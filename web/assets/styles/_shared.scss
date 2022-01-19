@@ -1,0 +1,265 @@
+/* stylelint-disable */
+@use './palette.scss';
+
+/* Font */
+$base-font: 'Roboto','-apple-system', 'PingFang FC','Microsoft YaHei', 'sans-serif';
+$base-medium-font: 'Roboto Medium', 'sans-serif';
+$monospace-font: 'Roboto Mono', monospace;
+
+$base-white: palette.logi-white();
+$base-black: palette.logi-black();
+$base-blue: palette.aris-brand();
+$base-green: palette.logi-green();
+$base-orange: palette.logi-orange();
+$base-red: palette.logi-red();
+
+$black-4: palette.logi-black(0.04);
+$black-12: palette.logi-black(0.12);
+$black-16: palette.logi-black(0.16);
+$black-24: palette.logi-black(0.24);
+$black-38: palette.logi-black(0.38);
+$black-60: palette.logi-black(0.6);
+$black-87: palette.logi-black(0.87);
+
+$error-color: $base-red;
+
+/* font color */
+$font-color-base: $black-60;
+$font-color-lighter: $black-38;
+$font-color-darker: $black-87;
+
+/* background-color */
+$bg-hover: $black-4;
+$bg-active: $black-12;
+
+/* border */
+$border-base: 1px solid $black-12;
+$border-selected: 1px solid $base-blue;
+
+/* box shadow */
+$box-shadow: 0 2px 4px rgba(0, 0, 0, 0.16);
+$base-box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16);
+$shadow-2: 0 2px 4px rgba(0, 0, 0, 0.16);
+$shadow-4: 0 4px 8px rgba(0, 0, 0, 0.16);
+$shadow-8: 0 8px 16px rgba(0, 0, 0, 0.16);
+$shadow-12: 0 12px 24px rgba(0, 0, 0, 0.16);
+
+/* color for theme */
+$base-brand: palette.aris-brand();
+$brand-4: palette.aris-brand(0.04);
+$brand-8: palette.aris-brand(0.08);
+$brand-12: palette.aris-brand(0.12);
+$header-bar-bg: palette.$header-bar-bg;
+$header-bar-fg: palette.$header-bar-fg;
+
+@function logi-grey-color($hue: 600, $opacity: null) {
+    @return palette.logi-color(palette.$logi-grey, $hue, $opacity);
+}
+
+@mixin box-shadow($box-shadow:$box-shadow) {
+    box-shadow: $box-shadow;
+    border-radius: 4px;
+}
+
+@mixin logi-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+@mixin logi-overflow-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The text of this div element cannot be selected */
+@mixin user-select($value) {
+    -webkit-user-select: $value; /* Safari */
+    -moz-user-select: $value; /* Firefox */
+    -ms-user-select: $value; /* IE 10+ and Edge */
+    user-select: $value;
+}
+
+/* The height and width of an element. */
+@mixin size($height: auto, $width: $height) {
+    height: $height;
+    width: $width;
+}
+
+@mixin square-size($size) {
+    @include size($size);
+    line-height: $size;
+}
+
+@mixin set-font($size: 12px, $weight: 400, $family: $base-font, $color: rgba(0, 0, 0, 0.87)) {
+    font-size: $size;
+    font-weight: $weight;
+    font-family: $family;
+    color: $color;
+}
+
+@mixin bold-darker-font($size: 16px) {
+    font-size: $size;
+    font-weight: bold;
+    color: $font-color-darker;
+}
+
+/* Display of an element. */
+@mixin element-display-flex($direction: column) {
+    display: flex;
+    flex: 1;
+    flex-direction: $direction;
+}
+
+@mixin spinner {
+    mat-spinner {
+        margin: auto;
+        margin-bottom: 19px;
+    }
+    circle {
+        stroke: rgba(65, 120, 184, 1);
+    }
+    ::ng-deep {
+        .mat-progress-spinner circle, .mat-spinner circle {
+            stroke: rgba(65, 120, 184, 1);
+        }
+    }
+    margin: auto;
+    span {
+        width: 56px;
+        height: 20px;
+
+        font-size: 14px;
+        font-weight: 400;
+        color: rgba(0, 0, 0, 0.6);
+    }
+}
+
+@mixin common-mat-tab(
+    $container-color: rgba(250, 250, 250, 1),
+    $content-align: center,
+    $active-font: bold,
+) {
+    .mat-ink-bar {
+        display: none;
+    }
+
+    .mat-tab-label-content {
+        margin: 9px 8px 9px 16px;
+    }
+
+    .mat-tab-label {
+        @include set-font(12px, 400);
+        border-right: $border-base;
+        height: 100%;
+        padding: 0;
+
+        background-color: rgba(250, 250, 250, 1);
+    }
+    .mat-tab-list {
+        height: 32px;
+    }
+
+    .mat-tab-body {
+        background-color: rgba(250, 250, 250, 1);
+    }
+
+    .mat-tab-body-wrapper {
+        flex: 1;
+        height: 100%;
+    }
+    .mat-tab-labels {
+        border-bottom: $border-base;
+        height: 32px;
+    }
+    .mat-tab-header {
+        border-bottom: none;
+    }
+
+    .mat-tab-label-container {
+        overflow: hidden;
+        background-color: $container-color;
+    }
+    .mat-tab-label-active {
+        opacity: 1;
+        height: 32px;
+        font-weight: $active-font;
+    }
+    .mat-tab-group.mat-primary {
+        .mat-tab-label.cdk-program-focused:not(.mat-tab-disabled) {
+            border-bottom: none;
+            background-color: rgba(250, 250, 250, 1);
+        }
+        .mat-tab-label-content {
+            align-items: center;
+            margin: 9px 8px 9px 16px;
+            line-height: 14px;
+        }
+    }
+    .mat-tab-header-pagination-after {
+        border-bottom: $border-base;
+    }
+    .mat-tab-header-pagination-before {
+        border-bottom: $border-base;
+        border-right: $border-base;
+    }
+}
+
+@mixin common-mat-dialog {
+    .mat-dialog-title {
+        margin-bottom: 24px;
+        font-size: 20px;
+        line-height: 29px;
+        font-weight: bold;
+    }
+
+    .mat-dialog-actions {
+        margin: 0;
+        padding: 0;
+        min-height: auto;
+
+        button {
+            margin-left: 8px;
+        }
+    }
+}
+
+@mixin set-place-holder-color($color: palette.logi-black(0.38)) {
+    &::-webkit-input-placeholder { /* Edge */
+        color: $color;
+    }
+    &:-ms-input-placeholder { /* Internet Explorer */
+        color: $color;
+    }
+
+    &::placeholder {
+        color: $color;
+    }
+}
+
+@mixin set-logi-tabs-nav-matMenu {
+    height: 240px;
+    .flag-button {
+        display: flex;
+        .icon-flag-wrapper {
+            width: 16px;
+            height: 32px;
+            .icon-flag {
+                margin-top: 14px;
+                border-radius: 50%;
+                width: 6px;
+                height: 6px;
+            }
+        }
+        .flag-text {
+            width: calc(100% - 56px);
+        }
+        .selected-icon-wrapper {
+            width: 24px;
+            padding-top: 4px;
+        }
+    }
+}

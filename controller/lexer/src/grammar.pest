@@ -1,0 +1,370 @@
+start = _{SOI ~ formula ~ EOI}
+
+formula = {expression}
+
+expression = {
+    ("(" ~ expression ~ ")" ~ expr)
+    | (function_call ~ expr)
+    | (cell_reference ~ expr)
+    | (constant ~ expr)
+    | (prefix_expr ~ expr)
+    | (name ~ expr)
+}
+
+expression_bracket = {
+    "(" ~ ws* ~ expression ~ ws* ~ ")"
+}
+
+prefix_expr = _{
+    prefix_op ~ expression_element
+}
+
+expression_element = _{
+    expression_bracket
+    | function_call
+    | constant
+    | cell_reference
+    | name
+    | prefix_expr
+}
+
+ws = _{" "}
+
+space_op = {" "+}
+
+expr = _{
+    (ws* ~ infix_op ~ ws* ~ expression_element ~ expr)
+    | (space_op ~ expression_element ~ expr)
+    | (postfix_op ~ expr)
+    | ""
+}
+
+constant = _{
+    error_constant
+    | logical_constant
+    | numerical_constant
+    | string_constant
+    | array_constant
+}
+
+error_constant = {
+    "#DIV/0!"
+    | "#N/A"
+    | "#NAME?"
+    | "#NULL!"
+    | "#NUM!"
+    | "#REF!"
+    | "#VALUE!"
+    | "#GETTING_DATA"
+}
+
+ref_err_with_prefix = {
+    (work_sheet_prefix | "#REF!") ~ "#REF!"
+}
+
+logical_constant = {"TRUE" | "FALSE"}
+
+numerical_constant = {
+    (whole_number_part ~ full_stop ~ fractional_part ~ exponent_part?) |
+    (whole_number_part ~ full_stop? ~ exponent_part?) |
+    (full_stop ~ fractional_part ~ exponent_part?)
+}
+
+full_stop = _{"."}
+
+whole_number_part = _{digit_sequence}
+
+fractional_part = _{digit_sequence}
+
+exponent_part = {
+    ("e" ~ sign? ~ digit_sequence) |
+    ("E" ~ sign? ~ digit_sequence)
+}
+
+sign = {"+" | "-"}
+
+digit_sequence = {ASCII_DIGIT+}
+
+string_constant = {double_quote ~ string_chars? ~ double_quote}
+
+double_quote = _{"\""}
+
+string_chars = _{string_char ~ string_char*}
+
+string_char = _{
+    "\"\"" | (!"\"" ~ ANY)
+}
+
+array_constant = {
+    "{" ~ constant_list_rows ~ "}"
+}
+
+constant_list_rows = {constant_list_row ~ (semicolon ~ constant_list_row)*}
+
+semicolon = {";"}
+
+constant_list_row = {constant ~ (comma ~ constant)*}
+
+space = {" "}
+
+colon_op = {":"}
+multiply_op = {"*"}
+div_op = {"/"}
+plus_op = {"+"}
+minus_op = {"-"}
+concat_op = {"&"}
+eq_op = {"="}
+neq_op = {"<>"}
+gt_op = {">"}
+ge_op = {">="}
+lt_op = {"<"}
+le_op = {"<="}
+exp_op = {"^"}
+percent_op = {"%"}
+
+operator = _{
+    colon_op
+    | space
+    | exp_op
+    | multiply_op
+    | div_op
+    | plus_op
+    | minus_op
+    | concat_op
+    | eq_op
+    | neq_op
+    | lt_op
+    | le_op
+    | gt_op
+    | ge_op
+    | percent_op
+}
+
+infix_op = _{
+    colon_op
+    | exp_op
+    | multiply_op
+    | div_op
+    | plus_op
+    | minus_op
+    | concat_op
+    | eq_op
+    | neq_op
+    | lt_op
+    | le_op
+    | gt_op
+    | ge_op
+}
+
+comma = {","}
+
+postfix_op = {percent_op}
+prefix_op = {
+    minus_op | plus_op
+}
+
+a1_reference_range = {a1_reference ~ ws* ~ ":" ~ ws* ~ a1_reference}
+
+r1c1_reference_range = {r1c1_reference ~ ws* ~ ":" ~ ws* ~ r1c1_reference}
+
+a1_reference_with_prefix = {
+    work_sheet_prefix? ~ a1_reference
+}
+
+a1_reference_range_with_prefix = {
+    work_sheet_prefix? ~ a1_reference_range
+}
+
+r1c1_reference_with_prefix = {
+    work_sheet_prefix? ~ r1c1_reference
+}
+
+r1c1_reference_range_with_prefix = {
+    work_sheet_prefix? ~ r1c1_reference_range
+}
+
+cell_reference = {
+    a1_reference_range_with_prefix
+    | a1_reference_with_prefix
+    | r1c1_reference_range_with_prefix
+    | r1c1_reference_with_prefix
+}
+
+work_sheet_prefix = {
+    work_sheet_prefix_special
+    | (sheet_name ~ "!")
+    | (sheet_name ~ ":" ~ sheet_name ~ "!")
+    | ("[" ~ workbook_name ~ "]" ~ sheet_name ~ ":" ~ sheet_name ~ "!")
+    | ("[" ~ workbook_name ~ "]" ~ sheet_name ~ "!")
+}
+
+work_sheet_prefix_special = {
+    (apostrophe ~ sheet_name_special ~ apostrophe ~ "!")
+    | (apostrophe ~ sheet_name_special ~ ":" ~ sheet_name_special ~ apostrophe ~ "!")
+    | (
+        apostrophe ~ "[" ~ workbook_name_special ~ "]"
+        ~ sheet_name_special ~ apostrophe ~ "!"
+      )
+    | (
+        apostrophe ~ "[" ~ workbook_name_special ~ "]"
+        ~ sheet_name_special ~ ":" ~ sheet_name_special ~ apostrophe ~ "!"
+      )
+}
+
+workbook_name = {book_name_character+}
+
+operator_with_comma = {operator | comma}
+
+book_name_character = _{
+    !(operator_with_comma | apostrophe | "[" | "]" | "?" | "!") ~ ANY
+}
+
+apostrophe = {"'"}
+
+sheet_name = {sheet_name_character+}
+
+sheet_name_character = _{
+    !(operator_with_comma | apostrophe | "[" | "]" | "\\" | "?" | "!" | ":") ~ ANY
+}
+
+workbook_name_special = {
+    book_name_start_character_special ~ book_name_characters_special?
+}
+
+book_name_start_character_special = {
+    !(apostrophe | "*" | "[" | "]" | ":" | "?") ~ANY
+}
+
+book_name_characters_special = {
+    book_name_character_special+
+}
+
+book_name_character_special = {
+    (apostrophe ~ apostrophe)
+    | (!(apostrophe | "*" | "[" | "]" | ":" | "?") ~ ANY)
+}
+
+sheet_name_special = {
+    sheet_name_start_character_special+ ~
+    (double_apostrophe* ~ sheet_name_end_character_special)*
+}
+
+sheet_name_start_character_special = _{
+    !(apostrophe | "*" | "[" | "]" | "\\" | ":" | "/" | "?") ~ ANY
+}
+
+sheet_name_end_character_special = _{sheet_name_start_character_special}
+
+double_apostrophe = _{apostrophe~apostrophe}
+
+a1_column_range = {
+    a1_column ~ ":" ~ a1_column
+}
+
+a1_row_range = {
+    a1_row ~ ":" ~ a1_row
+}
+
+a1_addr = {a1_column ~ a1_row}
+
+a1_reference = {
+    a1_column_range
+    | a1_row_range
+    | a1_addr
+}
+
+a1_column = {
+    a1_relative_column
+    | a1_absolute_column
+}
+
+a1_relative_column = {LETTER+}
+
+a1_absolute_column = {"$" ~ a1_relative_column}
+
+a1_row = {a1_relative_row | a1_absolute_row}
+
+a1_relative_row = {digit_sequence}
+
+a1_absolute_row = {"$" ~ a1_relative_row}
+
+r1c1_reference = {
+    r1c1_row_only
+    | r1c1_column_only
+    | (r1c1_row ~ r1c1_column)
+}
+
+r1c1_row_only = {
+    ("R" ~ r1c1_absolute_number)
+    | ("R[" ~ r1c1_relative_number ~ "]")
+}
+
+r1c1_row = {r1c1_relative_row | r1c1_absolute_row}
+
+r1c1_relative_row = {"R[" ~ r1c1_relative_number ~ "]"}
+
+r1c1_absolute_row = {"R" | ("R" ~ r1c1_absolute_number)}
+
+r1c1_column_only = {
+    ("C" ~ r1c1_absolute_number)
+    | ("C[" ~ r1c1_relative_number ~ "]")
+}
+
+r1c1_column = {
+    r1c1_relative_column
+    | r1c1_absolute_column
+}
+
+r1c1_relative_column = {
+    "C[" ~ r1c1_relative_number ~ "]"
+}
+
+r1c1_absolute_column = {
+    "C" | ("C" ~ r1c1_absolute_number)
+}
+
+r1c1_relative_number = {"-"? ~ digit_sequence}
+
+r1c1_absolute_number = {digit_sequence}
+
+function_call = {
+    function_name ~ "(" ~ ws* ~ argument_list? ~ ws* ~ ")"
+}
+
+function_call_char = _{
+    LETTER | "_" | "."
+}
+
+function_name = {
+    function_call_char+
+}
+
+argument_list = _{
+    argument ~ ( ws* ~ "," ~ ws* ~ argument?)*
+}
+
+argument = _{
+    comma_node | expression
+}
+
+comma_node = {
+    "(" ~ ws* ~ argument ~ ws* ~ comma ~ (ws* ~ argument ~ ws* ~ comma?)+ ~ ")"
+}
+
+name = {
+    (workbook_name ~ "!")? ~ name_characters
+}
+
+name_characters = {name_start_character ~ name_suffix_characters?}
+
+name_start_character = _{
+    LETTER | underscore | backslash
+}
+
+underscore = {"_"}
+
+backslash = {"\\"}
+
+name_suffix_characters = _{name_character+}
+
+name_character = _{LETTER | ASCII_DIGIT | underscore | full_stop}

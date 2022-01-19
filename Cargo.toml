@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "controller",
+    "logiutils",
+    "math",
+    "network",
+    "wasm",
+    "workbook",
+]

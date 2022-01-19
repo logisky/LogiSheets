@@ -1,0 +1,10 @@
+[package]
+name = "formatter"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+parser = {version = "0.1.1", path = "../parser"}
+pest = "2.1.3"
+pest_derive = "2.1.0"
+logiutils = {version = "0.1.0", path = "../../logiutils"}

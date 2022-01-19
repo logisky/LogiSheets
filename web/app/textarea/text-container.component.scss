@@ -1,0 +1,26 @@
+:host {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    cursor: text;
+}
+.text-canvas, .textarea {
+    position: absolute;
+    background-color: white;
+}
+.selection-canvas {
+    position: absolute;
+}
+.input-text-cursor {
+    position: absolute;
+    opacity: 0;
+    overflow: hidden;
+    margin: 0;
+    border: none;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    background-color: transparent;
+    letter-spacing: 0;
+    outline: none !important;
+}

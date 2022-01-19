@@ -1,0 +1,22 @@
+<canvas #logi_sheet_canvas logi-canvas-contextmenu>你的浏览器不支持canvas，请升级浏览器</canvas>
+<textarea *ngIf='selector && !editing'
+    [ngStyle]='{"left":toPx(selector.x), "top": toPx(selector.y), "width": toPx(selector.width), "height": toPx(selector.height)}'
+    class="fake-textarea" #logi_sheet_fake_textarea></textarea>
+<logi-selector class="selector" *ngIf='selector' [x]='selector.x' [y]='selector.y' [width]='selector.width'
+    [height]='selector.height' [borderTopWidth]='selector.borderTopWidth' [borderRightWidth]='selector.borderRightWidth'
+    [borderBottomWidth]='selector.borderBottomWidth' [borderLeftWidth]='selector.borderLeftWidth'>
+</logi-selector>
+<logi-text-container class="text-container" *ngIf='textContext && editing' [context]='textContext'
+    (blur$)='blur($event)'>
+</logi-text-container>
+<logi-scrollbar class="middle-x-scrollbar" *ngIf="xScrollbar" (mousemove$)='mouseMoveScrolling($event)'
+    [containerLength]='xScrollbar.containerLength' [scrollDistance]='xScrollbar.scrollDistance'
+    [containerTotalLength]='xScrollbar.containerTotalLength' [paddingLeft]='settings.leftTop.width' [direction]='"x"'>
+</logi-scrollbar>
+<logi-scrollbar class="middle-y-scrollbar" *ngIf="yScrollbar" (mousemove$)='mouseMoveScrolling($event)'
+    [containerLength]='yScrollbar.containerLength' [scrollDistance]='yScrollbar.scrollDistance'
+    [containerTotalLength]='yScrollbar.containerTotalLength' [paddingTop]='settings.leftTop.height' [direction]='"y"'>
+</logi-scrollbar>
+<logi-dnd *ngIf="selector" (mousedown)='dndMng?.onMouseDown($event)' [x]="dndMng?.x$ | async" [y]="dndMng?.y$ | async"
+    [width]="dndMng?.width$ | async" [height]="dndMng?.height$ | async" [draggingX]="dndMng?.draggingX$ | async"
+    [draggingY]="dndMng?.draggingY$ | async"></logi-dnd>

@@ -1,0 +1,7 @@
+<canvas #textCanvas class="text-canvas"></canvas>
+<canvas #selectionCanvas class="selection-canvas"></canvas>
+<textarea #textarea class="inputarea input-text-cursor" wrap="off" autocorrect="off" autocomplete="off"
+    spellcheck="false" role="textbox" aria-autocomplete="both" aria-multiline="true" aria-haspopup="false" logi-suggest
+    [suggestX]='cursorEvent.clientX' [suggestY]='cursorEvent.clientY' [suggestClose]='!showCursor'
+    [triggerText]='triggerText'></textarea>
+<logi-cursor *ngIf='showCursor' [height]='context.cellHeight' [x]='cursorX' [y]='cursorY'></logi-cursor>

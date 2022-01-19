@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    <bookViews>
+        <workbookView/>
+    </bookViews>
+    <sheets>
+        <sheet name="Cover" sheetId="1" r:id="rId2"/>
+        <sheet name="报表输出" sheetId="2" r:id="rId3"/>
+        <sheet name="利润表" sheetId="3" r:id="rId4"/>
+        <sheet name="资产负债表" sheetId="4" r:id="rId5"/>
+        <sheet name="现金流量表" sheetId="5" r:id="rId6"/>
+        <sheet name="销售成本假设" sheetId="6" r:id="rId7"/>
+        <sheet name="销售预测" sheetId="7" r:id="rId8"/>
+        <sheet name="资产预测" sheetId="8" r:id="rId9"/>
+        <sheet name="财务分析" sheetId="9" r:id="rId10"/>
+        <sheet name="主要财务摘要" sheetId="10" r:id="rId11"/>
+        <sheet name="现金流" sheetId="11" r:id="rId12"/>
+        <sheet name="报表摘要" sheetId="12" r:id="rId13"/>
+        <sheet name="财务基础数据" sheetId="13" r:id="rId14"/>
+        <sheet name="财务附注数据" sheetId="14" r:id="rId15"/>
+        <sheet name="估值与敏感性分析" sheetId="15" r:id="rId16"/>
+    </sheets>
+    <calcPr calcId="0" iterate="1" iterateCount="100" iterateDelta="0.01"/>
+</workbook>

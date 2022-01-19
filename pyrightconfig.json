@@ -1,0 +1,17 @@
+{
+    "exclude": [
+        "bazel-out",
+        "build",
+        "node_modules"
+    ],
+    "extraPaths": [
+        "build/external",
+        "build/external/pip/pypi__ansible",
+        "build/external/pip/pypi__beautifultable",
+        "build/external/pip/pypi__colorama",
+        "build/external/pip/pypi__jinja2",
+        "build/external/pip/pypi__netaddr",
+        "build/external/pip/pypi__pyyaml",
+        "build/external/pip/pypi__ruamel_yaml"
+    ]
+}

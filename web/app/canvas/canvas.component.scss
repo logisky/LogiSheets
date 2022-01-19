@@ -1,0 +1,36 @@
+$y-scrollbar-width: 16px;
+$x-scrollbar-height: 16px;
+:host {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.fake-textarea {
+    position: absolute;
+    visibility: hidden;
+}
+canvas {
+    width: calc(100% - #{$y-scrollbar-width});
+    height: calc(100% - #{$x-scrollbar-height});
+}
+.selector {
+    z-index: 100;
+}
+.text-container {
+    z-index: 1000;
+    background-color: rgb(255, 255, 255, 1);
+}
+.middle-y-scrollbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: $y-scrollbar-width;
+    height: calc(100% - #{$x-scrollbar-height});
+}
+.middle-x-scrollbar {
+    position: absolute;
+    bottom: 0;
+    width: calc(100% - #{$y-scrollbar-width});
+    height: $x-scrollbar-height;
+}

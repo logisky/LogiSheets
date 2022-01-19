@@ -1,0 +1,26 @@
+<div class="line1 line">
+    <mat-form-field label='user id' size='large'>
+        <input matInput [formControl]='userIdCtl'>
+    </mat-form-field>
+    <mat-form-field label='file id' size='large'>
+        <input matInput [formControl]='fileIdCtl'>
+    </mat-form-field>
+    <button (click)='join()' mat-flat-button>join</button>
+</div>
+<div class="line2 line">
+    <mat-form-field appearance="fill">
+        <mat-select [(ngModel)]='operate'>
+            <mat-option *ngFor='let option of allOperateOptions' [value]='option'>{{option}}</mat-option>
+        </mat-select>
+    </mat-form-field>
+    <button (click)="change()" mat-button>change payload</button>
+    <button (click)='execute()' mat-button>execute</button>
+    <button (click)='undo()' mat-button>undo</button>
+    <button (click)='redo()' mat-button>redo</button>
+</div>
+<div class="line3 line">
+    <mat-form-field label='script' size='large'>
+        <input matInput [formControl]='scriptCtl'>
+    </mat-form-field>
+    <button (click)='customScript()' mat-flat-button>send script</button>
+</div>

@@ -1,0 +1,48 @@
+$border: 1px solid #E2E6ED;
+:host {
+    display: block;
+    .thumb {
+        transition: margin-left 0.2s;
+    }
+    &.x-scrollbar {
+        border-top: $border;
+        .edit-scrollbar {
+            display: flex;
+        }
+        .thumb {
+            transition: margin-top 0.2s;
+            height: 80%;
+        }
+        .thumb_container {
+            align-items: center;
+        }
+    }
+    &.y-scrollbar {
+        border-left: $border;
+        .edit-scrollbar {
+            flex-direction: column;
+            display: flex;
+        }
+        .thumb {
+            transition: margin-left 0.2s;
+            width: 80%;
+        }
+        .thumb_container {
+            justify-content: center;
+        }
+    }
+}
+.thumb_container {
+    position: relative;
+    flex: 1;
+    display: flex;
+}
+.thumb {
+    position: absolute;
+    border-radius: 4px;
+    background-color: #C0C6CF;
+    cursor: default;
+    &:hover {
+        background-color: #9298A2;
+    }
+}

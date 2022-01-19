@@ -1,0 +1,1044 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" mc:Ignorable="x14ac">
+	<numFmts count="6">
+		<numFmt numFmtId="41" formatCode="_(* #,##0_);_(* (#,##0);_(* &quot;-&quot;_);_(@_)"/>
+		<numFmt numFmtId="42" formatCode="_(&quot;$&quot;* #,##0_);_(&quot;$&quot;* (#,##0);_(&quot;$&quot;* &quot;-&quot;_);_(@_)"/>
+		<numFmt numFmtId="43" formatCode="_(* #,##0.00_);_(* (#,##0.00);_(* &quot;-&quot;??_);_(@_)"/>
+		<numFmt numFmtId="44" formatCode="_(&quot;$&quot;* #,##0.00_);_(&quot;$&quot;* (#,##0.00);_(&quot;$&quot;* &quot;-&quot;??_);_(@_)"/>
+		<numFmt numFmtId="171" formatCode="#,##0.00;"/>
+		<numFmt numFmtId="172" formatCode="#,##0.00%;(#,##0.00%)"/>
+	</numFmts>
+	<fonts count="29">
+		<font>
+			<color rgb="FF000000"/>
+			<sz val="12"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<color theme="1"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<color theme="0"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<color rgb="FF9C0006"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FFFA7D00"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<b/>
+			<color theme="0"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<color indexed="0"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<family val="2"/>
+		</font>
+		<font>
+			<i/>
+			<color rgb="FF7F7F7F"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<color rgb="FF006100"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<b/>
+			<color theme="3"/>
+			<sz val="15"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<b/>
+			<color theme="3"/>
+			<sz val="13"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<b/>
+			<color theme="3"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<color rgb="FF3F3F76"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<color rgb="FFFA7D00"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<color rgb="FF9C6500"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FF3F3F3F"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<b/>
+			<color theme="3"/>
+			<sz val="18"/>
+			<name val="Cambria"/>
+			<scheme val="major"/>
+		</font>
+		<font>
+			<b/>
+			<color theme="1"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<color rgb="FFFF0000"/>
+			<sz val="11"/>
+			<name val="Calibri"/>
+			<scheme val="minor"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FF0019A3"/>
+			<sz val="16"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FF0019A3"/>
+			<sz val="14"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FF0019A3"/>
+			<sz val="12"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FFFFFFFF"/>
+			<sz val="12"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FF0044CC"/>
+			<sz val="10"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<u/>
+			<color rgb="FF000000"/>
+			<sz val="10"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<color rgb="FF000000"/>
+			<sz val="10"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<i/>
+			<color rgb="FF000000"/>
+			<sz val="10"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FF000000"/>
+			<sz val="10"/>
+			<name val="Calibri"/>
+		</font>
+		<font>
+			<b/>
+			<color rgb="FF757575"/>
+			<sz val="10"/>
+			<name val="Calibri"/>
+		</font>
+	</fonts>
+	<fills count="38">
+		<fill>
+			<patternFill patternType="none"/>
+		</fill>
+		<fill>
+			<patternFill patternType="gray125"/>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="4" tint="0.8"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="5" tint="0.8"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="6" tint="0.8"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="7" tint="0.8"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="8" tint="0.8"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="9" tint="0.8"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="4" tint="0.6"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="5" tint="0.6"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="6" tint="0.6"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="7" tint="0.6"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="8" tint="0.6"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="9" tint="0.6"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="4" tint="0.4"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="5" tint="0.4"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="6" tint="0.4"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="7" tint="0.4"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="8" tint="0.4"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="9" tint="0.4"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="4"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="5"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="6"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="7"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="8"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor theme="9"/>
+				<bgColor indexed="64"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFFFC7CE"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFF2F2F2"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFA5A5A5"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFC6EFCE"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFFFCC99"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFFFEB9C"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFFFFFCC"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFFFFFFF"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FF0044CC"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFC3C9F3"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFE0E0E0"/>
+			</patternFill>
+		</fill>
+		<fill>
+			<patternFill patternType="solid">
+				<fgColor rgb="FFFFEBEE"/>
+			</patternFill>
+		</fill>
+	</fills>
+	<borders count="18">
+		<border>
+			<left/>
+			<right/>
+			<top/>
+			<bottom/>
+		</border>
+		<border>
+			<left style='thin'>
+				<color rgb="FF7F7F7F"/>
+			</left>
+			<right style='thin'>
+				<color rgb="FF7F7F7F"/>
+			</right>
+			<top style='thin'>
+				<color rgb="FF7F7F7F"/>
+			</top>
+			<bottom style='thin'>
+				<color rgb="FF7F7F7F"/>
+			</bottom>
+		</border>
+		<border>
+			<left style='double'>
+				<color rgb="FF3F3F3F"/>
+			</left>
+			<right style='double'>
+				<color rgb="FF3F3F3F"/>
+			</right>
+			<top style='double'>
+				<color rgb="FF3F3F3F"/>
+			</top>
+			<bottom style='double'>
+				<color rgb="FF3F3F3F"/>
+			</bottom>
+		</border>
+		<border>
+			<left/>
+			<right/>
+			<top/>
+			<bottom style='thick'>
+				<color theme="4"/>
+			</bottom>
+		</border>
+		<border>
+			<left/>
+			<right/>
+			<top/>
+			<bottom style='thick'>
+				<color theme="4" tint="0.5"/>
+			</bottom>
+		</border>
+		<border>
+			<left/>
+			<right/>
+			<top/>
+			<bottom style='medium'>
+				<color theme="4" tint="0.4"/>
+			</bottom>
+		</border>
+		<border>
+			<left/>
+			<right/>
+			<top/>
+			<bottom style='double'>
+				<color rgb="FFFF8001"/>
+			</bottom>
+		</border>
+		<border>
+			<left style='thin'>
+				<color rgb="FFB2B2B2"/>
+			</left>
+			<right style='thin'>
+				<color rgb="FFB2B2B2"/>
+			</right>
+			<top style='thin'>
+				<color rgb="FFB2B2B2"/>
+			</top>
+			<bottom style='thin'>
+				<color rgb="FFB2B2B2"/>
+			</bottom>
+		</border>
+		<border>
+			<left style='thin'>
+				<color rgb="FF3F3F3F"/>
+			</left>
+			<right style='thin'>
+				<color rgb="FF3F3F3F"/>
+			</right>
+			<top style='thin'>
+				<color rgb="FF3F3F3F"/>
+			</top>
+			<bottom style='thin'>
+				<color rgb="FF3F3F3F"/>
+			</bottom>
+		</border>
+		<border>
+			<left/>
+			<right/>
+			<top style='thin'>
+				<color theme="4"/>
+			</top>
+			<bottom style='double'>
+				<color theme="4"/>
+			</bottom>
+		</border>
+		<border>
+			<left style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</left>
+			<right style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</right>
+			<top/>
+			<bottom/>
+		</border>
+		<border>
+			<left style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</left>
+			<right/>
+			<top/>
+			<bottom/>
+		</border>
+		<border>
+			<left/>
+			<right style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</right>
+			<top/>
+			<bottom/>
+		</border>
+		<border>
+			<left style='mediumDashed'>
+				<color rgb="FFE53935"/>
+			</left>
+			<right style='mediumDashed'>
+				<color rgb="FFE53935"/>
+			</right>
+			<top style='mediumDashed'>
+				<color rgb="FFE53935"/>
+			</top>
+			<bottom/>
+		</border>
+		<border>
+			<left style='mediumDashed'>
+				<color rgb="FFE53935"/>
+			</left>
+			<right style='mediumDashed'>
+				<color rgb="FFE53935"/>
+			</right>
+			<top/>
+			<bottom style='mediumDashed'>
+				<color rgb="FFE53935"/>
+			</bottom>
+		</border>
+		<border>
+			<left/>
+			<right style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</right>
+			<top/>
+			<bottom style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</bottom>
+		</border>
+		<border>
+			<left style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</left>
+			<right/>
+			<top/>
+			<bottom style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</bottom>
+		</border>
+		<border>
+			<left/>
+			<right/>
+			<top/>
+			<bottom style='medium'>
+				<color rgb="FFE0E0E0"/>
+			</bottom>
+		</border>
+	</borders>
+	<cellStyleXfs count="47">
+		<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyFont="1"/>
+		<xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="3" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="4" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="5" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="6" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="7" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="8" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="9" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="10" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="11" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="12" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="13" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="14" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="15" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="16" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="17" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="18" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="19" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="20" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="21" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="22" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="23" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="24" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="25" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="3" fillId="26" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="4" fillId="27" borderId="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="5" fillId="28" borderId="2" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="43" fontId="6" fillId="0" borderId="0" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="41" fontId="6" fillId="0" borderId="0" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="44" fontId="6" fillId="0" borderId="0" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="42" fontId="6" fillId="0" borderId="0" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="7" fillId="0" borderId="0" applyFont="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="8" fillId="29" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="9" fillId="0" borderId="3" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="10" fillId="0" borderId="4" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="11" fillId="0" borderId="5" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="11" fillId="0" borderId="0" applyFont="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="12" fillId="30" borderId="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="13" fillId="0" borderId="6" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="14" fillId="31" borderId="0" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="6" fillId="32" borderId="7" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="15" fillId="27" borderId="8" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="9" fontId="6" fillId="0" borderId="0" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="16" fillId="0" borderId="0" applyFont="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="17" fillId="0" borderId="9" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="18" fillId="0" borderId="0" applyFont="1">
+			<alignment vertical="top"/>
+		</xf>
+	</cellStyleXfs>
+	<cellXfs count="90">
+		<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+		<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+		<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="1" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="2" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="4" borderId="0" xfId="3" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="5" borderId="0" xfId="4" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="6" borderId="0" xfId="5" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="7" borderId="0" xfId="6" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="8" borderId="0" xfId="7" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="9" borderId="0" xfId="8" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="10" borderId="0" xfId="9" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="11" borderId="0" xfId="10" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="12" borderId="0" xfId="11" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="1" fillId="13" borderId="0" xfId="12" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="14" borderId="0" xfId="13" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="15" borderId="0" xfId="14" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="16" borderId="0" xfId="15" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="17" borderId="0" xfId="16" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="18" borderId="0" xfId="17" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="19" borderId="0" xfId="18" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="20" borderId="0" xfId="19" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="21" borderId="0" xfId="20" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="22" borderId="0" xfId="21" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="23" borderId="0" xfId="22" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="24" borderId="0" xfId="23" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="2" fillId="25" borderId="0" xfId="24" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="3" fillId="26" borderId="0" xfId="25" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="4" fillId="27" borderId="1" xfId="26" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="5" fillId="28" borderId="2" xfId="27" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="43" fontId="6" fillId="0" borderId="0" xfId="28" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="41" fontId="6" fillId="0" borderId="0" xfId="29" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="44" fontId="6" fillId="0" borderId="0" xfId="30" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="42" fontId="6" fillId="0" borderId="0" xfId="31" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="7" fillId="0" borderId="0" xfId="32" applyFont="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="8" fillId="29" borderId="0" xfId="33" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="9" fillId="0" borderId="3" xfId="34" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="10" fillId="0" borderId="4" xfId="35" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="11" fillId="0" borderId="5" xfId="36" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="11" fillId="0" borderId="0" xfId="37" applyFont="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="12" fillId="30" borderId="1" xfId="38" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="13" fillId="0" borderId="6" xfId="39" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="14" fillId="31" borderId="0" xfId="40" applyFont="1" applyFill="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="6" fillId="32" borderId="7" xfId="41" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="15" fillId="27" borderId="8" xfId="42" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="9" fontId="6" fillId="0" borderId="0" xfId="43" applyNumberFormat="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="16" fillId="0" borderId="0" xfId="44" applyFont="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="17" fillId="0" borderId="9" xfId="45" applyFont="1" applyBorder="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="18" fillId="0" borderId="0" xfId="46" applyFont="1">
+			<alignment vertical="top"/>
+		</xf>
+		<xf numFmtId="0" fontId="19" fillId="33" borderId="0" xfId="0" applyFont="1" applyFill="1">
+			<alignment horizontal="left"/>
+		</xf>
+		<xf numFmtId="0" fontId="20" fillId="33" borderId="0" xfId="0" applyFont="1" applyFill="1">
+			<alignment horizontal="left"/>
+		</xf>
+		<xf numFmtId="0" fontId="21" fillId="33" borderId="0" xfId="0" applyFont="1" applyFill="1">
+			<alignment horizontal="left"/>
+		</xf>
+		<xf numFmtId="0" fontId="22" fillId="34" borderId="0" xfId="0" applyFont="1" applyFill="1">
+			<alignment horizontal="left" vertical="center"/>
+		</xf>
+		<xf numFmtId="0" fontId="22" fillId="34" borderId="10" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="center" vertical="center"/>
+		</xf>
+		<xf numFmtId="0" fontId="23" fillId="35" borderId="11" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="center" vertical="center"/>
+		</xf>
+		<xf numFmtId="0" fontId="23" fillId="35" borderId="0" xfId="0" applyFont="1" applyFill="1">
+			<alignment horizontal="center" vertical="center"/>
+		</xf>
+		<xf numFmtId="0" fontId="23" fillId="35" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="center" vertical="center"/>
+		</xf>
+		<xf numFmtId="0" fontId="0" fillId="33" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+		<xf numFmtId="0" fontId="0" fillId="33" borderId="11" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+		<xf numFmtId="0" fontId="0" fillId="33" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+		<xf numFmtId="0" fontId="24" fillId="33" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="left"/>
+		</xf>
+		<xf numFmtId="43" fontId="24" fillId="33" borderId="11" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="43" fontId="24" fillId="33" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="43" fontId="24" fillId="33" borderId="12" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="0" fontId="25" fillId="33" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="left" indent="1"/>
+		</xf>
+		<xf numFmtId="171" fontId="25" fillId="33" borderId="11" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="171" fontId="25" fillId="33" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="171" fontId="25" fillId="33" borderId="12" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="0" fontId="26" fillId="33" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="left" indent="2"/>
+		</xf>
+		<xf numFmtId="172" fontId="26" fillId="33" borderId="11" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="172" fontId="26" fillId="33" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="172" fontId="26" fillId="33" borderId="12" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="0" fontId="25" fillId="33" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="left"/>
+		</xf>
+		<xf numFmtId="39" fontId="25" fillId="33" borderId="11" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="25" fillId="33" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="25" fillId="33" borderId="12" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="0" fontId="27" fillId="33" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="left"/>
+		</xf>
+		<xf numFmtId="39" fontId="27" fillId="33" borderId="11" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="27" fillId="33" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="27" fillId="33" borderId="12" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="0" fontId="27" fillId="33" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="left" indent="1"/>
+		</xf>
+		<xf numFmtId="0" fontId="28" fillId="36" borderId="12" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="left"/>
+		</xf>
+		<xf numFmtId="39" fontId="28" fillId="36" borderId="11" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="28" fillId="36" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="28" fillId="36" borderId="12" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="25" fillId="37" borderId="13" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="25" fillId="37" borderId="14" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="0" fontId="25" fillId="33" borderId="15" xfId="0" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="left"/>
+		</xf>
+		<xf numFmtId="39" fontId="25" fillId="33" borderId="16" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="25" fillId="33" borderId="17" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+		<xf numFmtId="39" fontId="25" fillId="33" borderId="15" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1">
+			<alignment horizontal="right"/>
+		</xf>
+	</cellXfs>
+	<cellStyles count="47">
+		<cellStyle name="Normal" xfId="0" builtinId="0"/>
+		<cellStyle name="20% - Accent1" xfId="1" builtinId="30"/>
+		<cellStyle name="20% - Accent2" xfId="2" builtinId="34"/>
+		<cellStyle name="20% - Accent3" xfId="3" builtinId="38"/>
+		<cellStyle name="20% - Accent4" xfId="4" builtinId="42"/>
+		<cellStyle name="20% - Accent5" xfId="5" builtinId="46"/>
+		<cellStyle name="20% - Accent6" xfId="6" builtinId="50"/>
+		<cellStyle name="40% - Accent1" xfId="7" builtinId="31"/>
+		<cellStyle name="40% - Accent2" xfId="8" builtinId="35"/>
+		<cellStyle name="40% - Accent3" xfId="9" builtinId="39"/>
+		<cellStyle name="40% - Accent4" xfId="10" builtinId="43"/>
+		<cellStyle name="40% - Accent5" xfId="11" builtinId="47"/>
+		<cellStyle name="40% - Accent6" xfId="12" builtinId="51"/>
+		<cellStyle name="60% - Accent1" xfId="13" builtinId="32"/>
+		<cellStyle name="60% - Accent2" xfId="14" builtinId="36"/>
+		<cellStyle name="60% - Accent3" xfId="15" builtinId="40"/>
+		<cellStyle name="60% - Accent4" xfId="16" builtinId="44"/>
+		<cellStyle name="60% - Accent5" xfId="17" builtinId="48"/>
+		<cellStyle name="60% - Accent6" xfId="18" builtinId="52"/>
+		<cellStyle name="Accent1" xfId="19" builtinId="29"/>
+		<cellStyle name="Accent2" xfId="20" builtinId="33"/>
+		<cellStyle name="Accent3" xfId="21" builtinId="37"/>
+		<cellStyle name="Accent4" xfId="22" builtinId="41"/>
+		<cellStyle name="Accent5" xfId="23" builtinId="45"/>
+		<cellStyle name="Accent6" xfId="24" builtinId="49"/>
+		<cellStyle name="Bad" xfId="25" builtinId="27"/>
+		<cellStyle name="Calculation" xfId="26" builtinId="22"/>
+		<cellStyle name="Check Cell" xfId="27" builtinId="23"/>
+		<cellStyle name="Comma" xfId="28" builtinId="3"/>
+		<cellStyle name="Comma [0]" xfId="29" builtinId="6"/>
+		<cellStyle name="Currency" xfId="30" builtinId="4"/>
+		<cellStyle name="Currency [0]" xfId="31" builtinId="7"/>
+		<cellStyle name="Explanatory Text" xfId="32" builtinId="53"/>
+		<cellStyle name="Good" xfId="33" builtinId="26"/>
+		<cellStyle name="Heading 1" xfId="34" builtinId="16"/>
+		<cellStyle name="Heading 2" xfId="35" builtinId="17"/>
+		<cellStyle name="Heading 3" xfId="36" builtinId="18"/>
+		<cellStyle name="Heading 4" xfId="37" builtinId="19"/>
+		<cellStyle name="Input" xfId="38" builtinId="20"/>
+		<cellStyle name="Linked Cell" xfId="39" builtinId="24"/>
+		<cellStyle name="Neutral" xfId="40" builtinId="28"/>
+		<cellStyle name="Note" xfId="41" builtinId="10"/>
+		<cellStyle name="Output" xfId="42" builtinId="21"/>
+		<cellStyle name="Percent" xfId="43" builtinId="5"/>
+		<cellStyle name="Title" xfId="44" builtinId="15"/>
+		<cellStyle name="Total" xfId="45" builtinId="25"/>
+		<cellStyle name="Warning Text" xfId="46" builtinId="11"/>
+	</cellStyles>
+	<dxfs count="0"/>
+	<tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>
+</styleSheet>

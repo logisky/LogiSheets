@@ -1,0 +1,20 @@
+:host {
+    flex-direction: column;
+    display: flex;
+    height: 100%;
+}
+.top-bar {
+    height: 102px;
+}
+.content {
+    height: calc(100% - 166px);
+}
+.bottom-bar {
+    height: 64px;
+}
+.debug-toolbar {
+    position: absolute;
+    z-index: 999;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16);
+    background-color: white;
+}

@@ -1,0 +1,504 @@
+syntax = "proto3";
+package network.proto;
+
+message ClientSend {
+    oneof client_send_oneof {
+        Transaction transaction = 1;
+        DisplayRequest display_request = 2;
+    }
+    string user = 3;
+    string file_id = 4;
+}
+
+// Message sent by the server.
+message ServerSend {
+    oneof server_send_oneof {
+        DisplayResponse display_response = 1;
+        SheetUpdated sheet_updated = 2;
+    }
+}
+
+message SheetUpdated {
+    // The index of the sheet that has been updated on the server side.
+    repeated uint32 index = 1;
+}
+
+// A transaction contains serveral payloads indicating some atomic changes on a
+// workbook. These atomic changes will be all withdrawed when client `undo`.
+// Priority:
+// - undo
+// - redo
+// - payloads
+message Transaction {
+    repeated Payload payloads = 1;
+    bool undo = 2;
+    bool redo = 3;
+    // If this transaction is undoable. Meaningless if `undo` or `redo` is true.
+    bool undoable = 4;
+}
+
+// Client tells Server that it wants to display/prepare to display this area.
+// Server will prepare data for it.
+message DisplayRequest {
+    uint32 sheet_idx = 1;
+    // Server would find out the patch for incremental updating the data in the
+    // client according to this.
+    uint32 version = 2;
+}
+
+// Notify the client that the sheet bar has updated as the content delivered.
+message SheetNames {
+    repeated string sheet_names = 1;
+}
+
+message Comment {
+    uint32 row = 1;
+    uint32 col = 2;
+    string author = 3;
+    string content = 4;
+}
+
+message MergeCell {
+    uint32 start_row = 1;
+    uint32 start_col = 2;
+    uint32 end_row = 3;
+    uint32 end_col = 4;
+}
+
+message SheetMergeCells {
+    uint32 idx = 1;
+    repeated MergeCell merge_cells = 2;
+}
+
+message SheetComments {
+    uint32 idx = 1;
+    repeated Comment comment = 2;
+}
+
+message RowInfo {
+    uint32 idx = 1;
+    double height = 2;
+    bool hidden = 3;
+}
+
+message ColInfo {
+    uint32 idx = 1;
+    // Specifies the width (in twentieths of a point) of this text column.
+    double width = 2;
+    bool hidden = 3;
+}
+
+message SheetRowInfo {
+    uint32 sheet_idx = 1;
+    repeated RowInfo info = 2;
+    double default_height = 3;
+}
+
+message SheetColInfo {
+    uint32 sheet_idx = 1;
+    repeated ColInfo info = 2;
+    double default_width = 3;
+}
+
+message DisplayResponse {
+    repeated DisplayPatch patches = 1;
+}
+
+message DisplayPatch {
+    oneof display_patch_oneof {
+        SheetValues values = 1;
+        SheetStyles styles = 2;
+        SheetRowInfo row_info = 3;
+        SheetColInfo col_info = 4;
+        SheetNames sheet_names = 5;
+        SheetMergeCells merge_cells = 6;
+        SheetComments comments = 7;
+    }
+}
+
+message SheetStyles {
+    uint32 sheet_idx = 1;
+    repeated CellStyle styles = 2;
+}
+
+message SheetValues {
+    uint32 sheet_idx = 1;
+    repeated CellValue values = 2;
+}
+
+message Value {
+    oneof cell_value_oneof {
+        string str = 1;
+        double number = 2;
+        bool bool = 3;
+        string error = 4;
+    }
+}
+
+message CellStyle {
+    // If row or col equals 0. It means this is the default style for this row
+    // or col.
+    uint32 row = 1;
+    uint32 col = 2;
+    Style style = 3;
+}
+
+message CellValue {
+    // 1-based.
+    uint32 row = 1;
+    // 1-based.
+    uint32 col = 2;
+    Value value = 3;
+    string formula = 4;
+}
+
+message Payload {
+    oneof payload_oneof {
+        CellInput cell_input = 1;
+        RowShift row_shift = 2;
+        ColumnShift column_shift = 3;
+        SheetRename sheet_rename = 4;
+        SheetShift sheet_shift = 5;
+        StyleUpdate style_update = 6;
+        CreateBlock create_block = 7;
+        MoveBlock move_block = 8;
+        BlockInput block_input = 9;
+        BlockStyleUpdate block_style_update = 10;
+        LineShiftInBlock line_shift_in_block = 11;
+        SetRowHeight set_row_height = 12;
+        SetColWidth set_col_width = 13;
+        SetRowVisible set_row_visible = 14;
+        SetColVisible set_col_visible = 15;
+    }
+}
+
+message SetRowHeight {
+    uint32 sheet_idx = 1;
+    uint32 row = 2;
+    double height = 3;
+}
+
+message SetColWidth {
+    uint32 sheet_idx = 1;
+    uint32 col = 2;
+    double width = 3;
+}
+
+message SetRowVisible {
+    uint32 sheet_idx = 1;
+    uint32 row = 2;
+    bool visible = 3;
+}
+
+message SetColVisible {
+    uint32 sheet_idx = 1;
+    uint32 col = 2;
+    bool visible = 3;
+}
+
+message CreateBlock {
+    uint32 sheet_idx = 1;
+    uint32 id = 2;
+    uint32 master_row = 3;
+    uint32 master_col = 4;
+    uint32 row_cnt = 5;
+    uint32 col_cnt =6;
+}
+
+message MoveBlock {
+    uint32 sheet_idx = 1;
+    uint32 id = 2;
+    uint32 new_master_row = 3;
+    uint32 new_master_col = 4;
+}
+
+message BlockInput {
+    uint32 sheet_idx = 1;
+    uint32 id = 2;
+    uint32 row = 3;
+    uint32 col = 4;
+    string input = 5;
+}
+
+message BlockStyleUpdate {
+    uint32 sheet_idx = 1;
+    uint32 id = 2;
+    uint32 row = 3;
+    uint32 col = 4;
+    StyleUpdatePayload payload = 5;
+}
+
+message LineShiftInBlock {
+    uint32 sheet_idx = 1;
+    uint32 id = 2;
+    uint32 idx = 3;
+    uint32 cnt = 4;
+    bool horizontal = 5;
+    bool insert = 6;
+}
+
+message SheetRename {
+    string old_name = 1;
+    string new_name = 2;
+}
+
+message CellInput {
+    uint32 sheet_idx = 1;
+    uint32 row = 2;
+    uint32 col = 3;
+    // Auto refer the input type.
+    // If it starts with "=", we will refer it as a formula input.
+    string input = 4;
+}
+
+message RowShift {
+    uint32 sheet_idx = 1;
+    uint32 start = 2;
+    uint32 count = 3;
+    ShiftType type = 4;
+}
+
+message ColumnShift {
+    uint32 sheet_idx = 1;
+    uint32 start = 2;
+    uint32 count = 3;
+    ShiftType type = 4;
+}
+
+enum ShiftType {
+    UNSPECIFIED = 0;
+    INSERT = 1;
+    DELETE = 2;
+}
+
+message SheetShift {
+    uint32 sheet_idx = 1;
+    ShiftType type = 2;
+}
+
+message Style {
+    Border border = 1;
+    Font font = 2;
+    PatternFill fill = 3;
+    Alignment alignment = 4;
+    string formatter = 5;
+}
+message Alignment {
+    Horizontal horizontal = 1;
+    int32 indent = 2;
+    bool justify_last_line = 3;
+    ReadingOrder reading_order = 4;
+    int32 relative_indent = 5;
+    bool shrink_to_fit = 6;
+    // range 0 to 180
+    int32 text_rotation = 7;
+    Vertical vertical = 8;
+    bool wrap_text = 9;
+    enum Horizontal {
+        H_UNSPECIFIED = 0;
+        H_CENTER = 1;
+        H_CENTER_CONTINUOUS = 2;
+        H_DISTRIBUTED = 3;
+        H_FILL = 4;
+        H_GENERAL = 5;
+        H_JUSTIFY = 6;
+        H_LEFT = 7;
+        H_RIGHT = 8;
+    }
+    enum Vertical {
+        V_UNSPECIFIED = 0;
+        V_BOTTOM = 1;
+        V_CENTER = 2;
+        V_DISTRIBUTED = 3;
+        V_JUSTIFY = 4;
+        V_TOP = 5;
+    }
+}
+enum ReadingOrder {
+    R_CONTEXT_DEPENDENT = 0;
+    R_LEFT_TO_RIGHT = 1;
+    R_RIGHT_TO_LEFT = 2;
+}
+
+message Border {
+    BorderPr left = 1;
+    BorderPr right = 2;
+    BorderPr top = 3;
+    BorderPr bottom = 4;
+    BorderPr diagonal = 5;
+    BorderPr vertical = 6;
+    BorderPr horizontal = 7;
+    bool diagonal_up = 8;
+    bool diagonal_down = 9;
+    bool outline = 10;
+}
+
+message BorderPr {
+    string color = 1;
+    BorderType type = 2;
+}
+
+enum BorderType {
+    DASH_DOT = 0;
+    DASH_DOT_DOT = 1;
+    DASHED = 2;
+    DOTTED = 3;
+    DOUBLE = 4;
+    HAIR = 5;
+    MEDIUM = 6;
+    MEDIUM_DASH_DOT = 7;
+    MEDIUM_DASH_DOT_DOT = 8;
+    MEDIUM_DASHED = 9;
+    NONE_BORDER = 10;
+    SLANT_DASH_DOT = 11;
+    THICK = 12;
+    THIN = 13;
+}
+
+enum UnderlineType {
+    DOUBLE_U = 0;
+    DOUBLE_ACCOUNTING = 1;
+    NONE = 2;
+    SINGLE = 3;
+    SINGLE_ACCOUNTING = 4;
+}
+
+message Font {
+    bool bold = 1;
+    bool italic = 2;
+    UnderlineType underline = 3;
+    string color = 4; // Empty means default
+    // Size of the text font, where font-size is a decimal font size in points.
+    double size = 5;
+    string name = 6;
+    bool outline = 7;
+    bool shadow = 8;
+    bool strike = 9;
+    bool condense = 10;
+}
+
+message PatternFill {
+    string fg_color = 1;
+    string bg_color = 2;
+    PatternFillType type = 3;
+}
+
+enum PatternFillType {
+    DARK_DOWN = 0;
+    DARK_GRAY = 1;
+    DARK_GRID = 2;
+    DARK_HORIZONTAL = 3;
+    DARK_TRELLIS = 4;
+    DARK_UP = 5;
+    DARK_VERTICAL = 6;
+    GRAY0625 = 7;
+    GRAY125 = 8;
+    LIGHT_DOWN = 9;
+    LIGHT_GRAY = 10;
+    LIGHT_GRID = 11;
+    LIGHT_HORIZONTAL = 12;
+    LIGHT_TRELLIS = 13;
+    LIGHT_UP = 14;
+    LIGHT_VERTICAL = 15;
+    MEDIUM_GRAY = 16;
+    NONE_PATTERN_FILL = 17;
+    SOLID = 18;
+}
+
+message SetFontBold {
+    bool bold = 1;
+}
+
+message SetFontItalic {
+    bool italic = 1;
+}
+
+message SetFontUnderline {
+    UnderlineType underline = 1;
+}
+
+message SetFontColor {
+    string color = 1;
+}
+
+message SetFontSize {
+    double size = 1;
+}
+
+message SetFontName {
+    string name = 1;
+}
+
+message SetFontOutline {
+    bool outline = 1;
+}
+
+message SetFontShadow {
+    bool shadow = 1;
+}
+
+message SetFontStrike {
+    bool strike = 1;
+}
+
+message SetFontCondense {
+    bool condense = 1;
+}
+
+message SetBorderDiagonalUp {
+    bool diagonal_up = 1;
+}
+
+message SetBorderDiagonalDown {
+    bool diagonal_down = 1;
+}
+
+message SetBorderOutline {
+    bool outline = 1;
+}
+
+message SetBorderPr {
+    BorderLocation location = 1;
+    BorderPr pr = 2;
+}
+
+enum BorderLocation {
+    LEFT = 0;
+    RIGHT = 1;
+    TOP = 2;
+    BOTTOM = 3;
+    DIAGONAL = 4;
+    VERTICAL = 5;
+    HORIZONTAL = 6;
+}
+
+message SetPatternFill {
+    PatternFill pattern_fill = 1;
+}
+
+message StyleUpdatePayload {
+    oneof style_payload_oneof {
+        SetFontBold set_font_bold = 1;
+        SetFontItalic set_font_italic = 2;
+        SetFontUnderline set_font_underline = 3;
+        SetFontColor set_font_color = 4;
+        SetFontSize set_font_size = 5;
+        SetFontName set_font_name = 6;
+        SetFontOutline set_font_outline = 7;
+        SetFontShadow set_font_shadow = 8;
+        SetFontStrike set_font_strike = 9;
+        SetFontCondense set_font_condense = 10;
+        SetBorderDiagonalUp set_border_diagonal_up = 11;
+        SetBorderDiagonalDown set_border_diagonal_down = 12;
+        SetBorderOutline set_border_outline = 13;
+        SetBorderPr set_border_pr = 14;
+        SetPatternFill set_pattern_fill = 15;
+    }
+}
+
+message StyleUpdate {
+    uint32 sheet_idx = 1;
+    uint32 row = 2;
+    uint32 col = 3;
+    StyleUpdatePayload payload = 4;
+}

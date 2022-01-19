@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" mc:Ignorable="x14ac">
+    <dimension ref="A1:AB42"/>
+    <sheetViews>
+        <sheetView showGridLines="0" topLeftCell="A1" workbookViewId="0">
+            <selection activeCell="A1" sqref="A1"/>
+        </sheetView>
+    </sheetViews>
+    <sheetFormatPr defaultColWidth="3.53125" customHeight="1" defaultRowHeight="17.4"/>
+    <cols>
+        <col min="1" max="2" width="0.75390625" customWidth="1"/>
+        <col min="3" max="3" width="27.50390625" customWidth="1"/>
+        <col min="4" max="8" width="10.00390625" customWidth="1"/>
+    </cols>
+    <sheetData>
+        <row ht="20.625" customHeight="1">
+            <c r="C1" s="48" t="s">
+                <v>0</v>
+            </c>
+        </row>
+        <row ht="20.625" customHeight="1">
+            <c r="C2" s="49" t="s">
+                <v>1</v>
+            </c>
+        </row>
+        <row ht="20.625" customHeight="1">
+            <c r="C3" s="50" t="s">
+                <v>2</v>
+            </c>
+        </row>
+        <row r="5" ht="21.375" customHeight="1">
+            <c r="C5" s="51" t="s">
+                <v>3</v>
+            </c>
+            <c s="52" t="s">
+                <v>4</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="D6" s="53" t="s">
+                <v>5</v>
+            </c>
+            <c s="54" t="s">
+                <v>6</v>
+            </c>
+            <c s="54" t="s">
+                <v>7</v>
+            </c>
+            <c s="54" t="s">
+                <v>8</v>
+            </c>
+            <c s="55" t="s">
+                <v>9</v>
+            </c>
+        </row>
+        <row ht="17.4" customHeight="1">
+            <c r="C7" s="56"/>
+            <c s="57"/>
+            <c s="56"/>
+            <c s="56"/>
+            <c s="56"/>
+            <c s="58"/>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C8" s="59" t="s">
+                <v>10</v>
+            </c>
+            <c s="60">
+                <f>D15</f>
+                <v>32</v>
+            </c>
+            <c s="61">
+                <f>E15</f>
+                <v>32</v>
+            </c>
+            <c s="61">
+                <f>F15</f>
+                <v>32</v>
+            </c>
+            <c s="61">
+                <f>G15</f>
+                <v>32</v>
+            </c>
+            <c s="62">
+                <f>H15</f>
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C9" s="63" t="s">
+                <v>11</v>
+            </c>
+            <c s="64">
+                <f>D15</f>
+                <v>32</v>
+            </c>
+            <c s="65">
+                <f>E15</f>
+                <v>32</v>
+            </c>
+            <c s="65">
+                <f>F15</f>
+                <v>32</v>
+            </c>
+            <c s="65">
+                <f>G15</f>
+                <v>32</v>
+            </c>
+            <c s="66">
+                <f>H15</f>
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C10" s="67" t="s">
+                <v>12</v>
+            </c>
+            <c s="68">
+                <f>D15</f>
+                <v>32</v>
+            </c>
+            <c s="69">
+                <f>E15</f>
+                <v>32</v>
+            </c>
+            <c s="69">
+                <f>F15</f>
+                <v>32</v>
+            </c>
+            <c s="69">
+                <f>G15</f>
+                <v>32</v>
+            </c>
+            <c s="70">
+                <f>H15</f>
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C11" s="71" t="s">
+                <v>13</v>
+            </c>
+            <c s="72">
+                <f>D15</f>
+                <v>32</v>
+            </c>
+            <c s="73">
+                <f>E15</f>
+                <v>32</v>
+            </c>
+            <c s="73">
+                <f>F15</f>
+                <v>32</v>
+            </c>
+            <c s="73">
+                <f>G15</f>
+                <v>32</v>
+            </c>
+            <c s="74">
+                <f>H15</f>
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C12" s="75" t="s">
+                <v>14</v>
+            </c>
+            <c s="76">
+                <f>D15</f>
+                <v>32</v>
+            </c>
+            <c s="77">
+                <f>E15</f>
+                <v>32</v>
+            </c>
+            <c s="77">
+                <f>F15</f>
+                <v>32</v>
+            </c>
+            <c s="77">
+                <f>G15</f>
+                <v>32</v>
+            </c>
+            <c s="78">
+                <f>H15</f>
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C13" s="79" t="s">
+                <v>15</v>
+            </c>
+            <c s="76">
+                <f>D15</f>
+                <v>32</v>
+            </c>
+            <c s="77">
+                <f>E15</f>
+                <v>32</v>
+            </c>
+            <c s="77">
+                <f>F15</f>
+                <v>32</v>
+            </c>
+            <c s="77">
+                <f>G15</f>
+                <v>32</v>
+            </c>
+            <c s="78">
+                <f>H15</f>
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C14" s="80" t="s">
+                <v>16</v>
+            </c>
+            <c s="81">
+                <f>D15</f>
+                <v>32</v>
+            </c>
+            <c s="82">
+                <f>E15</f>
+                <v>32</v>
+            </c>
+            <c s="82">
+                <f>F15</f>
+                <v>32</v>
+            </c>
+            <c s="82">
+                <f>G15</f>
+                <v>32</v>
+            </c>
+            <c s="83">
+                <f>H15</f>
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C15" s="71" t="s">
+                <v>17</v>
+            </c>
+            <c s="72">
+                <v>32</v>
+            </c>
+            <c s="73">
+                <v>32</v>
+            </c>
+            <c s="73">
+                <v>32</v>
+            </c>
+            <c s="73">
+                <v>32</v>
+            </c>
+            <c s="74">
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C16" s="71" t="s">
+                <v>18</v>
+            </c>
+            <c s="72">
+                <v>32</v>
+            </c>
+            <c s="73">
+                <v>32</v>
+            </c>
+            <c s="73">
+                <v>32</v>
+            </c>
+            <c s="73">
+                <v>32</v>
+            </c>
+            <c s="74">
+                <v>32</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C17" s="71" t="s">
+                <v>19</v>
+            </c>
+            <c s="72"/>
+            <c s="73"/>
+            <c s="73"/>
+            <c s="73"/>
+            <c s="74"/>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C18" s="71" t="s">
+                <v>20</v>
+            </c>
+            <c s="72"/>
+            <c s="73"/>
+            <c s="73"/>
+            <c s="73"/>
+            <c s="74"/>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C19" s="71" t="s">
+                <v>21</v>
+            </c>
+            <c s="84"/>
+            <c s="73"/>
+            <c s="73"/>
+            <c s="73"/>
+            <c s="74"/>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C20" s="71" t="s">
+                <v>22</v>
+            </c>
+            <c s="85"/>
+            <c s="73"/>
+            <c s="73"/>
+            <c s="73"/>
+            <c s="74"/>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C21" s="71" t="s">
+                <v>23</v>
+            </c>
+            <c s="72">
+                <f>1/2</f>
+                <v>0.5</v>
+            </c>
+            <c s="73">
+                <f>1/2</f>
+                <v>0.5</v>
+            </c>
+            <c s="73">
+                <f>1/2</f>
+                <v>0.5</v>
+            </c>
+            <c s="73">
+                <f>1/2</f>
+                <v>0.5</v>
+            </c>
+            <c s="74">
+                <f>1/2</f>
+                <v>0.5</v>
+            </c>
+        </row>
+        <row ht="21.375" customHeight="1">
+            <c r="C22" s="86" t="s">
+                <v>24</v>
+            </c>
+            <c s="87"/>
+            <c s="88"/>
+            <c s="88"/>
+            <c s="88"/>
+            <c s="89"/>
+        </row>
+    </sheetData>
+    <mergeCells count="5">
+        <mergeCell ref="C1:H1"/>
+        <mergeCell ref="C2:H2"/>
+        <mergeCell ref="C3:H3"/>
+        <mergeCell ref="C5:C6"/>
+        <mergeCell ref="D5:H5"/>
+    </mergeCells>
+</worksheet>

@@ -1,0 +1,46 @@
+# This file is derived from /etc/gitconfig, which is provisioned from:
+#       it/roles/svc/git/client/files/gitconfig
+# The main differences are:
+#        -  `git diff` defaults to ignoring submodules for speed.
+#        -  `git display` is `git status` without ignoring submodules.
+#
+
+[alias]
+    # Similar to `git status`, except that it includes submodules.
+    display = status --ignore-submodules=none
+    # Add all tracked files.  If successful, commit the staged files.  With
+    # documentation on how to write git commit messages.
+    land = !git add -u :/ && git commit --template=.gitcommitmsg
+    # Completely clean up the repository.
+    purge = !git clean -dfx && git checkout -- . && git submodule foreach --recursive git clean -dfx && git submodule foreach --recursive git checkout -- .
+    # Similar to `git checkout`, except that it would update and init the
+    # submodules after check out.
+    switch = "!f(){ git checkout $@ && git submodule update --init; };f"
+    # Remove dead branches, both locally and from remotes.
+    tidy = "!git remote prune origin; git branch -v | grep 'gone' | awk '{ print $1 }' | xargs git branch -D | true"
+    # Nicely output the git history for overviews.
+    tree = log --graph --oneline --decorate
+[commit]
+    edit = true
+    # Preserve git commit message.
+    file = .git/COMMIT_EDITMSG
+    # Always sign commits.
+    gpgSign = true
+[core]
+    excludesfile = ~/.gitignore
+    mergeoptions = --no-edit
+[diff]
+    # Ignore submodules when using `git diff` to speed up the execution of
+    # `pre-commit` hooks.
+    ignoreSubmodules = all
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    process = git-lfs filter-process
+    required = true
+    smudge = git-lfs smudge -- %f
+[rebase]
+    autostash = true
+[pull]
+    rebase = true
+[push]
+    default = simple

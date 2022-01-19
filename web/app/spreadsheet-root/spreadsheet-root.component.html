@@ -1,0 +1,16 @@
+<div class="debug-toolbar" cdkDrag>
+    <logi-debug *ngIf='debug'></logi-debug>
+</div>
+<ng-container *ngIf='!opening;else waiting'>
+    <ng-container *ngIf='openSuccess;else error'>
+        <logi-top-bar class="top-bar" *ngIf="settings.showTopBar" [selectedCell]='selectedCell'></logi-top-bar>
+        <logi-content class="content" (selectedCell$)='selectedCell = $event'></logi-content>
+        <logi-bottom-bar class="bottom-bar" *ngIf="settings.showBottomBar"></logi-bottom-bar>
+    </ng-container>
+</ng-container>
+<ng-template #waiting>
+    <div>waiting...</div>
+</ng-template>
+<ng-template #error>
+    <div>websocket connect error</div>
+</ng-template>

@@ -1,0 +1,6 @@
+<div class="font-color" [style.color]='getStartItem(startItemTypeEnum.FONT_COLOR).value'
+    [colorPicker]='getStartItem(startItemTypeEnum.FONT_COLOR).value'
+    (colorPickerChange)='setStyle(startItemTypeEnum.FONT_COLOR, $event)' [cpPosition]='"bottom"'
+    [cpPositionOffset]='"50%"' [cpToggle]='getStartItem(startItemTypeEnum.FONT_COLOR).opened'
+    (click)='open(startItemTypeEnum.FONT_COLOR)'>set font color1
+</div>

@@ -1,0 +1,19 @@
+[package]
+authors = ["Jiangming He"]
+edition = "2018"
+name = "xlrs_workbook"
+version = "0.1.0"
+
+[dependencies]
+chrono = {version = "0.4.19", features = ["serde"]}
+convert_case = "0.4.0"
+linked-hash-map = {version = "0.5.3", features = ["serde_impl"]}
+macros = {path = "./macros"}
+paste = "1.0.5"
+quick-xml = {version = "0.22.0", features = ["serialize"]}
+regex = "1"
+serde = {version = "1.0.125", features = ["derive"]}
+serde_json = "1.0.59"
+serde_repr = "0.1"
+thiserror = "1.0.24"
+zip = {version = "0.5.0", default-features = false, features = ["deflate"]}

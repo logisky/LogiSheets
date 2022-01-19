@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<comments xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="xr" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision">
+	<authors>
+		<author>作者</author>
+	</authors>
+	<commentList>
+		<comment ref="D2" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000001000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>TRADING CURRENCY</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="D3" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000002000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>FINANCIAL REPORTING CURRENCY</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="P33" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000003000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t xml:space="preserve">機構投資人持有股份百分比</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="P34" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000004000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>公司內部人持有百分比</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="P35" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000005000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>非機構(即散戶)持有百分比</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="P36" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000006000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>公司管理階層之外人士所持有的百分比</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="P38" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000007000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>空這支股票的UNITS</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="P39" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000008000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>空這支股票的數量佔所有OUTSTANDING的股票的百分比</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="R50" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-000009000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>持有股票數量</t>
+				</r>
+			</text>
+		</comment>
+		<comment ref="M85" authorId="0" shapeId="0" xr:uid="{00000000-0006-0000-0000-00000A000000}">
+			<text>
+				<r>
+					<rPr>
+						<b/>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>作者:</t>
+				</r>
+				<r>
+					<rPr>
+						<sz val="9"/>
+						<color indexed="81"/>
+						<rFont val="宋体"/>
+						<family val="3"/>
+						<charset val="134"/>
+					</rPr>
+					<t>涉及到RAW里的数据，无数据</t>
+				</r>
+			</text>
+		</comment>
+	</commentList>
+</comments>

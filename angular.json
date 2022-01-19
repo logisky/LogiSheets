@@ -1,0 +1,125 @@
+{
+    "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+    "defaultProject": "app",
+    "newProjectRoot": "projects",
+    "projects": {
+        "app": {
+            "architect": {
+                "build": {
+                    "builder": "@angular-devkit/build-angular:browser",
+                    "configurations": {
+                        "development": {
+                            "buildOptimizer": false,
+                            "extractLicenses": false,
+                            "namedChunks": true,
+                            "optimization": false,
+                            "sourceMap": true,
+                            "vendorChunk": true
+                        },
+                        "production": {
+                            "budgets": [
+                                {
+                                    "maximumError": "5mb",
+                                    "maximumWarning": "2mb",
+                                    "type": "initial"
+                                },
+                                {
+                                    "maximumError": "10kb",
+                                    "maximumWarning": "6kb",
+                                    "type": "anyComponentStyle"
+                                }
+                            ],
+                            "buildOptimizer": true,
+                            "extractLicenses": true,
+                            "fileReplacements": [
+                                {
+                                    "replace": "web/app/environments/environment.ts",
+                                    "with": "web/app/environments/environment.prod.ts"
+                                }
+                            ],
+                            "namedChunks": false,
+                            "outputHashing": "all",
+                            "sourceMap": true,
+                            "vendorChunk": false
+                        }
+                    },
+                    "options": {
+                        "aot": true,
+                        "assets": [
+                            "web/assets/*"
+                        ],
+                        "index": "web/app/index.html",
+                        "inlineStyleLanguage": "scss",
+                        "main": "web/app/main.ts",
+                        "outputPath": "dist/app",
+                        "polyfills": "web/app/polyfills.ts",
+                        "preserveSymlinks": true,
+                        "scripts": [],
+                        "stylePreprocessorOptions": {
+                            "includePaths": [
+                                "./build/bin"
+                            ]
+                        },
+                        "styles": [
+                            {
+                                "bundleName": "aris-theme",
+                                "inject": true,
+                                "input": "build/external/logi_base/src/web/ui/core/theming/prebuilt/aris-theme.scss"
+                            },
+                            {
+                                "bundleName": "deeppurple-amber",
+                                "inject": true,
+                                "input": "node_modules/@angular/material/prebuilt-themes/deeppurple-amber.css"
+                            },
+                            {
+                                "bundleName": "bahnschrift",
+                                "inject": true,
+                                "input": "build/external/com_logiocean_design_fontdb/bahnschrift/font.scss"
+                            },
+                            {
+                                "bundleName": "roboto",
+                                "inject": true,
+                                "input": "build/external/com_logiocean_design_fontdb/roboto/font.scss"
+                            }
+                        ],
+                        "tsConfig": "web/tsconfig.json"
+                    }
+                },
+                "extract-i18n": {
+                    "builder": "@angular-devkit/build-angular:extract-i18n",
+                    "options": {
+                        "browserTarget": "app:build"
+                    }
+                },
+                "serve": {
+                    "builder": "@angular-devkit/build-angular:dev-server",
+                    "configurations": {
+                        "development": {
+                            "browserTarget": "app:build:development"
+                        },
+                        "production": {
+                            "browserTarget": "app:build:production"
+                        }
+                    },
+                    "options": {
+                        "browserTarget": "app:build:development"
+                    }
+                }
+            },
+            "prefix": "logi",
+            "projectType": "application",
+            "root": "web",
+            "sourceRoot": "web"
+        }
+    },
+    "schematics": {
+        "@schematics/angular:component": {
+            "changeDetection": "OnPush",
+            "displayBlock": true,
+            "prefix": "logi",
+            "skipTests": true,
+            "style": "scss"
+        }
+    },
+    "version": 1
+}

@@ -1,0 +1,54 @@
+# Subject Line: A one-line summary of WHAT this commit does.
+
+# Longer Description: Potentially multi-line textual information that you
+#   believe other developers should know about this commit while looking at `git
+#   log`.
+
+
+# A commit message consists of two parts, the subject line and the body.
+#
+# The subject line is the first non-commented line of a git commit message.  The
+# body is all other non-commented lines.
+#
+# The subject line comprises of the following:
+#       <type>(<scope>): <one-line-summary>
+#
+# The <type> of a git commit is one of the following enums that categorizes WHAT
+# this commit does:
+#       build: Changes that affect the build system or external dependencies
+#           (example scopes: gulp, broccoli, npm).
+#       chore: Repeatability tasks.
+#       ci: Changes to CI configuration files and scripts (example scopes:
+#           Travis, Circle, BrowserStack, SauceLabs).
+#       docs: Documentation only changes.
+#       feat: A new feature.
+#       fix: A bug fix.
+#       perf: A code change that improves performance.
+#       refactor: A code change that neither fixes a bug nor adds a feature.
+#       revert: Revert to previous version.
+#       style: Changes that do not affect the meaning of the code (white-space,
+#           formatting, missing semi-colons, etc).
+#       test: Adding missing tests or correcting existing tests.
+#
+# The <scope> of a git commit is an optional field in kebab-case that narrows
+# the scope of the work performed by this commit.
+#
+# The <one-line-summary> starts with lower case, uses present tense, and does
+# not end with a punctuation such as period.  This is deliberately chosen to
+# maximize the information density within the first line.
+#
+# The subject line MUST NOT exceed 72 characters total.  This is a hard limit.
+# If you find it difficult to summrize what the commit does within 72
+# characters, chances are (almost always), this commit did too many things that
+# should have been split into separate commits.  Please split the commit into
+# multiple commits whose utilities can be concisely summarized.
+#
+# The body of a git commit message is wrapped at 72 characters too.  This is
+# chosen to play nicely with several command line utilities including git-log.
+# There are, however, a few exceptions to this rule.  For example, when pasting
+# long URLs.  But these exceptions should be used carefully and sparingly.
+#
+# The rules described above are enforced by commitlint, which is configurable
+# with the .commitlint.config.js file (generated from .commitlint.config.ts).
+# The VIM editor assists with the editing of git commit messages that conform to
+# the 72-character line width rules.

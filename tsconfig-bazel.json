@@ -1,0 +1,32 @@
+{
+    "angularCompilerOptions": {
+        "disableTypeScriptVersionCheck": true,
+        "strictTemplates": true
+    },
+    "compilerOptions": {
+        "allowSyntheticDefaultImports": false,
+        "allowUnreachableCode": false,
+        "allowUnusedLabels": false,
+        "alwaysStrict": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "forceConsistentCasingInFileNames": true,
+        "lib": [
+            "dom",
+            "es2016",
+            "ES2018",
+            "webworker"
+        ],
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "pretty": true,
+        "sourceMap": true,
+        "strict": true,
+        "strictNullChecks": true,
+        "types": []
+    }
+}

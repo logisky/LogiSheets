@@ -1,0 +1,12 @@
+# Cargo related files.
+/target
+Cargo.lock
+
+# NodeJs related files.
+node_modules
+yarn-error.log
+yarn.lock
+
+# Excel backup file of libre office
+*.xls#
+*.xlsx#

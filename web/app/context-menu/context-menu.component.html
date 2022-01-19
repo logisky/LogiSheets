@@ -1,0 +1,10 @@
+<div class="item" *ngFor='let item of items'>
+    <ng-container [ngSwitch]='item.type'>
+        <ng-container *ngSwitchCase='"text"'>
+            <div class="text" (click)='clickItem(item)'>{{item.text}}</div>
+        </ng-container>
+        <ng-container *ngSwitchCase='"divider"'>
+            <div class="divider"></div>
+        </ng-container>
+    </ng-container>
+</div>

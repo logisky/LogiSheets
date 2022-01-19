@@ -1,0 +1,14 @@
+:host {
+    display: block;
+    border: 1px solid black;
+}
+.main-menu {
+    border-bottom: 1px solid rgba(0, 0, 0, 1);
+    height: 53px;
+}
+.content {
+    height: calc(100% - 54px);
+}
+.content-detail {
+    height: 100%;
+}

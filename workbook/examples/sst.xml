@@ -1,0 +1,4881 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1984" uniqueCount="1350">
+	<si>
+		<t>Ticker</t>
+	</si>
+	<si>
+		<t>Price</t>
+	</si>
+	<si>
+		<t>Update Date</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Bull</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Base</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Bear</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Price (Local)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>PE</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>PB</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>EV/EBITDA</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Valuation-Street</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>52 Wk H/L (Local)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Millions</t>
+	</si>
+	<si>
+		<t>Latest Dividend</t>
+	</si>
+	<si>
+		<t>Dividend Yield</t>
+	</si>
+	<si>
+		<t>Dividend Payout</t>
+	</si>
+	<si>
+		<t>Revenue</t>
+	</si>
+	<si>
+		<t>Gross Income</t>
+	</si>
+	<si>
+		<t>Date</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>%</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Price</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>%</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Ownership Statistics</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net Income</t>
+	</si>
+	<si>
+		<t>Institutional Holders</t>
+	</si>
+	<si>
+		<t>Insider/"Stake" Holders</t>
+	</si>
+	<si>
+		<t>Implied Retail Float</t>
+	</si>
+	<si>
+		<t>Float (Institutional+Retail)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Short Interest % of Shares O/S</t>
+	</si>
+	<si>
+		<t>Revenue</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mean</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Management</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Title</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>High</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Low</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Surprise%</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Insider Shareholder</t>
+	</si>
+	<si>
+		<t>EBIT</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Other Key Matrix</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>DSO</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>DIO</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Capex</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cash Balance</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Debt Due</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Financing Need</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>ROE</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net Margin</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Asset Turn</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Leverage</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q1</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q2</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q3</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q4</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cash Flow Statement</t>
+	</si>
+	<si>
+		<t>Operating Activities</t>
+	</si>
+	<si>
+		<t>CF_NET_INC</t>
+	</si>
+	<si>
+		<t>Net Income before Extraordinaries</t>
+	</si>
+	<si>
+		<t>CF_DEPR_AMORT</t>
+	</si>
+	<si>
+		<t>ARDR_DEPRECIATION_EXP</t>
+	</si>
+	<si>
+		<t>Depreciation</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>ARDR AMORT EXP</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Amortization</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>ARD_DEFERRED_INCOME_TAXES_CF</t>
+	</si>
+	<si>
+		<t>Deferred Taxes</t>
+	</si>
+	<si>
+		<t>CF_OTHER_NON_CASH_ADJUST</t>
+	</si>
+	<si>
+		<t>Non-Cash Items</t>
+	</si>
+	<si>
+		<t>CF_CHNG_NON_CASH_WORK_CAP</t>
+	</si>
+	<si>
+		<t>Changes in Working Capital</t>
+	</si>
+	<si>
+		<t>CF_CASH_FROM_OPER</t>
+	</si>
+	<si>
+		<t>Net Operating Cash Flow</t>
+	</si>
+	<si>
+		<t>Investing Activites</t>
+	</si>
+	<si>
+		<t>CF_CAP_EXPEND_PRPTY_ADD</t>
+	</si>
+	<si>
+		<t>Capital Expenditures</t>
+	</si>
+	<si>
+		<t>Acquisition of Intangible Assets</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>ARD_ACQUISITION_OF_BUSINESS</t>
+	</si>
+	<si>
+		<t>Acquisition/Sale of Business</t>
+	</si>
+	<si>
+		<t>CF_DISP_FIX_ASSET</t>
+	</si>
+	<si>
+		<t>Sale of Fixed Assets</t>
+	</si>
+	<si>
+		<t>CF_INCR_INVEST</t>
+	</si>
+	<si>
+		<t>Purchase/Sale of Investments</t>
+	</si>
+	<si>
+		<t>CF_OTHER_INV_ACT</t>
+	</si>
+	<si>
+		<t>Other Investing Activities</t>
+	</si>
+	<si>
+		<t>CF_CASH_FROM_INV_ACT</t>
+	</si>
+	<si>
+		<t>Net Investing Cash Flow</t>
+	</si>
+	<si>
+		<t>Financing Activities</t>
+	</si>
+	<si>
+		<t>CF_DVD_PAID</t>
+	</si>
+	<si>
+		<t>Cash Dividends Paid</t>
+	</si>
+	<si>
+		<t>NET_CAP_STOCK</t>
+	</si>
+	<si>
+		<t>Sale/Repurchase of Stock, Net</t>
+	</si>
+	<si>
+		<t>CF_INCR_ST_BORROW</t>
+	</si>
+	<si>
+		<t>Issuance/Reduction of Debt, Net</t>
+	</si>
+	<si>
+		<t>CF_OTHER_FNC_ACT</t>
+	</si>
+	<si>
+		<t>Other Financing Activities, Net</t>
+	</si>
+	<si>
+		<t>ARD_EFF_OF_EXCH_RATES_ON_CASH</t>
+	</si>
+	<si>
+		<t>Foreign Exchange Effects</t>
+	</si>
+	<si>
+		<t>CF_CASH_FROM_FNC_ACT</t>
+	</si>
+	<si>
+		<t>Net Financing Cash Flow</t>
+	</si>
+	<si>
+		<t>CF_NET_CHNG_CASH</t>
+	</si>
+	<si>
+		<t>Net Change in Cash</t>
+	</si>
+	<si>
+		<t>ARD_CASH_CASH_EQUIV_BEG_OF_PER</t>
+	</si>
+	<si>
+		<t>Cash - Beginning Balance</t>
+	</si>
+	<si>
+		<t>ARD_CASH_CASH_EQUIV_END_OF_PER</t>
+	</si>
+	<si>
+		<t>Cash - Ending Balance</t>
+	</si>
+	<si>
+		<t>Depreciation Schedule</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Capex</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Capex as % of Revenue</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Acquisition of Intangible </t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Acquisition of Intangible as % of Revenue</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Depreciation from existing PP&amp;E</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Implied % of total gross pp&amp;e</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Amortization from existing Intangible </t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Implied % of total net intangible</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>If Amortization exceed Acquisition of Intangible?</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>1FY</t>
+	</si>
+	<si>
+		<t>2FY</t>
+	</si>
+	<si>
+		<t>3FY</t>
+	</si>
+	<si>
+		<t>Income Statement</t>
+	</si>
+	<si>
+		<t>LATEST_PERIOD_END_CSR</t>
+	</si>
+	<si>
+		<t>SALES_REV_TURN</t>
+	</si>
+	<si>
+		<t>Sales/Revenue</t>
+	</si>
+	<si>
+		<t>IS_COGS_TO_FE_AND_PP_AND_G</t>
+	</si>
+	<si>
+		<t>Cost of Goods Sold</t>
+	</si>
+	<si>
+		<t>GROSS_PROFIT</t>
+	</si>
+	<si>
+		<t>ARD_OTHER_OPERATING_EXPENSES</t>
+	</si>
+	<si>
+		<t>IS_OPERATING_EXPN</t>
+	</si>
+	<si>
+		<t>SG&amp;A Expense</t>
+	</si>
+	<si>
+		<t>IS_selling_EXPENSES</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Marketing / Advertising Expense</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>is_general_and_administrative</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>General &amp; Administrative</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>is_opex_r&amp;d</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Research &amp; Development</t>
+	</si>
+	<si>
+		<t>Other Operating Expenses - bbg</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>EBIT</t>
+	</si>
+	<si>
+		<t>IS_net_interest_EXPENSE</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net Interest Expense (Income)</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>IS_FOREIGN_EXCH_LOSS</t>
+	</si>
+	<si>
+		<t>Foreign Exchange Losses (Income)</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>income_loss_from_affiliates</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Loss (Income) from Affiliates</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>IS_NET_NON_OPER_LOSS</t>
+	</si>
+	<si>
+		<t>Net Non-Operating Losses (Income)</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>PRETAX_INC</t>
+	</si>
+	<si>
+		<t>Pretax Income</t>
+	</si>
+	<si>
+		<t>% Tax rate</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>IS_INC_TAX_EXP</t>
+	</si>
+	<si>
+		<t>Income Taxes</t>
+	</si>
+	<si>
+		<t>MIN_NONCONTROL_INTEREST_CREDITS</t>
+	</si>
+	<si>
+		<t>Minority Interest</t>
+	</si>
+	<si>
+		<t>ARD_EQY_EARN_LOSS_FROM_AFFILIATE</t>
+	</si>
+	<si>
+		<t>Equity In Affiliates</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Others </t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>NET_INCOME</t>
+	</si>
+	<si>
+		<t>IS_AVG_NUM_SH_FOR_EPS</t>
+	</si>
+	<si>
+		<t>Basic Shares Outstanding (Average)</t>
+	</si>
+	<si>
+		<t>IS_SH_FOR_DILUTED_EPS</t>
+	</si>
+	<si>
+		<t>Diluted Shares Outstanding (Average)</t>
+	</si>
+	<si>
+		<t>EQY_DPS</t>
+	</si>
+	<si>
+		<t>Dividend per share</t>
+	</si>
+	<si>
+		<t>IS_EPS</t>
+	</si>
+	<si>
+		<t>IS_DILUTED_EPS</t>
+	</si>
+	<si>
+		<t>Financial Analysis</t>
+	</si>
+	<si>
+		<t>Ratios</t>
+	</si>
+	<si>
+		<t>GROSS_MARGIN</t>
+	</si>
+	<si>
+		<t>GPM</t>
+	</si>
+	<si>
+		<t>OPER_MARGIN</t>
+	</si>
+	<si>
+		<t>OPM</t>
+	</si>
+	<si>
+		<t>PRETAX_MARGIN</t>
+	</si>
+	<si>
+		<t>Pretax Margin</t>
+	</si>
+	<si>
+		<t>PROF_MARGIN</t>
+	</si>
+	<si>
+		<t>NPM</t>
+	</si>
+	<si>
+		<t>Margin Analysis</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cost of Revenue</t>
+	</si>
+	<si>
+		<t>Selling, General &amp; Admin Exp</t>
+	</si>
+	<si>
+		<t>Marketing / Advertising Expense</t>
+	</si>
+	<si>
+		<t>General &amp; Administrative</t>
+	</si>
+	<si>
+		<t>Other Operating Expenses - bbg</t>
+	</si>
+	<si>
+		<t>EBIT (Operating Income)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Interest Expense</t>
+	</si>
+	<si>
+		<t>Foreign Exchange Losses</t>
+	</si>
+	<si>
+		<t>Income (loss) from Affiliates</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net Non-Operating Income/Losses</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Pretax Income</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Income Taxes</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Others </t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Sequential Growth%</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>EBIT (Operating Income)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>-</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Income (loss) from Affiliates</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>-</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve"> </t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Pretax Income</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Basic EPS</t>
+	</si>
+	<si>
+		<t>Diluted EPS</t>
+	</si>
+	<si>
+		<t>Annual Growth%</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>EBIT (Operating Income)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Income (loss) from Affiliates</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net Non-Operating Income/Losses</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Pretax Income</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Others </t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Balance Sheet</t>
+	</si>
+	<si>
+		<t>BS_CASH_NEAR_CASH_ITEM</t>
+	</si>
+	<si>
+		<t>Assets</t>
+	</si>
+	<si>
+		<t>BS_CUR_ASSET_REPORT</t>
+	</si>
+	<si>
+		<t>Cash &amp; Short Term Investments</t>
+	</si>
+	<si>
+		<t>Total Accounts Receivable</t>
+	</si>
+	<si>
+		<t>BS_GROSS_FIX_ASSET</t>
+	</si>
+	<si>
+		<t>Inventories</t>
+	</si>
+	<si>
+		<t>BS_ACCUM_DEPR</t>
+	</si>
+	<si>
+		<t>Other Current Assets</t>
+	</si>
+	<si>
+		<t>BS_NET_FIX_ASSET</t>
+	</si>
+	<si>
+		<t>Total Current Assets</t>
+	</si>
+	<si>
+		<t>BS_GOODWILL</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Check </t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>ARD_OTHER_INTANGIBLE_ASSET</t>
+	</si>
+	<si>
+		<t>Property, Plant &amp; Equipment - Gross</t>
+	</si>
+	<si>
+		<t>BS_LT_INVEST</t>
+	</si>
+	<si>
+		<t>Accumulated Depreciation</t>
+	</si>
+	<si>
+		<t>BS_OTHER_ASSETS_DEF_CHRG_OTHER</t>
+	</si>
+	<si>
+		<t>Property, Plant &amp; Equipment - Net</t>
+	</si>
+	<si>
+		<t>BS_TOT_ASSET</t>
+	</si>
+	<si>
+		<t>Net Goodwill</t>
+	</si>
+	<si>
+		<t>Net Intangibles</t>
+	</si>
+	<si>
+		<t>Long Term Investments</t>
+	</si>
+	<si>
+		<t>BS_ST_BORROW</t>
+	</si>
+	<si>
+		<t>Other Assets</t>
+	</si>
+	<si>
+		<t>BS_ACCT_PAYABLE</t>
+	</si>
+	<si>
+		<t>Total Assets</t>
+	</si>
+	<si>
+		<t>ARD_INCOME_TAX_ACCRUED_PAYABLE</t>
+	</si>
+	<si>
+		<t>ST_Deferred_Revenue</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Liabilities &amp; Shareholder's Equity</t>
+	</si>
+	<si>
+		<t>BS_OTHER_ST_LIAB</t>
+	</si>
+	<si>
+		<t>Total Short Term Debt</t>
+	</si>
+	<si>
+		<t>BS_CUR_LIAB</t>
+	</si>
+	<si>
+		<t>Accounts Payable</t>
+	</si>
+	<si>
+		<t>Income Tax Payable</t>
+	</si>
+	<si>
+		<t>BS_LT_BORROW</t>
+	</si>
+	<si>
+		<t>ST Deferred Revenue</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>ARD_DEFERRED_INCOME_TAXES_LIAB</t>
+	</si>
+	<si>
+		<t>Other Current Liabilities</t>
+	</si>
+	<si>
+		<t>BS_OTHER_LT_LIABILITIES</t>
+	</si>
+	<si>
+		<t>Total Current Liabilities</t>
+	</si>
+	<si>
+		<t>BS_TOT_LIAB2</t>
+	</si>
+	<si>
+		<t>Total Long Term Debt</t>
+	</si>
+	<si>
+		<t>BS_PFD_EQY</t>
+	</si>
+	<si>
+		<t>Deferred Income Tax</t>
+	</si>
+	<si>
+		<t>BS_SH_CAP_AND_APIC</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Other Liabilities</t>
+	</si>
+	<si>
+		<t>BS_PURE_Retained_Earnings</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total Liabilities</t>
+	</si>
+	<si>
+		<t>TOT_COMMON_EQY</t>
+	</si>
+	<si>
+		<t>Preferred Stock</t>
+	</si>
+	<si>
+		<t>MINORITY_NONCONTROLLING_INTEREST</t>
+	</si>
+	<si>
+		<t>Share Capital &amp; APIC</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>TOTAL_EQUITY</t>
+	</si>
+	<si>
+		<t>Retained Earning</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>a</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Others</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total Shareholders' Equity</t>
+	</si>
+	<si>
+		<t>BOOK_VAL_PER_SH</t>
+	</si>
+	<si>
+		<t>Accumulated Minority Interest</t>
+	</si>
+	<si>
+		<t>CASH_FLOW_PER_SH</t>
+	</si>
+	<si>
+		<t>Total Equity</t>
+	</si>
+	<si>
+		<t>Total Liabilities &amp; Shareholders' Equity</t>
+	</si>
+	<si>
+		<t>Book Value Per Share</t>
+	</si>
+	<si>
+		<t>NET_DEBT_TO_SHRHLDR_EQTY</t>
+	</si>
+	<si>
+		<t>CFPS</t>
+	</si>
+	<si>
+		<t>FNCL_LVRG</t>
+	</si>
+	<si>
+		<t>CUR_RATIO</t>
+	</si>
+	<si>
+		<t>INTEREST_COVERAGE_RATIO</t>
+	</si>
+	<si>
+		<t>Capitalization</t>
+	</si>
+	<si>
+		<t>Net Debt / Equity</t>
+	</si>
+	<si>
+		<t>Asset / Equity</t>
+	</si>
+	<si>
+		<t>Current Ratio</t>
+	</si>
+	<si>
+		<t>Interest Coverage</t>
+	</si>
+	<si>
+		<t>Ratio Analysis</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Liquidity</t>
+	</si>
+	<si>
+		<t>Working Capital</t>
+	</si>
+	<si>
+		<t>Quick Ratio</t>
+	</si>
+	<si>
+		<t>Cash Ratio</t>
+	</si>
+	<si>
+		<t>Turnover</t>
+	</si>
+	<si>
+		<t>Recievable Turnover</t>
+	</si>
+	<si>
+		<t>Inventory Turnover</t>
+	</si>
+	<si>
+		<t>Payable Turnover</t>
+	</si>
+	<si>
+		<t>Turnover Days</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Receivable Days</t>
+	</si>
+	<si>
+		<t>Inventory Days</t>
+	</si>
+	<si>
+		<t>Operating Cycle</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Payable Days</t>
+	</si>
+	<si>
+		<t>Cash Cycle</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Profitability</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Return on Assets</t>
+	</si>
+	<si>
+		<t>Return on Equity</t>
+	</si>
+	<si>
+		<t>Dupont System</t>
+	</si>
+	<si>
+		<t>Profit Margin</t>
+	</si>
+	<si>
+		<t>Asset Turnover</t>
+	</si>
+	<si>
+		<t>Financial Leverage</t>
+	</si>
+	<si>
+		<t>ROE</t>
+	</si>
+	<si>
+		<t>Forward ROE</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Solvency</t>
+	</si>
+	<si>
+		<t>Debt Ratio</t>
+	</si>
+	<si>
+		<t>Equity Ratio</t>
+	</si>
+	<si>
+		<t>Gearing Ratio</t>
+	</si>
+	<si>
+		<t>Interest Bearing Liability</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Short Term Debt</t>
+	</si>
+	<si>
+		<t>Long Term Debt</t>
+	</si>
+	<si>
+		<t>Interest Expense</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Implied Interest Rate</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Minimum Working Capital Required</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>CASH AVAILABLE</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>REQUIRED TO BORROW</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cash &amp; ST Investment</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Interest Income</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Implied Interest Rate Earned</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Circuit Breaker</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>No</t>
+	</si>
+	<si>
+		<t>Scenario</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>TP</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Ordinary Shares / DR</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Base</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Market Info</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Valuation-CA</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Bull</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>PB</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Shares O/S (mn)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>PS</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mkt Cap (Local)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>PE</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Average Daily Volume (k)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Bull</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Bear</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Financial Highlight</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Dividend Info</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Major Holders</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>IPO Info</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Lead</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Lockup</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>mn</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>PBR(x)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Short Interest Shares (mn)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>High</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Surprise%</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>EBITDA</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mean</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Holding</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mean</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Clean BPS</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q4</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q3</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q4</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>PER(x)</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>When linking your standard model to raw data, please make sure you open both files at the same time</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Notes</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>When this happens, please go to the corresponding cells and override them with hard-coded number</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>There are two place where it is easily showing N/A</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>D&amp;A</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Interest Expense</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Where the problems could be</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>If it is a company with fiscal year end date in non-December, it is advised to check if our formula calcualtes numbers in the right period and if there is a blank column.</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>If not, please copy the formula from any of the future periods and paste it to the period where blank column exists</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Upside%</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Model update time</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Finished by</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Checked by </t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>YoY</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Depreciation &amp; Amortization</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>Depreciation &amp; Amortization</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Average Daily Value (USD mn)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>%</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>Before using the model</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>a</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>b</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<r>
+			<t xml:space="preserve">In Raw data PnL tab, </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t>Make sure Cell "AB 5" is in the correct reporting date</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> by adding and deducting the year/month figure in the function</t>
+		</r>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Using the raw data model to update earnings</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<r>
+			<t xml:space="preserve">When downloading the official financial data, please use </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t>RAW DATA STANDARD</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> file and follow the steps below</t>
+		</r>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<r>
+			<t xml:space="preserve">Copy the </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve">Bloomberg formula </t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t>in last reporting period (e.g. 4Q 17)</t>
+		</r>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Paste the formula over the next period (e.g. 1Q18)</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>If cells don't respond, please click the Bloomberg tag on the toolbar above and hit refresh</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Color meaning</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>When comparing numbers with those on Financial Reports, please be noted that all data come from Bloomberg, and it classified or grouped a few line items together. (e.g. Other liability under non-current liability)</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<r>
+			<t xml:space="preserve">Cells with </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t>light yellow-coded</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> is the </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t>input area</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve">, where user should manually input the figure; </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t>Orange-coded cells</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> are where user is advised to </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t>pay extra attention</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> and refer to financial report for further guidance</t>
+		</r>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>NET DEBT</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>EV COMPONENT</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>BPS</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>CONSENSUS</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>CONSENSUS - SALES</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>CONSENSUS - EBIT</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>CONSENSUS - NET INCOME</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>CONSENSUS - EPS</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>VARIANCE (%)</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>Interest EXPENSE</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>INTEREST INCOME</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>FCF ANALYSIS</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>NET OPERATING CASH FLOW</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>SUBSTRACT: CAPEX</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>FREE CASH FLOW</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>VARIANCE (%)</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>EPS (Diluted) - NON GAAP</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>CONSENSUS - EPS</t>
+	</si>
+	<si>
+		<t>VARIANCE (%)</t>
+	</si>
+	<si>
+		<t>Yan</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY14</t>
+	</si>
+	<si>
+		<t>FY15</t>
+	</si>
+	<si>
+		<t>FY16</t>
+	</si>
+	<si>
+		<t>FY17</t>
+	</si>
+	<si>
+		<t>FY18</t>
+	</si>
+	<si>
+		<t>FY19</t>
+	</si>
+	<si>
+		<t>FY20</t>
+	</si>
+	<si>
+		<t>FY21</t>
+	</si>
+	<si>
+		<t>FY22</t>
+	</si>
+	<si>
+		<t>RMB in mns</t>
+	</si>
+	<si>
+		<t>1Q14</t>
+	</si>
+	<si>
+		<t>2Q14</t>
+	</si>
+	<si>
+		<t>3Q14</t>
+	</si>
+	<si>
+		<t>4Q14</t>
+	</si>
+	<si>
+		<t>1Q15</t>
+	</si>
+	<si>
+		<t>2Q15</t>
+	</si>
+	<si>
+		<t>3Q15</t>
+	</si>
+	<si>
+		<t>4Q15</t>
+	</si>
+	<si>
+		<t>1Q16</t>
+	</si>
+	<si>
+		<t>2Q16</t>
+	</si>
+	<si>
+		<t>3Q16</t>
+	</si>
+	<si>
+		<t>4Q16</t>
+	</si>
+	<si>
+		<t>1Q17</t>
+	</si>
+	<si>
+		<t>2Q17</t>
+	</si>
+	<si>
+		<t>3Q17</t>
+	</si>
+	<si>
+		<t>4Q17</t>
+	</si>
+	<si>
+		<t>1Q18</t>
+	</si>
+	<si>
+		<t>2Q18</t>
+	</si>
+	<si>
+		<t>3Q18</t>
+	</si>
+	<si>
+		<t>4Q18</t>
+	</si>
+	<si>
+		<t>1Q19</t>
+	</si>
+	<si>
+		<t>2Q19</t>
+	</si>
+	<si>
+		<t>3Q19</t>
+	</si>
+	<si>
+		<t>4Q19</t>
+	</si>
+	<si>
+		<t>1Q20</t>
+	</si>
+	<si>
+		<t>2Q20</t>
+	</si>
+	<si>
+		<t>3Q20</t>
+	</si>
+	<si>
+		<t>4Q20</t>
+	</si>
+	<si>
+		<t>1Q21</t>
+	</si>
+	<si>
+		<t>2Q21</t>
+	</si>
+	<si>
+		<t>3Q21</t>
+	</si>
+	<si>
+		<t>4Q21</t>
+	</si>
+	<si>
+		<t>1Q22</t>
+	</si>
+	<si>
+		<t>2Q22</t>
+	</si>
+	<si>
+		<t>3Q22</t>
+	</si>
+	<si>
+		<t>4Q22</t>
+	</si>
+	<si>
+		<t>given Y/N</t>
+	</si>
+	<si>
+		<t>2014/3/31</t>
+	</si>
+	<si>
+		<t>2015/3/31</t>
+	</si>
+	<si>
+		<t>2016/3/31</t>
+	</si>
+	<si>
+		<t>2017/3/31</t>
+	</si>
+	<si>
+		<t>2018/3/31</t>
+	</si>
+	<si>
+		<t>2019/3/31</t>
+	</si>
+	<si>
+		<t>2020/3/31</t>
+	</si>
+	<si>
+		<t>FX: USD/RMB</t>
+	</si>
+	<si>
+		<t>alpha</t>
+	</si>
+	<si>
+		<t>y</t>
+	</si>
+	<si>
+		<t>%YoY</t>
+	</si>
+	<si>
+		<t>VA Consensus</t>
+	</si>
+	<si>
+		<t>Revenue - Guidance (RMB bns)</t>
+	</si>
+	<si>
+		<t>375-383</t>
+	</si>
+	<si>
+		<t>50-53%</t>
+	</si>
+	<si>
+		<t>a) CRM</t>
+	</si>
+	<si>
+		<t>Y</t>
+	</si>
+	<si>
+		<t>%QoQ</t>
+	</si>
+	<si>
+		<t>&lt;----new feeds monetized from FY20</t>
+	</si>
+	<si>
+		<t>b) Commission</t>
+	</si>
+	<si>
+		<t>&lt;----NBS matched</t>
+	</si>
+	<si>
+		<t xml:space="preserve">NBS GMV </t>
+	</si>
+	<si>
+		<t>BABA TMALL GMV</t>
+	</si>
+	<si>
+		<t>[1.1.1] Core China Retail (excl. Other)</t>
+	</si>
+	<si>
+		<t>[1.1.2] Others</t>
+	</si>
+	<si>
+		<t>a) New Retail - Intime</t>
+	</si>
+	<si>
+		<t>b) New Retail - Hema</t>
+	</si>
+	<si>
+		<t>&lt;----too high in consensus?</t>
+	</si>
+	<si>
+		<t>**</t>
+	</si>
+	<si>
+		<t>c) New Retail - Others (Tmall Import, Storefront fee)</t>
+	</si>
+	<si>
+		<t>d) New Retail - Kaola</t>
+	</si>
+	<si>
+		<t>[1.1] Total China Retail</t>
+	</si>
+	<si>
+		<t>[1.2.1] China Wholesale</t>
+	</si>
+	<si>
+		<t>[1.2.2] International Commerce</t>
+	</si>
+	<si>
+		<t>a) International Wholesale (Alibaba.com)</t>
+	</si>
+	<si>
+		<t>b) International Retail</t>
+	</si>
+	<si>
+		<t>(i) AliExpress and others</t>
+	</si>
+	<si>
+		<t>n</t>
+	</si>
+	<si>
+		<t>(ii) Lazada</t>
+	</si>
+	<si>
+		<t>[1.2.3] Other (related to AliHealth)</t>
+	</si>
+	<si>
+		<t>[1.2] Non-China Retail</t>
+	</si>
+	<si>
+		<t>[1.3] Cainiao logistics</t>
+	</si>
+	<si>
+		<t>[1.4] Local consumer services : Eleme&amp;Koubei</t>
+	</si>
+	<si>
+		<t>[1] Total Commerce</t>
+	</si>
+	<si>
+		<t>Memo: Organic Commerce (excl. New Retail &amp; Eleme &amp; Cainiao)</t>
+	</si>
+	<si>
+		<t>% Organic Growth</t>
+	</si>
+	<si>
+		<t>China IaaS Market (bn $)</t>
+	</si>
+	<si>
+		<t>% Industry Growth</t>
+	</si>
+	<si>
+		<t>% BABA share</t>
+	</si>
+	<si>
+		<t>[2] Cloud</t>
+	</si>
+	<si>
+		<t>in mns $</t>
+	</si>
+	<si>
+		<t>Memo: AWS revenue</t>
+	</si>
+	<si>
+		<t>% AWS Growth</t>
+	</si>
+	<si>
+		<t>[3] Digital Media &amp; Entertainment</t>
+	</si>
+	<si>
+		<t>[4] New Business (Autonavi, DDTalk, etc.)</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Total Other Revenue [3]+[4] </t>
+	</si>
+	<si>
+		<t>Total Revenue</t>
+	</si>
+	<si>
+		<t>in bns $</t>
+	</si>
+	<si>
+		<t>INCOME STATEMENT</t>
+	</si>
+	<si>
+		<t>% YOY</t>
+	</si>
+	<si>
+		<t>Adj EBITA BY SEGMENT</t>
+	</si>
+	<si>
+		<t>not given</t>
+	</si>
+	<si>
+		<t>given</t>
+	</si>
+	<si>
+		<t>given margin</t>
+	</si>
+	<si>
+		<t>Market place core commerce revenue</t>
+	</si>
+	<si>
+		<t>EBITA</t>
+	</si>
+	<si>
+		<t>% Margin(nG)</t>
+	</si>
+	<si>
+		<t>Others</t>
+	</si>
+	<si>
+		<t>1. New Retail - Intime</t>
+	</si>
+	<si>
+		<t>% Margin</t>
+	</si>
+	<si>
+		<t>2. New Retail - Hema</t>
+	</si>
+	<si>
+		<t>3. New Retail - Tmall Import</t>
+	</si>
+	<si>
+		<t>FY 19 %</t>
+	</si>
+	<si>
+		<t>Check</t>
+	</si>
+	<si>
+		<t>EBITA on cainiao+eleme+lazada+new retail&amp;import</t>
+	</si>
+	<si>
+		<t>Cainiao</t>
+	</si>
+	<si>
+		<t>Eleme+koubei</t>
+	</si>
+	<si>
+		<t>Lazada+ ali express</t>
+	</si>
+	<si>
+		<t>Error term</t>
+	</si>
+	<si>
+		<t>[1] Retail: check</t>
+	</si>
+	<si>
+		<t>% YoY</t>
+	</si>
+	<si>
+		<t>[1] Retail: repoted Core commerce</t>
+	</si>
+	<si>
+		<t>Adj EBITA margin</t>
+	</si>
+	<si>
+		<t>Gap</t>
+	</si>
+	<si>
+		<t>Repoted Core commerce-VA Consensus</t>
+	</si>
+	<si>
+		<t>[4] New Businesses</t>
+	</si>
+	<si>
+		<t>[5]Unallocated</t>
+	</si>
+	<si>
+		<t>EBITA - non GAAP</t>
+	</si>
+	<si>
+		<t>[i]</t>
+	</si>
+	<si>
+		<t>EBIT (GAAP): = EBITA (Non-GAAP) - SBC - Amortization of intangible assets</t>
+	</si>
+	<si>
+		<t>[ii]</t>
+	</si>
+	<si>
+		<t>EBIT (GAAP): = GP - OPEX</t>
+	</si>
+	<si>
+		<t>error term: = [i] - [ii]</t>
+	</si>
+	<si>
+		<t>Diluted Shares Outstanding (Average)</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>By Method [i]</t>
+	</si>
+	<si>
+		<t>Net Income - non GAAP</t>
+	</si>
+	<si>
+		<t>部分数据对不上</t>
+	</si>
+	<si>
+		<t>EPS  Consensus RMB</t>
+	</si>
+	<si>
+		<t>EPS  Consensus USD</t>
+	</si>
+	<si>
+		<t>EPS RMB</t>
+	</si>
+	<si>
+		<t>历史数据对不上</t>
+	</si>
+	<si>
+		<t>EPS USD</t>
+	</si>
+	<si>
+		<t>&lt;--PE band 18.3-30</t>
+	</si>
+	<si>
+		<t>TP</t>
+	</si>
+	<si>
+		<t>PE   (High end)</t>
+	</si>
+	<si>
+		<t>Ant TP</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Core Commerce - Net Income - non GAAP </t>
+	</si>
+	<si>
+		<t>PE</t>
+	</si>
+	<si>
+		<t>&lt;---SOTP 给云等不盈利业务一个综合PE 溢价</t>
+	</si>
+	<si>
+		<t>% of revenue</t>
+	</si>
+	<si>
+		<t>Gross Profit</t>
+	</si>
+	<si>
+		<t>% GPM</t>
+	</si>
+	<si>
+		<t>Operating Costs and Expenses</t>
+	</si>
+	<si>
+		<t>S&amp;M</t>
+	</si>
+	<si>
+		<t>% yoy</t>
+	</si>
+	<si>
+		<t>G&amp;A</t>
+	</si>
+	<si>
+		<t>R&amp;D</t>
+	</si>
+	<si>
+		<t>EBIT (Operating Income) - GAAP</t>
+	</si>
+	<si>
+		<t>Income expenses</t>
+	</si>
+	<si>
+		<t>Interest and investment income, other income, net</t>
+	</si>
+	<si>
+		<t>% Tax rate</t>
+	</si>
+	<si>
+		<t>EBITDA non GAAP adjustment</t>
+	</si>
+	<si>
+		<t>Total SBC</t>
+	</si>
+	<si>
+		<t>% of Rev</t>
+	</si>
+	<si>
+		<t>SBC - COGS</t>
+	</si>
+	<si>
+		<t>SBC - R&amp;D</t>
+	</si>
+	<si>
+		<t>SBC - S&amp;M</t>
+	</si>
+	<si>
+		<t>SBC - G&amp;A</t>
+	</si>
+	<si>
+		<t>Amortization of intangible assets</t>
+	</si>
+	<si>
+		<t>Impairment of goodwill</t>
+	</si>
+	<si>
+		<t>Depreciation and amortization of property and equipment and land use rights</t>
+	</si>
+	<si>
+		<t>By Method [ii]</t>
+	</si>
+	<si>
+		<t>Net Income non GAAP adjustment</t>
+	</si>
+	<si>
+		<t>SBC</t>
+	</si>
+	<si>
+		<t>Impairment of goodwill and investments</t>
+	</si>
+	<si>
+		<t>Yahoo TIPLA amendment payment</t>
+	</si>
+	<si>
+		<t>(Gain)/loss on deemed disposals/revaluation of investments &amp; others</t>
+	</si>
+	<si>
+		<t>Amortization of excess value receivable (related to Ant Financial)</t>
+	</si>
+	<si>
+		<t>Expenses relating to sale of shares by existing shareholders in IPO</t>
+	</si>
+	<si>
+		<t>Tax effects on non-gaap adjustments</t>
+	</si>
+	<si>
+		<t>One-time charge for financing-related fees</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Gain in relation to the receipt of the 33% equity interest in Ant Financial </t>
+	</si>
+	<si>
+		<t>部分数据和VA数据不同，对的上的数据为 Net income before non controlling interest - operating而不是Net income/(loss) - operating</t>
+	</si>
+	<si>
+		<t>Net Income - GAAP</t>
+	</si>
+	<si>
+		<t>Accretion of convertible preference shares</t>
+	</si>
+	<si>
+		<t>Dividends accrued on convertible preference shares</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Net Income - attribute to ordinary shareholders </t>
+	</si>
+	<si>
+		<t>Dilution effect on earnings arising from option plans operated by a subsidiary and an equity investe</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Net Income - non GAAP - attribute to ordinary shareholders </t>
+	</si>
+	<si>
+		<t xml:space="preserve">SEGMENT Amortisation </t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>Advertising</t>
+	</si>
+	<si>
+		<t>Commission</t>
+	</si>
+	<si>
+		<t>Ad + Comm</t>
+	</si>
+	<si>
+		<t>Other (new retail)</t>
+	</si>
+	<si>
+		<t>Hema</t>
+	</si>
+	<si>
+		<t>Ex- Hema (Intime, Tmall Imports)</t>
+	</si>
+	<si>
+		<t>China Retail Commerce</t>
+	</si>
+	<si>
+		<t>Wholesale</t>
+	</si>
+	<si>
+		<t>China Core Commerce (Retail+Wholesale)</t>
+	</si>
+	<si>
+		<t>Cainaio</t>
+	</si>
+	<si>
+		<t>Ele.me</t>
+	</si>
+	<si>
+		<t>China Core</t>
+	</si>
+	<si>
+		<t>Retail, Int'l</t>
+	</si>
+	<si>
+		<t>Lazada</t>
+	</si>
+	<si>
+		<t>ex. Lazada</t>
+	</si>
+	<si>
+		<t>Wholesale, Int'l</t>
+	</si>
+	<si>
+		<t>Int'l Commerce</t>
+	</si>
+	<si>
+		<t>Total Core Commerce (China + Int'l)</t>
+	</si>
+	<si>
+		<t>Cloud</t>
+	</si>
+	<si>
+		<t>Entertainment</t>
+	</si>
+	<si>
+		<t>Innovation</t>
+	</si>
+	<si>
+		<t>Unallocated</t>
+	</si>
+	<si>
+		<t>Alibaba Group Holding Limited</t>
+	</si>
+	<si>
+		<t>Calendar-Year GMV</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>CY13 GMV</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>CY14 GMV</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>CY15 GMV</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>CY16 GMV</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tmall</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tmall</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Calendar</t>
+	</si>
+	<si>
+		<t>Jun CY12</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Sep CY12</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Dec CY12</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mar CY13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Jun CY13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Sep CY13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Dec CY13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mar CY14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Jun CY14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Sep CY14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Dec CY14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mar CY15</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Jun CY15</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Sep CY15</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Dec CY15</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mar CY16</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Jun CY16</t>
+	</si>
+	<si>
+		<t>Sep CY16</t>
+	</si>
+	<si>
+		<t>Dec CY16</t>
+	</si>
+	<si>
+		<t>Mar CY17</t>
+	</si>
+	<si>
+		<t>Jun CY17</t>
+	</si>
+	<si>
+		<t>Sep CY17</t>
+	</si>
+	<si>
+		<t>Dec CY17</t>
+	</si>
+	<si>
+		<t>Mar CY18</t>
+	</si>
+	<si>
+		<t>Jun CY18</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Sep CY18</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Dec CY18</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mar CY19</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Jun CY19</t>
+	</si>
+	<si>
+		<t>Sep CY19</t>
+	</si>
+	<si>
+		<t>Dec CY19</t>
+	</si>
+	<si>
+		<t>Mar CY20</t>
+	</si>
+	<si>
+		<t>Jun CY20</t>
+	</si>
+	<si>
+		<t>Sep CY20</t>
+	</si>
+	<si>
+		<t>Dec CY20</t>
+	</si>
+	<si>
+		<t>Mar CY21</t>
+	</si>
+	<si>
+		<t>Jun CY21</t>
+	</si>
+	<si>
+		<t>Sep CY21</t>
+	</si>
+	<si>
+		<t>Dec CY21</t>
+	</si>
+	<si>
+		<t>Mar CY22</t>
+	</si>
+	<si>
+		<t>YE Mar 12</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>YE Mar 13</t>
+	</si>
+	<si>
+		<t>YE Mar 14</t>
+	</si>
+	<si>
+		<t>YE Mar 15</t>
+	</si>
+	<si>
+		<t>YE Mar 16</t>
+	</si>
+	<si>
+		<t>YE Mar 17</t>
+	</si>
+	<si>
+		<t>YE Mar 18</t>
+	</si>
+	<si>
+		<t>YE Mar 19</t>
+	</si>
+	<si>
+		<t>YE Mar 20</t>
+	</si>
+	<si>
+		<t>YE Mar 21</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>YE Mar 22</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>YE Mar 23</t>
+	</si>
+	<si>
+		<t>YE Mar 24</t>
+	</si>
+	<si>
+		<t>Note</t>
+		<phoneticPr fontId="87" type="noConversion"/>
+	</si>
+	<si>
+		<t>Items</t>
+	</si>
+	<si>
+		<t>F1Q13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F2Q13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F3Q13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F4Q13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F1Q14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F2Q14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F3Q14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F4Q14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F1Q15</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F2Q15</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F3Q15</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F4Q15</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F1Q16</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F2Q16</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F3Q16</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F4Q16</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F1Q17</t>
+	</si>
+	<si>
+		<t>F2Q17</t>
+	</si>
+	<si>
+		<t>F3Q17</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F4Q17</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F1Q18</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F2Q18</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F3Q18</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F4Q18</t>
+	</si>
+	<si>
+		<t>F1Q19</t>
+	</si>
+	<si>
+		<t>F2Q19</t>
+	</si>
+	<si>
+		<t>F3Q19</t>
+	</si>
+	<si>
+		<t>F4Q19</t>
+	</si>
+	<si>
+		<t>F1Q20</t>
+	</si>
+	<si>
+		<t>F2Q20</t>
+	</si>
+	<si>
+		<t>F3Q20</t>
+	</si>
+	<si>
+		<t>F4Q20</t>
+	</si>
+	<si>
+		<t>F1Q21</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>F2Q21E</t>
+	</si>
+	<si>
+		<t>F3Q21E</t>
+	</si>
+	<si>
+		<t>F4Q21E</t>
+	</si>
+	<si>
+		<t>F1Q22E</t>
+	</si>
+	<si>
+		<t>F2Q22E</t>
+	</si>
+	<si>
+		<t>F3Q22E</t>
+	</si>
+	<si>
+		<t>F4Q22E</t>
+	</si>
+	<si>
+		<t>FY2012</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2013</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2014</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2015</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2016</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2017</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2018</t>
+	</si>
+	<si>
+		<t>FY2019</t>
+	</si>
+	<si>
+		<t>FY2020</t>
+	</si>
+	<si>
+		<t>FY2021E</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2022E</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2023E</t>
+	</si>
+	<si>
+		<t>FY2024E</t>
+	</si>
+	<si>
+		<t>Exchange rate</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Operating Metrics</t>
+	</si>
+	<si>
+		<t>86Estimates</t>
+	</si>
+	<si>
+		<t>Total GMV $ bln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total GMV RMB bln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Non-Taobao / Tmall GMV RMB bln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Lazada (RMB bln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>86Estimates, assuming 15% blended takerate</t>
+	</si>
+	<si>
+		<t>AliExpress (RMB bln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Quarterly data after F1Q17 are 86Estimates; Annual data from 20-F</t>
+	</si>
+	<si>
+		<r>
+			<t xml:space="preserve">China retail marketplace GMV </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color rgb="FF0070C0"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t>(RMB bln)</t>
+		</r>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve"> GMV ($ bln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q/Q Growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Y/Y Growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>NBS, 86 adjusted</t>
+	</si>
+	<si>
+		<t>China Online Retail Sales (RMB bln)</t>
+	</si>
+	<si>
+		<t>Y/Y</t>
+	</si>
+	<si>
+		<t>Quarterly data after F1Q17 are 86Estimates</t>
+	</si>
+	<si>
+		<t>BABA market share</t>
+	</si>
+	<si>
+		<t>Annual Report:</t>
+	</si>
+	<si>
+		<t>Physical goods Y/Y Growth</t>
+	</si>
+	<si>
+		<r>
+			<t>Taobao Marketplace GMV</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="10"/>
+				<color rgb="FF0070C0"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color rgb="FF0070C0"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t>(RMB bln)</t>
+		</r>
+	</si>
+	<si>
+		<t>Contain assumptions for quarterly Taobao GMV</t>
+	</si>
+	<si>
+		<t>Y/Y Growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Taobao physical goods GMV Y/Y Growth</t>
+	</si>
+	<si>
+		<t>Excluding Lottery</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Lottery sales</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>yoy</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<r>
+			<t>Tmall GMV</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="10"/>
+				<color rgb="FF0070C0"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color rgb="FF0070C0"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t>(RMB bln)</t>
+		</r>
+	</si>
+	<si>
+		<t>Contain assumptions for quarterly Tmall GMV</t>
+	</si>
+	<si>
+		<t>Quarterly Report:</t>
+	</si>
+	<si>
+		<t>Physical goods Y/Y Growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>*Check- Commission rev growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>86Estimates from F2Q17</t>
+	</si>
+	<si>
+		<t>% of Taobao + Tmall GMV</t>
+	</si>
+	<si>
+		<t>*China Retail Marketplace Revenue (RMB mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Y/YGrowth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mobile GMV (RMB bln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for mobile GMV</t>
+	</si>
+	<si>
+		<t>Mobile GMV as a % of total GMV</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Market share % of total mobile retail GMV in China</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>86Estimates from F1Q18</t>
+	</si>
+	<si>
+		<t>Mobile Revenue (RMB mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>% of total China Retail</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>% of total Revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Desktop GMV (RMB bln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Desktop GMV as a % of total GMV</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Desktop Revenue (RMB mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Active Buyers TTM (mln)</t>
+	</si>
+	<si>
+		<t>Net add of active buyers Q/Q (mln)</t>
+	</si>
+	<si>
+		<t>Contain assumptions for # of active buyers</t>
+	</si>
+	<si>
+		<t>= Marketing expense / net add of annual active buyers</t>
+	</si>
+	<si>
+		<t>Average customer acquisition cost (RMB)</t>
+	</si>
+	<si>
+		<t>Annual order per active buyer</t>
+	</si>
+	<si>
+		<t>Average annual spending (RMB)</t>
+	</si>
+	<si>
+		<t>Mobile MAUs (mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net add of Mobile MAUs (mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for # of mobile MAUs</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Mobile MAU as % total active buyers </t>
+	</si>
+	<si>
+		<t>Mobile DAUs (mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for # of mobile DAUs</t>
+	</si>
+	<si>
+		<t>Taobao App DAU/MAU</t>
+	</si>
+	<si>
+		<t>China revenue per annual active buyer (TTM)</t>
+	</si>
+	<si>
+		<t>Contain assumptions for mobile revenue</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Mobile revenue per mobile MAU </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>(Mobile GMV per mobile buyer in RMB)</t>
+	</si>
+	<si>
+		<t>Prospectus and Annual Report:</t>
+	</si>
+	<si>
+		<t>Buyers outside tier 1 &amp; 2 cities (mln)</t>
+	</si>
+	<si>
+		<t>% of total</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Brands on Tmall </t>
+	</si>
+	<si>
+		<t>Active sellers (mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Sellers outside tier 1 &amp; 2 cities (mln)</t>
+	</si>
+	<si>
+		<t>% of sellers outsdie T-1&amp;2 as of total</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Monetization of China Retail Marketplace</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Blended Take Rate </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Blended Marketing Take Rate</t>
+	</si>
+	<si>
+		<t>Taobao Implied Take Rate  (%)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tmall Take Rate  (%)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tmall commission rate (%)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tmall marketing take rate (%)</t>
+	</si>
+	<si>
+		<t>Taobao ad revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>as % of total ad rev</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tmall ad revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Taobao ad revenue and takerate</t>
+	</si>
+	<si>
+		<t>Data after F2Q17 are 86Estimates</t>
+	</si>
+	<si>
+		<t>Mobile Take Rate</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Data after F1Q18 are 86Estimates</t>
+	</si>
+	<si>
+		<t>PC Take Rate</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net yoy improvement</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Mobile Q/Q</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>PC Q/Q</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>New Retail</t>
+	</si>
+	<si>
+		<t>Hema stores</t>
+	</si>
+	<si>
+		<t>City coverage</t>
+	</si>
+	<si>
+		<t>International</t>
+	</si>
+	<si>
+		<t>Lazada GMV $ mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Lazada GMV</t>
+	</si>
+	<si>
+		<t>Y/Y growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q/Q growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Lazada revenue</t>
+	</si>
+	<si>
+		<t>Take rate</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Lazada Revenue RMB mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Lazada as % of International</t>
+	</si>
+	<si>
+		<t>AliExpress GMV $ mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Take rate</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>AliExpress Revenue RMB mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>AliCloud</t>
+	</si>
+	<si>
+		<t>Data after F2Q18 are 86Estimates</t>
+	</si>
+	<si>
+		<t>AliCloud - Paying customers ('000)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for # of paying customers</t>
+	</si>
+	<si>
+		<t>Cloud Customer ARPU (RMB)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for # of ARPU</t>
+	</si>
+	<si>
+		<t>AliCloud Revenue RMB mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>AliCloud Revenue $ bln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>% revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>AliCloud EBITA $mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>AliCloud Valuation $bln P/S ratio</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Digital Content &amp; Equity Investees</t>
+	</si>
+	<si>
+		<t>DME (digital meida &amp; entertainment) Group</t>
+	</si>
+	<si>
+		<r>
+			<t xml:space="preserve"> </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<i/>
+				<sz val="10"/>
+				<color theme="1"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> UCWeb</t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<i/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> MAU mln </t>
+		</r>
+		<r>
+			<rPr>
+				<i/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t>- a mobile media asset, offering mobile search &amp; news feeds</t>
+		</r>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Equity Investees Updates</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<r>
+			<t xml:space="preserve"> </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="10"/>
+				<color theme="1"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> Cainiao</t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t xml:space="preserve"> </t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<color theme="1"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t>- logistics</t>
+		</r>
+	</si>
+	<si>
+		<t>Quarterly Report: Annual report:</t>
+	</si>
+	<si>
+		<t>Enabled Ave Packages Per Day (mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Annual report:</t>
+	</si>
+	<si>
+		<t>Network delivery &amp; warehouse personnel (mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Network hubs &amp; sorting station (K)</t>
+	</si>
+	<si>
+		<t>Network delivery stations</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Network city coverage</t>
+	</si>
+	<si>
+		<t>Eleme</t>
+	</si>
+	<si>
+		<t>Koubei</t>
+	</si>
+	<si>
+		<t>Revenue (CY)</t>
+	</si>
+	<si>
+		<t>Net Loss (CY)</t>
+	</si>
+	<si>
+		<t>Net Margin</t>
+	</si>
+	<si>
+		<t>Payment Vol transacted thru Alipay (RMB bln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Alipay</t>
+	</si>
+	<si>
+		<t>Annual active users (mln)</t>
+	</si>
+	<si>
+		<t>Domestic annual active users (mln)</t>
+	</si>
+	<si>
+		<t>Singles Day GMV setled thru Alipay (RMB bln)</t>
+	</si>
+	<si>
+		<t>GMV setteled thru Alipay  (RMB bln)</t>
+	</si>
+	<si>
+		<t>Payment processing and escrow services fee (RMB mln)</t>
+	</si>
+	<si>
+		<t>Payment handling fee rate</t>
+	</si>
+	<si>
+		<t xml:space="preserve">    # orders processed by cloud computing platform (mln)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>R&amp;D personnel</t>
+	</si>
+	<si>
+		<t>Total headcount</t>
+	</si>
+	<si>
+		<t>Income Statement in RMB mln</t>
+	</si>
+	<si>
+		<t>1Q13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>2Q13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>3Q13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>4Q13</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>1Q14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>2Q14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>3Q14</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FY2012</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Total Core Commerce </t>
+	</si>
+	<si>
+		<t>Core Commerce excl. Cainiao, Eleme, &amp; Kaola</t>
+	</si>
+	<si>
+		<t>China Commerce (Retail &amp; Wholesale)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>China Commerce Retail</t>
+	</si>
+	<si>
+		<t xml:space="preserve"> - Customer management</t>
+	</si>
+	<si>
+		<t xml:space="preserve"> - Commission</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve"> - Others</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tmall Import &amp; Tmall Supermarket</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Tmall Import revenue</t>
+	</si>
+	<si>
+		<t>Y/Y</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Quarterly data from NTES model</t>
+	</si>
+	<si>
+		<t>Kaola</t>
+	</si>
+	<si>
+		<t>Intime</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Intime revenue</t>
+	</si>
+	<si>
+		<t>Y/Y</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Annual data linked to "Hema" tab</t>
+	</si>
+	<si>
+		<t>New Retail 3P</t>
+	</si>
+	<si>
+		<t>Storefront fees</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>China Commerce Wholesale</t>
+	</si>
+	<si>
+		<t>International commerce  (Retail &amp; Wholesale)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>International commerce retail</t>
+	</si>
+	<si>
+		<t>Lazada*</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Lazada*Y/Y</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Lazada* Q/Q</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>AliExpress*</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for AliExpress revenue</t>
+	</si>
+	<si>
+		<t>AliExpress* Y/Y</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>AliExpress* Q/Q</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>International commerce wholesale</t>
+	</si>
+	<si>
+		<t>Contain assumptions for International commerce wholesale</t>
+	</si>
+	<si>
+		<t>Q/Q</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cainiao</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Consumer Service</t>
+	</si>
+	<si>
+		<t>Others</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total operating income</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Add: Total SBC expense</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Add: Total Amortization of intangible assets</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Based on Lazada revenue estimates</t>
+	</si>
+	<si>
+		<t>Marketplace-based Revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Quarterly Report from F1Q18</t>
+	</si>
+	<si>
+		<t>Marketplace-based Adj. EBITA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Marketplace-based Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Marketplace-based Adj. EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Marketplace-based Adj. Net Income (RMB mln)</t>
+	</si>
+	<si>
+		<t>Marketplace-based Adj. Net Income ($ mln)</t>
+	</si>
+	<si>
+		<t>Lazada Adj. EBITA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Lazada Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Lazada Adj. EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>New Retail Adj. EBITA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tmall Import and Tmall Supermarket Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Contain assumptions for Tmall Import Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Tmall Import Adj. EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Kaola Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Contain assumptions for Kaola Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Kaola Adj. EBITAM</t>
+	</si>
+	<si>
+		<t>Hema Adj. EBITA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Hema Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Hema Adj. EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>New Retail 3P Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Contain assumptions for NR 3P Adj. EBITA</t>
+	</si>
+	<si>
+		<t>New Retail 3P Adj. EBITAM</t>
+	</si>
+	<si>
+		<t>Intime Adj. EBITA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Intime Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Intime Adj. EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cainiao Adj. EBITA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Cainiao Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Cainiao Adj. EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>86Estimates; Linked to "Eleme" tab</t>
+	</si>
+	<si>
+		<t>Consumer Service Adj. EBITA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Consumer Service Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Consumer Service Adj. EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Combined losses of other businesses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Combined losses as % of mkplace adj. EBITA</t>
+	</si>
+	<si>
+		<t>Quarterly Reports:</t>
+	</si>
+	<si>
+		<t xml:space="preserve">Adjusted EBITA </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>EBITA in US$ mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Effective tax rate</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tax expense</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Overall EBITA Margin drag</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Margin drag from Lazada</t>
+	</si>
+	<si>
+		<t>Margin drag from New Retail</t>
+	</si>
+	<si>
+		<t>Margin drag from Tmall Import</t>
+	</si>
+	<si>
+		<t>Margin drag from Kaola</t>
+	</si>
+	<si>
+		<t>Margin drag from Intime</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Margin drag from Hema</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Margin drag from New Retail 3P</t>
+	</si>
+	<si>
+		<t>Margin drag from Cainiao</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Margin drag from Consumer Service</t>
+	</si>
+	<si>
+		<t>Incremental margin drag</t>
+	</si>
+	<si>
+		<t>Cloud Computing</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>in $</t>
+	</si>
+	<si>
+		<t>Income from Operation</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Add: SBC expense</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Add: Amortization of intangible assets</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted EBITA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for AliCloud Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Digital Media and Entertainment</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>in $mln</t>
+	</si>
+	<si>
+		<t>Youku (non-GAAP)- checkline</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>NO MORE</t>
+	</si>
+	<si>
+		<t>Youku total revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Youku ads revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Youku ad rev</t>
+	</si>
+	<si>
+		<t>Y/Y growth</t>
+	</si>
+	<si>
+		<t>Youku subscription revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Youku subs rev</t>
+	</si>
+	<si>
+		<t>UCWeb and others</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for UCWeb rev</t>
+	</si>
+	<si>
+		<t>Online gaming</t>
+	</si>
+	<si>
+		<t>Half-year data from AliPictures filings; quarterly data by 86Estimates; consolidated from F4Q19</t>
+	</si>
+	<si>
+		<t>AliPictures revenue</t>
+	</si>
+	<si>
+		<t>Contain assumptions for AliPictures rev</t>
+	</si>
+	<si>
+		<t>Total cost and expenses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>- Youku expenses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Youku Content Costs</t>
+	</si>
+	<si>
+		<t>Contain assumptions for Youku content cost</t>
+	</si>
+	<si>
+		<t>Youku bandwidth and OPEX costs</t>
+	</si>
+	<si>
+		<t>Contain assumptions for Youku bandwidth cost</t>
+	</si>
+	<si>
+		<t>as % of revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>- UCWeb and others expenses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>- online gaming expenses</t>
+	</si>
+	<si>
+		<t>- AliPictures expenses</t>
+	</si>
+	<si>
+		<t>Youku Adj EBITA</t>
+	</si>
+	<si>
+		<t>UCWeb Adj EBITA</t>
+	</si>
+	<si>
+		<t>online gaming Adj EBITA</t>
+	</si>
+	<si>
+		<t>AliPictures Op Profit (Loss)</t>
+	</si>
+	<si>
+		<t>Youku Adj EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for UCWeb Adj. EBITA</t>
+	</si>
+	<si>
+		<t>UCWeb Adj EBITAM</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>online gaming Adj EBITAM</t>
+	</si>
+	<si>
+		<t>Contain assumptions for AliPictures Adj. EBITA</t>
+	</si>
+	<si>
+		<t>AliPictures Adj OPM</t>
+	</si>
+	<si>
+		<t>Innovation Initiatives and Others</t>
+	</si>
+	<si>
+		<t>Contain assumptions for Innovation Adj. EBITA</t>
+	</si>
+	<si>
+		<t>NO MORE</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Unallocated</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Income from Operation</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Add: impairment of goodwill</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Add: Settlement of U.S. federal class action lawsuit</t>
+	</si>
+	<si>
+		<t>Contain assumptions for Unallocated Adj. EBITA</t>
+	</si>
+	<si>
+		<t>Total revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Check Y/Y growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Backtesting</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Core commerce revenue calcaulated</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Core commerce revenue actual</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total revenues in USD mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cost of revenue</t>
+	</si>
+	<si>
+		<t>Gross profit</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Product development expenses</t>
+	</si>
+	<si>
+		<t>Sales and marketing expenses</t>
+	</si>
+	<si>
+		<t>General and administrative expenses</t>
+	</si>
+	<si>
+		<t>Amortization of intangible assets</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Impairment of goodwill and intangible assets</t>
+	</si>
+	<si>
+		<t>Expense from operations</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Income from operations</t>
+	</si>
+	<si>
+		<t>Interest and investment income (loss), net</t>
+	</si>
+	<si>
+		<t>Interest expense</t>
+	</si>
+	<si>
+		<t>Other income, net*</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">   Pre-tax Sharing from Ant Financial</t>
+	</si>
+	<si>
+		<t xml:space="preserve">   Others</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Income before income tax and share of results of equity investees</t>
+	</si>
+	<si>
+		<t>Income tax expenses</t>
+	</si>
+	<si>
+		<t>Share of results of equity investees*</t>
+	</si>
+	<si>
+		<t>Ant Financial</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Koubei</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Youku Tudou</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cainiao Network</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Other equity investee</t>
+	</si>
+	<si>
+		<t>Impairment loss</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Dilution (losses) gain</t>
+	</si>
+	<si>
+		<t>Net income</t>
+	</si>
+	<si>
+		<t>Net loss attributable to noncontrolling interests</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net income attributable to Alibaba Group Holding Limited</t>
+	</si>
+	<si>
+		<t>Accretion of Convertible Preference Shares</t>
+	</si>
+	<si>
+		<t>Dividends accrued on Convertible Preference Shares</t>
+	</si>
+	<si>
+		<t>Accretion of mezzanine equity</t>
+	</si>
+	<si>
+		<t>Net income attributable to ordinary shareholders</t>
+	</si>
+	<si>
+		<t>Reversal of accretion upon assumed conversion of convertible preference shares</t>
+	</si>
+	<si>
+		<t>Dividend eliminated upon assumed conversion of convertible preference shares</t>
+	</si>
+	<si>
+		<t>Dilution effect on earnings arising from option plans operated by a subsidiary and an equity investee</t>
+	</si>
+	<si>
+		<t>Net income attributable to ordinary shareholders for computing diluted EPS</t>
+	</si>
+	<si>
+		<r>
+			<t>Earnings per share attributable to ordinary</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="8"/>
+				<color theme="0"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t> </t>
+		</r>
+		<r>
+			<rPr>
+				<b/>
+				<sz val="8"/>
+				<color theme="0"/>
+				<rFont val="Arial Narrow"/>
+				<family val="2"/>
+			</rPr>
+			<t>shareholders</t>
+		</r>
+	</si>
+	<si>
+		<t>Basic</t>
+	</si>
+	<si>
+		<t>Diluted</t>
+	</si>
+	<si>
+		<t>GAAP EPADS Diluted</t>
+	</si>
+	<si>
+		<t>Number of ADS equivalent basic</t>
+	</si>
+	<si>
+		<t>Number of ordinary shares diluted</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Number of ADS equivalent diluted</t>
+	</si>
+	<si>
+		<t>Adjusted items</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Share-based compensation expense</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>*check-line for SBC</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cost of revene</t>
+	</si>
+	<si>
+		<t>Product development expenses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Sales and marketing expenses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>General and administrative expenses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Equity-settled donation expense</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>One-time charge for financing -related fees as a result of early repayment of bank borrowings</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Impairment of goodwill, intangible assets and investments</t>
+	</si>
+	<si>
+		<t>Gain on deemed disposals/disposals/revaluation of investments</t>
+	</si>
+	<si>
+		<t>Gain in relation to the receipt of the 33% equity interest in Ant Financial</t>
+	</si>
+	<si>
+		<t>Settlement of U.S. federal class action lawsuit</t>
+	</si>
+	<si>
+		<t>Amortization of excess value receivable arising from the restructuring of Ant Financial</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Immediate recognition of unamortized professional fees and upfront fees upon termination of bank borrowings</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Tax effects on non-GAAP adjustments</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Expenses relating to the sales of shares by existing shareholders</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted EBITDA</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted income from operations</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted PBT</t>
+	</si>
+	<si>
+		<t>Adjusted tax expense</t>
+	</si>
+	<si>
+		<t>Adjusted net income</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted net income attributable to ordinary shares</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Non-GAAP EPS Diluted</t>
+	</si>
+	<si>
+		<t>Non-GAAP EPADS Diluted</t>
+	</si>
+	<si>
+		<t>Adjusted EBITDA in USD</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Adjusted net income in USD </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Non-GAAP EPADS Diluted in USD</t>
+	</si>
+	<si>
+		<t>Segment Analysis</t>
+	</si>
+	<si>
+		<t>China commerce</t>
+	</si>
+	<si>
+		<t xml:space="preserve"> - China retail commerce </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Marketing revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Commission revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>China retail others</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve"> - China wholesale commerce</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>International commerce</t>
+	</si>
+	<si>
+		<t>Cloud computing and Internet infrastructure</t>
+	</si>
+	<si>
+		<t>Cost and Expenses (as % of rev)</t>
+	</si>
+	<si>
+		<t>Total Operating Expenses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adj. income tax rate</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Income tax rate</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Cost and Expenses (as % of operating expense)</t>
+	</si>
+	<si>
+		<t>Contain assumptions for COGS</t>
+	</si>
+	<si>
+		<t>Contain assumptions for R&amp;D expense</t>
+	</si>
+	<si>
+		<t>Contain assumptions for S&amp;M expense</t>
+	</si>
+	<si>
+		<t>Non-GAAP Cost and Expenses (as % of rev)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total Non-GAAP Operating Expenses</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for income tax expense</t>
+	</si>
+	<si>
+		<t>Tax Rate</t>
+	</si>
+	<si>
+		<t>Margin Analysis</t>
+	</si>
+	<si>
+		<t>Gross margin</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Operating margin</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net margin</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted gross margin</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted EBITDA margin</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted EBITA margin</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted operating margin</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Adjusted net margin</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Y/Y Growth Rate</t>
+	</si>
+	<si>
+		<t>Segments</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">  Core Commerce</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">China retail commerce </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for CMR</t>
+	</si>
+	<si>
+		<t>Customer management</t>
+	</si>
+	<si>
+		<t>Contain assumptions for commission</t>
+	</si>
+	<si>
+		<t>Commission</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Customer mgmt + Commission combined</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for China wholesale commerce</t>
+	</si>
+	<si>
+		<t>China wholesale commerce</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Cainiao</t>
+	</si>
+	<si>
+		<t>Consumer Services</t>
+	</si>
+	<si>
+		<t xml:space="preserve">  Cloud Computing </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">  Digital Media and Entertainment</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Contain assumptions for Innovative Initiatives and others</t>
+	</si>
+	<si>
+		<t xml:space="preserve">  Innovative Initiatives and others</t>
+	</si>
+	<si>
+		<t>Total revenue</t>
+	</si>
+	<si>
+		<t>Total revenue excl. Cainiao and Eleme</t>
+	</si>
+	<si>
+		<t>GAAP EPS Diluted</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Non-GAAP EPADS Diluted - USD</t>
+	</si>
+	<si>
+		<t>Q/Q Growth Rate</t>
+	</si>
+	<si>
+		<t>Online marketing services</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Others (storefront fees +intime)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">  Cloud computing </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">  Innovative Initiatives</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Non-GAAP EPS Diluted</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Seansonality (as % of full fiscal year)</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Innovation Initiatives and Others</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total Revenue</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net cash in USD mln</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net cash per ADS in USD</t>
+	</si>
+	<si>
+		<t>Only modeling annual Balance Sheet</t>
+	</si>
+	<si>
+		<t>Current assets:</t>
+	</si>
+	<si>
+		<t>Cash and cash equivalents</t>
+	</si>
+	<si>
+		<t>Short-term investments</t>
+	</si>
+	<si>
+		<t>The Company’s restricted cash mainly represents cash received from consumers and reserved in a bank supervised account for payments to merchants.</t>
+	</si>
+	<si>
+		<t>Restricted cash and escrow receivables</t>
+	</si>
+	<si>
+		<t>Investment securities</t>
+	</si>
+	<si>
+		<t>Prepayments, receivables and other assets</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Prepayments, receivables and other assets</t>
+	</si>
+	<si>
+		<t>Loan receivables, net</t>
+	</si>
+	<si>
+		<t>Total current assets</t>
+	</si>
+	<si>
+		<t>Investment in equity investees</t>
+	</si>
+	<si>
+		<t>Property and equipment, net</t>
+	</si>
+	<si>
+		<t>Land use rights, net</t>
+	</si>
+	<si>
+		<t>Intangible assets, net</t>
+	</si>
+	<si>
+		<t>Goodwill</t>
+	</si>
+	<si>
+		<t>Total assets</t>
+	</si>
+	<si>
+		<t>Liabilities, Mezzanine Equity and Shareholders’ Equity</t>
+	</si>
+	<si>
+		<t>Current liabilities:</t>
+	</si>
+	<si>
+		<t>Current bank borrowings</t>
+	</si>
+	<si>
+		<t>Current portion of unsecured notes</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Secured borrowings</t>
+	</si>
+	<si>
+		<t>Income tax payable</t>
+	</si>
+	<si>
+		<t>Escrow money payable</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Accrued expenses, accounts payable and other liabilities</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Merchant deposits</t>
+	</si>
+	<si>
+		<t>Deferred revenue and customer advances</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total current liabilities</t>
+	</si>
+	<si>
+		<t>Deferred revenue</t>
+	</si>
+	<si>
+		<t>Deferred tax liabilities</t>
+	</si>
+	<si>
+		<t>Redeemable Preference Shares</t>
+	</si>
+	<si>
+		<t>Non-current bank borrowings</t>
+	</si>
+	<si>
+		<t>Unsecured senior notes</t>
+	</si>
+	<si>
+		<t>Other liabilities</t>
+	</si>
+	<si>
+		<t>Total liabilities</t>
+	</si>
+	<si>
+		<t>Commitments and contingencies</t>
+	</si>
+	<si>
+		<t>Mezzanine equity:</t>
+	</si>
+	<si>
+		<t>Convertible Preference Shares, US$0.000025 par value; 2,600,000 shares authorized; nil, 1,688,000, 1,688,000 and nil shares issued and outstanding as of March 31, 2012, March 31, 2013, December 31, 2013 (unaudited) and pro forma December 31, 2013 (unaudited), respectively; liquidation value of nil, RMB10,447 million, RMB10,235 million and nil as of March 31, 2012, March 31, 2013, December 31, 2013 (unaudited) and pro forma December 31, 2013 (unaudited), respectively</t>
+	</si>
+	<si>
+		<t>Total mezzanine equity</t>
+	</si>
+	<si>
+		<t>Alibaba Group Holding Limited shareholders’ equity:</t>
+	</si>
+	<si>
+		<t>Ordinary shares, US$0.000025 par value; 2,797,400,000 shares authorized; 2,506,952,201, 2,175,220,739, 2,217,793,573 and 2,309,036,816 shares issued and outstanding as of March 31, 2012, March 31, 2013, December 31, 2013 (unaudited) and pro forma December 31, 2013 (unaudited), respectively</t>
+	</si>
+	<si>
+		<t>Additional paid-in capital</t>
+	</si>
+	<si>
+		<t>Treasury shares at cost</t>
+	</si>
+	<si>
+		<t>Restructuring reserve</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Subscription receivables</t>
+	</si>
+	<si>
+		<t>Statutory reserves</t>
+	</si>
+	<si>
+		<t>Accumulated other comprehensive income</t>
+	</si>
+	<si>
+		<t>Cumulative translation adjustments</t>
+	</si>
+	<si>
+		<t>Unrealized gain (loss) on available-for-sale investment securities, interest rate swaps and others</t>
+	</si>
+	<si>
+		<t>Retained earnings (Accumulated deficits)</t>
+	</si>
+	<si>
+		<t>Total Alibaba Group Holding Limited shareholders’ equity (deficits)</t>
+	</si>
+	<si>
+		<t>Non controlling interests</t>
+	</si>
+	<si>
+		<t>Total equity</t>
+	</si>
+	<si>
+		<t>Total liabilities, mezzanine equity and equity</t>
+	</si>
+	<si>
+		<t>B/S Assumptions</t>
+		<phoneticPr fontId="79" type="noConversion"/>
+	</si>
+	<si>
+		<t>Prepayments, receivables and other assets as % of Rev</t>
+		<phoneticPr fontId="12" type="noConversion"/>
+	</si>
+	<si>
+		<t>Non-current prepayment, receivables and other assets as % of Rev</t>
+	</si>
+	<si>
+		<t>Accrued expenses, accounts payable etc as % of COS</t>
+		<phoneticPr fontId="12" type="noConversion"/>
+	</si>
+	<si>
+		<t>Current portion of deferred revenues as % of Rev</t>
+	</si>
+	<si>
+		<t>Deferred tax liability as % of Income before tax</t>
+	</si>
+	<si>
+		<t>Only modeling annual Cash Flow Statement</t>
+	</si>
+	<si>
+		<t>Cash flows from operating activities:</t>
+	</si>
+	<si>
+		<t>Adjustments to reconcile net income to net cash provided by operating activities:</t>
+	</si>
+	<si>
+		<t>Revaluation of previously held equity interest related to step acquisitions</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>(Gain) Loss on disposals of equity investees</t>
+	</si>
+	<si>
+		<t>Realized and unrealized loss (gain) related to investment securities</t>
+	</si>
+	<si>
+		<t>Change in fair value of other assets and liabilities</t>
+	</si>
+	<si>
+		<t>Gain in relation to the receipt of the 33% equity interest in Ant Group</t>
+	</si>
+	<si>
+		<t>Loss (Gain) on disposals of other subsidiaries</t>
+	</si>
+	<si>
+		<t>Tax benefits from share-based awards</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Share-based compensation expense</t>
+	</si>
+	<si>
+		<t>Equity-settled donation expense</t>
+	</si>
+	<si>
+		<t>Impairment of cost method equity investees and investment securities</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Impairment of goodwill and intangible assets</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Loss (Gain) on disposals of property and equipment</t>
+	</si>
+	<si>
+		<t>Amortization of restructuring reserve</t>
+	</si>
+	<si>
+		<t>Share of results of equity investees</t>
+	</si>
+	<si>
+		<t>Deferred income taxes</t>
+	</si>
+	<si>
+		<t>Allowance for doubtful accounts relating to micro loans</t>
+	</si>
+	<si>
+		<t>Changes in assets and liabilities, net of effects of acquisitions and disposals:</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Loan receivables</t>
+	</si>
+	<si>
+		<t>Escrow money payable</t>
+	</si>
+	<si>
+		<t>Accrued expenses, accounts payable and other liabilities</t>
+	</si>
+	<si>
+		<t>Deferred revenue and customer advances</t>
+	</si>
+	<si>
+		<t>Net cash provided by operating activities</t>
+	</si>
+	<si>
+		<t>Cash flows from investing activities:</t>
+	</si>
+	<si>
+		<t>Decrease (Increase) in short-term investments, net</t>
+	</si>
+	<si>
+		<t>(Increase) Decrease in restricted cash</t>
+	</si>
+	<si>
+		<t>Decrease (Increase) in trading investment securities, net</t>
+	</si>
+	<si>
+		<t>Payments for settlement of forward contracts</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Acquisitions of available-for-sale and held-to-maturity investment securities</t>
+	</si>
+	<si>
+		<t>Disposals of available-for-sale investment securities</t>
+	</si>
+	<si>
+		<t>Total CapEx</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Q/Q</t>
+	</si>
+	<si>
+		<t>Acquisitions of</t>
+	</si>
+	<si>
+		<t>- Land use rights and construction in progress</t>
+	</si>
+	<si>
+		<t>-  Other property and equipment</t>
+	</si>
+	<si>
+		<t xml:space="preserve">- Acquisition of licensed copyrights and intangible assets </t>
+	</si>
+	<si>
+		<t>Disposals of property and equipment</t>
+	</si>
+	<si>
+		<t>Changes in the consumer protection fund deposits</t>
+	</si>
+	<si>
+		<t>Cash paid for business combinations, net of cash acquired</t>
+	</si>
+	<si>
+		<t>Deconsolidation and disposal of subsidiaries, net of cash proceeds</t>
+	</si>
+	<si>
+		<t>Loans to employees, net of repayments</t>
+	</si>
+	<si>
+		<t>Acquisitions of equity investees</t>
+	</si>
+	<si>
+		<t>Disposals of equity investees</t>
+	</si>
+	<si>
+		<t>Disposals of intellectual property rights and assets</t>
+	</si>
+	<si>
+		<t>Net cash (used in) provided by investing activities</t>
+	</si>
+	<si>
+		<t>Cash flows from financing activities:</t>
+	</si>
+	<si>
+		<t>Issuance of ordinary shares, including repayment of loan and interest receivable on employee loans for the exercise of ordinary shares</t>
+	</si>
+	<si>
+		<t>Repurchase of ordinary shares</t>
+	</si>
+	<si>
+		<t>Subscription of rights for Partner Capital Investment Plan</t>
+	</si>
+	<si>
+		<t>Issuance of Convertible Preference Shares, net of direct incidental fees incurred</t>
+	</si>
+	<si>
+		<t>Payment of dividend on Convertible Preference Shares</t>
+	</si>
+	<si>
+		<t>Redemption of Redeemable Preference Shares</t>
+	</si>
+	<si>
+		<t>Acquisitions of shares of Alibaba.com Limited</t>
+	</si>
+	<si>
+		<t>Payment for privatization of Alibaba.com Limited</t>
+	</si>
+	<si>
+		<t>Acquisition of the remaining noncontrolling interest in a subsidiary</t>
+	</si>
+	<si>
+		<t>Payment for settlement of contingent consideration</t>
+	</si>
+	<si>
+		<t>Dividend paid by a consolidated subsidiary to noncontrolling interests</t>
+	</si>
+	<si>
+		<t>Disposals of partial interest in subsidiaries, net of related costs</t>
+	</si>
+	<si>
+		<t>Capital injection from noncontrolling interests</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Proceeds from secured borrowings relating to micro loans</t>
+	</si>
+	<si>
+		<t>Repayment of secured borrowings relating to micro loans</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Proceeds from current bank borrowings</t>
+	</si>
+	<si>
+		<t>Repayment of current bank borrowings</t>
+	</si>
+	<si>
+		<t>Proceeds from non-current bank borrowings</t>
+	</si>
+	<si>
+		<t>Repayment of non-current bank borrowings</t>
+	</si>
+	<si>
+		<t>Proceeds from unsecured senior notes</t>
+	</si>
+	<si>
+		<t>Repayment of unsecured senior notes</t>
+	</si>
+	<si>
+		<t>Upfront fee payment for a revolving credit facility</t>
+	</si>
+	<si>
+		<t>Net cash provided by (used in) financing activities</t>
+	</si>
+	<si>
+		<t>Effect of exchange rate changes on cash and cash equivalents</t>
+	</si>
+	<si>
+		<t>Increase in cash and cash equivalents</t>
+	</si>
+	<si>
+		<t>Cash and cash equivalents, restricted cash and escrow receivables at beginning of year</t>
+	</si>
+	<si>
+		<t>Cash and cash equivalents, restricted cash and escrow receivables at end of year/period</t>
+	</si>
+	<si>
+		<t>Cash flow Assumptions</t>
+	</si>
+	<si>
+		<t>Depreciation and amortization as % of Rev</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Amortization of intangible assets as % of intangible assets</t>
+	</si>
+	<si>
+		<t>Loss from disposal of property, equipment and software as % of PPE</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>Total CapEx as % of Rev</t>
+		<phoneticPr fontId="16" type="noConversion"/>
+	</si>
+	<si>
+		<t>- Non-Real Estate CapEx: Other property, equipment and intangible assets</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t xml:space="preserve">Impairment of cost method equity investees and investment securities as % </t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Impairment of goodwill and intangible assets as %</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Changes in loan receivables, net and others</t>
+	</si>
+	<si>
+		<t>Free Cash Flows</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>yoy growth</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>Free cash flow in USD</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>FCF per share $</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>TTM Free Cash Flows</t>
+		<phoneticPr fontId="82" type="noConversion"/>
+	</si>
+	<si>
+		<t>1Q23</t>
+	</si>
+	<si>
+		<t>2Q23</t>
+	</si>
+	<si>
+		<t>3Q23</t>
+	</si>
+	<si>
+		<t>4Q23</t>
+	</si>
+	<si>
+		<t>FY23</t>
+	</si>
+	<si>
+		<t>FY24</t>
+	</si>
+	<si>
+		<t>FY25</t>
+	</si>
+	<si>
+		<t>FY26</t>
+	</si>
+	<si>
+		<t>FY27</t>
+	</si>
+	<si>
+		<t>FY28</t>
+	</si>
+	<si>
+		<t>FY29</t>
+	</si>
+	<si>
+		<t>FY30</t>
+	</si>
+	<si>
+		<t>EBIT (Operating Income) - NoN GAAP</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>EBITDA-Non GAAP</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>Operating Income-Non GAAP</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net Income-Non GAAP</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>OPM</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>EBIT non GAAP adjustment</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>NPM</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<r>
+			<t xml:space="preserve">PE </t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<rFont val="宋体"/>
+				<family val="3"/>
+				<charset val="134"/>
+			</rPr>
+			<t>（</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<rFont val="Arial"/>
+				<family val="2"/>
+			</rPr>
+			<t>Low end</t>
+		</r>
+		<r>
+			<rPr>
+				<sz val="9"/>
+				<rFont val="宋体"/>
+				<family val="3"/>
+				<charset val="134"/>
+			</rPr>
+			<t>）</t>
+		</r>
+	</si>
+	<si>
+		<t>手动链接</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>check</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>调节项目</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>Net Income, NG</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>fy21</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>fy22</t>
+	</si>
+	<si>
+		<t>fy23</t>
+	</si>
+	<si>
+		<t>Net Cash Per Share (USD)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>EPS (RMB)</t>
+		<phoneticPr fontId="14" type="noConversion"/>
+	</si>
+	<si>
+		<t>EPS-Non GAAP (RMB)</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+	<si>
+		<t>BPS (RMB)</t>
+		<phoneticPr fontId="4" type="noConversion"/>
+	</si>
+</sst>

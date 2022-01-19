@@ -1,0 +1,4 @@
+#!/bin/bash -e
+mkdir -p build
+touch build/time.txt
+bazel run @logi_build//cmd/repo_init -- "$@"

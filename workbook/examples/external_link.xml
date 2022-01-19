@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<externalLink xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main">
+	<externalBook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1">
+		<sheetNames>
+			<sheetName val="Disclaimer"/>
+			<sheetName val="Balance Sheet_VDF"/>
+			<sheetName val="Income Statement_VDF"/>
+			<sheetName val="Forecasts_VDF"/>
+			<sheetName val="Summary Page_VDF"/>
+			<sheetName val="Invested capital_VDF"/>
+			<sheetName val="NOPAT_VDF"/>
+			<sheetName val="WACC_VDF"/>
+			<sheetName val="DCF_VDF"/>
+			<sheetName val="Charts_VDF"/>
+			<sheetName val="PV of Op Leases_VDF"/>
+			<sheetName val="China Retail Sales"/>
+		</sheetNames>
+		<sheetDataSet>
+			<sheetData sheetId="0" refreshError="1"/>
+			<sheetData sheetId="1" refreshError="1"/>
+			<sheetData sheetId="2" refreshError="1"/>
+			<sheetData sheetId="3" refreshError="1"/>
+			<sheetData sheetId="4" refreshError="1"/>
+			<sheetData sheetId="5" refreshError="1"/>
+			<sheetData sheetId="6" refreshError="1"/>
+			<sheetData sheetId="7" refreshError="1"/>
+			<sheetData sheetId="8" refreshError="1"/>
+			<sheetData sheetId="9" refreshError="1"/>
+			<sheetData sheetId="10" refreshError="1"/>
+			<sheetData sheetId="11" refreshError="1"/>
+		</sheetDataSet>
+	</externalBook>
+</externalLink>

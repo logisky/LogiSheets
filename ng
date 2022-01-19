@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+
+import argparse
+import pathlib
+import subprocess
+import os
+
+ROOT_DIR = pathlib.Path(__file__).resolve().parent
+
+
+def run_cmds(cmds):
+    for cmd in cmds:
+        print(cmd)
+        subprocess.check_call(cmd, cwd=ROOT_DIR, shell=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--only',
+        type=str,
+        help='only',
+    )
+    parser.add_argument(
+        '--location',
+        '-l',
+        type=str,
+        help='location',
+    )
+    parser.add_argument(
+        '--root',
+        '-r',
+        type=str,
+        help='root',
+        default='web/app',
+    )
+    parser.add_argument(
+        '--module',
+        '-m',
+        type=str,
+        help='module name',
+    )
+    parser.add_argument(
+        '--service',
+        type=str,
+        help='module name',
+    )
+    parser.add_argument(
+        '--serve',
+        '-s',
+        help='run logisheets',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--debug',
+        help='run logisheets debug mode',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--interact',
+        '-i',
+        help='run logisheets with ibazel',
+        action='store_true',
+    )
+    args = parser.parse_args()
+    cmds = []
+    print(args.module)
+    if args.module:
+        directory = '%s/%s' % (args.root, args.location)
+        if os.path.exists(directory) == False:
+            cmds.append('mkdir %s' % directory)
+        cmds.append('ng g m %s' % args.module)
+        cmds.append('ng g c %s -m %s --export' % (args.module, args.module))
+        cmds.append(
+            'echo "export * from \\"./%s.component\\"" >>  %s/index.ts' %
+            (args.module, directory)
+        )
+        cmds.append(
+            'echo "export * from \\"./%s.module\\"" >>  %s/index.ts' %
+            (args.module, directory)
+        )
+        cmds.append('touch %s/BUILD' % (directory))
+        cmds.append(
+            'mv src/app/%s/* %s' % (args.module, directory)
+        )
+        cmds.append('rm -r src/app')
+    print(args.service)
+    if args.service:
+        tail = os.path.split(args.service)[1]
+        cmds.append('mkdir %s' % args.service)
+        cmds.append(
+            '''
+        echo
+        "
+import \{Injectable\} from '@angular/core'
+
+@Injectable()
+export class %sService {}
+        "
+        >> %s
+        ''' % (tail, args.service)
+        )
+        cmds.append('ng g s %s --flat --skip-tests' % tail)
+        cmds.append(
+            'echo "export * from \\"./%s.service\\" >> index.ts' % (tail)
+        )
+        cmds.append('touch BUILD')
+
+        cmds.append('cd -')
+    if args.serve:
+        if args.interact:
+            cmds.append('ibazel run web/app:web')
+        else:
+            cmds.append('bazel run web/app:web')
+    if args.debug:
+        if args.interact:
+            cmds.append('ibazel run web/app:web --define=debug=true')
+        else:
+            cmds.append('bazel run web/app:web --define=debug=true')
+    run_cmds(cmds)
+
+
+if __name__ == '__main__':
+    main()
