@@ -1,3 +1,4 @@
 <div class="menus">
-    <button class="menu-btn" *ngFor="let btn of btns" (click)='click(btn)'>{{btn.text}}</button>
+    <div class="menu-btn" [ngClass]="{'active': btn.type === currType}" *ngFor="let btn of btns" (click)='click(btn)'>
+        {{btn.text}}</div>
 </div>

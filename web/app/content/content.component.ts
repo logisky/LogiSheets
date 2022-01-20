@@ -1,7 +1,5 @@
-// tslint:disable: max-func-body-length
 import {
     OnDestroy,
-    OnInit,
     ChangeDetectionStrategy,
     AfterViewInit,
     Component,
@@ -9,7 +7,7 @@ import {
     Output,
     EventEmitter,
 } from '@angular/core'
-import {Subscription} from 'rxjs'
+import {Subscription, Subject} from 'rxjs'
 import {DataService} from '@logi-sheets/web/core/data'
 import {
     MouseDownEvent,
@@ -17,6 +15,7 @@ import {
     SelectedCell,
 } from '@logi-sheets/web/app/canvas'
 import {FormulaType} from './edit-bar.component'
+import {toA1notation} from '@logi-base/src/ts/common/index_notation'
 
 @Component({
     selector: 'logi-content',
@@ -24,7 +23,7 @@ import {FormulaType} from './edit-bar.component'
     styleUrls: ['./content.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ContentComponent implements AfterViewInit, OnInit, OnDestroy {
+export class ContentComponent implements AfterViewInit, OnDestroy {
     constructor(
         private readonly _dataSvc: DataService,
         private readonly _cd: ChangeDetectorRef,
@@ -33,9 +32,7 @@ export class ContentComponent implements AfterViewInit, OnInit, OnDestroy {
     settings = this._dataSvc.settings
     cellText = ''
     formulaType = FormulaType.UNSPECIFIED
-
-    ngOnInit(): void {
-    }
+    a1notation$ = new Subject<string>()
 
     ngAfterViewInit(): void {
         this._cd.detectChanges()
@@ -47,6 +44,8 @@ export class ContentComponent implements AfterViewInit, OnInit, OnDestroy {
 
     selectedCell(selectedCell: SelectedCell): void {
         this.selectedCell$.next(selectedCell)
+        const col = toA1notation(selectedCell.col)
+        this.a1notation$.next(`${col}${selectedCell.row}`)
     }
 
     mousedown(e: MouseDownEvent): void {

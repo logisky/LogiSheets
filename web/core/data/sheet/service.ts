@@ -6,8 +6,10 @@ import {
     MergeCell,
     Comment,
     Value,
+    BlockInfo,
 } from '@logi-pb/network/src/proto/message_pb'
 import {
+    StandardBlock,
     StandardRowInfo,
     StandardColInfo,
     StandardCell,
@@ -26,6 +28,22 @@ export class SheetService {
         sheet.name = this.settings.defaultSheetName
         this._sheet.set(0, sheet)
     }
+    setBlocks(sheet: number, blocks: readonly BlockInfo[]) {
+        const bls = blocks.map(b => StandardBlock.from(b))
+        this._blocks.set(sheet, bls)
+    }
+
+    getBlocks(sheet = this._activeIndex) {
+        return this._blocks.get(sheet) ?? []
+    }
+
+    clear() {
+        this._cells.clear()
+        this._colInfos.clear()
+        this._rowInfos.clear()
+        this._blocks.clear()
+    }
+
     setCell(
         row: number,
         col: number,
@@ -162,6 +180,7 @@ export class SheetService {
      * sheet index => sheet info
      */
     private _sheet = new Map<number, StandardSheet>()
+    private _blocks = new Map<number, readonly StandardBlock[]>()
     private _activeIndex = 0
 }
 

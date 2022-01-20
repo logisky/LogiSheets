@@ -1,6 +1,6 @@
 const DEFAULT_PPI = 96
 const PPI = DEFAULT_PPI
-let MDW = 6
+let MDW = 8
 const MAX_MDW = 15
 const MIN_MDW = 1
 export function ptToPx(pt: number): number {

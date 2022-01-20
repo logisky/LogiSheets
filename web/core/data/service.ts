@@ -10,6 +10,7 @@ import {Backend} from './backend'
 import {WebSocketService} from '@logi-sheets/web/ws'
 import {DisplayRequestBuilder} from '@logi-pb/network/src/proto/message_pb'
 import {RangeBuilder} from '@logi-sheets/web/core/standable'
+import {debugWeb} from '@logi-sheets/web/global'
 export const CANVAS_OFFSET = 100
 
 @Injectable()
@@ -51,6 +52,7 @@ export class DataService {
      */
     // tslint:disable-next-line: max-func-body-length
     initViewRange(maxWidth: number, maxHeight: number) {
+        debugWeb('init view range')
         const scroll = this._getScrollPosition()
         const rows = this._initRows(maxHeight, scroll.row)
         const cols = this._initCols(maxWidth, scroll.col)

@@ -1,6 +1,39 @@
+@mixin center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 :host {
     flex-direction: row;
     display: flex;
-    border: 1px solid black;
-    height: 64px;
+    box-sizing: border-box;
+    padding-bottom: 17px;
+    padding-left: 12px;
+    background-color: #F2F4F7;
+}
+.pre-btns {
+    width: 30px;
+}
+.tab {
+    overflow: hidden;
+    border-bottom: 1px solid #E2E6ED;
+    border-left: 1px solid #E2E6ED;
+    border-right: 1px solid #E2E6ED;
+    height: 30px;
+    padding: 0 16px;
+    background-color: #FFF;
+    cursor: pointer;
+    @include center();
+    white-space: nowrap;
+    word-wrap: normal;
+    &.active {
+        font-weight: bold;
+        color: #1CAC73;
+    }
+}
+.add-btn {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    @include center();
 }

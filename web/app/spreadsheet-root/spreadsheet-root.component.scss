@@ -2,15 +2,12 @@
     flex-direction: column;
     display: flex;
     height: 100%;
-}
-.top-bar {
-    height: 102px;
+    background-color: #F2F4F7;
+    font-size: 12px;
 }
 .content {
-    height: calc(100% - 166px);
-}
-.bottom-bar {
-    height: 64px;
+    flex: 1;
+    overflow: hidden;
 }
 .debug-toolbar {
     position: absolute;

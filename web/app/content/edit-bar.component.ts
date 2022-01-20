@@ -26,6 +26,7 @@ export class EditBarComponent implements OnInit, OnDestroy {
         this.formCtl.setValue(formula)
     }
     @Input() formulaType = FormulaType.UNSPECIFIED
+    @Input() coordinate: string | null = ''
     @Output() readonly textChanged$ = new EventEmitter<string>()
     formCtl = new FormControl('')
     ngOnInit(): void {

@@ -6,6 +6,7 @@ import {
     DisplayPatch,
     DisplayRequest,
     isDisplayRequest,
+    isSheetBlocks,
     isSheetColInfo,
     isSheetComments,
     isSheetMergeCells,
@@ -67,6 +68,7 @@ export class Backend {
     private _handleResponse(): void {
         this._wsSvc.displayResponse$().subscribe(e => {
             debugWeb('ws: display response', e)
+            this._sheetSvc.clear()
             e.patches.forEach(p => {
                 this._handleDisplayArea(p)
             })
@@ -116,6 +118,7 @@ export class Backend {
         } else if (isSheetComments(type) && p.comments) {
             const sheet = p.comments.idx
             this._sheetSvc.setSheet(sheet, {comments: p.comments.comment})
-        }
+        } else if (isSheetBlocks(type) && p.blocks)
+            this._sheetSvc.setBlocks(p.blocks.sheetIdx, p.blocks.blockInfo)
     }
 }
