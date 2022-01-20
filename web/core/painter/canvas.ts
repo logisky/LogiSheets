@@ -51,6 +51,7 @@ export class CanvasApi {
         const h = height ?? canvas.getBoundingClientRect().height
         canvas.width = w * dpr()
         canvas.height = h * dpr()
+        canvas.style.backgroundColor = '#fff'
         const ctx = canvas.getContext('2d')
         if (!ctx) {
             error('Error 2d Context')

@@ -1,13 +1,16 @@
 :host {
-    display: block;
-    border: 1px solid black;
+    flex-direction: column;
+    display: flex;
 }
 .main-menu {
-    border-bottom: 1px solid rgba(0, 0, 0, 1);
+    align-items: center;
+    display: flex;
+    border-bottom: 1px solid #E2E6ED;
     height: 53px;
 }
 .content {
-    height: calc(100% - 54px);
+    flex: 1;
+    overflow: hidden;
 }
 .content-detail {
     height: 100%;

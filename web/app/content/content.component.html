@@ -1,4 +1,4 @@
-<logi-edit-bar [formula]='cellText' [formulaType]='formulaType'></logi-edit-bar>
+<logi-edit-bar [formula]='cellText' [formulaType]='formulaType' [coordinate]="a1notation$ | async"></logi-edit-bar>
 <div class="middle">
     <div class="canvas" #canvas>
         <logi-canvas (mousedown$)='mousedown($event)' (selectedCell$)='selectedCell($event)'></logi-canvas>

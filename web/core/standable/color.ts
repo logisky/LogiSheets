@@ -37,6 +37,17 @@ export class StandardColor {
             return 'transparent'
         return `rgba(${this._red}, ${this._green}, ${this._blue}, ${alpha})`
     }
+
+    argb(): string {
+        if (!this._valid())
+            return ''
+        const transfer = (num: number) => num.toString(16).padStart(2, '0')
+        const a = transfer(this._alpha)
+        const r = transfer(this._red ?? 0)
+        const g = transfer(this._green ?? 0)
+        const b = transfer(this._blue ?? 0)
+        return `${a}${r}${g}${b}`
+    }
     private _red?: number
     private _green?: number
     private _blue?: number

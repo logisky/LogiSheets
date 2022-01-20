@@ -3,9 +3,10 @@
 </div>
 <ng-container *ngIf='!opening;else waiting'>
     <ng-container *ngIf='openSuccess;else error'>
-        <logi-top-bar class="top-bar" *ngIf="settings.showTopBar" [selectedCell]='selectedCell'></logi-top-bar>
+        <logi-top-bar class="top-bar" [ngStyle]="{height: settings.topBar}" [selectedCell]='selectedCell'>
+        </logi-top-bar>
         <logi-content class="content" (selectedCell$)='selectedCell = $event'></logi-content>
-        <logi-bottom-bar class="bottom-bar" *ngIf="settings.showBottomBar"></logi-bottom-bar>
+        <logi-bottom-bar class="bottom-bar" [ngStyle]="{height: settings.bottomBar}"></logi-bottom-bar>
     </ng-container>
 </ng-container>
 <ng-template #waiting>

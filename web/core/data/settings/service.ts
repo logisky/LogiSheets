@@ -8,8 +8,8 @@ export class Settings {
     readonly showContextMenu = true
     readonly showToolBar = true
     readonly showSheetsTab = true
-    readonly showTopBar = true
-    readonly showBottomBar = true
+    readonly topBar = '102px'
+    readonly bottomBar = '0'
     readonly defaultSheetName = 'sheet'
     readonly scrollbarSize = 16
     readonly emptyFillColor = 'white'

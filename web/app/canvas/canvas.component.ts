@@ -196,7 +196,6 @@ export class CanvasComponent implements AfterViewInit, OnDestroy {
         this._subs.add(merge(...contextmenuEvent).subscribe(e => {
             this._onContextMenu(e)
         }))
-        this.renderMng.render(this._canvasEl)
         this.dataSvc.sendDisplayArea()
     }
 
