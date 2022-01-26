@@ -7,6 +7,7 @@ use super::utils::{handle_sheet_range_affect_result, handle_sts_affect_result};
 use crate::vertex_manager::executors::utils::delete_cells;
 use crate::vertex_manager::vertex::{MutReferenceVertex, SheetRangeVertex};
 
+#[derive(Debug)]
 pub struct RemoveBlock {
     pub sheet_id: SheetId,
     pub block_id: BlockId,

@@ -10,6 +10,7 @@ use controller_base::{CellId, SheetId};
 use im::HashSet;
 use parser::{ast, Parser};
 
+#[derive(Debug)]
 pub struct InputFormula {
     pub sheet_id: SheetId,
     pub row: usize,

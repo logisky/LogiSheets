@@ -13,14 +13,11 @@ pub struct DataContainer {
 }
 
 impl DataContainer {
-    pub fn delete_cells(self, sheet_id: SheetId, cids: Vec<CellId>) -> Self {
+    pub fn delete_cells(self, sheet_id: SheetId, cids: &Vec<CellId>) -> Self {
         let mut res = self.clone();
         if let Some(container) = res.data.get_mut(&sheet_id) {
-            cids.into_iter().for_each(|cid| {
-                if let Some(c) = container.cells.get_mut(&cid) {
-                    let mut new_cell = Cell::default();
-                    std::mem::swap(c, &mut new_cell);
-                }
+            cids.iter().for_each(|cid| {
+                container.cells.remove(cid);
             });
             res
         } else {

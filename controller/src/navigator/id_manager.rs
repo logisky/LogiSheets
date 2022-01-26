@@ -1,4 +1,4 @@
-use controller_base::{ColId, RowId};
+use controller_base::{BlockId, ColId, RowId};
 use im::{hashset::HashSet, Vector};
 
 #[derive(Clone, Debug)]
@@ -8,17 +8,25 @@ pub struct IdManager {
     preserved_row: HashSet<RowId>,
     preserved_col: HashSet<ColId>,
     has_allocated: HashSet<(RowId, ColId)>,
+    next_avail_block: BlockId,
 }
 
 impl IdManager {
-    pub fn new(next_avail_row: RowId, next_avail_col: ColId) -> Self {
+    pub fn new(next_avail_row: RowId, next_avail_col: ColId, next_avail_block: BlockId) -> Self {
         IdManager {
             next_avail_row,
             next_avail_col,
+            next_avail_block,
             preserved_col: HashSet::new(),
             preserved_row: HashSet::new(),
             has_allocated: HashSet::new(),
         }
+    }
+
+    pub fn get_block_id(&mut self) -> BlockId {
+        let res = self.next_avail_block;
+        self.next_avail_block += 1;
+        res
     }
 
     pub fn get_row_ids(&mut self, cnt: u32) -> Vector<RowId> {

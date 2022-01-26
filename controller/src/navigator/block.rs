@@ -1,4 +1,4 @@
-use controller_base::{BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId};
+use controller_base::{ColId, NormalCellId, RowId};
 use im::Vector;
 
 #[derive(Debug, Clone)]
@@ -27,7 +27,7 @@ impl BlockPlace {
 
     pub fn add_new_rows(self, idx: usize, cnt: u32) -> Self {
         let new_next_avail_row = self.next_avail_row + cnt;
-        let new_row_ids = (self.next_avail_row..new_next_avail_row + cnt)
+        let new_row_ids = (self.next_avail_row..new_next_avail_row)
             .into_iter()
             .collect::<Vector<_>>();
         let (mut left, right) = self.rows.split_at(idx);
@@ -44,7 +44,7 @@ impl BlockPlace {
 
     pub fn add_new_cols(self, idx: usize, cnt: u32) -> Self {
         let new_next_avail_col = self.next_avail_col + cnt;
-        let new_col_ids = (self.next_avail_col..new_next_avail_col + cnt)
+        let new_col_ids = (self.next_avail_col..new_next_avail_col)
             .into_iter()
             .collect::<Vector<_>>();
         let (mut left, right) = self.cols.split_at(idx);
@@ -61,7 +61,7 @@ impl BlockPlace {
 
     pub fn delete_rows(self, idx: usize, cnt: u32) -> Self {
         let (mut left, right) = self.rows.split_at(idx);
-        let (_, right) = right.split_at(cnt as usize - 1);
+        let (_, right) = right.split_at(cnt as usize);
         left.append(right);
         BlockPlace {
             master: self.master,
@@ -74,7 +74,7 @@ impl BlockPlace {
 
     pub fn delete_cols(self, idx: usize, cnt: u32) -> Self {
         let (mut left, right) = self.cols.split_at(idx);
-        let (_, right) = right.split_at(cnt as usize - 1);
+        let (_, right) = right.split_at(cnt as usize);
         left.append(right);
         BlockPlace {
             master: self.master,

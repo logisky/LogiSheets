@@ -8,7 +8,9 @@ use super::{
 use crate::container::DataContainer;
 use crate::id_manager::TextIdManager;
 use crate::navigator::Navigator;
-use crate::payloads::sheet_process::style::{BorderPayloadType, CellStylePayload, FontPayloadType};
+use crate::payloads::sheet_process::style::{
+    BorderPayloadType, CellStylePayload, FillPayloadType, FontPayloadType, PatternPayload,
+};
 use crate::payloads::sheet_process::{
     BlockDeleteColsPayload, BlockDeleteRowsPayload, BlockInsertColsPayload, BlockInsertRowsPayload,
     BlockPayload, CellChange, CellPayload, ColInfoUpdate, CreateBlock as EditCreateBlock,
@@ -309,6 +311,17 @@ fn get_style_payload(sut: StyleUpdateType) -> Option<CellStylePayload> {
         },
         StyleUpdateType::SetBorderDiagonalUp(_) => None,
         StyleUpdateType::SetBorderDiagonalDown(_) => None,
-        StyleUpdateType::SetPatternFill(_) => None,
+        StyleUpdateType::SetPatternFill(spf) => {
+            let p: PatternPayload = {
+                if let Some(fg) = spf.pattern_fill.fg_color {
+                    PatternPayload::FgColor(Some(fg))
+                } else if let Some(bg) = spf.pattern_fill.bg_color {
+                    PatternPayload::BgColor(Some(bg))
+                } else {
+                    todo!()
+                }
+            };
+            Some(CellStylePayload::Fill(FillPayloadType::Pattern(p)))
+        }
     }
 }

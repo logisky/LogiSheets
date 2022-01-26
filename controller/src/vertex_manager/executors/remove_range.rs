@@ -10,6 +10,7 @@ use controller_base::matrix_value::cross_product_usize;
 use controller_base::{CellId, NormalCellId, SheetId};
 use im::HashSet;
 
+#[derive(Debug)]
 pub struct RemoveRange {
     pub sheet_id: SheetId,
     pub start: NormalCellId,
@@ -168,15 +169,16 @@ impl SubPayload for RemoveRange {
             .fetch_cell_index(self.sheet_id, &CellId::NormalCell(self.start))
             .unwrap();
         let (end_row, end_col) = context
-            .fetch_cell_index(self.sheet_id, &CellId::NormalCell(self.start))
+            .fetch_cell_index(self.sheet_id, &CellId::NormalCell(self.end))
             .unwrap();
         let to_be_deleted = cross_product_usize(start_row, end_row, start_col, end_col)
             .into_iter()
             .fold(Vec::<FormulaId>::new(), |mut prev, (r, c)| {
-                let cell_id = context.fetch_cell_id(self.sheet_id, r, c).unwrap();
-                prev.push((self.sheet_id, cell_id));
+                let cell_id = context.get_norm_cell_id(self.sheet_id, r, c).unwrap();
+                prev.push((self.sheet_id, CellId::NormalCell(cell_id)));
                 prev
             });
+        log!("delete cells: {:?}", to_be_deleted);
         let res = delete_cells(prev, to_be_deleted);
         let sheet_ranges = res
             .status

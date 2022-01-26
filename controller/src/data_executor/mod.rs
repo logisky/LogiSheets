@@ -1,4 +1,6 @@
-use controller_base::{CellId, CellValue, SheetId};
+use controller_base::{
+    matrix_value::cross_product_usize, CellId, CellValue, NormalCellId, SheetId,
+};
 
 use crate::{
     cell::Cell,
@@ -9,6 +11,7 @@ use crate::{
         cell::CellChange,
         line::{ColInfoUpdate, LineInfoUpdate, RowInfoUpdate},
         style::CellStylePayload,
+        Direction, ShiftPayload, ShiftType,
     },
     payloads::sheet_process::{SheetPayload, SheetProcess},
     style_manager::StyleManager,
@@ -19,6 +22,7 @@ pub struct DataExecutor {
     pub navigator: Navigator,
     pub style_manager: StyleManager,
     pub container: DataContainer,
+    pub deleted_cells: Vec<(SheetId, CellId)>,
 }
 
 impl DataExecutor {
@@ -39,14 +43,7 @@ impl DataExecutor {
                     CellChange::Recalc => self,
                 }
             }
-            SheetPayload::Shift(s) => {
-                let new_navigator = self.navigator.execute_shift(sheet_id, &s);
-                DataExecutor {
-                    navigator: new_navigator,
-                    container: self.container,
-                    style_manager: self.style_manager,
-                }
-            }
+            SheetPayload::Shift(s) => self.handle_shift_payload(sheet_id, s),
             SheetPayload::Line(l) => {
                 let line_idx = l.idx;
                 match &l.change {
@@ -64,27 +61,248 @@ impl DataExecutor {
         }
     }
 
+    fn handle_shift_payload(self, sheet_id: SheetId, sp: &ShiftPayload) -> Self {
+        let (mut old_navigator, mut old_container) = (self.navigator, self.container);
+        let (new_container, deleted_cells) = match sp {
+            ShiftPayload::Line(l) => match (&l.direction, &l.ty) {
+                (Direction::Horizontal, ShiftType::Insert) => (old_container, vec![]),
+                (Direction::Vertical, ShiftType::Insert) => (old_container, vec![]),
+                (Direction::Horizontal, ShiftType::Delete) => {
+                    let bids = old_navigator.get_affected_blockplace(
+                        sheet_id,
+                        l.start,
+                        l.cnt as usize,
+                        true,
+                    );
+                    let mut deleted_cells = Vec::<CellId>::new();
+                    bids.into_iter().for_each(|block_id| {
+                        let (row_cnt, col_cnt) =
+                            old_navigator.get_block_size(sheet_id, block_id).unwrap();
+                        let master = old_navigator.get_master_cell(sheet_id, block_id).unwrap();
+                        let (master_row, master_col) =
+                            old_navigator.fetch_cell_idx(sheet_id, &master).unwrap();
+                        let start_row = master_row + row_cnt;
+                        let end_row = start_row + l.cnt as usize - 1;
+                        let start_col = master_col;
+                        let end_col = master_col + col_cnt as usize - 1;
+                        cross_product_usize(start_row, end_row, start_col, end_col)
+                            .into_iter()
+                            .for_each(|(r, c)| {
+                                if let Some(cid) = old_navigator.fetch_cell_id(sheet_id, r, c) {
+                                    deleted_cells.push(cid)
+                                }
+                            });
+                    });
+                    get_norm_cell_ids_by_line(
+                        &mut old_navigator,
+                        &mut old_container,
+                        sheet_id,
+                        l.start,
+                        l.cnt as usize,
+                        true,
+                    )
+                    .into_iter()
+                    .for_each(|nc| {
+                        deleted_cells.push(CellId::NormalCell(nc));
+                    });
+                    log!("deleted cells: {:?}", deleted_cells);
+                    (
+                        old_container.delete_cells(sheet_id, &deleted_cells),
+                        deleted_cells,
+                    )
+                }
+                (Direction::Vertical, ShiftType::Delete) => {
+                    let bids = old_navigator.get_affected_blockplace(
+                        sheet_id,
+                        l.start,
+                        l.cnt as usize,
+                        false,
+                    );
+                    let mut deleted_cells = Vec::<CellId>::new();
+                    bids.into_iter().for_each(|block_id| {
+                        let (row_cnt, col_cnt) =
+                            old_navigator.get_block_size(sheet_id, block_id).unwrap();
+                        let master = old_navigator.get_master_cell(sheet_id, block_id).unwrap();
+                        let (master_row, master_col) =
+                            old_navigator.fetch_cell_idx(sheet_id, &master).unwrap();
+                        let start_row = master_row;
+                        let end_row = master_row + row_cnt as usize - 1;
+                        let start_col = master_col + col_cnt;
+                        let end_col = start_col + l.cnt as usize - 1;
+                        cross_product_usize(start_row, end_row, start_col, end_col)
+                            .into_iter()
+                            .for_each(|(r, c)| {
+                                if let Some(cid) = old_navigator.fetch_cell_id(sheet_id, r, c) {
+                                    deleted_cells.push(cid)
+                                }
+                            });
+                    });
+                    get_norm_cell_ids_by_line(
+                        &mut old_navigator,
+                        &mut old_container,
+                        sheet_id,
+                        l.start,
+                        l.cnt as usize,
+                        false,
+                    )
+                    .into_iter()
+                    .for_each(|nc| {
+                        deleted_cells.push(CellId::NormalCell(nc));
+                    });
+                    (
+                        old_container.delete_cells(sheet_id, &deleted_cells),
+                        deleted_cells,
+                    )
+                }
+            },
+            ShiftPayload::Range(_) => todo!(),
+        };
+        let new_navigator = old_navigator.execute_shift(sheet_id, sp);
+        DataExecutor {
+            navigator: new_navigator,
+            container: new_container,
+            style_manager: self.style_manager,
+            deleted_cells: deleted_cells.into_iter().map(|c| (sheet_id, c)).collect(),
+        }
+    }
+
     fn handle_block_payload(self, sheet_id: SheetId, bp: &BlockPayload) -> Self {
         let mut navigator = self.navigator.clone();
-        let new_container = {
+        let (new_container, deleted_cells) = {
             match bp {
-                BlockPayload::Move(mv) => {
-                    let bid = mv.block_id;
-                    let cells = navigator.get_cells_covered_by_block(sheet_id, bid);
-                    self.container.delete_cells(sheet_id, cells)
+                BlockPayload::Create(c) => {
+                    let start_row = c.master_row;
+                    let start_col = c.master_col;
+                    let end_row = start_row + c.row_cnt - 1;
+                    let end_col = start_col + c.col_cnt - 1;
+                    let cells = cross_product_usize(start_row, end_row, start_col, end_col)
+                        .into_iter()
+                        .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                        .filter(|c| c.is_some())
+                        .map(|c| c.unwrap())
+                        .collect::<Vec<_>>();
+                    (
+                        self.container.delete_cells(sheet_id, &cells),
+                        cells.into_iter().map(|c| (sheet_id, c)).collect(),
+                    )
                 }
-                // TODO: Optimization
+                BlockPayload::InsertRows(c) => {
+                    let block_id = c.block_id;
+                    let bp = navigator
+                        .get_block_place(sheet_id, block_id)
+                        .map_or(None, |b| Some(b.clone()));
+                    match bp {
+                        Some(bp) => {
+                            let (row_cnt, col_cnt) = bp.get_block_size();
+                            let (master_row, master_col) = navigator
+                                .fetch_normal_cell_idx(sheet_id, &bp.master)
+                                .unwrap();
+                            let start_row = master_row + row_cnt;
+                            let end_row = start_row + c.insert_cnt - 1;
+                            let start_col = master_col;
+                            let end_col = master_col + col_cnt - 1;
+                            let cells = cross_product_usize(start_row, end_row, start_col, end_col)
+                                .into_iter()
+                                .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                                .filter(|c| c.is_some())
+                                .map(|c| c.unwrap())
+                                .collect::<Vec<_>>();
+                            (
+                                self.container.delete_cells(sheet_id, &cells),
+                                cells.into_iter().map(|c| (sheet_id, c)).collect(),
+                            )
+                        }
+                        None => (self.container, vec![]),
+                    }
+                }
+                BlockPayload::InsertCols(c) => {
+                    let block_id = c.block_id;
+                    let bp = navigator
+                        .get_block_place(sheet_id, block_id)
+                        .map_or(None, |b| Some(b.clone()));
+                    match bp {
+                        Some(bp) => {
+                            let (row_cnt, col_cnt) = bp.get_block_size();
+                            let (master_row, master_col) = navigator
+                                .fetch_normal_cell_idx(sheet_id, &bp.master)
+                                .unwrap();
+                            let start_row = master_row;
+                            let end_row = master_row + row_cnt - 1;
+                            let start_col = master_col + col_cnt;
+                            let end_col = start_col + c.insert_cnt - 1;
+                            let cells = cross_product_usize(start_row, end_row, start_col, end_col)
+                                .into_iter()
+                                .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                                .filter(|c| c.is_some())
+                                .map(|c| c.unwrap())
+                                .collect::<Vec<_>>();
+                            (
+                                self.container.delete_cells(sheet_id, &cells),
+                                cells.into_iter().map(|c| (sheet_id, c)).collect(),
+                            )
+                        }
+                        None => (self.container, vec![]),
+                    }
+                }
                 BlockPayload::DeleteRows(dr) => {
-                    let bid = dr.block_id;
-                    let cells = navigator.get_cells_covered_by_block(sheet_id, bid);
-                    self.container.delete_cells(sheet_id, cells)
+                    let block_id = dr.block_id;
+                    let bp = navigator
+                        .get_block_place(sheet_id, block_id)
+                        .map_or(None, |b| Some(b.clone()));
+                    match bp {
+                        Some(bp) => {
+                            let (_, col_cnt) = bp.get_block_size();
+                            let (master_row, master_col) = navigator
+                                .fetch_normal_cell_idx(sheet_id, &bp.master)
+                                .unwrap();
+                            let start_row = master_row + dr.idx;
+                            let end_row = start_row + dr.delete_cnt - 1;
+                            let start_col = master_col;
+                            let end_col = start_col + col_cnt - 1;
+                            let cells = cross_product_usize(start_row, end_row, start_col, end_col)
+                                .into_iter()
+                                .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                                .filter(|c| c.is_some())
+                                .map(|c| c.unwrap())
+                                .collect::<Vec<_>>();
+                            (
+                                self.container.delete_cells(sheet_id, &cells),
+                                cells.into_iter().map(|c| (sheet_id, c)).collect(),
+                            )
+                        }
+                        None => (self.container, vec![]),
+                    }
                 }
                 BlockPayload::DeleteCols(dc) => {
-                    let bid = dc.block_id;
-                    let cells = navigator.get_cells_covered_by_block(sheet_id, bid);
-                    self.container.delete_cells(sheet_id, cells)
+                    let block_id = dc.block_id;
+                    let bp = navigator
+                        .get_block_place(sheet_id, block_id)
+                        .map_or(None, |b| Some(b.clone()));
+                    match bp {
+                        Some(bp) => {
+                            let (row_cnt, _) = bp.get_block_size();
+                            let (master_row, master_col) = navigator
+                                .fetch_normal_cell_idx(sheet_id, &bp.master)
+                                .unwrap();
+                            let start_row = master_row;
+                            let end_row = start_row + row_cnt - 1;
+                            let start_col = master_col + dc.idx;
+                            let end_col = start_col + dc.delete_cnt - 1;
+                            let cells = cross_product_usize(start_row, end_row, start_col, end_col)
+                                .into_iter()
+                                .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                                .filter(|c| c.is_some())
+                                .map(|c| c.unwrap())
+                                .collect::<Vec<_>>();
+                            (
+                                self.container.delete_cells(sheet_id, &cells),
+                                cells.into_iter().map(|c| (sheet_id, c)).collect(),
+                            )
+                        }
+                        None => (self.container, vec![]),
+                    }
                 }
-                _ => self.container,
+                _ => (self.container, vec![]),
             }
         };
         let new_navigator = match bp {
@@ -94,7 +312,7 @@ impl DataExecutor {
                 if let Some(CellId::NormalCell(master)) =
                     navigator.fetch_cell_id(sheet_id, master_row, master_col)
                 {
-                    navigator.create_block(sheet_id, c.block_id, master, c.row_cnt, c.col_cnt);
+                    navigator.create_block(sheet_id, master, c.row_cnt, c.col_cnt);
                     navigator
                 } else {
                     navigator
@@ -107,6 +325,7 @@ impl DataExecutor {
                 } else {
                     let bp = bp.unwrap().clone();
                     let new_bp = bp.delete_cols(dc.idx, dc.delete_cnt as u32);
+                    navigator.clean_cache(sheet_id);
                     navigator.add_block_place(sheet_id, dc.block_id, new_bp)
                 }
             }
@@ -117,6 +336,7 @@ impl DataExecutor {
                 } else {
                     let bp = bp.unwrap().clone();
                     let new_bp = bp.delete_rows(dr.idx, dr.delete_cnt as u32);
+                    navigator.clean_cache(sheet_id);
                     navigator.add_block_place(sheet_id, dr.block_id, new_bp)
                 }
             }
@@ -127,6 +347,7 @@ impl DataExecutor {
                 } else {
                     let bp = bp.unwrap().clone();
                     let new_bp = bp.add_new_cols(ic.idx, ic.insert_cnt as u32);
+                    navigator.clean_cache(sheet_id);
                     navigator.add_block_place(sheet_id, ic.block_id, new_bp)
                 }
             }
@@ -136,7 +357,8 @@ impl DataExecutor {
                     navigator
                 } else {
                     let bp = bp.unwrap().clone();
-                    let new_bp = bp.add_new_cols(ir.idx, ir.insert_cnt as u32);
+                    let new_bp = bp.add_new_rows(ir.idx, ir.insert_cnt as u32);
+                    navigator.clean_cache(sheet_id);
                     navigator.add_block_place(sheet_id, ir.block_id, new_bp)
                 }
             }
@@ -161,6 +383,7 @@ impl DataExecutor {
             navigator: new_navigator,
             style_manager: self.style_manager,
             container: new_container,
+            deleted_cells,
         }
     }
 
@@ -197,9 +420,10 @@ impl DataExecutor {
             return res;
         }
         let id = id.unwrap();
-        let cell = res.container.get_cell(sheet_id, &id);
+        let mut cell = res.container.get_cell(sheet_id, &id);
         if cell.is_none() {
-            return res;
+            res.container.add_cell(sheet_id, id, Cell::default());
+            cell = res.container.get_cell(sheet_id, &id);
         }
         let mut cell = cell.unwrap();
         let old_style = cell.style;
@@ -221,6 +445,7 @@ impl DataExecutor {
             mut navigator,
             mut style_manager,
             mut container,
+            deleted_cells,
         } = self;
         let row_id = navigator.fetch_row_id(sheet_id, row).unwrap_or(0);
         let mut info = container
@@ -246,6 +471,7 @@ impl DataExecutor {
             navigator,
             style_manager,
             container: new_container,
+            deleted_cells,
         }
     }
 
@@ -254,6 +480,7 @@ impl DataExecutor {
             mut navigator,
             mut style_manager,
             mut container,
+            deleted_cells,
         } = self;
         let col_id = navigator.fetch_col_id(sheet_id, col).unwrap_or(0);
         let mut info = container
@@ -279,6 +506,7 @@ impl DataExecutor {
             navigator,
             style_manager,
             container: new_container,
+            deleted_cells,
         }
     }
 }
@@ -298,6 +526,7 @@ mod tests {
             navigator: Navigator::default(),
             style_manager: StyleManager::default(),
             container: DataContainer::default(),
+            deleted_cells: vec![],
         };
         let sheet_id = 1;
         let block_id = 0;
@@ -338,4 +567,41 @@ mod tests {
         let payload = SheetPayload::Block(bp);
         SheetProcess { sheet_id, payload }
     }
+}
+
+fn get_norm_cell_ids_by_line(
+    navigator: &mut Navigator,
+    container: &mut DataContainer,
+    sheet_id: SheetId,
+    idx: usize,
+    cnt: usize,
+    is_row: bool,
+) -> Vec<NormalCellId> {
+    let sheet_container = container.data.get(&sheet_id);
+    if sheet_container.is_none() {
+        return Vec::new();
+    }
+    let mut result = Vec::<NormalCellId>::new();
+    let sheet_container = sheet_container.unwrap();
+    sheet_container
+        .clone()
+        .cells
+        .iter()
+        .for_each(|(cid, _)| match cid {
+            CellId::NormalCell(nc) => {
+                let cidx = navigator.fetch_cell_idx(sheet_id, cid);
+                match cidx {
+                    Some((r, c)) => {
+                        if is_row && r >= idx && r <= idx + cnt - 1 {
+                            result.push(nc.clone())
+                        } else if !is_row && c >= idx && c <= idx + cnt - 1 {
+                            result.push(nc.clone())
+                        }
+                    }
+                    None => {}
+                }
+            }
+            CellId::BlockCell(_) => {}
+        });
+    result
 }

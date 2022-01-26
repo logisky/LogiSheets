@@ -11,6 +11,7 @@ pub mod message {
     use xlrs_controller::controller::display::Style as ControllerStyle;
     use xlrs_controller::controller::display::Value as ControllerValue;
     use xlrs_controller::controller::edit_action::style_payload::BorderLocation as CtrlBorderLocation;
+    use xlrs_controller::controller::edit_action::style_payload::SetPatternFill as CtrlSetPatternFill;
     use xlrs_controller::controller::edit_action::EditAction;
     use xlrs_controller::controller::edit_action::{self, EditPayload};
     use xlrs_workbook::complex_types::Color;
@@ -23,6 +24,7 @@ pub mod message {
     use xlrs_workbook::styles::CellAlignment;
     use xlrs_workbook::styles::Fill as WbFill;
     use xlrs_workbook::styles::Font as WbFont;
+    use xlrs_workbook::styles::PatternFill as WbPatternFill;
 
     impl DisplayResponse {
         pub fn from(res: ControllerResponse) -> Self {
@@ -111,6 +113,27 @@ pub mod message {
                         display_patch_oneof: Some(DisplayPatchOneof::Comments(sheet_comments)),
                     }
                 }
+                ControllerDisplayPatch::Blocks(sb) => {
+                    let sheet_blocks = SheetBlocks {
+                        sheet_idx: sb.sheet_idx as u32,
+                        block_info: sb.blocks.into_iter().map(|b| BlockInfo::from(b)).collect(),
+                    };
+                    DisplayPatch {
+                        display_patch_oneof: Some(DisplayPatchOneof::Blocks(sheet_blocks)),
+                    }
+                }
+            }
+        }
+    }
+
+    impl BlockInfo {
+        pub fn from(bi: xlrs_controller::controller::display::BlockInfo) -> Self {
+            BlockInfo {
+                block_id: bi.block_id as u32,
+                row_start: bi.row_start as u32,
+                col_start: bi.col_start as u32,
+                row_cnt: bi.row_cnt as u32,
+                col_cnt: bi.col_cnt as u32,
             }
         }
     }
@@ -362,7 +385,14 @@ pub mod message {
                 let location = BorderLocation::into_ctrl(bp.location);
                 StyleUpdateType::SetBorderPr(SetBorderPr { location, pr })
             }
-            StylePayloadOneof::SetPatternFill(_) => todo!(),
+            StylePayloadOneof::SetPatternFill(set_fill) => {
+                let pf = set_fill.pattern_fill.unwrap();
+                let fill = pf.into();
+                let s = CtrlSetPatternFill {
+                    pattern_fill: fill.pattern_fill.unwrap(),
+                };
+                StyleUpdateType::SetPatternFill(s)
+            }
         };
         use xlrs_controller::controller::edit_action::style_payload::StyleUpdate;
         EditPayload::StyleUpdate(StyleUpdate {
@@ -725,6 +755,31 @@ pub mod message {
                 }
             }
         }
+
+        pub fn into(self) -> WbFill {
+            let bg_color = Color {
+                auto: None,
+                indexed: None,
+                rgb: Some(self.bg_color),
+                theme: None,
+                tint: 0.0,
+            };
+            let fg_color = Color {
+                auto: None,
+                indexed: None,
+                rgb: Some(self.fg_color),
+                theme: None,
+                tint: 0.0,
+            };
+            WbFill {
+                pattern_fill: Some(WbPatternFill {
+                    fg_color: Some(fg_color),
+                    bg_color: Some(bg_color),
+                    pattern_type: Some(convert_pattern_type(self.r#type)),
+                }),
+                gradient_fill: None,
+            }
+        }
     }
 
     impl PatternFillType {
@@ -750,6 +805,31 @@ pub mod message {
                 StPatternType::Type::None => PatternFillType::NonePatternFill,
                 StPatternType::Type::Solid => PatternFillType::Solid,
             }
+        }
+    }
+
+    pub fn convert_pattern_type(i: i32) -> StPatternType::Type {
+        match i {
+            0 => StPatternType::Type::DarkDown,
+            1 => StPatternType::Type::DarkGray,
+            2 => StPatternType::Type::DarkGrid,
+            3 => StPatternType::Type::DarkHorizontal,
+            4 => StPatternType::Type::DarkTrellis,
+            5 => StPatternType::Type::DarkUp,
+            6 => StPatternType::Type::DarkVertical,
+            7 => StPatternType::Type::Gray0625,
+            8 => StPatternType::Type::Gray125,
+            9 => StPatternType::Type::LightDown,
+            10 => StPatternType::Type::LightGray,
+            11 => StPatternType::Type::LightGrid,
+            12 => StPatternType::Type::LightHorizontal,
+            13 => StPatternType::Type::LightTrellis,
+            14 => StPatternType::Type::LightUp,
+            15 => StPatternType::Type::LightVertical,
+            16 => StPatternType::Type::MediumGray,
+            17 => StPatternType::Type::None,
+            18 => StPatternType::Type::Solid,
+            _ => StPatternType::Type::None,
         }
     }
 

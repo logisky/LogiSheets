@@ -5,6 +5,7 @@ use crate::vertex_manager::vertex::{MutReferenceVertex, SheetRangeVertex};
 use controller_base::{CellId, SheetId};
 use im::HashSet;
 
+#[derive(Debug)]
 pub struct InsertRange {
     pub sheet_id: SheetId,
     pub row: usize,

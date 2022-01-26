@@ -5,6 +5,7 @@ use crate::vertex_manager::vertex::{MutReferenceVertex, SheetRangeVertex, StsRan
 use controller_base::{BlockId, CellId, SheetId};
 use im::HashSet;
 
+#[derive(Debug)]
 pub struct InsertBlockLine {
     pub sheet_id: SheetId,
     pub block_id: BlockId,

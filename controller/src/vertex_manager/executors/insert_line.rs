@@ -5,6 +5,8 @@ use super::base::{AffectResult, ExecuteResult, SubPayload};
 use super::utils::{handle_sheet_range_affect_result, handle_sts_affect_result};
 use controller_base::{CellId, SheetId};
 use im::HashSet;
+
+#[derive(Debug)]
 pub struct InsertLine {
     pub sheet_id: SheetId,
     pub start: usize,

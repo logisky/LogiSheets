@@ -11,6 +11,7 @@ use controller_base::CellId;
 use controller_base::{BlockId, SheetId};
 use im::HashSet;
 
+#[derive(Debug)]
 pub struct RemoveBlockLine {
     pub sheet_id: SheetId,
     pub block_id: BlockId,

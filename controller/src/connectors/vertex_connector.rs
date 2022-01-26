@@ -1,6 +1,7 @@
 use controller_base::block_affect::BlockAffectTrait;
 use controller_base::get_active_sheet::GetActiveSheetTrait;
 use controller_base::get_book_name::GetBookNameTrait;
+use controller_base::get_norm_cell_id::GetNormCellIdTrait;
 use controller_base::get_norm_cells_in_line::GetNormCellsInLineTrait;
 use controller_base::id_fetcher::IdFetcherTrait;
 use controller_base::index_fetcher::IndexFetcherTrait;
@@ -15,7 +16,7 @@ use crate::container::DataContainer;
 use crate::external_links::ExternalLinksManager;
 use crate::id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager};
 use crate::navigator::Navigator;
-use crate::vertex_manager::context::ContextTrait;
+use crate::vertex_manager::context::{ContextTrait, GetDeletedCellsTrait};
 use crate::workbook::sheet_pos_manager::SheetPosManager;
 
 use super::{IdFetcher, IndexFetcher};
@@ -23,6 +24,7 @@ use super::{IdFetcher, IndexFetcher};
 pub struct VertexConnector<'a> {
     pub book_name: &'a str,
     pub active_sheet: SheetId,
+    pub deleted_cells: Vec<(SheetId, CellId)>,
     pub container: &'a mut DataContainer,
     pub sheet_pos_manager: &'a mut SheetPosManager,
     pub sheet_id_manager: &'a mut SheetIdManager,
@@ -262,6 +264,25 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
     }
 }
 
+impl<'a> GetNormCellIdTrait for VertexConnector<'a> {
+    fn get_norm_cell_id(
+        &mut self,
+        sheet_id: SheetId,
+        row: usize,
+        col: usize,
+    ) -> Option<NormalCellId> {
+        self.id_navigator.fetch_norm_cell_id(sheet_id, row, col)
+    }
+}
+
 impl<'a> ParserTrait for VertexConnector<'a> {}
+
+impl<'a> GetDeletedCellsTrait for VertexConnector<'a> {
+    fn get_deleted_cells(&mut self) -> Vec<(SheetId, CellId)> {
+        let mut empty = Vec::<(SheetId, CellId)>::new();
+        std::mem::swap(&mut empty, &mut self.deleted_cells);
+        empty
+    }
+}
 
 impl<'a> ContextTrait for VertexConnector<'a> {}

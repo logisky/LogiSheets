@@ -76,12 +76,10 @@ where
                     let sp = RemoveBlock { sheet_id, block_id };
                     sp.exec(p, ctx)
                 });
-            let start = ctx
-                .fetch_cell_id(sheet_id, c.master_row, c.master_col)
-                .unwrap();
-            let end = ctx.fetch_cell_id(sheet_id, end_row, end_col).unwrap();
+            let start = ctx.get_norm_cell_id(sheet_id, c.master_row, c.master_col);
+            let end = ctx.get_norm_cell_id(sheet_id, end_row, end_col);
             match (start, end) {
-                (CellId::NormalCell(s), CellId::NormalCell(e)) => {
+                (Some(s), Some(e)) => {
                     let sp = RemoveRange {
                         sheet_id,
                         start: s,

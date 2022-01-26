@@ -113,7 +113,21 @@ message DisplayPatch {
         SheetNames sheet_names = 5;
         SheetMergeCells merge_cells = 6;
         SheetComments comments = 7;
+        SheetBlocks blocks = 8;
     }
+}
+
+message SheetBlocks {
+    uint32 sheet_idx = 1;
+    repeated BlockInfo block_info = 2;
+}
+
+message BlockInfo {
+    uint32 block_id = 1;
+    uint32 row_start = 2;
+    uint32 col_start = 3;
+    uint32 row_cnt = 4;
+    uint32 col_cnt = 5;
 }
 
 message SheetStyles {

@@ -1,3 +1,4 @@
+use controller_base::BlockId;
 use serde::Serialize;
 use xlrs_workbook::styles::*;
 
@@ -15,6 +16,22 @@ pub enum DisplayPatch {
     ColInfo(SheetColInfo),
     MergeCells(SheetMergeCells),
     Comments(SheetComments),
+    Blocks(SheetBlocks),
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SheetBlocks {
+    pub sheet_idx: usize,
+    pub blocks: Vec<BlockInfo>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BlockInfo {
+    pub block_id: BlockId,
+    pub row_start: usize,
+    pub row_cnt: usize,
+    pub col_start: usize,
+    pub col_cnt: usize,
 }
 
 #[derive(Debug, Clone)]

@@ -122,12 +122,13 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
 }
 
 fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
-    let version = sheet_nav.version.clone() + 1;
-    let mut new_id_manager = sheet_nav.id_manager.clone();
+    let mut result = sheet_nav;
+    let version = result.version.clone() + 1;
+    let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_row_ids(cnt);
     let new_rows = {
-        let rows = sheet_nav.data.rows.clone();
-        log!("delete cols:{}", idx);
+        let rows = result.data.rows.clone();
+        log!("delete rows:{}", idx);
         let removed_cnt = std::cmp::min(rows.len() - idx, cnt as usize);
         let (mut left, right) = rows.split_at(idx);
         left.append(right.skip(removed_cnt));
@@ -135,28 +136,43 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left
     };
     let new_row_version = {
-        let row_version = sheet_nav.data.row_version.clone();
+        let row_version = result.data.row_version.clone();
         new_ids
             .into_iter()
             .fold(row_version, |prev, id| prev.update(id, version))
     };
+    let new_blocks = {
+        let mut old_blocks = result.data.blocks.clone();
+        old_blocks.iter_mut().for_each(|(_, bp)| {
+            let master = &bp.master;
+            let (row, col) = result.get_fetcher().get_norm_cell_idx(master).unwrap();
+            if row >= idx && row <= idx + cnt as usize - 1 {
+                let new_row = idx + cnt as usize;
+                let new_master_id = result.get_fetcher().get_norm_cell_id(new_row, col).unwrap();
+                bp.master = new_master_id;
+            }
+        });
+        old_blocks
+    };
     SheetNav {
-        version: sheet_nav.version + 1,
-        data: sheet_nav
+        version: result.version + 1,
+        data: result
             .data
             .update_rows(new_rows)
-            .update_row_version(new_row_version),
+            .update_row_version(new_row_version)
+            .update_blocks(new_blocks),
         cache: Cache::default(),
         id_manager: new_id_manager,
     }
 }
 
 fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
-    let version = sheet_nav.version.clone() + 1;
-    let mut new_id_manager = sheet_nav.id_manager.clone();
+    let mut result = sheet_nav;
+    let version = result.version.clone() + 1;
+    let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_col_ids(cnt);
     let new_cols = {
-        let cols = sheet_nav.data.cols.clone();
+        let cols = result.data.cols.clone();
         let removed_cnt = std::cmp::min(cols.len() - idx, cnt as usize);
         let (mut left, right) = cols.split_at(idx);
         left.append(right.skip(removed_cnt));
@@ -164,17 +180,31 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left
     };
     let new_col_version = {
-        let col_version = sheet_nav.data.col_version.clone();
+        let col_version = result.data.col_version.clone();
         new_ids
             .into_iter()
             .fold(col_version, |prev, id| prev.update(id, version))
     };
+    let new_blocks = {
+        let mut old_blocks = result.data.blocks.clone();
+        old_blocks.iter_mut().for_each(|(_, bp)| {
+            let master = &bp.master;
+            let (row, col) = result.get_fetcher().get_norm_cell_idx(master).unwrap();
+            if col >= idx && col <= idx + cnt as usize - 1 {
+                let new_col = idx + cnt as usize;
+                let new_master_id = result.get_fetcher().get_norm_cell_id(row, new_col).unwrap();
+                bp.master = new_master_id;
+            }
+        });
+        old_blocks
+    };
     SheetNav {
         version,
-        data: sheet_nav
+        data: result
             .data
             .update_cols(new_cols)
-            .update_col_version(new_col_version),
+            .update_col_version(new_col_version)
+            .update_blocks(new_blocks),
         cache: Cache::default(),
         id_manager: new_id_manager,
     }

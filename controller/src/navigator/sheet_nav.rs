@@ -18,7 +18,7 @@ impl SheetNav {
     pub fn init(row_max: u32, col_max: u32) -> Self {
         SheetNav {
             data: Data::init(row_max, col_max),
-            id_manager: IdManager::new(row_max, col_max),
+            id_manager: IdManager::new(row_max, col_max, 0),
             cache: Cache::default(),
             version: 1,
         }
@@ -160,6 +160,18 @@ impl Data {
             row_version: self.row_version,
             col_version: version,
             blocks: self.blocks,
+        }
+    }
+
+    pub fn update_blocks(self, blocks: HashMap<BlockId, BlockPlace>) -> Self {
+        Data {
+            rows: self.rows,
+            cols: self.cols,
+            row_index_changes: self.row_index_changes,
+            col_index_changes: self.col_index_changes,
+            row_version: self.row_version,
+            col_version: self.col_version,
+            blocks,
         }
     }
 }

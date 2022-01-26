@@ -8,8 +8,8 @@ use crate::controller::display::{
 use crate::id_manager::TextIdManager;
 
 use super::display::{
-    CellFormulaValue, CellStyle, ColInfo, Comment, DisplayPatch, DisplayResponse, MergeCell,
-    RowInfo,
+    BlockInfo, CellFormulaValue, CellStyle, ColInfo, Comment, DisplayPatch, DisplayResponse,
+    MergeCell, RowInfo, SheetBlocks,
 };
 use super::Controller;
 
@@ -21,6 +21,7 @@ pub struct SheetViewer {
     pub col_infos: Vec<ColInfo>,
     pub comments: Vec<Comment>,
     pub merge_cells: Vec<MergeCell>,
+    pub blocks: Vec<BlockInfo>,
 }
 
 impl SheetViewer {
@@ -53,29 +54,38 @@ impl SheetViewer {
                 .get_all_col_info()
                 .into_iter()
                 .for_each(|(col_id, info)| {
-                    let idx = navigator.fetch_col_idx(sheet_id, col_id).unwrap();
-                    let info = ColInfo {
-                        idx,
-                        width: info.width.unwrap_or(get_default_col_width()),
-                        hidden: info.hidden,
-                    };
-                    self.col_infos.push(info);
+                    // TODO: Optimize here.
+                    if let Some(idx) = navigator.fetch_col_idx(sheet_id, col_id) {
+                        let info = ColInfo {
+                            idx,
+                            width: info.width.unwrap_or(get_default_col_width()),
+                            hidden: info.hidden,
+                        };
+                        self.col_infos.push(info);
+                    }
                 });
             sheet_data
                 .row_info
                 .get_all_row_info()
                 .into_iter()
                 .for_each(|(row_id, info)| {
-                    let idx = navigator.fetch_row_idx(sheet_id, row_id).unwrap();
-                    let info = RowInfo {
-                        idx,
-                        height: info.ht.unwrap_or(get_default_row_height()),
-                        hidden: info.hidden,
-                    };
-                    self.row_infos.push(info)
+                    // TODO: Optimize here.
+                    if let Some(idx) = navigator.fetch_row_idx(sheet_id, row_id) {
+                        let info = RowInfo {
+                            idx,
+                            height: info.ht.unwrap_or(get_default_row_height()),
+                            hidden: info.hidden,
+                        };
+                        self.row_infos.push(info)
+                    }
                 });
             sheet_data.cells.iter().for_each(|(cell_id, cell)| {
-                let (row, col) = navigator.fetch_cell_idx(sheet_id, cell_id).unwrap();
+                let coord = navigator.fetch_cell_idx(sheet_id, cell_id);
+                if coord.is_none() {
+                    log!("Cannot find cell id: {:?}", cell_id);
+                    panic!()
+                }
+                let (row, col) = coord.unwrap();
                 let style = style_manager.get_cell_style(cell.style);
                 self.styles.push(CellStyle { row, col, style });
                 let mut name_fetcher = NameFetcher {
@@ -102,31 +112,52 @@ impl SheetViewer {
         let comments = &cell_attachments.comments;
         if let Some(sheet_comments) = comments.data.get(&sheet_id) {
             sheet_comments.comments.iter().for_each(|(cell_id, c)| {
-                let (row, col) = navigator.fetch_cell_idx(sheet_id, cell_id).unwrap();
-                let author = comments
-                    .get_author_name(&c.author)
-                    .unwrap_or(String::from("unknown author"));
-                self.comments.push(Comment {
-                    row,
-                    col,
-                    author,
-                    content: c.text.clone(),
-                })
+                // TODO: Optimize here.
+                if let Some((row, col)) = navigator.fetch_cell_idx(sheet_id, cell_id) {
+                    let author = comments
+                        .get_author_name(&c.author)
+                        .unwrap_or(String::from("unknown author"));
+                    self.comments.push(Comment {
+                        row,
+                        col,
+                        author,
+                        content: c.text.clone(),
+                    })
+                }
             });
         }
         let merge_cells_manager = &cell_attachments.merge_cells;
         if let Some(merge_cells) = merge_cells_manager.data.get(&sheet_id) {
             merge_cells.iter().for_each(|(start, end)| {
-                let (row_start, col_start) =
-                    navigator.fetch_normal_cell_idx(sheet_id, &start).unwrap();
-                let (row_end, col_end) = navigator.fetch_normal_cell_idx(sheet_id, &end).unwrap();
-                let mc = MergeCell {
-                    row_start,
-                    col_start,
-                    row_end,
-                    col_end,
+                if let Some((row_start, col_start)) =
+                    navigator.fetch_normal_cell_idx(sheet_id, &start)
+                {
+                    let (row_end, col_end) =
+                        navigator.fetch_normal_cell_idx(sheet_id, &end).unwrap();
+                    let mc = MergeCell {
+                        row_start,
+                        col_start,
+                        row_end,
+                        col_end,
+                    };
+                    self.merge_cells.push(mc);
+                }
+            });
+        }
+        if let Some(sn) = navigator.sheet_navs.clone().get(&sheet_id) {
+            sn.data.blocks.iter().for_each(|(block_id, block_place)| {
+                let (row_cnt, col_cnt) = block_place.get_block_size();
+                let master = &block_place.master;
+                let (master_row, master_col) =
+                    navigator.fetch_normal_cell_idx(sheet_id, &master).unwrap();
+                let block_info = BlockInfo {
+                    block_id: *block_id,
+                    row_start: master_row,
+                    row_cnt,
+                    col_start: master_col,
+                    col_cnt,
                 };
-                self.merge_cells.push(mc);
+                self.blocks.push(block_info)
             });
         }
     }
@@ -176,6 +207,13 @@ impl SheetViewer {
                 merge_cells: self.merge_cells,
             };
             res.push(DisplayPatch::MergeCells(merge_cells))
+        }
+        if self.blocks.len() > 0 {
+            let blocks = SheetBlocks {
+                sheet_idx,
+                blocks: self.blocks,
+            };
+            res.push(DisplayPatch::Blocks(blocks))
         }
         res
     }

@@ -1,7 +1,7 @@
 use super::defaults::get_init_fill;
 use super::manager::Manager;
 use crate::payloads::sheet_process::style::{FillPayloadType, GradientPayload, PatternPayload};
-use xlrs_workbook::styles::*;
+use xlrs_workbook::{simple_types::StPatternType, styles::*};
 
 pub type FillId = u32;
 pub type FillManager = Manager<Fill, FillId>;
@@ -40,8 +40,14 @@ fn handle(fill: &mut Fill, ty: FillPayloadType) {
         FillPayloadType::Pattern(p) => {
             if let Some(pf) = &mut fill.pattern_fill {
                 match p {
-                    PatternPayload::FgColor(c) => pf.set_fg_color(c),
-                    PatternPayload::BgColor(c) => pf.set_bg_color(c),
+                    PatternPayload::FgColor(c) => {
+                        pf.set_fg_color(c);
+                        pf.set_pattern_type(Some(StPatternType::Type::Solid));
+                    }
+                    PatternPayload::BgColor(c) => {
+                        pf.set_bg_color(c);
+                        pf.set_pattern_type(Some(StPatternType::Type::Solid));
+                    }
                     PatternPayload::Type(t) => pf.set_pattern_type(t),
                 }
             }

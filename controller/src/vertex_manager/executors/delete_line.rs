@@ -5,11 +5,11 @@ use super::base::{AffectResult, ExecuteResult, SubPayload};
 use super::utils::{handle_sheet_range_affect_result, handle_sts_affect_result};
 use crate::vertex_manager::executors::utils::{delete_and_get_new, delete_cells};
 use crate::vertex_manager::vertex::{
-    FormulaId, MutAddrRange, MutColRange, MutReferenceVertex, MutRowRange, SheetRangeVertex,
-    StsRangeVertex,
+    MutAddrRange, MutColRange, MutReferenceVertex, MutRowRange, SheetRangeVertex, StsRangeVertex,
 };
 use im::HashSet;
 
+#[derive(Debug)]
 pub struct DeleteLine {
     pub sheet_id: SheetId,
     pub start: usize,
@@ -147,17 +147,7 @@ impl SubPayload for DeleteLine {
     where
         T: ContextTrait,
     {
-        let to_be_deleted: Vec<FormulaId> = {
-            let norm_cells = if self.is_row {
-                context.get_norm_cell_ids_by_row(self.sheet_id, self.start, self.cnt)
-            } else {
-                context.get_norm_cell_ids_by_col(self.sheet_id, self.start, self.cnt)
-            };
-            norm_cells
-                .into_iter()
-                .map(|nc| (self.sheet_id, CellId::NormalCell(nc)))
-                .collect::<Vec<_>>()
-        };
+        let to_be_deleted = context.get_deleted_cells();
         let res = delete_cells(prev, to_be_deleted);
         let sheet_ranges = res
             .status

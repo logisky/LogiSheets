@@ -28,7 +28,6 @@ pub struct Transaction<'a> {
 
 impl<'a> Transaction<'a> {
     pub fn start(self) -> Status {
-        log!("transaction start");
         let context = self.context;
         let mut async_func_manager = self.async_func_manager;
         let Status {
@@ -166,16 +165,19 @@ fn handle_sheet_proc(status: Status, proc: SheetProcess, context: &TransactionCo
         navigator,
         container,
         style_manager,
+        deleted_cells: vec![],
     };
     let DataExecutor {
         navigator: mut new_navigator,
         container: mut new_container,
         style_manager: new_style_manager,
+        deleted_cells,
     } = data_executor.execute(&proc);
     let active_sheet = proc.sheet_id;
     let vertex_manager = vertex_manager.execute_sheet_proc(
         proc,
         &mut VertexConnector {
+            deleted_cells,
             book_name: context.book_name,
             active_sheet,
             container: &mut new_container,

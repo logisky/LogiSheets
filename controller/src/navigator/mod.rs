@@ -1,7 +1,5 @@
 use crate::payloads::sheet_process::ShiftPayload;
-use controller_base::{
-    matrix_value::cross_product_usize, BlockId, CellId, ColId, NormalCellId, RowId, SheetId,
-};
+use controller_base::{BlockId, CellId, ColId, NormalCellId, RowId, SheetId};
 use im::HashMap;
 
 use self::{
@@ -17,7 +15,7 @@ mod sheet_nav;
 
 #[derive(Debug, Clone, Default)]
 pub struct Navigator {
-    sheet_navs: HashMap<SheetId, SheetNav>,
+    pub sheet_navs: HashMap<SheetId, SheetNav>,
 }
 
 impl Navigator {
@@ -30,33 +28,6 @@ impl Navigator {
         } else {
             self
         }
-    }
-
-    pub fn get_cells_covered_by_block(
-        &mut self,
-        sheet_id: SheetId,
-        block_id: BlockId,
-    ) -> Vec<CellId> {
-        let mut res: Vec<CellId> = vec![];
-        let bp = self.get_block_place(sheet_id, block_id);
-        if bp.is_none() {
-            return res;
-        }
-        let bp = bp.unwrap().clone();
-        let master = self.fetch_normal_cell_idx(sheet_id, &bp.master);
-        if master.is_none() {
-            return res;
-        }
-        let (m_row, m_col) = master.unwrap();
-        let (rc, cc) = bp.get_block_size();
-        cross_product_usize(m_row, rc + m_row - 1, m_col, cc + m_col - 1)
-            .into_iter()
-            .for_each(|(r, c)| {
-                if let Some(id) = self.fetch_norm_cell_id(sheet_id, r, c) {
-                    res.push(CellId::NormalCell(id));
-                }
-            });
-        res
     }
 
     pub fn fetch_row_id(&mut self, sheet_id: SheetId, row: usize) -> Option<RowId> {
@@ -115,13 +86,13 @@ impl Navigator {
     pub fn create_block(
         &mut self,
         sheet_id: SheetId,
-        block_id: BlockId,
         master: NormalCellId,
         row_cnt: usize,
         col_cnt: usize,
     ) {
         let sheet_nav = self.get_sheet_nav(sheet_id);
         let block_place = BlockPlace::new(master, row_cnt as u32, col_cnt as u32);
+        let block_id = sheet_nav.id_manager.get_block_id();
         sheet_nav.data.blocks.insert(block_id, block_place);
         sheet_nav.cache = Cache::default();
     }
@@ -205,6 +176,12 @@ impl Navigator {
                 res
             }
             None => res,
+        }
+    }
+
+    pub fn clean_cache(&mut self, sheet_id: SheetId) {
+        if let Some(sn) = self.sheet_navs.get_mut(&sheet_id) {
+            sn.cache = Cache::default();
         }
     }
 }

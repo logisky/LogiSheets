@@ -10,6 +10,7 @@ use im::HashSet;
 use super::base::SubPayload;
 use super::input_formula::affect_sheet_range;
 
+#[derive(Debug)]
 pub struct InputValue {
     pub sheet_id: SheetId,
     pub row: usize,
