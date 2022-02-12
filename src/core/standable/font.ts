@@ -2,8 +2,8 @@ import {
     Font,
     UnderlineType,
 } from 'proto/message'
-import {shallowCopy} from 'global'
-import {StandardColor} from './color'
+import { shallowCopy } from 'global'
+import { StandardColor } from './color'
 /**
  * https://developer.mozilla.org/zh-CN/docs/Web/CSS/font
  * css font: font-style | font-variant | font-weight | font-size | line-height | font-family
@@ -22,6 +22,8 @@ export class StandardFont implements Font {
         if (font.color === '')
             f.standardColor = StandardColor.from(0, 0, 0)
         shallowCopy(font, f)
+        // ooxml标准存的是pt
+        f.fontSizeUnit = 'pt'
         return f
     }
     size = 10
@@ -56,7 +58,7 @@ export class StandardFont implements Font {
     toCssFont(): string {
         const fontStyle = this.italic ? 'italic' : 'normal'
         const fontVariant = 'normal'
-        const fontWeight = this.bold ? 'bold': 'normal'
+        const fontWeight = this.bold ? 'bold' : 'normal'
         const fontSize = `${this.size}${this.fontSizeUnit}`
         const fontFamily = this.name
         const lineHeight = this.lineHeight
