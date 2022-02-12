@@ -1,9 +1,9 @@
 import { PainterService, Box, TextAttr, CanvasAttr } from 'core/painter'
 import { DATA_SERVICE, RenderCell } from 'core/data'
 import { StandardColor, Range } from 'core/standable'
-import { Style } from 'proto/message'
 import { SETTINGS } from 'global/settings'
 import { toA1notation } from 'global'
+import { StandardStyle } from 'core/standable/style'
 
 export class Render {
     render(canvas: HTMLCanvasElement) {
@@ -91,7 +91,7 @@ export class Render {
         this._painterSvc.restore()
     }
 
-    private _fill(box: Box, style: Style) {
+    private _fill(box: Box, style: StandardStyle) {
         const fill = style.fill
         if (!fill)
             return
@@ -109,7 +109,7 @@ export class Render {
         }
     }
 
-    private _border(box: Box, position: Range, style: Style) {
+    private _border(box: Box, position: Range, style: StandardStyle) {
         const border = style.border
         if (!border)
             return
@@ -161,14 +161,14 @@ export class Render {
         this._painterSvc.comment(box)
     }
 
-    private _text(box: Box, range: Range, style: Style) {
+    private _text(box: Box, range: Range, style: StandardStyle) {
         const info = DATA_SERVICE.sheetSvc
             .getCell(range.startRow, range.startCol)
         if (!info)
             return
         const textAttr = new TextAttr()
         textAttr.alignment = style.alignment
-        textAttr.setFont(style.font)
+        textAttr.setFont(style.getFont())
         this._painterSvc.text(info.getFormattedText(), textAttr, box)
     }
 }
