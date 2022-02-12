@@ -1,0 +1,16 @@
+.host {
+  flex-direction: column;
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+.main-menu {
+  align-items: center;
+  display: flex;
+  border-bottom: 1px solid #e2e6ed;
+  height: 53px;
+}
+.content {
+  flex: 1;
+  overflow: hidden;
+}

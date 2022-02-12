@@ -1,0 +1,18 @@
+{
+	"javascript.referencesCodeLens.enabled": true,
+	"javascript.referencesCodeLens.showOnAllFunctions": true,
+	"typescript.implementationsCodeLens.enabled": true,
+	"typescript.referencesCodeLens.enabled": true,
+	"typescript.referencesCodeLens.showOnAllFunctions": true,
+	"editor.parameterHints.cycle": true,
+	"javascript.inlayHints.enumMemberValues.enabled": true,
+	"javascript.inlayHints.functionLikeReturnTypes.enabled": true,
+	"javascript.inlayHints.parameterTypes.enabled": true,
+	"javascript.inlayHints.propertyDeclarationTypes.enabled": true,
+	"javascript.inlayHints.variableTypes.enabled": true,
+	"typescript.inlayHints.enumMemberValues.enabled": true,
+	"typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+	"typescript.inlayHints.parameterTypes.enabled": true,
+	"typescript.inlayHints.propertyDeclarationTypes.enabled": true,
+	"typescript.inlayHints.variableTypes.enabled": true
+}

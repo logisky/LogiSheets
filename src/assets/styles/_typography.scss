@@ -1,0 +1,115 @@
+@use './typography-utils.scss';
+
+/* Represents a typography level from the LOGI-STUDIO design spec. */
+@function logi-typography-level(
+    $font-size,
+    $font-weight: 400,
+    $font-family: null) {
+    @return (
+        font-size: $font-size,
+        font-weight: $font-weight,
+        font-family: $font-family
+    );
+}
+$font: 'Roboto', 'Noto Sans SC', '-apple-system', 'PingFang FC', 'Microsoft YaHei', 'sans-serif';
+
+/* Represents a collection of typography levels. */
+@function logi-typography-config(
+    $font-family:   $font,
+    $head-1:        logi-typography-level(96px, 300),
+    $head-2:        logi-typography-level(60px, 300),
+    $head-3:        logi-typography-level(48px, 400),
+    $head-4:        logi-typography-level(34px, 400),
+    $head-5:        logi-typography-level(24px, 400),
+    $head-6:        logi-typography-level(20px, bold),
+    $subtitle-1:    logi-typography-level(16px, 400),
+    $subtitle-2:    logi-typography-level(14px, bold),
+    $body-1:        logi-typography-level(16px, 400),
+    $body-2:        logi-typography-level(14px, 400),
+    $button:        logi-typography-level(14px, bold),
+    $caption:       logi-typography-level(12px, 400),
+) {
+    /* Declare an initial map with all of the levels. */
+    $config: (
+        head-1:         $head-1,
+        head-2:         $head-2,
+        head-3:         $head-3,
+        head-4:         $head-4,
+        head-5:         $head-5,
+        head-6:         $head-6,
+        subtitle-1:     $subtitle-1,
+        subtitle-2:     $subtitle-2,
+        body-1:         $body-1,
+        body-2:         $body-2,
+        button:         $button,
+        caption:        $caption,
+    );
+
+    /* Loop through the levels and set the `font-family` of the ones that don't
+    have one to the base. Note that Sass can't modify maps in place, which means
+    that we need to merge and re-assign. */
+    @each $key, $level in $config {
+        @if map-get($level, font-family) == null {
+            $new-level: map-merge($level, (font-family: $font-family));
+            $config: map-merge($config, ($key: $new-level));
+        }
+    }
+
+    /* Add the base font family to the config. */
+    @return map-merge($config, (font-family: $font-family));
+}
+
+@mixin logi-button-typography($config: null) {
+    @if $config == null {
+        $config: logi-typography-config();
+    }
+    @include logi-font($config, button);
+}
+
+@mixin logi-head-4-typography($config: null) {
+    @if $config == null {
+        $config: logi-typography-config();
+    }
+    @include logi-font($config, head-4);
+}
+
+@mixin logi-head-6-typography($config: null) {
+    @if $config == null {
+        $config: logi-typography-config();
+    }
+    @include logi-font($config, head-6);
+}
+
+@mixin logi-subtitle-2-typography($config: null) {
+    @if $config == null {
+        $config: logi-typography-config();
+    }
+    @include logi-font($config, subtitle-2);
+}
+
+@mixin logi-body-1-typography($config: null) {
+    @if $config == null {
+        $config: logi-typography-config();
+    }
+    @include logi-font($config, body-1);
+}
+
+@mixin logi-body-2-typography($config: null) {
+    @if $config == null {
+        $config: logi-typography-config();
+    }
+    @include logi-font($config, body-2);
+}
+
+@mixin logi-caption-typography($config: null) {
+    @if $config == null {
+        $config: logi-typography-config();
+    }
+    @include logi-font($config, caption);
+}
+
+@mixin logi-font($config, $level) {
+    font-family: typography-utils.logi-font-family($config, $level);
+    font-size: typography-utils.logi-font-size($config, $level);
+    font-weight: typography-utils.logi-font-weight($config, $level);
+}

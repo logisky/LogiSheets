@@ -6,3 +6,8 @@ The grammar is refered to [this repo](https://github.com/spreadsheetlab/XLParser
 And this grammar has left-recursion. We used [this](https://cyberzhg.github.io/toolbox/left_rec) to eliminate it.
 
 WIP
+
+## protoc
+
+下载对应系统的安装包
+https://github.com/protocolbuffers/protobuf/releases
