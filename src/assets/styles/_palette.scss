@@ -1,0 +1,169 @@
+@use "./brand.scss";
+
+$header-bar-bg: brand.$header-background;
+$header-bar-fg: brand.$header-foreground;
+
+@function logi-black($opacity: 1) {
+  @return rgba(#000000, $opacity);
+}
+
+@function logi-white($opacity: 1) {
+  @return rgba(#ffffff, $opacity);
+}
+
+/**
+ * Sample 1:
+ *     logi-color($logi-brand, 800, 0.6)
+ *
+ * Sample 2:
+ *     logi-color($logi-brand, 0,6)
+ *     it is equal to:
+ *     logi-color($logi-brand, 600, 0,6)
+ */
+@function logi-color($palette, $hue: 600, $opacity: null) {
+  @if type-of($hue) == number and $hue >= 0 and $hue <= 1 {
+    @return logi-color($palette, 600, $hue);
+  }
+
+  $color: map-get($palette, $hue);
+  @if (type-of($color) != color) {
+    @return $color;
+  }
+  @return rgba($color, if($opacity == null, opacity($color), $opacity));
+}
+
+$logi-brand: (
+  50: #e7eafa,
+  100: #c3c9f3,
+  200: #9aa6eb,
+  300: #6d84e4,
+  400: #4868de,
+  500: #0c4cd7,
+  600: #0044cc,
+  700: #003ac0,
+  800: #002fb5,
+  900: #0019a3,
+);
+
+@function logi-brand($opacity: 1) {
+  @return rgba(map-get($logi-brand, 600), $opacity);
+}
+
+$aris-brand: (
+  50: #e5f2fa,
+  100: #c0def3,
+  200: #9ccaec,
+  300: #7ab5e2,
+  400: #63a5dd,
+  500: #5397d8,
+  600: brand.$brand,
+  700: #3a67a6,
+  800: #2d4a86,
+  900: #243a66,
+);
+
+@function aris-brand($opacity: 1) {
+  @return rgba(map-get($aris-brand, 600), $opacity);
+}
+
+$logi-green: (
+  50: #e6f7ec,
+  100: #c3ead0,
+  200: #9cddb2,
+  300: #71d193,
+  400: #4dc67b,
+  500: #1ebb63,
+  600: #13ac59,
+  700: #00994d,
+  800: #008841,
+  900: #00682c,
+);
+
+@function logi-green($opacity: 1) {
+  @return rgba(map-get($logi-green, 600), $opacity);
+}
+
+$logi-aqua: (
+  50: #e0f5fb,
+  100: #b1e6f4,
+  200: #7dd6ec,
+  300: #4ac5e2,
+  400: #23bada,
+  500: #05aed2,
+  600: #009fbf,
+  700: #008ba5,
+  800: #00778c,
+  900: #005661,
+);
+
+@function logi-aqua($opacity: 1) {
+  @return rgba(map-get($logi-aqua, 600), $opacity);
+}
+
+$logi-orange: (
+  50: #fcf3e3,
+  100: #f8e0b9,
+  200: #f4cb8d,
+  300: #f0b763,
+  400: #eda848,
+  500: #ea9b39,
+  600: #e59035,
+  700: #de8231,
+  800: #d6742d,
+  900: #ca6029,
+);
+
+@function logi-orange($opacity: 1) {
+  @return rgba(map-get($logi-orange, 600), $opacity);
+}
+
+$logi-purple: (
+  50: #f3e4e9,
+  100: #e1bcf1,
+  200: #cd8fe9,
+  300: #b960e0,
+  400: #a939da,
+  500: #9900d2,
+  600: #8800cc,
+  700: #7002c5,
+  800: #5f02a6,
+  900: #50018c,
+);
+
+@function logi-purple($opacity: 1) {
+  @return rgba(map-get($logi-purple, 600), $opacity);
+}
+
+$logi-red: (
+  50: #fceaef,
+  100: #f8cbd5,
+  200: #e596a1,
+  300: #d96d7d,
+  400: #e4495f,
+  500: #ea324a,
+  600: #da2947,
+  700: #c82040,
+  800: #bb1838,
+  900: #ac082e,
+);
+
+@function logi-red($opacity: 1) {
+  @return rgba(map-get($logi-red, 600), $opacity);
+}
+
+$logi-grey: (
+  50: #fafafa,
+  100: #f5f5f5,
+  200: #eeeeee,
+  300: #e0e0e0,
+  400: #bdbdbd,
+  500: #9e9e9e,
+  600: #757575,
+  700: #616161,
+  800: #424242,
+  900: #212121,
+);
+
+@function logi-grey($opacity: 1) {
+  @return rgba(map-get($logi-grey, 600), $opacity);
+}

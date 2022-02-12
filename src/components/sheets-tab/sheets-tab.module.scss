@@ -1,0 +1,39 @@
+@mixin center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.host {
+  flex-direction: row;
+  display: flex;
+  box-sizing: border-box;
+  padding-bottom: 17px;
+  padding-left: 12px;
+  background-color: #f2f4f7;
+}
+.pre-btns {
+  width: 30px;
+}
+.tab {
+  overflow: hidden;
+  border-bottom: 1px solid #e2e6ed;
+  border-left: 1px solid #e2e6ed;
+  border-right: 1px solid #e2e6ed;
+  height: 30px;
+  padding: 0 16px;
+  background-color: #fff;
+  cursor: pointer;
+  @include center();
+  white-space: nowrap;
+  word-wrap: normal;
+  &.active {
+    font-weight: bold;
+    color: #1cac73;
+  }
+}
+.add-btn {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  @include center();
+}

@@ -1,0 +1,10 @@
+.border {
+    position: absolute;
+    display: block;
+    border: 2px solid rgb(31, 187, 125);
+    cursor: move;
+}
+.dragging {
+    position: absolute;
+    border: 2px dotted rgba(0, 0, 0, 0.38);
+}

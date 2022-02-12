@@ -1,0 +1,258 @@
+@use './shared';
+
+$scrollbar-border: shared.$border-base;
+$scrollbar-button-background: rgba(0, 0, 0, 0.6);
+
+%thumb-vertical {
+    border-radius: 8px;
+    -webkit-appearance: none;
+}
+
+%thumb-horizontal {
+    border-radius: 8px;
+    -webkit-appearance: none;
+}
+
+@mixin simple-scrollbar {
+    ::-webkit-scrollbar {
+        @include shared.size(8px, 8px);
+        -webkit-appearance: none;
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:vertical {
+        @extend %thumb-vertical;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to right, rgba(250, 250, 250, 0) 0 2px, rgba(0, 0, 0, 0.12) 2px 6px, rgba(250, 250, 250, 0) 6px 8px);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:hover:vertical {
+        @extend %thumb-vertical;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to right, rgba(250, 250, 250, 0) 16%, rgba(0, 0, 0, 0.38) 16% 84%, rgba(250, 250, 250, 0) 84%);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:active:vertical {
+        @extend %thumb-vertical;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to right, rgba(250, 250, 250, 0) 16%, rgba(0, 0, 0, 0.6) 16% 84%, rgba(250, 250, 250, 0) 84%);
+    }
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:horizontal {
+        @extend %thumb-horizontal;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to top, rgba(250, 250, 250, 0) 33%, rgba(0, 0, 0, 0.12) 33% 66%, rgba(250, 250, 250, 0) 66%);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:hover:horizontal {
+        @extend %thumb-horizontal;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to top, rgba(250, 250, 250, 0) 16%, rgba(0, 0, 0, 0.38) 16% 84%, rgba(250, 250, 250, 0) 84%);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:active:horizontal {
+        @extend %thumb-horizontal;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to top, rgba(250, 250, 250, 0) 16%, rgba(0, 0, 0, 0.6) 16% 84%, rgba(250, 250, 250, 0) 84%);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-corner {
+        @include shared.size(8px, 8px);
+        background-color: transparent;
+    }
+    ::-webkit-scrollbar-button:vertical {
+        width: 0;
+        height: 8px;
+        background-color: transparent;
+    }
+    ::-webkit-scrollbar-button:horizontal {
+        width: 8px;
+        height: 0;
+        background-color: transparent;
+    }
+}
+
+@mixin full-scrollbar($needBtn: true) {
+    ::-webkit-scrollbar {
+        @include shared.size(12px, 12px);
+        border: $scrollbar-border;
+        -webkit-appearance: none;
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:vertical {
+        @extend %thumb-vertical;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to right, rgba(250, 250, 250, 0) 0 4px, rgba(0, 0, 0, 0.12) 4px 8px, rgba(250, 250, 250, 0) 8px 12px);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:hover:vertical {
+        @extend %thumb-vertical;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to right, rgba(250, 250, 250, 0) 16%, rgba(0, 0, 0, 0.38) 16% 84%, rgba(250, 250, 250, 0) 84%);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:active:vertical {
+        @extend %thumb-vertical;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to right, rgba(250, 250, 250, 0) 16%, rgba(0, 0, 0, 0.6) 16% 84%, rgba(250, 250, 250, 0) 84%);
+    }
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:horizontal {
+        @extend %thumb-horizontal;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to top, rgba(250, 250, 250, 0) 33%, rgba(0, 0, 0, 0.12) 33% 66%, rgba(250, 250, 250, 0) 66%);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:hover:horizontal {
+        @extend %thumb-horizontal;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to top, rgba(250, 250, 250, 0) 16%, rgba(0, 0, 0, 0.38) 16% 84%, rgba(250, 250, 250, 0) 84%);
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-thumb:active:horizontal {
+        @extend %thumb-horizontal;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(to top, rgba(250, 250, 250, 0) 16%, rgba(0, 0, 0, 0.6) 16% 84%, rgba(250, 250, 250, 0) 84%);
+    }
+
+    @if $needBtn {
+        /* stylelint-disable-next-line */
+        ::-webkit-scrollbar-button:vertical:end:decrement {
+            @include shared.size(12px, 12px);
+            /* stylelint-disable-next-line */
+            border-left: $scrollbar-border;
+            border-right: $scrollbar-border;
+            background: linear-gradient(120deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(240deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(0deg, rgb(252, 252, 252) 30%, rgba(0, 0, 0, 0) 31%);
+            background-color: $scrollbar-button-background
+        }
+
+        /* stylelint-disable-next-line */
+        ::-webkit-scrollbar-button:vertical:end:increment {
+            @include shared.size(12px, 12px);
+            /* stylelint-disable-next-line */
+            border-left: $scrollbar-border;
+            border-right: $scrollbar-border;
+            background: linear-gradient(300deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(60deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(180deg, rgb(252, 252, 252) 30%, rgba(0, 0, 0, 0) 31%);
+            background-color: $scrollbar-button-background
+        }
+
+        /* stylelint-disable-next-line */
+        ::-webkit-scrollbar-button:horizontal:end:increment {
+            @include shared.size(12px, 12px);
+            /* stylelint-disable-next-line */
+            border-bottom: $scrollbar-border;
+            border-right: $scrollbar-border;
+            border-top: $scrollbar-border;
+
+            background: linear-gradient(210deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(330deg, rgba(250, 250, 250, 1) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(90deg, rgba(250, 250, 250, 1) 30%, rgba(0, 0, 0, 0) 31%);
+            background-color: $scrollbar-button-background;
+        }
+
+        /* stylelint-disable-next-line */
+        ::-webkit-scrollbar-button:horizontal:end:decrement {
+            @include shared.size(12px, 12px);
+            /* stylelint-disable-next-line */
+            border-bottom: $scrollbar-border;
+            border-top: $scrollbar-border;
+            background: linear-gradient(30deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(150deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(270deg, rgb(252, 252, 252) 30%, rgba(0, 0, 0, 0) 31%);
+            background-color: $scrollbar-button-background;
+        }
+        /* stylelint-disable-next-line */
+        ::-webkit-scrollbar-button:vertical {
+            width: 1px;
+            height: 4px;
+            background-color: transparent;
+        }
+        /* stylelint-disable-next-line */
+        ::-webkit-scrollbar-button:horizontal {
+            width: 4px;
+            height: 1;
+            background-color: transparent;
+        }
+        /* stylelint-disable-next-line */
+        ::-webkit-scrollbar-button:end {
+            display: block;
+        }
+    }
+}
+
+@mixin full-scrollbar-with-separate-button() {
+    @include full-scrollbar(false);
+    ::-webkit-scrollbar:vertical {
+        border: none;
+        border-left: $scrollbar-border;
+    }
+    ::-webkit-scrollbar:horizontal {
+        border: none;
+        border-top: $scrollbar-border;
+    }
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-button:vertical:end:increment {
+        @include shared.size(12px, 12px);
+        border: none;
+        border-left: $scrollbar-border;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(300deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(60deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(180deg, rgb(252, 252, 252) 30%, rgba(0, 0, 0, 0) 31%);
+        background-color: $scrollbar-button-background;
+    }
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-button:vertical:start:decrement {
+        @include shared.size(12px, 12px);
+        border: none;
+        border-left: $scrollbar-border;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(120deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(240deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(0deg, rgb(252, 252, 252) 30%, rgba(0, 0, 0, 0) 31%);
+        background-color: $scrollbar-button-background;
+    }
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-button:horizontal:end:increment {
+        @include shared.size(12px, 12px);
+        border: $scrollbar-border;
+        border-bottom: none;
+        border-left: none;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(210deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(330deg, rgba(250, 250, 250, 1) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(90deg, rgba(250, 250, 250, 1) 30%, rgba(0, 0, 0, 0) 31%);
+        background-color: $scrollbar-button-background;
+    }
+
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-button:horizontal:start:decrement {
+        @include shared.size(12px, 12px);
+        border: $scrollbar-border;
+        border-bottom: none;
+        border-right: none;
+        /* stylelint-disable-next-line */
+        background: linear-gradient(30deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(150deg, rgb(252, 252, 252) 40%, rgba(0, 0, 0, 0) 41%), linear-gradient(270deg, rgb(252, 252, 252) 30%, rgba(0, 0, 0, 0) 31%);
+        background-color: $scrollbar-button-background;
+    }
+    /* stylelint-disable-next-line */
+    ::-webkit-scrollbar-button:horizontal {
+        border-top: $scrollbar-border;
+        width: 4px;
+        height: 1;
+        background-color: transparent;
+    }
+    ::-webkit-scrollbar-corner {
+        width: 12px;
+        height: 12px;
+        background-color: #E0E0E0;
+    }
+}
+
+@mixin hide-scrollbar {
+    scrollbar-width: none; /* Firefox 64 */
+    -ms-overflow-style: none; /* IE 11 */
+    &::-webkit-scrollbar { /* WebKit */
+        display: none;
+    }
+}

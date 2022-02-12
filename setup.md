@@ -65,6 +65,13 @@ sudo apt install pkg-config
 sudo apt install libssl-dev
 ```
 
+遇到问题:
+
+> Could not resolve host: crates
+
+请参考该 issue:
+https://github.com/rust-lang/cargo/issues/7515
+
 ## Install the vscode extension
 
 Install the extension `rust-analyzer`.
