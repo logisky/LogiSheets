@@ -1,4 +1,0 @@
-<div class="pre-btns"></div>
-<div class="tab" [ngClass]="{'active':i === active}" *ngFor="let sheetname of tabs$ | async;let i=index"
-    (click)='onTabChange(i)' [index]="i" logi-sheet-tab-contextmenu>{{sheetname}}</div>
-<div class="add-btn" (click)="add()">+</div>

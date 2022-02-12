@@ -1,9 +1,0 @@
-<logi-main-menu class="main-menu" [currType]='mainMenuType' (mainMenuChanged$)='mainMenuChange($event)'>
-</logi-main-menu>
-<div class="content">
-    <ng-container [ngSwitch]='mainMenuType'>
-        <logi-start class="top-bar-start content-detail" *ngSwitchCase='mainMenuTypeEnum.START'
-            [selectedCell]='selectedCell'>
-        </logi-start>
-    </ng-container>
-</div>

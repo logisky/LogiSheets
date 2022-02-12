@@ -1,5 +1,0 @@
-export * from './scrollbar.component'
-export * from './scrollbar.module'
-export * from './scrollbar'
-export * from './service'
-export * from './scroll_event'

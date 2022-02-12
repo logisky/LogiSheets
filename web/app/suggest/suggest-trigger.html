@@ -1,6 +1,0 @@
-<ng-container *ngFor='let item of items'>
-    <div class="suggest" [ngClass]='{"disable": item.disable}'>
-        <span class="suggest-span" *ngFor='let s of item.spans' [ngClass]='{"highlight": s.highlight}'>{{s.text}}</span>
-    </div>
-    <div class="desc">{{item.desc}}</div>
-</ng-container>

@@ -1,6 +1,0 @@
-export * from './content.module'
-export * from './font-size'
-export * from './start-item'
-export * from './set-attr-event'
-export * from './start-item-type'
-export * from './start.component'

@@ -1,8 +1,0 @@
-<div class="left"></div>
-<div class="font-color" [colorPicker]='getStartItem(startItemTypeEnum.FONT_COLOR).value'
-    (colorPickerChange)='setStyle(startItemTypeEnum.FONT_COLOR, $event)' [cpPosition]='"bottom"'
-    [cpPositionOffset]='"50%"' [cpToggle]='getStartItem(startItemTypeEnum.FONT_COLOR).opened'
-    (click)='open(startItemTypeEnum.FONT_COLOR)'>
-    <div>A</div>
-    <div class="color-bar" [style.backgroundColor]='getStartItem(startItemTypeEnum.FONT_COLOR).value'></div>
-</div>
