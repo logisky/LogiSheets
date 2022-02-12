@@ -7,6 +7,13 @@ And this grammar has left-recursion. We used [this](https://cyberzhg.github.io/t
 
 WIP
 
+## 启动前端
+
+```
+yarn
+yarn start
+```
+
 ## protoc
 
 下载对应系统的安装包
