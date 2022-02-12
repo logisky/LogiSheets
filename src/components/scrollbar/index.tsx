@@ -7,18 +7,16 @@ import { EventType, on } from 'global/events'
 export * from './scroll_event'
 export type ScrollbarType = 'x' | 'y'
 export interface ScrollbarProps {
+    // 当前canvas的尺寸
     containerLength?: number
+    // 整个sheet的尺寸
+    containerTotalLength?: number
     scrollDistance?: number
     setScrollDistance?: (scrollDistance: number) => void
-    containerTotalLength?: number
-    /**
-     * y-scrollbar padding-top, pixel
-     */
     paddingTop?: number
-    /**
-     * x-scrollbar padding-left, pixel
-     */
+    paddingBottom?: number
     paddingLeft?: number
+    paddingRight?: number
     minThumbLength?: number
     maxThumbRadio?: number
     direction?: ScrollbarType
@@ -31,8 +29,10 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     scrollDistance = 0,
     setScrollDistance,
     containerTotalLength = 0,
-    paddingTop = 0,
+    paddingBottom = 0,
     paddingLeft = 0,
+    paddingRight = 0,
+    paddingTop = 0,
     minThumbLength = 20,
     maxThumbRadio = 80,
     direction = 'x',
@@ -87,8 +87,6 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
         containerLength,
         scrollDistance,
         containerTotalLength,
-        paddingTop,
-        paddingLeft,
         minThumbLength,
         maxThumbRadio,
         direction,
@@ -187,9 +185,11 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
         <div className={`${styles.host} ${xScrollbar() ? styles['x-scrollbar'] : styles['y-scrollbar']}`} >
             <div className={styles["edit-scrollbar"]} ref={_containerEl} style={{
                 paddingTop: toPx(paddingTop),
-                height: `calc(100% - ${toPx(paddingTop)})`,
+                paddingBottom: toPx(paddingBottom),
                 paddingLeft: toPx(paddingLeft),
-                width: `calc(100% - ${toPx(paddingLeft)})`,
+                paddingRight: toPx(paddingRight),
+                height: `calc(100% - ${toPx(paddingTop + paddingBottom)})`,
+                width: `calc(100% - ${toPx(paddingLeft + paddingRight)})`,
             }}>
                 <div
                     className={styles["thumb_container"]}

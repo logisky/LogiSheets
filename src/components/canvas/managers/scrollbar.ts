@@ -39,7 +39,8 @@ export const useScrollbar = () => {
         mouseWheelScrolling(delta, type, e.currentTarget)
     }
     const resize = (canvas: HTMLCanvasElement) => {
-        initScrollbar(canvas)
+        setXScrollbar({ ...xScrollbar, containerLength: canvas.offsetWidth })
+        setYScrollbar({ ...yScrollbar, containerLength: canvas.offsetHeight })
     }
 
     const mouseWheelScrolling = (
