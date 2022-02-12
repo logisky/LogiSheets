@@ -1,5 +1,6 @@
 import { SelectedCell } from './events'
 import { Subscription } from 'rxjs'
+import { debounceTime } from 'rxjs/operators'
 import { CellInput, Payload } from 'proto/message'
 import styles from './canvas.module.scss'
 import {
@@ -45,15 +46,29 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         subs.add(DATA_SERVICE.backend.render$.subscribe(() => {
             renderMng.render(getCanvas())
         }))
-        subs.add(on(window, EventType.RESIZE).subscribe(() => {
-            const canvas = getCanvas()
-            renderMng.render(canvas)
-            scrollbarMng.resize(canvas)
-        }))
+        subs.add(on(window, EventType.RESIZE)
+            .pipe(debounceTime(100))
+            .subscribe(() => {
+                const canvas = getCanvas()
+                renderMng.render(canvas)
+            }))
         return () => {
             subs.unsubscribe()
         }
     }, [])
+    // 这里需要获取最新的state，所以useeffect不能加参数
+    useEffect(() => {
+        const subs = new Subscription()
+        subs.add(on(window, EventType.RESIZE)
+            .pipe(debounceTime(100))
+            .subscribe(() => {
+                const canvas = getCanvas()
+                scrollbarMng.resize(canvas)
+            }))
+        return () => {
+            subs.unsubscribe()
+        }
+    })
     useEffect(() => {
         const e = startCellMng.startCellEvent
         selectorMng.startCellChange(e)
@@ -173,11 +188,15 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         ) : null}
         <ScrollbarComponent
             {...scrollbarMng.xScrollbar}
+            paddingLeft={20}
+            paddingRight={10}
             mousemove$={mouseMoveScrolling}
             mouseWheelMove$={e => scrollbarMng.mouseWheelScrolling(e.delta, e.type, canvasEl.current!)}
         ></ScrollbarComponent>
         <ScrollbarComponent
             {...scrollbarMng.yScrollbar}
+            paddingTop={20}
+            paddingBottom={10}
             mousemove$={mouseMoveScrolling}
             mouseWheelMove$={e => scrollbarMng.mouseWheelScrolling(e.delta, e.type, canvasEl.current!)}
         ></ScrollbarComponent>
