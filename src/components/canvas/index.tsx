@@ -48,6 +48,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         subs.add(on(window, EventType.RESIZE).subscribe(() => {
             const canvas = getCanvas()
             renderMng.render(canvas)
+            scrollbarMng.resize(canvas)
         }))
         return () => {
             subs.unsubscribe()
@@ -124,7 +125,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         scrollbarMng.mouseMove(e)
         renderMng.render(canvasEl.current!)
     }
-    const mouseWheelScroll = (e: WheelEvent<HTMLCanvasElement>) => {
+    const wheelScroll = (e: WheelEvent<HTMLCanvasElement>) => {
         scrollbarMng.mouseWheel(e)
         renderMng.render(e.currentTarget)
     }
@@ -160,7 +161,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         <canvas
             className={styles.canvas}
             ref={canvasEl}
-            onWheel={mouseWheelScroll}
+            onWheel={wheelScroll}
         >你的浏览器不支持canvas，请升级浏览器</canvas>
         {contextmenuOpen && contextMenuEl ? contextMenuEl : null}
         {selectorMng.selector ? (
@@ -170,8 +171,16 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
                 ></SelectorComponent>
             </div>
         ) : null}
-        <ScrollbarComponent {...scrollbarMng.xScrollbar} mousemove$={mouseMoveScrolling}></ScrollbarComponent>
-        <ScrollbarComponent {...scrollbarMng.yScrollbar} mousemove$={mouseMoveScrolling}></ScrollbarComponent>
+        <ScrollbarComponent
+            {...scrollbarMng.xScrollbar}
+            mousemove$={mouseMoveScrolling}
+            mouseWheelMove$={e => scrollbarMng.mouseWheelScrolling(e.delta, e.type, canvasEl.current!)}
+        ></ScrollbarComponent>
+        <ScrollbarComponent
+            {...scrollbarMng.yScrollbar}
+            mousemove$={mouseMoveScrolling}
+            mouseWheelMove$={e => scrollbarMng.mouseWheelScrolling(e.delta, e.type, canvasEl.current!)}
+        ></ScrollbarComponent>
         {textMng.context && textMng.editing ?
             <TextContainerComponent
                 context={textMng.context}

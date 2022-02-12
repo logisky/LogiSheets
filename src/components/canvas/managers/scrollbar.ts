@@ -1,10 +1,10 @@
 import { ScrollbarType, ScrollEvent, ScrollbarProps } from 'components/scrollbar'
 import { CANVAS_OFFSET, DATA_SERVICE } from 'core/data'
-import { useState, WheelEvent } from 'react'
+import { useRef, useState, WheelEvent } from 'react'
 export const useScrollbar = () => {
     const [xScrollbar, setXScrollbar] = useState<ScrollbarProps>({})
     const [yScrollbar, setYScrollbar] = useState<ScrollbarProps>({})
-    const [scrollEvent, setScrollEvent] = useState<ScrollEvent>()
+    const scrollEvent = useRef<ScrollEvent>()
     const initScrollbar = (canvas: HTMLCanvasElement) => {
         const scroll = DATA_SERVICE.scroll
         setXScrollbar({
@@ -31,27 +31,18 @@ export const useScrollbar = () => {
             DATA_SERVICE.updateScroll(undefined, e.scrollDistance)
             setYScrollbar({ ...yScrollbar, scrollDistance: e.scrollDistance })
         }
-        setScrollEvent(e)
+        scrollEvent.current = e
     }
     const mouseWheel = (e: WheelEvent<HTMLCanvasElement>) => {
         const delta = e.deltaX === 0 ? e.deltaY : e.deltaX
         const type = e.deltaX === 0 ? 'y' : 'x'
-        _mouseWheelScrolling(delta, type, e.currentTarget)
+        mouseWheelScrolling(delta, type, e.currentTarget)
     }
     const resize = (canvas: HTMLCanvasElement) => {
-        setXScrollbar({
-            ...xScrollbar,
-            containerLength: canvas.offsetWidth,
-            containerTotalLength: DATA_SERVICE.sheetSvc.maxWidth(),
-        })
-        setYScrollbar({
-            ...yScrollbar,
-            containerLength: canvas.offsetHeight,
-            containerTotalLength: DATA_SERVICE.sheetSvc.maxHeight(),
-        })
+        initScrollbar(canvas)
     }
 
-    const _mouseWheelScrolling = (
+    const mouseWheelScrolling = (
         delta: number,
         type: ScrollbarType,
         canvas: HTMLCanvasElement,
@@ -60,9 +51,9 @@ export const useScrollbar = () => {
             return
         const deltaX = type === 'x' ? delta : 0
         const deltaY = type === 'y' ? delta : 0
-        const scrollEvent = new ScrollEvent()
-        scrollEvent.type = type
-        scrollEvent.trust = true
+        const e = new ScrollEvent()
+        e.type = type
+        e.trust = true
         if (deltaY) {
             const oldScrollY = DATA_SERVICE.scroll.y
             if (deltaY < 0 && oldScrollY === 0)
@@ -75,8 +66,8 @@ export const useScrollbar = () => {
             let height = scrollY + canvas.offsetHeight
             height = Math.max(height, minHeight)
             height = DATA_SERVICE.sheetSvc.updateMaxHeight(height)
-            scrollEvent.delta = scrollY - oldScrollY
-            scrollEvent.scrollDistance = scrollY
+            e.delta = scrollY - oldScrollY
+            e.scrollDistance = scrollY
             setYScrollbar({
                 ...yScrollbar,
                 containerLength: canvas.offsetHeight,
@@ -95,8 +86,8 @@ export const useScrollbar = () => {
             let width = scrollX + canvasWidth
             width = Math.max(width, canvasWidth)
             width = DATA_SERVICE.sheetSvc.updateMaxWidth(width)
-            scrollEvent.delta = scrollX - oldScrollX
-            scrollEvent.scrollDistance = scrollX
+            e.delta = scrollX - oldScrollX
+            e.scrollDistance = scrollX
             setXScrollbar({
                 ...xScrollbar,
                 containerLength: canvasWidth,
@@ -105,7 +96,7 @@ export const useScrollbar = () => {
             })
         } else
             return false
-        setScrollEvent(scrollEvent)
+        scrollEvent.current = e
     }
     return {
         xScrollbar,
@@ -117,6 +108,7 @@ export const useScrollbar = () => {
         mouseMove,
         resize,
         mouseWheel,
+        mouseWheelScrolling,
     }
 }
 
