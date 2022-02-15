@@ -1,6 +1,0 @@
-{
-    "compilerOptions": {
-        "baseUrl": "../"
-    },
-    "extends": "../tsconfig-vscode.json"
-}
