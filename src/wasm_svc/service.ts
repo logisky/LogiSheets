@@ -1,5 +1,5 @@
 import { Subject } from 'rxjs'
-import {ClientSend,  Payload,  ServerSend, ShiftType, Transaction} from '../proto/message'
+import {ClientSend,  DisplayRequest,  DisplayResponse,  Payload,  ServerSend, ShiftType, Transaction} from '../proto/message'
 import * as wasm from '../../wasm/pkg'
 import { Calculator , Executor } from './calculator'
 import { TransactionCode, TransactionEndResult } from './jsvalues'
@@ -25,7 +25,17 @@ export class Service {
     private _calculator: Calculator = new Calculator()
 
     private _execute(req: ClientSend): ServerSend {
-        throw Error('todo')
+        const clientSend = req.clientSendOneof
+        if (clientSend === undefined)
+            return {}
+        if (clientSend.$case === 'transaction')
+            return this._execTransaction(clientSend.transaction)
+        return this._execDisplayReq(clientSend.displayRequest)
+    }
+
+    private _execDisplayReq(req: DisplayRequest): ServerSend {
+        const response: DisplayResponse = wasm.get_patches(req.sheetIdx, req.version)
+        return {serverSendOneof: {$case: 'displayResponse', displayResponse: response}}
     }
 
     private _execTransaction(transaction: Transaction): ServerSend {
