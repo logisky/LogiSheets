@@ -1,5 +1,5 @@
 import { DATA_SERVICE } from 'core/data'
-import { SETTINGS } from 'global/settings'
+import { SETTINGS } from 'common/settings'
 import { Range } from 'core/standable'
 import { Cell } from './cell'
 

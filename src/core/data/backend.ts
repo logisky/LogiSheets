@@ -1,6 +1,6 @@
 import { Observable, from, ReplaySubject, Subject } from 'rxjs'
 import { ClientSend, DisplayPatch, Payload, ServerSend, SheetUpdated, Transaction } from 'proto/message'
-import { debugWeb } from 'global'
+import { debugWeb } from 'common'
 import { SheetService } from 'core/data/sheet'
 export class Backend {
     constructor(

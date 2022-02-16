@@ -1,6 +1,6 @@
-import {error} from 'global'
-import {CanvasAttr} from './canvas_attr'
-import {dpr, npx, npxLine} from './utils'
+import { error } from 'common'
+import { CanvasAttr } from './canvas_attr'
+import { dpr, npx, npxLine } from './utils'
 
 export class CanvasApi {
     canvas() {

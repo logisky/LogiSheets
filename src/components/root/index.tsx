@@ -5,7 +5,7 @@ import { RootContainer } from './container'
 import useWebSocket, { ReadyState } from 'react-use-websocket'
 import { DATA_SERVICE } from 'core/data'
 import styles from './root.module.scss'
-import { SETTINGS } from 'global/settings'
+import { SETTINGS } from 'common/settings'
 
 
 export const SpreadsheetRoot = () => {

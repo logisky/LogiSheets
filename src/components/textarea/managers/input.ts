@@ -5,7 +5,7 @@ import {
     KeyboardEventCode,
     MIMES,
     StandardKeyboardEvent,
-} from 'global/events'
+} from 'common/events'
 import { TextManager } from './text'
 import {
     Position,
@@ -17,10 +17,10 @@ import {
 } from '../input'
 import { useCursor } from './cursor'
 import { useSelection } from './selection'
-import { AccessibilitySupport } from 'global/document'
-import { isMac } from 'global/platform'
+import { AccessibilitySupport } from 'common/document'
+import { isMac } from 'common/platform'
 import { ErrorNode, isErrorNode, parse } from 'core/formula'
-import { debugWeb } from 'global'
+import { debugWeb } from 'common'
 import { Subscription, Subject, Observable } from 'rxjs'
 import { tap } from 'rxjs/operators'
 

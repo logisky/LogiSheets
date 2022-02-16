@@ -17,7 +17,7 @@ import {
     Range,
 } from 'core/standable'
 
-import {SETTINGS} from 'global/settings'
+import { SETTINGS } from 'common/settings'
 import { StandardValue } from 'core/standable/value'
 export const MAX_COUNT = 100000000
 

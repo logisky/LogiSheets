@@ -1,5 +1,5 @@
-import {ColInfo} from 'proto/message'
-import {findMdwColw, shallowCopy, width2px} from 'global'
+import { ColInfo } from 'proto/message'
+import { findMdwColw, shallowCopy, width2px } from 'common'
 export class StandardColInfo implements ColInfo {
     hidden = false
     idx = 0

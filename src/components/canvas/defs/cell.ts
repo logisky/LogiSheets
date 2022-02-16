@@ -1,5 +1,5 @@
-import {RenderCell} from 'core/data'
-import {shallowCopy} from 'global'
+import { RenderCell } from 'core/data'
+import { shallowCopy } from 'common'
 export type CellType = 'Cell' | 'LeftTop' | 'FixedLeftHeader' | 'FixedTopHeader' | 'unknown'
 export class Cell extends RenderCell {
     type: CellType = 'unknown'

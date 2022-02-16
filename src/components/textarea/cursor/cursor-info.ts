@@ -1,4 +1,4 @@
-import { equal } from "global"
+import { equal } from "common"
 
 export class BaseInfo {
     public x = 0

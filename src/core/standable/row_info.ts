@@ -1,5 +1,5 @@
-import {RowInfo} from 'proto/message'
-import {shallowCopy, ptToPx} from 'global'
+import { RowInfo } from 'proto/message'
+import { shallowCopy, ptToPx } from 'common'
 export class StandardRowInfo implements RowInfo {
     height = 0
     hidden = false

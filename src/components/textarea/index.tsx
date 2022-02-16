@@ -1,4 +1,4 @@
-import { on, EventType } from 'global/events'
+import { on, EventType } from 'common/events'
 import { useSelection, useCursor, InputManager, TextManager } from './managers'
 import { Context } from './defs'
 import { BlurEvent, CursorEvent } from './events'

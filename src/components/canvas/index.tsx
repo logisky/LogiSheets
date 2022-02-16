@@ -15,13 +15,13 @@ import {
 import { useSelector, useStartCell, useScrollbar, useDnd, useText, Render } from './managers'
 import { Cell } from './defs'
 import { ScrollEvent, ScrollbarComponent } from 'components/scrollbar'
-import { createSyntheticEvent, EventType, on } from 'global/events'
+import { createSyntheticEvent, EventType, on } from 'common/events'
 import { DATA_SERVICE } from 'core/data'
 import { ContextmenuComponent } from './contextmenu'
 import { SelectorComponent } from 'components/selector'
 import { BlurEvent, TextContainerComponent } from 'components/textarea'
 import { DndComponent } from 'components/dnd'
-import { Buttons } from 'global'
+import { Buttons } from 'common'
 export const OFFSET = 100
 
 export interface CanvasProps {

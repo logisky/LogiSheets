@@ -1,9 +1,9 @@
 import { DATA_SERVICE } from 'core/data'
 import { Context } from 'components/textarea'
 import { Cell } from '../defs'
-import { StandardKeyboardEvent } from 'global/events'
+import { StandardKeyboardEvent } from 'common/events'
 import { useRef, useState } from 'react'
-import { shallowCopy } from 'global'
+import { shallowCopy } from 'common'
 import { StartCellEvent } from './start-cell'
 
 export const useText = () => {

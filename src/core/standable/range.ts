@@ -1,5 +1,5 @@
-import {MergeCell} from 'proto/message'
-import {shallowCopy} from 'global'
+import { MergeCell } from 'proto/message'
+import { shallowCopy } from 'common'
 export class Range {
     static fromMergeCell(mergeCell: MergeCell) {
         const range = new Range()
