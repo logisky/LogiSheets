@@ -1,7 +1,7 @@
 import { Cell, match } from '../defs'
 import { DATA_SERVICE } from 'core/data'
 import { MouseEvent, useState } from 'react'
-import { Buttons } from 'global'
+import { Buttons } from 'common'
 import { SelectorProps } from 'components/selector'
 import { Range } from 'core/standable'
 export type StartCellType = 'mousedown' | 'contextmenu' | 'render' | 'unknown'

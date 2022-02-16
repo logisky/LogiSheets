@@ -2,7 +2,7 @@ import {
     Font,
     UnderlineType,
 } from 'proto/message'
-import { shallowCopy } from 'global'
+import { shallowCopy } from 'common'
 import { StandardColor } from './color'
 /**
  * https://developer.mozilla.org/zh-CN/docs/Web/CSS/font

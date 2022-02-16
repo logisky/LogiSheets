@@ -3,10 +3,10 @@ import {
     commonSuffixLength,
     containsEmoji,
     containsFullWidthCharactor,
-} from 'global/strings'
-import {Position} from './position'
-import {TextAreaWrapper} from './textarea-wrapper'
-import {TypeData} from './type_data'
+} from 'common/strings'
+import { Position } from './position'
+import { TextAreaWrapper } from './textarea-wrapper'
+import { TypeData } from './type_data'
 export class TextAreaState {
     public value = ''
     public selectionStart = 0
@@ -44,13 +44,13 @@ export class TextAreaState {
             currSelectionStart,
             currSelectionEnd,
         ] = [
-            previousState.value,
-            previousState.selectionStart,
-            previousState.selectionEnd,
-            currentState.value,
-            currentState.selectionStart,
-            currentState.selectionEnd,
-        ]
+                previousState.value,
+                previousState.selectionStart,
+                previousState.selectionEnd,
+                currentState.value,
+                currentState.selectionStart,
+                currentState.selectionEnd,
+            ]
         const prevSuffix = prevValue.substring(prevSelectionEnd)
         const currSuffix = currValue.substring(currSelectionEnd)
         const suffixLength = commonSuffixLength(prevSuffix, currSuffix)
@@ -71,7 +71,7 @@ export class TextAreaState {
             if (currSelectionStart === currValue.length) {
                 if (currValue.startsWith(prevValue))
                     potentialEmojiInput = currValue.substring(prevValue.length)
-            // tslint:disable-next-line: ext-curly
+                // tslint:disable-next-line: ext-curly
             } else if (currValue.endsWith(prevValue))
                 potentialEmojiInput = currValue
                     .substring(0, currValue.length - prevValue.length)
@@ -80,10 +80,10 @@ export class TextAreaState {
                 && (/\uFE0F/.test(potentialEmojiInput) || containsEmoji(
                     potentialEmojiInput
                 ))) {
-                    const typeData = new TypeData()
-                    typeData.text = potentialEmojiInput
-                    return typeData
-                }
+                const typeData = new TypeData()
+                typeData.text = potentialEmojiInput
+                return typeData
+            }
         }
         if (currSelectionStart === currSelectionEnd) {
             if (

@@ -1,10 +1,10 @@
-import { shallowCopy } from 'global'
-import {BlockInfo} from 'proto/message'
-import {Range} from './range'
+import { shallowCopy } from 'common'
+import { BlockInfo } from 'proto/message'
+import { Range } from './range'
 export class StandardBlock implements BlockInfo {
     rowCnt = 0
     blockId = 0
-    colCnt= 0
+    colCnt = 0
     colStart = 0
     rowStart = 0
     get coordinate() {

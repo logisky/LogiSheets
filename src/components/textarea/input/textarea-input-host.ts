@@ -1,10 +1,10 @@
-import {Position} from './position'
-import {ClipboardStoredMetaData} from 'global/events'
-import {TextAreaState} from './textarea-state'
+import { Position } from './position'
+import { ClipboardStoredMetaData } from 'common/events'
+import { TextAreaState } from './textarea-state'
 export class ClipboardDataToCopy {
     constructor(
         public data: ClipboardStoredMetaData
-    ) {}
+    ) { }
     public text = ''
 }
 

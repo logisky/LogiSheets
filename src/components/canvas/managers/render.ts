@@ -1,8 +1,8 @@
 import { PainterService, Box, TextAttr, CanvasAttr } from 'core/painter'
 import { DATA_SERVICE, RenderCell } from 'core/data'
 import { StandardColor, Range } from 'core/standable'
-import { SETTINGS } from 'global/settings'
-import { toA1notation } from 'global'
+import { SETTINGS } from 'common/settings'
+import { toA1notation } from 'common'
 import { StandardStyle } from 'core/standable/style'
 
 export class Render {

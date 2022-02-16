@@ -1,5 +1,5 @@
-import './App.css';
-import {SpreadsheetRoot} from './components/root/index'
+import './App.scss';
+import { SpreadsheetRoot } from './components/root/index'
 
 function App() {
   return (

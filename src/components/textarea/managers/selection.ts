@@ -3,7 +3,7 @@ import { BaseInfo } from 'components/textarea/cursor'
 import { useCursor } from './cursor'
 import { Context } from '../defs'
 import { TextManager } from './text'
-import { StandardKeyboardEvent } from 'global/events'
+import { StandardKeyboardEvent } from 'common/events'
 import { MouseEvent as ReactMouseEvent, useRef } from 'react'
 export class Selection {
     public startX = 0

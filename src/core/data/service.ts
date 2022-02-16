@@ -1,11 +1,11 @@
 import { MAX_COUNT, SheetService } from './sheet'
 import { ScrollPosition } from './scroll'
-import { SETTINGS } from '../../global/settings'
+import { SETTINGS } from '../../common/settings'
 import { RenderCell, ViewRange } from './view_range'
 import { Backend } from './backend'
 import { DisplayRequest } from 'proto/message'
 import { Range } from 'core/standable'
-import { debugWeb } from 'global'
+import { debugWeb } from 'common'
 export const CANVAS_OFFSET = 100
 
 

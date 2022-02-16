@@ -1,6 +1,6 @@
-import {Alignment, Border, Font, PatternFill, Style} from 'proto/message'
-import {shallowCopy} from 'global'
-import {StandardFont} from './font'
+import { Alignment, Border, Font, PatternFill, Style } from 'proto/message'
+import { shallowCopy } from 'common'
+import { StandardFont } from './font'
 
 export class StandardStyle implements Style {
     border: Border | undefined = undefined

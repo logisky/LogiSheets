@@ -1,6 +1,6 @@
-import {TextAreaWrapper} from './textarea-wrapper'
-import {TextAreaInputHost} from './textarea-input-host'
-import {Subscription} from 'rxjs'
+import { TextAreaWrapper } from './textarea-wrapper'
+import { TextAreaInputHost } from './textarea-input-host'
+import { Subscription } from 'rxjs'
 import {
     EventType,
     on,
@@ -13,20 +13,20 @@ import {
     CompositionStartEvent,
     ClipboardMetaData,
     ClipboardStoredMetaData,
-} from 'global/events'
-import {TextAreaState} from './textarea-state'
+} from 'common/events'
+import { TextAreaState } from './textarea-state'
 import {
     isChrome,
     isFirefox,
     isMac,
     isSafari,
-} from 'global/platform'
-import {TypeData} from './type_data'
-import {Selection} from './selection'
-import {Position} from './position'
-import {TextAreaInputEvents} from './textarea-input-events'
-import {isHighSurrogate} from 'global/strings'
-import {debugWeb, shallowCopy} from 'global'
+} from 'common/platform'
+import { TypeData } from './type_data'
+import { Selection } from './selection'
+import { Position } from './position'
+import { TextAreaInputEvents } from './textarea-input-events'
+import { isHighSurrogate } from 'common/strings'
+import { debugWeb, shallowCopy } from 'common'
 const enum ReadFromTextArea {
     TYPE,
     PASTE,
@@ -121,9 +121,9 @@ export class TextAreaInput extends TextAreaInputEvents {
             const oldState = this._textAreaState
             const newState = TextAreaState.selectedText(text)
             const typeInput = new TypeData()
-                typeInput.text = newState.value
-                typeInput.replacePrevCharCnt = 
-                    oldState.selectionEnd - oldState.selectionStart
+            typeInput.text = newState.value
+            typeInput.replacePrevCharCnt =
+                oldState.selectionEnd - oldState.selectionStart
             return [newState, typeInput]
         }
         this._subs.add(
@@ -149,7 +149,7 @@ export class TextAreaInput extends TextAreaInputEvents {
             }))
         const deduceInputFromTextAreaValue = (
             couldBeEmojiInput: boolean
-        )  => {
+        ) => {
             const oldState = this._textAreaState
             const newState = TextAreaState
                 .readFromTextArea(this._textareaWrapper)

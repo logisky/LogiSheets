@@ -13,3 +13,6 @@ yarn.lock
 
 # lint cached files
 .husky
+
+# bundle generate files
+dist

@@ -2,11 +2,11 @@ import {
     getParentScrollTop,
     restoreParentsScrollTop,
     getShadowRoot,
-} from 'global/document'
+} from 'common/document'
 export class TextAreaWrapper {
     constructor(
         public readonly textArea: HTMLTextAreaElement,
-    ) {}
+    ) { }
     setIgnoreSelectionChangeTime(): void {
         this._ignoreSelectionChangeTime = Date.now()
     }
