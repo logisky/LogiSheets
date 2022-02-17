@@ -2,10 +2,15 @@ import { Observable, from, ReplaySubject, Subject } from 'rxjs'
 import { ClientSend, DisplayPatch, Payload, ServerSend, SheetUpdated, Transaction } from 'proto/message'
 import { debugWeb } from 'common'
 import { SheetService } from 'core/data/sheet'
+import { Service as StandAloneService } from 'wasm_svc/service'
 export class Backend {
     constructor(
         public readonly sheetSvc: SheetService,
-    ) { }
+    ) {
+        this._wasmSvc.output$.subscribe(e => {
+            this.handleResponse(e)
+        })
+    }
     get render$(): Observable<void> {
         return this._render$
     }
@@ -14,26 +19,18 @@ export class Backend {
         return this._sheetUpdated$
     }
     send$ = new ReplaySubject<Blob>(5)
-    _handleResponse(msg: unknown) {
-        if (!(msg instanceof Blob))
+    handleResponse(msg: Blob | ServerSend) {
+        debugWeb(`standalone: ${STAND_ALONE}, response`, msg)
+        if (!(msg instanceof Blob)) {
+            if (!STAND_ALONE)
+                return
+            this._handleServerSend(msg)
             return
+        }
         from(msg.arrayBuffer()).subscribe(ab => {
-            const data = ServerSend.decode(new Uint8Array(ab))
-            debugWeb('server send ', data)
-            const type = data.serverSendOneof
-            if (type?.$case === 'displayResponse') {
-                const e = type.displayResponse
-                debugWeb('ws: display response', e)
-                this.sheetSvc.clear()
-                e.patches.forEach(p => {
-                    this._handleDisplayArea(p)
-                })
-                this._render$.next()
-            } else if (type?.$case === 'sheetUpdated') {
-                const e = type.sheetUpdated
-                debugWeb('ws: sheet updated', e)
-                this._sheetUpdated$.next(e)
-            }
+            const e = ServerSend.decode(new Uint8Array(ab))
+            debugWeb('server send ', e)
+            this._handleServerSend(e)
         })
     }
     sendTransaction(payloads: Payload[], undoable = true) {
@@ -55,11 +52,32 @@ export class Backend {
             clientSendOneof: msg,
         }
         debugWeb('client send', clientSend)
+        if (STAND_ALONE) {
+            this._wasmSvc.input$.next(clientSend)
+            return
+        }
         const ab = ClientSend.encode(clientSend).finish()
         this.send$.next(new Blob([ab]))
     }
     private _render$ = new Subject<void>()
     private _sheetUpdated$ = new Subject<SheetUpdated>()
+    private _wasmSvc = new StandAloneService([])
+    private _handleServerSend(e: ServerSend) {
+        const type = e.serverSendOneof
+        if (type?.$case === 'displayResponse') {
+            const e = type.displayResponse
+            debugWeb('ws: display response', e)
+            this.sheetSvc.clear()
+            e.patches.forEach(p => {
+                this._handleDisplayArea(p)
+            })
+            this._render$.next()
+        } else if (type?.$case === 'sheetUpdated') {
+            const e = type.sheetUpdated
+            debugWeb('ws: sheet updated', e)
+            this._sheetUpdated$.next(e)
+        }
+    }
 
     private _handleDisplayArea(p: DisplayPatch) {
         const displayArea = p.displayPatchOneof
