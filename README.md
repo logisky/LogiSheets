@@ -14,6 +14,13 @@ yarn
 yarn start
 ```
 
+## 单机版
+
+```
+yarn
+yarn start:wasm
+```
+
 ## protoc
 
 下载对应系统的安装包
