@@ -1,6 +1,8 @@
 import * as path from 'path'
 import { Configuration, DefinePlugin } from 'webpack'
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
+import HtmlWebpackPlugin from 'html-webpack-plugin'
+import WasmPackPlugin from '@wasm-tool/wasm-pack-plugin'
 import 'webpack-dev-server'
 module.exports = (env: NodeJS.ProcessEnv): Configuration => {
 	const mode = env['dev'] ? 'development' : 'production'
@@ -25,6 +27,10 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
 			compress: true,
 			port: 4200,
 		},
+		experiments: {
+			asyncWebAssembly: true,
+			syncWebAssembly: true,
+		},
 
 		// Enable sourcemaps for debugging webpack's output.
 		devtool: "source-map",
@@ -39,17 +45,25 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
 			],
 		},
 		plugins: [
+			new HtmlWebpackPlugin({
+				publicPath: path.join(__dirname, 'dist'),
+				template: path.resolve(__dirname, '/public/index.html')
+			}),
 			new DefinePlugin({
 				STAND_ALONE: standAlone,
+			}),
+			// https://rustwasm.github.io/wasm-pack/book/commands/build.html
+			new WasmPackPlugin({
+				crateDirectory: path.resolve(__dirname, 'src/wasm'),
+				extraArgs: '--mode no-install --target web --dev',
+				outDir: 'pkg',
 			}),
 		],
 
 		module: {
 			rules: [
-				// All files with a '.ts' or '.tsx' extension will be handled by 'awesome-typescript-loader'.
 				{ test: /\.tsx?$/, loader: "ts-loader" },
 
-				// All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
 				{ enforce: "pre", test: /\.js$/, loader: "source-map-loader" },
 				{
 					test: /\.s[ac]ss$/i,

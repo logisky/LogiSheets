@@ -4,6 +4,6 @@ members = [
     "logiutils",
     "math",
     "network",
-    "wasm",
+    "src/wasm",
     "workbook",
 ]
