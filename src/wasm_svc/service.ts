@@ -54,6 +54,7 @@ export class Service {
 
     private _execDisplayReq(req: DisplayRequest): ServerSend {
         const response = get_patches(req.sheetIdx, req.version)
+        console.log(response)
         return { serverSendOneof: { $case: 'displayResponse', displayResponse: response } }
     }
 

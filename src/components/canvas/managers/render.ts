@@ -23,8 +23,6 @@ export class Render {
         const { coodinate: range, position } = renderCell
         const sheetSvc = DATA_SERVICE.sheetSvc
         const style = sheetSvc.getCell(range.startRow, range.startCol)?.style
-        if (!style)
-            return
         const box = new Box()
         box.position = position
         this._fill(box, style)
@@ -91,8 +89,8 @@ export class Render {
         this._painterSvc.restore()
     }
 
-    private _fill(box: Box, style: StandardStyle) {
-        const fill = style.fill
+    private _fill(box: Box, style?: StandardStyle) {
+        const fill = style?.fill
         if (!fill)
             return
         if (fill.bgColor !== '') {
@@ -109,8 +107,8 @@ export class Render {
         }
     }
 
-    private _border(box: Box, position: Range, style: StandardStyle) {
-        const border = style.border
+    private _border(box: Box, position: Range, style?: StandardStyle) {
+        const border = style?.border
         if (!border)
             return
         if (border.top)
@@ -161,14 +159,16 @@ export class Render {
         this._painterSvc.comment(box)
     }
 
-    private _text(box: Box, range: Range, style: StandardStyle) {
+    private _text(box: Box, range: Range, style?: StandardStyle) {
         const info = DATA_SERVICE.sheetSvc
             .getCell(range.startRow, range.startCol)
         if (!info)
             return
         const textAttr = new TextAttr()
-        textAttr.alignment = style.alignment
-        textAttr.setFont(style.getFont())
+        if (style) {
+            textAttr.alignment = style.alignment
+            textAttr.setFont(style.getFont())
+        }
         this._painterSvc.text(info.getFormattedText(), textAttr, box)
     }
 }
