@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use crate::async_func_helper::AsyncCalculator;
 use crate::message::{CalcAsyncResult, CalcAsyncTask};
-use crate::proto::{deserialize_client_message, serialize_server_message};
+use logisheets_protocols::{deserialize_client_message, serialize_server_message};
+use logisheets_protocols::message::ServerSend;
 
 use super::message::{ApplyEdit, FileId, JoinEdit, LeaveEdit, ServerMessage, UserId};
-use super::proto::message::ServerSend;
 use super::room::{ClientResponse, Room};
 use actix::{Actor, Context, Handler, MessageResult, Recipient, Supervised, SystemService};
 use actix_broker::BrokerSubscribe;

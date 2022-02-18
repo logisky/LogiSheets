@@ -1,11 +1,10 @@
 use crate::message::{ApplyEdit, JoinEdit, ServerMessage};
-use crate::proto::message::{
+use logisheets_protocols::message::{
     client_send::ClientSendOneof, payload::PayloadOneof, CellInput, ClientSend, ColumnShift,
     CreateBlock, DisplayRequest, LineShiftInBlock, MoveBlock, Payload, RowShift, SheetShift,
-    ShiftType, Transaction,
+    ShiftType, Transaction, SetColWidth, SetRowHeight
 };
-use crate::proto::message::{SetColWidth, SetRowHeight};
-use crate::proto::serialize_client_message;
+use logisheets_protocols::serialize_client_message;
 use actix::Recipient;
 use std::str::Split;
 
@@ -304,11 +303,11 @@ fn convert<T, U>(res: Result<T, U>) -> Option<T> {
 #[cfg(test)]
 mod tests {
     use super::build_apply_edit_binary;
-    use crate::proto::message::{
+    use logisheets_protocols::message::{
         client_send::ClientSendOneof, payload::PayloadOneof, CellInput, ClientSend, ColumnShift,
         DisplayRequest, Payload, RowShift, ShiftType, Transaction,
     };
-    use crate::proto::serialize_client_message;
+    use logisheets_protocols::serialize_client_message;
 
     #[test]
     fn undo_test() {

@@ -10,7 +10,6 @@ use log::info;
 use session::EditSession;
 mod async_func_helper;
 mod message;
-mod proto;
 mod room;
 mod server;
 mod session;

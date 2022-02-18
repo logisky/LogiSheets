@@ -8,6 +8,7 @@ use wasm_bindgen::prelude::*;
 use xlrs_controller::controller::edit_action::{EditAction, EditPayload, CellInput, RowShift, ColShift, CreateBlock, MoveBlock, BlockInput};
 use xlrs_controller::controller::{display::DisplayRequest, Controller};
 use xlrs_controller::{AsyncCalcResult, AsyncErr, Task};
+use logisheets_protocols::message::DisplayResponse;
 
 lazy_static! {
     static ref CONTROLLER: Mutex<Controller> = Mutex::new(Controller::default());
@@ -129,7 +130,14 @@ pub fn get_patches(sheet_idx: u32, version: u32) -> JsValue {
         sheet_idx: sheet_idx as usize,
         version,
     });
-    JsValue::from_serde(&response).unwrap()
+    let res = JsValue::from_serde(&response);
+    match res {
+        Ok(r) => r,
+        Err(err) => {
+            web_sys::console::log_1(&err.to_string().into());
+            panic!()
+        },
+    }
 }
 
 #[wasm_bindgen]

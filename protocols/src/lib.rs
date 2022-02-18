@@ -1,8 +1,10 @@
+#[macro_use]
+extern crate logiutils;
 use prost::Message;
 use std::io::Cursor;
 
 pub mod message {
-    include!(concat!(env!("OUT_DIR"), "/network.proto.rs"));
+    include!(concat!(env!("OUT_DIR"), "/protocols.rs"));
 
     use xlrs_controller::controller::display::CellFormulaValue;
     use xlrs_controller::controller::display::CellStyle as ControllerCellStyle;

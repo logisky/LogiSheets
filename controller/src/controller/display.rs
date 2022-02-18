@@ -3,12 +3,13 @@ use serde::Serialize;
 use xlrs_workbook::styles::*;
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DisplayResponse {
     pub patches: Vec<DisplayPatch>,
 }
 
 #[derive(Debug, Clone, Serialize)]
-#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum DisplayPatch {
     Values(SheetValues),
     Styles(SheetStyles),
@@ -20,12 +21,14 @@ pub enum DisplayPatch {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SheetBlocks {
     pub sheet_idx: usize,
     pub blocks: Vec<BlockInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlockInfo {
     pub block_id: BlockId,
     pub row_start: usize,
@@ -41,18 +44,21 @@ pub struct DisplayRequest {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SheetMergeCells {
     pub sheet_idx: usize,
     pub merge_cells: Vec<MergeCell>,
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SheetComments {
     pub sheet_idx: usize,
     pub comments: Vec<Comment>,
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MergeCell {
     pub row_start: usize,
     pub col_start: usize,
@@ -61,6 +67,7 @@ pub struct MergeCell {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Comment {
     pub row: usize,
     pub col: usize,
@@ -69,6 +76,7 @@ pub struct Comment {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SheetRowInfo {
     pub sheet_idx: usize,
     pub info: Vec<RowInfo>,
@@ -76,6 +84,7 @@ pub struct SheetRowInfo {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RowInfo {
     pub idx: usize,
     pub height: f64,
@@ -83,6 +92,7 @@ pub struct RowInfo {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SheetColInfo {
     pub sheet_idx: usize,
     pub info: Vec<ColInfo>,
@@ -90,6 +100,7 @@ pub struct SheetColInfo {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ColInfo {
     pub idx: usize,
     pub width: f64,
@@ -105,6 +116,7 @@ pub fn get_default_col_width() -> f64 {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Style {
     pub font: Font,
     pub fill: Fill,
@@ -115,7 +127,7 @@ pub struct Style {
 }
 
 #[derive(Debug, Clone, Serialize)]
-#[serde(tag = "vt")]
+#[serde(rename_all = "camelCase")]
 pub enum Value {
     Text(String),
     Boolean(bool),
@@ -124,6 +136,7 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CellFormulaValue {
     pub row: usize,
     pub col: usize,
@@ -132,12 +145,14 @@ pub struct CellFormulaValue {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SheetValues {
     pub sheet_idx: usize,
     pub values: Vec<CellFormulaValue>,
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CellStyle {
     pub row: usize,
     pub col: usize,
@@ -145,6 +160,7 @@ pub struct CellStyle {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SheetStyles {
     pub sheet_idx: usize,
     pub styles: Vec<CellStyle>,

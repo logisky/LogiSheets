@@ -21,9 +21,8 @@ prost = "0.8"
 rand = "0.7"
 regex = "1"
 reqwest = "0.10.10"
+serde = {version = "1.0.125", features = ["derive"]}
 logiutils = {version = "0.1.0", path = "../logiutils"}
 xlrs_controller = {version = "0.1.0", path = "../controller"}
 xlrs_workbook = {version = "0.1.0", path = "../workbook"}
-
-[build-dependencies]
-prost-build = "0.8"
+logisheets_protocols = {version = "0.1.0", path = "../protocols"}

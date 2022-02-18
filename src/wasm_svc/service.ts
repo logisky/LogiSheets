@@ -1,5 +1,5 @@
 import { Subject, ReplaySubject } from 'rxjs'
-import { ClientSend, DisplayRequest, Payload, ServerSend, ShiftType, Transaction } from '../proto/message'
+import { ClientSend, DisplayRequest, DisplayResponse, Payload, ServerSend, ShiftType, Transaction } from '../proto/message'
 import initWasm, {
     block_input,
     cell_input,
@@ -30,8 +30,7 @@ export class Service {
     public output$: Subject<ServerSend> = new Subject()
     private _calculator: Calculator = new Calculator()
     private async _init() {
-        const initOutput = await initWasm()
-        initOutput.greet()
+        await initWasm()
         this.input$.subscribe((req: ClientSend): void => {
             const response = this._execute(req)
             this.output$.next(response)
@@ -45,6 +44,7 @@ export class Service {
 
     private _execute(req: ClientSend): ServerSend {
         const clientSend = req.clientSendOneof
+        console.log(req)
         if (clientSend === undefined)
             return {}
         if (clientSend.$case === 'transaction')
@@ -53,7 +53,11 @@ export class Service {
     }
 
     private _execDisplayReq(req: DisplayRequest): ServerSend {
-        const response = get_patches(req.sheetIdx, req.version)
+        const jsonRes= get_patches(req.sheetIdx, req.version)
+        console.log('?????')
+        console.log(jsonRes)
+        const response = DisplayResponse.fromJSON(jsonRes)
+        console.log(response)
         return { serverSendOneof: { $case: 'displayResponse', displayResponse: response } }
     }
 
