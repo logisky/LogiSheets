@@ -9,14 +9,14 @@ WIP
 
 ## 启动前端
 
-```
+```sh
 yarn
 yarn start
 ```
 
 ## 单机版
 
-```
+```sh
 yarn
 yarn start:wasm
 ```
