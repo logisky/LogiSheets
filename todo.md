@@ -10,6 +10,8 @@
 - hmr
 - wasm的hmr
 - 用bazel作为编译、构建、打包的底层工具
+- git commit message规范
+- ts的lint
 
 ### 业务
 
