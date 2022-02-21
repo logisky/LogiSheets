@@ -1,11 +1,8 @@
-# Engine for calculating excel formula
+# LogiSheets
 
-The grammar is refered to [this repo](https://github.com/spreadsheetlab/XLParser/blob/master/src/XLParser.Tests/ParserTests.cs)
-.
+LogiSheets is a spreadsheet application that is compatible with Excel and designed for easy further development. Most important of all, it's free!
 
-And this grammar has left-recursion. We used [this](https://cyberzhg.github.io/toolbox/left_rec) to eliminate it.
-
-WIP
+LogiSheets has `wasm` edition and `network` edition. Choose your edition at your option.
 
 ## 启动前端
 
