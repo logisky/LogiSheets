@@ -8,7 +8,6 @@ use wasm_bindgen::prelude::*;
 use xlrs_controller::controller::edit_action::{EditAction, EditPayload, CellInput, RowShift, ColShift, CreateBlock, MoveBlock, BlockInput};
 use xlrs_controller::controller::{display::DisplayRequest, Controller};
 use xlrs_controller::{AsyncCalcResult, AsyncErr, Task};
-use logisheets_protocols::message::DisplayResponse;
 
 lazy_static! {
     static ref CONTROLLER: Mutex<Controller> = Mutex::new(Controller::default());

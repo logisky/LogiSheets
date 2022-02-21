@@ -14,7 +14,7 @@ import initWasm, {
     transaction_end,
     transaction_start,
     undo,
-} from '../wasm/pkg'
+} from '../wasms/server/pkg'
 import { Calculator, Executor } from './calculator'
 import { TransactionCode, TransactionEndResult } from './jsvalues'
 
