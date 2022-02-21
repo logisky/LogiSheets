@@ -35,3 +35,11 @@ pub type AsyncCalcResult = controller_base::async_func::AsyncCalcResult;
 pub type AsyncErr = controller_base::async_func::AsyncErr;
 pub type Task = controller_base::async_func::Task;
 pub type BlockId = controller_base::BlockId;
+
+pub fn lex_success(f: &str) -> bool {
+    let toks = lexer::lex(f);
+    match toks {
+        Some(_) => true,
+        None => false,
+    }
+}
