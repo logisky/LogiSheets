@@ -31,8 +31,8 @@ cargo --version
 ## Select version
 
 ```shell
-rustup update 1.53.0
-rustup default 1.53.0
+rustup update 1.58.1
+rustup default 1.58.1
 ```
 
 ## Config Cargo
