@@ -6,6 +6,7 @@ export interface MainMenuProps {
 }
 export enum MainMenuType {
     START,
+    FILE,
 }
 export interface MainMenuBtn {
     readonly text: string
@@ -16,6 +17,10 @@ export const MainMenu = ({
     mainMenuChanged$,
 }: MainMenuProps) => {
     const btns: readonly MainMenuBtn[] = [
+        {
+            text: '文件',
+            type: MainMenuType.FILE,
+        },
         {
             text: '开始',
             type: MainMenuType.START,
