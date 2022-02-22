@@ -10,11 +10,11 @@
 //     _StyleUpdatePayload_Style_payload_oneof,
 // } from '@logi-pb/network/src/proto/message_pb'
 // import {isBoolean, isString} from '@logi-base/src/ts/common/type_guard'
-import {SelectedCell} from 'components/canvas'
-import {DataService, DATA_SERVICE} from 'core/data'
-import {StartItem} from './start-item'
-import {ItemType} from './start-item-type'
-import {ColorResult, SketchPicker} from 'react-color'
+import { SelectedCell } from 'components/canvas'
+import { DataService, DATA_SERVICE } from 'core/data'
+import { StartItem } from './start-item'
+import { ItemType } from './start-item-type'
+import { ColorResult, SketchPicker } from 'react-color'
 import styles from './start.module.scss'
 import { useEffect, useState } from 'react'
 import { StandardColor } from 'core/standable'
@@ -28,7 +28,7 @@ export interface StartProps {
     readonly selectedCell?: SelectedCell
 }
 
-export const Start = ({
+export const StartComponent = ({
     selectedCell,
 }: StartProps) => {
     const [openSketchPicker, setOpenSketchPicker] = useState(false)
@@ -74,7 +74,7 @@ export const Start = ({
     const _initStyle = () => {
         if (!selectedCell)
             return
-        const {row, col} = selectedCell
+        const { row, col } = selectedCell
         const style = DATA_SERVICE.sheetSvc.getCell(row, col)?.style
         if (style === undefined)
             return
@@ -130,7 +130,7 @@ export const Start = ({
     //     return styleUpdate.payload(payload.build()).build()
     // }
     const onColorPick = (result: ColorResult) => {
-        const {r, g, b, a} = result.rgb
+        const { r, g, b, a } = result.rgb
         const standardColor = StandardColor.from(r, g, b, a)
         setFontColor(standardColor.css())
         setOpenSketchPicker(false)
@@ -143,7 +143,7 @@ export const Start = ({
                 onClick={() => setOpenSketchPicker(true)}
             >
                 <div>A</div>
-                <div className={styles['color-bar']} style={{backgroundColor:fontColor}}></div>
+                <div className={styles['color-bar']} style={{ backgroundColor: fontColor }}></div>
             </div>
             {openSketchPicker ? <SketchPicker
                 color={fontColor}
