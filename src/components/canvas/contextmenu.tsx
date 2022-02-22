@@ -1,17 +1,10 @@
-import {
-    ColumnShift,
-    CreateBlock,
-    LineShiftInBlock,
-    Payload,
-    RowShift,
-    ShiftType,
-} from 'proto/message'
 import { Range, StandardBlock } from 'core/standable'
 import { SelectBlockComponent } from './select-block'
 import { Cell } from './defs'
 import { useState, ReactElement, MouseEvent } from 'react'
 import { DATA_SERVICE } from 'core/data'
 import { ContextMenuComponent, ContextMenuItem } from 'ui/contextmenu'
+import { DeleteBlockColsBuilder, DeleteColsBuilder, InsertColsBuilder, Payload , InsertBlockColsBuilder, InsertBlockRowsBuilder, InsertRowsBuilder, DeleteBlockRowsBuilder, DeleteRowsBuilder, CreateBlockBuilder } from 'api'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent
@@ -53,32 +46,22 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             _blockProcess(
                 blocks,
                 blks => blks.map((block): Payload => {
-                    const shift: LineShiftInBlock = {
-                        cnt: 1,
-                        horizontal: false,
-                        id: block.blockId,
-                        idx: start - block.colStart,
-                        insert: true,
-                        sheetIdx: sheet,
-                    }
-                    return {
-                        payloadOneof: {
-                            $case: 'lineShiftInBlock',
-                            lineShiftInBlock: shift
-                        }
-                    }
+                    return new InsertBlockColsBuilder()
+                        .sheetIdx(sheet)
+                        .blockId(block.blockId)
+                        .colIdx(start - block.colStart)
+                        .cnt(1)
+                        .build() as Payload
                 })
             )
             setBlockMenuOpened(true)
             return
         }
-        const columnShift: ColumnShift = {
-            sheetIdx: sheet,
-            count: 1,
-            start: start,
-            type: ShiftType.INSERT,
-        }
-        const payload: Payload = { payloadOneof: { columnShift, $case: 'columnShift' } }
+        const payload = new InsertColsBuilder()
+            .sheetIdx(sheet)
+            .start(start)
+            .cnt(1)
+            .build()
         DATA_SERVICE.backend.sendTransaction([payload])
     }
 
@@ -90,37 +73,22 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             _blockProcess(
                 blocks,
                 blks => blks.map((block): Payload => {
-                    const lineShiftInBlock: LineShiftInBlock = {
-                        cnt: 1,
-                        horizontal: false,
-                        id: block.blockId,
-                        idx: start - block.colStart,
-                        insert: false,
-                        sheetIdx: sheet,
-                    }
-                    return {
-                        payloadOneof: {
-                            $case: 'lineShiftInBlock',
-                            lineShiftInBlock,
-                        }
-                    }
+                    return new DeleteBlockColsBuilder()
+                        .sheetIdx(sheet)
+                        .blockId(block.blockId)
+                        .cnt(1)
+                        .colIdx(start - block.colStart)
+                        .build() as Payload
                 })
             )
             setBlockMenuOpened(true)
             return
         }
-        const columnShift: ColumnShift = {
-            sheetIdx: sheet,
-            count: 1,
-            start: start,
-            type: ShiftType.DELETE,
-        }
-        const payload: Payload = {
-            payloadOneof: {
-                $case: 'columnShift',
-                columnShift,
-            }
-        }
+        const payload = new DeleteColsBuilder()
+            .sheetIdx(sheet)
+            .cnt(1)
+            .start(start)
+            .build()
         DATA_SERVICE.backend.sendTransaction([payload])
     }
 
@@ -132,36 +100,21 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             _blockProcess(
                 blocks,
                 blks => blks.map((block): Payload => {
-                    const lineShiftInBlock: LineShiftInBlock = {
-                        cnt: 1,
-                        horizontal: true,
-                        id: block.blockId,
-                        idx: start - block.rowStart,
-                        insert: true,
-                        sheetIdx: sheet,
-                    }
-                    return {
-                        payloadOneof: {
-                            lineShiftInBlock,
-                            $case: 'lineShiftInBlock',
-                        }
-                    }
+                    return new InsertBlockRowsBuilder()
+                        .sheetIdx(sheet)
+                        .rowIdx(start - block.rowStart)
+                        .blockId(block.blockId)
+                        .cnt(1)
+                        .build()
                 })
             )
             return
         }
-        const rowShift: RowShift = {
-            sheetIdx: sheet,
-            count: 1,
-            start: start,
-            type: ShiftType.INSERT,
-        }
-        const payload: Payload = {
-            payloadOneof: {
-                $case: 'rowShift',
-                rowShift,
-            }
-        }
+        const payload = new InsertRowsBuilder()
+            .sheetIdx(sheet)
+            .start(start)
+            .cnt(1)
+            .build()
         DATA_SERVICE.backend.sendTransaction([payload])
     }
 
@@ -173,36 +126,21 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             _blockProcess(
                 blocks,
                 blks => blks.map((block): Payload => {
-                    const lineShiftInBlock: LineShiftInBlock = {
-                        cnt: 1,
-                        horizontal: true,
-                        id: block.blockId,
-                        idx: start - block.rowStart,
-                        insert: false,
-                        sheetIdx: sheet,
-                    }
-                    return {
-                        payloadOneof: {
-                            $case: 'lineShiftInBlock',
-                            lineShiftInBlock,
-                        }
-                    }
+                    return new DeleteBlockRowsBuilder()
+                        .sheetIdx(sheet)
+                        .cnt(1)
+                        .blockId(block.blockId)
+                        .rowIdx(start - block.rowStart)
+                        .build()
                 })
             )
             return
         }
-        const rowShift: RowShift = {
-            sheetIdx: sheet,
-            count: 1,
-            start: start,
-            type: ShiftType.DELETE,
-        }
-        const payload: Payload = {
-            payloadOneof: {
-                $case: 'rowShift',
-                rowShift,
-            }
-        }
+        const payload = new DeleteRowsBuilder()
+            .sheetIdx(sheet)
+            .cnt(1)
+            .start(start)
+            .build()
         DATA_SERVICE.backend.sendTransaction([payload])
     }
 
@@ -210,20 +148,14 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const endCellTruthy = endCell ?? startCell
         const start = startCell.coodinate
         const end = endCellTruthy.coodinate
-        const createBlock: CreateBlock = {
-            id: 0,
-            sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
-            colCnt: Math.abs(end.endCol - start.startCol) + 1,
-            rowCnt: Math.abs(end.endRow - start.startRow) + 1,
-            masterCol: Math.min(start.startCol, end.startCol),
-            masterRow: Math.min(start.startRow, end.startRow),
-        }
-        const payload: Payload = {
-            payloadOneof: {
-                $case: 'createBlock',
-                createBlock,
-            }
-        }
+        const payload = new CreateBlockBuilder()
+            .blockId(0)
+            .sheetIdx(DATA_SERVICE.sheetSvc.getActiveSheet())
+            .rowCnt(Math.abs(end.endRow - start.startRow) + 1)
+            .colCnt(Math.abs(end.endCol - start.startCol) + 1)
+            .masterRow(Math.min(start.startRow, end.startRow))
+            .masterCol(Math.min(start.startCol, end.startCol))
+            .build()
         DATA_SERVICE.backend.sendTransaction([payload])
     }
 

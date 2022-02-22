@@ -1,7 +1,6 @@
 import { SelectedCell } from './events'
 import { Subscription } from 'rxjs'
 import { debounceTime } from 'rxjs/operators'
-import { CellInput, Payload } from 'proto/message'
 import styles from './canvas.module.scss'
 import {
     MouseEvent,
@@ -22,6 +21,7 @@ import { SelectorComponent } from 'components/selector'
 import { BlurEvent, TextContainerComponent } from 'components/textarea'
 import { DndComponent } from 'components/dnd'
 import { Buttons } from 'common'
+import { CellInputBuilder } from 'api'
 export const OFFSET = 100
 
 export interface CanvasProps {
@@ -121,18 +121,12 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         const newText = e.text.trim()
         if (oldText === newText)
             return
-        const cellInput: CellInput = {
-            sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
-            row: e.bindingData.coodinate.startRow,
-            col: e.bindingData.coodinate.startCol,
-            input: newText,
-        }
-        const payload: Payload = {
-            payloadOneof: {
-                $case: 'cellInput',
-                cellInput,
-            }
-        }
+        const payload = new CellInputBuilder()
+            .row(e.bindingData.coodinate.startRow)
+            .col(e.bindingData.coodinate.startCol)
+            .sheetIdx(DATA_SERVICE.sheetSvc.getActiveSheet())
+            .input(newText)
+            .build()
         DATA_SERVICE.backend.sendTransaction([payload])
     }
 
