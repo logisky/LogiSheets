@@ -1,5 +1,6 @@
 import { Observable, from, ReplaySubject, Subject } from 'rxjs'
-import { ClientSend, DisplayPatch, Payload, ServerSend, SheetUpdated, Transaction } from 'proto/message'
+import { ClientSend, DisplayPatch, ServerSend, SheetUpdated } from 'proto/message'
+import { Payload, PayloadsTransaction, adaptTransaction} from 'api'
 import { debugWeb } from 'common'
 import { SheetService } from 'core/data/sheet'
 import { Service as StandAloneService } from 'wasm_svc/service'
@@ -36,13 +37,9 @@ export class Backend {
     sendTransaction(payloads: Payload[], undoable = true) {
         if (payloads.length === 0)
             return
-        const transaction: Transaction = {
-            undoable,
-            payloads,
-            undo: false,
-            redo: false,
-        }
-        this.send({ transaction, $case: 'transaction' })
+        const t = new PayloadsTransaction(payloads, undoable)
+        const msg = adaptTransaction(t)
+        this.send({$case:'transaction', transaction: msg})
     }
 
     send(msg: ClientSend['clientSendOneof']) {

@@ -1,6 +1,6 @@
 import { DATA_SERVICE } from 'core/data'
-import { Payload, SheetRename, SheetShift, ShiftType } from 'proto/message'
-import { useState } from 'react'
+import {SheetRenameBuilder, DeleteSheetBuilder} from 'api'
+import {useState} from 'react'
 import Modal from 'react-modal'
 
 export interface ContextMenuProps {
@@ -22,30 +22,17 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
     const rename = () => {
         if (sheetName === oldName)
             return
-        const sheetRename: SheetRename = {
-            oldName,
-            newName: sheetName,
-        }
-        const payload: Payload = {
-            payloadOneof: {
-                $case:'sheetRename',
-                sheetRename,
-            }
-        }
-        DATA_SERVICE.backend.sendTransaction([payload])
+        const sheetRename= new SheetRenameBuilder()
+            .oldName(oldName)
+            .newName(sheetName)
+            .build()
+        DATA_SERVICE.backend.sendTransaction([sheetRename])
     }
 
     const deleteSheet = () => {
-        const sheetShift: SheetShift = {
-            sheetIdx: index,
-            type: ShiftType.DELETE,
-        }
-        const payload: Payload = {
-            payloadOneof: {
-                $case: 'sheetShift',
-                sheetShift
-            }
-        }
+        const payload = new DeleteSheetBuilder()
+            .sheetIdx(index)
+            .build()
         DATA_SERVICE.backend.sendTransaction([payload])
     }
     return <div>

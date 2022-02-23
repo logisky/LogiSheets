@@ -44,7 +44,6 @@ export class Service {
 
     private _execute(req: ClientSend): ServerSend {
         const clientSend = req.clientSendOneof
-        console.log(req)
         if (clientSend === undefined)
             return {}
         if (clientSend.$case === 'transaction')
@@ -54,7 +53,6 @@ export class Service {
 
     private _execDisplayReq(req: DisplayRequest): ServerSend {
         const jsonRes= get_patches(req.sheetIdx, req.version)
-        console.log('?????')
         console.log(jsonRes)
         const response = DisplayResponse.fromJSON(jsonRes)
         console.log(response)

@@ -1,8 +1,8 @@
 import {DATA_SERVICE} from 'core/data'
 import { useState } from 'react'
 import styles from './sheets-tab.module.scss'
-import { Payload, SheetShift, ShiftType } from 'proto/message'
 import {ContextMenuComponent} from './contextmenu'
+import {InsertSheetBuilder} from 'api'
 
 export interface SheetsTabprops {
 
@@ -25,16 +25,9 @@ export const SheetsTabComponent = (props: SheetsTabprops) => {
     }
 
     const add = () => {
-        const sheetShift: SheetShift = {
-            sheetIdx: active,
-            type: ShiftType.INSERT,
-        }
-        const payload: Payload = {
-            payloadOneof: {
-                $case: 'sheetShift',
-                sheetShift,
-            }
-        }
+        const payload = new InsertSheetBuilder()
+            .sheetIdx(active)
+            .build()
         DATA_SERVICE.backend.sendTransaction([payload])
     }
     return (
