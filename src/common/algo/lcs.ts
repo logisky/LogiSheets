@@ -1,5 +1,3 @@
-export type MatchInfo = readonly [string, Map<number, number>]
-
 /**
  * Return words according to the length of the longest common subsequence.
  *
@@ -8,16 +6,18 @@ export type MatchInfo = readonly [string, Map<number, number>]
  * if pattern = 'at' and beMatched = ['bath', 'banana', 'ant', 'at']
  * then ['at', 'ant', 'bath'] will be returned.
  */
-export function lcsLenMatch(
+export function lcsLenMatch<T>(
     pattern: string,
-    beMatched: readonly string[],
+    beMatcheds: readonly T[],
+    getValue: (beMatched: T) => string,
     caseSensitive = true,
-): readonly MatchInfo[] {
-    const result: MatchInfo[] = []
+) {
+    const result: { beMatched: T, matchedMap: Map<number, number> }[] = []
     if (pattern === '')
         return result
     // tslint:disable-next-line: no-loop
-    for (const word of beMatched) {
+    for (const beMatched of beMatcheds) {
+        const word = getValue(beMatched)
         const candidateWord = caseSensitive ? word : word.toLowerCase()
         const target = caseSensitive ? pattern : pattern.toLowerCase()
         const matrix:
@@ -31,8 +31,7 @@ export function lcsLenMatch(
         wordIndex.forEach((value: number, index: number): void => {
             matchedMap.set(index, value)
         })
-        const matchInfo = [word, matchedMap] as MatchInfo
-        result.push(matchInfo)
+        result.push({ beMatched, matchedMap })
     }
 
     return result

@@ -24,7 +24,8 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
 			static: {
 				directory: path.join(__dirname, 'public'),
 			},
-			compress: true,
+			compress: false,
+			hot: true,
 			port: 4200,
 		},
 		experiments: {

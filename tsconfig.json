@@ -21,13 +21,13 @@
     "paths": {
       "src/*": [
         "src/*"
-      ],
+      ]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "es6",
+    "target": "es6"
   },
   "ts-node": {
     "compilerOptions": {
@@ -35,7 +35,7 @@
     }
   },
   "files": [
-    "src/global.d.ts",
+    "src/global.d.ts"
   ],
   "include": [
     "src/*.tsx",

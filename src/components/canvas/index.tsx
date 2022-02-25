@@ -1,5 +1,5 @@
 import { SelectedCell } from './events'
-import { Subscription } from 'rxjs'
+import { Subscription, Subject } from 'rxjs'
 import { debounceTime } from 'rxjs/operators'
 import styles from './canvas.module.scss'
 import {
@@ -39,18 +39,19 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const scrollbarMng = useScrollbar()
     const dndMng = useDnd()
     const textMng = useText()
-    const renderMng = new Render()
+    const renderMng = useRef(new Render())
+    const focus$ = useRef(new Subject<void>())
 
     useEffect(() => {
         const subs = new Subscription()
         subs.add(DATA_SERVICE.backend.render$.subscribe(() => {
-            renderMng.render(getCanvas())
+            renderMng.current.render(getCanvas())
         }))
         subs.add(on(window, EventType.RESIZE)
             .pipe(debounceTime(100))
             .subscribe(() => {
                 const canvas = getCanvas()
-                renderMng.render(canvas)
+                renderMng.current.render(canvas)
             }))
         return () => {
             subs.unsubscribe()
@@ -91,7 +92,14 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         dndMng.selectorChange(selectorMng.selector)
     }, [selectorMng.selector])
 
-    const onMousedown = (e: MouseEvent) => {
+    const onMousedown = async (e: MouseEvent) => {
+        e.stopPropagation()
+        const checked = await textMng.checkFormula()
+        if (!checked) {
+            e.preventDefault()
+            focus$.current.next()
+            return
+        }
         if (e.buttons === Buttons.RIGHT)
             return
         const canvas = getCanvas()
@@ -118,7 +126,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         textMng.blur()
         if (e.bindingData === undefined)
             return
-        const newText = e.text.trim()
+        const newText = textMng.currText.current.trim()
         if (oldText === newText)
             return
         const payload = new CellInputBuilder()
@@ -132,11 +140,11 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
 
     const mouseMoveScrolling = (e: ScrollEvent) => {
         scrollbarMng.mouseMove(e)
-        renderMng.render(canvasEl.current!)
+        renderMng.current.render(canvasEl.current!)
     }
     const wheelScroll = (e: WheelEvent<HTMLCanvasElement>) => {
         scrollbarMng.mouseWheel(e)
-        renderMng.render(e.currentTarget)
+        renderMng.current.render(e.currentTarget)
     }
 
     const onContextMenu = (e: MouseEvent) => {
@@ -198,6 +206,9 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             <TextContainerComponent
                 context={textMng.context}
                 blur={blur}
+                type={t => textMng.currText.current = t}
+                checkFormula={textMng.checkFormula}
+                focus$={focus$.current}
             ></TextContainerComponent>
             : null}
         {selectorMng.selector ? <DndComponent
@@ -209,6 +220,10 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             draggingX={dndMng.draggingX}
             draggingY={dndMng.draggingY}
         ></DndComponent> : null}
+        {
+            // TODO: add invalid formula prompt
+            textMng.validFormula ? null : null
+        }
     </div>
     )
 }

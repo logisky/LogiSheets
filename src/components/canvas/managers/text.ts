@@ -5,10 +5,13 @@ import { StandardKeyboardEvent } from 'common/events'
 import { useRef, useState } from 'react'
 import { shallowCopy } from 'common'
 import { StartCellEvent } from './start-cell'
+import initFc, { formula_check } from '../../../wasms/fc/pkg'
 
 export const useText = () => {
     const [editing, setEditing] = useState(false)
     const [context, setContext] = useState<Context<Cell>>()
+    const [validFormula, setValidFormula] = useState(false)
+    const currText = useRef('')
 
     const _lastMouseDownTime = useRef(0)
     const canvas = useRef<HTMLCanvasElement>()
@@ -17,8 +20,21 @@ export const useText = () => {
         canvas.current = c
     }
 
-    const blur = () => {
+    const blur = async () => {
+        const check = await checkFormula()
+        if (!check)
+            return
         _setEditing(false)
+    }
+    const checkFormula = async () => {
+        if (!editing)
+            return true
+        await initFc()
+        const checked = formula_check(currText.current)
+        setValidFormula(checked)
+        if (!checked)
+            console.log(`invalid formula ${currText.current}`)
+        return checked
     }
 
     const keydown = (e: KeyboardEvent, startCell?: Cell) => {
@@ -87,6 +103,9 @@ export const useText = () => {
     return {
         editing,
         context,
+        currText,
+        validFormula,
+        checkFormula,
         init,
         blur,
         keydown,

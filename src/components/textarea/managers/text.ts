@@ -1,16 +1,17 @@
 import { Text, Texts, History, Context } from '../defs'
 import { Box, PainterService, TextAttr } from 'core/painter'
 import { Range } from 'core/standable'
+import { BehaviorSubject, Observable } from 'rxjs'
 export class TextManager<T> {
     constructor(
         public readonly context: Context<T>,
     ) {
         this._texts = Texts.from(this.context.text, this.context.eof)
+        this._textChange$.next(this.getPlainText())
     }
-    // get textChanged$(): Observable<undefined> {
-    //     return this._textChanged$
-    // }
-
+    textChanged(): Observable<string> {
+        return this._textChange$
+    }
     getNewSize(): readonly [width: number, height: number] {
         const texts = this.getTwoDimensionalTexts()
         const baseHeight = this.context.lineHeight()
@@ -46,7 +47,7 @@ export class TextManager<T> {
                 x += t.width()
             })
         })
-        // this._textChanged$.next()
+        this._textChange$.next(this.getPlainText())
     }
 
     /**
@@ -107,12 +108,11 @@ export class TextManager<T> {
     replace(
         content: string,
         start: number,
-        end?: number,
+        count: number,
     ): readonly [added: readonly Text[], removed: readonly Text[]] {
-        const e = end ?? this._texts.texts.length
         const eof = this.context.eof
         const newTexts = Texts.from(content, eof)
-        const removed = this._texts.replace(newTexts, start, e)
+        const removed = this._texts.replace(newTexts, start, count)
         this._history.add(this._texts)
         this.drawText()
         return [newTexts.texts, removed]
@@ -126,24 +126,6 @@ export class TextManager<T> {
         this._texts.add(newTexts, start)
         this.drawText()
         return newTexts.texts
-    }
-
-    replaceByTwoDimenSional(
-        content: string,
-        startLine: number,
-        startColumn: number,
-        endLine: number,
-        endColumn: number,
-    ) {
-        const [start, end] = this._twoDimensionalToOneDimensinal(
-            startLine,
-            startColumn,
-            endLine,
-            endColumn,
-        )
-        const [added, removed] = this.replace(content, start, end)
-        this.drawText()
-        return { added, removed }
     }
 
     getText(
@@ -164,6 +146,7 @@ export class TextManager<T> {
     private _texts = new Texts()
     private _history = new History()
     private _painterSvc = new PainterService()
+    private _textChange$ = new BehaviorSubject('')
     private _twoDimensionalToOneDimensinal(
         startLine: number,
         startColumn: number,

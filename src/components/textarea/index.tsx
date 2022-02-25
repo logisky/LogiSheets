@@ -1,10 +1,17 @@
-import { on, EventType } from 'common/events'
-import { useSelection, useCursor, InputManager, TextManager } from './managers'
+import { on, EventType, StandardKeyboardEvent } from 'common/events'
+import {
+    useSelection,
+    useCursor,
+    InputManager,
+    TextManager,
+    useSuggest,
+} from './managers'
 import { Context } from './defs'
-import { BlurEvent, CursorEvent } from './events'
+import { BlurEvent } from './events'
 import { CursorComponent } from './cursor'
-import { MouseEvent, useEffect, useRef, useState } from 'react'
-import { Subscription } from 'rxjs'
+import { ClipboardEvent, CompositionEvent, FocusEvent, FormEvent, KeyboardEvent, MouseEvent, useEffect, useRef } from 'react'
+import { Candidate, SuggestComponent } from 'components/suggest'
+import { Subscription, Observable } from 'rxjs'
 import styles from './textarea.module.scss'
 
 export * from './events'
@@ -15,11 +22,17 @@ export interface TextContainerProps<T> {
     context: Context<T>
     blur?: (e: BlurEvent<T>) => void
     type?: (e: string) => void
-    triggerText?: (e: string) => void
+    checkFormula: (text?: string) => Promise<boolean>
+    focus$: Observable<void>
 }
 
-export const TextContainerComponent = <T,>(props: TextContainerProps<T>) => {
-    const { context, blur, type, triggerText } = props
+export const TextContainerComponent = <T,>({
+    context,
+    blur,
+    type,
+    checkFormula,
+    focus$,
+}: TextContainerProps<T>) => {
     const textMng = useRef(new TextManager(context))
     const cursorMng = useCursor(textMng.current, context)
     const selectionMng = useSelection(cursorMng, context, textMng.current)
@@ -29,6 +42,7 @@ export const TextContainerComponent = <T,>(props: TextContainerProps<T>) => {
         context,
         cursorMng,
     ))
+    const suggestMng = useSuggest<T>(textMng.current, cursorMng)
     const isMouseDown = useRef(false)
 
     const textEl = useRef<HTMLCanvasElement>(null)
@@ -63,38 +77,124 @@ export const TextContainerComponent = <T,>(props: TextContainerProps<T>) => {
         sub.add(inputMng.current.blur$.subscribe(() => {
             _onBlur()
         }))
-        sub.add(inputMng.current.type$.subscribe(() => {
-            type?.(textMng.current.getPlainText())
+        sub.add(textMng.current.textChanged().subscribe(t => {
+            type?.(t)
+            suggestMng.onType()
+        }))
+        sub.add(suggestMng.suggest$.current.subscribe(s => {
+            if (!s)
+                return
+            onSuggest(s)
+        }))
+        sub.add(focus$.subscribe(() => {
+            inputMng.current.setFocus()
         }))
         return () => {
-            // 点走到其他单元格，若当前单元格是输入状态，则触发blur事件
-            _onBlur()
             sub.unsubscribe()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const onHostMouseDown = (mde: MouseEvent) => {
-        /**
-         * 当前组件应该在最底层，对于鼠标事件应仅限在该层中，不允许向上抛
-         */
         mde.stopPropagation()
         mde.preventDefault()
         cursorMng.mousedown(mde)
         selectionMng.mousedown(mde)
         isMouseDown.current = true
     }
+    const onHostKeyDown = (e: KeyboardEvent) => {
+        e.stopPropagation()
+        const event = new StandardKeyboardEvent(e.nativeEvent)
+        const finish = suggestMng.onKeydown(event)
+        if (finish)
+            return
+        inputMng.current.textareaInput?.onKeydown(e.nativeEvent)
+    }
+    const onHostKeyup = (e: KeyboardEvent) => {
+        inputMng.current.textareaInput?.onKeyup(e.nativeEvent)
+    }
+    const onHostCompositionStart = (e: CompositionEvent) => {
+        inputMng.current.textareaInput?.onCompositionnStart(e.nativeEvent)
+    }
+    const onHostCompositionUpdate = (e: CompositionEvent) => {
+        inputMng.current.textareaInput?.onCompositionUpdate(e.nativeEvent)
+    }
+    const onHostCompositionEnd = (e: CompositionEvent) => {
+        inputMng.current.textareaInput?.onCompositionEnd(e.nativeEvent)
+    }
+    const onHostInput = (e: FormEvent) => {
+        inputMng.current.textareaInput?.onInput()
+    }
+    const onHostCut = (e: ClipboardEvent) => {
+        inputMng.current.textareaInput?.onCut(e.nativeEvent)
+    }
+    const onHostCopy = (e: ClipboardEvent) => {
+        inputMng.current.textareaInput?.onCopy(e.nativeEvent)
+    }
+    const onHostPaste = (e: ClipboardEvent) => {
+        inputMng.current.textareaInput?.onPaste(e.nativeEvent)
+    }
+    const onHostFocus = (e: FocusEvent) => {
+        inputMng.current.textareaInput?.onFocus(e.nativeEvent)
+    }
+    const onHostBlur = () => {
+        inputMng.current.textareaInput?.onBlur()
+    }
 
 
-    const _onBlur = () => {
+    const _onBlur = async () => {
+        const check = await checkBlur()
+        if (!check) {
+            inputMng.current.setFocus()
+            return
+        }
         const event = new BlurEvent(
-            textMng.current.getPlainText(),
             context.bindingData,
         )
         blur?.(event)
     }
+
+    const onSuggest = (candidate: Candidate) => {
+        suggestMng.setShowSuggest(false)
+        const replaceRange = suggestMng.replaceRange.current
+        if (!replaceRange)
+            return
+        console.log(replaceRange)
+        textMng.current.replace(candidate.plainText, replaceRange.start, replaceRange.count)
+        // 将光标设到函数括号中间
+        if (candidate.quoteStart) {
+            const newCursor = replaceRange.start + candidate.quoteStart + 1
+            cursorMng.setCursor(newCursor)
+        }
+    }
+
+    const checkBlur = async () => {
+        const formula = textMng.current.getPlainText()
+        // 补全括号
+
+        // 检查是否为合法公式(wasm)，再发往服务端
+        const valid = await checkFormula(formula)
+        if (!valid) {
+            console.log(`invalid formula, ${formula}`)
+            return false
+        }
+
+        return true
+    }
     return <div
+        onKeyUp={onHostKeyup}
+        onCompositionStart={onHostCompositionStart}
+        onCompositionUpdate={onHostCompositionUpdate}
+        onCompositionEnd={onHostCompositionEnd}
+        onInput={onHostInput}
+        onCut={onHostCut}
+        onCopy={onHostCopy}
+        onPaste={onHostPaste}
+        onFocus={onHostFocus}
+        onBlur={onHostBlur}
         className={styles.host}
         onMouseDown={onHostMouseDown}
+        onKeyDown={onHostKeyDown}
         style={{
             left: `${context.canvasOffsetX}px`,
             top: `${context.canvasOffsetY}px`,
@@ -117,9 +217,17 @@ export const TextContainerComponent = <T,>(props: TextContainerProps<T>) => {
             aria-haspopup="false"
         ></textarea>
         <CursorComponent
-            height={context.cellHeight}
-            x={cursorMng.cursor.x}
-            y={cursorMng.cursor.y}
+            height={cursorMng.cursorHeight}
+            x={cursorMng.cursor$.x}
+            y={cursorMng.cursor$.y}
         ></CursorComponent>
+        <SuggestComponent
+            show$={suggestMng.showSuggest$}
+            close$={() => suggestMng.setShowSuggest(false)}
+            select$={onSuggest}
+            sugggestStyles={{ x: 0, y: context.cellHeight }}
+            acitveCandidate={suggestMng.activeCandidate$}
+            candidates={suggestMng.candidates$}
+        ></SuggestComponent>
     </div>
 }
