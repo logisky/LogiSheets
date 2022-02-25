@@ -1,6 +1,7 @@
 import { Subject, ReplaySubject } from 'rxjs'
-import { ClientSend, DisplayRequest, DisplayResponse, Payload, ServerSend, ShiftType, Transaction } from '../proto/message'
+import { ClientSend, DisplayRequest, DisplayResponse, OpenFile, Payload, ServerSend, ShiftType, Transaction } from '../proto/message'
 import initWasm, {
+    read_file,
     block_input,
     cell_input,
     col_delete,
@@ -14,6 +15,7 @@ import initWasm, {
     transaction_end,
     transaction_start,
     undo,
+    ReadFileResult,
 } from '../wasms/server/pkg'
 import { Calculator, Executor } from './calculator'
 import { TransactionCode, TransactionEndResult } from './jsvalues'
@@ -61,8 +63,24 @@ export class Service {
             return this._execTransaction(clientSend.transaction)
         else if (clientSend.$case === 'displayRequest')
             return this._execDisplayReq(clientSend.displayRequest)
+        else if (clientSend.$case === 'openFile')
+            return this._execOpenFile(clientSend.openFile)
         else
-            throw Error(`Not support ${clientSend.$case}`)
+            throw Error(`Not support ${clientSend}`)
+    }
+
+    private _execOpenFile(req: OpenFile): ServerSend {
+        const r = read_file(req.name, req.content)
+        if (r === ReadFileResult.Ok) {
+            return {serverSendOneof: {
+                $case: "sheetUpdated",
+                sheetUpdated: {index: [], eventSource: {
+                    userId: "1",
+                    actionId: "1",
+                }},
+            }}
+        }
+        throw Error('read file Error!')
     }
 
     private _execDisplayReq(req: DisplayRequest): ServerSend {
