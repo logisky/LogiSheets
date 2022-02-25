@@ -38,7 +38,9 @@ impl DataExecutor {
                         self.handle_cell_value_payload(sheet_id, row, col, value)
                     }
                     CellChange::DiffStyle(csp) => {
-                        self.handle_cell_style_payload(sheet_id, row, col, csp)
+                        csp.iter().fold(self, |prev, p| {
+                            prev.handle_cell_style_payload(sheet_id, row, col, p)
+                        })
                     }
                     CellChange::Recalc => self,
                 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::async_func_helper::AsyncCalculator;
 use crate::message::{CalcAsyncResult, CalcAsyncTask};
 use logisheets_protocols::{deserialize_client_message, serialize_server_message};
-use logisheets_protocols::message::ServerSend;
+use logisheets_protocols::message::{ServerSend, EventSource};
 
 use super::message::{ApplyEdit, FileId, JoinEdit, LeaveEdit, ServerMessage, UserId};
 use super::room::{ClientResponse, Room};
@@ -109,7 +109,10 @@ impl Handler<JoinEdit> for BooksServer {
             recipient,
         } = msg;
         let e = ActionEffect::default();
-        let r = ServerSend::from_action_effect(e.sheets);
+        let r = ServerSend::from_action_effect(e.sheets, EventSource {
+            user_id: user_id.clone(),
+            action_id: String::from(""),
+        });
         let buf = serialize_server_message(r);
         let res = ServerMessage { content: buf };
         self.send_user_message(&file_id, &user_id, res);
@@ -137,7 +140,8 @@ impl Handler<ApplyEdit> for BooksServer {
         let ApplyEdit { content } = msg;
         if let Ok(client_send) = deserialize_client_message(content) {
             let file_id = client_send.file_id;
-            let user = client_send.user;
+            let source = client_send.event_source.unwrap();
+            let user = source.user_id.clone();
             if let Some(room) = self.rooms.get_mut(&file_id) {
                 if room.has_user(&user) {
                     if let Some(msg) = room.get_response(client_send.client_send_oneof.unwrap()) {
@@ -152,7 +156,7 @@ impl Handler<ApplyEdit> for BooksServer {
                                 if calc_tasks.tasks.len() > 0 {
                                     AsyncCalculator::from_registry().do_send(calc_tasks);
                                 }
-                                ServerSend::from_action_effect(e.sheets)
+                                ServerSend::from_action_effect(e.sheets, source)
                             }
                         };
                         let buf = serialize_server_message(r);
@@ -175,7 +179,10 @@ impl Handler<CalcAsyncResult> for BooksServer {
                 .wb
                 .handle_async_calc_results(msg.tasks, msg.res, msg.dirtys);
             if let Some(ae) = affect {
-                let buf = serialize_server_message(ServerSend::from_action_effect(ae.sheets));
+                let buf = serialize_server_message(ServerSend::from_action_effect(ae.sheets, EventSource {
+                    user_id: String::from("__SYS__"),
+                    action_id: String::from(""),
+                }));
                 let res = ServerMessage { content: buf };
                 self.send_room_message(&msg.file_id, res);
             }

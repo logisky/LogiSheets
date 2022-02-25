@@ -145,13 +145,13 @@ impl CellValue {
     where
         F: FnMut(&str) -> TextId,
     {
-        let text = text.to_uppercase();
+        let upper_text = text.to_uppercase();
         let text = text.trim();
         if text == "" {
             CellValue::Blank
-        } else if text == "TRUE" {
+        } else if upper_text == "TRUE" {
             CellValue::Boolean(true)
-        } else if text == "FALSE" {
+        } else if upper_text == "FALSE" {
             CellValue::Boolean(false)
         } else if text.starts_with('\'') {
             let mut chars = text.chars();

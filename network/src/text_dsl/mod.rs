@@ -1,4 +1,5 @@
 use crate::message::{ApplyEdit, JoinEdit, ServerMessage};
+use logisheets_protocols::message::EventSource;
 use logisheets_protocols::message::{
     client_send::ClientSendOneof, payload::PayloadOneof, CellInput, ClientSend, ColumnShift,
     CreateBlock, DisplayRequest, LineShiftInBlock, MoveBlock, Payload, RowShift, SheetShift,
@@ -56,7 +57,10 @@ pub fn build_apply_edit_binary(text: &str) -> Option<ApplyEdit> {
             let version = convert(iter.next()?.parse::<u32>())?;
             let display_area = DisplayRequest { sheet_idx, version };
             Some(ClientSend {
-                user: user_id,
+                event_source: Some(EventSource {
+                    user_id,
+                    action_id: String::from("")
+                }),
                 file_id,
                 client_send_oneof: Some(ClientSendOneof::DisplayRequest(display_area)),
             })
@@ -71,7 +75,10 @@ pub fn build_apply_edit_binary(text: &str) -> Option<ApplyEdit> {
                 undoable: false,
             };
             Some(ClientSend {
-                user: user_id,
+                event_source: Some(EventSource {
+                    user_id,
+                    action_id: String::from("")
+                }),
                 file_id,
                 client_send_oneof: Some(ClientSendOneof::Transaction(t)),
             })
@@ -84,7 +91,10 @@ pub fn build_apply_edit_binary(text: &str) -> Option<ApplyEdit> {
                 undoable: false,
             };
             Some(ClientSend {
-                user: user_id,
+                event_source: Some(EventSource {
+                    user_id,
+                    action_id: String::from("")
+                }),
                 file_id,
                 client_send_oneof: Some(ClientSendOneof::Transaction(t)),
             })
@@ -97,7 +107,10 @@ pub fn build_apply_edit_binary(text: &str) -> Option<ApplyEdit> {
                 undoable: false,
             };
             Some(ClientSend {
-                user: user_id,
+                event_source: Some(EventSource {
+                    user_id,
+                    action_id: String::from("")
+                }),
                 file_id,
                 client_send_oneof: Some(ClientSendOneof::Transaction(t)),
             })
@@ -303,6 +316,7 @@ fn convert<T, U>(res: Result<T, U>) -> Option<T> {
 #[cfg(test)]
 mod tests {
     use super::build_apply_edit_binary;
+    use logisheets_protocols::message::EventSource;
     use logisheets_protocols::message::{
         client_send::ClientSendOneof, payload::PayloadOneof, CellInput, ClientSend, ColumnShift,
         DisplayRequest, Payload, RowShift, ShiftType, Transaction,
@@ -322,7 +336,10 @@ mod tests {
                     undoable: false,
                 };
                 let cs = ClientSend {
-                    user: "user".to_string(),
+                    event_source: Some(EventSource {
+                        user_id: String::from("user"),
+                        action_id: String::from("")
+                    }),
                     file_id: "file".to_string(),
                     client_send_oneof: Some(ClientSendOneof::Transaction(t)),
                 };
@@ -344,7 +361,10 @@ mod tests {
             undoable: false,
         };
         let cs = ClientSend {
-            user: "user".to_string(),
+            event_source: Some(EventSource {
+                user_id: String::from("user"),
+                action_id: String::from("")
+            }),
             file_id: "file".to_string(),
             client_send_oneof: Some(ClientSendOneof::Transaction(t)),
         };
@@ -361,7 +381,10 @@ mod tests {
             version: 0,
         };
         let cs = ClientSend {
-            user: "user".to_string(),
+            event_source: Some(EventSource {
+                user_id: String::from("user"),
+                action_id: String::from("")
+            }),
             file_id: "file".to_string(),
             client_send_oneof: Some(ClientSendOneof::DisplayRequest(display_request)),
         };
@@ -389,7 +412,10 @@ mod tests {
             undoable: false,
         };
         let cs = ClientSend {
-            user: "user".to_string(),
+            event_source: Some(EventSource {
+                user_id: String::from("user"),
+                action_id: String::from("")
+            }),
             file_id: "file".to_string(),
             client_send_oneof: Some(ClientSendOneof::Transaction(t)),
         };
@@ -426,7 +452,10 @@ mod tests {
             undoable: false,
         };
         let cs = ClientSend {
-            user: "user".to_string(),
+            event_source: Some(EventSource {
+                user_id: String::from("user"),
+                action_id: String::from("")
+            }),
             file_id: "file".to_string(),
             client_send_oneof: Some(ClientSendOneof::Transaction(t)),
         };

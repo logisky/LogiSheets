@@ -1,5 +1,5 @@
 use xlrs_workbook::{
-    simple_types::StUnderlineValues,
+    simple_types::{StUnderlineValues, StBorderStyle},
     styles::{BorderPr, PatternFill},
 };
 
@@ -8,35 +8,34 @@ pub struct StyleUpdate {
     pub sheet_idx: usize,
     pub row: usize,
     pub col: usize,
-    pub ty: StyleUpdateType,
+    pub ty: Vec<StyleUpdateType>,
 }
+
+pub type Color = String;
 
 #[derive(Debug)]
 pub enum StyleUpdateType {
-    SetFontBold(SetFontBold),
-    SetFontItalic(SetFontItalic),
+    SetFontBold(bool),
+    SetFontItalic(bool),
     SetFontUnderline(SetFontUnderline),
-    SetFontColor(SetFontColor),
-    SetFontSize(SetFontSize),
-    SetFontName(SetFontName),
-    SetFontOutline(SetFontOutline),
-    SetFontShadow(SetFontShadow),
-    SetFontStrike(SetFontStrike),
-    SetFontCondense(SetFontCondense),
-    SetBorderPr(SetBorderPr),
-    SetBorderDiagonalUp(SetBorderDiagonalUp),
-    SetBorderDiagonalDown(SetBorderDiagonalDown),
+    SetFontColor(Color),
+    SetFontSize(f64),
+    SetFontName(String),
+    SetFontOutline(bool),
+    SetFontShadow(bool),
+    SetFontStrike(bool),
+    SetFontCondense(bool),
+    SetLeftBorderColor(Color),
+    SetRightBorderColor(Color),
+    SetTopBorderColor(Color),
+    SetBottomBorderColor(Color),
+    SetLeftBorderStyle(SetBorderStyle),
+    SetRightBorderStyle(SetBorderStyle),
+    SetTopBorderStyle(SetBorderStyle),
+    SetBottomBorderStyle(SetBorderStyle),
+    SetBorderDiagonalUp(bool),
+    SetBorderDiagonalDown(bool),
     SetPatternFill(SetPatternFill),
-}
-
-#[derive(Debug)]
-pub struct SetFontBold {
-    pub bold: bool,
-}
-
-#[derive(Debug)]
-pub struct SetFontItalic {
-    pub italic: bool,
 }
 
 #[derive(Debug)]
@@ -45,44 +44,14 @@ pub struct SetFontUnderline {
 }
 
 #[derive(Debug)]
-pub struct SetFontColor {
-    pub color: String,
-}
-
-#[derive(Debug)]
-pub struct SetFontSize {
-    pub size: f64,
-}
-
-#[derive(Debug)]
-pub struct SetFontName {
-    pub name: String,
-}
-
-#[derive(Debug)]
-pub struct SetFontOutline {
-    pub outline: bool,
-}
-
-#[derive(Debug)]
-pub struct SetFontShadow {
-    pub shadow: bool,
-}
-
-#[derive(Debug)]
-pub struct SetFontStrike {
-    pub strike: bool,
-}
-
-#[derive(Debug)]
-pub struct SetFontCondense {
-    pub condense: bool,
-}
-
-#[derive(Debug)]
 pub struct SetBorderPr {
     pub location: BorderLocation,
     pub pr: BorderPr,
+}
+
+#[derive(Debug)]
+pub struct SetBorderStyle {
+    pub ty: StBorderStyle::Type
 }
 
 #[derive(Debug)]

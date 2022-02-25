@@ -240,20 +240,20 @@ fn convert_value(
             if has_formula {
                 Value::Number(0_f64)
             } else {
-                Value::Text(String::from(""))
+                Value::Str(String::from(""))
             }
         }
-        CellValue::Boolean(b) => Value::Boolean(*b),
+        CellValue::Boolean(b) => Value::Bool(*b),
         CellValue::Date(_) => todo!(),
         CellValue::Error(e) => Value::Error(e.to_string()),
-        CellValue::String(s) => Value::Text(
+        CellValue::String(s) => Value::Str(
             text_id_manager
                 .get_string(s)
                 .unwrap_or(String::from("Error")),
         ),
         CellValue::Number(n) => Value::Number(*n),
         CellValue::InlineStr(_) => todo!(),
-        CellValue::FormulaStr(s) => Value::Text(s.clone()),
+        CellValue::FormulaStr(s) => Value::Str(s.clone()),
     };
     CellFormulaValue {
         row,

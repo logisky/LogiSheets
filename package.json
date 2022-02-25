@@ -43,7 +43,7 @@
     "start:wasm": "webpack serve --config=webpack.config.ts --env=stand-alone",
     "start": "webpack serve --config=webpack.config.ts",
     "build": "webpack build --config=webpack.config.ts",
-    "protoc": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/proto --ts_proto_opt=esModuleInterop=tru --ts_proto_opt=oneof=unions --proto_path=network/src/proto network/src/proto/message.proto"
+    "protoc": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/proto --ts_proto_opt=esModuleInterop=tru --ts_proto_opt=oneof=unions --proto_path=protocols protocols/message.proto"
   },
   "eslintConfig": {
     "extends": [
