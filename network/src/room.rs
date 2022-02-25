@@ -38,37 +38,7 @@ impl Room {
                 let r = DisplayResponse::from(res);
                 Some(ClientResponse::Display(r))
             }
-        }
-    }
-
-    pub fn get_client_msg_response(&mut self, content: Vec<u8>) -> Option<ClientResponse> {
-        match deserialize_client_message(content) {
-            Ok(msg) => match msg.client_send_oneof {
-                Some(m) => match m {
-                    ClientSendOneof::Transaction(t) => {
-                        let undoable = t.undoable;
-                        let action = t.into();
-                        log!("Get Action from client: {:?}", &action);
-                        if let Some(e) = self.wb.handle_action(action, undoable) {
-                            Some(ClientResponse::ActionEffect(e))
-                        } else {
-                            todo!()
-                        }
-                    }
-                    ClientSendOneof::DisplayRequest(req) => {
-                        let idx = req.sheet_idx as usize;
-                        let dq = DisplayRequest {
-                            sheet_idx: idx,
-                            version: req.version,
-                        };
-                        let res = self.wb.get_display_response(dq);
-                        let r = DisplayResponse::from(res);
-                        Some(ClientResponse::Display(r))
-                    }
-                },
-                None => None,
-            },
-            Err(_) => None,
+            ClientSendOneof::OpenFile(_) => unreachable!(),
         }
     }
 

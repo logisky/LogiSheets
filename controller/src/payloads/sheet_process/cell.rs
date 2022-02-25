@@ -13,7 +13,7 @@ pub struct CellPayload {
 pub enum CellChange {
     Recalc,
     Value(CellValue),
-    DiffStyle(CellStylePayload),
+    DiffStyle(Vec<CellStylePayload>),
 }
 
 impl Payload for CellChange {}

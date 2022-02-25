@@ -129,8 +129,8 @@ pub struct Style {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Value {
-    Text(String),
-    Boolean(bool),
+    Str(String),
+    Bool(bool),
     Number(f64),
     Error(String),
 }

@@ -1,6 +1,5 @@
 use xlrs_workbook::complex_types::Color;
-use xlrs_workbook::simple_types::{StPatternType, StUnderlineValues};
-use xlrs_workbook::styles::*;
+use xlrs_workbook::simple_types::{StPatternType, StUnderlineValues, StBorderStyle};
 
 #[derive(Debug, Clone)]
 pub enum FontPayloadType {
@@ -13,13 +12,16 @@ pub enum FontPayloadType {
 
 #[derive(Debug, Clone)]
 pub enum BorderPayloadType {
-    Left(BorderPr),
-    Right(BorderPr),
-    Top(BorderPr),
-    Bottom(BorderPr),
-    Diagonal(BorderPr),
-    Vertical(BorderPr),
-    Horizontal(BorderPr),
+    LeftBorderColor(String),
+    RightBorderColor(String),
+    TopBorderColor(String),
+    BottomBorderColor(String),
+    LeftBorderStyle(StBorderStyle::Type),
+    RightBorderStyle(StBorderStyle::Type),
+    TopBorderStyle(StBorderStyle::Type),
+    BottomBorderStyle(StBorderStyle::Type),
+    BorderDiagonalUp(bool),
+    BorderDiagonalDown(bool),
     Outline(bool),
 }
 

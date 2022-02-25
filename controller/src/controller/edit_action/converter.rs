@@ -1,6 +1,6 @@
 use controller_base::{BlockId, CellValue, TextId};
 
-use super::style_payload::{BorderLocation, StyleUpdate, StyleUpdateType};
+use super::style_payload::{StyleUpdate, StyleUpdateType};
 use super::{
     CellInput, ColShift, CreateBlock, EditPayload, LineShiftInBlock, MoveBlock, RowShift,
     SetColWidth, SetRowHeight,
@@ -9,7 +9,7 @@ use crate::container::DataContainer;
 use crate::id_manager::TextIdManager;
 use crate::navigator::Navigator;
 use crate::payloads::sheet_process::style::{
-    BorderPayloadType, CellStylePayload, FillPayloadType, FontPayloadType, PatternPayload,
+    CellStylePayload, FillPayloadType, FontPayloadType, PatternPayload, BorderPayloadType,
 };
 use crate::payloads::sheet_process::{
     BlockDeleteColsPayload, BlockDeleteRowsPayload, BlockInsertColsPayload, BlockInsertRowsPayload,
@@ -88,11 +88,18 @@ impl<'a> Converter<'a> {
             ty,
         } = su;
         let sheet_id = self.sheet_pos_manager.get_sheet_id(sheet_idx)?;
-        let cell_style = get_style_payload(ty)?;
+        let mut ps = Vec::new();
+        ty.into_iter()
+            .for_each(|t| {
+                let p = get_style_payload(t);
+                if let Some(p) = p {
+                    ps.push(p);
+                }
+            });
         let p = CellPayload {
             row,
             col,
-            change: CellChange::DiffStyle(cell_style),
+            change: CellChange::DiffStyle(ps),
         };
         Some(Process::Sheet(SheetProcess {
             sheet_id,
@@ -273,42 +280,25 @@ where
 fn get_style_payload(sut: StyleUpdateType) -> Option<CellStylePayload> {
     match sut {
         StyleUpdateType::SetFontBold(fb) => {
-            Some(CellStylePayload::Font(FontPayloadType::Bold(fb.bold)))
+            Some(CellStylePayload::Font(FontPayloadType::Bold(fb)))
         }
         StyleUpdateType::SetFontItalic(fi) => {
-            Some(CellStylePayload::Font(FontPayloadType::Italic(fi.italic)))
+            Some(CellStylePayload::Font(FontPayloadType::Italic(fi)))
         }
         StyleUpdateType::SetFontUnderline(fu) => Some(CellStylePayload::Font(
             FontPayloadType::Underline(fu.underline),
         )),
         StyleUpdateType::SetFontColor(_) => None,
         StyleUpdateType::SetFontSize(fs) => {
-            Some(CellStylePayload::Font(FontPayloadType::Size(fs.size)))
+            Some(CellStylePayload::Font(FontPayloadType::Size(fs)))
         }
         StyleUpdateType::SetFontName(_) => None,
         StyleUpdateType::SetFontOutline(_) => None,
         StyleUpdateType::SetFontShadow(fs) => {
-            Some(CellStylePayload::Font(FontPayloadType::Shadow(fs.shadow)))
+            Some(CellStylePayload::Font(FontPayloadType::Shadow(fs)))
         }
         StyleUpdateType::SetFontStrike(_) => None,
         StyleUpdateType::SetFontCondense(_) => None,
-        StyleUpdateType::SetBorderPr(bpr) => match bpr.location {
-            BorderLocation::Left => Some(CellStylePayload::Border(BorderPayloadType::Left(bpr.pr))),
-            BorderLocation::Right => {
-                Some(CellStylePayload::Border(BorderPayloadType::Right(bpr.pr)))
-            }
-            BorderLocation::Top => Some(CellStylePayload::Border(BorderPayloadType::Top(bpr.pr))),
-            BorderLocation::Bottom => {
-                Some(CellStylePayload::Border(BorderPayloadType::Bottom(bpr.pr)))
-            }
-            BorderLocation::Diagonal => None,
-            BorderLocation::Vertical => Some(CellStylePayload::Border(
-                BorderPayloadType::Vertical(bpr.pr),
-            )),
-            BorderLocation::Horizontal => Some(CellStylePayload::Border(
-                BorderPayloadType::Horizontal(bpr.pr),
-            )),
-        },
         StyleUpdateType::SetBorderDiagonalUp(_) => None,
         StyleUpdateType::SetBorderDiagonalDown(_) => None,
         StyleUpdateType::SetPatternFill(spf) => {
@@ -323,5 +313,29 @@ fn get_style_payload(sut: StyleUpdateType) -> Option<CellStylePayload> {
             };
             Some(CellStylePayload::Fill(FillPayloadType::Pattern(p)))
         }
+        StyleUpdateType::SetLeftBorderColor(c) => {
+            Some(CellStylePayload::Border(BorderPayloadType::LeftBorderColor(c)))
+        },
+        StyleUpdateType::SetRightBorderColor(c) => {
+            Some(CellStylePayload::Border(BorderPayloadType::RightBorderColor(c)))
+        },
+        StyleUpdateType::SetTopBorderColor(c) => {
+            Some(CellStylePayload::Border(BorderPayloadType::TopBorderColor(c)))
+        },
+        StyleUpdateType::SetBottomBorderColor(c) => {
+            Some(CellStylePayload::Border(BorderPayloadType::BottomBorderColor(c)))
+        },
+        StyleUpdateType::SetLeftBorderStyle(s) => {
+            Some(CellStylePayload::Border(BorderPayloadType::LeftBorderStyle(s.ty)))
+        },
+        StyleUpdateType::SetRightBorderStyle(s) => {
+            Some(CellStylePayload::Border(BorderPayloadType::RightBorderStyle(s.ty)))
+        },
+        StyleUpdateType::SetTopBorderStyle(s) => {
+            Some(CellStylePayload::Border(BorderPayloadType::TopBorderStyle(s.ty)))
+        },
+        StyleUpdateType::SetBottomBorderStyle(s) => {
+            Some(CellStylePayload::Border(BorderPayloadType::BottomBorderStyle(s.ty)))
+        },
     }
 }
