@@ -37,7 +37,18 @@ export class Service {
         })
         this._calculator.output$.subscribe(res => {
             const r = input_async_result(res)
-            const serverSend: ServerSend = { serverSendOneof: { $case: 'sheetUpdated', sheetUpdated: { index: r.sheetIdx } } }
+            const serverSend: ServerSend = {
+                serverSendOneof: {
+                    $case: 'sheetUpdated',
+                    sheetUpdated: {
+                        eventSource: {
+                            actionId: '1',
+                            userId: '1'
+                        },
+                        index: r.sheetIdx,
+                    }
+                }
+            }
             this.output$.next(serverSend)
         })
     }
@@ -48,14 +59,16 @@ export class Service {
             return {}
         if (clientSend.$case === 'transaction')
             return this._execTransaction(clientSend.transaction)
-        return this._execDisplayReq(clientSend.displayRequest)
+        else if (clientSend.$case === 'displayRequest')
+            return this._execDisplayReq(clientSend.displayRequest)
+        else
+            throw Error(`Not support ${clientSend.$case}`)
     }
 
     private _execDisplayReq(req: DisplayRequest): ServerSend {
-        const jsonRes= get_patches(req.sheetIdx, req.version)
-        console.log(jsonRes)
+        const jsonRes = get_patches(req.sheetIdx, req.version)
+        console.log('jsonRes', jsonRes)
         const response = DisplayResponse.fromJSON(jsonRes)
-        console.log(response)
         return { serverSendOneof: { $case: 'displayResponse', displayResponse: response } }
     }
 
@@ -72,7 +85,18 @@ export class Service {
         const result: TransactionEndResult = transaction_end(undoable)
         if (result.code === TransactionCode.Err)
             return {}
-        return { serverSendOneof: { $case: 'sheetUpdated', sheetUpdated: { index: result.sheetIdx } } }
+        return {
+            serverSendOneof: {
+                $case: 'sheetUpdated',
+                sheetUpdated: {
+                    eventSource: {
+                        actionId: '1',
+                        userId: '1',
+                    },
+                    index: result.sheetIdx
+                }
+            }
+        }
     }
 
     private _addPayload(p: Payload) {
@@ -164,7 +188,17 @@ export class Service {
     private _execUndo(): ServerSend {
         const r = undo()
         if (r) {
-            return { serverSendOneof: { $case: "sheetUpdated", sheetUpdated: { index: [] } } }
+            return {
+                serverSendOneof: {
+                    $case: "sheetUpdated", sheetUpdated: {
+                        eventSource: {
+                            actionId: '1',
+                            userId: '1',
+                        },
+                        index: []
+                    }
+                }
+            }
         }
         return {}
     }
@@ -172,7 +206,17 @@ export class Service {
     private _execRedo(): ServerSend {
         const r = redo()
         if (r) {
-            return { serverSendOneof: { $case: "sheetUpdated", sheetUpdated: { index: [] } } }
+            return {
+                serverSendOneof: {
+                    $case: "sheetUpdated", sheetUpdated: {
+                        eventSource: {
+                            actionId: '1',
+                            userId: '1',
+                        },
+                        index: []
+                    }
+                }
+            }
         }
         return {}
     }
