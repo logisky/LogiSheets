@@ -4,7 +4,6 @@ import {
     ClipboardStoredMetaData,
     KeyboardEventCode,
     MIMES,
-    StandardKeyboardEvent,
 } from 'common/events'
 import { TextManager } from './text'
 import {
@@ -19,10 +18,8 @@ import { useCursor } from './cursor'
 import { useSelection } from './selection'
 import { AccessibilitySupport } from 'common/document'
 import { isMac } from 'common/platform'
-import { ErrorNode, isErrorNode, parse } from 'core/formula'
 import { debugWeb } from 'common'
 import { Subscription, Subject, Observable } from 'rxjs'
-import { tap } from 'rxjs/operators'
 
 export class InputManager<T> extends Subscription {
     constructor(
@@ -33,8 +30,15 @@ export class InputManager<T> extends Subscription {
     ) {
         super()
     }
+    get textareaInput() {
+        return this._textareaInput
+    }
     hasFocus(): boolean {
         return this._textareaInput?.hasFocus() ?? false
+    }
+    setFocus() {
+        this._textareaInput?.focusTextArea()
+        this._cursorManager.focus()
     }
 
     init(textarea: HTMLTextAreaElement) {
@@ -75,61 +79,15 @@ export class InputManager<T> extends Subscription {
         this._listen()
     }
 
-    get focus$(): Observable<undefined> {
-        return this._focus$
-    }
-
     get blur$(): Observable<void> {
         return this._blur$
     }
-
-    get type$() {
-        return this._type$
-    }
-
-    get editingFunction$(): Observable<string> {
-        return this._editingFunction$
-    }
-
-    get error$(): Observable<ErrorNode> {
-        return this._error$
-    }
-
-    keydown$(): Observable<StandardKeyboardEvent> {
-        return this._keydown$
-    }
-    private _error$ = new Subject<ErrorNode>()
-    private _focus$ = new Subject<undefined>()
     private _blur$ = new Subject<undefined>()
-    private _type$ =
-        new Subject<readonly [add: readonly Text[], remove: readonly Text[]]>()
-    private _keydown$ = new Subject<StandardKeyboardEvent>()
-    private _editingFunction$ = new Subject<string>()
     private _textareaInput?: TextAreaInput
     private _accessibilitySupport = AccessibilitySupport.DISABLED
     private get _cursor() {
         return this._cursorManager.currCursor.current
     }
-    private _check(text?: string) {
-        const content = text === undefined ? this._textManager
-            .getPlainText() : text
-        return parse(content)
-    }
-
-    // private _setEdtingTexts(): void {
-    //     const cursor = this._cursorManager.cursor
-    //     const texts = this._textManager
-    //         .getText(cursor.lineNumber, 0, cursor.lineNumber, cursor.column)
-    //     let plainText = ''
-    //     texts.forEach(t => plainText += t.char)
-    //     const tokens = tokenize(plainText)
-    //     if (tokens.length === 0)
-    //         return
-    //     const lastToken = tokens[tokens.length - 1]
-    //     if (lastToken.type !== TokenType.FUNCTION)
-    //         return
-    //     // this._editingFunction$
-    // }
 
     private _listen(): void {
         const input = this._textareaInput
@@ -139,17 +97,12 @@ export class InputManager<T> extends Subscription {
         //     input.writeScreenReaderContent()
         // }))
         this.add(input.onBlur$.subscribe(() => {
-            const n = this._check()
-            if (isErrorNode(n)) {
-                this._error$.next(n)
-                input.focusTextArea()
-                return
-            }
             this._blur$.next(undefined)
             this._cursorManager.blur()
         }))
         this.add(input.onFocus$.subscribe(() => {
-            this._focus$.next(undefined)
+            if (this.hasFocus())
+                return
             this._cursorManager.focus()
         }))
         this.add(input.onType$.subscribe(e => {
@@ -176,43 +129,36 @@ export class InputManager<T> extends Subscription {
                 this._cursorManager.type(added, [])
             }
             input.writeScreenReaderContent()
-            // this._setEdtingTexts()
             this._selectionManager.type()
-            this._type$.next([added, removed])
         }))
-        this.add(input.onKeyDown$
-            .pipe(tap(e => {
-                if (e.keyCodeId === KeyboardEventCode.BACKSPACE) {
-                    const cursor = this._cursor
-                    if (cursor.lineNumber === 0 && cursor.column === 0)
-                        return
-                    const selection = this._selectionManager.getSelection()
-                    const removed: Text[] = []
-                    if (selection !== undefined)
-                        removed.push(...this._textManager.remove(
-                            selection.startLineNumber,
-                            selection.startColumn,
-                            selection.endLineNumber,
-                            selection.endColumn,
-                        ))
-                    else
-                        removed.push(...this._textManager.remove(
-                            cursor.lineNumber,
-                            cursor.column - 1,
-                            cursor.lineNumber,
-                            cursor.column - 1,
-                        ))
-                    this._type$.next([[], removed])
-                    this._cursorManager.type([], removed)
-                    this._selectionManager.keydown(e)
+        this.add(input.onKeyDown$.subscribe(e => {
+            if (e.keyCodeId === KeyboardEventCode.BACKSPACE) {
+                const cursor = this._cursor
+                if (cursor.lineNumber === 0 && cursor.column === 0)
                     return
-                }
-                if (e.keyCodeId === KeyboardEventCode.ENTER)
-                    this._blur$.next(undefined)
-            }))
-            .subscribe(e => {
-                this._keydown$.next(e)
-            }))
+                const selection = this._selectionManager.getSelection()
+                const removed: Text[] = []
+                if (selection !== undefined)
+                    removed.push(...this._textManager.remove(
+                        selection.startLineNumber,
+                        selection.startColumn,
+                        selection.endLineNumber,
+                        selection.endColumn,
+                    ))
+                else
+                    removed.push(...this._textManager.remove(
+                        cursor.lineNumber,
+                        cursor.column - 1,
+                        cursor.lineNumber,
+                        cursor.column - 1,
+                    ))
+                this._cursorManager.type([], removed)
+                this._selectionManager.keydown(e)
+            } else if (e.keyCodeId === KeyboardEventCode.ENTER)
+                this._blur$.next(undefined)
+            else
+                this._cursorManager.keydown(e)
+        }))
         this.add(input.onPaste$.subscribe(e => {
             const text = e.clipboardMetaData[0]?.text
             if (text === undefined)

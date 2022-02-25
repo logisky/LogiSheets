@@ -17,4 +17,7 @@ yarn.lock
 # bundle generate files
 dist
 
+# jest files
+coverage/
+
 /pkg

@@ -40,8 +40,8 @@ export class Texts {
         return this._texts.splice(start, end - start + 1)
     }
 
-    replace(text: Texts, start: number, end: number): readonly Text[] {
-        return this._texts.splice(start, end - start + 1, ...text.texts)
+    replace(text: Texts, start: number, count: number): readonly Text[] {
+        return this._texts.splice(start, count, ...text.texts)
     }
 
     getPlainText(): string {

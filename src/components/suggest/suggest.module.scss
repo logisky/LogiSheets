@@ -1,0 +1,33 @@
+.host {
+    position: absolute;
+    border: 1px solid #e2e6ed;
+    z-index: 1000;
+    max-width: 670px;
+    max-height: 676px;
+    overflow: auto;
+    box-shadow: 0 2px 12px 0 rgb(56 56 56 / 20%);
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+}
+.suggest {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    white-space: nowrap;
+    padding: 0 32px 0 16px;
+    height: 30px;
+    &:not(.text-only) {
+        cursor: pointer;
+        &:hover {
+            background-color: rgba(25,55,88,0.04);
+        }
+        &.active {
+            background-color: rgba(25,55,88,0.04);
+        }
+    }
+}
+.highlight {
+    color: #eb5451;
+}

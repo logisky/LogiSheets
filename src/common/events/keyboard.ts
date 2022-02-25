@@ -1,4 +1,4 @@
-import {KeyboardEventCode, extractKeyCode} from './key_code'
+import { KeyboardEventCode, extractKeyCode } from './key_code'
 export const enum KeyMod {
     CTRL_CMD = (1 << 11) >>> 0,
     SHIFT = (1 << 10) >>> 0,

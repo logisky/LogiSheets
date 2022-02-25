@@ -38,7 +38,6 @@ export class TextAreaInput extends TextAreaInputEvents {
     ) {
         super()
         this.writeScreenReaderContent()
-        this._listen()
     }
     destroy(): void {
         this._subs.unsubscribe()
@@ -50,7 +49,7 @@ export class TextAreaInput extends TextAreaInputEvents {
     }
 
     focusTextArea(): void {
-        this._setHasFocus(true)
+        this.#setHasFocus(true)
         // this.refreshFocusState()
     }
 
@@ -61,6 +60,127 @@ export class TextAreaInput extends TextAreaInputEvents {
             this.host.getScreenReaderContent(this._textAreaState)
         )
     }
+    onKeydown(e: KeyboardEvent) {
+        if (e.isComposing || (this._isDoingComposition && e.code === KeyboardEventCode.BACKSPACE))
+            e.stopPropagation()
+        if (e.code === KeyboardEventCode.ESCAPE)
+            e.preventDefault()
+        this._lastKeydown = new StandardKeyboardEvent(e)
+        this.onKeyDown$.next(this._lastKeydown)
+    }
+    onKeyup(e: KeyboardEvent) {
+        this.onKeyUp$.next(e)
+    }
+    onCompositionnStart(e: CompositionEvent) {
+        if (this._isDoingComposition)
+            return
+        this._isDoingComposition = true
+        if (isMac()
+            && this._textAreaState.selectionStart === this._textAreaState.selectionEnd
+            && this._textAreaState.selectionStart > 0
+            && this._textAreaState.value.substr(
+                this._textAreaState.selectionStart - 1,
+                1
+            ) === e.data) {
+            const isArrowKey = this._lastKeydown
+                && this._lastKeydown.isComposing
+                && (this._lastKeydown.keyCodeId === KeyboardEventCode.ARROW_RIGHT || this._lastKeydown.keyCodeId === KeyboardEventCode.ARROW_LEFT)
+            if (isArrowKey || isFirefox()) {
+                const newState = new TextAreaState()
+                shallowCopy(this._textAreaState, newState)
+                newState.selectionStart = this._textAreaState.selectionStart - 1
+                if (this._textAreaState.selectionStartPosition) {
+                    const position = new Position()
+                    shallowCopy(this._textAreaState.selectionStartPosition, position)
+                    position.column = this._textAreaState.selectionStartPosition.column - 1
+                    newState.selectionStartPosition = position
+                }
+                this._textAreaState = newState
+                const compositionStartEvent = new CompositionStartEvent()
+                compositionStartEvent.revealDeltaColumns = -1
+                this.onCompositionStart$.next(compositionStartEvent)
+                return
+            }
+        }
+        this._setAndWriteTextAreaState(TextAreaState.EMPTY)
+        this.onCompositionStart$.next(new CompositionStartEvent())
+    }
+    onCompositionUpdate(e: CompositionEvent) {
+        const [newState, typeInput] = this.#deduceComposition(e.data || '')
+        this._textAreaState = newState
+        this.onType$.next(typeInput)
+        this.onCompositionUpdate$.next(e)
+    }
+    onCompositionEnd(e: CompositionEvent) {
+        if (!this._isDoingComposition)
+            return
+        this._isDoingComposition = false
+        const [newState, typeInput] = this.#deduceComposition(e.data || '')
+        this._textAreaState = newState
+        this.onType$.next(typeInput)
+        if (isChrome() || isFirefox())
+            this._textAreaState = TextAreaState.readFromTextArea(this._textareaWrapper)
+        this.onCompositionEnd$.next(undefined)
+    }
+    onInput() {
+        if (this._isDoingComposition)
+            return
+        const [newState, typeInput] = this.#deduceInputFromTextAreaValue(isMac())
+        if (typeInput.replacePrevCharCnt === 0
+            && typeInput.text.length === 1
+            && isHighSurrogate(typeInput.text.charCodeAt(0))
+        )
+            return
+        this._textAreaState = newState
+        if (this._nextCommand === ReadFromTextArea.TYPE) {
+            if (typeInput.text !== '' || typeInput.replacePrevCharCnt !== 0)
+                this.onType$.next(typeInput)
+        } else {
+            if (typeInput.text !== '' || typeInput.replacePrevCharCnt !== 0) {
+                const metaData = new ClipboardMetaData()
+                metaData.text = typeInput.text
+                metaData.format = MIMES['.txt']
+                const clipboardStoredMetaData = new ClipboardStoredMetaData()
+                clipboardStoredMetaData.clipboardMetaData = [metaData]
+                this.onPaste$.next(clipboardStoredMetaData)
+            }
+            this._nextCommand = ReadFromTextArea.TYPE
+        }
+    }
+    onCut(e: ClipboardEvent) {
+        this._textareaWrapper.setIgnoreSelectionChangeTime()
+        this._ensureClipboardGetsEditorSelection(e)
+    }
+    onCopy(e: ClipboardEvent) {
+        this._ensureClipboardGetsEditorSelection(e)
+    }
+    onPaste(e: ClipboardEvent) {
+        if (canUseTextData(e)) {
+            const data = getClipboardData(e)
+            this.onPaste$.next(data)
+        } else {
+            if (this._textareaWrapper.getSelectionStart()
+                !== this._textareaWrapper.getSelectionEnd())
+                this._setAndWriteTextAreaState(TextAreaState.EMPTY)
+            this._nextCommand = ReadFromTextArea.PASTE
+        }
+    }
+    onFocus(e: FocusEvent) {
+        e.stopPropagation()
+        e.preventDefault()
+        const hasFocus = this._hasFocus
+        this.#setHasFocus(true)
+        if (isSafari() && !hasFocus && this._hasFocus)
+            debugWeb('safari todo')
+    }
+    onBlur() {
+        if (this._isDoingComposition) {
+            this._isDoingComposition = false
+            this.writeScreenReaderContent()
+            this.onCompositionEnd$.next(undefined)
+        }
+        this.#setHasFocus(false)
+    }
     private _textAreaState = TextAreaState.EMPTY
     private _textareaWrapper = new TextAreaWrapper(this.textarea)
     private _selectionChangeListener?: Subscription
@@ -68,156 +188,27 @@ export class TextAreaInput extends TextAreaInputEvents {
     private _hasFocus = false
     private _isDoingComposition = false
     private _subs = new Subscription()
-    // tslint:disable-next-line: max-func-body-length
-    private _listen(): void {
-        let lastKeyDown: StandardKeyboardEvent | null = null
-        this._subs.add(on(this.textarea, EventType.KEY_DOWN).subscribe(e => {
-            if (e.isComposing || (this._isDoingComposition && e.code === KeyboardEventCode.BACKSPACE))
-                e.stopPropagation()
-            if (e.code === KeyboardEventCode.ESCAPE)
-                e.preventDefault()
-            lastKeyDown = new StandardKeyboardEvent(e)
-            this.onKeyDown$.next(lastKeyDown)
-        }))
-        this._subs.add(on(this.textarea, EventType.KEY_UP).subscribe(e => {
-            this.onKeyUp$.next(e)
-        }))
-        this._subs
-            .add(on(this.textarea, EventType.COMPOSITION_START).subscribe(e => {
-                if (this._isDoingComposition)
-                    return
-                this._isDoingComposition = true
-                if (isMac()
-                    && this._textAreaState.selectionStart === this._textAreaState.selectionEnd
-                    && this._textAreaState.selectionStart > 0
-                    && this._textAreaState.value.substr(
-                        this._textAreaState.selectionStart - 1,
-                        1
-                    ) === e.data) {
-                    const isArrowKey = lastKeyDown
-                        && lastKeyDown.isComposing
-                        && (lastKeyDown.e.code === KeyboardEventCode.ARROW_RIGHT || lastKeyDown.e.code === KeyboardEventCode.ARROW_LEFT)
-                    if (isArrowKey || isFirefox()) {
-                        const newState = new TextAreaState()
-                        shallowCopy(this._textAreaState, newState)
-                        newState.selectionStart = this._textAreaState.selectionStart - 1
-                        if (this._textAreaState.selectionStartPosition) {
-                            const position = new Position()
-                            shallowCopy(this._textAreaState.selectionStartPosition, position)
-                            position.column = this._textAreaState.selectionStartPosition.column - 1
-                            newState.selectionStartPosition = position
-                        }
-                        this._textAreaState = newState
-                        const compositionStartEvent = new CompositionStartEvent()
-                        compositionStartEvent.revealDeltaColumns = -1
-                        this.onCompositionStart$.next(compositionStartEvent)
-                        return
-                    }
-                }
-                this._setAndWriteTextAreaState(TextAreaState.EMPTY)
-                this.onCompositionStart$.next(new CompositionStartEvent())
-            }))
-        const deduceComposition = (text: string): [TextAreaState, TypeData] => {
-            const oldState = this._textAreaState
-            const newState = TextAreaState.selectedText(text)
-            const typeInput = new TypeData()
-            typeInput.text = newState.value
-            typeInput.replacePrevCharCnt =
-                oldState.selectionEnd - oldState.selectionStart
-            return [newState, typeInput]
-        }
-        this._subs.add(
-            on(this.textarea, EventType.COMPOSITION_UPDATE).subscribe(e => {
-                const [newState, typeInput] = deduceComposition(e.data || '')
-                this._textAreaState = newState
-                this.onType$.next(typeInput)
-                this.onCompositionUpdate$.next(e)
-            })
-        )
-        this._subs
-            .add(on(this.textarea, EventType.COMPOSITION_END).subscribe(e => {
-                if (!this._isDoingComposition)
-                    return
-                this._isDoingComposition = false
-                const [newState, typeInput] = deduceComposition(e.data || '')
-                this._textAreaState = newState
-                this.onType$.next(typeInput)
-                if (isChrome() || isFirefox())
-                    this._textAreaState = TextAreaState
-                        .readFromTextArea(this._textareaWrapper)
-                this.onCompositionEnd$.next(undefined)
-            }))
-        const deduceInputFromTextAreaValue = (
-            couldBeEmojiInput: boolean
-        ) => {
-            const oldState = this._textAreaState
-            const newState = TextAreaState
-                .readFromTextArea(this._textareaWrapper)
-            return [newState, TextAreaState
-                .deduceInput(oldState, newState, couldBeEmojiInput)] as const
-        }
-        this._subs.add(on(this.textarea, EventType.INPUT).subscribe(() => {
-            if (this._isDoingComposition)
-                return
-            const [newState, typeInput] = deduceInputFromTextAreaValue(isMac())
-            if (typeInput.replacePrevCharCnt === 0
-                && typeInput.text.length === 1
-                && isHighSurrogate(typeInput.text.charCodeAt(0))
-            )
-                return
-            this._textAreaState = newState
-            if (this._nextCommand === ReadFromTextArea.TYPE) {
-                if (typeInput.text !== '' || typeInput.replacePrevCharCnt !== 0)
-                    this.onType$.next(typeInput)
-            } else {
-                if (typeInput.text !== '' || typeInput.replacePrevCharCnt !== 0) {
-                    const metaData = new ClipboardMetaData()
-                    metaData.text = typeInput.text
-                    metaData.format = MIMES['.txt']
-                    const clipboardStoredMetaData = new ClipboardStoredMetaData()
-                    clipboardStoredMetaData.clipboardMetaData = [metaData]
-                    this.onPaste$.next(clipboardStoredMetaData)
-                }
-                this._nextCommand = ReadFromTextArea.TYPE
-            }
-        }))
-        this._subs.add(on(this.textarea, EventType.CUT).subscribe(e => {
-            this._textareaWrapper.setIgnoreSelectionChangeTime()
-            this._ensureClipboardGetsEditorSelection(e)
-        }))
-        this._subs.add(on(this.textarea, EventType.COPY).subscribe(e => {
-            this._ensureClipboardGetsEditorSelection(e)
-        }))
-        this._subs.add(on(this.textarea, EventType.PASTE).subscribe(e => {
-            if (canUseTextData(e)) {
-                const data = getClipboardData(e)
-                this.onPaste$.next(data)
-            } else {
-                if (this._textareaWrapper.getSelectionStart()
-                    !== this._textareaWrapper.getSelectionEnd())
-                    this._setAndWriteTextAreaState(TextAreaState.EMPTY)
-                this._nextCommand = ReadFromTextArea.PASTE
-            }
-        }))
-        this._subs.add(on(this.textarea, EventType.FOCUS).subscribe(e => {
-            e.stopPropagation()
-            e.preventDefault()
-            const hasFocus = this._hasFocus
-            this._setHasFocus(true)
-            if (isSafari() && !hasFocus && this._hasFocus)
-                debugWeb('safari todo')
-        }))
-        this._subs.add(on(this.textarea, EventType.BLUR).subscribe(() => {
-            if (this._isDoingComposition) {
-                this._isDoingComposition = false
-                this.writeScreenReaderContent()
-                this.onCompositionEnd$.next(undefined)
-            }
-            this._setHasFocus(false)
-        }))
+    private _lastKeydown?: StandardKeyboardEvent
+    #deduceComposition = (text: string) => {
+        const oldState = this._textAreaState
+        const newState = TextAreaState.selectedText(text)
+        const typeInput = new TypeData()
+        typeInput.text = newState.value
+        typeInput.replacePrevCharCnt =
+            oldState.selectionEnd - oldState.selectionStart
+        return [newState, typeInput] as const
+    }
+    #deduceInputFromTextAreaValue = (
+        couldBeEmojiInput: boolean
+    ) => {
+        const oldState = this._textAreaState
+        const newState = TextAreaState
+            .readFromTextArea(this._textareaWrapper)
+        return [newState, TextAreaState
+            .deduceInput(oldState, newState, couldBeEmojiInput)] as const
     }
 
-    private _setHasFocus(hasFocus: boolean): void {
+    #setHasFocus(hasFocus: boolean): void {
         if (this._hasFocus === hasFocus)
             return
         this._hasFocus = hasFocus

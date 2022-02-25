@@ -6,6 +6,57 @@ import { MouseEvent, useRef, useState } from 'react'
 import { CursorEvent } from '../events'
 
 export const useCursor = <T,>(textMng: TextManager<T>, context: Context<T>) => {
+    // 将单元格内输入内容拉平成一行之后，算cursor的位置
+    const getCursorInOneLine = () => {
+        const texts = textMng.getTwoDimensionalTexts()
+        let result = 0
+        const { lineNumber, column } = currCursor.current
+        texts.forEach((eachLine, line) => {
+            if (line > lineNumber)
+                return
+            if (line < lineNumber) {
+                const length = eachLine.reduce((a, b) => a + b.char.length, 0)
+                result += length
+            }
+            else
+                result += column
+        })
+        return result
+    }
+    const getCursorInfoByOneLineCoordinate = (cursor: number) => {
+        const texts = textMng.getTwoDimensionalTexts()
+        let currIndex = 0
+        let lineNumber = 0, column = 0
+        for (let line = 0; line < texts.length; line++) {
+            const eachLine = texts[line]
+            const lineLength = eachLine.reduce((a, b) => a + b.char.length, 0)
+            const index = lineLength + currIndex
+            if (index < cursor) {
+                currIndex += lineLength
+                continue
+            } else if (index >= cursor) {
+                lineNumber = line
+                column = cursor - currIndex
+                break
+            } else
+                return
+        }
+        return getCursorInfoByCoordinate(lineNumber, column)
+    }
+    // 根据坐标获取光标的pixel位置
+    const getCursorInfoByCoordinate = (line: number, column: number) => {
+        const baseInfo = new BaseInfo()
+        baseInfo.column = column
+        baseInfo.lineNumber = line
+        baseInfo.y = line * context.lineHeight()
+        const texts = textMng.getTwoDimensionalTexts()
+        let x = 0
+        for (let i = 0; i < texts[line].length && i < column; i++) {
+            x += texts[line][i].width()
+        }
+        baseInfo.x = x
+        return baseInfo
+    }
     /**
      * 如果offsetX为-1，则cursorX为当前行的最后
      * 如果offsetY为-1，则cursorY为最后一行
@@ -142,6 +193,10 @@ export const useCursor = <T,>(textMng: TextManager<T>, context: Context<T>) => {
         const cursor = getCursorInfoByPosition(x, y)
         _update(cursor)
     }
+    const setCursor = (cursor: number) => {
+        const cursorInfo = getCursorInfoByOneLineCoordinate(cursor)
+        _update(cursorInfo)
+    }
     const _update = (cursor?: BaseInfo) => {
         const cursorEvent = new CursorEvent()
         cursorEvent.show = cursor !== undefined
@@ -161,20 +216,23 @@ export const useCursor = <T,>(textMng: TextManager<T>, context: Context<T>) => {
     }
 
     const [cursorEvent$, setCursorEvent] = useState<CursorEvent>()
-    const [cursor, setCursorInfo] = useState<BaseInfo>(getCursorInfoByPosition(
+    const [cursor$, setCursorInfo] = useState<BaseInfo>(getCursorInfoByPosition(
         context.textareaOffsetX,
         context.textareaOffsetY
     ))
-    const currCursor = useRef(cursor)
+    const currCursor = useRef(cursor$)
     return {
         cursorEvent$,
-        cursor,
+        cursor$,
         currCursor,
+        cursorHeight: context.cellHeight,
         getCursorInfoByPosition,
         type,
         mousedown,
         blur,
         keydown,
         focus,
+        getCursorInOneLine,
+        setCursor,
     }
 }

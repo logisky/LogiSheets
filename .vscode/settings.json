@@ -1,4 +1,5 @@
 {
+	"editor.selectionClipboard": true,
 	"javascript.referencesCodeLens.enabled": true,
 	"javascript.referencesCodeLens.showOnAllFunctions": true,
 	"typescript.implementationsCodeLens.enabled": true,
@@ -14,5 +15,5 @@
 	"typescript.inlayHints.functionLikeReturnTypes.enabled": true,
 	"typescript.inlayHints.parameterTypes.enabled": true,
 	"typescript.inlayHints.propertyDeclarationTypes.enabled": true,
-	"typescript.inlayHints.variableTypes.enabled": true
+	"typescript.inlayHints.variableTypes.enabled": true,
 }
