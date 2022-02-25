@@ -13,6 +13,7 @@ pub mod message {
     use xlrs_controller::controller::display::Style as ControllerStyle;
     use xlrs_controller::controller::display::Value as ControllerValue;
     use xlrs_controller::controller::edit_action::style_payload::BorderLocation as CtrlBorderLocation;
+    use xlrs_controller::controller::edit_action::style_payload::SetBorderStyle;
     use xlrs_controller::controller::edit_action::style_payload::SetPatternFill as CtrlSetPatternFill;
     use xlrs_controller::controller::edit_action::EditAction;
     use xlrs_controller::controller::edit_action::{self, EditPayload};
@@ -166,8 +167,8 @@ pub mod message {
         pub fn from(v: ControllerValue) -> Self {
             use value::CellValueOneof;
             let cv = match v {
-                ControllerValue::Text(t) => CellValueOneof::Str(t),
-                ControllerValue::Boolean(b) => CellValueOneof::Bool(b),
+                ControllerValue::Str(t) => CellValueOneof::Str(t),
+                ControllerValue::Bool(b) => CellValueOneof::Bool(b),
                 ControllerValue::Number(n) => CellValueOneof::Number(n),
                 ControllerValue::Error(e) => CellValueOneof::Error(e),
             };
@@ -327,81 +328,101 @@ pub mod message {
 
     fn into_style_update(input: StyleUpdate) -> EditPayload {
         use edit_action::style_payload::{
-            SetBorderPr, SetFontBold, SetFontColor, SetFontCondense, SetFontItalic, SetFontName,
-            SetFontOutline, SetFontShadow, SetFontSize, SetFontStrike, SetFontUnderline,
+            SetFontUnderline,
             StyleUpdateType,
         };
         use style_update_payload::StylePayloadOneof;
-        let p = input.payload.unwrap().style_payload_oneof.unwrap();
+        let ps = input.payloads.into_iter().map(|p| {
+            let p = p.style_payload_oneof.unwrap();
+            match p {
+                StylePayloadOneof::SetFontBold(fb) => {
+                    StyleUpdateType::SetFontBold(fb.bold)
+                }
+                StylePayloadOneof::SetFontItalic(fi) => {
+                    StyleUpdateType::SetFontItalic(fi.italic)
+                }
+                StylePayloadOneof::SetFontUnderline(fu) => {
+                    let underline = match fu.underline {
+                        0 => StUnderlineValues::Type::Double,
+                        1 => StUnderlineValues::Type::DoubleAccounting,
+                        2 => StUnderlineValues::Type::None,
+                        3 => StUnderlineValues::Type::Single,
+                        4 => StUnderlineValues::Type::SingleAccounting,
+                        _ => StUnderlineValues::Type::None,
+                    };
+                    StyleUpdateType::SetFontUnderline(SetFontUnderline { underline })
+                }
+                StylePayloadOneof::SetFontColor(fc) => {
+                    StyleUpdateType::SetFontColor(fc.color)
+                }
+                StylePayloadOneof::SetFontSize(fs) => {
+                    StyleUpdateType::SetFontSize(fs.size)
+                }
+                StylePayloadOneof::SetFontName(fname) => {
+                    StyleUpdateType::SetFontName(fname.name)
+                }
+                StylePayloadOneof::SetFontOutline(fo) => {
+                    StyleUpdateType::SetFontOutline(fo.outline)
+                }
+                StylePayloadOneof::SetFontShadow(fs) => {
+                    StyleUpdateType::SetFontShadow(fs.shadow)
+                }
+                StylePayloadOneof::SetFontStrike(fs) => {
+                    StyleUpdateType::SetFontStrike(fs.strike)
+                }
+                StylePayloadOneof::SetFontCondense(fc) => {
+                    StyleUpdateType::SetFontCondense(fc.condense)
+                }
+                StylePayloadOneof::SetBorderDiagonalUp(_) => todo!(),
+                StylePayloadOneof::SetBorderDiagonalDown(_) => todo!(),
+                StylePayloadOneof::SetBorderOutline(_) => todo!(),
+                StylePayloadOneof::SetPatternFill(set_fill) => {
+                    let pf = set_fill.pattern_fill.unwrap();
+                    let fill = pf.into();
+                    let s = CtrlSetPatternFill {
+                        pattern_fill: fill.pattern_fill.unwrap(),
+                    };
+                    StyleUpdateType::SetPatternFill(s)
+                }
+                StylePayloadOneof::SetLeftBorderColor(c) => {
+                    StyleUpdateType::SetLeftBorderColor(c.color)
+                },
+                StylePayloadOneof::SetRightBorderColor(c) => {
+                    StyleUpdateType::SetRightBorderColor(c.color)
+                },
+                StylePayloadOneof::SetTopBorderColor(c) => {
+                    StyleUpdateType::SetTopBorderColor(c.color)
+                },
+                StylePayloadOneof::SetBottomBorderColor(c) => {
+                    StyleUpdateType::SetBottomBorderColor(c.color)
+                },
+                StylePayloadOneof::SetLeftBorderType(s) => {
+                    let ty = convert_border_style(s.bt);
+                    StyleUpdateType::SetLeftBorderStyle(SetBorderStyle{ ty })
+                },
+                StylePayloadOneof::SetRightBorderType(s) => {
+                    let ty = convert_border_style(s.bt);
+                    StyleUpdateType::SetRightBorderStyle(SetBorderStyle{ ty })
+                },
+                StylePayloadOneof::SetTopBorderType(s) => {
+                    let ty = convert_border_style(s.bt);
+                    StyleUpdateType::SetTopBorderStyle(SetBorderStyle{ ty })
+                },
+                StylePayloadOneof::SetBottomBorderType(s) => {
+                    let ty = convert_border_style(s.bt);
+                    StyleUpdateType::SetBottomBorderStyle(SetBorderStyle{ ty })
+                },
+            }
+        }).collect();
         let sheet_idx = input.sheet_idx as usize;
         let row = input.row as usize;
         let col = input.col as usize;
-        let su = match p {
-            StylePayloadOneof::SetFontBold(fb) => {
-                StyleUpdateType::SetFontBold(SetFontBold { bold: fb.bold })
-            }
-            StylePayloadOneof::SetFontItalic(fi) => {
-                StyleUpdateType::SetFontItalic(SetFontItalic { italic: fi.italic })
-            }
-            StylePayloadOneof::SetFontUnderline(fu) => {
-                let underline = match fu.underline {
-                    0 => StUnderlineValues::Type::Double,
-                    1 => StUnderlineValues::Type::DoubleAccounting,
-                    2 => StUnderlineValues::Type::None,
-                    3 => StUnderlineValues::Type::Single,
-                    4 => StUnderlineValues::Type::SingleAccounting,
-                    _ => StUnderlineValues::Type::None,
-                };
-                StyleUpdateType::SetFontUnderline(SetFontUnderline { underline })
-            }
-            StylePayloadOneof::SetFontColor(fc) => {
-                StyleUpdateType::SetFontColor(SetFontColor { color: fc.color })
-            }
-            StylePayloadOneof::SetFontSize(fs) => {
-                StyleUpdateType::SetFontSize(SetFontSize { size: fs.size })
-            }
-            StylePayloadOneof::SetFontName(fname) => {
-                StyleUpdateType::SetFontName(SetFontName { name: fname.name })
-            }
-            StylePayloadOneof::SetFontOutline(fo) => {
-                StyleUpdateType::SetFontOutline(SetFontOutline {
-                    outline: fo.outline,
-                })
-            }
-            StylePayloadOneof::SetFontShadow(fs) => {
-                StyleUpdateType::SetFontShadow(SetFontShadow { shadow: fs.shadow })
-            }
-            StylePayloadOneof::SetFontStrike(fs) => {
-                StyleUpdateType::SetFontStrike(SetFontStrike { strike: fs.strike })
-            }
-            StylePayloadOneof::SetFontCondense(fc) => {
-                StyleUpdateType::SetFontCondense(SetFontCondense {
-                    condense: fc.condense,
-                })
-            }
-            StylePayloadOneof::SetBorderDiagonalUp(_) => todo!(),
-            StylePayloadOneof::SetBorderDiagonalDown(_) => todo!(),
-            StylePayloadOneof::SetBorderOutline(_) => todo!(),
-            StylePayloadOneof::SetBorderPr(bp) => {
-                let pr = bp.pr.unwrap().into();
-                let location = BorderLocation::into_ctrl(bp.location);
-                StyleUpdateType::SetBorderPr(SetBorderPr { location, pr })
-            }
-            StylePayloadOneof::SetPatternFill(set_fill) => {
-                let pf = set_fill.pattern_fill.unwrap();
-                let fill = pf.into();
-                let s = CtrlSetPatternFill {
-                    pattern_fill: fill.pattern_fill.unwrap(),
-                };
-                StyleUpdateType::SetPatternFill(s)
-            }
-        };
         use xlrs_controller::controller::edit_action::style_payload::StyleUpdate;
         EditPayload::StyleUpdate(StyleUpdate {
             sheet_idx,
             row,
             col,
-            ty: su,
+            ty: ps,
         })
     }
 
@@ -836,9 +857,10 @@ pub mod message {
     }
 
     impl ServerSend {
-        pub fn from_action_effect(sheets: Vec<usize>) -> Self {
+        pub fn from_action_effect(sheets: Vec<usize>, source: EventSource) -> Self {
             let su = SheetUpdated {
                 index: sheets.into_iter().map(|i| i as u32).collect::<Vec<_>>(),
+                event_source: Some(source),
             };
             ServerSend {
                 server_send_oneof: Some(server_send::ServerSendOneof::SheetUpdated(su)),
@@ -849,6 +871,26 @@ pub mod message {
             ServerSend {
                 server_send_oneof: Some(server_send::ServerSendOneof::DisplayResponse(dr)),
             }
+        }
+    }
+
+    fn convert_border_style(i: i32) -> StBorderStyle::Type {
+        match i {
+            0 => StBorderStyle::Type::DashDot,
+            1 => StBorderStyle::Type::DashDot,
+            2 => StBorderStyle::Type::Dashed,
+            3 => StBorderStyle::Type::Dotted,
+            4 => StBorderStyle::Type::Double,
+            5 => StBorderStyle::Type::Hair,
+            6 => StBorderStyle::Type::Medium,
+            7 => StBorderStyle::Type::MediumDashDot,
+            8 => StBorderStyle::Type::MediumDashDotDot,
+            9 => StBorderStyle::Type::MediumDashed,
+            10 => StBorderStyle::Type::None,
+            11 => StBorderStyle::Type::SlantDashDot,
+            12 => StBorderStyle::Type::Thick,
+            13 => StBorderStyle::Type::Thin,
+            _ => unreachable!(),
         }
     }
 }
