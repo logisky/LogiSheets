@@ -5,6 +5,7 @@ members = [
     "math",
     "network",
     "workbook",
+    "workbook2",
     "protocols",
     "src/wasms/server",
     "src/wasms/fc",
