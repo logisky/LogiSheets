@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import { shallowCopy } from 'common'
 import { StartCellEvent } from './start-cell'
 import initFc, { formula_check } from '../../../wasms/fc/pkg'
+import { isFormula } from 'core/snippet'
 
 export const useText = () => {
     const [editing, setEditing] = useState(false)
@@ -29,11 +30,14 @@ export const useText = () => {
     const checkFormula = async () => {
         if (!editing)
             return true
+        const formula = currText.current
+        if (!isFormula(formula))
+            return true
         await initFc()
-        const checked = formula_check(currText.current)
+        const checked = formula_check(formula)
         setValidFormula(checked)
         if (!checked)
-            console.log(`invalid formula ${currText.current}`)
+            console.log(`invalid formula ${formula}`)
         return checked
     }
 
