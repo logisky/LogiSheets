@@ -10,6 +10,7 @@ const formulas = [
 	'=abs(1)',
 	'=abs()',
 	'=accrint(abs(), 1,2)',
+	'= ',
 ] as const
 describe('lex test', () => {
 	formulas.forEach(formula => {

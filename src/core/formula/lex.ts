@@ -505,9 +505,9 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
 
 		if (token.type === TokenType.WHITE_SPACE) {
 			let doAddToken = (tokens.BOF()) || (tokens.EOF());
-			const previous = tokens.previous() as Token
+			const previous = tokens.previous()
 			//if ((tokens.BOF()) || (tokens.EOF())) {}
-			doAddToken = doAddToken && (((previous.type === TokenType.FUNCTION) && (previous.subtype === SubType.STOP)) || ((previous.type === TokenType.SUBEXPR) && (previous?.subtype === SubType.STOP)) || (previous?.type === TokenType.OPERAND));
+			doAddToken = doAddToken && (((previous?.type === TokenType.FUNCTION) && (previous?.subtype === SubType.STOP)) || ((previous?.type === TokenType.SUBEXPR) && (previous?.subtype === SubType.STOP)) || (previous?.type === TokenType.OPERAND));
 			//else if (!(
 			//       ((tokens.previous().type === TokenType.FUNCTION) && (tokens.previous().subtype == SubType.STOP))
 			//    || ((tokens.previous().type == TokenType.SUBEXPR) && (tokens.previous().subtype == SubType.STOP))
