@@ -13,6 +13,7 @@ default = ["console_error_panic_hook"]
 [dependencies]
 xlrs_controller = {versoin = "0.1.0", path = '../../../controller'}
 wasm-bindgen = {version = "0.2.79", features = ["serde-serialize"]}
+web-sys = {version = "0.3.56", features = ["console"]}
 console_error_panic_hook = {version = "0.1.6", optional = true}
 # Specify the feature of the crate used in `xlrs_controller`.
 getrandom = {version = "0.2.3", features = ["js"]}
