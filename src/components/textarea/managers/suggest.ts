@@ -96,7 +96,6 @@ export const useSuggest = <T,>(
 			// 如果光标停在参数位置或分隔符，计算当前属于第几个参数，提示该参数信息
 		} else if (tokenManager.isOperandStart(token)) {
 			const { fnIndex, paramCount } = tokenManager.getFnInfo(token)
-			console.log(fnIndex, paramCount)
 			if (fnIndex === -1) {
 				setShowSuggest(false)
 				return

@@ -11,6 +11,9 @@ const formulas = [
 	'=abs()',
 	'=accrint(abs(), 1,2)',
 	'= ',
+	'=sum(a1:b2)',
+	'=a1',
+	'=sum(a1,a2)',
 ] as const
 describe('lex test', () => {
 	formulas.forEach(formula => {

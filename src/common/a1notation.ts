@@ -1,3 +1,26 @@
+// https://github.com/FLighter7/a1-notation
+import { upperCase } from './strings'
+import {isString} from './type-guard'
+const a1notationReg = /^(?<cs>[A-Z]+)(?<rs>\d+)(:(?<ce>[A-Z]+)(?<re>\d+))?$/i
+const notationReq = /^[A-Z]/
+export function isA1notation(value: unknown) {
+    if (!isString(value))
+        return false
+    return a1notationReg.test(upperCase(value))
+}
+// 所有的返回值都是从0开始
+export function parseA1notation(value: string): {cs: number, rs: number, ce?: number, re?: number} | undefined {
+    const result = upperCase(value).match(a1notationReg)
+    if (!result?.groups)
+        return
+    let {ce, re, cs, rs} = result.groups
+    return {
+        cs: toZeroBasedNotation(cs),
+        rs: parseInt(rs) - 1,
+        ce: ce ? toZeroBasedNotation(ce) : undefined,
+        re: re ? parseInt(re) - 1 : undefined,
+    }
+}
 /**
  * Convert a 0-based column index to A1-notation, i.e., A, BC, etc..
  *
@@ -34,9 +57,10 @@
  * Convert a A1-notation to 0-based column index, i.e., A, BC, etc..
  */
 export function toZeroBasedNotation(notation: string): number {
-    if (notation.match(/[^A-Z]/) || notation === '')
+    const n = upperCase(notation)
+    if (!n.match(notationReq) || n === '')
         throw Error(
-            `Invalid position'${notation}'. Must be a [A-Z] character.`)
+            `Invalid notation ${n}. Must be a [A-Z] character.`)
     let index = 0
     // Calculation method:
     // Example:
@@ -49,9 +73,9 @@ export function toZeroBasedNotation(notation: string): number {
     //   sum=number*26^powNumber       1*26^2    2*26^1   3*26^0
     //   numberSum(one_based_index) =  1*26^2 + 2*26^1 + 3*26^0  = 731
     //   index(zero_based_index) = numSum - 1 = 730
-    for (let pos = 0; pos < notation.length ; pos += 1) {
-        const powNumber = notation.length - 1 - pos
-        index += (Math.pow(26, powNumber) * (notation.charCodeAt(pos) - 64))
+    for (let pos = 0; pos < n.length ; pos += 1) {
+        const powNumber = n.length - 1 - pos
+        index += (Math.pow(26, powNumber) * (n.charCodeAt(pos) - 64))
     }
 
     return index - 1

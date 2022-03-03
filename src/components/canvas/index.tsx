@@ -11,7 +11,15 @@ import {
     WheelEvent,
     FC,
 } from 'react'
-import { useSelector, useStartCell, useScrollbar, useDnd, useText, Render } from './managers'
+import { 
+    useSelector,
+    useStartCell,
+    useScrollbar,
+    useDnd,
+    useText,
+    Render,
+    useHighlightCell,
+} from './managers'
 import { Cell } from './defs'
 import { ScrollEvent, ScrollbarComponent } from 'components/scrollbar'
 import { createSyntheticEvent, EventType, on } from 'common/events'
@@ -39,6 +47,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const scrollbarMng = useScrollbar()
     const dndMng = useDnd()
     const textMng = useText()
+    const highlights = useHighlightCell()
     const renderMng = useRef(new Render())
     const focus$ = useRef(new Subject<void>())
 
@@ -91,6 +100,11 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     useEffect(() => {
         dndMng.selectorChange(selectorMng.selector)
     }, [selectorMng.selector])
+    useEffect(() => {
+        if (!textMng.editing)
+            return
+        highlights.init(textMng.currText.current)
+    }, [textMng.editing])
 
     const onMousedown = async (e: MouseEvent) => {
         e.stopPropagation()
@@ -124,6 +138,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const blur = (e: BlurEvent<Cell>) => {
         const oldText = textMng.context?.text ?? ''
         textMng.blur()
+        highlights.blur()
         if (e.bindingData === undefined)
             return
         const newText = textMng.currText.current.trim()
@@ -163,6 +178,10 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             ></ContextmenuComponent>
         ))
         setContextMenuOpen(true)
+    }
+    const type = (text: string) => {
+        textMng.currText.current = text
+        highlights.update(text)
     }
     const getCanvas = () => {
         if (!canvasEl.current)
@@ -206,7 +225,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             <TextContainerComponent
                 context={textMng.context}
                 blur={blur}
-                type={t => textMng.currText.current = t}
+                type={type}
                 checkFormula={textMng.checkFormula}
                 focus$={focus$.current}
             ></TextContainerComponent>
@@ -223,6 +242,18 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         {
             // TODO: add invalid formula prompt
             textMng.validFormula ? null : null
+        }
+        {
+            highlights.highlightCells.map(cell => {
+                const cellStyle = cell.style
+                return <div className={styles['highlight-cell']} style={{
+                    left: cellStyle.x,
+                    top: cellStyle.y,
+                    width: `${cellStyle.width}px`,
+                    height: `${cellStyle.height}px`,
+                    backgroundColor: cellStyle.bgColor.css(),
+                }}></div>
+            })
         }
     </div>
     )
