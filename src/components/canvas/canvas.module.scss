@@ -31,3 +31,8 @@ $x-scrollbar-height: 16px;
   width: calc(100% - #{$y-scrollbar-width});
   height: $x-scrollbar-height;
 }
+.highlight-cell {
+  opacity: 0.6;
+  position: absolute;
+  border: 1px solid;
+}
