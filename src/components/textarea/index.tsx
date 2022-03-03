@@ -90,6 +90,8 @@ export const TextContainerComponent = <T,>({
             inputMng.current.setFocus()
         }))
         return () => {
+            // 目前不知道为什么点击到另一个单元格不会触发blur事件，只好这里先做这个blur这个事情
+            _onBlur()
             sub.unsubscribe()
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -3,7 +3,8 @@
  * Only used in this folder.
  */
 export function dpr(): number {
-    return window.devicePixelRatio || 1
+    // return window.devicePixelRatio || 1
+    return 1
 }
 
 export function npx(px: number): number {
