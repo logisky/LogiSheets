@@ -1,4 +1,3 @@
-import { ScrollEvent } from './scroll_event'
 import styles from './scrollbar.module.scss'
 import { CSSProperties, MouseEvent, useEffect, useRef, useState, WheelEvent, FC } from 'react'
 import { Subscription } from 'rxjs'
@@ -6,22 +5,22 @@ import { EventType, on } from 'common/events'
 
 export * from './scroll_event'
 export type ScrollbarType = 'x' | 'y'
-export interface ScrollbarProps {
+export interface ScrollbarAttr {
     // 当前canvas的尺寸
-    containerLength?: number
+    containerLength: number
     // 整个sheet的尺寸
-    containerTotalLength?: number
-    scrollDistance?: number
-    setScrollDistance?: (scrollDistance: number) => void
+    containerTotalLength: number
+    scrollDistance: number
     paddingTop?: number
     paddingBottom?: number
     paddingLeft?: number
     paddingRight?: number
     minThumbLength?: number
     maxThumbRadio?: number
-    direction?: ScrollbarType
-    mouseWheelMove$?: (e: ScrollEvent) => void
-    mousemove$?: (e: ScrollEvent) => void
+    direction: ScrollbarType
+}
+export interface ScrollbarProps extends ScrollbarAttr {
+    setScrollDistance: (scrollDistance: number) => void
 }
 
 export const ScrollbarComponent: FC<ScrollbarProps> = ({
@@ -36,10 +35,7 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     minThumbLength = 20,
     maxThumbRadio = 80,
     direction = 'x',
-    mouseWheelMove$,
-    mousemove$,
 }) => {
-    const moving = useRef(false)
     const _thumbEl = useRef<HTMLSpanElement>(null)
     const _containerEl = useRef<HTMLDivElement>(null)
     const _thumbContainerEl = useRef<HTMLDivElement>(null)
@@ -47,9 +43,6 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
 
     useEffect(() => {
         const _render = () => {
-            /**
-             * TODO(minglong): need show scrollbar when hover?
-             */
             const thumbContainer = _thumbContainerEl.current!
             /**
              * The difference between clientHeight, offsetHeight, scrollHeight, offsetTop, and scrollTop
@@ -81,8 +74,8 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
             }
             setThumbStyle(newThumbStyle)
         }
-        if (!moving.current)
-            _render()
+        _render()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         containerLength,
         scrollDistance,
@@ -97,77 +90,41 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     }
     const thumbMouseDown = (mde: MouseEvent) => {
         mde.stopPropagation()
-        const totalLength = _containerLength()
-        const thumbLength = _thumbLength()
-        let startPosition = xScrollbar() ? mde.clientX : mde.clientY
-        moving.current = true
+        mde.preventDefault()
+        const startPosition = xScrollbar() ? mde.clientX : mde.clientY
+        const startScollDistance = scrollDistance
         const sub = new Subscription()
         sub.add(on(window, EventType.MOUSE_MOVE).subscribe(mme => {
             mme.preventDefault()
             mme.stopPropagation()
             const endPosition = xScrollbar() ? mme.clientX : mme.clientY
-            let moved = endPosition - startPosition
-            const oldScrollRadio = scrollDistance / containerTotalLength
-            const oldStart = totalLength * oldScrollRadio
-            if (moved + totalLength * oldScrollRadio + thumbLength >= totalLength)
-                if (moved > 0)
-                    moved = totalLength - thumbLength - oldStart
-                else
-                    return
-            if ((moved + totalLength * oldScrollRadio) <= 0)
-                if (moved < 0)
-                    moved = -oldStart
-                else
-                    return
-            if (moved === 0)
-                return
-            let newScrollDistance = 0
-            if (scrollDistance + containerTotalLength * (moved / totalLength) < 0) {
-                startPosition = xScrollbar() ? mde.clientX : mde.clientY
-            }
-            else {
-                newScrollDistance = scrollDistance + containerTotalLength * (moved / totalLength)
-                startPosition += moved
-            }
-            setScrollDistance?.(newScrollDistance)
-            const scrollEvent = new ScrollEvent()
-            scrollEvent.delta = containerTotalLength * (moved / totalLength)
-            scrollEvent.scrollDistance = newScrollDistance
-            scrollEvent.trust = true
-            scrollEvent.type = direction
-            mousemove$?.(scrollEvent)
+            const moved = endPosition - startPosition
+            calcScrollDistance(startScollDistance, moved)
         }))
         sub.add(on(window, EventType.MOUSE_UP).subscribe(() => {
-            moving.current = false
             sub.unsubscribe()
         }))
     }
     const thumbHostMouseWheel = (e: WheelEvent) => {
+        const moved = xScrollbar() ? e.deltaX : e.deltaY
+        calcScrollDistance(scrollDistance, moved)
+    }
+    const calcScrollDistance = (
+        containerScrollDistance: number,
+        moved: number,
+    ) => {
         const totalLength = _containerLength()
         const thumbLength = _thumbLength()
-        let moved = xScrollbar() ? e.deltaX : e.deltaY
-        const oldScrollRadio = scrollDistance / containerTotalLength
-        const startPosition = totalLength * oldScrollRadio
-        if (moved + totalLength * oldScrollRadio + thumbLength >= totalLength)
-            if (moved > 0)
-                moved = totalLength - thumbLength - startPosition
-            else
-                return
-        if ((moved + totalLength * oldScrollRadio) <= 0)
-            if (moved < 0)
-                moved = -startPosition
-            else
-                return
-        if (moved === 0)
-            return
-        const newScrollRadio = Math.abs(moved / totalLength)
+        const oldScrollRadio = containerScrollDistance / containerTotalLength
+        const oldStart = totalLength * oldScrollRadio
+        let newStart = oldStart + moved
+        if (newStart + thumbLength > totalLength)
+            newStart = (totalLength - thumbLength)
+        if (newStart < 0)
+            newStart = 0
+        const newScrollRadio = newStart / totalLength
         const newScrollDistance = containerTotalLength * newScrollRadio
-        const scrollEvent = new ScrollEvent()
-        scrollEvent.delta = scrollDistance - newScrollDistance
-        scrollEvent.scrollDistance = scrollDistance
-        scrollEvent.trust = true
-        scrollEvent.type = direction
-        mouseWheelMove$?.(scrollEvent)
+        setScrollDistance(newScrollDistance)
     }
 
 

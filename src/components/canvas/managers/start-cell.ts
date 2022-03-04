@@ -1,5 +1,5 @@
 import { Cell, match } from '../defs'
-import { DATA_SERVICE } from 'core/data'
+import { DATA_SERVICE, RenderCell } from 'core/data'
 import { MouseEvent, useState } from 'react'
 import { Buttons } from 'common'
 import { SelectorProps } from 'components/selector'
@@ -16,6 +16,29 @@ export const useStartCell = () => {
     const [startCell, setStartCell] = useState<Cell>()
     const [startCellEvent, setStartCellEvent] = useState<StartCellEvent>()
     const [canvas, setCanvas] = useState<HTMLCanvasElement>()
+
+    const scroll = () => {
+        const oldStartCell = startCell
+        if (!oldStartCell || oldStartCell.type === 'LeftTop' || oldStartCell.type === 'unknown')
+            return
+        const newStartCell = new Cell()
+        let renderCell: RenderCell | undefined
+        const viewRange = DATA_SERVICE.cachedViewRange
+        if (oldStartCell.type === 'FixedLeftHeader')
+            renderCell = viewRange.rows.find(r => r.coodinate.cover(oldStartCell.coodinate))
+        else if (oldStartCell.type === 'FixedTopHeader')
+            renderCell = viewRange.cols.find(c => c.coodinate.cover(oldStartCell.coodinate))
+        else if (oldStartCell.type === 'Cell')
+            renderCell = viewRange.cells.find(c => c.coodinate.cover(oldStartCell.coodinate))
+        else
+            return
+        if (!renderCell) {
+            setStartCell(undefined)
+            return
+        }
+        newStartCell.copyByRenderCell(renderCell)
+        setStartCell(newStartCell)
+    }
 
     const canvasChange = (canvas: HTMLCanvasElement) => {
         setCanvas(canvas)
@@ -65,6 +88,7 @@ export const useStartCell = () => {
         canvas,
         startCell,
         startCellEvent,
+        scroll,
         canvasChange,
         mousedown,
     }
