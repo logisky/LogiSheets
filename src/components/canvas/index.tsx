@@ -10,6 +10,7 @@ import {
     useState,
     WheelEvent,
     FC,
+    UIEvent,
 } from 'react'
 import { 
     useSelector,
@@ -21,7 +22,8 @@ import {
     useHighlightCell,
 } from './managers'
 import { Cell } from './defs'
-import { ScrollEvent, ScrollbarComponent } from 'components/scrollbar'
+import { 
+    ScrollbarComponent } from 'components/scrollbar'
 import { createSyntheticEvent, EventType, on } from 'common/events'
 import { DATA_SERVICE } from 'core/data'
 import { ContextmenuComponent } from './contextmenu'
@@ -79,6 +81,8 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             subs.unsubscribe()
         }
     })
+
+    // 当前单元格
     useEffect(() => {
         const e = startCellMng.startCellEvent
         selectorMng.startCellChange(e)
@@ -90,6 +94,8 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         const { startRow: row, startCol: col } = e.cell.coodinate
         selectedCell$({ row, col })
     }, [startCellMng.startCellEvent])
+
+    // 初始化
     useEffect(() => {
         selectorMng.init(canvasEl.current!)
         scrollbarMng.initScrollbar(canvasEl.current!)
@@ -97,14 +103,23 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         startCellMng.canvasChange(canvasEl.current!)
         DATA_SERVICE.sendDisplayArea()
     }, [canvasEl])
+
     useEffect(() => {
         dndMng.selectorChange(selectorMng.selector)
     }, [selectorMng.selector])
+
+    // 监听用户开始输入
     useEffect(() => {
         if (!textMng.editing)
             return
         highlights.init(textMng.currText.current)
     }, [textMng.editing])
+
+    // 监听滚动
+    useEffect(() => {
+        renderMng.current.render(canvasEl.current!)
+        startCellMng.scroll()
+    }, [scrollbarMng.xScrollDistance, scrollbarMng.yScrollDistance])
 
     const onMousedown = async (e: MouseEvent) => {
         e.stopPropagation()
@@ -153,15 +168,6 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         DATA_SERVICE.backend.sendTransaction([payload])
     }
 
-    const mouseMoveScrolling = (e: ScrollEvent) => {
-        scrollbarMng.mouseMove(e)
-        renderMng.current.render(canvasEl.current!)
-    }
-    const wheelScroll = (e: WheelEvent<HTMLCanvasElement>) => {
-        scrollbarMng.mouseWheel(e)
-        renderMng.current.render(e.currentTarget)
-    }
-
     const onContextMenu = (e: MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
@@ -197,7 +203,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         <canvas
             className={styles.canvas}
             ref={canvasEl}
-            onWheel={wheelScroll}
+            onWheel={scrollbarMng.mouseWheel}
         >你的浏览器不支持canvas，请升级浏览器</canvas>
         {contextmenuOpen && contextMenuEl ? contextMenuEl : null}
         {selectorMng.selector ? (
@@ -208,18 +214,22 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             </div>
         ) : null}
         <ScrollbarComponent
-            {...scrollbarMng.xScrollbar}
+            direction={'x'}
+            scrollDistance={scrollbarMng.xScrollDistance}
+            containerLength={scrollbarMng.size.width}
+            containerTotalLength={scrollbarMng.totalSize.width}
             paddingLeft={20}
             paddingRight={10}
-            mousemove$={mouseMoveScrolling}
-            mouseWheelMove$={e => scrollbarMng.mouseWheelScrolling(e.delta, e.type, canvasEl.current!)}
+            setScrollDistance={e => scrollbarMng.setScrollDistance(e, 'x')}
         ></ScrollbarComponent>
         <ScrollbarComponent
-            {...scrollbarMng.yScrollbar}
+            direction={'y'}
+            scrollDistance={scrollbarMng.yScrollDistance}
+            containerLength={scrollbarMng.size.height}
+            containerTotalLength={scrollbarMng.totalSize.height}
             paddingTop={20}
             paddingBottom={10}
-            mousemove$={mouseMoveScrolling}
-            mouseWheelMove$={e => scrollbarMng.mouseWheelScrolling(e.delta, e.type, canvasEl.current!)}
+            setScrollDistance={e => scrollbarMng.setScrollDistance(e, 'y')}
         ></ScrollbarComponent>
         {textMng.context && textMng.editing ?
             <TextContainerComponent
