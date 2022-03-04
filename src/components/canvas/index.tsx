@@ -8,9 +8,7 @@ import {
     useEffect,
     useRef,
     useState,
-    WheelEvent,
     FC,
-    UIEvent,
 } from 'react'
 import { 
     useSelector,
@@ -30,8 +28,10 @@ import { ContextmenuComponent } from './contextmenu'
 import { SelectorComponent } from 'components/selector'
 import { BlurEvent, TextContainerComponent } from 'components/textarea'
 import { DndComponent } from 'components/dnd'
+import {InvalidFormulaComponent} from './invalid-formula'
 import { Buttons } from 'common'
 import { CellInputBuilder } from 'api'
+import { DialogComponent } from 'ui/dialog'
 export const OFFSET = 100
 
 export interface CanvasProps {
@@ -249,10 +249,13 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             draggingX={dndMng.draggingX}
             draggingY={dndMng.draggingY}
         ></DndComponent> : null}
-        {
-            // TODO: add invalid formula prompt
-            textMng.validFormula ? null : null
-        }
+        <DialogComponent
+            content={<InvalidFormulaComponent
+                close$={() => textMng.setValidFormulaOpen(false)}
+            ></InvalidFormulaComponent>}
+            close$={() => textMng.setValidFormulaOpen(false)}
+            isOpen={textMng.validFormulaOpen}
+        ></DialogComponent>
         {
             highlights.highlightCells.map(cell => {
                 const cellStyle = cell.style

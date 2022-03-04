@@ -29,6 +29,8 @@ export const SuggestComponent: FC<SuggestProps> = ({
 	const mouseDown = (e: MouseEvent, candidate: Candidate) => {
 		e.preventDefault()
 		e.stopPropagation()
+		if (candidate.textOnly)
+			return
 		select$(candidate)
 		close$()
 	}

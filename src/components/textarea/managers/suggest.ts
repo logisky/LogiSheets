@@ -9,7 +9,6 @@ import { TextManager } from './text'
 import { useCursor } from './cursor'
 import { SubType, TokenType } from "core/formula"
 import { KeyboardEventCode, StandardKeyboardEvent } from "common/events"
-import { BehaviorSubject } from "rxjs"
 import { TokenManager } from './token'
 
 export const useSuggest = <T,>(
@@ -20,7 +19,6 @@ export const useSuggest = <T,>(
 	const [activeCandidate$, setActiveCandidate] = useState<Candidate>()
 	const [candidates$, setCandidates] = useState<Candidate[]>([])
 	const replaceRange = useRef<{ start: number, count: number }>()
-	const suggest$ = useRef(new BehaviorSubject<Candidate | undefined>(undefined))
 
 
 	useEffect(() => {
@@ -32,12 +30,7 @@ export const useSuggest = <T,>(
 	const tokenMng = useRef(new TokenManager())
 
 	const onType = () => {
-		const text = textMng.getPlainText()
-		if (!shouldShowSuggest(text)) {
-			setShowSuggest(false)
-			return
-		}
-		onTrigger(text)
+		onTrigger(textMng.getPlainText())
 	}
 	const onKeydown = (e: StandardKeyboardEvent) => {
 		if (!showSuggest$)
@@ -67,13 +60,17 @@ export const useSuggest = <T,>(
 		} else if (e.keyCodeId === KeyboardEventCode.TAB) {
 			e.e.preventDefault()
 			if (activeCandidate$)
-				suggest$.current.next(activeCandidate$)
+				onSuggest(activeCandidate$)
 			return true
 		}
 		return false
 	}
 
 	const onTrigger = (text: string) => {
+		if (!shouldShowSuggest(text)) {
+			setShowSuggest(false)
+			return
+		}
 		replaceRange.current = undefined
 		const cursor = cursorMng.getCursorInOneLine()
 		const tokenManager = tokenMng.current
@@ -124,16 +121,28 @@ export const useSuggest = <T,>(
 		setCandidates(newCandidates)
 		setActiveCandidate(newCandidates[0])
 	}
+    const onSuggest = (candidate: Candidate) => {
+       	setShowSuggest(false)
+        if (!replaceRange.current)
+            return
+		const {start, count} = replaceRange.current
+        textMng.replace(candidate.plainText, start, count)
+        // 将光标设到函数括号中间
+        if (candidate.quoteStart) {
+            const newCursor = start + candidate.quoteStart + 1
+            cursorMng.setCursor(newCursor)
+        }
+    }
+
 
 	return {
 		onType,
 		setShowSuggest,
 		onKeydown,
-		suggest$,
+		onSuggest,
 		showSuggest$,
 		candidates$,
 		activeCandidate$,
-		replaceRange,
 	}
 }
 export interface ReplaceEvent {

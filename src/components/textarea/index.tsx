@@ -74,25 +74,21 @@ export const TextContainerComponent = <T,>({
             isMouseDown.current = false
             sub.unsubscribe()
         }))
-        sub.add(inputMng.current.blur$.subscribe(() => {
-            _onBlur()
-        }))
         sub.add(textMng.current.textChanged().subscribe(t => {
             type?.(t)
             suggestMng.onType()
-        }))
-        sub.add(suggestMng.suggest$.current.subscribe(s => {
-            if (!s)
-                return
-            onSuggest(s)
         }))
         sub.add(focus$.subscribe(() => {
             inputMng.current.setFocus()
         }))
         return () => {
             // 目前不知道为什么点击到另一个单元格不会触发blur事件，只好这里先做这个blur这个事情
-            _onBlur()
-            sub.unsubscribe()
+            _onBlur().then(shouldClose => {
+                if (!shouldClose)
+                    return
+                console.log('unsubscribe')
+                sub.unsubscribe()
+            })
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -100,6 +96,8 @@ export const TextContainerComponent = <T,>({
     const onHostMouseDown = (mde: MouseEvent) => {
         mde.stopPropagation()
         mde.preventDefault()
+        if (!inputMng.current.hasFocus())
+            inputMng.current.setFocus()
         cursorMng.mousedown(mde)
         selectionMng.mousedown(mde)
         isMouseDown.current = true
@@ -148,26 +146,13 @@ export const TextContainerComponent = <T,>({
         const check = await checkBlur()
         if (!check) {
             inputMng.current.setFocus()
-            return
+            return false
         }
         const event = new BlurEvent(
             context.bindingData,
         )
         blur?.(event)
-    }
-
-    const onSuggest = (candidate: Candidate) => {
-        suggestMng.setShowSuggest(false)
-        const replaceRange = suggestMng.replaceRange.current
-        if (!replaceRange)
-            return
-        console.log(replaceRange)
-        textMng.current.replace(candidate.plainText, replaceRange.start, replaceRange.count)
-        // 将光标设到函数括号中间
-        if (candidate.quoteStart) {
-            const newCursor = replaceRange.start + candidate.quoteStart + 1
-            cursorMng.setCursor(newCursor)
-        }
+        return true
     }
 
     const checkBlur = async () => {
@@ -176,10 +161,8 @@ export const TextContainerComponent = <T,>({
 
         // 检查是否为合法公式(wasm)，再发往服务端
         const valid = await checkFormula(formula)
-        if (!valid) {
-            console.log(`invalid formula, ${formula}`)
+        if (!valid)
             return false
-        }
 
         return true
     }
@@ -226,7 +209,7 @@ export const TextContainerComponent = <T,>({
         <SuggestComponent
             show$={suggestMng.showSuggest$}
             close$={() => suggestMng.setShowSuggest(false)}
-            select$={onSuggest}
+            select$={suggestMng.onSuggest}
             sugggestStyles={{ x: 0, y: context.cellHeight }}
             acitveCandidate={suggestMng.activeCandidate$}
             candidates={suggestMng.candidates$}

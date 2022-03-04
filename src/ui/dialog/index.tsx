@@ -1,5 +1,6 @@
 import { ReactElement } from 'react'
 import Modal, { Props } from 'react-modal'
+import './dialog.scss'
 
 export interface DialogProps extends Props {
     readonly close$: () => void
