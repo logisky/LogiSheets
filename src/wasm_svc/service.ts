@@ -85,7 +85,6 @@ export class Service {
 
     private _execDisplayReq(req: DisplayRequest): ServerSend {
         const jsonRes = get_patches(req.sheetIdx, req.version)
-        console.log('jsonRes', jsonRes)
         const response = DisplayResponse.fromJSON(jsonRes)
         return { serverSendOneof: { $case: 'displayResponse', displayResponse: response } }
     }

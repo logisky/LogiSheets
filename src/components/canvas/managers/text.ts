@@ -11,7 +11,7 @@ import { isFormula } from 'core/snippet'
 export const useText = () => {
     const [editing, setEditing] = useState(false)
     const [context, setContext] = useState<Context<Cell>>()
-    const [validFormula, setValidFormula] = useState(false)
+    const [validFormulaOpen, setValidFormulaOpen] = useState(false)
     const currText = useRef('')
 
     const _lastMouseDownTime = useRef(0)
@@ -35,10 +35,8 @@ export const useText = () => {
             return true
         await initFc()
         const checked = formula_check(formula)
-        setValidFormula(checked)
-        if (!checked)
-            console.log(`invalid formula ${formula}`)
-        return checked
+        setValidFormulaOpen(checked)
+        return !checked
     }
 
     const keydown = (e: KeyboardEvent, startCell?: Cell) => {
@@ -108,7 +106,8 @@ export const useText = () => {
         editing,
         context,
         currText,
-        validFormula,
+        setValidFormulaOpen,
+        validFormulaOpen,
         checkFormula,
         init,
         blur,
