@@ -35,8 +35,8 @@ export const useText = () => {
             return true
         await initFc()
         const checked = formula_check(formula)
-        setValidFormulaOpen(checked)
-        return !checked
+        setValidFormulaOpen(!checked)
+        return checked
     }
 
     const keydown = (e: KeyboardEvent, startCell?: Cell) => {
