@@ -1,4 +1,4 @@
-import { getCell, Cell } from '../defs'
+import { getCell } from '../defs'
 import { MouseEvent, useState } from 'react'
 import { SelectorProps } from 'components/selector'
 export const useDnd = () => {
@@ -10,7 +10,6 @@ export const useDnd = () => {
     const [draggingY, setDraggingY] = useState<number>(-1)
     const [isDragging, setIsDragging] = useState<boolean>(false)
     const [_mousedown, setMouseDown] = useState<{ x: number, y: number }>()
-    const [_draggingDepCell, setDraggingDepCell] = useState<Cell>()
 
     const onMouseDown = (e: MouseEvent) => {
         setIsDragging(true)
@@ -30,14 +29,12 @@ export const useDnd = () => {
             return
         if (newY + height > canvasHeight)
             return
-        setDraggingDepCell(cell)
         setDraggingX(cell.position.startCol)
         setDraggingY(cell.position.startRow)
     }
 
     const onMouseUp = () => {
         clean()
-        return _draggingDepCell
     }
     const clean = () => {
         setMouseDown(undefined)

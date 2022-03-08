@@ -27,33 +27,25 @@ export function match(
     clickPosition.startRow = y
     clickPosition.endCol = x
     clickPosition.endRow = y
-    let cell = new Cell()
     const { width: leftTopWidth, height: leftTopHeight } = SETTINGS.leftTop
     const col = cols.find(c => c.position.cover(clickPosition))
     const row = rows.find(r => r.position.cover(clickPosition))
     const renderCell = cells.find(c => c.position.cover(clickPosition))
     if (x <= leftTopWidth && y <= leftTopHeight)
-        cell.type = 'LeftTop'
-    else if (row) {
-        cell.type = 'FixedLeftHeader'
-        cell.copyByRenderCell(row)
-    } else if (col) {
-        cell.type = 'FixedTopHeader'
-        cell.copyByRenderCell(col)
-    } else if (renderCell) {
-        cell.type = 'Cell'
-        cell.copyByRenderCell(renderCell)
-    }
-    return cell
+        return new Cell('LeftTop')
+    else if (row)
+        return new Cell('FixedLeftHeader').copyByRenderCell(row)
+    else if (col)
+        return new Cell('FixedTopHeader').copyByRenderCell(col)
+    else if (renderCell)
+        return new Cell('Cell').copyByRenderCell(renderCell)
+    return new Cell('unknown')
 }
 
 export function getCell(offsetX: number, offsetY: number) {
-    const cell = new Cell()
     const leftTop = SETTINGS.leftTop
-    if (offsetX <= leftTop.width && offsetY <= leftTop.height) {
-        cell.type = 'LeftTop'
-        return cell
-    }
+    if (offsetX <= leftTop.width && offsetY <= leftTop.height)
+        return new Cell('LeftTop')
     const { rows, cols, cells } = DATA_SERVICE.cachedViewRange
     const position = new Range()
     position.startCol = offsetX
@@ -61,22 +53,13 @@ export function getCell(offsetX: number, offsetY: number) {
     position.startRow = offsetY
     position.endRow = offsetY
     const row = rows.find(r => r.position.cover(position))
-    if (offsetX <= leftTop.width && row) {
-        cell.type = 'FixedLeftHeader'
-        cell.copyByRenderCell(row)
-        return cell
-    }
+    if (offsetX <= leftTop.width && row)
+        return new Cell('FixedLeftHeader').copyByRenderCell(row)
     const col = cols.find(c => c.position.cover(position))
-    if (offsetY <= leftTop.height && col) {
-        cell.type = 'FixedTopHeader'
-        cell.copyByRenderCell(col)
-        return cell
-    }
+    if (offsetY <= leftTop.height && col)
+        return new Cell('FixedTopHeader').copyByRenderCell(col)
     const matchCell = cells.find(c => c.position.cover(position))
-    if (matchCell) {
-        cell.type = 'Cell'
-        cell.copyByRenderCell(matchCell)
-        return cell
-    }
-    return cell
+    if (matchCell)
+        return new Cell('Cell').copyByRenderCell(matchCell)
+    return new Cell('unknown')
 }
