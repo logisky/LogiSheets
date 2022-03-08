@@ -1,42 +1,15 @@
 use syn::DeriveInput;
 
-use crate::container::{self, Field, EleType, Container};
-
-pub struct DeFields<'a> {
-    pub children: Vec<Field<'a>>,
-    pub text: Option<Field<'a>>,
-    pub attrs: Vec<Field<'a>>,
-    pub self_closed_children: Vec<Field<'a>>,
-}
-
-impl<'a> DeFields<'a> {
-    pub fn from_fields(fields: Vec<Field<'a>>) -> Self {
-        let mut result = DeFields {
-            children: vec![],
-            text: None,
-            attrs: vec![],
-            self_closed_children: vec![],
-        };
-        fields.into_iter().for_each(|f| {
-            match f.ty {
-                EleType::Attr => result.attrs.push(f),
-                EleType::Child => result.children.push(f),
-                EleType::Text => result.text = Some(f),
-                EleType::SelfClosedChild => result.self_closed_children.push(f),
-            }
-        });
-        result
-    }
-}
+use crate::container::{self, Field, EleType, Container, FieldsSummary};
 
 pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let container = Container::from_ast(&input, container::Derive::Deserialize);
-    let DeFields {
+    let FieldsSummary {
         children,
         text,
         attrs,
         self_closed_children,
-    }= DeFields::from_fields(container.fields);
+    }= FieldsSummary::from_fields(container.fields);
     let vec_init = get_vec_init(&children);
     let attr_branches = attrs
         .into_iter()
