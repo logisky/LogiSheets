@@ -40,7 +40,7 @@ export const DndComponent: FC<DndProps> = ({
         }
     }
     return (
-        <div className={styles.host}>
+        <div className={`${styles.host}`}>
             <div className={styles.border} style={{
                 left: POS(x),
                 top: POS(y),

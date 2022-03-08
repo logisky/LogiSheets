@@ -1,27 +1,28 @@
 import { Cell, match } from '../defs'
 import { DATA_SERVICE, RenderCell } from 'core/data'
-import { MouseEvent, useState } from 'react'
+import { MouseEvent, useRef, useState } from 'react'
 import { Buttons } from 'common'
 import { SelectorProps } from 'components/selector'
 import { Range } from 'core/standable'
-export type StartCellType = 'mousedown' | 'contextmenu' | 'render' | 'unknown'
+export type StartCellType = 'mousedown' | 'contextmenu' | 'render' | 'unknown' | 'scroll'
 export class StartCellEvent {
-    public from: StartCellType = 'unknown'
-    public cell!: Cell
+    constructor(
+        public readonly cell: Cell,
+        public readonly from: StartCellType = 'unknown',
+    ) { }
     public event = new Event('')
     public same = false
 }
 
 export const useStartCell = () => {
-    const [startCell, setStartCell] = useState<Cell>()
+    const startCell = useRef<Cell>()
     const [startCellEvent, setStartCellEvent] = useState<StartCellEvent>()
     const [canvas, setCanvas] = useState<HTMLCanvasElement>()
 
     const scroll = () => {
-        const oldStartCell = startCell
+        const oldStartCell = startCell.current
         if (!oldStartCell || oldStartCell.type === 'LeftTop' || oldStartCell.type === 'unknown')
             return
-        const newStartCell = new Cell()
         let renderCell: RenderCell | undefined
         const viewRange = DATA_SERVICE.cachedViewRange
         if (oldStartCell.type === 'FixedLeftHeader')
@@ -33,33 +34,35 @@ export const useStartCell = () => {
         else
             return
         if (!renderCell) {
-            setStartCell(undefined)
+            setStartCellEvent(undefined)
             return
         }
-        newStartCell.copyByRenderCell(renderCell)
-        setStartCell(newStartCell)
+        const newStartCell = new Cell(oldStartCell.type).copyByRenderCell(renderCell)
+        startCell.current = newStartCell
+        const e = new StartCellEvent(newStartCell, 'scroll')
+        e.same = true
+        setStartCellEvent(e)
     }
 
     const canvasChange = (canvas: HTMLCanvasElement) => {
         setCanvas(canvas)
         const viewRange = DATA_SERVICE.cachedViewRange
-        const row = viewRange.rows.find(r => startCell?.cover(r))
+        const oldStartCell = startCell.current
+        const row = viewRange.rows.find(r => oldStartCell?.cover(r))
         if (row === undefined) {
-            setStartCell(undefined)
+            startCell.current = undefined
             return
         }
-        const col = viewRange.cols.find(c => startCell?.cover(c))
+        const col = viewRange.cols.find(c => oldStartCell?.cover(c))
         if (col === undefined) {
-            setStartCell(undefined)
+            startCell.current = undefined
             return
         }
-        const cell = new Cell()
-        cell.type = startCell?.type ?? 'unknown'
-        const event = new StartCellEvent()
-        event.cell = cell
-        event.from = 'render'
+        const cell = new Cell(oldStartCell?.type ?? 'unknown')
+        const event = new StartCellEvent(cell, 'render')
         event.same = false
         setStartCellEvent(event)
+        startCell.current = cell
     }
     const mousedown = (e: MouseEvent, selector?: SelectorProps) => {
         const buttons = e.buttons
@@ -76,17 +79,14 @@ export const useStartCell = () => {
             if (range.cover(matchCell.position))
                 return
         }
-        const event = new StartCellEvent()
-        event.cell = matchCell
-        event.from = buttons === Buttons.LEFT ? 'mousedown' : 'contextmenu'
-        if (startCell && matchCell.equals(startCell))
+        const event = new StartCellEvent(matchCell, buttons === Buttons.LEFT ? 'mousedown' : 'contextmenu')
+        if (startCell.current && matchCell.equals(startCell.current))
             event.same = true
-        setStartCell(matchCell)
+        startCell.current = matchCell
         setStartCellEvent(event)
     }
     return {
         canvas,
-        startCell,
         startCellEvent,
         scroll,
         canvasChange,

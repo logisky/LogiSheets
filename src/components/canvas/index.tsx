@@ -10,7 +10,7 @@ import {
     useState,
     FC,
 } from 'react'
-import { 
+import {
     useSelector,
     useStartCell,
     useScrollbar,
@@ -20,15 +20,16 @@ import {
     useHighlightCell,
 } from './managers'
 import { Cell } from './defs'
-import { 
-    ScrollbarComponent } from 'components/scrollbar'
+import {
+    ScrollbarComponent
+} from 'components/scrollbar'
 import { createSyntheticEvent, EventType, on } from 'common/events'
 import { DATA_SERVICE } from 'core/data'
 import { ContextmenuComponent } from './contextmenu'
 import { SelectorComponent } from 'components/selector'
 import { BlurEvent, TextContainerComponent } from 'components/textarea'
 import { DndComponent } from 'components/dnd'
-import {InvalidFormulaComponent} from './invalid-formula'
+import { InvalidFormulaComponent } from './invalid-formula'
 import { Buttons } from 'common'
 import { CellInputBuilder } from 'api'
 import { DialogComponent } from 'ui/dialog'
@@ -119,7 +120,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     useEffect(() => {
         renderMng.current.render(canvasEl.current!)
         startCellMng.scroll()
-    }, [scrollbarMng.xScrollDistance, scrollbarMng.yScrollDistance])
+    }, [scrollbarMng.xScrollbarAttr, scrollbarMng.yScrollbarAttr])
 
     const onMousedown = async (e: MouseEvent) => {
         e.stopPropagation()
@@ -136,8 +137,6 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             startCellMng.mousedown(e)
         const sub = new Subscription()
         sub.add(on(window, EventType.MOUSE_UP).subscribe(() => {
-            if (!dndMng.isDragging)
-                selectorMng.onMouseUp(canvas)
             dndMng.onMouseUp()
             sub.unsubscribe()
         }))
@@ -214,21 +213,11 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             </div>
         ) : null}
         <ScrollbarComponent
-            direction={'x'}
-            scrollDistance={scrollbarMng.xScrollDistance}
-            containerLength={scrollbarMng.size.width}
-            containerTotalLength={scrollbarMng.totalSize.width}
-            paddingLeft={20}
-            paddingRight={10}
+            {...scrollbarMng.xScrollbarAttr}
             setScrollDistance={e => scrollbarMng.setScrollDistance(e, 'x')}
         ></ScrollbarComponent>
         <ScrollbarComponent
-            direction={'y'}
-            scrollDistance={scrollbarMng.yScrollDistance}
-            containerLength={scrollbarMng.size.height}
-            containerTotalLength={scrollbarMng.totalSize.height}
-            paddingTop={20}
-            paddingBottom={10}
+            {...scrollbarMng.yScrollbarAttr}
             setScrollDistance={e => scrollbarMng.setScrollDistance(e, 'y')}
         ></ScrollbarComponent>
         {textMng.context && textMng.editing ?

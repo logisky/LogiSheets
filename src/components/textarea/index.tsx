@@ -86,7 +86,6 @@ export const TextContainerComponent = <T,>({
             _onBlur().then(shouldClose => {
                 if (!shouldClose)
                     return
-                console.log('unsubscribe')
                 sub.unsubscribe()
             })
         }

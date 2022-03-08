@@ -33,7 +33,6 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     paddingRight = 0,
     paddingTop = 0,
     minThumbLength = 20,
-    maxThumbRadio = 80,
     direction = 'x',
 }) => {
     const _thumbEl = useRef<HTMLSpanElement>(null)
@@ -48,24 +47,30 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
              * The difference between clientHeight, offsetHeight, scrollHeight, offsetTop, and scrollTop
              * https://www.programmersought.com/article/76801676023/
              */
-            const scrollRadio = scrollDistance / containerTotalLength
-            const thumbRadio = containerLength / containerTotalLength
+            // 除法要注意判断分母是否为0
+            let scrollRadio = scrollDistance / containerTotalLength
+            let thumbRadio = containerLength / containerTotalLength
+            if (containerTotalLength === 0) {
+                scrollRadio = 0
+                thumbRadio = 0
+            }
+            const containerStyle = getComputedStyle(thumbContainer)
             const newThumbStyle: CSSProperties = {}
             if (xScrollbar()) {
-                const containerLength = thumbContainer.offsetWidth
+                const containerLength = parseFloat(containerStyle.width)
                 const thumbWidth = containerLength * thumbRadio
                 const thumbLength = Math.max(thumbWidth, minThumbLength)
-                newThumbStyle.width = toPx(thumbLength)
+                newThumbStyle.width = thumbLength === containerLength ? 0 : toPx(thumbLength)
                 const left = scrollRadio * containerLength
                 if (left + thumbLength > containerLength) {
                     newThumbStyle.right = 0
                 } else
                     newThumbStyle.left = toPx(left)
             } else {
-                const containerLength = thumbContainer.offsetHeight
+                const containerLength = parseFloat(containerStyle.height)
                 const thumbHeight = thumbContainer.offsetHeight * thumbRadio
                 const thumbLength = Math.max(thumbHeight, minThumbLength)
-                newThumbStyle.height = toPx(thumbLength)
+                newThumbStyle.height = thumbLength === containerLength ? 0 : toPx(thumbLength)
                 const top = scrollRadio * containerLength
                 if (top + thumbLength > containerLength) {
                     newThumbStyle.bottom = 0
@@ -75,13 +80,12 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
             setThumbStyle(newThumbStyle)
         }
         _render()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         containerLength,
         scrollDistance,
         containerTotalLength,
         minThumbLength,
-        maxThumbRadio,
         direction,
     ])
 

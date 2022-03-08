@@ -83,19 +83,26 @@ export const useSelector = () => {
         setEndCell(matchCell)
     }
 
-    const onMouseUp = (canvas: HTMLCanvasElement) => {
+    const onScroll = (startCell: Cell) => {
+        setEndCell(undefined)
+        setStartCell(startCell)
     }
+
     const startCellChange = (e?: StartCellEvent) => {
-        if (e?.same)
+        if (e === undefined) {
+            setSelector(undefined)
             return
-        if (e === undefined)
-            setSelector(undefined)
-        else if (e.from === 'mousedown')
-            onMouseDown(e.cell)
-        else if (e.from === 'contextmenu')
-            onContextmenu(e.cell)
-        else
-            setSelector(undefined)
+        }
+        if (e.from === 'scroll')
+            onScroll(e.cell)
+        else if (!e.same) {
+            if (e.from === 'mousedown')
+                onMouseDown(e.cell)
+            else if (e.from === 'contextmenu')
+                onContextmenu(e.cell)
+            else
+                setSelector(undefined)
+        }
     }
     return {
         selector,
@@ -104,7 +111,6 @@ export const useSelector = () => {
         startCellChange,
         onContextmenu,
         onMouseDown,
-        onMouseUp,
         onMouseMove,
         init,
     }
