@@ -74,6 +74,7 @@ impl<'a> Field<'a> {
                             "attr" => EleType::Attr,
                             "child" => EleType::Child,
                             "text" => EleType::Text,
+                            "sfc" => EleType::SelfClosedChild,
                             _ => panic!(""),
                         };
                         ty = Some(t);
@@ -127,6 +128,20 @@ pub enum EleType {
     Attr,
     Child,
     Text,
+    ///
+    /// ```
+    /// struct Font {
+    ///     bold: bool,
+    ///     italic: bool,
+    /// }
+    /// ```
+    /// In the xml, it is like
+    /// <font>
+    ///     </b>
+    ///     </i>
+    /// </font>
+    /// In this case, </b> indicates the field *bold* is true and <i/> indicates *italic* is true.
+    SelfClosedChild,
 }
 
 pub enum Derive {

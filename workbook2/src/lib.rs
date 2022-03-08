@@ -151,6 +151,33 @@ mod tests {
     }
 
     #[test]
+    fn self_closed_boolean_child() {
+        #[derive(XmlDeserialize, Default)]
+        struct Font {
+            #[xmlserde(name = b"b", ty="sfc")]
+            bold: bool,
+            #[xmlserde(name = b"i", ty="sfc")]
+            italic: bool,
+            #[xmlserde(name = b"size", ty="attr")]
+            size: f64,
+
+        }
+        let xml = r#"<font size="12.2">
+            <b/>
+            <i/>
+        </font>"#;
+        let result = xml_deserialize::<Font>(b"font", xml);
+        match result {
+            Ok(f) => {
+                assert_eq!(f.bold, true);
+                assert_eq!(f.italic, true);
+                assert_eq!(f.size, 12.2);
+            },
+            Err(_) => panic!(),
+        }
+    }
+
+    #[test]
     fn derive_deserialize_vec_with_init_size_from_attr() {
         #[derive(XmlDeserialize, Default)]
         pub struct Child {
