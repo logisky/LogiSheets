@@ -39,6 +39,34 @@ impl<'a> Container<'a> {
     }
 }
 
+pub struct FieldsSummary<'a> {
+    pub children: Vec<Field<'a>>,
+    pub text: Option<Field<'a>>,
+    pub attrs: Vec<Field<'a>>,
+    pub self_closed_children: Vec<Field<'a>>,
+}
+
+impl<'a> FieldsSummary<'a> {
+    pub fn from_fields(fields: Vec<Field<'a>>) -> Self {
+        let mut result = FieldsSummary {
+            children: vec![],
+            text: None,
+            attrs: vec![],
+            self_closed_children: vec![],
+        };
+        fields.into_iter().for_each(|f| {
+            match f.ty {
+                EleType::Attr => result.attrs.push(f),
+                EleType::Child => result.children.push(f),
+                EleType::Text => result.text = Some(f),
+                EleType::SelfClosedChild => result.self_closed_children.push(f),
+            }
+        });
+        result
+    }
+}
+
+
 pub struct Field<'a> {
     pub ty: EleType,
     pub name: Option<syn::LitByteStr>,
@@ -74,6 +102,7 @@ impl<'a> Field<'a> {
                             "attr" => EleType::Attr,
                             "child" => EleType::Child,
                             "text" => EleType::Text,
+                            "sfc" => EleType::SelfClosedChild,
                             _ => panic!(""),
                         };
                         ty = Some(t);
@@ -127,6 +156,20 @@ pub enum EleType {
     Attr,
     Child,
     Text,
+    ///
+    /// ```
+    /// struct Font {
+    ///     bold: bool,
+    ///     italic: bool,
+    /// }
+    /// ```
+    /// In the xml, it is like
+    /// <font>
+    ///     </b>
+    ///     </i>
+    /// </font>
+    /// In this case, </b> indicates the field *bold* is true and <i/> indicates *italic* is true.
+    SelfClosedChild,
 }
 
 pub enum Derive {

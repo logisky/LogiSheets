@@ -10,8 +10,10 @@ extern crate paste;
 mod container;
 mod symbol;
 mod de;
+mod ser;
 
 use de::get_de_impl_block;
+use ser::get_ser_impl_block;
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
@@ -19,4 +21,10 @@ use syn::{parse_macro_input, DeriveInput};
 pub fn derive_xml_deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     get_de_impl_block(input).into()
+}
+
+#[proc_macro_derive(XmlSerialize, attributes(xmlserde))]
+pub fn derive_xml_serialize(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    get_ser_impl_block(input).into()
 }

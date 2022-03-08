@@ -1,45 +1,21 @@
 use syn::DeriveInput;
 
-use crate::container::{self, Field, EleType, Container};
-
-pub struct DeFields<'a> {
-    pub children: Vec<Field<'a>>,
-    pub text: Option<Field<'a>>,
-    pub attrs: Vec<Field<'a>>
-}
-
-impl<'a> DeFields<'a> {
-    pub fn from_fields(fields: Vec<Field<'a>>) -> Self {
-        let mut result = DeFields {
-            children: vec![],
-            text: None,
-            attrs: vec![],
-        };
-        fields.into_iter().for_each(|f| {
-            match f.ty {
-                EleType::Attr => result.attrs.push(f),
-                EleType::Child => result.children.push(f),
-                EleType::Text => result.text = Some(f),
-            }
-        });
-        result
-    }
-}
+use crate::container::{self, Field, EleType, Container, FieldsSummary};
 
 pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let container = Container::from_ast(&input, container::Derive::Deserialize);
-    let DeFields {
+    let FieldsSummary {
         children,
         text,
         attrs,
-    }= DeFields::from_fields(container.fields);
+        self_closed_children,
+    }= FieldsSummary::from_fields(container.fields);
     let vec_init = get_vec_init(&children);
     let attr_branches = attrs
         .into_iter()
         .map(|a| attr_match_branch(a));
-    let child_branches = children
-        .into_iter()
-        .map(|c| child_match_branch(c));
+    let child_branches = children_match_branch(children);
+    let sfc_branch = sfc_match_branch(self_closed_children);
     let ident = &input.ident;
     let text_branch = {
         if let Some(t) = text {
@@ -74,8 +50,9 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                                 break
                             }
                         },
-                        #(#child_branches)*
+                        #child_branches
                         #text_branch
+                        #sfc_branch
                         Ok(Event::Eof) => break,
                         Err(_) => break,
                         _ => {},
@@ -120,6 +97,32 @@ fn get_vec_init(children: &Vec<Field>) -> proc_macro2::TokenStream {
         #(#vec_inits)*
     }
 }
+
+fn sfc_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
+    if fields.len() == 0 {
+        return quote!{}
+    }
+    let mut idents = vec![];
+    let mut tags = vec![];
+    fields.iter().for_each(|f| {
+        if !matches!(f.ty, EleType::SelfClosedChild) {
+            panic!("")
+        }
+        let tag = f.name.as_ref().unwrap();
+        tags.push(tag);
+        let ident = f.original.ident.as_ref().unwrap();
+        idents.push(ident);
+    });
+    quote! {
+        Ok(Event::Empty(s)) => {
+            match s.name() {
+                #(#tags => {result.#idents = true;})*
+                _ => {},
+            }
+        },
+    }
+}
+
 
 fn attr_match_branch(field: Field) -> proc_macro2::TokenStream {
     if !matches!(field.ty, EleType::Attr) {
@@ -166,27 +169,42 @@ fn text_match_branch(field: Field) -> proc_macro2::TokenStream {
     }
 }
 
-fn child_match_branch(field: Field) -> proc_macro2::TokenStream {
-    if !matches!(field.ty, EleType::Child) {
-        panic!("")
+fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
+    if fields.len() == 0 {
+        return quote!{}
     }
-    let t = &field.original.ty;
-    let tag = field.name.as_ref().unwrap();
-    let ident = field.original.ident.as_ref().unwrap();
-    let size = field.vec_size;
-    if size.is_none() {
-        quote! {
-            Ok(Event::Start(s)) => {
-                let f = #t::deserialize(#tag, reader, s.attributes());
-                result.#ident = f;
-            },
+    let mut branches= vec![];
+    fields.iter().for_each(|f| {
+        if !matches!(f.ty, EleType::Child) {
+            panic!("")
         }
-    } else {
-        let vec_ty = field.vec_ty.unwrap();
-        quote! {
-            Ok(Event::Start(s)) => {
-                let ele = #vec_ty::deserialize(#tag, reader, s.attributes());
-                result.#ident.push(ele);
+        let tag = f.name.as_ref().unwrap();
+        let ident = f.original.ident.as_ref().unwrap();
+        let t = &f.original.ty;
+        let size = &f.vec_size;
+        let branch = if size.is_none() {
+            quote! {
+                #tag => {
+                    let f = #t::deserialize(#tag, reader, s.attributes());
+                    result.#ident = f;
+                },
+            }
+        } else {
+            let vec_ty = f.vec_ty.unwrap();
+            quote! {
+                #tag => {
+                    let ele = #vec_ty::deserialize(#tag, reader, s.attributes());
+                    result.#ident.push(ele);
+                }
+            }
+        };
+        branches.push(branch);
+    });
+    quote!{
+        Ok(Event::Start(s)) => {
+            match s.name() {
+                #(#branches)*
+                _ => {},
             }
         }
     }
