@@ -582,6 +582,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.56
+    #[derive(Debug)]
     StPhoneticAlignment {
         Left => "left",
         Center => "center",
@@ -591,6 +592,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.57
+    #[derive(Debug)]
     StPhoneticType {
         HalfWidthKatakana => "halfwidthKatakana",
         FullwidthKatakana => "fullwidthKatakana",

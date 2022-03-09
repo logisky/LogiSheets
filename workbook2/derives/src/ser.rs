@@ -32,9 +32,18 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 }
             },
             Generic::None => {
-                quote! {
-                    let ser = self.#ident.serialize();
-                    attrs.push(Attribute::from((#name.as_ref(), ser.as_bytes())));
+                match &attr.default {
+                    Some(path) => quote!{
+                        let mut ser;
+                        if #path() != self.#ident {
+                            ser = self.#ident.serialize();
+                            attrs.push(Attribute::from((#name.as_ref(), ser.as_bytes())));
+                        }
+                    },
+                    None => quote! {
+                        let ser = self.#ident.serialize();
+                        attrs.push(Attribute::from((#name.as_ref(), ser.as_bytes())));
+                    },
                 }
             },
         }
@@ -88,6 +97,7 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
             ) {
                 use quick_xml::events::*;
                 use quick_xml::events::attributes::Attribute;
+                use crate::XmlValue;
                 let start = BytesStart::borrowed_name(tag);
                 let mut attrs = Vec::<Attribute>::new();
                 #(#build_attr_and_push)*

@@ -96,7 +96,7 @@ pub fn xml_deserialize<T>(
     xml_str: &str,
 ) -> Result<T, String>
 where
-    T: Default + XmlDeserialize
+    T: XmlDeserialize
 {
     let mut reader = quick_xml::Reader::from_str(xml_str);
     reader.trim_text(false);
@@ -237,11 +237,12 @@ mod tests {
             #[xmlserde(ty="text")]
             pub name: String,
         }
+        fn default_zero() -> u32 {0}
         #[derive(XmlDeserialize, Default)]
         pub struct Aa {
             #[xmlserde(name=b"f", ty="child", vec_size = "cnt")]
             pub f: Vec<Child>,
-            #[xmlserde(name=b"cnt", ty="attr")]
+            #[xmlserde(name=b"cnt", ty="attr", default="default_zero")]
             pub cnt: u32,
         }
         let xml = r#"<root cnt="2">
@@ -357,5 +358,46 @@ mod tests {
             Ok(p) => assert_eq!(p.age, Some(2)),
             Err(_) => panic!(),
         }
+    }
+
+    #[test]
+    fn deserialize_default() {
+        fn default_age() -> u16 {
+            12
+        }
+        #[derive(XmlDeserialize)]
+        struct Person {
+            #[xmlserde(name=b"age", ty="attr", default="default_age")]
+            age: u16,
+            #[xmlserde(name=b"name", ty="text")]
+            name: String,
+        }
+        let xml = r#"<Person>Tom</Person>"#;
+        let result = xml_deserialize::<Person>(b"Person", xml);
+        match result {
+            Ok(p) => {
+                assert_eq!(p.age, 12);
+                assert_eq!(p.name, "Tom");
+            },
+            Err(_) => panic!(),
+        }
+    }
+
+    #[test]
+    fn serialize_skip_default() {
+        fn default_age() -> u16 {
+            12
+        }
+        #[derive(XmlSerialize)]
+        struct Person {
+            #[xmlserde(name=b"age", ty="attr", default="default_age")]
+            age: u16,
+            #[xmlserde(name=b"name", ty="text")]
+            name: String,
+        }
+
+        let p = Person { age: 12, name: String::from("Tom")};
+        let result = xml_serialize(b"Person", p);
+        assert_eq!(result, "<Person>Tom</Person>")
     }
 }
