@@ -3,6 +3,37 @@ extern crate logiutils;
 #[macro_use]
 extern crate derives;
 
+macro_rules! xml_serde_enum {
+    (
+         $(#[$outer:meta])*
+        $name:ident {
+            $($f:ident => $s:literal,)*
+        }
+    ) => {
+        #[warn(dead_code)]
+        $(#[$outer])*
+        pub enum $name {
+            $($f,)*
+        }
+
+        impl crate::XmlValue for $name {
+            fn serialize(&self) -> String {
+                match &self {
+                    $(Self::$f => String::from($s),)*
+                }
+            }
+            fn deserialize(s: &str) -> Result<Self, String> {
+                match s {
+                    $($s => Ok(Self::$f),)*
+                    _ => Err(String::from("")),
+                }
+            }
+        }
+    };
+}
+
+pub mod simple_types;
+
 use std::io::{BufRead, Write};
 
 pub trait XmlSerialize {
@@ -84,6 +115,8 @@ where
     }
 }
 
+
+
 pub trait XmlValue: Sized {
     fn serialize(&self) -> String;
     fn deserialize(s: &str) -> Result<Self, String>;
@@ -145,33 +178,6 @@ impl_xml_value_for_num!(u32);
 impl_xml_value_for_num!(f64);
 impl_xml_value_for_num!(i32);
 impl_xml_value_for_num!(i64);
-
-macro_rules! xml_serde_enum {
-    (
-        $name:ident {
-            $($f:ident => $s:literal,)*
-        }
-    ) => {
-        #[warn(dead_code)]
-        pub enum $name {
-            $($f,)*
-        }
-
-        impl crate::XmlValue for $name {
-            fn serialize(&self) -> String {
-                match &self {
-                    $(Self::$f => String::from($s),)*
-                }
-            }
-            fn deserialize(s: &str) -> Result<Self, String> {
-                match s {
-                    $($s => Ok(Self::$f),)*
-                    _ => Err(String::from("")),
-                }
-            }
-        }
-    };
-}
 
 #[cfg(test)]
 mod tests {
