@@ -67,11 +67,11 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
 fn get_vec_init(children: &Vec<Field>) -> proc_macro2::TokenStream {
     let vec_inits= children
         .iter()
-        .filter(|c| c.vec_ty.is_some())
+        .filter(|c| c.generic.is_vec())
         .map(|c| {
             match &c.vec_size {
             Some(lit) => {
-                let vec_ty = &c.vec_ty.unwrap();
+                let vec_ty = &c.generic.get_vec().unwrap();
                 let ident = c.original.ident.as_ref().unwrap();
                 match lit {
                     syn::Lit::Str(_) => {
@@ -131,20 +131,39 @@ fn attr_match_branch(field: Field) -> proc_macro2::TokenStream {
     let t = &field.original.ty;
     let tag = field.name.as_ref().unwrap();
     let ident = field.original.ident.as_ref().unwrap();
-    quote! {
-        #tag => {
-            let s = String::from_utf8(attr.value.into_iter().map(|c| *c).collect()).unwrap();
-            match #t::deserialize(&s) {
-                Ok(v) => {
-                    result.#ident = v;
-                },
-                Err(_) => {
-                    // If we used format! here. It would panic!.
-                    // let err_msg = format!("xml value deserialize error: {:?} to {:?}", s, #t);
-                    panic!("deserialize failed")
-                },
+    if field.generic.is_opt() {
+        let opt_ty = field.generic.get_opt().unwrap();
+        quote! {
+            #tag => {
+                let s = String::from_utf8(attr.value.into_iter().map(|c| *c).collect()).unwrap();
+                match #opt_ty::deserialize(&s) {
+                    Ok(v) => {
+                        result.#ident = Some(v);
+                    },
+                    Err(_) => {
+                        // If we used format! here. It would panic!.
+                        // let err_msg = format!("xml value deserialize error: {:?} to {:?}", s, #t);
+                        panic!("deserialize failed")
+                    },
+                }
             }
-        },
+        }
+    } else {
+        quote! {
+            #tag => {
+                let s = String::from_utf8(attr.value.into_iter().map(|c| *c).collect()).unwrap();
+                match #t::deserialize(&s) {
+                    Ok(v) => {
+                        result.#ident = v;
+                    },
+                    Err(_) => {
+                        // If we used format! here. It would panic!.
+                        // let err_msg = format!("xml value deserialize error: {:?} to {:?}", s, #t);
+                        panic!("deserialize failed")
+                    },
+                }
+            },
+        }
     }
 }
 
@@ -190,7 +209,7 @@ fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
                 },
             }
         } else {
-            let vec_ty = f.vec_ty.unwrap();
+            let vec_ty = f.generic.get_vec().unwrap();
             quote! {
                 #tag => {
                     let ele = #vec_ty::deserialize(#tag, reader, s.attributes());

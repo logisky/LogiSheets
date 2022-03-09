@@ -74,7 +74,7 @@ pub struct Field<'a> {
     pub skip_serializing_if: Option<syn::ExprPath>,
     pub original: &'a syn::Field,
     pub vec_size: Option<syn::Lit>,
-    pub vec_ty: Option<&'a syn::Type>,
+    pub generic: Generic<'a>,
 }
 
 impl<'a> Field<'a> {
@@ -84,7 +84,7 @@ impl<'a> Field<'a> {
         let mut skip_serializing_if = Option::<syn::ExprPath>::None;
         let mut ty = Option::<EleType>::None;
         let mut vec_size = Option::<syn::Lit>::None;
-        let mut vec_ty = Option::<&syn::Type>::None;
+        let generic= get_generics(&f.ty);
         for meta_item in f
             .attrs
             .iter()
@@ -113,8 +113,6 @@ impl<'a> Field<'a> {
                     match m.lit {
                         syn::Lit::Str(_) | syn::Lit::Int(_) => {
                             vec_size = Some(m.lit);
-                            let ty = get_vec_type(&f.ty).unwrap();
-                            vec_ty = Some(ty);
                         },
                         _ => panic!(),
                     }
@@ -145,7 +143,7 @@ impl<'a> Field<'a> {
                 skip_serializing_if,
                 original: f,
                 vec_size,
-                vec_ty,
+                generic,
             })
         }
     }
@@ -253,7 +251,7 @@ fn respan_token(mut token: TokenTree, span: Span) -> TokenTree {
     token
 }
 
-fn get_vec_type(t: &syn::Type) -> Option<&syn::Type> {
+fn get_generics(t: &syn::Type) -> Generic {
     match t {
         syn::Type::Path(p) => {
             let path = &p.path;
@@ -264,24 +262,83 @@ fn get_vec_type(t: &syn::Type) -> Option<&syn::Type> {
                             syn::PathArguments::AngleBracketed(a) => {
                                 let args = &a.args;
                                 if args.len() != 1 {
-                                    None
+                                    Generic::None
                                 } else {
                                     if let Some(syn::GenericArgument::Type(t)) = args.first() {
-                                        Some(t)
+                                        Generic::Vec(t)
                                     } else {
-                                        None
+                                        Generic::None
                                     }
                                 }
                             },
-                            _ => None,
+                            _ => Generic::None,
+                        }
+                    } else if seg.ident.to_string() == "Option"{
+                        match &seg.arguments {
+                            syn::PathArguments::AngleBracketed(a) => {
+                                let args = &a.args;
+                                if args.len() != 1 {
+                                    Generic::None
+                                } else {
+                                    if let Some(syn::GenericArgument::Type(t)) = args.first() {
+                                        Generic::Opt(t)
+                                    } else {
+                                        Generic::None
+                                    }
+                                }
+                            },
+                            _ => Generic::None,
                         }
                     } else {
-                        None
+                        Generic::None
                     }
                 },
-                None => None,
+                None => Generic::None,
             }
         },
-        _ => None,
+        _ => Generic::None,
+    }
+}
+
+pub enum Generic<'a> {
+    Vec(&'a syn::Type),
+    Opt(&'a syn::Type),
+    None,
+}
+
+impl<'a> Generic<'a> {
+    pub fn is_vec(&self) -> bool {
+        match self {
+            Generic::Vec(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn is_opt(&self) -> bool {
+        match self {
+            Generic::Opt(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_none(&self) -> bool {
+        match self {
+            Generic::None => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_vec(&self) -> Option<&syn::Type> {
+        match self {
+            Generic::Vec(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn get_opt(&self) -> Option<&syn::Type> {
+        match self {
+            Generic::Opt(v) => Some(v),
+            _ => None,
+        }
     }
 }

@@ -33,6 +33,8 @@ macro_rules! xml_serde_enum {
 }
 
 pub mod simple_types;
+pub mod complex_types;
+pub mod shared_string_table;
 
 use std::io::{BufRead, Write};
 
@@ -182,7 +184,6 @@ impl_xml_value_for_num!(i64);
 #[cfg(test)]
 mod tests {
     use derives::{XmlDeserialize, XmlSerialize};
-    use quick_xml::events::{attributes::Attribute};
     use super::{XmlValue, xml_deserialize, xml_serialize};
 
     #[test]
@@ -326,5 +327,35 @@ mod tests {
         };
         let result = xml_serialize(b"Person", p);
         assert_eq!(result, "<Person age=\"32\"><skills eng=\"0\"><jap/></skills></Person>");
+    }
+
+    #[test]
+    fn serialize_opt_attr() {
+        #[derive(XmlSerialize)]
+        struct Person {
+            #[xmlserde(name = b"age", ty ="attr")]
+            age: Option<u16>,
+        }
+        let p = Person { age: Some(2) };
+        let result = xml_serialize(b"Person", p);
+        assert_eq!(result, "<Person age=\"2\"></Person>");
+        let p = Person { age: None };
+        let result = xml_serialize(b"Person", p);
+        assert_eq!(result, "<Person></Person>");
+    }
+
+    #[test]
+    fn deserialize_opt_attr() {
+        #[derive(XmlDeserialize, Default)]
+        struct Person {
+            #[xmlserde(name = b"age", ty ="attr")]
+            age: Option<u16>,
+        }
+        let xml = r#"<Person age="2"></Person>"#;
+        let result = xml_deserialize::<Person>(b"Person", xml);
+        match result {
+            Ok(p) => assert_eq!(p.age, Some(2)),
+            Err(_) => panic!(),
+        }
     }
 }
