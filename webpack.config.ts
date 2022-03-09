@@ -1,5 +1,5 @@
 import * as path from 'path'
-import { Configuration, DefinePlugin } from 'webpack'
+import { Configuration, DefinePlugin, ProvidePlugin } from 'webpack'
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import WasmPackPlugin from '@wasm-tool/wasm-pack-plugin'
@@ -56,21 +56,30 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
 			// https://rustwasm.github.io/wasm-pack/book/commands/build.html
 			new WasmPackPlugin({
 				crateDirectory: path.resolve(__dirname, 'src/wasms/server'),
-				extraArgs: '--mode no-install --target web --dev',
+				extraArgs: '--mode no-install --target web',
 				outDir: 'pkg',
 			}),
 			new WasmPackPlugin({
 				crateDirectory: path.resolve(__dirname, 'src/wasms/fc'),
-				extraArgs: '--mode no-install --target web --dev',
+				extraArgs: '--mode no-install --target web',
 				outDir: 'pkg',
+			}),
+			new ProvidePlugin({
+				React: 'react',
 			}),
 		],
 
 		module: {
 			rules: [
-				{ test: /\.tsx?$/, loader: "ts-loader" },
+				{
+					test: /\.tsx?$/,
+					loader: "esbuild-loader",
+					options: {
+						loader: 'tsx',
+						target: 'es2015'
+					}
+				},
 
-				{ enforce: "pre", test: /\.js$/, loader: "source-map-loader" },
 				{
 					test: /\.s[ac]ss$/i,
 					use: [
