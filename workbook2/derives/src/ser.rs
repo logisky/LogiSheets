@@ -20,6 +20,11 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
         (children.len() > 0 || self_closed_children.len() > 0) {
         panic!("Cannot owns the text and children at the same time.")
     }
+    let is_empty = if text.is_none() && children.len() == 0 && self_closed_children.len() == 0 {
+        true
+    } else {
+        false
+    };
     let build_attr_and_push= attrs.into_iter().map(|attr| {
         let name = attr.name.as_ref().unwrap();
         let ident = attr.original.ident.as_ref().unwrap();
@@ -93,6 +98,18 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
         }
     };
     let ident = &input.ident;
+    let write_event= if is_empty {
+        quote!{
+            writer.write_event(Event::Empty(start));
+        }
+    } else {
+        quote!{
+            writer.write_event(Event::Start(start));
+            #write_text_or_children
+            let end = BytesEnd::borrowed(tag);
+            writer.write_event(Event::End(end));
+        }
+    };
     quote! {
         #[allow(unused_must_use)]
         impl crate::XmlSerialize for #ident {
@@ -109,10 +126,7 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 #write_ns
                 #(#build_attr_and_push)*
                 let start = start.with_attributes(attrs);
-                writer.write_event(Event::Start(start));
-                #write_text_or_children
-                let end = BytesEnd::borrowed(tag);
-                writer.write_event(Event::End(end));
+                #write_event
             }
         }
     }

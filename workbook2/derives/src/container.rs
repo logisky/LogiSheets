@@ -185,8 +185,8 @@ pub enum EleType {
     /// ```
     /// In the xml, it is like
     /// <font>
-    ///     </b>
-    ///     </i>
+    ///     <b/>
+    ///     <i/>
     /// </font>
     /// In this case, </b> indicates the field *bold* is true and <i/> indicates *italic* is true.
     SelfClosedChild,

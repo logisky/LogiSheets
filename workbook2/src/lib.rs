@@ -34,8 +34,10 @@ macro_rules! xml_serde_enum {
 
 pub mod simple_types;
 pub mod complex_types;
-pub mod shared_string_table;
+pub mod sst;
 mod defaults;
+#[cfg(test)]
+mod test_utils;
 
 use std::io::{BufRead, Write};
 
@@ -80,6 +82,7 @@ pub trait XmlDeserialize {
         tag: &[u8],
         reader: &mut quick_xml::Reader<B>,
         attrs: quick_xml::events::attributes::Attributes,
+        is_empty: bool,
     ) -> Self;
 }
 
@@ -124,7 +127,7 @@ where
         match reader.read_event(&mut buf) {
             Ok(Event::Start(start)) => {
                 if start.name() == root {
-                    let result = T::deserialize(root, &mut reader, start.attributes());
+                    let result = T::deserialize(root, &mut reader, start.attributes(), false);
                     return Ok(result);
                 }
             },
@@ -357,10 +360,10 @@ mod tests {
         }
         let p = Person { age: Some(2) };
         let result = xml_serialize(b"Person", p);
-        assert_eq!(result, "<Person age=\"2\"></Person>");
+        assert_eq!(result, "<Person age=\"2\"/>");
         let p = Person { age: None };
         let result = xml_serialize(b"Person", p);
-        assert_eq!(result, "<Person></Person>");
+        assert_eq!(result, "<Person/>");
     }
 
     #[test]
