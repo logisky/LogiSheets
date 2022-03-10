@@ -34,6 +34,7 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 tag: &[u8],
                 reader: &mut quick_xml::Reader<B>,
                 attrs: quick_xml::events::attributes::Attributes,
+                is_empty: bool,
             ) -> Self {
                 #fields_init
                 attrs.into_iter().for_each(|attr| {
@@ -47,19 +48,21 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 let mut buf = Vec::<u8>::new();
                 use quick_xml::events::Event;
                 #vec_init
-                loop {
-                    match reader.read_event(&mut buf) {
-                        Ok(Event::End(e)) => {
-                            if e.name() == tag {
-                                break
-                            }
-                        },
-                        #child_branches
-                        #text_branch
-                        #sfc_branch
-                        Ok(Event::Eof) => break,
-                        Err(_) => break,
-                        _ => {},
+                if is_empty {} else {
+                    loop {
+                        match reader.read_event(&mut buf) {
+                            Ok(Event::End(e)) => {
+                                if e.name() == tag {
+                                    break
+                                }
+                            },
+                            #child_branches
+                            #text_branch
+                            #sfc_branch
+                            Ok(Event::Eof) => break,
+                            Err(_) => break,
+                            _ => {},
+                        }
                     }
                 }
                 Self {
@@ -313,7 +316,7 @@ fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
             Generic::Vec(vec_ty) => {
                 quote! {
                     #tag => {
-                        let ele = #vec_ty::deserialize(#tag, reader, s.attributes());
+                        let ele = #vec_ty::deserialize(#tag, reader, s.attributes(), is_empty);
                         #ident.push(ele);
                     }
                 }
@@ -321,7 +324,7 @@ fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
             Generic::Opt(opt_ty) => {
                 quote! {
                     #tag => {
-                        let f = #opt_ty::deserialize(#tag, reader, s.attributes());
+                        let f = #opt_ty::deserialize(#tag, reader, s.attributes(), is_empty);
                         #ident = Some(f);
                     },
                 }
@@ -338,7 +341,7 @@ fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
                 };
                 quote! {
                     #tag => {
-                        let f = #t::deserialize(#tag, reader, s.attributes());
+                        let f = #t::deserialize(#tag, reader, s.attributes(), is_empty);
                         #tt
                     },
                 }
@@ -347,7 +350,15 @@ fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
         branches.push(branch);
     });
     quote!{
+        Ok(Event::Empty(s)) => {
+            let is_empty = true;
+            match s.name() {
+                #(#branches)*
+                _ => {},
+            }
+        }
         Ok(Event::Start(s)) => {
+            let is_empty = false;
             match s.name() {
                 #(#branches)*
                 _ => {},

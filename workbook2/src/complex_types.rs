@@ -1,4 +1,5 @@
 use super::simple_types::*;
+use super::defaults::*;
 
 #[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
 pub struct CtRst {
@@ -40,14 +41,14 @@ pub struct CtFontName {
     pub val: String
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug)]
 pub struct CtPhoneticPr {
     #[xmlserde(name=b"fontId", ty="attr")]
     pub font_id: StFontId,
-    // #[xmlserde(name=b"type", ty="attr")]
-    // pub ty: StPhoneticType, // default = fullwidthKatakana
-    // #[xmlserde(name=b"alignment", ty="attr")]
-    // pub alignment: StPhoneticAlignment, // default = left
+    #[xmlserde(name=b"type", ty="attr", default="fullwidth_katakana")]
+    pub ty: StPhoneticType,
+    #[xmlserde(name=b"alignment", ty="attr", default="st_phonetic_alignment_left")]
+    pub alignment: StPhoneticAlignment,
 }
 
 #[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
