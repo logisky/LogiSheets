@@ -8,8 +8,8 @@ pub const XML_SERDE: Symbol = Symbol("xmlserde");
 pub const NAME: Symbol = Symbol("name");
 pub const TYPE: Symbol = Symbol("ty");
 pub const SKIP_SERIALIZING: Symbol = Symbol("skip_serializing");
-pub const SKIP_SERIALIZING_IF: Symbol = Symbol("skip_serializing_if");
 pub const VEC_SIZE: Symbol = Symbol("vec_size");
+pub const DEFAULT: Symbol = Symbol("default");
 
 impl PartialEq<Symbol> for Ident {
     fn eq(&self, other: &Symbol) -> bool {

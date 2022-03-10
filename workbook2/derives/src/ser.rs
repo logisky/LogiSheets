@@ -1,6 +1,6 @@
 use syn::DeriveInput;
 
-use crate::container::{Container, Derive, FieldsSummary};
+use crate::container::{Container, Derive, FieldsSummary, Generic};
 
 pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let container = Container::from_ast(&input, Derive::Serialize);
@@ -17,9 +17,35 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let build_attr_and_push= attrs.into_iter().map(|attr| {
         let name = attr.name.as_ref().unwrap();
         let ident = attr.original.ident.as_ref().unwrap();
-        quote! {
-            let ser = self.#ident.serialize();
-            attrs.push(Attribute::from((#name.as_ref(), ser.as_bytes())));
+        match &attr.generic {
+            Generic::Vec(_) => panic!("cannot use a vector in attribute"),
+            Generic::Opt(_) => {
+                quote! {
+                    let mut sr: String;
+                    match &self.#ident {
+                        Some(v) => {
+                            sr = v.serialize();
+                            attrs.push(Attribute::from((#name.as_ref(), sr.as_bytes())));
+                        },
+                        None => {},
+                    }
+                }
+            },
+            Generic::None => {
+                match &attr.default {
+                    Some(path) => quote!{
+                        let mut ser;
+                        if #path() != self.#ident {
+                            ser = self.#ident.serialize();
+                            attrs.push(Attribute::from((#name.as_ref(), ser.as_bytes())));
+                        }
+                    },
+                    None => quote! {
+                        let ser = self.#ident.serialize();
+                        attrs.push(Attribute::from((#name.as_ref(), ser.as_bytes())));
+                    },
+                }
+            },
         }
     });
     let write_text_or_children = if let Some(t) = text {
@@ -70,8 +96,10 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 writer: &mut quick_xml::Writer<W>,
             ) {
                 use quick_xml::events::*;
+                use quick_xml::events::attributes::Attribute;
+                use crate::XmlValue;
                 let start = BytesStart::borrowed_name(tag);
-                let mut attrs = Vec::new();
+                let mut attrs = Vec::<Attribute>::new();
                 #(#build_attr_and_push)*
                 let start = start.with_attributes(attrs);
                 writer.write_event(Event::Start(start));

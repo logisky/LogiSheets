@@ -3,6 +3,39 @@ extern crate logiutils;
 #[macro_use]
 extern crate derives;
 
+macro_rules! xml_serde_enum {
+    (
+         $(#[$outer:meta])*
+        $name:ident {
+            $($f:ident => $s:literal,)*
+        }
+    ) => {
+        #[warn(dead_code)]
+        $(#[$outer])*
+        pub enum $name {
+            $($f,)*
+        }
+
+        impl crate::XmlValue for $name {
+            fn serialize(&self) -> String {
+                match &self {
+                    $(Self::$f => String::from($s),)*
+                }
+            }
+            fn deserialize(s: &str) -> Result<Self, String> {
+                match s {
+                    $($s => Ok(Self::$f),)*
+                    _ => Err(String::from("")),
+                }
+            }
+        }
+    };
+}
+
+pub mod simple_types;
+pub mod complex_types;
+pub mod shared_string_table;
+
 use std::io::{BufRead, Write};
 
 pub trait XmlSerialize {
@@ -63,7 +96,7 @@ pub fn xml_deserialize<T>(
     xml_str: &str,
 ) -> Result<T, String>
 where
-    T: Default + XmlDeserialize
+    T: XmlDeserialize
 {
     let mut reader = quick_xml::Reader::from_str(xml_str);
     reader.trim_text(false);
@@ -83,6 +116,8 @@ where
         }
     }
 }
+
+
 
 pub trait XmlValue: Sized {
     fn serialize(&self) -> String;
@@ -146,37 +181,9 @@ impl_xml_value_for_num!(f64);
 impl_xml_value_for_num!(i32);
 impl_xml_value_for_num!(i64);
 
-macro_rules! xml_serde_enum {
-    (
-        $name:ident {
-            $($f:ident => $s:literal,)*
-        }
-    ) => {
-        #[warn(dead_code)]
-        pub enum $name {
-            $($f,)*
-        }
-
-        impl crate::XmlValue for $name {
-            fn serialize(&self) -> String {
-                match &self {
-                    $(Self::$f => String::from($s),)*
-                }
-            }
-            fn deserialize(s: &str) -> Result<Self, String> {
-                match s {
-                    $($s => Ok(Self::$f),)*
-                    _ => Err(String::from("")),
-                }
-            }
-        }
-    };
-}
-
 #[cfg(test)]
 mod tests {
     use derives::{XmlDeserialize, XmlSerialize};
-    use quick_xml::events::{attributes::Attribute};
     use super::{XmlValue, xml_deserialize, xml_serialize};
 
     #[test]
@@ -230,11 +237,12 @@ mod tests {
             #[xmlserde(ty="text")]
             pub name: String,
         }
+        fn default_zero() -> u32 {0}
         #[derive(XmlDeserialize, Default)]
         pub struct Aa {
             #[xmlserde(name=b"f", ty="child", vec_size = "cnt")]
             pub f: Vec<Child>,
-            #[xmlserde(name=b"cnt", ty="attr")]
+            #[xmlserde(name=b"cnt", ty="attr", default="default_zero")]
             pub cnt: u32,
         }
         let xml = r#"<root cnt="2">
@@ -320,5 +328,76 @@ mod tests {
         };
         let result = xml_serialize(b"Person", p);
         assert_eq!(result, "<Person age=\"32\"><skills eng=\"0\"><jap/></skills></Person>");
+    }
+
+    #[test]
+    fn serialize_opt_attr() {
+        #[derive(XmlSerialize)]
+        struct Person {
+            #[xmlserde(name = b"age", ty ="attr")]
+            age: Option<u16>,
+        }
+        let p = Person { age: Some(2) };
+        let result = xml_serialize(b"Person", p);
+        assert_eq!(result, "<Person age=\"2\"></Person>");
+        let p = Person { age: None };
+        let result = xml_serialize(b"Person", p);
+        assert_eq!(result, "<Person></Person>");
+    }
+
+    #[test]
+    fn deserialize_opt_attr() {
+        #[derive(XmlDeserialize, Default)]
+        struct Person {
+            #[xmlserde(name = b"age", ty ="attr")]
+            age: Option<u16>,
+        }
+        let xml = r#"<Person age="2"></Person>"#;
+        let result = xml_deserialize::<Person>(b"Person", xml);
+        match result {
+            Ok(p) => assert_eq!(p.age, Some(2)),
+            Err(_) => panic!(),
+        }
+    }
+
+    #[test]
+    fn deserialize_default() {
+        fn default_age() -> u16 {
+            12
+        }
+        #[derive(XmlDeserialize)]
+        struct Person {
+            #[xmlserde(name=b"age", ty="attr", default="default_age")]
+            age: u16,
+            #[xmlserde(name=b"name", ty="text")]
+            name: String,
+        }
+        let xml = r#"<Person>Tom</Person>"#;
+        let result = xml_deserialize::<Person>(b"Person", xml);
+        match result {
+            Ok(p) => {
+                assert_eq!(p.age, 12);
+                assert_eq!(p.name, "Tom");
+            },
+            Err(_) => panic!(),
+        }
+    }
+
+    #[test]
+    fn serialize_skip_default() {
+        fn default_age() -> u16 {
+            12
+        }
+        #[derive(XmlSerialize)]
+        struct Person {
+            #[xmlserde(name=b"age", ty="attr", default="default_age")]
+            age: u16,
+            #[xmlserde(name=b"name", ty="text")]
+            name: String,
+        }
+
+        let p = Person { age: 12, name: String::from("Tom")};
+        let result = xml_serialize(b"Person", p);
+        assert_eq!(result, "<Person>Tom</Person>")
     }
 }
