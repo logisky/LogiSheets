@@ -372,7 +372,13 @@ pub struct Color {
 
 impl Color {
     pub fn new_with_rgb(color: String) -> Self {
-        Color { auto: None, indexed: None, rgb: Some(color), theme: None, tint: 0_f64 }
+        Color {
+            auto: None,
+            indexed: None,
+            rgb: Some(color),
+            theme: None,
+            tint: 0_f64,
+        }
     }
 }
 

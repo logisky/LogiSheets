@@ -5,7 +5,9 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use wasm_bindgen::prelude::*;
-use xlrs_controller::controller::edit_action::{EditAction, EditPayload, CellInput, RowShift, ColShift, CreateBlock, MoveBlock, BlockInput};
+use xlrs_controller::controller::edit_action::{
+    BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock, RowShift,
+};
 use xlrs_controller::controller::{display::DisplayRequest, Controller};
 use xlrs_controller::{AsyncCalcResult, AsyncErr, Task};
 
@@ -135,57 +137,107 @@ pub fn get_patches(sheet_idx: u32, version: u32) -> JsValue {
         Err(err) => {
             web_sys::console::log_1(&err.to_string().into());
             panic!()
-        },
+        }
     }
 }
 
 #[wasm_bindgen]
 pub fn cell_input(sheet_idx: usize, row: usize, col: usize, content: String) {
     let mut payloads = PAYLOADS.lock().unwrap();
-    payloads.push(EditPayload::CellInput(CellInput{ sheet_idx, row, col, content }));
+    payloads.push(EditPayload::CellInput(CellInput {
+        sheet_idx,
+        row,
+        col,
+        content,
+    }));
 }
 
 #[wasm_bindgen]
 pub fn row_insert(sheet_idx: usize, start: usize, count: usize) {
     let mut payloads = PAYLOADS.lock().unwrap();
-    payloads.push(EditPayload::RowShift(RowShift{sheet_idx,start,count, insert: true }));
+    payloads.push(EditPayload::RowShift(RowShift {
+        sheet_idx,
+        start,
+        count,
+        insert: true,
+    }));
 }
 
 #[wasm_bindgen]
 pub fn row_delete(sheet_idx: usize, start: usize, count: usize) {
     let mut payloads = PAYLOADS.lock().unwrap();
-    payloads.push(EditPayload::RowShift(RowShift{sheet_idx,start,count, insert: false }));
+    payloads.push(EditPayload::RowShift(RowShift {
+        sheet_idx,
+        start,
+        count,
+        insert: false,
+    }));
 }
 
 #[wasm_bindgen]
 pub fn col_insert(sheet_idx: usize, start: usize, count: usize) {
     let mut payloads = PAYLOADS.lock().unwrap();
-    payloads.push(EditPayload::ColShift(ColShift{sheet_idx,start,count, insert: true}));
+    payloads.push(EditPayload::ColShift(ColShift {
+        sheet_idx,
+        start,
+        count,
+        insert: true,
+    }));
 }
 
 #[wasm_bindgen]
 pub fn col_delete(sheet_idx: usize, start: usize, count: usize) {
     let mut payloads = PAYLOADS.lock().unwrap();
-    payloads.push(EditPayload::ColShift(ColShift{sheet_idx,start,count, insert: false}));
+    payloads.push(EditPayload::ColShift(ColShift {
+        sheet_idx,
+        start,
+        count,
+        insert: false,
+    }));
 }
 
 #[wasm_bindgen]
-pub fn create_block(sheet_idx: usize, id: usize, master_row: usize, master_col: usize, row_cnt: usize, col_cnt: usize) {
-    let b = CreateBlock{ sheet_idx , master_row, master_col, row_cnt, col_cnt, id };
+pub fn create_block(
+    sheet_idx: usize,
+    id: usize,
+    master_row: usize,
+    master_col: usize,
+    row_cnt: usize,
+    col_cnt: usize,
+) {
+    let b = CreateBlock {
+        sheet_idx,
+        master_row,
+        master_col,
+        row_cnt,
+        col_cnt,
+        id,
+    };
     let mut payloads = PAYLOADS.lock().unwrap();
     payloads.push(EditPayload::CreateBlock(b));
 }
 
 #[wasm_bindgen]
 pub fn move_block(sheet_idx: usize, id: usize, row: usize, col: usize) {
-    let m = MoveBlock { sheet_idx, id, new_master_row: row, new_master_col: col};
+    let m = MoveBlock {
+        sheet_idx,
+        id,
+        new_master_row: row,
+        new_master_col: col,
+    };
     let mut payloads = PAYLOADS.lock().unwrap();
     payloads.push(EditPayload::MoveBlock(m));
 }
 
 #[wasm_bindgen]
 pub fn block_input(sheet_idx: usize, id: usize, row: usize, col: usize, input: String) {
-    let bi = BlockInput { sheet_idx, id, row, col, input };
+    let bi = BlockInput {
+        sheet_idx,
+        id,
+        row,
+        col,
+        input,
+    };
     let mut payloads = PAYLOADS.lock().unwrap();
     payloads.push(EditPayload::BlockInput(bi));
 }

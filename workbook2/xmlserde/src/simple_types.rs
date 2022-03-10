@@ -1,4 +1,3 @@
-
 xml_serde_enum! {
     #[derive(Debug, PartialEq, Eq)]
     StAxis {
@@ -1104,4 +1103,65 @@ xml_serde_enum! {
 pub type StXmlDataType = String;
 
 /// 18.18.94
-pub type StFontFamily = u32;
+pub type StFontFamily = u8;
+pub type StUnsignedIntHex = String;
+
+xml_serde_enum! {
+    /// 18.18.92
+    #[derive(Debug, PartialEq, Eq)]
+    StVerticalAlignRun {
+        Baseline => "baseline",
+        Superscript => "superscript",
+        Subscript => "subscript",
+    }
+}
+
+// xml_serde_enum! {
+//     StFontFamily {
+//         Decorative => "decorative",
+//         Modern => "modern",
+//         Roman => "roman",
+//         Script => "script",
+//         Swiss => "swiss",
+//         Auto => "auto",
+//     }
+// }
+
+xml_serde_enum! {
+    /// 18.18.92
+    #[derive(Debug, PartialEq, Eq)]
+    StConformanceClass {
+        Strict => "strict",
+        Transitional => "transitional",
+    }
+}
+
+pub type StPositiveUniversalMeasure = String;
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StCalendarType {
+        Gregorian => "gregorian",
+        GregorianUs => "gregorianUs",
+        GregorianMeFrench => "gregorianMeFrench",
+        GregorianArabic => "gregorianArabic",
+        Hijri => "hijri",
+        Hebrew => "hebrew",
+        Taiwan => "taiwan",
+        Japan => "japan",
+        Thai => "thai",
+        Korea => "korea",
+        Saka => "saka",
+        GregorianXlitEnglish => "gregorianXlitEnglish",
+        GregorianXlitFrench => "gregorianXlitFrench",
+        None => "none",
+    }
+}
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StTargetMode {
+        External => "External",
+        Internal => "Internal",
+    }
+}

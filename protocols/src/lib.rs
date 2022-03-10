@@ -327,93 +327,88 @@ pub mod message {
     }
 
     fn into_style_update(input: StyleUpdate) -> EditPayload {
-        use edit_action::style_payload::{
-            SetFontUnderline,
-            StyleUpdateType,
-        };
+        use edit_action::style_payload::{SetFontUnderline, StyleUpdateType};
         use style_update_payload::StylePayloadOneof;
-        let ps = input.payloads.into_iter().map(|p| {
-            let p = p.style_payload_oneof.unwrap();
-            match p {
-                StylePayloadOneof::SetFontBold(fb) => {
-                    StyleUpdateType::SetFontBold(fb.bold)
+        let ps = input
+            .payloads
+            .into_iter()
+            .map(|p| {
+                let p = p.style_payload_oneof.unwrap();
+                match p {
+                    StylePayloadOneof::SetFontBold(fb) => StyleUpdateType::SetFontBold(fb.bold),
+                    StylePayloadOneof::SetFontItalic(fi) => {
+                        StyleUpdateType::SetFontItalic(fi.italic)
+                    }
+                    StylePayloadOneof::SetFontUnderline(fu) => {
+                        let underline = match fu.underline {
+                            0 => StUnderlineValues::Type::Double,
+                            1 => StUnderlineValues::Type::DoubleAccounting,
+                            2 => StUnderlineValues::Type::None,
+                            3 => StUnderlineValues::Type::Single,
+                            4 => StUnderlineValues::Type::SingleAccounting,
+                            _ => StUnderlineValues::Type::None,
+                        };
+                        StyleUpdateType::SetFontUnderline(SetFontUnderline { underline })
+                    }
+                    StylePayloadOneof::SetFontColor(fc) => StyleUpdateType::SetFontColor(fc.color),
+                    StylePayloadOneof::SetFontSize(fs) => StyleUpdateType::SetFontSize(fs.size),
+                    StylePayloadOneof::SetFontName(fname) => {
+                        StyleUpdateType::SetFontName(fname.name)
+                    }
+                    StylePayloadOneof::SetFontOutline(fo) => {
+                        StyleUpdateType::SetFontOutline(fo.outline)
+                    }
+                    StylePayloadOneof::SetFontShadow(fs) => {
+                        StyleUpdateType::SetFontShadow(fs.shadow)
+                    }
+                    StylePayloadOneof::SetFontStrike(fs) => {
+                        StyleUpdateType::SetFontStrike(fs.strike)
+                    }
+                    StylePayloadOneof::SetFontCondense(fc) => {
+                        StyleUpdateType::SetFontCondense(fc.condense)
+                    }
+                    StylePayloadOneof::SetBorderDiagonalUp(_) => todo!(),
+                    StylePayloadOneof::SetBorderDiagonalDown(_) => todo!(),
+                    StylePayloadOneof::SetBorderOutline(_) => todo!(),
+                    StylePayloadOneof::SetPatternFill(set_fill) => {
+                        let pf = set_fill.pattern_fill.unwrap();
+                        let fill = pf.into();
+                        let s = CtrlSetPatternFill {
+                            pattern_fill: fill.pattern_fill.unwrap(),
+                        };
+                        StyleUpdateType::SetPatternFill(s)
+                    }
+                    StylePayloadOneof::SetLeftBorderColor(c) => {
+                        StyleUpdateType::SetLeftBorderColor(c.color)
+                    }
+                    StylePayloadOneof::SetRightBorderColor(c) => {
+                        StyleUpdateType::SetRightBorderColor(c.color)
+                    }
+                    StylePayloadOneof::SetTopBorderColor(c) => {
+                        StyleUpdateType::SetTopBorderColor(c.color)
+                    }
+                    StylePayloadOneof::SetBottomBorderColor(c) => {
+                        StyleUpdateType::SetBottomBorderColor(c.color)
+                    }
+                    StylePayloadOneof::SetLeftBorderType(s) => {
+                        let ty = convert_border_style(s.bt);
+                        StyleUpdateType::SetLeftBorderStyle(SetBorderStyle { ty })
+                    }
+                    StylePayloadOneof::SetRightBorderType(s) => {
+                        let ty = convert_border_style(s.bt);
+                        StyleUpdateType::SetRightBorderStyle(SetBorderStyle { ty })
+                    }
+                    StylePayloadOneof::SetTopBorderType(s) => {
+                        let ty = convert_border_style(s.bt);
+                        StyleUpdateType::SetTopBorderStyle(SetBorderStyle { ty })
+                    }
+                    StylePayloadOneof::SetBottomBorderType(s) => {
+                        let ty = convert_border_style(s.bt);
+                        StyleUpdateType::SetBottomBorderStyle(SetBorderStyle { ty })
+                    }
                 }
-                StylePayloadOneof::SetFontItalic(fi) => {
-                    StyleUpdateType::SetFontItalic(fi.italic)
-                }
-                StylePayloadOneof::SetFontUnderline(fu) => {
-                    let underline = match fu.underline {
-                        0 => StUnderlineValues::Type::Double,
-                        1 => StUnderlineValues::Type::DoubleAccounting,
-                        2 => StUnderlineValues::Type::None,
-                        3 => StUnderlineValues::Type::Single,
-                        4 => StUnderlineValues::Type::SingleAccounting,
-                        _ => StUnderlineValues::Type::None,
-                    };
-                    StyleUpdateType::SetFontUnderline(SetFontUnderline { underline })
-                }
-                StylePayloadOneof::SetFontColor(fc) => {
-                    StyleUpdateType::SetFontColor(fc.color)
-                }
-                StylePayloadOneof::SetFontSize(fs) => {
-                    StyleUpdateType::SetFontSize(fs.size)
-                }
-                StylePayloadOneof::SetFontName(fname) => {
-                    StyleUpdateType::SetFontName(fname.name)
-                }
-                StylePayloadOneof::SetFontOutline(fo) => {
-                    StyleUpdateType::SetFontOutline(fo.outline)
-                }
-                StylePayloadOneof::SetFontShadow(fs) => {
-                    StyleUpdateType::SetFontShadow(fs.shadow)
-                }
-                StylePayloadOneof::SetFontStrike(fs) => {
-                    StyleUpdateType::SetFontStrike(fs.strike)
-                }
-                StylePayloadOneof::SetFontCondense(fc) => {
-                    StyleUpdateType::SetFontCondense(fc.condense)
-                }
-                StylePayloadOneof::SetBorderDiagonalUp(_) => todo!(),
-                StylePayloadOneof::SetBorderDiagonalDown(_) => todo!(),
-                StylePayloadOneof::SetBorderOutline(_) => todo!(),
-                StylePayloadOneof::SetPatternFill(set_fill) => {
-                    let pf = set_fill.pattern_fill.unwrap();
-                    let fill = pf.into();
-                    let s = CtrlSetPatternFill {
-                        pattern_fill: fill.pattern_fill.unwrap(),
-                    };
-                    StyleUpdateType::SetPatternFill(s)
-                }
-                StylePayloadOneof::SetLeftBorderColor(c) => {
-                    StyleUpdateType::SetLeftBorderColor(c.color)
-                },
-                StylePayloadOneof::SetRightBorderColor(c) => {
-                    StyleUpdateType::SetRightBorderColor(c.color)
-                },
-                StylePayloadOneof::SetTopBorderColor(c) => {
-                    StyleUpdateType::SetTopBorderColor(c.color)
-                },
-                StylePayloadOneof::SetBottomBorderColor(c) => {
-                    StyleUpdateType::SetBottomBorderColor(c.color)
-                },
-                StylePayloadOneof::SetLeftBorderType(s) => {
-                    let ty = convert_border_style(s.bt);
-                    StyleUpdateType::SetLeftBorderStyle(SetBorderStyle{ ty })
-                },
-                StylePayloadOneof::SetRightBorderType(s) => {
-                    let ty = convert_border_style(s.bt);
-                    StyleUpdateType::SetRightBorderStyle(SetBorderStyle{ ty })
-                },
-                StylePayloadOneof::SetTopBorderType(s) => {
-                    let ty = convert_border_style(s.bt);
-                    StyleUpdateType::SetTopBorderStyle(SetBorderStyle{ ty })
-                },
-                StylePayloadOneof::SetBottomBorderType(s) => {
-                    let ty = convert_border_style(s.bt);
-                    StyleUpdateType::SetBottomBorderStyle(SetBorderStyle{ ty })
-                },
-            }
-        }).collect();
+            })
+            .collect();
         let sheet_idx = input.sheet_idx as usize;
         let row = input.row as usize;
         let col = input.col as usize;
