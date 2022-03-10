@@ -4,6 +4,12 @@ use crate::container::{Container, Derive, FieldsSummary, Generic};
 
 pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let container = Container::from_ast(&input, Derive::Serialize);
+    let write_ns = match container.with_ns {
+        Some(ns) => quote!{
+            attrs.push(Attribute::from((b"xmlns".as_ref(), #ns.as_ref())));
+        },
+        None => quote!{},
+    };
     let FieldsSummary {
         children,
         text,
@@ -100,6 +106,7 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 use crate::XmlValue;
                 let start = BytesStart::borrowed_name(tag);
                 let mut attrs = Vec::<Attribute>::new();
+                #write_ns
                 #(#build_attr_and_push)*
                 let start = start.with_attributes(attrs);
                 writer.write_event(Event::Start(start));

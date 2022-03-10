@@ -1,5 +1,4 @@
-use crate::symbol::{VEC_SIZE, DEFAULT};
-use crate::symbol::{XML_SERDE, NAME, SKIP_SERIALIZING, TYPE};
+use crate::symbol::{XML_SERDE, NAME, SKIP_SERIALIZING, TYPE, VEC_SIZE, DEFAULT, WITH_NS};
 use syn::parse::{self, Parse};
 use proc_macro2::{Group, Span, TokenStream, TokenTree};
 use syn::Meta::List;
@@ -12,6 +11,7 @@ use syn::NestedMeta::Lit;
 pub struct Container<'a> {
     pub fields: Vec<Field<'a>>,
     pub original: &'a syn::DeriveInput,
+    pub with_ns: Option<syn::LitByteStr>,
 }
 
 impl<'a> Container<'a> {
@@ -19,6 +19,21 @@ impl<'a> Container<'a> {
         item: &'a syn::DeriveInput,
         _derive: Derive,
     ) -> Container<'a> {
+        let mut with_ns = Option::<syn::LitByteStr>::None;
+        for meta_item in item
+            .attrs
+            .iter()
+            .flat_map(|attr| get_xmlserde_meta_items(attr))
+            .flatten() {
+            match meta_item {
+                Meta(NameValue(m)) if m.path == WITH_NS => {
+                    if let Ok(s) = get_lit_byte_str(&m.lit) {
+                        with_ns = Some(s.clone());
+                    }
+                },
+                _ => panic!("unexpected attr")
+            }
+        }
         match &item.data {
             syn::Data::Struct(ds) => {
                 let fields = ds
@@ -31,10 +46,11 @@ impl<'a> Container<'a> {
                     Container {
                         fields,
                         original: item,
+                        with_ns,
                     }
             },
-            syn::Data::Enum(_) => todo!(),
-            syn::Data::Union(_) => todo!(),
+            syn::Data::Enum(_) => panic!("Only support struct type, enum is found"),
+            syn::Data::Union(_) => panic!("Only support struct type, union is found"),
         }
     }
 }
@@ -222,7 +238,7 @@ pub fn parse_lit_into_expr_path(lit: &syn::Lit) -> Result<syn::ExprPath, ()> {
     match parse_lit_str(string) {
         Ok(r) => Ok(r),
         Err(_) => {
-            let msg = format!("failed to parse path: {:?}", string.value());
+            let _ = format!("failed to parse path: {:?}", string.value());
             Err(())
             // panic!("{:?}", msg)
         },

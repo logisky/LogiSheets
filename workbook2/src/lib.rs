@@ -35,8 +35,10 @@ macro_rules! xml_serde_enum {
 pub mod simple_types;
 pub mod complex_types;
 pub mod shared_string_table;
+mod defaults;
 
 use std::io::{BufRead, Write};
+
 
 pub trait XmlSerialize {
     fn serialize<W: Write>(
@@ -79,6 +81,22 @@ pub trait XmlDeserialize {
         reader: &mut quick_xml::Reader<B>,
         attrs: quick_xml::events::attributes::Attributes,
     ) -> Self;
+}
+
+pub fn xml_serialize_with_decl<T>(root: &[u8], obj:T) -> String
+where
+    T: XmlSerialize
+{
+    use quick_xml::events::{BytesDecl, Event};
+    let mut writer = quick_xml::Writer::new(Vec::new());
+    let decl = BytesDecl::new(
+        b"1.0".as_ref(),
+        Some(b"UTF-8".as_ref()),
+        Some(b"yes".as_ref()),
+    );
+    let _ = writer.write_event(Event::Decl(decl));
+    obj.serialize(root, &mut writer);
+    String::from_utf8(writer.into_inner()).unwrap()
 }
 
 pub fn xml_serialize<T>(root: &[u8], obj: T) -> String
@@ -399,5 +417,21 @@ mod tests {
         let p = Person { age: 12, name: String::from("Tom")};
         let result = xml_serialize(b"Person", p);
         assert_eq!(result, "<Person>Tom</Person>")
+    }
+
+    #[test]
+    fn serialize_with_ns() {
+        #[derive(XmlSerialize)]
+        #[xmlserde(with_ns=b"namespace")]
+        struct Person {
+            #[xmlserde(name=b"age", ty="attr")]
+            age: u16,
+            #[xmlserde(name=b"name", ty="text")]
+            name: String,
+        }
+        let p = Person { age: 12, name: String::from("Tom")};
+        let result = xml_serialize(b"Person", p);
+        println!("{:?}", result);
+        assert_eq!(result, "<Person xmlns=\"namespace\" age=\"12\">Tom</Person>");
     }
 }
