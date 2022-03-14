@@ -1,4 +1,4 @@
-import { Cell, match } from '../defs'
+import { Cell } from '../defs'
 import { DATA_SERVICE, RenderCell } from 'core/data'
 import { MouseEvent, useRef, useState } from 'react'
 import { Buttons } from 'common'
@@ -17,7 +17,6 @@ export class StartCellEvent {
 export const useStartCell = () => {
     const startCell = useRef<Cell>()
     const [startCellEvent, setStartCellEvent] = useState<StartCellEvent>()
-    const [canvas, setCanvas] = useState<HTMLCanvasElement>()
 
     const scroll = () => {
         const oldStartCell = startCell.current
@@ -44,8 +43,7 @@ export const useStartCell = () => {
         setStartCellEvent(e)
     }
 
-    const canvasChange = (canvas: HTMLCanvasElement) => {
-        setCanvas(canvas)
+    const canvasChange = () => {
         const viewRange = DATA_SERVICE.cachedViewRange
         const oldStartCell = startCell.current
         const row = viewRange.rows.find(r => oldStartCell?.cover(r))
@@ -64,18 +62,17 @@ export const useStartCell = () => {
         setStartCellEvent(event)
         startCell.current = cell
     }
-    const mousedown = (e: MouseEvent, selector?: SelectorProps) => {
+    const mousedown = (e: MouseEvent, matchCell: Cell, canvas: HTMLCanvasElement, selector?: SelectorProps) => {
         const buttons = e.buttons
-        if ((buttons !== Buttons.LEFT && buttons !== Buttons.RIGHT) || !canvas)
+        if ((buttons !== Buttons.LEFT && buttons !== Buttons.RIGHT))
             return
-        const matchCell = match(e.clientX, e.clientY, canvas)
         // 如果是在选中区域内右键，则不触发新的start cell
         if (selector && buttons === Buttons.RIGHT) {
             const range = new Range()
-            range.startRow = selector.y - selector.borderTopWidth
-            range.endRow = selector.y + selector.borderBottomWidth
-            range.startCol = selector.x - selector.borderLeftWidth
-            range.endCol = selector.x + selector.borderRightWidth
+                .setStartRow(selector.y - selector.borderTopWidth)
+                .setEndRow(selector.y + selector.borderBottomWidth)
+                .setStartCol(selector.x - selector.borderLeftWidth)
+                .setEndCol(selector.x + selector.borderRightWidth)
             if (range.cover(matchCell.position))
                 return
         }
@@ -86,7 +83,6 @@ export const useStartCell = () => {
         setStartCellEvent(event)
     }
     return {
-        canvas,
         startCellEvent,
         scroll,
         canvasChange,

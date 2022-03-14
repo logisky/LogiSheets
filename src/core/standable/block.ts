@@ -8,12 +8,11 @@ export class StandardBlock implements BlockInfo {
     colStart = 0
     rowStart = 0
     get coordinate() {
-        const range = new Range()
-        range.startRow = this.rowStart
-        range.endRow = this.rowStart + this.rowCnt - 1
-        range.startCol = this.colStart
-        range.endCol = this.colStart + this.colCnt - 1
-        return range
+        return new Range()
+            .setStartRow(this.rowStart)
+            .setEndRow(this.rowStart + this.rowCnt - 1)
+            .setStartCol(this.colStart)
+            .setEndCol(this.colStart + this.colCnt - 1)
     }
     static from(block: BlockInfo) {
         const newBlock = new StandardBlock()

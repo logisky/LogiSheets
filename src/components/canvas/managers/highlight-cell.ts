@@ -69,10 +69,10 @@ export const useHighlightCell = () => {
             }
             const cell = viewRange.cells.find(c => {
                 const range = new Range()
-                range.startRow = newCell.rowStart
-                range.startCol = newCell.colStart
-                range.endCol = newCell.colEnd ?? range.startCol
-                range.endRow = newCell.rowEnd ?? range.startRow
+                    .setStartCol(newCell.colStart)
+                    .setStartRow(newCell.rowStart)
+                    .setEndCol(newCell.colEnd ?? newCell.colStart)
+                    .setEndRow(newCell.rowEnd ?? newCell.rowStart)
                 return c.coodinate.cover(range)
             })
             if (!cell)
@@ -112,10 +112,10 @@ export const useHighlightCell = () => {
             }
             const cell = viewRange.cells.find(c => {
                 const range = new Range()
-                range.startRow = newCell.rowStart
-                range.startCol = newCell.colStart
-                range.endCol = newCell.colEnd ?? range.startCol
-                range.endRow = newCell.rowEnd ?? range.startRow
+                    .setStartRow(newCell.rowStart)
+                    .setStartCol(newCell.colStart)
+                    .setEndCol(newCell.colEnd ?? newCell.colStart)
+                    .setEndRow(newCell.rowEnd ?? newCell.rowStart)
                 return c.coodinate.cover(range)
             })
             if (!cell)

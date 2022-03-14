@@ -35,10 +35,10 @@ export class TextManager<T> {
             let x = 0
             ts.forEach(t => {
                 const position = new Range()
-                position.startRow = y
-                position.endRow = y + this.context.lineHeight()
-                position.startCol = x
-                position.endCol = x + t.width() + 2
+                    .setStartRow(y)
+                    .setEndRow(y + this.context.lineHeight())
+                    .setStartCol(x)
+                    .setEndCol(x + t.width() + 2)
                 const box = new Box()
                 box.position = position
                 const attr = new TextAttr()

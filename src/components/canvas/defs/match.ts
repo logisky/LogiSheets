@@ -23,10 +23,10 @@ export function match(
     const { x, y } = getOffset(clientX, clientY, canvas)
     const { rows, cols, cells } = DATA_SERVICE.cachedViewRange
     const clickPosition = new Range()
-    clickPosition.startCol = x
-    clickPosition.startRow = y
-    clickPosition.endCol = x
-    clickPosition.endRow = y
+        .setStartCol(x)
+        .setStartRow(y)
+        .setEndCol(x)
+        .setEndRow(y)
     const { width: leftTopWidth, height: leftTopHeight } = SETTINGS.leftTop
     const col = cols.find(c => c.position.cover(clickPosition))
     const row = rows.find(r => r.position.cover(clickPosition))
@@ -48,10 +48,10 @@ export function getCell(offsetX: number, offsetY: number) {
         return new Cell('LeftTop')
     const { rows, cols, cells } = DATA_SERVICE.cachedViewRange
     const position = new Range()
-    position.startCol = offsetX
-    position.endCol = offsetX
-    position.startRow = offsetY
-    position.endRow = offsetY
+        .setStartCol(offsetX)
+        .setEndCol(offsetX)
+        .setStartRow(offsetY)
+        .setEndRow(offsetY)
     const row = rows.find(r => r.position.cover(position))
     if (offsetX <= leftTop.width && row)
         return new Cell('FixedLeftHeader').copyByRenderCell(row)

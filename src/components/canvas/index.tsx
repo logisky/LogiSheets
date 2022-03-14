@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { SelectedCell } from './events'
 import { Subscription, Subject } from 'rxjs'
 import { debounceTime } from 'rxjs/operators'
@@ -18,8 +19,9 @@ import {
     useText,
     Render,
     useHighlightCell,
+    useResizers,
 } from './managers'
-import { Cell } from './defs'
+import { Cell, match } from './defs'
 import {
     ScrollbarComponent
 } from 'components/scrollbar'
@@ -27,6 +29,7 @@ import { createSyntheticEvent, EventType, on } from 'common/events'
 import { DATA_SERVICE } from 'core/data'
 import { ContextmenuComponent } from './contextmenu'
 import { SelectorComponent } from 'components/selector'
+import {ResizerComponent} from 'components/resize'
 import { BlurEvent, TextContainerComponent } from 'components/textarea'
 import { DndComponent } from 'components/dnd'
 import { InvalidFormulaComponent } from './invalid-formula'
@@ -52,19 +55,23 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const textMng = useText()
     const highlights = useHighlightCell()
     const renderMng = useRef(new Render())
+    const resizerMng = useResizers()
     const focus$ = useRef(new Subject<void>())
 
     useEffect(() => {
         const subs = new Subscription()
         subs.add(DATA_SERVICE.backend.render$.subscribe(() => {
-            renderMng.current.render(getCanvas())
+            renderMng.current.render(canvasEl.current!)
         }))
         subs.add(on(window, EventType.RESIZE)
             .pipe(debounceTime(100))
             .subscribe(() => {
-                const canvas = getCanvas()
-                renderMng.current.render(canvas)
+                renderMng.current.render(canvasEl.current!)
             }))
+        subs.add(renderMng.current.rendered$.subscribe(() => {
+            // resizer manager依赖viewRange
+            resizerMng.init()
+        }))
         return () => {
             subs.unsubscribe()
         }
@@ -75,8 +82,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         subs.add(on(window, EventType.RESIZE)
             .pipe(debounceTime(100))
             .subscribe(() => {
-                const canvas = getCanvas()
-                scrollbarMng.resize(canvas)
+                scrollbarMng.resize(canvasEl.current!)
             }))
         return () => {
             subs.unsubscribe()
@@ -101,7 +107,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         selectorMng.init(canvasEl.current!)
         scrollbarMng.initScrollbar(canvasEl.current!)
         textMng.init(canvasEl.current!)
-        startCellMng.canvasChange(canvasEl.current!)
+        startCellMng.canvasChange()
         DATA_SERVICE.sendDisplayArea()
     }, [canvasEl])
 
@@ -123,29 +129,41 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     }, [scrollbarMng.xScrollbarAttr, scrollbarMng.yScrollbarAttr])
 
     const onMousedown = async (e: MouseEvent) => {
-        e.stopPropagation()
-        const checked = await textMng.checkFormula()
-        if (!checked) {
-            e.preventDefault()
-            focus$.current.next()
-            return
+        const mousedown = async (e: MouseEvent) => {
+            const checked = await textMng.checkFormula()
+            if (!checked) {
+                e.preventDefault()
+                focus$.current.next()
+                return
+            }
+            if (e.buttons === Buttons.RIGHT)
+                return
+            const matchCell = match(e.clientX, e.clientY, canvasEl.current!)
+            const isResize = resizerMng.mousedown(e.nativeEvent, canvasEl.current!)
+            if (isResize)
+                return
+            const isDnd = dndMng.onMouseDown(e)
+            if (isDnd)
+                return
+            startCellMng.mousedown(e, matchCell, canvasEl.current!)
+            e.stopPropagation()
         }
-        if (e.buttons === Buttons.RIGHT)
-            return
-        const canvas = getCanvas()
-        if (!dndMng.isDragging)
-            startCellMng.mousedown(e)
+        mousedown(e)
         const sub = new Subscription()
         sub.add(on(window, EventType.MOUSE_UP).subscribe(() => {
             dndMng.onMouseUp()
+            resizerMng.mouseup()
             sub.unsubscribe()
         }))
         sub.add(on(window, EventType.MOUSE_MOVE).subscribe(mme => {
             mme.preventDefault()
+            const mouseevent = createSyntheticEvent(mme) as MouseEvent
+            const isResize = resizerMng.mousemove(mme)
+            if (isResize)
+                return
             if (!dndMng.isDragging)
                 selectorMng.onMouseMove(mme, canvasEl.current!)
-            const mouseevent = createSyntheticEvent(mme) as MouseEvent
-            dndMng.onMouseMove(mouseevent, canvas)
+            dndMng.onMouseMove(mouseevent, canvasEl.current!)
         }))
     }
 
@@ -170,7 +188,8 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const onContextMenu = (e: MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        startCellMng.mousedown(e, selectorMng.selector)
+        const matchCell = match(e.clientX, e.clientY, canvasEl.current!)
+        startCellMng.mousedown(e, matchCell, canvasEl.current!, selectorMng.selector)
         if (!selectorMng.startCell)
             return
         setContextMenu((
@@ -187,11 +206,6 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const type = (text: string) => {
         textMng.currText.current = text
         highlights.update(text)
-    }
-    const getCanvas = () => {
-        if (!canvasEl.current)
-            throw Error('Not have canvas')
-        return canvasEl.current
     }
 
     return (<div
@@ -255,6 +269,26 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
                     height: `${cellStyle.height}px`,
                     backgroundColor: cellStyle.bgColor.css(),
                 }}></div>
+            })
+        }
+        {
+            resizerMng.resizers.map((resizer, i) => {
+                const {startCol: x, startRow: y, width, height} = resizer.range
+                const {isRow} = resizer
+                return <ResizerComponent
+                    hoverText={resizerMng.hoverText}
+                    x={!isRow ? x : 0}
+                    y={!isRow ? 0 : y}
+                    width={width}
+                    height={height}
+                    key={i}
+                    movingX={!isRow ? resizerMng.moving.x : 0}
+                    movingY={isRow ? resizerMng.moving.y : 0}
+                    movingHeight={!isRow ? canvasEl.current!.getBoundingClientRect().height : 0}
+                    movingWidth={!isRow ? 0 : canvasEl.current!.getBoundingClientRect().width}
+                    active={resizerMng.active === resizer}
+                    type={isRow ? 'row' : 'col'}
+                ></ResizerComponent>
             })
         }
     </div>

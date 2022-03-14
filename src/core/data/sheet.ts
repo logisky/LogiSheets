@@ -103,7 +103,7 @@ export class SheetService {
 
     getRowInfo(row: number, sheet = this._activeIndex) {
         const key = genKey(sheet, row)
-        return this._rowInfos.get(key)
+        return this._rowInfos.get(key) ?? new StandardRowInfo(row)
     }
 
     setRowInfo(row: number, info: RowInfo, sheet: number) {
@@ -151,7 +151,7 @@ export class SheetService {
 
     getColInfo(col: number, sheet = this._activeIndex) {
         const key = genKey(sheet, col)
-        return this._colInfos.get(key)
+        return this._colInfos.get(key) ?? new StandardColInfo(col)
     }
     private _maxHeight = 0
     /**

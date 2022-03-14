@@ -9,7 +9,7 @@ import { debugWeb } from 'common'
 export const CANVAS_OFFSET = 100
 
 
-export class DataService {
+class DataService {
     constructor() {
         this._handleBackend()
     }
@@ -65,13 +65,12 @@ export class DataService {
     }
 
     private _getScrollPosition() {
-        const { width, height } = SETTINGS.defaultCellSize
         let rowIndex = 0
         let i = -1
         while (i < MAX_COUNT) {
             i += 1
             if (rowIndex < this.scroll.y) {
-                rowIndex += this.sheetSvc.getRowInfo(i)?.px ?? height
+                rowIndex += this.sheetSvc.getRowInfo(i).px
                 continue
             }
             rowIndex = i
@@ -82,7 +81,7 @@ export class DataService {
         while (i < MAX_COUNT) {
             i += 1
             if (colIndex < this.scroll.x) {
-                colIndex += this.sheetSvc.getColInfo(i)?.px ?? width
+                colIndex += this.sheetSvc.getColInfo(i).px
                 continue
             }
             colIndex = i
@@ -93,27 +92,21 @@ export class DataService {
 
     private _initRows(maxHeight: number, scrollY: number) {
         const rows: RenderCell[] = []
-        const getHeight = (i: number) => this.sheetSvc
-            .getRowInfo(i)?.px ?? SETTINGS.defaultCellSize.height
+        const getHeight = (i: number) => this.sheetSvc.getRowInfo(i).px
         const staticWidth = SETTINGS.leftTop.width
         for (let i = scrollY, y = SETTINGS.leftTop.height; i <= MAX_COUNT && y <= maxHeight; i += 1) {
-            const isHidden = this.sheetSvc.getRowInfo(i)?.hidden ?? false
+            const isHidden = this.sheetSvc.getRowInfo(i).hidden
             if (isHidden)
                 continue
             if (y > maxHeight)
                 break
             const height = getHeight(i)
             const cell = new RenderCell()
-            cell.coodinate = new Range()
-            cell.coodinate.startRow = i
-            cell.coodinate.endRow = i
-            cell.coodinate.startCol = 0
-            cell.coodinate.endCol = 0
-            cell.position = new Range()
-            cell.position.startRow = y
-            cell.position.endRow = y + height
-            cell.position.startCol = 0
-            cell.position.endCol = staticWidth
+                .setCoordinate(new Range().setStartRow(i).setEndRow(i))
+                .setPosition(new Range()
+                    .setStartRow(y)
+                    .setEndRow(y + height)
+                    .setEndCol(staticWidth))
             rows.push(cell)
             y += height
         }
@@ -122,27 +115,18 @@ export class DataService {
 
     private _initCols(maxWidth: number, scrollX: number) {
         const cols: RenderCell[] = []
-        const getWidth = (i: number) => this.sheetSvc
-            .getColInfo(i)?.px ?? SETTINGS.defaultCellSize.width
+        const getWidth = (i: number) => this.sheetSvc.getColInfo(i).px
         const staticHeight = SETTINGS.leftTop.height
         for (let i = scrollX, x = SETTINGS.leftTop.width; i <= MAX_COUNT && x <= maxWidth; i += 1) {
-            const isHidden = this.sheetSvc.getColInfo(i)?.hidden ?? false
+            const isHidden = this.sheetSvc.getColInfo(i).hidden
             if (isHidden)
                 continue
             if (x > maxWidth)
                 break
             const width = getWidth(i)
             const cell = new RenderCell()
-            cell.position = new Range()
-            cell.position.startCol = x
-            cell.position.endCol = x + width
-            cell.position.startRow = 0
-            cell.position.endRow = staticHeight
-            cell.coodinate = new Range()
-            cell.coodinate.startCol = i
-            cell.coodinate.endCol = i
-            cell.coodinate.startRow = 0
-            cell.coodinate.endRow = 0
+                .setPosition(new Range().setStartCol(x).setEndCol(x + width).setEndRow(staticHeight))
+                .setCoordinate(new Range().setStartCol(i).setEndCol(i))
             cols.push(cell)
             x += width
         }
@@ -163,20 +147,20 @@ export class DataService {
                 if (renderedCells.has(key))
                     return
                 const coordinate = new Range()
-                coordinate.startRow = startRow.coodinate.startRow
-                coordinate.endRow = startRow.coodinate.endRow
-                coordinate.startCol = startCol.coodinate.startCol
-                coordinate.endCol = startCol.coodinate.endCol
+                    .setStartRow(startRow.coodinate.startRow)
+                    .setEndRow(startRow.coodinate.endRow)
+                    .setStartCol(startCol.coodinate.startCol)
+                    .setEndCol(startCol.coodinate.endCol)
                 const mCells = merges.filter(m => m.cover(coordinate))
                 // no merge cell
                 if (mCells.length === 0) {
                     const cell = new RenderCell()
-                    cell.position = new Range()
-                    cell.position.endCol = startCol.position.endCol
-                    cell.position.endRow = startRow.position.endRow
-                    cell.position.startCol = startCol.position.startCol
-                    cell.position.startRow = startRow.position.startRow
-                    cell.coodinate = coordinate
+                        .setPosition(new Range()
+                            .setStartRow(startRow.position.startRow)
+                            .setEndRow(startRow.position.endRow)
+                            .setStartCol(startCol.position.startCol)
+                            .setEndCol(startCol.position.endCol))
+                        .setCoordinate(coordinate)
                     renderedCells.add(key)
                     cells.push(cell)
                     return
@@ -199,16 +183,16 @@ export class DataService {
                         endCol = tmpCol
                     }
                     const c = new RenderCell()
-                    c.position = new Range()
-                    c.position.endCol = endCol.position.endCol
-                    c.position.endRow = endRow.position.endRow
-                    c.position.startCol = startCol.position.startCol
-                    c.position.startRow = startRow.position.startRow
-                    c.coodinate = new Range()
-                    c.coodinate.startRow = startRow.coodinate.startRow
-                    c.coodinate.startCol = startCol.coodinate.startCol
-                    c.coodinate.endCol = endCol.coodinate.endCol
-                    c.coodinate.endRow = endRow.coodinate.endRow
+                        .setPosition(new Range()
+                            .setStartCol(startCol.position.startCol)
+                            .setStartRow(startRow.position.startRow)
+                            .setEndCol(endCol.position.endCol)
+                            .setEndRow(endRow.position.endRow))
+                        .setCoordinate(new Range()
+                            .setStartRow(startRow.coodinate.startRow)
+                            .setStartCol(startCol.coodinate.startCol)
+                            .setEndCol(endCol.coodinate.endCol)
+                            .setEndRow(endRow.coodinate.endRow))
                     cells.push(c)
                     for (let i = c.coodinate.startRow; i <= c.coodinate.endRow; i += 1)
                         for (let j = c.coodinate.startCol; j <= c.coodinate.endCol; j += 1)
