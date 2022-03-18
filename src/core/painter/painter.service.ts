@@ -186,9 +186,7 @@ export class PainterService extends CanvasApi {
         const width = attr.font.measureText(text).width
         switch (attr.font.underline) {
             case UnderlineType.DOUBLE_ACCOUNTING:
-                break
             case UnderlineType.DOUBLE_U:
-                break
             case UnderlineType.NONE:
                 return
             case UnderlineType.SINGLE:
