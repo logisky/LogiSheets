@@ -1,9 +1,12 @@
 import {StandardFont} from 'core/standable'
-export class Settings {
+class Settings {
     public leftTop = new LeftTop()
     public grid = new Grid()
     public fixedHeader = new FixedHeaderStyle()
-    public defaultCellSize = {width: 40, height: 25}
+    /**
+     * unit: pt
+     */
+    public defaultCellSize = {width: 6, height: 25}
     public showContextMenu = true
     public showToolBar = true
     public showSheetsTab = true

@@ -6,11 +6,11 @@ import { Range } from 'core/standable'
 export class Box {
     public position = new Range()
     public get width() {
-        return this.position.endCol - this.position.startCol
+        return this.position.width
     }
 
     public get height() {
-        return this.position.endRow - this.position.startRow
+        return this.position.height
     }
 
     public textX(

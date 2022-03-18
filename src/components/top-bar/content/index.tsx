@@ -1,19 +1,5 @@
-// import {
-//     PayloadBuilder,
-//     SetFontBoldBuilder,
-//     SetFontColorBuilder,
-//     StyleUpdate,
-//     StyleUpdateBuilder,
-//     StyleUpdatePayloadBuilder,
-//     TransactionBuilder,
-//     _Payload_Payload_oneof,
-//     _StyleUpdatePayload_Style_payload_oneof,
-// } from '@logi-pb/network/src/proto/message_pb'
-// import {isBoolean, isString} from '@logi-base/src/ts/common/type_guard'
 import { SelectedCell } from 'components/canvas'
-import { DataService, DATA_SERVICE } from 'core/data'
-import { StartItem } from './start-item'
-import { ItemType } from './start-item-type'
+import { DATA_SERVICE } from 'core/data'
 import { ColorResult, SketchPicker } from 'react-color'
 import styles from './start.module.scss'
 import { useEffect, useState } from 'react'

@@ -14,6 +14,7 @@ export const useDnd = () => {
     const onMouseDown = (e: MouseEvent) => {
         setIsDragging(true)
         setMouseDown({ x: e.clientX, y: e.clientY })
+        return false
     }
 
     const onMouseMove = (e: MouseEvent, canvas: HTMLCanvasElement) => {

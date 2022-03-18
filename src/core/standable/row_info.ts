@@ -1,19 +1,22 @@
 import { RowInfo } from 'proto/message'
 import { shallowCopy, ptToPx } from 'common'
+import { SETTINGS } from 'common/settings'
 export class StandardRowInfo implements RowInfo {
-    height = 0
+    constructor(
+        public readonly idx: number,
+    ) {}
+    height = SETTINGS.defaultCellSize.height
     hidden = false
-    idx = 0
-    get pt(): number {
+    get pt() {
         return this.height
     }
 
-    get px(): number {
+    get px() {
         return parseFloat(ptToPx(this.height).toFixed(2))
     }
 
-    static from(rowInfo: RowInfo): StandardRowInfo {
-        const rInfo = new StandardRowInfo()
+    static from(rowInfo: RowInfo) {
+        const rInfo = new StandardRowInfo(rowInfo.idx)
         shallowCopy(rowInfo, rInfo)
         return rInfo
     }

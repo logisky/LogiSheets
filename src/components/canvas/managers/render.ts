@@ -4,6 +4,7 @@ import { StandardColor, Range } from 'core/standable'
 import { SETTINGS } from 'common/settings'
 import { toA1notation } from 'common'
 import { StandardStyle } from 'core/standable/style'
+import {Subject} from 'rxjs'
 
 export class Render {
     render(canvas: HTMLCanvasElement) {
@@ -15,7 +16,9 @@ export class Render {
         this._renderLeftHeader()
         this._renderTopHeader()
         this._renderLeftTop()
+        this.rendered$.next(undefined)
     }
+    rendered$ = new Subject()
 
     private _painterSvc = new PainterService()
 

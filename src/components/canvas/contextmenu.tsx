@@ -163,10 +163,10 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const { coodinate: start } = startCell
         const { coodinate: end } = endCell ?? startCell
         const curr = new Range()
-        curr.startRow = start.startRow
-        curr.endRow = end.endRow
-        curr.startCol = start.startCol
-        curr.endCol = end.endCol
+            .setStartRow(start.startRow)
+            .setStartCol(start.startCol)
+            .setEndRow(end.endRow)
+            .setEndCol(end.endCol)
         const blocks = DATA_SERVICE.sheetSvc.getBlocks()
         return blocks.filter(b => b.coordinate.cover(curr))
     }

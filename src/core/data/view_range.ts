@@ -1,11 +1,19 @@
 import {Range} from 'core/standable'
 export class RenderCell {
     get width() {
-        return this.position.endCol - this.position.startCol
+        return this.position.width
     }
 
     get height() {
-        return this.position.endRow - this.position.startRow
+        return this.position.height
+    }
+    setCoordinate(coordinate: Range) {
+        this.coodinate = coordinate
+        return this
+    }
+    setPosition(position: Range) {
+        this.position = position
+        return this
     }
     /**
      * start/end row/col index
