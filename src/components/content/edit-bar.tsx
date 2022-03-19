@@ -15,7 +15,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
     useEffect(() => {
         const { row, col } = selectedCell
         const notation = toA1notation(selectedCell.col)
-        setCoordinate(`${notation}${row}`)
+        setCoordinate(`${notation}${row + 1}`)
         const cell = DATA_SERVICE.sheetSvc.getCell(row, col)
         if (cell === undefined)
             return

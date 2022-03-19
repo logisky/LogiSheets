@@ -1,8 +1,15 @@
-.border {
+.host {
+}
+.dragging-handle {
     position: absolute;
     display: block;
     border: 2px solid rgb(31, 187, 125);
     cursor: move;
+}
+.dragging-mask {
+    cursor: default;
+    width: 100%;
+    height: 100%;
 }
 .dragging {
     position: absolute;

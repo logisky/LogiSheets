@@ -42,5 +42,8 @@ export class ViewRange {
      * visible cols.
      */
     public cols: readonly RenderCell[] = []
+    /**
+     * visible cells
+     */
     public cells: readonly RenderCell[] = []
 }

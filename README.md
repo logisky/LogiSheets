@@ -4,18 +4,26 @@ LogiSheets is a spreadsheet application that is compatible with Excel and design
 
 LogiSheets has `wasm` edition and `network` edition. Choose your edition at your option.
 
-## 启动前端
+
+## start
+
+1. 启动前端
 
 ```sh
 yarn
 yarn start
 ```
 
-## 单机版
+2. 单机版
 
 ```sh
 yarn
 yarn start:wasm
+```
+
+访问
+```
+http://localhost:4200
 ```
 
 ## protoc

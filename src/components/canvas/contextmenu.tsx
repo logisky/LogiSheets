@@ -4,7 +4,7 @@ import { Cell } from './defs'
 import { useState, ReactElement, MouseEvent } from 'react'
 import { DATA_SERVICE } from 'core/data'
 import { ContextMenuComponent, ContextMenuItem } from 'ui/contextmenu'
-import { DeleteBlockColsBuilder, DeleteColsBuilder, InsertColsBuilder, Payload , InsertBlockColsBuilder, InsertBlockRowsBuilder, InsertRowsBuilder, DeleteBlockRowsBuilder, DeleteRowsBuilder, CreateBlockBuilder } from 'api'
+import { DeleteBlockColsBuilder, DeleteColsBuilder, InsertColsBuilder, Payload, InsertBlockColsBuilder, InsertBlockRowsBuilder, InsertRowsBuilder, DeleteBlockRowsBuilder, DeleteRowsBuilder, CreateBlockBuilder } from 'api'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent
@@ -149,7 +149,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const start = startCell.coodinate
         const end = endCellTruthy.coodinate
         const payload = new CreateBlockBuilder()
-            .blockId(0)
+            .blockId(1)
             .sheetIdx(DATA_SERVICE.sheetSvc.getActiveSheet())
             .rowCnt(Math.abs(end.endRow - start.startRow) + 1)
             .colCnt(Math.abs(end.endCol - start.startCol) + 1)
