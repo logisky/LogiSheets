@@ -1,5 +1,5 @@
 use xlrs_workbook::{
-    simple_types::{StUnderlineValues, StBorderStyle},
+    simple_types::{StBorderStyle, StUnderlineValues},
     styles::{BorderPr, PatternFill},
 };
 
@@ -51,7 +51,7 @@ pub struct SetBorderPr {
 
 #[derive(Debug)]
 pub struct SetBorderStyle {
-    pub ty: StBorderStyle::Type
+    pub ty: StBorderStyle::Type,
 }
 
 #[derive(Debug)]

@@ -39,115 +39,114 @@ pub struct BorderPayload {
 fn handle(border: &mut Border, ty: BorderPayloadType) {
     use xlrs_workbook::complex_types::Color;
     match ty {
-        BorderPayloadType::LeftBorderColor(s) => {
-            match &mut border.left {
-                Some(pr) => {
-                    match &mut pr.color {
-                        Some(c) => c.rgb = Some(s),
-                        None => {
-                            let mut color = Color::new_with_rgb(s);
-                            pr.color = Some(color);
-                        },
-                    }
-                },
+        BorderPayloadType::LeftBorderColor(s) => match &mut border.left {
+            Some(pr) => match &mut pr.color {
+                Some(c) => c.rgb = Some(s),
                 None => {
                     let mut color = Color::new_with_rgb(s);
-                    border.left = Some(BorderPr {color: Some(color), style: StBorderStyle::Type::None});
-                },
+                    pr.color = Some(color);
+                }
+            },
+            None => {
+                let mut color = Color::new_with_rgb(s);
+                border.left = Some(BorderPr {
+                    color: Some(color),
+                    style: StBorderStyle::Type::None,
+                });
             }
         },
-        BorderPayloadType::RightBorderColor(s) => {
-            match &mut border.right {
-                Some(pr) => {
-                    match &mut pr.color {
-                        Some(c) => c.rgb = Some(s),
-                        None => {
-                            let mut color = Color::new_with_rgb(s);
-                            pr.color = Some(color);
-                        },
-                    }
-                },
+        BorderPayloadType::RightBorderColor(s) => match &mut border.right {
+            Some(pr) => match &mut pr.color {
+                Some(c) => c.rgb = Some(s),
                 None => {
                     let mut color = Color::new_with_rgb(s);
-                    border.right = Some(BorderPr {color: Some(color), style: StBorderStyle::Type::None});
-                },
+                    pr.color = Some(color);
+                }
+            },
+            None => {
+                let mut color = Color::new_with_rgb(s);
+                border.right = Some(BorderPr {
+                    color: Some(color),
+                    style: StBorderStyle::Type::None,
+                });
             }
-
         },
-        BorderPayloadType::TopBorderColor(s) => {
-            match &mut border.top {
-                Some(pr) => {
-                    match &mut pr.color {
-                        Some(c) => c.rgb = Some(s),
-                        None => {
-                            let mut color = Color::new_with_rgb(s);
-                            pr.color = Some(color);
-                        },
-                    }
-                },
+        BorderPayloadType::TopBorderColor(s) => match &mut border.top {
+            Some(pr) => match &mut pr.color {
+                Some(c) => c.rgb = Some(s),
                 None => {
                     let mut color = Color::new_with_rgb(s);
-                    border.top = Some(BorderPr {color: Some(color), style: StBorderStyle::Type::None});
-                },
+                    pr.color = Some(color);
+                }
+            },
+            None => {
+                let mut color = Color::new_with_rgb(s);
+                border.top = Some(BorderPr {
+                    color: Some(color),
+                    style: StBorderStyle::Type::None,
+                });
             }
         },
-        BorderPayloadType::BottomBorderColor(s) => {
-            match &mut border.bottom {
-                Some(pr) => {
-                    match &mut pr.color {
-                        Some(c) => c.rgb = Some(s),
-                        None => {
-                            let mut color = Color::new_with_rgb(s);
-                            pr.color = Some(color);
-                        },
-                    }
-                },
+        BorderPayloadType::BottomBorderColor(s) => match &mut border.bottom {
+            Some(pr) => match &mut pr.color {
+                Some(c) => c.rgb = Some(s),
                 None => {
                     let mut color = Color::new_with_rgb(s);
-                    border.bottom = Some(BorderPr {color: Some(color), style: StBorderStyle::Type::None});
-                },
+                    pr.color = Some(color);
+                }
+            },
+            None => {
+                let mut color = Color::new_with_rgb(s);
+                border.bottom = Some(BorderPr {
+                    color: Some(color),
+                    style: StBorderStyle::Type::None,
+                });
             }
         },
-        BorderPayloadType::LeftBorderStyle(s) => {
-            match &mut border.left {
-                Some(pr) => pr.style = s,
-                None => {
-                    border.left = Some(BorderPr {color: None, style: s})
-                },
+        BorderPayloadType::LeftBorderStyle(s) => match &mut border.left {
+            Some(pr) => pr.style = s,
+            None => {
+                border.left = Some(BorderPr {
+                    color: None,
+                    style: s,
+                })
             }
         },
-        BorderPayloadType::RightBorderStyle(s) => {
-            match &mut border.right {
-                Some(pr) => pr.style = s,
-                None => {
-                    border.right = Some(BorderPr {color: None, style: s})
-                },
+        BorderPayloadType::RightBorderStyle(s) => match &mut border.right {
+            Some(pr) => pr.style = s,
+            None => {
+                border.right = Some(BorderPr {
+                    color: None,
+                    style: s,
+                })
             }
         },
-        BorderPayloadType::TopBorderStyle(s) => {
-            match &mut border.top {
-                Some(pr) => pr.style = s,
-                None => {
-                    border.top = Some(BorderPr {color: None, style: s})
-                },
+        BorderPayloadType::TopBorderStyle(s) => match &mut border.top {
+            Some(pr) => pr.style = s,
+            None => {
+                border.top = Some(BorderPr {
+                    color: None,
+                    style: s,
+                })
             }
         },
-        BorderPayloadType::BottomBorderStyle(s) => {
-            match &mut border.bottom {
-                Some(pr) => pr.style = s,
-                None => {
-                    border.bottom = Some(BorderPr {color: None, style: s})
-                },
+        BorderPayloadType::BottomBorderStyle(s) => match &mut border.bottom {
+            Some(pr) => pr.style = s,
+            None => {
+                border.bottom = Some(BorderPr {
+                    color: None,
+                    style: s,
+                })
             }
         },
         BorderPayloadType::BorderDiagonalUp(b) => {
             border.diagonal_up = Some(b);
-        },
+        }
         BorderPayloadType::BorderDiagonalDown(b) => {
             border.diagonal_down = Some(b);
-        },
+        }
         BorderPayloadType::Outline(b) => {
             border.outline = b;
-        },
+        }
     };
 }

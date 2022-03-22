@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::async_func_helper::AsyncCalculator;
 use crate::message::{CalcAsyncResult, CalcAsyncTask};
+use logisheets_protocols::message::{EventSource, ServerSend};
 use logisheets_protocols::{deserialize_client_message, serialize_server_message};
-use logisheets_protocols::message::{ServerSend, EventSource};
 
 use super::message::{ApplyEdit, FileId, JoinEdit, LeaveEdit, ServerMessage, UserId};
 use super::room::{ClientResponse, Room};
@@ -109,10 +109,13 @@ impl Handler<JoinEdit> for BooksServer {
             recipient,
         } = msg;
         let e = ActionEffect::default();
-        let r = ServerSend::from_action_effect(e.sheets, EventSource {
-            user_id: user_id.clone(),
-            action_id: String::from(""),
-        });
+        let r = ServerSend::from_action_effect(
+            e.sheets,
+            EventSource {
+                user_id: user_id.clone(),
+                action_id: String::from(""),
+            },
+        );
         let buf = serialize_server_message(r);
         let res = ServerMessage { content: buf };
         self.send_user_message(&file_id, &user_id, res);
@@ -179,10 +182,13 @@ impl Handler<CalcAsyncResult> for BooksServer {
                 .wb
                 .handle_async_calc_results(msg.tasks, msg.res, msg.dirtys);
             if let Some(ae) = affect {
-                let buf = serialize_server_message(ServerSend::from_action_effect(ae.sheets, EventSource {
-                    user_id: String::from("__SYS__"),
-                    action_id: String::from(""),
-                }));
+                let buf = serialize_server_message(ServerSend::from_action_effect(
+                    ae.sheets,
+                    EventSource {
+                        user_id: String::from("__SYS__"),
+                        action_id: String::from(""),
+                    },
+                ));
                 let res = ServerMessage { content: buf };
                 self.send_room_message(&msg.file_id, res);
             }

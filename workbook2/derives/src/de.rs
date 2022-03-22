@@ -1,6 +1,6 @@
 use syn::DeriveInput;
 
-use crate::container::{self, Field, EleType, Container, FieldsSummary, Generic};
+use crate::container::{self, Container, EleType, Field, FieldsSummary, Generic};
 
 pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let container = Container::from_ast(&input, container::Derive::Deserialize);
@@ -12,11 +12,9 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
         text,
         attrs,
         self_closed_children,
-    }= summary;
+    } = summary;
     let vec_init = get_vec_init(&children);
-    let attr_branches = attrs
-        .into_iter()
-        .map(|a| attr_match_branch(a));
+    let attr_branches = attrs.into_iter().map(|a| attr_match_branch(a));
     let child_branches = children_match_branch(children);
     let sfc_branch = sfc_match_branch(self_closed_children);
     let ident = &input.ident;
@@ -27,7 +25,7 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
             None
         }
     };
-    quote!{
+    quote! {
         #[allow(unused_assignments)]
         impl crate::XmlDeserialize for #ident {
             fn deserialize<B: std::io::BufRead>(
@@ -51,14 +49,12 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 if is_empty {} else {
                     loop {
                         match reader.read_event(&mut buf) {
-                            Ok(Event::End(e)) => {
-                                if e.name() == tag {
-                                    break
-                                }
+                            Ok(Event::End(e)) if e.name() == tag => {
+                                break
                             },
+                            #sfc_branch
                             #child_branches
                             #text_branch
-                            #sfc_branch
                             Ok(Event::Eof) => break,
                             Err(_) => break,
                             _ => {},
@@ -77,7 +73,7 @@ fn get_result(fields: &[Field]) -> proc_macro2::TokenStream {
     let branch = fields.iter().map(|f| {
         let ident = f.original.ident.as_ref().unwrap();
         if f.is_required() {
-            quote!{
+            quote! {
                 #ident: #ident.unwrap(),
             }
         } else {
@@ -86,7 +82,7 @@ fn get_result(fields: &[Field]) -> proc_macro2::TokenStream {
             }
         }
     });
-    quote!{#(#branch)*}
+    quote! {#(#branch)*}
 }
 
 fn get_fields_init(fields: &FieldsSummary) -> proc_macro2::TokenStream {
@@ -96,7 +92,7 @@ fn get_fields_init(fields: &FieldsSummary) -> proc_macro2::TokenStream {
         match &f.default {
             Some(p) => {
                 quote! {let mut #ident = #p();}
-            },
+            }
             None => {
                 if let Some(opt) = f.generic.get_opt() {
                     quote! {
@@ -105,7 +101,7 @@ fn get_fields_init(fields: &FieldsSummary) -> proc_macro2::TokenStream {
                 } else {
                     quote! {let mut #ident = Option::<#ty>::None;}
                 }
-            },
+            }
         }
     });
     let children_inits = fields.children.iter().map(|f| {
@@ -114,83 +110,81 @@ fn get_fields_init(fields: &FieldsSummary) -> proc_macro2::TokenStream {
         match &f.default {
             Some(p) => {
                 quote! {let mut #ident = #p;}
-            },
-            None => {
-                match f.generic {
-                    Generic::Vec(v) => quote!{
-                        let mut #ident = Vec::<#v>::new();
-                    },
-                    Generic::Opt(opt) => quote!{
-                        let mut #ident = Option::<#opt>::None;
-                    },
-                    Generic::None => quote!{
-                        let mut #ident = Option::<#ty>::None;
-                    },
-                }
+            }
+            None => match f.generic {
+                Generic::Vec(v) => quote! {
+                    let mut #ident = Vec::<#v>::new();
+                },
+                Generic::Opt(opt) => quote! {
+                    let mut #ident = Option::<#opt>::None;
+                },
+                Generic::None => quote! {
+                    let mut #ident = Option::<#ty>::None;
+                },
             },
         }
     });
     let text_init = match &fields.text {
         Some(f) => {
             let ident = f.original.ident.as_ref().unwrap();
-            let ty = &f.original.ty;
+            let ty = match f.generic {
+                Generic::Vec(_) => panic!("text element should not be Vec<T>"),
+                Generic::Opt(t) => t,
+                Generic::None => &f.original.ty,
+            };
+            // let ty = &f.original.ty;
             match &f.default {
-                Some(_) => {
-                    panic!("text element should not have default")
+                Some(e) => quote! {
+                        let mut #ident = #e();
                 },
                 None => quote! {
                     let mut #ident = Option::<#ty>::None;
                 },
             }
-        },
-        None => quote!{},
+        }
+        None => quote! {},
     };
-    let sfc_init = fields
-        .self_closed_children
-        .iter()
-        .map(|f| {
-            let ident = f.original.ident.as_ref().unwrap();
-            quote!{
-                let mut #ident = false;
-            }
+    let sfc_init = fields.self_closed_children.iter().map(|f| {
+        let ident = f.original.ident.as_ref().unwrap();
+        quote! {
+            let mut #ident = false;
+        }
     });
     quote! {
         #(#attrs_inits)*
-        #(#children_inits)*
         #(#sfc_init)*
+        #(#children_inits)*
         #text_init
     }
 }
 
 fn get_vec_init(children: &[Field]) -> proc_macro2::TokenStream {
-    let vec_inits= children
+    let vec_inits = children
         .iter()
         .filter(|c| c.generic.is_vec())
-        .map(|c| {
-            match &c.vec_size {
+        .map(|c| match &c.vec_size {
             Some(lit) => {
                 let vec_ty = &c.generic.get_vec().unwrap();
                 let ident = c.original.ident.as_ref().unwrap();
                 match lit {
                     syn::Lit::Str(_) => {
                         let path = container::parse_lit_into_expr_path(lit).unwrap();
-                        quote!{
+                        quote! {
                             #ident = Vec::<#vec_ty>::with_capacity(#path as usize);
                         }
-                    },
+                    }
                     syn::Lit::Int(i) => {
-                        quote!{
+                        quote! {
                             #ident = Vec::<#vec_ty>::with_capacity(#i);
                         }
-                    },
+                    }
                     _ => panic!(""),
                 }
-            },
+            }
             None => {
-                quote!{}
-            },
-        }
-    });
+                quote! {}
+            }
+        });
     quote! {
         #(#vec_inits)*
     }
@@ -198,7 +192,7 @@ fn get_vec_init(children: &[Field]) -> proc_macro2::TokenStream {
 
 fn sfc_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
     if fields.len() == 0 {
-        return quote!{}
+        return quote! {};
     }
     let mut idents = vec![];
     let mut tags = vec![];
@@ -212,15 +206,19 @@ fn sfc_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
         idents.push(ident);
     });
     quote! {
-        Ok(Event::Empty(s)) => {
-            match s.name() {
-                #(#tags => {#idents = true;})*
-                _ => {},
-            }
-        },
+        #(Ok(Event::Empty(__s)) if __s.name() == #tags => {
+            #idents = true;
+        })*
     }
+    // quote! {
+    //     Ok(Event::Empty(s)) => {
+    //         match s.name() {
+    //             #(#tags => {#idents = true;})*
+    //             _ => {},
+    //         }
+    //     },
+    // }
 }
-
 
 fn attr_match_branch(field: Field) -> proc_macro2::TokenStream {
     if !matches!(field.ty, EleType::Attr) {
@@ -236,35 +234,35 @@ fn attr_match_branch(field: Field) -> proc_macro2::TokenStream {
                 use crate::{XmlValue, XmlDeserialize};
                 let s = String::from_utf8(attr.value.into_iter().map(|c| *c).collect()).unwrap();
                 match #opt_ty::deserialize(&s) {
-                    Ok(v) => {
-                        #ident = Some(v);
+                    Ok(__v) => {
+                        #ident = Some(__v);
                     },
                     Err(_) => {
                         // If we used format! here. It would panic!.
                         // let err_msg = format!("xml value deserialize error: {:?} to {:?}", s, #t);
-                        panic!("deserialize failed")
+                        panic!("deserialize failed in attr opt")
                     },
                 }
             }
         }
     } else {
         let tt = if field.is_required() {
-            quote!{#ident = Some(v);}
+            quote! {#ident = Some(__v);}
         } else {
-            quote!{#ident = v;}
+            quote! {#ident = __v;}
         };
         quote! {
             #tag => {
                 use crate::{XmlValue, XmlDeserialize};
-                let s = String::from_utf8(attr.value.into_iter().map(|c| *c).collect()).unwrap();
-                match #t::deserialize(&s) {
-                    Ok(v) => {
+                let __s = String::from_utf8(attr.value.into_iter().map(|c| *c).collect()).unwrap();
+                match #t::deserialize(&__s) {
+                    Ok(__v) => {
                         #tt
                     },
                     Err(_) => {
                         // If we used format! here. It would panic!.
                         // let err_msg = format!("xml value deserialize error: {:?} to {:?}", s, #t);
-                        panic!("deserialize failed")
+                        panic!("deserialize failed in attr")
                     },
                 }
             },
@@ -277,23 +275,28 @@ fn text_match_branch(field: Field) -> proc_macro2::TokenStream {
         panic!("")
     }
     let ident = field.original.ident.as_ref().unwrap();
-    let t = &field.original.ty;
-    let tt = if field.is_required() {
-        quote!{#ident = Some(v);}
+    // let t = &field.original.ty;
+    let (t, is_opt) = match field.generic {
+        Generic::Vec(_) => panic!("text element should not be Vec<T>"),
+        Generic::Opt(ty) => (ty, true),
+        Generic::None => (&field.original.ty, false),
+    };
+    let tt = if field.is_required() || is_opt {
+        quote! {#ident = Some(__v);}
     } else {
-        quote!{#ident = v;}
+        quote! {#ident = __v;}
     };
     quote! {
-        Ok(Event::Text(s)) => {
+        Ok(Event::Text(__s)) => {
             use crate::{XmlValue, XmlDeserialize};
-            let r = s.unescape_and_decode(reader).unwrap();
-            match #t::deserialize(&r) {
-                Ok(v) => {
+            let __r = __s.unescape_and_decode(reader).unwrap();
+            match #t::deserialize(&__r) {
+                Ok(__v) => {
                     // #ident = v;
                     #tt
                 },
                 Err(_) => {
-                    panic!("deserialize failed")
+                    panic!("deserialize failed in text element")
                 }
             }
         },
@@ -302,9 +305,9 @@ fn text_match_branch(field: Field) -> proc_macro2::TokenStream {
 
 fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
     if fields.len() == 0 {
-        return quote!{}
+        return quote! {};
     }
-    let mut branches= vec![];
+    let mut branches = vec![];
     fields.iter().for_each(|f| {
         if !matches!(f.ty, EleType::Child) {
             panic!("")
@@ -316,40 +319,40 @@ fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
             Generic::Vec(vec_ty) => {
                 quote! {
                     #tag => {
-                        let ele = #vec_ty::deserialize(#tag, reader, s.attributes(), is_empty);
-                        #ident.push(ele);
+                        let __ele = #vec_ty::deserialize(#tag, reader, s.attributes(), is_empty);
+                        #ident.push(__ele);
                     }
                 }
-            },
+            }
             Generic::Opt(opt_ty) => {
                 quote! {
                     #tag => {
-                        let f = #opt_ty::deserialize(#tag, reader, s.attributes(), is_empty);
-                        #ident = Some(f);
+                        let __f = #opt_ty::deserialize(#tag, reader, s.attributes(), is_empty);
+                        #ident = Some(__f);
                     },
                 }
-            },
+            }
             Generic::None => {
                 let tt = if f.is_required() {
-                    quote!{
-                        #ident = Some(f);
+                    quote! {
+                        #ident = Some(__f);
                     }
                 } else {
-                    quote!{
-                        #ident = f;
+                    quote! {
+                        #ident = __f;
                     }
                 };
                 quote! {
                     #tag => {
-                        let f = #t::deserialize(#tag, reader, s.attributes(), is_empty);
+                        let __f = #t::deserialize(#tag, reader, s.attributes(), is_empty);
                         #tt
                     },
                 }
-            },
+            }
         };
         branches.push(branch);
     });
-    quote!{
+    quote! {
         Ok(Event::Empty(s)) => {
             let is_empty = true;
             match s.name() {

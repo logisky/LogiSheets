@@ -1,12 +1,12 @@
 use crate::message::{ApplyEdit, JoinEdit, ServerMessage};
+use actix::Recipient;
 use logisheets_protocols::message::EventSource;
 use logisheets_protocols::message::{
     client_send::ClientSendOneof, payload::PayloadOneof, CellInput, ClientSend, ColumnShift,
-    CreateBlock, DisplayRequest, LineShiftInBlock, MoveBlock, Payload, RowShift, SheetShift,
-    ShiftType, Transaction, SetColWidth, SetRowHeight
+    CreateBlock, DisplayRequest, LineShiftInBlock, MoveBlock, Payload, RowShift, SetColWidth,
+    SetRowHeight, SheetShift, ShiftType, Transaction,
 };
 use logisheets_protocols::serialize_client_message;
-use actix::Recipient;
 use std::str::Split;
 
 /// This module is used to simulate client message. It can be used in testing
@@ -59,7 +59,7 @@ pub fn build_apply_edit_binary(text: &str) -> Option<ApplyEdit> {
             Some(ClientSend {
                 event_source: Some(EventSource {
                     user_id,
-                    action_id: String::from("")
+                    action_id: String::from(""),
                 }),
                 file_id,
                 client_send_oneof: Some(ClientSendOneof::DisplayRequest(display_area)),
@@ -77,7 +77,7 @@ pub fn build_apply_edit_binary(text: &str) -> Option<ApplyEdit> {
             Some(ClientSend {
                 event_source: Some(EventSource {
                     user_id,
-                    action_id: String::from("")
+                    action_id: String::from(""),
                 }),
                 file_id,
                 client_send_oneof: Some(ClientSendOneof::Transaction(t)),
@@ -93,7 +93,7 @@ pub fn build_apply_edit_binary(text: &str) -> Option<ApplyEdit> {
             Some(ClientSend {
                 event_source: Some(EventSource {
                     user_id,
-                    action_id: String::from("")
+                    action_id: String::from(""),
                 }),
                 file_id,
                 client_send_oneof: Some(ClientSendOneof::Transaction(t)),
@@ -109,7 +109,7 @@ pub fn build_apply_edit_binary(text: &str) -> Option<ApplyEdit> {
             Some(ClientSend {
                 event_source: Some(EventSource {
                     user_id,
-                    action_id: String::from("")
+                    action_id: String::from(""),
                 }),
                 file_id,
                 client_send_oneof: Some(ClientSendOneof::Transaction(t)),
@@ -338,7 +338,7 @@ mod tests {
                 let cs = ClientSend {
                     event_source: Some(EventSource {
                         user_id: String::from("user"),
-                        action_id: String::from("")
+                        action_id: String::from(""),
                     }),
                     file_id: "file".to_string(),
                     client_send_oneof: Some(ClientSendOneof::Transaction(t)),
@@ -363,7 +363,7 @@ mod tests {
         let cs = ClientSend {
             event_source: Some(EventSource {
                 user_id: String::from("user"),
-                action_id: String::from("")
+                action_id: String::from(""),
             }),
             file_id: "file".to_string(),
             client_send_oneof: Some(ClientSendOneof::Transaction(t)),
@@ -383,7 +383,7 @@ mod tests {
         let cs = ClientSend {
             event_source: Some(EventSource {
                 user_id: String::from("user"),
-                action_id: String::from("")
+                action_id: String::from(""),
             }),
             file_id: "file".to_string(),
             client_send_oneof: Some(ClientSendOneof::DisplayRequest(display_request)),
@@ -414,7 +414,7 @@ mod tests {
         let cs = ClientSend {
             event_source: Some(EventSource {
                 user_id: String::from("user"),
-                action_id: String::from("")
+                action_id: String::from(""),
             }),
             file_id: "file".to_string(),
             client_send_oneof: Some(ClientSendOneof::Transaction(t)),
@@ -454,7 +454,7 @@ mod tests {
         let cs = ClientSend {
             event_source: Some(EventSource {
                 user_id: String::from("user"),
-                action_id: String::from("")
+                action_id: String::from(""),
             }),
             file_id: "file".to_string(),
             client_send_oneof: Some(ClientSendOneof::Transaction(t)),

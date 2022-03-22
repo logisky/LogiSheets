@@ -5,6 +5,7 @@ use syn::{Ident, Path};
 pub struct Symbol(&'static str);
 
 pub const WITH_NS: Symbol = Symbol("with_ns");
+pub const WITH_CUSTOM_NS: Symbol = Symbol("with_custom_ns");
 pub const XML_SERDE: Symbol = Symbol("xmlserde");
 pub const NAME: Symbol = Symbol("name");
 pub const TYPE: Symbol = Symbol("ty");

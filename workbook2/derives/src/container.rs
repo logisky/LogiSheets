@@ -1,37 +1,56 @@
-use crate::symbol::{XML_SERDE, NAME, SKIP_SERIALIZING, TYPE, VEC_SIZE, DEFAULT, WITH_NS};
-use syn::parse::{self, Parse};
+use crate::symbol::{
+    DEFAULT, NAME, SKIP_SERIALIZING, TYPE, VEC_SIZE, WITH_CUSTOM_NS, WITH_NS, XML_SERDE,
+};
 use proc_macro2::{Group, Span, TokenStream, TokenTree};
+use syn::parse::{self, Parse};
 use syn::Meta::List;
 use syn::Meta::NameValue;
 use syn::Meta::Path;
-use syn::NestedMeta::Meta;
 use syn::NestedMeta::Lit;
-
+use syn::NestedMeta::Meta;
 
 pub struct Container<'a> {
     pub fields: Vec<Field<'a>>,
     pub original: &'a syn::DeriveInput,
     pub with_ns: Option<syn::LitByteStr>,
+    pub custom_ns: Vec<(syn::LitByteStr, syn::LitByteStr)>,
 }
 
 impl<'a> Container<'a> {
-    pub fn from_ast(
-        item: &'a syn::DeriveInput,
-        _derive: Derive,
-    ) -> Container<'a> {
+    pub fn from_ast(item: &'a syn::DeriveInput, _derive: Derive) -> Container<'a> {
         let mut with_ns = Option::<syn::LitByteStr>::None;
+        let mut custom_ns = Vec::<(syn::LitByteStr, syn::LitByteStr)>::new();
         for meta_item in item
             .attrs
             .iter()
             .flat_map(|attr| get_xmlserde_meta_items(attr))
-            .flatten() {
+            .flatten()
+        {
             match meta_item {
                 Meta(NameValue(m)) if m.path == WITH_NS => {
                     if let Ok(s) = get_lit_byte_str(&m.lit) {
                         with_ns = Some(s.clone());
                     }
-                },
-                _ => panic!("unexpected attr")
+                }
+                Meta(List(l)) if l.path == WITH_CUSTOM_NS => {
+                    let mut iter = l.nested.into_iter();
+                    let first = iter
+                        .next()
+                        .expect("with_custom_ns should at least 2 arguments");
+                    let second = iter
+                        .next()
+                        .expect("with_custom_ns should at least 2 arguments");
+                    match (first, second) {
+                        (Lit(f), Lit(s)) => {
+                            let f = get_lit_byte_str(&f).unwrap().clone();
+                            let s = get_lit_byte_str(&s).unwrap().clone();
+                            custom_ns.push((f, s));
+                        }
+                        _ => panic!(r#"with_custom_ns(b"r", b"ns")"#),
+                    }
+                }
+                // Meta(List(l)) => {},
+                _ => panic!("unexpected attr"),
             }
         }
         match &item.data {
@@ -43,12 +62,13 @@ impl<'a> Container<'a> {
                     .filter(|f| f.is_some())
                     .map(|f| f.unwrap())
                     .collect::<Vec<_>>();
-                    Container {
-                        fields,
-                        original: item,
-                        with_ns,
-                    }
-            },
+                Container {
+                    fields,
+                    original: item,
+                    with_ns,
+                    custom_ns,
+                }
+            }
             syn::Data::Enum(_) => panic!("Only support struct type, enum is found"),
             syn::Data::Union(_) => panic!("Only support struct type, union is found"),
         }
@@ -70,18 +90,15 @@ impl<'a> FieldsSummary<'a> {
             attrs: vec![],
             self_closed_children: vec![],
         };
-        fields.into_iter().for_each(|f| {
-            match f.ty {
-                EleType::Attr => result.attrs.push(f),
-                EleType::Child => result.children.push(f),
-                EleType::Text => result.text = Some(f),
-                EleType::SelfClosedChild => result.self_closed_children.push(f),
-            }
+        fields.into_iter().for_each(|f| match f.ty {
+            EleType::Attr => result.attrs.push(f),
+            EleType::Child => result.children.push(f),
+            EleType::Text => result.text = Some(f),
+            EleType::SelfClosedChild => result.self_closed_children.push(f),
         });
         result
     }
 }
-
 
 pub struct Field<'a> {
     pub ty: EleType,
@@ -100,18 +117,19 @@ impl<'a> Field<'a> {
         let mut default = Option::<syn::ExprPath>::None;
         let mut ty = Option::<EleType>::None;
         let mut vec_size = Option::<syn::Lit>::None;
-        let generic= get_generics(&f.ty);
+        let generic = get_generics(&f.ty);
         for meta_item in f
             .attrs
             .iter()
             .flat_map(|attr| get_xmlserde_meta_items(attr))
-            .flatten() {
+            .flatten()
+        {
             match meta_item {
                 Meta(NameValue(m)) if m.path == NAME => {
                     if let Ok(s) = get_lit_byte_str(&m.lit) {
                         name = Some(s.clone());
                     }
-                },
+                }
                 Meta(NameValue(m)) if m.path == TYPE => {
                     if let Ok(s) = get_lit_str(&m.lit) {
                         let t = match s.value().as_str() {
@@ -122,17 +140,14 @@ impl<'a> Field<'a> {
                             _ => panic!(""),
                         };
                         ty = Some(t);
-
-                    }
-                },
-                Meta(NameValue(m)) if m.path == VEC_SIZE => {
-                    match m.lit {
-                        syn::Lit::Str(_) | syn::Lit::Int(_) => {
-                            vec_size = Some(m.lit);
-                        },
-                        _ => panic!(),
                     }
                 }
+                Meta(NameValue(m)) if m.path == VEC_SIZE => match m.lit {
+                    syn::Lit::Str(_) | syn::Lit::Int(_) => {
+                        vec_size = Some(m.lit);
+                    }
+                    _ => panic!(),
+                },
                 Meta(Path(word)) if word == SKIP_SERIALIZING => {
                     skip_serializing = true;
                 }
@@ -147,7 +162,6 @@ impl<'a> Field<'a> {
                 }
                 Lit(_) => unimplemented!(),
             }
-
         }
         if ty.is_none() {
             None
@@ -203,16 +217,12 @@ fn get_xmlserde_meta_items(attr: &syn::Attribute) -> Result<Vec<syn::NestedMeta>
     }
 
     match attr.parse_meta() {
-        Ok(List(meta)) => {
-            Ok(meta.nested.into_iter().collect())
-        },
+        Ok(List(meta)) => Ok(meta.nested.into_iter().collect()),
         Ok(_) => {
             Err(())
             // panic!("expected #[xmlserde(...)]")
-        },
-        Err(_) => {
-            Err(())
         }
+        Err(_) => Err(()),
     }
 }
 
@@ -232,7 +242,6 @@ fn get_lit_str<'a>(lit: &'a syn::Lit) -> Result<&'a syn::LitStr, ()> {
     }
 }
 
-
 pub fn parse_lit_into_expr_path(lit: &syn::Lit) -> Result<syn::ExprPath, ()> {
     let string = get_lit_str(lit)?;
     match parse_lit_str(string) {
@@ -241,7 +250,7 @@ pub fn parse_lit_into_expr_path(lit: &syn::Lit) -> Result<syn::ExprPath, ()> {
             let _ = format!("failed to parse path: {:?}", string.value());
             Err(())
             // panic!("{:?}", msg)
-        },
+        }
     }
 }
 
@@ -292,10 +301,10 @@ fn get_generics(t: &syn::Type) -> Generic {
                                         Generic::None
                                     }
                                 }
-                            },
+                            }
                             _ => Generic::None,
                         }
-                    } else if seg.ident.to_string() == "Option"{
+                    } else if seg.ident.to_string() == "Option" {
                         match &seg.arguments {
                             syn::PathArguments::AngleBracketed(a) => {
                                 let args = &a.args;
@@ -308,16 +317,16 @@ fn get_generics(t: &syn::Type) -> Generic {
                                         Generic::None
                                     }
                                 }
-                            },
+                            }
                             _ => Generic::None,
                         }
                     } else {
                         Generic::None
                     }
-                },
+                }
                 None => Generic::None,
             }
-        },
+        }
         _ => Generic::None,
     }
 }
@@ -332,7 +341,7 @@ impl<'a> Generic<'a> {
     pub fn is_vec(&self) -> bool {
         match self {
             Generic::Vec(_) => true,
-            _ => false
+            _ => false,
         }
     }
 

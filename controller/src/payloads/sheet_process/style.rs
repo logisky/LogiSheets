@@ -1,5 +1,5 @@
 use xlrs_workbook::complex_types::Color;
-use xlrs_workbook::simple_types::{StPatternType, StUnderlineValues, StBorderStyle};
+use xlrs_workbook::simple_types::{StBorderStyle, StPatternType, StUnderlineValues};
 
 #[derive(Debug, Clone)]
 pub enum FontPayloadType {
