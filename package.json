@@ -36,7 +36,9 @@
     "typescript": "^4.5.5",
     "web-vitals": "^2.1.4",
     "webpack": "^5.69.0",
-    "webpack-dev-server": "^4.7.4"
+    "webpack-dev-server": "^4.7.4",
+    "logisheets-fc": "./src/wasms/fc/pkg",
+    "logisheets-server": "./src/wasms/server/pkg"
   },
   "scripts": {
     "test": "jest",

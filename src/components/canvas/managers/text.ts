@@ -5,7 +5,7 @@ import { StandardKeyboardEvent } from 'common/events'
 import { useRef, useState } from 'react'
 import { shallowCopy } from 'common'
 import { StartCellEvent } from './start-cell'
-import initFc, { formula_check } from '../../../wasms/fc/pkg'
+import initFc, { formula_check } from 'logisheets-fc'
 import { isFormula } from 'core/snippet'
 
 export const useText = () => {
