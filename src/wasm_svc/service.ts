@@ -16,7 +16,7 @@ import initWasm, {
     transaction_start,
     undo,
     ReadFileResult,
-} from '../wasms/server/pkg'
+} from 'logisheets-server'
 import { Calculator, Executor } from './calculator'
 import { TransactionCode, TransactionEndResult } from './jsvalues'
 
@@ -72,13 +72,17 @@ export class Service {
     private _execOpenFile(req: OpenFile): ServerSend {
         const r = read_file(req.name, req.content)
         if (r === ReadFileResult.Ok) {
-            return {serverSendOneof: {
-                $case: "sheetUpdated",
-                sheetUpdated: {index: [], eventSource: {
-                    userId: "1",
-                    actionId: "1",
-                }},
-            }}
+            return {
+                serverSendOneof: {
+                    $case: "sheetUpdated",
+                    sheetUpdated: {
+                        index: [], eventSource: {
+                            userId: "1",
+                            actionId: "1",
+                        }
+                    },
+                }
+            }
         }
         throw Error('read file Error!')
     }
