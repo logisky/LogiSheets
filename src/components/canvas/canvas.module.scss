@@ -15,9 +15,6 @@ $x-scrollbar-height: 16px;
   width: calc(100% - #{$y-scrollbar-width});
   height: calc(100% - #{$x-scrollbar-height});
 }
-.selector {
-  z-index: 100;
-}
 .middle-y-scrollbar {
   position: absolute;
   top: 0;

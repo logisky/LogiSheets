@@ -1,69 +1,121 @@
-import { getCell } from '../defs'
-import { MouseEvent, useState } from 'react'
-import { SelectorProps } from 'components/selector'
+import { useRef, useState } from 'react'
+import { getPosition, getSelector } from './selector'
+import { Range } from 'core/standable'
+import { AttributeName } from 'common/const'
+import { match, Cell } from '../defs'
+import { Payload, CellInputBuilder } from 'api'
+import { DATA_SERVICE } from 'core/data'
+interface _Selector {
+    readonly canvas: HTMLCanvasElement
+    readonly start: Cell
+    readonly end?: Cell
+}
 export const useDnd = () => {
-    const [x, setX] = useState<number>(-1)
-    const [y, setY] = useState<number>(-1)
-    const [width, setWidth] = useState<number>(-1)
-    const [height, setHeight] = useState<number>(-1)
-    const [draggingX, setDraggingX] = useState<number>(-1)
-    const [draggingY, setDraggingY] = useState<number>(-1)
-    const [isDragging, setIsDragging] = useState<boolean>(false)
-    const [_mousedown, setMouseDown] = useState<{ x: number, y: number }>()
-
-    const onMouseDown = (e: MouseEvent) => {
-        setIsDragging(true)
-        setMouseDown({ x: e.clientX, y: e.clientY })
-        return false
+    const [promptReplace, setPrompReplace] = useState(false)
+    const [range, setRange] = useState<Range>()
+    const [dragging, setDragging] = useState<Range>()
+    const mousedownStart = useRef<{ x: number, y: number }>()
+    const _selector = useRef<_Selector>()
+    const _endSelector = useRef<_Selector>()
+    const onReplace = () => {
+        const startSelector = _selector.current
+        const endSelector = _endSelector.current
+        if (!startSelector || !endSelector)
+            return
+        const payloads: Payload[] = []
+        const startVisibleCells = startSelector.start.visibleCells(startSelector.end)
+        startVisibleCells.forEach(c => {
+            payloads.push({
+                payloadOneof: {
+                    $case: 'cellInput',
+                    cellInput: {
+                        col: c.col,
+                        row: c.row,
+                        input: '',
+                        sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
+                    }
+                }
+            })
+        })
+        endSelector.start.visibleCells(endSelector.end).forEach((c, i) => {
+            const { row, col } = startVisibleCells[i]
+            const input = DATA_SERVICE.sheetSvc.getCell(row, col)?.getText()
+            payloads.push({
+                payloadOneof: {
+                    $case: 'cellInput',
+                    cellInput: {
+                        col: c.col,
+                        row: c.row,
+                        input: input ?? '',
+                        sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
+                    }
+                }
+            })
+        })
+        DATA_SERVICE.backend.sendTransaction(payloads)
+    }
+    const _setRange = (selector?: _Selector) => {
+        _selector.current = selector
+        const sel = selector ? getSelector(selector.canvas, selector.start, selector.end) : undefined
+        const newRange = sel ? getPosition(sel) : undefined
+        setRange(newRange)
+    }
+    const _setEnd = (selector?: { canvas: HTMLCanvasElement, start: Cell, end?: Cell }) => {
+        _endSelector.current = selector
+        const sel = selector ?
+            getSelector(selector.canvas, selector.start, selector.end) : undefined
+        const draggingRange = sel ? getPosition(sel) : undefined
+        setDragging(draggingRange)
     }
 
-    const onMouseMove = (e: MouseEvent, canvas: HTMLCanvasElement) => {
-        if (!_mousedown)
-            return
-        const newX = x + e.clientX - _mousedown.x
-        const newY = y + e.clientY - _mousedown.y
-        const cell = getCell(newX, newY)
-        const { width: canvasWidth, height: canvasHeight } = canvas.getBoundingClientRect()
-        if (cell.type !== 'Cell')
-            return
-        if (newX + width > canvasWidth)
-            return
-        if (newY + height > canvasHeight)
-            return
-        setDraggingX(cell.position.startCol)
-        setDraggingY(cell.position.startRow)
+    const onMouseDown = (e: MouseEvent) => {
+        const target = e.target as HTMLDivElement
+        const isHandle = target.getAttribute(AttributeName.SELECTOR_DND_HANDLE)
+        if (isHandle === null) {
+            mousedownStart.current = undefined
+            return false
+        }
+        mousedownStart.current = { x: e.clientX, y: e.clientY }
+        return true
+    }
+
+    const onMouseMove = (e: MouseEvent, canvas: HTMLCanvasElement, startCell: Cell, oldEnd: Cell) => {
+        if (!mousedownStart.current)
+            return false
+        const moved = { x: e.clientX - mousedownStart.current.x, y: e.clientY - mousedownStart.current.y }
+        if (startCell.type !== 'Cell')
+            return true
+        const endCell = match(oldEnd.position.startCol + moved.x, oldEnd.position.startRow + moved.y, canvas)
+        if (endCell.type !== 'Cell')
+            return true
+        _setEnd({ canvas, start: startCell, end: endCell })
+        return true
     }
 
     const onMouseUp = () => {
-        clean()
+        _setEnd(undefined)
     }
     const clean = () => {
-        setMouseDown(undefined)
-        setIsDragging(false)
-        setDraggingX(-1)
-        setDraggingY(-1)
+        mousedownStart.current = undefined
+        _setRange(undefined)
     }
-    const selectorChange = (selector?: SelectorProps) => {
+    const selectorChange = (selector?: _Selector) => {
         if (!selector) {
             clean()
             return
         }
-        setX(selector.x)
-        setY(selector.y)
-        setWidth(selector.width + selector.borderLeftWidth + selector.borderRightWidth)
-        setHeight(selector.height + selector.borderBottomWidth + selector.borderTopWidth)
+        _setRange(selector)
     }
     return {
-        x,
-        y,
-        width,
-        height,
-        draggingX,
-        draggingY,
-        isDragging,
+        _endSelector,
+        clean,
+        range,
+        dragging,
         onMouseDown,
         onMouseMove,
         onMouseUp,
         selectorChange,
+        promptReplace,
+        setPrompReplace,
     }
 }

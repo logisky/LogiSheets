@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { SelectedCell } from './events'
 import { Subscription, Subject } from 'rxjs'
 import { debounceTime } from 'rxjs/operators'
@@ -25,11 +24,11 @@ import { Cell, match } from './defs'
 import {
     ScrollbarComponent
 } from 'components/scrollbar'
-import { createSyntheticEvent, EventType, on } from 'common/events'
+import { EventType, on } from 'common/events'
 import { DATA_SERVICE } from 'core/data'
 import { ContextmenuComponent } from './contextmenu'
 import { SelectorComponent } from 'components/selector'
-import {ResizerComponent} from 'components/resize'
+import { ResizerComponent } from 'components/resize'
 import { BlurEvent, TextContainerComponent } from 'components/textarea'
 import { DndComponent } from 'components/dnd'
 import { InvalidFormulaComponent } from './invalid-formula'
@@ -72,10 +71,21 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             // resizer manager依赖viewRange
             resizerMng.init()
         }))
+        // 当前单元格
+        subs.add(startCellMng.startCellEvent$.current.subscribe(e => {
+            selectorMng.startCellChange(e)
+            textMng.startCellChange(e)
+            if (e === undefined || e.same)
+                return
+            if (e.cell.type !== 'Cell')
+                return
+            const { startRow: row, startCol: col } = e.cell.coodinate
+            selectedCell$({ row, col })
+        }))
         return () => {
             subs.unsubscribe()
         }
-    }, [])
+    }, [renderMng.current.rendered$])
     // 这里需要获取最新的state，所以useeffect不能加参数
     useEffect(() => {
         const subs = new Subscription()
@@ -89,19 +99,6 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         }
     })
 
-    // 当前单元格
-    useEffect(() => {
-        const e = startCellMng.startCellEvent
-        selectorMng.startCellChange(e)
-        textMng.startCellChange(e)
-        if (e === undefined || e.same)
-            return
-        if (e.cell.type !== 'Cell')
-            return
-        const { startRow: row, startCol: col } = e.cell.coodinate
-        selectedCell$({ row, col })
-    }, [startCellMng.startCellEvent])
-
     // 初始化
     useEffect(() => {
         selectorMng.init(canvasEl.current!)
@@ -112,7 +109,12 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     }, [canvasEl])
 
     useEffect(() => {
-        dndMng.selectorChange(selectorMng.selector)
+        if (selectorMng.startCell)
+            dndMng.selectorChange({
+                canvas: canvasEl.current!,
+                start: selectorMng.startCell,
+                end: selectorMng.endCell,
+            })
     }, [selectorMng.selector])
 
     // 监听用户开始输入
@@ -129,10 +131,11 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     }, [scrollbarMng.xScrollbarAttr, scrollbarMng.yScrollbarAttr])
 
     const onMousedown = async (e: MouseEvent) => {
-        const mousedown = async (e: MouseEvent) => {
+        e.stopPropagation()
+        e.preventDefault()
+        const mousedown = async () => {
             const checked = await textMng.checkFormula()
             if (!checked) {
-                e.preventDefault()
                 focus$.current.next()
                 return
             }
@@ -142,13 +145,12 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             const isResize = resizerMng.mousedown(e.nativeEvent, canvasEl.current!)
             if (isResize)
                 return
-            const isDnd = dndMng.onMouseDown(e)
+            const isDnd = dndMng.onMouseDown(e.nativeEvent)
             if (isDnd)
                 return
             startCellMng.mousedown(e, matchCell, canvasEl.current!)
-            e.stopPropagation()
         }
-        mousedown(e)
+        mousedown()
         const sub = new Subscription()
         sub.add(on(window, EventType.MOUSE_UP).subscribe(() => {
             dndMng.onMouseUp()
@@ -157,13 +159,16 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         }))
         sub.add(on(window, EventType.MOUSE_MOVE).subscribe(mme => {
             mme.preventDefault()
-            const mouseevent = createSyntheticEvent(mme) as MouseEvent
+            const startCell = match(mme.clientX, mme.clientY, canvasEl.current!)
             const isResize = resizerMng.mousemove(mme)
             if (isResize)
                 return
-            if (!dndMng.isDragging)
-                selectorMng.onMouseMove(mme, canvasEl.current!)
-            dndMng.onMouseMove(mouseevent, canvasEl.current!)
+            if (startCellMng.startCell.current?.equals(startCell) === false) {
+                const isDnd = dndMng.onMouseMove(mme, canvasEl.current!, startCell, selectorMng.endCell ?? startCell)
+                if (isDnd)
+                    return
+            }
+            selectorMng.onMouseMove(startCell)
         }))
     }
 
@@ -220,11 +225,9 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         >你的浏览器不支持canvas，请升级浏览器</canvas>
         {contextmenuOpen && contextMenuEl ? contextMenuEl : null}
         {selectorMng.selector ? (
-            <div className={styles.selector}>
-                <SelectorComponent
-                    {...selectorMng.selector}
-                ></SelectorComponent>
-            </div>
+            <SelectorComponent
+                {...selectorMng.selector}
+            ></SelectorComponent>
         ) : null}
         <ScrollbarComponent
             {...scrollbarMng.xScrollbarAttr}
@@ -243,14 +246,14 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
                 focus$={focus$.current}
             ></TextContainerComponent>
             : null}
-        {selectorMng.selector ? <DndComponent
-            mousedown={dndMng.onMouseDown}
-            x={dndMng.x}
-            y={dndMng.y}
-            width={dndMng.width}
-            height={dndMng.height}
-            draggingX={dndMng.draggingX}
-            draggingY={dndMng.draggingY}
+        {dndMng.range ? <DndComponent
+            dragging={dndMng.dragging !== undefined}
+            x={dndMng.range.startCol}
+            y={dndMng.range.startRow}
+            width={dndMng.range.width}
+            height={dndMng.range.height}
+            draggingX={dndMng.dragging?.startCol}
+            draggingY={dndMng.dragging?.startRow}
         ></DndComponent> : null}
         <DialogComponent
             content={<InvalidFormulaComponent
@@ -273,8 +276,8 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         }
         {
             resizerMng.resizers.map((resizer, i) => {
-                const {startCol: x, startRow: y, width, height} = resizer.range
-                const {isRow} = resizer
+                const { startCol: x, startRow: y, width, height } = resizer.range
+                const { isRow } = resizer
                 return <ResizerComponent
                     hoverText={resizerMng.hoverText}
                     x={!isRow ? x : 0}

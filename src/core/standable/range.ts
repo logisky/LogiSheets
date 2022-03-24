@@ -40,6 +40,16 @@ export class Range {
         this.#endCol = endCol
         return this
     }
+    setStartEndRow(row: number) {
+        this.#startRow = row
+        this.#endRow = row
+        return this
+    }
+    setStartEndCol(col: number) {
+        this.#startCol = col
+        this.#endCol = col
+        return this
+    }
     #startRow = 0
     #startCol = 0
     #endRow = 0

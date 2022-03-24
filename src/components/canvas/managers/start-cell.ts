@@ -1,9 +1,10 @@
 import { Cell } from '../defs'
 import { DATA_SERVICE, RenderCell } from 'core/data'
-import { MouseEvent, useRef, useState } from 'react'
+import { MouseEvent, useRef } from 'react'
 import { Buttons } from 'common'
 import { SelectorProps } from 'components/selector'
 import { Range } from 'core/standable'
+import { Subject } from 'rxjs'
 export type StartCellType = 'mousedown' | 'contextmenu' | 'render' | 'unknown' | 'scroll'
 export class StartCellEvent {
     constructor(
@@ -16,7 +17,7 @@ export class StartCellEvent {
 
 export const useStartCell = () => {
     const startCell = useRef<Cell>()
-    const [startCellEvent, setStartCellEvent] = useState<StartCellEvent>()
+    const startCellEvent$ = useRef(new Subject<StartCellEvent | undefined>())
 
     const scroll = () => {
         const oldStartCell = startCell.current
@@ -33,14 +34,14 @@ export const useStartCell = () => {
         else
             return
         if (!renderCell) {
-            setStartCellEvent(undefined)
+            startCellEvent$.current.next(undefined)
             return
         }
         const newStartCell = new Cell(oldStartCell.type).copyByRenderCell(renderCell)
         startCell.current = newStartCell
         const e = new StartCellEvent(newStartCell, 'scroll')
         e.same = true
-        setStartCellEvent(e)
+        startCellEvent$.current.next(e)
     }
 
     const canvasChange = () => {
@@ -59,8 +60,8 @@ export const useStartCell = () => {
         const cell = new Cell(oldStartCell?.type ?? 'unknown')
         const event = new StartCellEvent(cell, 'render')
         event.same = false
-        setStartCellEvent(event)
         startCell.current = cell
+        startCellEvent$.current.next(event)
     }
     const mousedown = (e: MouseEvent, matchCell: Cell, canvas: HTMLCanvasElement, selector?: SelectorProps) => {
         const buttons = e.buttons
@@ -80,10 +81,11 @@ export const useStartCell = () => {
         if (startCell.current && matchCell.equals(startCell.current))
             event.same = true
         startCell.current = matchCell
-        setStartCellEvent(event)
+        startCellEvent$.current.next(event)
     }
     return {
-        startCellEvent,
+        startCell,
+        startCellEvent$,
         scroll,
         canvasChange,
         mousedown,
