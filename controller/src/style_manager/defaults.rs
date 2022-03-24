@@ -1,54 +1,47 @@
-use xlrs_workbook::complex_types::{Color, FontFamily, FontName, FontScheme};
-use xlrs_workbook::simple_types::{StFontFamily, StFontScheme, StPatternType};
-use xlrs_workbook::styles::Font;
-use xlrs_workbook::{complex_types::FontSize, styles::*};
+use logisheets_workbook::prelude::*;
 
-pub fn get_init_font() -> Font {
-    Font {
-        b: None,
-        i: None,
-        u: None,
-        color: Some(Color {
+pub fn get_init_font() -> CtFont {
+    CtFont {
+        bold: false,
+        italic: false,
+        underline: None,
+        color: Some(CtColor {
             auto: None,
             indexed: None,
             rgb: None,
             theme: Some(1),
             tint: 0_f64,
         }),
-        sz: Some(FontSize { val: 11. }),
-        name: Some(FontName {
+        sz: Some(CtFontSize { val: 11. }),
+        name: Some(CtFontName {
             val: String::from("等线"),
         }),
         charset: None,
-        family: Some(FontFamily {
-            val: StFontFamily::Swiss,
+        family: Some(CtFontFamily {
+            val: 2, // Swiss
         }),
-        strike: None,
-        outline: None,
-        shadow: None,
-        condense: None,
-        extend: None,
+        strike: false,
+        outline: false,
+        shadow: false,
+        condense: false,
+        extend: false,
         vert_align: None,
-        scheme: Some(FontScheme {
-            val: StFontScheme::Type::Minor,
+        scheme: Some(CtFontScheme {
+            val: StFontScheme::Minor,
         }),
-        ext_lst: None,
     }
 }
 
-pub fn get_init_fill() -> Fill {
-    Fill {
-        pattern_fill: Some(PatternFill {
-            fg_color: None,
-            bg_color: None,
-            pattern_type: Some(StPatternType::Type::None),
-        }),
-        gradient_fill: None,
-    }
+pub fn get_init_fill() -> CtFill {
+    CtFill::PatternFill(CtPatternFill {
+        fg_color: None,
+        bg_color: None,
+        pattern_type: Some(StPatternType::None),
+    })
 }
 
-pub fn get_init_border() -> Border {
-    Border {
+pub fn get_init_border() -> CtBorder {
+    CtBorder {
         left: None,
         right: None,
         top: None,

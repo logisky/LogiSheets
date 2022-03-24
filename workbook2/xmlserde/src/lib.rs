@@ -2,6 +2,8 @@
 extern crate logiutils;
 #[macro_use]
 extern crate derives;
+#[macro_use]
+extern crate serde;
 
 macro_rules! xml_serde_enum {
     (

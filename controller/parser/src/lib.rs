@@ -143,7 +143,7 @@ impl Parser {
                 }
             }
             Rule::string_constant => {
-                let pure = build_string_constant(pair, &mut |t| context.fetch_text_id(t));
+                let pure = build_string_constant(pair);
                 ast::Node {
                     pure,
                     bracket: false,
@@ -304,13 +304,9 @@ fn build_error(pair: Pair<Rule>) -> ast::PureNode {
     ast::PureNode::Value(ast::Value::Error(error))
 }
 
-fn build_string_constant<T>(pair: Pair<Rule>, text_id_fetcher: &mut T) -> ast::PureNode
-where
-    T: FnMut(&String) -> TextId,
-{
+fn build_string_constant(pair: Pair<Rule>) -> ast::PureNode {
     let v = pair.as_str().trim_matches('"').to_string();
-    let id = (text_id_fetcher)(&v);
-    ast::PureNode::Value(ast::Value::Text(id))
+    ast::PureNode::Value(ast::Value::Text(v))
 }
 
 fn build_numerical_constant(pair: Pair<Rule>) -> ast::PureNode {

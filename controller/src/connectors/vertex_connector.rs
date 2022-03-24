@@ -13,7 +13,7 @@ use controller_base::{
 use parser::context::ContextTrait as ParserTrait;
 
 use crate::container::DataContainer;
-use crate::external_links::ExternalLinksManager;
+use crate::ext_book_manager::ExtBooksManager;
 use crate::id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager};
 use crate::navigator::Navigator;
 use crate::vertex_manager::context::{ContextTrait, GetDeletedCellsTrait};
@@ -33,7 +33,7 @@ pub struct VertexConnector<'a> {
     pub name_id_manager: &'a mut NameIdManager,
     pub id_navigator: &'a mut Navigator,
     pub idx_navigator: &'a mut Navigator,
-    pub external_links_manager: &'a mut ExternalLinksManager,
+    pub external_links_manager: &'a mut ExtBooksManager,
 }
 
 impl<'a> VertexConnector<'a> {

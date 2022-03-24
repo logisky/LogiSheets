@@ -1,5 +1,5 @@
 use crate::{
-    external_links::ExternalLinksManager,
+    ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
 };
@@ -10,7 +10,7 @@ pub struct IdFetcher<'a> {
     pub text_id_manager: &'a mut TextIdManager,
     pub func_id_manager: &'a mut FuncIdManager,
     pub name_id_manager: &'a mut NameIdManager,
-    pub external_links_manager: &'a mut ExternalLinksManager,
+    pub external_links_manager: &'a mut ExtBooksManager,
     pub navigator: &'a mut Navigator,
 }
 

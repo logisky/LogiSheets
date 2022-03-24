@@ -1,5 +1,5 @@
 use chrono::{DateTime, FixedOffset};
-use controller_base::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId, TextId};
+use controller_base::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId};
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,7 +79,7 @@ pub enum PostfixOperator {
 pub enum Value {
     Blank,
     Number(f64),
-    Text(TextId),
+    Text(String),
     Boolean(bool),
     Error(Error),
     Date(DateTime<FixedOffset>),

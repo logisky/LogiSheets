@@ -26,3 +26,4 @@ logisheets_math = {version = "0.1.1", path = "../math"}
 logiutils = {version = "0.1.0", path = "../logiutils"}
 parser = {version = "0.1.1", path = "./parser"}
 xlrs_workbook = {version = "0.1.0", path = "../workbook"}
+logisheets_workbook = {version = "0.1.0", path = "../workbook2"}

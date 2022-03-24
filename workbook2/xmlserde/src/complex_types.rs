@@ -1,6 +1,6 @@
 use super::defaults::*;
 use super::simple_types::*;
-#[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Default, Debug, Clone)]
 pub struct CtRst {
     #[xmlserde(name = b"t", ty = "child")]
     pub t: Option<PlainTextString>,
@@ -12,7 +12,7 @@ pub struct CtRst {
     pub phonetic_pr: Option<CtPhoneticPr>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Default, Debug, Clone)]
 pub struct CtRElt {
     #[xmlserde(name = b"rPr", ty = "child")]
     pub r_pr: Option<CtRPrElt>,
@@ -20,7 +20,7 @@ pub struct CtRElt {
     pub t: PlainTextString,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Default, Debug, Clone)]
 pub struct PlainTextString {
     #[xmlserde(ty = "text", default = "empty_string")]
     pub value: String,
@@ -34,7 +34,7 @@ pub struct PlainTextU32 {
     pub value: i32,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Default, Debug, Clone)]
 pub struct CtRPrElt {
     #[xmlserde(name = b"b", ty = "sfc")]
     pub bold: bool,
@@ -68,13 +68,15 @@ pub struct CtRPrElt {
     pub scheme: Option<CtFontScheme>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
+#[derive(
+    XmlSerialize, XmlDeserialize, Default, Debug, Hash, PartialEq, Eq, Clone, serde::Serialize,
+)]
 pub struct CtFontName {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: String,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtPhoneticPr {
     #[xmlserde(name = b"fontId", ty = "attr")]
     pub font_id: StFontId,
@@ -88,7 +90,7 @@ pub struct CtPhoneticPr {
     pub alignment: StPhoneticAlignment,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtPhoneticRun {
     #[xmlserde(name = b"t", ty = "child")]
     pub t: PlainTextString,
@@ -124,7 +126,7 @@ pub struct CtMruColors {
     pub color: Vec<CtColor>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, serde::Serialize)]
 pub struct CtColor {
     #[xmlserde(name = b"auto", ty = "attr")]
     pub auto: Option<bool>,
@@ -138,7 +140,7 @@ pub struct CtColor {
     pub tint: f64,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone, serde::Serialize)]
 pub struct CtBorder {
     #[xmlserde(name = b"left", ty = "child")]
     pub left: Option<CtBorderPr>,
@@ -162,7 +164,7 @@ pub struct CtBorder {
     pub outline: bool,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone, serde::Serialize)]
 pub struct CtBorderPr {
     #[xmlserde(name = b"color", ty = "child")]
     pub color: Option<CtColor>,
@@ -200,7 +202,7 @@ pub struct CtCellStyle {
     pub custom_builtin: Option<bool>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, Hash, PartialEq, Eq, serde::Serialize)]
 pub struct CtPatternFill {
     #[xmlserde(name = b"fgColor", ty = "child")]
     pub fg_color: Option<CtColor>,
@@ -210,7 +212,7 @@ pub struct CtPatternFill {
     pub pattern_type: Option<StPatternType>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, serde::Serialize)]
 pub struct CtGradientFill {
     #[xmlserde(name = b"stop", ty = "child")]
     pub stops: Vec<CtGradientStop>,
@@ -228,7 +230,7 @@ pub struct CtGradientFill {
     pub bottom: f64,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, serde::Serialize)]
 pub struct CtGradientStop {
     #[xmlserde(name = b"color", ty = "child")]
     pub color: CtColor,
@@ -244,7 +246,7 @@ pub struct CtFills {
     pub fills: Vec<CtFill>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize)]
 pub enum CtFill {
     PatternFill(CtPatternFill),
     GradientFill(CtGradientFill),
@@ -329,7 +331,7 @@ impl crate::XmlDeserialize for CtFill {
     }
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, PartialEq, Eq, Clone, Hash, serde::Serialize)]
 pub struct CtCellAlignment {
     #[xmlserde(name = b"horizontal", ty = "attr")]
     pub horizontal: Option<StHorizontalAlignment>,
@@ -341,8 +343,8 @@ pub struct CtCellAlignment {
     pub wrap_text: Option<bool>,
     #[xmlserde(name = b"indent", ty = "attr")]
     pub indent: Option<u32>,
-    #[xmlserde(name = b"relativeIdent", ty = "attr")]
-    pub relative_ident: Option<u32>,
+    #[xmlserde(name = b"relativeIndent", ty = "attr")]
+    pub relative_indent: Option<i32>,
     #[xmlserde(name = b"justifyLastLine", ty = "attr")]
     pub justify_last_line: Option<bool>,
     #[xmlserde(name = b"shrinkToFit", ty = "attr")]
@@ -351,7 +353,7 @@ pub struct CtCellAlignment {
     pub reading_order: Option<u32>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone, serde::Serialize)]
 pub struct CtCellProtection {
     #[xmlserde(name = b"locked", ty = "attr")]
     pub locked: Option<bool>,
@@ -359,7 +361,7 @@ pub struct CtCellProtection {
     pub hidden: Option<bool>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
 pub struct CtFontScheme {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: StFontScheme,
@@ -373,14 +375,14 @@ pub struct CtFonts {
     pub fonts: Vec<CtFont>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone, serde::Serialize)]
 pub struct CtFont {
     #[xmlserde(name = b"b", ty = "sfc")]
     pub bold: bool,
     #[xmlserde(name = b"i", ty = "sfc")]
     pub italic: bool,
     #[xmlserde(name = b"u", ty = "child")]
-    pub u: Option<CtUnderlineProperty>,
+    pub underline: Option<CtUnderlineProperty>,
     #[xmlserde(name = b"color", ty = "child")]
     pub color: Option<CtColor>,
     #[xmlserde(name = b"sz", ty = "child")]
@@ -407,31 +409,31 @@ pub struct CtFont {
     pub scheme: Option<CtFontScheme>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
 pub struct CtVerticalAlignFontProperty {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: StVerticalAlignRun,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, MapObj, Clone, serde::Serialize)]
 pub struct CtFontSize {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: f64,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
 pub struct CtIntProperty {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: i32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
 pub struct CtUnderlineProperty {
     #[xmlserde(name = b"val", ty = "attr", default = "st_underline_values_single")]
     pub val: StUnderlineValues,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
 pub struct CtFontFamily {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: StFontFamily,
@@ -1357,7 +1359,7 @@ pub struct CtSheetCalcPr {
     pub full_calc_on_load: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct CtSheetFormatPr {
     #[xmlserde(name = b"baseColWidth", ty = "attr", default = "default_8_u32")]
     pub base_col_width: u32,
@@ -1382,11 +1384,11 @@ pub struct CtSheetFormatPr {
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct CtCols {
     #[xmlserde(name = b"col", ty = "child")]
-    pub cols: Vec<Col>,
+    pub cols: Vec<CtCol>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
-pub struct Col {
+pub struct CtCol {
     #[xmlserde(name = b"min", ty = "attr")]
     pub min: u32,
     #[xmlserde(name = b"max", ty = "attr")]

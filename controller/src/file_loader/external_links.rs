@@ -11,7 +11,7 @@ use xlrs_workbook::{
 
 use crate::{
     calc_engine::calculator::calc_vertex::Value,
-    external_links::{ExtBook, ExternalLinksManager},
+    ext_book_manager::{ExtBook, ExtBooksManager},
     file_loader::utils::parse_cell,
     id_manager::BookIdManager,
 };
@@ -20,7 +20,7 @@ pub fn load_external_links<S, N>(
     links: ExternalLinks,
     sheet_id_fetcher: &mut S,
     name_id_fetcher: &mut N,
-) -> (ExternalLinksManager, HashMap<usize, ExtBookId>)
+) -> (ExtBooksManager, HashMap<usize, ExtBookId>)
 where
     S: FnMut(&str) -> SheetId,
     N: FnMut(ExtBookId, String) -> NameId,
@@ -47,11 +47,12 @@ where
                 None => {}
             }
         });
-    let manager = ExternalLinksManager {
-        book_id_manager,
-        books: ext_books,
-    };
-    (manager, m)
+    // let manager = ExtBooksManager {
+    //     book_id_manager,
+    //     books: ext_books,
+    // };
+    // (manager, m)
+    todo!()
 }
 
 fn get_ext_book_name(rels: RelationshipsPart) -> Option<String> {
@@ -99,13 +100,14 @@ where
             convert_data_set(d, sheet_id, &mut data_set);
         });
     }
-    ExtBook {
-        book_id,
-        book_name: name,
-        sheets,
-        defined_names,
-        data_set,
-    }
+    // ExtBook {
+    //     book_id,
+    //     book_name: name,
+    //     sheets,
+    //     defined_names,
+    //     data_set,
+    // }
+    todo!()
 }
 
 fn convert_data_set(

@@ -119,14 +119,11 @@ impl Default for Value {
 }
 
 impl Value {
-    pub fn from_ast_value<F>(v: &ast::Value, fetcher: &F) -> Self
-    where
-        F: Fn(&TextId) -> Option<String>,
-    {
+    pub fn from_ast_value(v: &ast::Value) -> Self {
         match v {
             ast::Value::Blank => Value::Blank,
             ast::Value::Number(f) => Value::Number(f.clone()),
-            ast::Value::Text(id) => Value::Text(fetcher(id).unwrap_or(String::from(""))),
+            ast::Value::Text(s) => Value::Text(s.clone()),
             ast::Value::Boolean(b) => Value::Boolean(b.clone()),
             ast::Value::Error(e) => Value::Error(e.clone()),
             ast::Value::Date(d) => Value::Date(d.clone()),

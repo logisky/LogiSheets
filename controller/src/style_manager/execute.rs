@@ -17,6 +17,7 @@ pub fn execute_style_payload(
         mut cell_xfs_manager,
         cell_style_xfs_manager,
         mut fill_manager,
+        num_fmt_manager,
     } = sm;
     let mut xf = cell_xfs_manager.get_data(id)?.clone();
     match payload {
@@ -51,13 +52,14 @@ pub fn execute_style_payload(
             fill_manager = new_manager;
         }
     };
-    let new_id = cell_xfs_manager.get_id(xf);
+    let new_id = cell_xfs_manager.get_id(&xf);
     let manager = StyleManager {
         font_manager,
         border_manager,
         cell_xfs_manager,
         cell_style_xfs_manager,
         fill_manager,
+        num_fmt_manager,
     };
     Some((manager, new_id))
 }

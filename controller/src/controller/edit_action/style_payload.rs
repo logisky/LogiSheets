@@ -1,7 +1,4 @@
-use xlrs_workbook::{
-    simple_types::{StBorderStyle, StUnderlineValues},
-    styles::{BorderPr, PatternFill},
-};
+use logisheets_workbook::prelude::*;
 
 #[derive(Debug)]
 pub struct StyleUpdate {
@@ -40,18 +37,18 @@ pub enum StyleUpdateType {
 
 #[derive(Debug)]
 pub struct SetFontUnderline {
-    pub underline: StUnderlineValues::Type,
+    pub underline: StUnderlineValues,
 }
 
 #[derive(Debug)]
 pub struct SetBorderPr {
     pub location: BorderLocation,
-    pub pr: BorderPr,
+    pub pr: CtBorderPr,
 }
 
 #[derive(Debug)]
 pub struct SetBorderStyle {
-    pub ty: StBorderStyle::Type,
+    pub ty: StBorderStyle,
 }
 
 #[derive(Debug)]
@@ -82,5 +79,5 @@ pub enum BorderLocation {
 
 #[derive(Debug)]
 pub struct SetPatternFill {
-    pub pattern_fill: PatternFill,
+    pub pattern_fill: CtPatternFill,
 }

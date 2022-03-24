@@ -163,7 +163,7 @@ fn de_workbook<R: Read + Seek>(
         });
     Ok(Workbook {
         workbook_part,
-        styles,
+        styles: styles.unwrap(),
         sst,
         worksheets,
         external_links,
@@ -331,6 +331,5 @@ mod tests {
         let r = read(&buf).unwrap();
         assert_eq!(27, r.worksheets.len());
         assert_eq!(true, r.sst.is_some());
-        assert_eq!(true, r.styles.is_some());
     }
 }

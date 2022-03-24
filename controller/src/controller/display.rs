@@ -1,6 +1,6 @@
 use controller_base::BlockId;
+use logisheets_workbook::prelude::*;
 use serde::Serialize;
-use xlrs_workbook::styles::*;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -118,11 +118,11 @@ pub fn get_default_col_width() -> f64 {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Style {
-    pub font: Font,
-    pub fill: Fill,
-    pub border: Border,
-    pub alignment: Option<CellAlignment>,
-    pub protection: Option<CellProtection>,
+    pub font: CtFont,
+    pub fill: CtFill,
+    pub border: CtBorder,
+    pub alignment: Option<CtCellAlignment>,
+    pub protection: Option<CtCellProtection>,
     pub formatter: String,
 }
 
