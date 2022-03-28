@@ -134,8 +134,8 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         e.stopPropagation()
         e.preventDefault()
         const mousedown = async () => {
-            const checked = await textMng.checkFormula()
-            if (!checked) {
+            const isBlur = await textMng.blur()
+            if (!isBlur) {
                 focus$.current.next()
                 return
             }

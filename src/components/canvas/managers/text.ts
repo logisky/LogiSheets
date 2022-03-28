@@ -24,8 +24,9 @@ export const useText = () => {
     const blur = async () => {
         const check = await checkFormula()
         if (!check)
-            return
+            return false
         _setEditing(false)
+        return true
     }
     const checkFormula = async () => {
         if (!editing)
