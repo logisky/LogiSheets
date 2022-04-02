@@ -1,17 +1,16 @@
 use super::defaults::get_init_border;
 use super::manager::Manager;
 use crate::payloads::sheet_process::style::BorderPayloadType;
-use xlrs_workbook::simple_types::StBorderStyle;
-use xlrs_workbook::styles::*;
+use logisheets_workbook::prelude::*;
 
 pub type BorderId = u32;
-pub type BorderManager = Manager<Border, BorderId>;
+pub type BorderManager = Manager<CtBorder, BorderId>;
 
 impl Default for BorderManager {
     fn default() -> Self {
         let border = get_init_border();
         let mut manager = BorderManager::new(0);
-        manager.get_id(border);
+        manager.get_id(&border);
         manager
     }
 }
@@ -23,7 +22,7 @@ impl BorderManager {
         if let Some(border) = res.get_data(base) {
             let mut new_border = border.clone();
             handle(&mut new_border, payload.change.clone());
-            let new_id = res.get_id(new_border);
+            let new_id = res.get_id(&new_border);
             (res, new_id)
         } else {
             (res, 0)
@@ -36,22 +35,21 @@ pub struct BorderPayload {
     pub change: BorderPayloadType,
 }
 
-fn handle(border: &mut Border, ty: BorderPayloadType) {
-    use xlrs_workbook::complex_types::Color;
+fn handle(border: &mut CtBorder, ty: BorderPayloadType) {
     match ty {
         BorderPayloadType::LeftBorderColor(s) => match &mut border.left {
             Some(pr) => match &mut pr.color {
                 Some(c) => c.rgb = Some(s),
                 None => {
-                    let mut color = Color::new_with_rgb(s);
+                    let color = new_color_with_rgb(s);
                     pr.color = Some(color);
                 }
             },
             None => {
-                let mut color = Color::new_with_rgb(s);
-                border.left = Some(BorderPr {
+                let color = new_color_with_rgb(s);
+                border.left = Some(CtBorderPr {
                     color: Some(color),
-                    style: StBorderStyle::Type::None,
+                    style: StBorderStyle::None,
                 });
             }
         },
@@ -59,15 +57,15 @@ fn handle(border: &mut Border, ty: BorderPayloadType) {
             Some(pr) => match &mut pr.color {
                 Some(c) => c.rgb = Some(s),
                 None => {
-                    let mut color = Color::new_with_rgb(s);
+                    let color = new_color_with_rgb(s);
                     pr.color = Some(color);
                 }
             },
             None => {
-                let mut color = Color::new_with_rgb(s);
-                border.right = Some(BorderPr {
+                let color = new_color_with_rgb(s);
+                border.right = Some(CtBorderPr {
                     color: Some(color),
-                    style: StBorderStyle::Type::None,
+                    style: StBorderStyle::None,
                 });
             }
         },
@@ -75,15 +73,15 @@ fn handle(border: &mut Border, ty: BorderPayloadType) {
             Some(pr) => match &mut pr.color {
                 Some(c) => c.rgb = Some(s),
                 None => {
-                    let mut color = Color::new_with_rgb(s);
+                    let color = new_color_with_rgb(s);
                     pr.color = Some(color);
                 }
             },
             None => {
-                let mut color = Color::new_with_rgb(s);
-                border.top = Some(BorderPr {
+                let color = new_color_with_rgb(s);
+                border.top = Some(CtBorderPr {
                     color: Some(color),
-                    style: StBorderStyle::Type::None,
+                    style: StBorderStyle::None,
                 });
             }
         },
@@ -91,22 +89,22 @@ fn handle(border: &mut Border, ty: BorderPayloadType) {
             Some(pr) => match &mut pr.color {
                 Some(c) => c.rgb = Some(s),
                 None => {
-                    let mut color = Color::new_with_rgb(s);
+                    let color = new_color_with_rgb(s);
                     pr.color = Some(color);
                 }
             },
             None => {
-                let mut color = Color::new_with_rgb(s);
-                border.bottom = Some(BorderPr {
+                let color = new_color_with_rgb(s);
+                border.bottom = Some(CtBorderPr {
                     color: Some(color),
-                    style: StBorderStyle::Type::None,
+                    style: StBorderStyle::None,
                 });
             }
         },
         BorderPayloadType::LeftBorderStyle(s) => match &mut border.left {
             Some(pr) => pr.style = s,
             None => {
-                border.left = Some(BorderPr {
+                border.left = Some(CtBorderPr {
                     color: None,
                     style: s,
                 })
@@ -115,7 +113,7 @@ fn handle(border: &mut Border, ty: BorderPayloadType) {
         BorderPayloadType::RightBorderStyle(s) => match &mut border.right {
             Some(pr) => pr.style = s,
             None => {
-                border.right = Some(BorderPr {
+                border.right = Some(CtBorderPr {
                     color: None,
                     style: s,
                 })
@@ -124,7 +122,7 @@ fn handle(border: &mut Border, ty: BorderPayloadType) {
         BorderPayloadType::TopBorderStyle(s) => match &mut border.top {
             Some(pr) => pr.style = s,
             None => {
-                border.top = Some(BorderPr {
+                border.top = Some(CtBorderPr {
                     color: None,
                     style: s,
                 })
@@ -133,7 +131,7 @@ fn handle(border: &mut Border, ty: BorderPayloadType) {
         BorderPayloadType::BottomBorderStyle(s) => match &mut border.bottom {
             Some(pr) => pr.style = s,
             None => {
-                border.bottom = Some(BorderPr {
+                border.bottom = Some(CtBorderPr {
                     color: None,
                     style: s,
                 })
@@ -149,4 +147,14 @@ fn handle(border: &mut Border, ty: BorderPayloadType) {
             border.outline = b;
         }
     };
+}
+
+fn new_color_with_rgb(c: String) -> CtColor {
+    CtColor {
+        auto: None,
+        indexed: None,
+        rgb: Some(c),
+        theme: None,
+        tint: 0f64,
+    }
 }

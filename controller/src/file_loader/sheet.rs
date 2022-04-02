@@ -136,27 +136,27 @@ impl SheetLoader {
                         .get_text_id(idx, &mut self.text_id_manager)
                         .unwrap()
                 };
-                let value = CellValue::from_cell(&c, f);
-                let reference = c.r.unwrap();
-                let parse_result = parse_cell(&reference);
-                if parse_result.is_none() {
-                    log!("{}", &reference);
-                    return;
-                }
-                let (row_idx, col_idx) = parse_result.unwrap();
-                let cell_id = self
-                    .navigator
-                    .fetch_cell_id(sheet_id, row_idx, col_idx)
-                    .unwrap();
-                let style_id = self.style_loader.convert(c.s as usize).unwrap_or(0);
-                let cell = Cell {
-                    value,
-                    style: style_id,
-                };
-                self.container.add_cell(sheet_id, cell_id, cell);
-                if let Some(cf) = c.f {
-                    self.load_cell_formula(sheet_id, cf, row_idx, col_idx);
-                }
+                // let value = CellValue::from_cell(&c, f);
+                // let reference = c.r.unwrap();
+                // let parse_result = parse_cell(&reference);
+                // if parse_result.is_none() {
+                //     log!("{}", &reference);
+                //     return;
+                // }
+                // let (row_idx, col_idx) = parse_result.unwrap();
+                // let cell_id = self
+                //     .navigator
+                //     .fetch_cell_id(sheet_id, row_idx, col_idx)
+                //     .unwrap();
+                // let style_id = self.style_loader.convert(c.s as usize).unwrap_or(0);
+                // let cell = Cell {
+                //     value,
+                //     style: style_id,
+                // };
+                // self.container.add_cell(sheet_id, cell_id, cell);
+                // if let Some(cf) = c.f {
+                //     self.load_cell_formula(sheet_id, cf, row_idx, col_idx);
+                // }
             });
         });
         Some(())

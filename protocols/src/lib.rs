@@ -6,6 +6,17 @@ use std::io::Cursor;
 pub mod message {
     include!(concat!(env!("OUT_DIR"), "/protocols.rs"));
 
+    use logisheets_workbook::prelude::CtBorder as WbBorder;
+    use logisheets_workbook::prelude::CtBorderPr as WbBorderPr;
+    use logisheets_workbook::prelude::CtCellAlignment;
+    use logisheets_workbook::prelude::CtColor;
+    use logisheets_workbook::prelude::CtFill as WbFill;
+    use logisheets_workbook::prelude::CtFont as WbFont;
+    use logisheets_workbook::prelude::CtPatternFill as WbPatternFill;
+    use logisheets_workbook::prelude::StBorderStyle;
+    use logisheets_workbook::prelude::StPatternType;
+    use logisheets_workbook::prelude::StUnderlineValues;
+    use logisheets_workbook::prelude::{StHorizontalAlignment, StVerticalAlignment};
     use xlrs_controller::controller::display::CellFormulaValue;
     use xlrs_controller::controller::display::CellStyle as ControllerCellStyle;
     use xlrs_controller::controller::display::DisplayPatch as ControllerDisplayPatch;
@@ -17,17 +28,6 @@ pub mod message {
     use xlrs_controller::controller::edit_action::style_payload::SetPatternFill as CtrlSetPatternFill;
     use xlrs_controller::controller::edit_action::EditAction;
     use xlrs_controller::controller::edit_action::{self, EditPayload};
-    use xlrs_workbook::complex_types::Color;
-    use xlrs_workbook::simple_types::StBorderStyle;
-    use xlrs_workbook::simple_types::StPatternType;
-    use xlrs_workbook::simple_types::StUnderlineValues;
-    use xlrs_workbook::simple_types::{StHorizontalAlignment, StVerticalAlignment};
-    use xlrs_workbook::styles::Border as WbBorder;
-    use xlrs_workbook::styles::BorderPr as WbBorderPr;
-    use xlrs_workbook::styles::CellAlignment;
-    use xlrs_workbook::styles::Fill as WbFill;
-    use xlrs_workbook::styles::Font as WbFont;
-    use xlrs_workbook::styles::PatternFill as WbPatternFill;
 
     impl DisplayResponse {
         pub fn from(res: ControllerResponse) -> Self {
@@ -341,12 +341,12 @@ pub mod message {
                     }
                     StylePayloadOneof::SetFontUnderline(fu) => {
                         let underline = match fu.underline {
-                            0 => StUnderlineValues::Type::Double,
-                            1 => StUnderlineValues::Type::DoubleAccounting,
-                            2 => StUnderlineValues::Type::None,
-                            3 => StUnderlineValues::Type::Single,
-                            4 => StUnderlineValues::Type::SingleAccounting,
-                            _ => StUnderlineValues::Type::None,
+                            0 => StUnderlineValues::Double,
+                            1 => StUnderlineValues::DoubleAccounting,
+                            2 => StUnderlineValues::None,
+                            3 => StUnderlineValues::Single,
+                            4 => StUnderlineValues::SingleAccounting,
+                            _ => StUnderlineValues::None,
                         };
                         StyleUpdateType::SetFontUnderline(SetFontUnderline { underline })
                     }
@@ -373,10 +373,12 @@ pub mod message {
                     StylePayloadOneof::SetPatternFill(set_fill) => {
                         let pf = set_fill.pattern_fill.unwrap();
                         let fill = pf.into();
-                        let s = CtrlSetPatternFill {
-                            pattern_fill: fill.pattern_fill.unwrap(),
-                        };
-                        StyleUpdateType::SetPatternFill(s)
+                        if let WbFill::PatternFill(p) = fill {
+                            let s = CtrlSetPatternFill { pattern_fill: p };
+                            StyleUpdateType::SetPatternFill(s)
+                        } else {
+                            todo!()
+                        }
                     }
                     StylePayloadOneof::SetLeftBorderColor(c) => {
                         StyleUpdateType::SetLeftBorderColor(c.color)
@@ -422,28 +424,22 @@ pub mod message {
     }
 
     impl Alignment {
-        pub fn from(ca: CellAlignment) -> Self {
+        pub fn from(ca: CtCellAlignment) -> Self {
             Alignment {
                 horizontal: match ca.horizontal {
                     Some(h) => match h {
-                        StHorizontalAlignment::Type::Center => {
-                            alignment::Horizontal::HCenter as i32
-                        }
-                        StHorizontalAlignment::Type::CenterContinuous => {
+                        StHorizontalAlignment::Center => alignment::Horizontal::HCenter as i32,
+                        StHorizontalAlignment::CenterContinuous => {
                             alignment::Horizontal::HCenterContinuous as i32
                         }
-                        StHorizontalAlignment::Type::Distributed => {
+                        StHorizontalAlignment::Distributed => {
                             alignment::Horizontal::HDistributed as i32
                         }
-                        StHorizontalAlignment::Type::Fill => alignment::Horizontal::HFill as i32,
-                        StHorizontalAlignment::Type::General => {
-                            alignment::Horizontal::HGeneral as i32
-                        }
-                        StHorizontalAlignment::Type::Justify => {
-                            alignment::Horizontal::HJustify as i32
-                        }
-                        StHorizontalAlignment::Type::Left => alignment::Horizontal::HLeft as i32,
-                        StHorizontalAlignment::Type::Right => alignment::Horizontal::HRight as i32,
+                        StHorizontalAlignment::Fill => alignment::Horizontal::HFill as i32,
+                        StHorizontalAlignment::General => alignment::Horizontal::HGeneral as i32,
+                        StHorizontalAlignment::Justify => alignment::Horizontal::HJustify as i32,
+                        StHorizontalAlignment::Left => alignment::Horizontal::HLeft as i32,
+                        StHorizontalAlignment::Right => alignment::Horizontal::HRight as i32,
                     },
                     None => alignment::Horizontal::HUnspecified as i32,
                 },
@@ -478,13 +474,13 @@ pub mod message {
                 },
                 vertical: match ca.vertical {
                     Some(v) => match v {
-                        StVerticalAlignment::Type::Bottom => alignment::Vertical::VBottom as i32,
-                        StVerticalAlignment::Type::Center => alignment::Vertical::VCenter as i32,
-                        StVerticalAlignment::Type::Distributed => {
+                        StVerticalAlignment::Bottom => alignment::Vertical::VBottom as i32,
+                        StVerticalAlignment::Center => alignment::Vertical::VCenter as i32,
+                        StVerticalAlignment::Distributed => {
                             alignment::Vertical::VDistributed as i32
                         }
-                        StVerticalAlignment::Type::Justify => alignment::Vertical::VJustify as i32,
-                        StVerticalAlignment::Type::Top => alignment::Vertical::VTop as i32,
+                        StVerticalAlignment::Justify => alignment::Vertical::VJustify as i32,
+                        StVerticalAlignment::Top => alignment::Vertical::VTop as i32,
                     },
                     None => alignment::Vertical::VUnspecified as i32,
                 },
@@ -522,7 +518,7 @@ pub mod message {
         }
     }
 
-    fn convert_color(color: &Option<Color>) -> String {
+    fn convert_color(color: &Option<CtColor>) -> String {
         color.as_ref().map_or(String::from(""), |c| match &c.rgb {
             Some(c) => c.to_string(),
             None => match &c.indexed {
@@ -600,17 +596,17 @@ pub mod message {
 
     impl Font {
         pub fn from(font: WbFont) -> Self {
-            let bold = font.b.as_ref().map_or(false, |b| b.val);
-            let italic = font.i.as_ref().map_or(false, |b| b.val);
+            let bold = font.bold;
+            let italic = font.italic;
             let underline = font
-                .u
+                .underline
                 .as_ref()
                 .map_or(UnderlineType::None, |u| match &u.val {
-                    StUnderlineValues::Type::Double => UnderlineType::DoubleU,
-                    StUnderlineValues::Type::DoubleAccounting => UnderlineType::DoubleAccounting,
-                    StUnderlineValues::Type::None => UnderlineType::None,
-                    StUnderlineValues::Type::Single => UnderlineType::Single,
-                    StUnderlineValues::Type::SingleAccounting => UnderlineType::SingleAccounting,
+                    StUnderlineValues::Double => UnderlineType::DoubleU,
+                    StUnderlineValues::DoubleAccounting => UnderlineType::DoubleAccounting,
+                    StUnderlineValues::None => UnderlineType::None,
+                    StUnderlineValues::Single => UnderlineType::Single,
+                    StUnderlineValues::SingleAccounting => UnderlineType::SingleAccounting,
                 }) as i32;
             let color = convert_color(&font.color);
             let size = font.sz.as_ref().map_or(11_f64, |fs| fs.val);
@@ -618,10 +614,10 @@ pub mod message {
                 .name
                 .as_ref()
                 .map_or(String::from(""), |f| f.val.to_string());
-            let outline = font.outline.as_ref().map_or(true, |ol| ol.val);
-            let shadow = font.shadow.as_ref().map_or(false, |s| s.val);
-            let strike = font.strike.as_ref().map_or(false, |s| s.val);
-            let condense = font.condense.as_ref().map_or(false, |c| c.val);
+            let outline = font.outline;
+            let shadow = font.shadow;
+            let strike = font.strike;
+            let condense = font.condense;
             Font {
                 bold,
                 italic,
@@ -697,7 +693,7 @@ pub mod message {
 
         pub fn into(self) -> WbBorderPr {
             WbBorderPr {
-                color: Some(Color {
+                color: Some(CtColor {
                     auto: None,
                     indexed: None,
                     rgb: Some(self.color),
@@ -710,144 +706,142 @@ pub mod message {
     }
 
     impl BorderType {
-        pub fn from(ty: &StBorderStyle::Type) -> Self {
+        pub fn from(ty: &StBorderStyle) -> Self {
             match ty {
-                StBorderStyle::Type::DashDot => BorderType::DashDot,
-                StBorderStyle::Type::DashDotDot => BorderType::DashDotDot,
-                StBorderStyle::Type::Dashed => BorderType::Dashed,
-                StBorderStyle::Type::Dotted => BorderType::Dotted,
-                StBorderStyle::Type::Double => BorderType::Double,
-                StBorderStyle::Type::Hair => BorderType::Hair,
-                StBorderStyle::Type::Medium => BorderType::Medium,
-                StBorderStyle::Type::MediumDashDot => BorderType::MediumDashDot,
-                StBorderStyle::Type::MediumDashDotDot => BorderType::MediumDashDotDot,
-                StBorderStyle::Type::MediumDashed => BorderType::MediumDashed,
-                StBorderStyle::Type::None => BorderType::NoneBorder,
-                StBorderStyle::Type::SlantDashDot => BorderType::SlantDashDot,
-                StBorderStyle::Type::Thick => BorderType::Thick,
-                StBorderStyle::Type::Thin => BorderType::Thin,
+                StBorderStyle::DashDot => BorderType::DashDot,
+                StBorderStyle::DashDotDot => BorderType::DashDotDot,
+                StBorderStyle::Dashed => BorderType::Dashed,
+                StBorderStyle::Dotted => BorderType::Dotted,
+                StBorderStyle::Double => BorderType::Double,
+                StBorderStyle::Hair => BorderType::Hair,
+                StBorderStyle::Medium => BorderType::Medium,
+                StBorderStyle::MediumDashDot => BorderType::MediumDashDot,
+                StBorderStyle::MediumDashDotDot => BorderType::MediumDashDotDot,
+                StBorderStyle::MediumDashed => BorderType::MediumDashed,
+                StBorderStyle::None => BorderType::NoneBorder,
+                StBorderStyle::SlantDashDot => BorderType::SlantDashDot,
+                StBorderStyle::Thick => BorderType::Thick,
+                StBorderStyle::Thin => BorderType::Thin,
             }
         }
 
-        pub fn to(n: i32) -> StBorderStyle::Type {
+        pub fn to(n: i32) -> StBorderStyle {
             let s: BorderType = unsafe { std::mem::transmute(n) };
             match s {
-                BorderType::DashDot => StBorderStyle::Type::DashDot,
-                BorderType::DashDotDot => StBorderStyle::Type::DashDotDot,
-                BorderType::Dashed => StBorderStyle::Type::Dashed,
-                BorderType::Dotted => StBorderStyle::Type::Dotted,
-                BorderType::Double => StBorderStyle::Type::Double,
-                BorderType::Hair => StBorderStyle::Type::Hair,
-                BorderType::Medium => StBorderStyle::Type::Medium,
-                BorderType::MediumDashDot => StBorderStyle::Type::MediumDashDot,
-                BorderType::MediumDashDotDot => StBorderStyle::Type::MediumDashDotDot,
-                BorderType::MediumDashed => StBorderStyle::Type::MediumDashed,
-                BorderType::NoneBorder => StBorderStyle::Type::None,
-                BorderType::SlantDashDot => StBorderStyle::Type::SlantDashDot,
-                BorderType::Thick => StBorderStyle::Type::Thick,
-                BorderType::Thin => StBorderStyle::Type::Thin,
+                BorderType::DashDot => StBorderStyle::DashDot,
+                BorderType::DashDotDot => StBorderStyle::DashDotDot,
+                BorderType::Dashed => StBorderStyle::Dashed,
+                BorderType::Dotted => StBorderStyle::Dotted,
+                BorderType::Double => StBorderStyle::Double,
+                BorderType::Hair => StBorderStyle::Hair,
+                BorderType::Medium => StBorderStyle::Medium,
+                BorderType::MediumDashDot => StBorderStyle::MediumDashDot,
+                BorderType::MediumDashDotDot => StBorderStyle::MediumDashDotDot,
+                BorderType::MediumDashed => StBorderStyle::MediumDashed,
+                BorderType::NoneBorder => StBorderStyle::None,
+                BorderType::SlantDashDot => StBorderStyle::SlantDashDot,
+                BorderType::Thick => StBorderStyle::Thick,
+                BorderType::Thin => StBorderStyle::Thin,
             }
         }
     }
 
     impl PatternFill {
         pub fn from(fill: WbFill) -> Self {
-            if let Some(pf) = &fill.pattern_fill {
-                let bg_color = convert_color(&pf.bg_color);
-                let fg_color = convert_color(&pf.fg_color);
-                let t: StPatternType::Type = pf
-                    .pattern_type
-                    .as_ref()
-                    .map_or(StPatternType::Type::None, |a| a.clone());
-                let ty = PatternFillType::from(t);
-                PatternFill {
-                    bg_color,
-                    fg_color,
-                    r#type: ty as i32,
+            match fill {
+                WbFill::PatternFill(pf) => {
+                    let bg_color = convert_color(&pf.bg_color);
+                    let fg_color = convert_color(&pf.fg_color);
+                    let t: StPatternType = pf
+                        .pattern_type
+                        .as_ref()
+                        .map_or(StPatternType::None, |a| a.clone());
+                    let ty = PatternFillType::from(t);
+                    PatternFill {
+                        bg_color,
+                        fg_color,
+                        r#type: ty as i32,
+                    }
                 }
-            } else {
-                PatternFill {
+                WbFill::GradientFill(_) => PatternFill {
                     bg_color: String::from(""),
                     fg_color: String::from(""),
                     r#type: PatternFillType::NonePatternFill as i32,
-                }
+                },
             }
         }
 
         pub fn into(self) -> WbFill {
-            let bg_color = Color {
+            let bg_color = CtColor {
                 auto: None,
                 indexed: None,
                 rgb: Some(self.bg_color),
                 theme: None,
                 tint: 0.0,
             };
-            let fg_color = Color {
+            let fg_color = CtColor {
                 auto: None,
                 indexed: None,
                 rgb: Some(self.fg_color),
                 theme: None,
                 tint: 0.0,
             };
-            WbFill {
-                pattern_fill: Some(WbPatternFill {
-                    fg_color: Some(fg_color),
-                    bg_color: Some(bg_color),
-                    pattern_type: Some(convert_pattern_type(self.r#type)),
-                }),
-                gradient_fill: None,
-            }
+            WbFill::PatternFill(WbPatternFill {
+                fg_color: Some(fg_color),
+                bg_color: Some(bg_color),
+                pattern_type: Some(convert_pattern_type(self.r#type)),
+            })
         }
     }
 
     impl PatternFillType {
-        pub fn from(t: StPatternType::Type) -> Self {
+        pub fn from(t: StPatternType) -> Self {
             match t {
-                StPatternType::Type::DarkDown => PatternFillType::DarkDown,
-                StPatternType::Type::DarkGray => PatternFillType::DarkGray,
-                StPatternType::Type::DarkGrid => PatternFillType::DarkGrid,
-                StPatternType::Type::DarkHorizontal => PatternFillType::DarkHorizontal,
-                StPatternType::Type::DarkTrellis => PatternFillType::DarkTrellis,
-                StPatternType::Type::DarkUp => PatternFillType::DarkUp,
-                StPatternType::Type::DarkVertical => PatternFillType::DarkVertical,
-                StPatternType::Type::Gray0625 => PatternFillType::Gray0625,
-                StPatternType::Type::Gray125 => PatternFillType::Gray125,
-                StPatternType::Type::LightDown => PatternFillType::LightDown,
-                StPatternType::Type::LightGray => PatternFillType::LightGray,
-                StPatternType::Type::LightGrid => PatternFillType::LightGrid,
-                StPatternType::Type::LightHorizontal => PatternFillType::LightHorizontal,
-                StPatternType::Type::LightTrellis => PatternFillType::LightTrellis,
-                StPatternType::Type::LightUp => PatternFillType::LightUp,
-                StPatternType::Type::LightVertical => PatternFillType::LightVertical,
-                StPatternType::Type::MediumGray => PatternFillType::MediumGray,
-                StPatternType::Type::None => PatternFillType::NonePatternFill,
-                StPatternType::Type::Solid => PatternFillType::Solid,
+                StPatternType::DarkDown => PatternFillType::DarkDown,
+                StPatternType::DarkGray => PatternFillType::DarkGray,
+                StPatternType::DarkGrid => PatternFillType::DarkGrid,
+                StPatternType::DarkHorizontal => PatternFillType::DarkHorizontal,
+                StPatternType::DarkTrellis => PatternFillType::DarkTrellis,
+                StPatternType::DarkUp => PatternFillType::DarkUp,
+                StPatternType::DarkVertical => PatternFillType::DarkVertical,
+                StPatternType::Gray0625 => PatternFillType::Gray0625,
+                StPatternType::Gray125 => PatternFillType::Gray125,
+                StPatternType::LightDown => PatternFillType::LightDown,
+                StPatternType::LightGray => PatternFillType::LightGray,
+                StPatternType::LightGrid => PatternFillType::LightGrid,
+                StPatternType::LightHorizontal => PatternFillType::LightHorizontal,
+                StPatternType::LightTrellis => PatternFillType::LightTrellis,
+                StPatternType::LightUp => PatternFillType::LightUp,
+                StPatternType::LightVertical => PatternFillType::LightVertical,
+                StPatternType::MediumGray => PatternFillType::MediumGray,
+                StPatternType::None => PatternFillType::NonePatternFill,
+                StPatternType::Solid => PatternFillType::Solid,
             }
         }
     }
 
-    pub fn convert_pattern_type(i: i32) -> StPatternType::Type {
+    pub fn convert_pattern_type(i: i32) -> StPatternType {
         match i {
-            0 => StPatternType::Type::DarkDown,
-            1 => StPatternType::Type::DarkGray,
-            2 => StPatternType::Type::DarkGrid,
-            3 => StPatternType::Type::DarkHorizontal,
-            4 => StPatternType::Type::DarkTrellis,
-            5 => StPatternType::Type::DarkUp,
-            6 => StPatternType::Type::DarkVertical,
-            7 => StPatternType::Type::Gray0625,
-            8 => StPatternType::Type::Gray125,
-            9 => StPatternType::Type::LightDown,
-            10 => StPatternType::Type::LightGray,
-            11 => StPatternType::Type::LightGrid,
-            12 => StPatternType::Type::LightHorizontal,
-            13 => StPatternType::Type::LightTrellis,
-            14 => StPatternType::Type::LightUp,
-            15 => StPatternType::Type::LightVertical,
-            16 => StPatternType::Type::MediumGray,
-            17 => StPatternType::Type::None,
-            18 => StPatternType::Type::Solid,
-            _ => StPatternType::Type::None,
+            0 => StPatternType::DarkDown,
+            1 => StPatternType::DarkGray,
+            2 => StPatternType::DarkGrid,
+            3 => StPatternType::DarkHorizontal,
+            4 => StPatternType::DarkTrellis,
+            5 => StPatternType::DarkUp,
+            6 => StPatternType::DarkVertical,
+            7 => StPatternType::Gray0625,
+            8 => StPatternType::Gray125,
+            9 => StPatternType::LightDown,
+            10 => StPatternType::LightGray,
+            11 => StPatternType::LightGrid,
+            12 => StPatternType::LightHorizontal,
+            13 => StPatternType::LightTrellis,
+            14 => StPatternType::LightUp,
+            15 => StPatternType::LightVertical,
+            16 => StPatternType::MediumGray,
+            17 => StPatternType::None,
+            18 => StPatternType::Solid,
+            _ => StPatternType::None,
         }
     }
 
@@ -869,22 +863,22 @@ pub mod message {
         }
     }
 
-    fn convert_border_style(i: i32) -> StBorderStyle::Type {
+    fn convert_border_style(i: i32) -> StBorderStyle {
         match i {
-            0 => StBorderStyle::Type::DashDot,
-            1 => StBorderStyle::Type::DashDot,
-            2 => StBorderStyle::Type::Dashed,
-            3 => StBorderStyle::Type::Dotted,
-            4 => StBorderStyle::Type::Double,
-            5 => StBorderStyle::Type::Hair,
-            6 => StBorderStyle::Type::Medium,
-            7 => StBorderStyle::Type::MediumDashDot,
-            8 => StBorderStyle::Type::MediumDashDotDot,
-            9 => StBorderStyle::Type::MediumDashed,
-            10 => StBorderStyle::Type::None,
-            11 => StBorderStyle::Type::SlantDashDot,
-            12 => StBorderStyle::Type::Thick,
-            13 => StBorderStyle::Type::Thin,
+            0 => StBorderStyle::DashDot,
+            1 => StBorderStyle::DashDot,
+            2 => StBorderStyle::Dashed,
+            3 => StBorderStyle::Dotted,
+            4 => StBorderStyle::Double,
+            5 => StBorderStyle::Hair,
+            6 => StBorderStyle::Medium,
+            7 => StBorderStyle::MediumDashDot,
+            8 => StBorderStyle::MediumDashDotDot,
+            9 => StBorderStyle::MediumDashed,
+            10 => StBorderStyle::None,
+            11 => StBorderStyle::SlantDashDot,
+            12 => StBorderStyle::Thick,
+            13 => StBorderStyle::Thin,
             _ => unreachable!(),
         }
     }

@@ -404,7 +404,7 @@ impl Stringify for Value {
         match self {
             Value::Blank => String::from(""),
             Value::Number(f) => format!("{}", f),
-            Value::Text(id) => format!("\"{}\"", fetcher.fetch_text(id)),
+            Value::Text(id) => format!("\"{}\"", id),
             Value::Boolean(b) => match b {
                 true => "TRUE",
                 false => "FALSE",

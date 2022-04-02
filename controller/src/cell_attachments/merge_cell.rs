@@ -9,6 +9,7 @@ pub struct MergeCells {
 }
 
 impl MergeCells {
+    // todo: remove this
     pub fn add_merge_cell(
         self,
         sheet_id: SheetId,
@@ -22,6 +23,24 @@ impl MergeCells {
         set.insert(start_cell, end_cell);
         let new_data = self.data.update(sheet_id, set);
         MergeCells { data: new_data }
+    }
+
+    pub fn add_merge_cell2(
+        &mut self,
+        sheet_id: SheetId,
+        start_cell: NormalCellId,
+        end_cell: NormalCellId,
+    ) {
+        match self.data.get_mut(&sheet_id) {
+            Some(m) => {
+                m.insert(start_cell, end_cell);
+            }
+            None => {
+                let mut sheet = HashMap::<NormalCellId, NormalCellId>::new();
+                sheet.insert(start_cell, end_cell);
+                self.data.insert(sheet_id, sheet);
+            }
+        }
     }
 
     pub fn remove_merge_cell(self, sheet_id: SheetId, start_cell: NormalCellId) -> Self {

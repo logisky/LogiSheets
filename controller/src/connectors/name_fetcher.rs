@@ -1,7 +1,7 @@
 use controller_base::name_fetcher::NameFetcherTrait;
 
 use crate::{
-    external_links::ExternalLinksManager,
+    ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
 };
@@ -9,7 +9,7 @@ use crate::{
 pub struct NameFetcher<'a> {
     pub func_manager: &'a FuncIdManager,
     pub sheet_id_manager: &'a SheetIdManager,
-    pub external_links_manager: &'a ExternalLinksManager,
+    pub external_links_manager: &'a ExtBooksManager,
     pub text_id_manager: &'a TextIdManager,
     pub name_id_manager: &'a NameIdManager,
     pub navigator: &'a mut Navigator,

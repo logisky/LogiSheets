@@ -1,5 +1,4 @@
-use xlrs_workbook::complex_types::Color;
-use xlrs_workbook::simple_types::{StBorderStyle, StPatternType, StUnderlineValues};
+use logisheets_workbook::prelude::*;
 
 #[derive(Debug, Clone)]
 pub enum FontPayloadType {
@@ -7,7 +6,7 @@ pub enum FontPayloadType {
     Italic(bool),
     Size(f64),
     Shadow(bool),
-    Underline(StUnderlineValues::Type),
+    Underline(StUnderlineValues),
 }
 
 #[derive(Debug, Clone)]
@@ -16,10 +15,10 @@ pub enum BorderPayloadType {
     RightBorderColor(String),
     TopBorderColor(String),
     BottomBorderColor(String),
-    LeftBorderStyle(StBorderStyle::Type),
-    RightBorderStyle(StBorderStyle::Type),
-    TopBorderStyle(StBorderStyle::Type),
-    BottomBorderStyle(StBorderStyle::Type),
+    LeftBorderStyle(StBorderStyle),
+    RightBorderStyle(StBorderStyle),
+    TopBorderStyle(StBorderStyle),
+    BottomBorderStyle(StBorderStyle),
     BorderDiagonalUp(bool),
     BorderDiagonalDown(bool),
     Outline(bool),
@@ -33,9 +32,9 @@ pub enum FillPayloadType {
 
 #[derive(Debug, Clone)]
 pub enum PatternPayload {
-    FgColor(Option<Color>),
-    BgColor(Option<Color>),
-    Type(Option<StPatternType::Type>),
+    FgColor(Option<CtColor>),
+    BgColor(Option<CtColor>),
+    Type(Option<StPatternType>),
 }
 
 #[derive(Debug, Clone)]

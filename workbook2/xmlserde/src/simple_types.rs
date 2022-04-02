@@ -11,7 +11,7 @@ xml_serde_enum! {
 pub type StBorderId = u32;
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize)]
     StBorderStyle {
         None => "none",
         Thin => "thin",
@@ -350,7 +350,7 @@ xml_serde_enum! {
 pub type StFontId = u32;
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize)]
     StFontScheme {
         None => "none",
         Major => "major",
@@ -384,7 +384,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.37
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash, serde::Serialize)]
     StGradientType {
         Linear => "linear",
         Path => "path",
@@ -418,7 +418,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.40
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize)]
     StHorizontalAlignment {
         General => "general",
         Left => "left",
@@ -600,7 +600,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.55
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash, serde::Serialize)]
     StPatternType {
         None => "none",
         Solid => "solid",
@@ -626,7 +626,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.56
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     StPhoneticAlignment {
         Left => "left",
         Center => "center",
@@ -636,7 +636,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.57
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     StPhoneticType {
         HalfWidthKatakana => "halfwidthKatakana",
         FullwidthKatakana => "fullwidthKatakana",
@@ -1023,7 +1023,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.85
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash, serde::Serialize)]
     StUnderlineValues {
         Single => "single",
         Double => "double",
@@ -1045,7 +1045,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.88
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash, serde::Serialize)]
     StVerticalAlignment {
         Top => "top",
         Center => "center",
@@ -1108,7 +1108,7 @@ pub type StUnsignedIntHex = String;
 
 xml_serde_enum! {
     /// 18.18.92
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize)]
     StVerticalAlignRun {
         Baseline => "baseline",
         Superscript => "superscript",

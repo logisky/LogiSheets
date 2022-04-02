@@ -1,8 +1,8 @@
 extern crate chrono;
 extern crate futures;
 extern crate im;
+extern crate logisheets_workbook;
 extern crate serde;
-extern crate xlrs_workbook;
 pub mod async_func;
 pub mod block_affect;
 pub mod block_affected;
@@ -21,10 +21,11 @@ pub mod set_curr_cell;
 
 use chrono::{DateTime, FixedOffset};
 use std::hash::Hash;
-use xlrs_workbook::complex_types::Rst;
-use xlrs_workbook::simple_types::StCellType;
-use xlrs_workbook::worksheet::Cell;
-use xlrs_workbook::{complex_types::*, external_link::ExternalCell};
+// use xlrs_workbook::complex_types::Rst;
+// use xlrs_workbook::simple_types::StCellType;
+// use xlrs_workbook::worksheet::Cell;
+// use xlrs_workbook::{complex_types::*, external_link::ExternalCell};
+use logisheets_workbook::prelude::*;
 
 pub type Id = u32;
 pub type RowId = u32;
@@ -130,7 +131,7 @@ pub enum CellValue {
     Error(Error),
     String(TextId),
     Number(f64),
-    InlineStr(Rst),
+    InlineStr(CtRst),
     FormulaStr(String),
 }
 
@@ -167,9 +168,9 @@ impl CellValue {
     }
 
     fn get_value<F>(
-        t: &StCellType::Type,
-        value: Option<&PlainText>,
-        is: Option<&Rst>,
+        t: &StCellType,
+        value: Option<&PlainTextString>,
+        is: Option<&CtRst>,
         mut f: F,
     ) -> CellValue
     where
@@ -177,11 +178,11 @@ impl CellValue {
     {
         if let Some(text) = value {
             match t {
-                StCellType::Type::N => {
+                StCellType::N => {
                     let num = text.value.parse::<f64>().unwrap();
                     CellValue::Number(num)
                 }
-                StCellType::Type::B => {
+                StCellType::B => {
                     if text.value == "1" {
                         CellValue::Boolean(true)
                     } else if text.value == "0" {
@@ -195,27 +196,27 @@ impl CellValue {
                         CellValue::Boolean(v)
                     }
                 }
-                StCellType::Type::S => {
+                StCellType::S => {
                     let idx = text.value.parse::<usize>().unwrap();
                     let id = f(idx);
                     CellValue::String(id)
                 }
-                StCellType::Type::InlineStr => {
+                StCellType::InlineStr => {
                     if let Some(is) = is {
                         CellValue::InlineStr(is.clone())
                     } else {
                         CellValue::Blank
                     }
                 }
-                StCellType::Type::Str => CellValue::FormulaStr(text.value.clone()),
-                StCellType::Type::D => {
+                StCellType::Str => CellValue::FormulaStr(text.value.clone()),
+                StCellType::D => {
                     let dt = DateTime::parse_from_rfc3339(&text.value);
                     match dt {
                         Ok(d) => CellValue::Date(d),
                         Err(_) => CellValue::Blank,
                     }
                 }
-                StCellType::Type::E => {
+                StCellType::E => {
                     let e = {
                         if &text.value == "#DIV/0!" {
                             Error::Div0
@@ -243,14 +244,14 @@ impl CellValue {
         }
     }
 
-    pub fn from_external_cell<F>(c: &ExternalCell, f: F) -> CellValue
-    where
-        F: FnMut(usize) -> TextId,
-    {
-        CellValue::get_value(&c.t, Some(&c.v), None, f)
-    }
+    // pub fn from_external_cell<F>(c: &CtExternalCell, f: F) -> CellValue
+    // where
+    //     F: FnMut(usize) -> TextId,
+    // {
+    //     CellValue::get_value(&c.t, Some(&c.v), None, f)
+    // }
 
-    pub fn from_cell<F>(c: &Cell, f: F) -> CellValue
+    pub fn from_cell<F>(c: &CtCell, f: F) -> CellValue
     where
         F: FnMut(usize) -> TextId,
     {

@@ -9,12 +9,14 @@ mod execute;
 mod fill_manager;
 mod font_manager;
 mod manager;
+mod num_fmt_manager;
 pub mod xf_manager;
 
 use border_manager::BorderManager;
 use controller_base::StyleId;
 use fill_manager::FillManager;
 use font_manager::FontManager;
+use num_fmt_manager::NumFmtManager;
 use xf_manager::XfManager;
 
 use crate::payloads::sheet_process::style::CellStylePayload;
@@ -29,6 +31,7 @@ pub struct StyleManager {
     pub fill_manager: FillManager,
     pub cell_xfs_manager: XfManager,
     pub cell_style_xfs_manager: XfManager,
+    pub num_fmt_manager: NumFmtManager,
 }
 
 impl StyleManager {

@@ -19,11 +19,7 @@ where
     C: Connector,
 {
     match &node.pure {
-        ast::PureNode::Value(v) => {
-            CalcVertex::Value(CalcValue::Scalar(Value::from_ast_value(v, &|t| {
-                fetcher.get_text(t)
-            })))
-        }
+        ast::PureNode::Value(v) => CalcVertex::Value(CalcValue::Scalar(Value::from_ast_value(v))),
         ast::PureNode::Func(f) => calc_func(f, fetcher),
         ast::PureNode::Reference(r) => fetcher.convert(r),
     }

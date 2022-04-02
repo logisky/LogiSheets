@@ -5,7 +5,7 @@ use xlrs_workbook::{reader::Spreadsheet, styles::StyleSheetPart};
 use crate::{
     cell_attachments::CellAttachmentsManager,
     controller::{status::Status, Controller},
-    external_links::ExternalLinksManager,
+    ext_book_manager::ExtBooksManager,
     file_loader::sheet::{load_sheet_tab, SheetLoader, SheetLoaderResult},
     id_manager::NameIdManager,
 };
@@ -34,7 +34,7 @@ pub fn load(ss: Spreadsheet, book_name: String) -> Controller {
                 |book_id, s: String| name_id_manager.get_id(&(book_id, s)).clone();
             load_external_links(links, &mut sheet_id_fetcher, &mut name_id_fetcher)
         } else {
-            (ExternalLinksManager::new(), HashMap::new())
+            (ExtBooksManager::new(), HashMap::new())
         };
     let mut settings_loader = SettingsLoader::new();
     let calc_pr = workbook.calc_pr;

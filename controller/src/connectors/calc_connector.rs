@@ -22,7 +22,7 @@ use crate::{
     calc_engine::connector::Connector,
     cell::Cell,
     container::DataContainer,
-    external_links::ExternalLinksManager,
+    ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, TextIdManager},
     navigator::Navigator,
     vertex_manager::status::Status as VertexStatus,
@@ -34,7 +34,7 @@ pub struct CalcConnector<'a> {
     pub vertex_status: &'a VertexStatus,
     pub navigator: &'a mut Navigator,
     pub container: &'a mut DataContainer,
-    pub ext_links: &'a ExternalLinksManager,
+    pub ext_links: &'a mut ExtBooksManager,
     pub text_id_manager: &'a mut TextIdManager,
     pub func_id_manager: &'a FuncIdManager,
     pub names_storage: HashMap<NameId, CalcValue>,
@@ -408,7 +408,7 @@ impl<'a> CalcConnector<'a> {
         }
     }
 
-    pub fn convert_unmut_ref(&self, unmut_ref: &UnMutRefWithPrefix) -> CalcVertex {
+    pub fn convert_unmut_ref(&mut self, unmut_ref: &UnMutRefWithPrefix) -> CalcVertex {
         let prefix = &unmut_ref.prefix;
         let reference = &unmut_ref.reference;
         match (prefix, reference) {

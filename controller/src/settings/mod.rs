@@ -1,10 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use controller_base::SheetId;
-use xlrs_workbook::worksheet::SheetFormatPr;
+use logisheets_workbook::prelude::CtSheetFormatPr;
 
 pub struct Settings {
-    pub sheet_format_pr: HashMap<SheetId, SheetFormatPr>,
+    pub sheet_format_pr: HashMap<SheetId, CtSheetFormatPr>,
     pub calc_config: CalcConfig,
     pub async_funcs: HashSet<String>, // function names in upper case.
 }
@@ -12,7 +12,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         let calc_config = CalcConfig::default();
-        let sheet_format_pr = HashMap::<SheetId, SheetFormatPr>::new();
+        let sheet_format_pr = HashMap::<SheetId, CtSheetFormatPr>::new();
         let afuncs = vec!["BAIDUHOTSEARCH".to_string()];
         Settings {
             sheet_format_pr,

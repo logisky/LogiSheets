@@ -10,3 +10,4 @@ paste = "1.0.5"
 quick-xml = {version = "0.22.0", features = ["serialize"]}
 regex = "1"
 logiutils = {version = "0.1.0", path = "../../logiutils"}
+serde = {version = "1.0.125", features = ["derive"]}
