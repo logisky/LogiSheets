@@ -31,7 +31,7 @@ mod tests {
     use crate::xml_deserialize_from_str;
     #[test]
     fn test1() {
-        let xml = include_str!("../../../workbook/examples/styles2.xml");
+        let xml = include_str!("../../examples/styles2.xml");
         let r = xml_deserialize_from_str::<StylesheetPart>(b"styleSheet", xml);
         match r {
             Ok(sst) => {

@@ -50,7 +50,7 @@ mod tests {
     use crate::xml_deserialize_from_str;
     #[test]
     fn test1() {
-        let xml = include_str!("../../../workbook/examples/workbook.xml");
+        let xml = include_str!("../../examples/workbook.xml");
         let r = xml_deserialize_from_str::<WorkbookPart>(b"workbook", xml);
         match r {
             Ok(wb) => {

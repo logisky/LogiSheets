@@ -1,5 +1,3 @@
-// use xlrs_workbook::complex_types::UnderlineProperty;
-// use xlrs_workbook::{complex_types::FontSize, styles::*};
 use logisheets_workbook::prelude::*;
 
 use super::defaults::get_init_font;

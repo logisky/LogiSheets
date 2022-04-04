@@ -1,10 +1,5 @@
 use im::hashmap::HashMap;
 use serde::Serialize;
-use xlrs_workbook::complex_types::BooleanProperty;
-
-pub fn build_boolean_property(val: bool) -> BooleanProperty {
-    BooleanProperty { val }
-}
 
 #[derive(Debug, Clone)]
 struct KeyValue<K, V>

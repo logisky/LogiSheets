@@ -1,13 +1,13 @@
 use controller_base::async_func::{AsyncCalcResult, Task};
 use controller_base::{CellId, SheetId};
-use xlrs_workbook::reader::Spreadsheet;
 
+use logisheets_workbook::prelude::read;
 pub mod display;
 pub mod edit_action;
 pub mod status;
 mod transaction;
 mod viewer;
-use crate::file_loader::load;
+use crate::file_loader2::load;
 use crate::payloads::sheet_shift::{SheetShiftPayload, SheetShiftType};
 use crate::payloads::Process;
 use crate::settings::Settings;
@@ -65,7 +65,7 @@ impl Controller {
     }
 
     pub fn from_file(name: String, f: &[u8]) -> Option<Self> {
-        let res = Spreadsheet::read(f);
+        let res = read(f);
         match res {
             Ok(ss) => Some(load(ss, name)),
             Err(e) => {
