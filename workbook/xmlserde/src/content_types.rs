@@ -32,7 +32,7 @@ mod tests {
     use crate::xml_deserialize_from_str;
     #[test]
     fn test1() {
-        let xml = include_str!("../../../workbook/examples/[Content_Types].xml");
+        let xml = include_str!("../../examples/[Content_Types].xml");
         let r = xml_deserialize_from_str::<ContentTypes>(b"Types", xml);
         match r {
             Ok(ct) => {

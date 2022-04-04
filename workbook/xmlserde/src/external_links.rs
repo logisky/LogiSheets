@@ -95,7 +95,7 @@ mod tests {
     use crate::xml_deserialize_from_str;
     #[test]
     fn test1() {
-        let xml = include_str!("../../../workbook/examples/external_link.xml");
+        let xml = include_str!("../../examples/external_link.xml");
         let r = xml_deserialize_from_str::<ExternalLinkPart>(b"externalLink", xml);
         match r {
             Ok(external_link) => {

@@ -1,31 +1,19 @@
-#[macro_use]
-mod defaults;
-
-pub mod app_properties;
-pub mod calc_chain;
-pub mod chartsheet;
-pub mod comments;
-pub mod complex_types;
-pub mod content_types;
-pub mod core_properties;
-pub mod custom;
-pub mod drawing;
-pub mod errors;
-pub mod external_link;
-pub mod metadata;
 pub mod reader;
-pub mod relationships;
-pub mod shared_string_table;
-pub mod sheet_config;
-pub mod simple_types;
-pub mod styles;
-pub mod tables;
-pub mod variant;
+pub mod rtypes;
 pub mod workbook;
-pub mod worksheet;
-pub mod xml_element;
+#[macro_use]
+extern crate logiutils;
+use xmlserde::*;
 
-mod namespace;
-
-#[cfg(test)]
-mod tests;
+pub mod prelude {
+    pub use super::reader::*;
+    pub use super::workbook::Workbook;
+    pub use comments::*;
+    pub use complex_types::*;
+    pub use simple_types::*;
+    pub use sst::SstPart;
+    pub use style_sheet::StylesheetPart;
+    pub use workbook::WorkbookPart;
+    pub use worksheet::*;
+    pub use xmlserde::*;
+}

@@ -1,7 +1,6 @@
 use super::defaults::get_init_fill;
 use super::manager::Manager;
 use crate::payloads::sheet_process::style::{FillPayloadType, GradientPayload, PatternPayload};
-// use xlrs_workbook::{simple_types::StPatternType, styles::*};
 use logisheets_workbook::prelude::*;
 
 pub type FillId = u32;

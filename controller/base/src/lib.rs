@@ -20,12 +20,8 @@ pub mod name_fetcher;
 pub mod set_curr_cell;
 
 use chrono::{DateTime, FixedOffset};
-use std::hash::Hash;
-// use xlrs_workbook::complex_types::Rst;
-// use xlrs_workbook::simple_types::StCellType;
-// use xlrs_workbook::worksheet::Cell;
-// use xlrs_workbook::{complex_types::*, external_link::ExternalCell};
 use logisheets_workbook::prelude::*;
+use std::hash::Hash;
 
 pub type Id = u32;
 pub type RowId = u32;

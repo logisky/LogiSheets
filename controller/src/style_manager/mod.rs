@@ -1,7 +1,6 @@
 extern crate indexmap;
 extern crate quick_xml;
 extern crate serde;
-extern crate xlrs_workbook;
 
 mod border_manager;
 pub mod defaults;

@@ -15,7 +15,7 @@ mod tests {
     use crate::xml_deserialize_from_str;
     #[test]
     fn test1() {
-        let xml = include_str!("../../../workbook/examples/comments.xml");
+        let xml = include_str!("../../examples/comments.xml");
         let r = xml_deserialize_from_str::<Comments>(b"comments", xml);
         match r {
             Ok(sst) => {
