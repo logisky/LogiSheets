@@ -21,3 +21,5 @@ dist
 coverage/
 
 /pkg
+
+.DS_Store

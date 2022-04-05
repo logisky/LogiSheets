@@ -179,4 +179,17 @@ mod tests {
         let wb = Controller::default();
         log!("{:?}", wb.status);
     }
+
+    #[test]
+    fn from_file_test() {
+        use std::fs;
+        let buf = fs::read("../workbook/examples/6.xlsx").unwrap();
+        let controller = Controller::from_file(String::from("6"), &buf);
+        match controller {
+            Some(_) => {}
+            None => {
+                todo!()
+            }
+        }
+    }
 }
