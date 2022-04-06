@@ -22,11 +22,11 @@ pub fn read_file(name: String, buf: &[u8]) -> ReadFileResult {
     let mut old_ctrl = CONTROLLER.lock().unwrap();
     let ctrl = Controller::from_file(name, buf);
     match ctrl {
-        Some(c) => {
+        Ok(c) => {
             *old_ctrl = c;
             ReadFileResult::Ok
         }
-        None => ReadFileResult::FileErr,
+        Err(_) => ReadFileResult::FileErr,
     }
 }
 

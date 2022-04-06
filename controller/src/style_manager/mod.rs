@@ -62,6 +62,11 @@ impl StyleManager {
             .border_manager
             .get_data(border_id)
             .unwrap_or(self.border_manager.get_data(0).unwrap());
+        let num_fmt_id = xf.num_fmt_id.unwrap_or(0);
+        let num_fmt = self
+            .num_fmt_manager
+            .get_data(num_fmt_id)
+            .unwrap_or(self.num_fmt_manager.get_data(0).unwrap());
         let alignment = xf.alignment.clone();
         let protection = xf.protection.clone();
         Style {
@@ -70,7 +75,7 @@ impl StyleManager {
             border: border.clone(),
             alignment: alignment.clone(),
             protection: protection.clone(),
-            formatter: String::from(""),
+            formatter: num_fmt.clone(),
         }
     }
 }
