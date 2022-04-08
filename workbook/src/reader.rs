@@ -320,16 +320,4 @@ mod tests {
         let s = result.to_str().unwrap();
         assert_eq!(s, "xl/comments6.xml");
     }
-
-    // #[test]
-    // fn read_test() {
-    //     use std::fs;
-    //     use std::path::Path;
-    //     let path_str = "/home/yiliang/work/LogiTemplate/xn-jsbg.xlsx";
-    //     let path = Path::new(path_str);
-    //     let buf = fs::read(path).unwrap();
-    //     let r = read(&buf).unwrap();
-    //     assert_eq!(27, r.worksheets.len());
-    //     assert_eq!(true, r.sst.is_some());
-    // }
 }

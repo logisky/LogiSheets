@@ -171,6 +171,7 @@ pub mod message {
                 ControllerValue::Bool(b) => CellValueOneof::Bool(b),
                 ControllerValue::Number(n) => CellValueOneof::Number(n),
                 ControllerValue::Error(e) => CellValueOneof::Error(e),
+                ControllerValue::Empty => todo!(),
             };
             Value {
                 cell_value_oneof: Some(cv),

@@ -133,6 +133,7 @@ pub enum Value {
     Bool(bool),
     Number(f64),
     Error(String),
+    Empty,
 }
 
 #[derive(Debug, Clone, Serialize)]

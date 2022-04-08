@@ -1,7 +1,7 @@
 use controller_base::async_func::{AsyncCalcResult, Task};
 use controller_base::{CellId, SheetId};
 
-use logisheets_workbook::prelude::read;
+use logisheets_workbook::prelude::{read, SerdeErr};
 pub mod display;
 pub mod edit_action;
 pub mod status;
@@ -21,12 +21,12 @@ use crate::async_func_manager::AsyncFuncManager;
 use edit_action::EditAction;
 
 pub struct Controller {
-    status: Status,
-    async_func_manager: AsyncFuncManager,
-    curr_book_name: String,
-    settings: Settings,
-    undo_stack: Vec<Status>,
-    redo_stack: Vec<Status>,
+    pub status: Status,
+    pub async_func_manager: AsyncFuncManager,
+    pub curr_book_name: String,
+    pub settings: Settings,
+    pub undo_stack: Vec<Status>,
+    pub redo_stack: Vec<Status>,
 }
 
 impl Default for Controller {
@@ -64,18 +64,23 @@ impl Controller {
         }
     }
 
-    pub fn from_file(name: String, f: &[u8]) -> Option<Self> {
+    pub fn from_file(name: String, f: &[u8]) -> Result<Self, SerdeErr> {
         let res = read(f);
         match res {
-            Ok(ss) => Some(load(ss, name)),
+            Ok(ss) => Ok(load(ss, name)),
             Err(e) => {
                 log!("{:?}", e);
-                None
+                Err(e)
             }
         }
     }
-    pub fn get_sheet_id(&self, idx: usize) -> Option<SheetId> {
+
+    pub fn get_sheet_id_by_idx(&self, idx: usize) -> Option<SheetId> {
         self.status.sheet_pos_manager.get_sheet_id(idx)
+    }
+
+    pub fn get_sheet_id_by_name(&self, name: &str) -> Option<SheetId> {
+        self.status.sheet_id_manager.has(name)
     }
 
     // Handle an action and get the affected sheet indices.
