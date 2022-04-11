@@ -1,5 +1,5 @@
 [package]
-name = "xlrs_controller"
+name = "logisheets_controller"
 version = "0.1.0"
 authors = ["Jiangming He"]
 edition = "2018"

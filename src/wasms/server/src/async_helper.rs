@@ -1,5 +1,5 @@
+use logisheets_controller::{CellId, SheetId, Task};
 use std::collections::HashMap;
-use xlrs_controller::{CellId, SheetId, Task};
 
 #[derive(Debug)]
 pub struct PendingTask {

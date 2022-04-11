@@ -191,9 +191,9 @@ mod tests {
         let buf = fs::read("../workbook/examples/6.xlsx").unwrap();
         let controller = Controller::from_file(String::from("6"), &buf);
         match controller {
-            Some(_) => {}
-            None => {
-                todo!()
+            Ok(_) => {}
+            Err(_) => {
+                panic!()
             }
         }
     }

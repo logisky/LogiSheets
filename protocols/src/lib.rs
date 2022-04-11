@@ -6,6 +6,17 @@ use std::io::Cursor;
 pub mod message {
     include!(concat!(env!("OUT_DIR"), "/protocols.rs"));
 
+    use logisheets_controller::controller::display::CellFormulaValue;
+    use logisheets_controller::controller::display::CellStyle as ControllerCellStyle;
+    use logisheets_controller::controller::display::DisplayPatch as ControllerDisplayPatch;
+    use logisheets_controller::controller::display::DisplayResponse as ControllerResponse;
+    use logisheets_controller::controller::display::Style as ControllerStyle;
+    use logisheets_controller::controller::display::Value as ControllerValue;
+    use logisheets_controller::controller::edit_action::style_payload::BorderLocation as CtrlBorderLocation;
+    use logisheets_controller::controller::edit_action::style_payload::SetBorderStyle;
+    use logisheets_controller::controller::edit_action::style_payload::SetPatternFill as CtrlSetPatternFill;
+    use logisheets_controller::controller::edit_action::EditAction;
+    use logisheets_controller::controller::edit_action::{self, EditPayload};
     use logisheets_workbook::prelude::CtBorder as WbBorder;
     use logisheets_workbook::prelude::CtBorderPr as WbBorderPr;
     use logisheets_workbook::prelude::CtCellAlignment;
@@ -17,17 +28,6 @@ pub mod message {
     use logisheets_workbook::prelude::StPatternType;
     use logisheets_workbook::prelude::StUnderlineValues;
     use logisheets_workbook::prelude::{StHorizontalAlignment, StVerticalAlignment};
-    use xlrs_controller::controller::display::CellFormulaValue;
-    use xlrs_controller::controller::display::CellStyle as ControllerCellStyle;
-    use xlrs_controller::controller::display::DisplayPatch as ControllerDisplayPatch;
-    use xlrs_controller::controller::display::DisplayResponse as ControllerResponse;
-    use xlrs_controller::controller::display::Style as ControllerStyle;
-    use xlrs_controller::controller::display::Value as ControllerValue;
-    use xlrs_controller::controller::edit_action::style_payload::BorderLocation as CtrlBorderLocation;
-    use xlrs_controller::controller::edit_action::style_payload::SetBorderStyle;
-    use xlrs_controller::controller::edit_action::style_payload::SetPatternFill as CtrlSetPatternFill;
-    use xlrs_controller::controller::edit_action::EditAction;
-    use xlrs_controller::controller::edit_action::{self, EditPayload};
 
     impl DisplayResponse {
         pub fn from(res: ControllerResponse) -> Self {
@@ -130,7 +130,7 @@ pub mod message {
     }
 
     impl BlockInfo {
-        pub fn from(bi: xlrs_controller::controller::display::BlockInfo) -> Self {
+        pub fn from(bi: logisheets_controller::controller::display::BlockInfo) -> Self {
             BlockInfo {
                 block_id: bi.block_id as u32,
                 row_start: bi.row_start as u32,
@@ -142,7 +142,7 @@ pub mod message {
     }
 
     impl MergeCell {
-        pub fn from(mc: xlrs_controller::controller::display::MergeCell) -> Self {
+        pub fn from(mc: logisheets_controller::controller::display::MergeCell) -> Self {
             MergeCell {
                 start_row: mc.row_start as u32,
                 start_col: mc.col_start as u32,
@@ -153,7 +153,7 @@ pub mod message {
     }
 
     impl Comment {
-        pub fn from(comment: xlrs_controller::controller::display::Comment) -> Self {
+        pub fn from(comment: logisheets_controller::controller::display::Comment) -> Self {
             Comment {
                 row: comment.row as u32,
                 col: comment.col as u32,
@@ -180,7 +180,7 @@ pub mod message {
     }
 
     impl RowInfo {
-        pub fn from(info: xlrs_controller::controller::display::RowInfo) -> Self {
+        pub fn from(info: logisheets_controller::controller::display::RowInfo) -> Self {
             RowInfo {
                 height: info.height,
                 hidden: info.hidden,
@@ -190,7 +190,7 @@ pub mod message {
     }
 
     impl ColInfo {
-        pub fn from(info: xlrs_controller::controller::display::ColInfo) -> Self {
+        pub fn from(info: logisheets_controller::controller::display::ColInfo) -> Self {
             ColInfo {
                 width: info.width,
                 hidden: info.hidden,
@@ -415,7 +415,7 @@ pub mod message {
         let sheet_idx = input.sheet_idx as usize;
         let row = input.row as usize;
         let col = input.col as usize;
-        use xlrs_controller::controller::edit_action::style_payload::StyleUpdate;
+        use logisheets_controller::controller::edit_action::style_payload::StyleUpdate;
         EditPayload::StyleUpdate(StyleUpdate {
             sheet_idx,
             row,
