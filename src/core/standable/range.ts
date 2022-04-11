@@ -1,10 +1,11 @@
 import { MergeCell } from 'proto/message'
-import { shallowCopy } from 'common'
 export class Range {
     static fromMergeCell(mergeCell: MergeCell) {
-        const range = new Range()
-        shallowCopy(mergeCell, range)
-        return range
+        return new Range()
+            .setEndCol(mergeCell.endCol)
+            .setStartCol(mergeCell.startCol)
+            .setEndRow(mergeCell.endRow)
+            .setStartRow(mergeCell.startRow)
     }
     get width() {
         return this.#endCol - this.#startCol

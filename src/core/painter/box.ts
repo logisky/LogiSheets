@@ -25,6 +25,7 @@ export class Box {
             // default
             // 常规
             // 居中
+            case AlignX.UNRECOGNIZED:
             case AlignX.H_UNSPECIFIED:
             case AlignX.H_GENERAL:
             case AlignX.H_CENTER:
@@ -74,6 +75,7 @@ export class Box {
                 break
             // default
             // 居中
+            case AlignY.UNRECOGNIZED:
             case AlignY.V_UNSPECIFIED:
             case AlignY.V_CENTER:
                 textBaseline = 'middle'
