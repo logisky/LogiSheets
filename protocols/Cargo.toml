@@ -9,7 +9,7 @@ prost = "0.9"
 bytes = "1"
 serde = {version = "1.0.125", features = ["derive"]}
 logiutils = {version = "0.1.0", path = "../logiutils"}
-xlrs_controller = {version = "0.1.0", path = "../controller"}
+logisheets_controller = {version = "0.1.0", path = "../controller"}
 logisheets_workbook = {version = "0.1.0", path = "../workbook"}
 
 [build-dependencies]

@@ -2,14 +2,14 @@ use crate::async_helper::PendingTask;
 
 use super::async_helper::AsyncHelper;
 use lazy_static::lazy_static;
+use logisheets_controller::controller::edit_action::{
+    BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock, RowShift,
+};
+use logisheets_controller::controller::{display::DisplayRequest, Controller};
+use logisheets_controller::{AsyncCalcResult, AsyncErr, Task};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use wasm_bindgen::prelude::*;
-use xlrs_controller::controller::edit_action::{
-    BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock, RowShift,
-};
-use xlrs_controller::controller::{display::DisplayRequest, Controller};
-use xlrs_controller::{AsyncCalcResult, AsyncErr, Task};
 
 lazy_static! {
     static ref CONTROLLER: Mutex<Controller> = Mutex::new(Controller::default());
@@ -124,7 +124,7 @@ pub fn input_async_result(result: &JsValue) -> JsValue {
 }
 
 #[wasm_bindgen]
-/// xlrs_controller::DisplayResponse
+/// logisheets_controller::DisplayResponse
 pub fn get_patches(sheet_idx: u32, version: u32) -> JsValue {
     let mut ctrl = CONTROLLER.lock().unwrap();
     let response = ctrl.get_display_response(DisplayRequest {

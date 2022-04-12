@@ -3,7 +3,6 @@ members = [
     "controller",
     "logiutils",
     "math",
-    "network",
     "workbook",
     "protocols",
     "src/wasms/server",

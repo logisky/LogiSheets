@@ -54,6 +54,7 @@ pub fn lex_success(f: &str) -> bool {
     }
 }
 
+#[derive(Debug)]
 pub enum Err {
     SerdeErr(SerdeErr),
     NotFound,
@@ -64,11 +65,6 @@ pub struct Workbook {
 }
 
 impl Workbook {
-    /// ```
-    /// use std::fs;
-    /// let buf = fs::read("./example.xlsx");
-    /// Workbook::from_file(&buf, String::from("example.xlsx"));
-    /// ```
     pub fn from_file(buf: &[u8], book_name: String) -> Result<Self, Err> {
         match Controller::from_file(book_name, buf) {
             Ok(controller) => Ok(Workbook { controller }),
@@ -76,12 +72,6 @@ impl Workbook {
         }
     }
 
-    /// ```
-    /// use std::fs;
-    /// let buf = fs::read("./example.xlsx");
-    /// let mut workbook = Workbook::from_file(&buf, String::from("example.xlsx")).unwrap();
-    /// workbook.get_sheet_by_name("Sheet1");
-    /// ```
     pub fn get_sheet_by_name(&mut self, name: &str) -> Result<Worksheet, Err> {
         match self.controller.get_sheet_id_by_name(name) {
             Some(sheet_id) => Ok(Worksheet {
@@ -92,12 +82,6 @@ impl Workbook {
         }
     }
 
-    /// ```
-    /// use std::fs;
-    /// let buf = fs::read("./example.xlsx");
-    /// let mut workbook = Workbook::from_file(&buf, String::from("example.xlsx")).unwrap();
-    /// workbook.get_sheet_by_idx(0);
-    /// ```
     pub fn get_sheet_by_idx(&mut self, idx: usize) -> Result<Worksheet, Err> {
         match self.controller.get_sheet_id_by_idx(idx) {
             Some(sheet_id) => Ok(Worksheet {
