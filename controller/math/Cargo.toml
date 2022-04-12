@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 num = {version = "0.4.0"}
-logiutils = {version = "0.1.0", path = "../logiutils"}
+logiutils = {version = "0.1.0", path = "../../logiutils"}
