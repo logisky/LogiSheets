@@ -30,12 +30,11 @@ mod vertex_manager;
 mod workbook;
 
 use connectors::NameFetcher;
-use controller::display::Comment;
 pub use controller::{
-    display::{MergeCell, Style, Value},
+    display::{Comment, MergeCell, Style, Value},
     Controller,
 };
-use logisheets_workbook::prelude::SerdeErr;
+pub use logisheets_workbook::prelude::SerdeErr;
 use parser::unparse;
 
 pub type SheetId = controller_base::SheetId;
