@@ -1,9 +1,13 @@
+[package]
+name = "logisheets"
+version = "0.1.0"
+
 [workspace]
 members = [
-    "controller",
-    "logiutils",
-    "workbook",
-    "protocols",
-    "src/wasms/server",
+    "crates/*",
     "src/wasms/fc",
+    "src/wasms/server",
 ]
+
+[dependencies]
+logisheets_controller = {path = "crates/controller", version = "0.1.0"}
