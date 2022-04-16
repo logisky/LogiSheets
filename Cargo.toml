@@ -11,3 +11,4 @@ members = [
 
 [dependencies]
 logisheets_controller = {path = "crates/controller", version = "0.1.0"}
+logisheets_workbook = {path = "crates/workbook", version = "0.1.0"}

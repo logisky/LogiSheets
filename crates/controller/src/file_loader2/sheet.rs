@@ -194,6 +194,16 @@ pub fn load_sheet_data(
                                         &mut fetcher,
                                     )
                                 }
+                            } else {
+                                load_normal_formula(
+                                    vertex_manager,
+                                    book_name,
+                                    sheet_id,
+                                    row,
+                                    col,
+                                    f,
+                                    &mut fetcher,
+                                )
                             }
                         }
                     }

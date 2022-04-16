@@ -10,6 +10,7 @@ yarn.lock
 # Excel backup file of libre office
 *.xls#
 *.xlsx#
+.~*
 
 # lint cached files
 .husky
