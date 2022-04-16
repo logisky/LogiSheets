@@ -16,7 +16,7 @@ import { Direction, error } from 'common'
 import { TextAttr } from './text_attr'
 
 export class PainterService extends CanvasApi {
-    fillFgColor(type: PatternFillType, color: string, box: Box) {
+    fillFgColor (type: PatternFillType, color: string, box: Box) {
         this.save()
         const attr = new CanvasAttr()
         attr.fillStyle = color
@@ -32,7 +32,7 @@ export class PainterService extends CanvasApi {
         this.restore()
     }
 
-    comment(box: Box): void {
+    comment (box: Box): void {
         this.save()
         const attr = new CanvasAttr()
         /**
@@ -51,7 +51,7 @@ export class PainterService extends CanvasApi {
     }
 
     // tslint:disable-next-line: max-func-body-length
-    border(border: BorderPr, box: Box, type: Direction) {
+    border (border: BorderPr, box: Box, type: Direction) {
         this.save()
         const stdColor = StandardColor.fromArgb(border.color)
         const dot = npx(1)
@@ -132,7 +132,7 @@ export class PainterService extends CanvasApi {
         this.restore()
     }
 
-    public text(txt: string, attr: TextAttr, box: Box): void {
+    public text (txt: string, attr: TextAttr, box: Box): void {
         this.save()
         const boxWidth = box.width
         const ntxts: string[] = []
@@ -178,7 +178,7 @@ export class PainterService extends CanvasApi {
         this.restore()
     }
 
-    private _underline(tx: number, ty: number, attr: TextAttr, text: string) {
+    private _underline (tx: number, ty: number, attr: TextAttr, text: string) {
         let xOffset = 1
         let yOffset = 1
         const lineAttr = new CanvasAttr()
@@ -216,7 +216,7 @@ export class PainterService extends CanvasApi {
                 }
                 break
             default:
-                error(`Not support underline ${attr.font.underline}`)
+                console.error(`Not support underline ${attr.font.underline}`)
                 return
         }
         this.attr(lineAttr)
