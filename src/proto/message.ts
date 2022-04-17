@@ -197,18 +197,23 @@ export function underlineTypeFromJSON(object: any): UnderlineType {
   switch (object) {
     case 0:
     case "DOUBLE_U":
+    case "DoubleU":
       return UnderlineType.DOUBLE_U;
     case 1:
     case "DOUBLE_ACCOUNTING":
+    case "DoubleAccounting":
       return UnderlineType.DOUBLE_ACCOUNTING;
     case 2:
     case "NONE":
+    case "None":
       return UnderlineType.NONE;
     case 3:
     case "SINGLE":
+    case "Single":
       return UnderlineType.SINGLE;
     case 4:
     case "SINGLE_ACCOUNTING":
+    case "SingleAccounting":
       return UnderlineType.SINGLE_ACCOUNTING;
     case -1:
     case "UNRECOGNIZED":
@@ -221,14 +226,15 @@ export function underlineTypeToJSON(object: UnderlineType): string {
   switch (object) {
     case UnderlineType.DOUBLE_U:
       return "DOUBLE_U";
+      return "DoubleU";
     case UnderlineType.DOUBLE_ACCOUNTING:
-      return "DOUBLE_ACCOUNTING";
+      return "DoubleAccounting";
     case UnderlineType.NONE:
-      return "NONE";
+      return "None";
     case UnderlineType.SINGLE:
-      return "SINGLE";
+      return "Single";
     case UnderlineType.SINGLE_ACCOUNTING:
-      return "SINGLE_ACCOUNTING";
+      return "SINGLEAccounting";
     default:
       return "UNKNOWN";
   }
@@ -261,63 +267,83 @@ export function patternFillTypeFromJSON(object: any): PatternFillType {
   switch (object) {
     case 0:
     case "DARK_DOWN":
+    case "DarkDown":
       return PatternFillType.DARK_DOWN;
     case 1:
     case "DARK_GRAY":
+    case "DarkGray":
       return PatternFillType.DARK_GRAY;
     case 2:
     case "DARK_GRID":
+    case "DarkGrid":
       return PatternFillType.DARK_GRID;
     case 3:
     case "DARK_HORIZONTAL":
+    case "DarkHorizontal":
       return PatternFillType.DARK_HORIZONTAL;
     case 4:
     case "DARK_TRELLIS":
+    case "DarkThrellis":
       return PatternFillType.DARK_TRELLIS;
     case 5:
     case "DARK_UP":
+    case "DarkUp":
       return PatternFillType.DARK_UP;
     case 6:
     case "DARK_VERTICAL":
+    case "DarkVertical":
       return PatternFillType.DARK_VERTICAL;
     case 7:
     case "GRAY0625":
+    case "Gray0625":
       return PatternFillType.GRAY0625;
     case 8:
     case "GRAY125":
+    case "Gray125":
       return PatternFillType.GRAY125;
     case 9:
     case "LIGHT_DOWN":
+    case "LightDown":
       return PatternFillType.LIGHT_DOWN;
     case 10:
     case "LIGHT_GRAY":
+    case "LightGray":
       return PatternFillType.LIGHT_GRAY;
     case 11:
     case "LIGHT_GRID":
+    case "LightGrid":
       return PatternFillType.LIGHT_GRID;
     case 12:
     case "LIGHT_HORIZONTAL":
+    case "Light":
       return PatternFillType.LIGHT_HORIZONTAL;
     case 13:
     case "LIGHT_TRELLIS":
+    case "LightTrellis":
       return PatternFillType.LIGHT_TRELLIS;
     case 14:
     case "LIGHT_UP":
+    case "LightUp":
       return PatternFillType.LIGHT_UP;
     case 15:
     case "LIGHT_VERTICAL":
+    case "LightVertical":
       return PatternFillType.LIGHT_VERTICAL;
     case 16:
     case "MEDIUM_GRAY":
+    case "MediumGray":
       return PatternFillType.MEDIUM_GRAY;
     case 17:
     case "NONE_PATTERN_FILL":
+    case "NonePatternFill":
       return PatternFillType.NONE_PATTERN_FILL;
     case 18:
     case "SOLID":
+    case "Solid":
       return PatternFillType.SOLID;
     case -1:
     case "UNRECOGNIZED":
+    case "Unrecognized":
     default:
       return PatternFillType.UNRECOGNIZED;
   }
@@ -1911,10 +1937,10 @@ export const MergeCell = {
 
   fromJSON(object: any): MergeCell {
     return {
-      startRow: isSet(object.startRow) ? Number(object.startRow) : 0,
-      startCol: isSet(object.startCol) ? Number(object.startCol) : 0,
-      endRow: isSet(object.endRow) ? Number(object.endRow) : 0,
-      endCol: isSet(object.endCol) ? Number(object.endCol) : 0,
+      startRow: isSet(object.rowStart) ? Number(object.rowStart) : 0,
+      startCol: isSet(object.colStart) ? Number(object.colStart) : 0,
+      endRow: isSet(object.rowEnd) ? Number(object.rowEnd) : 0,
+      endCol: isSet(object.colEnd) ? Number(object.colEnd) : 0,
     };
   },
 
@@ -5621,9 +5647,11 @@ export const Font = {
       bold: isSet(object.bold) ? Boolean(object.bold) : false,
       italic: isSet(object.italic) ? Boolean(object.italic) : false,
       underline: isSet(object.underline)
-        ? underlineTypeFromJSON(object.underline)
+        ? underlineTypeFromJSON(object.underline.val)
         : 0,
-      color: isSet(object.color) ? String(object.color) : "",
+      color: isSet(object.color) ?
+        isSet(object.color.rgb) ? String(object.color.rgb): String(object.color)
+        : "",
       size: isSet(object.size) ? Number(object.size) : 0,
       name: isSet(object.name) ? String(object.name) : "",
       outline: isSet(object.outline) ? Boolean(object.outline) : false,
@@ -5712,9 +5740,9 @@ export const PatternFill = {
 
   fromJSON(object: any): PatternFill {
     return {
-      fgColor: isSet(object.fgColor) ? String(object.fgColor) : "",
-      bgColor: isSet(object.bgColor) ? String(object.bgColor) : "",
-      type: isSet(object.type) ? patternFillTypeFromJSON(object.type) : 0,
+      fgColor: isSet(object.PatternFill.fg_color) ? String(object.PatternFill.fg_color.rgb) : "",
+      bgColor: isSet(object.PatternFill.bg_color) ? String(object.PatternFill.bg_color.rgb) : "",
+      type: isSet(object.PatternFill.pattern_type) ? patternFillTypeFromJSON(object.PatternFill.pattern_type) : 0,
     };
   },
 
