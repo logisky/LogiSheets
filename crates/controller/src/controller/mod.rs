@@ -146,7 +146,6 @@ impl Controller {
     }
 
     pub fn get_display_response(&mut self, req: DisplayRequest) -> DisplayResponse {
-        log!("{:?}", req);
         let viewer = SheetViewer::default();
         let response = viewer.display(self, req.sheet_idx);
         response
