@@ -1,6 +1,11 @@
 [package]
 name = "logisheets"
 version = "0.1.0"
+description = "A web spreadsheets application written in Rust and Typescript"
+keywords = ["excel", "spreadsheets", "ooxml", "logisheets"]
+readme = "README.md"
+repository = "https://github.com/proclml/LogiSheets"
+license = "MIT"
 
 [workspace]
 members = [
