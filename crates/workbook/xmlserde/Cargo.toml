@@ -1,14 +1,14 @@
 [package]
-edition = "2018"
 name = "logisheets_xmlserde"
+edition = "2018"
 version = "0.1.0"
 description = "read and write the ooxml files"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 license = "MIT"
 
 [dependencies]
-logisheets_derives = {path = "../derives"}
 paste = "1.0.5"
 quick-xml = {version = "0.22.0", features = ["serialize"]}
 regex = "1"
 serde = {version = "1.0.125", features = ["derive"]}
+logisheets_derives = {path = "../derives", version = "0.1.0"}
