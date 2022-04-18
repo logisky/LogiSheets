@@ -15,7 +15,7 @@ pub fn lex(s: &str) -> Option<pest::iterators::Pair<Rule>> {
             let tokens = r.next().unwrap();
             Some(tokens)
         }
-        Err(e) => None,
+        Err(_e) => None,
     }
 }
 

@@ -129,7 +129,6 @@ pub fn calc_infix(
         }
         ast::InfixOperator::Space => intersect(lhs, rhs),
         ast::InfixOperator::Colon => get_range(lhs, rhs),
-        _ => unimplemented!(),
     }
 }
 

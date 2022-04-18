@@ -33,7 +33,6 @@ where
         let mut finish = false;
         let connector = self.connector;
         let formulas = self.formulas;
-        let names = self.names;
         let error = self.error;
         let mut last_calc = vec![CalcValue::Scalar(Value::Blank); self.vertices.len()];
         let mut dirties = HashSet::<FormulaId>::new();

@@ -1,6 +1,6 @@
 use super::defaults::get_init_fill;
 use super::manager::Manager;
-use crate::payloads::sheet_process::style::{FillPayloadType, GradientPayload, PatternPayload};
+use crate::payloads::sheet_process::style::FillPayloadType;
 use logisheets_workbook::prelude::*;
 
 pub type FillId = u32;

@@ -128,7 +128,7 @@ impl<'a> Connector for CalcConnector<'a> {
                         Some(from_sheet) => {
                             let sheets = self.get_sheet_ids(from_sheet, sheet_id);
                             sheets.into_iter().for_each(|s| {
-                                let value = self.get_sheet_calc_range_value(
+                                let _value = self.get_sheet_calc_range_value(
                                     s, addr.row, addr.col, addr.row, addr.col,
                                 );
                             });

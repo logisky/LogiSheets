@@ -57,13 +57,6 @@ pub fn convert_f64(value: Value) -> Result<f64, ast::Error> {
     }
 }
 
-pub fn assert_scalar_value(v: CalcValue) -> Option<Value> {
-    match v {
-        CalcValue::Scalar(v) => Some(v),
-        _ => None,
-    }
-}
-
 pub fn is_error(value: &CalcValue) -> bool {
     match value {
         CalcValue::Scalar(s) => match s {
@@ -92,9 +85,9 @@ pub mod tests_utils {
     impl AsyncFuncCommitTrait for TestFetcher {
         fn query_or_commit_task(
             &mut self,
-            sheet_id: logisheets_base::SheetId,
-            cell_id: logisheets_base::CellId,
-            task: Task,
+            _sheet_id: logisheets_base::SheetId,
+            _cell_id: logisheets_base::CellId,
+            _task: Task,
         ) -> Option<AsyncCalcResult> {
             None
         }
@@ -114,8 +107,8 @@ pub mod tests_utils {
     impl SetCurrCellTrait for TestFetcher {
         fn set_curr_cell(
             &mut self,
-            active_sheet: logisheets_base::SheetId,
-            addr: logisheets_base::Addr,
+            _active_sheet: logisheets_base::SheetId,
+            _addr: logisheets_base::Addr,
         ) {
             todo!()
         }
@@ -144,30 +137,30 @@ pub mod tests_utils {
 
         fn get_cell_idx(
             &mut self,
-            sheet_id: logisheets_base::SheetId,
-            cell_id: &logisheets_base::CellId,
+            _sheet_id: logisheets_base::SheetId,
+            _cell_id: &logisheets_base::CellId,
         ) -> Option<(usize, usize)> {
             Some((0, 0))
         }
 
         fn get_cell_id(
             &mut self,
-            sheet_id: logisheets_base::SheetId,
-            row: usize,
-            col: usize,
+            _sheet_id: logisheets_base::SheetId,
+            _row: usize,
+            _col: usize,
         ) -> Option<logisheets_base::CellId> {
             todo!()
         }
 
         fn commit_calc_values(
             &mut self,
-            vertex: FormulaId,
-            result: CalcValue,
+            _vertex: FormulaId,
+            _result: CalcValue,
         ) -> std::collections::HashSet<crate::vertex_manager::vertex::FormulaId> {
             todo!()
         }
 
-        fn is_async_func(&self, func_name: &str) -> bool {
+        fn is_async_func(&self, _func_name: &str) -> bool {
             false
         }
     }

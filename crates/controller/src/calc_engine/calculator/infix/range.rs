@@ -139,7 +139,7 @@ fn get_range_of_range_and_row_range(range: Range, rr: RowRange) -> Option<Refere
     Some(Reference::RowRange(RowRange { start, end }))
 }
 
-fn get_range_of_col_range_and_row_range(cr: ColRange, rr: RowRange) -> Option<Reference> {
+fn get_range_of_col_range_and_row_range(_cr: ColRange, _rr: RowRange) -> Option<Reference> {
     None
 }
 

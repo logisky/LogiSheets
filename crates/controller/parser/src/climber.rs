@@ -5,6 +5,7 @@ use pest::iterators::Pair;
 use pest::RuleType;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[allow(dead_code)]
 pub enum Assoc {
     Prefix,
     Left,
@@ -13,6 +14,7 @@ pub enum Assoc {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Operator<R: RuleType> {
     rule: R,
     assoc: Assoc,

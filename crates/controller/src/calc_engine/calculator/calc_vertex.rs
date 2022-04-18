@@ -16,39 +16,6 @@ pub enum CalcVertex {
 }
 
 impl CalcVertex {
-    pub fn get_sheet_id(&self) -> Option<SheetId> {
-        match self {
-            CalcVertex::Value(_) => None,
-            CalcVertex::Reference(r) => Some(r.sheet),
-            CalcVertex::Union(u) => {
-                let sheet_id = u.get(0)?.as_ref().get_sheet_id()?;
-                Some(sheet_id)
-            }
-        }
-    }
-
-    pub fn get_addr(&self) -> Option<Addr> {
-        match self {
-            CalcVertex::Value(_) => None,
-            CalcVertex::Reference(r) => match &r.reference {
-                Reference::Addr(addr) => Some(*addr),
-                Reference::ColumnRange(cr) => Some(Addr {
-                    row: 0,
-                    col: cr.start,
-                }),
-                Reference::RowRange(rr) => Some(Addr {
-                    row: rr.start,
-                    col: 0,
-                }),
-                Reference::Range(range) => Some(range.start),
-            },
-            CalcVertex::Union(u) => {
-                let addr = u.get(0)?.as_ref().get_addr()?;
-                Some(addr)
-            }
-        }
-    }
-
     pub fn from_error(e: ast::Error) -> Self {
         CalcVertex::Value(CalcValue::Scalar(Value::Error(e)))
     }

@@ -91,7 +91,7 @@ fn _index(cv: CalcVertex, r: usize, c: usize) -> CalcVertex {
             CalcValue::Cube(_) => CalcVertex::from_error(ast::Error::Value),
             CalcValue::Union(_) => unreachable!(),
         },
-        CalcVertex::Reference(r) => todo!(),
+        CalcVertex::Reference(_) => todo!(),
         CalcVertex::Union(_) => unreachable!(),
     }
 }

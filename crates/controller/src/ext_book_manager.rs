@@ -46,8 +46,8 @@ impl ExtBooksManager {
         book_id: ExtBookId,
         from_sheet_id: Option<SheetId>,
         sheet_id: SheetId,
-        start: Addr,
-        end: Addr,
+        _start: Addr,
+        _end: Addr,
     ) -> CalcValue {
         self.check(book_id, sheet_id);
         if let Some(f) = from_sheet_id {
@@ -60,7 +60,7 @@ impl ExtBooksManager {
         &mut self,
         book_id: ExtBookId,
         sheet_id: SheetId,
-        addr: Addr,
+        _addr: Addr,
     ) -> CalcValue {
         self.check(book_id, sheet_id);
         CalcValue::Scalar(Value::Error(ast::Error::Ref))
@@ -71,8 +71,8 @@ impl ExtBooksManager {
         book_id: ExtBookId,
         from_sheet_id: Option<SheetId>,
         sheet_id: SheetId,
-        start: usize,
-        end: usize,
+        _start: usize,
+        _end: usize,
     ) -> CalcValue {
         self.check(book_id, sheet_id);
         if let Some(f) = from_sheet_id {
@@ -86,8 +86,8 @@ impl ExtBooksManager {
         book_id: ExtBookId,
         from_sheet_id: Option<SheetId>,
         sheet_id: SheetId,
-        start: usize,
-        end: usize,
+        _start: usize,
+        _end: usize,
     ) -> CalcValue {
         self.check(book_id, sheet_id);
         if let Some(f) = from_sheet_id {

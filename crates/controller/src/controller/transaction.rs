@@ -140,7 +140,11 @@ fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Sta
     }
 }
 
-fn handle_name_proc(status: Status, payload: NamePayload, context: &TransactionContext) -> Status {
+fn handle_name_proc(
+    _status: Status,
+    _payload: NamePayload,
+    _context: &TransactionContext,
+) -> Status {
     todo!()
 }
 

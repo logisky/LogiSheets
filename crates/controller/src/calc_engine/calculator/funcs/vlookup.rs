@@ -2,7 +2,8 @@ use super::CalcVertex;
 use crate::calc_engine::connector::Connector;
 use logisheets_parser::ast;
 
-pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+#[allow(dead_code)]
+pub fn calc<C>(args: Vec<CalcVertex>, _fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
@@ -10,9 +11,9 @@ where
         return CalcVertex::from_error(ast::Error::Unspecified);
     }
     let mut args_iter = args.into_iter();
-    let lookup_value = args_iter.next().unwrap();
-    let table_array = args_iter.next().unwrap();
-    let col_index_num = args_iter.next().unwrap();
-    let range_look_up = args_iter.next();
+    let _lookup_value = args_iter.next().unwrap();
+    let _table_array = args_iter.next().unwrap();
+    let _col_index_num = args_iter.next().unwrap();
+    let _range_look_up = args_iter.next();
     todo!()
 }

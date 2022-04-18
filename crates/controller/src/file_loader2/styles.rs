@@ -3,6 +3,7 @@ use logisheets_base::StyleId;
 use logisheets_workbook::prelude::*;
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 pub struct StyleLoader<'a> {
     manager: &'a mut StyleManager,
     part: &'a StylesheetPart,

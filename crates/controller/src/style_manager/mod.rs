@@ -19,10 +19,7 @@ use xf_manager::XfManager;
 
 use crate::payloads::sheet_process::style::CellStylePayload;
 
-use self::{
-    defaults::{get_init_border, get_init_fill, get_init_font},
-    execute::execute_style_payload,
-};
+use self::execute::execute_style_payload;
 use crate::controller::display::Style;
 
 #[derive(Debug, Clone, Default)]

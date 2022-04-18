@@ -6,7 +6,6 @@ extern crate regex;
 extern crate statrs;
 extern crate unicode_segmentation;
 
-mod addr_parser;
 mod async_func_manager;
 mod calc_engine;
 mod cell;
@@ -22,7 +21,6 @@ mod navigator;
 mod payloads;
 mod settings;
 mod style_manager;
-mod utils;
 mod vertex_manager;
 mod workbook;
 

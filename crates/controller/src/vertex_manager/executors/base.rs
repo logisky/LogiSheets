@@ -35,6 +35,7 @@ pub enum AffectResult {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum Direction {
     Horizontal,
     Vertical,

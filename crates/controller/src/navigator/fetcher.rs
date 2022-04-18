@@ -290,7 +290,7 @@ impl<'a> Fetcher<'a> {
             (None, None) => Some((curr_row, curr_col)),
             (None, Some(_)) => todo!(),
             (Some(_), None) => todo!(),
-            (Some(rc), Some(cc)) => todo!(),
+            (Some(_rc), Some(_cc)) => todo!(),
         }
     }
 }
