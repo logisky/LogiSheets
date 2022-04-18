@@ -35,7 +35,6 @@ export class Service {
         await initWasm()
         this.input$.subscribe((req: ClientSend): void => {
             const response = this._execute(req)
-            console.log(response)
             this.output$.next(response)
         })
         this._calculator.output$.subscribe(res => {
@@ -89,9 +88,7 @@ export class Service {
     }
 
     private _execDisplayReq(req: DisplayRequest): ServerSend {
-        console.log(req)
         const jsonRes = get_patches(req.sheetIdx, req.version)
-        console.log('???????????')
         const response = DisplayResponse.fromJSON(jsonRes)
         return { serverSendOneof: { $case: 'displayResponse', displayResponse: response } }
     }
@@ -102,14 +99,11 @@ export class Service {
         if (transaction.redo)
             return this._execRedo()
         transaction_start()
-        console.log('????????????/')
         transaction.payloads.forEach(p => {
             this._addPayload(p)
         })
-        console.log('!!!!!!!!!!')
         const undoable = transaction.undoable
         const result: TransactionEndResult = transaction_end(undoable)
-        console.log('kkkkkkkkkkkkkkkkkk')
         if (result.code === TransactionCode.Err)
             return {}
         return {
