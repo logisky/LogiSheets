@@ -2,7 +2,7 @@ use crate::calc_engine::{
     calculator::calc_vertex::{CalcValue, CalcVertex, Value},
     connector::Connector,
 };
-use parser::ast;
+use logisheets_parser::ast;
 
 fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex
 where

@@ -2,9 +2,9 @@ mod calc_order;
 pub mod calculator;
 pub mod connector;
 mod cycle;
-use controller_base::Addr;
 use im::HashSet;
 use itertools::Itertools;
+use logisheets_base::Addr;
 
 use crate::settings::CalcConfig;
 use crate::vertex_manager::status::Status;

@@ -1,6 +1,6 @@
 use crate::calc_engine::calculator::calc_vertex::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub fn calc_left<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

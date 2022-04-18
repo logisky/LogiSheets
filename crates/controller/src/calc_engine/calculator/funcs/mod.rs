@@ -43,7 +43,7 @@ mod switch;
 mod utils;
 mod vlookup;
 
-use parser::ast;
+use logisheets_parser::ast;
 
 use super::calc_vertex::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;

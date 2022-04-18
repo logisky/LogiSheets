@@ -1,5 +1,5 @@
 use crate::calc_engine::calculator::math::bits::{bin2dec, hex2dec, oct2dec};
-use parser::ast;
+use logisheets_parser::ast;
 
 use crate::calc_engine::connector::Connector;
 

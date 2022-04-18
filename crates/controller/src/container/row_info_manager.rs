@@ -1,5 +1,5 @@
-use controller_base::{RowId, StyleId};
 use im::HashMap;
+use logisheets_base::{RowId, StyleId};
 
 #[derive(Debug, Clone, Default)]
 pub struct RowInfoManager {

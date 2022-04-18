@@ -1,5 +1,5 @@
 use super::calc_vertex::Value;
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
     match (lhs, rhs) {

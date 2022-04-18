@@ -1,6 +1,6 @@
-use controller_base::SheetId;
 use im::{HashSet, Vector};
 use itertools::Itertools;
+use logisheets_base::SheetId;
 
 use crate::{
     id_manager::SheetIdManager, payloads::sheet_shift::SheetShiftPayload,

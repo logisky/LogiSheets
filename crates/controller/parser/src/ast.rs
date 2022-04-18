@@ -1,5 +1,5 @@
 use chrono::{DateTime, FixedOffset};
-use controller_base::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId};
+use logisheets_base::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId};
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

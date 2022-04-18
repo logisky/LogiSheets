@@ -1,6 +1,6 @@
 use crate::cell::Cell;
-use controller_base::{CellId, ColId, RowId, SheetId};
 use im::hashmap::HashMap;
+use logisheets_base::{CellId, ColId, RowId, SheetId};
 
 use self::col_info_manager::{ColInfo, ColInfoManager};
 use self::row_info_manager::{RowInfo, RowInfoManager};

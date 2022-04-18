@@ -3,8 +3,8 @@ use im::HashSet;
 use crate::vertex_manager::vertex::{
     MutAddrRange, MutColRange, MutReferenceVertex, MutRowRange, SheetRangeVertex, Vertex,
 };
-use controller_base::{CellId, SheetId};
-use parser::ast::{self, MutRefWithPrefix};
+use logisheets_base::{CellId, SheetId};
+use logisheets_parser::ast::{self, MutRefWithPrefix};
 
 pub fn find_vertices(node: &ast::Node) -> HashSet<Vertex> {
     match &node.pure {

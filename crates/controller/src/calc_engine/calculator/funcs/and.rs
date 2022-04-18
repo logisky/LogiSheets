@@ -1,7 +1,7 @@
 use crate::calc_engine::connector::Connector;
 
 use super::{CalcValue, CalcVertex, Value};
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
@@ -54,8 +54,8 @@ mod tests {
     use super::calc;
     use super::{CalcValue, CalcVertex, Value};
     use chrono::DateTime;
-    use controller_base::matrix_value::MatrixValue;
-    use parser::ast::Error;
+    use logisheets_base::matrix_value::MatrixValue;
+    use logisheets_parser::ast::Error;
 
     #[test]
     fn and_test() {

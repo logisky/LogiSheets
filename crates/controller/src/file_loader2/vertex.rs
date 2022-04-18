@@ -1,5 +1,5 @@
-use controller_base::{id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, SheetId};
-use parser::{ast, context::Context, Parser};
+use logisheets_base::{id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, SheetId};
+use logisheets_parser::{ast, context::Context, Parser};
 
 use crate::vertex_manager::{
     executors::input_formula::add_ast_node, status::Status as VertexStatus, VertexManager,

@@ -2,7 +2,7 @@ use super::condition::{
     get_condition_value, match_condition, parse_condition, Condition, LogicalCondition, Op,
 };
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 
 use super::{CalcValue, CalcVertex, Value};
 

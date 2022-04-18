@@ -1,5 +1,5 @@
 use crate::style_manager::{xf_manager::CtrlXf, StyleManager};
-use controller_base::StyleId;
+use logisheets_base::StyleId;
 use logisheets_workbook::prelude::*;
 use std::collections::HashMap;
 

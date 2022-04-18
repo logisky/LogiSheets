@@ -1,6 +1,6 @@
-use controller_base::id_fetcher::IdFetcherTrait;
-use controller_base::name_fetcher::NameFetcherTrait;
-use controller_base::{
+use logisheets_base::id_fetcher::IdFetcherTrait;
+use logisheets_base::name_fetcher::NameFetcherTrait;
+use logisheets_base::{
     CellId, ColId, ExtBookId, FuncId, NameId, NormalCellId, RowId, SheetId, TextId,
 };
 

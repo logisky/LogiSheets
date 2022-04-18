@@ -1,5 +1,5 @@
-use controller_base::{NormalCellId, SheetId};
 use im::HashMap;
+use logisheets_base::{NormalCellId, SheetId};
 
 #[derive(Debug, Clone, Default)]
 pub struct MergeCells {

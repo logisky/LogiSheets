@@ -1,4 +1,4 @@
-use controller_base::{CellId, ColId, RowId, SheetId};
+use logisheets_base::{CellId, ColId, RowId, SheetId};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SheetRangeVertex {

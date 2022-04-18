@@ -1,5 +1,5 @@
-use controller_base::{ColId, StyleId};
 use im::HashMap;
+use logisheets_base::{ColId, StyleId};
 
 #[derive(Debug, Clone, Default)]
 pub struct ColInfoManager {

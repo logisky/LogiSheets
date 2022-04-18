@@ -1,7 +1,7 @@
 use super::super::utils::{get_condition_result, ConditionResult};
 use super::super::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 use statrs::distribution::{Continuous, ContinuousCDF, Gamma};
 
 pub fn calc_gammadist<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

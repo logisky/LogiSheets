@@ -1,4 +1,4 @@
-use controller_base::{CellId, CellValue, SheetId};
+use logisheets_base::{CellId, CellValue, SheetId};
 use logisheets_workbook::prelude::*;
 
 use crate::{

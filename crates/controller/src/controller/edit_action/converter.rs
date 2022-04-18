@@ -1,4 +1,4 @@
-use controller_base::{BlockId, CellValue, TextId};
+use logisheets_base::{BlockId, CellValue, TextId};
 
 use super::style_payload::{StyleUpdate, StyleUpdateType};
 use super::{

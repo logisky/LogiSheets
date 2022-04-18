@@ -1,4 +1,4 @@
-use controller_base::{CellValue, Payload};
+use logisheets_base::{CellValue, Payload};
 
 use super::style::CellStylePayload;
 

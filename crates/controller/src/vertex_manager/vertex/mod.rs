@@ -2,7 +2,7 @@ mod cell;
 mod sheet_range;
 mod sts_range;
 
-use controller_base::NameId;
+use logisheets_base::NameId;
 
 use super::graph::Graph;
 

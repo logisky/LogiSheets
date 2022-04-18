@@ -1,5 +1,5 @@
 [package]
-name = "lexer"
+name = "logisheets_lexer"
 version = "0.1.0"
 edition = "2018"
 description = "the lexer for excel formula"

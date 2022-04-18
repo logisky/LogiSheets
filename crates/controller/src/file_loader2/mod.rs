@@ -6,7 +6,7 @@ mod styles;
 mod utils;
 mod vertex;
 
-use controller_base::id_fetcher::SheetIdFetcherTrait;
+use logisheets_base::id_fetcher::SheetIdFetcherTrait;
 use logisheets_workbook::prelude::*;
 use sheet::load_comments;
 
@@ -25,7 +25,7 @@ pub struct SheetIdFetcher<'a> {
 }
 
 impl<'a> SheetIdFetcherTrait for SheetIdFetcher<'a> {
-    fn fetch_sheet_id(&mut self, sheet_name: &str) -> controller_base::SheetId {
+    fn fetch_sheet_id(&mut self, sheet_name: &str) -> logisheets_base::SheetId {
         self.sheet_id_manager.get_id(sheet_name)
     }
 }

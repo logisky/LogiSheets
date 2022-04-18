@@ -1,5 +1,5 @@
-use controller_base::async_func::{AsyncCalcResult, Task};
-use controller_base::{CellId, SheetId};
+use logisheets_base::async_func::{AsyncCalcResult, Task};
+use logisheets_base::{CellId, SheetId};
 
 use logisheets_workbook::prelude::{read, SerdeErr};
 pub mod display;

@@ -2,7 +2,7 @@ use crate::calc_engine::calculator::calc_vertex::{CalcValue, Value};
 use crate::calc_engine::connector::Connector;
 
 use super::CalcVertex;
-use parser::ast;
+use logisheets_parser::ast;
 
 #[derive(Debug, Clone, Copy)]
 pub enum IsErrType {

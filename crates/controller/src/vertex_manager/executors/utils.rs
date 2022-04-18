@@ -5,8 +5,8 @@ use crate::vertex_manager::executors::ast2vertex::{
 };
 use crate::vertex_manager::status::Status;
 use crate::vertex_manager::vertex::{FormulaId, SheetRangeVertex, StsRangeVertex, Vertex};
-use controller_base::{CellId, SheetId};
 use im::HashSet;
+use logisheets_base::{CellId, SheetId};
 
 pub fn delete_and_get_new(
     range_start: usize,

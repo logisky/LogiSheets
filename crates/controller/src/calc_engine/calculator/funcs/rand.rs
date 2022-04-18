@@ -1,5 +1,5 @@
 use crate::calc_engine::calculator::calc_vertex::CalcVertex;
-use parser::ast;
+use logisheets_parser::ast;
 use rand::{thread_rng, Rng};
 
 pub fn calc(args: Vec<CalcVertex>) -> CalcVertex {

@@ -6,9 +6,9 @@ use super::utils::{
 use crate::vertex_manager::vertex::{
     FormulaId, MutAddrRange, MutReferenceVertex, SheetRangeVertex, StsRangeVertex,
 };
-use controller_base::matrix_value::cross_product_usize;
-use controller_base::{CellId, NormalCellId, SheetId};
 use im::HashSet;
+use logisheets_base::matrix_value::cross_product_usize;
+use logisheets_base::{CellId, NormalCellId, SheetId};
 
 #[derive(Debug)]
 pub struct RemoveRange {

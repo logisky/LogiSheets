@@ -1,7 +1,7 @@
 use super::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::calculator::math::{fv::calc_fv, pv::calc_pv};
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn fv<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where

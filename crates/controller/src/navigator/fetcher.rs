@@ -1,7 +1,7 @@
 use crate::navigator::sheet_nav::{ChangeType, IndexChange};
 
 use super::sheet_nav::{Cache, Data};
-use controller_base::{BlockCellId, CellId, ColId, Id, NormalCellId, RowId};
+use logisheets_base::{BlockCellId, CellId, ColId, Id, NormalCellId, RowId};
 
 pub struct Fetcher<'a> {
     data: &'a Data,

@@ -1,7 +1,7 @@
 use crate::calc_engine::connector::Connector;
 
 use super::{CalcValue, CalcVertex, Value};
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex
 where

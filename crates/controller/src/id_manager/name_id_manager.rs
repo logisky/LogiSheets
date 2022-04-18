@@ -1,5 +1,5 @@
-use controller_base::{ExtBookId, NameId};
 use im::hashmap::HashMap;
+use logisheets_base::{ExtBookId, NameId};
 
 #[derive(Debug, Clone)]
 pub struct NameIdManager {

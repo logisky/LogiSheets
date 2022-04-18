@@ -1,6 +1,6 @@
 use super::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
@@ -59,8 +59,8 @@ fn sum_calc_value(value: CalcValue) -> Result<f64, ast::Error> {
 mod tests {
     use super::super::utils::tests_utils::TestFetcher;
     use super::{CalcValue, CalcVertex, Value};
-    use controller_base::matrix_value::MatrixValue;
-    use parser::ast;
+    use logisheets_base::matrix_value::MatrixValue;
+    use logisheets_parser::ast;
 
     #[test]
     fn sum_test() {

@@ -2,8 +2,8 @@ use super::super::context::ContextTrait;
 use super::base::{AffectResult, Direction, ExecuteResult, SubPayload};
 use super::utils::{handle_sheet_range_affect_result, handle_sts_affect_result};
 use crate::vertex_manager::vertex::{MutReferenceVertex, SheetRangeVertex};
-use controller_base::{CellId, SheetId};
 use im::HashSet;
+use logisheets_base::{CellId, SheetId};
 
 #[derive(Debug)]
 pub struct InsertRange {

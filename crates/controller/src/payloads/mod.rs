@@ -1,7 +1,7 @@
 pub mod name;
 pub mod sheet_process;
 pub mod sheet_shift;
-use controller_base::{CellId, SheetId};
+use logisheets_base::{CellId, SheetId};
 use name::NamePayload;
 use sheet_process::SheetProcess;
 use sheet_shift::SheetRenamePayload;

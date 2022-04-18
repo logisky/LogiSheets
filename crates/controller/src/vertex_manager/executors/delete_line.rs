@@ -1,4 +1,4 @@
-use controller_base::{CellId, SheetId};
+use logisheets_base::{CellId, SheetId};
 
 use super::super::context::ContextTrait;
 use super::base::{AffectResult, ExecuteResult, SubPayload};

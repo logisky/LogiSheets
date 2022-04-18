@@ -1,4 +1,4 @@
-use parser::ast;
+use logisheets_parser::ast;
 
 use super::{CalcValue, Value};
 
@@ -78,11 +78,11 @@ pub fn is_error(value: &CalcValue) -> bool {
 
 #[cfg(test)]
 pub mod tests_utils {
-    use controller_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
-    use controller_base::get_active_sheet::GetActiveSheetTrait;
-    use controller_base::get_curr_addr::GetCurrAddrTrait;
-    use controller_base::set_curr_cell::SetCurrCellTrait;
-    use parser::ast;
+    use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
+    use logisheets_base::get_active_sheet::GetActiveSheetTrait;
+    use logisheets_base::get_curr_addr::GetCurrAddrTrait;
+    use logisheets_base::set_curr_cell::SetCurrCellTrait;
+    use logisheets_parser::ast;
 
     use crate::calc_engine::calculator::calc_vertex::{CalcValue, CalcVertex};
     use crate::calc_engine::connector::Connector;
@@ -92,21 +92,21 @@ pub mod tests_utils {
     impl AsyncFuncCommitTrait for TestFetcher {
         fn query_or_commit_task(
             &mut self,
-            sheet_id: controller_base::SheetId,
-            cell_id: controller_base::CellId,
+            sheet_id: logisheets_base::SheetId,
+            cell_id: logisheets_base::CellId,
             task: Task,
         ) -> Option<AsyncCalcResult> {
             None
         }
     }
     impl GetActiveSheetTrait for TestFetcher {
-        fn get_active_sheet(&self) -> controller_base::SheetId {
+        fn get_active_sheet(&self) -> logisheets_base::SheetId {
             todo!()
         }
     }
 
     impl GetCurrAddrTrait for TestFetcher {
-        fn get_curr_addr(&self) -> controller_base::Addr {
+        fn get_curr_addr(&self) -> logisheets_base::Addr {
             todo!()
         }
     }
@@ -114,8 +114,8 @@ pub mod tests_utils {
     impl SetCurrCellTrait for TestFetcher {
         fn set_curr_cell(
             &mut self,
-            active_sheet: controller_base::SheetId,
-            addr: controller_base::Addr,
+            active_sheet: logisheets_base::SheetId,
+            addr: logisheets_base::Addr,
         ) {
             todo!()
         }
@@ -134,28 +134,28 @@ pub mod tests_utils {
             }
         }
 
-        fn get_text(&self, _: &controller_base::TextId) -> Option<String> {
+        fn get_text(&self, _: &logisheets_base::TextId) -> Option<String> {
             todo!()
         }
 
-        fn get_func_name(&self, _: &controller_base::FuncId) -> Option<String> {
+        fn get_func_name(&self, _: &logisheets_base::FuncId) -> Option<String> {
             todo!()
         }
 
         fn get_cell_idx(
             &mut self,
-            sheet_id: controller_base::SheetId,
-            cell_id: &controller_base::CellId,
+            sheet_id: logisheets_base::SheetId,
+            cell_id: &logisheets_base::CellId,
         ) -> Option<(usize, usize)> {
             Some((0, 0))
         }
 
         fn get_cell_id(
             &mut self,
-            sheet_id: controller_base::SheetId,
+            sheet_id: logisheets_base::SheetId,
             row: usize,
             col: usize,
-        ) -> Option<controller_base::CellId> {
+        ) -> Option<logisheets_base::CellId> {
             todo!()
         }
 

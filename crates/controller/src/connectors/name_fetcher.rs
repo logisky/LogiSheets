@@ -1,4 +1,4 @@
-use controller_base::name_fetcher::NameFetcherTrait;
+use logisheets_base::name_fetcher::NameFetcherTrait;
 
 use crate::{
     ext_book_manager::ExtBooksManager,
@@ -16,31 +16,31 @@ pub struct NameFetcher<'a> {
 }
 
 impl<'a> NameFetcherTrait for NameFetcher<'a> {
-    fn fetch_text(&self, text_id: &controller_base::TextId) -> String {
+    fn fetch_text(&self, text_id: &logisheets_base::TextId) -> String {
         self.text_id_manager
             .get_string(text_id)
             .unwrap_or(String::from(""))
     }
 
-    fn fetch_func_name(&self, func_id: &controller_base::FuncId) -> String {
+    fn fetch_func_name(&self, func_id: &logisheets_base::FuncId) -> String {
         self.func_manager
             .get_string(func_id)
             .unwrap_or(String::from(""))
     }
 
-    fn fetch_sheet_name(&self, sheet_id: &controller_base::SheetId) -> String {
+    fn fetch_sheet_name(&self, sheet_id: &logisheets_base::SheetId) -> String {
         self.sheet_id_manager
             .get_string(sheet_id)
             .unwrap_or(String::from("Unknown"))
     }
 
-    fn fetch_book_name(&self, book_id: &controller_base::ExtBookId) -> String {
+    fn fetch_book_name(&self, book_id: &logisheets_base::ExtBookId) -> String {
         self.external_links_manager
             .fetch_book_name(book_id)
             .unwrap_or(String::from(""))
     }
 
-    fn fetch_defined_name(&self, nid: &controller_base::NameId) -> String {
+    fn fetch_defined_name(&self, nid: &logisheets_base::NameId) -> String {
         match self.name_id_manager.get_string(nid) {
             Some((_, name)) => name,
             None => String::from(""),
@@ -49,8 +49,8 @@ impl<'a> NameFetcherTrait for NameFetcher<'a> {
 
     fn fetch_cell_idx(
         &mut self,
-        sheet_id: &controller_base::SheetId,
-        cell_id: &controller_base::CellId,
+        sheet_id: &logisheets_base::SheetId,
+        cell_id: &logisheets_base::CellId,
     ) -> (usize, usize) {
         self.navigator
             .fetch_cell_idx(sheet_id.clone(), cell_id)
@@ -59,8 +59,8 @@ impl<'a> NameFetcherTrait for NameFetcher<'a> {
 
     fn fetch_row_idx(
         &mut self,
-        sheet_id: &controller_base::SheetId,
-        row_id: &controller_base::RowId,
+        sheet_id: &logisheets_base::SheetId,
+        row_id: &logisheets_base::RowId,
     ) -> usize {
         self.navigator
             .fetch_row_idx(sheet_id.clone(), row_id.clone())
@@ -69,8 +69,8 @@ impl<'a> NameFetcherTrait for NameFetcher<'a> {
 
     fn fetch_col_idx(
         &mut self,
-        sheet_id: &controller_base::SheetId,
-        col_id: &controller_base::ColId,
+        sheet_id: &logisheets_base::SheetId,
+        col_id: &logisheets_base::ColId,
     ) -> usize {
         self.navigator
             .fetch_col_idx(sheet_id.clone(), col_id.clone())

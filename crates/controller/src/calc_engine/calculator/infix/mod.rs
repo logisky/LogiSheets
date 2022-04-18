@@ -5,7 +5,7 @@ use super::super::connector::Connector;
 use super::calc_vertex::{CalcValue, CalcVertex, Value};
 use super::compare::{compare, CompareResult};
 use intersect::intersect;
-use parser::ast;
+use logisheets_parser::ast;
 use range::get_range;
 
 pub fn calc_infix(

@@ -1,5 +1,5 @@
-use controller_base::{AuthorId, CellId, SheetId};
 use im::HashMap;
+use logisheets_base::{AuthorId, CellId, SheetId};
 
 use crate::id_manager::AuthorIdManager;
 

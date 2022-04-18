@@ -3,7 +3,7 @@ use crate::calc_engine::calculator::math::combine::{
     calc_combine as combine, calc_permut as permut,
 };
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn calc_combine<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where

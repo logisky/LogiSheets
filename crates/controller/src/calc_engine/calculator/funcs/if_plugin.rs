@@ -2,7 +2,7 @@ use crate::calc_engine::connector::Connector;
 
 use super::utils::{get_condition_result, ConditionResult};
 use super::CalcVertex;
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where

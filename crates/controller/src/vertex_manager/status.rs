@@ -1,6 +1,6 @@
-use controller_base::{NameId, SheetId};
 use im::{HashMap, HashSet};
-use parser::ast;
+use logisheets_base::{NameId, SheetId};
+use logisheets_parser::ast;
 
 use super::vertex::{FormulaId, SheetRangeVertex, StsRangeVertex, Vertex};
 

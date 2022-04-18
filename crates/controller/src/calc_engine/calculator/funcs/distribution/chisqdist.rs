@@ -1,7 +1,7 @@
 use super::super::utils::{get_condition_result, ConditionResult};
 use super::super::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 use statrs::distribution::{ChiSquared, Continuous, ContinuousCDF};
 
 pub fn calc_chisqdist<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

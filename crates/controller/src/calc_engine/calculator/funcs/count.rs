@@ -38,7 +38,7 @@ fn count_calc_value(value: CalcValue) -> u16 {
 mod tests {
     use super::super::utils::tests_utils::TestFetcher;
     use super::{CalcValue, CalcVertex, Value};
-    use controller_base::matrix_value::MatrixValue;
+    use logisheets_base::matrix_value::MatrixValue;
 
     #[test]
     fn count_test() {

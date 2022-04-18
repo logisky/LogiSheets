@@ -1,6 +1,6 @@
 use super::super::calc_vertex::{CalcReference, CalcVertex, ColRange, Range, Reference, RowRange};
-use controller_base::Addr as Address;
-use parser::ast;
+use logisheets_base::Addr as Address;
+use logisheets_parser::ast;
 
 pub fn intersect(lhs: CalcVertex, rhs: CalcVertex) -> CalcVertex {
     match (lhs, rhs) {
@@ -205,8 +205,8 @@ mod tests {
         CalcReference, CalcValue, CalcVertex, ColRange, Range, Reference, RowRange, Value,
     };
     use super::{intersect, intersect_without_prefix};
-    use controller_base::Addr as Address;
-    use parser::ast;
+    use logisheets_base::Addr as Address;
+    use logisheets_parser::ast;
 
     #[test]
     fn addr_test() {

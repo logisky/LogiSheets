@@ -7,9 +7,9 @@ use crate::vertex_manager::executors::utils::delete_cells;
 use crate::vertex_manager::vertex::{
     MutAddrRange, MutReferenceVertex, SheetRangeVertex, StsRangeVertex,
 };
-use controller_base::CellId;
-use controller_base::{BlockId, SheetId};
 use im::HashSet;
+use logisheets_base::CellId;
+use logisheets_base::{BlockId, SheetId};
 
 #[derive(Debug)]
 pub struct RemoveBlockLine {

@@ -1,4 +1,4 @@
-use controller_base::BlockId;
+use logisheets_base::BlockId;
 
 #[derive(Debug, Clone)]
 pub struct CreateBlockPayload {

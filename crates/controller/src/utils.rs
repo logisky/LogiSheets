@@ -44,7 +44,7 @@ where
     }
 }
 
-use controller_base::column_label_to_index;
+use logisheets_base::column_label_to_index;
 use regex::Regex;
 
 lazy_static! {

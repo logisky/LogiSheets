@@ -1,7 +1,7 @@
-use parser::ast;
+use logisheets_parser::ast;
 
 use super::super::calc_vertex::{CalcReference, CalcVertex, ColRange, Range, Reference, RowRange};
-use controller_base::Addr as Address;
+use logisheets_base::Addr as Address;
 
 pub fn get_range(lhs: CalcVertex, rhs: CalcVertex) -> CalcVertex {
     match (lhs, rhs) {

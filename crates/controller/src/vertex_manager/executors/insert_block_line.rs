@@ -2,8 +2,8 @@ use super::super::context::ContextTrait;
 use super::base::{AffectResult, ExecuteResult, SubPayload};
 use super::utils::{handle_sheet_range_affect_result, handle_sts_affect_result};
 use crate::vertex_manager::vertex::{MutReferenceVertex, SheetRangeVertex, StsRangeVertex};
-use controller_base::{BlockId, CellId, SheetId};
 use im::HashSet;
+use logisheets_base::{BlockId, CellId, SheetId};
 
 #[derive(Debug)]
 pub struct InsertBlockLine {

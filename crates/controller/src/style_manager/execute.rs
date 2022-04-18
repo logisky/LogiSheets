@@ -3,7 +3,7 @@ use crate::{
     payloads::sheet_process::style::CellStylePayload,
     style_manager::{border_manager::BorderPayload, font_manager::FontPayload},
 };
-use controller_base::StyleId;
+use logisheets_base::StyleId;
 
 pub fn execute_style_payload(
     sm: StyleManager,

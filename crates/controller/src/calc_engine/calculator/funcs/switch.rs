@@ -1,7 +1,7 @@
 use super::super::compare::{compare, CompareResult};
 use super::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
@@ -55,7 +55,7 @@ where
 mod tests {
     use super::super::utils::tests_utils::TestFetcher;
     use super::{CalcValue, CalcVertex, Value};
-    use parser::ast;
+    use logisheets_parser::ast;
 
     #[test]
     fn default_value() {

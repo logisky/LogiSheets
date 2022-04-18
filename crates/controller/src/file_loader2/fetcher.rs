@@ -4,7 +4,7 @@ use crate::{
     navigator::Navigator,
 };
 
-use controller_base::{
+use logisheets_base::{
     id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, ColId, ExtBookId, RowId, SheetId,
 };
 use logisheets_workbook::workbook::Workbook;
@@ -32,7 +32,7 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
         sheet_id: SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Option<controller_base::CellId> {
+    ) -> Option<logisheets_base::CellId> {
         self.navigator.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 
@@ -40,7 +40,7 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
         self.sheet_id_manager.get_id(sheet_name)
     }
 
-    fn fetch_name_id(&mut self, workbook: &Option<&str>, name: &str) -> controller_base::NameId {
+    fn fetch_name_id(&mut self, workbook: &Option<&str>, name: &str) -> logisheets_base::NameId {
         let book_id = match workbook {
             Some(book) => self.fetch_ext_book_id(book),
             None => 0 as ExtBookId,
@@ -72,11 +72,11 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
         }
     }
 
-    fn fetch_text_id(&mut self, text: &str) -> controller_base::TextId {
+    fn fetch_text_id(&mut self, text: &str) -> logisheets_base::TextId {
         self.text_id_manager.get_id(text)
     }
 
-    fn fetch_func_id(&mut self, func_name: &str) -> controller_base::FuncId {
+    fn fetch_func_id(&mut self, func_name: &str) -> logisheets_base::FuncId {
         self.func_id_manager.get_func_id(func_name)
     }
 }
@@ -93,7 +93,7 @@ impl<'a> IndexFetcherTrait for Fetcher<'a> {
     fn fetch_cell_index(
         &mut self,
         sheet_id: SheetId,
-        cell_id: &controller_base::CellId,
+        cell_id: &logisheets_base::CellId,
     ) -> Option<(usize, usize)> {
         self.navigator.fetch_cell_idx(sheet_id, cell_id)
     }

@@ -1,5 +1,5 @@
-use controller_base::{CellId, SheetId};
-use parser::ast;
+use logisheets_base::{CellId, SheetId};
+use logisheets_parser::ast;
 
 pub fn delete_cell(node: ast::Node, sheet_id: SheetId, cell_id: CellId) -> ast::Node {
     let pure = match node.pure {

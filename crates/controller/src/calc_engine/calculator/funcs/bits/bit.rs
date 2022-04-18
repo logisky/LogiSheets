@@ -1,6 +1,6 @@
 use crate::calc_engine::calculator::math::bits::{bitand, bitlshift, bitor, bitrshift, bitxor};
 use crate::calc_engine::connector::Connector;
-use parser::ast;
+use logisheets_parser::ast;
 
 use super::super::{CalcValue, CalcVertex, Value};
 

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use controller_base::SheetId;
+use logisheets_base::SheetId;
 use logisheets_workbook::prelude::CtSheetFormatPr;
 
 pub struct Settings {

@@ -1,5 +1,5 @@
-use controller_base::{CellValue, SheetId};
-use parser::unparse::Stringify;
+use logisheets_base::{CellValue, SheetId};
+use logisheets_parser::unparse::Stringify;
 
 use crate::connectors::NameFetcher;
 use crate::controller::display::{

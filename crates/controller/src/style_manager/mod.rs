@@ -11,9 +11,9 @@ mod num_fmt_manager;
 pub mod xf_manager;
 
 use border_manager::BorderManager;
-use controller_base::StyleId;
 use fill_manager::FillManager;
 use font_manager::FontManager;
+use logisheets_base::StyleId;
 use num_fmt_manager::NumFmtManager;
 use xf_manager::XfManager;
 

@@ -12,8 +12,8 @@ pub mod walker;
 extern crate lazy_static;
 use crate::climber::{Assoc, Climber, ClimberBuilder, Operator};
 use context::ContextTrait;
-use controller_base::{id_fetcher::IdFetcherTrait, TextId};
-use lexer::*;
+use logisheets_base::id_fetcher::IdFetcherTrait;
+use logisheets_lexer::*;
 use pest::iterators::Pair;
 use reference::build_cell_reference;
 use regex::Regex;
@@ -320,8 +320,8 @@ mod tests {
     use super::Parser;
     use crate::context::Context;
     use crate::test_utils::TestFetcher;
-    use controller_base::CellId;
-    use controller_base::{ExtBookId, NormalCellId, SheetId};
+    use logisheets_base::CellId;
+    use logisheets_base::{ExtBookId, NormalCellId, SheetId};
 
     // Need more tests
     #[test]

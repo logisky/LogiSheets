@@ -1,14 +1,16 @@
 use std::collections::{HashMap, HashSet};
 
-use controller_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
-use controller_base::get_active_sheet::GetActiveSheetTrait;
-use controller_base::get_curr_addr::GetCurrAddrTrait;
-use controller_base::set_curr_cell::SetCurrCellTrait;
-use controller_base::{
+use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
+use logisheets_base::get_active_sheet::GetActiveSheetTrait;
+use logisheets_base::get_curr_addr::GetCurrAddrTrait;
+use logisheets_base::set_curr_cell::SetCurrCellTrait;
+use logisheets_base::{
     matrix_value::{cross_product_usize, MatrixValue},
     Addr, CellId, CellValue, Error, FuncId, NameId, SheetId, TextId,
 };
-use parser::ast::{self, A1Reference, A1ReferenceRange, UnMutA1Reference, UnMutRefWithPrefix};
+use logisheets_parser::ast::{
+    self, A1Reference, A1ReferenceRange, UnMutA1Reference, UnMutRefWithPrefix,
+};
 
 use crate::{
     async_func_manager::AsyncFuncManager,
@@ -174,7 +176,7 @@ impl<'a> Connector for CalcConnector<'a> {
     fn get_cell_idx(
         &mut self,
         sheet_id: SheetId,
-        cell_id: &controller_base::CellId,
+        cell_id: &logisheets_base::CellId,
     ) -> Option<(usize, usize)> {
         self.navigator.fetch_cell_idx(sheet_id, cell_id)
     }

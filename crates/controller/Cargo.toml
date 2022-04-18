@@ -20,7 +20,7 @@ serde = {version = "1.0.125", features = ["derive"]}
 statrs = "0.15.0"
 unicode-segmentation = "1.8.0"
 
-controller_base = {version = "0.1.0", path = "./base"}
-lexer = {version = "0.1.0", path = "./lexer"}
-parser = {version = "0.1.1", path = "./parser"}
+logisheets_base = {version = "0.1.0", path = "./base"}
+logisheets_lexer = {version = "0.1.0", path = "./lexer"}
+logisheets_parser = {version = "0.1.1", path = "./parser"}
 logisheets_workbook = {version = "0.1.0", path = "../workbook"}

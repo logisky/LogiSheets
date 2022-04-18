@@ -31,19 +31,19 @@ pub use controller::{
     display::{Comment, MergeCell, Style, Value},
     Controller,
 };
+use logisheets_parser::unparse;
 pub use logisheets_workbook::prelude::SerdeErr;
-use parser::unparse;
 
-pub type SheetId = controller_base::SheetId;
-pub type CellId = controller_base::CellId;
-pub type AsyncCalcResult = controller_base::async_func::AsyncCalcResult;
-pub type AsyncErr = controller_base::async_func::AsyncErr;
-pub type Task = controller_base::async_func::Task;
-pub type BlockId = controller_base::BlockId;
+pub type SheetId = logisheets_base::SheetId;
+pub type CellId = logisheets_base::CellId;
+pub type AsyncCalcResult = logisheets_base::async_func::AsyncCalcResult;
+pub type AsyncErr = logisheets_base::async_func::AsyncErr;
+pub type Task = logisheets_base::async_func::Task;
+pub type BlockId = logisheets_base::BlockId;
 
 // Has SKIPPED the '='
 pub fn lex_success(f: &str) -> bool {
-    let toks = lexer::lex(f);
+    let toks = logisheets_lexer::lex(f);
     match toks {
         Some(_) => true,
         None => false,
@@ -110,20 +110,20 @@ impl<'a> Worksheet<'a> {
             {
                 let value = &cell.value;
                 let v = match value {
-                    controller_base::CellValue::Blank => Value::Empty,
-                    controller_base::CellValue::Boolean(b) => Value::Bool(*b),
-                    controller_base::CellValue::Date(_) => Value::Empty,
-                    controller_base::CellValue::Error(e) => Value::Error(e.to_string()),
-                    controller_base::CellValue::String(s) => {
+                    logisheets_base::CellValue::Blank => Value::Empty,
+                    logisheets_base::CellValue::Boolean(b) => Value::Bool(*b),
+                    logisheets_base::CellValue::Date(_) => Value::Empty,
+                    logisheets_base::CellValue::Error(e) => Value::Error(e.to_string()),
+                    logisheets_base::CellValue::String(s) => {
                         let text = self.controller.status.text_id_manager.get_string(s);
                         match text {
                             Some(r) => Value::Str(r),
                             None => Value::Str(String::from("")),
                         }
                     }
-                    controller_base::CellValue::Number(n) => Value::Number(*n),
-                    controller_base::CellValue::InlineStr(_) => Value::Empty,
-                    controller_base::CellValue::FormulaStr(s) => Value::Str(s.to_string()),
+                    logisheets_base::CellValue::Number(n) => Value::Number(*n),
+                    logisheets_base::CellValue::InlineStr(_) => Value::Empty,
+                    logisheets_base::CellValue::FormulaStr(s) => Value::Str(s.to_string()),
                 };
                 Ok(v)
             } else {

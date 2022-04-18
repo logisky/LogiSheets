@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use controller_base::{Addr, CellId, SheetId};
+use logisheets_base::{Addr, CellId, SheetId};
 
 use super::status::Status;
 use crate::async_func_manager::AsyncFuncManager;

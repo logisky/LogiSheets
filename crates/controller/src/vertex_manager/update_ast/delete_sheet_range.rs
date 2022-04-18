@@ -1,5 +1,5 @@
 use super::super::vertex::{MutReferenceVertex, SheetRangeVertex};
-use parser::ast;
+use logisheets_parser::ast;
 
 pub fn delete_sheet_range(node: ast::Node, sr: &SheetRangeVertex) -> ast::Node {
     let pure = match node.pure {

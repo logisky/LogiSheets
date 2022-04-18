@@ -1,5 +1,5 @@
-use controller_base::{BlockId, ColId, RowId};
 use im::{hashset::HashSet, Vector};
+use logisheets_base::{BlockId, ColId, RowId};
 
 #[derive(Clone, Debug)]
 pub struct IdManager {

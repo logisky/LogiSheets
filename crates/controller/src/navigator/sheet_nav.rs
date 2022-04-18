@@ -1,8 +1,8 @@
 use super::block::BlockPlace;
 use super::id_manager::IdManager;
 use super::{executor, fetcher::Fetcher};
-use controller_base::{BlockId, CellId, ColId, Id, RowId};
 use im::{HashMap, Vector};
+use logisheets_base::{BlockId, CellId, ColId, Id, RowId};
 
 use crate::payloads::sheet_process::ShiftPayload;
 
