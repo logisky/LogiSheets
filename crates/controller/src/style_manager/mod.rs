@@ -1,4 +1,3 @@
-extern crate indexmap;
 extern crate quick_xml;
 extern crate serde;
 
@@ -20,7 +19,10 @@ use xf_manager::XfManager;
 
 use crate::payloads::sheet_process::style::CellStylePayload;
 
-use self::execute::execute_style_payload;
+use self::{
+    defaults::{get_init_border, get_init_fill, get_init_font},
+    execute::execute_style_payload,
+};
 use crate::controller::display::Style;
 
 #[derive(Debug, Clone, Default)]
@@ -73,8 +75,8 @@ impl StyleManager {
             font: font.clone(),
             fill: fill.clone(),
             border: border.clone(),
-            alignment: alignment.clone(),
-            protection: protection.clone(),
+            alignment,
+            protection,
             formatter: num_fmt.clone(),
         }
     }

@@ -1,10 +1,8 @@
+use crate::calc_engine::calculator::math::{gcd::multi_gcd, lcm::multi_lcm};
 use crate::calc_engine::{
     calculator::calc_vertex::{CalcValue, CalcVertex, Value},
     connector::Connector,
 };
-
-use logisheets_math::gcd::multi_gcd;
-use logisheets_math::lcm::multi_lcm;
 use parser::ast;
 
 pub fn calc_gcd<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

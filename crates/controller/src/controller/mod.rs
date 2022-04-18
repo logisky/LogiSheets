@@ -173,12 +173,29 @@ impl Controller {
 
 #[cfg(test)]
 mod tests {
-    use super::Controller;
+    use super::{
+        edit_action::{CellInput, EditAction, EditPayload},
+        Controller,
+    };
 
     #[test]
     fn controller_default_test() {
         let wb = Controller::default();
         println!("{:?}", wb.status);
+    }
+
+    #[test]
+    fn controller_input_formula() {
+        let mut wb = Controller::default();
+        let action = EditAction::Payloads(vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: String::from("=ABS(1)"),
+        })]);
+        wb.handle_action(action, true);
+        let len = wb.status.vertex_manager.status.formulas.len();
+        assert_eq!(len, 1);
     }
 
     #[test]

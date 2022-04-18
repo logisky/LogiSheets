@@ -44,16 +44,20 @@ pub fn redo() -> bool {
 
 #[wasm_bindgen]
 pub fn transaction_start() -> TransactionStartResult {
+    web_sys::console::log_1(&"ssss".to_string().into());
     TransactionStartResult::Ok
 }
 
 #[wasm_bindgen]
 /// The JSON format of `TransactionEndResult`.
 pub fn transaction_end(undoable: bool) -> JsValue {
+    web_sys::console::log_1(&"hhhh".to_string().into());
     let mut empty = Vec::<EditPayload>::new();
     let mut payloads = PAYLOADS.lock().unwrap();
+    web_sys::console::log_1(&"tttt".to_string().into());
     std::mem::swap(&mut empty, &mut payloads);
     let mut ctrl = CONTROLLER.lock().unwrap();
+    web_sys::console::log_1(&"qqqqq".to_string().into());
     let action = EditAction::Payloads(empty);
     let result = match ctrl.handle_action(action, undoable) {
         Some(effect) => {

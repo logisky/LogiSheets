@@ -1,6 +1,8 @@
 use super::{CalcValue, CalcVertex, Value};
+use crate::calc_engine::calculator::math::combine::{
+    calc_combine as combine, calc_permut as permut,
+};
 use crate::calc_engine::connector::Connector;
-use logisheets_math::combine::{calc_combine as combine, calc_permut as permut};
 use parser::ast;
 
 pub fn calc_combine<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

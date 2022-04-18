@@ -5,6 +5,9 @@ pub type NumFmtManager = Manager<String, NumFmtId>;
 
 impl Default for NumFmtManager {
     fn default() -> Self {
-        NumFmtManager::new(0)
+        let num_fmt = String::from("");
+        let mut manager = NumFmtManager::new(0);
+        manager.get_id(&num_fmt);
+        manager
     }
 }

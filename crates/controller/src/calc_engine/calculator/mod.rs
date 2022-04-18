@@ -3,3 +3,4 @@ pub mod calculator;
 mod compare;
 mod funcs;
 pub mod infix;
+mod math;

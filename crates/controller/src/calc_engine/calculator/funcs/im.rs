@@ -3,7 +3,7 @@ use crate::calc_engine::{
     connector::Connector,
 };
 
-use logisheets_math::complex::build_complex;
+use crate::calc_engine::calculator::math::complex::build_complex;
 use num::Complex;
 use parser::ast;
 

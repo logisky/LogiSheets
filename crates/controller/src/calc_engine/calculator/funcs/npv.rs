@@ -1,7 +1,7 @@
 use super::utils::convert_f64;
 use super::{CalcValue, CalcVertex};
+use crate::calc_engine::calculator::math::npv::calc_npv;
 use crate::calc_engine::connector::Connector;
-use logisheets_math::npv::calc_npv;
 use parser::ast;
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

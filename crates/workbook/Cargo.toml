@@ -15,6 +15,6 @@ serde_json = "1.0.59"
 serde_repr = "0.1"
 thiserror = "1.0.24"
 zip = {version = "0.6.0", default-features = false, features = ["deflate"]}
-xmlserde = {path = "./xmlserde"}
-derives = {path = "./derives"}
+xmlserde = {path = "./xmlserde", version = "0.1.0"}
+derives = {path = "./derives", version = "0.1.0"}
 

@@ -1,6 +1,6 @@
 use super::{CalcValue, CalcVertex, Value};
+use crate::calc_engine::calculator::math::pmt::{calc_ipmt, calc_pmt, calc_ppmt};
 use crate::calc_engine::connector::Connector;
-use logisheets_math::pmt::{calc_ipmt, calc_pmt, calc_ppmt};
 use parser::ast;
 
 pub fn pmt<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

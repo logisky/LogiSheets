@@ -1,4 +1,4 @@
-use crate::gcd::gcd;
+use super::gcd::gcd;
 
 pub fn multi_lcm(nums: &[u32]) -> u32 {
     let multi = nums.iter().fold(1_u32, |prev, t| {

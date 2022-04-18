@@ -1,5 +1,3 @@
-extern crate num;
-
 pub mod bits;
 pub mod combine;
 pub mod complex;

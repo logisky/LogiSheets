@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate logisheets_math;
 extern crate num;
 extern crate rand;
 extern crate regex;

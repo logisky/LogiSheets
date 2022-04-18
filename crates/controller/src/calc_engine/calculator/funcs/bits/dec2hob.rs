@@ -1,4 +1,4 @@
-use logisheets_math::bits::{dec2bin, dec2hex, dec2oct};
+use crate::calc_engine::calculator::math::bits::{dec2bin, dec2hex, dec2oct};
 use parser::ast;
 
 use crate::calc_engine::connector::Connector;

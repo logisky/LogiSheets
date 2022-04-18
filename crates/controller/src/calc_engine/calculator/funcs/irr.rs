@@ -1,6 +1,6 @@
 use super::{CalcValue, CalcVertex, Value};
+use crate::calc_engine::calculator::math::irr::calc_irr;
 use crate::calc_engine::connector::Connector;
-use logisheets_math::irr::calc_irr;
 use parser::ast;
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

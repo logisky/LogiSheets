@@ -1,5 +1,5 @@
-use crate::newton_iter::newton;
-use crate::npv::calc_npv;
+use super::newton_iter::newton;
+use super::npv::calc_npv;
 
 pub fn calc_irr(values: &[f64], guess: Option<f64>) -> Option<f64> {
     validate_cashflow(values)?;

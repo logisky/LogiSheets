@@ -1,4 +1,6 @@
-use logisheets_math::bits::{bin2hex, bin2oct, hex2bin, hex2oct, oct2bin, oct2hex};
+use crate::calc_engine::calculator::math::bits::{
+    bin2hex, bin2oct, hex2bin, hex2oct, oct2bin, oct2hex,
+};
 use parser::ast;
 
 use crate::calc_engine::connector::Connector;
