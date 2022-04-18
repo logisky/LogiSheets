@@ -1,6 +1,9 @@
 [package]
 name = "controller_base"
 version = "0.1.0"
+description = "some basic definitions for LogiSheets"
+authors = ["ImJeremyHe<yiliang.he@qq.com>"]
+license = "MIT"
 
 [dependencies]
 chrono = "0.4.19"

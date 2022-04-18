@@ -352,13 +352,6 @@ impl<'a> Generic<'a> {
         }
     }
 
-    pub fn is_none(&self) -> bool {
-        match self {
-            Generic::None => true,
-            _ => false,
-        }
-    }
-
     pub fn get_vec(&self) -> Option<&syn::Type> {
         match self {
             Generic::Vec(v) => Some(v),

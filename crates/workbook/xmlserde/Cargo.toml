@@ -1,8 +1,10 @@
 [package]
-authors = ["Jiangming He"]
 edition = "2018"
 name = "logisheets_xmlserde"
 version = "0.1.0"
+description = "read and write the ooxml files"
+authors = ["ImJeremyHe<yiliang.he@qq.com>"]
+license = "MIT"
 
 [dependencies]
 logisheets_derives = {path = "../derives"}

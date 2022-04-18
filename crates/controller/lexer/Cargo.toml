@@ -2,6 +2,9 @@
 name = "lexer"
 version = "0.1.0"
 edition = "2018"
+description = "the lexer for excel formula"
+authors = ["ImJeremyHe<yiliang.he@qq.com>"]
+license = "MIT"
 
 [dependencies]
 pest = "2.1.3"

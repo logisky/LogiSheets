@@ -1,7 +1,9 @@
 [package]
 name = "logisheets_derives"
 version = "0.1.0"
-authors = ["Jiangming He"]
+description = "macros that help LogiSheets serde the xml files"
+authors = ["ImJeremyHe<yiliang.he@qq.com>"]
+license = "MIT"
 
 [lib]
 proc-macro = true

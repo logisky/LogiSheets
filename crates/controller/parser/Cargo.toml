@@ -2,6 +2,9 @@
 name = "parser"
 version = "0.1.1"
 edition = "2018"
+description = "the parser of excel formula"
+authors = ["ImJeremyHe<yiliang.he@qq.com>"]
+license = "MIT"
 
 [dependencies]
 lazy_static = "1.4.0"

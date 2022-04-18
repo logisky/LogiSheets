@@ -1,8 +1,10 @@
 [package]
 name = "logisheets_controller"
 version = "0.1.0"
-authors = ["Jiangming He"]
+description = "the core of LogiSheets"
+authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 edition = "2018"
+license = "MIT"
 
 [dependencies]
 chrono = "0.4.19"
