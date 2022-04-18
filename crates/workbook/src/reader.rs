@@ -111,7 +111,7 @@ fn de_workbook<R: Read + Seek>(
                             worksheets.insert(id, w);
                         }
                         Err(e) => {
-                            log!("parsing file: {:?} but meet error:{:?}", s, e)
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
                         }
                     }
                 }
@@ -126,7 +126,7 @@ fn de_workbook<R: Read + Seek>(
                             external_links.insert(id, w);
                         }
                         Err(e) => {
-                            log!("parsing file: {:?} but meet error:{:?}", s, e)
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
                         }
                     }
                 }
@@ -140,7 +140,7 @@ fn de_workbook<R: Read + Seek>(
                             sst = Some(w);
                         }
                         Err(e) => {
-                            log!("parsing file: {:?} but meet error:{:?}", s, e)
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
                         }
                     }
                 }
@@ -154,7 +154,7 @@ fn de_workbook<R: Read + Seek>(
                             styles = Some(w);
                         }
                         Err(e) => {
-                            log!("parsing file: {:?} but meet error:{:?}", s, e)
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
                         }
                     }
                 }
@@ -301,7 +301,6 @@ fn get_target_abs_path(rels: &str, target: &str) -> PathBuf {
 mod tests {
     use super::get_rels;
     use super::get_target_abs_path;
-    use super::read;
     #[test]
     fn get_rels_test() {
         let p = "/foo/test.xml";

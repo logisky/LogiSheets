@@ -11,4 +11,3 @@ syn = {version = "1.0.86", features = ["full"]}
 quote = "1.0.15"
 paste = "1.0.5"
 proc-macro2 = "1.0.36"
-logiutils = {version = "0.1.0", path = "../../logiutils"}

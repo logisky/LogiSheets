@@ -1,8 +1,6 @@
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
-#[macro_use]
-extern crate logiutils;
 
 use pest::Parser;
 
@@ -17,10 +15,7 @@ pub fn lex(s: &str) -> Option<pest::iterators::Pair<Rule>> {
             let tokens = r.next().unwrap();
             Some(tokens)
         }
-        Err(e) => {
-            log!("{:?}", e);
-            None
-        }
+        Err(e) => None,
     }
 }
 
@@ -45,70 +40,70 @@ mod tests {
     #[test]
     fn reference() {
         let r1 = lex("B2").unwrap();
-        log!("{:?}", r1);
+        println!("{:?}", r1);
         let r2 = lex("B$2").unwrap();
-        log!("{:?}", r2);
+        println!("{:?}", r2);
         let r3 = lex("$B$2").unwrap();
-        log!("{:?}", r3);
+        println!("{:?}", r3);
         let r = lex("B2:A$3").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         // let r = lex("SUM(Sheet1!#REF!)").unwrap();
-        // log!("{:?}", r);
+        // println!("{:?}", r);
     }
 
     #[test]
     fn ref_with_preifx() {
         let r = lex("'sheet1'!B2").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
     }
 
     #[test]
     fn func_call() {
         let r = lex("B2+1").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("SUM(B2,1)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("SUM($B2,1)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("SUM(A2:B4)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("SUM(A2:B4)*SUM($A2:B$4)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("5%").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("SUM(1:2)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("_xll.VDATA(1:2)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
     }
 
     #[test]
     fn str_op() {
         let r = lex("\"string\"").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("\"string\"&\"string\"").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
     }
 
     #[test]
     fn comma_node() {
         let r = lex("INDEX( (A5:B2, D6), 3)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("SUM( (A5:B2, D6, (A1, B3)), 3)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
     }
 
     #[test]
     fn bracket() {
         let r = lex("1+(2-3)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
         let r = lex("1+ ( 2 - 3)").unwrap();
-        log!("{:?}", r);
+        println!("{:?}", r);
     }
 
     #[test]
     fn infix_op() {
         let r = lex("1/-2");
-        log!("{:?}", r);
+        println!("{:?}", r);
     }
 }

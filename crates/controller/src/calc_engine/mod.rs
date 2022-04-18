@@ -55,7 +55,6 @@ where
             }
         };
         let order = calc_order(&rdeps_fetcher, dirty_nodes);
-        log!("{:?}", order.len());
         let formulas = self.vertex_manager.status.formulas;
         let names = self.vertex_manager.status.names;
         let CalcConfig { iter_limit, error } = self.config;
@@ -77,14 +76,12 @@ where
             }
             CalcUnit::Node(fid) => {
                 if let Some(ast_node) = formulas.get(&fid) {
-                    log!("start to calculate cell {:?}", fid);
                     let curr_sheet = fid.0;
                     let curr_addr = connector
                         .get_cell_idx(curr_sheet, &fid.1)
                         .map_or(Addr::default(), |(row, col)| Addr { row, col });
                     connector.set_curr_cell(curr_sheet, curr_addr);
                     let v = calc(&ast_node, &mut connector);
-                    log!("{:?}", v);
                     let dirty = connector.commit_calc_values(fid, v.clone());
                     dirties.extend(dirty);
                 }

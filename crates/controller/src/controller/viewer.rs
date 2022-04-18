@@ -82,7 +82,6 @@ impl SheetViewer {
             sheet_data.cells.iter().for_each(|(cell_id, cell)| {
                 let coord = navigator.fetch_cell_idx(sheet_id, cell_id);
                 if coord.is_none() {
-                    log!("Cannot find cell id: {:?}", cell_id);
                     panic!()
                 }
                 let (row, col) = coord.unwrap();

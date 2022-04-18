@@ -6,6 +6,12 @@ keywords = ["excel", "spreadsheets", "ooxml", "logisheets"]
 readme = "README.md"
 repository = "https://github.com/proclml/LogiSheets"
 license = "MIT"
+include = [
+    "crates/workbook/**/*",
+    "crates/controller/**/*",
+    "src/lib.rs",
+    "Cargo.toml",
+]
 
 [workspace]
 members = [

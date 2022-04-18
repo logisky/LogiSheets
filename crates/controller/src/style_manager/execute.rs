@@ -10,7 +10,6 @@ pub fn execute_style_payload(
     payload: &CellStylePayload,
     id: StyleId,
 ) -> Option<(StyleManager, StyleId)> {
-    log!("style payload executing: {:?}", payload);
     let StyleManager {
         mut font_manager,
         mut border_manager,

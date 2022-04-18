@@ -184,7 +184,6 @@ impl<'a> Connector for CalcConnector<'a> {
     }
 
     fn commit_calc_values(&mut self, vertex: FormulaId, result: CalcValue) -> HashSet<FormulaId> {
-        log!("commit the value: {:?}", result);
         let dirties = HashSet::<FormulaId>::new();
         let sheet_id = vertex.0;
         let cell_id = vertex.1;
@@ -269,7 +268,6 @@ impl<'a> CalcConnector<'a> {
         if sheet_container.is_none() {
             return MatrixValue::new(0, 0);
         }
-        log!("Get matrix value: {}-{}-{}", sheet_id, col_start, col_end);
         let sheet_container = sheet_container.unwrap().clone();
         // todo!() usize::MAX
         let mut matrix = MatrixValue::<Value>::new(65535, col_end - col_start + 1);
@@ -284,7 +282,6 @@ impl<'a> CalcConnector<'a> {
                 }
             }
         });
-        log!("{:?}", matrix);
         matrix
     }
 

@@ -85,8 +85,6 @@ impl<'a> Transaction<'a> {
 }
 
 fn handle(status: Status, proc: Process, context: &TransactionContext) -> Status {
-    log!("try to handle proc");
-    log!("{:?}", &proc);
     match proc {
         Process::Sheet(sheet_proc) => handle_sheet_proc(status, sheet_proc, context),
         Process::Name(p) => handle_name_proc(status, p, context),

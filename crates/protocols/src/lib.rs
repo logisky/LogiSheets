@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate logiutils;
 use prost::Message;
 use std::io::Cursor;
 

@@ -1,6 +1,4 @@
 #[macro_use]
-extern crate logiutils;
-#[macro_use]
 extern crate derives;
 #[macro_use]
 extern crate serde;

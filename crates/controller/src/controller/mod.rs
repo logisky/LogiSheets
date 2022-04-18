@@ -68,10 +68,7 @@ impl Controller {
         let res = read(f);
         match res {
             Ok(ss) => Ok(load(ss, name)),
-            Err(e) => {
-                log!("{:?}", e);
-                Err(e)
-            }
+            Err(e) => Err(e),
         }
     }
 
@@ -181,13 +178,13 @@ mod tests {
     #[test]
     fn controller_default_test() {
         let wb = Controller::default();
-        log!("{:?}", wb.status);
+        println!("{:?}", wb.status);
     }
 
     #[test]
     fn from_file_test() {
         use std::fs;
-        let buf = fs::read("../workbook/examples/6.xlsx").unwrap();
+        let buf = fs::read("../../tests/6.xlsx").unwrap();
         let controller = Controller::from_file(String::from("6"), &buf);
         match controller {
             Ok(_) => {}

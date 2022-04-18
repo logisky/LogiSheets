@@ -178,7 +178,6 @@ impl SubPayload for RemoveRange {
                 prev.push((self.sheet_id, CellId::NormalCell(cell_id)));
                 prev
             });
-        log!("delete cells: {:?}", to_be_deleted);
         let res = delete_cells(prev, to_be_deleted);
         let sheet_ranges = res
             .status

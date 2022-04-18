@@ -10,8 +10,6 @@ pub mod walker;
 
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate logiutils;
 use crate::climber::{Assoc, Climber, ClimberBuilder, Operator};
 use context::ContextTrait;
 use controller_base::{id_fetcher::IdFetcherTrait, TextId};
@@ -224,9 +222,7 @@ impl Parser {
                         let n = self.build_arg(p, context);
                         args.push(n);
                     }
-                    _ => {
-                        log!("{}", p);
-                    }
+                    _ => {}
                 });
                 let op = ast::Operator::Comma;
                 let func = ast::Func { op, args };

@@ -27,7 +27,6 @@ pub struct DataExecutor {
 
 impl DataExecutor {
     pub fn execute(self, proc: &SheetProcess) -> Self {
-        log!("data excutor ready to handle sheet process");
         let sheet_id = proc.sheet_id;
         match &proc.payload {
             SheetPayload::Cell(cp) => {
@@ -105,7 +104,6 @@ impl DataExecutor {
                     .for_each(|nc| {
                         deleted_cells.push(CellId::NormalCell(nc));
                     });
-                    log!("deleted cells: {:?}", deleted_cells);
                     (
                         old_container.delete_cells(sheet_id, &deleted_cells),
                         deleted_cells,

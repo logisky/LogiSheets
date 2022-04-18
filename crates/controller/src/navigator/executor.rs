@@ -128,7 +128,6 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     let new_ids = new_id_manager.get_row_ids(cnt);
     let new_rows = {
         let rows = result.data.rows.clone();
-        log!("delete rows:{}", idx);
         let removed_cnt = std::cmp::min(rows.len() - idx, cnt as usize);
         let (mut left, right) = rows.split_at(idx);
         left.append(right.skip(removed_cnt));

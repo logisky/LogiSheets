@@ -22,6 +22,5 @@ unicode-segmentation = "1.8.0"
 controller_base = {version = "0.1.0", path = "./base"}
 lexer = {version = "0.1.0", path = "./lexer"}
 logisheets_math = {version = "0.1.1", path = "./math"}
-logiutils = {version = "0.1.0", path = "../logiutils"}
 parser = {version = "0.1.1", path = "./parser"}
 logisheets_workbook = {version = "0.1.0", path = "../workbook"}
