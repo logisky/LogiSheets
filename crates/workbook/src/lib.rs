@@ -1,17 +1,17 @@
 pub mod reader;
 pub mod rtypes;
 pub mod workbook;
-use xmlserde::*;
+use logisheets_xmlserde::*;
 
 pub mod prelude {
+    pub use super::comments::*;
+    pub use super::complex_types::*;
     pub use super::reader::*;
+    pub use super::simple_types::*;
+    pub use super::sst::SstPart;
+    pub use super::style_sheet::StylesheetPart;
     pub use super::workbook::Workbook;
-    pub use comments::*;
-    pub use complex_types::*;
-    pub use simple_types::*;
-    pub use sst::SstPart;
-    pub use style_sheet::StylesheetPart;
-    pub use workbook::WorkbookPart;
-    pub use worksheet::*;
-    pub use xmlserde::*;
+    pub use super::worksheet::*;
+    pub use logisheets_xmlserde::workbook::WorkbookPart;
+    pub use logisheets_xmlserde::*;
 }

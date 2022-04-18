@@ -1,4 +1,8 @@
 use super::rtypes::*;
+use logisheets_xmlserde::{
+    comments::Comments, sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart,
+    worksheet::WorksheetPart,
+};
 use std::collections::HashMap;
 use std::{
     io::{BufReader, Cursor, Read, Seek},
@@ -6,10 +10,6 @@ use std::{
     str::FromStr,
 };
 use thiserror::Error;
-use xmlserde::{
-    comments::Comments, sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart,
-    worksheet::WorksheetPart,
-};
 use zip::ZipArchive;
 
 #[derive(Debug, Error)]

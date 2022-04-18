@@ -1,10 +1,10 @@
+use logisheets_xmlserde::comments::Comments;
+use logisheets_xmlserde::external_links::*;
+use logisheets_xmlserde::sst::SstPart;
+use logisheets_xmlserde::style_sheet::StylesheetPart;
+use logisheets_xmlserde::workbook::WorkbookPart;
+use logisheets_xmlserde::worksheet::WorksheetPart;
 use std::collections::HashMap;
-use xmlserde::comments::Comments;
-use xmlserde::external_links::*;
-use xmlserde::sst::SstPart;
-use xmlserde::style_sheet::StylesheetPart;
-use xmlserde::workbook::WorkbookPart;
-use xmlserde::worksheet::WorksheetPart;
 
 type Id = String;
 

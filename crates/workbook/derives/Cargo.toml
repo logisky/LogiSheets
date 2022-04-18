@@ -1,5 +1,5 @@
 [package]
-name = "derives"
+name = "logisheets_derives"
 version = "0.1.0"
 authors = ["Jiangming He"]
 

@@ -1,5 +1,5 @@
 #[macro_use]
-extern crate derives;
+extern crate logisheets_derives;
 #[macro_use]
 extern crate serde;
 
@@ -209,7 +209,7 @@ impl_xml_value_for_num!(i64);
 #[cfg(test)]
 mod tests {
     use super::{xml_deserialize_from_str, xml_serialize, XmlValue};
-    use derives::{XmlDeserialize, XmlSerialize};
+    use logisheets_derives::{XmlDeserialize, XmlSerialize};
 
     #[test]
     fn xml_serde_enum_test() {
