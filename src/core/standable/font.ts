@@ -4,6 +4,7 @@ import {
 } from 'proto/message'
 import { shallowCopy } from 'common'
 import { StandardColor } from './color'
+const DEFAULT_FONT_SIZE = 10
 /**
  * https://developer.mozilla.org/zh-CN/docs/Web/CSS/font
  * css font: font-style | font-variant | font-weight | font-size | line-height | font-family
@@ -16,7 +17,7 @@ import { StandardColor } from './color'
  */
 export type FontSizeUnit = 'px' | 'pt'
 export class StandardFont implements Font {
-    static from(font: Font): StandardFont {
+    static from (font: Font): StandardFont {
         const f = new StandardFont()
         f.standardColor = StandardColor.fromArgb(font.color)
         if (font.color === '')
@@ -24,9 +25,13 @@ export class StandardFont implements Font {
         shallowCopy(font, f)
         // ooxml标准存的是pt
         f.fontSizeUnit = 'pt'
+        if (font.size === 0) {
+            f.fontSizeUnit = 'px'
+            f.size = DEFAULT_FONT_SIZE
+        }
         return f
     }
-    size = 10
+    size = DEFAULT_FONT_SIZE
     name = 'Arial'
     underline = UnderlineType.NONE
     fontSizeUnit: FontSizeUnit = 'px'
@@ -40,12 +45,12 @@ export class StandardFont implements Font {
     shadow = false
     strike = false
 
-    setSize(s: number) {
+    setSize (s: number) {
         this.size = s
         return this
     }
 
-    measureText(text: string): TextMetrics {
+    measureText (text: string): TextMetrics {
         const canvas = document.createElement('canvas')
         const context = canvas.getContext('2d')
         if (!context)
@@ -55,7 +60,7 @@ export class StandardFont implements Font {
         return context.measureText(text)
     }
 
-    toCssFont(): string {
+    toCssFont (): string {
         const fontStyle = this.italic ? 'italic' : 'normal'
         const fontVariant = 'normal'
         const fontWeight = this.bold ? 'bold' : 'normal'

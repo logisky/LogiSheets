@@ -8,13 +8,13 @@ export class StandardStyle implements Style {
     fill: PatternFill | undefined = undefined
     alignment: Alignment | undefined = undefined
     formatter: string = ''
-    static from(style: Style) {
+    static from (style: Style) {
         const s = new StandardStyle()
         shallowCopy(style, s)
         return s
     }
 
-    getFont() {
+    getFont () {
         if (!this.font)
             return new StandardFont()
         return StandardFont.from(this.font)

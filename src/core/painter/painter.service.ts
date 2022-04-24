@@ -192,27 +192,29 @@ export class PainterService extends CanvasApi {
             case UnderlineType.SINGLE:
                 lineAttr.lineWidth = npxLine(1)
                 switch (attr.alignment?.vertical) {
+                    case Alignment_Vertical.V_UNSPECIFIED:
                     case Alignment_Vertical.V_BOTTOM:
-                        yOffset = 0
+                        yOffset += attr.font.size / 2
                         break
                     case Alignment_Vertical.V_CENTER:
                         break
                     case Alignment_Vertical.V_TOP:
                         break
-                    case Alignment_Vertical.V_UNSPECIFIED:
-                        yOffset += attr.font.size / 2
-                        break
                     default:
                 }
                 switch (attr.alignment?.horizontal) {
+                    case Alignment_Horizontal.H_UNSPECIFIED:
+                    case Alignment_Horizontal.UNRECOGNIZED:
                     case Alignment_Horizontal.H_CENTER:
-                        xOffset += 0
+                        xOffset -= (width / 2)
                         break
                     case Alignment_Horizontal.H_RIGHT:
                         xOffset += -width
                         break
                     case Alignment_Horizontal.H_LEFT:
                         break
+                    default:
+                        throw Error(`Not support underline horizontal ${attr.alignment?.horizontal}`)
                 }
                 break
             default:
