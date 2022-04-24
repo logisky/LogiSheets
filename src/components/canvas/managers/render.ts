@@ -4,10 +4,10 @@ import { StandardColor, Range } from 'core/standable'
 import { SETTINGS } from 'common/settings'
 import { toA1notation } from 'common'
 import { StandardStyle } from 'core/standable/style'
-import {Subject} from 'rxjs'
+import { Subject } from 'rxjs'
 
 export class Render {
-    render(canvas: HTMLCanvasElement) {
+    render (canvas: HTMLCanvasElement) {
         this._painterSvc.setupCanvas(canvas)
         const rect = canvas.getBoundingClientRect()
         DATA_SERVICE.initViewRange(rect.width, rect.height)
@@ -22,7 +22,7 @@ export class Render {
 
     private _painterSvc = new PainterService()
 
-    private _renderCell(renderCell: RenderCell) {
+    private _renderCell (renderCell: RenderCell) {
         const { coodinate: range, position } = renderCell
         const sheetSvc = DATA_SERVICE.sheetSvc
         const style = sheetSvc.getCell(range.startRow, range.startCol)?.style
@@ -37,7 +37,7 @@ export class Render {
     /**
      * main content + freeze content.
      */
-    private _renderContent() {
+    private _renderContent () {
         DATA_SERVICE.cachedViewRange.cells.forEach(cell => {
             this._painterSvc.save()
             this._renderCell(cell)
@@ -45,7 +45,7 @@ export class Render {
         })
     }
 
-    private _renderLeftHeader() {
+    private _renderLeftHeader () {
         this._painterSvc.save()
         DATA_SERVICE.cachedViewRange.rows.forEach(r => {
             const { startRow, startCol, endRow, endCol } = r.position
@@ -63,7 +63,7 @@ export class Render {
         this._painterSvc.restore()
     }
 
-    private _renderTopHeader() {
+    private _renderTopHeader () {
         this._painterSvc.save()
         DATA_SERVICE.cachedViewRange.cols.forEach(c => {
             const { startRow, startCol, endRow, endCol } = c.position
@@ -82,7 +82,7 @@ export class Render {
         this._painterSvc.restore()
     }
 
-    private _renderLeftTop() {
+    private _renderLeftTop () {
         this._painterSvc.save()
         const leftTop = SETTINGS.leftTop
         const attr = new CanvasAttr()
@@ -92,7 +92,7 @@ export class Render {
         this._painterSvc.restore()
     }
 
-    private _fill(box: Box, style?: StandardStyle) {
+    private _fill (box: Box, style?: StandardStyle) {
         const fill = style?.fill
         if (!fill)
             return
@@ -110,7 +110,7 @@ export class Render {
         }
     }
 
-    private _border(box: Box, position: Range, style?: StandardStyle) {
+    private _border (box: Box, position: Range, style?: StandardStyle) {
         const border = style?.border
         if (!border)
             return
@@ -132,7 +132,7 @@ export class Render {
             )
     }
 
-    private _renderGrid(canvas: HTMLCanvasElement) {
+    private _renderGrid (canvas: HTMLCanvasElement) {
         const { cachedViewRange: viewRange } = DATA_SERVICE
         const { grid, leftTop } = SETTINGS
         this._painterSvc.save()
@@ -153,7 +153,7 @@ export class Render {
         this._painterSvc.restore()
     }
 
-    private _comment(box: Box, range: Range) {
+    private _comment (box: Box, range: Range) {
         const comment = DATA_SERVICE.sheetSvc
             .getSheet()
             ?.getComment(range.startRow, range.startCol)
@@ -162,7 +162,7 @@ export class Render {
         this._painterSvc.comment(box)
     }
 
-    private _text(box: Box, range: Range, style?: StandardStyle) {
+    private _text (box: Box, range: Range, style?: StandardStyle) {
         const info = DATA_SERVICE.sheetSvc
             .getCell(range.startRow, range.startCol)
         if (!info)
