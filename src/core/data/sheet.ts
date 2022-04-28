@@ -1,13 +1,13 @@
 // tslint:disable: max-params
 import {
-    RowInfo,
-    ColInfo,
-    Style,
-    MergeCell,
-    Comment,
-    Value,
     BlockInfo,
-} from 'proto/message'
+    ColInfo,
+    Comment,
+    MergeCell,
+    RowInfo,
+    Style,
+    Value,
+} from 'bindings'
 import {
     StandardBlock,
     StandardRowInfo,

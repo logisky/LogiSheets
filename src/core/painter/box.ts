@@ -1,7 +1,7 @@
 import {
-    Alignment_Horizontal as AlignX,
-    Alignment_Vertical as AlignY,
-} from 'proto/message'
+    StVerticalAlignment as AlignY,
+    StHorizontalAlignment as AlignX,
+} from 'bindings'
 import { Range } from 'core/standable'
 export class Box {
     public position = new Range()
@@ -14,31 +14,29 @@ export class Box {
     }
 
     public textX(
-        align?: AlignX
+        align?: AlignX | null
     ): readonly [tx: number, textAlign: CanvasTextAlign] {
         let tx: number
         let textAlign: CanvasTextAlign
         const { startCol: x } = this.position
         // set default to center
-        const alignX = align ?? AlignX.H_CENTER
+        const alignX = align ?? 'Center'
         switch (alignX) {
             // default
             // 常规
             // 居中
-            case AlignX.UNRECOGNIZED:
-            case AlignX.H_UNSPECIFIED:
-            case AlignX.H_GENERAL:
-            case AlignX.H_CENTER:
+            case 'General':
+            case 'Center':
                 textAlign = 'center'
                 tx = x + this.width / 2
                 break
             // 靠左(缩进)
-            case AlignX.H_LEFT:
+            case 'Left':
                 textAlign = 'left'
                 tx = x
                 break
             // 靠右(缩进)
-            case AlignX.H_RIGHT:
+            case 'Right':
                 textAlign = 'right'
                 tx = x + this.width
                 break
@@ -61,28 +59,26 @@ export class Box {
         return [tx, textAlign]
     }
 
-    public textY(vertical?: AlignY): readonly [number, CanvasTextBaseline] {
+    public textY(vertical?: AlignY | null): readonly [number, CanvasTextBaseline] {
         let ty: number
         let textBaseline: CanvasTextBaseline
         const { startRow: y } = this.position
         // set default to center
-        const alignY = vertical ?? AlignY.V_CENTER
+        const alignY = vertical ?? 'Center'
         switch (alignY) {
             // 靠上
-            case AlignY.V_TOP:
+            case 'Top':
                 textBaseline = 'top'
                 ty = y
                 break
             // default
             // 居中
-            case AlignY.UNRECOGNIZED:
-            case AlignY.V_UNSPECIFIED:
-            case AlignY.V_CENTER:
+            case 'Center':
                 textBaseline = 'middle'
                 ty = y + this.height / 2
                 break
             // 靠下
-            case AlignY.V_BOTTOM:
+            case 'Bottom':
                 textBaseline = 'bottom'
                 ty = y + this.height
                 break

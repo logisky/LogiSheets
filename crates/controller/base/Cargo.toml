@@ -10,4 +10,5 @@ chrono = "0.4.19"
 futures = "0.3.19"
 im = "15.0.0"
 serde = {version = "1.0.125", features = ["derive"]}
+ts-rs = "6.1.2"
 logisheets_workbook = {version = "0.1.0", path = "../../workbook"}

@@ -1,5 +1,7 @@
 import { Subject, ReplaySubject } from 'rxjs'
-import { ClientSend, DisplayRequest, DisplayResponse, OpenFile, Payload, ServerSend, ShiftType, Transaction } from '../proto/message'
+// import { ClientSend, DisplayRequest, DisplayResponse, OpenFile, Payload, ServerSend, ShiftType, Transaction } from '../proto/message'
+import { DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload } from 'bindings'
+import { ClientSend, ServerSend, OpenFile } from 'message'
 import initWasm, {
     read_file,
     block_input,
@@ -18,7 +20,8 @@ import initWasm, {
     ReadFileResult,
 } from 'logisheets-server'
 import { Calculator, Executor } from './calculator'
-import { TransactionCode, TransactionEndResult } from './jsvalues'
+import { AsyncFuncResult, TransactionCode, TransactionEndResult } from './jsvalues'
+import { hasOwnProperty } from 'common'
 
 export class Service {
     public constructor(funcs: readonly CustomFunc[]) {
@@ -38,27 +41,17 @@ export class Service {
             this.output$.next(response)
         })
         this._calculator.output$.subscribe(res => {
-            const r = input_async_result(res)
+            const r = input_async_result(res) as TransactionEndResult
             const serverSend: ServerSend = {
-                serverSendOneof: {
-                    $case: 'sheetUpdated',
-                    sheetUpdated: {
-                        eventSource: {
-                            actionId: '1',
-                            userId: '1'
-                        },
-                        index: r.sheetIdx,
-                    }
-                }
+                $case: "actionEffect",
+                actionEffect: {sheets: r.sheetIdx, async_tasks: [], dirtys: []} // todo!()
             }
             this.output$.next(serverSend)
         })
     }
 
     private _execute(req: ClientSend): ServerSend {
-        const clientSend = req.clientSendOneof
-        if (clientSend === undefined)
-            return {}
+        const clientSend = req
         if (clientSend.$case === 'transaction')
             return this._execTransaction(clientSend.transaction)
         else if (clientSend.$case === 'displayRequest')
@@ -73,173 +66,111 @@ export class Service {
         const r = read_file(req.name, req.content)
         if (r === ReadFileResult.Ok) {
             return {
-                serverSendOneof: {
-                    $case: "sheetUpdated",
-                    sheetUpdated: {
-                        index: [], eventSource: {
-                            userId: "1",
-                            actionId: "1",
-                        }
-                    },
-                }
+                $case: 'actionEffect',
+                actionEffect: {sheets: [], async_tasks: [], dirtys: []},
             }
         }
         throw Error('read file Error!')
     }
 
     private _execDisplayReq(req: DisplayRequest): ServerSend {
-        const jsonRes = get_patches(req.sheetIdx, req.version)
-        const response = DisplayResponse.fromJSON(jsonRes)
-        return { serverSendOneof: { $case: 'displayResponse', displayResponse: response } }
+        const displayResponse = get_patches(req.sheetIdx, req.version) as DisplayResponse
+        return { $case: 'displayResponse', displayResponse}
     }
 
     private _execTransaction(transaction: Transaction): ServerSend {
-        if (transaction.undo)
+        if (transaction === "Undo")
             return this._execUndo()
-        if (transaction.redo)
+        if (transaction === "Redo")
             return this._execRedo()
         transaction_start()
-        transaction.payloads.forEach(p => {
+        transaction.Payloads.payloads.forEach(p => {
             this._addPayload(p)
         })
-        const undoable = transaction.undoable
+        const undoable = transaction.Payloads.undoable
         const result: TransactionEndResult = transaction_end(undoable)
-        if (result.code === TransactionCode.Err)
-            return {}
+        if (result.code === TransactionCode.Err) {
+            debugger
+        }
         return {
-            serverSendOneof: {
-                $case: 'sheetUpdated',
-                sheetUpdated: {
-                    eventSource: {
-                        actionId: '1',
-                        userId: '1',
-                    },
-                    index: result.sheetIdx
-                }
-            }
+            $case: "actionEffect",
+            actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
         }
     }
 
     private _addPayload(p: Payload) {
-        if (p.payloadOneof === undefined)
-            return
-        switch (p.payloadOneof.$case) {
-            case 'cellInput':
-                const cellInput = p.payloadOneof.cellInput
-                cell_input(
-                    cellInput.sheetIdx,
-                    cellInput.row,
-                    cellInput.col,
-                    cellInput.input,
-                )
-                break
-            case 'rowShift':
-                const rowShift = p.payloadOneof.rowShift
-                if (rowShift.type === ShiftType.INSERT) {
-                    row_insert(
-                        rowShift.sheetIdx,
-                        rowShift.start,
-                        rowShift.count,
-                    )
-                } else if (rowShift.type === ShiftType.DELETE) {
-                    row_delete(
-                        rowShift.sheetIdx,
-                        rowShift.start,
-                        rowShift.count,
-                    )
-                } else {
-                    throw Error('')
-                }
-                break
-            case 'columnShift':
-                const colShift = p.payloadOneof.columnShift
-                if (colShift.type === ShiftType.INSERT) {
-                    row_insert(
-                        colShift.sheetIdx,
-                        colShift.start,
-                        colShift.count,
-                    )
-                } else if (colShift.type === ShiftType.DELETE) {
-                    col_delete(
-                        colShift.sheetIdx,
-                        colShift.start,
-                        colShift.count,
-                    )
-                } else {
-                    throw Error('')
-                }
-                break
-            case 'createBlock':
-                const cb = p.payloadOneof.createBlock
-                create_block(
-                    cb.sheetIdx,
-                    cb.id,
-                    cb.masterRow,
-                    cb.masterCol,
-                    cb.rowCnt,
-                    cb.colCnt,
-                )
-                break
-            case 'moveBlock':
-                const mb = p.payloadOneof.moveBlock
-                move_block(
-                    mb.sheetIdx,
-                    mb.id,
-                    mb.newMasterRow,
-                    mb.newMasterCol,
-                )
-                break
-            case 'blockInput':
-                const bi = p.payloadOneof.blockInput
-                block_input(
-                    bi.sheetIdx,
-                    bi.id,
-                    bi.row,
-                    bi.col,
-                    bi.input,
-                )
-                break
-            case 'setColVisible':
-            case 'setColWidth':
-            case 'sheetShift':
-            case 'sheetRename':
+        if (hasOwnProperty(p, 'CellInput')) {
+            const cellInput = p.CellInput
+            return cell_input(
+                cellInput.sheetIdx,
+                cellInput.row,
+                cellInput.col,
+                cellInput.content,
+            )
         }
+        if (hasOwnProperty(p, 'RowShift')) {
+            const rowShift = p.RowShift
+            if (rowShift.insert)
+                return row_insert(rowShift.sheetIdx, rowShift.row, rowShift.count)
+            return row_delete(rowShift.sheetIdx, rowShift.row, rowShift.count)
+        }
+        if (hasOwnProperty(p, 'ColShift')) {
+            const colShift = p.ColShift
+            if (colShift.insert)
+                return row_insert(colShift.sheetIdx, colShift.col, colShift.count)
+            return row_delete(colShift.sheetIdx, colShift.col, colShift.count)
+        }
+        if (hasOwnProperty(p, 'CreateBlock')) {
+            const createBlock = p.CreateBlock
+            return create_block(
+                createBlock.sheetIdx,
+                createBlock.id,
+                createBlock.masterRow,
+                createBlock.masterCol,
+                createBlock.rowCnt,
+                createBlock.colCnt,
+            )
+        }
+        if (hasOwnProperty(p, 'MoveBlock')) {
+            const moveBlock = p.MoveBlock
+            return move_block(
+                moveBlock.sheetIdx,
+                moveBlock.id,
+                moveBlock.newMasterRow,
+                moveBlock.newMasterCol,
+            )
+        }
+        if (hasOwnProperty(p, 'BlockInput')) {
+            const blockInput = p.BlockInput
+            return block_input(
+                blockInput.sheetIdx,
+                blockInput.blockId,
+                blockInput.row,
+                blockInput.col,
+                blockInput.input,
+            )
+        }
+        console.log('Unimplemented!')
     }
 
     private _execUndo(): ServerSend {
         const r = undo()
-        if (r) {
-            return {
-                serverSendOneof: {
-                    $case: "sheetUpdated", sheetUpdated: {
-                        eventSource: {
-                            actionId: '1',
-                            userId: '1',
-                        },
-                        index: []
-                    }
-                }
-            }
+        if (!r)
+            console.log('undo failed')
+        return {
+            $case: "actionEffect",
+            actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
         }
-        return {}
     }
 
     private _execRedo(): ServerSend {
         const r = redo()
-        if (r) {
-            return {
-                serverSendOneof: {
-                    $case: "sheetUpdated", sheetUpdated: {
-                        eventSource: {
-                            actionId: '1',
-                            userId: '1',
-                        },
-                        index: []
-                    }
-                }
-            }
+        if (!r)
+            console.log('redo failed')
+        return {
+            $case: "actionEffect",
+            actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
         }
-        return {}
     }
 
 }

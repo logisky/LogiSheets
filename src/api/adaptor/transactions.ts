@@ -1,220 +1,138 @@
 import { Transaction, PayloadsTransaction, UndoTransaction, RedoTransaction } from '../transactions'
-import { Transaction as ProtoTransaction , Payload as ProtoPayload, ShiftType, underlineTypeFromJSON, StyleUpdatePayload, borderTypeFromJSON} from '../../proto/message'
+import { EditAction, EditPayload, StyleUpdateType } from 'bindings'
 import { Payload, SetFont, SetBorder } from "../payloads";
 
-export function adaptTransaction(t: Transaction): ProtoTransaction {
+export function adaptTransaction(t: Transaction): EditAction {
     if (t instanceof UndoTransaction)
-        return {undo: true, undoable: false, payloads: [], redo: false}
+        return 'Undo'
     if (t instanceof RedoTransaction) {
-        return {undo: false, undoable: false, payloads:[], redo: true}
+        return 'Redo'
     }
     if (t instanceof PayloadsTransaction) {
         const transaction = t
-        const protoPayloads: ProtoPayload[] = []
+        const payloads: EditPayload[] = []
         transaction.payloads.forEach(p => {
-            protoPayloads.push(adaptPayload(p))
+            payloads.push(adaptPayload(p))
         })
-        return {undo: false, undoable: false, payloads: protoPayloads, redo: false}
+        return {Payloads: {payloads , undoable: true}}
     }
     throw Error('unknown transaction type!')
 }
 
-export function adaptPayload(p: Payload): ProtoPayload {
+export function adaptPayload(p: Payload): EditPayload {
     switch (p.type) {
     case 'sheetRename':
         return {
-            payloadOneof: {
-                $case: 'sheetRename',
-                sheetRename: {
-                    oldName: p.oldName,
-                    newName: p.newName,
-                }
-            }
+            SheetRename: {oldName: p.oldName, newName: p.newName}
         }
     case 'cellInput':
         return {
-            payloadOneof: {
-                $case: 'cellInput',
-                cellInput: {
-                    sheetIdx: p.sheetIdx,
-                    row: p.row,
-                    col: p.col,
-                    input: p.input,
-                }
-            }
+            CellInput: {sheetIdx: p.sheetIdx, row: p.row, col: p.col, content: p.input}
         }
     case 'insertRows':
         return {
-            payloadOneof: {
-                $case: 'rowShift',
-                rowShift: {
-                    sheetIdx: p.sheetIdx,
-                    start: p.start,
-                    count: p.cnt,
-                    type: ShiftType.INSERT
-                }
-            }
+            RowShift: {insert: true, row: p.start, count: p.cnt, sheetIdx: p.sheetIdx}
         }
     case 'deleteRows':
         return {
-            payloadOneof: {
-                $case: 'rowShift',
-                rowShift: {
-                    sheetIdx: p.sheetIdx,
-                    start: p.start,
-                    count: p.cnt,
-                    type: ShiftType.DELETE
-                }
-            }
+            RowShift: {insert: false, row: p.start, count: p.cnt, sheetIdx: p.sheetIdx}
         }
     case 'insertCols':
         return {
-            payloadOneof: {
-                $case: 'columnShift',
-                columnShift: {
-                    sheetIdx: p.sheetIdx,
-                    start: p.start,
-                    count: p.cnt,
-                    type: ShiftType.INSERT
-                }
-            }
+            ColShift: {insert: true, col: p.start, count: p.cnt, sheetIdx: p.sheetIdx}
         }
     case 'deleteCols':
         return {
-            payloadOneof: {
-                $case: 'columnShift',
-                columnShift: {
-                    sheetIdx: p.sheetIdx,
-                    start: p.start,
-                    count: p.cnt,
-                    type: ShiftType.DELETE
-                }
-            }
+            ColShift: {insert: false, col: p.start, count: p.cnt, sheetIdx: p.sheetIdx}
         }
     case 'createBlock':
         return {
-            payloadOneof: {
-                $case: 'createBlock',
-                createBlock: {
-                    sheetIdx: p.sheetIdx,
-                    id: p.blockId,
-                    masterRow: p.masterRow,
-                    masterCol: p.masterCol,
-                    rowCnt: p.rowCnt,
-                    colCnt: p.colCnt,
-                }
+            CreateBlock: {
+                sheetIdx: p.sheetIdx,
+                masterRow: p.masterRow,
+                masterCol: p.masterCol,
+                colCnt: p.colCnt,
+                rowCnt: p.rowCnt,
+                id: p.blockId,
             }
         }
     case 'moveBlock':
         return {
-            payloadOneof: {
-                $case: 'moveBlock',
-                moveBlock: {
-                    sheetIdx: p.sheetIdx,
-                    id: p.blockId,
-                    newMasterRow: p.newMasterRow,
-                    newMasterCol: p.newMasterCol,
-                }
+            MoveBlock: {
+                sheetIdx: p.sheetIdx,
+                id: p.blockId,
+                newMasterRow: p.newMasterRow,
+                newMasterCol: p.newMasterCol,
             }
         }
     case 'setColWidth':
         return {
-            payloadOneof: {
-                $case: 'setColWidth',
-                setColWidth: {
-                    sheetIdx: p.sheetIdx,
-                    col: p.col,
-                    width: p.width,
-                }
-            }
+            SetColWidth: {sheetIdx: p.sheetIdx, col: p.col, width: p.width}
         }
     case 'setRowHeight':
         return {
-            payloadOneof: {
-                $case: 'setRowHeight',
-                setRowHeight: {
-                    sheetIdx: p.sheetIdx,
-                    row: p.row,
-                    height: p.height,
-                }
-            }
+            SetRowHeight: {sheetIdx: p.sheetIdx, row: p.row, height: p.height}
         }
     case 'setRowVisible':
         return {
-            payloadOneof: {
-                $case: 'setRowVisible',
-                setRowVisible: {
-                    sheetIdx: p.sheetIdx,
-                    row: p.row,
-                    visible: p.visible,
-                }
-            }
+           SetVisible: {
+               isRow: true,
+               sheetIdx: p.sheetIdx,
+               visible: p.visible,
+               start: p.row,
+            } 
         }
     case 'setColVisible':
         return {
-            payloadOneof: {
-                $case: 'setColVisible',
-                setColVisible: {
-                    sheetIdx: p.sheetIdx,
-                    col: p.col,
-                    visible: p.visible,
-                }
-            }
+           SetVisible: {
+               isRow: false,
+               sheetIdx: p.sheetIdx,
+               visible: p.visible,
+               start: p.col,
+            } 
         }
     case 'insertBlockRows':
         return {
-            payloadOneof: {
-                $case: 'lineShiftInBlock',
-                lineShiftInBlock: {
-                    sheetIdx: p.sheetIdx,
-                    id: p.blockId,
-                    idx: p.rowIdx,
-                    cnt: p.cnt,
-                    horizontal: true,
-                    insert: true,
-                },
+            LineShiftInBlock: {
+                sheetIdx: p.sheetIdx,
+                blockId: p.blockId,
+                idx: p.rowIdx,
+                cnt: p.cnt,
+                insert: true,
+                horizontal: true,
             }
         }
     case 'insertBlockCols':
         return {
-            payloadOneof: {
-                $case: 'lineShiftInBlock',
-                lineShiftInBlock: {
-                    sheetIdx: p.sheetIdx,
-                    id: p.blockId,
-                    idx: p.colIdx,
-                    cnt: p.cnt,
-                    horizontal: false,
-                    insert: true,
-                },
+            LineShiftInBlock: {
+                sheetIdx: p.sheetIdx,
+                blockId: p.blockId,
+                idx: p.colIdx,
+                cnt: p.cnt,
+                insert: true,
+                horizontal: true,
             }
         }
     case 'deleteBlockRows':
         return {
-            payloadOneof: {
-                $case: 'lineShiftInBlock',
-                lineShiftInBlock: {
-                    sheetIdx: p.sheetIdx,
-                    id: p.blockId,
-                    idx: p.rowIdx,
-                    cnt: p.cnt,
-                    horizontal: true,
-                    insert: false,
-                },
+            LineShiftInBlock: {
+                sheetIdx: p.sheetIdx,
+                blockId: p.blockId,
+                idx: p.rowIdx,
+                cnt: p.cnt,
+                insert: false,
+                horizontal: true,
             }
         }
     case 'deleteBlockCols':
         return {
-            payloadOneof: {
-                $case: 'lineShiftInBlock',
-                lineShiftInBlock: {
-                    sheetIdx: p.sheetIdx,
-                    id: p.blockId,
-                    idx: p.colIdx,
-                    cnt: p.cnt,
-                    horizontal: false,
-                    insert: false,
-                },
+            LineShiftInBlock: {
+                sheetIdx: p.sheetIdx,
+                blockId: p.blockId,
+                idx: p.colIdx,
+                cnt: p.cnt,
+                insert: false,
+                horizontal: false,
             }
         }
     case 'setFont':
@@ -222,203 +140,88 @@ export function adaptPayload(p: Payload): ProtoPayload {
     case 'setBorder':
         return adaptSetBorder(p)
     case 'deleteSheet':
-        return {
-            payloadOneof: {
-                $case: 'sheetShift',
-                sheetShift: {
-                    sheetIdx: p.sheetIdx,
-                    type: ShiftType.DELETE
-                }
-            }
-        }
     case 'insertSheet':
-        return {
-            payloadOneof: {
-                $case: 'sheetShift',
-                sheetShift: {
-                    sheetIdx: p.sheetIdx,
-                    type: ShiftType.INSERT
-                }
-            }
-        }
     default:
         throw Error(`unimplemented: ${p}`)
     }
 }
 
-function adapatSetFont(p: SetFont): ProtoPayload {
-    const payloads: StyleUpdatePayload[] = []
-    if (p.bold)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontBold',
-                setFontBold: {bold: p.bold}
-            }
-        })
-    if (p.italic)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontItalic',
-                setFontItalic: {italic: p.italic}
-            }
-        })
-    if (p.underline)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontUnderline',
-                setFontUnderline: {underline: underlineTypeFromJSON(p.underline)}
-            }
-        })
-    if (p.color)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontColor',
-                setFontColor: {color: p.color}
-            }
-        })
-    if (p.size)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontSize',
-                setFontSize: {size: p.size}
-            }
-        })
-    if (p.name)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontName',
-                setFontName: {name: p.name}
-            }
-        })
-    if (p.outline)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontOutline',
-                setFontOutline: {outline: p.outline}
-            }
-        })
-    if (p.shadow)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontShadow',
-                setFontShadow: {shadow: p.shadow}
-            }
-        })
-    if (p.strike)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontStrike',
-                setFontStrike: {strike: p.strike}
-            }
-        })
-    if (p.condense)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setFontCondense',
-                setFontCondense: {condense: p.condense}
-            }
-        })
+function adapatSetFont(p: SetFont): EditPayload {
+    const payload = initStyleUpdate()
+    if (p.bold !== undefined)
+        payload.setFontBold = p.bold
+    if (p.italic !== undefined)
+        payload.setFontItalic = p.italic
+    if (p.underline !== undefined)
+        payload.setFontUnderline = p.underline
+    if (p.color !== undefined)
+        payload.setFontColor = p.color
+    if (p.size !== undefined)
+        payload.setFontSize = p.size
+    if (p.name !== undefined)
+        payload.setFontName = p.name
+    if (p.outline !== undefined)
+        payload.setFontOutline = p.outline
+    if (p.shadow !== undefined)
+        payload.setFontShadow = p.shadow
+    if (p.strike !== undefined)
+        payload.setFontStrike = p.strike
+    if (p.condense !== undefined)
+        payload.setFontCondense = p.condense
     return {
-        payloadOneof: {
-            $case: 'styleUpdate',
-            styleUpdate: {
-                sheetIdx: p.sheetIdx,
-                row: p.row,
-                col: p.col,
-                payloads: payloads,
-            }
-        }
+        StyleUpdate: {sheetIdx: p.sheetIdx, row: p.row, col: p.col, ty: payload}
     }
 }
 
-function adaptSetBorder(p: SetBorder): ProtoPayload {
-    const payloads: StyleUpdatePayload[] = []
-    if (p.leftColor)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setLeftBorderColor',
-                setLeftBorderColor: {color: p.leftColor}
-            }
-        })
-    if (p.rightColor)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setRightBorderColor',
-                setRightBorderColor: {color: p.rightColor}
-            }
-        })
-    if (p.topColor)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setTopBorderColor',
-                setTopBorderColor: {color: p.topColor}
-            }
-        })
-    if (p.bottomColor)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setBottomBorderColor',
-                setBottomBorderColor: {color: p.bottomColor}
-            }
-        })
-    if (p.leftBorderType)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setLeftBorderType',
-                setLeftBorderType: {bt: borderTypeFromJSON(p.leftBorderType)}
-            }
-        })
-    if (p.rightBorderType)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setRightBorderType',
-                setRightBorderType: {bt: borderTypeFromJSON(p.rightBorderType)}
-            }
-        })
-    if (p.topBorderType)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setTopBorderType',
-                setTopBorderType: {bt: borderTypeFromJSON(p.topBorderType)}
-            }
-        })
-    if (p.bottomBorderType)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setBottomBorderType',
-                setBottomBorderType: {bt: borderTypeFromJSON(p.bottomBorderType)}
-            }
-        })
-    if (p.outline !== undefined)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setBorderOutline',
-                setBorderOutline: {outline: p.outline},
-            }
-        })
-    if (p.diagonalUp)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setBorderDiagonalUp',
-                setBorderDiagonalUp: {diagonalUp: p.diagonalUp}
-            }
-        })
-    if (p.diagonalDown)
-        payloads.push({
-            stylePayloadOneof: {
-                $case: 'setBorderDiagonalDown',
-                setBorderDiagonalDown: {diagonalDown: p.diagonalDown},
-            }
-        })
+function adaptSetBorder(p: SetBorder): EditPayload {
+    const payload = initStyleUpdate()
+    if (p.leftColor !== undefined)
+        payload.setLeftBorderColor = p.leftColor
+    if (p.rightColor !== undefined)
+        payload.setRightBorderColor = p.rightColor
+    if (p.topColor !== undefined)
+        payload.setTopBorderColor = p.topColor
+    if (p.bottomColor !== undefined)
+        payload.setBottomBorderColor = p.bottomColor
+    if (p.leftBorderType !== undefined)
+        payload.setLeftBorderStyle  = p.leftBorderType
+    if (p.rightBorderType !== undefined)
+        payload.setRightBorderStyle = p.rightBorderType
+    if (p.topBorderType !== undefined)
+        payload.setTopBorderStyle = p.topBorderType
+    if (p.bottomBorderType !== undefined)
+        payload.setBottomBorderStyle = p.bottomBorderType
+    if (p.diagonalUp !== undefined)
+        payload.setBorderGiagonalUp = p.diagonalUp
+    if (p.diagonalDown !== undefined)
+        payload.setBorderGiagonalDown = p.diagonalDown
     return {
-        payloadOneof: {
-            $case: 'styleUpdate',
-            styleUpdate: {
-                sheetIdx: p.sheetIdx,
-                row: p.row,
-                col: p.col,
-                payloads: payloads,
-            }
-        }
+        StyleUpdate: {sheetIdx: p.sheetIdx, row: p.row, col: p.col, ty: payload}
+    }
+}
+
+function initStyleUpdate(): StyleUpdateType {
+    return {
+        setBorderGiagonalDown: null,
+        setBorderGiagonalUp: null,
+        setBottomBorderColor: null,
+        setBottomBorderStyle: null,
+        setFontBold: null,
+        setFontColor: null,
+        setFontCondense: null,
+        setFontItalic: null,
+        setFontName: null,
+        setFontOutline: null,
+        setFontShadow: null,
+        setFontSize: null,
+        setFontStrike: null,
+        setFontUnderline: null,
+        setLeftBorderColor: null,
+        setLeftBorderStyle: null,
+        setPatternFill: null,
+        setRightBorderColor: null,
+        setRightBorderStyle: null,
+        setTopBorderColor: null,
+        setTopBorderStyle: null,
     }
 }

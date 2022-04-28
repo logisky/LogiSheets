@@ -26,30 +26,22 @@ export const useDnd = () => {
         const startVisibleCells = startSelector.start.visibleCells(startSelector.end)
         startVisibleCells.forEach(c => {
             payloads.push({
-                payloadOneof: {
-                    $case: 'cellInput',
-                    cellInput: {
-                        col: c.col,
-                        row: c.row,
-                        input: '',
-                        sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
-                    }
-                }
+                type: "cellInput",
+                sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
+                row: c.row,
+                col: c.col,
+                input: '',
             })
         })
         endSelector.start.visibleCells(endSelector.end).forEach((c, i) => {
             const { row, col } = startVisibleCells[i]
             const input = DATA_SERVICE.sheetSvc.getCell(row, col)?.getText()
             payloads.push({
-                payloadOneof: {
-                    $case: 'cellInput',
-                    cellInput: {
-                        col: c.col,
-                        row: c.row,
-                        input: input ?? '',
-                        sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
-                    }
-                }
+                type: "cellInput",
+                sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
+                row: c.row,
+                col: c.col,
+                input: input ?? '',
             })
         })
         DATA_SERVICE.backend.sendTransaction(payloads)

@@ -1,4 +1,4 @@
-import { Style } from 'proto/message'
+import { Style } from 'bindings'
 import { StandardValue } from './value'
 import { format } from 'ssf'
 import { StandardStyle } from './style'

@@ -1,3 +1,4 @@
+import {StBorderStyle} from 'bindings'
 export interface SetBorder {
     readonly type: 'setBorder'
     readonly sheetIdx: number
@@ -7,10 +8,10 @@ export interface SetBorder {
     readonly rightColor?: string
     readonly topColor?: string
     readonly bottomColor?: string
-    readonly leftBorderType?: BorderType
-    readonly rightBorderType?: BorderType
-    readonly topBorderType?: BorderType
-    readonly bottomBorderType?: BorderType
+    readonly leftBorderType?: StBorderStyle
+    readonly rightBorderType?: StBorderStyle
+    readonly topBorderType?: StBorderStyle
+    readonly bottomBorderType?: StBorderStyle
     readonly outline?: boolean
     readonly diagonalUp?: boolean
     readonly diagonalDown?: boolean
@@ -24,10 +25,10 @@ export class SetBorderBuilder{
     private _rightColor?: string
     private _topColor?: string
     private _bottomColor?: string
-    private _leftBorderType?: BorderType
-    private _rightBorderType?: BorderType
-    private _topBorderType?: BorderType
-    private _bottomBorderType?: BorderType
+    private _leftBorderType?: StBorderStyle
+    private _rightBorderType?: StBorderStyle
+    private _topBorderType?: StBorderStyle
+    private _bottomBorderType?: StBorderStyle
     private _outline?: boolean
     private _diagonalUp?: boolean
     private _diagonalDown?: boolean
@@ -59,19 +60,19 @@ export class SetBorderBuilder{
         this._bottomColor = bottomColor
         return this
     }
-    public leftBorderType(leftBorderType: BorderType): this {
+    public leftBorderType(leftBorderType: StBorderStyle): this {
         this._leftBorderType = leftBorderType
         return this
     }
-    public rightBorderType(rightBorderType: BorderType): this {
+    public rightBorderType(rightBorderType: StBorderStyle): this {
         this._rightBorderType = rightBorderType
         return this
     }
-    public topBorderType(topBorderType: BorderType): this {
+    public topBorderType(topBorderType: StBorderStyle): this {
         this._topBorderType = topBorderType
         return this
     }
-    public bottomBorderType(bottomBorderType: BorderType): this {
+    public bottomBorderType(bottomBorderType: StBorderStyle): this {
         this._bottomBorderType = bottomBorderType
         return this
     }
@@ -109,21 +110,4 @@ export class SetBorderBuilder{
             diagonalDown: this._diagonalDown,
         }
     }
-}
-
-export const enum BorderType {
-    DASH_DOT,
-    DASH_DOT_DOT,
-    DASHED,
-    DOTTED,
-    DOUBLE,
-    HAIR,
-    MEDIUM,
-    MEDIUM_DASH_DOT,
-    MEDIUM_DASH_DOT_DOT,
-    MEDIUM_DASHED,
-    NONE_BORDER ,
-    SLANT_DASH_DOT ,
-    THICK ,
-    THIN ,
 }

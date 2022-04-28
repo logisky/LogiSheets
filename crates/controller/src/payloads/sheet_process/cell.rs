@@ -1,4 +1,4 @@
-use logisheets_base::{CellValue, Payload};
+use logisheets_base::CellValue;
 
 use super::style::CellStylePayload;
 
@@ -15,5 +15,3 @@ pub enum CellChange {
     Value(CellValue),
     DiffStyle(Vec<CellStylePayload>),
 }
-
-impl Payload for CellChange {}

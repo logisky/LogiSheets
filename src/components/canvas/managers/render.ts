@@ -2,7 +2,7 @@ import { PainterService, Box, TextAttr, CanvasAttr } from 'core/painter'
 import { DATA_SERVICE, RenderCell } from 'core/data'
 import { StandardColor, Range } from 'core/standable'
 import { SETTINGS } from 'common/settings'
-import { toA1notation } from 'common'
+import { hasOwnProperty, toA1notation } from 'common'
 import { StandardStyle } from 'core/standable/style'
 import { Subject } from 'rxjs'
 
@@ -94,20 +94,25 @@ export class Render {
 
     private _fill (box: Box, style?: StandardStyle) {
         const fill = style?.fill
-        if (!fill)
+        if (!fill || !hasOwnProperty(fill, 'PatternFill'))
             return
-        if (fill.bgColor !== '') {
-            const color = StandardColor.fromArgb(fill.bgColor)
+        const patternFill = fill.PatternFill
+        if (patternFill.bgColor) {
+            const color = StandardColor.fromCtColor(patternFill.bgColor)
             const fillAttr = new CanvasAttr()
             fillAttr.fillStyle = color.css()
             this._painterSvc.attr(fillAttr)
             const { startRow, startCol } = box.position
             this._painterSvc.fillRect(startCol, startRow, box.width, box.height)
         }
-        if (fill.fgColor !== '') {
-            const color = StandardColor.fromArgb(fill.fgColor)
-            this._painterSvc.fillFgColor(fill.type, color.css(), box)
-        }
+        if (patternFill.fgColor) {
+            const color = StandardColor.fromCtColor(patternFill.fgColor)
+            this._painterSvc.fillFgColor(
+                patternFill?.patternType ?? 'None',
+                color.css(),
+                box,
+            )
+        } 
     }
 
     private _border (box: Box, position: Range, style?: StandardStyle) {

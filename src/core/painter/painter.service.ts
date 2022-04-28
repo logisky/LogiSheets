@@ -1,11 +1,4 @@
-import {
-    Alignment_Horizontal,
-    Alignment_Vertical,
-    BorderPr,
-    BorderType,
-    PatternFillType,
-    UnderlineType,
-} from 'proto/message'
+import { CtBorderPr, StPatternType } from 'bindings'
 import { StandardColor } from 'core/standable'
 import { CanvasAttr } from './canvas_attr'
 import { Box } from './box'
@@ -16,13 +9,13 @@ import { Direction, error } from 'common'
 import { TextAttr } from './text_attr'
 
 export class PainterService extends CanvasApi {
-    fillFgColor (type: PatternFillType, color: string, box: Box) {
+    fillFgColor (type: StPatternType, color: string, box: Box) {
         this.save()
         const attr = new CanvasAttr()
         attr.fillStyle = color
         this.attr(attr)
         switch (type) {
-            case PatternFillType.SOLID: {
+            case 'Solid': {
                 const { startRow: y, startCol: x } = box.position
                 this.fillRect(x, y, box.width, box.height)
             }
@@ -51,9 +44,9 @@ export class PainterService extends CanvasApi {
     }
 
     // tslint:disable-next-line: max-func-body-length
-    border (border: BorderPr, box: Box, type: Direction) {
+    border (border: CtBorderPr, box: Box, type: Direction) {
         this.save()
-        const stdColor = StandardColor.fromArgb(border.color)
+        const stdColor = StandardColor.fromCtColor(border.color)
         const dot = npx(1)
         const hair = dot / 2
         const dash = npx(3)
@@ -64,48 +57,48 @@ export class PainterService extends CanvasApi {
         const borderAttr = new CanvasAttr()
         borderAttr.strokeStyle = stdColor.css()
         borderAttr.lineWidth = thinLine
-        switch (border.type) {
-            case BorderType.DASHED:
+        switch (border.style) {
+            case 'Dashed':
                 segments.push(dash)
                 break
-            case BorderType.DASH_DOT:
+            case 'DashDot':
                 segments.push(dash, dot)
                 break
-            case BorderType.DASH_DOT_DOT:
+            case 'DashDotDot':
                 segments.push(dash, dot, dot)
                 break
-            case BorderType.DOTTED:
+            case 'Dotted':
                 segments.push(dot)
                 break
-            case BorderType.DOUBLE:
+            case 'Double':
                 return
-            case BorderType.HAIR:
+            case 'Hair':
                 segments.push(hair)
                 break
-            case BorderType.MEDIUM:
+            case 'Medium':
                 borderAttr.lineWidth = mediumLine
                 break
-            case BorderType.MEDIUM_DASHED:
+            case 'MediumDashed':
                 borderAttr.lineWidth = mediumLine
                 segments.push(dash)
                 break
-            case BorderType.MEDIUM_DASH_DOT:
+            case 'MediumDashDot':
                 borderAttr.lineWidth = mediumLine
                 segments.push(dash, dot)
                 break
-            case BorderType.MEDIUM_DASH_DOT_DOT:
+            case 'MediumDashDotDot':
                 borderAttr.lineWidth = mediumLine
                 segments.push(dash, dot, dot, dot)
                 break
-            case BorderType.NONE_BORDER:
+            case 'None':
                 return
-            case BorderType.SLANT_DASH_DOT:
+            case 'SlantDashDot':
                 this.restore()
                 return
-            case BorderType.THICK:
+            case 'Thick':
                 borderAttr.lineWidth = thickLine
                 break
-            case BorderType.THIN:
+            case 'Thin':
                 borderAttr.lineWidth = thinLine
                 break
             default:
@@ -184,34 +177,33 @@ export class PainterService extends CanvasApi {
         const lineAttr = new CanvasAttr()
         lineAttr.strokeStyle = attr.font.standardColor.css()
         const width = attr.font.measureText(text).width
-        switch (attr.font.underline) {
-            case UnderlineType.DOUBLE_ACCOUNTING:
-            case UnderlineType.DOUBLE_U:
-            case UnderlineType.NONE:
+        switch (attr?.font?.underline?.val ?? 'None') {
+            case 'DoubleAccounting':
+            case 'Double':
+            case 'None':
                 return
-            case UnderlineType.SINGLE:
+            case 'Single':
                 lineAttr.lineWidth = npxLine(1)
                 switch (attr.alignment?.vertical) {
-                    case Alignment_Vertical.V_UNSPECIFIED:
-                    case Alignment_Vertical.V_BOTTOM:
+                    case 'Bottom':
                         yOffset += attr.font.size / 2
                         break
-                    case Alignment_Vertical.V_CENTER:
+                    case 'Center':
                         break
-                    case Alignment_Vertical.V_TOP:
+                    case 'Top':
                         break
                     default:
+                        yOffset += attr.font.size / 2
+                        break
                 }
                 switch (attr.alignment?.horizontal) {
-                    case Alignment_Horizontal.H_UNSPECIFIED:
-                    case Alignment_Horizontal.UNRECOGNIZED:
-                    case Alignment_Horizontal.H_CENTER:
+                    case 'Center':
                         xOffset -= (width / 2)
                         break
-                    case Alignment_Horizontal.H_RIGHT:
+                    case 'Right':
                         xOffset += -width
                         break
-                    case Alignment_Horizontal.H_LEFT:
+                    case 'Left':
                         break
                     default:
                         throw Error(`Not support underline horizontal ${attr.alignment?.horizontal}`)

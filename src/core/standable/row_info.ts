@@ -1,4 +1,4 @@
-import { RowInfo } from 'proto/message'
+import { RowInfo } from 'bindings'
 import { shallowCopy, ptToPx } from 'common'
 import { SETTINGS } from 'common/settings'
 export class StandardRowInfo implements RowInfo {

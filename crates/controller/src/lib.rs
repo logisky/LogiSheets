@@ -4,6 +4,8 @@ extern crate num;
 extern crate rand;
 extern crate regex;
 extern crate statrs;
+#[macro_use]
+extern crate ts_rs;
 extern crate unicode_segmentation;
 
 mod async_func_manager;

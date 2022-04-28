@@ -1,5 +1,6 @@
-import {Value} from 'proto/message'
-export class StandardValue implements Value {
+import { Value } from 'bindings'
+import { hasOwnProperty } from 'common'
+export class StandardValue {
     cellValueOneof?:
     | { $case: "str"; str: string }
     | { $case: "number"; number: number }
@@ -22,7 +23,14 @@ export class StandardValue implements Value {
     }
     static from(value: Value) {
         const v = new StandardValue()
-        v.cellValueOneof = value.cellValueOneof
+        if (hasOwnProperty(value, 'str'))
+            v.cellValueOneof = {$case: 'str', str: value.str}
+        else if (hasOwnProperty(value, 'bool'))
+            v.cellValueOneof = {$case: "bool", bool: value.bool}
+        else if (hasOwnProperty(value, 'number'))
+            v.cellValueOneof = {$case: 'number', number: value.number}
+        else if (hasOwnProperty(value, 'error'))
+            v.cellValueOneof = {$case: 'error', error: value.error}
         return v
     }
 }

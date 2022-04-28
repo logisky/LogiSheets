@@ -8,15 +8,14 @@ use super::{
 use crate::container::DataContainer;
 use crate::id_manager::TextIdManager;
 use crate::navigator::Navigator;
-use crate::payloads::sheet_process::style::{
-    BorderPayloadType, CellStylePayload, FillPayloadType, FontPayloadType, PatternPayload,
-};
+use crate::payloads::sheet_process::style::{CellStylePayload, FontPayloadType};
 use crate::payloads::sheet_process::{
     BlockDeleteColsPayload, BlockDeleteRowsPayload, BlockInsertColsPayload, BlockInsertRowsPayload,
     BlockPayload, CellChange, CellPayload, ColInfoUpdate, CreateBlock as EditCreateBlock,
     Direction, FormulaPayload, LineInfoUpdate, LinePayload, LineShift, MoveBlock as EditMoveBlock,
     RowInfoUpdate, SheetPayload, SheetProcess, ShiftPayload, ShiftType,
 };
+use crate::payloads::sheet_shift::SheetRenamePayload;
 use crate::payloads::Process;
 use crate::workbook::sheet_pos_manager::SheetPosManager;
 
@@ -41,8 +40,15 @@ impl<'a> Converter<'a> {
                 EditPayload::LineShiftInBlock(input) => self.convert_line_shift_in_block(input),
                 EditPayload::BlockInput(_) => todo!(),
                 EditPayload::BlockStyleUpdate(_) => todo!(),
+                EditPayload::SheetRename(sheet_rename) => {
+                    Some(Process::SheetRename(SheetRenamePayload {
+                        old_name: sheet_rename.old_name,
+                        new_name: sheet_rename.new_name,
+                    }))
+                }
                 EditPayload::SetColWidth(scw) => self.convert_set_col_width(scw),
                 EditPayload::SetRowHeight(srh) => self.convert_set_row_height(srh),
+                EditPayload::SetVisible(_) => todo!(),
             };
             match proc {
                 Some(p) => {
@@ -57,7 +63,7 @@ impl<'a> Converter<'a> {
     fn convert_set_row_height(&mut self, srh: SetRowHeight) -> Option<Process> {
         let sheet_id = self.sheet_pos_manager.get_sheet_id(srh.sheet_idx)?;
         let line_payload = LinePayload {
-            idx: srh.idx,
+            idx: srh.row,
             change: LineInfoUpdate::Row(RowInfoUpdate::Height(srh.height)),
         };
         let sp = SheetProcess {
@@ -70,7 +76,7 @@ impl<'a> Converter<'a> {
     fn convert_set_col_width(&mut self, scw: SetColWidth) -> Option<Process> {
         let sheet_id = self.sheet_pos_manager.get_sheet_id(scw.sheet_idx)?;
         let line_payload = LinePayload {
-            idx: scw.idx,
+            idx: scw.col,
             change: LineInfoUpdate::Col(ColInfoUpdate::Width(scw.width)),
         };
         let sp = SheetProcess {
@@ -88,17 +94,11 @@ impl<'a> Converter<'a> {
             ty,
         } = su;
         let sheet_id = self.sheet_pos_manager.get_sheet_id(sheet_idx)?;
-        let mut ps = Vec::new();
-        ty.into_iter().for_each(|t| {
-            let p = get_style_payload(t);
-            if let Some(p) = p {
-                ps.push(p);
-            }
-        });
+        let cell_style_payload = get_style_payload(ty);
         let p = CellPayload {
             row,
             col,
-            change: CellChange::DiffStyle(ps),
+            change: CellChange::DiffStyle(cell_style_payload),
         };
         Some(Process::Sheet(SheetProcess {
             sheet_id,
@@ -109,7 +109,7 @@ impl<'a> Converter<'a> {
     fn convert_row_shift(&self, rs: RowShift) -> Option<Process> {
         let sheet_id = self.sheet_pos_manager.get_sheet_id(rs.sheet_idx)?;
         let ls = LineShift {
-            start: rs.start,
+            start: rs.row,
             cnt: rs.count as u32,
             ty: if rs.insert {
                 ShiftType::Insert
@@ -129,7 +129,7 @@ impl<'a> Converter<'a> {
     fn convert_col_shift(&self, cs: ColShift) -> Option<Process> {
         let sheet_id = self.sheet_pos_manager.get_sheet_id(cs.sheet_idx)?;
         let ls = LineShift {
-            start: cs.start,
+            start: cs.col,
             cnt: cs.count as u32,
             ty: if cs.insert {
                 ShiftType::Insert
@@ -197,7 +197,7 @@ impl<'a> Converter<'a> {
     fn convert_line_shift_in_block(&mut self, input: LineShiftInBlock) -> Option<Process> {
         let LineShiftInBlock {
             sheet_idx,
-            id,
+            block_id: id,
             idx,
             cnt,
             horizontal,
@@ -276,61 +276,20 @@ where
     }
 }
 
-fn get_style_payload(sut: StyleUpdateType) -> Option<CellStylePayload> {
-    match sut {
-        StyleUpdateType::SetFontBold(fb) => Some(CellStylePayload::Font(FontPayloadType::Bold(fb))),
-        StyleUpdateType::SetFontItalic(fi) => {
-            Some(CellStylePayload::Font(FontPayloadType::Italic(fi)))
-        }
-        StyleUpdateType::SetFontUnderline(fu) => Some(CellStylePayload::Font(
-            FontPayloadType::Underline(fu.underline),
-        )),
-        StyleUpdateType::SetFontColor(_) => None,
-        StyleUpdateType::SetFontSize(fs) => Some(CellStylePayload::Font(FontPayloadType::Size(fs))),
-        StyleUpdateType::SetFontName(_) => None,
-        StyleUpdateType::SetFontOutline(_) => None,
-        StyleUpdateType::SetFontShadow(fs) => {
-            Some(CellStylePayload::Font(FontPayloadType::Shadow(fs)))
-        }
-        StyleUpdateType::SetFontStrike(_) => None,
-        StyleUpdateType::SetFontCondense(_) => None,
-        StyleUpdateType::SetBorderDiagonalUp(_) => None,
-        StyleUpdateType::SetBorderDiagonalDown(_) => None,
-        StyleUpdateType::SetPatternFill(spf) => {
-            let p: PatternPayload = {
-                if let Some(fg) = spf.pattern_fill.fg_color {
-                    PatternPayload::FgColor(Some(fg))
-                } else if let Some(bg) = spf.pattern_fill.bg_color {
-                    PatternPayload::BgColor(Some(bg))
-                } else {
-                    todo!()
-                }
-            };
-            Some(CellStylePayload::Fill(FillPayloadType::Pattern(p)))
-        }
-        StyleUpdateType::SetLeftBorderColor(c) => Some(CellStylePayload::Border(
-            BorderPayloadType::LeftBorderColor(c),
-        )),
-        StyleUpdateType::SetRightBorderColor(c) => Some(CellStylePayload::Border(
-            BorderPayloadType::RightBorderColor(c),
-        )),
-        StyleUpdateType::SetTopBorderColor(c) => Some(CellStylePayload::Border(
-            BorderPayloadType::TopBorderColor(c),
-        )),
-        StyleUpdateType::SetBottomBorderColor(c) => Some(CellStylePayload::Border(
-            BorderPayloadType::BottomBorderColor(c),
-        )),
-        StyleUpdateType::SetLeftBorderStyle(s) => Some(CellStylePayload::Border(
-            BorderPayloadType::LeftBorderStyle(s.ty),
-        )),
-        StyleUpdateType::SetRightBorderStyle(s) => Some(CellStylePayload::Border(
-            BorderPayloadType::RightBorderStyle(s.ty),
-        )),
-        StyleUpdateType::SetTopBorderStyle(s) => Some(CellStylePayload::Border(
-            BorderPayloadType::TopBorderStyle(s.ty),
-        )),
-        StyleUpdateType::SetBottomBorderStyle(s) => Some(CellStylePayload::Border(
-            BorderPayloadType::BottomBorderStyle(s.ty),
-        )),
+fn get_style_payload(sut: StyleUpdateType) -> Vec<CellStylePayload> {
+    let mut result = Vec::<CellStylePayload>::new();
+    if let Some(fb) = sut.set_font_bold {
+        result.push(CellStylePayload::Font(FontPayloadType::Bold(fb)));
     }
+    if let Some(fi) = sut.set_font_italic {
+        result.push(CellStylePayload::Font(FontPayloadType::Italic(fi)));
+    }
+    if let Some(fs) = sut.set_font_size {
+        result.push(CellStylePayload::Font(FontPayloadType::Size(fs)));
+    }
+    if let Some(fs) = sut.set_font_shadow {
+        result.push(CellStylePayload::Font(FontPayloadType::Shadow(fs)));
+    }
+    // todo!()
+    result
 }
