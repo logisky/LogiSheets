@@ -3,7 +3,8 @@ use crate::async_helper::PendingTask;
 use super::async_helper::AsyncHelper;
 use lazy_static::lazy_static;
 use logisheets_controller::controller::edit_action::{
-    BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock, RowShift,
+    BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock,
+    PayloadsAction, RowShift,
 };
 use logisheets_controller::controller::{display::DisplayRequest, Controller};
 use logisheets_controller::{AsyncCalcResult, AsyncErr, Task};
@@ -54,8 +55,11 @@ pub fn transaction_end(undoable: bool) -> JsValue {
     let mut payloads = PAYLOADS.lock().unwrap();
     std::mem::swap(&mut empty, &mut payloads);
     let mut ctrl = CONTROLLER.lock().unwrap();
-    let action = EditAction::Payloads(empty);
-    let result = match ctrl.handle_action(action, undoable) {
+    let action = EditAction::Payloads(PayloadsAction {
+        payloads: empty,
+        undoable,
+    });
+    let result = match ctrl.handle_action(action) {
         Some(effect) => {
             let async_id = if effect.async_tasks.len() > 0 {
                 let t = PendingTask {
@@ -157,7 +161,7 @@ pub fn row_insert(sheet_idx: usize, start: usize, count: usize) {
     let mut payloads = PAYLOADS.lock().unwrap();
     payloads.push(EditPayload::RowShift(RowShift {
         sheet_idx,
-        start,
+        row: start,
         count,
         insert: true,
     }));
@@ -168,7 +172,7 @@ pub fn row_delete(sheet_idx: usize, start: usize, count: usize) {
     let mut payloads = PAYLOADS.lock().unwrap();
     payloads.push(EditPayload::RowShift(RowShift {
         sheet_idx,
-        start,
+        row: start,
         count,
         insert: false,
     }));
@@ -179,7 +183,7 @@ pub fn col_insert(sheet_idx: usize, start: usize, count: usize) {
     let mut payloads = PAYLOADS.lock().unwrap();
     payloads.push(EditPayload::ColShift(ColShift {
         sheet_idx,
-        start,
+        col: start,
         count,
         insert: true,
     }));
@@ -190,7 +194,7 @@ pub fn col_delete(sheet_idx: usize, start: usize, count: usize) {
     let mut payloads = PAYLOADS.lock().unwrap();
     payloads.push(EditPayload::ColShift(ColShift {
         sheet_idx,
-        start,
+        col: start,
         count,
         insert: false,
     }));
@@ -230,10 +234,10 @@ pub fn move_block(sheet_idx: usize, id: usize, row: usize, col: usize) {
 }
 
 #[wasm_bindgen]
-pub fn block_input(sheet_idx: usize, id: usize, row: usize, col: usize, input: String) {
+pub fn block_input(sheet_idx: usize, block_id: usize, row: usize, col: usize, input: String) {
     let bi = BlockInput {
         sheet_idx,
-        id,
+        block_id,
         row,
         col,
         input,

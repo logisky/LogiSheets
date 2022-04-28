@@ -1,11 +1,11 @@
-import { MergeCell } from 'proto/message'
+import { MergeCell } from 'bindings'
 export class Range {
     static fromMergeCell(mergeCell: MergeCell) {
         return new Range()
-            .setEndCol(mergeCell.endCol)
-            .setStartCol(mergeCell.startCol)
-            .setEndRow(mergeCell.endRow)
-            .setStartRow(mergeCell.startRow)
+            .setEndCol(mergeCell.colEnd)
+            .setStartCol(mergeCell.colStart)
+            .setEndRow(mergeCell.rowEnd)
+            .setStartRow(mergeCell.rowStart)
     }
     get width() {
         return this.#endCol - this.#startCol

@@ -1,7 +1,4 @@
-import {
-    Font,
-    UnderlineType,
-} from 'proto/message'
+import { CtFont, CtFontName, CtUnderlineProperty } from 'bindings'
 import { shallowCopy } from 'common'
 import { StandardColor } from './color'
 const DEFAULT_FONT_SIZE = 10
@@ -16,37 +13,47 @@ const DEFAULT_FONT_SIZE = 10
  * font-size（字体大小）: 可通过多种不同单位（比如像素或百分比等）来设置, 如：12xp，12pt，120%，1em
  */
 export type FontSizeUnit = 'px' | 'pt'
-export class StandardFont implements Font {
-    static from (font: Font): StandardFont {
+export class StandardFont implements CtFont {
+    static from(font: CtFont): StandardFont {
         const f = new StandardFont()
-        f.standardColor = StandardColor.fromArgb(font.color)
-        if (font.color === '')
+        if (font.color === null)
             f.standardColor = StandardColor.from(0, 0, 0)
+        else
+            f.standardColor = StandardColor.fromCtColor(font.color)
         shallowCopy(font, f)
         // ooxml标准存的是pt
         f.fontSizeUnit = 'pt'
-        if (font.size === 0) {
+        if (font.sz?.val === 0) {
             f.fontSizeUnit = 'px'
-            f.size = DEFAULT_FONT_SIZE
+            f.sz = {val: DEFAULT_FONT_SIZE}
         }
         return f
     }
-    size = DEFAULT_FONT_SIZE
-    name = 'Arial'
-    underline = UnderlineType.NONE
+    get size() {
+        return this.sz.val
+    }
+
+    name: CtFontName = {val: 'Arial'}
+    underline: CtUnderlineProperty | null = null
     fontSizeUnit: FontSizeUnit = 'px'
     lineHeight = '100%'
     standardColor = StandardColor.from(0, 0, 0, 1)
     bold = false
-    color = ''
+    color = null
+    family = null
+    sz = {val: 10}
     condense = false
     italic = false
     outline = false
     shadow = false
     strike = false
+    extend = false
+    charset = null
+    vertAlign = null
+    scheme = null
 
-    setSize (s: number) {
-        this.size = s
+    setSize(s: number) {
+        this.sz.val = s
         return this
     }
 

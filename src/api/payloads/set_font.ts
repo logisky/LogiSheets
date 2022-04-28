@@ -1,3 +1,5 @@
+import {StUnderlineValues as UnderlineType} from 'bindings'
+
 export interface SetFont {
     readonly type: 'setFont'
     readonly sheetIdx: number
@@ -102,12 +104,4 @@ export class SetFontBuilder {
             name: this._name,
         }
     }
-}
-
-export const enum UnderlineType {
-    DOUBLE_U,
-    DOUBLE_ACCOUNTING,
-    NONE,
-    SINGLE,
-    SINGLE_ACCOUNTING,
 }

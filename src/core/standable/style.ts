@@ -1,12 +1,13 @@
-import { Alignment, Border, Font, PatternFill, Style } from 'proto/message'
+import { CtCellAlignment, CtBorder, CtFont, CtFill, Style, CtCellProtection } from 'bindings'
 import { shallowCopy } from 'common'
 import { StandardFont } from './font'
 
 export class StandardStyle implements Style {
-    border: Border | undefined = undefined
-    font: Font | undefined = undefined
-    fill: PatternFill | undefined = undefined
-    alignment: Alignment | undefined = undefined
+    protection!: CtCellProtection 
+    border!: CtBorder
+    font!: CtFont 
+    fill!: CtFill
+    alignment!: CtCellAlignment
     formatter: string = ''
     static from (style: Style) {
         const s = new StandardStyle()
