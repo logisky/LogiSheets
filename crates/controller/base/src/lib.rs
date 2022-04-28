@@ -3,6 +3,8 @@ extern crate futures;
 extern crate im;
 extern crate logisheets_workbook;
 extern crate serde;
+#[macro_use]
+extern crate ts_rs;
 pub mod async_func;
 pub mod block_affect;
 pub mod block_affected;
@@ -21,6 +23,7 @@ pub mod set_curr_cell;
 
 use chrono::{DateTime, FixedOffset};
 use logisheets_workbook::prelude::*;
+use serde::Serialize;
 use std::hash::Hash;
 
 pub type Id = u32;
@@ -36,21 +39,22 @@ pub type ExtBookId = u8;
 pub type AuthorId = u8;
 pub type StyleId = u32;
 
-pub trait Payload {}
-
 #[derive(Debug)]
 pub enum VisitResultType<'c, C> {
     Build(&'c C),
     Unbuild,
 }
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
+#[ts(export, export_to = "../../../src/bindings/cell_id.ts")]
 pub enum CellId {
     NormalCell(NormalCellId),
     BlockCell(BlockCellId),
 }
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
+#[ts(export, export_to = "../../../src/bindings/normal_cell_id.ts")]
+#[serde(rename_all = "camelCase")]
 pub struct NormalCellId {
     pub row: RowId,
     pub col: ColId,
@@ -58,7 +62,9 @@ pub struct NormalCellId {
     pub follow_col: Option<ColId>,
 }
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
+#[ts(export, export_to = "../../../src/bindings/block_cell_id.ts")]
+#[serde(rename_all = "camelCase")]
 pub struct BlockCellId {
     pub block_id: BlockId,
     // block inner row id

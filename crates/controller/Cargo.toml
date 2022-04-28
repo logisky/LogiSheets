@@ -19,6 +19,7 @@ regex = "1"
 serde = {version = "1.0.125", features = ["derive"]}
 statrs = "0.15.0"
 unicode-segmentation = "1.8.0"
+ts-rs = "6.1.2"
 
 logisheets_base = {version = "0.1.0", path = "./base"}
 logisheets_lexer = {version = "0.1.0", path = "./lexer"}

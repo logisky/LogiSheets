@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{CellId, SheetId};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../../src/bindings/task.ts")]
 pub struct Task {
     pub async_func: String,
     pub args: Vec<String>,

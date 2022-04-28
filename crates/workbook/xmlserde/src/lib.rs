@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate logisheets_derives;
+#[macro_use]
+extern crate ts_rs;
 
 macro_rules! xml_serde_enum {
     (

@@ -81,7 +81,7 @@ impl Controller {
     }
 
     // Handle an action and get the affected sheet indices.
-    pub fn handle_action(&mut self, action: EditAction, undoable: bool) -> Option<ActionEffect> {
+    pub fn handle_action(&mut self, action: EditAction) -> Option<ActionEffect> {
         match action {
             EditAction::Undo => match self.undo() {
                 true => Some(ActionEffect::default()),
@@ -91,15 +91,15 @@ impl Controller {
                 true => Some(ActionEffect::default()),
                 false => None,
             },
-            EditAction::Payloads(payloads) => {
+            EditAction::Payloads(action) => {
                 let mut c = Converter {
                     sheet_pos_manager: &self.status.sheet_pos_manager,
                     navigator: &mut self.status.navigator,
                     container: &mut self.status.container,
                     text_id_manager: &mut self.status.text_id_manager,
                 };
-                let proc = c.convert_edit_payloads(payloads);
-                self.handle_process(proc, undoable);
+                let proc = c.convert_edit_payloads(action.payloads);
+                self.handle_process(proc, action.undoable);
                 let (tasks, dirties) = self.async_func_manager.get_calc_tasks();
                 Some(ActionEffect {
                     sheets: vec![],
@@ -173,6 +173,8 @@ impl Controller {
 
 #[cfg(test)]
 mod tests {
+    use crate::controller::edit_action::PayloadsAction;
+
     use super::{
         edit_action::{CellInput, EditAction, EditPayload},
         Controller,
@@ -187,13 +189,16 @@ mod tests {
     #[test]
     fn controller_input_formula() {
         let mut wb = Controller::default();
-        let action = EditAction::Payloads(vec![EditPayload::CellInput(CellInput {
-            sheet_idx: 0,
-            row: 0,
-            col: 0,
-            content: String::from("=ABS(1)"),
-        })]);
-        wb.handle_action(action, true);
+        let payloads_action = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: String::from("=ABS(1)"),
+            })],
+            undoable: true,
+        };
+        wb.handle_action(EditAction::Payloads(payloads_action));
         let len = wb.status.vertex_manager.status.formulas.len();
         assert_eq!(len, 1);
     }
