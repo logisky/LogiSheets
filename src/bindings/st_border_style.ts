@@ -1,0 +1,2 @@
+
+export type StBorderStyle = "None" | "Thin" | "Medium" | "Dashed" | "Dotted" | "Thick" | "Double" | "Hair" | "MediumDashed" | "DashDot" | "MediumDashDot" | "DashDotDot" | "MediumDashDotDot" | "SlantDashDot";

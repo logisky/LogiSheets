@@ -1,0 +1,5 @@
+import type { CtPatternFill } from "./pattern_fill"
+import type { StBorderStyle } from "./st_border_style"
+import type { StUnderlineValues } from "./st_underline_values"
+
+export interface StyleUpdateType { setFontBold: boolean | null, setFontItalic: boolean | null, setFontUnderline: StUnderlineValues | null, setFontColor: string | null, setFontSize: number | null, setFontName: string | null, setFontOutline: boolean | null, setFontShadow: boolean | null, setFontStrike: boolean | null, setFontCondense: boolean | null, setLeftBorderColor: string | null, setRightBorderColor: string | null, setTopBorderColor: string | null, setBottomBorderColor: string | null, setLeftBorderStyle: StBorderStyle | null, setRightBorderStyle: StBorderStyle | null, setTopBorderStyle: StBorderStyle | null, setBottomBorderStyle: StBorderStyle | null, setBorderGiagonalUp: boolean | null, setBorderGiagonalDown: boolean | null, setPatternFill: CtPatternFill | null, }
