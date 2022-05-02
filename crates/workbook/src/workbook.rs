@@ -2,6 +2,7 @@ use logisheets_xmlserde::comments::Comments;
 use logisheets_xmlserde::external_links::*;
 use logisheets_xmlserde::sst::SstPart;
 use logisheets_xmlserde::style_sheet::StylesheetPart;
+use logisheets_xmlserde::theme::ThemePart;
 use logisheets_xmlserde::workbook::WorkbookPart;
 use logisheets_xmlserde::worksheet::WorksheetPart;
 use std::collections::HashMap;
@@ -15,6 +16,7 @@ pub struct Workbook {
     pub sst: Option<SstPart>,
     pub worksheets: HashMap<Id, Worksheet>,
     pub external_links: HashMap<Id, ExternalLink>,
+    pub theme: Option<ThemePart>,
 }
 
 #[derive(Debug)]

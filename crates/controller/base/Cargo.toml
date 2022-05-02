@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_base"
-version = "0.1.0"
+version = "0.2.0"
 description = "some basic definitions for LogiSheets"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 license = "MIT"
@@ -11,4 +11,4 @@ futures = "0.3.19"
 im = "15.0.0"
 serde = {version = "1.0.125", features = ["derive"]}
 ts-rs = "6.1.2"
-logisheets_workbook = {version = "0.1.0", path = "../../workbook"}
+logisheets_workbook = {version = "0.2.0", path = "../../workbook"}

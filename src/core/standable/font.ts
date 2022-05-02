@@ -1,4 +1,4 @@
-import { CtFont, CtFontName, CtUnderlineProperty } from 'bindings'
+import { Font, CtFontName, CtUnderlineProperty, Color } from 'bindings'
 import { shallowCopy } from 'common'
 import { StandardColor } from './color'
 const DEFAULT_FONT_SIZE = 10
@@ -13,8 +13,8 @@ const DEFAULT_FONT_SIZE = 10
  * font-size（字体大小）: 可通过多种不同单位（比如像素或百分比等）来设置, 如：12xp，12pt，120%，1em
  */
 export type FontSizeUnit = 'px' | 'pt'
-export class StandardFont implements CtFont {
-    static from(font: CtFont): StandardFont {
+export class StandardFont implements Font {
+    static from(font: Font): StandardFont {
         const f = new StandardFont()
         if (font.color === null)
             f.standardColor = StandardColor.from(0, 0, 0)
@@ -23,14 +23,14 @@ export class StandardFont implements CtFont {
         shallowCopy(font, f)
         // ooxml标准存的是pt
         f.fontSizeUnit = 'pt'
-        if (font.sz?.val === 0) {
+        if (font.sz === 0) {
             f.fontSizeUnit = 'px'
-            f.sz = {val: DEFAULT_FONT_SIZE}
+            f.sz = DEFAULT_FONT_SIZE
         }
         return f
     }
     get size() {
-        return this.sz.val
+        return this.sz
     }
 
     name: CtFontName = {val: 'Arial'}
@@ -39,9 +39,9 @@ export class StandardFont implements CtFont {
     lineHeight = '100%'
     standardColor = StandardColor.from(0, 0, 0, 1)
     bold = false
-    color = null
+    color!: Color
     family = null
-    sz = {val: 10}
+    sz = 10
     condense = false
     italic = false
     outline = false
@@ -53,7 +53,7 @@ export class StandardFont implements CtFont {
     scheme = null
 
     setSize(s: number) {
-        this.sz.val = s
+        this.sz = s
         return this
     }
 

@@ -1,5 +1,5 @@
+use super::style::Style;
 use logisheets_base::BlockId;
-use logisheets_workbook::prelude::*;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -135,18 +135,6 @@ pub fn get_default_row_height() -> f64 {
 
 pub fn get_default_col_width() -> f64 {
     8.38
-}
-
-#[derive(Debug, Clone, Serialize, TS)]
-#[ts(export_to = "../../src/bindings/style.ts")]
-#[serde(rename_all = "camelCase")]
-pub struct Style {
-    pub font: CtFont,
-    pub fill: CtFill,
-    pub border: CtBorder,
-    pub alignment: Option<CtCellAlignment>,
-    pub protection: Option<CtCellProtection>,
-    pub formatter: String,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]

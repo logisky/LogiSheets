@@ -128,9 +128,7 @@ pub struct CtMruColors {
     pub color: Vec<CtColor>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, serde::Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/color.ts")]
-#[serde(rename_all = "camelCase")]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj)]
 pub struct CtColor {
     #[xmlserde(name = b"auto", ty = "attr")]
     pub auto: Option<bool>,
@@ -144,9 +142,7 @@ pub struct CtColor {
     pub tint: f64,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone, serde::Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/border.ts")]
-#[serde(rename_all = "camelCase")]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone)]
 pub struct CtBorder {
     #[xmlserde(name = b"left", ty = "child")]
     pub left: Option<CtBorderPr>,
@@ -170,9 +166,7 @@ pub struct CtBorder {
     pub outline: bool,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone, serde::Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/border_pr.ts")]
-#[serde(rename_all = "camelCase")]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone)]
 pub struct CtBorderPr {
     #[xmlserde(name = b"color", ty = "child")]
     pub color: Option<CtColor>,
@@ -210,9 +204,7 @@ pub struct CtCellStyle {
     pub custom_builtin: Option<bool>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, Hash, PartialEq, Eq, serde::Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/pattern_fill.ts")]
-#[serde(rename_all = "camelCase")]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct CtPatternFill {
     #[xmlserde(name = b"fgColor", ty = "child")]
     pub fg_color: Option<CtColor>,
@@ -222,9 +214,7 @@ pub struct CtPatternFill {
     pub pattern_type: Option<StPatternType>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, serde::Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/gradient_fill.ts")]
-#[serde(rename_all = "camelCase")]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj)]
 pub struct CtGradientFill {
     #[xmlserde(name = b"stop", ty = "child")]
     pub stops: Vec<CtGradientStop>,
@@ -242,25 +232,7 @@ pub struct CtGradientFill {
     pub bottom: f64,
 }
 
-#[cfg(test)]
-mod tests2 {
-    use super::CtPatternFill;
-    use serde_json::to_string;
-    #[test]
-    fn t() {
-        let f = CtPatternFill {
-            fg_color: None,
-            bg_color: None,
-            pattern_type: None,
-        };
-        let a = to_string(&f);
-        println!("{:?}", a);
-    }
-}
-
-#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, serde::Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/gradient_stop.ts")]
-#[serde(rename_all = "camelCase")]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj)]
 pub struct CtGradientStop {
     #[xmlserde(name = b"color", ty = "child")]
     pub color: CtColor,
@@ -276,8 +248,7 @@ pub struct CtFills {
     pub fills: Vec<CtFill>,
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/fill.ts")]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum CtFill {
     PatternFill(CtPatternFill),
     GradientFill(CtGradientFill),
@@ -411,9 +382,7 @@ pub struct CtFonts {
     pub fonts: Vec<CtFont>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone, serde::Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/font.ts")]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone)]
 pub struct CtFont {
     #[xmlserde(name = b"b", ty = "sfc")]
     pub bold: bool,

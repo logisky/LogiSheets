@@ -1,11 +1,89 @@
 use syn::DeriveInput;
 
-use crate::container::{self, Container, EleType, Field, FieldsSummary, Generic};
+use crate::container::{self, Container, EleType, FieldsSummary, Generic, StructField};
 
 pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let container = Container::from_ast(&input, container::Derive::Deserialize);
-    let result = get_result(&container.fields);
-    let summary = FieldsSummary::from_fields(container.fields);
+    if container.is_enum() {
+        get_de_enum_impl_block(container)
+    } else {
+        get_de_struct_impl_block(container)
+    }
+}
+
+pub fn get_de_enum_impl_block(container: Container) -> proc_macro2::TokenStream {
+    let ident = &container.original.ident;
+    let event_start_branches = container.enum_variants.iter().map(|v| {
+        let name = &v.name;
+        let ty = v.ty;
+        let ident = v.ident;
+        quote! {
+            #name => {
+                let _r = #ty::deserialize(
+                    #name,
+                    reader,
+                    _s.attributes(),
+                    false,
+                );
+                result = Some(Self::#ident(_r));
+            }
+        }
+    });
+    let event_empty_branches = container.enum_variants.iter().map(|v| {
+        let name = &v.name;
+        let ty = v.ty;
+        let ident = v.ident;
+        quote! {
+            #name => {
+                let _r = #ty::deserialize(
+                    #name,
+                    reader,
+                    _s.attributes(),
+                    true,
+                );
+                result = Some(Self::#ident(_r));
+            }
+        }
+    });
+    quote! {
+        #[allow(unused_assignments)]
+        impl crate::XmlDeserialize for #ident {
+            fn deserialize<B: std::io::BufRead>(
+                tag: &[u8],
+                reader: &mut quick_xml::Reader<B>,
+                attrs: quick_xml::events::attributes::Attributes,
+                is_empty: bool,
+            ) -> Self {
+                use quick_xml::events::*;
+                let mut buf = Vec::<u8>::new();
+                let mut result = Option::<Self>::None;
+                loop {
+                    match reader.read_event(&mut buf) {
+                        Ok(Event::End(e)) if e.name() == tag => {
+                            break
+                        },
+                        Ok(Event::Start(_s)) => match _s.name() {
+                            #(#event_start_branches)*
+                            _ => {},
+                        },
+                        Ok(Event::Empty(_s)) => match _s.name() {
+                            #(#event_empty_branches)*
+                            _ => {},
+                        }
+                        Ok(Event::Eof) => break,
+                        Err(_) => break,
+                        _ => {},
+                    }
+                }
+                result.unwrap()
+            }
+        }
+    }
+}
+
+pub fn get_de_struct_impl_block(container: Container) -> proc_macro2::TokenStream {
+    let result = get_result(&container.struct_fields);
+    let summary = FieldsSummary::from_fields(container.struct_fields);
     let fields_init = get_fields_init(&summary);
     let FieldsSummary {
         children,
@@ -17,7 +95,7 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let attr_branches = attrs.into_iter().map(|a| attr_match_branch(a));
     let child_branches = children_match_branch(children);
     let sfc_branch = sfc_match_branch(self_closed_children);
-    let ident = &input.ident;
+    let ident = &container.original.ident;
     let text_branch = {
         if let Some(t) = text {
             Some(text_match_branch(t))
@@ -69,7 +147,7 @@ pub fn get_de_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     }
 }
 
-fn get_result(fields: &[Field]) -> proc_macro2::TokenStream {
+fn get_result(fields: &[StructField]) -> proc_macro2::TokenStream {
     let branch = fields.iter().map(|f| {
         let ident = f.original.ident.as_ref().unwrap();
         if f.is_required() {
@@ -158,7 +236,7 @@ fn get_fields_init(fields: &FieldsSummary) -> proc_macro2::TokenStream {
     }
 }
 
-fn get_vec_init(children: &[Field]) -> proc_macro2::TokenStream {
+fn get_vec_init(children: &[StructField]) -> proc_macro2::TokenStream {
     let vec_inits = children
         .iter()
         .filter(|c| c.generic.is_vec())
@@ -190,7 +268,7 @@ fn get_vec_init(children: &[Field]) -> proc_macro2::TokenStream {
     }
 }
 
-fn sfc_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
+fn sfc_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
     if fields.len() == 0 {
         return quote! {};
     }
@@ -220,7 +298,7 @@ fn sfc_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
     // }
 }
 
-fn attr_match_branch(field: Field) -> proc_macro2::TokenStream {
+fn attr_match_branch(field: StructField) -> proc_macro2::TokenStream {
     if !matches!(field.ty, EleType::Attr) {
         panic!("")
     }
@@ -270,7 +348,7 @@ fn attr_match_branch(field: Field) -> proc_macro2::TokenStream {
     }
 }
 
-fn text_match_branch(field: Field) -> proc_macro2::TokenStream {
+fn text_match_branch(field: StructField) -> proc_macro2::TokenStream {
     if !matches!(field.ty, EleType::Text) {
         panic!("")
     }
@@ -303,7 +381,7 @@ fn text_match_branch(field: Field) -> proc_macro2::TokenStream {
     }
 }
 
-fn children_match_branch(fields: Vec<Field>) -> proc_macro2::TokenStream {
+fn children_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
     if fields.len() == 0 {
         return quote! {};
     }

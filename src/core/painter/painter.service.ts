@@ -1,4 +1,4 @@
-import { CtBorderPr, StPatternType } from 'bindings'
+import { BorderPr, StPatternType } from 'bindings'
 import { StandardColor } from 'core/standable'
 import { CanvasAttr } from './canvas_attr'
 import { Box } from './box'
@@ -44,7 +44,7 @@ export class PainterService extends CanvasApi {
     }
 
     // tslint:disable-next-line: max-func-body-length
-    border (border: CtBorderPr, box: Box, type: Direction) {
+    border (border: BorderPr, box: Box, type: Direction) {
         this.save()
         const stdColor = StandardColor.fromCtColor(border.color)
         const dot = npx(1)
@@ -206,7 +206,7 @@ export class PainterService extends CanvasApi {
                     case 'Left':
                         break
                     default:
-                        throw Error(`Not support underline horizontal ${attr.alignment?.horizontal}`)
+                        console.log(`Not support underline horizontal ${attr.alignment?.horizontal}`)
                 }
                 break
             default:

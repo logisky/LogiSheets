@@ -11,6 +11,7 @@ use super::display::{
     BlockInfo, CellFormulaValue, CellStyle, ColInfo, Comment, DisplayPatch, DisplayResponse,
     MergeCell, RowInfo, SheetBlocks,
 };
+use super::style::StyleConverter;
 use super::Controller;
 
 #[derive(Debug, Default)]
@@ -79,14 +80,21 @@ impl SheetViewer {
                         self.row_infos.push(info)
                     }
                 });
+            let style_converter = StyleConverter {
+                theme_manager: &controller.settings.theme,
+            };
             sheet_data.cells.iter().for_each(|(cell_id, cell)| {
                 let coord = navigator.fetch_cell_idx(sheet_id, cell_id);
                 if coord.is_none() {
                     panic!()
                 }
                 let (row, col) = coord.unwrap();
-                let style = style_manager.get_cell_style(cell.style);
-                self.styles.push(CellStyle { row, col, style });
+                let raw_style = style_manager.get_cell_style(cell.style);
+                self.styles.push(CellStyle {
+                    row,
+                    col,
+                    style: style_converter.convert_style(raw_style),
+                });
                 let mut name_fetcher = NameFetcher {
                     func_manager,
                     sheet_id_manager,

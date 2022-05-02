@@ -5,6 +5,7 @@ use logisheets_workbook::prelude::{read, SerdeErr};
 pub mod display;
 pub mod edit_action;
 pub mod status;
+pub mod style;
 mod transaction;
 mod viewer;
 use crate::file_loader2::load;

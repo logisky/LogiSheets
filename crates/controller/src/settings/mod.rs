@@ -3,10 +3,13 @@ use std::collections::{HashMap, HashSet};
 use logisheets_base::SheetId;
 use logisheets_workbook::prelude::CtSheetFormatPr;
 
+use crate::theme_manager::ThemeManager;
+
 pub struct Settings {
     pub sheet_format_pr: HashMap<SheetId, CtSheetFormatPr>,
     pub calc_config: CalcConfig,
     pub async_funcs: HashSet<String>, // function names in upper case.
+    pub theme: ThemeManager,
 }
 
 impl Default for Settings {
@@ -18,6 +21,7 @@ impl Default for Settings {
             sheet_format_pr,
             calc_config,
             async_funcs: afuncs.into_iter().collect(),
+            theme: ThemeManager::default(),
         }
     }
 }

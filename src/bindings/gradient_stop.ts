@@ -1,3 +1,3 @@
-import type { CtColor } from "./color";
+import type { Color } from "./color";
 
-export interface CtGradientStop { color: CtColor, position: number, }
+export interface GradientStop { color: Color, position: number, }
