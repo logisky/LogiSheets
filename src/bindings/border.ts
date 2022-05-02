@@ -1,3 +1,3 @@
-import type { CtBorderPr } from "./border_pr";
+import type { BorderPr } from "./border_pr";
 
-export interface CtBorder { left: CtBorderPr | null, right: CtBorderPr | null, top: CtBorderPr | null, bottom: CtBorderPr | null, diagonal: CtBorderPr | null, vertical: CtBorderPr | null, horizontal: CtBorderPr | null, diagonalUp: boolean | null, diagonalDown: boolean | null, outline: boolean, }
+export interface Border { left: BorderPr | null, right: BorderPr | null, top: BorderPr | null, bottom: BorderPr | null, diagonal: BorderPr | null, vertical: BorderPr | null, horizontal: BorderPr | null, diagonalUp: boolean | null, diagonalDown: boolean | null, outline: boolean, }

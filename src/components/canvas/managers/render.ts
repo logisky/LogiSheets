@@ -94,9 +94,9 @@ export class Render {
 
     private _fill (box: Box, style?: StandardStyle) {
         const fill = style?.fill
-        if (!fill || !hasOwnProperty(fill, 'PatternFill'))
+        if (!fill || !hasOwnProperty(fill, 'patternFill'))
             return
-        const patternFill = fill.PatternFill
+        const patternFill = fill.patternFill
         if (patternFill.bgColor) {
             const color = StandardColor.fromCtColor(patternFill.bgColor)
             const fillAttr = new CanvasAttr()
