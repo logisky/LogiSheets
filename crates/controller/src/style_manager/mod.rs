@@ -18,9 +18,18 @@ use num_fmt_manager::NumFmtManager;
 use xf_manager::XfManager;
 
 use crate::payloads::sheet_process::style::CellStylePayload;
+use logisheets_workbook::prelude::{CtBorder, CtCellAlignment, CtCellProtection, CtFill, CtFont};
 
 use self::execute::execute_style_payload;
-use crate::controller::display::Style;
+
+pub struct RawStyle {
+    pub font: CtFont,
+    pub fill: CtFill,
+    pub border: CtBorder,
+    pub alignment: Option<CtCellAlignment>,
+    pub protection: Option<CtCellProtection>,
+    pub formatter: String,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct StyleManager {
@@ -41,7 +50,7 @@ impl StyleManager {
         execute_style_payload(self, payload, idx)
     }
 
-    pub fn get_cell_style(&self, id: StyleId) -> Style {
+    pub fn get_cell_style(&self, id: StyleId) -> RawStyle {
         let xf = self
             .cell_xfs_manager
             .get_data(id)
@@ -68,7 +77,7 @@ impl StyleManager {
             .unwrap_or(self.num_fmt_manager.get_data(0).unwrap());
         let alignment = xf.alignment.clone();
         let protection = xf.protection.clone();
-        Style {
+        RawStyle {
             font: font.clone(),
             fill: fill.clone(),
             border: border.clone(),

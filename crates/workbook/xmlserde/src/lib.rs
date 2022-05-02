@@ -44,6 +44,7 @@ pub mod sst;
 pub mod style_sheet;
 #[cfg(test)]
 mod test_utils;
+pub mod theme;
 pub mod workbook;
 pub mod worksheet;
 use std::io::{BufRead, Write};
@@ -494,5 +495,45 @@ mod tests {
         let c = Child { age: 12 };
         let p = xml_serialize(b"Child", c);
         assert_eq!(p, "<Child xmlns:a=\"c\" age=\"12\"/>");
+    }
+
+    #[test]
+    fn enum_serialize_test() {
+        #[derive(XmlDeserialize, XmlSerialize)]
+        struct TestA {
+            #[xmlserde(name = b"age", ty = "attr")]
+            pub age: u16,
+        }
+
+        #[derive(XmlDeserialize, XmlSerialize)]
+        struct TestB {
+            #[xmlserde(name = b"name", ty = "attr")]
+            pub name: String,
+        }
+
+        #[derive(XmlSerialize, XmlDeserialize)]
+        enum TestEnum {
+            #[xmlserde(name = b"testA")]
+            TestA(TestA),
+            #[xmlserde(name = b"testB")]
+            TestB(TestB),
+        }
+
+        #[derive(XmlSerialize, XmlDeserialize)]
+        struct Child {
+            #[xmlserde(name = b"dummy", ty = "child")]
+            pub c: TestEnum,
+        }
+
+        let obj = Child {
+            c: TestEnum::TestA(TestA { age: 23 }),
+        };
+        let xml = xml_serialize(b"Child", obj);
+        println!("{}", xml);
+        let p = xml_deserialize_from_str::<Child>(b"Child", &xml).unwrap();
+        match p.c {
+            TestEnum::TestA(a) => assert_eq!(a.age, 23),
+            TestEnum::TestB(_) => panic!(),
+        }
     }
 }

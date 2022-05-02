@@ -19,6 +19,7 @@ use crate::{
     },
     id_manager::SheetIdManager,
     settings::Settings,
+    theme_manager::ThemeManager,
 };
 pub struct SheetIdFetcher<'a> {
     pub sheet_id_manager: &'a mut SheetIdManager,
@@ -128,5 +129,8 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         style_manager,
         cell_attachment_manager,
     };
+    if let Some(theme) = wb.theme {
+        settings.theme = ThemeManager::from(theme);
+    }
     Controller::from(status, book_name, settings)
 }

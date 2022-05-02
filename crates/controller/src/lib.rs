@@ -23,12 +23,15 @@ mod navigator;
 mod payloads;
 mod settings;
 mod style_manager;
+mod theme_manager;
 mod vertex_manager;
 mod workbook;
 
 use connectors::NameFetcher;
+use controller::style::StyleConverter;
 pub use controller::{
-    display::{Comment, MergeCell, Style, Value},
+    display::{Comment, MergeCell, Value},
+    style::{Border, BorderPr, Fill, Font, Style},
     Controller,
 };
 use logisheets_parser::unparse;
@@ -213,12 +216,15 @@ impl<'a> Worksheet<'a> {
                     }
                 }
             };
-            let style = self
+            let raw_style = self
                 .controller
                 .status
                 .style_manager
                 .get_cell_style(style_id);
-            Ok(style)
+            let style_converter = StyleConverter {
+                theme_manager: &self.controller.settings.theme,
+            };
+            Ok(style_converter.convert_style(raw_style))
         } else {
             Err(Err::NotFound)
         }

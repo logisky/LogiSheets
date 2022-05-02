@@ -13,6 +13,8 @@ pub const STYLE: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles");
 pub const COMMENTS: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments");
+pub const THEME: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme");
 
 impl<'a> PartialEq<str> for RType<'a> {
     fn eq(&self, other: &str) -> bool {

@@ -8,15 +8,21 @@ use syn::Meta::NameValue;
 use syn::Meta::Path;
 use syn::NestedMeta::Lit;
 use syn::NestedMeta::Meta;
+use syn::Variant;
 
 pub struct Container<'a> {
-    pub fields: Vec<Field<'a>>,
+    pub struct_fields: Vec<StructField<'a>>, // Struct fields
+    pub enum_variants: Vec<EnumVariant<'a>>,
     pub original: &'a syn::DeriveInput,
     pub with_ns: Option<syn::LitByteStr>,
     pub custom_ns: Vec<(syn::LitByteStr, syn::LitByteStr)>,
 }
 
 impl<'a> Container<'a> {
+    pub fn is_enum(&self) -> bool {
+        self.enum_variants.len() > 0
+    }
+
     pub fn from_ast(item: &'a syn::DeriveInput, _derive: Derive) -> Container<'a> {
         let mut with_ns = Option::<syn::LitByteStr>::None;
         let mut custom_ns = Vec::<(syn::LitByteStr, syn::LitByteStr)>::new();
@@ -58,32 +64,46 @@ impl<'a> Container<'a> {
                 let fields = ds
                     .fields
                     .iter()
-                    .map(|f| Field::from_ast(f))
+                    .map(|f| StructField::from_ast(f))
                     .filter(|f| f.is_some())
                     .map(|f| f.unwrap())
                     .collect::<Vec<_>>();
                 Container {
-                    fields,
+                    struct_fields: fields,
+                    enum_variants: vec![],
                     original: item,
                     with_ns,
                     custom_ns,
                 }
             }
-            syn::Data::Enum(_) => panic!("Only support struct type, enum is found"),
+            syn::Data::Enum(e) => {
+                let variants = e
+                    .variants
+                    .iter()
+                    .map(|v| EnumVariant::from_ast(v))
+                    .collect::<Vec<_>>();
+                Container {
+                    struct_fields: vec![],
+                    enum_variants: variants,
+                    original: item,
+                    with_ns,
+                    custom_ns,
+                }
+            }
             syn::Data::Union(_) => panic!("Only support struct type, union is found"),
         }
     }
 }
 
 pub struct FieldsSummary<'a> {
-    pub children: Vec<Field<'a>>,
-    pub text: Option<Field<'a>>,
-    pub attrs: Vec<Field<'a>>,
-    pub self_closed_children: Vec<Field<'a>>,
+    pub children: Vec<StructField<'a>>,
+    pub text: Option<StructField<'a>>,
+    pub attrs: Vec<StructField<'a>>,
+    pub self_closed_children: Vec<StructField<'a>>,
 }
 
 impl<'a> FieldsSummary<'a> {
-    pub fn from_fields(fields: Vec<Field<'a>>) -> Self {
+    pub fn from_fields(fields: Vec<StructField<'a>>) -> Self {
         let mut result = FieldsSummary {
             children: vec![],
             text: None,
@@ -100,7 +120,7 @@ impl<'a> FieldsSummary<'a> {
     }
 }
 
-pub struct Field<'a> {
+pub struct StructField<'a> {
     pub ty: EleType,
     pub name: Option<syn::LitByteStr>,
     pub skip_serializing: bool,
@@ -110,7 +130,7 @@ pub struct Field<'a> {
     pub generic: Generic<'a>,
 }
 
-impl<'a> Field<'a> {
+impl<'a> StructField<'a> {
     pub fn from_ast(f: &'a syn::Field) -> Option<Self> {
         let mut name = Option::<syn::LitByteStr>::None;
         let mut skip_serializing = false;
@@ -166,7 +186,7 @@ impl<'a> Field<'a> {
         if ty.is_none() {
             None
         } else {
-            Some(Field {
+            Some(StructField {
                 ty: ty.unwrap(),
                 name,
                 skip_serializing,
@@ -182,6 +202,40 @@ impl<'a> Field<'a> {
         self.default.is_none()
             && matches!(self.generic, Generic::None)
             && !matches!(self.ty, EleType::SelfClosedChild)
+    }
+}
+
+pub struct EnumVariant<'a> {
+    pub name: syn::LitByteStr,
+    pub ident: &'a syn::Ident,
+    pub ty: &'a syn::Type,
+}
+
+impl<'a> EnumVariant<'a> {
+    pub fn from_ast(v: &'a Variant) -> Self {
+        let mut name = Option::<syn::LitByteStr>::None;
+        for meta_item in v
+            .attrs
+            .iter()
+            .flat_map(|attr| get_xmlserde_meta_items(attr))
+            .flatten()
+        {
+            match meta_item {
+                Meta(NameValue(m)) if m.path == NAME => {
+                    if let Ok(s) = get_lit_byte_str(&m.lit) {
+                        name = Some(s.clone());
+                    }
+                }
+                _ => panic!("Invalid attr"),
+            }
+        }
+        let ty = &v.fields.iter().next().unwrap().ty;
+        let ident = &v.ident;
+        EnumVariant {
+            name: name.unwrap(),
+            ty,
+            ident,
+        }
     }
 }
 

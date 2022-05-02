@@ -1,4 +1,5 @@
 use super::rtypes::*;
+use logisheets_xmlserde::theme::ThemePart;
 use logisheets_xmlserde::{
     comments::Comments, sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart,
     worksheet::WorksheetPart,
@@ -90,6 +91,7 @@ fn de_workbook<R: Read + Seek>(
     let mut sst = Option::<SstPart>::None;
     let mut worksheets = HashMap::<String, Worksheet>::new();
     let mut external_links = HashMap::<String, ExternalLink>::new();
+    let mut theme = Option::<ThemePart>::None;
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -159,6 +161,20 @@ fn de_workbook<R: Read + Seek>(
                     }
                 }
             }
+            THEME => {
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(s) = path.to_str() {
+                    match de_theme(s, archive) {
+                        Ok(w) => {
+                            theme = Some(w);
+                        }
+                        Err(e) => {
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
+                        }
+                    }
+                }
+            }
             _ => {}
         });
     Ok(Workbook {
@@ -167,6 +183,7 @@ fn de_workbook<R: Read + Seek>(
         sst,
         worksheets,
         external_links,
+        theme,
     })
 }
 
@@ -235,6 +252,7 @@ define_de_func!(de_worksheet_part, WorksheetPart, b"worksheet");
 define_de_func!(de_comments, Comments, b"comments");
 define_de_func!(de_sst, SstPart, b"sst");
 define_de_func!(de_style_part, StylesheetPart, b"styleSheet");
+define_de_func!(de_theme, ThemePart, b"a:theme");
 
 /// Given a path `/foo/test.xml`, find its relationships `/foo/_rels/test.xml.rels`
 fn get_rels(path: &str) -> Result<PathBuf, SerdeErr> {

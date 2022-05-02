@@ -1,9 +1,45 @@
 use syn::DeriveInput;
 
-use crate::container::{Container, Derive, Field, FieldsSummary, Generic};
+use crate::container::{Container, Derive, FieldsSummary, Generic, StructField};
 
 pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let container = Container::from_ast(&input, Derive::Serialize);
+    if container.is_enum() {
+        get_ser_enum_impl_block(container)
+    } else {
+        get_ser_struct_impl_block(container)
+    }
+}
+
+fn get_ser_enum_impl_block(container: Container) -> proc_macro2::TokenStream {
+    let ident = &container.original.ident;
+    let branches = container.enum_variants.iter().map(|v| {
+        let f = v.ident;
+        let name = &v.name;
+        quote! {
+            Self::#f(c) => c.serialize(#name, writer),
+        }
+    });
+    quote! {
+        #[allow(unused_must_use)]
+        impl crate::XmlSerialize for #ident {
+            fn serialize<W: std::io::Write>(
+                &self,
+                tag: &[u8],
+                writer: &mut quick_xml::Writer<W>,
+            ) {
+                use quick_xml::events::*;
+                let _ = writer.write_event(Event::Start(BytesStart::borrowed_name(tag)));
+                match self {
+                    #(#branches)*
+                }
+                let _ = writer.write_event(Event::End(BytesEnd::borrowed(tag)));
+            }
+        }
+    }
+}
+
+fn get_ser_struct_impl_block(container: Container) -> proc_macro2::TokenStream {
     let write_ns = match container.with_ns {
         Some(ns) => quote! {
             attrs.push(Attribute::from((b"xmlns".as_ref(), #ns.as_ref())));
@@ -27,7 +63,7 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
         text,
         attrs,
         self_closed_children,
-    } = FieldsSummary::from_fields(container.fields);
+    } = FieldsSummary::from_fields(container.struct_fields);
     if text.is_some() && (children.len() > 0 || self_closed_children.len() > 0) {
         panic!("Cannot owns the text and children at the same time.")
     }
@@ -111,19 +147,7 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
             #(#write_children)*
         }
     };
-    let ident = &input.ident;
-    // let write_event = if is_empty {
-    //     quote! {
-    //         writer.write_event(Event::Empty(start));
-    //     }
-    // } else {
-    //     quote! {
-    //         writer.write_event(Event::Start(start));
-    //         #write_text_or_children
-    //         let end = BytesEnd::borrowed(tag);
-    //         writer.write_event(Event::End(end));
-    //     }
-    // };
+    let ident = &container.original.ident;
     let write_event = quote! {
         if is_empty {
             writer.write_event(Event::Empty(start));
@@ -159,9 +183,9 @@ pub fn get_ser_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
 }
 
 fn init_is_empty(
-    children: &Vec<Field>,
-    scf: &Vec<Field>,
-    text: &Option<Field>,
+    children: &Vec<StructField>,
+    scf: &Vec<StructField>,
+    text: &Option<StructField>,
 ) -> proc_macro2::TokenStream {
     let children_init = children.iter().map(|c| {
         let ident = c.original.ident.as_ref().unwrap();
