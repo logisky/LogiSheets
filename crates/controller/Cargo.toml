@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_controller"
-version = "0.1.0"
+version = "0.2.0"
 description = "the core of LogiSheets"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 edition = "2018"
@@ -21,7 +21,7 @@ statrs = "0.15.0"
 unicode-segmentation = "1.8.0"
 ts-rs = "6.1.2"
 
-logisheets_base = {version = "0.1.0", path = "./base"}
-logisheets_lexer = {version = "0.1.0", path = "./lexer"}
-logisheets_parser = {version = "0.1.1", path = "./parser"}
-logisheets_workbook = {version = "0.1.0", path = "../workbook"}
+logisheets_base = {version = "0.2.0", path = "./base"}
+logisheets_lexer = {version = "0.2.0", path = "./lexer"}
+logisheets_parser = {version = "0.2.0", path = "./parser"}
+logisheets_workbook = {version = "0.2.0", path = "../workbook"}

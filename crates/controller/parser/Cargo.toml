@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_parser"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2018"
 description = "the parser of excel formula"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
@@ -12,5 +12,5 @@ pest = "2.1.3"
 pest_derive = "2.1.0"
 chrono = "0.4.19"
 regex = "1"
-logisheets_lexer = {version = "0.1.0", path = "../lexer"}
-logisheets_base = {version = "0.1.0", path = "../base"}
+logisheets_lexer = {version = "0.2.0", path = "../lexer"}
+logisheets_base = {version = "0.2.0", path = "../base"}
