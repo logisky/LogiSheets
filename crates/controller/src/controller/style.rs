@@ -26,7 +26,7 @@ pub struct Font {
     pub bold: bool,
     pub italic: bool,
     pub underline: Option<CtUnderlineProperty>,
-    pub color: Color,
+    pub color: Option<Color>,
     pub sz: Option<f64>,
     pub name: Option<CtFontName>,
     pub charset: Option<i32>,
@@ -102,12 +102,14 @@ pub struct Border {
     pub outline: bool,
 }
 
-#[derive(Debug, Clone, Serialize, TS, Default)]
+#[derive(Debug, Clone, Serialize, TS)]
 #[ts(export, export_to = "../../src/bindings/color.ts")]
 #[serde(rename_all = "camelCase")]
 pub struct Color {
-    pub rgb: String,
-    pub tint: f64,
+    pub red: Option<f64>,
+    pub green: Option<f64>,
+    pub blue: Option<f64>,
+    pub alpha: Option<f64>,
 }
 
 pub struct StyleConverter<'a> {
@@ -131,9 +133,7 @@ impl<'a> StyleConverter<'a> {
             bold: font.bold,
             italic: font.italic,
             underline: font.underline.clone(),
-            color: font
-                .color
-                .map_or(Color::default(), |c| self.convert_color(c)),
+            color: font.color.map_or(None, |c| Some(self.convert_color(c))),
             sz: font.sz.as_ref().map_or(None, |s| Some(s.val)),
             name: font.name.clone(),
             charset: font.charset.as_ref().map_or(None, |s| Some(s.val)),
@@ -219,78 +219,131 @@ impl<'a> StyleConverter<'a> {
                 rgb.clone()
             } else if let Some(indexed) = color.indexed {
                 match indexed {
-                    0 => String::from("00000000"),
-                    1 => String::from("00FFFFFF"),
-                    2 => String::from("00FF0000"),
-                    3 => String::from("0000FF00"),
-                    4 => String::from("000000FF"),
-                    5 => String::from("00FFFF00"),
-                    6 => String::from("00FF00FF"),
-                    7 => String::from("0000FFFF"),
-                    8 => String::from("00000000"),
-                    9 => String::from("00FFFFFF"),
-                    10 => String::from("00FF0000"),
-                    11 => String::from("0000FF00"),
-                    12 => String::from("000000FF"),
-                    13 => String::from("00FFFF00"),
-                    14 => String::from("00FF00FF"),
-                    15 => String::from("0000FFFF"),
-                    16 => String::from("00800000"),
-                    17 => String::from("00008000"),
-                    18 => String::from("00000080"),
-                    19 => String::from("00808000"),
-                    20 => String::from("00800080"),
-                    21 => String::from("00008080"),
-                    22 => String::from("00C0C0C0"),
-                    23 => String::from("00808080"),
-                    24 => String::from("009999FF"),
-                    25 => String::from("00993366"),
-                    26 => String::from("00FFFFCC"),
-                    27 => String::from("00CCFFFF"),
-                    28 => String::from("00660066"),
-                    29 => String::from("00FF8080"),
-                    30 => String::from("000066CC"),
-                    31 => String::from("00CCCCFF"),
-                    32 => String::from("00000080"),
-                    33 => String::from("00FF00FF"),
-                    34 => String::from("00FFFF00"),
-                    35 => String::from("0000FFFF"),
-                    36 => String::from("00800080"),
-                    37 => String::from("00800000"),
-                    38 => String::from("00008080"),
-                    39 => String::from("000000FF"),
-                    40 => String::from("0000CCFF"),
-                    41 => String::from("00CCFFFF"),
-                    42 => String::from("00CCFFCC"),
-                    43 => String::from("00FFFF99"),
-                    44 => String::from("0099CCFF"),
-                    45 => String::from("00FF99CC"),
-                    46 => String::from("00CC99FF"),
-                    47 => String::from("00FFCC99"),
-                    48 => String::from("003366FF"),
-                    49 => String::from("0033CCCC"),
-                    50 => String::from("0099CC00"),
-                    51 => String::from("00FFCC00"),
-                    52 => String::from("00FF9900"),
-                    53 => String::from("00FF6600"),
-                    54 => String::from("00666699"),
-                    55 => String::from("00969696"),
-                    56 => String::from("00003366"),
-                    57 => String::from("00339966"),
-                    58 => String::from("00003300"),
-                    59 => String::from("00333300"),
-                    60 => String::from("00993300"),
-                    61 => String::from("00993366"),
-                    62 => String::from("00333399"),
-                    63 => String::from("00333333"),
-                    _ => String::from(""),
+                    0 => String::from("FF000000"),
+                    1 => String::from("FFFFFFFF"),
+                    2 => String::from("FFFF0000"),
+                    3 => String::from("FF00FF00"),
+                    4 => String::from("FF0000FF"),
+                    5 => String::from("FFFFFF00"),
+                    6 => String::from("FFFF00FF"),
+                    7 => String::from("FF00FFFF"),
+                    8 => String::from("FF000000"),
+                    9 => String::from("FFFFFFFF"),
+                    10 => String::from("FFFF0000"),
+                    11 => String::from("FF00FF00"),
+                    12 => String::from("FF0000FF"),
+                    13 => String::from("FFFFFF00"),
+                    14 => String::from("FFFF00FF"),
+                    15 => String::from("FF00FFFF"),
+                    16 => String::from("FF800000"),
+                    17 => String::from("FF008000"),
+                    18 => String::from("FF000080"),
+                    19 => String::from("FF808000"),
+                    20 => String::from("FF800080"),
+                    21 => String::from("FF008080"),
+                    22 => String::from("FFC0C0C0"),
+                    23 => String::from("FF808080"),
+                    24 => String::from("FF9999FF"),
+                    25 => String::from("FF993366"),
+                    26 => String::from("FFFFFFCC"),
+                    27 => String::from("FFCCFFFF"),
+                    28 => String::from("FF660066"),
+                    29 => String::from("FFFF8080"),
+                    30 => String::from("FF0066CC"),
+                    31 => String::from("FFCCCCFF"),
+                    32 => String::from("FF000080"),
+                    33 => String::from("FFFF00FF"),
+                    34 => String::from("FFFFFF00"),
+                    35 => String::from("FF00FFFF"),
+                    36 => String::from("FF800080"),
+                    37 => String::from("FF800000"),
+                    38 => String::from("FF008080"),
+                    39 => String::from("FF0000FF"),
+                    40 => String::from("FF00CCFF"),
+                    41 => String::from("FFCCFFFF"),
+                    42 => String::from("FFCCFFCC"),
+                    43 => String::from("FFFFFF99"),
+                    44 => String::from("FF99CCFF"),
+                    45 => String::from("FFFF99CC"),
+                    46 => String::from("FFCC99FF"),
+                    47 => String::from("FFFFCC99"),
+                    48 => String::from("FF3366FF"),
+                    49 => String::from("FF33CCCC"),
+                    50 => String::from("FF99CC00"),
+                    51 => String::from("FFFFCC00"),
+                    52 => String::from("FFFF9900"),
+                    53 => String::from("FFFF6600"),
+                    54 => String::from("FF666699"),
+                    55 => String::from("FF969696"),
+                    56 => String::from("FF003366"),
+                    57 => String::from("FF339966"),
+                    58 => String::from("FF003300"),
+                    59 => String::from("FF333300"),
+                    60 => String::from("FF993300"),
+                    61 => String::from("FF993366"),
+                    62 => String::from("FF333399"),
+                    63 => String::from("FF333333"),
+                    _ => String::from("FFFFFFFF"),
                 }
             } else if let Some(theme) = color.theme {
                 self.theme_manager.get_color(theme)
             } else {
-                String::from("")
+                // auto is true.
+                // TODO: Figure out what auto means.
+                String::from("FFFFFFFF")
             }
         };
-        Color { rgb, tint }
+        from_hex_str(rgb, tint)
+    }
+}
+
+// Convert ARGB hex str and apply the tint to it.
+fn from_hex_str(argb: String, tint: f64) -> Color {
+    use colorsys::{Hsl, Rgb};
+    if argb.len() < 8 {
+        return Color {
+            red: None,
+            green: None,
+            blue: None,
+            alpha: None,
+        };
+    }
+    let a = u32::from_str_radix(&argb[0..2], 16).unwrap_or(0) as f64;
+    let r = u32::from_str_radix(&argb[2..4], 16).unwrap_or(0) as f64;
+    let g = u32::from_str_radix(&argb[4..6], 16).unwrap_or(0) as f64;
+    let b = u32::from_str_radix(&argb[6..8], 16).unwrap_or(0) as f64;
+    let rgb = Rgb::new(r, g, b, None);
+    let mut hsl = Hsl::from(rgb);
+    let lum = {
+        let lum_max = 100.;
+        let lum = hsl.lightness();
+        if tint < 0. {
+            lum * (1. + tint)
+        } else if tint == 0. {
+            lum
+        } else {
+            lum * (1. - tint) + lum_max - lum_max * (1. - tint)
+        }
+    };
+    hsl.set_lightness(lum);
+    let rgb = Rgb::from(hsl);
+    Color {
+        red: Some(rgb.red()),
+        green: Some(rgb.green()),
+        blue: Some(rgb.blue()),
+        alpha: Some(a),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::from_hex_str;
+
+    #[test]
+    fn test_from_hex_str() {
+        let argb = "FF2F4B1A".to_string();
+        let tint = 0.1;
+        let color = from_hex_str(argb, tint);
+        println!("{:?}", color);
     }
 }
