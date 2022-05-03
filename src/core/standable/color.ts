@@ -28,10 +28,13 @@ export class StandardColor {
         if (color === null) {
             return new StandardColor()
         }
-        if (color.rgb !== null) {
-            return  StandardColor.fromArgb(color.rgb)
-        }
-        return new StandardColor()
+        const result = new StandardColor()
+        result.#red = color.red ?? undefined
+        result.#green = color.green ?? undefined
+        result.#blue = color.blue ?? undefined
+        if (color.alpha)
+            result.#alpha = color.alpha
+        return result
     }
 
     /**

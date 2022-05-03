@@ -1,2 +1,2 @@
 
-export interface Color { rgb: string, tint: number, }
+export interface Color { red: number | null, green: number | null, blue: number | null, alpha: number | null, }
