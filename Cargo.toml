@@ -1,6 +1,6 @@
 [package]
 name = "logisheets"
-version = "0.2.0"
+version = "0.2.1"
 description = "A web spreadsheets application written in Rust and Typescript"
 keywords = ["excel", "spreadsheets", "ooxml", "logisheets"]
 readme = "README.md"
@@ -21,5 +21,5 @@ members = [
 ]
 
 [dependencies]
-logisheets_controller = {path = "crates/controller", version = "0.2.0"}
-logisheets_workbook = {path = "crates/workbook", version = "0.2.0"}
+logisheets_controller = {path = "crates/controller", version = "0.2.1"}
+logisheets_workbook = {path = "crates/workbook", version = "0.2.1"}

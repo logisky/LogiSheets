@@ -90,8 +90,7 @@ mod test_6 {
         let (row_cnt, col_cnt) = ws.get_sheet_dimension();
         for r in 0..row_cnt {
             for c in 0..col_cnt {
-                let s = ws.get_style(r, c).unwrap();
-                println!("{}, {}, {:?}", r, c, s.fill);
+                let _ = ws.get_style(r, c).unwrap();
             }
         }
     }

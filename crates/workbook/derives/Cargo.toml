@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_derives"
-version = "0.2.0"
+version = "0.2.1"
 description = "macros that help LogiSheets serde the xml files"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 license = "MIT"
