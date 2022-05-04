@@ -283,14 +283,14 @@ impl<'a> StyleConverter<'a> {
                     61 => String::from("FF993366"),
                     62 => String::from("FF333399"),
                     63 => String::from("FF333333"),
-                    _ => String::from("FFFFFFFF"),
+                    _ => String::from("FF000000"),
                 }
             } else if let Some(theme) = color.theme {
                 self.theme_manager.get_color(theme)
             } else {
                 // auto is true.
                 // TODO: Figure out what auto means.
-                String::from("FFFFFFFF")
+                String::from("FF000000")
             }
         };
         from_hex_str(rgb, tint)
