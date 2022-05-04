@@ -1,4 +1,5 @@
 use crate::defaults::default_zero_u8;
+use crate::Unparsed;
 
 // Ct_OfficeStyleSheet 20.1.6.2
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -8,7 +9,8 @@ pub struct ThemePart {
     pub name: String,
     #[xmlserde(name = b"a:themeElements", ty = "child")]
     pub theme_elements: CtBaseStyles,
-    // pub object_defaults: Option<CtObjectStyleDefaults>,
+    #[xmlserde(name = b"a:objectDefaults", ty = "child")]
+    pub object_defaults: Option<Unparsed>,
     // pub extra_clr_scheme_lst: Option<CtColorSchemeList>,
     // pub ext_lst: Option<CtOfficeArtExtensionList>,
 }
@@ -19,8 +21,8 @@ pub struct CtBaseStyles {
     pub clr_scheme: CtColorScheme,
     #[xmlserde(name = b"a:fontScheme", ty = "child")]
     pub font_scheme: CtFontScheme,
-    // #[xmlserde(name = b"a:fmtScheme", ty = "child")]
-    // pub fmt_scheme: CtStyleMatrix,
+    #[xmlserde(name = b"a:fmtScheme", ty = "child")]
+    pub fmt_scheme: Unparsed,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -143,41 +145,6 @@ pub struct CtSupplementalFont {
     pub typeface: String,
 }
 
-// pub struct CtStyleMatrix {
-// pub name: String,
-// pub fill_style_lst: CtFillStyleList,
-// pub ln_style_lst: CtLineStyleList,
-// pub effect_style_lst: CtEffectStyleList,
-// pub bg_fill_style_lst: CtBackgroundFillStyleList,
-// }
-
-// pub type CtFillStyleList = Vec<EgFillProperties>;
-
-// pub enum EgFillProperties {
-//     NoFill(CtNoFillProperties),
-//     SolidFill(EgColorChoice),
-//     GradFill(CtGradientFillProperties),
-// BlipFill(CtBlipFillProperties),
-// PattFill(CtPatternFillProperties),
-// GrpFill(CtGroupFillProperties),
-// }
-
-// #[derive(XmlSerialize, XmlDeserialize)]
-// pub struct CtNoFillProperties {}
-
-// pub struct CtGradientFillProperties {
-//     pub flip: Option<String>,
-//     pub rot_with_shape: Option<bool>,
-// }
-
-// pub struct CtGradientStopList {
-//     pub gss: Vec<CtGradientStop2>, // minOccurs= "2"
-// }
-
-// pub struct CtGradientStop2 {
-//     pos: u8,
-// }
-
 #[cfg(test)]
 mod tests {
     use super::ThemePart;
@@ -189,18 +156,13 @@ mod tests {
         let r = xml_deserialize_from_str::<ThemePart>(b"a:theme", xml);
         match r {
             Ok(theme) => {
-                assert_eq!(theme.name, "Office 主题​​")
-                // use crate::test_utils::*;
-                // use crate::xml_serialize_with_decl;
-                // let expected = to_tree(&in_one_line(xml));
-                // let actual = xml_serialize_with_decl(b"a:theme", theme);
-                // let r = to_tree(&in_one_line(&actual));
-                // println!("{:?}", actual);
-                // use std::io::Write;
-                // let mut file1 = std::fs::File::create("data1.txt").expect("create failed");
-                // file1.write_all(expected.as_bytes()).expect("write failed");
-                // let mut file2 = std::fs::File::create("data2.txt").expect("create failed");
-                // file2.write_all(r.as_bytes()).expect("write failed");
+                assert_eq!(theme.name, "Office 主题​​");
+                use crate::test_utils::*;
+                use crate::xml_serialize_with_decl;
+                let expected = to_tree(&in_one_line(xml));
+                let actual = xml_serialize_with_decl(b"a:theme", theme);
+                let r = to_tree(&in_one_line(&actual));
+                assert_eq!(expected, r);
             }
             Err(_) => todo!(),
         }

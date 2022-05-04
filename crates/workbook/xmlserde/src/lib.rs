@@ -49,6 +49,8 @@ pub mod workbook;
 pub mod worksheet;
 use std::io::{BufRead, Write};
 
+use quick_xml::events::Event;
+
 pub trait XmlSerialize {
     fn serialize<W: Write>(&self, tag: &[u8], writer: &mut quick_xml::Writer<W>);
 }
@@ -79,11 +81,77 @@ pub trait XmlDeserialize {
     ) -> Self;
 }
 
+#[derive(Debug)]
+pub struct Unparsed {
+    data: Vec<Event<'static>>,
+    attrs: Vec<(String, String)>,
+}
+
+impl XmlSerialize for Unparsed {
+    fn serialize<W: Write>(&self, tag: &[u8], writer: &mut quick_xml::Writer<W>) {
+        use quick_xml::events::*;
+        let mut start = BytesStart::borrowed_name(tag);
+        self.attrs.iter().for_each(|(k, v)| {
+            let k = k as &str;
+            let v = v as &str;
+            start.push_attribute((k, v));
+        });
+        if self.data.len() > 0 {
+            let _ = writer.write_event(Event::Start(start));
+            self.data.iter().for_each(|e| {
+                let _ = writer.write_event(e);
+            });
+            let _ = writer.write_event(Event::End(BytesEnd::borrowed(tag)));
+        } else {
+            let _ = writer.write_event(Event::Empty(start));
+        }
+    }
+}
+
+impl XmlDeserialize for Unparsed {
+    fn deserialize<B: BufRead>(
+        tag: &[u8],
+        reader: &mut quick_xml::Reader<B>,
+        attrs: quick_xml::events::attributes::Attributes,
+        is_empty: bool,
+    ) -> Self {
+        use quick_xml::events::*;
+        let mut attrs_vec = Vec::<(String, String)>::new();
+        let mut data = Vec::<Event<'static>>::new();
+        let mut buf = Vec::<u8>::new();
+        attrs.into_iter().for_each(|a| {
+            if let Ok(attr) = a {
+                let key = String::from_utf8(attr.key.to_vec()).unwrap_or(String::from(""));
+                let value = String::from_utf8(attr.value.to_vec()).unwrap_or(String::from(""));
+                attrs_vec.push((key, value))
+            }
+        });
+        if is_empty {
+            return Unparsed {
+                data,
+                attrs: attrs_vec,
+            };
+        }
+        loop {
+            match reader.read_event(&mut buf) {
+                Ok(Event::End(e)) if e.name() == tag => break,
+                Ok(Event::Eof) => break,
+                Err(_) => break,
+                Ok(e) => data.push(e.into_owned()),
+            }
+        }
+        Unparsed {
+            data,
+            attrs: attrs_vec,
+        }
+    }
+}
+
 pub fn xml_serialize_with_decl<T>(root: &[u8], obj: T) -> String
 where
     T: XmlSerialize,
 {
-    use quick_xml::events::{BytesDecl, Event};
+    use quick_xml::events::BytesDecl;
     let mut writer = quick_xml::Writer::new(Vec::new());
     let decl = BytesDecl::new(
         b"1.0".as_ref(),
@@ -112,7 +180,6 @@ where
     let mut reader = quick_xml::Reader::from_reader(reader);
     reader.trim_text(false);
     let mut buf = Vec::<u8>::new();
-    use quick_xml::events::Event;
     loop {
         match reader.read_event(&mut buf) {
             Ok(Event::Start(start)) => {
@@ -209,6 +276,8 @@ impl_xml_value_for_num!(i64);
 
 #[cfg(test)]
 mod tests {
+    use crate::Unparsed;
+
     use super::{xml_deserialize_from_str, xml_serialize, XmlValue};
     use logisheets_derives::{XmlDeserialize, XmlSerialize};
 
@@ -535,5 +604,19 @@ mod tests {
             TestEnum::TestA(a) => assert_eq!(a.age, 23),
             TestEnum::TestB(_) => panic!(),
         }
+    }
+
+    #[test]
+    fn unparsed_serde_test() {
+        #[derive(XmlSerialize, XmlDeserialize)]
+        pub struct TestA {
+            #[xmlserde(name = b"others", ty = "child")]
+            pub others: Unparsed,
+        }
+
+        let xml = r#"<TestA><others age="16" name="Tom"><gf/><parent><f/><m name="Lisa">1999</m></parent></others></TestA>"#;
+        let p = xml_deserialize_from_str::<TestA>(b"TestA", &xml).unwrap();
+        let ser = xml_serialize(b"TestA", p);
+        assert_eq!(xml, ser);
     }
 }
