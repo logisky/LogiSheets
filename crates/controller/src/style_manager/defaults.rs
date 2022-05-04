@@ -9,7 +9,7 @@ pub fn get_init_font() -> CtFont {
             auto: None,
             indexed: None,
             rgb: None,
-            theme: Some(1),
+            theme: None,
             tint: 0_f64,
         }),
         sz: Some(CtFontSize { val: 11. }),

@@ -18,6 +18,7 @@ import initWasm, {
     transaction_start,
     undo,
     ReadFileResult,
+    col_insert,
 } from 'logisheets-server'
 import { Calculator, Executor } from './calculator'
 import { AsyncFuncResult, TransactionCode, TransactionEndResult } from './jsvalues'
@@ -117,8 +118,8 @@ export class Service {
         if (hasOwnProperty(p, 'ColShift')) {
             const colShift = p.ColShift
             if (colShift.insert)
-                return row_insert(colShift.sheetIdx, colShift.col, colShift.count)
-            return row_delete(colShift.sheetIdx, colShift.col, colShift.count)
+                return col_insert(colShift.sheetIdx, colShift.col, colShift.count)
+            return col_delete(colShift.sheetIdx, colShift.col, colShift.count)
         }
         if (hasOwnProperty(p, 'CreateBlock')) {
             const createBlock = p.CreateBlock
