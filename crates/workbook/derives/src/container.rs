@@ -55,7 +55,6 @@ impl<'a> Container<'a> {
                         _ => panic!(r#"with_custom_ns(b"r", b"ns")"#),
                     }
                 }
-                // Meta(List(l)) => {},
                 _ => panic!("unexpected attr"),
             }
         }
