@@ -15,6 +15,14 @@ pub const COMMENTS: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments");
 pub const THEME: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme");
+pub const DOC_PROP_APP: RType = RType(
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
+);
+pub const DOC_PROP_CORE: RType =
+    RType("http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties");
+
+pub const DOC_PROP_CUSTOM: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties");
 
 impl<'a> PartialEq<str> for RType<'a> {
     fn eq(&self, other: &str) -> bool {

@@ -37,6 +37,7 @@ pub mod complex_types;
 pub mod content_types;
 pub mod core_properties;
 mod defaults;
+pub mod doc_props;
 pub mod external_links;
 pub mod relationships;
 pub mod simple_types;
@@ -81,6 +82,10 @@ pub trait XmlDeserialize {
     ) -> Self;
 }
 
+///
+/// Some structs are difficult to parse using xmlserde. Fortunately, those structs
+/// have little affect to us. We just need to read and write them. We use `Unparsed`
+/// to keep them.
 #[derive(Debug)]
 pub struct Unparsed {
     data: Vec<Event<'static>>,

@@ -1,4 +1,8 @@
 use super::rtypes::*;
+use super::SerdeErr;
+use logisheets_xmlserde::doc_props::DocPropApp;
+use logisheets_xmlserde::doc_props::DocPropCore;
+use logisheets_xmlserde::doc_props::DocPropCustom;
 use logisheets_xmlserde::theme::ThemePart;
 use logisheets_xmlserde::{
     comments::Comments, sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart,
@@ -10,22 +14,10 @@ use std::{
     path::PathBuf,
     str::FromStr,
 };
-use thiserror::Error;
 use zip::ZipArchive;
 
-#[derive(Debug, Error)]
-pub enum SerdeErr {
-    #[error("zip error")]
-    ZipError(#[from] zip::result::ZipError),
-    #[error("io error")]
-    IoError(#[from] std::io::Error),
-    #[error("xml error")]
-    XmlError(#[from] quick_xml::Error),
-    #[error("custom error")]
-    Custom(String),
-}
-
 use crate::external_links::ExternalLinkPart;
+use crate::workbook::DocProps;
 use crate::workbook::ExternalLink;
 use crate::{
     relationships::Relationships,
@@ -92,6 +84,9 @@ fn de_workbook<R: Read + Seek>(
     let mut worksheets = HashMap::<String, Worksheet>::new();
     let mut external_links = HashMap::<String, ExternalLink>::new();
     let mut theme = Option::<ThemePart>::None;
+    let mut doc_prop_core = Option::<DocPropCore>::None;
+    let mut doc_prop_custom = Option::<DocPropCustom>::None;
+    let mut doc_prop_app = Option::<DocPropApp>::None;
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -175,6 +170,48 @@ fn de_workbook<R: Read + Seek>(
                     }
                 }
             }
+            DOC_PROP_APP => {
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(s) = path.to_str() {
+                    match de_doc_prop_app(s, archive) {
+                        Ok(w) => {
+                            doc_prop_app = Some(w);
+                        }
+                        Err(e) => {
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
+                        }
+                    }
+                }
+            }
+            DOC_PROP_CORE => {
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(s) = path.to_str() {
+                    match de_doc_prop_core(s, archive) {
+                        Ok(w) => {
+                            doc_prop_core = Some(w);
+                        }
+                        Err(e) => {
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
+                        }
+                    }
+                }
+            }
+            DOC_PROP_CUSTOM => {
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(s) = path.to_str() {
+                    match de_doc_prop_custom(s, archive) {
+                        Ok(w) => {
+                            doc_prop_custom = Some(w);
+                        }
+                        Err(e) => {
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
+                        }
+                    }
+                }
+            }
             _ => {}
         });
     Ok(Workbook {
@@ -184,6 +221,11 @@ fn de_workbook<R: Read + Seek>(
         worksheets,
         external_links,
         theme,
+        doc_props: DocProps {
+            app: doc_prop_app,
+            core: doc_prop_core,
+            custom: doc_prop_custom,
+        },
     })
 }
 
@@ -253,6 +295,9 @@ define_de_func!(de_comments, Comments, b"comments");
 define_de_func!(de_sst, SstPart, b"sst");
 define_de_func!(de_style_part, StylesheetPart, b"styleSheet");
 define_de_func!(de_theme, ThemePart, b"a:theme");
+define_de_func!(de_doc_prop_custom, DocPropCustom, b"Properties");
+define_de_func!(de_doc_prop_app, DocPropApp, b"Properties");
+define_de_func!(de_doc_prop_core, DocPropCore, b"cp:coreProperties");
 
 /// Given a path `/foo/test.xml`, find its relationships `/foo/_rels/test.xml.rels`
 fn get_rels(path: &str) -> Result<PathBuf, SerdeErr> {

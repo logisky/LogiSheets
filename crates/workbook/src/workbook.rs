@@ -1,4 +1,5 @@
 use logisheets_xmlserde::comments::Comments;
+use logisheets_xmlserde::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
 use logisheets_xmlserde::external_links::*;
 use logisheets_xmlserde::sst::SstPart;
 use logisheets_xmlserde::style_sheet::StylesheetPart;
@@ -17,6 +18,7 @@ pub struct Workbook {
     pub worksheets: HashMap<Id, Worksheet>,
     pub external_links: HashMap<Id, ExternalLink>,
     pub theme: Option<ThemePart>,
+    pub doc_props: DocProps,
 }
 
 #[derive(Debug)]
@@ -29,6 +31,13 @@ pub struct Worksheet {
 pub struct ExternalLink {
     pub external_link_part: ExternalLinkPart,
     pub target: String,
+}
+
+#[derive(Debug)]
+pub struct DocProps {
+    pub app: Option<DocPropApp>,
+    pub core: Option<DocPropCore>,
+    pub custom: Option<DocPropCustom>,
 }
 
 impl Workbook {
