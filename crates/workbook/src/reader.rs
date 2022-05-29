@@ -34,6 +34,9 @@ pub fn read(buf: &[u8]) -> Result<Workbook, SerdeErr> {
     let mut result = Err(SerdeErr::Custom(String::from(
         "Cannot find the workbook part",
     )));
+    let mut doc_prop_core = Option::<DocPropCore>::None;
+    let mut doc_prop_custom = Option::<DocPropCustom>::None;
+    let mut doc_prop_app = Option::<DocPropApp>::None;
     relationships
         .relationships
         .into_iter()
@@ -42,9 +45,48 @@ pub fn read(buf: &[u8]) -> Result<Workbook, SerdeErr> {
                 let target = &p.target;
                 result = de_workbook(target, &mut archive);
             }
+            DOC_PROP_APP => {
+                let target = &p.target;
+                match de_doc_prop_app(target, &mut archive) {
+                    Ok(app) => {
+                        doc_prop_app = Some(app);
+                    }
+                    Err(e) => {
+                        println!("parsing file: {:?} but meet error:{:?}", target, e)
+                    }
+                }
+            }
+            DOC_PROP_CORE => {
+                let target = &p.target;
+                match de_doc_prop_core(target, &mut archive) {
+                    Ok(core) => {
+                        doc_prop_core = Some(core);
+                    }
+                    Err(e) => {
+                        println!("parsing file: {:?} but meet error:{:?}", target, e)
+                    }
+                }
+            }
+            DOC_PROP_CUSTOM => {
+                let target = &p.target;
+                match de_doc_prop_custom(target, &mut archive) {
+                    Ok(custom) => {
+                        doc_prop_custom = Some(custom);
+                    }
+                    Err(e) => {
+                        println!("parsing file: {:?} but meet error:{:?}", target, e)
+                    }
+                }
+            }
             _ => {}
         });
-    result
+    let mut wb = result?;
+    wb.doc_props = DocProps {
+        app: doc_prop_app,
+        custom: doc_prop_custom,
+        core: doc_prop_core,
+    };
+    Ok(wb)
 }
 
 fn de_external_link<R: Read + Seek>(
@@ -84,9 +126,6 @@ fn de_workbook<R: Read + Seek>(
     let mut worksheets = HashMap::<String, Worksheet>::new();
     let mut external_links = HashMap::<String, ExternalLink>::new();
     let mut theme = Option::<ThemePart>::None;
-    let mut doc_prop_core = Option::<DocPropCore>::None;
-    let mut doc_prop_custom = Option::<DocPropCustom>::None;
-    let mut doc_prop_app = Option::<DocPropApp>::None;
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -170,48 +209,6 @@ fn de_workbook<R: Read + Seek>(
                     }
                 }
             }
-            DOC_PROP_APP => {
-                let target = &r.target;
-                let path = get_target_abs_path(rels, target);
-                if let Some(s) = path.to_str() {
-                    match de_doc_prop_app(s, archive) {
-                        Ok(w) => {
-                            doc_prop_app = Some(w);
-                        }
-                        Err(e) => {
-                            println!("parsing file: {:?} but meet error:{:?}", s, e)
-                        }
-                    }
-                }
-            }
-            DOC_PROP_CORE => {
-                let target = &r.target;
-                let path = get_target_abs_path(rels, target);
-                if let Some(s) = path.to_str() {
-                    match de_doc_prop_core(s, archive) {
-                        Ok(w) => {
-                            doc_prop_core = Some(w);
-                        }
-                        Err(e) => {
-                            println!("parsing file: {:?} but meet error:{:?}", s, e)
-                        }
-                    }
-                }
-            }
-            DOC_PROP_CUSTOM => {
-                let target = &r.target;
-                let path = get_target_abs_path(rels, target);
-                if let Some(s) = path.to_str() {
-                    match de_doc_prop_custom(s, archive) {
-                        Ok(w) => {
-                            doc_prop_custom = Some(w);
-                        }
-                        Err(e) => {
-                            println!("parsing file: {:?} but meet error:{:?}", s, e)
-                        }
-                    }
-                }
-            }
             _ => {}
         });
     Ok(Workbook {
@@ -221,11 +218,7 @@ fn de_workbook<R: Read + Seek>(
         worksheets,
         external_links,
         theme,
-        doc_props: DocProps {
-            app: doc_prop_app,
-            core: doc_prop_core,
-            custom: doc_prop_custom,
-        },
+        doc_props: DocProps::default(),
     })
 }
 

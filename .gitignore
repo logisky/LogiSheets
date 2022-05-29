@@ -24,3 +24,5 @@ coverage/
 /pkg
 
 .DS_Store
+
+tests_output

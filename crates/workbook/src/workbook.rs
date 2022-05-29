@@ -8,8 +8,13 @@ use logisheets_xmlserde::workbook::WorkbookPart;
 use logisheets_xmlserde::worksheet::WorksheetPart;
 use std::collections::HashMap;
 
+use crate::SerdeErr;
+
 type Id = String;
 
+pub struct XlsxZip {}
+
+// FIX ME: Refactor this structure and make `doc_props` out of `Workbook`
 #[derive(Debug)]
 pub struct Workbook {
     pub workbook_part: WorkbookPart,
@@ -33,11 +38,17 @@ pub struct ExternalLink {
     pub target: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DocProps {
     pub app: Option<DocPropApp>,
     pub core: Option<DocPropCore>,
     pub custom: Option<DocPropCustom>,
+}
+
+impl DocProps {
+    pub fn is_empty(&self) -> bool {
+        self.app.is_none() && self.core.is_none() && self.custom.is_none()
+    }
 }
 
 impl Workbook {
@@ -56,5 +67,9 @@ impl Workbook {
         let sheet = self.workbook_part.sheets.sheets.get(idx)?;
         let id = &sheet.id;
         self.worksheets.get(id)
+    }
+
+    pub fn from_file(buf: &[u8]) -> Result<Self, SerdeErr> {
+        crate::reader::read(buf)
     }
 }
