@@ -1,3 +1,5 @@
+use xmlserde::xml_serde_enum;
+
 xml_serde_enum! {
     #[derive(Debug, PartialEq, Eq)]
     StAxis {

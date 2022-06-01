@@ -1,3 +1,5 @@
+use xmlserde::{XmlDeserialize, XmlSerialize};
+
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/package/2006/content-types")]
 pub struct ContentTypes {
@@ -39,7 +41,7 @@ mod tests {
                 // Used the site and the code below to check the diff manually.
                 // Basically pass.
                 // https://www.diffchecker.com/diff
-                use crate::test_utils::*;
+                use crate::ooxml::test_utils::*;
                 use crate::xml_serialize_with_decl;
                 let expected = to_tree(&in_one_line(xml));
                 let actual = xml_serialize_with_decl(b"Types", ct);

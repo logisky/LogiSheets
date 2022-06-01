@@ -1,22 +1,26 @@
+#[macro_use]
+extern crate ts_rs;
+#[macro_use]
+extern crate xmlserde;
+mod ooxml;
 pub mod reader;
 pub mod rtypes;
 pub mod workbook;
 pub mod writer;
-use logisheets_xmlserde::*;
 use thiserror::Error;
+use xmlserde::*;
 
 pub mod prelude {
-    pub use super::comments::*;
-    pub use super::complex_types::*;
+    pub use super::ooxml::comments::*;
+    pub use super::ooxml::complex_types::*;
+    pub use super::ooxml::simple_types::*;
+    pub use super::ooxml::sst::SstPart;
+    pub use super::ooxml::style_sheet::StylesheetPart;
+    pub use super::ooxml::theme::*;
+    pub use super::ooxml::worksheet::*;
     pub use super::reader::*;
-    pub use super::simple_types::*;
-    pub use super::sst::SstPart;
-    pub use super::style_sheet::StylesheetPart;
     pub use super::workbook::Workbook;
-    pub use super::worksheet::*;
     pub use super::SerdeErr;
-    pub use logisheets_xmlserde::workbook::WorkbookPart;
-    pub use logisheets_xmlserde::*;
 }
 
 #[derive(Debug, Error)]

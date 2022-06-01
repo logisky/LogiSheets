@@ -39,7 +39,7 @@ where
                         let val_str = &ext_cell.v.as_ref().unwrap().value;
                         let cell_ref = ext_cell.r.as_ref().unwrap();
                         if let Some((r, c)) = parse_cell(cell_ref) {
-                            use logisheets_workbook::prelude::simple_types::StCellType;
+                            use logisheets_workbook::prelude::StCellType;
                             let val = match &ext_cell.t {
                                 StCellType::B => {
                                     let b = if val_str == "TRUE" || val_str == "0" {

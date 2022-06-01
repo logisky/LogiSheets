@@ -1,5 +1,5 @@
-use crate::complex_types::*;
-use crate::simple_types::*;
+use super::complex_types::*;
+use super::simple_types::*;
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
