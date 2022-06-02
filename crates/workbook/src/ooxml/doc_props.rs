@@ -1,4 +1,5 @@
 use crate::Unparsed;
+use xmlserde::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(with_custom_ns(
@@ -67,6 +68,7 @@ pub struct Time {
 #[cfg(test)]
 mod tests {
     use super::{DocPropApp, DocPropCore, DocPropCustom};
+    use crate::ooxml::test_utils::*;
     use crate::xml_deserialize_from_str;
     #[test]
     fn doc_prop_core_prop_test() {
@@ -74,7 +76,6 @@ mod tests {
         let r = xml_deserialize_from_str::<DocPropCore>(b"cp:coreProperties", xml);
         match r {
             Ok(core) => {
-                use crate::test_utils::*;
                 use crate::xml_serialize_with_decl;
                 let actual = xml_serialize_with_decl(b"cp:coreProperties", core);
                 let r = in_one_line(&xml);
@@ -90,7 +91,6 @@ mod tests {
         let r = xml_deserialize_from_str::<DocPropApp>(b"Properties", xml);
         match r {
             Ok(core) => {
-                use crate::test_utils::*;
                 use crate::xml_serialize_with_decl;
                 let actual = xml_serialize_with_decl(b"Properties", core);
                 let r = in_one_line(&xml);
@@ -106,7 +106,6 @@ mod tests {
         let r = xml_deserialize_from_str::<DocPropCustom>(b"Properties", xml);
         match r {
             Ok(core) => {
-                use crate::test_utils::*;
                 use crate::xml_serialize_with_decl;
                 let actual = xml_serialize_with_decl(b"Properties", core);
                 let r = in_one_line(&xml);

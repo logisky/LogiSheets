@@ -1,4 +1,4 @@
-use crate::complex_types::PlainTextString;
+use super::complex_types::PlainTextString;
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(with_custom_ns(
@@ -66,7 +66,7 @@ pub struct CreatedModified {
 #[cfg(test)]
 mod tests {
     use super::CoreProperties;
-    use crate::test_utils::*;
+    use crate::ooxml::test_utils::*;
     use crate::xml_deserialize_from_str;
     use crate::xml_serialize;
     #[test]

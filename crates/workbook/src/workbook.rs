@@ -1,18 +1,16 @@
-use logisheets_xmlserde::comments::Comments;
-use logisheets_xmlserde::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
-use logisheets_xmlserde::external_links::*;
-use logisheets_xmlserde::sst::SstPart;
-use logisheets_xmlserde::style_sheet::StylesheetPart;
-use logisheets_xmlserde::theme::ThemePart;
-use logisheets_xmlserde::workbook::WorkbookPart;
-use logisheets_xmlserde::worksheet::WorksheetPart;
+use crate::ooxml::comments::Comments;
+use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
+use crate::ooxml::external_links::*;
+use crate::ooxml::sst::SstPart;
+use crate::ooxml::style_sheet::StylesheetPart;
+use crate::ooxml::theme::ThemePart;
+use crate::ooxml::workbook::WorkbookPart;
+use crate::ooxml::worksheet::WorksheetPart;
 use std::collections::HashMap;
 
 use crate::SerdeErr;
 
 type Id = String;
-
-pub struct XlsxZip {}
 
 // FIX ME: Refactor this structure and make `doc_props` out of `Workbook`
 #[derive(Debug)]

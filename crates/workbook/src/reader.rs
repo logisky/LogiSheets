@@ -1,12 +1,12 @@
 use super::rtypes::*;
 use super::SerdeErr;
-use logisheets_xmlserde::doc_props::DocPropApp;
-use logisheets_xmlserde::doc_props::DocPropCore;
-use logisheets_xmlserde::doc_props::DocPropCustom;
-use logisheets_xmlserde::theme::ThemePart;
-use logisheets_xmlserde::{
-    comments::Comments, sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart,
-    worksheet::WorksheetPart,
+use crate::ooxml::doc_props::DocPropApp;
+use crate::ooxml::doc_props::DocPropCore;
+use crate::ooxml::doc_props::DocPropCustom;
+use crate::ooxml::theme::ThemePart;
+use crate::ooxml::{
+    comments::Comments, external_links::ExternalLinkPart, relationships::Relationships,
+    sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart, worksheet::WorksheetPart,
 };
 use std::collections::HashMap;
 use std::{
@@ -16,11 +16,9 @@ use std::{
 };
 use zip::ZipArchive;
 
-use crate::external_links::ExternalLinkPart;
 use crate::workbook::DocProps;
 use crate::workbook::ExternalLink;
 use crate::{
-    relationships::Relationships,
     rtypes::RType,
     workbook::{Workbook, Worksheet},
     xml_deserialize_from_reader,

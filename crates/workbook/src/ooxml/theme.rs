@@ -1,5 +1,5 @@
-use crate::defaults::default_zero_u8;
-use crate::Unparsed;
+use super::defaults::default_zero_u8;
+use xmlserde::{Unparsed, XmlDeserialize, XmlSerialize};
 
 // Ct_OfficeStyleSheet 20.1.6.2
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -20,7 +20,7 @@ pub struct CtBaseStyles {
     #[xmlserde(name = b"a:clrScheme", ty = "child")]
     pub clr_scheme: CtColorScheme,
     #[xmlserde(name = b"a:fontScheme", ty = "child")]
-    pub font_scheme: CtFontScheme,
+    pub font_scheme: ThemeCtFontScheme,
     #[xmlserde(name = b"a:fmtScheme", ty = "child")]
     pub fmt_scheme: Unparsed,
 }
@@ -100,7 +100,7 @@ pub struct CtSrgbColor {
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
-pub struct CtFontScheme {
+pub struct ThemeCtFontScheme {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
     #[xmlserde(name = b"a:majorFont", ty = "child")]
@@ -157,7 +157,7 @@ mod tests {
         match r {
             Ok(theme) => {
                 assert_eq!(theme.name, "Office 主题​​");
-                use crate::test_utils::*;
+                use crate::ooxml::test_utils::*;
                 use crate::xml_serialize_with_decl;
                 let expected = to_tree(&in_one_line(xml));
                 let actual = xml_serialize_with_decl(b"a:theme", theme);

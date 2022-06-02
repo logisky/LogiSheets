@@ -1,4 +1,4 @@
-use logisheets_workbook::prelude::theme::{CtColorScheme, ThemePart};
+use logisheets_workbook::prelude::{CtColorScheme, ThemePart};
 
 #[derive(Default)]
 pub struct ThemeManager {

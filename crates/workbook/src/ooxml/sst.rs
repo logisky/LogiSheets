@@ -14,7 +14,7 @@ pub struct SstPart {
 #[cfg(test)]
 mod tests {
     use super::SstPart;
-    use crate::test_utils::in_one_line;
+    use crate::ooxml::test_utils::in_one_line;
     use crate::{xml_deserialize_from_str, xml_serialize_with_decl};
 
     #[test]

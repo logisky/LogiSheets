@@ -1,8 +1,4 @@
-#[macro_use]
-extern crate logisheets_derives;
-#[macro_use]
-extern crate ts_rs;
-
+#[macro_export]
 macro_rules! xml_serde_enum {
     (
          $(#[$outer:meta])*
@@ -32,22 +28,6 @@ macro_rules! xml_serde_enum {
     };
 }
 
-pub mod comments;
-pub mod complex_types;
-pub mod content_types;
-pub mod core_properties;
-mod defaults;
-pub mod doc_props;
-pub mod external_links;
-pub mod relationships;
-pub mod simple_types;
-pub mod sst;
-pub mod style_sheet;
-#[cfg(test)]
-mod test_utils;
-pub mod theme;
-pub mod workbook;
-pub mod worksheet;
 use std::io::{BufRead, Write};
 
 use quick_xml::events::Event;
@@ -625,3 +605,5 @@ mod tests {
         assert_eq!(xml, ser);
     }
 }
+
+pub use logisheets_derives::{XmlDeserialize, XmlSerialize};

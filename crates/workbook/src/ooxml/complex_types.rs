@@ -1,5 +1,7 @@
 use super::defaults::*;
 use super::simple_types::*;
+use logisheets_workbook_derives::MapObj;
+
 #[derive(XmlSerialize, XmlDeserialize, Default, Debug, Clone)]
 pub struct CtRst {
     #[xmlserde(name = b"t", ty = "child")]

@@ -23,7 +23,7 @@ pub struct CtRelationship {
 #[cfg(test)]
 mod tests {
     use super::Relationships;
-    use crate::test_utils::*;
+    use crate::ooxml::test_utils::*;
     use crate::xml_deserialize_from_str;
     use crate::xml_serialize_with_decl;
     #[test]
