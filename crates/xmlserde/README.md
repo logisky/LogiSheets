@@ -5,6 +5,8 @@
 `xmlserde` is a tool for serializing or deserializing xml struct.
 It is designed for [LogiSheets](https://github.com/proclml/LogiSheets), which is a spreadsheets application working on the browser.
 
+You can check the usage in the `workbook` directory or [here](https://github.com/proclml/LogiSheets/crates/workbook).
+
 ## How to use `xmlserde`
 
 `xmlserde` provides macros for you and in the most of cases, they are enough.
@@ -123,18 +125,19 @@ If the capacity is from an **attr**, you can:
 #### enum:
 
 ```rs
-    #[derive(XmlSerialize, XmlDeserialize)]
-    enum TestEnum {
-        #[xmlserde(name = b"testA")]
-        TestA(TestA),
-        #[xmlserde(name = b"testB")]
-        TestB(TestB),
-    }
+#[derive(XmlSerialize, XmlDeserialize)]
+enum TestEnum {
+    #[xmlserde(name = b"testA")]
+    TestA(TestA),
+    #[xmlserde(name = b"testB")]
+    TestB(TestB),
+}
 ```
 
 #### Unparsed
 
-Sometimes we don't care about some xml element and we just want to keep them for serializing. We provide a struct `Unparsed`.
+Sometimes we don't care about some xml element and we just want to keep them for serializing.
+We provide a struct `Unparsed`.
 
 ```rs
 #[derive(XmlDeserialize)]
