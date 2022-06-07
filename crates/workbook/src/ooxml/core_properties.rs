@@ -1,6 +1,7 @@
 use super::complex_types::PlainTextString;
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"cp:coreProperties")]
 #[xmlserde(with_custom_ns(
     b"cp",
     b"http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
@@ -77,8 +78,8 @@ mod tests {
 <dcterms:created xsi:type="dcterms:W3CDTF">2022-03-17T11:56:30Z</dcterms:created>
 <dcterms:modified xsi:type="dcterms:W3CDTF">2022-03-17T11:56:46Z</dcterms:modified>
 </cp:coreProperties>"#;
-        let r = xml_deserialize_from_str::<CoreProperties>(b"cp:coreProperties", xml).unwrap();
-        let ser = xml_serialize(b"cp:coreProperties", r);
+        let r = xml_deserialize_from_str::<CoreProperties>(xml).unwrap();
+        let ser = xml_serialize(r);
         assert_eq!(in_one_line(xml), ser)
     }
 }

@@ -48,74 +48,79 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
     let mut sheet_id_fetcher = SheetIdFetcher {
         sheet_id_manager: &mut sheet_id_manager,
     };
-    if let Some(ers) = &wb.workbook_part.external_references {
+    if let Some(ers) = &wb.xl.workbook_part.external_references {
         ers.external_references.iter().for_each(|er| {
             let id = &er.id;
-            if let Some(link) = wb.external_links.get(id) {
+            if let Some(link) = wb.xl.external_links.get(id) {
                 load_external_link(&mut external_links_manager, link, &mut sheet_id_fetcher);
             }
         })
     }
     let mut settings = Settings::default();
-    if let Some(calc_pr) = &wb.workbook_part.calc_pr {
+    if let Some(calc_pr) = &wb.xl.workbook_part.calc_pr {
         settings.calc_config.iter_limit = calc_pr.iterate_count as u16;
         settings.calc_config.error = calc_pr.iterate_delta as f32;
     }
-    let mut style_loader = StyleLoader::new(&mut style_manager, &wb.styles);
-    wb.workbook_part.sheets.sheets.iter().for_each(|ct_sheet| {
-        let sheet_name = &ct_sheet.name;
-        let sheet_id = sheet_id_manager.get_id(sheet_name);
-        sheet_pos_manager.pos.push_back(sheet_id);
-        if ct_sheet.state != StSheetState::Visible {
-            sheet_pos_manager.hiddens.insert(sheet_id);
-        }
-        let id = &ct_sheet.id;
-        if let Some(ws) = wb.worksheets.get(id) {
-            if let Some(comments) = &ws.comments {
-                load_comments(
-                    sheet_id,
-                    comments,
-                    &mut navigator,
-                    &mut cell_attachment_manager,
-                );
+    let mut style_loader = StyleLoader::new(&mut style_manager, &wb.xl.styles);
+    wb.xl
+        .workbook_part
+        .sheets
+        .sheets
+        .iter()
+        .for_each(|ct_sheet| {
+            let sheet_name = &ct_sheet.name;
+            let sheet_id = sheet_id_manager.get_id(sheet_name);
+            sheet_pos_manager.pos.push_back(sheet_id);
+            if ct_sheet.state != StSheetState::Visible {
+                sheet_pos_manager.hiddens.insert(sheet_id);
             }
-            if let Some(cols) = &ws.worksheet_part.cols {
-                load_cols(
+            let id = &ct_sheet.id;
+            if let Some(ws) = wb.xl.worksheets.get(id) {
+                if let Some(comments) = &ws.comments {
+                    load_comments(
+                        sheet_id,
+                        comments,
+                        &mut navigator,
+                        &mut cell_attachment_manager,
+                    );
+                }
+                if let Some(cols) = &ws.worksheet_part.cols {
+                    load_cols(
+                        sheet_id,
+                        &cols.cols,
+                        &mut container,
+                        &mut style_loader,
+                        &mut navigator,
+                    )
+                }
+                if let Some(merge_cells) = &ws.worksheet_part.merge_cells {
+                    load_merge_cells(
+                        sheet_id,
+                        merge_cells,
+                        &mut navigator,
+                        &mut cell_attachment_manager,
+                    )
+                }
+                if let Some(sheet_format_pr) = &ws.worksheet_part.sheet_format_pr {
+                    load_sheet_format_pr(&mut settings, sheet_id, sheet_format_pr)
+                }
+                load_sheet_data(
                     sheet_id,
-                    &cols.cols,
+                    &book_name,
+                    &ws.worksheet_part.sheet_data,
+                    &mut navigator,
+                    &mut sheet_id_manager,
+                    &mut text_id_manager,
+                    &mut func_id_manager,
+                    &mut name_id_manager,
+                    &mut external_links_manager,
                     &mut container,
+                    &mut vertex_manager,
                     &mut style_loader,
-                    &mut navigator,
+                    &wb,
                 )
             }
-            if let Some(merge_cells) = &ws.worksheet_part.merge_cells {
-                load_merge_cells(
-                    sheet_id,
-                    merge_cells,
-                    &mut navigator,
-                    &mut cell_attachment_manager,
-                )
-            }
-            if let Some(sheet_format_pr) = &ws.worksheet_part.sheet_format_pr {
-                load_sheet_format_pr(&mut settings, sheet_id, sheet_format_pr)
-            }
-            load_sheet_data(
-                sheet_id,
-                &book_name,
-                &ws.worksheet_part.sheet_data,
-                &mut navigator,
-                &mut sheet_id_manager,
-                &mut text_id_manager,
-                &mut func_id_manager,
-                &mut name_id_manager,
-                &mut external_links_manager,
-                &mut container,
-                &mut vertex_manager,
-                &mut style_loader,
-                &wb,
-            )
-        }
-    });
+        });
     let status = Status {
         navigator,
         vertex_manager,
@@ -129,7 +134,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         style_manager,
         cell_attachment_manager,
     };
-    if let Some(theme) = wb.theme {
+    if let Some(theme) = wb.xl.theme {
         settings.theme = ThemeManager::from(theme);
     }
     Controller::from(status, book_name, settings)

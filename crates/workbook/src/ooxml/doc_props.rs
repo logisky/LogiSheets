@@ -2,6 +2,7 @@ use crate::Unparsed;
 use xmlserde::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"cp:coreProperties")]
 #[xmlserde(with_custom_ns(
     b"cp",
     b"http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
@@ -20,6 +21,7 @@ pub struct DocPropCore {
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"Properties")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties")]
 #[xmlserde(with_custom_ns(
     b"vt",
@@ -35,6 +37,7 @@ pub struct DocPropApp {
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"Properties")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/officeDocument/2006/custom-properties")]
 #[xmlserde(with_custom_ns(
     b"vt",
@@ -73,11 +76,11 @@ mod tests {
     #[test]
     fn doc_prop_core_prop_test() {
         let xml = include_str!("../../examples/doc_prop_core.xml");
-        let r = xml_deserialize_from_str::<DocPropCore>(b"cp:coreProperties", xml);
+        let r = xml_deserialize_from_str::<DocPropCore>(xml);
         match r {
             Ok(core) => {
                 use crate::xml_serialize_with_decl;
-                let actual = xml_serialize_with_decl(b"cp:coreProperties", core);
+                let actual = xml_serialize_with_decl(core);
                 let r = in_one_line(&xml);
                 assert_eq!(actual, r);
             }
@@ -88,11 +91,11 @@ mod tests {
     #[test]
     fn doc_prop_app_test() {
         let xml = include_str!("../../examples/doc_prop_app.xml");
-        let r = xml_deserialize_from_str::<DocPropApp>(b"Properties", xml);
+        let r = xml_deserialize_from_str::<DocPropApp>(xml);
         match r {
             Ok(core) => {
                 use crate::xml_serialize_with_decl;
-                let actual = xml_serialize_with_decl(b"Properties", core);
+                let actual = xml_serialize_with_decl(core);
                 let r = in_one_line(&xml);
                 assert_eq!(actual, r);
             }
@@ -103,11 +106,11 @@ mod tests {
     #[test]
     fn doc_prop_custom_test() {
         let xml = include_str!("../../examples/doc_prop_custom.xml");
-        let r = xml_deserialize_from_str::<DocPropCustom>(b"Properties", xml);
+        let r = xml_deserialize_from_str::<DocPropCustom>(xml);
         match r {
             Ok(core) => {
                 use crate::xml_serialize_with_decl;
-                let actual = xml_serialize_with_decl(b"Properties", core);
+                let actual = xml_serialize_with_decl(core);
                 let r = in_one_line(&xml);
                 assert_eq!(actual, r);
             }

@@ -1,6 +1,7 @@
 use super::complex_types::*;
 
 #[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[xmlserde(root = b"styleSheet")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
 pub struct StylesheetPart {
     #[xmlserde(name = b"numFmts", ty = "child")]
@@ -32,7 +33,7 @@ mod tests {
     #[test]
     fn test1() {
         let xml = include_str!("../../examples/styles2.xml");
-        let r = xml_deserialize_from_str::<StylesheetPart>(b"styleSheet", xml);
+        let r = xml_deserialize_from_str::<StylesheetPart>(xml);
         match r {
             Ok(sst) => {
                 assert_eq!(sst.cell_style_xfs.unwrap().xfs.len(), 47);

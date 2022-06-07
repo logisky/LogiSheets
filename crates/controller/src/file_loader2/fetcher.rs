@@ -52,6 +52,7 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
         let idx = book.parse::<usize>().unwrap_or(0);
         if let Some(link) = self
             .workbook
+            .xl
             .workbook_part
             .external_references
             .as_ref()
@@ -60,7 +61,7 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
             .get(idx)
         {
             let id = &link.id;
-            match self.workbook.external_links.get(id) {
+            match self.workbook.xl.external_links.get(id) {
                 Some(link) => {
                     let target = &link.target;
                     self.ext_books_manager.fetch_ext_book_id(target)

@@ -1,10 +1,11 @@
 use crate::ooxml::sst::SstPart;
+use crate::rtypes::RType;
 use std::io::{Cursor, Write};
 use xmlserde::xml_serialize_with_decl;
 use zip::write::{FileOptions, ZipWriter};
 use zip::CompressionMethod;
 
-use crate::workbook::{DocProps, Workbook};
+use crate::workbook::{DocProps, Workbook, Xl};
 use zip::result::ZipResult;
 
 type Writer<'a> = ZipWriter<Cursor<&'a mut Vec<u8>>>;
@@ -13,21 +14,25 @@ pub fn write(wb: Workbook) -> ZipResult<Vec<u8>> {
     let mut buf = Vec::<u8>::with_capacity(65535);
     let mut writer: Writer = ZipWriter::new(Cursor::new(&mut buf));
     write_doc_props(wb.doc_props, &mut writer)?;
+    write_xl(wb.xl, &mut writer)?;
     writer.finish()?;
     drop(writer);
     Ok(buf)
 }
 
-fn write_xl(mut wb: Workbook, writer: &mut Writer) -> ZipResult<()> {
+fn write_xl(mut wb: Xl, writer: &mut Writer) -> ZipResult<Vec<RType<'static>>> {
+    writer.add_directory("xl", options())?;
     if let Some(sst) = wb.sst.take() {
-        write_sst(sst, writer)?;
+        write_sst(sst, writer, "xl/sharedStrings.xml")?;
     }
     todo!()
 }
 
-fn write_sst(sst: SstPart, writer: &mut Writer) -> ZipResult<()> {
-    writer.add_directory("xl", options())?;
-    todo!()
+fn write_sst(sst: SstPart, writer: &mut Writer, path: &str) -> ZipResult<()> {
+    writer.start_file(path, options())?;
+    let s = xml_serialize_with_decl(sst);
+    writer.write(s.as_bytes())?;
+    Ok(())
 }
 
 fn write_doc_props(doc_props: DocProps, writer: &mut Writer) -> ZipResult<()> {
@@ -38,17 +43,17 @@ fn write_doc_props(doc_props: DocProps, writer: &mut Writer) -> ZipResult<()> {
     writer.add_directory("docProps", options())?;
     if let Some(app) = doc_props.app.take() {
         writer.start_file("docProps/app.xml", options())?;
-        let s = xml_serialize_with_decl(b"Properties", app);
+        let s = xml_serialize_with_decl(app);
         writer.write(s.as_bytes())?;
     }
     if let Some(core) = doc_props.core.take() {
         writer.start_file("docProps/core.xml", options())?;
-        let s = xml_serialize_with_decl(b"cp:coreProperties", core);
+        let s = xml_serialize_with_decl(core);
         writer.write(s.as_bytes())?;
     }
     if let Some(custom) = doc_props.custom.take() {
         writer.start_file("docProps/custom.xml", options())?;
-        let s = xml_serialize_with_decl(b"Properties", custom);
+        let s = xml_serialize_with_decl(custom);
         writer.write(s.as_bytes())?;
     }
     Ok(())

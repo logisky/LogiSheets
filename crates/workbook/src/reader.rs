@@ -8,6 +8,7 @@ use crate::ooxml::{
     comments::Comments, external_links::ExternalLinkPart, relationships::Relationships,
     sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart, worksheet::WorksheetPart,
 };
+use crate::workbook::Xl;
 use std::collections::HashMap;
 use std::{
     io::{BufReader, Cursor, Read, Seek},
@@ -29,7 +30,7 @@ pub fn read(buf: &[u8]) -> Result<Workbook, SerdeErr> {
     let mut archive = ZipArchive::new(reader)?;
     let root = "_rels/.rels";
     let relationships = de_relationships(root, &mut archive)?;
-    let mut result = Err(SerdeErr::Custom(String::from(
+    let mut xl = Err(SerdeErr::Custom(String::from(
         "Cannot find the workbook part",
     )));
     let mut doc_prop_core = Option::<DocPropCore>::None;
@@ -41,7 +42,7 @@ pub fn read(buf: &[u8]) -> Result<Workbook, SerdeErr> {
         .for_each(|p| match RType(&p.ty) {
             WORKBOOK => {
                 let target = &p.target;
-                result = de_workbook(target, &mut archive);
+                xl = de_xl(target, &mut archive);
             }
             DOC_PROP_APP => {
                 let target = &p.target;
@@ -78,13 +79,13 @@ pub fn read(buf: &[u8]) -> Result<Workbook, SerdeErr> {
             }
             _ => {}
         });
-    let mut wb = result?;
-    wb.doc_props = DocProps {
+    let mut xl = xl?;
+    let doc_props = DocProps {
         app: doc_prop_app,
         custom: doc_prop_custom,
         core: doc_prop_core,
     };
-    Ok(wb)
+    Ok(Workbook { xl, doc_props })
 }
 
 fn de_external_link<R: Read + Seek>(
@@ -114,10 +115,7 @@ fn de_external_link<R: Read + Seek>(
     })
 }
 
-fn de_workbook<R: Read + Seek>(
-    path: &str,
-    archive: &mut ZipArchive<R>,
-) -> Result<Workbook, SerdeErr> {
+fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, SerdeErr> {
     let workbook_part = de_workbook_part(path, archive)?;
     let mut styles = Option::<StylesheetPart>::None;
     let mut sst = Option::<SstPart>::None;
@@ -209,14 +207,13 @@ fn de_workbook<R: Read + Seek>(
             }
             _ => {}
         });
-    Ok(Workbook {
+    Ok(Xl {
         workbook_part,
         styles: styles.unwrap(),
         sst,
         worksheets,
         external_links,
         theme,
-        doc_props: DocProps::default(),
     })
 }
 
@@ -265,11 +262,11 @@ fn de_worksheet<R: Read + Seek>(
 }
 
 macro_rules! define_de_func {
-    ($func:ident, $t:ty, $s:literal) => {
+    ($func:ident, $t:ty) => {
         fn $func<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<$t, SerdeErr> {
             let file = archive.by_name(path)?;
             let reader = BufReader::new(file);
-            let result = xml_deserialize_from_reader::<$t, _>($s, reader);
+            let result = xml_deserialize_from_reader::<$t, _>(reader);
             match result {
                 Ok(r) => Ok(r),
                 Err(s) => Err(SerdeErr::Custom(s)),
@@ -278,17 +275,17 @@ macro_rules! define_de_func {
     };
 }
 
-define_de_func!(de_relationships, Relationships, b"Relationships");
-define_de_func!(de_external_link_part, ExternalLinkPart, b"externalLink");
-define_de_func!(de_workbook_part, WorkbookPart, b"workbook");
-define_de_func!(de_worksheet_part, WorksheetPart, b"worksheet");
-define_de_func!(de_comments, Comments, b"comments");
-define_de_func!(de_sst, SstPart, b"sst");
-define_de_func!(de_style_part, StylesheetPart, b"styleSheet");
-define_de_func!(de_theme, ThemePart, b"a:theme");
-define_de_func!(de_doc_prop_custom, DocPropCustom, b"Properties");
-define_de_func!(de_doc_prop_app, DocPropApp, b"Properties");
-define_de_func!(de_doc_prop_core, DocPropCore, b"cp:coreProperties");
+define_de_func!(de_relationships, Relationships);
+define_de_func!(de_external_link_part, ExternalLinkPart);
+define_de_func!(de_workbook_part, WorkbookPart);
+define_de_func!(de_worksheet_part, WorksheetPart);
+define_de_func!(de_comments, Comments);
+define_de_func!(de_sst, SstPart);
+define_de_func!(de_style_part, StylesheetPart);
+define_de_func!(de_theme, ThemePart);
+define_de_func!(de_doc_prop_custom, DocPropCustom);
+define_de_func!(de_doc_prop_app, DocPropApp);
+define_de_func!(de_doc_prop_core, DocPropCore);
 
 /// Given a path `/foo/test.xml`, find its relationships `/foo/_rels/test.xml.rels`
 fn get_rels(path: &str) -> Result<PathBuf, SerdeErr> {

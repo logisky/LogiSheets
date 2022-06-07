@@ -2,6 +2,7 @@ use super::complex_types::*;
 use super::simple_types::*;
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"workbook")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
 pub struct WorkbookPart {
     #[xmlserde(name = b"fileVersion", ty = "child")]
@@ -51,7 +52,7 @@ mod tests {
     #[test]
     fn test1() {
         let xml = include_str!("../../examples/workbook.xml");
-        let r = xml_deserialize_from_str::<WorkbookPart>(b"workbook", xml);
+        let r = xml_deserialize_from_str::<WorkbookPart>(xml);
         match r {
             Ok(wb) => {
                 assert_eq!(wb.sheets.sheets.len(), 15);

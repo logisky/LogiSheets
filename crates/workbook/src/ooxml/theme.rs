@@ -3,6 +3,7 @@ use xmlserde::{Unparsed, XmlDeserialize, XmlSerialize};
 
 // Ct_OfficeStyleSheet 20.1.6.2
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"a:theme")]
 #[xmlserde(with_custom_ns(b"a", b"http://schemas.openxmlformats.org/drawingml/2006/main"))]
 pub struct ThemePart {
     #[xmlserde(name = b"name", ty = "attr")]
@@ -153,14 +154,14 @@ mod tests {
     #[test]
     fn test1() {
         let xml = include_str!("../../examples/theme1.xml");
-        let r = xml_deserialize_from_str::<ThemePart>(b"a:theme", xml);
+        let r = xml_deserialize_from_str::<ThemePart>(xml);
         match r {
             Ok(theme) => {
                 assert_eq!(theme.name, "Office 主题​​");
                 use crate::ooxml::test_utils::*;
                 use crate::xml_serialize_with_decl;
                 let expected = to_tree(&in_one_line(xml));
-                let actual = xml_serialize_with_decl(b"a:theme", theme);
+                let actual = xml_serialize_with_decl(theme);
                 let r = to_tree(&in_one_line(&actual));
                 assert_eq!(expected, r);
             }

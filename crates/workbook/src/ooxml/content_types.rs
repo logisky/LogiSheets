@@ -1,7 +1,10 @@
 use xmlserde::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
-#[xmlserde(with_ns = b"http://schemas.openxmlformats.org/package/2006/content-types")]
+#[xmlserde(
+    root = b"Types",
+    with_ns = b"http://schemas.openxmlformats.org/package/2006/content-types"
+)]
 pub struct ContentTypes {
     #[xmlserde(name = b"Default", ty = "child")]
     pub defaults: Vec<CtDefault>,
@@ -35,7 +38,7 @@ mod tests {
     #[test]
     fn test1() {
         let xml = include_str!("../../examples/[Content_Types].xml");
-        let r = xml_deserialize_from_str::<ContentTypes>(b"Types", xml);
+        let r = xml_deserialize_from_str::<ContentTypes>(xml);
         match r {
             Ok(ct) => {
                 // Used the site and the code below to check the diff manually.
@@ -44,7 +47,7 @@ mod tests {
                 use crate::ooxml::test_utils::*;
                 use crate::xml_serialize_with_decl;
                 let expected = to_tree(&in_one_line(xml));
-                let actual = xml_serialize_with_decl(b"Types", ct);
+                let actual = xml_serialize_with_decl(ct);
                 let r = to_tree(&in_one_line(&actual));
                 assert_eq!(expected, r);
             }

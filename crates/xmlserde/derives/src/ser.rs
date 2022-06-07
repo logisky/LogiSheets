@@ -158,6 +158,15 @@ fn get_ser_struct_impl_block(container: Container) -> proc_macro2::TokenStream {
             writer.write_event(Event::End(end));
         }
     };
+    let get_root = if let Some(r) = &container.root {
+        quote! {
+            fn ser_root() -> Option<&'static [u8]> {
+                Some(#r)
+            }
+        }
+    } else {
+        quote! {}
+    };
     quote! {
         #[allow(unused_must_use)]
         impl crate::XmlSerialize for #ident {
@@ -178,6 +187,7 @@ fn get_ser_struct_impl_block(container: Container) -> proc_macro2::TokenStream {
                 #init
                 #write_event
             }
+            #get_root
         }
     }
 }
