@@ -8,13 +8,13 @@ LogiSheets is a web spreadsheet application that is compatible with Excel and de
 
 ## WARNING
 
-LogiSheets is still in the __very__ early stages of development. Your issues or PRs are welcome!
+LogiSheets is still in the **very** early stages of development. Your issues or PRs are welcome!
 
 ## Design goals
 
-* **Easy further development**: LogiSheets provides rich APIs to help you develop your plugins.
-* **Structural Data Support**: LogiSheets provides a data structure (temporary named *Block*) to ensure the relative positions of cells in a certain area keep unchanged.
-* **Supporting Cowork**
+- **Easy further development**: LogiSheets provides rich APIs to help you develop your plugins.
+- **Structural Data Support**: LogiSheets provides a data structure (temporary named _Block_) to ensure the relative positions of cells in a certain area keep unchanged.
+- **Supporting Cowork**
 
 ## Get Started
 
@@ -23,6 +23,7 @@ LogiSheets is still in the __very__ early stages of development. Your issues or 
 Now, LogiSheets provides APIs to read a **.xlsx** file. More APIs to manipulate the spreadsheets(like input a formula and calculate or write a file) is on the way.
 
 Read a file:
+
 ```rust
 use logisheets::{Value, Workbook};
 use std::fs;
@@ -32,23 +33,25 @@ let mut ws = wb.get_sheet_by_idx(0).unwrap();
 ```
 
 And then get a value:
+
 ```rust
 let v = ws.get_value(9, 1).unwrap();
 ```
 
 Or get a formula:
+
 ```rust
 let f = ws.get_formula(9, 1).unwrap();
 ```
 
 Also you can get a cell style:
+
 ```rust
 let s = ws.get_style(9, 1).unwrap();
 ```
 
-In the cases that the style is based on *builtin styles*, this function will get the wrong result. We will fix it!
-
 You can get the comments of a sheet by:
+
 ```rust
 let comments = ws.get_comments();
 ```
@@ -66,3 +69,7 @@ yarn start:wasm
 - Insert/delete columns or rows.
 - Calculating and supporting 200+ functions.
 - Undo/Redo
+
+## LIMITATIONS
+
+- Insert/delete cells.

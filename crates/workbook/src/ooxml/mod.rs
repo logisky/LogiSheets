@@ -9,6 +9,7 @@ pub mod relationships;
 pub mod simple_types;
 pub mod sst;
 pub mod style_sheet;
+#[cfg(test)]
 pub mod test_utils;
 pub mod theme;
 pub mod workbook;

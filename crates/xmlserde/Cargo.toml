@@ -5,6 +5,7 @@ name = "xmlserde"
 version = "0.3.0"
 license = "MIT"
 description = "read and write .xlsx files"
+repository = "https://github.com/proclml/LogiSheets/crates/xmlserde"
 
 [dependencies]
 convert_case = "0.4.0"
