@@ -79,7 +79,7 @@ pub fn read(buf: &[u8]) -> Result<Workbook, SerdeErr> {
             }
             _ => {}
         });
-    let mut xl = xl?;
+    let xl = xl?;
     let doc_props = DocProps {
         app: doc_prop_app,
         custom: doc_prop_custom,
