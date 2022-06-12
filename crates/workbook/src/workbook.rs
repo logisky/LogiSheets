@@ -12,16 +12,21 @@ use crate::SerdeErr;
 
 type Id = String;
 
-// FIX ME: Refactor this structure and make `doc_props` out of `Workbook`
 #[derive(Debug)]
 pub struct Workbook {
+    pub xl: Xl,
+    pub doc_props: DocProps,
+}
+
+// FIX ME: Refactor this structure and make `doc_props` out of `Workbook`
+#[derive(Debug)]
+pub struct Xl {
     pub workbook_part: WorkbookPart,
     pub styles: StylesheetPart,
     pub sst: Option<SstPart>,
     pub worksheets: HashMap<Id, Worksheet>,
     pub external_links: HashMap<Id, ExternalLink>,
     pub theme: Option<ThemePart>,
-    pub doc_props: DocProps,
 }
 
 #[derive(Debug)]
@@ -52,19 +57,20 @@ impl DocProps {
 impl Workbook {
     pub fn get_sheet_by_name(&self, name: &str) -> Option<&Worksheet> {
         let sheet = self
+            .xl
             .workbook_part
             .sheets
             .sheets
             .iter()
             .find(|s| s.name == name)?;
         let id = &sheet.id;
-        self.worksheets.get(id)
+        self.xl.worksheets.get(id)
     }
 
     pub fn get_sheet_by_index(&self, idx: usize) -> Option<&Worksheet> {
-        let sheet = self.workbook_part.sheets.sheets.get(idx)?;
+        let sheet = self.xl.workbook_part.sheets.sheets.get(idx)?;
         let id = &sheet.id;
-        self.worksheets.get(id)
+        self.xl.worksheets.get(id)
     }
 
     pub fn from_file(buf: &[u8]) -> Result<Self, SerdeErr> {

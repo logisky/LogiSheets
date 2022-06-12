@@ -17,6 +17,7 @@ pub mod prelude {
     pub use super::ooxml::sst::SstPart;
     pub use super::ooxml::style_sheet::StylesheetPart;
     pub use super::ooxml::theme::*;
+    pub use super::ooxml::workbook::*;
     pub use super::ooxml::worksheet::*;
     pub use super::reader::*;
     pub use super::workbook::Workbook;

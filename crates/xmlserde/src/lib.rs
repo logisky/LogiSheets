@@ -34,6 +34,9 @@ use quick_xml::events::Event;
 
 pub trait XmlSerialize {
     fn serialize<W: Write>(&self, tag: &[u8], writer: &mut quick_xml::Writer<W>);
+    fn ser_root() -> Option<&'static [u8]> {
+        None
+    }
 }
 
 impl<T: XmlSerialize> XmlSerialize for Option<T> {
@@ -60,6 +63,9 @@ pub trait XmlDeserialize {
         attrs: quick_xml::events::attributes::Attributes,
         is_empty: bool,
     ) -> Self;
+    fn de_root() -> Option<&'static [u8]> {
+        None
+    }
 }
 
 ///
@@ -132,7 +138,7 @@ impl XmlDeserialize for Unparsed {
     }
 }
 
-pub fn xml_serialize_with_decl<T>(root: &[u8], obj: T) -> String
+pub fn xml_serialize_with_decl<T>(obj: T) -> String
 where
     T: XmlSerialize,
 {
@@ -144,20 +150,23 @@ where
         Some(b"yes".as_ref()),
     );
     let _ = writer.write_event(Event::Decl(decl));
-    obj.serialize(root, &mut writer);
+    obj.serialize(
+        T::ser_root().expect(r#"Expect a root element to serialize: #[xmlserde(root=b"tag")]"#),
+        &mut writer,
+    );
     String::from_utf8(writer.into_inner()).unwrap()
 }
 
-pub fn xml_serialize<T>(root: &[u8], obj: T) -> String
+pub fn xml_serialize<T>(obj: T) -> String
 where
     T: XmlSerialize,
 {
     let mut writer = quick_xml::Writer::new(Vec::new());
-    obj.serialize(root, &mut writer);
+    obj.serialize(T::ser_root().expect("Expect root"), &mut writer);
     String::from_utf8(writer.into_inner()).unwrap()
 }
 
-pub fn xml_deserialize_from_reader<T, R>(root: &[u8], reader: R) -> Result<T, String>
+pub fn xml_deserialize_from_reader<T, R>(reader: R) -> Result<T, String>
 where
     T: XmlDeserialize,
     R: BufRead,
@@ -165,6 +174,7 @@ where
     let mut reader = quick_xml::Reader::from_reader(reader);
     reader.trim_text(false);
     let mut buf = Vec::<u8>::new();
+    let root = T::de_root().expect(r#"#[xmlserde(root = b"tag")]"#);
     loop {
         match reader.read_event(&mut buf) {
             Ok(Event::Start(start)) => {
@@ -192,11 +202,11 @@ where
 }
 
 /// Keep reading event until meeting the Start Event named `root` and start to deserialize.
-pub fn xml_deserialize_from_str<T>(root: &[u8], xml_str: &str) -> Result<T, String>
+pub fn xml_deserialize_from_str<T>(xml_str: &str) -> Result<T, String>
 where
     T: XmlDeserialize,
 {
-    xml_deserialize_from_reader(root, xml_str.as_bytes())
+    xml_deserialize_from_reader(xml_str.as_bytes())
 }
 
 pub trait XmlValue: Sized {
@@ -284,6 +294,7 @@ mod tests {
     #[test]
     fn self_closed_boolean_child() {
         #[derive(XmlDeserialize, Default)]
+        #[xmlserde(root = b"font")]
         struct Font {
             #[xmlserde(name = b"b", ty = "sfc")]
             bold: bool,
@@ -296,7 +307,7 @@ mod tests {
             <b/>
             <i/>
         </font>"#;
-        let result = xml_deserialize_from_str::<Font>(b"font", xml);
+        let result = xml_deserialize_from_str::<Font>(xml);
         match result {
             Ok(f) => {
                 assert_eq!(f.bold, true);
@@ -320,6 +331,7 @@ mod tests {
             0
         }
         #[derive(XmlDeserialize, Default)]
+        #[xmlserde(root = b"root")]
         pub struct Aa {
             #[xmlserde(name = b"f", ty = "child", vec_size = "cnt")]
             pub f: Vec<Child>,
@@ -330,7 +342,7 @@ mod tests {
             <f age="15">Tom</f>
             <f age="9">Jerry</f>
         </root>"#;
-        let result = xml_deserialize_from_str::<Aa>(b"root", xml);
+        let result = xml_deserialize_from_str::<Aa>(xml);
         match result {
             Ok(result) => {
                 assert_eq!(result.f.len(), 2);
@@ -350,6 +362,7 @@ mod tests {
     #[test]
     fn serialize_attr_and_text() {
         #[derive(XmlSerialize)]
+        #[xmlserde(root = b"Person")]
         struct Person {
             #[xmlserde(name = b"age", ty = "attr")]
             age: u16,
@@ -358,20 +371,18 @@ mod tests {
             #[xmlserde(name = b"name", ty = "text")]
             name: String,
         }
-        let result = xml_serialize(
-            b"Person",
-            Person {
-                age: 12,
-                male: true,
-                name: String::from("Tom"),
-            },
-        );
+        let result = xml_serialize(Person {
+            age: 12,
+            male: true,
+            name: String::from("Tom"),
+        });
         assert_eq!(result, "<Person age=\"12\" male=\"1\">Tom</Person>");
     }
 
     #[test]
     fn serialize_attr_and_sfc() {
         #[derive(XmlSerialize)]
+        #[xmlserde(root = b"Person")]
         struct Person {
             #[xmlserde(name = b"age", ty = "attr")]
             age: u16,
@@ -385,7 +396,7 @@ mod tests {
             male: false,
             lefty: true,
         };
-        let result = xml_serialize(b"Person", p1);
+        let result = xml_serialize(p1);
         assert_eq!(result, "<Person age=\"16\"><lefty/></Person>");
     }
 
@@ -399,6 +410,7 @@ mod tests {
             japanese: bool,
         }
         #[derive(XmlSerialize)]
+        #[xmlserde(root = b"Person")]
         struct Person {
             #[xmlserde(name = b"age", ty = "attr")]
             age: u16,
@@ -413,7 +425,7 @@ mod tests {
                 japanese: true,
             },
         };
-        let result = xml_serialize(b"Person", p);
+        let result = xml_serialize(p);
         assert_eq!(
             result,
             "<Person age=\"32\"><skills eng=\"0\"><jap/></skills></Person>"
@@ -423,27 +435,29 @@ mod tests {
     #[test]
     fn serialize_opt_attr() {
         #[derive(XmlSerialize)]
+        #[xmlserde(root = b"Person")]
         struct Person {
             #[xmlserde(name = b"age", ty = "attr")]
             age: Option<u16>,
         }
         let p = Person { age: Some(2) };
-        let result = xml_serialize(b"Person", p);
+        let result = xml_serialize(p);
         assert_eq!(result, "<Person age=\"2\"/>");
         let p = Person { age: None };
-        let result = xml_serialize(b"Person", p);
+        let result = xml_serialize(p);
         assert_eq!(result, "<Person/>");
     }
 
     #[test]
     fn deserialize_opt_attr() {
         #[derive(XmlDeserialize, Default)]
+        #[xmlserde(root = b"Person")]
         struct Person {
             #[xmlserde(name = b"age", ty = "attr")]
             age: Option<u16>,
         }
         let xml = r#"<Person age="2"></Person>"#;
-        let result = xml_deserialize_from_str::<Person>(b"Person", xml);
+        let result = xml_deserialize_from_str::<Person>(xml);
         match result {
             Ok(p) => assert_eq!(p.age, Some(2)),
             Err(_) => panic!(),
@@ -456,6 +470,7 @@ mod tests {
             12
         }
         #[derive(XmlDeserialize)]
+        #[xmlserde(root = b"Person")]
         struct Person {
             #[xmlserde(name = b"age", ty = "attr", default = "default_age")]
             age: u16,
@@ -463,7 +478,7 @@ mod tests {
             name: String,
         }
         let xml = r#"<Person>Tom</Person>"#;
-        let result = xml_deserialize_from_str::<Person>(b"Person", xml);
+        let result = xml_deserialize_from_str::<Person>(xml);
         match result {
             Ok(p) => {
                 assert_eq!(p.age, 12);
@@ -479,6 +494,7 @@ mod tests {
             12
         }
         #[derive(XmlSerialize)]
+        #[xmlserde(root = b"Person")]
         struct Person {
             #[xmlserde(name = b"age", ty = "attr", default = "default_age")]
             age: u16,
@@ -490,13 +506,14 @@ mod tests {
             age: 12,
             name: String::from("Tom"),
         };
-        let result = xml_serialize(b"Person", p);
+        let result = xml_serialize(p);
         assert_eq!(result, "<Person>Tom</Person>")
     }
 
     #[test]
     fn serialize_with_ns() {
         #[derive(XmlSerialize)]
+        #[xmlserde(root = b"Person")]
         #[xmlserde(with_ns = b"namespace")]
         struct Person {
             #[xmlserde(name = b"age", ty = "attr")]
@@ -508,7 +525,7 @@ mod tests {
             age: 12,
             name: String::from("Tom"),
         };
-        let result = xml_serialize(b"Person", p);
+        let result = xml_serialize(p);
         println!("{:?}", result);
         assert_eq!(
             result,
@@ -525,6 +542,7 @@ mod tests {
         }
 
         #[derive(XmlDeserialize, XmlSerialize)]
+        #[xmlserde(root = b"Person")]
         struct Person {
             #[xmlserde(name = b"lefty", ty = "sfc")]
             lefty: bool,
@@ -533,21 +551,22 @@ mod tests {
         }
 
         let xml = r#"<Person><lefty/><c age="12"/></Person>"#;
-        let p = xml_deserialize_from_str::<Person>(b"Person", xml).unwrap();
-        let result = xml_serialize(b"Person", p);
+        let p = xml_deserialize_from_str::<Person>(xml).unwrap();
+        let result = xml_serialize(p);
         assert_eq!(xml, result);
     }
 
     #[test]
     fn custom_ns_test() {
         #[derive(XmlDeserialize, XmlSerialize)]
+        #[xmlserde(root = b"Child")]
         #[xmlserde(with_custom_ns(b"a", b"c"))]
         struct Child {
             #[xmlserde(name = b"age", ty = "attr")]
             age: u16,
         }
         let c = Child { age: 12 };
-        let p = xml_serialize(b"Child", c);
+        let p = xml_serialize(c);
         assert_eq!(p, "<Child xmlns:a=\"c\" age=\"12\"/>");
     }
 
@@ -574,6 +593,7 @@ mod tests {
         }
 
         #[derive(XmlSerialize, XmlDeserialize)]
+        #[xmlserde(root = b"Child")]
         struct Child {
             #[xmlserde(name = b"dummy", ty = "child")]
             pub c: TestEnum,
@@ -582,9 +602,9 @@ mod tests {
         let obj = Child {
             c: TestEnum::TestA(TestA { age: 23 }),
         };
-        let xml = xml_serialize(b"Child", obj);
+        let xml = xml_serialize(obj);
         println!("{}", xml);
-        let p = xml_deserialize_from_str::<Child>(b"Child", &xml).unwrap();
+        let p = xml_deserialize_from_str::<Child>(&xml).unwrap();
         match p.c {
             TestEnum::TestA(a) => assert_eq!(a.age, 23),
             TestEnum::TestB(_) => panic!(),
@@ -594,14 +614,15 @@ mod tests {
     #[test]
     fn unparsed_serde_test() {
         #[derive(XmlSerialize, XmlDeserialize)]
+        #[xmlserde(root = b"TestA")]
         pub struct TestA {
             #[xmlserde(name = b"others", ty = "child")]
             pub others: Unparsed,
         }
 
         let xml = r#"<TestA><others age="16" name="Tom"><gf/><parent><f/><m name="Lisa">1999</m></parent></others></TestA>"#;
-        let p = xml_deserialize_from_str::<TestA>(b"TestA", &xml).unwrap();
-        let ser = xml_serialize(b"TestA", p);
+        let p = xml_deserialize_from_str::<TestA>(&xml).unwrap();
+        let ser = xml_serialize(p);
         assert_eq!(xml, ser);
     }
 }

@@ -5,6 +5,7 @@ use super::{
 };
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"externalLink")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
 pub struct ExternalLinkPart {
     #[xmlserde(name = b"externalBook", ty = "child")]
@@ -96,7 +97,7 @@ mod tests {
     #[test]
     fn test1() {
         let xml = include_str!("../../examples/external_link.xml");
-        let r = xml_deserialize_from_str::<ExternalLinkPart>(b"externalLink", xml);
+        let r = xml_deserialize_from_str::<ExternalLinkPart>(xml);
         match r {
             Ok(external_link) => {
                 let book = external_link.external_book.unwrap();

@@ -3,6 +3,7 @@ use xmlserde::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
+#[xmlserde(root = b"comments")]
 pub struct Comments {
     #[xmlserde(name = b"authors", ty = "child")]
     pub authors: CtAuthors,
@@ -17,7 +18,7 @@ mod tests {
     #[test]
     fn test1() {
         let xml = include_str!("../../examples/comments.xml");
-        let r = xml_deserialize_from_str::<Comments>(b"comments", xml);
+        let r = xml_deserialize_from_str::<Comments>(xml);
         match r {
             Ok(sst) => {
                 assert_eq!(sst.comment_list.comments.len(), 10);

@@ -2,6 +2,7 @@ use super::complex_types::*;
 use xmlserde::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"worksheet")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
 // Some worksheet contains an legacyDrawing element. We just ignored it.
 pub struct WorksheetPart {
@@ -86,7 +87,7 @@ mod tests {
     #[test]
     fn test1() {
         let xml = include_str!("../../examples/sheet1.xml");
-        let r = xml_deserialize_from_str::<WorksheetPart>(b"worksheet", xml);
+        let r = xml_deserialize_from_str::<WorksheetPart>(xml);
         match r {
             Ok(_) => {
                 // Used the site and the code below to check the diff manually.

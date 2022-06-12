@@ -103,6 +103,15 @@ pub fn get_de_struct_impl_block(container: Container) -> proc_macro2::TokenStrea
             None
         }
     };
+    let get_root = if let Some(r) = &container.root {
+        quote! {
+            fn de_root() -> Option<&'static [u8]> {
+                Some(#r)
+            }
+        }
+    } else {
+        quote! {}
+    };
     quote! {
         #[allow(unused_assignments)]
         impl crate::XmlDeserialize for #ident {
@@ -143,7 +152,9 @@ pub fn get_de_struct_impl_block(container: Container) -> proc_macro2::TokenStrea
                     #result
                 }
             }
+            #get_root
         }
+
     }
 }
 

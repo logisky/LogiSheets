@@ -2,6 +2,7 @@ use super::defaults::*;
 use super::simple_types::*;
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"Relationships")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/package/2006/relationships")]
 pub struct Relationships {
     #[xmlserde(name = b"Relationship", ty = "child")]
@@ -30,8 +31,8 @@ mod tests {
     fn test1() {
         let xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties" Target="docProps/custom.xml"/></Relationships>"#;
-        let r = xml_deserialize_from_str::<Relationships>(b"Relationships", xml).unwrap();
-        let ser = xml_serialize_with_decl(b"Relationships", r);
+        let r = xml_deserialize_from_str::<Relationships>(xml).unwrap();
+        let ser = xml_serialize_with_decl(r);
         assert_eq!(in_one_line(xml), ser)
     }
 }

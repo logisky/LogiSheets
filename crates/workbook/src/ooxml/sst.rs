@@ -1,6 +1,7 @@
 use super::complex_types::*;
 
 #[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[xmlserde(root = b"sst")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
 pub struct SstPart {
     #[xmlserde(name = b"count", ty = "attr")]
@@ -39,11 +40,11 @@ mod tests {
 		<phoneticPr fontId="16" type="noConversion"/>
 	</si>
 </sst>"#;
-        let r = xml_deserialize_from_str::<SstPart>(b"sst", xml);
+        let r = xml_deserialize_from_str::<SstPart>(xml);
         match r {
             Ok(sst) => {
                 let actual = in_one_line(xml);
-                let r = xml_serialize_with_decl(b"sst", sst);
+                let r = xml_serialize_with_decl(sst);
                 assert_eq!(actual, r);
             }
             Err(e) => panic!("{:?}", e),
