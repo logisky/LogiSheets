@@ -69,13 +69,61 @@ pub fn write(wb: Workbook) -> ZipResult<Vec<u8>> {
     let mut writer: Writer = ZipWriter::new(Cursor::new(&mut buf));
     let mut prooves = Vec::<WriteProof>::with_capacity(30);
 
+    writer.add_directory("_rels", options())?;
+
+    let mut i = 1_usize;
+    let mut relationships = Vec::<CtRelationship>::new();
+
+    relationships.push(CtRelationship {
+        id: format!("rId{}", i),
+        ty: WORKBOOK.0.to_string(),
+        target: String::from("xl/workbook.xml"),
+        target_mode: StTargetMode::Internal,
+    });
+    i += 1;
+
     let ps = write_doc_props(wb.doc_props, &mut writer)?;
+    ps.iter().for_each(|wp| match &wp.rtype {
+        &DOC_PROP_APP => {
+            let relationship = CtRelationship {
+                id: format!("rId{}", i),
+                ty: wp.rtype.0.to_string(),
+                target: String::from("docProps/app.xml"),
+                target_mode: StTargetMode::Internal,
+            };
+            relationships.push(relationship);
+            i += 1;
+        }
+        &DOC_PROP_CUSTOM => {
+            let relationship = CtRelationship {
+                id: format!("rId{}", i),
+                ty: wp.rtype.0.to_string(),
+                target: String::from("docProps/custom.xml"),
+                target_mode: StTargetMode::Internal,
+            };
+            relationships.push(relationship);
+            i += 1;
+        }
+        &DOC_PROP_CORE => {
+            let relationship = CtRelationship {
+                id: format!("rId{}", i),
+                ty: wp.rtype.0.to_string(),
+                target: String::from("docProps/core.xml"),
+                target_mode: StTargetMode::Internal,
+            };
+            relationships.push(relationship);
+            i += 1;
+        }
+        _ => unreachable!(),
+    });
     prooves.extend(ps);
 
     let ps = write_xl(wb.xl, &mut writer)?;
     prooves.extend(ps);
 
     write_content_types(prooves, &mut writer)?;
+
+    write_relationships(Relationships { relationships }, &mut writer, "_rels/.rels")?;
 
     writer.finish()?;
 
@@ -161,10 +209,11 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
     result.push(p);
 
     writer.add_directory("xl/_rels", options())?;
+
     write_relationships(
         Relationships { relationships },
         writer,
-        "xl/_rels/workbook.xml",
+        "xl/_rels/workbook.xml.rels",
     )?;
 
     Ok(result)
@@ -205,7 +254,7 @@ fn write_worksheet<'a>(
     write_relationships(
         Relationships { relationships },
         writer,
-        &format!("xl/worksheets/_rels/sheet{}.xml", idx),
+        &format!("xl/worksheets/_rels/sheet{}.xml.rels", idx),
     )?;
 
     Ok(result)
@@ -224,6 +273,9 @@ define_se_func!(write_doc_core, DocPropCore, DOC_PROP_CORE);
 define_se_func!(write_doc_custom, DocPropCustom, DOC_PROP_CUSTOM);
 
 fn write_relationships(obj: Relationships, writer: &mut Writer, path: &str) -> ZipResult<()> {
+    if obj.relationships.len() == 0 {
+        return Ok(());
+    }
     writer.start_file(path, options())?;
     let s = xml_serialize_with_decl(obj);
     writer.write(s.as_bytes())?;
@@ -296,7 +348,7 @@ fn write_content_types(prooves: Vec<WriteProof>, writer: &mut Writer) -> ZipResu
         .into_iter()
         .fold(Vec::<CtOverride>::new(), |mut prev, p| {
             let c = CtOverride {
-                part_name: p.path.into(),
+                part_name: String::from(p.path),
                 content_type: get_content_type(p.rtype).into(),
             };
             prev.push(c);
@@ -342,6 +394,8 @@ mod tests {
         assert!(wb.doc_props.custom.is_some());
         let res = write(wb).unwrap();
         let mut f = fs::File::create("tests_output/builtin_style.zip").unwrap();
+        f.write_all(&res).unwrap();
+        let mut f = fs::File::create("tests_output/builtin_style.xlsx").unwrap();
         f.write_all(&res).unwrap();
     }
 }

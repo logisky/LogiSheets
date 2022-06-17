@@ -4,6 +4,11 @@ use super::simple_types::*;
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"workbook")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
+#[xmlserde(with_custom_ns(
+    b"r",
+    b"http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+))]
+#[xmlserde(with_custom_ns(b"mc", b"http://schemas.openxmlformats.org/markup-compatibility/2006"))]
 pub struct WorkbookPart {
     #[xmlserde(name = b"fileVersion", ty = "child")]
     pub file_version: Option<CtFileVersion>,
