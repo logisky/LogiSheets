@@ -1,0 +1,11 @@
+[package]
+authors = ["ImJeremyHe<yiliang.he@qq.com>"]
+edition = "2018"
+name = "xmldiff"
+version = "0.3.0"
+license = "MIT"
+description = "compare 2 .xml files and show their differences"
+repository = "https://github.com/proclml/LogiSheets/crates/xmldiff"
+
+[dependencies]
+quick-xml = {version = "0.22.0", features = ["serialize"]}

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 use crate::SerdeErr;
 
-type Id = String;
+pub type Id = String;
 
 #[derive(Debug)]
 pub struct Workbook {
@@ -18,15 +18,14 @@ pub struct Workbook {
     pub doc_props: DocProps,
 }
 
-// FIX ME: Refactor this structure and make `doc_props` out of `Workbook`
 #[derive(Debug)]
 pub struct Xl {
     pub workbook_part: WorkbookPart,
-    pub styles: StylesheetPart,
-    pub sst: Option<SstPart>,
+    pub styles: (Id, StylesheetPart),
+    pub sst: Option<(Id, SstPart)>,
     pub worksheets: HashMap<Id, Worksheet>,
     pub external_links: HashMap<Id, ExternalLink>,
-    pub theme: Option<ThemePart>,
+    pub theme: Option<(Id, ThemePart)>,
 }
 
 #[derive(Debug)]

@@ -144,7 +144,7 @@ pub fn load_sheet_data(
             if let Some(r) = &ct_cell.r {
                 if let Some((row, col)) = parse_cell(r) {
                     let cv = CellValue::from_cell(ct_cell, |idx| {
-                        let rst = workbook.xl.sst.as_ref().unwrap().si.get(idx).unwrap();
+                        let rst = workbook.xl.sst.as_ref().unwrap().1.si.get(idx).unwrap();
                         let string = rst_to_plain_text(rst);
                         text_id_manager.get_id(&string)
                     });

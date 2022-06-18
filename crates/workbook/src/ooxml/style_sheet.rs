@@ -1,4 +1,5 @@
 use super::complex_types::*;
+use crate::Unparsed;
 
 #[derive(XmlSerialize, XmlDeserialize, Debug)]
 #[xmlserde(root = b"styleSheet")]
@@ -24,6 +25,8 @@ pub struct StylesheetPart {
     pub table_styles: Option<CtTableStyles>,
     #[xmlserde(name = b"colors", ty = "child")]
     pub colors: Option<CtColors>,
+    #[xmlserde(name = b"extLst", ty = "child")]
+    pub ext_lst: Unparsed,
 }
 
 #[cfg(test)]
