@@ -8,6 +8,7 @@ use crate::ooxml::{
     comments::Comments, external_links::ExternalLinkPart, relationships::Relationships,
     sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart, worksheet::WorksheetPart,
 };
+use crate::workbook::Id;
 use crate::workbook::Xl;
 use std::collections::HashMap;
 use std::{
@@ -117,11 +118,11 @@ fn de_external_link<R: Read + Seek>(
 
 fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, SerdeErr> {
     let workbook_part = de_workbook_part(path, archive)?;
-    let mut styles = Option::<StylesheetPart>::None;
-    let mut sst = Option::<SstPart>::None;
-    let mut worksheets = HashMap::<String, Worksheet>::new();
-    let mut external_links = HashMap::<String, ExternalLink>::new();
-    let mut theme = Option::<ThemePart>::None;
+    let mut styles = Option::<(Id, StylesheetPart)>::None;
+    let mut sst = Option::<(Id, SstPart)>::None;
+    let mut worksheets = HashMap::<Id, Worksheet>::new();
+    let mut external_links = HashMap::<Id, ExternalLink>::new();
+    let mut theme = Option::<(Id, ThemePart)>::None;
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -165,11 +166,12 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
             }
             SST => {
                 let target = &r.target;
+                let id = r.id;
                 let path = get_target_abs_path(rels, target);
                 if let Some(s) = path.to_str() {
                     match de_sst(s, archive) {
                         Ok(w) => {
-                            sst = Some(w);
+                            sst = Some((id, w));
                         }
                         Err(e) => {
                             println!("parsing file: {:?} but meet error:{:?}", s, e)
@@ -179,11 +181,12 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
             }
             STYLE => {
                 let target = &r.target;
+                let id = r.id;
                 let path = get_target_abs_path(rels, target);
                 if let Some(s) = path.to_str() {
                     match de_style_part(s, archive) {
                         Ok(w) => {
-                            styles = Some(w);
+                            styles = Some((id, w));
                         }
                         Err(e) => {
                             println!("parsing file: {:?} but meet error:{:?}", s, e)
@@ -193,11 +196,12 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
             }
             THEME => {
                 let target = &r.target;
+                let id = r.id;
                 let path = get_target_abs_path(rels, target);
                 if let Some(s) = path.to_str() {
                     match de_theme(s, archive) {
                         Ok(w) => {
-                            theme = Some(w);
+                            theme = Some((id, w));
                         }
                         Err(e) => {
                             println!("parsing file: {:?} but meet error:{:?}", s, e)

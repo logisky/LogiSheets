@@ -7,6 +7,8 @@ pub mod reader;
 pub mod rtypes;
 pub mod workbook;
 pub mod writer;
+#[cfg(test)]
+mod zipdiff;
 use thiserror::Error;
 use xmlserde::*;
 

@@ -70,6 +70,7 @@ pub fn write(wb: Workbook) -> ZipResult<Vec<u8>> {
     let mut prooves = Vec::<WriteProof>::with_capacity(30);
 
     writer.add_directory("_rels", options())?;
+    writer.add_directory("xl", options())?;
 
     let mut i = 1_usize;
     let mut relationships = Vec::<CtRelationship>::new();
@@ -134,42 +135,6 @@ pub fn write(wb: Workbook) -> ZipResult<Vec<u8>> {
 fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
     let mut result = Vec::<WriteProof>::with_capacity(10);
     let mut relationships = Vec::<CtRelationship>::new();
-    let mut i = 1_usize;
-
-    if let Some(sst) = xl.sst {
-        let sst_proof = write_sst(sst, writer, FileLocation::from("xl/sharedStrings.xml"))?;
-        result.push(sst_proof);
-        relationships.push(CtRelationship {
-            id: format!("rId{}", i),
-            ty: SST.0.to_string(),
-            target: String::from("sharedStrings.xml"),
-            target_mode: StTargetMode::Internal,
-        });
-        i += 1;
-    }
-
-    let style_proof = write_stylesheet(xl.styles, writer, FileLocation::from("xl/styles.xml"))?;
-    result.push(style_proof);
-    relationships.push(CtRelationship {
-        id: format!("rId{}", i),
-        ty: STYLE.0.to_string(),
-        target: String::from("styles.xml"),
-        target_mode: StTargetMode::Internal,
-    });
-    i += 1;
-
-    if let Some(theme) = xl.theme {
-        writer.add_directory("xl/theme", options())?;
-        let theme_proof = write_theme(theme, writer, FileLocation::from("xl/theme/theme1.xml"))?;
-        result.push(theme_proof);
-        relationships.push(CtRelationship {
-            id: format!("rId{}", i),
-            ty: THEME.0.to_string(),
-            target: String::from("theme/theme1.xml"),
-            target_mode: StTargetMode::Internal,
-        });
-        i += 1;
-    }
 
     let mut worksheets = xl.worksheets;
     let mut sheet_ids = xl
@@ -190,15 +155,46 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
         if let Some(ws) = worksheets.remove(&sheet_id) {
             let prooves = write_worksheet(ws, writer, idx)?;
             result.extend(prooves);
-            idx += 1;
             relationships.push(CtRelationship {
-                id: format!("rId{}", i),
+                id: sheet_id,
                 ty: WORKSHEET.0.to_string(),
                 target: format!("worksheets/sheet{}.xml", idx),
                 target_mode: StTargetMode::Internal,
             });
-            i += 1;
+            idx += 1;
         }
+    }
+
+    if let Some(sst) = xl.sst {
+        let sst_proof = write_sst(sst.1, writer, FileLocation::from("xl/sharedStrings.xml"))?;
+        result.push(sst_proof);
+        relationships.push(CtRelationship {
+            id: sst.0,
+            ty: SST.0.to_string(),
+            target: String::from("sharedStrings.xml"),
+            target_mode: StTargetMode::Internal,
+        });
+    }
+
+    let style_proof = write_stylesheet(xl.styles.1, writer, FileLocation::from("xl/styles.xml"))?;
+    result.push(style_proof);
+    relationships.push(CtRelationship {
+        id: xl.styles.0,
+        ty: STYLE.0.to_string(),
+        target: String::from("styles.xml"),
+        target_mode: StTargetMode::Internal,
+    });
+
+    if let Some(theme) = xl.theme {
+        writer.add_directory("xl/theme", options())?;
+        let theme_proof = write_theme(theme.1, writer, FileLocation::from("xl/theme/theme1.xml"))?;
+        result.push(theme_proof);
+        relationships.push(CtRelationship {
+            id: theme.0,
+            ty: THEME.0.to_string(),
+            target: String::from("theme/theme1.xml"),
+            target_mode: StTargetMode::Internal,
+        });
     }
 
     let p = write_workbook_part(
@@ -226,7 +222,7 @@ fn write_worksheet<'a>(
 ) -> ZipResult<Vec<WriteProof>> {
     let mut result = Vec::<WriteProof>::new();
     let mut relationships = Vec::<CtRelationship>::new();
-    let mut rid = 1_usize;
+    let rid = 1_usize;
 
     if let Some(comments) = wb.comments {
         let p = write_comment(
@@ -241,7 +237,6 @@ fn write_worksheet<'a>(
             target_mode: StTargetMode::Internal,
         });
         result.push(p);
-        rid += 1;
     }
 
     let proof = write_sheet_part(
@@ -348,7 +343,7 @@ fn write_content_types(prooves: Vec<WriteProof>, writer: &mut Writer) -> ZipResu
         .into_iter()
         .fold(Vec::<CtOverride>::new(), |mut prev, p| {
             let c = CtOverride {
-                part_name: String::from(p.path),
+                part_name: format!("/{}", String::from(p.path)),
                 content_type: get_content_type(p.rtype).into(),
             };
             prev.push(c);
@@ -384,6 +379,7 @@ fn options() -> FileOptions {
 #[cfg(test)]
 mod tests {
     use super::write;
+    use crate::zipdiff::zipdiff;
     use std::{fs, io::Write};
     #[test]
     fn write_test() {
@@ -397,5 +393,6 @@ mod tests {
         f.write_all(&res).unwrap();
         let mut f = fs::File::create("tests_output/builtin_style.xlsx").unwrap();
         f.write_all(&res).unwrap();
+        zipdiff(&buf, &res);
     }
 }

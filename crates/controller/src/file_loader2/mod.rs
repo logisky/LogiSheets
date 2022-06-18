@@ -61,7 +61,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         settings.calc_config.iter_limit = calc_pr.iterate_count as u16;
         settings.calc_config.error = calc_pr.iterate_delta as f32;
     }
-    let mut style_loader = StyleLoader::new(&mut style_manager, &wb.xl.styles);
+    let mut style_loader = StyleLoader::new(&mut style_manager, &wb.xl.styles.1);
     wb.xl
         .workbook_part
         .sheets
@@ -135,7 +135,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         cell_attachment_manager,
     };
     if let Some(theme) = wb.xl.theme {
-        settings.theme = ThemeManager::from(theme);
+        settings.theme = ThemeManager::from(theme.1);
     }
     Controller::from(status, book_name, settings)
 }

@@ -4,6 +4,20 @@ use xmlserde::{XmlDeserialize, XmlSerialize};
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"worksheet")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]
+#[xmlserde(with_custom_ns(
+    b"r",
+    b"http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+))]
+#[xmlserde(with_custom_ns(
+    b"xdr",
+    b"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+))]
+#[xmlserde(with_custom_ns(
+    b"x14",
+    b"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+))]
+#[xmlserde(with_custom_ns(b"mc", b"http://schemas.openxmlformats.org/markup-compatibility/2006"))]
+#[xmlserde(with_custom_ns(b"etc", b"http://www.wps.cn/officeDocument/2017/etCustomData"))]
 // Some worksheet contains an legacyDrawing element. We just ignored it.
 pub struct WorksheetPart {
     #[xmlserde(name = b"sheetPr", ty = "child")]
