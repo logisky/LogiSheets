@@ -1,6 +1,6 @@
-import { SelectedCell } from 'components/canvas'
-import { DATA_SERVICE } from 'core/data'
-import { toA1notation } from 'common'
+import { SelectedCell } from '@/components/canvas'
+import { DATA_SERVICE } from '@/core/data'
+import { toA1notation } from '@/common'
 import { FC, useEffect, useState } from 'react'
 import styles from './edit-bar.module.scss'
 export interface EditBarProps {

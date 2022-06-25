@@ -1,4 +1,4 @@
-import { error } from 'common'
+import { error } from '@/common'
 import { CanvasAttr } from './canvas_attr'
 import { dpr, npx, npxLine } from './utils'
 

@@ -1,10 +1,10 @@
-import { Range, StandardBlock } from 'core/standable'
+import { Range, StandardBlock } from '@/core/standable'
 import { SelectBlockComponent } from './select-block'
 import { Cell } from './defs'
 import { useState, ReactElement, MouseEvent } from 'react'
-import { DATA_SERVICE } from 'core/data'
-import { ContextMenuComponent, ContextMenuItem } from 'ui/contextmenu'
-import { DeleteBlockColsBuilder, DeleteColsBuilder, InsertColsBuilder, Payload, InsertBlockColsBuilder, InsertBlockRowsBuilder, InsertRowsBuilder, DeleteBlockRowsBuilder, DeleteRowsBuilder, CreateBlockBuilder } from 'api'
+import { DATA_SERVICE } from '@/core/data'
+import { ContextMenuComponent, ContextMenuItem } from '@/ui/contextmenu'
+import { DeleteBlockColsBuilder, DeleteColsBuilder, InsertColsBuilder, Payload, InsertBlockColsBuilder, InsertBlockRowsBuilder, InsertRowsBuilder, DeleteBlockRowsBuilder, DeleteRowsBuilder, CreateBlockBuilder } from '@/api'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent

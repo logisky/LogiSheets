@@ -1,5 +1,5 @@
-import {StandardBlock} from 'core/standable'
-import {SelectionModel} from 'core/selection'
+import {StandardBlock} from '@/core/standable'
+import {SelectionModel} from '@/core/selection'
 
 export interface SelectBlockProps {
     readonly message: string

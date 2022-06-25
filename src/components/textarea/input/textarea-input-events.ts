@@ -3,7 +3,7 @@ import {
     CompositionData,
     ClipboardStoredMetaData,
     StandardKeyboardEvent,
-} from 'common/events'
+} from '@/common/events'
 import { Subject } from 'rxjs'
 import { TypeData } from './type_data'
 import { Selection } from './selection'

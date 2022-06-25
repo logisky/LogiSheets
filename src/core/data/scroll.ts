@@ -1,4 +1,4 @@
-import { shallowCopy } from "common"
+import { shallowCopy } from "@/common"
 
 export class ScrollPosition {
     static copy(scrollPosition: ScrollPosition) {

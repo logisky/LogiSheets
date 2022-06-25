@@ -1,8 +1,8 @@
 import { useState } from "react"
-import {parseA1notation} from 'common/a1notation'
-import { getTokens } from "core/formula"
-import { DATA_SERVICE } from "core/data"
-import { Range, StandardColor } from "core/standable"
+import {parseA1notation} from '@/common/a1notation'
+import { getTokens } from "@/core/formula"
+import { DATA_SERVICE } from "@/core/data"
+import { Range, StandardColor } from "@/core/standable"
 
 const initStyle = (): HighlightCellStyle => {
     return {

@@ -1,9 +1,9 @@
 import { Cell } from '../defs'
-import { DATA_SERVICE, RenderCell } from 'core/data'
+import { DATA_SERVICE, RenderCell } from '@/core/data'
 import { MouseEvent, useRef } from 'react'
-import { Buttons } from 'common'
-import { SelectorProps } from 'components/selector'
-import { Range } from 'core/standable'
+import { Buttons } from '@/common'
+import { SelectorProps } from '@/components/selector'
+import { Range } from '@/core/standable'
 import { Subject } from 'rxjs'
 export type StartCellType = 'mousedown' | 'contextmenu' | 'render' | 'unknown' | 'scroll'
 export class StartCellEvent {

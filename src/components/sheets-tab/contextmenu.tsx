@@ -1,5 +1,5 @@
-import { DATA_SERVICE } from 'core/data'
-import {SheetRenameBuilder, DeleteSheetBuilder} from 'api'
+import { DATA_SERVICE } from '@/core/data'
+import {SheetRenameBuilder, DeleteSheetBuilder} from '@/api'
 import {useState} from 'react'
 import Modal from 'react-modal'
 

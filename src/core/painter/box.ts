@@ -1,8 +1,8 @@
 import {
     StVerticalAlignment as AlignY,
     StHorizontalAlignment as AlignX,
-} from 'bindings'
-import { Range } from 'core/standable'
+} from '@/bindings'
+import { Range } from '@/core/standable'
 export class Box {
     public position = new Range()
     public get width() {

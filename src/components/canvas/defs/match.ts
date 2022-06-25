@@ -1,6 +1,6 @@
-import { DATA_SERVICE } from 'core/data'
-import { SETTINGS } from 'common/settings'
-import { Range } from 'core/standable'
+import { DATA_SERVICE } from '@/core/data'
+import { SETTINGS } from '@/common/settings'
+import { Range } from '@/core/standable'
 import { Cell } from './cell'
 
 export function getOffset(

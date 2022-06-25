@@ -1,21 +1,28 @@
-import { compilerOptions } from './tsconfig.json'
-import { pathsToModuleNameMapper } from 'ts-jest'
 import type { Config } from '@jest/types'
 
 const config: Config.InitialOptions = {
+	preset: 'ts-jest',
 	verbose: true,
 	silent: false,
 	cache: true,
-	// moduleNameMapper: {
-	// 	"src/(.*)$": resolve(__dirname, './src/$1'),
-	// },
 	rootDir: '.',
-	moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths),
+	testEnvironment: 'node',
+	collectCoverage: true,
+	moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
+	setupFilesAfterEnv: ['<rootDir>/setup-jest.ts'],
+	testMatch: [
+		'**/?(*.)+(spec|test).[jt]s?(x)',
+	],
+	moduleNameMapper: {
+		'@/(.*)': '<rootDir>/src/$1',
+	},
 	modulePaths: [
 		'<rootDir>'
 	],
-	transform: {
-		'^.+\\.tsx?$': 'ts-jest',
+	globals: {
+		'ts-jest': {
+			tsconfig: 'tsconfig.json',
+		}
 	}
 }
 

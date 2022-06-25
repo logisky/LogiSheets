@@ -7,7 +7,7 @@ import {
     RowInfo,
     Style,
     Value,
-} from 'bindings'
+} from '@/bindings'
 import {
     StandardBlock,
     StandardRowInfo,
@@ -15,10 +15,10 @@ import {
     StandardCell,
     StandardSheet,
     Range,
-} from 'core/standable'
+} from '@/core/standable'
 
-import { SETTINGS } from 'common/settings'
-import { StandardValue } from 'core/standable/value'
+import { SETTINGS } from '@/common/settings'
+import { StandardValue } from '@/core/standable/value'
 export const MAX_COUNT = 100000000
 
 export class SheetService {

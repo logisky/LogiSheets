@@ -1,4 +1,4 @@
-import {StandardFont} from 'core/standable'
+import {StandardFont} from '@/core/standable'
 export class CanvasAttr {
     public fillStyle?: string
     public strokeStyle?: string

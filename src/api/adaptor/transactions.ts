@@ -1,5 +1,5 @@
 import { Transaction, PayloadsTransaction, UndoTransaction, RedoTransaction } from '../transactions'
-import { EditAction, EditPayload, StyleUpdateType } from 'bindings'
+import { EditAction, EditPayload, StyleUpdateType } from '@/bindings'
 import { Payload, SetFont, SetBorder } from "../payloads";
 
 export function adaptTransaction(t: Transaction): EditAction {

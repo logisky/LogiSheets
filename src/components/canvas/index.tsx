@@ -23,18 +23,18 @@ import {
 import { Cell, match } from './defs'
 import {
     ScrollbarComponent
-} from 'components/scrollbar'
-import { EventType, on } from 'common/events'
-import { DATA_SERVICE } from 'core/data'
+} from '@/components/scrollbar'
+import { EventType, on } from '@/common/events'
+import { DATA_SERVICE } from '@/core/data'
 import { ContextmenuComponent } from './contextmenu'
-import { SelectorComponent } from 'components/selector'
-import { ResizerComponent } from 'components/resize'
-import { BlurEvent, TextContainerComponent } from 'components/textarea'
-import { DndComponent } from 'components/dnd'
+import { SelectorComponent } from '@/components/selector'
+import { ResizerComponent } from '@/components/resize'
+import { BlurEvent, TextContainerComponent } from '@/components/textarea'
+import { DndComponent } from '@/components/dnd'
 import { InvalidFormulaComponent } from './invalid-formula'
-import { Buttons } from 'common'
-import { CellInputBuilder } from 'api'
-import { DialogComponent } from 'ui/dialog'
+import { Buttons } from '@/common'
+import { CellInputBuilder } from '@/api'
+import { DialogComponent } from '@/ui/dialog'
 export const OFFSET = 100
 
 export interface CanvasProps {

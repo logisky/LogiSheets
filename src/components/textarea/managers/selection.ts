@@ -1,9 +1,9 @@
-import { CanvasAttr, PainterService } from 'core/painter'
-import { BaseInfo } from 'components/textarea/cursor'
+import { CanvasAttr, PainterService } from '@/core/painter'
+import { BaseInfo } from '@/components/textarea/cursor'
 import { useCursor } from './cursor'
 import { Context } from '../defs'
 import { TextManager } from './text'
-import { StandardKeyboardEvent } from 'common/events'
+import { StandardKeyboardEvent } from '@/common/events'
 import { MouseEvent as ReactMouseEvent, useRef } from 'react'
 export class Selection {
     public startX = 0

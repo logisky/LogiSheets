@@ -1,10 +1,10 @@
-import { Observable, from, ReplaySubject, Subject } from 'rxjs'
-import { DisplayPatch } from 'bindings'
-import { ClientSend, ServerSend } from 'message'
-import { Payload, PayloadsTransaction, adaptTransaction } from 'api'
-import { debugWeb, hasOwnProperty } from 'common'
-import { SheetService } from 'core/data/sheet'
-import { Service as StandAloneService } from 'wasm_svc/service'
+import { Observable, ReplaySubject, Subject } from 'rxjs'
+import { DisplayPatch } from '@/bindings'
+import { ClientSend, ServerSend } from '@/message'
+import { Payload, PayloadsTransaction, adaptTransaction } from '@/api'
+import { debugWeb, hasOwnProperty } from '@/common'
+import { SheetService } from '@/core/data/sheet'
+import { Service as StandAloneService } from '@/wasm_svc/service'
 export class Backend {
     constructor(
         public readonly sheetSvc: SheetService,

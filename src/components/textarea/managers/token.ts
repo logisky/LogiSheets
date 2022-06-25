@@ -1,4 +1,4 @@
-import { getTokens, SubType, Token, TokenType } from "core/formula"
+import { getTokens, SubType, Token, TokenType } from "@/core/formula"
 // EXPORT ONLY FOR TEST
 export class TokenManager {
 	getToken(i: number): Token | undefined {

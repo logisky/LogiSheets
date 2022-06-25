@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react"
 import {
 	Candidate,
 	SpanItem,
-} from 'components/suggest'
-import { lcsLenMatch } from 'common/algo/lcs'
-import { fullFilterSnippet, getAllFormulas, isFormula, Snippet } from 'core/snippet'
+} from '@/components/suggest'
+import { lcsLenMatch } from '@/common/algo/lcs'
+import { fullFilterSnippet, getAllFormulas, isFormula, Snippet } from '@/core/snippet'
 import { TextManager } from './text'
 import { useCursor } from './cursor'
-import { SubType, TokenType } from "core/formula"
-import { KeyboardEventCode, StandardKeyboardEvent } from "common/events"
+import { SubType, TokenType } from "@/core/formula"
+import { KeyboardEventCode, StandardKeyboardEvent } from "@/common/events"
 import { TokenManager } from './token'
 
 export const useSuggest = <T,>(

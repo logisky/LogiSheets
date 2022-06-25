@@ -1,4 +1,4 @@
-import {StUnderlineValues as UnderlineType} from 'bindings'
+import {StUnderlineValues as UnderlineType} from '@/bindings'
 
 export interface SetFont {
     readonly type: 'setFont'

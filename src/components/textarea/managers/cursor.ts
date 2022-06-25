@@ -1,7 +1,7 @@
 import { BaseInfo } from '../cursor'
 import { Text, Context } from '../defs'
 import { TextManager } from './text'
-import { KeyboardEventCode, StandardKeyboardEvent } from 'common/events'
+import { KeyboardEventCode, StandardKeyboardEvent } from '@/common/events'
 import { MouseEvent, useRef, useState } from 'react'
 import { CursorEvent } from '../events'
 

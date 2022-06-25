@@ -1,6 +1,6 @@
 import { Text, Texts, History, Context } from '../defs'
-import { Box, PainterService, TextAttr } from 'core/painter'
-import { Range } from 'core/standable'
+import { Box, PainterService, TextAttr } from '@/core/painter'
+import { Range } from '@/core/standable'
 import { BehaviorSubject, Observable } from 'rxjs'
 export class TextManager<T> {
     constructor(

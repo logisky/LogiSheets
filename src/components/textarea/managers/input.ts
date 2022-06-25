@@ -4,7 +4,7 @@ import {
     ClipboardStoredMetaData,
     KeyboardEventCode,
     MIMES,
-} from 'common/events'
+} from '@/common/events'
 import { TextManager } from './text'
 import {
     Position,
@@ -16,9 +16,9 @@ import {
 } from '../input'
 import { useCursor } from './cursor'
 import { useSelection } from './selection'
-import { AccessibilitySupport } from 'common/document'
-import { isMac } from 'common/platform'
-import { debugWeb } from 'common'
+import { AccessibilitySupport } from '@/common/document'
+import { isMac } from '@/common/platform'
+import { debugWeb } from '@/common'
 import { Subscription, Subject, Observable } from 'rxjs'
 
 export class InputManager<T> extends Subscription {

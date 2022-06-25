@@ -1,5 +1,5 @@
-import { ScrollbarAttr, ScrollbarType } from 'components/scrollbar'
-import { CANVAS_OFFSET, DATA_SERVICE } from 'core/data'
+import { ScrollbarAttr, ScrollbarType } from '@/components/scrollbar'
+import { CANVAS_OFFSET, DATA_SERVICE } from '@/core/data'
 import { useReducer, WheelEvent } from 'react'
 const reducer = (prevState: ScrollbarAttr, newState: Partial<ScrollbarAttr>) => {
     const s = { ...prevState }

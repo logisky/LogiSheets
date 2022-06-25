@@ -1,8 +1,8 @@
-import { SelectorProps } from 'components/selector'
+import { SelectorProps } from '@/components/selector'
 import { Cell } from '../defs'
 import { useEffect, useRef, useState } from 'react'
 import { StartCellEvent } from './start-cell'
-import { Range } from 'core/standable'
+import { Range } from '@/core/standable'
 
 export const getPosition = (selector: SelectorProps) => {
     return new Range()

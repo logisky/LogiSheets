@@ -1,7 +1,7 @@
 import { Subject, ReplaySubject } from 'rxjs'
 // import { ClientSend, DisplayRequest, DisplayResponse, OpenFile, Payload, ServerSend, ShiftType, Transaction } from '../proto/message'
-import { DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload } from 'bindings'
-import { ClientSend, ServerSend, OpenFile } from 'message'
+import { DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload } from '@/bindings'
+import { ClientSend, ServerSend, OpenFile } from '@/message'
 import initWasm, {
     read_file,
     block_input,
@@ -21,8 +21,8 @@ import initWasm, {
     col_insert,
 } from 'logisheets-server'
 import { Calculator, Executor } from './calculator'
-import { AsyncFuncResult, TransactionCode, TransactionEndResult } from './jsvalues'
-import { hasOwnProperty } from 'common'
+import { TransactionCode, TransactionEndResult } from './jsvalues'
+import { hasOwnProperty } from '@/common'
 
 export class Service {
     public constructor(funcs: readonly CustomFunc[]) {
