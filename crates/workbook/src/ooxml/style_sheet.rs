@@ -26,7 +26,7 @@ pub struct StylesheetPart {
     #[xmlserde(name = b"colors", ty = "child")]
     pub colors: Option<CtColors>,
     #[xmlserde(name = b"extLst", ty = "child")]
-    pub ext_lst: Unparsed,
+    pub ext_lst: Option<Unparsed>,
 }
 
 #[cfg(test)]

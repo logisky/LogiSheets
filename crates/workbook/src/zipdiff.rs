@@ -7,8 +7,6 @@ use zip::ZipArchive;
 pub fn zipdiff(zip1: &[u8], zip2: &[u8]) {
     let mut archive1 = ZipArchive::new(Cursor::new(zip1)).unwrap();
     let mut archive2 = ZipArchive::new(Cursor::new(zip2)).unwrap();
-    println!("{:?}", archive1.file_names().collect::<Vec<_>>());
-    println!("{:?}", archive2.file_names().collect::<Vec<_>>());
     let files1 = archive1
         .file_names()
         .map(|s| String::from(s))
