@@ -381,8 +381,9 @@ mod tests {
     use super::write;
     use crate::zipdiff::zipdiff;
     use std::{fs, io::Write};
+    #[ignore]
     #[test]
-    fn write_test() {
+    fn write_test_1() {
         let mut buf = fs::read("../../tests/builtin_style.xlsx").unwrap();
         let wb = crate::workbook::Workbook::from_file(&mut buf).unwrap();
         assert!(wb.doc_props.app.is_some());
@@ -392,6 +393,19 @@ mod tests {
         let mut f = fs::File::create("tests_output/builtin_style.zip").unwrap();
         f.write_all(&res).unwrap();
         let mut f = fs::File::create("tests_output/builtin_style.xlsx").unwrap();
+        f.write_all(&res).unwrap();
+        zipdiff(&buf, &res);
+    }
+
+    #[ignore]
+    #[test]
+    fn write_test_2() {
+        let mut buf = fs::read("../../tests/6.xlsx").unwrap();
+        let wb = crate::workbook::Workbook::from_file(&mut buf).unwrap();
+        let res = write(wb).unwrap();
+        let mut f = fs::File::create("tests_output/6.zip").unwrap();
+        f.write_all(&res).unwrap();
+        let mut f = fs::File::create("tests_output/6.xlsx").unwrap();
         f.write_all(&res).unwrap();
         zipdiff(&buf, &res);
     }
