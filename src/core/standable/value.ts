@@ -1,5 +1,5 @@
-import { Value } from 'bindings'
-import { hasOwnProperty } from 'common'
+import { Value } from '@/bindings'
+import { hasOwnProperty } from '@/common'
 export class StandardValue {
     cellValueOneof?:
     | { $case: "str"; str: string }

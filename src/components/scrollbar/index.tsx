@@ -1,7 +1,7 @@
 import styles from './scrollbar.module.scss'
 import { CSSProperties, MouseEvent, useEffect, useRef, useState, WheelEvent, FC } from 'react'
 import { Subscription } from 'rxjs'
-import { EventType, on } from 'common/events'
+import { EventType, on } from '@/common/events'
 
 export * from './scroll_event'
 export type ScrollbarType = 'x' | 'y'

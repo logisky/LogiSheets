@@ -1,4 +1,4 @@
-import { MergeCell } from 'bindings'
+import { MergeCell } from '@/bindings'
 export class Range {
     static fromMergeCell(mergeCell: MergeCell) {
         return new Range()

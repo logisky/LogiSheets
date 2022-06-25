@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
 import { getPosition, getSelector } from './selector'
-import { Range } from 'core/standable'
-import { AttributeName } from 'common/const'
+import { Range } from '@/core/standable'
+import { AttributeName } from '@/common/const'
 import { match, Cell } from '../defs'
-import { Payload, CellInputBuilder } from 'api'
-import { DATA_SERVICE } from 'core/data'
+import { Payload, CellInputBuilder } from '@/api'
+import { DATA_SERVICE } from '@/core/data'
 interface _Selector {
     readonly canvas: HTMLCanvasElement
     readonly start: Cell

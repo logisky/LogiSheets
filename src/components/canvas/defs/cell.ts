@@ -1,5 +1,5 @@
-import { DATA_SERVICE, RenderCell } from 'core/data'
-import { shallowCopy } from 'common'
+import { DATA_SERVICE, RenderCell } from '@/core/data'
+import { shallowCopy } from '@/common'
 export type CellType = 'Cell' | 'LeftTop' | 'FixedLeftHeader' | 'FixedTopHeader' | 'unknown'
 export class Cell extends RenderCell {
     constructor(public type: CellType) {

@@ -1,8 +1,8 @@
-import {DATA_SERVICE} from 'core/data'
+import {DATA_SERVICE} from '@/core/data'
 import { useState } from 'react'
 import styles from './sheets-tab.module.scss'
 import {ContextMenuComponent} from './contextmenu'
-import {InsertSheetBuilder} from 'api'
+import {InsertSheetBuilder} from '@/api'
 
 export interface SheetsTabprops {
 

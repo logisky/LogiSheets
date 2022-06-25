@@ -1,12 +1,12 @@
-import { DATA_SERVICE } from 'core/data'
-import { Context } from 'components/textarea'
+import { DATA_SERVICE } from '@/core/data'
+import { Context } from '@/components/textarea'
 import { Cell } from '../defs'
-import { StandardKeyboardEvent } from 'common/events'
+import { StandardKeyboardEvent } from '@/common/events'
 import { useRef, useState } from 'react'
-import { shallowCopy } from 'common'
+import { shallowCopy } from '@/common'
 import { StartCellEvent } from './start-cell'
 import initFc, { formula_check } from 'logisheets-fc'
-import { isFormula } from 'core/snippet'
+import { isFormula } from '@/core/snippet'
 
 export const useText = () => {
     const [editing, setEditing] = useState(false)

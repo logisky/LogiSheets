@@ -1,5 +1,5 @@
 import { CSSProperties, MouseEvent } from 'react'
-import { DialogComponent, DialogProps } from 'ui/dialog'
+import { DialogComponent, DialogProps } from '@/ui/dialog'
 import './contextmenu.scss'
 export interface ContextMenuProps extends DialogProps {
     items: readonly ContextMenuItem[]

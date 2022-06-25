@@ -1,4 +1,4 @@
-import { on, EventType, StandardKeyboardEvent } from 'common/events'
+import { on, EventType, StandardKeyboardEvent } from '@/common/events'
 import {
     useSelection,
     useCursor,
@@ -10,7 +10,7 @@ import { Context } from './defs'
 import { BlurEvent } from './events'
 import { CursorComponent } from './cursor'
 import { ClipboardEvent, CompositionEvent, FocusEvent, FormEvent, KeyboardEvent, MouseEvent, useEffect, useRef } from 'react'
-import { Candidate, SuggestComponent } from 'components/suggest'
+import { Candidate, SuggestComponent } from '@/components/suggest'
 import { Subscription, Observable } from 'rxjs'
 import styles from './textarea.module.scss'
 

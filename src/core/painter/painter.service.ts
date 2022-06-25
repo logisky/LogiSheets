@@ -1,11 +1,11 @@
-import { BorderPr, StPatternType } from 'bindings'
-import { StandardColor } from 'core/standable'
+import { BorderPr, StPatternType } from '@/bindings'
+import { StandardColor } from '@/core/standable'
 import { CanvasAttr } from './canvas_attr'
 import { Box } from './box'
 import { CanvasApi } from './canvas'
 
 import { npx, npxLine, thinLineWidth } from './utils'
-import { Direction, error } from 'common'
+import { Direction, error } from '@/common'
 import { TextAttr } from './text_attr'
 
 export class PainterService extends CanvasApi {

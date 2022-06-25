@@ -13,20 +13,20 @@ import {
     CompositionStartEvent,
     ClipboardMetaData,
     ClipboardStoredMetaData,
-} from 'common/events'
+} from '@/common/events'
 import { TextAreaState } from './textarea-state'
 import {
     isChrome,
     isFirefox,
     isMac,
     isSafari,
-} from 'common/platform'
+} from '@/common/platform'
 import { TypeData } from './type_data'
 import { Selection } from './selection'
 import { Position } from './position'
 import { TextAreaInputEvents } from './textarea-input-events'
-import { isHighSurrogate } from 'common/strings'
-import { debugWeb, shallowCopy } from 'common'
+import { isHighSurrogate } from '@/common/strings'
+import { debugWeb, shallowCopy } from '@/common'
 const enum ReadFromTextArea {
     TYPE,
     PASTE,

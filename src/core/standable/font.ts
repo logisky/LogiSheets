@@ -1,5 +1,5 @@
-import { Font, CtFontName, CtUnderlineProperty, Color } from 'bindings'
-import { shallowCopy } from 'common'
+import { Font, CtFontName, CtUnderlineProperty, Color } from '@/bindings'
+import { shallowCopy } from '@/common'
 import { StandardColor } from './color'
 const DEFAULT_FONT_SIZE = 10
 /**

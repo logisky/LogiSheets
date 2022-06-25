@@ -1,4 +1,4 @@
-import {Range} from 'core/standable'
+import {Range} from '@/core/standable'
 export class RenderCell {
     get width() {
         return this.position.width

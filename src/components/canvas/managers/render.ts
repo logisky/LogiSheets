@@ -1,9 +1,9 @@
-import { PainterService, Box, TextAttr, CanvasAttr } from 'core/painter'
-import { DATA_SERVICE, RenderCell } from 'core/data'
-import { StandardColor, Range } from 'core/standable'
-import { SETTINGS } from 'common/settings'
-import { hasOwnProperty, toA1notation } from 'common'
-import { StandardStyle } from 'core/standable/style'
+import { PainterService, Box, TextAttr, CanvasAttr } from '@/core/painter'
+import { DATA_SERVICE, RenderCell } from '@/core/data'
+import { StandardColor, Range } from '@/core/standable'
+import { SETTINGS } from '@/common/settings'
+import { hasOwnProperty, toA1notation } from '@/common'
+import { StandardStyle } from '@/core/standable/style'
 import { Subject } from 'rxjs'
 
 export class Render {

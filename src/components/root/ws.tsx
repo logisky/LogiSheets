@@ -3,9 +3,9 @@ import { SocketError } from './error'
 import { Waiting } from './waiting'
 import { RootContainer } from './container'
 import useWebSocket, { ReadyState } from 'react-use-websocket'
-import { DATA_SERVICE } from 'core/data'
+import { DATA_SERVICE } from '@/core/data'
 import styles from './root.module.scss'
-import { SETTINGS } from 'common/settings'
+import { SETTINGS } from '@/common/settings'
 
 
 export const WsCommponent: FC = () => {
@@ -19,6 +19,7 @@ export const WsCommponent: FC = () => {
 		onMessage: msg => {
 			if (!(msg.data instanceof Blob))
 				return
+			// @ts-expect-error TODO(minglong): remove this file
 			DATA_SERVICE.backend.handleResponse(msg.data)
 		},
 	});

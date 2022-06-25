@@ -1,6 +1,6 @@
-import { ColInfo } from 'bindings'
-import { findMdwColw, shallowCopy, width2px } from 'common'
-import { SETTINGS } from 'common/settings'
+import { ColInfo } from '@/bindings'
+import { findMdwColw, shallowCopy, width2px } from '@/common'
+import { SETTINGS } from '@/common/settings'
 export class StandardColInfo implements ColInfo {
     constructor(
         public readonly idx: number,

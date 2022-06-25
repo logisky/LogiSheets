@@ -11,6 +11,9 @@ describe('formula test', () => {
 	it('count test', () => {
 		const descs = formulas.map(f => f.getParamDesc())
 		descs.forEach(desc => {
+			expect(desc).not.toBeUndefined()
+			if (!desc)
+				return
 			if (desc.count === -1)
 				return
 			expect(desc.params.length).toBe(desc.count)

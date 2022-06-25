@@ -1,9 +1,9 @@
-import { SelectedCell } from 'components/canvas'
-import { DATA_SERVICE } from 'core/data'
+import { SelectedCell } from '@/components/canvas'
+import { DATA_SERVICE } from '@/core/data'
 import { ColorResult, SketchPicker } from 'react-color'
 import styles from './start.module.scss'
 import { useEffect, useState } from 'react'
-import { StandardColor } from 'core/standable'
+import { StandardColor } from '@/core/standable'
 
 export * from './font-size'
 export * from './start-item'

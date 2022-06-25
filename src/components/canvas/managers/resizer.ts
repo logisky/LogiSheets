@@ -1,9 +1,9 @@
-import { pxToPt } from "common"
-import { DATA_SERVICE, RenderCell } from "core/data"
-import { Range } from "core/standable"
+import { pxToPt } from "@/common"
+import { DATA_SERVICE, RenderCell } from "@/core/data"
+import { Range } from "@/core/standable"
 import { useRef, useState } from "react"
 import { getOffset } from "../defs"
-import {SetColWidthBuilder, SetRowHeightBuilder} from 'api'
+import {SetColWidthBuilder, SetRowHeightBuilder} from '@/api'
 interface ResizerProps {
     /**
      * Resizer的位置信息

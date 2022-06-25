@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
@@ -19,15 +19,13 @@
     "noImplicitAny": true,
     "outDir": "./dist/",
     "paths": {
-      "src/*": [
-        "src/*"
-      ]
+      "@/*": ["src/*"],
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "es6"
+    "target": "esnext"
   },
   "ts-node": {
     "compilerOptions": {
@@ -38,7 +36,7 @@
     "src/global.d.ts"
   ],
   "include": [
-    "src/*.tsx",
-    "src/*.ts"
+    "src/**/*.tsx",
+    "src/**/*.ts"
   ]
 }

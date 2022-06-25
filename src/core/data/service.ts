@@ -3,9 +3,9 @@ import { ScrollPosition } from './scroll'
 import { SETTINGS } from '../../common/settings'
 import { RenderCell, ViewRange } from './view_range'
 import { Backend } from './backend'
-import { DisplayRequest } from 'bindings'
-import { Range } from 'core/standable'
-import { debugWeb } from 'common'
+import { DisplayRequest } from '@/bindings'
+import { Range } from '@/core/standable'
+import { debugWeb } from '@/common'
 export const CANVAS_OFFSET = 100
 
 

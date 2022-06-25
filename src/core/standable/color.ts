@@ -1,4 +1,4 @@
-import {Color} from 'bindings'
+import {Color} from '@/bindings'
 // https://css-tricks.com/snippets/javascript/random-hex-color/
 function getRandomColor() {
     return Math.floor(Math.random()*16777215).toString(16);

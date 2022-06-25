@@ -1,7 +1,7 @@
 import { ChangeEvent, FC } from 'react'
 import styles from './file.module.scss'
-import { getU8 } from 'common/file'
-import { DATA_SERVICE } from 'core/data'
+import { getU8 } from '@/common/file'
+import { DATA_SERVICE } from '@/core/data'
 // TODO: 挪到DataService中
 let FILE_ID = 1
 

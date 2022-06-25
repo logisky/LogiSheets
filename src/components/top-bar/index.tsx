@@ -1,5 +1,5 @@
 import { SetAttrEvent } from './content'
-import { SelectedCell } from 'components/canvas'
+import { SelectedCell } from '@/components/canvas'
 import { MainMenuType, MainMenu } from './main-menu'
 import { useState, ReactElement, useEffect } from 'react'
 import styles from './top-bar.module.scss'

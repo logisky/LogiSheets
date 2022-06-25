@@ -1,4 +1,4 @@
-import {StandardFont} from 'core/standable'
+import {StandardFont} from '@/core/standable'
 class Settings {
     public leftTop = new LeftTop()
     public grid = new Grid()

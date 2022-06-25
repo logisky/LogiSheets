@@ -2,7 +2,7 @@ import {
     getParentScrollTop,
     restoreParentsScrollTop,
     getShadowRoot,
-} from 'common/document'
+} from '@/common/document'
 export class TextAreaWrapper {
     constructor(
         public readonly textArea: HTMLTextAreaElement,

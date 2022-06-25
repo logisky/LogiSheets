@@ -1,4 +1,4 @@
-import { equal } from "common"
+import { equal } from "@/common"
 
 export class BaseInfo {
     public x = 0

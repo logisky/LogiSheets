@@ -1,4 +1,4 @@
-import {Comment} from 'bindings'
+import {Comment} from '@/bindings'
 import {Range} from './range'
 
 export interface TopLeftCell {
