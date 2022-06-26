@@ -1,34 +1,37 @@
-import {DATA_SERVICE} from '@/core/data'
-import { useState } from 'react'
+import { useState, FC } from 'react'
 import styles from './sheets-tab.module.scss'
 import {ContextMenuComponent} from './contextmenu'
 import {InsertSheetBuilder} from '@/api'
+import { Backend, SheetService } from '@/core/data'
+import { useInjection } from '@/core/ioc/provider'
+import { TYPES } from '@/core/ioc/types'
 
 export interface SheetsTabprops {
 
 }
 
-export const SheetsTabComponent = (props: SheetsTabprops) => {
-    const {} = props
+export const SheetsTabComponent: FC<SheetsTabprops> = () => {
+    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const getSheets = () =>
-        DATA_SERVICE.sheetSvc.getSheets().map(s => s.name)
+        SHEET_SERVICE.getSheets().map(s => s.name)
     const [sheets, setSheets] = useState(getSheets())
     const [active, setActive] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
-    DATA_SERVICE.backend.render$.subscribe(() => {
+    BACKEND_SERVICE.render$.subscribe(() => {
         setSheets(getSheets())
     })
 
     const onTabChange = (i: number) => {
         setActive(i)
-        DATA_SERVICE.sheetSvc.setActiveSheet(i)
+        SHEET_SERVICE.setActiveSheet(i)
     }
 
     const add = () => {
         const payload = new InsertSheetBuilder()
             .sheetIdx(active)
             .build()
-        DATA_SERVICE.backend.sendTransaction([payload])
+        BACKEND_SERVICE.sendTransaction([payload])
     }
     return (
         <div className={styles["host"]}>

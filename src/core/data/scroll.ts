@@ -1,11 +1,12 @@
-import { shallowCopy } from "@/common"
+import {injectable} from 'inversify'
+import {getID} from '@/core/ioc/id'
 
+@injectable()
 export class ScrollPosition {
-    static copy(scrollPosition: ScrollPosition) {
-        const target = new ScrollPosition()
-        shallowCopy(scrollPosition, target)
-        return target
+    constructor() {
+        console.log('init scroll service')
     }
+    readonly id = getID()
     /**
      * pixel of x-axis margin-left
      */

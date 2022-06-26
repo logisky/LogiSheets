@@ -1,10 +1,12 @@
 import { Cell } from '../defs'
-import { DATA_SERVICE, RenderCell } from '@/core/data'
+import { DataService, RenderCell } from '@/core/data'
 import { MouseEvent, useRef } from 'react'
 import { Buttons } from '@/common'
 import { SelectorProps } from '@/components/selector'
 import { Range } from '@/core/standable'
 import { Subject } from 'rxjs'
+import { useInjection } from '@/core/ioc/provider'
+import { TYPES } from '@/core/ioc/types'
 export type StartCellType = 'mousedown' | 'contextmenu' | 'render' | 'unknown' | 'scroll'
 export class StartCellEvent {
     constructor(
@@ -16,6 +18,7 @@ export class StartCellEvent {
 }
 
 export const useStartCell = () => {
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const startCell = useRef<Cell>()
     const startCellEvent$ = useRef(new Subject<StartCellEvent | undefined>())
 

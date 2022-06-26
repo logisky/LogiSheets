@@ -1,7 +1,9 @@
 import { ChangeEvent, FC } from 'react'
 import styles from './file.module.scss'
 import { getU8 } from '@/common/file'
-import { DATA_SERVICE } from '@/core/data'
+import { Backend } from '@/core/data'
+import { useInjection } from '@/core/ioc/provider'
+import { TYPES } from '@/core/ioc/types'
 // TODO: 挪到DataService中
 let FILE_ID = 1
 
@@ -9,7 +11,8 @@ export interface FileProps {
 
 }
 
-export const FileComponent: FC<FileProps> = ({ }) => {
+export const FileComponent: FC<FileProps> = () => {
+    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
 	const upload = (e: ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.item(0)
 		if (!file)
@@ -19,7 +22,7 @@ export const FileComponent: FC<FileProps> = ({ }) => {
 				alert('read file error')
 				return
 			}
-			DATA_SERVICE.backend.send({
+			BACKEND_SERVICE.send({
 				$case: 'openFile',
 				openFile: {
 					content: u8,

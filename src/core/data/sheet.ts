@@ -16,13 +16,18 @@ import {
     StandardSheet,
     Range,
 } from '@/core/standable'
+import {injectable} from 'inversify'
 
 import { SETTINGS } from '@/common/settings'
 import { StandardValue } from '@/core/standable/value'
+import { getID } from '@/core/ioc/id'
 export const MAX_COUNT = 100000000
 
+@injectable()
 export class SheetService {
+    readonly id = getID()
     constructor() {
+        console.log('init sheet service')
         const sheet = new StandardSheet()
         sheet.name = SETTINGS.defaultSheetName
         this._sheet.set(0, sheet)

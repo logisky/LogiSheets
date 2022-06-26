@@ -6,16 +6,23 @@ import { Backend } from './backend'
 import { DisplayRequest } from '@/bindings'
 import { Range } from '@/core/standable'
 import { debugWeb } from '@/common'
+import {injectable, inject} from 'inversify'
+import {TYPES} from '@/core/ioc/types'
+import { getID } from '@/core/ioc/id'
 export const CANVAS_OFFSET = 100
 
 
-class DataService {
-    constructor() {
+@injectable()
+export class DataService {
+    readonly id = getID()
+    constructor(
+        @inject(TYPES.Scroll) private readonly scroll: ScrollPosition,
+        @inject(TYPES.Sheet) private readonly sheetSvc: SheetService,
+        @inject(TYPES.Backend) private readonly backend: Backend,
+    ) {
+        console.log('init data service')
         this._handleBackend()
     }
-    scroll = new ScrollPosition()
-    sheetSvc = new SheetService()
-    backend = new Backend(this.sheetSvc)
 
     get cachedViewRange() {
         return this._viewRange
@@ -33,12 +40,10 @@ class DataService {
         if ((x && x < 0) || (y && y < 0))
             // tslint:disable-next-line: no-throw-unless-asserts
             throw Error(`x'${x}' or y'${y}' should not lower than 0`)
-        const scroll = ScrollPosition.copy(this.scroll)
         if (x !== undefined)
-            scroll.x = x
+            this.scroll.x = x
         if (y !== undefined)
-            scroll.y = y
-        this.scroll = scroll
+            this.scroll.y = y
     }
 
     /**
@@ -203,4 +208,3 @@ class DataService {
         return cells
     }
 }
-export const DATA_SERVICE = new DataService()

@@ -1,4 +1,4 @@
-import { DATA_SERVICE, RenderCell } from '@/core/data'
+import { RenderCell, SheetService } from '@/core/data'
 import { shallowCopy } from '@/common'
 export type CellType = 'Cell' | 'LeftTop' | 'FixedLeftHeader' | 'FixedTopHeader' | 'unknown'
 export class Cell extends RenderCell {
@@ -9,24 +9,24 @@ export class Cell extends RenderCell {
         return cell.type === this.type
             && super.equals(cell)
     }
-    visibleCells(end = this) {
-        const cells: { readonly row: number, readonly col: number }[] = []
-        const { startCol, startRow } = this.coodinate
-        const { endCol, endRow } = end.coodinate
-        const sheet = DATA_SERVICE.sheetSvc
-        for (let row = startRow; row <= endRow; row++) {
-            for (let col = startCol; col < endCol; col++) {
-                if (sheet.getColInfo(col).hidden)
-                    continue
-                if (sheet.getRowInfo(row).hidden)
-                    continue
-                cells.push({ row, col })
-            }
-        }
-        return cells
-    }
     copyByRenderCell(cell: RenderCell) {
         shallowCopy(cell, this)
         return this
     }
+}
+
+export function visibleCells(cell: Cell, end: Cell, sheetSvc: SheetService) {
+    const cells: { readonly row: number, readonly col: number }[] = []
+    const { startCol, startRow } = cell.coodinate
+    const { endCol, endRow } = end.coodinate
+    for (let row = startRow; row <= endRow; row++) {
+        for (let col = startCol; col < endCol; col++) {
+            if (sheetSvc.getColInfo(col).hidden)
+                continue
+            if (sheetSvc.getRowInfo(row).hidden)
+                continue
+            cells.push({ row, col })
+        }
+    }
+    return cells
 }

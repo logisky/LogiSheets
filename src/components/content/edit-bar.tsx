@@ -1,8 +1,10 @@
 import { SelectedCell } from '@/components/canvas'
-import { DATA_SERVICE } from '@/core/data'
 import { toA1notation } from '@/common'
 import { FC, useEffect, useState } from 'react'
 import styles from './edit-bar.module.scss'
+import { useInjection } from '@/core/ioc/provider'
+import { SheetService } from '@/core/data'
+import { TYPES } from '@/core/ioc/types'
 export interface EditBarProps {
     selectedCell: SelectedCell
 }
@@ -10,13 +12,14 @@ export interface EditBarProps {
 export const EditBarComponent: FC<EditBarProps> = ({
     selectedCell,
 }) => {
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const [coordinate, setCoordinate] = useState('')
     const [formula, setFormula] = useState('')
     useEffect(() => {
         const { row, col } = selectedCell
         const notation = toA1notation(selectedCell.col)
         setCoordinate(`${notation}${row + 1}`)
-        const cell = DATA_SERVICE.sheetSvc.getCell(row, col)
+        const cell = SHEET_SERVICE.getCell(row, col)
         if (cell === undefined)
             return
         if (cell.formula === '')

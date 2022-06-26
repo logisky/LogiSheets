@@ -2,9 +2,11 @@ import { Range, StandardBlock } from '@/core/standable'
 import { SelectBlockComponent } from './select-block'
 import { Cell } from './defs'
 import { useState, ReactElement, MouseEvent } from 'react'
-import { DATA_SERVICE } from '@/core/data'
+import {useInjection} from '@/core/ioc/provider'
 import { ContextMenuComponent, ContextMenuItem } from '@/ui/contextmenu'
 import { DeleteBlockColsBuilder, DeleteColsBuilder, InsertColsBuilder, Payload, InsertBlockColsBuilder, InsertBlockRowsBuilder, InsertRowsBuilder, DeleteBlockRowsBuilder, DeleteRowsBuilder, CreateBlockBuilder } from '@/api'
+import { TYPES } from '@/core/ioc/types'
+import { Backend, SheetService } from '@/core/data'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent
@@ -17,6 +19,8 @@ export interface ContextmenuProps {
 export const ContextmenuComponent = (props: ContextmenuProps) => {
     const { mouseevent, startCell, isOpen, setIsOpen, endCell } = props
     const [blockMenuOpened, setBlockMenuOpened] = useState(false)
+    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     let selectBlock: ReactElement | undefined
     const _blockProcess = (
         blocks: readonly StandardBlock[],
@@ -25,7 +29,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const close$ = (blks: readonly StandardBlock[]) => {
             setIsOpen(false)
             setBlockMenuOpened(false)
-            DATA_SERVICE.backend.sendTransaction(cb(blks))
+            BACKEND_SERVICE.sendTransaction(cb(blks))
         }
         selectBlock = (
             <div>
@@ -39,7 +43,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         setBlockMenuOpened(true)
     }
     const _addCol = () => {
-        const sheet = DATA_SERVICE.sheetSvc.getActiveSheet()
+        const sheet = SHEET_SERVICE.getActiveSheet()
         const { coodinate: { startCol: start } } = startCell
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
@@ -62,12 +66,12 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .start(start)
             .cnt(1)
             .build()
-        DATA_SERVICE.backend.sendTransaction([payload])
+        BACKEND_SERVICE.sendTransaction([payload])
     }
 
     const _removeCol = () => {
         const { coodinate: { startCol: start } } = startCell
-        const sheet = DATA_SERVICE.sheetSvc.getActiveSheet()
+        const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(
@@ -89,12 +93,12 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .cnt(1)
             .start(start)
             .build()
-        DATA_SERVICE.backend.sendTransaction([payload])
+        BACKEND_SERVICE.sendTransaction([payload])
     }
 
     const _addRow = () => {
         const { coodinate: { startRow: start } } = startCell
-        const sheet = DATA_SERVICE.sheetSvc.getActiveSheet()
+        const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(
@@ -115,12 +119,12 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .start(start)
             .cnt(1)
             .build()
-        DATA_SERVICE.backend.sendTransaction([payload])
+        BACKEND_SERVICE.sendTransaction([payload])
     }
 
     const _removeRow = () => {
         const { coodinate: { startRow: start } } = startCell
-        const sheet = DATA_SERVICE.sheetSvc.getActiveSheet()
+        const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(
@@ -141,7 +145,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .cnt(1)
             .start(start)
             .build()
-        DATA_SERVICE.backend.sendTransaction([payload])
+        BACKEND_SERVICE.sendTransaction([payload])
     }
 
     const _addBlock = () => {
@@ -150,13 +154,13 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const end = endCellTruthy.coodinate
         const payload = new CreateBlockBuilder()
             .blockId(1)
-            .sheetIdx(DATA_SERVICE.sheetSvc.getActiveSheet())
+            .sheetIdx(SHEET_SERVICE.getActiveSheet())
             .rowCnt(Math.abs(end.endRow - start.startRow) + 1)
             .colCnt(Math.abs(end.endCol - start.startCol) + 1)
             .masterRow(Math.min(start.startRow, end.startRow))
             .masterCol(Math.min(start.startCol, end.startCol))
             .build()
-        DATA_SERVICE.backend.sendTransaction([payload])
+        BACKEND_SERVICE.sendTransaction([payload])
     }
 
     const _checkBlock = () => {
@@ -167,7 +171,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .setStartCol(start.startCol)
             .setEndRow(end.endRow)
             .setEndCol(end.endCol)
-        const blocks = DATA_SERVICE.sheetSvc.getBlocks()
+        const blocks = SHEET_SERVICE.getBlocks()
         return blocks.filter(b => b.coordinate.cover(curr))
     }
 

@@ -2,15 +2,20 @@ import { useRef, useState } from 'react'
 import { getPosition, getSelector } from './selector'
 import { Range } from '@/core/standable'
 import { AttributeName } from '@/common/const'
-import { match, Cell } from '../defs'
-import { Payload, CellInputBuilder } from '@/api'
-import { DATA_SERVICE } from '@/core/data'
+import { match, Cell, visibleCells } from '../defs'
+import { Payload } from '@/api'
+import { Backend, DataService, SheetService } from '@/core/data'
+import { useInjection } from '@/core/ioc/provider'
+import { TYPES } from '@/core/ioc/types'
 interface _Selector {
     readonly canvas: HTMLCanvasElement
     readonly start: Cell
     readonly end?: Cell
 }
 export const useDnd = () => {
+    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const [promptReplace, setPrompReplace] = useState(false)
     const [range, setRange] = useState<Range>()
     const [dragging, setDragging] = useState<Range>()
@@ -23,28 +28,32 @@ export const useDnd = () => {
         if (!startSelector || !endSelector)
             return
         const payloads: Payload[] = []
-        const startVisibleCells = startSelector.start.visibleCells(startSelector.end)
+        const startVisibleCells = visibleCells(
+            startSelector.start,
+            startSelector.end ?? startSelector.start,
+            SHEET_SERVICE,
+        )
         startVisibleCells.forEach(c => {
             payloads.push({
                 type: "cellInput",
-                sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
+                sheetIdx: SHEET_SERVICE.getActiveSheet(),
                 row: c.row,
                 col: c.col,
                 input: '',
             })
         })
-        endSelector.start.visibleCells(endSelector.end).forEach((c, i) => {
+        visibleCells(endSelector.start, endSelector.end ?? endSelector.start, SHEET_SERVICE).forEach((c, i) => {
             const { row, col } = startVisibleCells[i]
-            const input = DATA_SERVICE.sheetSvc.getCell(row, col)?.getText()
+            const input = SHEET_SERVICE.getCell(row, col)?.getText()
             payloads.push({
                 type: "cellInput",
-                sheetIdx: DATA_SERVICE.sheetSvc.getActiveSheet(),
+                sheetIdx: SHEET_SERVICE.getActiveSheet(),
                 row: c.row,
                 col: c.col,
                 input: input ?? '',
             })
         })
-        DATA_SERVICE.backend.sendTransaction(payloads)
+        BACKEND_SERVICE.sendTransaction(payloads)
     }
     const _setRange = (selector?: _Selector) => {
         _selector.current = selector
@@ -77,7 +86,7 @@ export const useDnd = () => {
         const moved = { x: e.clientX - mousedownStart.current.x, y: e.clientY - mousedownStart.current.y }
         if (startCell.type !== 'Cell')
             return true
-        const endCell = match(oldEnd.position.startCol + moved.x, oldEnd.position.startRow + moved.y, canvas)
+        const endCell = match(oldEnd.position.startCol + moved.x, oldEnd.position.startRow + moved.y, canvas, DATA_SERVICE.cachedViewRange)
         if (endCell.type !== 'Cell')
             return true
         _setEnd({ canvas, start: startCell, end: endCell })
@@ -99,6 +108,7 @@ export const useDnd = () => {
         _setRange(selector)
     }
     return {
+        onReplace,
         _endSelector,
         clean,
         range,

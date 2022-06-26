@@ -1,9 +1,11 @@
 import { SelectedCell } from '@/components/canvas'
-import { DATA_SERVICE } from '@/core/data'
 import { ColorResult, SketchPicker } from 'react-color'
 import styles from './start.module.scss'
 import { useEffect, useState } from 'react'
 import { StandardColor } from '@/core/standable'
+import { SheetService } from '@/core/data'
+import { useInjection } from '@/core/ioc/provider'
+import { TYPES } from '@/core/ioc/types'
 
 export * from './font-size'
 export * from './start-item'
@@ -17,6 +19,7 @@ export interface StartProps {
 export const StartComponent = ({
     selectedCell,
 }: StartProps) => {
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const [openSketchPicker, setOpenSketchPicker] = useState(false)
     const [fontColor, setFontColor] = useState('#000')
 
@@ -61,7 +64,7 @@ export const StartComponent = ({
         if (!selectedCell)
             return
         const { row, col } = selectedCell
-        const style = DATA_SERVICE.sheetSvc.getCell(row, col)?.style
+        const style = SHEET_SERVICE.getCell(row, col)?.style
         if (style === undefined)
             return
         const font = style.getFont()

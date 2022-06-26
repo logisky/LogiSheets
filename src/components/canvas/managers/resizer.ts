@@ -1,9 +1,11 @@
 import { pxToPt } from "@/common"
-import { DATA_SERVICE, RenderCell } from "@/core/data"
+import {Backend, DataService, RenderCell, SheetService} from '@/core/data'
 import { Range } from "@/core/standable"
 import { useRef, useState } from "react"
 import { getOffset } from "../defs"
 import {SetColWidthBuilder, SetRowHeightBuilder} from '@/api'
+import { useInjection } from "@/core/ioc/provider"
+import { TYPES } from "@/core/ioc/types"
 interface ResizerProps {
     /**
      * Resizer的位置信息
@@ -20,6 +22,9 @@ export const useResizers = () => {
     const [resizers, setResizers] = useState<ResizerProps[]>([])
     const [active, setActive] = useState<ResizerProps>()
     const [moving, setMoving] = useState({x: 0, y: 0})
+    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     /**
      * 拖动过程中显示的宽度信息
      */
@@ -66,7 +71,7 @@ export const useResizers = () => {
         if (!activeResizer)
             return false
         movingStart.current = {x: e.clientX, y: e.clientY}
-        const sheet = DATA_SERVICE.sheetSvc
+        const sheet = SHEET_SERVICE
         const {startCol, startRow} = activeResizer.leftCell.coodinate
         const info = activeResizer.isRow ? sheet.getRowInfo(startCol) : sheet.getColInfo(startRow)
         setHoverText(`${info.px}px`)
@@ -103,16 +108,16 @@ export const useResizers = () => {
             const {isRow, leftCell: {coodinate, width, height}} = _active.current
             const payload = !isRow ?
                 new SetColWidthBuilder() 
-                    .sheetIdx(DATA_SERVICE.sheetSvc.getActiveSheet())
+                    .sheetIdx(SHEET_SERVICE.getActiveSheet())
                     .col(coodinate.startCol)
                     .width(pxToPt(moving.x + width))
                     .build() :
                 new SetRowHeightBuilder()
-                    .sheetIdx(DATA_SERVICE.sheetSvc.getActiveSheet())
+                    .sheetIdx(SHEET_SERVICE.getActiveSheet())
                     .row(coodinate.startRow)
                     .height(pxToPt(moving.y + height))
                     .build()
-            DATA_SERVICE.backend.sendTransaction([payload])
+            BACKEND_SERVICE.sendTransaction([payload])
         }
         _setActive(undefined)
         setMoving({x: 0, y: 0})
