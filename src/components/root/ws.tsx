@@ -10,7 +10,7 @@ import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
 
 
-export const WsCommponent: FC = () => {
+export const WsCommponent = () => {
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
 	const wsUrl = SETTINGS.wsUrl
 	const {
