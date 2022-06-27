@@ -3,12 +3,15 @@ import { SocketError } from './error'
 import { Waiting } from './waiting'
 import { RootContainer } from './container'
 import useWebSocket, { ReadyState } from 'react-use-websocket'
-import { DATA_SERVICE } from '@/core/data'
 import styles from './root.module.scss'
 import { SETTINGS } from '@/common/settings'
+import { Backend } from '@/core/data'
+import { useInjection } from '@/core/ioc/provider'
+import { TYPES } from '@/core/ioc/types'
 
 
 export const WsCommponent: FC = () => {
+    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
 	const wsUrl = SETTINGS.wsUrl
 	const {
 		sendMessage,
@@ -20,7 +23,7 @@ export const WsCommponent: FC = () => {
 			if (!(msg.data instanceof Blob))
 				return
 			// @ts-expect-error TODO(minglong): remove this file
-			DATA_SERVICE.backend.handleResponse(msg.data)
+			BACKEND_SERVICE.handleResponse(msg.data)
 		},
 	});
 
@@ -28,7 +31,7 @@ export const WsCommponent: FC = () => {
 		if (readyState !== ReadyState.OPEN)
 			return
 		sendMessage('join:minglong:4')
-		const sub = DATA_SERVICE.backend.send$.subscribe(msg => {
+		const sub = BACKEND_SERVICE.send$.subscribe(msg => {
 			sendMessage(msg)
 		})
 		return () => {

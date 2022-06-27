@@ -1,4 +1,3 @@
-import { DATA_SERVICE } from '@/core/data'
 import { Context } from '@/components/textarea'
 import { Cell } from '../defs'
 import { StandardKeyboardEvent } from '@/common/events'
@@ -7,8 +6,12 @@ import { shallowCopy } from '@/common'
 import { StartCellEvent } from './start-cell'
 import initFc, { formula_check } from 'logisheets-fc'
 import { isFormula } from '@/core/snippet'
+import { SheetService } from '@/core/data'
+import { useInjection } from '@/core/ioc/provider'
+import { TYPES } from '@/core/ioc/types'
 
 export const useText = () => {
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const [editing, setEditing] = useState(false)
     const [context, setContext] = useState<Context<Cell>>()
     const [validFormulaOpen, setValidFormulaOpen] = useState(false)
@@ -73,7 +76,7 @@ export const useText = () => {
             return
         }
         const { height, width, coodinate: { startRow: row, startCol: col }, position: { startCol: x, startRow: y } } = startCell
-        const info = DATA_SERVICE.sheetSvc.getCell(row, col)
+        const info = SHEET_SERVICE.getCell(row, col)
         const text = info?.formula ? info.getFormular() : info?.getText() ?? ''
         const rect = canvas.current.getBoundingClientRect()
         const [clientX, clientY] = [rect.x + x, rect.y + y]

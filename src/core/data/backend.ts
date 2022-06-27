@@ -5,10 +5,17 @@ import { Payload, PayloadsTransaction, adaptTransaction } from '@/api'
 import { debugWeb, hasOwnProperty } from '@/common'
 import { SheetService } from '@/core/data/sheet'
 import { Service as StandAloneService } from '@/wasm_svc/service'
+import {injectable, inject} from 'inversify'
+import {TYPES} from '@/core/ioc/types'
+import {getID} from '@/core/ioc/id'
+
+@injectable()
 export class Backend {
+    readonly id = getID()
     constructor(
-        public readonly sheetSvc: SheetService,
+        @inject(TYPES.Sheet) private readonly sheetSvc: SheetService,
     ) {
+        console.log('init backend service')
         this._wasmSvc.output$.subscribe(e => {
             this.handleResponse(e)
         })
@@ -34,6 +41,7 @@ export class Backend {
     }
 
     send(msg: ClientSend) {
+        debugWeb('send:', msg)
         this._wasmSvc.input$.next(msg)
         return
     }

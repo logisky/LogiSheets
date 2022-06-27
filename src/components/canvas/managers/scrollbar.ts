@@ -1,5 +1,7 @@
 import { ScrollbarAttr, ScrollbarType } from '@/components/scrollbar'
-import { CANVAS_OFFSET, DATA_SERVICE } from '@/core/data'
+import {CANVAS_OFFSET, DataService, ScrollPosition, SheetService} from '@/core/data'
+import { useInjection } from '@/core/ioc/provider'
+import { TYPES } from '@/core/ioc/types'
 import { useReducer, WheelEvent } from 'react'
 const reducer = (prevState: ScrollbarAttr, newState: Partial<ScrollbarAttr>) => {
     const s = { ...prevState }
@@ -11,32 +13,35 @@ const reducer = (prevState: ScrollbarAttr, newState: Partial<ScrollbarAttr>) => 
         s.scrollDistance = newState.scrollDistance
     return s
 }
-const _initXScrollbar = (canvas?: HTMLCanvasElement): ScrollbarAttr => {
+const _initXScrollbar = (): ScrollbarAttr => {
     return {
         direction: 'x',
         paddingLeft: 20,
         paddingRight: 10,
-        containerLength: canvas?.offsetWidth ?? 0,
-        scrollDistance: DATA_SERVICE.scroll.x,
-        containerTotalLength: canvas ? DATA_SERVICE.sheetSvc.updateMaxWidth(canvas.offsetWidth) : 0,
+        containerLength: 0,
+        scrollDistance: 0,
+        containerTotalLength: 0,
     }
 }
-const _initYScrollbar = (canvas?: HTMLCanvasElement): ScrollbarAttr => {
+const _initYScrollbar = (): ScrollbarAttr => {
     return {
         direction: 'y',
         paddingTop: 20,
         paddingBottom: 10,
-        containerLength: canvas?.offsetHeight ?? 0,
-        scrollDistance: DATA_SERVICE.scroll.y,
-        containerTotalLength: canvas ? DATA_SERVICE.sheetSvc.updateMaxHeight(_minHeight(canvas)) : 0,
+        containerLength: 0,
+        scrollDistance: 0,
+        containerTotalLength: 0,
     }
 }
 export const useScrollbar = () => {
+    const SCROLL_SERVICE = useInjection<ScrollPosition>(TYPES.Scroll)
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const [xScrollbarAttr, setXScrollbarAttr] = useReducer(reducer, undefined, _initXScrollbar)
     const [yScrollbarAttr, setYScrollbarAttr] = useReducer(reducer, undefined, _initYScrollbar)
-    const initScrollbar = (canvas: HTMLCanvasElement) => {
-        setXScrollbarAttr(_initXScrollbar(canvas))
-        setYScrollbarAttr(_initYScrollbar(canvas))
+    const initScrollbar = () => {
+        setXScrollbarAttr(_initXScrollbar())
+        setYScrollbarAttr(_initYScrollbar())
     }
     const mouseWheel = (e: WheelEvent<HTMLCanvasElement>) => {
         const delta = e.deltaX === 0 ? e.deltaY : e.deltaX
@@ -62,7 +67,7 @@ export const useScrollbar = () => {
         type: ScrollbarType,
         canvas: HTMLCanvasElement,
     ) => {
-        const oldScroll = type === 'x' ? DATA_SERVICE.scroll.x : DATA_SERVICE.scroll.y
+        const oldScroll = type === 'x' ? SCROLL_SERVICE.x : SCROLL_SERVICE.y
         let newScroll = oldScroll + delta
         // 不可能滚动到负数
         if (newScroll < 0)
@@ -73,12 +78,12 @@ export const useScrollbar = () => {
         if (type === 'y') {
             DATA_SERVICE.updateScroll(undefined, newScroll)
             const height = Math.max(newScroll + canvas.offsetHeight, _minHeight(canvas))
-            const maxHeight = DATA_SERVICE.sheetSvc.updateMaxHeight(height)
+            const maxHeight = SHEET_SERVICE.updateMaxHeight(height)
             setYScrollbarAttr({ scrollDistance: newScroll, containerTotalLength: maxHeight })
         } else if (type === 'x') {
             DATA_SERVICE.updateScroll(newScroll)
             const width = newScroll + canvas.offsetWidth
-            const maxWidth = DATA_SERVICE.sheetSvc.updateMaxWidth(width)
+            const maxWidth = SHEET_SERVICE.updateMaxWidth(width)
             setXScrollbarAttr({ scrollDistance: newScroll, containerTotalLength: maxWidth })
         }
     }

@@ -1,8 +1,10 @@
 import { useState } from "react"
 import {parseA1notation} from '@/common/a1notation'
 import { getTokens } from "@/core/formula"
-import { DATA_SERVICE } from "@/core/data"
 import { Range, StandardColor } from "@/core/standable"
+import { DataService } from "@/core/data"
+import { useInjection } from "@/core/ioc/provider"
+import { TYPES } from "@/core/ioc/types"
 
 const initStyle = (): HighlightCellStyle => {
     return {
@@ -38,6 +40,7 @@ export function equal(cell1: HighlightCell, cell2: HighlightCell) {
 
 // 接受从当前输入框中，输入的a1notation以高亮对应的单元格
 export const useHighlightCell = () => {
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const [highlightCells, setHighlightCells] = useState<HighlightCell[]>([])
 
     const getRanges = (formula: string) => {

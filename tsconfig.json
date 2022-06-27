@@ -5,6 +5,8 @@
     "baseUrl": ".",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "lib": [
@@ -18,6 +20,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "outDir": "./dist/",
+    "types": ["reflect-metadata"],
     "paths": {
       "@/*": ["src/*"],
     },

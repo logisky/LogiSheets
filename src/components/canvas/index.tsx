@@ -25,7 +25,6 @@ import {
     ScrollbarComponent
 } from '@/components/scrollbar'
 import { EventType, on } from '@/common/events'
-import { DATA_SERVICE } from '@/core/data'
 import { ContextmenuComponent } from './contextmenu'
 import { SelectorComponent } from '@/components/selector'
 import { ResizerComponent } from '@/components/resize'
@@ -35,6 +34,9 @@ import { InvalidFormulaComponent } from './invalid-formula'
 import { Buttons } from '@/common'
 import { CellInputBuilder } from '@/api'
 import { DialogComponent } from '@/ui/dialog'
+import { useInjection } from '@/core/ioc/provider'
+import { Backend, DataService, SheetService } from '@/core/data'
+import { TYPES } from '@/core/ioc/types'
 export const OFFSET = 100
 
 export interface CanvasProps {
@@ -44,6 +46,10 @@ export interface CanvasProps {
 export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [contextMenuEl, setContextMenu] = useState<ReactElement>()
+    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
+    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const renderMng = useInjection<Render>(TYPES.Render)
 
     const canvasEl = useRef<HTMLCanvasElement>(null)
 
@@ -53,21 +59,20 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const dndMng = useDnd()
     const textMng = useText()
     const highlights = useHighlightCell()
-    const renderMng = useRef(new Render())
     const resizerMng = useResizers()
     const focus$ = useRef(new Subject<void>())
 
     useEffect(() => {
         const subs = new Subscription()
-        subs.add(DATA_SERVICE.backend.render$.subscribe(() => {
-            renderMng.current.render(canvasEl.current!)
+        subs.add(BACKEND_SERVICE.render$.subscribe(() => {
+            renderMng.render(canvasEl.current!)
         }))
         subs.add(on(window, EventType.RESIZE)
             .pipe(debounceTime(100))
             .subscribe(() => {
-                renderMng.current.render(canvasEl.current!)
+                renderMng.render(canvasEl.current!)
             }))
-        subs.add(renderMng.current.rendered$.subscribe(() => {
+        subs.add(renderMng.rendered$.subscribe(() => {
             // resizer manager依赖viewRange
             resizerMng.init()
         }))
@@ -85,7 +90,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         return () => {
             subs.unsubscribe()
         }
-    }, [renderMng.current.rendered$])
+    }, [renderMng.rendered$])
     // 这里需要获取最新的state，所以useeffect不能加参数
     useEffect(() => {
         const subs = new Subscription()
@@ -102,7 +107,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     // 初始化
     useEffect(() => {
         selectorMng.init(canvasEl.current!)
-        scrollbarMng.initScrollbar(canvasEl.current!)
+        scrollbarMng.initScrollbar()
         textMng.init(canvasEl.current!)
         startCellMng.canvasChange()
         DATA_SERVICE.sendDisplayArea()
@@ -126,7 +131,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
 
     // 监听滚动
     useEffect(() => {
-        renderMng.current.render(canvasEl.current!)
+        renderMng.render(canvasEl.current!)
         startCellMng.scroll()
     }, [scrollbarMng.xScrollbarAttr, scrollbarMng.yScrollbarAttr])
 
@@ -141,7 +146,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             }
             if (e.buttons === Buttons.RIGHT)
                 return
-            const matchCell = match(e.clientX, e.clientY, canvasEl.current!)
+            const matchCell = match(e.clientX, e.clientY, canvasEl.current!, DATA_SERVICE.cachedViewRange)
             const isResize = resizerMng.mousedown(e.nativeEvent, canvasEl.current!)
             if (isResize)
                 return
@@ -159,7 +164,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         }))
         sub.add(on(window, EventType.MOUSE_MOVE).subscribe(mme => {
             mme.preventDefault()
-            const startCell = match(mme.clientX, mme.clientY, canvasEl.current!)
+            const startCell = match(mme.clientX, mme.clientY, canvasEl.current!, DATA_SERVICE.cachedViewRange)
             const isResize = resizerMng.mousemove(mme)
             if (isResize)
                 return
@@ -184,16 +189,16 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         const payload = new CellInputBuilder()
             .row(e.bindingData.coodinate.startRow)
             .col(e.bindingData.coodinate.startCol)
-            .sheetIdx(DATA_SERVICE.sheetSvc.getActiveSheet())
+            .sheetIdx(SHEET_SERVICE.getActiveSheet())
             .input(newText)
             .build()
-        DATA_SERVICE.backend.sendTransaction([payload])
+        BACKEND_SERVICE.sendTransaction([payload])
     }
 
     const onContextMenu = (e: MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        const matchCell = match(e.clientX, e.clientY, canvasEl.current!)
+        const matchCell = match(e.clientX, e.clientY, canvasEl.current!, DATA_SERVICE.cachedViewRange)
         startCellMng.mousedown(e, matchCell, canvasEl.current!, selectorMng.selector)
         if (!selectorMng.startCell)
             return
