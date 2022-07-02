@@ -20,7 +20,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "outDir": "./dist/",
-    "types": ["reflect-metadata"],
+    "types": ["reflect-metadata", "jest", "node"],
     "paths": {
       "@/*": ["src/*"],
     },
