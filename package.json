@@ -13,8 +13,6 @@
     "css-loader": "^6.6.0",
     "eslint-plugin-react-hooks": "^4.3.0",
     "html-webpack-plugin": "^5.5.0",
-    "logisheets-fc": "./src/wasms/fc/pkg",
-    "logisheets-server": "./src/wasms/server/pkg",
     "node-sass": "^7.0.1",
     "numfmt": "2.1.0",
     "react": "^17.0.2",
