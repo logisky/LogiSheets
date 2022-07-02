@@ -10,7 +10,6 @@ export const RootContainer = () => {
     const [selectedCell, setSelectedCell] = useState<SelectedCell>({ row: 0, col: 0 })
     return <div className={styles.host}>
         {DEBUG ? (<div className="debug-toolbar">
-
         </div>) : null}
         <div style={{ height: SETTINGS.topBar }}>
             <TopBar selectedCell={selectedCell}></TopBar>
