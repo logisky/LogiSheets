@@ -19,7 +19,7 @@ import initWasm, {
     undo,
     ReadFileResult,
     col_insert,
-} from '@/wasms/server/pkg'
+} from '../wasms/server/pkg'
 import { Calculator, Executor } from './calculator'
 import { TransactionCode, TransactionEndResult } from './jsvalues'
 import { hasOwnProperty } from '@/common'
