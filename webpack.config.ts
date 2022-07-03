@@ -54,16 +54,16 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
 				STAND_ALONE: standAlone,
 			}),
 			// https://rustwasm.github.io/wasm-pack/book/commands/build.html
-			new WasmPackPlugin({
-				crateDirectory: path.resolve(__dirname, 'src/wasms/server'),
-				extraArgs: '--mode no-install --target web',
-				outDir: 'pkg',
-			}),
-			new WasmPackPlugin({
-				crateDirectory: path.resolve(__dirname, 'src/wasms/fc'),
-				extraArgs: '--mode no-install --target web',
-				outDir: 'pkg',
-			}),
+			// new WasmPackPlugin({
+			// 	crateDirectory: path.resolve(__dirname, 'src/wasms/server'),
+			// 	extraArgs: '--mode no-install --target web',
+			// 	outDir: 'pkg',
+			// }),
+			// new WasmPackPlugin({
+			// 	crateDirectory: path.resolve(__dirname, 'src/wasms/fc'),
+			// 	extraArgs: '--mode no-install --target web',
+			// 	outDir: 'pkg',
+			// }),
 			new ProvidePlugin({
 				React: 'react',
 			}),

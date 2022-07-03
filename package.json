@@ -42,7 +42,10 @@
     "test": "jest -c jest.config.ts",
     "start:react": "react-scripts start",
     "start:dev": "webpack serve --config=webpack.config.ts --hot --env=dev",
-    "start:wasm": "webpack serve --config=webpack.config.ts --hot --env=dev --env=stand-alone",
+    "start:wasm": "yarn run wasm && webpack serve --config=webpack.config.ts --hot --env=dev --env=stand-alone",
+    "wasm": "yarn run wasm:server && yarn run wasm:fc",
+    "wasm:server": "wasm-pack build src/wasms/server --out-dir src/wasms/server --mode no-install --target web",
+    "wasm:fc": "wasm-pack build src/wasms/fc --out-dir src/wasms/fc --mode no-install --target web",
     "start": "yarn run start:wasm",
     "build": "webpack build --config=webpack.config.ts",
     "protoc": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/proto --ts_proto_opt=esModuleInterop=tru --ts_proto_opt=oneof=unions --proto_path=protocols protocols/message.proto"
