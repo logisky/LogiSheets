@@ -20,7 +20,6 @@ export class DataService {
         @inject(TYPES.Sheet) private readonly sheetSvc: SheetService,
         @inject(TYPES.Backend) private readonly backend: Backend,
     ) {
-        console.log('init data service')
         this._handleBackend()
     }
 

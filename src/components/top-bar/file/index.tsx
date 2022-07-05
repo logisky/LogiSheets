@@ -1,18 +1,18 @@
-import { ChangeEvent, FC } from 'react'
+import { ChangeEvent, FC, useRef } from 'react'
 import styles from './file.module.scss'
 import { getU8 } from '@/common/file'
-import { Backend } from '@/core/data'
+import { Backend, SheetService } from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
-// TODO: 挪到DataService中
-let FILE_ID = 1
 
 export interface FileProps {
 
 }
 
 export const FileComponent: FC<FileProps> = () => {
-    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
+	const fileId = useRef(1)
+    const backendSvc = useInjection<Backend>(TYPES.Backend)
+    const dataSvc = useInjection<SheetService>(TYPES.Sheet)
 	const upload = (e: ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.item(0)
 		if (!file)
@@ -22,11 +22,12 @@ export const FileComponent: FC<FileProps> = () => {
 				alert('read file error')
 				return
 			}
-			BACKEND_SERVICE.send({
+			dataSvc.clearAllData()
+			backendSvc.send({
 				$case: 'openFile',
 				openFile: {
 					content: u8,
-					fileId: `${FILE_ID++}`,
+					fileId: `${fileId.current++}`,
 					name: file.name
 				}
 			})
