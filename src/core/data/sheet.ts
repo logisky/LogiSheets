@@ -40,8 +40,16 @@ export class SheetService {
     getBlocks (sheet = this._activeIndex) {
         return this._blocks.get(sheet) ?? []
     }
+    clearAllData() {
+        this._sheet.clear()
+        this._cells.clear()
+        this._colInfos.clear()
+        this._rowInfos.clear()
+        this._blocks.clear()
+    }
 
     clear () {
+        this._sheet.delete(this._activeIndex)
         this._cells.clear()
         this._colInfos.clear()
         this._rowInfos.clear()
