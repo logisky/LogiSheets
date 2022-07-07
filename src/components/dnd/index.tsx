@@ -1,4 +1,4 @@
-import { FC, MouseEvent } from 'react'
+import { FC } from 'react'
 import styles from './dnd.module.scss'
 
 const BORDER_WIDTH = 2

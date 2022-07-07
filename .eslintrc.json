@@ -1,0 +1,52 @@
+{
+    "env": {
+        "browser": true,
+        "es2021": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaFeatures": {
+            "jsx": true
+        },
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": [
+        "react",
+        "@typescript-eslint"
+    ],
+    "ignorePatterns": [
+        "craco.config.js",
+        "src/bindings/**/*",
+        "src/wasm_svc/**/*",
+        "src/wasms/**/*"
+    ],
+    "rules": {
+        "max-lines": ["error", { "max": 200, "skipBlankLines": true, "skipComments": true }],
+        "react/react-in-jsx-scope": "off",
+        "no-console": "error",
+        "no-debugger": "error",
+        "@typescript-eslint/no-unused-vars": "error",
+        "indent": [
+            "error",
+            4
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "error",
+            "single"
+        ],
+        "semi": [
+            "error",
+            "never"
+        ]
+    }
+}

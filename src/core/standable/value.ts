@@ -2,10 +2,10 @@ import { Value } from '@/bindings'
 import { hasOwnProperty } from '@/common'
 export class StandardValue {
     cellValueOneof?:
-    | { $case: "str"; str: string }
-    | { $case: "number"; number: number }
-    | { $case: "bool"; bool: boolean }
-    | { $case: "error"; error: string }
+    | { $case: 'str'; str: string }
+    | { $case: 'number'; number: number }
+    | { $case: 'bool'; bool: boolean }
+    | { $case: 'error'; error: string }
     get value() {
         if (this.cellValueOneof?.$case === 'str')
             return this.cellValueOneof.str
@@ -26,7 +26,7 @@ export class StandardValue {
         if (hasOwnProperty(value, 'str'))
             v.cellValueOneof = {$case: 'str', str: value.str}
         else if (hasOwnProperty(value, 'bool'))
-            v.cellValueOneof = {$case: "bool", bool: value.bool}
+            v.cellValueOneof = {$case: 'bool', bool: value.bool}
         else if (hasOwnProperty(value, 'number'))
             v.cellValueOneof = {$case: 'number', number: value.number}
         else if (hasOwnProperty(value, 'error'))

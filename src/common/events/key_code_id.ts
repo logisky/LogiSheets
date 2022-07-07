@@ -3,7 +3,7 @@
  * Inspired somewhat from https://msdn.microsoft.com/en-us/library/windows/desktop/dd375731(v=vs.85).aspx
  * But these are "more general", as they should work across browsers & OS`s.
  */
- export const enum KeyCodeId {
+export const enum KeyCodeId {
     /**
      * Placed first to cover the 0 value of the enum.
      */

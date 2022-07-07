@@ -48,7 +48,12 @@
     "wasm:fc": "wasm-pack build src/wasms/fc --out-dir src/wasms/fc --mode no-install --target web",
     "start": "yarn run start:wasm",
     "build": "webpack build --config=webpack.config.ts",
-    "protoc": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/proto --ts_proto_opt=esModuleInterop=tru --ts_proto_opt=oneof=unions --proto_path=protocols protocols/message.proto"
+    "protoc": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/proto --ts_proto_opt=esModuleInterop=tru --ts_proto_opt=oneof=unions --proto_path=protocols protocols/message.proto",
+    "lint": "eslint . -c .eslintrc.json --fix",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.(ts|tsx|js|jsx)": "eslint -c .eslintrc.json --fix"
   },
   "eslintConfig": {
     "extends": [
@@ -71,11 +76,18 @@
   "devDependencies": {
     "@types/enzyme": "^3.10.12",
     "@types/jest": "^27.4.0",
+    "@typescript-eslint/eslint-plugin": "^5.30.5",
+    "@typescript-eslint/parser": "^5.30.5",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.6.7",
     "enzyme": "^3.11.0",
     "esbuild-loader": "^2.18.0",
+    "eslint": "^8.19.0",
+    "eslint-plugin-react": "^7.30.1",
+    "husky": "^8.0.1",
     "inversify": "^6.0.1",
     "jest": "^27.5.1",
+    "lint-staged": "^13.0.3",
+    "prettier": "^2.7.1",
     "reflect-metadata": "^0.1.13",
     "ts-jest": "^27.1.3",
     "webpack-cli": "^4.9.2"

@@ -6,9 +6,7 @@ import { Backend, SheetService } from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
 
-export interface SheetsTabprops {
-
-}
+export type SheetsTabprops = Record<string, unknown>
 
 export const SheetsTabComponent: FC<SheetsTabprops> = () => {
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
@@ -34,8 +32,8 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
         BACKEND_SERVICE.sendTransaction([payload])
     }
     return (
-        <div className={styles["host"]}>
-            <div className={styles["pre-btns"]}></div>
+        <div className={styles['host']}>
+            <div className={styles['pre-btns']}></div>
             {sheets.map((sheet, i) => (
                 <div className={['tab', `${i === active ? 'active' : ''}`].join(' ')}
                     onClick={() => onTabChange(i)}
@@ -43,7 +41,7 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
                     key={i}
                 >{sheet}</div>))
             }
-            <div className={styles["add-btn"]} onClick={add}>+</div>
+            <div className={styles['add-btn']} onClick={add}>+</div>
             <ContextMenuComponent
                 isOpen={isOpen}
                 setIsOpen={setIsOpen}

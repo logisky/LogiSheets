@@ -44,13 +44,13 @@ export class TextAreaState {
             currSelectionStart,
             currSelectionEnd,
         ] = [
-                previousState.value,
-                previousState.selectionStart,
-                previousState.selectionEnd,
-                currentState.value,
-                currentState.selectionStart,
-                currentState.selectionEnd,
-            ]
+            previousState.value,
+            previousState.selectionStart,
+            previousState.selectionEnd,
+            currentState.value,
+            currentState.selectionStart,
+            currentState.selectionEnd,
+        ]
         const prevSuffix = prevValue.substring(prevSelectionEnd)
         const currSuffix = currValue.substring(currSelectionEnd)
         const suffixLength = commonSuffixLength(prevSuffix, currSuffix)
@@ -169,6 +169,7 @@ export class TextAreaState {
 
 export class PagedScreenReaderStrategy {
     static fromEditorSelection(previousState: TextAreaState) {
+        previousState
         return TextAreaState.EMPTY
     }
 }

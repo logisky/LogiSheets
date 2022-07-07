@@ -13,5 +13,5 @@ export const SpreadsheetRoot = () => {
                 }
             </ErrorBoundary>
         </div>
-    );
+    )
 }

@@ -22,7 +22,7 @@ export const IocProvider: FC<IIocProvider> = ({
 }
 
 export function useInjection<T>(identifier: interfaces.ServiceIdentifier<T>) {
-    const { container } = useContext(InversifyContainer);
-    if (!container) { throw new Error(); }
-    return container.get<T>(identifier);
-};
+    const { container } = useContext(InversifyContainer)
+    if (!container) { throw new Error() }
+    return container.get<T>(identifier)
+}

@@ -11,19 +11,19 @@ export interface TopBarProps {
     readonly setAttr?: (e: SetAttrEvent) => void
 }
 
-export const TopBar = ({ selectedCell, setAttr }: TopBarProps) => {
+export const TopBar = ({ selectedCell }: TopBarProps) => {
     const [mainMenuType, setMainMenuType] = useState(MainMenuType.START)
     const [menuContent, setMenuContent] = useState<ReactElement | null>()
     useEffect(() => {
         let content: ReactElement | null = null
         switch (mainMenuType) {
-            case MainMenuType.START:
-                content = <StartComponent selectedCell={selectedCell}></StartComponent>
-                break
-            case MainMenuType.FILE:
-                content = <FileComponent></FileComponent>
-                break
-            default:
+        case MainMenuType.START:
+            content = <StartComponent selectedCell={selectedCell}></StartComponent>
+            break
+        case MainMenuType.FILE:
+            content = <FileComponent></FileComponent>
+            break
+        default:
         }
         setMenuContent(content)
     }, [mainMenuType])
@@ -32,7 +32,7 @@ export const TopBar = ({ selectedCell, setAttr }: TopBarProps) => {
             <div className={styles['main-menu']}>
                 <MainMenu currType={mainMenuType} mainMenuChanged$={setMainMenuType}></MainMenu>
             </div>
-            <div className={styles["content"]}>
+            <div className={styles['content']}>
                 <div className={styles['top-bar-start']}>
                     {menuContent}
                 </div>

@@ -44,7 +44,7 @@ export class Service {
         this._calculator.output$.subscribe(res => {
             const r = input_async_result(res) as TransactionEndResult
             const serverSend: ServerSend = {
-                $case: "actionEffect",
+                $case: 'actionEffect',
                 actionEffect: {sheets: r.sheetIdx, async_tasks: [], dirtys: []} // todo!()
             }
             this.output$.next(serverSend)
@@ -80,9 +80,9 @@ export class Service {
     }
 
     private _execTransaction(transaction: Transaction): ServerSend {
-        if (transaction === "Undo")
+        if (transaction === 'Undo')
             return this._execUndo()
-        if (transaction === "Redo")
+        if (transaction === 'Redo')
             return this._execRedo()
         transaction_start()
         transaction.Payloads.payloads.forEach(p => {
@@ -94,7 +94,7 @@ export class Service {
             debugger
         }
         return {
-            $case: "actionEffect",
+            $case: 'actionEffect',
             actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
         }
     }
@@ -159,7 +159,7 @@ export class Service {
         if (!r)
             console.log('undo failed')
         return {
-            $case: "actionEffect",
+            $case: 'actionEffect',
             actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
         }
     }
@@ -169,7 +169,7 @@ export class Service {
         if (!r)
             console.log('redo failed')
         return {
-            $case: "actionEffect",
+            $case: 'actionEffect',
             actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
         }
     }

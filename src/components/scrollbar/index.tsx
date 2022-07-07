@@ -42,7 +42,7 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
 
     useEffect(() => {
         const _render = () => {
-            const thumbContainer = _thumbContainerEl.current!
+            const thumbContainer = _thumbContainerEl.current as HTMLDivElement
             /**
              * The difference between clientHeight, offsetHeight, scrollHeight, offsetTop, and scrollTop
              * https://www.programmersought.com/article/76801676023/
@@ -80,7 +80,6 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
             setThumbStyle(newThumbStyle)
         }
         _render()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         containerLength,
         scrollDistance,
@@ -134,17 +133,17 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
 
     const _containerLength = () => {
         return xScrollbar() ?
-            _thumbContainerEl.current!.offsetWidth :
-            _thumbContainerEl.current!.offsetHeight
+            _thumbContainerEl.current?.offsetWidth ?? 0 :
+            _thumbContainerEl.current?.offsetHeight ?? 0
     }
 
     const _thumbLength = () => {
-        return xScrollbar() ? _thumbEl.current!.offsetWidth :
-            _thumbEl.current!.offsetHeight
+        return xScrollbar() ? _thumbEl.current?.offsetWidth ?? 0 :
+            _thumbEl.current?.offsetHeight ?? 0
     }
     return (
         <div className={`${styles.host} ${xScrollbar() ? styles['x-scrollbar'] : styles['y-scrollbar']}`} >
-            <div className={styles["edit-scrollbar"]} ref={_containerEl} style={{
+            <div className={styles['edit-scrollbar']} ref={_containerEl} style={{
                 paddingTop: toPx(paddingTop),
                 paddingBottom: toPx(paddingBottom),
                 paddingLeft: toPx(paddingLeft),
@@ -153,12 +152,12 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
                 width: `calc(100% - ${toPx(paddingLeft + paddingRight)})`,
             }}>
                 <div
-                    className={styles["thumb_container"]}
+                    className={styles['thumb_container']}
                     ref={_thumbContainerEl}
                     onWheel={e => thumbHostMouseWheel(e)}
                 >
                     <span
-                        className={styles["thumb"]}
+                        className={styles['thumb']}
                         ref={_thumbEl}
                         style={thumbStyle}
                         onMouseDown={e => thumbMouseDown(e)}

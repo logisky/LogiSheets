@@ -5,7 +5,7 @@ import { Box } from './box'
 import { CanvasApi } from './canvas'
 
 import { npx, npxLine, thinLineWidth } from './utils'
-import { Direction, error } from '@/common'
+import { Direction } from '@/common'
 import { TextAttr } from './text_attr'
 
 export class PainterService extends CanvasApi {
@@ -15,12 +15,12 @@ export class PainterService extends CanvasApi {
         attr.fillStyle = color
         this.attr(attr)
         switch (type) {
-            case 'Solid': {
-                const { startRow: y, startCol: x } = box.position
-                this.fillRect(x, y, box.width, box.height)
-            }
-                break
-            default:
+        case 'Solid': {
+            const { startRow: y, startCol: x } = box.position
+            this.fillRect(x, y, box.width, box.height)
+        }
+            break
+        default:
         }
         this.restore()
     }
@@ -58,69 +58,69 @@ export class PainterService extends CanvasApi {
         borderAttr.strokeStyle = stdColor.css()
         borderAttr.lineWidth = thinLine
         switch (border.style) {
-            case 'Dashed':
-                segments.push(dash)
-                break
-            case 'DashDot':
-                segments.push(dash, dot)
-                break
-            case 'DashDotDot':
-                segments.push(dash, dot, dot)
-                break
-            case 'Dotted':
-                segments.push(dot)
-                break
-            case 'Double':
-                return
-            case 'Hair':
-                segments.push(hair)
-                break
-            case 'Medium':
-                borderAttr.lineWidth = mediumLine
-                break
-            case 'MediumDashed':
-                borderAttr.lineWidth = mediumLine
-                segments.push(dash)
-                break
-            case 'MediumDashDot':
-                borderAttr.lineWidth = mediumLine
-                segments.push(dash, dot)
-                break
-            case 'MediumDashDotDot':
-                borderAttr.lineWidth = mediumLine
-                segments.push(dash, dot, dot, dot)
-                break
-            case 'None':
-                return
-            case 'SlantDashDot':
-                this.restore()
-                return
-            case 'Thick':
-                borderAttr.lineWidth = thickLine
-                break
-            case 'Thin':
-                borderAttr.lineWidth = thinLine
-                break
-            default:
+        case 'Dashed':
+            segments.push(dash)
+            break
+        case 'DashDot':
+            segments.push(dash, dot)
+            break
+        case 'DashDotDot':
+            segments.push(dash, dot, dot)
+            break
+        case 'Dotted':
+            segments.push(dot)
+            break
+        case 'Double':
+            return
+        case 'Hair':
+            segments.push(hair)
+            break
+        case 'Medium':
+            borderAttr.lineWidth = mediumLine
+            break
+        case 'MediumDashed':
+            borderAttr.lineWidth = mediumLine
+            segments.push(dash)
+            break
+        case 'MediumDashDot':
+            borderAttr.lineWidth = mediumLine
+            segments.push(dash, dot)
+            break
+        case 'MediumDashDotDot':
+            borderAttr.lineWidth = mediumLine
+            segments.push(dash, dot, dot, dot)
+            break
+        case 'None':
+            return
+        case 'SlantDashDot':
+            this.restore()
+            return
+        case 'Thick':
+            borderAttr.lineWidth = thickLine
+            break
+        case 'Thin':
+            borderAttr.lineWidth = thinLine
+            break
+        default:
         }
         if (segments.length)
             this.setLineDash(segments)
         this.attr(borderAttr)
         const { startRow, startCol, endRow, endCol } = box.position
         switch (type) {
-            case 'top':
-                this.line([[startCol, startRow], [endCol, startRow]])
-                break
-            case 'right':
-                this.line([[endCol, startRow], [endCol, endRow]])
-                break
-            case 'bottom':
-                this.line([[startCol, endRow], [endCol, endRow]])
-                break
-            case 'left':
-                this.line([[startCol, startRow], [startCol, endRow]])
-                break
-            default:
+        case 'top':
+            this.line([[startCol, startRow], [endCol, startRow]])
+            break
+        case 'right':
+            this.line([[endCol, startRow], [endCol, endRow]])
+            break
+        case 'bottom':
+            this.line([[startCol, endRow], [endCol, endRow]])
+            break
+        case 'left':
+            this.line([[startCol, startRow], [startCol, endRow]])
+            break
+        default:
         }
         this.restore()
     }
@@ -178,40 +178,40 @@ export class PainterService extends CanvasApi {
         lineAttr.strokeStyle = attr.font.standardColor.css()
         const width = attr.font.measureText(text).width
         switch (attr?.font?.underline?.val ?? 'None') {
-            case 'DoubleAccounting':
-            case 'Double':
-            case 'None':
-                return
-            case 'Single':
-                lineAttr.lineWidth = npxLine(1)
-                switch (attr.alignment?.vertical) {
-                    case 'Bottom':
-                        yOffset += attr.font.size / 2
-                        break
-                    case 'Center':
-                        break
-                    case 'Top':
-                        break
-                    default:
-                        yOffset += attr.font.size / 2
-                        break
-                }
-                switch (attr.alignment?.horizontal) {
-                    case 'Center':
-                        xOffset -= (width / 2)
-                        break
-                    case 'Right':
-                        xOffset += -width
-                        break
-                    case 'Left':
-                        break
-                    default:
-                        console.log(`Not support underline horizontal ${attr.alignment?.horizontal}`)
-                }
+        case 'DoubleAccounting':
+        case 'Double':
+        case 'None':
+            return
+        case 'Single':
+            lineAttr.lineWidth = npxLine(1)
+            switch (attr.alignment?.vertical) {
+            case 'Bottom':
+                yOffset += attr.font.size / 2
+                break
+            case 'Center':
+                break
+            case 'Top':
                 break
             default:
-                console.error(`Not support underline ${attr.font.underline}`)
-                return
+                yOffset += attr.font.size / 2
+                break
+            }
+            switch (attr.alignment?.horizontal) {
+            case 'Center':
+                xOffset -= (width / 2)
+                break
+            case 'Right':
+                xOffset += -width
+                break
+            case 'Left':
+                break
+            default:
+                console.log(`Not support underline horizontal ${attr.alignment?.horizontal}`)
+            }
+            break
+        default:
+            console.error(`Not support underline ${attr.font.underline}`)
+            return
         }
         this.attr(lineAttr)
         this.line([

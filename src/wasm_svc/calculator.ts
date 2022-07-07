@@ -16,14 +16,14 @@ export class Calculator {
                         return v
                     }
                     switch (v) {
-                        case CalcException.ArgErr:
-                            return '#ARGERR!'
-                        case CalcException.TimeOut:
-                            return '#TIMEOUT!'
-                        case CalcException.NotFound:
-                            return '#NOTFOUND!'
-                        default:
-                            return '#UNKNOWN!'
+                    case CalcException.ArgErr:
+                        return '#ARGERR!'
+                    case CalcException.TimeOut:
+                        return '#TIMEOUT!'
+                    case CalcException.NotFound:
+                        return '#NOTFOUND!'
+                    default:
+                        return '#UNKNOWN!'
                     }
                 })
                 const asyncFuncResult: AsyncFuncResult = {asyncId: tasks.id, values: res}

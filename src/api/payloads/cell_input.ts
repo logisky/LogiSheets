@@ -1,6 +1,6 @@
 
 export interface CellInput {
-    readonly type: "cellInput"
+    readonly type: 'cellInput'
     readonly sheetIdx: number
     readonly row: number
     readonly col: number

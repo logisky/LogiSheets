@@ -1,4 +1,4 @@
-import { Payload } from "./payloads";
+import { Payload } from './payloads'
 
 export class UndoTransaction {
     public static type = 'undo'

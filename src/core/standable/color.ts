@@ -1,7 +1,7 @@
 import {Color} from '@/bindings'
 // https://css-tricks.com/snippets/javascript/random-hex-color/
 function getRandomColor() {
-    return Math.floor(Math.random()*16777215).toString(16);
+    return Math.floor(Math.random()*16777215).toString(16)
 }
 const ALPHA = 255
 // https://en.wikipedia.org/wiki/RGBA_color_model

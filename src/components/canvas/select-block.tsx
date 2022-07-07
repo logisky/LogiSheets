@@ -15,7 +15,7 @@ export const SelectBlockComponent = (props: SelectBlockProps) => {
             <div className="content" style={{display: 'flex',flexDirection: 'column'}}>
                 {blocks.length > 1 ? (
                     blocks.map((block, i) =>
-                        <input type='checkbox' onChange={() => selectionModel.toggle(block)}>block{i}</input>)
+                        <input type='checkbox' key={i} onChange={() => selectionModel.toggle(block)}>block{i}</input>)
                 ) : null}
             </div>
             <div className="actions">

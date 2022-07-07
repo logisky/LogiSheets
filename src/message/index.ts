@@ -1,8 +1,8 @@
 import {ActionEffect, DisplayRequest, DisplayResponse, EditAction} from '../bindings'
 export type ClientSend = 
-    | {$case: "transaction"; transaction: EditAction}
-    | {$case: "displayRequest"; displayRequest: DisplayRequest}
-    | {$case: "openFile"; openFile: OpenFile}
+    | {$case: 'transaction'; transaction: EditAction}
+    | {$case: 'displayRequest'; displayRequest: DisplayRequest}
+    | {$case: 'openFile'; openFile: OpenFile}
 
 export interface OpenFile {
     name: string,
@@ -10,8 +10,8 @@ export interface OpenFile {
 }
 
 export type ServerSend =
-    | {$case: "displayResponse"; displayResponse: DisplayResponse}
-    | {$case: "actionEffect"; actionEffect: ActionEffect}
+    | {$case: 'displayResponse'; displayResponse: DisplayResponse}
+    | {$case: 'actionEffect'; actionEffect: ActionEffect}
 
 export interface OpenFile {
     fileId: string;

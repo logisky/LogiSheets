@@ -9,8 +9,8 @@ import {
 import { Context } from './defs'
 import { BlurEvent } from './events'
 import { CursorComponent } from './cursor'
-import { ClipboardEvent, CompositionEvent, FocusEvent, FormEvent, KeyboardEvent, MouseEvent, useEffect, useRef } from 'react'
-import { Candidate, SuggestComponent } from '@/components/suggest'
+import { ClipboardEvent, CompositionEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useRef } from 'react'
+import { SuggestComponent } from '@/components/suggest'
 import { Subscription, Observable } from 'rxjs'
 import styles from './textarea.module.scss'
 
@@ -50,14 +50,15 @@ export const TextContainerComponent = <T,>({
     const textareaEl = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
-        const textElement = textEl.current!
-        const selectionElement = selectionEl.current!
-        const textareaElement = textareaEl.current!
-        textMng.current.drawText(textElement)
-        selectionMng.init(selectionElement)
-        inputMng.current.init(textareaElement)
-        // 仅为了拿到最新的元素所以放在useEffect里面
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const textElement = textEl.current
+        const selectionElement = selectionEl.current
+        const textareaElement = textareaEl.current
+        if (textElement)
+            textMng.current.drawText(textElement)
+        if (selectionElement)
+            selectionMng.init(selectionElement)
+        if (textareaElement)
+            inputMng.current.init(textareaElement)
     }, [context])
     useEffect(() => {
         const sub = new Subscription()
@@ -89,7 +90,6 @@ export const TextContainerComponent = <T,>({
                 sub.unsubscribe()
             })
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const onHostMouseDown = (mde: MouseEvent) => {
@@ -121,7 +121,7 @@ export const TextContainerComponent = <T,>({
     const onHostCompositionEnd = (e: CompositionEvent) => {
         inputMng.current.textareaInput?.onCompositionEnd(e.nativeEvent)
     }
-    const onHostInput = (e: FormEvent) => {
+    const onHostInput = () => {
         inputMng.current.textareaInput?.onInput()
     }
     const onHostCut = (e: ClipboardEvent) => {
@@ -186,11 +186,11 @@ export const TextContainerComponent = <T,>({
             height: `${context.cellHeight}px`,
         }}
     >
-        <canvas className={styles["text-canvas"]} ref={textEl}></canvas>
-        <canvas className={styles["selection-canvas"]} ref={selectionEl}></canvas>
+        <canvas className={styles['text-canvas']} ref={textEl}></canvas>
+        <canvas className={styles['selection-canvas']} ref={selectionEl}></canvas>
         <textarea
             ref={textareaEl}
-            className={`${styles["inputarea"]} ${styles["input-text-cursor"]}`}
+            className={`${styles['inputarea']} ${styles['input-text-cursor']}`}
             wrap="off"
             autoCorrect="off"
             autoComplete="off"
