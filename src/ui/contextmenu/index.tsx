@@ -24,12 +24,12 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
         <div>
             {items.map((item, key) => {
                 switch (item.type) {
-                    case 'text':
-                        return <div className="text" key={key} onClick={() => onClick(item)}>{item.text}</div>
-                    case 'divider':
-                        return <div className="divider" key={key}></div>
-                    default:
-                        return <div key={key}></div>
+                case 'text':
+                    return <div className="text" key={key} onClick={() => onClick(item)}>{item.text}</div>
+                case 'divider':
+                    return <div className="divider" key={key}></div>
+                default:
+                    return <div key={key}></div>
                 }
             })}
         </div>

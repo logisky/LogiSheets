@@ -28,7 +28,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
             setFormula(cell.getFormular())
     }, [selectedCell])
     const textChange = (newText: string) => {
-
+        console.log(newText)
     }
     return <div className={styles.host}>
         <div className={styles.a1notation}>{coordinate}</div>

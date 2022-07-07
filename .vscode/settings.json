@@ -16,6 +16,7 @@
 	"typescript.inlayHints.parameterTypes.enabled": true,
 	"typescript.inlayHints.propertyDeclarationTypes.enabled": true,
 	"typescript.inlayHints.variableTypes.enabled": true,
+	"eslint.codeActionsOnSave.mode": "all",
 	"[rust]": {
 		"editor.formatOnSave": true,
 	}

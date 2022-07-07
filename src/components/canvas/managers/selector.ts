@@ -68,7 +68,7 @@ export const useSelector = () => {
             setSelector(undefined)
             return
         }
-        const selector = getSelector(canvas.current!, startCellInner, endCell)
+        const selector = getSelector(canvas.current, startCellInner, endCell)
         setSelector(selector)
     }, [canvas, endCell, startCellInner])
 

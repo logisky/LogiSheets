@@ -39,22 +39,22 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
         BACKEND_SERVICE.sendTransaction([payload])
     }
     return <div>
-            <Modal
-                isOpen={isOpen}
-                shouldCloseOnEsc={true}
-                shouldCloseOnOverlayClick={true}
-            >
-                <div onClick={openRename}>重命名</div>
-                <div onClick={deleteSheet}>删除</div>
-            </Modal>
-            <Modal
-                isOpen={renameIsOpen}
-                shouldCloseOnEsc={true}
-                shouldCloseOnOverlayClick={true}
-                onAfterClose={rename}
-            >
-                <input value={sheetName} onChange={e => setSheetName(e.target.value)} />
-                <button onClick={() => setRenameIsOpen(true)}>关闭</button>
-            </Modal>
+        <Modal
+            isOpen={isOpen}
+            shouldCloseOnEsc={true}
+            shouldCloseOnOverlayClick={true}
+        >
+            <div onClick={openRename}>重命名</div>
+            <div onClick={deleteSheet}>删除</div>
+        </Modal>
+        <Modal
+            isOpen={renameIsOpen}
+            shouldCloseOnEsc={true}
+            shouldCloseOnOverlayClick={true}
+            onAfterClose={rename}
+        >
+            <input value={sheetName} onChange={e => setSheetName(e.target.value)} />
+            <button onClick={() => setRenameIsOpen(true)}>关闭</button>
+        </Modal>
     </div>
 }

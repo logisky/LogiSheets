@@ -13,7 +13,7 @@ export function parseA1notation(value: string): {cs: number, rs: number, ce?: nu
     const result = upperCase(value).match(a1notationReg)
     if (!result?.groups)
         return
-    let {ce, re, cs, rs} = result.groups
+    const {ce, re, cs, rs} = result.groups
     return {
         cs: toZeroBasedNotation(cs),
         rs: parseInt(rs) - 1,
@@ -27,7 +27,7 @@ export function parseA1notation(value: string): {cs: number, rs: number, ce?: nu
  * Note that the in Excel A1-notation, row indices are plain integers and don't
  * need to be formatted to A1-notation.
  */
- export function toA1notation(index: number): string {
+export function toA1notation(index: number): string {
     /**
      * The algorithm employed here is the same as converting numbers between
      * different bases, e.g., decimal vs. hexadecimal.

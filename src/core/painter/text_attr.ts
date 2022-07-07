@@ -9,8 +9,8 @@ export class TextAttr {
     }
     font = new StandardFont()
     alignment: CtCellAlignment | undefined = {
-        horizontal: "Center",
-        vertical: "Center",
+        horizontal: 'Center',
+        vertical: 'Center',
         indent: 0,
         justifyLastLine: false,
         readingOrder: -1,

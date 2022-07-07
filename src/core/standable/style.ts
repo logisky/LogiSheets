@@ -8,7 +8,7 @@ export class StandardStyle implements Style {
     font!: Font 
     fill!: Fill
     alignment!: CtCellAlignment
-    formatter: string = ''
+    formatter = ''
     static from (style: Style) {
         const s = new StandardStyle()
         shallowCopy(style, s)

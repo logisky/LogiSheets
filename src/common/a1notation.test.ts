@@ -3,7 +3,7 @@ import {
     toA1notation,
     toZeroBasedNotation,
     parseA1notation,
-    } from './a1notation'
+} from './a1notation'
 
 describe('a1notation test', () => {
     it('to a1notation', () => {

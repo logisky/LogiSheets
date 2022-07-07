@@ -1,10 +1,9 @@
-export function equal(a: Object, b: Object) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function equal(a: any, b: any) {
     let result = true
     Object.keys(a).forEach(key => {
-        // @ts-expect-error
         if (!b[key])
             result = false
-        // @ts-expect-error
         if (a[key] !== b[key])
             result = false
     })

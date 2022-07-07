@@ -1,6 +1,6 @@
 import { Transaction, PayloadsTransaction, UndoTransaction, RedoTransaction } from '../transactions'
 import { EditAction, EditPayload, StyleUpdateType } from '@/bindings'
-import { Payload, SetFont, SetBorder } from "../payloads";
+import { Payload, SetFont, SetBorder } from '../payloads'
 
 export function adaptTransaction(t: Transaction): EditAction {
     if (t instanceof UndoTransaction)
@@ -75,20 +75,20 @@ export function adaptPayload(p: Payload): EditPayload {
         }
     case 'setRowVisible':
         return {
-           SetVisible: {
-               isRow: true,
-               sheetIdx: p.sheetIdx,
-               visible: p.visible,
-               start: p.row,
+            SetVisible: {
+                isRow: true,
+                sheetIdx: p.sheetIdx,
+                visible: p.visible,
+                start: p.row,
             } 
         }
     case 'setColVisible':
         return {
-           SetVisible: {
-               isRow: false,
-               sheetIdx: p.sheetIdx,
-               visible: p.visible,
-               start: p.col,
+            SetVisible: {
+                isRow: false,
+                sheetIdx: p.sheetIdx,
+                visible: p.visible,
+                start: p.col,
             } 
         }
     case 'insertBlockRows':

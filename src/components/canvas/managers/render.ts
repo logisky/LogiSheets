@@ -56,9 +56,9 @@ export class Render {
         this.dataSvc.cachedViewRange.rows.forEach(r => {
             const { startRow, startCol, endRow, endCol } = r.position
             this._painterSvc.line([[startCol, startRow],
-            [endCol, startRow],
-            [endCol, endRow],
-            [startCol, endRow]])
+                [endCol, startRow],
+                [endCol, endRow],
+                [startCol, endRow]])
             const box = new Box()
             box.position = r.position
             const attr = new TextAttr()
@@ -74,9 +74,9 @@ export class Render {
         this.dataSvc.cachedViewRange.cols.forEach(c => {
             const { startRow, startCol, endRow, endCol } = c.position
             this._painterSvc.line([[endCol, startRow],
-            [endCol, endRow],
-            [startCol, endRow],
-            [startCol, startRow],
+                [endCol, endRow],
+                [startCol, endRow],
+                [startCol, startRow],
             ])
             const a1Notation = toA1notation(c.coodinate.startCol)
             const box = new Box()

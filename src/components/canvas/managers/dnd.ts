@@ -35,7 +35,7 @@ export const useDnd = () => {
         )
         startVisibleCells.forEach(c => {
             payloads.push({
-                type: "cellInput",
+                type: 'cellInput',
                 sheetIdx: SHEET_SERVICE.getActiveSheet(),
                 row: c.row,
                 col: c.col,
@@ -46,7 +46,7 @@ export const useDnd = () => {
             const { row, col } = startVisibleCells[i]
             const input = SHEET_SERVICE.getCell(row, col)?.getText()
             payloads.push({
-                type: "cellInput",
+                type: 'cellInput',
                 sheetIdx: SHEET_SERVICE.getActiveSheet(),
                 row: c.row,
                 col: c.col,
