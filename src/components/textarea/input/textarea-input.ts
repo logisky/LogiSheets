@@ -26,7 +26,7 @@ import { Selection } from './selection'
 import { Position } from './position'
 import { TextAreaInputEvents } from './textarea-input-events'
 import { isHighSurrogate } from '@/common/strings'
-import { debugWeb, shallowCopy } from '@/common'
+import { shallowCopy } from '@/common'
 const enum ReadFromTextArea {
     TYPE,
     PASTE,
@@ -37,6 +37,7 @@ export class TextAreaInput extends TextAreaInputEvents {
         public readonly textarea: HTMLTextAreaElement,
     ) {
         super()
+        this._textareaWrapper = new TextAreaWrapper(this.textarea)
         this.writeScreenReaderContent()
     }
     destroy(): void {
@@ -171,7 +172,7 @@ export class TextAreaInput extends TextAreaInputEvents {
         const hasFocus = this._hasFocus
         this.#setHasFocus(true)
         if (isSafari() && !hasFocus && this._hasFocus)
-            debugWeb('safari todo')
+            console.log('safari todo')
     }
     onBlur() {
         if (this._isDoingComposition) {
@@ -182,7 +183,7 @@ export class TextAreaInput extends TextAreaInputEvents {
         this.#setHasFocus(false)
     }
     private _textAreaState = TextAreaState.EMPTY
-    private _textareaWrapper = new TextAreaWrapper(this.textarea)
+    private _textareaWrapper: TextAreaWrapper
     private _selectionChangeListener?: Subscription
     private _nextCommand = ReadFromTextArea.TYPE
     private _hasFocus = false

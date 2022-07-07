@@ -2,7 +2,7 @@ import { Observable, ReplaySubject, Subject } from 'rxjs'
 import { DisplayPatch } from '@/bindings'
 import { ClientSend, ServerSend } from '@/message'
 import { Payload, PayloadsTransaction, adaptTransaction } from '@/api'
-import { debugWeb, hasOwnProperty } from '@/common'
+import { hasOwnProperty } from '@/common'
 import { SheetService } from '@/core/data/sheet'
 import { Service as StandAloneService } from '@/wasm_svc/service'
 import {injectable, inject} from 'inversify'
@@ -15,7 +15,6 @@ export class Backend {
     constructor(
         @inject(TYPES.Sheet) private readonly sheetSvc: SheetService,
     ) {
-        console.log('init backend service')
         this._wasmSvc.output$.subscribe(e => {
             this.handleResponse(e)
         })
@@ -29,7 +28,7 @@ export class Backend {
     }
     send$ = new ReplaySubject<Blob>(5)
     handleResponse(msg: ServerSend) {
-        debugWeb(`standalone: ${STAND_ALONE}, response`, msg)
+        console.log(`standalone: ${STAND_ALONE}, response`, msg)
         this._handleServerSend(msg)
     }
     sendTransaction(payloads: Payload[], undoable = true) {
@@ -41,7 +40,7 @@ export class Backend {
     }
 
     send(msg: ClientSend) {
-        debugWeb('send:', msg)
+        console.log('send:', msg)
         this._wasmSvc.input$.next(msg)
         return
     }
@@ -52,7 +51,7 @@ export class Backend {
     private _handleServerSend(serverSend: ServerSend) {
         if (serverSend.$case === 'displayResponse') {
             const e = serverSend.displayResponse
-            debugWeb('ws: display response', e)
+            console.log('ws: display response', e)
             this.sheetSvc.clear()
             e.patches.forEach(p => {
                 this._handleDisplayArea(p)
@@ -60,7 +59,7 @@ export class Backend {
             this._render$.next()
         } else if (serverSend.$case === 'actionEffect') {
             const sheetUpdated = serverSend.actionEffect.sheets
-            debugWeb('ws: sheet updated', sheetUpdated)
+            console.log('ws: sheet updated', sheetUpdated)
             this._sheetUpdated$.next(sheetUpdated)
         }
     }

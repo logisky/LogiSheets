@@ -5,7 +5,6 @@ import { RenderCell, ViewRange } from './view_range'
 import { Backend } from './backend'
 import { DisplayRequest } from '@/bindings'
 import { Range } from '@/core/standable'
-import { debugWeb } from '@/common'
 import {injectable, inject} from 'inversify'
 import {TYPES} from '@/core/ioc/types'
 import { getID } from '@/core/ioc/id'
@@ -58,7 +57,7 @@ export class DataService {
         viewRange.cols = cols
         viewRange.cells = cells
         this._viewRange = viewRange
-        debugWeb('init view range', viewRange)
+        console.log('init view range', viewRange)
         return this._viewRange
     }
     private _viewRange = new ViewRange()

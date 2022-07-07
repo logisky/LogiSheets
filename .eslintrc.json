@@ -27,9 +27,10 @@
         "src/wasms/**/*"
     ],
     "rules": {
-        "max-lines": ["error", { "max": 200, "skipBlankLines": true, "skipComments": true }],
+        "max-lines": ["off"],
         "react/react-in-jsx-scope": "off",
         "no-console": "error",
+        "no-alert": "error",
         "no-debugger": "error",
         "@typescript-eslint/no-unused-vars": "error",
         "indent": [

@@ -123,7 +123,6 @@ export const StartComponent = ({
         const standardColor = StandardColor.from(r, g, b, a)
         setFontColor(standardColor.css())
         setOpenSketchPicker(false)
-        console.log(fontColor)
     }
     return (
         <div className={styles.host}>

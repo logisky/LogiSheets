@@ -27,7 +27,6 @@ export const MAX_COUNT = 100000000
 export class SheetService {
     readonly id = getID()
     constructor() {
-        console.log('init sheet service')
         const sheet = new StandardSheet()
         sheet.name = SETTINGS.defaultSheetName
         this._sheet.set(0, sheet)
