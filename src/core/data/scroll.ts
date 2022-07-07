@@ -3,9 +3,6 @@ import {getID} from '@/core/ioc/id'
 
 @injectable()
 export class ScrollPosition {
-    constructor() {
-        console.log('init scroll service')
-    }
     readonly id = getID()
     /**
      * pixel of x-axis margin-left

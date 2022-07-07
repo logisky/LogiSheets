@@ -1,8 +1,9 @@
-import React from 'react'
+import React, {ErrorInfo} from 'react'
+import {useToast} from '@/ui/notification/useToast'
 export interface IErrorBoundaryState {
     hasError: boolean
-    error: unknown
-    errorInfo: unknown
+    error: Error | null
+    errorInfo: ErrorInfo | null
 }
 
 export interface IErrorBoundaryProps {
@@ -18,7 +19,7 @@ export class ErrorBoundary extends React.Component<IErrorBoundaryProps, IErrorBo
         }
     }
   
-    static getDerivedStateFromError(error: unknown) {
+    static getDerivedStateFromError(error: Error) {
         // Update state so the next render will show the fallback UI.
         return {
             hasError: true,
@@ -26,10 +27,10 @@ export class ErrorBoundary extends React.Component<IErrorBoundaryProps, IErrorBo
         }
     }
   
-    componentDidCatch(error: unknown, errorInfo: unknown) {
+    componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         // You can also log the error to an error reporting service
-        console.log('error: ', error)
-        console.log('errorInfo: ', errorInfo)
+        useToast().toast.error(error)
+        useToast().toast.error(errorInfo)
     }
   
     render() {

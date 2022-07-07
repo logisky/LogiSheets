@@ -4,6 +4,7 @@ import { getU8 } from '@/common/file'
 import { Backend, SheetService } from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
+import {useToast} from '@/ui/notification/useToast'
 
 export type FileProps = Record<string, unknown>
 
@@ -15,22 +16,30 @@ export const FileComponent: FC<FileProps> = () => {
         const file = e.target.files?.item(0)
         if (!file)
             return
-        getU8(file).subscribe(async u8 => {
-            if (!u8) {
-                alert('read file error')
-                return
-            }
-            dataSvc.clearAllData()
-            backendSvc.send({
-                $case: 'openFile',
-                openFile: {
-                    content: u8,
-                    fileId: `${fileId.current++}`,
-                    name: file.name
+        const readFile = new Promise((resolve, reject) => {
+            getU8(file).subscribe(async u8 => {
+                if (!u8) {
+                    reject('read file error')
+                    return
                 }
+                dataSvc.clearAllData()
+                backendSvc.send({
+                    $case: 'openFile',
+                    openFile: {
+                        content: u8,
+                        fileId: `${fileId.current++}`,
+                        name: file.name
+                    }
+                })
+                resolve('')
+            }, err => {
+                reject(err)
             })
-        }, err => {
-            throw Error(err)
+        })
+        useToast().toast.promise(readFile, {
+            pending: 'Loading file...',
+            error: 'Read file error, retry later',
+            success: `Read file ${file.name}`,
         })
     }
     return (<div className={styles.host}>

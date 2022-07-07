@@ -1,8 +1,10 @@
+/* eslint-disable max-lines */
 import { BorderPr, StPatternType } from '@/bindings'
 import { StandardColor } from '@/core/standable'
 import { CanvasAttr } from './canvas_attr'
 import { Box } from './box'
 import { CanvasApi } from './canvas'
+import {useToast} from '@/ui/notification/useToast'
 
 import { npx, npxLine, thinLineWidth } from './utils'
 import { Direction } from '@/common'
@@ -43,7 +45,6 @@ export class PainterService extends CanvasApi {
         this.restore()
     }
 
-    // tslint:disable-next-line: max-func-body-length
     border (border: BorderPr, box: Box, type: Direction) {
         this.save()
         const stdColor = StandardColor.fromCtColor(border.color)
@@ -206,11 +207,11 @@ export class PainterService extends CanvasApi {
             case 'Left':
                 break
             default:
-                console.log(`Not support underline horizontal ${attr.alignment?.horizontal}`)
+                useToast().toast.error(`Not support underline horizontal ${attr.alignment?.horizontal}`)
             }
             break
         default:
-            console.error(`Not support underline ${attr.font.underline}`)
+            useToast().toast.error(`Not support underline ${attr.font.underline}`)
             return
         }
         this.attr(lineAttr)

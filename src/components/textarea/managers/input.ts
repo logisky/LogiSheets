@@ -18,7 +18,6 @@ import { useCursor } from './cursor'
 import { useSelection } from './selection'
 import { AccessibilitySupport } from '@/common/document'
 import { isMac } from '@/common/platform'
-import { debugWeb } from '@/common'
 import { Subscription, Subject, Observable } from 'rxjs'
 
 export class InputManager<T> extends Subscription {
@@ -60,7 +59,7 @@ export class InputManager<T> extends Subscription {
             ) => {
                 if (this._accessibilitySupport === AccessibilitySupport.DISABLED) {
                     if (isMac())
-                        debugWeb('TODO', 'mac process')
+                        console.log('TODO', 'mac process')
                     return TextAreaState.EMPTY
                 }
                 return PagedScreenReaderStrategy
@@ -71,7 +70,7 @@ export class InputManager<T> extends Subscription {
                 deltaOffset: number,
                 lineFeedCnt: number
             ) => {
-                debugWeb('TODO', viewAnchorPosition, deltaOffset, lineFeedCnt)
+                console.log('TODO', viewAnchorPosition, deltaOffset, lineFeedCnt)
                 return viewAnchorPosition
             },
         }
@@ -121,7 +120,7 @@ export class InputManager<T> extends Subscription {
                 this._cursorManager.type([], removed)
             }
             if (e.positionDelta || e.replaceNextCharCnt || e.replacePrevCharCnt)
-                debugWeb('textarea type composition change', e)
+                console.log('textarea type composition change', e)
             else {
                 const line = cursor.lineNumber
                 const col = cursor.column

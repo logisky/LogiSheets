@@ -1,6 +1,6 @@
-import { error } from '@/common'
 import { CanvasAttr } from './canvas_attr'
 import { dpr, npx, npxLine } from './utils'
+import {useToast} from '@/ui/notification/useToast'
 
 export class CanvasApi {
     canvas() {
@@ -59,7 +59,7 @@ export class CanvasApi {
         c.style.backgroundColor = '#fff'
         const ctx = c.getContext('2d')
         if (!ctx) {
-            error('Error 2d Context')
+            useToast().toast('Unexpected error, please refresh website!')
             return
         }
         ctx.scale(dpr(), dpr())
