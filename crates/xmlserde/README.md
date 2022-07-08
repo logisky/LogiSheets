@@ -5,7 +5,7 @@
 `xmlserde` is a tool for serializing or deserializing xml struct.
 It is designed for [LogiSheets](https://github.com/proclml/LogiSheets), which is a spreadsheets application working on the browser.
 
-You can check the usage in the `workbook` directory or [here](https://github.com/proclml/LogiSheets/crates/workbook).
+You can check the usage in the `workbook` directory or [here](https://github.com/proclml/LogiSheets/tree/master/crates/workbook).
 
 ## How to use `xmlserde`
 
