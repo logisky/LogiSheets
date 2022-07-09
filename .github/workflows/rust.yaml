@@ -1,6 +1,6 @@
 name: rust test
 
-on: [push, pull_request]
+on: [pull_request]
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,6 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --verbose --workspace
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --verbose --workspace
