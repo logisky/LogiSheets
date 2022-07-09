@@ -1176,3 +1176,132 @@ xml_serde_enum! {
         Internal => "Internal",
     }
 }
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StBlackWhiteMode {
+        Clr => "clr",
+        Auto => "auto",
+        Gray => "gray",
+        LtGray => "ltGray",
+        InvGray => "invGray",
+        GrayWhite => "grayWhite",
+        BlackGray => "blackGray",
+        BlackWhite => "blackWhite",
+        Black => "black",
+        White => "white",
+        Hidden => "hidden",
+    }
+}
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StFontCollectionIndex {
+        Major => "major",
+        Minor => "minor",
+        None => "none",
+    }
+}
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StTextShapeType {
+        TextNoShape => "textNoShape",
+        TextPlain => "textPlain",
+        TextStop => "textStop",
+        TextTriangle => "textTriangle",
+        TextTriangleInverted => "textTriangleInverted",
+        TextChevron => "textChevron",
+        TextChevronInverted => "textChevronInverted",
+        TextRingInside => "textRingInside",
+        TextRingOutside => "textRingOutside",
+        TextArchUp => "textArchUp",
+        TextArchDown => "textArchDown",
+        TextCircle => "textCircle",
+        TextButton => "textButton",
+        TextArchUpPour => "textArchUpPour",
+        TextArchDownPour => "textArchDownPour",
+        TextCirclePour => "textCirclePour",
+        TextButtonPour => "textButtonPour",
+        TextCanUp => "textCanUp",
+        TextCanDown => "textCanDown",
+        TextWave1 => "textWave1",
+        TextWave2 => "textWave2",
+        TextDoubleWave1 => "textDoubleWave1",
+        TextWave4 => "textWave4",
+        TextInflate => "textInflate",
+        TextDeflate => "textDeflate",
+        TextInflateBottom => "textInflateBottom",
+        TextDeflateBottom => "textDeflateBottom",
+        TextInflateTop => "textInflateTop",
+        TextDeflateTop => "textDeflateTop",
+        TextDeflateInflate => "textDeflateInflate",
+        TextDeflateInflateDeflate => "textDeflateInflateDeflate",
+        TextFadeRight => "textFadeRight",
+        TextFadeLeft => "textFadeLeft",
+        TextFadeUp => "textFadeUp",
+        TextFadeDown => "textFadeDown",
+        TextSlantUp => "textSlantUp",
+        TextSlantDown => "textSlantDown",
+        TextCascadeUp => "textCascadeUp",
+        TextCascadeDown => "textCascadeDown",
+    }
+}
+
+pub type StAngle = i32;
+pub type StGeomGuideFormula = String;
+pub type StGeomGuideName = String;
+pub type StCoordinate32 = i64;
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StTextHorzOverflowType {
+        Overflow => "overflow",
+        Clip => "clip",
+    }
+}
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StTextVertOverflowType {
+        Overflow => "overflow",
+        Ellipsis => "ellipsis",
+        Clip => "clip",
+    }
+}
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StTextVerticalType {
+        Horz => "horz",
+        Vert => "vert",
+        Vert270 => "vert270",
+        WordArtVert => "wordArtVert",
+        EaVert => "eavert",
+        MongolianVert => "mongolianVert",
+        WordArtVertRtl => "wordArtVertRtl",
+    }
+}
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StTextWrappingType {
+        None => "none",
+        Square => "square",
+    }
+}
+
+xml_serde_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    StTextAnchoringType {
+        T=>"t",
+        Ctr => "ctr",
+        B => "b",
+        Just => "just",
+        Dist => "dist",
+    }
+}
+
+pub type StTextColumnCount = u8; // minInclusive = 1, maxInclusive = 16
+
+pub type StPositiveCoordinate32 = u64;

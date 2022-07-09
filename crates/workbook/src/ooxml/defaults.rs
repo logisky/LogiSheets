@@ -135,6 +135,10 @@ pub fn default_string_pict() -> String {
     String::from("pict")
 }
 
+pub fn default_string_empty() -> String {
+    String::from("")
+}
+
 pub fn st_dv_aspect_content() -> StDvAspect {
     StDvAspect::DvaspectContent
 }
@@ -207,6 +211,10 @@ pub fn default_zero_u8() -> u8 {
     0
 }
 
+pub fn default_zero_i32() -> i32 {
+    0
+}
+
 pub fn st_cell_type_n() -> StCellType {
     StCellType::N
 }
@@ -221,4 +229,12 @@ pub fn empty_string() -> String {
 
 pub fn st_target_mode_internal() -> StTargetMode {
     StTargetMode::Internal
+}
+
+pub fn string_100_percent() -> String {
+    String::from("100%")
+}
+
+pub fn string_0_percent() -> String {
+    String::from("0%")
 }

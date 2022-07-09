@@ -1,4 +1,5 @@
 use super::defaults::default_zero_u8;
+use super::enum_groups::EgColorChoice;
 use xmlserde::{Unparsed, XmlDeserialize, XmlSerialize};
 
 // Ct_OfficeStyleSheet 20.1.6.2
@@ -54,50 +55,6 @@ pub struct CtColorScheme {
     pub hlink: EgColorChoice,
     #[xmlserde(name = b"a:folHlink", ty = "child")]
     pub fol_hlink: EgColorChoice,
-}
-
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
-pub enum EgColorChoice {
-    #[xmlserde(name = b"a:sysClr")]
-    SysClr(CtSystemColor),
-    #[xmlserde(name = b"a:srgbClr")]
-    SrgbClr(CtSrgbColor),
-}
-
-impl EgColorChoice {
-    pub fn get_color(&self) -> String {
-        match self {
-            EgColorChoice::SysClr(sys) => {
-                if let Some(rgb) = &sys.last_clr {
-                    let mut a = String::from("FF");
-                    a.push_str(&rgb);
-                    a
-                } else {
-                    String::from("")
-                }
-            }
-            EgColorChoice::SrgbClr(srgb_color) => {
-                let rgb = &srgb_color.val;
-                let mut a = String::from("FF");
-                a.push_str(&rgb);
-                a
-            }
-        }
-    }
-}
-
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
-pub struct CtSystemColor {
-    #[xmlserde(name = b"val", ty = "attr")]
-    pub val: String,
-    #[xmlserde(name = b"lastClr", ty = "attr")]
-    pub last_clr: Option<String>,
-}
-
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
-pub struct CtSrgbColor {
-    #[xmlserde(name = b"val", ty = "attr")]
-    pub val: String,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
