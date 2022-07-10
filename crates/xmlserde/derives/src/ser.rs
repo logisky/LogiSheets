@@ -17,7 +17,15 @@ fn get_ser_enum_impl_block(container: Container) -> proc_macro2::TokenStream {
         let f = v.ident;
         let name = &v.name;
         quote! {
-            Self::#f(c) => c.serialize(#name, writer),
+            Self::#f(c) => {
+                if tag == b"" {
+                    c.serialize(#name, writer);
+                } else {
+                    let _ = writer.write_event(Event::Start(BytesStart::borrowed_name(tag)));
+                    c.serialize(#name, writer);
+                    let _ = writer.write_event(Event::End(BytesEnd::borrowed(tag)));
+                }
+            },
         }
     });
     quote! {
@@ -29,11 +37,9 @@ fn get_ser_enum_impl_block(container: Container) -> proc_macro2::TokenStream {
                 writer: &mut quick_xml::Writer<W>,
             ) {
                 use quick_xml::events::*;
-                let _ = writer.write_event(Event::Start(BytesStart::borrowed_name(tag)));
                 match self {
                     #(#branches)*
                 }
-                let _ = writer.write_event(Event::End(BytesEnd::borrowed(tag)));
             }
         }
     }
@@ -63,11 +69,13 @@ fn get_ser_struct_impl_block(container: Container) -> proc_macro2::TokenStream {
         text,
         attrs,
         self_closed_children,
+        untags,
     } = FieldsSummary::from_fields(container.struct_fields);
-    if text.is_some() && (children.len() > 0 || self_closed_children.len() > 0) {
+    if text.is_some() && (children.len() > 0 || self_closed_children.len() > 0 || untags.len() > 0)
+    {
         panic!("Cannot owns the text and children at the same time.")
     }
-    let init = init_is_empty(&children, &self_closed_children, &text);
+    let init = init_is_empty(&children, &self_closed_children, &untags, &text);
     let build_attr_and_push = attrs.into_iter().map(|attr| {
         let name = attr.name.as_ref().unwrap();
         let ident = attr.original.ident.as_ref().unwrap();
@@ -142,9 +150,17 @@ fn get_ser_struct_impl_block(container: Container) -> proc_macro2::TokenStream {
                 }
             }
         });
+        let write_untags = untags.into_iter().map(|f| {
+            let ident = f.original.ident.as_ref().unwrap();
+            quote! {
+                println!("here");
+                self.#ident.serialize(b"", writer);
+            }
+        });
         quote! {
             #(#write_scf)*
             #(#write_children)*
+            #(#write_untags)*
         }
     };
     let ident = &container.original.ident;
@@ -195,6 +211,7 @@ fn get_ser_struct_impl_block(container: Container) -> proc_macro2::TokenStream {
 fn init_is_empty(
     children: &Vec<StructField>,
     scf: &Vec<StructField>,
+    untags: &Vec<StructField>,
     text: &Option<StructField>,
 ) -> proc_macro2::TokenStream {
     let children_init = children.iter().map(|c| {
@@ -214,6 +231,7 @@ fn init_is_empty(
             },
         }
     });
+    let has_untags = untags.len() > 0;
     let scf_init = scf.iter().map(|s| {
         let ident = s.original.ident.as_ref().unwrap();
         quote! {
@@ -251,7 +269,7 @@ fn init_is_empty(
         });
         quote! {
             let has_child_to_write = #(#idents ||)* has_text;
-            let is_empty = !has_child_to_write;
+            let is_empty = !has_child_to_write && !#has_untags;
         }
     };
     quote! {

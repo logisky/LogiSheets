@@ -45,6 +45,21 @@ pub fn get_de_enum_impl_block(container: Container) -> proc_macro2::TokenStream 
             }
         }
     });
+    let children_tags = container.enum_variants.iter().map(|v| {
+        let name = &v.name;
+        quote! {#name}
+    });
+    let exact_tags = container.enum_variants.iter().map(|v| {
+        let name = &v.name;
+        let ty = v.ty;
+        let ident = v.ident;
+        quote! {
+            #name => {
+                let _r = #ty::deserialize(#name, reader, attrs, is_empty);
+                return Self::#ident(_r);
+            }
+        }
+    });
     quote! {
         #[allow(unused_assignments)]
         impl crate::XmlDeserialize for #ident {
@@ -55,6 +70,10 @@ pub fn get_de_enum_impl_block(container: Container) -> proc_macro2::TokenStream 
                 is_empty: bool,
             ) -> Self {
                 use quick_xml::events::*;
+                match tag {
+                    #(#exact_tags)*
+                    _ => {},
+                }
                 let mut buf = Vec::<u8>::new();
                 let mut result = Option::<Self>::None;
                 loop {
@@ -77,6 +96,10 @@ pub fn get_de_enum_impl_block(container: Container) -> proc_macro2::TokenStream 
                 }
                 result.unwrap()
             }
+
+            fn __get_children_tags() -> Vec<&'static [u8]> {
+                vec![#(#children_tags,)*]
+            }
         }
     }
 }
@@ -90,10 +113,24 @@ pub fn get_de_struct_impl_block(container: Container) -> proc_macro2::TokenStrea
         text,
         attrs,
         self_closed_children,
+        untags,
     } = summary;
+    let get_children_tags = if children.len() > 0 {
+        let names = children.iter().map(|f| {
+            let n = f.name.as_ref().unwrap();
+            quote! {#n}
+        });
+        quote! {
+            fn __get_children_tags() -> Vec<&'static [u8]> {
+                vec![#(#names,)*]
+            }
+        }
+    } else {
+        quote! {}
+    };
     let vec_init = get_vec_init(&children);
     let attr_branches = attrs.into_iter().map(|a| attr_match_branch(a));
-    let child_branches = children_match_branch(children);
+    let child_branches = children_match_branch(children, untags);
     let sfc_branch = sfc_match_branch(self_closed_children);
     let ident = &container.original.ident;
     let text_branch = {
@@ -153,6 +190,7 @@ pub fn get_de_struct_impl_block(container: Container) -> proc_macro2::TokenStrea
                 }
             }
             #get_root
+            #get_children_tags
         }
 
     }
@@ -239,11 +277,19 @@ fn get_fields_init(fields: &FieldsSummary) -> proc_macro2::TokenStream {
             let mut #ident = false;
         }
     });
+    let untag_init = fields.untags.iter().map(|f| {
+        let ident = f.original.ident.as_ref().unwrap();
+        let ty = &f.original.ty;
+        quote! {
+            let mut #ident = Option::<#ty>::None;
+        }
+    });
     quote! {
         #(#attrs_inits)*
         #(#sfc_init)*
         #(#children_inits)*
         #text_init
+        #(#untag_init)*
     }
 }
 
@@ -299,14 +345,6 @@ fn sfc_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
             #idents = true;
         })*
     }
-    // quote! {
-    //     Ok(Event::Empty(s)) => {
-    //         match s.name() {
-    //             #(#tags => {#idents = true;})*
-    //             _ => {},
-    //         }
-    //     },
-    // }
 }
 
 fn attr_match_branch(field: StructField) -> proc_macro2::TokenStream {
@@ -392,8 +430,31 @@ fn text_match_branch(field: StructField) -> proc_macro2::TokenStream {
     }
 }
 
-fn children_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
+fn untags_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
     if fields.len() == 0 {
+        return quote! {};
+    }
+    let mut branches: Vec<proc_macro2::TokenStream> = vec![];
+    fields.iter().for_each(|f| {
+        let ident = f.original.ident.as_ref().unwrap();
+        let ty = &f.original.ty;
+        let branch = quote! {
+            _t if #ty::__get_children_tags().contains(&_t) => {
+                #ident = Some(#ty::deserialize(_t, reader, s.attributes(), is_empty));
+            }
+        };
+        branches.push(branch);
+    });
+    quote! {
+        #(#branches)*
+    }
+}
+
+fn children_match_branch(
+    fields: Vec<StructField>,
+    untags: Vec<StructField>,
+) -> proc_macro2::TokenStream {
+    if fields.len() == 0 && untags.len() == 0 {
         return quote! {};
     }
     let mut branches = vec![];
@@ -441,11 +502,13 @@ fn children_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
         };
         branches.push(branch);
     });
+    let untags_branches = untags_match_branch(untags);
     quote! {
         Ok(Event::Empty(s)) => {
             let is_empty = true;
             match s.name() {
                 #(#branches)*
+                #untags_branches
                 _ => {},
             }
         }
@@ -453,6 +516,7 @@ fn children_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
             let is_empty = false;
             match s.name() {
                 #(#branches)*
+                #untags_branches
                 _ => {},
             }
         }

@@ -108,6 +108,7 @@ pub struct FieldsSummary<'a> {
     pub text: Option<StructField<'a>>,
     pub attrs: Vec<StructField<'a>>,
     pub self_closed_children: Vec<StructField<'a>>,
+    pub untags: Vec<StructField<'a>>,
 }
 
 impl<'a> FieldsSummary<'a> {
@@ -117,12 +118,14 @@ impl<'a> FieldsSummary<'a> {
             text: None,
             attrs: vec![],
             self_closed_children: vec![],
+            untags: vec![],
         };
         fields.into_iter().for_each(|f| match f.ty {
             EleType::Attr => result.attrs.push(f),
             EleType::Child => result.children.push(f),
             EleType::Text => result.text = Some(f),
             EleType::SelfClosedChild => result.self_closed_children.push(f),
+            EleType::Untag => result.untags.push(f),
         });
         result
     }
@@ -165,6 +168,7 @@ impl<'a> StructField<'a> {
                             "child" => EleType::Child,
                             "text" => EleType::Text,
                             "sfc" => EleType::SelfClosedChild,
+                            "untag" => EleType::Untag,
                             _ => panic!(""),
                         };
                         ty = Some(t);
@@ -207,9 +211,10 @@ impl<'a> StructField<'a> {
     }
 
     pub fn is_required(&self) -> bool {
-        self.default.is_none()
+        (self.default.is_none()
             && matches!(self.generic, Generic::None)
-            && !matches!(self.ty, EleType::SelfClosedChild)
+            && !matches!(self.ty, EleType::SelfClosedChild))
+            || matches!(self.ty, EleType::Untag)
     }
 }
 
@@ -266,6 +271,7 @@ pub enum EleType {
     /// </font>
     /// In this case, </b> indicates the field *bold* is true and <i/> indicates *italic* is true.
     SelfClosedChild,
+    Untag,
 }
 
 pub enum Derive {

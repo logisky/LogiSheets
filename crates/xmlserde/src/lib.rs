@@ -63,8 +63,14 @@ pub trait XmlDeserialize {
         attrs: quick_xml::events::attributes::Attributes,
         is_empty: bool,
     ) -> Self;
+
     fn de_root() -> Option<&'static [u8]> {
         None
+    }
+
+    // Used when ty = `untag`.
+    fn __get_children_tags() -> Vec<&'static [u8]> {
+        vec![]
     }
 }
 
@@ -526,7 +532,6 @@ mod tests {
             name: String::from("Tom"),
         };
         let result = xml_serialize(p);
-        println!("{:?}", result);
         assert_eq!(
             result,
             "<Person xmlns=\"namespace\" age=\"12\">Tom</Person>"
@@ -603,7 +608,6 @@ mod tests {
             c: TestEnum::TestA(TestA { age: 23 }),
         };
         let xml = xml_serialize(obj);
-        println!("{}", xml);
         let p = xml_deserialize_from_str::<Child>(&xml).unwrap();
         match p.c {
             TestEnum::TestA(a) => assert_eq!(a.age, 23),
@@ -624,6 +628,43 @@ mod tests {
         let p = xml_deserialize_from_str::<TestA>(&xml).unwrap();
         let ser = xml_serialize(p);
         assert_eq!(xml, ser);
+    }
+
+    #[test]
+    fn untag_serde_test() {
+        #[derive(Debug, XmlSerialize, XmlDeserialize)]
+        #[xmlserde(root = b"Root")]
+        pub struct Root {
+            #[xmlserde(ty = "untag")]
+            pub dummy: EnumA,
+        }
+
+        #[derive(Debug, XmlSerialize, XmlDeserialize)]
+        pub enum EnumA {
+            #[xmlserde(name = b"a")]
+            A1(Astruct),
+            #[xmlserde(name = b"b")]
+            B1(Bstruct),
+        }
+        #[derive(Debug, XmlSerialize, XmlDeserialize)]
+        pub struct Astruct {
+            #[xmlserde(name = b"aAttr", ty = "attr")]
+            pub a_attr1: u32,
+        }
+        #[derive(Debug, XmlSerialize, XmlDeserialize)]
+        pub struct Bstruct {
+            #[xmlserde(name = b"bAttr", ty = "attr")]
+            pub b_attr1: u32,
+        }
+
+        let xml = r#"<Root><a aAttr="3"/></Root>"#;
+        let p = xml_deserialize_from_str::<Root>(&xml).unwrap();
+        match p.dummy {
+            EnumA::A1(ref a) => assert_eq!(a.a_attr1, 3),
+            EnumA::B1(_) => panic!(),
+        }
+        let ser = xml_serialize(p);
+        assert_eq!(xml, &ser);
     }
 }
 

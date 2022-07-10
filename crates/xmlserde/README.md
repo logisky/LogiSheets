@@ -30,6 +30,7 @@ We can deserialize with these code:
 
 ```rs
 #[derive(XmlDeserialize)]
+#[xmlserde(root = b"person")]
 pub struct Person {
     #[xmlserde(name=b"age", ty="attr")]
     pub age: u8,
@@ -41,21 +42,25 @@ fn deserialize_person() {
     use xmlserde::xml_deserialize_from_str;
 
     let s = r#"<person age ="16">Tom</person>"#;
-    let p = xml_deserialize_from_str(b"person", s).unwrap();
+    let p = xml_deserialize_from_str(s).unwrap();
     assert_eq!(p.age, 16);
     assert_eq!(p.name, "Tom");
 }
 ```
 
-You are supposed to declare that where the deserializer to look for the values.
+You are supposed to declare that where the deserializer is to look for the values.
 
-The available *type*s are **attr**, **text** and **child**. In the above example, we told program that diving into the tag named _"person"_ (xml*deserialize_from_str), and looking an attribute
-whose key is *"age"\_ and that the content of the text element is the value of the field **name**.
+The common available *type*s are **attr**, **text** and **child**. In the above example, we told program that diving into the tag named _"person"_ (xml*deserialize_from_str), and looking an attribute
+whose key is *"age"* and that the content of the text element is the value of the field **name**.
+
+You should tell the program that which element name is the entry for serde by
+doing something like `#[xmlserde(root = b"person")]`.
 
 Let's see an example of deserializing nested xml element.
 
 ```rs
 #[derive(XmlDeserialize)]
+#[xmlserde(root = b"person")]
 pub struct Person {
     #[xmlserde(name=b"age", ty="attr")]
     pub age: u8,
@@ -77,7 +82,7 @@ fn deserialize_person() {
     use xmlserde::xml_deserialize_from_str;
 
     let s = r#"<person age ="16"><name zh="汤姆", en="Tom"/></person>"#;
-    let p = xml_deserialize_from_str(b"person", s).unwrap();
+    let p = xml_deserialize_from_str(s).unwrap();
     assert_eq!(p.age, 16);
     assert_eq!(p.name.en, "Tom");
     assert_eq!(p.lefty, false);
@@ -93,7 +98,7 @@ and its default value of **lefty** is false.
 
 #### Vec
 
-We support deserialize the fields whose type are `std::Vec<T: XmlDeserialize>`.
+We support deserialize the fields whose types are `std::Vec<T: XmlDeserialize>`.
 
 ```rs
 #[derive(XmlDeserialize)]
@@ -102,6 +107,7 @@ pub struct Pet {
 }
 
 #[derive(XmlDeserialize)]
+#[xmlserde(root = b"person")]
 pub struct Person {
     #[xmlserde(name = b"petCount", ty = "attr")]
     pub pet_count: u8,
@@ -122,7 +128,9 @@ If the capacity is from an **attr**, you can:
 #[xmlserde(name = b"pet", ty="child", vec_size="pet_count")]
 ```
 
-#### enum:
+#### Enum
+
+We provide 2 patterns for deserializing `Enum`.
 
 ```rs
 #[derive(XmlSerialize, XmlDeserialize)]
@@ -132,12 +140,55 @@ enum TestEnum {
     #[xmlserde(name = b"testB")]
     TestB(TestB),
 }
+
+#[derive(XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"personA")]
+pub struct PersonA {
+    #[xmlserde(name = b"e", ty = "child")]
+    pub e: TestEnum
+    // Other fields
+}
+
+#[derive(XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"personB")]
+pub struct PersonB {
+    #[xmlserde(ty = "untag")]
+    pub dummy: TestEnum
+    // Other fields
+}
 ```
+
+**PersonA** can be used to deserialize the xml struct like below:
+```xml
+<personA><e><testA/></e></personA>
+```
+or
+
+```xml
+<personA><e><testB/></e></personA>
+```
+
+And **PersonB** can be used to deserialize the xml which looks like:
+
+```xml
+<personB><testA/></personB>
+```
+
+or
+
+
+```xml
+<personB><testB/></personB>
+```
+
+Notice: **untag** is the other available type. It is only used in this situation.
+
+You are not supposed to use **untag** to serde a struct.
 
 #### Unparsed
 
-Sometimes we don't care about some xml element and we just want to keep them for serializing.
-We provide a struct `Unparsed`.
+Sometimes we don't care about some xml element and we just want to keep them for future serializing.
+We provide a struct `Unparsed` to do this.
 
 ```rs
 #[derive(XmlDeserialize)]
@@ -149,11 +200,11 @@ pub struct Person {
 
 ### Serialize
 
-It is almost the same as deserializing. But there are some features you
-should pay attention to.
+Serializing is almost the same as deserializing.
+But there are some features you should pay attention to.
 
-- default value will skip serializing. If it is a **struct**,
-  it should impl `Eq`.
+- default values will be skipped serializing.
+If it is a **struct**, it should be implemented `Eq` trait.
 - If a struct has no **child** or **text**, the result of serializing will
   look like this:
   ```xml
