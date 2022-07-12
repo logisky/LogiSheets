@@ -34,6 +34,7 @@ mod pi;
 mod pmt;
 mod quotient;
 mod rand;
+mod rank;
 mod rept;
 mod row;
 mod scalar_number;
@@ -172,6 +173,9 @@ where
         "QUOTIENT" => quotient::calc(args, fetcher),
         "RADIANS" => scalar_number::calc_radians(args, fetcher),
         "RAND" => rand::calc(args),
+        "RANK" => rank::calc_rank(args, fetcher),
+        "RANK.AVG" => rank::calc_rank_avg(args, fetcher),
+        "RANK.EQ" => rank::calc_rank(args, fetcher),
         "REPT" => rept::calc(args, fetcher),
         "RIGHT" => leftright::calc_right(args, fetcher),
         "ROW" => row::calc(args, fetcher),
