@@ -184,6 +184,7 @@ where
         "SIN" => scalar_number::calc_sin(args, fetcher),
         "SQRT" => scalar_number::calc_sqrt(args, fetcher),
         "SQRTPI" => scalar_number::calc_sqrtpi(args, fetcher),
+        "STDEV" => distribution::statistics::calc_stdev(args, fetcher),
         "SUM" => sum::calc(args, fetcher),
         "SWITCH" => switch::calc(args, fetcher),
         "TAN" => scalar_number::calc_tan(args, fetcher),
@@ -193,6 +194,8 @@ where
         "TRIM" => scalar_text::calc_trim(args, fetcher),
         "TRUE" => boolean::calc_true(args),
         "UPPER" => scalar_text::calc_upper(args, fetcher),
+        "VAR" => distribution::statistics::calc_var(args, fetcher),
+        "VAR.S" => distribution::statistics::calc_var(args, fetcher),
         "YEAR" => datetime::ymd::calc_year(args, fetcher),
         _ => CalcVertex::from_error(ast::Error::Name),
     }

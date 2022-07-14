@@ -69,6 +69,73 @@ pub fn is_error(value: &CalcValue) -> bool {
     }
 }
 
+fn get_f64(v: Value) -> Result<Option<f64>, ast::Error> {
+    match v {
+        Value::Number(f) => Ok(Some(f)),
+        Value::Boolean(b) => {
+            if b {
+                Ok(Some(1.))
+            } else {
+                Ok(Some(0.))
+            }
+        }
+        Value::Error(e) => Err(e),
+        _ => Ok(None),
+    }
+}
+
+pub fn get_nums_from_value(value: CalcValue) -> Result<Vec<f64>, ast::Error> {
+    match value {
+        CalcValue::Scalar(v) => match get_f64(v) {
+            Ok(num) => {
+                if let Some(f) = num {
+                    Ok(vec![f])
+                } else {
+                    Ok(vec![])
+                }
+            }
+            Err(e) => Err(e),
+        },
+        CalcValue::Range(r) => r.into_iter().fold(Ok(vec![]), |prev, curr| {
+            if prev.is_err() {
+                return prev;
+            }
+            let num = get_f64(curr);
+            match num {
+                Ok(f) => {
+                    if let Some(n) = f {
+                        let mut v = prev.unwrap();
+                        v.push(n);
+                        Ok(v)
+                    } else {
+                        prev
+                    }
+                }
+                Err(e) => Err(e),
+            }
+        }),
+        CalcValue::Cube(c) => c.into_iter().fold(Ok(vec![]), |prev, curr| {
+            if prev.is_err() {
+                return prev;
+            }
+            let num = get_f64(curr);
+            match num {
+                Ok(f) => {
+                    if let Some(n) = f {
+                        let mut v = prev.unwrap();
+                        v.push(n);
+                        Ok(v)
+                    } else {
+                        prev
+                    }
+                }
+                Err(e) => Err(e),
+            }
+        }),
+        CalcValue::Union(_) => Err(ast::Error::Unspecified),
+    }
+}
+
 #[cfg(test)]
 pub mod tests_utils {
     use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
