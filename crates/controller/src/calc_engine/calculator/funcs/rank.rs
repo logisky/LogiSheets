@@ -1,5 +1,5 @@
 use super::{CalcValue, CalcVertex, Value};
-use crate::calc_engine::connector::Connector;
+use crate::calc_engine::{calculator::funcs::utils::get_nums_from_value, connector::Connector};
 use logisheets_parser::ast;
 
 pub fn calc_rank<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
@@ -59,66 +59,9 @@ where
     assert_f64_from_calc_value!(num, fetcher.get_calc_value(first));
     let second = args_iter.next().unwrap();
     let second_value = fetcher.get_calc_value(second);
-    let mut collection = match second_value {
-        CalcValue::Scalar(v) => match get_f64(v) {
-            Ok(num) => {
-                if let Some(f) = num {
-                    vec![f]
-                } else {
-                    vec![]
-                }
-            }
-            Err(e) => return CalcVertex::from_error(e),
-        },
-        CalcValue::Range(r) => {
-            let result = r.into_iter().fold(Ok(vec![]), |prev, curr| {
-                if prev.is_err() {
-                    return prev;
-                }
-                let num = get_f64(curr);
-                match num {
-                    Ok(f) => {
-                        if let Some(n) = f {
-                            let mut v = prev.unwrap();
-                            v.push(n);
-                            Ok(v)
-                        } else {
-                            prev
-                        }
-                    }
-                    Err(e) => Err(e),
-                }
-            });
-            match result {
-                Ok(v) => v,
-                Err(e) => return CalcVertex::from_error(e),
-            }
-        }
-        CalcValue::Cube(c) => {
-            let result = c.into_iter().fold(Ok(vec![]), |prev, curr| {
-                if prev.is_err() {
-                    return prev;
-                }
-                let num = get_f64(curr);
-                match num {
-                    Ok(f) => {
-                        if let Some(n) = f {
-                            let mut v = prev.unwrap();
-                            v.push(n);
-                            Ok(v)
-                        } else {
-                            prev
-                        }
-                    }
-                    Err(e) => Err(e),
-                }
-            });
-            match result {
-                Ok(v) => v,
-                Err(e) => return CalcVertex::from_error(e),
-            }
-        }
-        CalcValue::Union(_) => return CalcVertex::from_error(ast::Error::Unspecified),
+    let mut collection = match get_nums_from_value(second_value) {
+        Ok(v) => v,
+        Err(e) => return CalcVertex::from_error(e),
     };
     let third = args_iter.next();
     let descending = match third {
@@ -139,20 +82,5 @@ where
         CalcVertex::from_number(r)
     } else {
         CalcVertex::from_error(ast::Error::Value)
-    }
-}
-
-fn get_f64(v: Value) -> Result<Option<f64>, ast::Error> {
-    match v {
-        Value::Number(f) => Ok(Some(f)),
-        Value::Boolean(b) => {
-            if b {
-                Ok(Some(1.))
-            } else {
-                Ok(Some(0.))
-            }
-        }
-        Value::Error(e) => Err(e),
-        _ => Ok(None),
     }
 }
