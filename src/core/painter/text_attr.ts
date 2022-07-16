@@ -1,8 +1,8 @@
 import {StandardFont} from '@/core/standable'
-import {CtCellAlignment, CtFont} from '@/bindings'
+import {CtCellAlignment, Font} from '@/bindings'
 
 export class TextAttr {
-    setFont(font?: StandardFont | CtFont) {
+    setFont(font?: StandardFont | Font) {
         if (font === undefined)
             return
         this.font = font instanceof StandardFont ? font : StandardFont.from(font)

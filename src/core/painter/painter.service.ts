@@ -71,8 +71,6 @@ export class PainterService extends CanvasApi {
         case 'Dotted':
             segments.push(dot)
             break
-        case 'Double':
-            return
         case 'Hair':
             segments.push(hair)
             break
@@ -108,6 +106,7 @@ export class PainterService extends CanvasApi {
             this.setLineDash(segments)
         this.attr(borderAttr)
         const { startRow, startCol, endRow, endCol } = box.position
+        const isDouble = border.style === 'Double'
         switch (type) {
         case 'top':
             this.line([[startCol, startRow], [endCol, startRow]])
@@ -116,7 +115,11 @@ export class PainterService extends CanvasApi {
             this.line([[endCol, startRow], [endCol, endRow]])
             break
         case 'bottom':
-            this.line([[startCol, endRow], [endCol, endRow]])
+            if (isDouble) {
+                this.line([[startCol, endRow - 2], [endCol, endRow - 2]])
+                this.line([[startCol, endRow], [endCol, endRow]])
+            } else
+                this.line([[startCol, endRow], [endCol, endRow]])
             break
         case 'left':
             this.line([[startCol, startRow], [startCol, endRow]])
@@ -128,68 +131,58 @@ export class PainterService extends CanvasApi {
 
     public text (txt: string, attr: TextAttr, box: Box): void {
         this.save()
-        const boxWidth = box.width
-        const ntxts: string[] = []
-        const txts = txt.split('\n')
-        txts.forEach(it => {
-            const width = attr.font.measureText(it).width
-            if (width < boxWidth) {
-                ntxts.push(it)
-                return
-            }
-            let each = ''
-            it.split('').forEach(t => {
-                const width = attr.font.measureText(each + t).width
-                if (width >= boxWidth) {
-                    ntxts.push(each)
-                    each = ''
-                    return
-                }
-                each += t
-            })
-            if (each !== '')
-                ntxts.push(each)
-        })
+        const textWidth = attr.font.measureText(txt).width
         const [tx, textAlign] = box.textX(attr.alignment?.horizontal)
         const [ty, textBaseAlign] = box.textY(attr.alignment?.vertical)
-        let yOffset = 0
         const textAttr = new CanvasAttr()
         textAttr.textAlign = textAlign
         textAttr.textBaseAlign = textBaseAlign
         textAttr.font = attr.font
-        ntxts.forEach((it, i) => {
-            if (it === '')
-                return
-            if (i !== 0)
-                return
-            this.attr(textAttr)
-            this.fillText(it, tx, ty + yOffset)
-            this.save()
-            this._underline(tx, ty + yOffset, attr, it)
-            this.restore()
-            yOffset += attr.font.size + 2
-        })
+        this.attr(textAttr)
+        /**
+         * TODO(minglong): support multi lines txt
+         */
+        let trueTxt = txt
+        if (textWidth > box.width) {
+            let currText = ''
+            let currWidth = 0
+            for (let i = 0, txts = trueTxt.split(''); i < txts.length; i++) {
+                const t = txts[i]
+                const tWidth = attr.font.measureText(t).width
+                if (currWidth + tWidth > box.width)
+                    break
+                currText += t
+                currWidth += tWidth
+            }
+            trueTxt = currText
+        }
+        this.fillText(trueTxt, tx, ty)
+        this._underline(tx, ty, attr, textWidth)
         this.restore()
     }
 
-    private _underline (tx: number, ty: number, attr: TextAttr, text: string) {
+    private _underline (tx: number, ty: number, attr: TextAttr, textWidth: number) {
         let xOffset = 1
-        let yOffset = 1
+        let yOffset = 0
         const lineAttr = new CanvasAttr()
         lineAttr.strokeStyle = attr.font.standardColor.css()
-        const width = attr.font.measureText(text).width
-        switch (attr?.font?.underline?.val ?? 'None') {
-        case 'DoubleAccounting':
+        const horizontal = attr.alignment?.horizontal ?? 'General'
+        const underline = attr.font.underline?.val ?? 'None'
+        const vertical = attr.alignment?.vertical ?? 'Center'
+        switch (underline) {
         case 'Double':
+            break
         case 'None':
             return
         case 'Single':
             lineAttr.lineWidth = npxLine(1)
-            switch (attr.alignment?.vertical) {
+            yOffset += attr.font.size / 2
+            switch (vertical) {
             case 'Bottom':
-                yOffset += attr.font.size / 2
+                yOffset += attr.font.size
                 break
             case 'Center':
+                yOffset += attr.font.size / 2
                 break
             case 'Top':
                 break
@@ -197,26 +190,27 @@ export class PainterService extends CanvasApi {
                 yOffset += attr.font.size / 2
                 break
             }
-            switch (attr.alignment?.horizontal) {
+            switch (horizontal) {
+            case 'General':
             case 'Center':
-                xOffset -= (width / 2)
+                xOffset -= (textWidth / 2)
                 break
             case 'Right':
-                xOffset += -width
+                xOffset -= textWidth
                 break
             case 'Left':
                 break
             default:
                 useToast().toast.error(`Not support underline horizontal ${attr.alignment?.horizontal}`)
             }
+            this.attr(lineAttr)
+            this.line([
+                [npx(tx + xOffset), npx(ty + yOffset)],
+                [npx(tx + textWidth + xOffset), npx(ty + yOffset)]])
             break
         default:
             useToast().toast.error(`Not support underline ${attr.font.underline}`)
             return
         }
-        this.attr(lineAttr)
-        this.line([
-            [tx + npx(xOffset), ty + npx(yOffset)],
-            [tx + npx(xOffset) + width, ty + npx(yOffset)]])
     }
 }
