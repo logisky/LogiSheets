@@ -1,0 +1,12 @@
+{
+    "name": "SUM",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [
+        {
+            "argName": "element",
+            "startRepeated": true
+        }
+    ]
+}
