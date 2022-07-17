@@ -8,16 +8,16 @@ Here we will introduce some implementations.
 ## Important Components
 
 - `Cell Id Manager` assigns Cell Id for every cell.
-Cell Id identify a cell even this cell is removed.
-Cell Id is not the cell position which would be changed when
+Cell Id identifies a cell even this cell is removed.
+Cell Id is different from the cell position which would be changed when
 inserting or removing some cells. 
 You may find that we also use **Sheetid** to identify a worksheet,
 and use **NameId** to identify a name. That's because in a spreadsheet
 application, almost everything can be renamed or moved. Id Manager is
 the foundation.
 
-- `Container` stores the **CellId** and **Cell** map. You should visit the content
-  of a cell by its **CellId**.
+- `Container` stores the **CellId** and **Cell** map. The content
+  of a cell should be visited by its **CellId**.
 
 - `Navigator` is responsible for making convertion between cell id and
 cell position. For now, LogiSheets do only support inserting or removing rows and columns,
@@ -32,9 +32,9 @@ Users' inserting or removing rows/cols will do some effect on the **RowId** vect
 - `VertexManager` is responsible for recording the dependencies for calculating, updating
   the fomula ast and providing the dirty vertices and ast to `CalcEngine`.
 
-- `Connectors` implements the traits and helps communicate between components.
-  We use trait to make abstraction barrier between components, which helps to decouple
-  them and makes easier to write unittests.
+- `Connectors` implements the traits that helps communicate between components.
+  We define some traits to make abstraction barrier between components, which helps to decouple
+  them and makes it easier to write unittests.
 
 ## Undo / Redo
 
