@@ -1,0 +1,19 @@
+{
+    "name": "SWITCH",
+    "arguCount": {
+        "ge": 3,
+        "odd": true
+    },
+    "args": [
+        {
+            "argName": "expr"
+        },
+        {
+            "argName": "condition",
+            "startRepeated": true
+        },
+        {
+            "argName": "caseValue"
+        }
+    ]
+}

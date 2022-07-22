@@ -1,0 +1,12 @@
+{
+    "name":"COUNTBLANK",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [
+        {
+            "argName": "area",
+            "refOnly": true
+        }
+    ]
+}

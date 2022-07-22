@@ -26,3 +26,4 @@ logisheets_base = {version = "0.3.0", path = "./base"}
 logisheets_lexer = {version = "0.3.0", path = "./lexer"}
 logisheets_parser = {version = "0.3.0", path = "./parser"}
 logisheets_workbook = {version = "0.3.0", path = "../workbook"}
+logisheets_astchecker = {version = "0.3.0", path = "./ast_checker"}
