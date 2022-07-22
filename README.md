@@ -6,6 +6,9 @@
 
 LogiSheets is a web spreadsheet application that is compatible with Excel and designed for easy further development. Most important of all, it's free! And LogiSheets is written in Rust, and you are able to create, read and write .xlsx files.
 
+This repo contains some our tools too, feel free and just make issues
+or PRs about them!
+
 ## WARNING
 
 LogiSheets is still in the **very** early stages of development. Your issues or PRs are welcome!
