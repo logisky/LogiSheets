@@ -1,16 +1,16 @@
 import { Context } from '@/components/textarea'
 import { Cell } from '../defs'
 import { StandardKeyboardEvent } from '@/common/events'
-import { useRef, useState } from 'react'
+import { RefObject, useRef, useState } from 'react'
 import { shallowCopy } from '@/common'
 import { StartCellEvent } from './start-cell'
-import initFc, { formula_check } from '../../../wasms/fc/pkg'
+import initFc, { formula_check } from '../../../wasms/fc/pkg/logisheets_wasm_fc'
 import { isFormula } from '@/core/snippet'
 import { SheetService } from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
 
-export const useText = () => {
+export const useText = (canvas: RefObject<HTMLCanvasElement>) => {
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const [editing, setEditing] = useState(false)
     const [context, setContext] = useState<Context<Cell>>()
@@ -18,11 +18,6 @@ export const useText = () => {
     const currText = useRef('')
 
     const _lastMouseDownTime = useRef(0)
-    const canvas = useRef<HTMLCanvasElement>()
-
-    const init = (c: HTMLCanvasElement) => {
-        canvas.current = c
-    }
 
     const blur = async () => {
         const check = await checkFormula()
@@ -113,7 +108,6 @@ export const useText = () => {
         setValidFormulaOpen,
         validFormulaOpen,
         checkFormula,
-        init,
         blur,
         keydown,
         startCellChange,

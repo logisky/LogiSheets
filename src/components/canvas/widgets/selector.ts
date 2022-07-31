@@ -1,6 +1,6 @@
 import { SelectorProps } from '@/components/selector'
 import { Cell } from '../defs'
-import { useEffect, useRef, useState } from 'react'
+import { RefObject, useEffect, useState } from 'react'
 import { StartCellEvent } from './start-cell'
 import { Range } from '@/core/standable'
 
@@ -52,19 +52,14 @@ export const getSelector = (canvas: HTMLCanvasElement, start: Cell, end?: Cell) 
     return selector
 }
 
-export const useSelector = () => {
+export const useSelector = (canvas: RefObject<HTMLCanvasElement>) => {
     const [selector, setSelector] = useState<SelectorProps>()
     const [startCellInner, setStartCell] = useState<Cell>()
     const [endCell, setEndCell] = useState<Cell | undefined>(undefined)
 
-    const canvas = useRef<HTMLCanvasElement>()
-
-    const init = (c: HTMLCanvasElement) => {
-        canvas.current = c
-    }
     // 更新selector
     useEffect(() => {
-        if (startCellInner === undefined || canvas.current === undefined) {
+        if (startCellInner === undefined || canvas.current === null) {
             setSelector(undefined)
             return
         }
@@ -115,6 +110,5 @@ export const useSelector = () => {
         onContextmenu,
         onMouseDown,
         onMouseMove,
-        init,
     }
 }

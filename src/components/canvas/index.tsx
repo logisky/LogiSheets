@@ -1,6 +1,5 @@
 import { SelectedCell } from './events'
 import { Subscription, Subject } from 'rxjs'
-import { debounceTime } from 'rxjs/operators'
 import styles from './canvas.module.scss'
 import {
     MouseEvent,
@@ -9,6 +8,7 @@ import {
     useRef,
     useState,
     FC,
+    WheelEvent,
 } from 'react'
 import {
     useSelector,
@@ -16,11 +16,12 @@ import {
     useScrollbar,
     useDnd,
     useText,
-    Render,
+    useRender,
     useHighlightCell,
     useResizers,
-} from './managers'
-import { Cell, match } from './defs'
+    useMatch,
+} from './widgets'
+import { Cell } from './defs'
 import {
     ScrollbarComponent
 } from '@/components/scrollbar'
@@ -46,37 +47,33 @@ export interface CanvasProps {
 export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [contextMenuEl, setContextMenu] = useState<ReactElement>()
+    const canvasEl = useRef<HTMLCanvasElement>(null)
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const renderMng = useInjection<Render>(TYPES.Render)
-
-    const canvasEl = useRef<HTMLCanvasElement>(null)
 
     const startCellMng = useStartCell()
-    const selectorMng = useSelector()
-    const scrollbarMng = useScrollbar()
-    const dndMng = useDnd()
-    const textMng = useText()
+    const selectorMng = useSelector(canvasEl)
+    const scrollbarMng = useScrollbar({canvas: canvasEl})
+    const dndMng = useDnd(canvasEl)
+    const textMng = useText(canvasEl)
     const highlights = useHighlightCell()
-    const resizerMng = useResizers()
+    const resizerMng = useResizers(canvasEl)
+    const matchMng = useMatch(canvasEl)
+
     const focus$ = useRef(new Subject<void>())
+
+    const rendered = () => {
+        resizerMng.init()
+    }
+
+    const renderMng = useRender({
+        canvas: canvasEl,
+        rendered,
+    })
 
     useEffect(() => {
         const subs = new Subscription()
-        const _canvasEl = canvasEl.current as HTMLCanvasElement
-        subs.add(BACKEND_SERVICE.render$.subscribe(() => {
-            renderMng.render(_canvasEl)
-        }))
-        subs.add(on(window, EventType.RESIZE)
-            .pipe(debounceTime(100))
-            .subscribe(() => {
-                renderMng.render(_canvasEl)
-            }))
-        subs.add(renderMng.rendered$.subscribe(() => {
-            // resizer manager依赖viewRange
-            resizerMng.init()
-        }))
         // 当前单元格
         subs.add(startCellMng.startCellEvent$.current.subscribe(e => {
             selectorMng.startCellChange(e)
@@ -88,39 +85,13 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             const { startRow: row, startCol: col } = e.cell.coodinate
             selectedCell$({ row, col })
         }))
-        return () => {
-            subs.unsubscribe()
-        }
-    }, [renderMng.rendered$])
-    // 这里需要获取最新的state，所以useeffect不能加参数
-    useEffect(() => {
-        const subs = new Subscription()
-        subs.add(on(window, EventType.RESIZE)
-            .pipe(debounceTime(100))
-            .subscribe(() => {
-                scrollbarMng.resize(canvasEl.current as HTMLCanvasElement)
-            }))
-        return () => {
-            subs.unsubscribe()
-        }
-    })
-
-    // 初始化
-    useEffect(() => {
-        selectorMng.init(canvasEl.current as HTMLCanvasElement)
-        scrollbarMng.initScrollbar()
-        textMng.init(canvasEl.current as HTMLCanvasElement)
-        startCellMng.canvasChange()
-        DATA_SERVICE.sendDisplayArea()
-    }, [canvasEl])
+    }, [])
 
     useEffect(() => {
-        if (selectorMng.startCell)
-            dndMng.selectorChange({
-                canvas: canvasEl.current as HTMLCanvasElement,
-                start: selectorMng.startCell,
-                end: selectorMng.endCell,
-            })
+        const {startCell, endCell} = selectorMng
+        if (!startCell)
+            return
+        dndMng.selectorChange({start: startCell, end: endCell})
     }, [selectorMng.selector])
 
     // 监听用户开始输入
@@ -130,11 +101,24 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         highlights.init(textMng.currText.current)
     }, [textMng.editing])
 
-    // 监听滚动
-    useEffect(() => {
-        renderMng.render(canvasEl.current as HTMLCanvasElement)
+
+    const setScrollTop = (scrollTop: number, type: 'x' | 'y') => {
+        scrollbarMng.setScrollTop(scrollTop, type)
+        SHEET_SERVICE.getSheet()?.scroll?.update(type, scrollTop)
+        renderMng.render()
         startCellMng.scroll()
-    }, [scrollbarMng.xScrollbarAttr, scrollbarMng.yScrollbarAttr])
+    }
+
+    const onMouseWheel = (e: WheelEvent) => {
+        // only support y scrollbar
+        const delta = e.deltaY
+        const newScroll = scrollbarMng.mouseWheelScrolling(delta, 'y') ?? 0
+        const oldScroll = SHEET_SERVICE.getSheet()?.scroll.y
+        if (oldScroll === newScroll)
+            return
+        SHEET_SERVICE.getSheet()?.scroll?.update('y', newScroll)
+        renderMng.render()
+    }
 
     const onMousedown = async (e: MouseEvent) => {
         e.stopPropagation()
@@ -147,14 +131,16 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             }
             if (e.buttons === Buttons.RIGHT)
                 return
-            const matchCell = match(e.clientX, e.clientY, canvasEl.current as HTMLCanvasElement, DATA_SERVICE.cachedViewRange)
-            const isResize = resizerMng.mousedown(e.nativeEvent, canvasEl.current as HTMLCanvasElement)
+            const matchCell = matchMng.match(e.clientX, e.clientY, DATA_SERVICE.cachedViewRange)
+            if (!matchCell)
+                return
+            const isResize = resizerMng.mousedown(e.nativeEvent)
             if (isResize)
                 return
             const isDnd = dndMng.onMouseDown(e.nativeEvent)
             if (isDnd)
                 return
-            startCellMng.mousedown(e, matchCell, canvasEl.current as HTMLCanvasElement)
+            startCellMng.mousedown(e, matchCell)
         }
         mousedown()
         const sub = new Subscription()
@@ -165,12 +151,14 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         }))
         sub.add(on(window, EventType.MOUSE_MOVE).subscribe(mme => {
             mme.preventDefault()
-            const startCell = match(mme.clientX, mme.clientY, canvasEl.current as HTMLCanvasElement, DATA_SERVICE.cachedViewRange)
+            const startCell = matchMng.match(mme.clientX, mme.clientY, DATA_SERVICE.cachedViewRange)
+            if (!startCell)
+                return
             const isResize = resizerMng.mousemove(mme)
             if (isResize)
                 return
             if (startCellMng.startCell.current?.equals(startCell) === false) {
-                const isDnd = dndMng.onMouseMove(mme, canvasEl.current as HTMLCanvasElement, startCell, selectorMng.endCell ?? startCell)
+                const isDnd = dndMng.onMouseMove(mme, startCell, selectorMng.endCell ?? startCell)
                 if (isDnd)
                     return
             }
@@ -199,8 +187,10 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const onContextMenu = (e: MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        const matchCell = match(e.clientX, e.clientY, canvasEl.current as HTMLCanvasElement, DATA_SERVICE.cachedViewRange)
-        startCellMng.mousedown(e, matchCell, canvasEl.current as HTMLCanvasElement, selectorMng.selector)
+        const matchCell = matchMng.match(e.clientX, e.clientY, DATA_SERVICE.cachedViewRange)
+        if (!matchCell)
+            return
+        startCellMng.mousedown(e, matchCell, selectorMng.selector)
         if (!selectorMng.startCell)
             return
         setContextMenu((
@@ -227,7 +217,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         <canvas
             className={styles.canvas}
             ref={canvasEl}
-            onWheel={scrollbarMng.mouseWheel}
+            onWheel={onMouseWheel}
         >你的浏览器不支持canvas，请升级浏览器</canvas>
         {contextmenuOpen && contextMenuEl ? contextMenuEl : null}
         {selectorMng.selector ? (
@@ -237,11 +227,11 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         ) : null}
         <ScrollbarComponent
             {...scrollbarMng.xScrollbarAttr}
-            setScrollDistance={e => scrollbarMng.setScrollDistance(e, 'x')}
+            setScrollTop={e => setScrollTop(e, 'x')}
         ></ScrollbarComponent>
         <ScrollbarComponent
             {...scrollbarMng.yScrollbarAttr}
-            setScrollDistance={e => scrollbarMng.setScrollDistance(e, 'y')}
+            setScrollTop={e => setScrollTop(e, 'y')}
         ></ScrollbarComponent>
         {textMng.context && textMng.editing ?
             <TextContainerComponent
