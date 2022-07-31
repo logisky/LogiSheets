@@ -4,7 +4,6 @@ import styles from './canvas.module.scss'
 import {
     MouseEvent,
     ReactElement,
-    useEffect,
     useRef,
     useState,
     FC,
@@ -20,6 +19,8 @@ import {
     useHighlightCell,
     useResizers,
     useMatch,
+    StartCellEvent,
+    SelectorChange,
 } from './widgets'
 import { Cell } from './defs'
 import {
@@ -52,11 +53,8 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
 
-    const startCellMng = useStartCell()
-    const selectorMng = useSelector(canvasEl)
     const scrollbarMng = useScrollbar({canvas: canvasEl})
     const dndMng = useDnd(canvasEl)
-    const textMng = useText(canvasEl)
     const highlights = useHighlightCell()
     const resizerMng = useResizers(canvasEl)
     const matchMng = useMatch(canvasEl)
@@ -72,34 +70,36 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
         rendered,
     })
 
-    useEffect(() => {
-        const subs = new Subscription()
-        // 当前单元格
-        subs.add(startCellMng.startCellEvent$.current.subscribe(e => {
-            selectorMng.startCellChange(e)
-            textMng.startCellChange(e)
-            if (e === undefined || e.same)
-                return
-            if (e.cell.type !== 'Cell')
-                return
-            const { startRow: row, startCol: col } = e.cell.coodinate
-            selectedCell$({ row, col })
-        }))
-    }, [])
-
-    useEffect(() => {
-        const {startCell, endCell} = selectorMng
-        if (!startCell)
+    const startCellChange = (e: StartCellEvent) => {
+        selectorMng.startCellChange(e)
+        textMng.startCellChange(e)
+        if (e === undefined || e.same)
             return
-        dndMng.selectorChange({start: startCell, end: endCell})
-    }, [selectorMng.selector])
-
-    // 监听用户开始输入
-    useEffect(() => {
-        if (!textMng.editing)
+        if (e?.cell?.type !== 'Cell')
             return
-        highlights.init(textMng.currText.current)
-    }, [textMng.editing])
+        const { startRow: row, startCol: col } = e.cell.coodinate
+        selectedCell$({ row, col })
+    }
+    const startCellMng = useStartCell({startCellChange})
+
+    const selectorChange: SelectorChange = selector => {
+        if (!selector) {
+            dndMng.clean()
+            return
+        }
+        const {startCell: start, endCell: end} = selector
+        dndMng.selectorChange({start, end})
+    }
+    const selectorMng = useSelector({canvas: canvasEl, selectorChange})
+
+    const onEdit = (editing: boolean, text?: string) => {
+        if (!editing)
+            return
+        if (text === undefined)
+            return
+        highlights.init(text)
+    }
+    const textMng = useText({canvas: canvasEl, onEdit})
 
 
     const setScrollTop = (scrollTop: number, type: 'x' | 'y') => {
@@ -118,6 +118,7 @@ export const CanvasComponent: FC<CanvasProps> = ({ selectedCell$ }) => {
             return
         SHEET_SERVICE.getSheet()?.scroll?.update('y', newScroll)
         renderMng.render()
+        startCellMng.scroll()
     }
 
     const onMousedown = async (e: MouseEvent) => {
