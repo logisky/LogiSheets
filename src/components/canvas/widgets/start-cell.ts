@@ -66,7 +66,7 @@ export const useStartCell = () => {
         startCell.current = cell
         startCellEvent$.current.next(event)
     }
-    const mousedown = (e: MouseEvent, matchCell: Cell, canvas: HTMLCanvasElement, selector?: SelectorProps) => {
+    const mousedown = (e: MouseEvent, matchCell: Cell, selector?: SelectorProps) => {
         const buttons = e.buttons
         if ((buttons !== Buttons.LEFT && buttons !== Buttons.RIGHT))
             return

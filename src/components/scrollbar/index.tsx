@@ -6,35 +6,26 @@ import { EventType, on } from '@/common/events'
 export * from './scroll_event'
 export type ScrollbarType = 'x' | 'y'
 export interface ScrollbarAttr {
-    // 当前canvas的尺寸
-    containerLength: number
-    // 整个sheet的尺寸
-    containerTotalLength: number
-    scrollDistance: number
-    paddingTop?: number
-    paddingBottom?: number
-    paddingLeft?: number
-    paddingRight?: number
+    offsetHeight?: number
+    scrollHeight?: number
+    scrollTop?: number
     minThumbLength?: number
-    maxThumbRadio?: number
     direction: ScrollbarType
 }
 export interface ScrollbarProps extends ScrollbarAttr {
-    setScrollDistance: (scrollDistance: number) => void
+    setScrollTop: (scrollTop: number) => void
 }
 
 export const ScrollbarComponent: FC<ScrollbarProps> = ({
-    containerLength = 0,
-    scrollDistance = 0,
-    setScrollDistance,
-    containerTotalLength = 0,
-    paddingBottom = 0,
-    paddingLeft = 0,
-    paddingRight = 0,
-    paddingTop = 0,
+    offsetHeight = 0,
+    scrollTop = 0,
+    setScrollTop,
+    scrollHeight = 0,
     minThumbLength = 20,
     direction = 'x',
 }) => {
+    if (scrollHeight < offsetHeight)
+        throw Error(`scrollHeight[${scrollHeight}] must larger than offsetHeight[${offsetHeight}]`)
     const _thumbEl = useRef<HTMLSpanElement>(null)
     const _containerEl = useRef<HTMLDivElement>(null)
     const _thumbContainerEl = useRef<HTMLDivElement>(null)
@@ -48,9 +39,9 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
              * https://www.programmersought.com/article/76801676023/
              */
             // 除法要注意判断分母是否为0
-            let scrollRadio = scrollDistance / containerTotalLength
-            let thumbRadio = containerLength / containerTotalLength
-            if (containerTotalLength === 0) {
+            let scrollRadio = scrollTop / scrollHeight
+            let thumbRadio = offsetHeight / scrollHeight
+            if (scrollHeight === 0) {
                 scrollRadio = 0
                 thumbRadio = 0
             }
@@ -81,9 +72,9 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
         }
         _render()
     }, [
-        containerLength,
-        scrollDistance,
-        containerTotalLength,
+        offsetHeight,
+        scrollTop,
+        scrollHeight,
         minThumbLength,
         direction,
     ])
@@ -95,7 +86,7 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
         mde.stopPropagation()
         mde.preventDefault()
         const startPosition = xScrollbar() ? mde.clientX : mde.clientY
-        const startScollDistance = scrollDistance
+        const startScollDistance = scrollTop
         const sub = new Subscription()
         sub.add(on(window, EventType.MOUSE_MOVE).subscribe(mme => {
             mme.preventDefault()
@@ -110,7 +101,7 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     }
     const thumbHostMouseWheel = (e: WheelEvent) => {
         const moved = xScrollbar() ? e.deltaX : e.deltaY
-        calcScrollDistance(scrollDistance, moved)
+        calcScrollDistance(scrollTop, moved)
     }
     const calcScrollDistance = (
         containerScrollDistance: number,
@@ -118,7 +109,7 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     ) => {
         const totalLength = _containerLength()
         const thumbLength = _thumbLength()
-        const oldScrollRadio = containerScrollDistance / containerTotalLength
+        const oldScrollRadio = containerScrollDistance / scrollHeight
         const oldStart = totalLength * oldScrollRadio
         let newStart = oldStart + moved
         if (newStart + thumbLength > totalLength)
@@ -126,8 +117,8 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
         if (newStart < 0)
             newStart = 0
         const newScrollRadio = newStart / totalLength
-        const newScrollDistance = containerTotalLength * newScrollRadio
-        setScrollDistance(newScrollDistance)
+        const newScrollDistance = scrollHeight * newScrollRadio
+        setScrollTop(newScrollDistance)
     }
 
 
@@ -144,12 +135,8 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     return (
         <div className={`${styles.host} ${xScrollbar() ? styles['x-scrollbar'] : styles['y-scrollbar']}`} >
             <div className={styles['edit-scrollbar']} ref={_containerEl} style={{
-                paddingTop: toPx(paddingTop),
-                paddingBottom: toPx(paddingBottom),
-                paddingLeft: toPx(paddingLeft),
-                paddingRight: toPx(paddingRight),
-                height: `calc(100% - ${toPx(paddingTop + paddingBottom)})`,
-                width: `calc(100% - ${toPx(paddingLeft + paddingRight)})`,
+                height: '100%',
+                width: '100%',
             }}>
                 <div
                     className={styles['thumb_container']}

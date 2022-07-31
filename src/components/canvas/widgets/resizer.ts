@@ -1,7 +1,7 @@
 import { pxToPt } from '@/common'
 import {Backend, DataService, RenderCell, SheetService} from '@/core/data'
 import { Range } from '@/core/standable'
-import { useRef, useState } from 'react'
+import { RefObject, useRef, useState } from 'react'
 import { getOffset } from '../defs'
 import {SetColWidthBuilder, SetRowHeightBuilder} from '@/api'
 import { useInjection } from '@/core/ioc/provider'
@@ -18,7 +18,7 @@ interface ResizerProps {
     readonly leftCell: RenderCell
 }
 const RESIZER_SIZE = 4
-export const useResizers = () => {
+export const useResizers = (canvas: RefObject<HTMLCanvasElement>) => {
     const [resizers, setResizers] = useState<ResizerProps[]>([])
     const [active, setActive] = useState<ResizerProps>()
     const [moving, setMoving] = useState({x: 0, y: 0})
@@ -61,8 +61,10 @@ export const useResizers = () => {
         })
         setResizers(rowResizers.concat(colResizers))
     }
-    const mousedown = (e: MouseEvent, canvas: HTMLCanvasElement) => {
-        const {x, y} = getOffset(e.clientX, e.clientY, canvas)
+    const mousedown = (e: MouseEvent) => {
+        if (!canvas.current)
+            return
+        const {x, y} = getOffset(e.clientX, e.clientY, canvas.current)
         const mousedownRange = new Range().setStartRow(y).setEndRow(y).setStartCol(x).setEndCol(x)
         const i = resizers.findIndex(r => r.range.cover(mousedownRange))
         if (i === -1)

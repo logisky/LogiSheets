@@ -1,5 +1,4 @@
 import { MAX_COUNT, SheetService } from './sheet'
-import { ScrollPosition } from './scroll'
 import { SETTINGS } from '../../common/settings'
 import { RenderCell, ViewRange } from './view_range'
 import { Backend } from './backend'
@@ -15,7 +14,6 @@ export const CANVAS_OFFSET = 100
 export class DataService {
     readonly id = getID()
     constructor(
-        @inject(TYPES.Scroll) private readonly scroll: ScrollPosition,
         @inject(TYPES.Sheet) private readonly sheetSvc: SheetService,
         @inject(TYPES.Backend) private readonly backend: Backend,
     ) {
@@ -34,16 +32,6 @@ export class DataService {
         this.backend.send({ $case: 'displayRequest', displayRequest: req })
     }
 
-    updateScroll(x?: number, y?: number): void {
-        if ((x && x < 0) || (y && y < 0))
-            // tslint:disable-next-line: no-throw-unless-asserts
-            throw Error(`x'${x}' or y'${y}' should not lower than 0`)
-        if (x !== undefined)
-            this.scroll.x = x
-        if (y !== undefined)
-            this.scroll.y = y
-    }
-
     /**
      * filter?, freeze, scroll, hidden
      */
@@ -57,7 +45,7 @@ export class DataService {
         viewRange.cols = cols
         viewRange.cells = cells
         this._viewRange = viewRange
-        console.log('init view range', viewRange)
+        // console.log('init view range', viewRange)
         return this._viewRange
     }
     private _viewRange = new ViewRange()
@@ -68,11 +56,14 @@ export class DataService {
     }
 
     private _getScrollPosition() {
+        const scroll = this.sheetSvc.getSheet()?.scroll
+        if (!scroll)
+            return {row: 0, col: 0}
         let rowIndex = 0
         let i = -1
         while (i < MAX_COUNT) {
             i += 1
-            if (rowIndex < this.scroll.y) {
+            if (rowIndex < scroll.y) {
                 rowIndex += this.sheetSvc.getRowInfo(i).px
                 continue
             }
@@ -83,7 +74,7 @@ export class DataService {
         let colIndex = 0
         while (i < MAX_COUNT) {
             i += 1
-            if (colIndex < this.scroll.x) {
+            if (colIndex < scroll.x) {
                 colIndex += this.sheetSvc.getColInfo(i).px
                 continue
             }

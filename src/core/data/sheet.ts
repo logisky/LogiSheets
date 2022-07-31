@@ -1,4 +1,3 @@
-// tslint:disable: max-params
 import {
     BlockInfo,
     ColInfo,
@@ -19,6 +18,7 @@ import {
 import {injectable} from 'inversify'
 
 import { SETTINGS } from '@/common/settings'
+import { genKey } from '@/common'
 import { StandardValue } from '@/core/standable/value'
 import { getID } from '@/core/ioc/id'
 export const MAX_COUNT = 100000000
@@ -27,8 +27,7 @@ export const MAX_COUNT = 100000000
 export class SheetService {
     readonly id = getID()
     constructor() {
-        const sheet = new StandardSheet()
-        sheet.name = SETTINGS.defaultSheetName
+        const sheet = this.newSheet(SETTINGS.defaultSheetName)
         this._sheet.set(0, sheet)
     }
     setBlocks (sheet: number, blocks: readonly BlockInfo[]) {
@@ -48,7 +47,13 @@ export class SheetService {
     }
 
     clear () {
-        this._sheet.delete(this._activeIndex)
+        /**
+         * (TODO: minglong): 考虑清楚clear的时候对standard sheet应该如何处理
+         */
+        const currSheet = this.getSheet()
+        const newSheet = this.newSheet(currSheet?.name)
+        this._sheet.set(this._activeIndex, newSheet)
+
         this._cells.clear()
         this._colInfos.clear()
         this._rowInfos.clear()
@@ -83,7 +88,6 @@ export class SheetService {
     }
 
     getSheets (): readonly StandardSheet[] {
-        // tslint:disable-next-line: prefer-literal prefer-array-literal
         const sheets = new Array(this._sheet.size)
         this._sheet.forEach((sheet, index) => {
             sheets[index] = sheet
@@ -112,6 +116,22 @@ export class SheetService {
             s.setComments(info.comments)
         this._sheet.set(sheet, s)
     }
+    newSheet(name?: string) {
+        const s = new StandardSheet()
+        const sheets = Array.from(this._sheet.values()).map(s => s.name)
+        if (name)
+            s.name = name
+        else {
+            let num = 1
+            let name = `Sheet ${num}`
+            while(sheets.includes(name)) {
+                num++
+                name = `Sheet ${num}`
+            }
+            s.name = name
+        }
+        return s
+    }
 
     getRowInfo (row: number, sheet = this._activeIndex) {
         const key = genKey(sheet, row)
@@ -121,8 +141,14 @@ export class SheetService {
     setRowInfo (row: number, info: RowInfo, sheet: number) {
         const key = genKey(sheet, row)
         const rowInfo = StandardRowInfo.from(info)
-        const oldRowHeight = this._rowInfos.get(key)?.px ?? 0
-        this.updateMaxHeight(this.maxHeight() + rowInfo.px - oldRowHeight)
+        const oldRowInfo = this._rowInfos.get(key)
+        const s = this._sheet.get(sheet)
+        if (!s)
+            return
+        if (oldRowInfo)
+            s.height += (rowInfo.px - oldRowInfo.px)
+        else
+            s.height += rowInfo.px
         this._rowInfos.set(key, rowInfo)
     }
 
@@ -134,32 +160,22 @@ export class SheetService {
         return this._activeIndex
     }
 
-    maxHeight () {
-        return Math.max(this._maxHeight, this._dataHeight)
-    }
-
-    updateMaxHeight (maxHeight: number) {
-        this._maxHeight = maxHeight
-        return this.maxHeight()
-    }
-
-    maxWidth () {
-        return Math.max(this._maxWidth, this._dataWidth)
-    }
-
-    updateMaxWidth (maxWidth: number) {
-        this._maxWidth = maxWidth
-        return this.maxWidth()
-    }
-
     getCell (row: number, col: number, sheet = this._activeIndex) {
         const key = genKey(sheet, row, col)
         return this._cells.get(key)
     }
 
-    setColInfo (col: number, info: ColInfo, sheet: number) {
-        const key = genKey(sheet, col)
+    setColInfo (col: number, info: ColInfo, sheetIndex: number) {
+        const key = genKey(sheetIndex, col)
         const colInfo = StandardColInfo.from(info)
+        const oldColInfo = this._colInfos.get(key)
+        const sheet = this.getSheet()
+        if (!sheet)
+            return
+        if (oldColInfo)
+            sheet.width + (colInfo.px - oldColInfo.px)
+        else
+            sheet.width += colInfo.px
         this._colInfos.set(key, colInfo)
     }
 
@@ -167,16 +183,6 @@ export class SheetService {
         const key = genKey(sheet, col)
         return this._colInfos.get(key) ?? new StandardColInfo(col)
     }
-    private _maxHeight = 0
-    /**
-     * init from server.
-     */
-    private _dataHeight = 0
-    private _maxWidth = 0
-    /**
-     * init from server.
-     */
-    private _dataWidth = 0
     /**
      * sheet index + row index + col index => cell info
      */
@@ -195,8 +201,4 @@ export class SheetService {
     private _sheet = new Map<number, StandardSheet>()
     private _blocks = new Map<number, readonly StandardBlock[]>()
     private _activeIndex = 0
-}
-
-function genKey (...params: readonly (string | number)[]): string {
-    return params.join('-')
 }

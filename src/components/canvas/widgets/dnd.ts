@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { RefObject, useRef, useState } from 'react'
 import { getPosition, getSelector } from './selector'
 import { Range } from '@/core/standable'
 import { AttributeName } from '@/common/const'
@@ -8,11 +8,10 @@ import { Backend, DataService, SheetService } from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
 interface _Selector {
-    readonly canvas: HTMLCanvasElement
     readonly start: Cell
     readonly end?: Cell
 }
-export const useDnd = () => {
+export const useDnd = (canvas: RefObject<HTMLCanvasElement>) => {
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
@@ -56,8 +55,10 @@ export const useDnd = () => {
         BACKEND_SERVICE.sendTransaction(payloads)
     }
     const _setRange = (selector?: _Selector) => {
+        if (!canvas.current)
+            return
         _selector.current = selector
-        const sel = selector ? getSelector(selector.canvas, selector.start, selector.end) : undefined
+        const sel = selector ? getSelector(canvas.current, selector.start, selector.end) : undefined
         const newRange = sel ? getPosition(sel) : undefined
         setRange(newRange)
     }
@@ -80,16 +81,16 @@ export const useDnd = () => {
         return true
     }
 
-    const onMouseMove = (e: MouseEvent, canvas: HTMLCanvasElement, startCell: Cell, oldEnd: Cell) => {
-        if (!mousedownStart.current)
+    const onMouseMove = (e: MouseEvent, startCell: Cell, oldEnd: Cell) => {
+        if (!mousedownStart.current || !canvas.current)
             return false
         const moved = { x: e.clientX - mousedownStart.current.x, y: e.clientY - mousedownStart.current.y }
         if (startCell.type !== 'Cell')
             return true
-        const endCell = match(oldEnd.position.startCol + moved.x, oldEnd.position.startRow + moved.y, canvas, DATA_SERVICE.cachedViewRange)
+        const endCell = match(oldEnd.position.startCol + moved.x, oldEnd.position.startRow + moved.y, canvas.current, DATA_SERVICE.cachedViewRange)
         if (endCell.type !== 'Cell')
             return true
-        _setEnd({ canvas, start: startCell, end: endCell })
+        _setEnd({ canvas: canvas.current, start: startCell, end: endCell })
         return true
     }
 

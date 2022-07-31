@@ -1,10 +1,11 @@
-import { useState, FC } from 'react'
+import { useState, FC, useEffect } from 'react'
 import styles from './sheets-tab.module.scss'
 import {ContextMenuComponent} from './contextmenu'
 import {InsertSheetBuilder} from '@/api'
 import { Backend, SheetService } from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
+import { Subscription } from 'rxjs'
 
 export type SheetsTabprops = Record<string, unknown>
 
@@ -16,9 +17,16 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
     const [sheets, setSheets] = useState(getSheets())
     const [active, setActive] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
-    BACKEND_SERVICE.render$.subscribe(() => {
-        setSheets(getSheets())
-    })
+
+    useEffect(() => {
+        const subs = new Subscription()
+        subs.add(BACKEND_SERVICE.render$.subscribe(() => {
+            setSheets(getSheets())
+        }))
+        return () => {
+            subs.unsubscribe()
+        }
+    }, [])
 
     const onTabChange = (i: number) => {
         setActive(i)
