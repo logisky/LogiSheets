@@ -52,7 +52,17 @@ export const getSelector = (canvas: HTMLCanvasElement, start: Cell, end?: Cell) 
     return selector
 }
 
-export const useSelector = (canvas: RefObject<HTMLCanvasElement>) => {
+export type SelectorChange = (selector?: {startCell: Cell, endCell: Cell}) => void
+
+interface UseSelectorProps {
+    readonly canvas: RefObject<HTMLCanvasElement>
+    readonly selectorChange: SelectorChange
+}
+
+export const useSelector = ({
+    canvas,
+    selectorChange,
+}: UseSelectorProps) => {
     const [selector, setSelector] = useState<SelectorProps>()
     const [startCellInner, setStartCell] = useState<Cell>()
     const [endCell, setEndCell] = useState<Cell | undefined>(undefined)
@@ -60,12 +70,20 @@ export const useSelector = (canvas: RefObject<HTMLCanvasElement>) => {
     // 更新selector
     useEffect(() => {
         if (startCellInner === undefined || canvas.current === null) {
-            setSelector(undefined)
+            _setSelector()
             return
         }
         const selector = getSelector(canvas.current, startCellInner, endCell)
-        setSelector(selector)
+        _setSelector(selector)
     }, [canvas, endCell, startCellInner])
+
+    const _setSelector = (selector?: SelectorProps) => {
+        setSelector(selector)
+        if (!selector || !startCellInner)
+            selectorChange()
+        else
+            selectorChange({startCell: startCellInner, endCell: endCell ?? startCellInner})
+    }
 
     const onContextmenu = (startCell: Cell) => {
         setEndCell(undefined)
@@ -87,8 +105,8 @@ export const useSelector = (canvas: RefObject<HTMLCanvasElement>) => {
     }
 
     const startCellChange = (e?: StartCellEvent) => {
-        if (e === undefined) {
-            setSelector(undefined)
+        if (e?.cell === undefined) {
+            _setSelector()
             return
         }
         if (e.from === 'scroll')
@@ -99,7 +117,7 @@ export const useSelector = (canvas: RefObject<HTMLCanvasElement>) => {
             else if (e.from === 'contextmenu')
                 onContextmenu(e.cell)
             else
-                setSelector(undefined)
+                _setSelector()
         }
     }
     return {

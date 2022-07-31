@@ -10,7 +10,15 @@ import { SheetService } from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
 
-export const useText = (canvas: RefObject<HTMLCanvasElement>) => {
+interface TextProps {
+    readonly canvas: RefObject<HTMLCanvasElement>
+    readonly onEdit: (editing: boolean, text?: string) => void
+}
+
+export const useText = ({
+    canvas,
+    onEdit,
+}: TextProps) => {
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const [editing, setEditing] = useState(false)
     const [context, setContext] = useState<Context<Cell>>()
@@ -94,9 +102,10 @@ export const useText = (canvas: RefObject<HTMLCanvasElement>) => {
             return
         setEditing(isEditing)
         setContext(context)
+        onEdit(isEditing, currText.current)
     }
-    const startCellChange = (e?: StartCellEvent) => {
-        if (e?.from === 'mousedown')
+    const startCellChange = (e: StartCellEvent) => {
+        if (e.from === 'mousedown')
             mousedown(e)
         else
             _setEditing(false)

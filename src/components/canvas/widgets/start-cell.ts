@@ -4,23 +4,27 @@ import { MouseEvent, useRef } from 'react'
 import { Buttons } from '@/common'
 import { SelectorProps } from '@/components/selector'
 import { Range } from '@/core/standable'
-import { Subject } from 'rxjs'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'
 export type StartCellType = 'mousedown' | 'contextmenu' | 'render' | 'unknown' | 'scroll'
 export class StartCellEvent {
     constructor(
-        public readonly cell: Cell,
+        public readonly cell?: Cell,
         public readonly from: StartCellType = 'unknown',
     ) { }
     public event = new Event('')
     public same = false
 }
 
-export const useStartCell = () => {
+interface StartCellProps {
+    readonly startCellChange: (e: StartCellEvent) => void
+}
+
+export const useStartCell = ({
+    startCellChange,
+}: StartCellProps) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const startCell = useRef<Cell>()
-    const startCellEvent$ = useRef(new Subject<StartCellEvent | undefined>())
 
     const scroll = () => {
         const oldStartCell = startCell.current
@@ -37,14 +41,14 @@ export const useStartCell = () => {
         else
             return
         if (!renderCell) {
-            startCellEvent$.current.next(undefined)
+            startCellChange(new StartCellEvent())
             return
         }
         const newStartCell = new Cell(oldStartCell.type).copyByRenderCell(renderCell)
         startCell.current = newStartCell
         const e = new StartCellEvent(newStartCell, 'scroll')
         e.same = true
-        startCellEvent$.current.next(e)
+        startCellChange(e)
     }
 
     const canvasChange = () => {
@@ -64,11 +68,11 @@ export const useStartCell = () => {
         const event = new StartCellEvent(cell, 'render')
         event.same = false
         startCell.current = cell
-        startCellEvent$.current.next(event)
+        startCellChange(event)
     }
     const mousedown = (e: MouseEvent, matchCell: Cell, selector?: SelectorProps) => {
         const buttons = e.buttons
-        if ((buttons !== Buttons.LEFT && buttons !== Buttons.RIGHT))
+        if (buttons !== Buttons.LEFT && buttons !== Buttons.RIGHT)
             return
         // 如果是在选中区域内右键，则不触发新的start cell
         if (selector && buttons === Buttons.RIGHT) {
@@ -84,11 +88,10 @@ export const useStartCell = () => {
         if (startCell.current && matchCell.equals(startCell.current))
             event.same = true
         startCell.current = matchCell
-        startCellEvent$.current.next(event)
+        startCellChange(event)
     }
     return {
         startCell,
-        startCellEvent$,
         scroll,
         canvasChange,
         mousedown,
