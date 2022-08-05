@@ -1,7 +1,7 @@
 [package]
-name = "logisheets_derives"
-version = "0.3.0"
-description = "macros that help LogiSheets serde the xml files"
+name = "gents_derives"
+version = "0.1.0"
+description = "provides some macros for gents"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 license = "MIT"
 edition = "2018"
