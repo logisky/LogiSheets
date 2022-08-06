@@ -27,16 +27,11 @@ export const TopBar = ({ selectedCell }: TopBarProps) => {
         }
         setMenuContent(content)
     }, [mainMenuType])
+
     return (
         <div className={styles['host']}>
-            <div className={styles['main-menu']}>
-                <MainMenu currType={mainMenuType} mainMenuChanged$={setMainMenuType}></MainMenu>
-            </div>
-            <div className={styles['content']}>
-                <div className={styles['top-bar-start']}>
-                    {menuContent}
-                </div>
-            </div>
+            <MainMenu currType={mainMenuType} mainMenuChanged$={setMainMenuType}></MainMenu>
+            {menuContent}
         </div>
     )
 }

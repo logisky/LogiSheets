@@ -23,6 +23,7 @@
     "types": ["reflect-metadata", "jest", "node"],
     "paths": {
       "@/*": ["src/*"],
+      "@LogiSheets/*": ["./*"],
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
