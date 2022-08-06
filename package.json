@@ -21,6 +21,7 @@
     "react-dom": "^17.0.2",
     "react-modal": "^3.14.4",
     "react-scripts": "5.0.0",
+    "react-select": "^5.4.0",
     "react-transition-group": "^4.4.2",
     "react-use-websocket": "^2.9.1",
     "rxjs": "^7.5.2",
