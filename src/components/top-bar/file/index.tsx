@@ -1,6 +1,6 @@
 import { ChangeEvent, FC, useRef } from 'react'
 import styles from './file.module.scss'
-import { getU8 } from '@/common/file'
+import { getU8 } from '@/core/file'
 import { Backend, SheetService } from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'
 import { TYPES } from '@/core/ioc/types'

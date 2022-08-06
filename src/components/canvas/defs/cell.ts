@@ -1,5 +1,5 @@
 import { RenderCell, SheetService } from '@/core/data'
-import { shallowCopy } from '@/common'
+import { shallowCopy } from '@/core'
 export type CellType =
   | 'Cell'
   | 'LeftTop'

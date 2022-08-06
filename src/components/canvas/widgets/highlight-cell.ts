@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import {parseA1notation} from '@/common/a1notation'
+import {parseA1notation} from '@/core/a1notation'
 import { getTokens } from '@/core/formula'
 import { Range, StandardColor } from '@/core/standable'
 import { DataService } from '@/core/data'

@@ -1,7 +1,7 @@
 import { RefObject, useRef, useState } from 'react'
 import { getPosition, getSelector } from './selector'
 import { Range } from '@/core/standable'
-import { AttributeName } from '@/common/const'
+import { AttributeName } from '@/core/const'
 import { match, Cell, visibleCells } from '../defs'
 import { Payload } from '@/api'
 import { Backend, DataService, SheetService } from '@/core/data'

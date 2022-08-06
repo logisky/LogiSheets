@@ -1,7 +1,7 @@
 import { Cell } from '../defs'
 import { DataService, RenderCell } from '@/core/data'
 import { MouseEvent, useRef } from 'react'
-import { Buttons } from '@/common'
+import { Buttons } from '@/core'
 import { SelectorProps } from '@/components/selector'
 import { Range } from '@/core/standable'
 import { useInjection } from '@/core/ioc/provider'

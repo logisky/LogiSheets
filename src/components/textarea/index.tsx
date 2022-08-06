@@ -1,4 +1,4 @@
-import { on, EventType, StandardKeyboardEvent } from '@/common/events'
+import { on, EventType, StandardKeyboardEvent } from '@/core/events'
 import {
     useSelection,
     useCursor,

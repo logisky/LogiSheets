@@ -2,7 +2,7 @@ import { Observable, ReplaySubject, Subject } from 'rxjs'
 import { DisplayPatch } from '@/bindings'
 import { ClientSend, ServerSend } from '@/message'
 import { Payload, PayloadsTransaction, adaptTransaction } from '@/api'
-import { hasOwnProperty } from '@/common'
+import { hasOwnProperty } from '@/core'
 import { SheetService } from '@/core/data/sheet'
 import { Service as StandAloneService } from '@/wasm_svc/service'
 import {injectable, inject} from 'inversify'
@@ -28,9 +28,12 @@ export class Backend {
     }
     send$ = new ReplaySubject<Blob>(5)
     handleResponse(msg: ServerSend) {
-        console.log(`standalone: ${STAND_ALONE}, response`, msg)
         this._handleServerSend(msg)
     }
+    /**
+     * Send payloads to backend for transaction.
+     * @param undoable Default true
+     */
     sendTransaction(payloads: Payload[], undoable = true) {
         if (payloads.length === 0)
             return
@@ -40,7 +43,6 @@ export class Backend {
     }
 
     send(msg: ClientSend) {
-        console.log('send:', msg)
         this._wasmSvc.input$.next(msg)
         return
     }
@@ -51,7 +53,6 @@ export class Backend {
     private _handleServerSend(serverSend: ServerSend) {
         if (serverSend.$case === 'displayResponse') {
             const e = serverSend.displayResponse
-            console.log('ws: display response', e)
             this.sheetSvc.clear()
             e.patches.forEach(p => {
                 this._handleDisplayArea(p)
@@ -59,7 +60,6 @@ export class Backend {
             this._render$.next()
         } else if (serverSend.$case === 'actionEffect') {
             const sheetUpdated = serverSend.actionEffect.sheets
-            console.log('ws: sheet updated', sheetUpdated)
             this._sheetUpdated$.next(sheetUpdated)
         }
     }

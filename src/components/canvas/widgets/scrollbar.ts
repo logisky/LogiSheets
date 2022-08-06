@@ -1,4 +1,4 @@
-import { EventType, on } from '@/common/events'
+import { EventType, on } from '@/core/events'
 import { ScrollbarAttr, ScrollbarType } from '@/components/scrollbar'
 import {CANVAS_OFFSET, SheetService} from '@/core/data'
 import { useInjection } from '@/core/ioc/provider'

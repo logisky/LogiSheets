@@ -1,4 +1,4 @@
-import { lowerCase, upperCase } from '@/common/strings'
+import { lowerCase, upperCase } from '@/core/strings'
 import Formulas from './formula.json'
 
 export type Formula = ReturnType<typeof allFormulas>[0]

@@ -1,4 +1,4 @@
-import { shallowCopy } from '@/common'
+import { shallowCopy } from '@/core'
 import { BlockInfo } from '@/bindings'
 import { Range } from './range'
 export class StandardBlock implements BlockInfo {

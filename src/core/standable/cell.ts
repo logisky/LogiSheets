@@ -2,7 +2,7 @@ import { Style } from '@/bindings'
 import { StandardValue } from './value'
 import { format } from 'ssf'
 import { StandardStyle } from './style'
-import { Extract } from '@/common/html'
+import { Extract } from '@/core/html'
 
 export class StandardCell {
     style?: StandardStyle

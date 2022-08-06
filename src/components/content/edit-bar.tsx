@@ -1,9 +1,10 @@
 import { SelectedCell } from '@/components/canvas'
-import { toA1notation } from '@/common'
+import { toA1notation } from '@/core'
+import { CellInputBuilder } from '@/api'
 import { FC, useEffect, useState } from 'react'
 import styles from './edit-bar.module.scss'
 import { useInjection } from '@/core/ioc/provider'
-import { SheetService } from '@/core/data'
+import { Backend, SheetService } from '@/core/data'
 import { TYPES } from '@/core/ioc/types'
 export interface EditBarProps {
     selectedCell: SelectedCell
@@ -12,14 +13,15 @@ export interface EditBarProps {
 export const EditBarComponent: FC<EditBarProps> = ({
     selectedCell,
 }) => {
-    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
+    const sheetSvc = useInjection<SheetService>(TYPES.Sheet)
+    const backendSvc = useInjection<Backend>(TYPES.Backend)
     const [coordinate, setCoordinate] = useState('')
     const [formula, setFormula] = useState('')
     useEffect(() => {
         const { row, col } = selectedCell
         const notation = toA1notation(selectedCell.col)
         setCoordinate(`${notation}${row + 1}`)
-        const cell = SHEET_SERVICE.getCell(row, col)
+        const cell = sheetSvc.getCell(row, col)
         if (cell === undefined)
             return
         if (cell.formula === '')
@@ -28,7 +30,13 @@ export const EditBarComponent: FC<EditBarProps> = ({
             setFormula(cell.getFormular())
     }, [selectedCell])
     const textChange = (newText: string) => {
-        console.log(newText)
+        const payload = new CellInputBuilder()
+            .sheetIdx(sheetSvc.getActiveSheet())
+            .row(selectedCell.row)
+            .col(selectedCell.col)
+            .input(newText)
+            .build()
+        backendSvc.sendTransaction([payload], true)
     }
     return <div className={styles.host}>
         <div className={styles.a1notation}>{coordinate}</div>

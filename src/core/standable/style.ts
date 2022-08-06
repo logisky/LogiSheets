@@ -1,5 +1,5 @@
 import { CtCellAlignment, Border, Font, Fill, Style, CtCellProtection } from '@/bindings'
-import { shallowCopy } from '@/common'
+import { shallowCopy } from '@/core'
 import { StandardFont } from './font'
 
 export class StandardStyle implements Style {

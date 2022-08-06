@@ -22,7 +22,7 @@ import initWasm, {
 } from '../wasms/server/pkg'
 import { Calculator, Executor } from './calculator'
 import { TransactionCode, TransactionEndResult } from './jsvalues'
-import { hasOwnProperty } from '@/common'
+import { hasOwnProperty } from '@/core'
 
 export class Service {
     public constructor(funcs: readonly CustomFunc[]) {

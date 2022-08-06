@@ -1,5 +1,5 @@
 import { MAX_COUNT, SheetService } from './sheet'
-import { SETTINGS } from '../../common/settings'
+import { SETTINGS } from '@/core/settings'
 import { RenderCell, ViewRange } from './view_range'
 import { Backend } from './backend'
 import { DisplayRequest } from '@/bindings'

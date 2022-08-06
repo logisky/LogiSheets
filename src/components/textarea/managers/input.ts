@@ -4,7 +4,7 @@ import {
     ClipboardStoredMetaData,
     KeyboardEventCode,
     MIMES,
-} from '@/common/events'
+} from '@/core/events'
 import { TextManager } from './text'
 import {
     Position,
@@ -16,8 +16,7 @@ import {
 } from '../input'
 import { useCursor } from './cursor'
 import { useSelection } from './selection'
-import { AccessibilitySupport } from '@/common/document'
-import { isMac } from '@/common/platform'
+import { AccessibilitySupport } from '@/core/document'
 import { Subscription, Subject, Observable } from 'rxjs'
 
 export class InputManager<T> extends Subscription {
@@ -58,8 +57,11 @@ export class InputManager<T> extends Subscription {
                 currentState: TextAreaState
             ) => {
                 if (this._accessibilitySupport === AccessibilitySupport.DISABLED) {
-                    if (isMac())
-                        console.log('TODO', 'mac process')
+                    /**
+                     * TODO(minglong): implement it
+                     */
+                    // if (isMac())
+                    //     console.log('TODO', 'mac process')
                     return TextAreaState.EMPTY
                 }
                 return PagedScreenReaderStrategy
@@ -70,7 +72,12 @@ export class InputManager<T> extends Subscription {
                 deltaOffset: number,
                 lineFeedCnt: number
             ) => {
-                console.log('TODO', viewAnchorPosition, deltaOffset, lineFeedCnt)
+                /**
+                 * TODO(minglong): implement it
+                 */
+                // console.log('TODO', viewAnchorPosition, deltaOffset, lineFeedCnt)
+                deltaOffset
+                lineFeedCnt
                 return viewAnchorPosition
             },
         }
@@ -120,7 +127,8 @@ export class InputManager<T> extends Subscription {
                 this._cursorManager.type([], removed)
             }
             if (e.positionDelta || e.replaceNextCharCnt || e.replacePrevCharCnt)
-                console.log('textarea type composition change', e)
+                // console.log('textarea type composition change', e)
+                e
             else {
                 const line = cursor.lineNumber
                 const col = cursor.column
