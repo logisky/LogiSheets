@@ -1,14 +1,14 @@
 import { PainterService, Box, TextAttr, CanvasAttr } from '@/core/painter'
 import { Backend, DataService, RenderCell, SheetService } from '@/core/data'
 import { StandardColor, Range } from '@/core/standable'
-import { SETTINGS } from '@/common/settings'
-import { hasOwnProperty, toA1notation } from '@/common'
+import { SETTINGS } from '@/core/settings'
+import { hasOwnProperty, toA1notation } from '@/core'
 import { StandardStyle } from '@/core/standable/style'
 import { TYPES } from '@/core/ioc/types'
 import { useInjection } from '@/core/ioc/provider'
 import { RefObject, useEffect, useRef } from 'react'
 import { Subscription } from 'rxjs'
-import { EventType, on } from '@/common/events'
+import { EventType, on } from '@/core/events'
 
 interface RenderProps {
     readonly canvas: RefObject<HTMLCanvasElement>

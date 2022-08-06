@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { ContentComponent } from '@/components/content'
 import { BottomBarComponent } from '@/components/bottom-bar'
 import { SelectedCell } from '@/components/canvas'
-import { DEBUG } from '@/common'
-import { SETTINGS } from '@/common/settings'
+import { DEBUG } from '@/core'
+import { SETTINGS } from '@/core/settings'
 import styles from './root.module.scss'
 export const RootContainer = () => {
     const [selectedCell, setSelectedCell] = useState<SelectedCell>({ row: 0, col: 0 })

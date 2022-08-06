@@ -13,20 +13,19 @@ import {
     CompositionStartEvent,
     ClipboardMetaData,
     ClipboardStoredMetaData,
-} from '@/common/events'
+} from '@/core/events'
 import { TextAreaState } from './textarea-state'
 import {
     isChrome,
     isFirefox,
     isMac,
-    isSafari,
-} from '@/common/platform'
+} from '@/core/platform'
 import { TypeData } from './type_data'
 import { Selection } from './selection'
 import { Position } from './position'
 import { TextAreaInputEvents } from './textarea-input-events'
-import { isHighSurrogate } from '@/common/strings'
-import { shallowCopy } from '@/common'
+import { isHighSurrogate } from '@/core/strings'
+import { shallowCopy } from '@/core'
 const enum ReadFromTextArea {
     TYPE,
     PASTE,
@@ -169,10 +168,10 @@ export class TextAreaInput extends TextAreaInputEvents {
     onFocus(e: FocusEvent) {
         e.stopPropagation()
         e.preventDefault()
-        const hasFocus = this._hasFocus
+        // const hasFocus = this._hasFocus
         this.#setHasFocus(true)
-        if (isSafari() && !hasFocus && this._hasFocus)
-            console.log('safari todo')
+        // if (isSafari() && !hasFocus && this._hasFocus)
+        //     console.log('safari todo')
     }
     onBlur() {
         if (this._isDoingComposition) {

@@ -1,4 +1,4 @@
-import { lowerCase } from '@/common/strings'
+import { lowerCase } from '@/core/strings'
 
 export class Candidate {
     constructor(

@@ -7,7 +7,7 @@ import { CanvasApi } from './canvas'
 import {useToast} from '@/ui/notification/useToast'
 
 import { npx, npxLine, thinLineWidth } from './utils'
-import { Direction } from '@/common'
+import { Direction } from '@/core'
 import { TextAttr } from './text_attr'
 
 export class PainterService extends CanvasApi {

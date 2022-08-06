@@ -3,7 +3,7 @@ import {
     commonSuffixLength,
     containsEmoji,
     containsFullWidthCharactor,
-} from '@/common/strings'
+} from '@/core/strings'
 import { Position } from './position'
 import { TextAreaWrapper } from './textarea-wrapper'
 import { TypeData } from './type_data'

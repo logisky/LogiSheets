@@ -17,8 +17,8 @@ import {
 } from '@/core/standable'
 import {injectable} from 'inversify'
 
-import { SETTINGS } from '@/common/settings'
-import { genKey } from '@/common'
+import { SETTINGS } from '@/core/settings'
+import { genKey } from '@/core'
 import { StandardValue } from '@/core/standable/value'
 import { getID } from '@/core/ioc/id'
 export const MAX_COUNT = 100000000

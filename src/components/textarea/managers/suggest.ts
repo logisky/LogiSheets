@@ -3,12 +3,12 @@ import {
     Candidate,
     SpanItem,
 } from '@/components/suggest'
-import { lcsLenMatch } from '@/common/algo/lcs'
+import { lcsLenMatch } from '@/core/algo/lcs'
 import { fullFilterSnippet, getAllFormulas, isFormula, Snippet } from '@/core/snippet'
 import { TextManager } from './text'
 import { useCursor } from './cursor'
 import { SubType, TokenType } from '@/core/formula'
-import { KeyboardEventCode, StandardKeyboardEvent } from '@/common/events'
+import { KeyboardEventCode, StandardKeyboardEvent } from '@/core/events'
 import { TokenManager } from './token'
 
 export const useSuggest = <T,>(

@@ -1,4 +1,4 @@
-import { SETTINGS } from '@/common/settings'
+import { SETTINGS } from '@/core/settings'
 import { Range } from '@/core/standable'
 import { Cell } from './cell'
 import { ViewRange } from '@/core/data'
