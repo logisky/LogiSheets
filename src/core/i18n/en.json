@@ -1,0 +1,9 @@
+{
+    "lang": "English",
+    "topBar": {
+        "mainMenu": {
+            "file": "file",
+            "start": "start"
+        }
+    }
+}

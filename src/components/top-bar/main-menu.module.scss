@@ -1,20 +1,11 @@
 .host {
-  display: block;
-}
-.menus {
-  flex-direction: row;
   align-items: center;
   display: flex;
+  border-bottom: 1px solid #e2e6ed;
+  height: 53px;
+  padding: 8px;
+  box-sizing: border-box;
 }
-.menu-btn {
-  justify-content: center;
-  align-items: center;
-  display: flex;
-  height: 20px;
-  padding: 0 10px;
-  cursor: pointer;
-  &.active {
-    background-color: #1fbb7d;
-    color: #fff;
-  }
+.active {
+  background-color: #1fbb7d;
 }

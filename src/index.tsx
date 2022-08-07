@@ -5,6 +5,7 @@ import App from './App'
 import reportWebVitals from './reportWebVitals'
 import {IocProvider} from '@/core/ioc/provider'
 import {CONTAINER} from '@/core/ioc/config'
+import './core/i18n/i18n'
 
 ReactDOM.render(
     <React.StrictMode>

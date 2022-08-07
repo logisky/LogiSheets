@@ -1,7 +1,8 @@
 import Select from 'react-select'
 import {FC} from 'react'
-import { StateManagerProps } from 'react-select/dist/declarations/src/useStateManager'
+import type {Props} from 'react-select'
+export {Props as SelectProps}
 
-export const SelectComponent: FC<StateManagerProps> = (props) => {
+export const SelectComponent: FC<Props> = (props) => {
     return <Select {...props}></Select>
 }
