@@ -1,21 +1,24 @@
-import { lowerCase, upperCase } from '@/core/strings'
-import Formulas from './formula.json'
-
-export type Formula = ReturnType<typeof allFormulas>[0]
-export type ParamDesc = Formula['paramDesc']
-export type Param = ParamDesc['params'][0]
+import {upperCase} from '@/core/strings'
+import formulas from '../../../resources/funcs/out/funcs.json'
+import {formulaStandable} from '@/core/standable/formula'
 export type Snippet = ReturnType<typeof getAllFormulas>[0]
 
+const TMP_FLAG = '__LOGI_SHEETS_FORMULA_TMP_FLAG__'
+const PARAM_SEP = ' , '
+const PARAM_ELLIPSE = '...'
 function allFormulas() {
-    return Formulas
+    /**
+     * TODO(minglong): wait for bazel and merge all function jsons to one json.
+     */
+    return formulas.map(formulaStandable)
 }
 
 export function isFormula(value: string) {
     const formula = value.trim()
-    // 普通公式
+    // normal formula
     if (formula.startsWith('='))
         return true
-    // 数组公式
+    // array formula
     if (formula.startsWith('{') && formula.endsWith('}')) {
         const f = formula.substr(1)
         return f.trim().startsWith('=')
@@ -24,46 +27,11 @@ export function isFormula(value: string) {
 }
 export function getAllFormulas() {
     return allFormulas().map(f => {
-        const getText = () => {
-            return f.textLabel ?? ''
-        }
-        const getTextLowerCase = () => {
-            return lowerCase(getText())
-        }
         const getTextUpperCase = () => {
-            return upperCase(getText())
-        }
-        const getDesc = () => {
-            return f.desc ?? ''
-        }
-        const getParamDesc = (): ParamDesc | undefined => {
-            return f.paramDesc
-        }
-        const getParamDescription = (i: number) => {
-            const param = getParam(i)
-            return param?.desc ?? ''
-        }
-        const getParams = () => {
-            return getParamDesc()?.params ?? []
+            return upperCase(f.name)
         }
         const hasParams = () => {
-            return getParams().length !== 0
-        }
-        const getParam = (i: number): Param | undefined => {
-            const params = getParams()
-            return params[i]
-        }
-        const getParamType = (i: number) => {
-            return getParam(i)?.type ?? ''
-        }
-        const getParamTypes = (): readonly string[] => {
-            return getParams().map((_, i) => getParamType(i))
-        }
-        const getReplacetext = () => {
-            return `${getText()}()`
-        }
-        const getReplaceTextStartQuotePosition = () => {
-            return getReplacetext().indexOf('(')
+            return f.argCount.eq !== 0 || f.argCount.ge !== 0 || f.argCount.le !== 0
         }
         /**
 		 * 获取到第i个参数的message（包含第i个），返回message和第i个参数在message中的起始位置
@@ -71,67 +39,49 @@ export function getAllFormulas() {
 		 * @returns start为-1表示未匹配
 		 */
         const getSnippetMessage = (i = -1): [snippetMessage: string, targetParam: { startIndex: number, endIndex: number }] => {
-            const fn = getText()
-            const paramDesc = getParamDesc()
-            const params = getParamTypes()
-            let message = `${fn}(`
-            const tmpSplitter = '__LOGI_SHEETS_INTERNAL_SPLITTER__'
-            const paramSeparator = ' , '
-            const paramEllipse = '...'
-            let targetParam = ''
-            if (params.length !== 0) {
-                const paramStrs: string[] = []
-                // get params until index is i
-                if (paramDesc?.count === -1) {
-                    if (i === -1)
-                        paramStrs.push(...params.slice(0, 3))
-                    else {
-                        const showingParams = i >= params.length ? params
-                            : params.slice(0, i).concat([tmpSplitter + params[i]])
-                        paramStrs.push(...showingParams)
-                        targetParam = params[i]
-                    }
-                    paramStrs.push(paramEllipse)
-                    // get all params
-                } else {
-                    if (i === -1) {
-                        paramStrs.push(...params)
-                    } else {
-                        const showingParams = i >= params.length ? params :
-                            params.slice(0, i).concat([tmpSplitter + params[i]], params.slice(i + 1))
-                        paramStrs.push(...showingParams)
-                        targetParam = params[i]
-                    }
+            let message = `${f.name}(`
+            let targetParamIndex = i === -1 ? f.args.length : i
+            const minParamCount = 3
+            if (targetParamIndex < minParamCount)
+                targetParamIndex = minParamCount
+            const paramStrs: string[] = []
+            let tmp = 0
+            for (let j = 0; j < f.args.length; j++) {
+                const arg = f.args[j]
+                if (tmp > targetParamIndex)
+                    break
+                paramStrs.push(arg.argName)
+                tmp++
+                if (!arg.startRepeated)
+                    continue
+                let repeatCount = 1
+                while (tmp <= targetParamIndex) {
+                    paramStrs.push(`${arg.argName}${repeatCount}`)
+                    repeatCount++
+                    tmp++
                 }
-                message += paramStrs.join(paramSeparator)
-                message += ')'
+                paramStrs.push(PARAM_ELLIPSE)
             }
-            const startIndex = message.indexOf(tmpSplitter)
-            let endIndex = -1
-            if (startIndex !== -1) {
-                message = message.slice(0, startIndex) + message.slice(startIndex + tmpSplitter.length)
-                endIndex = startIndex + targetParam.length
+            let targetParam = ''
+            if (paramStrs.length && i < paramStrs.length) {
+                const targetIndex = i === -1 ? 0 : i
+                targetParam = paramStrs[targetIndex]
+                paramStrs[targetIndex] = `${TMP_FLAG}${paramStrs[targetIndex]}`
             }
-            return [message, { startIndex, endIndex }]
+            message += paramStrs.join(PARAM_SEP)
+            message += ')'
+            const startIndex = message.indexOf(TMP_FLAG)
+            message = message.replace(TMP_FLAG, '')
+            return [message, { startIndex, endIndex: startIndex + targetParam.length }]
         }
         const textEqual = (value: string) => {
             return getTextUpperCase() === upperCase(value)
         }
         return {
-            getDesc,
-            getParam,
-            getParamDesc,
-            getParamDescription,
-            getParamType,
-            getParams,
-            getReplacetext,
+            ...f,
             getSnippetMessage,
-            getText,
-            getTextLowerCase,
-            getTextUpperCase,
-            getReplaceTextStartQuotePosition,
-            hasParams,
             textEqual,
+            hasParams,
         }
     })
 }

@@ -4,7 +4,7 @@ import {
     SpanItem,
 } from '@/components/suggest'
 import { lcsLenMatch } from '@/core/algo/lcs'
-import { fullFilterSnippet, getAllFormulas, isFormula, Snippet } from '@/core/snippet'
+import { fullFilterSnippet, isFormula, Snippet, getAllFormulas } from '@/core/snippet'
 import { TextManager } from './text'
 import { useCursor } from './cursor'
 import { SubType, TokenType } from '@/core/formula'
@@ -106,7 +106,7 @@ export const useSuggest = <T,>(
             if (token.type === TokenType.OPERAND)
                 paramIndex = paramCount === 0 ? 0 : paramCount - 1
             else if (token.subtype === SubType.START)
-                paramIndex = 0
+                paramIndex = -1
             else if (token.subtype === SubType.SEPARATOR)
                 paramIndex = paramCount
             const candidate = getParamCandidate(text, snippet, paramIndex)
@@ -153,10 +153,8 @@ function shouldShowSuggest(text: string) {
     return isFormula(text)
 }
 function getParamCandidate(triggerText: string, snippet: Snippet, paramIndex: number) {
-    if (paramIndex === -1)
-        return
     const candidate = new Candidate(triggerText)
-    candidate.desc = snippet.getParamDescription(paramIndex)
+    candidate.desc = snippet.args.at(paramIndex)?.description ?? ''
     candidate.textOnly = true
     const [msg, { startIndex, endIndex }] = snippet.getSnippetMessage(paramIndex)
     const spans: SpanItem[] = []
@@ -175,14 +173,14 @@ function getParamCandidate(triggerText: string, snippet: Snippet, paramIndex: nu
 function fuzzyFilterFormula(key: string) {
     const result: Candidate[] = []
     const formulas = getAllFormulas()
-    const lcsResult = lcsLenMatch(key, formulas, f => f.getText(), false)
+    const lcsResult = lcsLenMatch(key, formulas, f => f.name, false)
     lcsResult.forEach(beMatchedInfo => {
-        const quoteStart = beMatchedInfo.beMatched.getReplaceTextStartQuotePosition()
-        const candidate = new Candidate(key, quoteStart, beMatchedInfo.beMatched.getReplacetext())
-        candidate.desc = beMatchedInfo.beMatched.getDesc()
+        const quoteStart = beMatchedInfo.beMatched.name.length
+        const candidate = new Candidate(key, quoteStart, `${beMatchedInfo.beMatched.name}()`)
+        candidate.desc = beMatchedInfo.beMatched.description
         const spans: SpanItem[] = []
         let currIndex = 0
-        const snippetMessage = beMatchedInfo.beMatched.getText()
+        const snippetMessage = beMatchedInfo.beMatched.name
         beMatchedInfo.matchedMap.forEach(nameIndex => {
             const nameSlice = snippetMessage.slice(currIndex, nameIndex)
             if (nameSlice !== '') {

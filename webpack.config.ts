@@ -2,7 +2,6 @@ import * as path from 'path'
 import { Configuration, DefinePlugin, ProvidePlugin } from 'webpack'
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
-// import WasmPackPlugin from '@wasm-tool/wasm-pack-plugin'
 import 'webpack-dev-server'
 module.exports = (env: NodeJS.ProcessEnv): Configuration => {
     const mode = env['dev'] ? 'development' : 'production'

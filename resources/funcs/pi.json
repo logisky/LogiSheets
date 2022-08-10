@@ -1,5 +1,6 @@
 {
     "name": "PI",
+    "description": "functions.pi.description",
     "argCount": {
         "eq": 0
     },
