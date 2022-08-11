@@ -1,3 +1,4 @@
+use quote::quote;
 use syn::DeriveInput;
 
 pub fn get_map_obj_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {

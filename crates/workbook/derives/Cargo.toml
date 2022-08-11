@@ -4,6 +4,7 @@ version = "0.3.0"
 description = "macros that help LogiSheets serde the xml files"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 license = "MIT"
+edition = "2018"
 
 [lib]
 proc-macro = true

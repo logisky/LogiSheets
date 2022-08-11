@@ -1,10 +1,3 @@
-extern crate proc_macro;
-extern crate proc_macro2;
-extern crate syn;
-#[macro_use]
-extern crate quote;
-extern crate paste;
-
 mod map_obj;
 
 use map_obj::get_map_obj_impl_block;
