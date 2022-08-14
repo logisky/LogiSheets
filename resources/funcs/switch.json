@@ -1,6 +1,7 @@
 {
     "name": "SWITCH",
-    "arguCount": {
+    "description": "functions.switch.description",
+    "argCount": {
         "ge": 3,
         "odd": true
     },

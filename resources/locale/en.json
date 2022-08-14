@@ -1,0 +1,17 @@
+{
+    "lang": "English",
+    "topBar": {
+        "mainMenu": {
+            "file": "file",
+            "start": "start"
+        }
+    },
+    "functions": {
+        "pi": {
+            "description": "Returns the number 3.14159265358979, the mathematical constant pi, accurate to 15 digits."
+        },
+        "switch": {
+            "description": " evaluates one value (called the expression) against a list of values, and returns the result corresponding to the first matching value. If there is no match, an optional default value may be returned."
+        }
+    }
+}

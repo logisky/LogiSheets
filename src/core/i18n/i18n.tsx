@@ -1,8 +1,8 @@
 import i18n from 'i18next'
 import {initReactI18next} from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
-import cn from './zh_CN.json'
-import en from './en.json'
+import cn from '../../../resources/locale/zh_CN.json'
+import en from '../../../resources/locale/en.json'
 
 i18n
     // detect user language
