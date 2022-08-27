@@ -9,6 +9,7 @@ import {useInjection} from '@/core/ioc/provider'
 import {RefObject, useEffect, useRef} from 'react'
 import {Subscription} from 'rxjs'
 import {EventType, on} from '@/core/events'
+import {PatternFill} from '@/bindings'
 
 interface RenderProps {
     readonly canvas: RefObject<HTMLCanvasElement>
@@ -128,7 +129,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
     const _fill = (box: Box, style?: StandardStyle) => {
         const fill = style?.fill
         if (!fill || !hasOwnProperty(fill, 'patternFill')) return
-        const patternFill = fill.patternFill
+        const patternFill = fill.patternFill as PatternFill
         if (patternFill.bgColor) {
             const color = StandardColor.fromCtColor(patternFill.bgColor)
             const fillAttr = new CanvasAttr()

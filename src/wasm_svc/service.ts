@@ -1,6 +1,5 @@
 import { Subject, ReplaySubject } from 'rxjs'
-// import { ClientSend, DisplayRequest, DisplayResponse, OpenFile, Payload, ServerSend, ShiftType, Transaction } from '../proto/message'
-import { DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload } from '@/bindings'
+import { BlockInput, CellInput, ColShift, CreateBlock, DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload, MoveBlock, RowShift } from '@/bindings'
 import { ClientSend, ServerSend, OpenFile } from '@/message'
 import initWasm, {
     read_file,
@@ -101,7 +100,7 @@ export class Service {
 
     private _addPayload(p: Payload) {
         if (hasOwnProperty(p, 'CellInput')) {
-            const cellInput = p.CellInput
+            const cellInput = p.CellInput as CellInput
             return cell_input(
                 cellInput.sheetIdx,
                 cellInput.row,
@@ -110,19 +109,19 @@ export class Service {
             )
         }
         if (hasOwnProperty(p, 'RowShift')) {
-            const rowShift = p.RowShift
+            const rowShift = p.RowShift as RowShift
             if (rowShift.insert)
                 return row_insert(rowShift.sheetIdx, rowShift.row, rowShift.count)
             return row_delete(rowShift.sheetIdx, rowShift.row, rowShift.count)
         }
         if (hasOwnProperty(p, 'ColShift')) {
-            const colShift = p.ColShift
+            const colShift = p.ColShift as ColShift
             if (colShift.insert)
                 return col_insert(colShift.sheetIdx, colShift.col, colShift.count)
             return col_delete(colShift.sheetIdx, colShift.col, colShift.count)
         }
         if (hasOwnProperty(p, 'CreateBlock')) {
-            const createBlock = p.CreateBlock
+            const createBlock = p.CreateBlock as CreateBlock
             return create_block(
                 createBlock.sheetIdx,
                 createBlock.id,
@@ -133,7 +132,7 @@ export class Service {
             )
         }
         if (hasOwnProperty(p, 'MoveBlock')) {
-            const moveBlock = p.MoveBlock
+            const moveBlock = p.MoveBlock as MoveBlock
             return move_block(
                 moveBlock.sheetIdx,
                 moveBlock.id,
@@ -142,7 +141,7 @@ export class Service {
             )
         }
         if (hasOwnProperty(p, 'BlockInput')) {
-            const blockInput = p.BlockInput
+            const blockInput = p.BlockInput as BlockInput
             return block_input(
                 blockInput.sheetIdx,
                 blockInput.blockId,
