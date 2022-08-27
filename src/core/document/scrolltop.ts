@@ -14,8 +14,7 @@ export function restoreParentsScrollTop(
 ): void {
     let curr = node
     for (let i = 0; curr && curr.nodeType === curr.ELEMENT_NODE; i++) {
-        if (curr.scrollTop !== state[i])
-            curr.scrollTop = state[i]
+        if (curr.scrollTop !== state[i]) curr.scrollTop = state[i]
         curr = <Element>curr.parentNode
     }
 }

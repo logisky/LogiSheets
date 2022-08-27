@@ -1,11 +1,10 @@
-import { StandardFont } from '@/core/standable'
+import {StandardFont} from '@/core/standable'
 export class Text {
     public char = ''
     public isEof = false
     public font = new StandardFont().setSize(14)
     width(): number {
-        if (this.isEof)
-            return 0
+        if (this.isEof) return 0
         const padding = 2
         return this.font.measureText(this.char).width + padding
     }
@@ -16,14 +15,12 @@ export class Texts {
         this._texts = texts
     }
     static from(content: string, eof: string): Texts {
-        const texts = content
-            .split('')
-            .map(c => {
-                const t = new Text()
-                t.char = c
-                t.isEof = c === eof
-                return t
-            })
+        const texts = content.split('').map((c) => {
+            const t = new Text()
+            t.char = c
+            t.isEof = c === eof
+            return t
+        })
         return new Texts(texts)
     }
 
@@ -46,7 +43,7 @@ export class Texts {
 
     getPlainText(): string {
         let text = ''
-        this._texts.forEach(t => text += t.char)
+        this._texts.forEach((t) => (text += t.char))
         return text
     }
     private _texts: Text[] = []

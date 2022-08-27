@@ -1,6 +1,6 @@
-import { shallowCopy } from '@/core'
-import { BlockInfo } from '@/bindings'
-import { Range } from './range'
+import {shallowCopy} from '@/core'
+import {BlockInfo} from '@/bindings'
+import {Range} from './range'
 export class StandardBlock implements BlockInfo {
     rowCnt = 0
     blockId = 0

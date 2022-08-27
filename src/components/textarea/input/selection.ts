@@ -1,8 +1,10 @@
 export function selectionEquals(a: Selection, b: Selection) {
-    return a.positionColumn === b.positionColumn
-        && a.positionLineNumber === b.positionLineNumber
-        && a.startColumn === b.startColumn
-        && a.startLineNumber === b.startLineNumber
+    return (
+        a.positionColumn === b.positionColumn &&
+        a.positionLineNumber === b.positionLineNumber &&
+        a.startColumn === b.startColumn &&
+        a.startLineNumber === b.startLineNumber
+    )
 }
 export const enum SelectionDirection {
     LTR,
@@ -33,7 +35,6 @@ export class Selection {
         return this.#positionLineNumber
     }
 
-
     set positionColumn(positionColumn: number) {
         this.#positionColumn = positionColumn
         this.endColumn = positionColumn
@@ -42,21 +43,21 @@ export class Selection {
         return this.#positionColumn
     }
 
-    startLineNumber= 0
-    startColumn= 0
-    endLineNumber= 0
-    endColumn= 0
-    #selectionStartLineNumber= 0
-    #selectionStartColumn= 0
-    #positionLineNumber= 0
-    #positionColumn= 0
+    startLineNumber = 0
+    startColumn = 0
+    endLineNumber = 0
+    endColumn = 0
+    #selectionStartLineNumber = 0
+    #selectionStartColumn = 0
+    #positionLineNumber = 0
+    #positionColumn = 0
     public equals(other: Selection) {
         return selectionEquals(this, other)
     }
 
     public getDirection() {
-        return this.#selectionStartLineNumber === this.startLineNumber
-            && this.#selectionStartColumn === this.startColumn
+        return this.#selectionStartLineNumber === this.startLineNumber &&
+            this.#selectionStartColumn === this.startColumn
             ? SelectionDirection.LTR
             : SelectionDirection.RTL
     }

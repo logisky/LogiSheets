@@ -7,7 +7,7 @@ function getPlatform(): string {
 }
 
 export function isFirefox(): boolean {
-    return (getUserAgent().indexOf('Firefox') >= 0)
+    return getUserAgent().indexOf('Firefox') >= 0
 }
 
 export function isWebkit(): boolean {
@@ -31,16 +31,18 @@ export function isWindows(): boolean {
 }
 
 export function isSafari(): boolean {
-    return (!isChrome() && (getUserAgent().indexOf('Safari') >= 0))
+    return !isChrome() && getUserAgent().indexOf('Safari') >= 0
 }
 
 export function isWebkitWebView(): boolean {
-    return (!isChrome() && !isSafari() && isWebkit())
+    return !isChrome() && !isSafari() && isWebkit()
 }
 
 export function isEdgeLegacyWebView(): boolean {
-    return (getUserAgent().indexOf('Edge/') >= 0)
-        && (getUserAgent().indexOf('WebView/') >= 0)
+    return (
+        getUserAgent().indexOf('Edge/') >= 0 &&
+        getUserAgent().indexOf('WebView/') >= 0
+    )
 }
 
 export function isAndroid(): boolean {

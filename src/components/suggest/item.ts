@@ -1,4 +1,4 @@
-import { lowerCase } from '@/core/strings'
+import {lowerCase} from '@/core/strings'
 
 export class Candidate {
     constructor(
@@ -6,8 +6,8 @@ export class Candidate {
         // 函数开始括号的位置,用于在suggest的时候把光标设到该位置
         public readonly quoteStart?: number,
         // 选择当前candidate之后，需要替换的文本
-        public readonly plainText = '',
-    ) { }
+        public readonly plainText = ''
+    ) {}
     // 无选择功能，仅做文本显示
     public textOnly = false
     public desc = ''
@@ -18,8 +18,5 @@ export class Candidate {
     }
 }
 export class SpanItem {
-    constructor(
-        public readonly text = '',
-        public readonly highlight = false,
-    ) { }
+    constructor(public readonly text = '', public readonly highlight = false) {}
 }

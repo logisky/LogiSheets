@@ -1,22 +1,20 @@
-import { Value } from '@/bindings'
-import { hasOwnProperty } from '@/core'
+import {Value} from '@/bindings'
+import {hasOwnProperty} from '@/core'
 export class StandardValue {
     cellValueOneof?:
-    | { $case: 'str'; str: string }
-    | { $case: 'number'; number: number }
-    | { $case: 'bool'; bool: boolean }
-    | { $case: 'error'; error: string }
+        | {$case: 'str'; str: string}
+        | {$case: 'number'; number: number}
+        | {$case: 'bool'; bool: boolean}
+        | {$case: 'error'; error: string}
     get value() {
-        if (this.cellValueOneof?.$case === 'str')
-            return this.cellValueOneof.str
+        if (this.cellValueOneof?.$case === 'str') return this.cellValueOneof.str
         else if (this.cellValueOneof?.$case === 'bool')
             return this.cellValueOneof.bool
         else if (this.cellValueOneof?.$case === 'error')
             return this.cellValueOneof.error
         else if (this.cellValueOneof?.$case === 'number')
             return this.cellValueOneof.number
-        else
-            return ''
+        else return ''
     }
     get valueStr() {
         return this.value.toString()

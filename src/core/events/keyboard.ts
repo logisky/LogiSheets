@@ -1,4 +1,4 @@
-import { KeyboardEventCode, extractKeyCode } from './key_code'
+import {KeyboardEventCode, extractKeyCode} from './key_code'
 export const enum KeyMod {
     CTRL_CMD = (1 << 11) >>> 0,
     SHIFT = (1 << 10) >>> 0,
@@ -53,17 +53,27 @@ function isKeyBinding(id: KeyboardEventCode) {
 }
 
 function isCtrl(id: KeyboardEventCode) {
-    return id === KeyboardEventCode.CONTROL_LEFT || id === KeyboardEventCode.CONTROL_RIGHT
+    return (
+        id === KeyboardEventCode.CONTROL_LEFT ||
+        id === KeyboardEventCode.CONTROL_RIGHT
+    )
 }
 
 function isShift(id: KeyboardEventCode) {
-    return id === KeyboardEventCode.SHIFT_LEFT || id === KeyboardEventCode.SHIFT_RIGHT
+    return (
+        id === KeyboardEventCode.SHIFT_LEFT ||
+        id === KeyboardEventCode.SHIFT_RIGHT
+    )
 }
 
 function isAlt(id: KeyboardEventCode) {
-    return id === KeyboardEventCode.ALT_LEFT || id === KeyboardEventCode.ALT_RIGHT
+    return (
+        id === KeyboardEventCode.ALT_LEFT || id === KeyboardEventCode.ALT_RIGHT
+    )
 }
 
 function isMeta(id: KeyboardEventCode) {
-    return id === KeyboardEventCode.METALEFT || id === KeyboardEventCode.META_RIGHT
+    return (
+        id === KeyboardEventCode.METALEFT || id === KeyboardEventCode.META_RIGHT
+    )
 }

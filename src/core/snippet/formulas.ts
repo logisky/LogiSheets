@@ -16,8 +16,7 @@ function allFormulas() {
 export function isFormula(value: string) {
     const formula = value.trim()
     // normal formula
-    if (formula.startsWith('='))
-        return true
+    if (formula.startsWith('=')) return true
     // array formula
     if (formula.startsWith('{') && formula.endsWith('}')) {
         const f = formula.substr(1)
@@ -26,19 +25,28 @@ export function isFormula(value: string) {
     return false
 }
 export function getAllFormulas() {
-    return allFormulas().map(f => {
+    return allFormulas().map((f) => {
         const getTextUpperCase = () => {
             return upperCase(f.name)
         }
         const hasParams = () => {
-            return f.argCount.eq !== 0 || f.argCount.ge !== 0 || f.argCount.le !== 0
+            return (
+                f.argCount.eq !== 0 ||
+                f.argCount.ge !== 0 ||
+                f.argCount.le !== 0
+            )
         }
         /**
-		 * 获取到第i个参数的message（包含第i个），返回message和第i个参数在message中的起始位置
-		 * @param i 若i为-1，返回默认message
-		 * @returns start为-1表示未匹配
-		 */
-        const getSnippetMessage = (i = -1): [snippetMessage: string, targetParam: { startIndex: number, endIndex: number }] => {
+         * 获取到第i个参数的message（包含第i个），返回message和第i个参数在message中的起始位置
+         * @param i 若i为-1，返回默认message
+         * @returns start为-1表示未匹配
+         */
+        const getSnippetMessage = (
+            i = -1
+        ): [
+            snippetMessage: string,
+            targetParam: {startIndex: number; endIndex: number}
+        ] => {
             let message = `${f.name}(`
             let targetParamIndex = i === -1 ? f.args.length : i
             const minParamCount = 3
@@ -48,12 +56,10 @@ export function getAllFormulas() {
             let tmp = 0
             for (let j = 0; j < f.args.length; j++) {
                 const arg = f.args[j]
-                if (tmp > targetParamIndex)
-                    break
+                if (tmp > targetParamIndex) break
                 paramStrs.push(arg.argName)
                 tmp++
-                if (!arg.startRepeated)
-                    continue
+                if (!arg.startRepeated) continue
                 let repeatCount = 1
                 while (tmp <= targetParamIndex) {
                     paramStrs.push(`${arg.argName}${repeatCount}`)
@@ -72,7 +78,10 @@ export function getAllFormulas() {
             message += ')'
             const startIndex = message.indexOf(TMP_FLAG)
             message = message.replace(TMP_FLAG, '')
-            return [message, { startIndex, endIndex: startIndex + targetParam.length }]
+            return [
+                message,
+                {startIndex, endIndex: startIndex + targetParam.length},
+            ]
         }
         const textEqual = (value: string) => {
             return getTextUpperCase() === upperCase(value)
@@ -88,5 +97,5 @@ export function getAllFormulas() {
 
 export function fullFilterSnippet(key: string) {
     const formulas = getAllFormulas()
-    return formulas.find(f => f.textEqual(key))
+    return formulas.find((f) => f.textEqual(key))
 }

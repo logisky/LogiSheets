@@ -4,9 +4,7 @@ import {
     getShadowRoot,
 } from '@/core/document'
 export class TextAreaWrapper {
-    constructor(
-        public readonly textArea: HTMLTextAreaElement,
-    ) { }
+    constructor(public readonly textArea: HTMLTextAreaElement) {}
     setIgnoreSelectionChangeTime(): void {
         this._ignoreSelectionChangeTime = Date.now()
     }
@@ -24,25 +22,34 @@ export class TextAreaWrapper {
     }
 
     setValue(value: string): void {
-        if (this.textArea.value === value)
-            return
+        if (this.textArea.value === value) return
         this.setIgnoreSelectionChangeTime()
         this.textArea.value = value
     }
 
     getSelectionStart(): number {
-        return this.textArea.selectionDirection === 'backward' ? this.textArea.selectionEnd : this.textArea.selectionStart
+        return this.textArea.selectionDirection === 'backward'
+            ? this.textArea.selectionEnd
+            : this.textArea.selectionStart
     }
 
     getSelectionEnd(): number {
-        return this.textArea.selectionDirection === 'backward' ? this.textArea.selectionStart : this.textArea.selectionEnd
+        return this.textArea.selectionDirection === 'backward'
+            ? this.textArea.selectionStart
+            : this.textArea.selectionEnd
     }
 
     setSelectionRange(start: number, end: number): void {
         const shadowRoot = getShadowRoot(this.textArea)
-        const activeElement = shadowRoot ? shadowRoot.activeElement : document.activeElement
+        const activeElement = shadowRoot
+            ? shadowRoot.activeElement
+            : document.activeElement
         const isFocused = activeElement === this.textArea
-        if (isFocused && this.textArea.selectionStart === start && this.textArea.selectionEnd === end)
+        if (
+            isFocused &&
+            this.textArea.selectionStart === start &&
+            this.textArea.selectionEnd === end
+        )
             return
         if (isFocused) {
             this.setIgnoreSelectionChangeTime()

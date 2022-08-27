@@ -1,4 +1,3 @@
-
 import styles from './main-menu.module.scss'
 import {useTranslation} from 'react-i18next'
 import {SelectComponent} from '@/ui/select'
@@ -15,11 +14,8 @@ export interface MainMenuBtn {
     readonly text: string
     readonly type: MainMenuType
 }
-type OptionType = {value: string, label: string}
-export const MainMenu = ({
-    currType,
-    mainMenuChanged$,
-}: MainMenuProps) => {
+type OptionType = {value: string; label: string}
+export const MainMenu = ({currType, mainMenuChanged$}: MainMenuProps) => {
     const [t, i18n] = useTranslation()
     const btns: readonly MainMenuBtn[] = [
         {
@@ -32,8 +28,7 @@ export const MainMenu = ({
         },
     ]
     const onChangeLocale = (newValue: unknown) => {
-        if (newValue === null || typeof newValue !== 'object')
-            return
+        if (newValue === null || typeof newValue !== 'object') return
         const lang = newValue as OptionType
         i18n.changeLanguage(lang.value)
     }
@@ -43,27 +38,35 @@ export const MainMenu = ({
     ]
     return (
         <div className={styles.host}>
-            {
-                btns.map((btn, index) =>
-                    <div style={{
+            {btns.map((btn, index) => (
+                <div
+                    style={{
                         padding: '0 10px',
                         borderRadius: '2px',
                         fontSize: '12px',
                         marginLeft: index === 0 ? 0 : '8px',
-                    }} className={btn.type === currType ? styles.active : styles.inactive}
+                    }}
+                    className={
+                        btn.type === currType ? styles.active : styles.inactive
+                    }
                     onClick={() => mainMenuChanged$(btn.type)}
                     key={index}
-                    >{t(btn.text)}</div>
-                )
-            }
-            <div style={{
-                position: 'absolute',
-                right: 0,
-            }}>
+                >
+                    {t(btn.text)}
+                </div>
+            ))}
+            <div
+                style={{
+                    position: 'absolute',
+                    right: 0,
+                }}
+            >
                 <SelectComponent
                     options={options}
                     isMulti={false}
-                    defaultValue={options.find(o => o.value === i18n.language)}
+                    defaultValue={options.find(
+                        (o) => o.value === i18n.language
+                    )}
                     onChange={onChangeLocale}
                 ></SelectComponent>
             </div>

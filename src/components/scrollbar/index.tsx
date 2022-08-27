@@ -1,7 +1,15 @@
 import styles from './scrollbar.module.scss'
-import { CSSProperties, MouseEvent, useEffect, useRef, useState, WheelEvent, FC } from 'react'
-import { Subscription } from 'rxjs'
-import { EventType, on } from '@/core/events'
+import {
+    CSSProperties,
+    MouseEvent,
+    useEffect,
+    useRef,
+    useState,
+    WheelEvent,
+    FC,
+} from 'react'
+import {EventType, on} from '@/core/events'
+import {Subscription} from 'rxjs'
 
 export * from './scroll_event'
 export type ScrollbarType = 'x' | 'y'
@@ -25,7 +33,9 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     direction = 'x',
 }) => {
     if (scrollHeight < offsetHeight)
-        throw Error(`scrollHeight[${scrollHeight}] must larger than offsetHeight[${offsetHeight}]`)
+        throw Error(
+            `scrollHeight[${scrollHeight}] must larger than offsetHeight[${offsetHeight}]`
+        )
     const _thumbEl = useRef<HTMLSpanElement>(null)
     const _containerEl = useRef<HTMLDivElement>(null)
     const _thumbContainerEl = useRef<HTMLDivElement>(null)
@@ -51,33 +61,27 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
                 const containerLength = parseFloat(containerStyle.width)
                 const thumbWidth = containerLength * thumbRadio
                 const thumbLength = Math.max(thumbWidth, minThumbLength)
-                newThumbStyle.width = thumbLength === containerLength ? 0 : toPx(thumbLength)
+                newThumbStyle.width =
+                    thumbLength === containerLength ? 0 : toPx(thumbLength)
                 const left = scrollRadio * containerLength
                 if (left + thumbLength > containerLength) {
                     newThumbStyle.right = 0
-                } else
-                    newThumbStyle.left = toPx(left)
+                } else newThumbStyle.left = toPx(left)
             } else {
                 const containerLength = parseFloat(containerStyle.height)
                 const thumbHeight = thumbContainer.offsetHeight * thumbRadio
                 const thumbLength = Math.max(thumbHeight, minThumbLength)
-                newThumbStyle.height = thumbLength === containerLength ? 0 : toPx(thumbLength)
+                newThumbStyle.height =
+                    thumbLength === containerLength ? 0 : toPx(thumbLength)
                 const top = scrollRadio * containerLength
                 if (top + thumbLength > containerLength) {
                     newThumbStyle.bottom = 0
-                } else
-                    newThumbStyle.top = toPx(top)
+                } else newThumbStyle.top = toPx(top)
             }
             setThumbStyle(newThumbStyle)
         }
         _render()
-    }, [
-        offsetHeight,
-        scrollTop,
-        scrollHeight,
-        minThumbLength,
-        direction,
-    ])
+    }, [offsetHeight, scrollTop, scrollHeight, minThumbLength, direction])
 
     const xScrollbar = () => {
         return direction === 'x'
@@ -88,16 +92,20 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
         const startPosition = xScrollbar() ? mde.clientX : mde.clientY
         const startScollDistance = scrollTop
         const sub = new Subscription()
-        sub.add(on(window, EventType.MOUSE_MOVE).subscribe(mme => {
-            mme.preventDefault()
-            mme.stopPropagation()
-            const endPosition = xScrollbar() ? mme.clientX : mme.clientY
-            const moved = endPosition - startPosition
-            calcScrollDistance(startScollDistance, moved)
-        }))
-        sub.add(on(window, EventType.MOUSE_UP).subscribe(() => {
-            sub.unsubscribe()
-        }))
+        sub.add(
+            on(window, EventType.MOUSE_MOVE).subscribe((mme) => {
+                mme.preventDefault()
+                mme.stopPropagation()
+                const endPosition = xScrollbar() ? mme.clientX : mme.clientY
+                const moved = endPosition - startPosition
+                calcScrollDistance(startScollDistance, moved)
+            })
+        )
+        sub.add(
+            on(window, EventType.MOUSE_UP).subscribe(() => {
+                sub.unsubscribe()
+            })
+        )
     }
     const thumbHostMouseWheel = (e: WheelEvent) => {
         const moved = xScrollbar() ? e.deltaX : e.deltaY
@@ -105,7 +113,7 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
     }
     const calcScrollDistance = (
         containerScrollDistance: number,
-        moved: number,
+        moved: number
     ) => {
         const totalLength = _containerLength()
         const thumbLength = _thumbLength()
@@ -113,41 +121,48 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
         const oldStart = totalLength * oldScrollRadio
         let newStart = oldStart + moved
         if (newStart + thumbLength > totalLength)
-            newStart = (totalLength - thumbLength)
-        if (newStart < 0)
-            newStart = 0
+            newStart = totalLength - thumbLength
+        if (newStart < 0) newStart = 0
         const newScrollRadio = newStart / totalLength
         const newScrollDistance = scrollHeight * newScrollRadio
         setScrollTop(newScrollDistance)
     }
 
-
     const _containerLength = () => {
-        return xScrollbar() ?
-            _thumbContainerEl.current?.offsetWidth ?? 0 :
-            _thumbContainerEl.current?.offsetHeight ?? 0
+        return xScrollbar()
+            ? _thumbContainerEl.current?.offsetWidth ?? 0
+            : _thumbContainerEl.current?.offsetHeight ?? 0
     }
 
     const _thumbLength = () => {
-        return xScrollbar() ? _thumbEl.current?.offsetWidth ?? 0 :
-            _thumbEl.current?.offsetHeight ?? 0
+        return xScrollbar()
+            ? _thumbEl.current?.offsetWidth ?? 0
+            : _thumbEl.current?.offsetHeight ?? 0
     }
     return (
-        <div className={`${styles.host} ${xScrollbar() ? styles['x-scrollbar'] : styles['y-scrollbar']}`} >
-            <div className={styles['edit-scrollbar']} ref={_containerEl} style={{
-                height: '100%',
-                width: '100%',
-            }}>
+        <div
+            className={`${styles.host} ${
+                xScrollbar() ? styles['x-scrollbar'] : styles['y-scrollbar']
+            }`}
+        >
+            <div
+                className={styles['edit-scrollbar']}
+                ref={_containerEl}
+                style={{
+                    height: '100%',
+                    width: '100%',
+                }}
+            >
                 <div
                     className={styles['thumb_container']}
                     ref={_thumbContainerEl}
-                    onWheel={e => thumbHostMouseWheel(e)}
+                    onWheel={(e) => thumbHostMouseWheel(e)}
                 >
                     <span
                         className={styles['thumb']}
                         ref={_thumbEl}
                         style={thumbStyle}
-                        onMouseDown={e => thumbMouseDown(e)}
+                        onMouseDown={(e) => thumbMouseDown(e)}
                     ></span>
                 </div>
             </div>

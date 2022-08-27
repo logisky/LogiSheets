@@ -1,4 +1,4 @@
-import { MAX_LEN } from './const'
+import {MAX_LEN} from './const'
 export function initArr<T>(len: number, value?: T): T[] {
     return new Array(len).fill(value)
 }

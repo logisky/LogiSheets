@@ -1,4 +1,4 @@
-import { lcsLenMatch } from './lcs'
+import {lcsLenMatch} from './lcs'
 describe('lcs test', () => {
     it('lcsLenMatch', () => {
         const pattern = 'at'
@@ -6,9 +6,27 @@ describe('lcs test', () => {
         const getValue = (beMatched: string) => beMatched
         const matchInfo = lcsLenMatch(pattern, beMatched, getValue)
         const expectedResult = [
-            { beMatched: 'bath', matchedMap: new Map([[0,1], [1, 2]])},
-            { beMatched: 'ant', matchedMap: new Map([[0, 0], [1, 2]])},
-            { beMatched: 'at', matchedMap: new Map ([[0, 0],[1, 1 ]])},
+            {
+                beMatched: 'bath',
+                matchedMap: new Map([
+                    [0, 1],
+                    [1, 2],
+                ]),
+            },
+            {
+                beMatched: 'ant',
+                matchedMap: new Map([
+                    [0, 0],
+                    [1, 2],
+                ]),
+            },
+            {
+                beMatched: 'at',
+                matchedMap: new Map([
+                    [0, 0],
+                    [1, 1],
+                ]),
+            },
         ]
         expect(matchInfo.length).toBe(expectedResult.length)
         expectedResult.forEach((expected, i) => {

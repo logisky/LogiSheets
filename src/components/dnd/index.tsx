@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import {FC} from 'react'
 import styles from './dnd.module.scss'
 
 const BORDER_WIDTH = 2
@@ -24,21 +24,31 @@ export const DndComponent: FC<DndProps> = ({
 }) => {
     return (
         <div className={styles.host}>
-            <div className={styles['dragging-handle']} style={{
-                left: POS(x),
-                top: POS(y),
-                width: `${width}px`,
-                height: `${height}px`,
-            }} data-selector-dnd-handle>
-                <div className={styles['dragging-mask']} data-selector-dnd-mask></div>
+            <div
+                className={styles['dragging-handle']}
+                style={{
+                    left: POS(x),
+                    top: POS(y),
+                    width: `${width}px`,
+                    height: `${height}px`,
+                }}
+                data-selector-dnd-handle
+            >
+                <div
+                    className={styles['dragging-mask']}
+                    data-selector-dnd-mask
+                ></div>
             </div>
-            <div className={styles.dragging} style={{
-                display: dragging ? 'block' : 'none',
-                left: POS(draggingX),
-                top: POS(draggingY),
-                width: `${width}px`,
-                height: `${height}px`,
-            }}></div>
+            <div
+                className={styles.dragging}
+                style={{
+                    display: dragging ? 'block' : 'none',
+                    left: POS(draggingX),
+                    top: POS(draggingY),
+                    width: `${width}px`,
+                    height: `${height}px`,
+                }}
+            ></div>
         </div>
     )
 }

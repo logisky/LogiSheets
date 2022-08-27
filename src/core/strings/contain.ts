@@ -1,5 +1,6 @@
 // Generated using https://github.com/alexdima/unicode-utils/blob/master/generate-emoji-test.js
-const CONTAINS_EMOJI = /(?:[\u231A\u231B\u23F0\u23F3\u2600-\u27BF\u2B50\u2B55]|\uD83C[\uDDE6-\uDDFF\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F\uDE80-\uDEFC\uDFE0-\uDFEB]|\uD83E[\uDD00-\uDDFF\uDE70-\uDED6])/
+const CONTAINS_EMOJI =
+    /(?:[\u231A\u231B\u23F0\u23F3\u2600-\u27BF\u2B50\u2B55]|\uD83C[\uDDE6-\uDDFF\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F\uDE80-\uDEFC\uDFE0-\uDFEB]|\uD83E[\uDD00-\uDDFF\uDE70-\uDED6])/
 export function containsEmoji(str: string): boolean {
     return CONTAINS_EMOJI.test(str)
 }
@@ -12,8 +13,7 @@ export function isBasicASCII(str: string): boolean {
 
 export function containsFullWidthCharactor(str: string): boolean {
     for (let i = 0, len = str.length; i < len; i += 1)
-        if (isFullWidthCharacter(str.charCodeAt(i)))
-            return true
+        if (isFullWidthCharacter(str.charCodeAt(i))) return true
     return false
 }
 
@@ -58,8 +58,8 @@ export function isFullWidthCharacter(charCode: number): boolean {
     // [IGNORE] FFF0 — FFFF   Specials
     charCode = +charCode // @perf
     return (
-        (charCode >= 0x2E80 && charCode <= 0xD7AF)
-		|| (charCode >= 0xF900 && charCode <= 0xFAFF)
-		|| (charCode >= 0xFF01 && charCode <= 0xFF5E)
+        (charCode >= 0x2e80 && charCode <= 0xd7af) ||
+        (charCode >= 0xf900 && charCode <= 0xfaff) ||
+        (charCode >= 0xff01 && charCode <= 0xff5e)
     )
 }

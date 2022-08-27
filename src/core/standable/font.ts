@@ -1,6 +1,6 @@
-import { Font, CtFontName, CtUnderlineProperty, Color } from '@/bindings'
-import { shallowCopy } from '@/core'
-import { StandardColor } from './color'
+import {Font, CtFontName, CtUnderlineProperty, Color} from '@/bindings'
+import {shallowCopy} from '@/core'
+import {StandardColor} from './color'
 const DEFAULT_FONT_SIZE = 10
 /**
  * https://developer.mozilla.org/zh-CN/docs/Web/CSS/font
@@ -16,10 +16,8 @@ export type FontSizeUnit = 'px' | 'pt'
 export class StandardFont implements Font {
     static from(font: Font): StandardFont {
         const f = new StandardFont()
-        if (font.color === null)
-            f.standardColor = StandardColor.from(0, 0, 0)
-        else
-            f.standardColor = StandardColor.fromCtColor(font.color)
+        if (font.color === null) f.standardColor = StandardColor.from(0, 0, 0)
+        else f.standardColor = StandardColor.fromCtColor(font.color)
         shallowCopy(font, f)
         // ooxml标准存的是pt
         f.fontSizeUnit = 'pt'
@@ -57,7 +55,7 @@ export class StandardFont implements Font {
         return this
     }
 
-    measureText (text: string): TextMetrics {
+    measureText(text: string): TextMetrics {
         const canvas = document.createElement('canvas')
         const context = canvas.getContext('2d')
         if (!context)
@@ -67,7 +65,7 @@ export class StandardFont implements Font {
         return context.measureText(text)
     }
 
-    toCssFont (): string {
+    toCssFont(): string {
         const fontStyle = this.italic ? 'italic' : 'normal'
         const fontVariant = 'normal'
         const fontWeight = this.bold ? 'bold' : 'normal'

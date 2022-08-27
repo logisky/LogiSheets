@@ -25,6 +25,6 @@ i18n
             cn: {
                 translation: cn,
             },
-        }
+        },
     })
 export default i18n

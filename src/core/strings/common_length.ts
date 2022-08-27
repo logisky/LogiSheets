@@ -4,8 +4,7 @@ export function commonSuffix(a: string, b: string): string {
     const bLastIndex = b.length - 1
     const len = Math.min(a.length, b.length)
     for (let i = 0; i < len; i += 1) {
-        if (a.charCodeAt(aLastIndex - i) !== b.charCodeAt(bLastIndex - i))
-            break
+        if (a.charCodeAt(aLastIndex - i) !== b.charCodeAt(bLastIndex - i)) break
         strs.push(a[i])
     }
     return strs.join('')
@@ -19,8 +18,7 @@ export function commonPrefix(a: string, b: string): string {
     const strs = []
     const len = Math.min(a.length, b.length)
     for (let i = 0; i < len; i += 1) {
-        if (a.charCodeAt(i) !== b.charCodeAt(i))
-            break
+        if (a.charCodeAt(i) !== b.charCodeAt(i)) break
         strs.push(a[i])
     }
     return strs.join('')

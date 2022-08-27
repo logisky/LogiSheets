@@ -30,10 +30,10 @@ export class Context<T> {
 
     getTexts(
         startPosition?: Position,
-        endPosition?: Position,
+        endPosition?: Position
     ): readonly string[] {
         const texts = this.text.split(this.eof)
-        const start = startPosition ??  new Position()
+        const start = startPosition ?? new Position()
         const endLine = texts.length - 1
         const endCol = texts[endLine].length - 1
         let end = endPosition
@@ -46,12 +46,10 @@ export class Context<T> {
             return [texts[start.lineNumber].slice(start.column, end.column + 1)]
         const r: string[] = []
         for (let i = start.lineNumber; i <= end.lineNumber; i += 1)
-            if (i === start.lineNumber)
-                r.push(texts[i].slice(start.column))
+            if (i === start.lineNumber) r.push(texts[i].slice(start.column))
             else if (i === end.lineNumber)
                 r.push(texts[i].slice(0, end.column + 1))
-            else
-                r.push(texts[i])
+            else r.push(texts[i])
         return r
     }
 }

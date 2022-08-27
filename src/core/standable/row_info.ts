@@ -1,10 +1,8 @@
-import { RowInfo } from '@/bindings'
-import { shallowCopy, ptToPx } from '@/core'
-import { SETTINGS } from '@/core/settings'
+import {RowInfo} from '@/bindings'
+import {shallowCopy, ptToPx} from '@/core'
+import {SETTINGS} from '@/core/settings'
 export class StandardRowInfo implements RowInfo {
-    constructor(
-        public readonly idx: number,
-    ) {}
+    constructor(public readonly idx: number) {}
     height = SETTINGS.defaultCellSize.height
     hidden = false
     get pt() {

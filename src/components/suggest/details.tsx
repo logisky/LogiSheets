@@ -1,8 +1,8 @@
-import { FC } from 'react'
+import {FC} from 'react'
 import styles from './suggest.module.scss'
 export interface Details {
-	close$: () => void
+    close$: () => void
 }
 export const SuggestDetailsComponent: FC<Details> = () => {
-    return (<div className={styles.details}></div>)
+    return <div className={styles.details}></div>
 }

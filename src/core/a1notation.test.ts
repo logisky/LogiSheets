@@ -11,7 +11,7 @@ describe('a1notation test', () => {
         const result = toA1notation(10)
         expect(result).toBe('K')
     })
-    it('toZeroBasedNotation' ,() => {
+    it('toZeroBasedNotation', () => {
         const r1 = toZeroBasedNotation('K')
         expect(r1).toBe(10)
         const r2 = toZeroBasedNotation('a')

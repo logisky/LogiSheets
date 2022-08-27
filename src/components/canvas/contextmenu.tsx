@@ -1,12 +1,23 @@
-import { Range, StandardBlock } from '@/core/standable'
-import { SelectBlockComponent } from './select-block'
-import { Cell } from './defs'
-import { useState, ReactElement, MouseEvent } from 'react'
+import {Range, StandardBlock} from '@/core/standable'
+import {SelectBlockComponent} from './select-block'
+import {Cell} from './defs'
+import {useState, ReactElement, MouseEvent} from 'react'
 import {useInjection} from '@/core/ioc/provider'
-import { ContextMenuComponent, ContextMenuItem } from '@/ui/contextmenu'
-import { DeleteBlockColsBuilder, DeleteColsBuilder, InsertColsBuilder, Payload, InsertBlockColsBuilder, InsertBlockRowsBuilder, InsertRowsBuilder, DeleteBlockRowsBuilder, DeleteRowsBuilder, CreateBlockBuilder } from '@/api'
-import { TYPES } from '@/core/ioc/types'
-import { Backend, SheetService } from '@/core/data'
+import {ContextMenuComponent, ContextMenuItem} from '@/ui/contextmenu'
+import {
+    DeleteBlockColsBuilder,
+    DeleteColsBuilder,
+    InsertColsBuilder,
+    Payload,
+    InsertBlockColsBuilder,
+    InsertBlockRowsBuilder,
+    InsertRowsBuilder,
+    DeleteBlockRowsBuilder,
+    DeleteRowsBuilder,
+    CreateBlockBuilder,
+} from '@/api'
+import {TYPES} from '@/core/ioc/types'
+import {Backend, SheetService} from '@/core/data'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent
@@ -17,14 +28,14 @@ export interface ContextmenuProps {
 }
 
 export const ContextmenuComponent = (props: ContextmenuProps) => {
-    const { mouseevent, startCell, isOpen, setIsOpen, endCell } = props
+    const {mouseevent, startCell, isOpen, setIsOpen, endCell} = props
     const [blockMenuOpened, setBlockMenuOpened] = useState(false)
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     let selectBlock: ReactElement | undefined
     const _blockProcess = (
         blocks: readonly StandardBlock[],
-        cb: (blks: readonly StandardBlock[]) => Payload[],
+        cb: (blks: readonly StandardBlock[]) => Payload[]
     ) => {
         const close$ = (blks: readonly StandardBlock[]) => {
             setIsOpen(false)
@@ -44,12 +55,13 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     }
     const _addCol = () => {
         const sheet = SHEET_SERVICE.getActiveSheet()
-        const { coodinate: { startCol: start } } = startCell
+        const {
+            coodinate: {startCol: start},
+        } = startCell
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
-            _blockProcess(
-                blocks,
-                blks => blks.map((block): Payload => {
+            _blockProcess(blocks, (blks) =>
+                blks.map((block): Payload => {
                     return new InsertBlockColsBuilder()
                         .sheetIdx(sheet)
                         .blockId(block.blockId)
@@ -70,13 +82,14 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     }
 
     const _removeCol = () => {
-        const { coodinate: { startCol: start } } = startCell
+        const {
+            coodinate: {startCol: start},
+        } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
-            _blockProcess(
-                blocks,
-                blks => blks.map((block): Payload => {
+            _blockProcess(blocks, (blks) =>
+                blks.map((block): Payload => {
                     return new DeleteBlockColsBuilder()
                         .sheetIdx(sheet)
                         .blockId(block.blockId)
@@ -97,13 +110,14 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     }
 
     const _addRow = () => {
-        const { coodinate: { startRow: start } } = startCell
+        const {
+            coodinate: {startRow: start},
+        } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
-            _blockProcess(
-                blocks,
-                blks => blks.map((block): Payload => {
+            _blockProcess(blocks, (blks) =>
+                blks.map((block): Payload => {
                     return new InsertBlockRowsBuilder()
                         .sheetIdx(sheet)
                         .rowIdx(start - block.rowStart)
@@ -123,13 +137,14 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     }
 
     const _removeRow = () => {
-        const { coodinate: { startRow: start } } = startCell
+        const {
+            coodinate: {startRow: start},
+        } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
-            _blockProcess(
-                blocks,
-                blks => blks.map((block): Payload => {
+            _blockProcess(blocks, (blks) =>
+                blks.map((block): Payload => {
                     return new DeleteBlockRowsBuilder()
                         .sheetIdx(sheet)
                         .cnt(1)
@@ -164,15 +179,15 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     }
 
     const _checkBlock = () => {
-        const { coodinate: start } = startCell
-        const { coodinate: end } = endCell ?? startCell
+        const {coodinate: start} = startCell
+        const {coodinate: end} = endCell ?? startCell
         const curr = new Range()
             .setStartRow(start.startRow)
             .setStartCol(start.startCol)
             .setEndRow(end.endRow)
             .setEndCol(end.endCol)
         const blocks = SHEET_SERVICE.getBlocks()
-        return blocks.filter(b => b.coordinate.cover(curr))
+        return blocks.filter((b) => b.coordinate.cover(curr))
     }
 
     const rows: ContextMenuItem[] = [
@@ -197,13 +212,11 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             text: '删除列',
             type: 'text',
             click: _removeCol,
-        }
+        },
     ]
     const items: ContextMenuItem[] = []
-    if (startCell.type === 'FixedLeftHeader')
-        items.push(...rows)
-    else if (startCell.type === 'FixedTopHeader')
-        items.push(...cols)
+    if (startCell.type === 'FixedLeftHeader') items.push(...rows)
+    else if (startCell.type === 'FixedTopHeader') items.push(...cols)
     else if (startCell.type === 'Cell') {
         items.push(...rows, ...cols)
         items.push({
@@ -219,7 +232,13 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
                 items={items}
                 close$={() => setIsOpen(false)}
                 mouseevent={mouseevent}
-                style={{ content: { height: 'fit-content', width: '200px', padding: '8px 0' } }}
+                style={{
+                    content: {
+                        height: 'fit-content',
+                        width: '200px',
+                        padding: '8px 0',
+                    },
+                }}
             ></ContextMenuComponent>
             {blockMenuOpened ? selectBlock : null}
         </div>
@@ -227,5 +246,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 }
 
 const getMessage = (blocks: readonly StandardBlock[]) => {
-    return blocks.length === 1 ? '当前选择范围属于一个block，是否继续？' : '选择一个block'
+    return blocks.length === 1
+        ? '当前选择范围属于一个block，是否继续？'
+        : '选择一个block'
 }

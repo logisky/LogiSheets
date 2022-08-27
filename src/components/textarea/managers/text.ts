@@ -1,11 +1,9 @@
-import { Text, Texts, History, Context } from '../defs'
-import { Box, PainterService, TextAttr } from '@/core/painter'
-import { Range } from '@/core/standable'
-import { BehaviorSubject, Observable } from 'rxjs'
+import {Text, Texts, History, Context} from '../defs'
+import {Box, PainterService, TextAttr} from '@/core/painter'
+import {Range} from '@/core/standable'
+import {BehaviorSubject, Observable} from 'rxjs'
 export class TextManager<T> {
-    constructor(
-        public readonly context: Context<T>,
-    ) {
+    constructor(public readonly context: Context<T>) {
         this._texts = Texts.from(this.context.text, this.context.eof)
         this._textChange$.next(this.getPlainText())
     }
@@ -16,10 +14,9 @@ export class TextManager<T> {
         const texts = this.getTwoDimensionalTexts()
         const baseHeight = this.context.lineHeight()
         const height = baseHeight * texts.length
-        const widths = texts.map(ts => ts.map(t => t.width()).reduce((
-            p,
-            c
-        ) => p + c))
+        const widths = texts.map((ts) =>
+            ts.map((t) => t.width()).reduce((p, c) => p + c)
+        )
         const width = Math.max(...widths)
         return [width, height]
     }
@@ -33,7 +30,7 @@ export class TextManager<T> {
         texts.forEach((ts, i) => {
             const y = i * baseHeight
             let x = 0
-            ts.forEach(t => {
+            ts.forEach((t) => {
                 const position = new Range()
                     .setStartRow(y)
                     .setEndRow(y + this.context.lineHeight())
@@ -56,15 +53,14 @@ export class TextManager<T> {
     getTwoDimensionalTexts(): readonly (readonly Text[])[] {
         const texts: Text[][] = []
         let currTexts: Text[] = []
-        this._texts.texts.forEach(t => {
+        this._texts.texts.forEach((t) => {
             currTexts.push(t)
             if (t.isEof) {
                 texts.push(currTexts)
                 currTexts = []
             }
         })
-        if (currTexts.length !== 0)
-            texts.push(currTexts)
+        if (currTexts.length !== 0) texts.push(currTexts)
         return texts
     }
 
@@ -74,16 +70,14 @@ export class TextManager<T> {
 
     undo() {
         let texts = this._history.undo()
-        if (texts === undefined)
-            texts = this._texts
+        if (texts === undefined) texts = this._texts
         this.drawText()
         return texts.getPlainText()
     }
 
     redo() {
         let texts = this._history.redo()
-        if (texts === undefined)
-            texts = this._texts
+        if (texts === undefined) texts = this._texts
         this.drawText()
         return texts.getPlainText()
     }
@@ -92,7 +86,7 @@ export class TextManager<T> {
         startLine: number,
         startColumn: number,
         endLine: number,
-        endColumn: number,
+        endColumn: number
     ) {
         const [start, end] = this._twoDimensionalToOneDimensinal(
             startLine,
@@ -108,7 +102,7 @@ export class TextManager<T> {
     replace(
         content: string,
         start: number,
-        count: number,
+        count: number
     ): readonly [added: readonly Text[], removed: readonly Text[]] {
         const eof = this.context.eof
         const newTexts = Texts.from(content, eof)
@@ -121,8 +115,12 @@ export class TextManager<T> {
     add(content: string, line: number, column: number) {
         const eof = this.context.eof
         const newTexts = Texts.from(content, eof)
-        const [start] = this
-            ._twoDimensionalToOneDimensinal(line, column, line, column)
+        const [start] = this._twoDimensionalToOneDimensinal(
+            line,
+            column,
+            line,
+            column
+        )
         this._texts.add(newTexts, start)
         this.drawText()
         return newTexts.texts
@@ -138,7 +136,7 @@ export class TextManager<T> {
             startLine,
             startColumn,
             endLine,
-            endColumn,
+            endColumn
         )
         return this._texts.texts.slice(start, end)
     }
@@ -151,22 +149,17 @@ export class TextManager<T> {
         startLine: number,
         startColumn: number,
         endLine: number,
-        endColumn: number,
+        endColumn: number
     ): readonly [start: number, end: number] {
         const texts = this.getTwoDimensionalTexts()
-        if (texts.length === 0)
-            return [0, 0]
+        if (texts.length === 0) return [0, 0]
         let [start, end] = [0, 0]
         for (let i = 0; i <= startLine; i += 1)
-            if (i === startLine)
-                start += startColumn
-            else
-                start += texts[i].length
+            if (i === startLine) start += startColumn
+            else start += texts[i].length
         for (let i = 0; i <= endLine; i += 1)
-            if (i === endLine)
-                end += endColumn
-            else
-                end += texts[i].length
+            if (i === endLine) end += endColumn
+            else end += texts[i].length
         return [start, end]
     }
 }

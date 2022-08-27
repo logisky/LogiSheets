@@ -1,22 +1,35 @@
-import { SelectorProps } from '@/components/selector'
-import { Cell } from '../defs'
-import { RefObject, useEffect, useState } from 'react'
-import { StartCellEvent } from './start-cell'
-import { Range } from '@/core/standable'
+import {SelectorProps} from '@/components/selector'
+import {Cell} from '../defs'
+import {RefObject, useEffect, useState} from 'react'
+import {StartCellEvent} from './start-cell'
+import {Range} from '@/core/standable'
 
 export const getPosition = (selector: SelectorProps) => {
     return new Range()
         .setStartRow(selector.y)
         .setStartCol(selector.x)
-        .setEndRow(selector.y + selector.height + selector.borderTopWidth + selector.borderBottomWidth)
-        .setEndCol(selector.x + selector.width + selector.borderLeftWidth + selector.borderRightWidth)
+        .setEndRow(
+            selector.y +
+                selector.height +
+                selector.borderTopWidth +
+                selector.borderBottomWidth
+        )
+        .setEndCol(
+            selector.x +
+                selector.width +
+                selector.borderLeftWidth +
+                selector.borderRightWidth
+        )
 }
-export const getSelector = (canvas: HTMLCanvasElement, start: Cell, end?: Cell) => {
-    const { type, width, height, position: startPos } = start
+export const getSelector = (
+    canvas: HTMLCanvasElement,
+    start: Cell,
+    end?: Cell
+) => {
+    const {type, width, height, position: startPos} = start
     const endCellInner = end ?? start
-    const { position: endPos } = endCellInner
-    if (type === 'unknown')
-        return
+    const {position: endPos} = endCellInner
+    if (type === 'unknown') return
     const selector = new SelectorProps()
     selector.width = width
     selector.height = height
@@ -36,7 +49,7 @@ export const getSelector = (canvas: HTMLCanvasElement, start: Cell, end?: Cell) 
         selector.x = startPos.startCol
     }
     // 起始点在左固定栏、上固定栏、leftTop
-    const { width: totalWidth, height: totalHeight } =
+    const {width: totalWidth, height: totalHeight} =
         canvas.getBoundingClientRect()
     if (type === 'LeftTop') {
         selector.x = startPos.startRow
@@ -52,17 +65,17 @@ export const getSelector = (canvas: HTMLCanvasElement, start: Cell, end?: Cell) 
     return selector
 }
 
-export type SelectorChange = (selector?: {startCell: Cell, endCell: Cell}) => void
+export type SelectorChange = (selector?: {
+    startCell: Cell
+    endCell: Cell
+}) => void
 
 interface UseSelectorProps {
     readonly canvas: RefObject<HTMLCanvasElement>
     readonly selectorChange: SelectorChange
 }
 
-export const useSelector = ({
-    canvas,
-    selectorChange,
-}: UseSelectorProps) => {
+export const useSelector = ({canvas, selectorChange}: UseSelectorProps) => {
     const [selector, setSelector] = useState<SelectorProps>()
     const [startCellInner, setStartCell] = useState<Cell>()
     const [endCell, setEndCell] = useState<Cell | undefined>(undefined)
@@ -79,10 +92,12 @@ export const useSelector = ({
 
     const _setSelector = (selector?: SelectorProps) => {
         setSelector(selector)
-        if (!selector || !startCellInner)
-            selectorChange()
+        if (!selector || !startCellInner) selectorChange()
         else
-            selectorChange({startCell: startCellInner, endCell: endCell ?? startCellInner})
+            selectorChange({
+                startCell: startCellInner,
+                endCell: endCell ?? startCellInner,
+            })
     }
 
     const onContextmenu = (startCell: Cell) => {
@@ -109,15 +124,11 @@ export const useSelector = ({
             _setSelector()
             return
         }
-        if (e.from === 'scroll')
-            onScroll(e.cell)
+        if (e.from === 'scroll') onScroll(e.cell)
         else if (!e.same) {
-            if (e.from === 'mousedown')
-                onMouseDown(e.cell)
-            else if (e.from === 'contextmenu')
-                onContextmenu(e.cell)
-            else
-                _setSelector()
+            if (e.from === 'mousedown') onMouseDown(e.cell)
+            else if (e.from === 'contextmenu') onContextmenu(e.cell)
+            else _setSelector()
         }
     }
     return {

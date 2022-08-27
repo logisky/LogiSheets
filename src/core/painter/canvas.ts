@@ -1,5 +1,5 @@
-import { CanvasAttr } from './canvas_attr'
-import { dpr, npx, npxLine } from './utils'
+import {CanvasAttr} from './canvas_attr'
+import {dpr, npx, npxLine} from './utils'
 import {useToast} from '@/ui/notification/useToast'
 
 export class CanvasApi {
@@ -12,22 +12,16 @@ export class CanvasApi {
     }
 
     attr(attr: CanvasAttr) {
-        if (attr.direction)
-            this._ctx.direction = attr.direction
-        if (attr.fillStyle)
-            this._ctx.fillStyle = attr.fillStyle
+        if (attr.direction) this._ctx.direction = attr.direction
+        if (attr.fillStyle) this._ctx.fillStyle = attr.fillStyle
         if (attr.font) {
             this._ctx.font = attr.font.toCssFont()
             this._ctx.fillStyle = attr.font.standardColor.css()
         }
-        if (attr.lineWidth)
-            this._ctx.lineWidth = attr.lineWidth
-        if (attr.strokeStyle)
-            this._ctx.strokeStyle = attr.strokeStyle
-        if (attr.textAlign)
-            this._ctx.textAlign = attr.textAlign
-        if (attr.textBaseAlign)
-            this._ctx.textBaseline = attr.textBaseAlign
+        if (attr.lineWidth) this._ctx.lineWidth = attr.lineWidth
+        if (attr.strokeStyle) this._ctx.strokeStyle = attr.strokeStyle
+        if (attr.textAlign) this._ctx.textAlign = attr.textAlign
+        if (attr.textBaseAlign) this._ctx.textBaseline = attr.textBaseAlign
     }
 
     paste(newCanvas: HTMLCanvasElement): void {
@@ -36,8 +30,7 @@ export class CanvasApi {
 
     clear(canvas?: HTMLCanvasElement) {
         const c = canvas ?? this._canvas
-        if (!c)
-            return
+        if (!c) return
         const height = c.height
         c.height = height
     }
@@ -48,8 +41,7 @@ export class CanvasApi {
      */
     setupCanvas(canvas?: HTMLCanvasElement, width?: number, height?: number) {
         const c = canvas ?? this._canvas
-        if (!c)
-            throw Error('please set a html canvas element')
+        if (!c) throw Error('please set a html canvas element')
         this._canvas = c
         this.clear(canvas)
         const w = width ?? c.getBoundingClientRect().width
@@ -76,9 +68,9 @@ export class CanvasApi {
         this._ctx.save()
         const w = position === 'h' ? len : lineWidth
         const h = position === 'h' ? lineWidth : len
-        position === 'h' ?
-            this._ctx.clearRect(npxLine(x), npxLine(y) - lineWidth, w, h + 1) :
-            this._ctx.clearRect(npxLine(x) - lineWidth, npxLine(y), w + 1, h)
+        position === 'h'
+            ? this._ctx.clearRect(npxLine(x), npxLine(y) - lineWidth, w, h + 1)
+            : this._ctx.clearRect(npxLine(x) - lineWidth, npxLine(y), w + 1, h)
         this._ctx.restore()
     }
 
@@ -104,17 +96,15 @@ export class CanvasApi {
 
     line(
         [start, ...points]: readonly (readonly [number, number])[],
-        close?: boolean,
+        close?: boolean
     ) {
-        if (points.length === 0)
-            return
+        if (points.length === 0) return
         this._ctx.beginPath()
         this._ctx.moveTo(this._npxLine(start[0]), this._npxLine(start[1]))
-        points.forEach(point => {
+        points.forEach((point) => {
             this._ctx.lineTo(this._npxLine(point[0]), this._npxLine(point[1]))
         })
-        if (close)
-            this._ctx.closePath()
+        if (close) this._ctx.closePath()
         this._ctx.stroke()
     }
 

@@ -1,50 +1,45 @@
 // https://github.com/joshbtn/excelFormulaUtilitiesJS/blob/main/src/ExcelFormulaUtilities.js
 
-import {
-    ERRORS,
-    OPERATORS,
-    DOUBLE_OPERATORS,
-    SN_REG,
-} from './const'
-import { exist, matchQuote } from './utils'
+import {ERRORS, OPERATORS, DOUBLE_OPERATORS, SN_REG} from './const'
+import {exist, matchQuote} from './utils'
 
 export const enum TokenType {
-	// '{'
-	ARRAY_FUNCTION_START = 'array-function-start',
-	// '}'
-	ARRAY_FUNCTION_END = 'array-function-end',
-	// '='
-	FUNCTION_START_FLAG = 'function-start-flag',
-	NOOP = 'noop',
-	OPERAND = 'operand',
-	FUNCTION = 'function',
-	SUBEXPR = 'subexpression',
-	ARGUMENT = 'argument',
-	OP_PRE = 'operator-prefix',
-	OP_IN = 'operator-infix',
-	OP_POST = 'operator-postfix',
-	WHITE_SPACE = 'white-space',
-	COMMA = 'comma',
-	BRACKETS = 'brackets',
-	QUOTES = 'quotes',
-	SEMICOLON = 'semicolon',
-	UNKNOWN = 'unknown',
+    // '{'
+    ARRAY_FUNCTION_START = 'array-function-start',
+    // '}'
+    ARRAY_FUNCTION_END = 'array-function-end',
+    // '='
+    FUNCTION_START_FLAG = 'function-start-flag',
+    NOOP = 'noop',
+    OPERAND = 'operand',
+    FUNCTION = 'function',
+    SUBEXPR = 'subexpression',
+    ARGUMENT = 'argument',
+    OP_PRE = 'operator-prefix',
+    OP_IN = 'operator-infix',
+    OP_POST = 'operator-postfix',
+    WHITE_SPACE = 'white-space',
+    COMMA = 'comma',
+    BRACKETS = 'brackets',
+    QUOTES = 'quotes',
+    SEMICOLON = 'semicolon',
+    UNKNOWN = 'unknown',
 }
 export const enum SubType {
-	START = 'start',
-	STOP = 'stop',
+    START = 'start',
+    STOP = 'stop',
 
-	TEXT = 'text',
-	NUMBER = 'number',
-	LOGICAL = 'logical',
-	ERROR = 'error',
-	RANGE = 'range',
+    TEXT = 'text',
+    NUMBER = 'number',
+    LOGICAL = 'logical',
+    ERROR = 'error',
+    RANGE = 'range',
 
-	MATH = 'math',
-	CONCAT = 'concatenate',
-	INTERSECT = 'intersect',
-	UNION = 'union',
-	SEPARATOR = 'separator',
+    MATH = 'math',
+    CONCAT = 'concatenate',
+    INTERSECT = 'intersect',
+    UNION = 'union',
+    SEPARATOR = 'separator',
 }
 const isEu = false
 class TokenStack {
@@ -55,13 +50,16 @@ class TokenStack {
     }
     pop() {
         const token = this.items.pop()
-        if (!token)
-            return
-        return new Token(token.value, token?.type ?? TokenType.UNKNOWN, SubType.STOP)
+        if (!token) return
+        return new Token(
+            token.value,
+            token?.type ?? TokenType.UNKNOWN,
+            SubType.STOP
+        )
     }
 
     token() {
-        return ((this.items.length > 0) ? this.items[this.items.length - 1] : null)
+        return this.items.length > 0 ? this.items[this.items.length - 1] : null
     }
     value() {
         return this.token()?.value ?? ''
@@ -75,16 +73,17 @@ class TokenStack {
 }
 export class Token {
     constructor(
-		public value: string,
-		public type: TokenType,
-		public subtype?: SubType,
-    ) { }
+        public value: string,
+        public type: TokenType,
+        public subtype?: SubType
+    ) {}
     equal(token?: Token) {
-        if (!token)
-            return
-        return token.value === this.value
-			&& token.type === this.type
-			&& token.subtype === this.subtype
+        if (!token) return
+        return (
+            token.value === this.value &&
+            token.type === this.type &&
+            token.subtype === this.subtype
+        )
     }
 }
 class Tokens {
@@ -99,8 +98,7 @@ class Tokens {
         return token
     }
     addRef(token?: Token) {
-        if (token === undefined)
-            return
+        if (token === undefined) return
         this.items.push(token)
     }
 
@@ -108,10 +106,10 @@ class Tokens {
         this.index = -1
     }
     BOF() {
-        return (this.index <= 0)
+        return this.index <= 0
     }
     EOF() {
-        return (this.index >= (this.items.length - 1))
+        return this.index >= this.items.length - 1
     }
     moveNext() {
         if (this.EOF()) {
@@ -124,28 +122,28 @@ class Tokens {
         if (this.index === -1) {
             return null
         }
-        return (this.items[this.index])
+        return this.items[this.index]
     }
     next() {
         if (this.EOF()) {
             return null
         }
-        return (this.items[this.index + 1])
+        return this.items[this.index + 1]
     }
     previous() {
         if (this.index < 1) {
             return null
         }
-        return (this.items[this.index - 1])
+        return this.items[this.index - 1]
     }
 }
 
 export interface Config {
-	readonly excludeWhiteSpace: boolean
-	readonly excludeNoops: boolean
-	readonly excludeBrackets: boolean
-	readonly excludeParamSeparator: boolean
-	readonly excludeQuotes: boolean
+    readonly excludeWhiteSpace: boolean
+    readonly excludeNoops: boolean
+    readonly excludeBrackets: boolean
+    readonly excludeParamSeparator: boolean
+    readonly excludeQuotes: boolean
 }
 const DEFAULT_CONFIG: Config = {
     excludeNoops: false,
@@ -155,7 +153,6 @@ const DEFAULT_CONFIG: Config = {
     excludeQuotes: false,
 }
 export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
-
     const tokens = new Tokens()
     const tokenStack = new TokenStack()
 
@@ -171,23 +168,27 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
     const currentChar = () => formula.substr(offset, 1)
     const doubleChar = () => formula.substr(offset, 2)
     const nextChar = () => formula.substr(offset + 1, 1)
-    const EOF = () => (offset >= formula.length)
-
+    const EOF = () => offset >= formula.length
 
     // trim left whitespaces and '=',if formula is array, trim start '{' and end '}'
     while (formula.length > 0) {
         if (formula[0] === ' ') {
-            tokens.startItems.push(new Token(formula.substr(1), TokenType.WHITE_SPACE, SubType.START))
+            tokens.startItems.push(
+                new Token(
+                    formula.substr(1),
+                    TokenType.WHITE_SPACE,
+                    SubType.START
+                )
+            )
             formula = formula.substr(1)
         } else if (formula[0] === '=') {
-            tokens.startItems.push(new Token(formula[0], TokenType.FUNCTION_START_FLAG))
+            tokens.startItems.push(
+                new Token(formula[0], TokenType.FUNCTION_START_FLAG)
+            )
             formula = formula.substr(1)
             break
-        } else
-            break
+        } else break
     }
-
-
 
     while (!EOF()) {
         // state-dependent character evaluation (order is important)
@@ -216,14 +217,13 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
         // embeds are double
         // end does not mark a token
         if (inPath) {
-            if (currentChar() === '\'') {
-
-                if (nextChar() === '\'') {
-                    token += '\''
+            if (currentChar() === "'") {
+                if (nextChar() === "'") {
+                    token += "'"
                     offset += 1
                 } else {
                     inPath = false
-                    token += '\''
+                    token += "'"
                 }
             } else {
                 token += currentChar()
@@ -259,7 +259,7 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
         }
 
         // scientific notation check
-        if (('+-').indexOf(currentChar()) !== -1) {
+        if ('+-'.indexOf(currentChar()) !== -1) {
             if (token.length > 1) {
                 if (token.match(SN_REG)) {
                     token += currentChar()
@@ -282,13 +282,13 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
             continue
         }
 
-        if (currentChar() === '\'') {
+        if (currentChar() === "'") {
             if (token.length > 0) {
                 // not expected
                 tokens.add(token, TokenType.UNKNOWN)
                 token = ''
             }
-            token = '\''
+            token = "'"
             inPath = true
             offset += 1
             continue
@@ -320,7 +320,9 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
                 tokens.add(token, TokenType.UNKNOWN)
                 token = ''
             }
-            tokenStack.push(tokens.add(currentChar(), TokenType.FUNCTION, SubType.START))
+            tokenStack.push(
+                tokens.add(currentChar(), TokenType.FUNCTION, SubType.START)
+            )
             // tokenStack.push(tokens.add(ARRAY_VALUE, TokenType.FUNCTION, SubType.START));
             // tokenStack.push(tokens.add("ARRAYROW", TokenType.FUNCTION, SubType.START));
             offset += 1
@@ -381,7 +383,7 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
             }
             tokens.add(currentChar(), TokenType.WHITE_SPACE)
             offset += 1
-            while ((currentChar() === ' ') && (!EOF())) {
+            while (currentChar() === ' ' && !EOF()) {
                 tokens.add(currentChar(), TokenType.WHITE_SPACE)
                 offset += 1
             }
@@ -411,7 +413,7 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
         }
 
         // standard postfix operators
-        if (('%').indexOf(currentChar()) !== -1) {
+        if ('%'.indexOf(currentChar()) !== -1) {
             if (token.length > 0) {
                 tokens.add(token, TokenType.OPERAND)
                 token = ''
@@ -427,10 +429,14 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
                 tokens.add(token, TokenType.FUNCTION)
                 if (!config.excludeQuotes)
                     tokens.add(currentChar(), TokenType.QUOTES, SubType.START)
-                tokenStack.push(new Token(currentChar(), TokenType.FUNCTION, SubType.START))
+                tokenStack.push(
+                    new Token(currentChar(), TokenType.FUNCTION, SubType.START)
+                )
                 token = ''
             } else {
-                tokenStack.push(tokens.add(currentChar(), TokenType.SUBEXPR, SubType.START))
+                tokenStack.push(
+                    tokens.add(currentChar(), TokenType.SUBEXPR, SubType.START)
+                )
             }
             offset += 1
             continue
@@ -446,8 +452,7 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
                 tokens.add(currentChar(), TokenType.OP_IN, SubType.UNION)
             else if (tokenStack.type() === TokenType.FUNCTION)
                 tokens.add(currentChar(), TokenType.COMMA, SubType.SEPARATOR)
-            else
-                tokens.add(currentChar(), TokenType.ARGUMENT)
+            else tokens.add(currentChar(), TokenType.ARGUMENT)
             offset += 1
             continue
         }
@@ -473,7 +478,6 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
         // token accumulation
         token += currentChar()
         offset += 1
-
     }
 
     // dump remaining accumulation
@@ -482,7 +486,7 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
             if (inString) {
                 token = '"' + token
             } else if (inPath) {
-                token = '\'' + token
+                token = "'" + token
             } else if (inRange) {
                 token = '[' + token
             } else if (inError) {
@@ -500,21 +504,32 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
     const tokens2 = new Tokens()
 
     while (tokens.moveNext()) {
-
         const token = tokens.current() as Token
 
         if (token.type === TokenType.WHITE_SPACE) {
-            let doAddToken = (tokens.BOF()) || (tokens.EOF())
+            let doAddToken = tokens.BOF() || tokens.EOF()
             const previous = tokens.previous()
             //if ((tokens.BOF()) || (tokens.EOF())) {}
-            doAddToken = doAddToken && (((previous?.type === TokenType.FUNCTION) && (previous?.subtype === SubType.STOP)) || ((previous?.type === TokenType.SUBEXPR) && (previous?.subtype === SubType.STOP)) || (previous?.type === TokenType.OPERAND))
+            doAddToken =
+                doAddToken &&
+                ((previous?.type === TokenType.FUNCTION &&
+                    previous?.subtype === SubType.STOP) ||
+                    (previous?.type === TokenType.SUBEXPR &&
+                        previous?.subtype === SubType.STOP) ||
+                    previous?.type === TokenType.OPERAND)
             //else if (!(
             //       ((tokens.previous().type === TokenType.FUNCTION) && (tokens.previous().subtype == SubType.STOP))
             //    || ((tokens.previous().type == TokenType.SUBEXPR) && (tokens.previous().subtype == SubType.STOP))
             //    || (tokens.previous().type == TokenType.OPERAND)))
             //  {}
             const next = tokens.next()
-            doAddToken = doAddToken && (((next?.type === TokenType.FUNCTION) && (next?.subtype === SubType.START)) || ((next?.type === TokenType.SUBEXPR) && (next?.subtype === SubType.START)) || (next?.type === TokenType.OPERAND))
+            doAddToken =
+                doAddToken &&
+                ((next?.type === TokenType.FUNCTION &&
+                    next?.subtype === SubType.START) ||
+                    (next?.type === TokenType.SUBEXPR &&
+                        next?.subtype === SubType.START) ||
+                    next?.type === TokenType.OPERAND)
             //else if (!(
             //	((tokens.next().type == TokenType.FUNCTION) && (tokens.next().subtype == SubType.START))
             //	|| ((tokens.next().type == TokenType.SUBEXPR) && (tokens.next().subtype == SubType.START))
@@ -523,26 +538,30 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
             //else { tokens2.add(token.value, TokenType.OP_IN, SubType.INTERSECT)};
             if (doAddToken) {
                 tokens2.add(token.value, TokenType.OP_IN, SubType.INTERSECT)
-            } else if (!config.excludeWhiteSpace)
-                tokens2.addRef(token)
+            } else if (!config.excludeWhiteSpace) tokens2.addRef(token)
             continue
         }
 
         tokens2.addRef(token)
-
     }
 
     // switch infix "-" operator to prefix when appropriate, switch infix "+" operator to noop when appropriate, identify operand
     // and infix-operator subtypes, pull "@" from in front of function names
     while (tokens2.moveNext()) {
-
         const token = tokens2.current() as Token
         const previous = tokens2.previous()
 
-        if ((token.type === TokenType.OP_IN) && (token.value === '-')) {
+        if (token.type === TokenType.OP_IN && token.value === '-') {
             if (tokens2.BOF()) {
                 token.type = TokenType.OP_PRE
-            } else if (((previous?.type === TokenType.FUNCTION) && (previous?.subtype === SubType.STOP)) || ((previous?.type === TokenType.SUBEXPR) && (previous?.subtype === SubType.STOP)) || (previous?.type === TokenType.OP_POST) || (previous?.type === TokenType.OPERAND)) {
+            } else if (
+                (previous?.type === TokenType.FUNCTION &&
+                    previous?.subtype === SubType.STOP) ||
+                (previous?.type === TokenType.SUBEXPR &&
+                    previous?.subtype === SubType.STOP) ||
+                previous?.type === TokenType.OP_POST ||
+                previous?.type === TokenType.OPERAND
+            ) {
                 token.subtype = SubType.MATH
             } else {
                 token.type = TokenType.OP_PRE
@@ -550,10 +569,17 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
             continue
         }
 
-        if ((token.type === TokenType.OP_IN) && (token.value === '+')) {
+        if (token.type === TokenType.OP_IN && token.value === '+') {
             if (tokens2.BOF()) {
                 token.type = TokenType.NOOP
-            } else if (((previous?.type === TokenType.FUNCTION) && (previous?.subtype === SubType.STOP)) || ((previous?.type === TokenType.SUBEXPR) && (previous?.subtype === SubType.STOP)) || (previous?.type === TokenType.OP_POST) || (previous?.type === TokenType.OPERAND)) {
+            } else if (
+                (previous?.type === TokenType.FUNCTION &&
+                    previous?.subtype === SubType.STOP) ||
+                (previous?.type === TokenType.SUBEXPR &&
+                    previous?.subtype === SubType.STOP) ||
+                previous?.type === TokenType.OP_POST ||
+                previous?.type === TokenType.OPERAND
+            ) {
                 token.subtype = SubType.MATH
             } else {
                 token.type = TokenType.NOOP
@@ -561,8 +587,8 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
             continue
         }
 
-        if ((token.type === TokenType.OP_IN) && token.subtype === undefined) {
-            if (('<>=').indexOf(token.value.substr(0, 1)) !== -1) {
+        if (token.type === TokenType.OP_IN && token.subtype === undefined) {
+            if ('<>='.indexOf(token.value.substr(0, 1)) !== -1) {
                 token.subtype = SubType.LOGICAL
             } else if (token.value === '&') {
                 token.subtype = SubType.CONCAT
@@ -572,9 +598,9 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
             continue
         }
 
-        if ((token.type === TokenType.OPERAND) && token.subtype === undefined) {
+        if (token.type === TokenType.OPERAND && token.subtype === undefined) {
             if (isNaN(parseFloat(token.value))) {
-                if ((token.value === 'TRUE') || (token.value === 'FALSE')) {
+                if (token.value === 'TRUE' || token.value === 'FALSE') {
                     token.subtype = SubType.LOGICAL
                 } else {
                     token.subtype = SubType.RANGE
@@ -592,7 +618,6 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
             }
             continue
         }
-
     }
 
     tokens2.reset()
@@ -601,12 +626,10 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
 
     while (tokens2.moveNext()) {
         const current = tokens2.current()
-        if (!current)
-            continue
+        if (!current) continue
         if (current.type !== TokenType.NOOP) {
             tokens3.addRef(current)
-        } else if (!config.excludeNoops)
-            tokens3.addRef(current)
+        } else if (!config.excludeNoops) tokens3.addRef(current)
     }
 
     tokens3.reset()

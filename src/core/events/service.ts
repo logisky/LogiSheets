@@ -5,12 +5,12 @@ import {EventType} from './event'
 interface TotalEventsHandlersEventMap extends ClipboardEventHandlersEventMap {}
 export function on<K extends keyof TotalEventsHandlersEventMap>(
     el: HasEventTargetAddRemove<TotalEventsHandlersEventMap[K]>,
-    event: K,
-)  {
+    event: K
+) {
     return fromEvent(el, event)
 }
 interface ClipboardEventHandlersEventMap extends GlobalEventHandlersEventMap {
-    readonly [EventType.COPY]: ClipboardEvent,
-    readonly [EventType.CUT]: ClipboardEvent,
-    readonly [EventType.PASTE]: ClipboardEvent,
+    readonly [EventType.COPY]: ClipboardEvent
+    readonly [EventType.CUT]: ClipboardEvent
+    readonly [EventType.PASTE]: ClipboardEvent
 }

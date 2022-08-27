@@ -4,9 +4,9 @@ import {
     containsEmoji,
     containsFullWidthCharactor,
 } from '@/core/strings'
-import { Position } from './position'
-import { TextAreaWrapper } from './textarea-wrapper'
-import { TypeData } from './type_data'
+import {Position} from './position'
+import {TextAreaWrapper} from './textarea-wrapper'
+import {TypeData} from './type_data'
 export class TextAreaState {
     public value = ''
     public selectionStart = 0
@@ -32,10 +32,9 @@ export class TextAreaState {
     static deduceInput(
         previousState: TextAreaState,
         currentState: TextAreaState,
-        couldBeEmojiInput: boolean,
+        couldBeEmojiInput: boolean
     ) {
-        if (!previousState)
-            return new TypeData()
+        if (!previousState) return new TypeData()
         let [
             prevValue,
             prevSelectionStart,
@@ -66,20 +65,27 @@ export class TextAreaState {
         prevSelectionStart -= prefixLength
         currSelectionEnd -= prefixLength
         prevSelectionEnd -= prefixLength
-        if (couldBeEmojiInput && currSelectionStart === currSelectionEnd && prevValue.length > 0) {
+        if (
+            couldBeEmojiInput &&
+            currSelectionStart === currSelectionEnd &&
+            prevValue.length > 0
+        ) {
             let potentialEmojiInput: string | null = null
             if (currSelectionStart === currValue.length) {
                 if (currValue.startsWith(prevValue))
                     potentialEmojiInput = currValue.substring(prevValue.length)
                 // tslint:disable-next-line: ext-curly
             } else if (currValue.endsWith(prevValue))
-                potentialEmojiInput = currValue
-                    .substring(0, currValue.length - prevValue.length)
-            if (potentialEmojiInput !== null
-                && potentialEmojiInput.length > 0
-                && (/\uFE0F/.test(potentialEmojiInput) || containsEmoji(
-                    potentialEmojiInput
-                ))) {
+                potentialEmojiInput = currValue.substring(
+                    0,
+                    currValue.length - prevValue.length
+                )
+            if (
+                potentialEmojiInput !== null &&
+                potentialEmojiInput.length > 0 &&
+                (/\uFE0F/.test(potentialEmojiInput) ||
+                    containsEmoji(potentialEmojiInput))
+            ) {
                 const typeData = new TypeData()
                 typeData.text = potentialEmojiInput
                 return typeData
@@ -87,16 +93,14 @@ export class TextAreaState {
         }
         if (currSelectionStart === currSelectionEnd) {
             if (
-                prevValue === currValue
-                && prevSelectionStart === 0
-                && prevSelectionEnd === prevValue.length
-                && currSelectionStart === currValue.length
-                && currValue.indexOf('\n') === -1
+                prevValue === currValue &&
+                prevSelectionStart === 0 &&
+                prevSelectionEnd === prevValue.length &&
+                currSelectionStart === currValue.length &&
+                currValue.indexOf('\n') === -1
             ) {
-                if (containsFullWidthCharactor(currValue))
-                    return new TypeData()
-            }
-            else {
+                if (containsFullWidthCharactor(currValue)) return new TypeData()
+            } else {
                 const typeData = new TypeData()
                 typeData.text = currValue
                 typeData.replacePrevCharCnt = prevPrefix.length - prefixLength
@@ -120,8 +124,7 @@ export class TextAreaState {
 
     writeToTextArea(textArea: TextAreaWrapper, focus: boolean): void {
         textArea.setValue(this.value)
-        if (!focus)
-            return
+        if (!focus) return
         textArea.setSelectionRange(this.selectionStart, this.selectionEnd)
     }
 
@@ -138,8 +141,11 @@ export class TextAreaState {
         }
         if (offset >= this.selectionEnd) {
             const str = this.value.substring(this.selectionEnd, offset)
-            return this
-                ._finishDeduceEditorPosition(this.selectionEndPosition, str, 1)
+            return this._finishDeduceEditorPosition(
+                this.selectionEndPosition,
+                str,
+                1
+            )
         }
         const str1 = this.value.substring(this.selectionStart, offset)
         if (str1.indexOf(String.fromCharCode(8230)) === -1)
@@ -149,8 +155,11 @@ export class TextAreaState {
                 1
             )
         const str2 = this.value.substring(offset, this.selectionEnd)
-        return this
-            ._finishDeduceEditorPosition(this.selectionEndPosition, str2, -1)
+        return this._finishDeduceEditorPosition(
+            this.selectionEndPosition,
+            str2,
+            -1
+        )
     }
 
     private _finishDeduceEditorPosition(
@@ -160,8 +169,12 @@ export class TextAreaState {
     ): readonly [Position | undefined, number, number] {
         let lineFeedCnt = 0
         let lastLineFeedIndex = -1
-        while ((lastLineFeedIndex = deltaText
-            .indexOf('\n', lastLineFeedIndex + 1)) !== -1)
+        while (
+            (lastLineFeedIndex = deltaText.indexOf(
+                '\n',
+                lastLineFeedIndex + 1
+            )) !== -1
+        )
             lineFeedCnt += 1
         return [anchor, signum * deltaText.length, lineFeedCnt]
     }

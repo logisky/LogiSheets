@@ -1,4 +1,4 @@
 export interface Styles {
-	readonly x: number
-	readonly y: number
+    readonly x: number
+    readonly y: number
 }

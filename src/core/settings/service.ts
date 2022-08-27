@@ -26,7 +26,6 @@ export class Grid {
     public lineWidth = 1
 }
 
-
 export class LeftTop {
     public width = 32
     public height = 24

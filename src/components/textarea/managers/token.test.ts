@@ -1,4 +1,4 @@
-import { TokenManager } from './token'
+import {TokenManager} from './token'
 
 describe('token manager test', () => {
     it('getTokenIndexByCursor', () => {

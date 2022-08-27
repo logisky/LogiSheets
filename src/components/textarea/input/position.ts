@@ -1,10 +1,6 @@
 export function positionEquals(a?: Position, b?: Position): boolean {
-    if (!a && !b)
-        return true
-    return !!a
-        && !!b
-        && a.lineNumber === b.lineNumber
-        && a.column === b.column
+    if (!a && !b) return true
+    return !!a && !!b && a.lineNumber === b.lineNumber && a.column === b.column
 }
 export class Position {
     public lineNumber = 0
@@ -22,8 +18,10 @@ export class Position {
     }
 
     public delta(deltaLineNumber = 0, deltaColumn = 0): Position {
-        return this
-            .with(this.lineNumber + deltaLineNumber, this.column + deltaColumn)
+        return this.with(
+            this.lineNumber + deltaLineNumber,
+            this.column + deltaColumn
+        )
     }
 
     public equals(other: Position): boolean {

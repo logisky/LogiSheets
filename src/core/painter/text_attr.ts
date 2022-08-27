@@ -3,9 +3,9 @@ import {CtCellAlignment, Font} from '@/bindings'
 
 export class TextAttr {
     setFont(font?: StandardFont | Font) {
-        if (font === undefined)
-            return
-        this.font = font instanceof StandardFont ? font : StandardFont.from(font)
+        if (font === undefined) return
+        this.font =
+            font instanceof StandardFont ? font : StandardFont.from(font)
     }
     font = new StandardFont()
     alignment: CtCellAlignment | undefined = {

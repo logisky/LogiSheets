@@ -18,11 +18,9 @@ export interface Scroll {
 class ScrollImpl implements Scroll {
     x = 0
     y = 0
-    update (type: 'x' | 'y', value: number) {
-        if (type === 'x')
-            this.x = value
-        else
-            this.y = value
+    update(type: 'x' | 'y', value: number) {
+        if (type === 'x') this.x = value
+        else this.y = value
     }
 }
 export class StandardSheet {
@@ -53,7 +51,7 @@ export class StandardSheet {
 
     setComments(comments: readonly Comment[]) {
         this._comments.clear()
-        comments.forEach(c => {
+        comments.forEach((c) => {
             this._comments.set(`${c.row}:${c.col}`, c)
         })
     }

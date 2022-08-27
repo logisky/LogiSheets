@@ -1,6 +1,6 @@
 import {toast} from 'react-toastify'
 export const useToast = () => {
     return {
-        toast
+        toast,
     }
 }
