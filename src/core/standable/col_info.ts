@@ -1,10 +1,8 @@
-import { ColInfo } from '@/bindings'
-import { findMdwColw, shallowCopy, width2px } from '@/core'
-import { SETTINGS } from '@/core/settings'
+import {ColInfo} from '@/bindings'
+import {findMdwColw, shallowCopy, width2px} from '@/core'
+import {SETTINGS} from '@/core/settings'
 export class StandardColInfo implements ColInfo {
-    constructor(
-        public readonly idx: number,
-    ) {}
+    constructor(public readonly idx: number) {}
     hidden = false
     width = SETTINGS.defaultCellSize.width
     get px() {

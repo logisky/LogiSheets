@@ -1,10 +1,10 @@
-import { Observable, ReplaySubject, Subject } from 'rxjs'
-import { DisplayPatch } from '@/bindings'
-import { ClientSend, ServerSend } from '@/message'
-import { Payload, PayloadsTransaction, adaptTransaction } from '@/api'
-import { hasOwnProperty } from '@/core'
-import { SheetService } from '@/core/data/sheet'
-import { Service as StandAloneService } from '@/wasm_svc/service'
+import {Observable, ReplaySubject, Subject} from 'rxjs'
+import {DisplayPatch} from '@/bindings'
+import {ClientSend, ServerSend} from '@/message'
+import {Payload, PayloadsTransaction, adaptTransaction} from '@/api'
+import {hasOwnProperty} from '@/core'
+import {SheetService} from '@/core/data/sheet'
+import {Service as StandAloneService} from '@/wasm_svc/service'
 import {injectable, inject} from 'inversify'
 import {TYPES} from '@/core/ioc/types'
 import {getID} from '@/core/ioc/id'
@@ -12,10 +12,8 @@ import {getID} from '@/core/ioc/id'
 @injectable()
 export class Backend {
     readonly id = getID()
-    constructor(
-        @inject(TYPES.Sheet) private readonly sheetSvc: SheetService,
-    ) {
-        this._wasmSvc.output$.subscribe(e => {
+    constructor(@inject(TYPES.Sheet) private readonly sheetSvc: SheetService) {
+        this._wasmSvc.output$.subscribe((e) => {
             this.handleResponse(e)
         })
     }
@@ -35,11 +33,10 @@ export class Backend {
      * @param undoable Default true
      */
     sendTransaction(payloads: Payload[], undoable = true) {
-        if (payloads.length === 0)
-            return
+        if (payloads.length === 0) return
         const t = new PayloadsTransaction(payloads, undoable)
         const msg = adaptTransaction(t)
-        this.send({ $case: 'transaction', transaction: msg })
+        this.send({$case: 'transaction', transaction: msg})
     }
 
     send(msg: ClientSend) {
@@ -54,7 +51,7 @@ export class Backend {
         if (serverSend.$case === 'displayResponse') {
             const e = serverSend.displayResponse
             this.sheetSvc.clear()
-            e.patches.forEach(p => {
+            e.patches.forEach((p) => {
                 this._handleDisplayArea(p)
             })
             this._render$.next()
@@ -68,39 +65,40 @@ export class Backend {
         const displayArea = patches
         if (hasOwnProperty(displayArea, 'values')) {
             const sheet = displayArea.values.sheetIdx
-            displayArea.values.values.forEach(v => {
-                const { row, col, formula, value } = v
-                this.sheetSvc.setCell(row, col, sheet, { value, formula })
+            displayArea.values.values.forEach((v) => {
+                const {row, col, formula, value} = v
+                this.sheetSvc.setCell(row, col, sheet, {value, formula})
             })
         } else if (hasOwnProperty(displayArea, 'styles')) {
             const sheet = displayArea.styles.sheetIdx
-            displayArea.styles.styles.forEach(s => {
-                const { row, col, style } = s
-                if (style)
-                    this.sheetSvc.setCell(row, col, sheet, { style })
+            displayArea.styles.styles.forEach((s) => {
+                const {row, col, style} = s
+                if (style) this.sheetSvc.setCell(row, col, sheet, {style})
             })
         } else if (hasOwnProperty(displayArea, 'rowInfo')) {
             const sheet = displayArea.rowInfo.sheetIdx
-            displayArea.rowInfo.info.forEach(i => {
+            displayArea.rowInfo.info.forEach((i) => {
                 this.sheetSvc.setRowInfo(i.idx, i, sheet)
             })
         } else if (hasOwnProperty(displayArea, 'colInfo')) {
             const sheet = displayArea.colInfo.sheetIdx
-            displayArea.colInfo.info.forEach(i => {
+            displayArea.colInfo.info.forEach((i) => {
                 this.sheetSvc.setColInfo(i.idx, i, sheet)
             })
         } else if (hasOwnProperty(displayArea, 'sheetNames'))
             displayArea.sheetNames.names.forEach((name, i) => {
-                this.sheetSvc.setSheet(i, { name })
+                this.sheetSvc.setSheet(i, {name})
             })
         else if (hasOwnProperty(displayArea, 'mergeCells')) {
             const merges = displayArea.mergeCells.mergeCells
-            this.sheetSvc.setSheet(displayArea.mergeCells.sheetIdx, { merges })
+            this.sheetSvc.setSheet(displayArea.mergeCells.sheetIdx, {merges})
         } else if (hasOwnProperty(displayArea, 'comments')) {
             const sheet = displayArea.comments.sheetIdx
-            this.sheetSvc.setSheet(sheet, { comments: displayArea.comments.comments })
+            this.sheetSvc.setSheet(sheet, {
+                comments: displayArea.comments.comments,
+            })
         } else if (hasOwnProperty(displayArea, 'blocks')) {
-            const { sheetIdx, blocks } = displayArea.blocks
+            const {sheetIdx, blocks} = displayArea.blocks
             this.sheetSvc.setBlocks(sheetIdx, blocks)
         }
     }

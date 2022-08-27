@@ -3,7 +3,7 @@ export function setDataToCopy(
     e: ClipboardEvent
 ): void {
     if (e.clipboardData)
-        data.clipboardMetaData.forEach(d => {
+        data.clipboardMetaData.forEach((d) => {
             e.clipboardData?.setData(d.format, d.text)
         })
     // tslint:disable-next-line: no-throw-unless-asserts
@@ -11,11 +11,9 @@ export function setDataToCopy(
 }
 
 export function canUseTextData(e: ClipboardEvent): boolean {
-    if (e.clipboardData)
-        return true
+    if (e.clipboardData) return true
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (navigator.clipboard)
-        return true
+    if (navigator.clipboard) return true
     return false
 }
 
@@ -29,7 +27,7 @@ export function getClipboardData(e: ClipboardEvent): ClipboardStoredMetaData {
     if (e.clipboardData) {
         e.preventDefault()
         const data: ClipboardMetaData[] = []
-        e.clipboardData.types.forEach(type => {
+        e.clipboardData.types.forEach((type) => {
             const d = new ClipboardMetaData()
             d.format = type
             d.text = e.clipboardData?.getData(type) ?? ''
@@ -43,11 +41,8 @@ export function getClipboardData(e: ClipboardEvent): ClipboardStoredMetaData {
     throw Error(`cannot get clipboard data ${e}`)
 }
 export class ClipboardStoredMetaData {
-    constructor(
-        public clipboardMetaData: readonly ClipboardMetaData[] = []
-    ) { }
+    constructor(public clipboardMetaData: readonly ClipboardMetaData[] = []) {}
 }
-
 
 export class ClipboardMetaData {
     /**
@@ -59,4 +54,3 @@ export class ClipboardMetaData {
 export class ExcelClipboardData {
     public sheetname = ''
 }
-

@@ -1,4 +1,4 @@
-import { shallowCopy } from '@/core/clone'
+import {shallowCopy} from '@/core/clone'
 
 /**
  * @see /resources/funcs/README.md
@@ -48,7 +48,7 @@ class ArgCountImpl implements ArgCount {
 
 export function formulaStandable(fn: unknown): Formula {
     const jsonFormula = fn as Formula
-    const args = (jsonFormula?.args ?? []).map(arg => {
+    const args = (jsonFormula?.args ?? []).map((arg) => {
         const a = new ArgImpl()
         shallowCopy(arg, a)
         return a

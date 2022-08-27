@@ -491,7 +491,6 @@ export const enum KeyboardEventCode {
     UNKNOWN = 'Unknown',
 }
 export function extractKeyCode(e: KeyboardEvent) {
-
     const allCodes = [
         KeyboardEventCode.BACKQUOTE,
         KeyboardEventCode.BACKSLASH,
@@ -623,8 +622,7 @@ export function extractKeyCode(e: KeyboardEvent) {
         KeyboardEventCode.PAUSE,
         KeyboardEventCode.UNKNOWN,
     ]
-    return allCodes.find(c => c === e.code) ??
-        KeyboardEventCode.UNKNOWN
+    return allCodes.find((c) => c === e.code) ?? KeyboardEventCode.UNKNOWN
 }
 
 export function isNumPad(code: KeyboardEventCode) {

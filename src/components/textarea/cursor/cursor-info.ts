@@ -1,4 +1,4 @@
-import { equal } from '@/core'
+import {equal} from '@/core'
 
 export class BaseInfo {
     public x = 0
@@ -10,10 +10,8 @@ export class BaseInfo {
     }
 
     biggerThan(baseInfo: BaseInfo): boolean {
-        if (this.y > baseInfo.y)
-            return true
-        if (this.y === baseInfo.y && this.x > baseInfo.x)
-            return true
+        if (this.y > baseInfo.y) return true
+        if (this.y === baseInfo.y && this.x > baseInfo.x) return true
         return false
     }
 }

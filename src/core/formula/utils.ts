@@ -1,4 +1,4 @@
-import { SPLITTER } from './const'
+import {SPLITTER} from './const'
 export function matchQuote(quote1: string, quote2: string) {
     const quotes = new Map([
         ['(', ')'],

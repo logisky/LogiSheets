@@ -10,28 +10,31 @@ export function lcsLenMatch<T>(
     pattern: string,
     beMatcheds: readonly T[],
     getValue: (beMatched: T) => string,
-    caseSensitive = true,
+    caseSensitive = true
 ) {
-    const result: { beMatched: T, matchedMap: Map<number, number> }[] = []
-    if (pattern === '')
-        return result
+    const result: {beMatched: T; matchedMap: Map<number, number>}[] = []
+    if (pattern === '') return result
     // tslint:disable-next-line: no-loop
     for (const beMatched of beMatcheds) {
         const word = getValue(beMatched)
         const candidateWord = caseSensitive ? word : word.toLowerCase()
         const target = caseSensitive ? pattern : pattern.toLowerCase()
-        const matrix:
-            readonly (readonly number[])[] = getLcsMatrix(target, candidateWord)
+        const matrix: readonly (readonly number[])[] = getLcsMatrix(
+            target,
+            candidateWord
+        )
         const lcsLen: number = matrix[target.length][candidateWord.length]
-        if (lcsLen !== target.length)
-            continue
-        const wordIndex:
-            readonly number[] = backTrackLcs(matrix, target, candidateWord)
+        if (lcsLen !== target.length) continue
+        const wordIndex: readonly number[] = backTrackLcs(
+            matrix,
+            target,
+            candidateWord
+        )
         const matchedMap = new Map<number, number>()
         wordIndex.forEach((value: number, index: number): void => {
             matchedMap.set(index, value)
         })
-        result.push({ beMatched, matchedMap })
+        result.push({beMatched, matchedMap})
     }
 
     return result
@@ -58,17 +61,14 @@ function getLcsMatrix(s1: string, s2: string): readonly (readonly number[])[] {
     for (let i = 0; i <= l1; i += 1) {
         lcsLen.push([])
         // tslint:disable-next-line: no-loop-statement
-        for (let j = 0; j <= l2; j += 1)
-            lcsLen[i].push(0)
+        for (let j = 0; j <= l2; j += 1) lcsLen[i].push(0)
     }
     // tslint:disable-next-line: no-loop-statement
     for (let i = 1; i <= l1; i += 1)
         // tslint:disable-next-line: no-loop-statement
         for (let j = 1; j <= l2; j += 1)
-            if (s1[i - 1] === s2[j - 1])
-                lcsLen[i][j] = lcsLen[i - 1][j - 1] + 1
-            else
-                lcsLen[i][j] = Math.max(lcsLen[i][j - 1], lcsLen[i - 1][j])
+            if (s1[i - 1] === s2[j - 1]) lcsLen[i][j] = lcsLen[i - 1][j - 1] + 1
+            else lcsLen[i][j] = Math.max(lcsLen[i][j - 1], lcsLen[i - 1][j])
 
     return lcsLen
 }
@@ -82,28 +82,24 @@ function getLcsMatrix(s1: string, s2: string): readonly (readonly number[])[] {
 function backTrackLcs(
     matrix: readonly (readonly number[])[],
     s1: string,
-    s2: string,
+    s2: string
 ): readonly number[] {
     const s2Index: number[] = []
     let i = s1.length
     let j = s2.length
     let target = matrix[i][j]
-    if (matrix[i][j] === 0)
-        return s2Index
+    if (matrix[i][j] === 0) return s2Index
     // tslint:disable-next-line: no-loop-statement
     while (i >= 1 && j >= 1) {
         // tslint:disable-next-line: no-loop-statement
-        while (matrix[i][j - 1] === target)
-            j -= 1
+        while (matrix[i][j - 1] === target) j -= 1
         if (s1[i - 1] === s2[j - 1]) {
             s2Index.unshift(j - 1)
             i -= 1
             j -= 1
             target -= 1
-        } else if (matrix[i - 1][j] >= matrix[i][j - 1])
-            i -= 1
-        else
-            j -= 1
+        } else if (matrix[i - 1][j] >= matrix[i][j - 1]) i -= 1
+        else j -= 1
     }
     return s2Index
 }

@@ -1,12 +1,12 @@
-import { RefObject, useRef, useState } from 'react'
-import { getPosition, getSelector } from './selector'
-import { Range } from '@/core/standable'
-import { AttributeName } from '@/core/const'
-import { match, Cell, visibleCells } from '../defs'
-import { Payload } from '@/api'
-import { Backend, DataService, SheetService } from '@/core/data'
-import { useInjection } from '@/core/ioc/provider'
-import { TYPES } from '@/core/ioc/types'
+import {RefObject, useRef, useState} from 'react'
+import {getPosition, getSelector} from './selector'
+import {Range} from '@/core/standable'
+import {AttributeName} from '@/core/const'
+import {match, Cell, visibleCells} from '../defs'
+import {Payload} from '@/api'
+import {Backend, DataService, SheetService} from '@/core/data'
+import {useInjection} from '@/core/ioc/provider'
+import {TYPES} from '@/core/ioc/types'
 interface _Selector {
     readonly start: Cell
     readonly end?: Cell
@@ -18,21 +18,20 @@ export const useDnd = (canvas: RefObject<HTMLCanvasElement>) => {
     const [promptReplace, setPrompReplace] = useState(false)
     const [range, setRange] = useState<Range>()
     const [dragging, setDragging] = useState<Range>()
-    const mousedownStart = useRef<{ x: number, y: number }>()
+    const mousedownStart = useRef<{x: number; y: number}>()
     const _selector = useRef<_Selector>()
     const _endSelector = useRef<_Selector>()
     const onReplace = () => {
         const startSelector = _selector.current
         const endSelector = _endSelector.current
-        if (!startSelector || !endSelector)
-            return
+        if (!startSelector || !endSelector) return
         const payloads: Payload[] = []
         const startVisibleCells = visibleCells(
             startSelector.start,
             startSelector.end ?? startSelector.start,
-            SHEET_SERVICE,
+            SHEET_SERVICE
         )
-        startVisibleCells.forEach(c => {
+        startVisibleCells.forEach((c) => {
             payloads.push({
                 type: 'cellInput',
                 sheetIdx: SHEET_SERVICE.getActiveSheet(),
@@ -41,8 +40,12 @@ export const useDnd = (canvas: RefObject<HTMLCanvasElement>) => {
                 input: '',
             })
         })
-        visibleCells(endSelector.start, endSelector.end ?? endSelector.start, SHEET_SERVICE).forEach((c, i) => {
-            const { row, col } = startVisibleCells[i]
+        visibleCells(
+            endSelector.start,
+            endSelector.end ?? endSelector.start,
+            SHEET_SERVICE
+        ).forEach((c, i) => {
+            const {row, col} = startVisibleCells[i]
             const input = SHEET_SERVICE.getCell(row, col)?.getText()
             payloads.push({
                 type: 'cellInput',
@@ -55,17 +58,23 @@ export const useDnd = (canvas: RefObject<HTMLCanvasElement>) => {
         BACKEND_SERVICE.sendTransaction(payloads)
     }
     const _setRange = (selector?: _Selector) => {
-        if (!canvas.current)
-            return
+        if (!canvas.current) return
         _selector.current = selector
-        const sel = selector ? getSelector(canvas.current, selector.start, selector.end) : undefined
+        const sel = selector
+            ? getSelector(canvas.current, selector.start, selector.end)
+            : undefined
         const newRange = sel ? getPosition(sel) : undefined
         setRange(newRange)
     }
-    const _setEnd = (selector?: { canvas: HTMLCanvasElement, start: Cell, end?: Cell }) => {
+    const _setEnd = (selector?: {
+        canvas: HTMLCanvasElement
+        start: Cell
+        end?: Cell
+    }) => {
         _endSelector.current = selector
-        const sel = selector ?
-            getSelector(selector.canvas, selector.start, selector.end) : undefined
+        const sel = selector
+            ? getSelector(selector.canvas, selector.start, selector.end)
+            : undefined
         const draggingRange = sel ? getPosition(sel) : undefined
         setDragging(draggingRange)
     }
@@ -77,20 +86,25 @@ export const useDnd = (canvas: RefObject<HTMLCanvasElement>) => {
             mousedownStart.current = undefined
             return false
         }
-        mousedownStart.current = { x: e.clientX, y: e.clientY }
+        mousedownStart.current = {x: e.clientX, y: e.clientY}
         return true
     }
 
     const onMouseMove = (e: MouseEvent, startCell: Cell, oldEnd: Cell) => {
-        if (!mousedownStart.current || !canvas.current)
-            return false
-        const moved = { x: e.clientX - mousedownStart.current.x, y: e.clientY - mousedownStart.current.y }
-        if (startCell.type !== 'Cell')
-            return true
-        const endCell = match(oldEnd.position.startCol + moved.x, oldEnd.position.startRow + moved.y, canvas.current, DATA_SERVICE.cachedViewRange)
-        if (endCell.type !== 'Cell')
-            return true
-        _setEnd({ canvas: canvas.current, start: startCell, end: endCell })
+        if (!mousedownStart.current || !canvas.current) return false
+        const moved = {
+            x: e.clientX - mousedownStart.current.x,
+            y: e.clientY - mousedownStart.current.y,
+        }
+        if (startCell.type !== 'Cell') return true
+        const endCell = match(
+            oldEnd.position.startCol + moved.x,
+            oldEnd.position.startRow + moved.y,
+            canvas.current,
+            DATA_SERVICE.cachedViewRange
+        )
+        if (endCell.type !== 'Cell') return true
+        _setEnd({canvas: canvas.current, start: startCell, end: endCell})
         return true
     }
 

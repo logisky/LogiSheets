@@ -1,23 +1,29 @@
-import { CtCellAlignment, Border, Font, Fill, Style, CtCellProtection } from '@/bindings'
-import { shallowCopy } from '@/core'
-import { StandardFont } from './font'
+import {
+    CtCellAlignment,
+    Border,
+    Font,
+    Fill,
+    Style,
+    CtCellProtection,
+} from '@/bindings'
+import {shallowCopy} from '@/core'
+import {StandardFont} from './font'
 
 export class StandardStyle implements Style {
-    protection!: CtCellProtection 
+    protection!: CtCellProtection
     border!: Border
-    font!: Font 
+    font!: Font
     fill!: Fill
     alignment!: CtCellAlignment
     formatter = ''
-    static from (style: Style) {
+    static from(style: Style) {
         const s = new StandardStyle()
         shallowCopy(style, s)
         return s
     }
 
-    getFont () {
-        if (!this.font)
-            return new StandardFont()
+    getFont() {
+        if (!this.font) return new StandardFont()
         return StandardFont.from(this.font)
     }
 }

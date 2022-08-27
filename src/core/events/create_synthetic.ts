@@ -1,5 +1,7 @@
-import { SyntheticEvent } from 'react'
-export const createSyntheticEvent = <T extends Element, E extends Event>(event: E): SyntheticEvent<T, E> => {
+import {SyntheticEvent} from 'react'
+export const createSyntheticEvent = <T extends Element, E extends Event>(
+    event: E
+): SyntheticEvent<T, E> => {
     let isDefaultPrevented = false
     let isPropagationStopped = false
     const preventDefault = () => {
@@ -24,7 +26,7 @@ export const createSyntheticEvent = <T extends Element, E extends Event>(event: 
         stopPropagation,
         isPropagationStopped: () => isPropagationStopped,
         // eslint-disable-next-line @typescript-eslint/no-empty-function
-        persist: () => { },
+        persist: () => {},
         timeStamp: event.timeStamp,
         type: event.type,
     }

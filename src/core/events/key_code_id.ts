@@ -171,12 +171,12 @@ export const enum KeyCodeId {
     NUMPAD_8 = 101, // VK_NUMPAD8, 0x68, Numeric keypad 8 key
     NUMPAD_9 = 102, // VK_NUMPAD9, 0x69, Numeric keypad 9 key
 
-    NUMPAD_MULTIPLY = 103,    // VK_MULTIPLY, 0x6A, Multiply key
-    NUMPAD_ADD = 104,        // VK_ADD, 0x6B, Add key
-    NUMPAD_SEPARATOR = 105,    // VK_SEPARATOR, 0x6C, Separator key
-    NUMPAD_SUBTRACT = 106,    // VK_SUBTRACT, 0x6D, Subtract key
-    NUMPAD_DECIMAL = 107,    // VK_DECIMAL, 0x6E, Decimal key
-    NUMPAD_DIVIDE = 108,    // VK_DIVIDE, 0x6F,
+    NUMPAD_MULTIPLY = 103, // VK_MULTIPLY, 0x6A, Multiply key
+    NUMPAD_ADD = 104, // VK_ADD, 0x6B, Add key
+    NUMPAD_SEPARATOR = 105, // VK_SEPARATOR, 0x6C, Separator key
+    NUMPAD_SUBTRACT = 106, // VK_SUBTRACT, 0x6D, Subtract key
+    NUMPAD_DECIMAL = 107, // VK_DECIMAL, 0x6E, Decimal key
+    NUMPAD_DIVIDE = 108, // VK_DIVIDE, 0x6F,
 
     /**
      * Cover all key codes when IME is processing input.

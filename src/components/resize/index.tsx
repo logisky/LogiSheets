@@ -26,27 +26,43 @@ export const ResizerComponent: FC<ResizerProps> = ({
     active,
     type,
 }) => {
-    return (<div className={`${Styles.host}`} style={{
-        left: `${x}px`,
-        top: `${y}px`,
-        opacity: active ? 1 : 0,
-    }}>
-        <div className={Styles.trigger} style={{
-            height: `${height}px`,
-            width: `${width}px`,
-            left: type === 'col' ? `${-width / 2}px` : 0,
-            top: type === 'row' ? `${-height / 2}px` : 0,
-            cursor: type === 'row' ? 'row-resize' : 'col-resize',
-        }}></div>
-        <div className={Styles['hover-text']} style={{
-            left: type === 'row' ? `${width}px` : 0,
-            top: type === 'col' ? `${height}px` : 0,
-        }}>{hoverText}</div>
-        <div className={Styles.moving} style={{
-            width: `${movingWidth}px`,
-            height: `${movingHeight}px`,
-            left: `${movingX}px`,
-            top: `${movingY}px`,
-        }}></div>
-    </div>)
+    return (
+        <div
+            className={`${Styles.host}`}
+            style={{
+                left: `${x}px`,
+                top: `${y}px`,
+                opacity: active ? 1 : 0,
+            }}
+        >
+            <div
+                className={Styles.trigger}
+                style={{
+                    height: `${height}px`,
+                    width: `${width}px`,
+                    left: type === 'col' ? `${-width / 2}px` : 0,
+                    top: type === 'row' ? `${-height / 2}px` : 0,
+                    cursor: type === 'row' ? 'row-resize' : 'col-resize',
+                }}
+            ></div>
+            <div
+                className={Styles['hover-text']}
+                style={{
+                    left: type === 'row' ? `${width}px` : 0,
+                    top: type === 'col' ? `${height}px` : 0,
+                }}
+            >
+                {hoverText}
+            </div>
+            <div
+                className={Styles.moving}
+                style={{
+                    width: `${movingWidth}px`,
+                    height: `${movingHeight}px`,
+                    left: `${movingX}px`,
+                    top: `${movingY}px`,
+                }}
+            ></div>
+        </div>
+    )
 }

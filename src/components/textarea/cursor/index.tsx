@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import {FC} from 'react'
 import styles from './cursor.module.scss'
 
 export interface CursorProps {
@@ -13,11 +13,13 @@ export const CursorComponent: FC<CursorProps> = ({
     y = 0,
 }) => {
     return (
-        <div className={`${styles.host} ${styles['logi-sheets-cursor-smooth']}`} style={{
-            height: `${height}px`,
-            left: `${x}px`,
-            top: `${y}px`,
-        }}
+        <div
+            className={`${styles.host} ${styles['logi-sheets-cursor-smooth']}`}
+            style={{
+                height: `${height}px`,
+                left: `${x}px`,
+                top: `${y}px`,
+            }}
         ></div>
     )
 }

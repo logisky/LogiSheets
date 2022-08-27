@@ -1,4 +1,4 @@
-import { Texts } from './texts'
+import {Texts} from './texts'
 export class History {
     add(texts: Texts): void {
         this._undo.push(texts)
@@ -7,15 +7,13 @@ export class History {
 
     undo(): Texts | undefined {
         const u = this._undo.pop()
-        if (u !== undefined)
-            this._redo.push(u)
+        if (u !== undefined) this._redo.push(u)
         return u
     }
 
     redo(): Texts | undefined {
         const r = this._redo.pop()
-        if (r !== undefined)
-            this._undo.push(r)
+        if (r !== undefined) this._undo.push(r)
         return r
     }
     // tslint:disable-next-line: readonly-array

@@ -1,11 +1,11 @@
-import { SelectedCell } from '@/components/canvas'
-import { ColorResult, SketchPicker } from 'react-color'
+import {SelectedCell} from '@/components/canvas'
+import {ColorResult, SketchPicker} from 'react-color'
 import styles from './start.module.scss'
-import { useEffect, useState } from 'react'
-import { StandardColor } from '@/core/standable'
-import { SheetService } from '@/core/data'
-import { useInjection } from '@/core/ioc/provider'
-import { TYPES } from '@/core/ioc/types'
+import {useEffect, useState} from 'react'
+import {StandardColor} from '@/core/standable'
+import {SheetService} from '@/core/data'
+import {useInjection} from '@/core/ioc/provider'
+import {TYPES} from '@/core/ioc/types'
 
 export * from './font-size'
 export * from './start-item'
@@ -16,9 +16,7 @@ export interface StartProps {
     readonly selectedCell?: SelectedCell
 }
 
-export const StartComponent = ({
-    selectedCell,
-}: StartProps) => {
+export const StartComponent = ({selectedCell}: StartProps) => {
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const [openSketchPicker, setOpenSketchPicker] = useState(false)
     const [fontColor, setFontColor] = useState('#000')
@@ -61,12 +59,10 @@ export const StartComponent = ({
     }
 
     const _initStyle = () => {
-        if (!selectedCell)
-            return
-        const { row, col } = selectedCell
+        if (!selectedCell) return
+        const {row, col} = selectedCell
         const style = SHEET_SERVICE.getCell(row, col)?.style
-        if (style === undefined)
-            return
+        if (style === undefined) return
         const font = style.getFont()
         setFontColor(font.standardColor.css())
     }
@@ -119,7 +115,7 @@ export const StartComponent = ({
     //     return styleUpdate.payload(payload.build()).build()
     // }
     const onColorPick = (result: ColorResult) => {
-        const { r, g, b, a } = result.rgb
+        const {r, g, b, a} = result.rgb
         const standardColor = StandardColor.from(r, g, b, a)
         setFontColor(standardColor.css())
         setOpenSketchPicker(false)
@@ -127,17 +123,23 @@ export const StartComponent = ({
     return (
         <div className={styles.host}>
             <div className={styles.left}></div>
-            <div className={styles['font-color']}
+            <div
+                className={styles['font-color']}
                 onClick={() => setOpenSketchPicker(true)}
             >
                 <div>A</div>
-                <div className={styles['color-bar']} style={{ backgroundColor: fontColor }}></div>
+                <div
+                    className={styles['color-bar']}
+                    style={{backgroundColor: fontColor}}
+                ></div>
             </div>
-            {openSketchPicker ? <SketchPicker
-                color={fontColor}
-                onChangeComplete={onColorPick}
-                className={styles['color-picker']}
-            ></SketchPicker> : null}
+            {openSketchPicker ? (
+                <SketchPicker
+                    color={fontColor}
+                    onChangeComplete={onColorPick}
+                    className={styles['color-picker']}
+                ></SketchPicker>
+            ) : null}
         </div>
     )
 }

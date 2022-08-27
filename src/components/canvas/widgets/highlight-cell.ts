@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import {useState} from 'react'
 import {parseA1notation} from '@/core/a1notation'
-import { getTokens } from '@/core/formula'
-import { Range, StandardColor } from '@/core/standable'
-import { DataService } from '@/core/data'
-import { useInjection } from '@/core/ioc/provider'
-import { TYPES } from '@/core/ioc/types'
+import {getTokens} from '@/core/formula'
+import {Range, StandardColor} from '@/core/standable'
+import {DataService} from '@/core/data'
+import {useInjection} from '@/core/ioc/provider'
+import {TYPES} from '@/core/ioc/types'
 
 const initStyle = (): HighlightCellStyle => {
     return {
@@ -32,10 +32,12 @@ export interface HighlightCell {
 }
 
 export function equal(cell1: HighlightCell, cell2: HighlightCell) {
-    return cell1.colEnd === cell2.colEnd
-        && cell1.colStart === cell2.colStart
-        && cell1.rowEnd === cell2.rowEnd
-        && cell1.rowStart === cell2.rowStart
+    return (
+        cell1.colEnd === cell2.colEnd &&
+        cell1.colStart === cell2.colStart &&
+        cell1.rowEnd === cell2.rowEnd &&
+        cell1.rowStart === cell2.rowStart
+    )
 }
 
 // 接受从当前输入框中，输入的a1notation以高亮对应的单元格
@@ -45,7 +47,7 @@ export const useHighlightCell = () => {
 
     const getRanges = (formula: string) => {
         const tokens = getTokens(formula)
-        return tokens.map(t => t.value)
+        return tokens.map((t) => t.value)
     }
     const blur = () => {
         setHighlightCells([])
@@ -56,12 +58,11 @@ export const useHighlightCell = () => {
         const newCells: HighlightCell[] = []
         const viewRange = DATA_SERVICE.cachedViewRange
         const find = (cell: HighlightCell) => {
-            return highlightCells.find(c => equal(c, cell))
+            return highlightCells.find((c) => equal(c, cell))
         }
-        ranges.forEach(r => {
+        ranges.forEach((r) => {
             const result = parseA1notation(r)
-            if (!result)
-                return
+            if (!result) return
             const {rs: rowStart, re: rowEnd, cs: colStart, ce: colEnd} = result
             const newCell = {
                 rowStart,
@@ -70,7 +71,7 @@ export const useHighlightCell = () => {
                 colEnd,
                 style: initStyle(),
             }
-            const cell = viewRange.cells.find(c => {
+            const cell = viewRange.cells.find((c) => {
                 const range = new Range()
                     .setStartCol(newCell.colStart)
                     .setStartRow(newCell.rowStart)
@@ -78,13 +79,11 @@ export const useHighlightCell = () => {
                     .setEndRow(newCell.rowEnd ?? newCell.rowStart)
                 return c.coodinate.cover(range)
             })
-            if (!cell)
-                return
+            if (!cell) return
             const oldCell = find(newCell)
-            if (oldCell)
-                newCell.style = oldCell.style
+            if (oldCell) newCell.style = oldCell.style
             else {
-                const currColors = newCells.map(c => c.style.bgColor)
+                const currColors = newCells.map((c) => c.style.bgColor)
                 newCell.style = {
                     bgColor: StandardColor.randomColor(currColors),
                     x: cell.position.startCol,
@@ -101,10 +100,9 @@ export const useHighlightCell = () => {
         const ranges = getRanges(text)
         const newCells: HighlightCell[] = []
         const viewRange = DATA_SERVICE.cachedViewRange
-        ranges.forEach(r => {
+        ranges.forEach((r) => {
             const result = parseA1notation(r)
-            if (!result)
-                return
+            if (!result) return
             const {rs: rowStart, re: rowEnd, cs: colStart, ce: colEnd} = result
             const newCell = {
                 rowStart,
@@ -113,7 +111,7 @@ export const useHighlightCell = () => {
                 colEnd,
                 style: initStyle(),
             }
-            const cell = viewRange.cells.find(c => {
+            const cell = viewRange.cells.find((c) => {
                 const range = new Range()
                     .setStartRow(newCell.rowStart)
                     .setStartCol(newCell.colStart)
@@ -121,9 +119,8 @@ export const useHighlightCell = () => {
                     .setEndRow(newCell.rowEnd ?? newCell.rowStart)
                 return c.coodinate.cover(range)
             })
-            if (!cell)
-                return
-            const currColors = newCells.map(c => c.style.bgColor)
+            if (!cell) return
+            const currColors = newCells.map((c) => c.style.bgColor)
             newCells.push({
                 ...newCell,
                 style: {
@@ -132,7 +129,7 @@ export const useHighlightCell = () => {
                     y: cell.position.startRow,
                     height: cell.height,
                     width: cell.width,
-                }
+                },
             })
         })
         setHighlightCells(newCells)

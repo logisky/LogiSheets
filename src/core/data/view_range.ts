@@ -32,7 +32,6 @@ export class RenderCell {
     }
 }
 
-
 export class ViewRange {
     /**
      * visible rows.

@@ -4,9 +4,9 @@ import {
     ClipboardStoredMetaData,
     StandardKeyboardEvent,
 } from '@/core/events'
-import { Subject } from 'rxjs'
-import { TypeData } from './type_data'
-import { Selection } from './selection'
+import {Subject} from 'rxjs'
+import {TypeData} from './type_data'
+import {Selection} from './selection'
 
 export class TextAreaInputEvents {
     onKeyDown$ = new Subject<StandardKeyboardEvent>()

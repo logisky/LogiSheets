@@ -1,7 +1,7 @@
 import {Color} from '@/bindings'
 // https://css-tricks.com/snippets/javascript/random-hex-color/
 function getRandomColor() {
-    return Math.floor(Math.random()*16777215).toString(16)
+    return Math.floor(Math.random() * 16777215).toString(16)
 }
 const ALPHA = 255
 // https://en.wikipedia.org/wiki/RGBA_color_model
@@ -9,19 +9,17 @@ export class StandardColor {
     static randomColor(excludes: StandardColor[] = []) {
         let color = getRandomColor()
         const exists = (c: string) => {
-            return excludes.find(e => e.rgb() === c)
+            return excludes.find((e) => e.rgb() === c)
         }
-        while (exists(color))
-            color = getRandomColor()
+        while (exists(color)) color = getRandomColor()
         return StandardColor.fromRgb(color)
     }
     static fromRgb(rgb: string) {
         const color = new StandardColor()
-        if (rgb === '')
-            return color
-        color.#red = parseInt(rgb.slice(0,2), 16)
-        color.#green = parseInt(rgb.slice(2,4), 16)
-        color.#blue = parseInt(rgb.slice(4,6), 16)
+        if (rgb === '') return color
+        color.#red = parseInt(rgb.slice(0, 2), 16)
+        color.#green = parseInt(rgb.slice(2, 4), 16)
+        color.#blue = parseInt(rgb.slice(4, 6), 16)
         return color
     }
     static fromCtColor(color: Color | null) {
@@ -32,8 +30,7 @@ export class StandardColor {
         result.#red = color.red ?? undefined
         result.#green = color.green ?? undefined
         result.#blue = color.blue ?? undefined
-        if (color.alpha)
-            result.#alpha = color.alpha
+        if (color.alpha) result.#alpha = color.alpha
         return result
     }
 
@@ -42,12 +39,11 @@ export class StandardColor {
      */
     static fromArgb(argb: string) {
         const color = new StandardColor()
-        if (argb === '')
-            return color
-        color.#alpha = parseInt(argb.slice(0,2), 16)
-        color.#red = parseInt(argb.slice(2,4), 16)
-        color.#green = parseInt(argb.slice(4,6), 16)
-        color.#blue = parseInt(argb.slice(6,8), 16)
+        if (argb === '') return color
+        color.#alpha = parseInt(argb.slice(0, 2), 16)
+        color.#red = parseInt(argb.slice(2, 4), 16)
+        color.#green = parseInt(argb.slice(4, 6), 16)
+        color.#blue = parseInt(argb.slice(6, 8), 16)
         return color
     }
 
@@ -72,13 +68,11 @@ export class StandardColor {
 
     css() {
         const alpha = this.#alpha / ALPHA
-        if (!this._valid())
-            return 'transparent'
+        if (!this._valid()) return 'transparent'
         return `rgba(${this.#red}, ${this.#green}, ${this.#blue}, ${alpha})`
     }
     rgb() {
-        if (!this._valid())
-            return ''
+        if (!this._valid()) return ''
         const transfer = (num: number) => num.toString(16).padStart(2, '0')
         const r = transfer(this.#red ?? 0)
         const g = transfer(this.#green ?? 0)
@@ -87,8 +81,7 @@ export class StandardColor {
     }
 
     argb() {
-        if (!this._valid())
-            return ''
+        if (!this._valid()) return ''
         const transfer = (num: number) => num.toString(16).padStart(2, '0')
         const a = transfer(this.#alpha)
         const r = transfer(this.#red ?? 0)
@@ -101,8 +94,10 @@ export class StandardColor {
     #blue?: number
     #alpha = ALPHA
     private _valid() {
-        return this.#red !== undefined
-            && this.#green !== undefined
-            && this.#blue !== undefined
+        return (
+            this.#red !== undefined &&
+            this.#green !== undefined &&
+            this.#blue !== undefined
+        )
     }
 }

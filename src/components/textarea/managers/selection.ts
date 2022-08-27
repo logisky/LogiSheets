@@ -1,10 +1,10 @@
-import { CanvasAttr, PainterService } from '@/core/painter'
-import { BaseInfo } from '@/components/textarea/cursor'
-import { useCursor } from './cursor'
-import { Context } from '../defs'
-import { TextManager } from './text'
-import { StandardKeyboardEvent } from '@/core/events'
-import { MouseEvent as ReactMouseEvent, useRef } from 'react'
+import {CanvasAttr, PainterService} from '@/core/painter'
+import {BaseInfo} from '@/components/textarea/cursor'
+import {useCursor} from './cursor'
+import {Context} from '../defs'
+import {TextManager} from './text'
+import {StandardKeyboardEvent} from '@/core/events'
+import {MouseEvent as ReactMouseEvent, useRef} from 'react'
 export class Selection {
     public startX = 0
     public startY = 0
@@ -16,10 +16,10 @@ export class Selection {
     public endColumn = 0
 }
 
-export const useSelection = <T,>(
+export const useSelection = <T>(
     cursorMng: ReturnType<typeof useCursor>,
     context: Context<T>,
-    textMng: TextManager<T>,
+    textMng: TextManager<T>
 ) => {
     const _painterSvc = new PainterService()
 
@@ -44,8 +44,7 @@ export const useSelection = <T,>(
         const [x, y] = context.getOffset(e.clientX, e.clientY)
         let curr = cursorMng.getCursorInfoByPosition(x, y)
         const startCursor = _startCursor.current
-        if (!curr || !startCursor)
-            return
+        if (!curr || !startCursor) return
         if (startCursor.biggerThan(curr)) {
             const tmp = curr
             curr = startCursor
@@ -60,14 +59,12 @@ export const useSelection = <T,>(
         selection.endY = curr.y
         selection.endColumn = curr.column
         selection.endLineNumber = curr.lineNumber
-        if (!curr.equal(startCursor))
-            currSelection.current = selection
+        if (!curr.equal(startCursor)) currSelection.current = selection
         _drawSelection()
     }
 
     const keydown = (e: StandardKeyboardEvent) => {
-        if (e.isKeyBinding)
-            return
+        if (e.isKeyBinding) return
         _painterSvc.clear()
         _initSelection()
     }
@@ -78,15 +75,17 @@ export const useSelection = <T,>(
 
     const getSelection = () => {
         const sel = currSelection.current
-        if (sel.startColumn === sel.endColumn && sel.startLineNumber === sel.endLineNumber)
+        if (
+            sel.startColumn === sel.endColumn &&
+            sel.startLineNumber === sel.endLineNumber
+        )
             return
         return sel
     }
 
     const _drawSelection = () => {
         const selection = getSelection()
-        if (selection === undefined)
-            return
+        if (selection === undefined) return
         const [totalWidth, totalHeight] = textMng.getNewSize()
         _painterSvc.setupCanvas(undefined, totalWidth, totalHeight)
         _painterSvc.save()
