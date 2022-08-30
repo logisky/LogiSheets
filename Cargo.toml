@@ -12,10 +12,15 @@ include = [
     "src/lib.rs",
     "Cargo.toml",
 ]
+edition = "2018"
 
 [workspace]
 members = [
-    "crates/*",
+    "crates/controller",
+    "crates/gents",
+    "crates/workbook",
+    "crates/xmldiff",
+    "crates/xmlserde",
     "src/wasms/fc",
     "src/wasms/server",
 ]

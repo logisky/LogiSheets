@@ -1,6 +1,5 @@
 # Cargo related files.
 /target
-Cargo.lock
 
 # NodeJs related files.
 node_modules
@@ -22,3 +21,6 @@ coverage/
 .DS_Store
 
 tests_output
+
+# bazel related
+/bazel-*

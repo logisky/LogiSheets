@@ -11,15 +11,16 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-logisheets_controller = {version = "0.3.0", path = '../../../crates/controller'}
-wasm-bindgen = {version = "0.2.79", features = ["serde-serialize"]}
+wasm-bindgen = {version = "0.2.82", features = ["serde-serialize"]}
 web-sys = {version = "0.3.56", features = ["console"]}
 console_error_panic_hook = {version = "0.1.6", optional = true}
 # Specify the feature of the crate used in `logisheets_controller`.
 getrandom = {version = "0.2.3", features = ["js"]}
 
+logisheets_controller = {version = "0.3.0", path = '../../../crates/controller'}
+
 [dev-dependencies]
-wasm-bindgen-test = "0.3.13"
+wasm-bindgen-test = "0.3.30"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
