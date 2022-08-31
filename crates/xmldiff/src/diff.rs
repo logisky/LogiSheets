@@ -1,6 +1,6 @@
 use crate::xml_data::{Decl, KeyValue, Object, Value, XmlData};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Element {
     pub tag: String,
     pub positon: usize,
@@ -15,7 +15,7 @@ impl From<KeyValue> for Element {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Diff {
     Delete(Element),
     Create(Element),
