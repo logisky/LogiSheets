@@ -1,3 +1,4 @@
+use gents::TS;
 use logisheets_base::{async_func::Task, CellId};
 use serde::Serialize;
 
@@ -13,7 +14,7 @@ pub mod style_payload;
 pub type Converter<'a> = converter::Converter<'a>;
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/edit_action.ts")]
+#[ts(file_name = "edit_action.ts")]
 pub enum EditAction {
     Undo,
     Redo,
@@ -21,7 +22,7 @@ pub enum EditAction {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/payloads_action.ts")]
+#[ts(file_name = "payloads_action.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadsAction {
     pub payloads: Vec<EditPayload>,
@@ -29,7 +30,7 @@ pub struct PayloadsAction {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/payload.ts")]
+#[ts(file_name = "payload.ts")]
 pub enum EditPayload {
     BlockInput(BlockInput),
     BlockStyleUpdate(BlockStyleUpdate),
@@ -47,7 +48,7 @@ pub enum EditPayload {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/sheet_rename.ts")]
+#[ts(file_name = "sheet_rename.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SheetRename {
     pub old_name: String,
@@ -55,7 +56,7 @@ pub struct SheetRename {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/row_shift.ts")]
+#[ts(file_name = "row_shift.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct RowShift {
     pub sheet_idx: usize,
@@ -65,7 +66,7 @@ pub struct RowShift {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/col_shift.ts")]
+#[ts(file_name = "col_shift.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct ColShift {
     pub sheet_idx: usize,
@@ -75,7 +76,7 @@ pub struct ColShift {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/cell_input.ts")]
+#[ts(file_name = "cell_input.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct CellInput {
     pub sheet_idx: usize,
@@ -85,7 +86,7 @@ pub struct CellInput {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/create_block.ts")]
+#[ts(file_name = "create_block.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct CreateBlock {
     pub sheet_idx: usize,
@@ -97,7 +98,7 @@ pub struct CreateBlock {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/set_row_height.ts")]
+#[ts(file_name = "set_row_height.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SetRowHeight {
     pub sheet_idx: usize,
@@ -106,7 +107,7 @@ pub struct SetRowHeight {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/set_col_width.ts")]
+#[ts(file_name = "set_col_width.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SetColWidth {
     pub sheet_idx: usize,
@@ -115,7 +116,7 @@ pub struct SetColWidth {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/move_block.ts")]
+#[ts(file_name = "move_block.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct MoveBlock {
     pub sheet_idx: usize,
@@ -125,7 +126,7 @@ pub struct MoveBlock {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/block_input.ts")]
+#[ts(file_name = "block_input.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct BlockInput {
     pub sheet_idx: usize,
@@ -136,7 +137,7 @@ pub struct BlockInput {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/line_shift_in_block.ts")]
+#[ts(file_name = "line_shift_in_block.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct LineShiftInBlock {
     pub sheet_idx: usize,
@@ -148,7 +149,7 @@ pub struct LineShiftInBlock {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/block_style_update.ts")]
+#[ts(file_name = "block_style_update.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct BlockStyleUpdate {
     pub sheet_idx: usize,
@@ -159,7 +160,7 @@ pub struct BlockStyleUpdate {
 }
 
 #[derive(Default, Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/set_visible.ts")]
+#[ts(file_name = "set_visible.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SetVisible {
     pub is_row: bool,
@@ -169,7 +170,7 @@ pub struct SetVisible {
 }
 
 #[derive(Default, Debug, Serialize, TS)]
-#[ts(export_to = "../../src/bindings/action_effect.ts")]
+#[ts(file_name = "action_effect.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct ActionEffect {
     // sheet indices

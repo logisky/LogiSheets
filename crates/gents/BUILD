@@ -5,11 +5,10 @@ rust_library(
     name = "gents",
     aliases = aliases(),
     srcs = glob(["src/*.rs"]),
-    deps = all_crate_deps(
-        normal = True,
-    ),
-    proc_macro_deps = all_crate_deps(
-        proc_macro = True,
-    ),
+    deps = all_crate_deps(normal = True),
+    proc_macro_deps = all_crate_deps(proc_macro = True) + [
+        "//crates/gents/derives:gents_derives",
+    ],
+    visibility = ["//visibility:public"],
     edition = "2018",
 )

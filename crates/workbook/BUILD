@@ -6,9 +6,10 @@ rust_library(
     aliases = aliases(),
     srcs = glob(["src/**/*.rs"]),
     visibility = ["//visibility:public"],
-    deps = all_crate_deps(
-        normal = True,
-    ) + ["//crates/xmlserde"],
+    deps = all_crate_deps(normal = True) + [
+        "//crates/gents",
+        "//crates/xmlserde",
+    ],
     proc_macro_deps = all_crate_deps(
         proc_macro = True,
     ) + [

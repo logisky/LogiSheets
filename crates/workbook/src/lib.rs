@@ -1,6 +1,4 @@
 #[macro_use]
-extern crate ts_rs;
-#[macro_use]
 extern crate xmlserde;
 mod ooxml;
 pub mod reader;

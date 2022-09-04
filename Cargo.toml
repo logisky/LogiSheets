@@ -21,6 +21,7 @@ members = [
     "crates/workbook",
     "crates/xmldiff",
     "crates/xmlserde",
+    "crates/buildtools",
     "src/wasms/fc",
     "src/wasms/server",
 ]

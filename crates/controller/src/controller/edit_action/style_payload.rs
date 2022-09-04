@@ -1,9 +1,10 @@
 use super::super::style::PatternFill;
+use gents::TS;
 use logisheets_workbook::prelude::*;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/style_update.ts")]
+#[ts(file_name = "style_update.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct StyleUpdate {
     pub sheet_idx: usize,
@@ -15,7 +16,7 @@ pub struct StyleUpdate {
 pub type Color = String;
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export_to = "../../src/bindings/style_update_type.ts")]
+#[ts(file_name = "style_update_type.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct StyleUpdateType {
     pub set_font_bold: Option<bool>,

@@ -1,16 +1,17 @@
 use super::style::Style;
+use gents::TS;
 use logisheets_base::BlockId;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/display_response.ts")]
+#[ts(file_name = "display_response.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct DisplayResponse {
     pub patches: Vec<DisplayPatch>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/display_patch.ts")]
+#[ts(file_name = "display_patch.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub enum DisplayPatch {
     Values(SheetValues),
@@ -24,14 +25,14 @@ pub enum DisplayPatch {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/sheet_names.ts")]
+#[ts(file_name = "sheet_names.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SheetNames {
     pub names: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/sheet_blocks.ts")]
+#[ts(file_name = "sheet_blocks.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SheetBlocks {
     pub sheet_idx: usize,
@@ -39,7 +40,7 @@ pub struct SheetBlocks {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/block_info.ts")]
+#[ts(file_name = "block_info.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct BlockInfo {
     pub block_id: BlockId,
@@ -50,7 +51,7 @@ pub struct BlockInfo {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/display_request.ts")]
+#[ts(file_name = "display_request.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct DisplayRequest {
     pub sheet_idx: usize,
@@ -58,7 +59,7 @@ pub struct DisplayRequest {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/sheet_merge_cells.ts")]
+#[ts(file_name = "sheet_merge_cells.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SheetMergeCells {
     pub sheet_idx: usize,
@@ -66,7 +67,7 @@ pub struct SheetMergeCells {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/sheet_comments.ts")]
+#[ts(file_name = "sheet_comments.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SheetComments {
     pub sheet_idx: usize,
@@ -74,7 +75,7 @@ pub struct SheetComments {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/merge_cell.ts")]
+#[ts(file_name = "merge_cell.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct MergeCell {
     pub row_start: usize,
@@ -84,7 +85,7 @@ pub struct MergeCell {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/comment.ts")]
+#[ts(file_name = "comment.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct Comment {
     pub row: usize,
@@ -94,7 +95,7 @@ pub struct Comment {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/sheet_row_info.ts")]
+#[ts(file_name = "sheet_row_info.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SheetRowInfo {
     pub sheet_idx: usize,
@@ -103,7 +104,7 @@ pub struct SheetRowInfo {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/row_info.ts")]
+#[ts(file_name = "row_info.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct RowInfo {
     pub idx: usize,
@@ -112,8 +113,8 @@ pub struct RowInfo {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
+#[ts(file_name = "sheet_col_info.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
-#[ts(export, export_to = "../../src/bindings/sheet_col_info.ts")]
 pub struct SheetColInfo {
     pub sheet_idx: usize,
     pub info: Vec<ColInfo>,
@@ -121,8 +122,8 @@ pub struct SheetColInfo {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
+#[ts(file_name = "col_info.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
-#[ts(export, export_to = "../../src/bindings/col_info.ts")]
 pub struct ColInfo {
     pub idx: usize,
     pub width: f64,
@@ -138,7 +139,7 @@ pub fn get_default_col_width() -> f64 {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/value.ts")]
+#[ts(file_name = "value.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub enum Value {
     Str(String),
@@ -149,7 +150,7 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/cell_formula_value.ts")]
+#[ts(file_name = "cell_formula_value.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct CellFormulaValue {
     pub row: usize,
@@ -159,7 +160,7 @@ pub struct CellFormulaValue {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/sheet_values.ts")]
+#[ts(file_name = "sheet_values.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SheetValues {
     pub sheet_idx: usize,
@@ -167,7 +168,7 @@ pub struct SheetValues {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/cell_style.ts")]
+#[ts(file_name = "cell_style.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct CellStyle {
     pub row: usize,
@@ -176,7 +177,7 @@ pub struct CellStyle {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/sheet_styles.ts")]
+#[ts(file_name = "sheet_styles.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct SheetStyles {
     pub sheet_idx: usize,

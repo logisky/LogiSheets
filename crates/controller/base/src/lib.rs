@@ -1,10 +1,3 @@
-extern crate chrono;
-extern crate futures;
-extern crate im;
-extern crate logisheets_workbook;
-extern crate serde;
-#[macro_use]
-extern crate ts_rs;
 pub mod async_func;
 pub mod block_affect;
 pub mod block_affected;
@@ -22,6 +15,7 @@ pub mod name_fetcher;
 pub mod set_curr_cell;
 
 use chrono::{DateTime, FixedOffset};
+use gents::TS;
 use logisheets_workbook::prelude::*;
 use serde::Serialize;
 use std::hash::Hash;
@@ -46,14 +40,14 @@ pub enum VisitResultType<'c, C> {
 }
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/cell_id.ts")]
+#[ts(file_name = "cell_id.ts")]
 pub enum CellId {
     NormalCell(NormalCellId),
     BlockCell(BlockCellId),
 }
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/normal_cell_id.ts")]
+#[ts(file_name = "normal_cell_id.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct NormalCellId {
     pub row: RowId,
@@ -63,7 +57,7 @@ pub struct NormalCellId {
 }
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
-#[ts(export, export_to = "../../../src/bindings/block_cell_id.ts")]
+#[ts(file_name = "block_cell_id.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct BlockCellId {
     pub block_id: BlockId,

@@ -31,7 +31,7 @@ Many thanks to `ts-rs` because it helps `gents` a lot.
 In your **Rust** code:
 
 ```rs
-use gents_derives::TS;
+use gents::TS;
 
 #[derive(TS)]
 #[ts(file_name = "person.ts", rename_all = "camelCase")]

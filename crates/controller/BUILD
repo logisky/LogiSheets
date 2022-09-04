@@ -11,6 +11,7 @@ rust_library(
         "//crates/controller/base:logisheets_base",
         "//crates/controller/lexer:logisheets_lexer",
         "//crates/controller/parser:logisheets_parser",
+        "//crates/gents",
         "//crates/workbook:logisheets_workbook",
     ],
     proc_macro_deps = all_crate_deps(

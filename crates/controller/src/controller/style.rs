@@ -1,5 +1,6 @@
 use crate::style_manager::RawStyle;
 use crate::theme_manager::ThemeManager;
+use gents::TS;
 use logisheets_workbook::prelude::{
     CtBorder, CtBorderPr, CtCellAlignment, CtCellProtection, CtColor, CtFill, CtFont, CtFontFamily,
     CtFontName, CtFontScheme, CtUnderlineProperty, CtVerticalAlignFontProperty, StBorderStyle,
@@ -8,7 +9,7 @@ use logisheets_workbook::prelude::{
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/style.ts")]
+#[ts(file_name = "style.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct Style {
     pub font: Font,
@@ -20,7 +21,7 @@ pub struct Style {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export_to = "../../src/bindings/font.ts")]
+#[ts(file_name = "font.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct Font {
     pub bold: bool,
@@ -41,7 +42,7 @@ pub struct Font {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/fill.ts")]
+#[ts(file_name = "fill.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub enum Fill {
     PatternFill(PatternFill),
@@ -49,7 +50,7 @@ pub enum Fill {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export_to = "../../src/bindings/pattern_fill.ts")]
+#[ts(file_name = "pattern_fill.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct PatternFill {
     pub fg_color: Option<Color>,
@@ -58,7 +59,7 @@ pub struct PatternFill {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export_to = "../../src/bindings/gradient_fill.ts")]
+#[ts(file_name = "gradient_fill.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct GradientFill {
     pub stops: Vec<GradientStop>,
@@ -71,7 +72,7 @@ pub struct GradientFill {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/gradient_stop.ts")]
+#[ts(file_name = "gradient_stop.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct GradientStop {
     pub color: Color,
@@ -79,7 +80,7 @@ pub struct GradientStop {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export_to = "../../src/bindings/border_pr.ts")]
+#[ts(file_name = "border_pr.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct BorderPr {
     pub color: Option<Color>,
@@ -87,7 +88,7 @@ pub struct BorderPr {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/border.ts")]
+#[ts(file_name = "border.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct Border {
     pub left: Option<BorderPr>,
@@ -103,7 +104,7 @@ pub struct Border {
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "../../src/bindings/color.ts")]
+#[ts(file_name = "color.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct Color {
     pub red: Option<f64>,

@@ -1,7 +1,3 @@
-extern crate logisheets;
-extern crate logisheets_controller;
-extern crate logisheets_workbook;
-
 #[cfg(test)]
 mod test_builtin_style {
     #[test]
