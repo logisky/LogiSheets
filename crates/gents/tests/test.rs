@@ -49,8 +49,8 @@ mod tests {
         assert_eq!(
             content.trim(),
             r#"export interface Person {
-    age: number,
-    enName: string,
+    age: number
+    enName: string
 }"#
         )
     }
@@ -63,13 +63,13 @@ mod tests {
         assert_eq!(file_name, "group.ts");
         assert_eq!(
             content,
-            r#"import Person from './person.ts'
+            r#"import {Person} from './person'
 
 export interface Group {
-    name: string,
-    capacity: number,
-    members: readonly Person[],
-    leader?: Person,
+    name: string
+    capacity: number
+    members: readonly Person[]
+    leader?: Person
 }
 "#
         );
@@ -83,9 +83,10 @@ export interface Group {
         assert_eq!(file_name, "gender.ts");
         assert_eq!(
             content.trim(),
-            r#"export type = "Male"
-    | "Female"
-    | "null""#
+            r#"export type Gender =
+    | 'Male'
+    | 'Female'
+    | 'null'"#
         );
     }
 
@@ -97,9 +98,10 @@ export interface Group {
         assert_eq!(file_name, "pet.ts");
         assert_eq!(
             content.trim(),
-            r#"export type = {cat: string}
+            r#"export type Pet =
+    | {cat: string}
     | {dog: string}
-    | "None""#
+    | 'None'"#
         );
     }
 }

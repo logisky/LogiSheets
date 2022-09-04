@@ -3,6 +3,8 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
+use crate::utils::remove_ext;
+
 pub trait TS {
     fn _register(manager: &mut DescriptorManager) -> usize;
     fn _ts_name() -> String;
@@ -48,7 +50,7 @@ impl DescriptorManager {
                         .into_iter()
                         .fold(String::from(""), |mut prev, idx| {
                             let (ts_name, file_name) = get_import_deps(&descriptors, idx);
-                            let s = format!("import {} from './{}'\n", ts_name, file_name);
+                            let s = format!("import {{{}}} from './{}'\n", ts_name, file_name);
                             prev.push_str(&s);
                             prev
                         });
@@ -60,7 +62,7 @@ impl DescriptorManager {
                     };
                     let ident = fd.ident.to_string();
                     let ty = fd.ts_ty.to_string();
-                    let f = format!("    {}{}: {},", ident, optional, ty);
+                    let f = format!("    {}{}: {}", ident, optional, ty);
                     prev.push(f);
                     prev
                 });
@@ -87,7 +89,7 @@ impl DescriptorManager {
                         .into_iter()
                         .fold(String::from(""), |mut prev, idx| {
                             let (ts_name, file_name) = get_import_deps(&descriptors, idx);
-                            let s = format!("import {} from './{}'\n", ts_name, file_name);
+                            let s = format!("import {{{}}} from './{}'\n", ts_name, file_name);
                             prev.push_str(&s);
                             prev
                         });
@@ -97,13 +99,18 @@ impl DescriptorManager {
                     let f = if ty != "" {
                         format!("{{{}: {}}}", ident, ty)
                     } else {
-                        format!(r#""{}""#, ident)
+                        format!(r#"'{}'"#, ident)
                     };
+                    let f = format!("| {}", f);
                     prev.push(f);
                     prev
                 });
-                let fields_string = fields_strings.join("\n    | ");
-                let content = format!("{}\nexport type = {}", import_string, fields_string);
+                let fields_string = fields_strings.join("\n    ");
+                let ts_name = e.ts_name.to_string();
+                let content = format!(
+                    "{}\nexport type {} =\n    {}\n",
+                    import_string, ts_name, fields_string
+                );
                 result.push((e.file_name.to_string(), content))
             }
             _ => {}
@@ -179,6 +186,7 @@ impl_builtin!(u8, "number");
 impl_builtin!(u16, "number");
 impl_builtin!(u32, "number");
 impl_builtin!(u64, "number");
+impl_builtin!(usize, "number");
 impl_builtin!(i8, "number");
 impl_builtin!(i32, "number");
 impl_builtin!(i64, "number");
@@ -222,6 +230,28 @@ impl<T: TS + 'static> TS for Option<T> {
 
     fn _is_optional() -> bool {
         true
+    }
+}
+
+impl<K, V> TS for (K, V)
+where
+    K: TS + 'static,
+    V: TS + 'static,
+{
+    fn _register(manager: &mut DescriptorManager) -> usize {
+        let k_dep = K::_register(manager);
+        let v_dep = V::_register(manager);
+        let descriptor = GenericDescriptor {
+            dependencies: vec![k_dep, v_dep],
+            ts_name: Self::_ts_name(),
+            optional: false,
+        };
+        let type_id = TypeId::of::<Self>();
+        manager.registry(type_id, Descriptor::Generics(descriptor))
+    }
+
+    fn _ts_name() -> String {
+        format!("(readonly [{}, {}])", K::_ts_name(), V::_ts_name())
     }
 }
 
@@ -269,8 +299,8 @@ fn get_import_deps_idx(all: &Vec<Descriptor>, idx: usize) -> HashSet<usize> {
 fn get_import_deps(all: &Vec<Descriptor>, idx: usize) -> (String, String) {
     let descriptor = all.get(idx).unwrap();
     match descriptor {
-        Descriptor::Interface(d) => (d.ts_name.to_string(), d.file_name.to_string()),
-        Descriptor::Enum(d) => (d.ts_name.to_string(), d.file_name.to_string()),
+        Descriptor::Interface(d) => (d.ts_name.to_string(), remove_ext(&d.file_name)),
+        Descriptor::Enum(d) => (d.ts_name.to_string(), remove_ext(&d.file_name)),
         _ => unreachable!(),
     }
 }
