@@ -45,7 +45,7 @@ export class Service {
             const r = input_async_result(res) as TransactionEndResult
             const serverSend: ServerSend = {
                 $case: 'actionEffect',
-                actionEffect: {sheets: r.sheetIdx, async_tasks: [], dirtys: []} // todo!()
+                actionEffect: {sheets: r.sheetIdx, asyncTasks: [], dirtys: []} // todo!()
             }
             this.output$.next(serverSend)
         })
@@ -68,7 +68,7 @@ export class Service {
         if (r === ReadFileResult.Ok) {
             return {
                 $case: 'actionEffect',
-                actionEffect: {sheets: [], async_tasks: [], dirtys: []},
+                actionEffect: {sheets: [], asyncTasks: [], dirtys: []},
             }
         }
         throw Error('read file Error!')
@@ -95,7 +95,7 @@ export class Service {
         }
         return {
             $case: 'actionEffect',
-            actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
+            actionEffect: {sheets: [], dirtys: [], asyncTasks:[]}
         }
     }
 
@@ -160,7 +160,7 @@ export class Service {
             console.log('undo failed')
         return {
             $case: 'actionEffect',
-            actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
+            actionEffect: {sheets: [], dirtys: [], asyncTasks:[]}
         }
     }
 
@@ -170,7 +170,7 @@ export class Service {
             console.log('redo failed')
         return {
             $case: 'actionEffect',
-            actionEffect: {sheets: [], dirtys: [], async_tasks:[]}
+            actionEffect: {sheets: [], dirtys: [], asyncTasks:[]}
         }
     }
 

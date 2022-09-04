@@ -1,3 +1,4 @@
+use gents::TS;
 use xmlserde::xml_serde_enum;
 
 xml_serde_enum! {
@@ -14,7 +15,7 @@ pub type StBorderId = u32;
 
 xml_serde_enum! {
     #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, TS)]
-    #[ts(export, export_to = "../../../src/bindings/st_border_style.ts")]
+    #[ts(file_name= "st_border_style.ts")]
     StBorderStyle {
         None => "none",
         Thin => "thin",
@@ -354,7 +355,7 @@ pub type StFontId = u32;
 
 xml_serde_enum! {
     #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, TS)]
-    #[ts(export, export_to = "../../../src/bindings/st_font_scheme.ts")]
+    #[ts(file_name= "st_font_scheme.ts")]
     StFontScheme {
         None => "none",
         Major => "major",
@@ -389,7 +390,7 @@ xml_serde_enum! {
 xml_serde_enum! {
     /// 18.18.37
     #[derive(Debug, PartialEq, Eq, Clone, Hash, serde::Serialize, TS)]
-    #[ts(export, export_to = "../../../src/bindings/st_gradient_type.ts")]
+    #[ts(file_name = "st_gradient_type.ts")]
     StGradientType {
         Linear => "linear",
         Path => "path",
@@ -424,7 +425,7 @@ xml_serde_enum! {
 xml_serde_enum! {
     /// 18.18.40
     #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, TS)]
-    #[ts(export, export_to = "../../../src/bindings/st_horizontal_alignment.ts")]
+    #[ts(file_name = "st_horizontal_alignment.ts")]
     StHorizontalAlignment {
         General => "general",
         Left => "left",
@@ -607,7 +608,7 @@ xml_serde_enum! {
 xml_serde_enum! {
     /// 18.18.55
     #[derive(Debug, PartialEq, Eq, Clone, Hash, serde::Serialize, TS)]
-    #[ts(export, export_to = "../../../src/bindings/st_pattern_type.ts")]
+    #[ts(file_name = "st_pattern_type.ts")]
     StPatternType {
         None => "none",
         Solid => "solid",
@@ -1031,7 +1032,7 @@ xml_serde_enum! {
 xml_serde_enum! {
     /// 18.18.85
     #[derive(Debug, PartialEq, Eq, Clone, Hash, serde::Serialize, TS)]
-    #[ts(export, export_to = "../../../src/bindings/st_underline_values.ts")]
+    #[ts(file_name = "st_underline_values.ts")]
     StUnderlineValues {
         Single => "single",
         Double => "double",
@@ -1054,7 +1055,7 @@ xml_serde_enum! {
 xml_serde_enum! {
     /// 18.18.88
     #[derive(Debug, PartialEq, Eq, Clone, Hash, serde::Serialize, TS)]
-    #[ts(export, export_to = "../../../src/bindings/st_vertical_alignment.ts")]
+    #[ts(file_name = "st_vertical_alignment.ts")]
     StVerticalAlignment {
         Top => "top",
         Center => "center",
@@ -1118,7 +1119,7 @@ pub type StUnsignedIntHex = String;
 xml_serde_enum! {
     /// 18.18.92
     #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, TS)]
-    #[ts(export, export_to = "../../../src/bindings/st_vertical_align_run.ts")]
+    #[ts(file_name = "st_vertical_align_run.ts")]
     StVerticalAlignRun {
         Baseline => "baseline",
         Superscript => "superscript",

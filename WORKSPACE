@@ -32,6 +32,7 @@ crates_repository(
     lockfile = "//:cargo-bazel-lock.json",
     manifests = [
         "//:Cargo.toml",
+        "//:crates/buildtools/Cargo.toml",
         "//:crates/controller/Cargo.toml",
         "//:crates/gents/Cargo.toml",
         "//:crates/workbook/Cargo.toml",

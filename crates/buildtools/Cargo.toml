@@ -1,0 +1,13 @@
+[package]
+name = "buildtools"
+version = "0.1.0"
+edition = "2018"
+authors = ["ImJeremyHe<yiliang.he@qq.com>"]
+
+[dependencies]
+gents = {version = "*", path = "../gents"}
+logisheets_controller = {version = "*", path = "../controller"}
+
+[[bin]]
+name = "generate"
+path = "src/generate.rs"

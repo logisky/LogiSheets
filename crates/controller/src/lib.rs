@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate ts_rs;
 
 mod async_func_manager;
 mod calc_engine;

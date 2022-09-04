@@ -43,18 +43,6 @@ mod tests {
                 assert_eq!(sst.cell_xfs.unwrap().xfs.len(), 90);
                 assert_eq!(sst.num_fmts.unwrap().num_fmts.len(), 6);
                 assert_eq!(sst.fonts.unwrap().fonts.len(), 29);
-                // Used the site and the code below to check the diff manually.
-                // Basically pass.
-                // https://www.diffchecker.com/diff
-                // use crate::xml_serialize_with_decl;
-                // let actual = in_one_line(xml);
-                // let r = xml_serialize_with_decl(b"styleSheet", sst);
-                // use std::io::Write;
-                // let mut file1 = std::fs::File::create("data1.txt").expect("create failed");
-                // file1.write_all(actual.as_bytes()).expect("write failed");
-                // let mut file2 = std::fs::File::create("data2.txt").expect("create failed");
-                // file2.write_all(r.as_bytes()).expect("write failed");
-                // assert_eq!(actual, r);
             }
             Err(e) => panic!("{:?}", e),
         }

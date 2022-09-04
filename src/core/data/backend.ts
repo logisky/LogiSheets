@@ -21,7 +21,7 @@ export class Backend {
         return this._render$
     }
 
-    get sheetUpdated$(): Observable<number[]> {
+    get sheetUpdated$(): Observable<readonly number[]> {
         return this._sheetUpdated$
     }
     send$ = new ReplaySubject<Blob>(5)
@@ -45,7 +45,7 @@ export class Backend {
     }
     private _render$ = new Subject<void>()
     // Sever tolds the client that these sheets are dirty.
-    private _sheetUpdated$ = new Subject<number[]>()
+    private _sheetUpdated$ = new Subject<readonly number[]>()
     private _wasmSvc = new StandAloneService([])
     private _handleServerSend(serverSend: ServerSend) {
         if (serverSend.$case === 'displayResponse') {

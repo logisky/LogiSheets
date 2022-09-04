@@ -6,10 +6,10 @@ In this project, we are going to design the best spreadsheet application
 and explore the best practice about Rust and Typescript application.
 
 ## Concept
+
 `LogiSheets` is a Rust library, a web component or maybe in the future, a co-work supporting product.
 We do not attemp to use more names to identify these concepts.
 They all are `LogiSheets`.
-
 
 ## Code Management
 
