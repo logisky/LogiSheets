@@ -22,13 +22,13 @@ export class StandardValue {
     static from(value: Value) {
         const v = new StandardValue()
         if (hasOwnProperty(value, 'str'))
-            v.cellValueOneof = {$case: 'str', str: value.str}
+            v.cellValueOneof = {$case: 'str', str: value.str as string}
         else if (hasOwnProperty(value, 'bool'))
-            v.cellValueOneof = {$case: 'bool', bool: value.bool}
+            v.cellValueOneof = {$case: 'bool', bool: value.bool as boolean}
         else if (hasOwnProperty(value, 'number'))
-            v.cellValueOneof = {$case: 'number', number: value.number}
+            v.cellValueOneof = {$case: 'number', number: value.number as number}
         else if (hasOwnProperty(value, 'error'))
-            v.cellValueOneof = {$case: 'error', error: value.error}
+            v.cellValueOneof = {$case: 'error', error: value.error as string}
         return v
     }
 }

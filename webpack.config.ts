@@ -1,7 +1,8 @@
 import * as path from 'path'
-import { Configuration, DefinePlugin, ProvidePlugin } from 'webpack'
+import {Configuration, DefinePlugin, ProvidePlugin} from 'webpack'
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
+import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin'
 import 'webpack-dev-server'
 module.exports = (env: NodeJS.ProcessEnv): Configuration => {
     const mode = env['dev'] ? 'development' : 'production'
@@ -9,7 +10,7 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
     const standAlone = !!env['stand-alone']
     return {
         entry: './src/index.tsx',
-        mode,
+        mode: 'development',
         output: {
             filename: 'bundle.js',
             path: path.resolve(__dirname) + '/dist',
@@ -40,14 +41,17 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             extensions: ['.ts', '.tsx', '.js', '.json'],
             plugins: [
                 new TsconfigPathsPlugin({
-                    configFile: './tsconfig.json'
+                    configFile: './tsconfig.json',
                 }),
             ],
         },
         plugins: [
+            new ForkTsCheckerWebpackPlugin({
+                typescript: {configFile: './tsconfig.json'},
+            }),
             new HtmlWebpackPlugin({
                 publicPath: path.join(__dirname, 'dist'),
-                template: path.resolve(__dirname, '/public/index.html')
+                template: path.resolve(__dirname, '/public/index.html'),
             }),
             new DefinePlugin({
                 STAND_ALONE: standAlone,
@@ -75,8 +79,8 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
                     loader: 'esbuild-loader',
                     options: {
                         loader: 'tsx',
-                        target: 'es2015'
-                    }
+                        target: 'es2015',
+                    },
                 },
                 {
                     test: /\.css$/i,
@@ -100,7 +104,7 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
                         'sass-loader',
                     ],
                 },
-            ]
+            ],
         },
     }
 }

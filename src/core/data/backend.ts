@@ -1,5 +1,16 @@
 import {Observable, ReplaySubject, Subject} from 'rxjs'
-import {DisplayPatch} from '@/bindings'
+import {
+    ColInfo,
+    DisplayPatch,
+    SheetBlocks,
+    SheetColInfo,
+    SheetComments,
+    SheetMergeCells,
+    SheetNames,
+    SheetRowInfo,
+    SheetStyles,
+    SheetValues,
+} from '@/bindings'
 import {ClientSend, ServerSend} from '@/message'
 import {Payload, PayloadsTransaction, adaptTransaction} from '@/api'
 import {hasOwnProperty} from '@/core'
@@ -64,41 +75,50 @@ export class Backend {
     private _handleDisplayArea(patches: DisplayPatch) {
         const displayArea = patches
         if (hasOwnProperty(displayArea, 'values')) {
-            const sheet = displayArea.values.sheetIdx
-            displayArea.values.values.forEach((v) => {
+            const values = displayArea.values as SheetValues
+            const sheet = values.sheetIdx
+            values.values.forEach((v) => {
                 const {row, col, formula, value} = v
                 this.sheetSvc.setCell(row, col, sheet, {value, formula})
             })
         } else if (hasOwnProperty(displayArea, 'styles')) {
-            const sheet = displayArea.styles.sheetIdx
-            displayArea.styles.styles.forEach((s) => {
+            const styles = displayArea.styles as SheetStyles
+            const sheet = styles.sheetIdx
+            styles.styles.forEach((s) => {
                 const {row, col, style} = s
                 if (style) this.sheetSvc.setCell(row, col, sheet, {style})
             })
         } else if (hasOwnProperty(displayArea, 'rowInfo')) {
-            const sheet = displayArea.rowInfo.sheetIdx
-            displayArea.rowInfo.info.forEach((i) => {
+            const rowInfo = displayArea.rowInfo as SheetRowInfo
+            const sheet = rowInfo.sheetIdx
+            rowInfo.info.forEach((i) => {
                 this.sheetSvc.setRowInfo(i.idx, i, sheet)
             })
         } else if (hasOwnProperty(displayArea, 'colInfo')) {
-            const sheet = displayArea.colInfo.sheetIdx
-            displayArea.colInfo.info.forEach((i) => {
+            const colInfo = displayArea.colInfo as SheetColInfo
+            const sheet = colInfo.sheetIdx
+            colInfo.info.forEach((i) => {
                 this.sheetSvc.setColInfo(i.idx, i, sheet)
             })
-        } else if (hasOwnProperty(displayArea, 'sheetNames'))
-            displayArea.sheetNames.names.forEach((name, i) => {
+        } else if (hasOwnProperty(displayArea, 'sheetNames')) {
+            const sheetNames = displayArea.sheetNames as SheetNames
+            sheetNames.names.forEach((name, i) => {
                 this.sheetSvc.setSheet(i, {name})
             })
-        else if (hasOwnProperty(displayArea, 'mergeCells')) {
-            const merges = displayArea.mergeCells.mergeCells
-            this.sheetSvc.setSheet(displayArea.mergeCells.sheetIdx, {merges})
+        } else if (hasOwnProperty(displayArea, 'mergeCells')) {
+            const merges = displayArea.mergeCells as SheetMergeCells
+            const cells = merges.mergeCells
+            this.sheetSvc.setSheet(merges.sheetIdx, {
+                merges: cells,
+            })
         } else if (hasOwnProperty(displayArea, 'comments')) {
-            const sheet = displayArea.comments.sheetIdx
+            const comments = displayArea.comments as SheetComments
+            const sheet = comments.sheetIdx
             this.sheetSvc.setSheet(sheet, {
-                comments: displayArea.comments.comments,
+                comments: comments.comments,
             })
         } else if (hasOwnProperty(displayArea, 'blocks')) {
-            const {sheetIdx, blocks} = displayArea.blocks
+            const {sheetIdx, blocks} = displayArea.blocks as SheetBlocks
             this.sheetSvc.setBlocks(sheetIdx, blocks)
         }
     }

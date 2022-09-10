@@ -22,14 +22,14 @@ export class StandardColor {
         color.#blue = parseInt(rgb.slice(4, 6), 16)
         return color
     }
-    static fromCtColor(color: Color | null) {
-        if (color === null) {
+    static fromCtColor(color: Color | undefined) {
+        if (color === undefined) {
             return new StandardColor()
         }
         const result = new StandardColor()
-        result.#red = color.red ?? undefined
-        result.#green = color.green ?? undefined
-        result.#blue = color.blue ?? undefined
+        result.#red = color.red
+        result.#green = color.green
+        result.#blue = color.blue
         if (color.alpha) result.#alpha = color.alpha
         return result
     }

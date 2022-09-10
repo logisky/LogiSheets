@@ -32,6 +32,7 @@
         "react/react-in-jsx-scope": "off",
         "no-console": "error",
         "no-alert": "error",
-        "no-debugger": "error"
+        "no-debugger": "error",
+        "@typescript-eslint/no-unused-vars": "off" 
     }
 }
