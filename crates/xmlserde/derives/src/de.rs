@@ -280,8 +280,14 @@ fn get_fields_init(fields: &FieldsSummary) -> proc_macro2::TokenStream {
     let untag_init = fields.untags.iter().map(|f| {
         let ident = f.original.ident.as_ref().unwrap();
         let ty = &f.original.ty;
-        quote! {
-            let mut #ident = Option::<#ty>::None;
+        match f.generic {
+            Generic::Vec(_) => unreachable!(),
+            Generic::Opt(t) => quote! {
+                let mut #ident = Option::<#t>::None;
+            },
+            Generic::None => quote! {
+                let mut #ident = Option::<#ty>::None;
+            },
         }
     });
     quote! {
@@ -438,10 +444,18 @@ fn untags_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
     fields.iter().for_each(|f| {
         let ident = f.original.ident.as_ref().unwrap();
         let ty = &f.original.ty;
-        let branch = quote! {
-            _t if #ty::__get_children_tags().contains(&_t) => {
-                #ident = Some(#ty::deserialize(_t, reader, s.attributes(), is_empty));
-            }
+        let branch = match f.generic {
+            Generic::Vec(_) => unreachable!(),
+            Generic::Opt(ty) => quote! {
+                _ty if #ty::__get_children_tags().contains(&_ty) => {
+                    #ident = Some(#ty::deserialize(_ty, reader, s.attributes(), is_empty))
+                }
+            },
+            Generic::None => quote! {
+                _t if #ty::__get_children_tags().contains(&_t) => {
+                    #ident = Some(#ty::deserialize(_t, reader, s.attributes(), is_empty));
+                }
+            },
         };
         branches.push(branch);
     });
