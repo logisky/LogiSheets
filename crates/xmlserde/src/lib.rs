@@ -666,6 +666,43 @@ mod tests {
         let ser = xml_serialize(p);
         assert_eq!(xml, &ser);
     }
+
+    #[test]
+    fn option_untag_serde_test() {
+        #[derive(Debug, XmlSerialize, XmlDeserialize)]
+        #[xmlserde(root = b"Root")]
+        pub struct Root {
+            #[xmlserde(ty = "untag")]
+            pub dummy: Option<EnumA>,
+        }
+        #[derive(Debug, XmlSerialize, XmlDeserialize)]
+        pub enum EnumA {
+            #[xmlserde(name = b"a")]
+            A1(Astruct),
+        }
+        #[derive(Debug, XmlSerialize, XmlDeserialize)]
+        pub struct Astruct {
+            #[xmlserde(name = b"aAttr", ty = "attr")]
+            pub a_attr1: u32,
+        }
+        #[derive(Debug, XmlSerialize, XmlDeserialize)]
+        pub struct Bstruct {
+            #[xmlserde(name = b"bAttr", ty = "attr")]
+            pub b_attr1: u32,
+        }
+
+        let xml = r#"<Root/>"#;
+        let p = xml_deserialize_from_str::<Root>(&xml).unwrap();
+        assert!(matches!(p.dummy, None));
+        let xml = r#"<Root><a aAttr="3"/></Root>"#;
+        let p = xml_deserialize_from_str::<Root>(&xml).unwrap();
+        match p.dummy {
+            Some(EnumA::A1(ref a)) => assert_eq!(a.a_attr1, 3),
+            None => panic!(),
+        }
+        let ser = xml_serialize(p);
+        assert_eq!(xml, &ser);
+    }
 }
 
 pub use logisheets_derives::{XmlDeserialize, XmlSerialize};

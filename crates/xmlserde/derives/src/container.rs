@@ -211,10 +211,15 @@ impl<'a> StructField<'a> {
     }
 
     pub fn is_required(&self) -> bool {
-        (self.default.is_none()
+        if matches!(self.ty, EleType::Untag) {
+            if matches!(self.generic, Generic::Opt(_)) {
+                return false;
+            }
+            return true;
+        }
+        self.default.is_none()
             && matches!(self.generic, Generic::None)
-            && !matches!(self.ty, EleType::SelfClosedChild))
-            || matches!(self.ty, EleType::Untag)
+            && !matches!(self.ty, EleType::SelfClosedChild)
     }
 }
 
