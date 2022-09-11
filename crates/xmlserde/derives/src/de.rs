@@ -281,7 +281,9 @@ fn get_fields_init(fields: &FieldsSummary) -> proc_macro2::TokenStream {
         let ident = f.original.ident.as_ref().unwrap();
         let ty = &f.original.ty;
         match f.generic {
-            Generic::Vec(_) => unreachable!(),
+            Generic::Vec(t) => quote! {
+                let mut #ident = Vec::<#t>::new();
+            },
             Generic::Opt(t) => quote! {
                 let mut #ident = Option::<#t>::None;
             },
@@ -445,10 +447,14 @@ fn untags_match_branch(fields: Vec<StructField>) -> proc_macro2::TokenStream {
         let ident = f.original.ident.as_ref().unwrap();
         let ty = &f.original.ty;
         let branch = match f.generic {
-            Generic::Vec(_) => unreachable!(),
+            Generic::Vec(ty) => quote! {
+                _ty if #ty::__get_children_tags().contains(&_ty) => {
+                    #ident.push(#ty::deserialize(_ty, reader, s.attributes(), is_empty));
+                }
+            },
             Generic::Opt(ty) => quote! {
                 _ty if #ty::__get_children_tags().contains(&_ty) => {
-                    #ident = Some(#ty::deserialize(_ty, reader, s.attributes(), is_empty))
+                    #ident = Some(#ty::deserialize(_ty, reader, s.attributes(), is_empty));
                 }
             },
             Generic::None => quote! {

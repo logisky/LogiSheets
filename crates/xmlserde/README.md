@@ -50,8 +50,8 @@ fn deserialize_person() {
 
 You are supposed to declare that where the deserializer is to look for the values.
 
-The common available *type*s are **attr**, **text** and **child**. In the above example, we told program that diving into the tag named _"person"_ (xml*deserialize_from_str), and looking an attribute
-whose key is *"age"* and that the content of the text element is the value of the field **name**.
+The common available *type*s are **attr**, **text** and **child**. In the above example, we told program that diving into the tag named *"person"* (xml*deserialize_from_str), and looking an attribute
+whose key is*"age"* and that the content of the text element is the value of the field **name**.
 
 You should tell the program that which element name is the entry for serde by
 doing something like `#[xmlserde(root = b"person")]`.
@@ -91,9 +91,9 @@ fn deserialize_person() {
 fn default_lefty() -> bool { false }
 ```
 
-In the example above, it is declared that the value of **name** is a child whose tag is _"name"_. So the program would diving into `<name>` element and continue deserializing recursively.
+In the example above, it is declared that the value of **name** is a child whose tag is *"name"*. So the program would diving into `<name>` element and continue deserializing recursively.
 
-Besides, we declare that if deserializer does not find the value of _lefty_
+Besides, we declare that if deserializer does not find the value of *lefty*
 and its default value of **lefty** is false.
 
 #### Vec
@@ -116,15 +116,15 @@ pub struct Person {
 }
 ```
 
-When the deserializer find the _pet_ element, and it will know that this is an element of **pets**. You can even assign the capacity of the `Vec` with following:
+When the deserializer find the *pet* element, and it will know that this is an element of **pets**. You can even assign the capacity of the `Vec` with following:
 
-```
+```xml
 #[xmlserde(name = b"pet", ty="child", vec_size=3)]
 ```
 
 If the capacity is from an **attr**, you can:
 
-```
+```xml
 #[xmlserde(name = b"pet", ty="child", vec_size="pet_count")]
 ```
 
@@ -159,9 +159,11 @@ pub struct PersonB {
 ```
 
 **PersonA** can be used to deserialize the xml struct like below:
+
 ```xml
 <personA><e><testA/></e></personA>
 ```
+
 or
 
 ```xml
@@ -176,14 +178,27 @@ And **PersonB** can be used to deserialize the xml which looks like:
 
 or
 
-
 ```xml
 <personB><testB/></personB>
 ```
 
-Notice: **untag** is the other available type. It is only used in this situation.
+You can use **untag** to **Option\<T\>** or **Vec\<T\>** where **T** is an **Enum**.
 
-You are not supposed to use **untag** to serde a struct.
+It means that the example below is legal:
+
+```rust
+#[derive(XmlSerialize, XmlDeserialize)]
+#[xmlserde(root = b"personB")]
+pub struct PersonB {
+    #[xmlserde(ty = "untag")]
+    pub dummy1: Enum1,
+    #[xmlserde(ty = "untag")]
+    pub dummy2: Option<Enum2>,
+    #[xmlserde(ty = "untag")]
+    pub dummy3: Vec<Enum3>,
+    // Other fields
+}
+```
 
 #### Unparsed
 
@@ -207,6 +222,7 @@ But there are some features you should pay attention to.
 If it is a **struct**, it should be implemented `Eq` trait.
 - If a struct has no **child** or **text**, the result of serializing will
   look like this:
+
   ```xml
   <tag attr1="value1"/>
   ```

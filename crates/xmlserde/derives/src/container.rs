@@ -98,7 +98,7 @@ impl<'a> Container<'a> {
                     root,
                 }
             }
-            syn::Data::Union(_) => panic!("Only support struct type, union is found"),
+            syn::Data::Union(_) => panic!("Only support struct and enum type, union is found"),
         }
     }
 }
@@ -212,10 +212,11 @@ impl<'a> StructField<'a> {
 
     pub fn is_required(&self) -> bool {
         if matches!(self.ty, EleType::Untag) {
-            if matches!(self.generic, Generic::Opt(_)) {
-                return false;
-            }
-            return true;
+            return match self.generic {
+                Generic::Vec(_) => false,
+                Generic::Opt(_) => false,
+                Generic::None => true,
+            };
         }
         self.default.is_none()
             && matches!(self.generic, Generic::None)
