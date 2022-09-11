@@ -5,7 +5,7 @@
 `xmlserde` is a tool for serializing or deserializing xml struct.
 It is designed for [LogiSheets](https://github.com/proclml/LogiSheets), which is a spreadsheets application working on the browser.
 
-You can check the usage in the `workbook` directory or [here](https://github.com/proclml/LogiSheets/tree/master/crates/workbook).
+You can check the detail of usage in the `workbook` directory or [here](https://github.com/proclml/LogiSheets/tree/master/crates/workbook).
 
 ## How to use `xmlserde`
 
@@ -231,3 +231,19 @@ If it is a **struct**, it should be implemented `Eq` trait.
 
 `xmlserde` provides the trait `XmlSerialize` and `XmlDeserialize`, you
 can define a struct's behavior by implementing them.
+
+### Enum for string type
+
+`xmlserde` also provides a macro called `xml_serde_enum` to serde `enum` for string type.
+
+`xml_serde_enum` defines an `enum` and specifies the behavior of serialization and deserialization.
+
+```rust
+xml_serde_enum!{
+    #[derive(Debug)]
+    Gender {
+        Male => "male",
+        Female => "female,
+    }
+}
+```
