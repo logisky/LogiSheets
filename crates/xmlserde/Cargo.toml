@@ -2,10 +2,12 @@
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 edition = "2018"
 name = "xmlserde"
-version = "0.4.0"
+version = "0.4.1"
 license = "MIT"
-description = "read and write .xlsx files"
-repository = "https://github.com/proclml/LogiSheets/crates/xmlserde"
+description = "useful tool for serializing and deserializing xml"
+repository = "https://github.com/proclml/LogiSheets/tree/master/crates/xmlserde"
+keywords = ["xml", "serde"]
+readme = "README.md"
 
 [dependencies]
 convert_case = "0.4.0"

@@ -15,7 +15,7 @@ thiserror = "1.0.24"
 zip = {version = "0.6.0", default-features = false, features = ["deflate"]}
 
 logisheets_workbook_derives = {version = "0.3.0", path = "./derives"}
-xmlserde = {version = "0.4.0", path = "../xmlserde"}
+xmlserde = {version = "0.4.1", path = "../xmlserde"}
 gents = {version = "0.1.0", path = "../gents"}
 
 [dev-dependencies]

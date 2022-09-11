@@ -272,6 +272,8 @@ impl_xml_value_for_num!(u8);
 impl_xml_value_for_num!(u16);
 impl_xml_value_for_num!(u32);
 impl_xml_value_for_num!(f64);
+impl_xml_value_for_num!(i8);
+impl_xml_value_for_num!(i16);
 impl_xml_value_for_num!(i32);
 impl_xml_value_for_num!(i64);
 
