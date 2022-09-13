@@ -1,6 +1,7 @@
 pub mod bits;
 pub mod combine;
 pub mod complex;
+pub mod cumipmt;
 pub mod effect;
 pub mod fact;
 pub mod fv;
@@ -11,3 +12,4 @@ mod newton_iter;
 pub mod npv;
 pub mod pmt;
 pub mod pv;
+pub mod sln;

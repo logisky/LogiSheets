@@ -10,6 +10,7 @@ mod concatenate;
 mod condition;
 mod count;
 mod countif;
+mod cumipmt;
 mod datetime;
 mod delta;
 mod distribution;
@@ -39,6 +40,7 @@ mod rept;
 mod row;
 mod scalar_number;
 mod scalar_text;
+mod sln;
 mod sum;
 mod switch;
 mod utils;
@@ -85,6 +87,7 @@ where
         "COUNT" => count::calc(args, fetcher),
         "COUNTIF" => countif::calc(args, fetcher),
         "CSC" => scalar_number::calc_csc(args, fetcher),
+        "CUMIPMT" => cumipmt::cumipmt(args, fetcher),
         "DATE" => datetime::date::calc(args, fetcher),
         "DAY" => datetime::ymd::calc_day(args, fetcher),
         "DAYS" => datetime::days::calc(args, fetcher),
@@ -94,7 +97,7 @@ where
         "DEGREES" => scalar_number::calc_degrees(args, fetcher),
         "DELTA" => delta::calc(args, fetcher),
         "EDATE" => datetime::edate::calc(args, fetcher),
-        "EFFECT" => effect::calc(args, fetcher),
+        "EFFECT" => effect::effect(args, fetcher),
         "EOMONTH" => datetime::eomonth::calc(args, fetcher),
         "EVEN" => scalar_number::calc_even(args, fetcher),
         "EXACT" => exact::calc(args, fetcher),
@@ -152,6 +155,7 @@ where
         "MINUTE" => datetime::hms::calc_minute(args, fetcher),
         "MONTH" => datetime::ymd::calc_month(args, fetcher),
         "NA" => na::calc(args),
+        "NOMINAL" => effect::nominal(args, fetcher),
         "NORM.DIST" => distribution::normdist::calc_normdist(args, fetcher),
         "NORM.S.DIST" => scalar_number::calc_normsdist(args, fetcher),
         "NORM.S.INV" => distribution::norminv::calc_normsinv(args, fetcher),
@@ -182,6 +186,7 @@ where
         "SECOND" => datetime::hms::calc_second(args, fetcher),
         "SIGN" => scalar_number::calc_sign(args, fetcher),
         "SIN" => scalar_number::calc_sin(args, fetcher),
+        "SLN" => sln::sln(args, fetcher),
         "SQRT" => scalar_number::calc_sqrt(args, fetcher),
         "SQRTPI" => scalar_number::calc_sqrtpi(args, fetcher),
         "STDEV" => distribution::statistics::calc_stdev(args, fetcher),
