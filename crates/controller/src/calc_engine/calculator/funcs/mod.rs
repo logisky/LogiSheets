@@ -30,6 +30,7 @@ mod leftright;
 mod len;
 mod na;
 mod npv;
+mod pduration;
 mod permutation;
 mod pi;
 mod pmt;
@@ -169,6 +170,7 @@ where
         "OCT2DEC" => bits::hob2dec::calc_oct2dec(args, fetcher),
         "OCT2HEX" => bits::hob2hob::calc_oct2hex(args, fetcher),
         "ODD" => scalar_number::calc_odd(args, fetcher),
+        "PDURATION" => pduration::pduration(args, fetcher),
         "PERMUT" => permutation::calc_permut(args, fetcher),
         "PI" => pi::calc(args),
         "PMT" => pmt::pmt(args, fetcher),
@@ -183,6 +185,7 @@ where
         "REPT" => rept::calc(args, fetcher),
         "RIGHT" => leftright::calc_right(args, fetcher),
         "ROW" => row::calc(args, fetcher),
+        "RRI" => pduration::rri(args, fetcher),
         "SECOND" => datetime::hms::calc_second(args, fetcher),
         "SIGN" => scalar_number::calc_sign(args, fetcher),
         "SIN" => scalar_number::calc_sin(args, fetcher),
