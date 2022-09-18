@@ -18,6 +18,7 @@ edition = "2018"
 members = [
     "crates/controller",
     "crates/gents",
+    "crates/logiscript",
     "crates/workbook",
     "crates/xmldiff",
     "crates/xmlserde",

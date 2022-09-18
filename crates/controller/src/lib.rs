@@ -21,12 +21,12 @@ mod vertex_manager;
 mod workbook;
 
 use connectors::NameFetcher;
-use controller::style::StyleConverter;
 pub use controller::{
     display::{Comment, MergeCell, Value},
     style::{Border, BorderPr, Fill, Font, Style},
     Controller,
 };
+use controller::{edit_action::EditAction, style::StyleConverter};
 use logisheets_parser::unparse;
 pub use logisheets_workbook::prelude::SerdeErr;
 
@@ -53,10 +53,22 @@ pub enum Err {
 }
 
 pub struct Workbook {
-    controller: Controller,
+    pub controller: Controller,
+}
+
+impl Default for Workbook {
+    fn default() -> Self {
+        Self {
+            controller: Default::default(),
+        }
+    }
 }
 
 impl Workbook {
+    pub fn handle_action(&mut self, action: EditAction) {
+        self.controller.handle_action(action);
+    }
+
     pub fn from_file(buf: &[u8], book_name: String) -> Result<Self, Err> {
         match Controller::from_file(book_name, buf) {
             Ok(controller) => Ok(Workbook { controller }),
@@ -71,6 +83,19 @@ impl Workbook {
                 controller: &mut self.controller,
             }),
             None => Err(Err::NotFound),
+        }
+    }
+
+    pub fn get_sheet_idx_by_name(&mut self, name: &str) -> Result<usize, Err> {
+        let sheet_id = self.controller.get_sheet_id_by_name(name);
+        if let Some(id) = sheet_id {
+            if let Some(idx) = self.controller.status.sheet_pos_manager.get_sheet_idx(id) {
+                Ok(idx)
+            } else {
+                Err(Err::NotFound)
+            }
+        } else {
+            Err(Err::NotFound)
         }
     }
 

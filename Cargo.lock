@@ -422,6 +422,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "logiscript"
+version = "0.1.0"
+dependencies = [
+ "logisheets_controller",
+ "pest",
+ "pest_derive",
+]
+
+[[package]]
 name = "logisheets"
 version = "0.3.0"
 dependencies = [

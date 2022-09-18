@@ -35,6 +35,7 @@ crates_repository(
         "//:crates/buildtools/Cargo.toml",
         "//:crates/controller/Cargo.toml",
         "//:crates/gents/Cargo.toml",
+        "//:crates/logiscript/Cargo.toml",
         "//:crates/workbook/Cargo.toml",
         "//:crates/xmldiff/Cargo.toml",
         "//:crates/xmlserde/Cargo.toml",
