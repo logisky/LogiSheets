@@ -3,7 +3,7 @@ use logisheets_base::{BlockId, CellValue, TextId};
 use super::style_payload::{StyleUpdate, StyleUpdateType};
 use super::{
     CellInput, ColShift, CreateBlock, EditPayload, LineShiftInBlock, MoveBlock, RowShift,
-    SetColWidth, SetRowHeight,
+    SetColWidth, SetRowHeight, SheetShift,
 };
 use crate::container::DataContainer;
 use crate::id_manager::TextIdManager;
@@ -15,7 +15,7 @@ use crate::payloads::sheet_process::{
     Direction, FormulaPayload, LineInfoUpdate, LinePayload, LineShift, MoveBlock as EditMoveBlock,
     RowInfoUpdate, SheetPayload, SheetProcess, ShiftPayload, ShiftType,
 };
-use crate::payloads::sheet_shift::SheetRenamePayload;
+use crate::payloads::sheet_shift::{SheetRenamePayload, SheetShiftPayload, SheetShiftType};
 use crate::payloads::Process;
 use crate::workbook::sheet_pos_manager::SheetPosManager;
 
@@ -49,6 +49,7 @@ impl<'a> Converter<'a> {
                 EditPayload::SetColWidth(scw) => self.convert_set_col_width(scw),
                 EditPayload::SetRowHeight(srh) => self.convert_set_row_height(srh),
                 EditPayload::SetVisible(_) => todo!(),
+                EditPayload::SheetShift(ss) => self.convert_sheet_shift(ss),
             };
             match proc {
                 Some(p) => {
@@ -58,6 +59,18 @@ impl<'a> Converter<'a> {
             }
         });
         res
+    }
+
+    fn convert_sheet_shift(&mut self, ss: SheetShift) -> Option<Process> {
+        let payload = SheetShiftPayload {
+            idx: ss.idx,
+            ty: if ss.insert {
+                SheetShiftType::Insert
+            } else {
+                SheetShiftType::Insert
+            },
+        };
+        Some(Process::SheetShift(payload))
     }
 
     fn convert_set_row_height(&mut self, srh: SetRowHeight) -> Option<Process> {

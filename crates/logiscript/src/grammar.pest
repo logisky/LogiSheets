@@ -1,0 +1,30 @@
+start = _{SOI ~ statement ~ EOI}
+
+ws = _{" "}
+
+row = {ASCII_DIGIT+}
+col = {LETTER+}
+
+float = {ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)?}
+
+position = {col ~ row}
+
+content = {not_space_or_tab ~ ANY*}
+
+not_space_or_tab = _{
+    !(" "| "\t") ~ ANY
+}
+
+input_op = {"INPUT" ~ ws+ ~ position ~ ws+ ~ content}
+switch_op = {"SWITCH"~ ws+ ~ content}
+checknum_op = {"CHECKNUM"~ ws+ ~ position ~ ws+ ~ float}
+checkstr_op = {"CHECKSTR" ~ ws+ ~ position ~ ws+ ~ content}
+checkerr_op = {"CHECKERR" ~ ws+ ~ position ~ ws+ ~ content}
+
+statement = _{
+    input_op
+    | switch_op
+    | checkerr_op
+    | checknum_op
+    | checkstr_op
+}

@@ -45,6 +45,14 @@ pub enum EditPayload {
     StyleUpdate(StyleUpdate),
     SheetRename(SheetRename),
     SetVisible(SetVisible),
+    SheetShift(SheetShift),
+}
+
+#[derive(Debug, Serialize, TS)]
+#[ts(file_name = "sheet_shift.tx")]
+pub struct SheetShift {
+    pub idx: usize,
+    pub insert: bool,
 }
 
 #[derive(Debug, Serialize, TS)]
