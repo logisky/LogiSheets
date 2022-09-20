@@ -1,4 +1,7 @@
 #[cfg(test)]
+mod funcs;
+
+#[cfg(test)]
 mod test_builtin_style {
     #[test]
     fn test_builtin1() {

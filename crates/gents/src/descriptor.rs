@@ -45,15 +45,20 @@ impl DescriptorManager {
                         prev.extend(deps);
                         prev
                     });
-                let import_string =
-                    import_deps
-                        .into_iter()
-                        .fold(String::from(""), |mut prev, idx| {
-                            let (ts_name, file_name) = get_import_deps(&descriptors, idx);
-                            let s = format!("import {{{}}} from './{}'\n", ts_name, file_name);
-                            prev.push_str(&s);
-                            prev
-                        });
+                let import_string = {
+                    let mut imports = import_deps.into_iter().fold(vec![], |mut prev, idx| {
+                        let (ts_name, file_name) = get_import_deps(&descriptors, idx);
+                        let s = format!("import {{{}}} from './{}'", ts_name, file_name);
+                        prev.push(s);
+                        prev
+                    });
+                    imports.sort();
+                    let mut result = imports.join("\n");
+                    if !imports.is_empty() {
+                        result.push_str("\n");
+                    }
+                    result
+                };
                 let fields_strings = d.fields.iter().fold(Vec::<String>::new(), |mut prev, fd| {
                     let optional = if fd.optional {
                         String::from("?")
@@ -84,15 +89,20 @@ impl DescriptorManager {
                         prev.extend(deps);
                         prev
                     });
-                let import_string =
-                    import_deps
-                        .into_iter()
-                        .fold(String::from(""), |mut prev, idx| {
-                            let (ts_name, file_name) = get_import_deps(&descriptors, idx);
-                            let s = format!("import {{{}}} from './{}'\n", ts_name, file_name);
-                            prev.push_str(&s);
-                            prev
-                        });
+                let import_string = {
+                    let mut imports = import_deps.into_iter().fold(vec![], |mut prev, idx| {
+                        let (ts_name, file_name) = get_import_deps(&descriptors, idx);
+                        let s = format!("import {{{}}} from './{}'", ts_name, file_name);
+                        prev.push(s);
+                        prev
+                    });
+                    imports.sort();
+                    let mut result = imports.join("\n");
+                    if !imports.is_empty() {
+                        result.push_str("\n");
+                    }
+                    result
+                };
                 let fields_strings = e.fields.iter().fold(Vec::<String>::new(), |mut prev, fd| {
                     let ident = fd.ident.to_string();
                     let ty = fd.ts_ty.to_string();
