@@ -3,6 +3,6 @@
 export interface NormalCellId {
     row: number
     col: number
-    followRow?: number
-    followCol?: number
+    followRow: number | null
+    followCol: number | null
 }

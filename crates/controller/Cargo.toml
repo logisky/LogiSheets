@@ -21,7 +21,7 @@ statrs = "0.15.0"
 unicode-segmentation = "1.8.0"
 colorsys = "0.6.5"
 
-gents = {version = "0.1.0", path = "../gents"}
+gents = {version = "0.2.0", path = "../gents"}
 logisheets_base = {version = "0.3.0", path = "./base"}
 logisheets_lexer = {version = "0.3.0", path = "./lexer"}
 logisheets_parser = {version = "0.3.0", path = "./parser"}

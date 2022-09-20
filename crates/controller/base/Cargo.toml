@@ -12,5 +12,5 @@ futures = "0.3.19"
 im = "15.0.0"
 serde = {version = "1.0.125", features = ["derive"]}
 
-gents = {version = "0.1.0", path = "../../gents"}
+gents = {version = "0.2.0", path = "../../gents"}
 logisheets_workbook = {version = "0.3.0", path = "../../workbook"}

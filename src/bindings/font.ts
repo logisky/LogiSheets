@@ -9,17 +9,17 @@ import {CtVerticalAlignFontProperty} from './vertical_align_font_property'
 export interface Font {
     bold: boolean
     italic: boolean
-    underline?: CtUnderlineProperty
-    color?: Color
-    sz?: number
-    name?: CtFontName
-    charset?: number
-    family?: CtFontFamily
+    underline: CtUnderlineProperty | null
+    color: Color | null
+    sz: number | null
+    name: CtFontName | null
+    charset: number | null
+    family: CtFontFamily | null
     strike: boolean
     outline: boolean
     shadow: boolean
     condense: boolean
     extend: boolean
-    vertAlign?: CtVerticalAlignFontProperty
-    scheme?: CtFontScheme
+    vertAlign: CtVerticalAlignFontProperty | null
+    scheme: CtFontScheme | null
 }
