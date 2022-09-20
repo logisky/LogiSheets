@@ -16,7 +16,7 @@ zip = {version = "0.6.0", default-features = false, features = ["deflate"]}
 
 logisheets_workbook_derives = {version = "0.3.0", path = "./derives"}
 xmlserde = {version = "0.4.1", path = "../xmlserde"}
-gents = {version = "0.1.0", path = "../gents"}
+gents = {version = "0.2.0", path = "../gents"}
 
 [dev-dependencies]
 xmldiff = {version = "0.3.0", path = "../xmldiff"}

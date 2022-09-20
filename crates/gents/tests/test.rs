@@ -69,7 +69,7 @@ export interface Group {
     name: string
     capacity: number
     members: readonly Person[]
-    leader?: Person
+    leader: Person | null
 }
 "#
         );

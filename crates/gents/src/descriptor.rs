@@ -61,13 +61,13 @@ impl DescriptorManager {
                 };
                 let fields_strings = d.fields.iter().fold(Vec::<String>::new(), |mut prev, fd| {
                     let optional = if fd.optional {
-                        String::from("?")
+                        String::from(" | null")
                     } else {
                         String::from("")
                     };
                     let ident = fd.ident.to_string();
                     let ty = fd.ts_ty.to_string();
-                    let f = format!("    {}{}: {}", ident, optional, ty);
+                    let f = format!("    {}: {}{}", ident, ty, optional);
                     prev.push(f);
                     prev
                 });

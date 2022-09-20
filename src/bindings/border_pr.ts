@@ -3,6 +3,6 @@ import {Color} from './color'
 import {StBorderStyle} from './st_border_style'
 
 export interface BorderPr {
-    color?: Color
+    color: Color | null
     style: StBorderStyle
 }
