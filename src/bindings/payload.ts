@@ -11,7 +11,7 @@ import {SetColWidth} from './set_col_width'
 import {SetRowHeight} from './set_row_height'
 import {SetVisible} from './set_visible'
 import {SheetRename} from './sheet_rename'
-import {SheetShift} from './sheet_shift.tx'
+import {SheetShift} from './sheet_shift'
 import {StyleUpdate} from './style_update'
 
 export type EditPayload =

@@ -49,7 +49,7 @@ pub enum EditPayload {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(file_name = "sheet_shift.tx")]
+#[ts(file_name = "sheet_shift.ts")]
 pub struct SheetShift {
     pub idx: usize,
     pub insert: bool,
