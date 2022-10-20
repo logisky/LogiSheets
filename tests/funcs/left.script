@@ -1,0 +1,2 @@
+INPUT   L2  =LEFT("left",2)
+CHECKSTR    L2  le

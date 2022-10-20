@@ -1,0 +1,2 @@
+INPUT    S9 =SWITCH(1,1,"x") 
+CHECKSTR    S9  x

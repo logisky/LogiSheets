@@ -1,0 +1,2 @@
+INPUT   R14 =RIGHT("abdcdhrtfjh",2)
+CHECKSTR    R14 jh

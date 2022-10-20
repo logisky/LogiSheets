@@ -1,0 +1,2 @@
+INPUT   N2  =NOMINAL(6.5%,4)
+##CHECKNUM    N2 6.3473%

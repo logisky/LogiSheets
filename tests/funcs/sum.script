@@ -1,0 +1,2 @@
+INPUT   S8  =SUM(1,2,3,4,5)
+CHECKNUM    S8 15

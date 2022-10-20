@@ -1,0 +1,2 @@
+INPUT   F3  =4=5
+##CHECKSTR  F3 FALSE

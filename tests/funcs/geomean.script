@@ -1,0 +1,2 @@
+INPUT  G7   =GEOMEAN(4,9)
+##CHECKNUM    G7 6

@@ -1,0 +1,2 @@
+INPUT   I4  =IMABS("2+3i")
+CHECKNUM   I4  3.60555

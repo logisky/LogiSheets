@@ -1,0 +1,2 @@
+INPUT   M2  =MONTH(2)
+CHECKNUM    M2 1
