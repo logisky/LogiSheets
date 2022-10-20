@@ -1,0 +1,2 @@
+INPUT   U1  =UPPER("2b28")
+CHECKSTR    U1  2B28

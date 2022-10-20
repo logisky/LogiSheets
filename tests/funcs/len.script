@@ -1,0 +1,2 @@
+INPUT   L3  =LEN("red")
+CHECKNUM L3 3

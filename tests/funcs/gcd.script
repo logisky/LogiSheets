@@ -1,0 +1,2 @@
+INPUT   G6  =GCD(21,7)
+CHECKNUM    G6 7

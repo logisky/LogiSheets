@@ -1,0 +1,2 @@
+INPUT   S2  =SIGN(5)
+CHECKNUM    S2  1

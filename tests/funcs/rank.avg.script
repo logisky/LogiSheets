@@ -1,0 +1,9 @@
+INPUT  R4  =1 
+INPUT   R5  =2   
+INPUT   R6  =3    
+INPUT   R7  =4    
+INPUT   R8  =5    
+INPUT    R9 =6    
+INPUT   R10 =7
+INPUT   R11 =RANK.AVG(2,R4:R10)
+##CHECKNUM    R11  6

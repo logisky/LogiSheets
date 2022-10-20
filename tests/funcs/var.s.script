@@ -1,0 +1,2 @@
+INPUT   T2  =VAR.S(5,1,6)
+CHECKNUM    T2  7

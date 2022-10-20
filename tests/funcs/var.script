@@ -1,0 +1,2 @@
+INPUT   V1  =VAR(5,1,6)
+CHECKNUM    V1  7
