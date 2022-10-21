@@ -275,7 +275,7 @@ where
 }
 
 fn build_bool(pair: Pair<Rule>) -> ast::PureNode {
-    let v = pair.into_inner().as_str().parse::<String>().unwrap();
+    let v = pair.as_str().parse::<String>().unwrap();
     if v == "TRUE" {
         let value = ast::Value::Boolean(true);
         ast::PureNode::Value(value)
@@ -805,5 +805,18 @@ mod tests {
                 })
             }))
         ));
+    }
+
+    #[test]
+    fn func_with_bool_arg() {
+        let parser = Parser {};
+        let mut id_fetcher = TestFetcher {};
+        let mut context = Context {
+            sheet_id: 1,
+            book_name: "book",
+            id_fetcher: &mut id_fetcher,
+        };
+        let f = "NORM.S.DIST(2,TRUE)";
+        let _ = parser.parse(f, &mut context).unwrap().pure;
     }
 }

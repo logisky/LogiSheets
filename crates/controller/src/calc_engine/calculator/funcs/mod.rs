@@ -29,6 +29,7 @@ mod iserr;
 mod leftright;
 mod len;
 mod na;
+mod norm_s_dist;
 mod npv;
 mod pduration;
 mod permutation;
@@ -158,7 +159,7 @@ where
         "NA" => na::calc(args),
         "NOMINAL" => effect::nominal(args, fetcher),
         "NORM.DIST" => distribution::normdist::calc_normdist(args, fetcher),
-        "NORM.S.DIST" => scalar_number::calc_normsdist(args, fetcher),
+        "NORM.S.DIST" => norm_s_dist::calc(args, fetcher),
         "NORM.S.INV" => distribution::norminv::calc_normsinv(args, fetcher),
         "NORMDIST" => distribution::normdist::calc_normdist(args, fetcher),
         "NORMINV" => distribution::norminv::calc_norminv(args, fetcher),

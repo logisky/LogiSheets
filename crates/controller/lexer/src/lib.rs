@@ -103,4 +103,16 @@ mod tests {
         let r = lex("1/-2");
         println!("{:?}", r);
     }
+
+    #[test]
+    fn func_with_bool_arg() {
+        let r = lex("NORM.S.DIST(2,TRUE)").unwrap();
+        println!("{:?}", r)
+    }
+
+    #[test]
+    fn func_name_has_num() {
+        let r = lex("LOG10(10)").unwrap();
+        println!("{:?}", r)
+    }
 }

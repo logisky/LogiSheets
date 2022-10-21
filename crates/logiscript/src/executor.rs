@@ -129,9 +129,9 @@ fn exec_check_num(ctx: &mut ExecContext, check_num: CheckNum, line: usize) -> Op
                         })
                     }
                 }
-                Value::Error(_) => Some(ExecError {
+                Value::Error(e) => Some(ExecError {
                     line,
-                    msg: "expect number, found error".to_string(),
+                    msg: format!("expect number, found error: {}", e),
                 }),
                 Value::Empty => Some(ExecError {
                     line,
@@ -167,10 +167,17 @@ fn exec_check_string(
                         None
                     }
                 }
-                Value::Bool(_) => Some(ExecError {
-                    line,
-                    msg: "bool is found".to_string(),
-                }),
+                Value::Bool(b) => {
+                    let actual = if b { "TRUE" } else { "FALSE" };
+                    if actual != check_str.expect {
+                        Some(ExecError {
+                            line,
+                            msg: format!("expect {} , found {}", check_str.expect, actual),
+                        })
+                    } else {
+                        None
+                    }
+                }
                 Value::Number(_) => Some(ExecError {
                     line,
                     msg: "expect string, found number".to_string(),

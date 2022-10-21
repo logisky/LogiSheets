@@ -70,3 +70,24 @@ macro_rules! assert_text_from_calc_value {
         let $var = _res.unwrap();
     };
 }
+
+macro_rules! assert_bool_from_calc_value {
+    ($var:ident, $value:expr) => {
+        let _v = match $value {
+            CalcValue::Scalar(v) => Some(v),
+            _ => None,
+        };
+        if _v.is_none() {
+            return CalcVertex::from_error(ast::Error::Num);
+        }
+        let _value = _v.unwrap();
+        let _res = match _value {
+            Value::Boolean(b) => Ok(b),
+            _ => Err(ast::Error::Num),
+        };
+        if let Err(e) = _res {
+            return CalcVertex::from_error(e);
+        }
+        let $var = _res.unwrap();
+    };
+}
