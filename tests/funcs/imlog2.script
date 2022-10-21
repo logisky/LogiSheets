@@ -1,2 +1,3 @@
 INPUT   I13 =IMLOG2(2)
-##CHECKNUM    I13 1
+# CHECKSTR I13 1
+# expect 1+0i

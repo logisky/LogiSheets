@@ -332,11 +332,13 @@ function_call = {
 }
 
 function_call_char = _{
-    LETTER | "_" | "."
+    LETTER | "_" | "." | NUMBER
 }
 
+function_call_start_char = _{LETTER | "_"}
+
 function_name = {
-    function_call_char+
+    function_call_start_char ~ function_call_char*
 }
 
 argument_list = _{

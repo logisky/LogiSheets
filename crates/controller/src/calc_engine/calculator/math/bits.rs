@@ -71,7 +71,7 @@ pub fn dec2oct(n: f64, places: Option<usize>) -> Option<String> {
 
 /// https://support.microsoft.com/en-us/office/dec2oct-function-c9d835ca-20b7-40c4-8a9e-d3be351ce00f
 pub fn dec2bin(n: f64, places: Option<usize>) -> Option<String> {
-    if n > 511_f64 || n < --512_f64 {
+    if n > 511_f64 || n < -512_f64 {
         return None;
     }
 
