@@ -22,7 +22,7 @@ where
 fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex
 where
     C: Connector,
-    F: Fn(u32, u32) -> u32,
+    F: Fn(u64, u64) -> Option<u64>,
 {
     assert_or_return!(args.len() == 2, ast::Error::Unspecified);
     let mut args_iter = args.into_iter();
@@ -35,8 +35,12 @@ where
     let chosen = second.floor();
     assert_or_return!(chosen >= 0., ast::Error::Num);
     assert_or_return!(chosen <= number, ast::Error::Num);
-    let number = number as u32;
-    let chosen = chosen as u32;
+    let number = number as u64;
+    let chosen = chosen as u64;
     let res = func(number, chosen);
-    CalcVertex::from_number(res as f64)
+    if let Some(res) = res {
+        CalcVertex::from_number(res as f64)
+    } else {
+        CalcVertex::from_error(ast::Error::Num)
+    }
 }

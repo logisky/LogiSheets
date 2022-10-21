@@ -483,6 +483,8 @@ dependencies = [
  "logisheets_parser",
  "logisheets_workbook",
  "num",
+ "num-bigint",
+ "num-traits",
  "quick-xml",
  "rand",
  "regex",

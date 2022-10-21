@@ -191,20 +191,12 @@ where
     calc(args, fetcher, |a| a.exp())
 }
 
-pub fn calc_fact<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
-where
-    C: Connector,
-{
-    use crate::calc_engine::calculator::math::fact::fact;
-    calc(args, fetcher, |a| fact(a.floor() as u32) as f64)
-}
-
 pub fn calc_factdouble<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
     use crate::calc_engine::calculator::math::fact::factdouble;
-    calc(args, fetcher, |a| factdouble(a.floor() as u32) as f64)
+    calc(args, fetcher, |a| factdouble(a.floor() as u64) as f64)
 }
 
 pub fn calc_odd<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

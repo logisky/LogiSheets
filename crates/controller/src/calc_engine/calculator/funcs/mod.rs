@@ -16,6 +16,7 @@ mod delta;
 mod distribution;
 mod effect;
 mod exact;
+mod fact;
 mod fvpv;
 mod gcdlcm;
 mod gestep;
@@ -80,7 +81,7 @@ where
         "BITXOR" => bits::bit::calc_bitxor(args, fetcher),
         "CHISQ.DIST" => distribution::chisqdist::calc_chisqdist(args, fetcher),
         "CHISQ.DIST.RT" => distribution::chisqdist::calc_chisqdist_rt(args, fetcher),
-        "COMBINE" => permutation::calc_combine(args, fetcher),
+        "COMBIN" => permutation::calc_combine(args, fetcher),
         "COMPLEX" => complex::calc(args, fetcher),
         "CONCATENATE" => concatenate::calc(args, fetcher),
         "COS" => scalar_number::calc_cos(args, fetcher),
@@ -104,7 +105,7 @@ where
         "EVEN" => scalar_number::calc_even(args, fetcher),
         "EXACT" => exact::calc(args, fetcher),
         "EXP" => scalar_number::calc_exp(args, fetcher),
-        "FACT" => scalar_number::calc_fact(args, fetcher),
+        "FACT" => fact::calc(args, fetcher),
         "FACTDOUBLE" => scalar_number::calc_factdouble(args, fetcher),
         "FALSE" => boolean::calc_false(args),
         "FV" => fvpv::fv(args, fetcher),
