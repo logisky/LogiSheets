@@ -55,7 +55,7 @@ where
         ast::Operator::Postfix(_) => {
             let mut iter = args.into_iter();
             let lhs = iter.next().unwrap();
-            let rhs = CalcVertex::Value(CalcValue::Scalar(Value::Number(0_f64)));
+            let rhs = CalcVertex::Value(CalcValue::Scalar(Value::Number(100_f64)));
             let op = ast::InfixOperator::Divide;
             infix::calc_infix(lhs, &op, rhs, fetcher)
         }
