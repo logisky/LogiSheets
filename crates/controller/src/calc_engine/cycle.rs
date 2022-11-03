@@ -1,11 +1,9 @@
-use std::collections::HashSet;
-
 use im::hashmap::HashMap;
-use logisheets_base::{Addr, NameId};
+use logisheets_base::{Addr, CellId, NameId, SheetId};
 use logisheets_parser::ast;
 
-use super::calculator::calculator::calc;
-use crate::vertex_manager::vertex::FormulaId;
+use super::{calculator::calculator::calc, get_cell_id_from_vertex};
+use crate::formula_manager::Vertex;
 
 use super::{
     calculator::calc_vertex::{CalcValue, Value},
@@ -16,44 +14,46 @@ pub struct CycleCalculator<'a, C>
 where
     C: Connector,
 {
-    pub vertices: Vec<FormulaId>,
+    pub vertices: Vec<Vertex>,
     pub error: f32,
     pub iter_limit: u16,
     pub connector: &'a mut C,
     pub names: &'a HashMap<NameId, ast::Node>,
-    pub formulas: &'a HashMap<FormulaId, ast::Node>,
+    pub formulas: &'a HashMap<(SheetId, CellId), ast::Node>,
 }
 
 impl<'a, C> CycleCalculator<'a, C>
 where
     C: Connector,
 {
-    pub fn start(self) -> HashSet<FormulaId> {
+    pub fn start(self) {
         let mut times = 0_u16;
         let mut finish = false;
         let connector = self.connector;
         let formulas = self.formulas;
+        let nodes = self
+            .vertices
+            .into_iter()
+            .map(|v| get_cell_id_from_vertex(&v, connector))
+            .flatten()
+            .collect::<Vec<_>>();
         let error = self.error;
-        let mut last_calc = vec![CalcValue::Scalar(Value::Blank); self.vertices.len()];
-        let mut dirties = HashSet::<FormulaId>::new();
+        let mut last_calc = vec![CalcValue::Scalar(Value::Blank); nodes.len()];
         while times < self.iter_limit && !finish {
-            let mut this_calc = Vec::<CalcValue>::with_capacity(self.vertices.len());
-            self.vertices
-                .iter()
-                .for_each(|fid| match formulas.get(fid) {
-                    Some(node) => {
-                        let curr_sheet = fid.0;
-                        let curr_addr = connector
-                            .get_cell_idx(curr_sheet, &fid.1)
-                            .map_or(Addr::default(), |(row, col)| Addr { row, col });
-                        connector.set_curr_cell(curr_sheet, curr_addr);
-                        let res = calc(node, connector);
-                        let dirty = connector.commit_calc_values(fid.clone(), res.clone());
-                        dirties.extend(dirty);
-                        this_calc.push(res);
-                    }
-                    None => this_calc.push(CalcValue::Scalar(Value::Blank)),
-                });
+            let mut this_calc = Vec::<CalcValue>::with_capacity(nodes.len());
+            nodes.iter().for_each(|v| match formulas.get(v) {
+                Some(node) => {
+                    let curr_sheet = v.0;
+                    let curr_addr = connector
+                        .get_cell_idx(curr_sheet, &v.1)
+                        .map_or(Addr::default(), |(row, col)| Addr { row, col });
+                    connector.set_curr_cell(curr_sheet, curr_addr);
+                    let res = calc(node, connector);
+                    connector.commit_calc_values(v.clone(), res.clone());
+                    this_calc.push(res);
+                }
+                None => this_calc.push(CalcValue::Scalar(Value::Blank)),
+            });
             if last_calc
                 .iter()
                 .zip(this_calc.iter())
@@ -64,7 +64,6 @@ where
             times += 1;
             last_calc = this_calc;
         }
-        dirties
     }
 }
 

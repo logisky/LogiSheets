@@ -1,13 +1,10 @@
-use super::{
-    sheet_nav::{Cache, ChangeType, IndexChange},
-    SheetNav,
-};
-use crate::payloads::sheet_process::{Direction, LineShift, RangeShift, ShiftPayload, ShiftType};
+use super::{sheet_nav::Cache, SheetNav};
+use crate::payloads::sheet_process::{Direction, LineShift, ShiftPayload, ShiftType};
 
 pub fn execute_shift_payload(sheet_nav: SheetNav, payload: &ShiftPayload) -> SheetNav {
     match payload {
         ShiftPayload::Line(ls) => execute_line_shift(sheet_nav, ls),
-        ShiftPayload::Range(rs) => execute_range_shift(sheet_nav, rs),
+        ShiftPayload::Range(_) => unreachable!(),
     }
 }
 
@@ -28,39 +25,6 @@ fn execute_line_shift(sheet_nav: SheetNav, ls: &LineShift) -> SheetNav {
     }
 }
 
-fn execute_range_shift(sheet_nav: SheetNav, rs: &RangeShift) -> SheetNav {
-    match (&rs.ty, &rs.direction) {
-        (ShiftType::Delete, Direction::Horizontal) => delete_horizontal_range(
-            sheet_nav,
-            rs.row as usize,
-            rs.col as usize,
-            rs.row_cnt,
-            rs.col_cnt,
-        ),
-        (ShiftType::Delete, Direction::Vertical) => delete_vertical_range(
-            sheet_nav,
-            rs.row as usize,
-            rs.col as usize,
-            rs.row_cnt,
-            rs.col_cnt,
-        ),
-        (ShiftType::Insert, Direction::Horizontal) => insert_horizontal_range(
-            sheet_nav,
-            rs.row as usize,
-            rs.col as usize,
-            rs.row_cnt,
-            rs.col_cnt,
-        ),
-        (ShiftType::Insert, Direction::Vertical) => insert_vertical_range(
-            sheet_nav,
-            rs.row as usize,
-            rs.col as usize,
-            rs.row_cnt,
-            rs.col_cnt,
-        ),
-    }
-}
-
 fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     let version = sheet_nav.version + 1;
     let mut new_id_manager = sheet_nav.id_manager.clone();
@@ -74,18 +38,9 @@ fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left.truncate(row_max);
         left
     };
-    let new_row_version = {
-        let row_version = sheet_nav.data.row_version.clone();
-        new_ids
-            .into_iter()
-            .fold(row_version, |prev, id| prev.update(id, version))
-    };
     SheetNav {
         version,
-        data: sheet_nav
-            .data
-            .update_rows(new_rows)
-            .update_row_version(new_row_version),
+        data: sheet_nav.data.update_rows(new_rows),
         cache: Cache::default(),
         id_manager: new_id_manager,
     }
@@ -104,18 +59,9 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left.truncate(row_max);
         left
     };
-    let new_col_version = {
-        let row_version = sheet_nav.data.row_version.clone();
-        new_ids
-            .into_iter()
-            .fold(row_version, |prev, id| prev.update(id, version))
-    };
     SheetNav {
         version,
-        data: sheet_nav
-            .data
-            .update_cols(new_cols)
-            .update_col_version(new_col_version),
+        data: sheet_nav.data.update_cols(new_cols),
         cache: Cache::default(),
         id_manager: new_id_manager,
     }
@@ -123,7 +69,6 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
 
 fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     let mut result = sheet_nav;
-    let version = result.version.clone() + 1;
     let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_row_ids(cnt);
     let new_rows = {
@@ -133,12 +78,6 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left.append(right.skip(removed_cnt));
         left.append(new_ids.clone());
         left
-    };
-    let new_row_version = {
-        let row_version = result.data.row_version.clone();
-        new_ids
-            .into_iter()
-            .fold(row_version, |prev, id| prev.update(id, version))
     };
     let new_blocks = {
         let mut old_blocks = result.data.blocks.clone();
@@ -155,11 +94,7 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     };
     SheetNav {
         version: result.version + 1,
-        data: result
-            .data
-            .update_rows(new_rows)
-            .update_row_version(new_row_version)
-            .update_blocks(new_blocks),
+        data: result.data.update_rows(new_rows).update_blocks(new_blocks),
         cache: Cache::default(),
         id_manager: new_id_manager,
     }
@@ -178,12 +113,6 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left.append(new_ids.clone());
         left
     };
-    let new_col_version = {
-        let col_version = result.data.col_version.clone();
-        new_ids
-            .into_iter()
-            .fold(col_version, |prev, id| prev.update(id, version))
-    };
     let new_blocks = {
         let mut old_blocks = result.data.blocks.clone();
         old_blocks.iter_mut().for_each(|(_, bp)| {
@@ -199,157 +128,9 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     };
     SheetNav {
         version,
-        data: result
-            .data
-            .update_cols(new_cols)
-            .update_col_version(new_col_version)
-            .update_blocks(new_blocks),
+        data: result.data.update_cols(new_cols).update_blocks(new_blocks),
         cache: Cache::default(),
         id_manager: new_id_manager,
-    }
-}
-
-fn delete_horizontal_range(
-    sheet_nav: SheetNav,
-    row: usize,
-    col: usize,
-    row_cnt: u32,
-    col_cnt: u32,
-) -> SheetNav {
-    let mut new_id_manager = sheet_nav.id_manager.clone();
-    let end_row = row + row_cnt as usize - 1;
-    let mut cols_copy = sheet_nav.data.cols.clone();
-    let col_ids = cols_copy.split_off(cols_copy.len() - row_cnt as usize);
-    let free_id = new_id_manager.get_preserved_row_ids(col_ids);
-    let change = IndexChange {
-        free_id,
-        offset: col_cnt,
-        version: sheet_nav.version,
-        start: col,
-        ty: ChangeType::Delete,
-    };
-    let new_data = sheet_nav
-        .data
-        .rows
-        .clone()
-        .slice(row..end_row + 1)
-        .into_iter()
-        .fold(sheet_nav.data, |prev, row_id| {
-            prev.add_row_index_change(row_id, change.clone())
-        });
-    SheetNav {
-        data: new_data,
-        version: sheet_nav.version + 1,
-        id_manager: sheet_nav.id_manager,
-        cache: Cache::default(),
-    }
-}
-
-fn delete_vertical_range(
-    sheet_nav: SheetNav,
-    row: usize,
-    col: usize,
-    row_cnt: u32,
-    col_cnt: u32,
-) -> SheetNav {
-    let mut new_id_manager = sheet_nav.id_manager.clone();
-    let end_col = col + col_cnt as usize - 1;
-    let mut rows_copy = sheet_nav.data.rows.clone();
-    let row_ids = rows_copy.split_off(rows_copy.len() - row_cnt as usize);
-    let free_id = new_id_manager.get_preserved_row_ids(row_ids);
-    let change = IndexChange {
-        free_id,
-        offset: row_cnt,
-        version: sheet_nav.version,
-        start: row,
-        ty: ChangeType::Delete,
-    };
-    let new_data = sheet_nav
-        .data
-        .cols
-        .clone()
-        .slice(col..end_col + 1)
-        .into_iter()
-        .fold(sheet_nav.data, |prev, col_id| {
-            prev.add_col_index_change(col_id, change.clone())
-        });
-    SheetNav {
-        data: new_data,
-        version: sheet_nav.version + 1,
-        id_manager: sheet_nav.id_manager,
-        cache: Cache::default(),
-    }
-}
-
-fn insert_horizontal_range(
-    sheet_nav: SheetNav,
-    row: usize,
-    col: usize,
-    row_cnt: u32,
-    col_cnt: u32,
-) -> SheetNav {
-    let mut new_id_manager = sheet_nav.id_manager.clone();
-    let end_row = row + row_cnt as usize - 1;
-    let end_col = col + col_cnt as usize - 1;
-    let col_ids = sheet_nav.data.cols.clone().slice(col..end_col + 1);
-    let free_id = new_id_manager.get_preserved_col_ids(col_ids);
-    let index_change = IndexChange {
-        free_id,
-        offset: col_cnt,
-        version: sheet_nav.version,
-        start: col,
-        ty: ChangeType::Insert,
-    };
-    let new_data = sheet_nav
-        .data
-        .rows
-        .clone()
-        .slice(row..end_row + 1)
-        .into_iter()
-        .fold(sheet_nav.data, |prev, row_id| {
-            prev.add_row_index_change(row_id, index_change.clone())
-        });
-    SheetNav {
-        data: new_data,
-        version: sheet_nav.version + 1,
-        id_manager: sheet_nav.id_manager,
-        cache: Cache::default(),
-    }
-}
-
-fn insert_vertical_range(
-    sheet_nav: SheetNav,
-    row: usize,
-    col: usize,
-    row_cnt: u32,
-    col_cnt: u32,
-) -> SheetNav {
-    let mut new_id_manager = sheet_nav.id_manager.clone();
-    let end_row = row + row_cnt as usize - 1;
-    let end_col = col + col_cnt as usize - 1;
-    let row_ids = sheet_nav.data.rows.clone().slice(row..end_row + 1);
-    let free_id = new_id_manager.get_preserved_row_ids(row_ids);
-    let index_change = IndexChange {
-        free_id,
-        offset: row_cnt,
-        version: sheet_nav.version,
-        start: row,
-        ty: ChangeType::Insert,
-    };
-    let new_data = sheet_nav
-        .data
-        .cols
-        .clone()
-        .slice(col..end_col + 1)
-        .into_iter()
-        .fold(sheet_nav.data, |prev, col_id| {
-            prev.add_col_index_change(col_id, index_change.clone())
-        });
-    SheetNav {
-        data: new_data,
-        version: sheet_nav.version + 1,
-        id_manager: sheet_nav.id_manager,
-        cache: Cache::default(),
     }
 }
 

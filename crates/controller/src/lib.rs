@@ -8,16 +8,19 @@ mod cell_attachments;
 mod connectors;
 mod container;
 pub mod controller;
+mod cube_manager;
 mod data_executor;
 mod ext_book_manager;
+mod ext_ref_manager;
 mod file_loader2;
+mod formula_manager;
 mod id_manager;
 mod navigator;
 mod payloads;
+mod range_manager;
 mod settings;
 mod style_manager;
 mod theme_manager;
-mod vertex_manager;
 mod workbook;
 
 use connectors::NameFetcher;
@@ -30,12 +33,12 @@ use controller::{edit_action::EditAction, style::StyleConverter};
 use logisheets_parser::unparse;
 pub use logisheets_workbook::prelude::SerdeErr;
 
-pub type SheetId = logisheets_base::SheetId;
-pub type CellId = logisheets_base::CellId;
-pub type AsyncCalcResult = logisheets_base::async_func::AsyncCalcResult;
-pub type AsyncErr = logisheets_base::async_func::AsyncErr;
-pub type Task = logisheets_base::async_func::Task;
-pub type BlockId = logisheets_base::BlockId;
+pub use logisheets_base::async_func::AsyncCalcResult;
+pub use logisheets_base::async_func::AsyncErr;
+pub use logisheets_base::async_func::Task;
+pub use logisheets_base::BlockId;
+pub use logisheets_base::CellId;
+pub use logisheets_base::SheetId;
 
 // Has SKIPPED the '='
 pub fn lex_success(f: &str) -> bool {
@@ -89,7 +92,7 @@ impl Workbook {
     pub fn get_sheet_idx_by_name(&mut self, name: &str) -> Result<usize, Err> {
         let sheet_id = self.controller.get_sheet_id_by_name(name);
         if let Some(id) = sheet_id {
-            if let Some(idx) = self.controller.status.sheet_pos_manager.get_sheet_idx(id) {
+            if let Some(idx) = self.controller.status.sheet_pos_manager.get_sheet_idx(&id) {
                 Ok(idx)
             } else {
                 Err(Err::NotFound)
@@ -121,7 +124,7 @@ impl<'a> Worksheet<'a> {
             self.controller
                 .status
                 .navigator
-                .fetch_cell_id(self.sheet_id, row, col)
+                .fetch_cell_id(&self.sheet_id, row, col)
         {
             if let Some(cell) = self
                 .controller
@@ -160,13 +163,12 @@ impl<'a> Worksheet<'a> {
             self.controller
                 .status
                 .navigator
-                .fetch_cell_id(self.sheet_id, row, col)
+                .fetch_cell_id(&self.sheet_id, row, col)
         {
             if let Some(node) = self
                 .controller
                 .status
-                .vertex_manager
-                .status
+                .formula_manager
                 .formulas
                 .get(&(self.sheet_id, cell_id))
             {
@@ -177,6 +179,7 @@ impl<'a> Worksheet<'a> {
                     text_id_manager: &mut self.controller.status.text_id_manager,
                     name_id_manager: &mut self.controller.status.name_id_manager,
                     navigator: &mut self.controller.status.navigator,
+                    formula_manager: &self.controller.status.formula_manager,
                 };
                 let f = unparse::unparse(node, &mut name_fetcher, self.sheet_id);
                 Ok(f)
@@ -193,7 +196,7 @@ impl<'a> Worksheet<'a> {
             self.controller
                 .status
                 .navigator
-                .fetch_cell_id(self.sheet_id, row, col)
+                .fetch_cell_id(&self.sheet_id, row, col)
         {
             let style_id = if let Some(cell) = self
                 .controller
@@ -207,7 +210,7 @@ impl<'a> Worksheet<'a> {
                     .controller
                     .status
                     .navigator
-                    .fetch_row_id(self.sheet_id, row)
+                    .fetch_row_id(&self.sheet_id, row)
                     .unwrap();
                 if let Some(row_info) = self
                     .controller
@@ -221,7 +224,7 @@ impl<'a> Worksheet<'a> {
                         .controller
                         .status
                         .navigator
-                        .fetch_row_id(self.sheet_id, col)
+                        .fetch_row_id(&self.sheet_id, col)
                         .unwrap();
                     match self
                         .controller
@@ -265,12 +268,12 @@ impl<'a> Worksheet<'a> {
                         .controller
                         .status
                         .navigator
-                        .fetch_normal_cell_idx(self.sheet_id, start);
+                        .fetch_normal_cell_idx(&self.sheet_id, start);
                     let e = self
                         .controller
                         .status
                         .navigator
-                        .fetch_normal_cell_idx(self.sheet_id, end);
+                        .fetch_normal_cell_idx(&self.sheet_id, end);
                     match (s, e) {
                         (Some((row_start, col_start)), Some((row_end, col_end))) => {
                             let m = MergeCell {
@@ -308,7 +311,7 @@ impl<'a> Worksheet<'a> {
                         .controller
                         .status
                         .navigator
-                        .fetch_cell_idx(self.sheet_id, id)
+                        .fetch_cell_idx(&self.sheet_id, id)
                     {
                         let author_id = c.author;
                         let author = self
@@ -352,7 +355,7 @@ impl<'a> Worksheet<'a> {
                     .controller
                     .status
                     .navigator
-                    .fetch_cell_idx(self.sheet_id, id);
+                    .fetch_cell_idx(&self.sheet_id, id);
                 match cell_idx {
                     Some((row, col)) => {
                         let r = if r > row { r } else { row };

@@ -19,7 +19,7 @@ where
                 Reference::Addr(a) => CalcVertex::from_number(a.row as f64),
                 Reference::ColumnRange(_) => todo!(),
                 Reference::RowRange(_) => todo!(),
-                Reference::Range(_) => todo!(),
+                Reference::Range(_, _) => todo!(),
             },
             CalcVertex::Union(_) => todo!(),
         },

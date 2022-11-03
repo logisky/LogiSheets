@@ -1,38 +1,51 @@
-use logisheets_base::{id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, SheetId};
-use logisheets_parser::{ast, context::Context, Parser};
+use logisheets_base::{
+    get_active_sheet::GetActiveSheetTrait,
+    get_book_name::GetBookNameTrait,
+    id_fetcher::{IdFetcherTrait, VertexFetcherTrait},
+    index_fetcher::IndexFetcherTrait,
+    CellId, ColId, Cube, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalRange, Range, RowId,
+    SheetId, TextId,
+};
+use logisheets_parser::{ast, context::ContextTrait, Parser};
 
-use crate::vertex_manager::{executors::input_formula::add_ast_node, VertexManager};
+use crate::{connectors::VertexConnector, formula_manager::FormulaManager};
 
-pub fn load_normal_formula<T>(
-    vertex_manager: &mut VertexManager,
-    book_name: &str,
+pub fn load_normal_formula<'a, 'b>(
+    formula_manager: &'b mut FormulaManager,
     sheet_id: SheetId,
     row: usize,
     col: usize,
     f: &str,
-    id_fetcher: &mut T,
-) where
-    T: IdFetcherTrait,
-{
-    let cell_id = id_fetcher.fetch_cell_id(sheet_id, row, col).unwrap();
-    let mut context = Context {
-        sheet_id,
-        book_name,
-        id_fetcher,
-    };
-    let parser = Parser {};
-    let ast = parser.parse(f, &mut context);
-    if ast.is_none() {
-        return;
+    connector: &'a mut VertexConnector<'a>,
+) {
+    let cid = connector.fetch_cell_id(&sheet_id, row, col).unwrap();
+    if let CellId::NormalCell(c) = cid {
+        let range = Range::Normal(NormalRange::Single(c));
+        let range_id = formula_manager
+            .range_manager
+            .get_range_id(&sheet_id, &range);
+
+        let ast_node = parse_formula(formula_manager, connector, f);
+
+        formula_manager.add_ast_node(sheet_id, cid, range_id, ast_node)
     }
-    let ast = ast.unwrap();
-    let status = add_ast_node(vertex_manager.status.clone(), sheet_id, cell_id, ast);
-    vertex_manager.status = status;
 }
 
-pub fn load_shared_formulas<T>(
-    vertex_manager: &mut VertexManager,
-    book_name: &str,
+fn parse_formula<'a: 'c, 'b, 'c>(
+    formula_manager: &'b mut FormulaManager,
+    connector: &'c mut VertexConnector<'a>,
+    f: &str,
+) -> ast::Node {
+    let parser = Parser {};
+    let mut context = Context {
+        formula_manager,
+        vertex_connector: connector,
+    };
+    parser.parse(f, &mut context).unwrap()
+}
+
+pub fn load_shared_formulas<'a, 'b>(
+    formula_manager: &'b mut FormulaManager,
     sheet_id: SheetId,
     master_row: usize,
     master_col: usize,
@@ -41,199 +54,212 @@ pub fn load_shared_formulas<T>(
     row_end: usize,
     col_end: usize,
     master_formula: &str,
-    fetcher: &mut T,
-) where
-    T: IdFetcherTrait + IndexFetcherTrait,
-{
-    let mut context = Context {
-        sheet_id,
-        book_name,
-        id_fetcher: fetcher,
-    };
-    let parser = Parser {};
-    let master_ast = parser.parse(master_formula, &mut context);
-    if master_ast.is_none() {
-        return;
-    }
-    let master_ast = master_ast.unwrap();
-    (row_start..row_end + 1).into_iter().for_each(|row| {
-        (col_start..col_end + 1).into_iter().for_each(|col| {
-            let status = vertex_manager.status.clone();
+    connector: &'a mut VertexConnector<'a>,
+) {
+    let master_ast = parse_formula(formula_manager, connector, master_formula);
+    for row in row_start..row_end + 1 {
+        for col in col_start..col_end + 1 {
+            let cid = connector.fetch_cell_id(&sheet_id, row, col).unwrap();
             let row_shift = row as i32 - master_row as i32;
             let col_shift = col as i32 - master_col as i32;
-            let n = shift_ast_node(master_ast.clone(), sheet_id, row_shift, col_shift, fetcher);
-            let cid = fetcher.fetch_cell_id(sheet_id, row, col).unwrap();
-            let new_status = add_ast_node(status, sheet_id, cid, n);
-            vertex_manager.status = new_status;
-        })
-    })
+            let n = shift_ast_node(
+                formula_manager,
+                master_ast.clone(),
+                sheet_id,
+                row_shift,
+                col_shift,
+                connector,
+            );
+            if let CellId::NormalCell(c) = cid {
+                let range = Range::Normal(NormalRange::Single(c));
+                let range_id = formula_manager
+                    .range_manager
+                    .get_range_id(&sheet_id, &range);
+                formula_manager.add_ast_node(sheet_id, cid, range_id, n)
+            } else {
+                unreachable!()
+            }
+        }
+    }
 }
 
-fn shift_ast_node<T>(
+fn shift_ast_node<'a, 'b>(
+    formula_manager: &'b mut FormulaManager,
     master: ast::Node,
     sheet_id: SheetId,
     row_shift: i32,
     col_shift: i32,
-    fetcher: &mut T,
-) -> ast::Node
-where
-    T: IdFetcherTrait + IndexFetcherTrait,
-{
+    connector: &'a mut VertexConnector,
+) -> ast::Node {
     if row_shift == 0 && col_shift == 0 {
         return master;
     }
     let mut result = master;
     let pure = &mut result.pure;
-    shift_pure_node(pure, sheet_id, row_shift, col_shift, fetcher);
+    shift_pure_node(
+        formula_manager,
+        pure,
+        sheet_id,
+        row_shift,
+        col_shift,
+        connector,
+    );
     result
 }
 
-fn shift_pure_node<T>(
-    pure: &mut ast::PureNode,
+fn shift_pure_node<'a, 'b>(
+    formula_manager: &'b mut FormulaManager,
+    pure: &'b mut ast::PureNode,
     sheet_id: SheetId,
     row_shift: i32,
     col_shift: i32,
-    fetcher: &mut T,
-) where
-    T: IdFetcherTrait + IndexFetcherTrait,
-{
+    connector: &'a mut VertexConnector,
+) {
     match pure {
         ast::PureNode::Func(func) => {
             let args = &mut func.args;
             args.iter_mut().for_each(|node| {
                 let p = &mut node.pure;
-                shift_pure_node(p, sheet_id, row_shift, col_shift, fetcher);
+                shift_pure_node(
+                    formula_manager,
+                    p,
+                    sheet_id,
+                    row_shift,
+                    col_shift,
+                    connector,
+                );
             });
         }
         ast::PureNode::Value(_) => {}
         ast::PureNode::Reference(cell_ref) => {
-            shift_cell_reference(cell_ref, sheet_id, row_shift, col_shift, fetcher);
+            shift_cell_reference(
+                formula_manager,
+                cell_ref,
+                sheet_id,
+                row_shift,
+                col_shift,
+                connector,
+            );
         }
     }
 }
 
-fn shift_cell_reference<T>(
+fn shift_cell_reference(
+    formula_manager: &mut FormulaManager,
     cr: &mut ast::CellReference,
     sheet_id: SheetId,
     row_shift: i32,
     col_shift: i32,
-    fetcher: &mut T,
-) -> Option<()>
-where
-    T: IdFetcherTrait + IndexFetcherTrait,
-{
+    connector: &mut VertexConnector,
+) -> Option<()> {
     if row_shift == 0 && col_shift == 0 {
         return None;
     }
     match cr {
-        ast::CellReference::Mut(ref_prefix) => match &mut ref_prefix.reference {
-            ast::MutRef::A1ReferenceRange(range) => {
-                let start = &mut range.start;
-                shift_a1_reference(start, sheet_id, row_shift, col_shift, fetcher)?;
-                let end = &mut range.end;
-                shift_a1_reference(end, sheet_id, row_shift, col_shift, fetcher)
+        ast::CellReference::Mut(range_display) => {
+            let range_id = range_display.range_id;
+            let range = formula_manager
+                .range_manager
+                .get_range(&sheet_id, &range_id)?;
+            match range {
+                Range::Normal(n) => match n {
+                    NormalRange::Single(c) => {
+                        let (row_idx, col_idx) =
+                            connector.fetch_normal_cell_index(&sheet_id, &c).unwrap();
+                        let r = (row_idx as i32 + row_shift) as usize;
+                        let c = (col_idx as i32 + col_shift) as usize;
+                        let cell_id = connector.fetch_cell_id(&sheet_id, r, c).unwrap();
+                        if let CellId::NormalCell(n) = cell_id {
+                            let shift_range = Range::Normal(NormalRange::Single(n));
+                            let range_id = formula_manager
+                                .range_manager
+                                .get_range_id(&sheet_id, &shift_range);
+                            range_display.range_id = range_id;
+                            Some(())
+                        } else {
+                            unreachable!()
+                        }
+                    }
+                    _ => None,
+                },
+                Range::Block(_) => unreachable!(),
             }
-            ast::MutRef::A1Reference(addr) => {
-                shift_a1_reference(addr, sheet_id, row_shift, col_shift, fetcher)
-            }
-        },
-        _ => unreachable!(),
+        }
+        _ => None,
     }
 }
 
-fn shift_a1_reference<T>(
-    a1_ref: &mut ast::A1Reference,
-    sheet_id: SheetId,
-    row_shift: i32,
-    col_shift: i32,
-    fetcher: &mut T,
-) -> Option<()>
-where
-    T: IdFetcherTrait + IndexFetcherTrait,
-{
-    match a1_ref {
-        ast::A1Reference::A1ColumnRange(col_range) => {
-            if col_range.start_abs && col_range.end_abs {
-                return None;
-            }
-            let start = if col_range.start_abs {
-                col_range.start
-            } else {
-                let idx = fetcher.fetch_col_index(sheet_id, col_range.start)?;
-                let new_idx = idx as i32 + col_shift;
-                let new_idx = if new_idx < 0 { 0 } else { new_idx as usize };
-                let new_id = fetcher.fetch_col_id(sheet_id, new_idx)?;
-                new_id
-            };
-            let end = if col_range.end_abs {
-                col_range.end
-            } else {
-                let idx = fetcher.fetch_col_index(sheet_id, col_range.end)?;
-                let new_idx = idx as i32 + col_shift;
-                let new_idx = if new_idx < 0 { 0 } else { new_idx as usize };
-                let new_id = fetcher.fetch_col_id(sheet_id, new_idx)?;
-                new_id
-            };
-            col_range.start = start;
-            col_range.end = end;
-            Some(())
-        }
-        ast::A1Reference::A1RowRange(row_range) => {
-            if row_range.start_abs && row_range.end_abs {
-                return None;
-            }
-            let start = if row_range.start_abs {
-                row_range.start
-            } else {
-                let idx = fetcher.fetch_row_index(sheet_id, row_range.start)?;
-                let new_idx = idx as i32 + row_shift;
-                let new_idx = if new_idx < 0 { 0 } else { new_idx as usize };
-                let new_id = fetcher.fetch_row_id(sheet_id, new_idx)?;
-                new_id
-            };
-            let end = if row_range.end_abs {
-                row_range.end
-            } else {
-                let idx = fetcher.fetch_row_index(sheet_id, row_range.end)?;
-                let new_idx = idx as i32 + row_shift;
-                let new_idx = if new_idx < 0 { 0 } else { new_idx as usize };
-                let new_id = fetcher.fetch_row_id(sheet_id, new_idx)?;
-                new_id
-            };
-            row_range.start = start;
-            row_range.end = end;
-            Some(())
-        }
-        ast::A1Reference::Addr(addr) => {
-            if addr.row_abs && addr.row_abs {
-                return None;
-            }
-            let (row, col) = fetcher
-                .fetch_cell_index(sheet_id, &addr.cell_id)
-                .unwrap_or((0, 0));
-            let row = if addr.row_abs {
-                row
-            } else {
-                let r = row as i32 + row_shift;
-                if r < 0 {
-                    0
-                } else {
-                    r as usize
-                }
-            };
-            let col = if addr.col_abs {
-                col
-            } else {
-                let c = col as i32 + col_shift;
-                if c < 0 {
-                    0
-                } else {
-                    c as usize
-                }
-            };
-            let new_cell_id = fetcher.fetch_cell_id(sheet_id, row, col)?;
-            addr.cell_id = new_cell_id;
-            Some(())
-        }
+struct Context<'a, 'b, 'c> {
+    formula_manager: &'b mut FormulaManager,
+    vertex_connector: &'a mut VertexConnector<'c>,
+}
+
+impl<'a, 'b, 'c> IdFetcherTrait for Context<'a, 'b, 'c> {
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId> {
+        self.vertex_connector.fetch_row_id(sheet_id, row_idx)
+    }
+
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId> {
+        self.vertex_connector.fetch_col_id(sheet_id, col_idx)
+    }
+
+    fn fetch_cell_id(
+        &mut self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> Option<CellId> {
+        self.vertex_connector
+            .fetch_cell_id(sheet_id, row_idx, col_idx)
+    }
+
+    fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId {
+        self.vertex_connector.fetch_sheet_id(sheet_name)
+    }
+
+    fn fetch_name_id(&mut self, workbook: &Option<&str>, name: &str) -> NameId {
+        self.vertex_connector.fetch_name_id(workbook, name)
+    }
+
+    fn fetch_ext_book_id(&mut self, book: &str) -> ExtBookId {
+        self.vertex_connector.fetch_ext_book_id(book)
+    }
+
+    fn fetch_text_id(&mut self, text: &str) -> TextId {
+        self.vertex_connector.fetch_text_id(text)
+    }
+
+    fn fetch_func_id(&mut self, func_name: &str) -> FuncId {
+        self.vertex_connector.fetch_func_id(func_name)
     }
 }
+
+impl<'a, 'b, 'c> GetActiveSheetTrait for Context<'a, 'b, 'c> {
+    fn get_active_sheet(&self) -> SheetId {
+        self.vertex_connector.get_active_sheet()
+    }
+}
+
+impl<'a, 'b, 'c> GetBookNameTrait for Context<'a, 'b, 'c> {
+    fn get_book_name(&self) -> &str {
+        self.vertex_connector.get_book_name()
+    }
+}
+
+impl<'a, 'b, 'c> VertexFetcherTrait for Context<'a, 'b, 'c> {
+    fn fetch_range_id(&mut self, sheet_id: &SheetId, range: &Range) -> logisheets_base::RangeId {
+        self.formula_manager
+            .range_manager
+            .get_range_id(sheet_id, range)
+    }
+
+    fn fetch_cube_id(&mut self, cube: &Cube) -> u32 {
+        self.formula_manager.cube_manager.get_cube_id(cube)
+    }
+
+    fn fetch_ext_ref_id(&mut self, ext_ref: &ExtRef) -> ExtRefId {
+        self.formula_manager.ext_ref_manager.get_ext_ref_id(ext_ref)
+    }
+}
+
+impl<'a, 'b, 'c> ContextTrait for Context<'a, 'b, 'c> {}

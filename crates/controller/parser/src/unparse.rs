@@ -1,11 +1,11 @@
-use logisheets_base::{index_to_column_label, name_fetcher::NameFetcherTrait, SheetId};
+use logisheets_base::{
+    index_to_column_label, name_fetcher::NameFetcherTrait, BlockCellId, BlockRange, CellId,
+    CubeCross, NormalCellId, NormalRange, Range, RefAbs, SheetId,
+};
 
 use crate::ast::{
-    A1Reference, CellReference, Error, ExternalSheet, ExternalSheetToSheet, ExternalUnMutRefPrefix,
-    Func, InfixOperator, LocalSheetToSheet, LocalUnMutRefPrefix, MutRef, MutRefWithPrefix,
-    Operator, PostfixOperator, PrefixOperator, PureNode, UnMutA1Reference, UnMutA1ReferenceRange,
-    UnMutAddress, UnMutColRange, UnMutRef, UnMutRefPrefix, UnMutRefWithPrefix, UnMutRowRange,
-    Value,
+    CellReference, CubeDisplay, Error, ExtRefDisplay, Func, InfixOperator, Operator,
+    PostfixOperator, PrefixOperator, PureNode, RangeDisplay, Value,
 };
 
 use super::ast::Node;
@@ -120,279 +120,209 @@ impl Stringify for CellReference {
             CellReference::Mut(mutref) => mutref.unparse(fetcher, curr_sheet),
             CellReference::UnMut(unmut_ref) => unmut_ref.unparse(fetcher, curr_sheet),
             CellReference::Name(nid) => fetcher.fetch_defined_name(nid),
+            CellReference::Ext(ext_ref) => ext_ref.unparse(fetcher, curr_sheet),
         }
     }
 }
 
-impl Stringify for MutRefWithPrefix {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+impl Stringify for CubeDisplay {
+    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> String
     where
         T: NameFetcherTrait,
     {
-        let sheet = self.sheet_id;
-        let prefix = if sheet == curr_sheet {
-            "".to_owned()
-        } else {
-            fetcher.fetch_sheet_name(&sheet)
-        };
-        let mut get_a1_ref_str = |r: &A1Reference| -> String {
-            match r {
-                A1Reference::A1ColumnRange(cr) => {
-                    let start_id = cr.start;
-                    let end_id = cr.end;
-                    let start_str = {
-                        let idx = fetcher.fetch_col_idx(&sheet, &start_id);
-                        let c = index_to_column_label(idx);
-                        if cr.start_abs {
-                            format!("${}", c)
-                        } else {
-                            format!("{}", c)
-                        }
-                    };
-                    let end_str = {
-                        let idx = fetcher.fetch_col_idx(&sheet, &end_id);
-                        let c = index_to_column_label(idx);
-                        if cr.end_abs {
-                            format!("${}", c)
-                        } else {
-                            format!("{}", c)
-                        }
-                    };
-                    format!("{}:{}", start_str, end_str)
-                }
-                A1Reference::A1RowRange(rr) => {
-                    let start_id = rr.start;
-                    let end_id = rr.end;
-                    let start_str = {
-                        let idx = fetcher.fetch_row_idx(&sheet, &start_id);
-                        if rr.start_abs {
-                            format!("${}", idx + 1)
-                        } else {
-                            format!("{}", idx + 1)
-                        }
-                    };
-                    let end_str = {
-                        let idx = fetcher.fetch_row_idx(&sheet, &end_id);
-                        if rr.end_abs {
-                            format!("${}", idx + 1)
-                        } else {
-                            format!("{}", idx + 1)
-                        }
-                    };
-                    format!("{}:{}", start_str, end_str)
-                }
-                A1Reference::Addr(addr) => {
-                    let (row, col) = fetcher.fetch_cell_idx(&sheet, &addr.cell_id);
-                    let row_str = {
-                        let r = (row + 1).to_string();
-                        if addr.row_abs {
-                            format!("${}", r)
-                        } else {
-                            r
-                        }
-                    };
-                    let col_str = {
-                        let c = index_to_column_label(col);
-                        if addr.col_abs {
-                            format!("${}", c)
-                        } else {
-                            c
-                        }
-                    };
-                    format!("{}{}", col_str, row_str)
-                }
+        let cube = fetcher.fetch_cube(&self.cube_id);
+        let from_sheet = fetcher.fetch_sheet_name(&cube.from_sheet);
+        let to_sheet = fetcher.fetch_sheet_name(&cube.to_sheet);
+        let prefix = format!("{}:{}", from_sheet, to_sheet);
+        let RefAbs {
+            start_row,
+            start_col,
+            end_row,
+            end_col,
+        } = self.ref_abs;
+        let cross_str = match cube.cross {
+            CubeCross::Single(row, col) => {
+                let row_str = get_row_string(start_row, row);
+                let col_str = get_col_string(start_col, col);
+                format!("{}{}", col_str, row_str)
             }
-        };
-        let suffix = match &self.reference {
-            MutRef::A1ReferenceRange(range) => {
-                let start = &range.start;
-                let end = &range.end;
-                let start_str = get_a1_ref_str(start);
-                let end_str = get_a1_ref_str(end);
+            CubeCross::RowRange(start, end) => {
+                let start_str = get_row_string(start_row, start);
+                let end_str = get_col_string(end_row, end);
                 format!("{}:{}", start_str, end_str)
             }
-            MutRef::A1Reference(r) => get_a1_ref_str(r),
+            CubeCross::ColRange(start, end) => {
+                let start_str = get_row_string(start_col, start);
+                let end_str = get_col_string(end_col, end);
+                format!("{}:{}", start_str, end_str)
+            }
+            CubeCross::AddrRange(start, end) => {
+                let sr = get_row_string(start_row, start.row);
+                let sc = get_col_string(start_col, start.col);
+                let er = get_row_string(end_row, end.row);
+                let ec = get_col_string(end_col, end.col);
+                format!("{}{}:{}{}", sc, sr, ec, er)
+            }
         };
-        if prefix != "" {
-            format!("{}!{}", prefix, suffix)
-        } else {
-            suffix
-        }
+        format!("{}!{}", prefix, cross_str)
     }
 }
 
-impl Stringify for UnMutRefPrefix {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+impl Stringify for ExtRefDisplay {
+    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> String
     where
         T: NameFetcherTrait,
     {
-        match self {
-            UnMutRefPrefix::Local(local) => match local {
-                LocalUnMutRefPrefix::SheetToSheet(sts) => {
-                    format!(
-                        "{}:{}!",
-                        fetcher.fetch_sheet_name(&sts.from_sheet),
-                        fetcher.fetch_sheet_name(&sts.to_sheet)
-                    )
+        let ext_ref = fetcher.fetch_ext_ref(&self.ext_ref_id);
+        let workbook_name = fetcher.fetch_book_name(&ext_ref.ext_book);
+        let sheet = {
+            let to_sheet = fetcher.fetch_sheet_name(&ext_ref.to_sheet);
+            match ext_ref.from_sheet {
+                Some(s) => {
+                    let from_sheet = fetcher.fetch_sheet_name(&s);
+                    format!("{}:{}", from_sheet, to_sheet)
                 }
-            },
-            UnMutRefPrefix::External(e) => e.unparse(fetcher, curr_sheet),
-        }
-    }
-}
-
-impl Stringify for UnMutRefWithPrefix {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        let prefix = self.prefix.unparse(fetcher, curr_sheet);
-        let reference = self.reference.unparse(fetcher, curr_sheet);
-        format!("{}{}", prefix, reference)
-    }
-}
-
-impl Stringify for ExternalUnMutRefPrefix {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        match self {
-            ExternalUnMutRefPrefix::Sheet(sheet) => sheet.unparse(fetcher, curr_sheet),
-            ExternalUnMutRefPrefix::SheetToSheet(sts) => sts.unparse(fetcher, curr_sheet),
-        }
-    }
-}
-
-impl Stringify for LocalUnMutRefPrefix {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        match self {
-            LocalUnMutRefPrefix::SheetToSheet(sts) => sts.unparse(fetcher, curr_sheet),
-        }
-    }
-}
-
-impl Stringify for ExternalSheet {
-    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        let workbook = fetcher.fetch_book_name(&self.workbook);
-        let sheet = fetcher.fetch_sheet_name(&self.sheet);
-        format!("[{}]{}!", workbook, sheet)
-    }
-}
-
-impl Stringify for ExternalSheetToSheet {
-    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        let workbook = fetcher.fetch_book_name(&self.workbook);
-        let from_sheet = fetcher.fetch_sheet_name(&self.from_sheet);
-        let to_sheet = fetcher.fetch_sheet_name(&self.to_sheet);
-        format!("[{}]{}:{}!", workbook, from_sheet, to_sheet)
-    }
-}
-
-impl Stringify for LocalSheetToSheet {
-    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        let from_sheet = fetcher.fetch_sheet_name(&self.from_sheet);
-        let to_sheet = fetcher.fetch_sheet_name(&self.to_sheet);
-        format!("{}:{}", from_sheet, to_sheet)
-    }
-}
-
-impl Stringify for UnMutRef {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        match self {
-            UnMutRef::A1ReferenceRange(range) => range.unparse(fetcher, curr_sheet),
-            UnMutRef::A1Reference(a1) => a1.unparse(fetcher, curr_sheet),
-        }
-    }
-}
-
-impl Stringify for UnMutA1Reference {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        match self {
-            UnMutA1Reference::A1ColumnRange(unmut_col_range) => {
-                unmut_col_range.unparse(fetcher, curr_sheet)
+                None => to_sheet,
             }
-            UnMutA1Reference::A1RowRange(unmut_row_range) => {
-                unmut_row_range.unparse(fetcher, curr_sheet)
+        };
+        let RefAbs {
+            start_row,
+            start_col,
+            end_row,
+            end_col,
+        } = self.ref_abs;
+        let cross_str = match ext_ref.cross {
+            CubeCross::Single(row, col) => {
+                let row_str = get_row_string(start_row, row);
+                let col_str = get_col_string(start_col, col);
+                format!("{}{}", col_str, row_str)
             }
-            UnMutA1Reference::Addr(addr) => addr.unparse(fetcher, curr_sheet),
-        }
+            CubeCross::RowRange(start, end) => {
+                let start_str = get_row_string(start_row, start);
+                let end_str = get_col_string(end_row, end);
+                format!("{}:{}", start_str, end_str)
+            }
+            CubeCross::ColRange(start, end) => {
+                let start_str = get_row_string(start_col, start);
+                let end_str = get_col_string(end_col, end);
+                format!("{}:{}", start_str, end_str)
+            }
+            CubeCross::AddrRange(start, end) => {
+                let sr = get_row_string(start_row, start.row);
+                let sc = get_col_string(start_col, start.col);
+                let er = get_row_string(end_row, end.row);
+                let ec = get_col_string(end_col, end.col);
+                format!("{}{}:{}{}", sc, sr, ec, er)
+            }
+        };
+        format!("[{}]{}!{}", workbook_name, sheet, cross_str)
     }
 }
 
-impl Stringify for UnMutA1ReferenceRange {
+fn get_row_string(abs: bool, idx: usize) -> String {
+    let r = (idx + 1).to_string();
+    if abs {
+        format!("${}", r)
+    } else {
+        r
+    }
+}
+
+fn get_col_string(abs: bool, idx: usize) -> String {
+    let c = index_to_column_label(idx);
+    if abs {
+        format!("${}", c)
+    } else {
+        c
+    }
+}
+
+impl Stringify for RangeDisplay {
     fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
     where
         T: NameFetcherTrait,
     {
-        format!(
-            "{}:{}",
-            self.start.unparse(fetcher, curr_sheet),
-            self.end.unparse(fetcher, curr_sheet)
-        )
-    }
-}
+        let prefix = if self.sheet_id == curr_sheet {
+            String::new()
+        } else {
+            let sheet_name = fetcher.fetch_sheet_name(&self.sheet_id);
+            if sheet_name.len() > 0 {
+                format!("{}!", sheet_name)
+            } else {
+                String::from("")
+            }
+        };
 
-impl Stringify for UnMutColRange {
-    fn unparse<T>(&self, _: &mut T, _curr_sheet: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        format!(
-            "{}{}:{}{}",
-            abs_str(self.start_abs),
-            index_to_column_label(self.start),
-            abs_str(self.end_abs),
-            index_to_column_label(self.end)
-        )
-    }
-}
+        let range = fetcher.fetch_range(&self.sheet_id, &self.range_id);
+        if range.is_none() {
+            return format!("{}#REF!", prefix);
+        }
 
-impl Stringify for UnMutRowRange {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        format!(
-            "{}{}:{}{}",
-            abs_str(self.start_abs),
-            self.start + 1,
-            abs_str(self.end_abs),
-            self.end + 1,
-        )
-    }
-}
+        let range = range.unwrap();
+        let RefAbs {
+            start_row,
+            start_col,
+            end_row,
+            end_col,
+        } = self.ref_abs;
 
-impl Stringify for UnMutAddress {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> String
-    where
-        T: NameFetcherTrait,
-    {
-        format!(
-            "{}{}{}{}",
-            abs_str(self.col_abs),
-            index_to_column_label(self.col),
-            abs_str(self.row_abs),
-            self.row + 1,
-        )
+        let range_str = match range {
+            Range::Normal(normal_range) => {
+                let mut get_normal_cell_str =
+                    |sheet: &SheetId, id: NormalCellId, row_abs: bool, col_abs: bool| -> String {
+                        let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::NormalCell(id));
+                        let row_str = get_row_string(row_abs, row);
+                        let col_str = get_col_string(col_abs, col);
+                        format!("{}{}", col_str, row_str)
+                    };
+                match normal_range {
+                    NormalRange::Single(normal_cell) => {
+                        get_normal_cell_str(&curr_sheet, normal_cell, start_row, start_col)
+                    }
+                    NormalRange::RowRange(start, end) => {
+                        let start_idx = fetcher.fetch_row_idx(&curr_sheet, &start);
+                        let end_idx = fetcher.fetch_row_idx(&curr_sheet, &end);
+                        let start_str = get_row_string(start_row, start_idx);
+                        let end_str = get_row_string(end_row, end_idx);
+                        format!("{}:{}", start_str, end_str)
+                    }
+                    NormalRange::ColRange(start, end) => {
+                        let start_idx = fetcher.fetch_col_idx(&curr_sheet, &start);
+                        let end_idx = fetcher.fetch_col_idx(&curr_sheet, &end);
+                        let start_str = get_col_string(start_row, start_idx);
+                        let end_str = get_col_string(end_row, end_idx);
+                        format!("{}:{}", start_str, end_str)
+                    }
+                    NormalRange::AddrRange(start, end) => {
+                        let start_str =
+                            get_normal_cell_str(&curr_sheet, start, start_row, start_col);
+                        let end_str = get_normal_cell_str(&curr_sheet, end, end_row, end_col);
+                        format!("{}:{}", start_str, end_str)
+                    }
+                }
+            }
+            Range::Block(block_range) => {
+                let mut get_block_cell_str =
+                    |sheet: &SheetId, id: BlockCellId, row_abs: bool, col_abs: bool| -> String {
+                        let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::BlockCell(id));
+                        let row_str = get_row_string(row_abs, row);
+                        let col_str = get_col_string(col_abs, col);
+                        format!("{}{}", col_str, row_str)
+                    };
+                match block_range {
+                    BlockRange::Single(block_cell_id) => {
+                        get_block_cell_str(&curr_sheet, block_cell_id, start_row, start_col)
+                    }
+                    BlockRange::AddrRange(start, end) => {
+                        let start_str =
+                            get_block_cell_str(&curr_sheet, start, start_row, start_col);
+                        let end_str = get_block_cell_str(&curr_sheet, end, end_row, end_col);
+                        format!("{}:{}", start_str, end_str)
+                    }
+                }
+            }
+        };
+        format!("{}{}", prefix, range_str)
     }
 }
 
@@ -472,45 +402,24 @@ impl Stringify for PostfixOperator {
     }
 }
 
-fn abs_str(abs: bool) -> String {
-    if abs {
-        String::from("$")
-    } else {
-        String::from("")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::unparse;
     use crate::context::Context;
-    use crate::test_utils::TestFetcher;
+    use crate::test_utils::{TestIdFetcher, TestVertexFetcher};
     use crate::Parser;
-
-    #[test]
-    fn unparse_formula_test() {
-        let parser = Parser {};
-        let sum = "sum(A1:B3,3, A2)";
-        let mut id_fetcher = TestFetcher {};
-        let mut context = Context {
-            sheet_id: 0,
-            book_name: "book",
-            id_fetcher: &mut id_fetcher,
-        };
-        let node = parser.parse(sum, &mut context).unwrap();
-        let a = unparse(&node, &mut id_fetcher, 0);
-        assert_eq!(a, "SUM(A1:B3, 3, A2)")
-    }
 
     #[test]
     fn comma_formula_test() {
         let parser = Parser {};
         let sum = "sum((2,3),3)";
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertex_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertex_fetcher,
         };
         let node = parser.parse(sum, &mut context).unwrap();
         let a = unparse(&node, &mut id_fetcher, 0);
@@ -521,11 +430,13 @@ mod tests {
     fn brakcet_test() {
         let parser = Parser {};
         let sum = "1*(3-2)";
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertex_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertex_fetcher,
         };
         let node = parser.parse(sum, &mut context).unwrap();
         let a = unparse(&node, &mut id_fetcher, 0);

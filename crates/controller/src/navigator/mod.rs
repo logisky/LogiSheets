@@ -1,6 +1,6 @@
 use crate::payloads::sheet_process::ShiftPayload;
 use im::HashMap;
-use logisheets_base::{BlockId, CellId, ColId, NormalCellId, RowId, SheetId};
+use logisheets_base::{BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId};
 
 use self::{
     block::BlockPlace,
@@ -30,34 +30,34 @@ impl Navigator {
         }
     }
 
-    pub fn fetch_row_id(&mut self, sheet_id: SheetId, row: usize) -> Option<RowId> {
+    pub fn fetch_row_id(&mut self, sheet_id: &SheetId, row: usize) -> Option<RowId> {
         let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
         fetcher.get_row_id(row)
     }
 
-    pub fn fetch_row_idx(&mut self, sheet_id: SheetId, row: RowId) -> Option<usize> {
+    pub fn fetch_row_idx(&mut self, sheet_id: &SheetId, row: &RowId) -> Option<usize> {
         let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
-        fetcher.get_row_idx(row)
+        fetcher.get_row_idx(row.clone())
     }
 
-    pub fn fetch_col_id(&mut self, sheet_id: SheetId, col: usize) -> Option<ColId> {
+    pub fn fetch_col_id(&mut self, sheet_id: &SheetId, col: usize) -> Option<ColId> {
         let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
-        fetcher.get_col_id(col)
+        fetcher.get_col_id(col.clone())
     }
 
-    pub fn fetch_col_idx(&mut self, sheet_id: SheetId, col: ColId) -> Option<usize> {
+    pub fn fetch_col_idx(&mut self, sheet_id: &SheetId, col: &ColId) -> Option<usize> {
         let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
-        fetcher.get_col_idx(col)
+        fetcher.get_col_idx(col.clone())
     }
 
-    pub fn fetch_cell_id(&mut self, sheet_id: SheetId, row: usize, col: usize) -> Option<CellId> {
+    pub fn fetch_cell_id(&mut self, sheet_id: &SheetId, row: usize, col: usize) -> Option<CellId> {
         let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
         fetcher.get_cell_id(row, col)
     }
 
     pub fn fetch_norm_cell_id(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         row: usize,
         col: usize,
     ) -> Option<NormalCellId> {
@@ -67,7 +67,7 @@ impl Navigator {
 
     pub fn fetch_cell_idx(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         cell_id: &CellId,
     ) -> Option<(usize, usize)> {
         let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
@@ -76,16 +76,25 @@ impl Navigator {
 
     pub fn fetch_normal_cell_idx(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         cell_id: &NormalCellId,
     ) -> Option<(usize, usize)> {
         let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
         fetcher.get_norm_cell_idx(cell_id)
     }
 
+    pub fn fetch_block_cell_idx(
+        &mut self,
+        sheet_id: &SheetId,
+        cell_id: &BlockCellId,
+    ) -> Option<(usize, usize)> {
+        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+        fetcher.get_block_cell_idx(cell_id)
+    }
+
     pub fn create_block(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         master: NormalCellId,
         row_cnt: usize,
         col_cnt: usize,
@@ -97,13 +106,13 @@ impl Navigator {
         sheet_nav.cache = Cache::default();
     }
 
-    pub fn remove_block(&mut self, sheet_id: SheetId, block_id: BlockId) {
+    pub fn remove_block(&mut self, sheet_id: &SheetId, block_id: &BlockId) {
         let sheet_nav = self.get_sheet_nav(sheet_id);
         sheet_nav.data.blocks.remove(&block_id);
         sheet_nav.cache = Cache::default();
     }
 
-    pub fn move_block(&mut self, sheet_id: SheetId, block_id: BlockId, new_master: NormalCellId) {
+    pub fn move_block(&mut self, sheet_id: &SheetId, block_id: &BlockId, new_master: NormalCellId) {
         let sheet_nav = self.get_sheet_nav(sheet_id);
         if let Some(mut bp) = sheet_nav.data.blocks.get_mut(&block_id) {
             bp.master = new_master;
@@ -113,7 +122,7 @@ impl Navigator {
 
     pub fn get_affected_blockplace(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         line_idx: usize,
         cnt: usize,
         is_row: bool,
@@ -147,22 +156,25 @@ impl Navigator {
         sheet_nav.data.blocks.get(&block_id)
     }
 
+    #[inline]
     pub fn get_block_size(&self, sheet_id: SheetId, block_id: BlockId) -> Option<(usize, usize)> {
         let bp = self.get_block_place(sheet_id, block_id)?;
         Some(bp.get_block_size())
     }
 
+    #[inline]
     pub fn get_master_cell(&self, sheet_id: SheetId, block_id: BlockId) -> Option<CellId> {
         let bp = self.get_block_place(sheet_id, block_id)?;
         let nc = bp.master;
         Some(CellId::NormalCell(nc))
     }
 
-    fn get_sheet_nav(&mut self, sheet_id: SheetId) -> &mut SheetNav {
+    fn get_sheet_nav(&mut self, sheet_id: &SheetId) -> &mut SheetNav {
         if let Some(_) = self.sheet_navs.get(&sheet_id) {
             self.sheet_navs.get_mut(&sheet_id).unwrap()
         } else {
-            self.sheet_navs.insert(sheet_id, SheetNav::default());
+            self.sheet_navs
+                .insert(sheet_id.clone(), SheetNav::default());
             self.sheet_navs.get_mut(&sheet_id).unwrap()
         }
     }

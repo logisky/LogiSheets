@@ -34,7 +34,6 @@ impl<'a> SheetIdFetcherTrait for SheetIdFetcher<'a> {
 pub fn load(wb: Workbook, book_name: String) -> Controller {
     let Status {
         mut navigator,
-        mut vertex_manager,
         mut container,
         mut sheet_id_manager,
         mut func_id_manager,
@@ -44,6 +43,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         mut sheet_pos_manager,
         mut style_manager,
         mut cell_attachment_manager,
+        mut formula_manager,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {
         sheet_id_manager: &mut sheet_id_manager,
@@ -110,12 +110,13 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
                     &ws.worksheet_part.sheet_data,
                     &mut navigator,
                     &mut sheet_id_manager,
+                    &mut sheet_pos_manager,
                     &mut text_id_manager,
                     &mut func_id_manager,
                     &mut name_id_manager,
                     &mut external_links_manager,
                     &mut container,
-                    &mut vertex_manager,
+                    &mut formula_manager,
                     &mut style_loader,
                     &wb,
                 )
@@ -123,7 +124,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         });
     let status = Status {
         navigator,
-        vertex_manager,
+        formula_manager,
         container,
         sheet_id_manager,
         func_id_manager,

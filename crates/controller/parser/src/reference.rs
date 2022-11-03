@@ -1,10 +1,13 @@
 use crate::{
-    ast::{MutRefWithPrefix, UnMutRefWithPrefix},
+    ast::{CubeDisplay, ExtRefDisplay, RangeDisplay},
     context::ContextTrait,
 };
 
 use super::ast;
-use logisheets_base::{column_label_to_index, id_fetcher::IdFetcherTrait, CellId, SheetId};
+use logisheets_base::{
+    column_label_to_index, id_fetcher::IdFetcherTrait, Addr, BlockRange, CellId, Cube, CubeCross,
+    ExtRef, NormalRange, Range, RefAbs, SheetId,
+};
 use logisheets_lexer::*;
 use pest::iterators::Pair;
 use regex::Regex;
@@ -46,12 +49,37 @@ where
 {
     let mut iter = pair.into_inner();
     let first = iter.next().unwrap();
-    let build_mut_ref = |pair, sheet_id, id_fetcher| {
+    let build_mut_ref_range = |pair: Pair<Rule>, sheet_id: SheetId, id_fetcher: &mut T| {
         let a1_ref = build_mut_a1_reference_range(pair, sheet_id, id_fetcher)?;
-        Some(ast::CellReference::Mut(MutRefWithPrefix {
-            sheet_id: curr_sheet,
-            reference: ast::MutRef::A1ReferenceRange(a1_ref),
-        }))
+        let start = a1_ref.start;
+        let end = a1_ref.end;
+        let ref_abs =
+            RefAbs::from_addr_range(start.row_abs, end.row_abs, start.col_abs, end.col_abs);
+        match (start.cell_id, end.cell_id) {
+            (CellId::NormalCell(s), CellId::NormalCell(e)) => {
+                let range = Range::Normal(NormalRange::AddrRange(s, e));
+                let range_id = id_fetcher.fetch_range_id(&curr_sheet, &range);
+                Some(ast::CellReference::Mut(RangeDisplay {
+                    range_id,
+                    ref_abs,
+                    sheet_id,
+                }))
+            }
+            (CellId::BlockCell(s), CellId::BlockCell(e)) => {
+                if s.block_id != e.block_id {
+                    panic!("")
+                }
+
+                let range = Range::Block(BlockRange::AddrRange(s, e));
+                let range_id = id_fetcher.fetch_range_id(&curr_sheet, &range);
+                Some(ast::CellReference::Mut(RangeDisplay {
+                    range_id,
+                    ref_abs,
+                    sheet_id,
+                }))
+            }
+            _ => panic!(),
+        }
     };
     match first.as_rule() {
         Rule::work_sheet_prefix => {
@@ -61,23 +89,62 @@ where
                 Some(p) => {
                     let unmut_prefix = build_unmut_prefix(&p, id_fetcher);
                     match unmut_prefix {
-                        Some(up) => {
+                        Some(prefix) => {
                             let unmut = build_unmut_a1_reference_range(second);
-                            Some(ast::CellReference::UnMut(UnMutRefWithPrefix {
-                                prefix: up,
-                                reference: ast::UnMutRef::A1ReferenceRange(unmut),
-                            }))
+                            let ref_abs = RefAbs::from_addr_range(
+                                unmut.start.row_abs,
+                                unmut.end.row_abs,
+                                unmut.start.col_abs,
+                                unmut.end.col_abs,
+                            );
+                            let cross = CubeCross::AddrRange(
+                                Addr {
+                                    row: unmut.start.row,
+                                    col: unmut.start.col,
+                                },
+                                Addr {
+                                    row: unmut.end.row,
+                                    col: unmut.end.col,
+                                },
+                            );
+                            match prefix {
+                                ast::UnMutRefPrefix::Local(sts) => {
+                                    let cube = Cube {
+                                        from_sheet: sts.from_sheet,
+                                        to_sheet: sts.to_sheet,
+                                        cross,
+                                    };
+                                    let cube_id = id_fetcher.fetch_cube_id(&cube);
+                                    Some(ast::CellReference::UnMut(CubeDisplay {
+                                        cube_id,
+                                        ref_abs,
+                                    }))
+                                }
+                                ast::UnMutRefPrefix::External(ext_prefix) => {
+                                    let ext_ref = ExtRef {
+                                        ext_book: ext_prefix.workbook,
+                                        from_sheet: ext_prefix.from_sheet,
+                                        to_sheet: ext_prefix.to_sheet,
+                                        cross,
+                                    };
+                                    let ext_ref_id = id_fetcher.fetch_ext_ref_id(&ext_ref);
+                                    Some(ast::CellReference::Ext(ExtRefDisplay {
+                                        ext_ref_id,
+                                        ref_abs,
+                                    }))
+                                }
+                            }
                         }
                         None => {
                             let sheet_id = id_fetcher.fetch_sheet_id(&p.sheet);
-                            build_mut_ref(second, sheet_id, id_fetcher)
+                            build_mut_ref_range(second, sheet_id, id_fetcher)
                         }
                     }
                 }
-                None => build_mut_ref(second, curr_sheet, id_fetcher),
+                None => build_mut_ref_range(second, curr_sheet, id_fetcher),
             }
         }
-        Rule::a1_reference_range => build_mut_ref(first, curr_sheet, id_fetcher),
+        Rule::a1_reference_range => build_mut_ref_range(first, curr_sheet, id_fetcher),
         _ => unreachable!(),
     }
 }
@@ -92,27 +159,189 @@ where
 {
     let mut p_iter = pair.into_inner();
     let first = p_iter.next().unwrap();
-    let build_mut_ref = |pair, sheet_id, id_fetcher| {
+    let build_mut_ref = |pair: Pair<Rule>, sheet_id: SheetId, id_fetcher: &mut T| {
         let a1_ref = build_mut_a1_reference(pair, sheet_id, id_fetcher)?;
-        Some(ast::CellReference::Mut(MutRefWithPrefix {
-            sheet_id,
-            reference: ast::MutRef::A1Reference(a1_ref),
-        }))
+        let range_display = match a1_ref {
+            ast::A1Reference::A1ColumnRange(col_range) => {
+                let ref_abs = RefAbs {
+                    start_row: false,
+                    start_col: col_range.start_abs,
+                    end_row: false,
+                    end_col: col_range.end_abs,
+                };
+                let range = Range::Normal(NormalRange::ColRange(col_range.start, col_range.end));
+                let range_id = id_fetcher.fetch_range_id(&sheet_id, &range);
+                RangeDisplay {
+                    range_id,
+                    ref_abs,
+                    sheet_id,
+                }
+            }
+            ast::A1Reference::A1RowRange(row_range) => {
+                let ref_abs = RefAbs {
+                    start_row: row_range.start_abs,
+                    start_col: false,
+                    end_row: row_range.end_abs,
+                    end_col: false,
+                };
+                let range = Range::Normal(NormalRange::RowRange(row_range.start, row_range.end));
+                let range_id = id_fetcher.fetch_range_id(&sheet_id, &range);
+                RangeDisplay {
+                    range_id,
+                    ref_abs,
+                    sheet_id,
+                }
+            }
+            ast::A1Reference::Addr(addr_range) => {
+                let ref_abs = RefAbs {
+                    start_row: addr_range.row_abs,
+                    start_col: addr_range.col_abs,
+                    end_row: false,
+                    end_col: false,
+                };
+                let range = match addr_range.cell_id {
+                    CellId::NormalCell(cell_id) => Range::Normal(NormalRange::Single(cell_id)),
+                    CellId::BlockCell(block_cell_id) => {
+                        Range::Block(BlockRange::Single(block_cell_id))
+                    }
+                };
+                let range_id = id_fetcher.fetch_range_id(&sheet_id, &range);
+                RangeDisplay {
+                    range_id,
+                    ref_abs,
+                    sheet_id,
+                }
+            }
+        };
+        Some(ast::CellReference::Mut(range_display))
     };
     match first.as_rule() {
         Rule::work_sheet_prefix => {
             let prefix = build_work_sheet_prefix(first);
             let second = p_iter.next().unwrap();
             match prefix {
+                None => build_mut_ref(second, curr_sheet, id_fetcher),
                 Some(p) => {
                     let unmut_prefix = build_unmut_prefix(&p, id_fetcher);
                     match unmut_prefix {
-                        Some(up) => {
+                        Some(prefix) => {
                             let unmut = build_unmut_a1_reference(second);
-                            Some(ast::CellReference::UnMut(UnMutRefWithPrefix {
-                                prefix: up,
-                                reference: ast::UnMutRef::A1Reference(unmut),
-                            }))
+                            match (prefix, unmut) {
+                                (
+                                    ast::UnMutRefPrefix::Local(sts),
+                                    ast::UnMutA1Reference::A1ColumnRange(col_range),
+                                ) => {
+                                    let cube = Cube {
+                                        from_sheet: sts.from_sheet,
+                                        to_sheet: sts.to_sheet,
+                                        cross: CubeCross::ColRange(col_range.start, col_range.end),
+                                    };
+                                    let ref_abs = RefAbs::from_col_range(
+                                        col_range.start_abs,
+                                        col_range.end_abs,
+                                    );
+                                    let cube_id = id_fetcher.fetch_cube_id(&cube);
+                                    Some(ast::CellReference::UnMut(CubeDisplay {
+                                        cube_id,
+                                        ref_abs,
+                                    }))
+                                }
+                                (
+                                    ast::UnMutRefPrefix::Local(sts),
+                                    ast::UnMutA1Reference::A1RowRange(row_range),
+                                ) => {
+                                    let cube = Cube {
+                                        from_sheet: sts.from_sheet,
+                                        to_sheet: sts.to_sheet,
+                                        cross: CubeCross::RowRange(row_range.start, row_range.end),
+                                    };
+                                    let ref_abs = RefAbs::from_row_range(
+                                        row_range.start_abs,
+                                        row_range.end_abs,
+                                    );
+                                    let cube_id = id_fetcher.fetch_cube_id(&cube);
+                                    Some(ast::CellReference::UnMut(CubeDisplay {
+                                        cube_id,
+                                        ref_abs,
+                                    }))
+                                }
+                                (
+                                    ast::UnMutRefPrefix::Local(sts),
+                                    ast::UnMutA1Reference::Addr(addr),
+                                ) => {
+                                    let cube = Cube {
+                                        from_sheet: sts.from_sheet,
+                                        to_sheet: sts.to_sheet,
+                                        cross: CubeCross::Single(addr.row, addr.col),
+                                    };
+                                    let ref_abs = RefAbs::from_addr(addr.row_abs, addr.col_abs);
+                                    let cube_id = id_fetcher.fetch_cube_id(&cube);
+                                    Some(ast::CellReference::UnMut(CubeDisplay {
+                                        cube_id,
+                                        ref_abs,
+                                    }))
+                                }
+                                (
+                                    ast::UnMutRefPrefix::External(ext_prefix),
+                                    ast::UnMutA1Reference::A1ColumnRange(col_range),
+                                ) => {
+                                    let cross = CubeCross::ColRange(col_range.start, col_range.end);
+                                    let ref_abs = RefAbs::from_col_range(
+                                        col_range.start_abs,
+                                        col_range.end_abs,
+                                    );
+                                    let ext_ref = ExtRef {
+                                        ext_book: ext_prefix.workbook,
+                                        from_sheet: ext_prefix.from_sheet,
+                                        to_sheet: ext_prefix.to_sheet,
+                                        cross,
+                                    };
+                                    let ext_ref_id = id_fetcher.fetch_ext_ref_id(&ext_ref);
+                                    Some(ast::CellReference::Ext(ExtRefDisplay {
+                                        ext_ref_id,
+                                        ref_abs,
+                                    }))
+                                }
+                                (
+                                    ast::UnMutRefPrefix::External(ext_prefix),
+                                    ast::UnMutA1Reference::A1RowRange(row_range),
+                                ) => {
+                                    let cross = CubeCross::RowRange(row_range.start, row_range.end);
+                                    let ref_abs = RefAbs::from_row_range(
+                                        row_range.start_abs,
+                                        row_range.end_abs,
+                                    );
+                                    let ext_ref = ExtRef {
+                                        ext_book: ext_prefix.workbook,
+                                        from_sheet: ext_prefix.from_sheet,
+                                        to_sheet: ext_prefix.to_sheet,
+                                        cross,
+                                    };
+                                    let ext_ref_id = id_fetcher.fetch_ext_ref_id(&ext_ref);
+                                    Some(ast::CellReference::Ext(ExtRefDisplay {
+                                        ext_ref_id,
+                                        ref_abs,
+                                    }))
+                                }
+                                (
+                                    ast::UnMutRefPrefix::External(ext_prefix),
+                                    ast::UnMutA1Reference::Addr(addr),
+                                ) => {
+                                    let cross = CubeCross::ColRange(addr.row, addr.col);
+                                    let ref_abs = RefAbs::from_addr(addr.row_abs, addr.col_abs);
+                                    let ext_ref = ExtRef {
+                                        ext_book: ext_prefix.workbook,
+                                        from_sheet: ext_prefix.from_sheet,
+                                        to_sheet: ext_prefix.to_sheet,
+                                        cross,
+                                    };
+                                    let ext_ref_id = id_fetcher.fetch_ext_ref_id(&ext_ref);
+                                    Some(ast::CellReference::Ext(ExtRefDisplay {
+                                        ext_ref_id,
+                                        ref_abs,
+                                    }))
+                                }
+                            }
                         }
                         None => {
                             let sheet_id = id_fetcher.fetch_sheet_id(&p.sheet);
@@ -120,7 +349,6 @@ where
                         }
                     }
                 }
-                None => build_mut_ref(second, curr_sheet, id_fetcher),
             }
         }
         Rule::a1_reference => build_mut_ref(first, curr_sheet, id_fetcher),
@@ -140,47 +368,40 @@ where
         (None, Some(from_sheet)) => {
             let from_id = id_fetcher.fetch_sheet_id(&from_sheet);
             let to_id = id_fetcher.fetch_sheet_id(&prefix.sheet);
-            Some(ast::UnMutRefPrefix::Local(
-                ast::LocalUnMutRefPrefix::SheetToSheet(ast::LocalSheetToSheet {
-                    from_sheet: from_id,
-                    to_sheet: to_id,
-                }),
-            ))
+            Some(ast::UnMutRefPrefix::Local(ast::LocalSheetToSheet {
+                from_sheet: from_id,
+                to_sheet: to_id,
+            }))
         }
         (Some(workbook), None) => {
             if id_fetcher.get_book_name() == workbook {
                 None
             } else {
                 let ext_book_id = id_fetcher.fetch_ext_book_id(workbook);
-                Some(ast::UnMutRefPrefix::External(
-                    ast::ExternalUnMutRefPrefix::Sheet(ast::ExternalSheet {
-                        sheet: id_fetcher.fetch_sheet_id(&prefix.sheet),
-                        workbook: ext_book_id,
-                    }),
-                ))
+                Some(ast::UnMutRefPrefix::External(ast::ExternalPrefix {
+                    workbook: ext_book_id,
+                    from_sheet: None,
+                    to_sheet: id_fetcher.fetch_sheet_id(&prefix.sheet),
+                }))
             }
         }
         (Some(workbook), Some(from_sheet)) => {
             if id_fetcher.get_book_name() == workbook {
                 let from_id = id_fetcher.fetch_sheet_id(&from_sheet);
                 let to_id = id_fetcher.fetch_sheet_id(&prefix.sheet);
-                Some(ast::UnMutRefPrefix::Local(
-                    ast::LocalUnMutRefPrefix::SheetToSheet(ast::LocalSheetToSheet {
-                        from_sheet: from_id,
-                        to_sheet: to_id,
-                    }),
-                ))
+                Some(ast::UnMutRefPrefix::Local(ast::LocalSheetToSheet {
+                    from_sheet: from_id,
+                    to_sheet: to_id,
+                }))
             } else {
                 let from_id = id_fetcher.fetch_sheet_id(&from_sheet);
                 let to_id = id_fetcher.fetch_sheet_id(&prefix.sheet);
                 let ext_book_id = id_fetcher.fetch_ext_book_id(workbook);
-                Some(ast::UnMutRefPrefix::External(
-                    ast::ExternalUnMutRefPrefix::SheetToSheet(ast::ExternalSheetToSheet {
-                        workbook: ext_book_id,
-                        from_sheet: from_id,
-                        to_sheet: to_id,
-                    }),
-                ))
+                Some(ast::UnMutRefPrefix::External(ast::ExternalPrefix {
+                    workbook: ext_book_id,
+                    from_sheet: Some(from_id),
+                    to_sheet: to_id,
+                }))
             }
         }
     }
@@ -192,7 +413,12 @@ fn build_unmut_a1_reference_range(pair: Pair<Rule>) -> ast::UnMutA1ReferenceRang
     let start = build_unmut_a1_reference(first);
     let second = iter.next().unwrap();
     let end = build_unmut_a1_reference(second);
-    ast::UnMutA1ReferenceRange { start, end }
+    match (start, end) {
+        (ast::UnMutA1Reference::Addr(s), ast::UnMutA1Reference::Addr(e)) => {
+            ast::UnMutA1ReferenceRange { start: s, end: e }
+        }
+        _ => unreachable!(),
+    }
 }
 
 fn build_mut_a1_reference_range<T>(
@@ -205,35 +431,10 @@ where
 {
     let mut iter = pair.into_inner();
     let first = iter.next().unwrap();
-    let start = build_mut_a1_reference(first, sheet_id, id_fetcher)?;
+    let start = build_mut_a1_addr(first, sheet_id, id_fetcher)?;
     let second = iter.next().unwrap();
-    let end = build_mut_a1_reference(second, sheet_id, id_fetcher)?;
-    match (&start, &end) {
-        (ast::A1Reference::Addr(s), ast::A1Reference::Addr(e)) => match (&s.cell_id, &e.cell_id) {
-            (CellId::NormalCell(_), CellId::NormalCell(_)) => {
-                Some(ast::A1ReferenceRange { start, end })
-            }
-            (CellId::NormalCell(_), CellId::BlockCell(_)) => Some(ast::A1ReferenceRange {
-                start: start.clone(),
-                end: start,
-            }),
-            (CellId::BlockCell(_), CellId::NormalCell(_)) => Some(ast::A1ReferenceRange {
-                start: end.clone(),
-                end,
-            }),
-            (CellId::BlockCell(b1), CellId::BlockCell(b2)) => {
-                if b1.block_id != b2.block_id {
-                    Some(ast::A1ReferenceRange {
-                        start: start.clone(),
-                        end: start,
-                    })
-                } else {
-                    Some(ast::A1ReferenceRange { start, end })
-                }
-            }
-        },
-        _ => Some(ast::A1ReferenceRange { start, end }),
-    }
+    let end = build_mut_a1_addr(second, sheet_id, id_fetcher)?;
+    Some(ast::A1ReferenceRange { start, end })
 }
 
 fn build_mut_a1_reference<T>(
@@ -291,7 +492,7 @@ fn build_mut_a1_addr(
     let row_pair = iter.next().unwrap();
     let (col_abs, col) = build_column(column_pair).unwrap_or((false, 1));
     let (row_abs, row) = build_row(row_pair).unwrap_or((false, 1));
-    let cell_id = id_fetcher.fetch_cell_id(sheet_id, row, col)?;
+    let cell_id = id_fetcher.fetch_cell_id(&sheet_id, row, col)?;
     Some(ast::Address {
         cell_id,
         row_abs,
@@ -351,8 +552,8 @@ fn build_mut_a1_column_range(
     let (start_abs, start) = build_column(first).unwrap_or((false, 1));
     let second = iter.next().unwrap();
     let (end_abs, end) = build_column(second).unwrap_or((false, 1));
-    let start_id = id_fetcher.fetch_col_id(sheet_id, start)?;
-    let end_id = id_fetcher.fetch_col_id(sheet_id, end)?;
+    let start_id = id_fetcher.fetch_col_id(&sheet_id, start)?;
+    let end_id = id_fetcher.fetch_col_id(&sheet_id, end)?;
     Some(ast::ColRange {
         start: start_id,
         start_abs,
@@ -371,8 +572,8 @@ fn build_mut_a1_row_range(
     let (start_abs, start) = build_row(first).unwrap_or((false, 1));
     let second = iter.next().unwrap();
     let (end_abs, end) = build_row(second).unwrap_or((false, 1));
-    let start_id = id_fetcher.fetch_row_id(sheet_id, start)?;
-    let end_id = id_fetcher.fetch_row_id(sheet_id, end)?;
+    let start_id = id_fetcher.fetch_row_id(&sheet_id, start)?;
+    let end_id = id_fetcher.fetch_row_id(&sheet_id, end)?;
     Some(ast::RowRange {
         start: start_id,
         end: end_id,

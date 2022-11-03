@@ -4,16 +4,17 @@ use logisheets_workbook::prelude::*;
 use crate::{
     cell::Cell,
     cell_attachments::{comment::Comment, CellAttachmentsManager},
+    connectors::VertexConnector,
     container::{col_info_manager::ColInfo, row_info_manager::RowInfo, DataContainer},
     ext_book_manager::ExtBooksManager,
+    formula_manager::FormulaManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
     settings::Settings,
-    vertex_manager::VertexManager,
+    workbook::sheet_pos_manager::SheetPosManager,
 };
 
 use super::{
-    fetcher::Fetcher,
     styles::StyleLoader,
     utils::{parse_cell, parse_range},
     vertex::{load_normal_formula, load_shared_formulas},
@@ -32,7 +33,7 @@ pub fn load_cols(
         let col_style_id = style_loader.load_xf(col.style);
         (min..max + 1).into_iter().for_each(|col_idx| {
             let col_id = navigator
-                .fetch_col_id(sheet_id, col_idx as usize)
+                .fetch_col_id(&sheet_id, col_idx as usize)
                 .unwrap_or(0);
             let col_info = ColInfo {
                 best_fit: col.best_fit,
@@ -57,8 +58,8 @@ pub fn load_merge_cells(
     merge_cells.merge_cells.iter().for_each(|mc| {
         let r = &mc.reference;
         if let Some(((start_row, start_col), (end_row, end_col))) = parse_range(&r) {
-            let start_id = navigator.fetch_cell_id(sheet_id, start_row, start_col);
-            let end_id = navigator.fetch_cell_id(sheet_id, end_row, end_col);
+            let start_id = navigator.fetch_cell_id(&sheet_id, start_row, start_col);
+            let end_id = navigator.fetch_cell_id(&sheet_id, end_row, end_col);
             match (start_id, end_id) {
                 (Some(start), Some(end)) => match (start, end) {
                     (CellId::NormalCell(s), CellId::NormalCell(e)) => {
@@ -92,7 +93,7 @@ pub fn load_comments(
         .iter()
         .for_each(|c| match parse_cell(&c.reference) {
             Some((row, col)) => {
-                if let Some(cell_id) = navigator.fetch_cell_id(sheet_id, row, col) {
+                if let Some(cell_id) = navigator.fetch_cell_id(&sheet_id, row, col) {
                     let text = rst_to_plain_text(&c.text);
                     let author = authors.get(c.author_id as usize).unwrap();
                     let author_id = cell_attachment_manager.comments.authors.get_id(author);
@@ -115,12 +116,13 @@ pub fn load_sheet_data(
     sheet_data: &CtSheetData,
     navigator: &mut Navigator,
     sheet_id_manager: &mut SheetIdManager,
+    sheet_pos_manager: &mut SheetPosManager,
     text_id_manager: &mut TextIdManager,
     func_id_manager: &mut FuncIdManager,
     name_id_manager: &mut NameIdManager,
     ext_books_manager: &mut ExtBooksManager,
     container: &mut DataContainer,
-    vertex_manager: &mut VertexManager,
+    formula_manager: &mut FormulaManager,
     style_loader: &mut StyleLoader,
     workbook: &Workbook,
 ) {
@@ -136,7 +138,7 @@ pub fn load_sheet_data(
                     outline_level: row.outline_level,
                     style: style_id,
                 };
-                let id = navigator.fetch_row_id(sheet_id, idx as usize - 1).unwrap();
+                let id = navigator.fetch_row_id(&sheet_id, idx as usize - 1).unwrap();
                 container.set_row_info(sheet_id, id, row_info);
             }
         }
@@ -148,7 +150,7 @@ pub fn load_sheet_data(
                         let string = rst_to_plain_text(rst);
                         text_id_manager.get_id(&string)
                     });
-                    let id = navigator.fetch_cell_id(sheet_id, row, col).unwrap();
+                    let id = navigator.fetch_cell_id(&sheet_id, row, col).unwrap();
                     let style_id = style_loader.load_xf(ct_cell.s);
                     let cell = Cell {
                         value: cv,
@@ -156,14 +158,18 @@ pub fn load_sheet_data(
                     };
                     container.add_cell(sheet_id, id, cell);
                     if let Some(formula) = &ct_cell.f {
-                        let mut fetcher = Fetcher {
+                        let mut vertex_connector = VertexConnector {
+                            book_name,
+                            active_sheet: sheet_id,
+                            container,
+                            sheet_pos_manager,
                             sheet_id_manager,
                             text_id_manager,
                             func_id_manager,
                             name_id_manager,
-                            navigator,
-                            ext_books_manager,
-                            workbook,
+                            id_navigator: &mut navigator.clone(),
+                            idx_navigator: navigator,
+                            external_links_manager: ext_books_manager,
                         };
                         if let Some(f) = &formula.formula {
                             if let Some(reference) = &formula.reference {
@@ -171,8 +177,7 @@ pub fn load_sheet_data(
                                     parse_range(reference)
                                 {
                                     load_shared_formulas(
-                                        vertex_manager,
-                                        book_name,
+                                        formula_manager,
                                         sheet_id,
                                         row_start,
                                         col_start,
@@ -181,28 +186,26 @@ pub fn load_sheet_data(
                                         row_end,
                                         col_end,
                                         f,
-                                        &mut fetcher,
+                                        &mut vertex_connector,
                                     )
                                 } else if let Some((row_idx, col_idx)) = parse_cell(reference) {
                                     load_normal_formula(
-                                        vertex_manager,
-                                        book_name,
+                                        formula_manager,
                                         sheet_id,
                                         row_idx,
                                         col_idx,
                                         f,
-                                        &mut fetcher,
+                                        &mut vertex_connector,
                                     )
                                 }
                             } else {
                                 load_normal_formula(
-                                    vertex_manager,
-                                    book_name,
+                                    formula_manager,
                                     sheet_id,
                                     row,
                                     col,
                                     f,
-                                    &mut fetcher,
+                                    &mut vertex_connector,
                                 )
                             }
                         }

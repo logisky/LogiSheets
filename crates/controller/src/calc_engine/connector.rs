@@ -1,11 +1,9 @@
-use crate::vertex_manager::vertex::FormulaId;
 use logisheets_base::{
     async_func::AsyncFuncCommitTrait, get_active_sheet::GetActiveSheetTrait,
-    get_curr_addr::GetCurrAddrTrait, set_curr_cell::SetCurrCellTrait, CellId, FuncId, SheetId,
-    TextId,
+    get_curr_addr::GetCurrAddrTrait, set_curr_cell::SetCurrCellTrait, CellId, FuncId, Range,
+    RangeId, SheetId, TextId,
 };
 use logisheets_parser::ast;
-use std::collections::HashSet;
 
 use super::calculator::calc_vertex::{CalcValue, CalcVertex};
 
@@ -18,6 +16,7 @@ pub trait Connector:
     fn get_func_name(&self, fid: &FuncId) -> Option<String>;
     fn get_cell_idx(&mut self, sheet_id: SheetId, cell_id: &CellId) -> Option<(usize, usize)>;
     fn get_cell_id(&mut self, sheet_id: SheetId, row: usize, col: usize) -> Option<CellId>;
-    fn commit_calc_values(&mut self, vertex: FormulaId, result: CalcValue) -> HashSet<FormulaId>;
+    fn commit_calc_values(&mut self, vertex: (SheetId, CellId), result: CalcValue);
     fn is_async_func(&self, func_name: &str) -> bool;
+    fn get_range(&self, sheet_id: &SheetId, range: &RangeId) -> Range;
 }

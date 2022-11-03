@@ -1,6 +1,5 @@
 pub mod async_func;
 pub mod block_affect;
-pub mod block_affected;
 pub mod cube_value;
 pub mod datetime;
 pub mod get_active_sheet;
@@ -23,6 +22,9 @@ use std::hash::Hash;
 pub type Id = u32;
 pub type RowId = u32;
 pub type ColId = u32;
+pub type RangeId = u32;
+pub type CubeId = u32;
+pub type ExtRefId = u32;
 pub type SheetId = u16;
 pub type TextId = u32;
 pub type NameId = u8;
@@ -32,12 +34,6 @@ pub const CURR_BOOK: ExtBookId = 0;
 pub type ExtBookId = u8;
 pub type AuthorId = u8;
 pub type StyleId = u32;
-
-#[derive(Debug)]
-pub enum VisitResultType<'c, C> {
-    Build(&'c C),
-    Unbuild,
-}
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
 #[ts(file_name = "cell_id.ts")]
@@ -56,6 +52,98 @@ pub struct NormalCellId {
     pub follow_col: Option<ColId>,
 }
 
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct RefAbs {
+    pub start_row: bool,
+    pub start_col: bool,
+    pub end_row: bool,
+    pub end_col: bool,
+}
+
+impl RefAbs {
+    pub fn from_col_range(start: bool, end: bool) -> Self {
+        RefAbs {
+            start_row: false,
+            start_col: start,
+            end_row: false,
+            end_col: end,
+        }
+    }
+
+    pub fn from_row_range(start: bool, end: bool) -> Self {
+        RefAbs {
+            start_row: start,
+            start_col: false,
+            end_row: end,
+            end_col: false,
+        }
+    }
+
+    pub fn from_addr(row: bool, col: bool) -> Self {
+        RefAbs {
+            start_row: row,
+            start_col: col,
+            end_row: false,
+            end_col: false,
+        }
+    }
+
+    pub fn from_addr_range(start_row: bool, end_row: bool, start_col: bool, end_col: bool) -> Self {
+        RefAbs {
+            start_row,
+            start_col,
+            end_row,
+            end_col,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum NormalRange {
+    Single(NormalCellId),
+    RowRange(RowId, RowId),
+    ColRange(ColId, ColId),
+    AddrRange(NormalCellId, NormalCellId),
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum BlockRange {
+    Single(BlockCellId),
+    AddrRange(BlockCellId, BlockCellId),
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum Range {
+    Normal(NormalRange),
+    Block(BlockRange),
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct Cube {
+    pub from_sheet: SheetId,
+    pub to_sheet: SheetId,
+    pub cross: CubeCross,
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum CubeCross {
+    // (row_idx, col_idx) pair
+    Single(usize, usize),
+    // (start_row_idx, end_row_idx)
+    RowRange(usize, usize),
+    // (start_col_idx, end_col_idx)
+    ColRange(usize, usize),
+    AddrRange(Addr, Addr),
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct ExtRef {
+    pub ext_book: ExtBookId,
+    pub from_sheet: Option<SheetId>,
+    pub to_sheet: SheetId,
+    pub cross: CubeCross,
+}
+
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
 #[ts(file_name = "block_cell_id.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
@@ -67,26 +155,10 @@ pub struct BlockCellId {
     pub col: ColId,
 }
 
-pub struct Reference {
-    pub sheet_id: SheetId,
-    pub position: Position,
-}
-
-pub enum Position {
-    Addr(Addr),
-    Span(Span),
-}
-
 #[derive(Debug, Clone, Default, Hash, PartialEq, Eq, Copy)]
 pub struct Addr {
     pub row: usize,
     pub col: usize,
-}
-
-#[derive(Debug, Clone)]
-pub struct Span {
-    pub start: Addr,
-    pub end: Addr,
 }
 
 #[derive(Debug, Clone)]
@@ -240,13 +312,6 @@ impl CellValue {
         }
     }
 
-    // pub fn from_external_cell<F>(c: &CtExternalCell, f: F) -> CellValue
-    // where
-    //     F: FnMut(usize) -> TextId,
-    // {
-    //     CellValue::get_value(&c.t, Some(&c.v), None, f)
-    // }
-
     pub fn from_cell<F>(c: &CtCell, f: F) -> CellValue
     where
         F: FnMut(usize) -> TextId,
@@ -274,25 +339,29 @@ pub fn index_to_column_label(index: usize) -> String {
     result.iter().collect()
 }
 
-#[test]
-fn label_to_index() {
-    let label = String::from("AA");
-    let result = column_label_to_index(&label);
-    assert_eq!(result, 26);
-    let label = String::from("A");
-    let result = column_label_to_index(&label);
-    assert_eq!(result, 0);
-}
+#[cfg(test)]
+mod tests {
+    use super::{column_label_to_index, index_to_column_label};
+    #[test]
+    fn label_to_index() {
+        let label = String::from("AA");
+        let result = column_label_to_index(&label);
+        assert_eq!(result, 26);
+        let label = String::from("A");
+        let result = column_label_to_index(&label);
+        assert_eq!(result, 0);
+    }
 
-#[test]
-fn index_to_label() {
-    let idx = 26;
-    let result = index_to_column_label(idx);
-    assert_eq!(result, String::from("AA"));
-    let idx = 29;
-    let result = index_to_column_label(idx);
-    assert_eq!(result, String::from("AD"));
-    let idx = 0;
-    let result = index_to_column_label(idx);
-    assert_eq!(result, String::from("A"));
+    #[test]
+    fn index_to_label() {
+        let idx = 26;
+        let result = index_to_column_label(idx);
+        assert_eq!(result, String::from("AA"));
+        let idx = 29;
+        let result = index_to_column_label(idx);
+        assert_eq!(result, String::from("AD"));
+        let idx = 0;
+        let result = index_to_column_label(idx);
+        assert_eq!(result, String::from("A"));
+    }
 }

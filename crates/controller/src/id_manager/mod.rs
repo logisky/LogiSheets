@@ -9,6 +9,7 @@ pub type TextIdManager = IdManager<TextId>;
 pub type FuncIdManager = IdManager<FuncId>;
 pub type AuthorIdManager = IdManager<AuthorId>;
 pub type NameIdManager = name_id_manager::NameIdManager;
+
 mod name_id_manager;
 
 #[derive(Debug, Clone)]
@@ -38,7 +39,7 @@ where
         }
     }
 
-    pub fn registry(&mut self, name: String) -> T {
+    fn registry(&mut self, name: String) -> T {
         let r = self.next_available;
         self.ids.insert(name, self.next_available);
         let _1: T = NumCast::from(1usize).unwrap();

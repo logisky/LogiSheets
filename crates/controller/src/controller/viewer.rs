@@ -42,7 +42,7 @@ impl SheetViewer {
         let s = &controller.status.container;
         let navigator = &mut controller.status.navigator;
         let style_manager = &controller.status.style_manager;
-        let vertex_manager = &controller.status.vertex_manager;
+        let formula_manager = &controller.status.formula_manager;
         let func_manager = &controller.status.func_id_manager;
         let sheet_id_manager = &controller.status.sheet_id_manager;
         let external_links_manager = &controller.status.external_links_manager;
@@ -56,7 +56,7 @@ impl SheetViewer {
                 .into_iter()
                 .for_each(|(col_id, info)| {
                     // TODO: Optimize here.
-                    if let Some(idx) = navigator.fetch_col_idx(sheet_id, col_id) {
+                    if let Some(idx) = navigator.fetch_col_idx(&sheet_id, &col_id) {
                         let info = ColInfo {
                             idx,
                             width: info.width.unwrap_or(get_default_col_width()),
@@ -71,7 +71,7 @@ impl SheetViewer {
                 .into_iter()
                 .for_each(|(row_id, info)| {
                     // TODO: Optimize here.
-                    if let Some(idx) = navigator.fetch_row_idx(sheet_id, row_id) {
+                    if let Some(idx) = navigator.fetch_row_idx(&sheet_id, &row_id) {
                         let info = RowInfo {
                             idx,
                             height: info.ht.unwrap_or(get_default_row_height()),
@@ -84,7 +84,7 @@ impl SheetViewer {
                 theme_manager: &controller.settings.theme,
             };
             sheet_data.cells.iter().for_each(|(cell_id, cell)| {
-                let coord = navigator.fetch_cell_idx(sheet_id, cell_id);
+                let coord = navigator.fetch_cell_idx(&sheet_id, cell_id);
                 if coord.is_none() {
                     panic!()
                 }
@@ -102,15 +102,14 @@ impl SheetViewer {
                     text_id_manager,
                     name_id_manager,
                     navigator,
+                    formula_manager,
                 };
-                let (formula, has_formula) = match vertex_manager
-                    .status
-                    .formulas
-                    .get(&(sheet_id, cell_id.clone()))
-                {
-                    Some(n) => (n.unparse(&mut name_fetcher, sheet_id), true),
-                    None => (String::from(""), false),
-                };
+
+                let (formula, has_formula) =
+                    match formula_manager.formulas.get(&(sheet_id, cell_id.clone())) {
+                        Some(n) => (n.unparse(&mut name_fetcher, sheet_id), true),
+                        None => (String::from(""), false),
+                    };
                 let v = convert_value(row, col, &cell.value, formula, has_formula, text_id_manager);
                 self.values.push(v);
             });
@@ -120,7 +119,7 @@ impl SheetViewer {
         if let Some(sheet_comments) = comments.data.get(&sheet_id) {
             sheet_comments.comments.iter().for_each(|(cell_id, c)| {
                 // TODO: Optimize here.
-                if let Some((row, col)) = navigator.fetch_cell_idx(sheet_id, cell_id) {
+                if let Some((row, col)) = navigator.fetch_cell_idx(&sheet_id, cell_id) {
                     let author = comments
                         .get_author_name(&c.author)
                         .unwrap_or(String::from("unknown author"));
@@ -137,10 +136,10 @@ impl SheetViewer {
         if let Some(merge_cells) = merge_cells_manager.data.get(&sheet_id) {
             merge_cells.iter().for_each(|(start, end)| {
                 if let Some((row_start, col_start)) =
-                    navigator.fetch_normal_cell_idx(sheet_id, &start)
+                    navigator.fetch_normal_cell_idx(&sheet_id, &start)
                 {
                     let (row_end, col_end) =
-                        navigator.fetch_normal_cell_idx(sheet_id, &end).unwrap();
+                        navigator.fetch_normal_cell_idx(&sheet_id, &end).unwrap();
                     let mc = MergeCell {
                         row_start,
                         col_start,
@@ -156,7 +155,7 @@ impl SheetViewer {
                 let (row_cnt, col_cnt) = block_place.get_block_size();
                 let master = &block_place.master;
                 let (master_row, master_col) =
-                    navigator.fetch_normal_cell_idx(sheet_id, &master).unwrap();
+                    navigator.fetch_normal_cell_idx(&sheet_id, &master).unwrap();
                 let block_info = BlockInfo {
                     block_id: *block_id,
                     row_start: master_row,

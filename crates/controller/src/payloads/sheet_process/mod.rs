@@ -16,7 +16,6 @@ pub type ShiftPayload = shift::ShiftPayload;
 pub type PropertyPayload = property::PropertyPayload;
 pub type ShiftType = shift::ShiftType;
 pub type LineShift = shift::LineShift;
-pub type RangeShift = shift::RangeShift;
 pub type Direction = shift::Direction;
 pub type BlockPayload = block::BlockPayload;
 pub type CreateBlock = block::CreateBlockPayload;

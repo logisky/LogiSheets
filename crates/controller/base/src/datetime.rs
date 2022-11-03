@@ -127,6 +127,7 @@ mod tests {
     use super::get_serial_num_by_date_1900;
     use super::get_time_by_decimal_num;
     use super::Date;
+
     #[test]
     fn f64_to_u32() {
         let a = 54.2;
