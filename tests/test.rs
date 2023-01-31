@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod funcs;
+#[cfg(test)]
+mod shift;
 
 #[cfg(test)]
 mod test_builtin_style {

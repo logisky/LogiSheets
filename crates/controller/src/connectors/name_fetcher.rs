@@ -1,4 +1,6 @@
-use logisheets_base::{name_fetcher::NameFetcherTrait, CellId, ExtRef, Range, SheetId};
+use logisheets_base::{
+    name_fetcher::NameFetcherTrait, CellId, ExtBookId, ExtRef, NameId, Range, SheetId,
+};
 
 use crate::{
     ext_book_manager::ExtBooksManager,
@@ -36,13 +38,13 @@ impl<'a> NameFetcherTrait for NameFetcher<'a> {
             .unwrap_or(String::from("Unknown"))
     }
 
-    fn fetch_book_name(&self, book_id: &logisheets_base::ExtBookId) -> String {
+    fn fetch_book_name(&self, book_id: &ExtBookId) -> String {
         self.external_links_manager
             .fetch_book_name(book_id)
             .unwrap_or(String::from(""))
     }
 
-    fn fetch_defined_name(&self, nid: &logisheets_base::NameId) -> String {
+    fn fetch_defined_name(&self, nid: &NameId) -> String {
         match self.name_id_manager.get_string(nid) {
             Some((_, name)) => name,
             None => String::from(""),

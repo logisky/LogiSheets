@@ -1,9 +1,11 @@
 use logisheets_controller::controller::edit_action::{
-    CellInput, EditAction, EditPayload, PayloadsAction, SheetRename, SheetShift,
+    CellInput, ColShift, EditAction, EditPayload, PayloadsAction, RowShift, SheetRename, SheetShift,
 };
 use logisheets_controller::{Value, Workbook};
 
-use crate::operator::{CheckError, CheckNum, CheckString, Input, Operator, Statement, Switch};
+use crate::operator::{
+    CheckError, CheckNum, CheckString, Input, Operator, ShiftData, Statement, Switch,
+};
 use crate::parser::{parse, ParseError};
 
 #[derive(Debug)]
@@ -51,11 +53,69 @@ fn execute(statements: Vec<Statement>) -> Option<ExecError> {
             Operator::CheckNum(check_num) => exec_check_num(&mut ctx, check_num, line),
             Operator::CheckString(check_str) => exec_check_string(&mut ctx, check_str, line),
             Operator::CheckError(check_err) => exec_check_error(&mut ctx, check_err, line),
+            Operator::InsertRow(data) => exec_shift_row(&mut ctx, data, line, true),
+            Operator::InsertCol(data) => exec_shift_col(&mut ctx, data, line, true),
+            Operator::DeleteRow(data) => exec_shift_row(&mut ctx, data, line, false),
+            Operator::DeleteCol(data) => exec_shift_col(&mut ctx, data, line, false),
         };
         if res.is_some() {
             return res;
         }
     }
+    None
+}
+
+fn exec_shift_row(
+    ctx: &mut ExecContext,
+    data: ShiftData,
+    line: usize,
+    insert: bool,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    ctx.workbook
+        .handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::RowShift(RowShift {
+                sheet_idx,
+                row: data.from as usize,
+                count: data.cnt as usize,
+                insert,
+            })],
+            undoable: false,
+        }));
+    None
+}
+
+fn exec_shift_col(
+    ctx: &mut ExecContext,
+    data: ShiftData,
+    line: usize,
+    insert: bool,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    ctx.workbook
+        .handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::ColShift(ColShift {
+                sheet_idx,
+                col: data.from as usize,
+                count: data.cnt as usize,
+                insert,
+            })],
+            undoable: false,
+        }));
     None
 }
 
