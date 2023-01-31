@@ -1,3 +1,5 @@
+use crate::{Cube, CubeId, ExtRef, ExtRefId, Range, RangeId};
+
 use super::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId, TextId};
 
 pub trait SheetIdFetcherTrait {
@@ -5,11 +7,11 @@ pub trait SheetIdFetcherTrait {
 }
 
 pub trait IdFetcherTrait {
-    fn fetch_row_id(&mut self, sheet_id: SheetId, row_idx: usize) -> Option<RowId>;
-    fn fetch_col_id(&mut self, sheet_id: SheetId, col_idx: usize) -> Option<ColId>;
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId>;
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId>;
     fn fetch_cell_id(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
     ) -> Option<CellId>;
@@ -23,4 +25,12 @@ pub trait IdFetcherTrait {
     fn fetch_text_id(&mut self, text: &str) -> TextId;
 
     fn fetch_func_id(&mut self, func_name: &str) -> FuncId;
+}
+
+pub trait VertexFetcherTrait {
+    fn fetch_range_id(&mut self, sheet_id: &SheetId, range: &Range) -> RangeId;
+
+    fn fetch_cube_id(&mut self, cube: &Cube) -> CubeId;
+
+    fn fetch_ext_ref_id(&mut self, ext_ref: &ExtRef) -> ExtRefId;
 }

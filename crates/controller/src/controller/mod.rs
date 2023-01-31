@@ -200,7 +200,7 @@ mod tests {
             undoable: true,
         };
         wb.handle_action(EditAction::Payloads(payloads_action));
-        let len = wb.status.vertex_manager.status.formulas.len();
+        let len = wb.status.formula_manager.formulas.len();
         assert_eq!(len, 1);
     }
 

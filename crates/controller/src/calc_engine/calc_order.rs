@@ -1,5 +1,5 @@
-use im::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt;
 use std::hash::Hash;
@@ -114,10 +114,11 @@ where
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::collections::HashSet;
 
     use super::{calc_order, CalcUnit};
-    use crate::vertex_manager::graph::Graph;
-    use im::{hashset::HashSet, OrdSet};
+    use crate::formula_manager::graph::Graph;
+    use im::OrdSet;
     use itertools::Itertools;
 
     #[test]
@@ -127,16 +128,16 @@ mod tests {
         //  2   4    6
         //  |
         //  3
-        let graph = Graph::<u32>::new()
-            .add_dep(1, 2)
-            .add_dep(2, 3)
-            .add_dep(1, 4)
-            .add_dep(5, 4)
-            .add_dep(5, 6);
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(1, 2);
+        graph.add_dep(2, 3);
+        graph.add_dep(1, 4);
+        graph.add_dep(5, 4);
+        graph.add_dep(5, 6);
         let rdeps_fetcher = |r: &u32| -> Vec<u32> {
             let set = match graph.get_rdeps(r) {
                 Some(s) => s.clone(),
-                None => HashSet::new(),
+                None => HashSet::new().into(),
             };
             let mut v = set.into_iter().collect_vec();
             v.sort();
@@ -166,16 +167,16 @@ mod tests {
         //  2   4    6
         //  |
         //  3
-        let graph = Graph::<u32>::new()
-            .add_dep(1, 2)
-            .add_dep(2, 3)
-            .add_dep(1, 4)
-            .add_dep(5, 4)
-            .add_dep(5, 6);
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(1, 2);
+        graph.add_dep(2, 3);
+        graph.add_dep(1, 4);
+        graph.add_dep(5, 4);
+        graph.add_dep(5, 6);
         let rdeps_fetcher = |r: &u32| -> Vec<u32> {
             let set = match graph.get_rdeps(r) {
                 Some(s) => s.clone(),
-                None => HashSet::new(),
+                None => HashSet::new().into(),
             };
             let mut v = set.into_iter().collect_vec();
             v.sort();
@@ -200,17 +201,17 @@ mod tests {
         //  2   4    6
         //   \ /
         //    3
-        let graph = Graph::<u32>::new()
-            .add_dep(1, 2)
-            .add_dep(2, 3)
-            .add_dep(4, 3)
-            .add_dep(1, 4)
-            .add_dep(5, 4)
-            .add_dep(5, 6);
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(1, 2);
+        graph.add_dep(2, 3);
+        graph.add_dep(4, 3);
+        graph.add_dep(1, 4);
+        graph.add_dep(5, 4);
+        graph.add_dep(5, 6);
         let rdeps_fetcher = |r: &u32| -> Vec<u32> {
             let set = match graph.get_rdeps(r) {
                 Some(s) => s.clone(),
-                None => HashSet::new(),
+                None => HashSet::new().into(),
             };
             let mut v = set.into_iter().collect_vec();
             v.sort();
@@ -239,11 +240,12 @@ mod tests {
         //   1
         //   |
         //   2
-        let graph = Graph::<u32>::new().add_dep(1, 2);
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(1, 2);
         let rdeps_fetcher = |r: &u32| -> Vec<u32> {
             let set = match graph.get_rdeps(r) {
                 Some(s) => s.clone(),
-                None => HashSet::new(),
+                None => HashSet::new().into(),
             };
             let mut v = set.into_iter().collect_vec();
             v.sort();
@@ -268,16 +270,16 @@ mod tests {
         //  2   4    6
         //  |
         //  3
-        let graph = Graph::<u32>::new()
-            .add_dep(1, 2)
-            .add_dep(2, 3)
-            .add_dep(1, 4)
-            .add_dep(5, 4)
-            .add_dep(5, 6);
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(1, 2);
+        graph.add_dep(2, 3);
+        graph.add_dep(1, 4);
+        graph.add_dep(5, 4);
+        graph.add_dep(5, 6);
         let rdeps_fetcher = |r: &u32| -> Vec<u32> {
             let set = match graph.get_rdeps(r) {
                 Some(s) => s.clone(),
-                None => HashSet::new(),
+                None => HashSet::new().into(),
             };
             let mut v = set.into_iter().collect_vec();
             v.sort();
@@ -301,14 +303,14 @@ mod tests {
         // 2   1   5
         //  \  |  /
         //     4
-        let graph = Graph::<u32>::new()
-            .add_dep(1, 4)
-            .add_dep(5, 4)
-            .add_dep(2, 4);
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(1, 4);
+        graph.add_dep(5, 4);
+        graph.add_dep(2, 4);
         let rdeps_fetcher = |r: &u32| -> Vec<u32> {
             let set = match graph.get_rdeps(r) {
                 Some(s) => s.clone(),
-                None => HashSet::new(),
+                None => HashSet::new().into(),
             };
             let mut v = set.into_iter().collect_vec();
             v.sort();
@@ -347,17 +349,17 @@ mod tests {
         //  3
         //  |
         //  1
-        let graph = Graph::<u32>::new()
-            .add_dep(1, 2)
-            .add_dep(2, 3)
-            .add_dep(3, 1)
-            .add_dep(1, 4)
-            .add_dep(5, 4)
-            .add_dep(5, 6);
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(1, 2);
+        graph.add_dep(2, 3);
+        graph.add_dep(3, 1);
+        graph.add_dep(1, 4);
+        graph.add_dep(5, 4);
+        graph.add_dep(5, 6);
         let rdeps_fetcher = |r: &u32| -> Vec<u32> {
             let set = match graph.get_rdeps(r) {
                 Some(s) => s.clone(),
-                None => HashSet::new(),
+                None => HashSet::new().into(),
             };
             let mut v = set.into_iter().collect_vec();
             v.sort();

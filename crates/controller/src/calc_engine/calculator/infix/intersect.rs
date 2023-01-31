@@ -1,4 +1,4 @@
-use super::super::calc_vertex::{CalcReference, CalcVertex, ColRange, Range, Reference, RowRange};
+use super::super::calc_vertex::{CalcReference, CalcVertex, ColRange, Reference, RowRange};
 use logisheets_base::Addr as Address;
 use logisheets_parser::ast;
 
@@ -31,7 +31,9 @@ fn intersect_without_prefix(l_ref: Reference, r_ref: Reference) -> Option<Refere
             intersect_addr_and_col_range(addr, cr)
         }
         (Reference::Addr(addr), Reference::RowRange(rr)) => intersect_addr_and_row_range(addr, rr),
-        (Reference::Addr(addr), Reference::Range(range)) => intersect_addr_and_range(addr, range),
+        (Reference::Addr(addr), Reference::Range(start, end)) => {
+            intersect_addr_and_range(addr, start, end)
+        }
         (Reference::ColumnRange(cr), Reference::Addr(addr)) => {
             intersect_addr_and_col_range(addr, cr)
         }
@@ -41,25 +43,29 @@ fn intersect_without_prefix(l_ref: Reference, r_ref: Reference) -> Option<Refere
         (Reference::ColumnRange(cr), Reference::RowRange(rr)) => {
             intersect_col_range_and_row_range(cr, rr)
         }
-        (Reference::ColumnRange(cr), Reference::Range(range)) => {
-            intersect_range_and_col_range(range, cr)
+        (Reference::ColumnRange(cr), Reference::Range(start, end)) => {
+            intersect_range_and_col_range(start, end, cr)
         }
         (Reference::RowRange(rr), Reference::Addr(addr)) => intersect_addr_and_row_range(addr, rr),
         (Reference::RowRange(rr), Reference::ColumnRange(cr)) => {
             intersect_col_range_and_row_range(cr, rr)
         }
         (Reference::RowRange(lrr), Reference::RowRange(rrr)) => intersect_row_ranges(lrr, rrr),
-        (Reference::RowRange(rr), Reference::Range(range)) => {
-            intersect_range_and_row_range(range, rr)
+        (Reference::RowRange(rr), Reference::Range(start, end)) => {
+            intersect_range_and_row_range(start, end, rr)
         }
-        (Reference::Range(range), Reference::Addr(addr)) => intersect_addr_and_range(addr, range),
-        (Reference::Range(range), Reference::ColumnRange(cr)) => {
-            intersect_range_and_col_range(range, cr)
+        (Reference::Range(start, end), Reference::Addr(addr)) => {
+            intersect_addr_and_range(addr, start, end)
         }
-        (Reference::Range(range), Reference::RowRange(rr)) => {
-            intersect_range_and_row_range(range, rr)
+        (Reference::Range(start, end), Reference::ColumnRange(cr)) => {
+            intersect_range_and_col_range(start, end, cr)
         }
-        (Reference::Range(lr), Reference::Range(rr)) => intersect_ranges(lr, rr),
+        (Reference::Range(start, end), Reference::RowRange(rr)) => {
+            intersect_range_and_row_range(start, end, rr)
+        }
+        (Reference::Range(left_start, left_end), Reference::Range(right_start, right_end)) => {
+            intersect_ranges(left_start, left_end, right_start, right_end)
+        }
     }
 }
 
@@ -71,21 +77,26 @@ fn intersect_addresses(la: Address, ra: Address) -> Option<Reference> {
     }
 }
 
-fn intersect_ranges(lr: Range, rr: Range) -> Option<Reference> {
+fn intersect_ranges(
+    lr_start: Address,
+    lr_end: Address,
+    rr_start: Address,
+    rr_end: Address,
+) -> Option<Reference> {
     let (row_start, row_end) =
-        intersect_intervals((lr.start.row, lr.end.row), (rr.start.row, rr.end.row))?;
+        intersect_intervals((lr_start.row, lr_end.row), (rr_start.row, rr_end.row))?;
     let (col_start, col_end) =
-        intersect_intervals((lr.start.col, lr.end.col), (rr.start.col, rr.end.col))?;
-    Some(Reference::Range(Range {
-        start: Address {
+        intersect_intervals((lr_start.col, lr_end.col), (rr_start.col, rr_end.col))?;
+    Some(Reference::Range(
+        Address {
             row: row_start,
             col: col_start,
         },
-        end: Address {
+        Address {
             row: row_end,
             col: col_end,
         },
-    }))
+    ))
 }
 
 fn intersect_col_ranges(lcr: ColRange, rcr: ColRange) -> Option<Reference> {
@@ -98,9 +109,13 @@ fn intersect_row_ranges(lrr: RowRange, rrr: RowRange) -> Option<Reference> {
     Some(Reference::RowRange(RowRange { start, end }))
 }
 
-fn intersect_addr_and_range(addr: Address, range: Range) -> Option<Reference> {
-    if point_in_interval(addr.row, (range.start.row, range.end.row))
-        && point_in_interval(addr.col, (range.start.col, range.end.col))
+fn intersect_addr_and_range(
+    addr: Address,
+    range_start: Address,
+    range_end: Address,
+) -> Option<Reference> {
+    if point_in_interval(addr.row, (range_start.row, range_end.row))
+        && point_in_interval(addr.col, (range_start.col, range_end.col))
     {
         Some(Reference::Addr(addr))
     } else {
@@ -124,47 +139,55 @@ fn intersect_addr_and_row_range(addr: Address, rr: RowRange) -> Option<Reference
     }
 }
 
-fn intersect_range_and_col_range(range: Range, cr: ColRange) -> Option<Reference> {
+fn intersect_range_and_col_range(
+    range_start: Address,
+    range_end: Address,
+    cr: ColRange,
+) -> Option<Reference> {
     let (col_start, col_end) =
-        intersect_intervals((range.start.col, range.end.col), (cr.start, cr.end))?;
-    Some(Reference::Range(Range {
-        start: Address {
-            row: range.start.row,
+        intersect_intervals((range_start.col, range_end.col), (cr.start, cr.end))?;
+    Some(Reference::Range(
+        Address {
+            row: range_start.row,
             col: col_start,
         },
-        end: Address {
-            row: range.end.row,
+        Address {
+            row: range_end.row,
             col: col_end,
         },
-    }))
+    ))
 }
 
-fn intersect_range_and_row_range(range: Range, rr: RowRange) -> Option<Reference> {
+fn intersect_range_and_row_range(
+    range_start: Address,
+    range_end: Address,
+    rr: RowRange,
+) -> Option<Reference> {
     let (row_start, row_end) =
-        intersect_intervals((range.start.row, range.end.row), (rr.start, rr.end))?;
-    Some(Reference::Range(Range {
-        start: Address {
+        intersect_intervals((range_start.row, range_end.row), (rr.start, rr.end))?;
+    Some(Reference::Range(
+        Address {
             row: row_start,
-            col: range.start.col,
+            col: range_start.col,
         },
-        end: Address {
-            col: range.end.col,
+        Address {
+            col: range_end.col,
             row: row_end,
         },
-    }))
+    ))
 }
 
 fn intersect_col_range_and_row_range(cr: ColRange, rr: RowRange) -> Option<Reference> {
-    Some(Reference::Range(Range {
-        start: Address {
+    Some(Reference::Range(
+        Address {
             row: rr.start,
             col: cr.start,
         },
-        end: Address {
+        Address {
             row: rr.end,
             col: cr.end,
         },
-    }))
+    ))
 }
 
 fn intersect_intervals(
@@ -202,7 +225,7 @@ fn point_in_interval(p: usize, interval: (usize, usize)) -> bool {
 #[cfg(test)]
 mod tests {
     use super::super::super::calc_vertex::{
-        CalcReference, CalcValue, CalcVertex, ColRange, Range, Reference, RowRange, Value,
+        CalcReference, CalcValue, CalcVertex, ColRange, Reference, RowRange, Value,
     };
     use super::{intersect, intersect_without_prefix};
     use logisheets_base::Addr as Address;
@@ -257,20 +280,14 @@ mod tests {
 
         let r = intersect_without_prefix(
             addr.clone(),
-            Reference::Range(Range {
-                start: Address { row: 4, col: 3 },
-                end: Address { row: 2, col: 5 },
-            }),
+            Reference::Range(Address { row: 4, col: 3 }, Address { row: 2, col: 5 }),
         );
         assert!(matches!(
             r,
             Some(Reference::Addr(Address { row: 3, col: 3 })),
         ));
         let r = intersect_without_prefix(
-            Reference::Range(Range {
-                start: Address { row: 4, col: 4 },
-                end: Address { row: 2, col: 5 },
-            }),
+            Reference::Range(Address { row: 4, col: 4 }, Address { row: 2, col: 5 }),
             addr.clone(),
         );
         assert!(matches!(r, None));
@@ -278,45 +295,33 @@ mod tests {
 
     #[test]
     fn range_test() {
-        let range = Reference::Range(Range {
-            start: Address { row: 2, col: 5 },
-            end: Address { row: 4, col: 7 },
-        });
+        let range = Reference::Range(Address { row: 2, col: 5 }, Address { row: 4, col: 7 });
 
         let r = intersect_without_prefix(
             range.clone(),
-            Reference::Range(Range {
-                start: Address { row: 3, col: 4 },
-                end: Address { row: 5, col: 6 },
-            }),
+            Reference::Range(Address { row: 3, col: 4 }, Address { row: 5, col: 6 }),
         );
         assert!(matches!(
             r,
-            Some(Reference::Range(Range {
-                start: Address { row: 3, col: 5 },
-                end: Address { row: 4, col: 6 },
-            })),
+            Some(Reference::Range(
+                Address { row: 3, col: 5 },
+                Address { row: 4, col: 6 },
+            )),
         ));
         let r = intersect_without_prefix(
-            Reference::Range(Range {
-                start: Address { row: 5, col: 6 },
-                end: Address { row: 2, col: 6 },
-            }),
+            Reference::Range(Address { row: 5, col: 6 }, Address { row: 2, col: 6 }),
             range.clone(),
         );
         assert!(matches!(
             r,
-            Some(Reference::Range(Range {
-                start: Address { row: 2, col: 6 },
-                end: Address { row: 4, col: 6 },
-            })),
+            Some(Reference::Range(
+                Address { row: 2, col: 6 },
+                Address { row: 4, col: 6 },
+            )),
         ));
         let r = intersect_without_prefix(
             range.clone(),
-            Reference::Range(Range {
-                start: Address { row: 3, col: 2 },
-                end: Address { row: 5, col: 4 },
-            }),
+            Reference::Range(Address { row: 3, col: 2 }, Address { row: 5, col: 4 }),
         );
         assert!(matches!(r, None));
 
@@ -326,10 +331,10 @@ mod tests {
         );
         assert!(matches!(
             r,
-            Some(Reference::Range(Range {
-                start: Address { row: 2, col: 7 },
-                end: Address { row: 4, col: 7 },
-            })),
+            Some(Reference::Range(
+                Address { row: 2, col: 7 },
+                Address { row: 4, col: 7 },
+            )),
         ));
         let r = intersect_without_prefix(
             range.clone(),
@@ -343,10 +348,10 @@ mod tests {
         );
         assert!(matches!(
             r,
-            Some(Reference::Range(Range {
-                start: Address { row: 2, col: 5 },
-                end: Address { row: 4, col: 7 },
-            })),
+            Some(Reference::Range(
+                Address { row: 2, col: 5 },
+                Address { row: 4, col: 7 },
+            )),
         ));
         let r = intersect_without_prefix(
             range.clone(),
@@ -378,10 +383,10 @@ mod tests {
         );
         assert!(matches!(
             r,
-            Some(Reference::Range(Range {
-                start: Address { row: 3, col: 2 },
-                end: Address { row: 1, col: 4 },
-            })),
+            Some(Reference::Range(
+                Address { row: 3, col: 2 },
+                Address { row: 1, col: 4 },
+            )),
         ));
     }
 

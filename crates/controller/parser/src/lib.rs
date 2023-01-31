@@ -5,8 +5,8 @@ mod reference;
 #[cfg(test)]
 mod test_utils;
 pub mod unparse;
-mod update;
-pub mod walker;
+// mod update;
+// pub mod walker;
 
 #[macro_use]
 extern crate lazy_static;
@@ -319,9 +319,8 @@ mod tests {
     use super::parse_number;
     use super::Parser;
     use crate::context::Context;
-    use crate::test_utils::TestFetcher;
-    use logisheets_base::CellId;
-    use logisheets_base::{ExtBookId, NormalCellId, SheetId};
+    use crate::test_utils::TestIdFetcher;
+    use crate::test_utils::TestVertexFetcher;
 
     // Need more tests
     #[test]
@@ -349,11 +348,13 @@ mod tests {
     #[test]
     fn parse_index_func_test() {
         let parser = Parser {};
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let f1 = "INDEX((A1:B2, C3:D4), 1, 2, 2)";
         let r1 = parser.parse(f1, &mut context).unwrap().pure;
@@ -378,11 +379,13 @@ mod tests {
     #[test]
     fn parse_prefix_op() {
         let parser = Parser {};
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let f1 = "-A1:B$2";
         let r1 = parser.parse(f1, &mut context).unwrap().pure;
@@ -403,11 +406,13 @@ mod tests {
     #[test]
     fn parse_prefix_op2() {
         let parser = Parser {};
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let f1 = "+K96-K97";
         let r1 = parser.parse(f1, &mut context).unwrap().pure;
@@ -442,11 +447,13 @@ mod tests {
 
     #[test]
     fn parse_postfix_op() {
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f1 = "3.14%";
@@ -456,11 +463,13 @@ mod tests {
 
     #[test]
     fn parse_infix_op() {
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "3+3.2";
@@ -482,11 +491,13 @@ mod tests {
 
     #[test]
     fn func_call() {
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "SUM(1,2)";
@@ -509,11 +520,13 @@ mod tests {
 
     #[test]
     fn prec() {
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "1+2*3";
@@ -542,11 +555,13 @@ mod tests {
 
     #[test]
     fn implicit_whitespace() {
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "1 + 2 * 3";
@@ -573,11 +588,13 @@ mod tests {
 
     #[test]
     fn composite() {
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "-1 + SUM(1+3.14, 2)% * 3e-4";
@@ -605,11 +622,13 @@ mod tests {
 
     #[test]
     fn name() {
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "\\costum_name.1";
@@ -628,11 +647,13 @@ mod tests {
 
     #[test]
     fn constant() {
-        let mut id_fetcher = TestFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "#N/A";
@@ -668,153 +689,15 @@ mod tests {
     }
 
     #[test]
-    fn reference() {
-        let mut id_fetcher = TestFetcher {};
-        let mut context = Context {
-            sheet_id: 1,
-            book_name: "book",
-            id_fetcher: &mut id_fetcher,
-        };
-        let parser = Parser {};
-        let f = "sheet!A1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        match r {
-            ast::PureNode::Reference(ast::CellReference::Mut(a1_ref)) => {
-                assert_eq!(a1_ref.sheet_id, 5);
-            }
-            _ => panic!(),
-        };
-        let f = "[wb.xlsx]sheet!A1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        match r {
-            ast::PureNode::Reference(ast::CellReference::UnMut(ast::UnMutRefWithPrefix {
-                prefix: ast::UnMutRefPrefix::External(ast::ExternalUnMutRefPrefix::Sheet(s)),
-                reference: _,
-            })) => {
-                assert_eq!(s.sheet, "sheet".len() as SheetId);
-                assert_eq!(s.workbook, "wb.xlsx".len() as ExtBookId);
-            }
-            _ => panic!(),
-        };
-        let f = "[book]sheet!A1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        match r {
-            ast::PureNode::Reference(ast::CellReference::Mut(a1_ref)) => {
-                assert_eq!(a1_ref.sheet_id, 5);
-            }
-            _ => panic!(),
-        };
-        let f = "'[w,b.xlsx]sheet1:she,et2'!A1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        match r {
-            ast::PureNode::Reference(ast::CellReference::UnMut(ast::UnMutRefWithPrefix {
-                prefix:
-                    ast::UnMutRefPrefix::External(ast::ExternalUnMutRefPrefix::SheetToSheet(sts)),
-                reference: _,
-            })) => {
-                assert_eq!(sts.from_sheet, "sheet1".len() as SheetId);
-                assert_eq!(sts.to_sheet, "she,et2".len() as SheetId);
-                assert_eq!(sts.workbook, "w,b.xlsx".len() as ExtBookId);
-            }
-            _ => panic!(),
-        };
-        let f = "sheet:sheet2!A1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        match r {
-            ast::PureNode::Reference(ast::CellReference::UnMut(ast::UnMutRefWithPrefix {
-                prefix: ast::UnMutRefPrefix::Local(ast::LocalUnMutRefPrefix::SheetToSheet(sts)),
-                reference: _,
-            })) => {
-                assert_eq!(sts.from_sheet, 5);
-                assert_eq!(sts.to_sheet, 6);
-            }
-            _ => panic!(),
-        };
-        let f = "[book]sheet:sheet2!A1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        match r {
-            ast::PureNode::Reference(ast::CellReference::UnMut(ast::UnMutRefWithPrefix {
-                prefix: ast::UnMutRefPrefix::Local(ast::LocalUnMutRefPrefix::SheetToSheet(sts)),
-                reference: _,
-            })) => {
-                assert_eq!(sts.from_sheet, 5);
-                assert_eq!(sts.to_sheet, 6);
-            }
-            _ => panic!(),
-        };
-        let f = "'sh''eet'!A1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        match r {
-            ast::PureNode::Reference(ast::CellReference::Mut(a1_ref)) => {
-                assert_eq!(a1_ref.sheet_id, 7);
-            }
-            _ => panic!(),
-        };
-        let f = "sh,eet!A1";
-        let r = parser.parse(f, &mut context);
-        assert!(matches!(r, None));
-        let f = "$A1:B:$D";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        assert!(matches!(
-            r,
-            ast::PureNode::Reference(ast::CellReference::Mut(ast::MutRefWithPrefix {
-                sheet_id: 1,
-                reference: ast::MutRef::A1ReferenceRange(ast::A1ReferenceRange {
-                    start: ast::A1Reference::Addr(ast::Address {
-                        cell_id: CellId::NormalCell(NormalCellId {
-                            row: 0,
-                            col: 0,
-                            follow_row: None,
-                            follow_col: None,
-                        }),
-                        col_abs: true,
-                        row_abs: false,
-                    }),
-                    end: ast::A1Reference::A1ColumnRange(ast::ColRange {
-                        start: 2,
-                        start_abs: false,
-                        end: 4,
-                        end_abs: true,
-                    }),
-                })
-            }))
-        ));
-        let f = "$1:$2:$D3";
-        let r = parser.parse(f, &mut context).unwrap().pure;
-        assert!(matches!(
-            r,
-            ast::PureNode::Reference(ast::CellReference::Mut(ast::MutRefWithPrefix {
-                sheet_id: 1,
-                reference: ast::MutRef::A1ReferenceRange(ast::A1ReferenceRange {
-                    start: ast::A1Reference::A1RowRange(ast::RowRange {
-                        start: 1,
-                        start_abs: true,
-                        end: 2,
-                        end_abs: true,
-                    }),
-                    end: ast::A1Reference::Addr(ast::Address {
-                        cell_id: CellId::NormalCell(NormalCellId {
-                            row: 2,
-                            col: 3,
-                            follow_row: None,
-                            follow_col: None,
-                        }),
-                        col_abs: true,
-                        row_abs: false,
-                    }),
-                })
-            }))
-        ));
-    }
-
-    #[test]
     fn func_with_bool_arg() {
         let parser = Parser {};
-        let mut id_fetcher = TestFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
         let mut context = Context {
             sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
         };
         let f = "NORM.S.DIST(2,TRUE)";
         let _ = parser.parse(f, &mut context).unwrap().pure;

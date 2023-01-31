@@ -68,7 +68,7 @@ impl DataExecutor {
                 (Direction::Vertical, ShiftType::Insert) => (old_container, vec![]),
                 (Direction::Horizontal, ShiftType::Delete) => {
                     let bids = old_navigator.get_affected_blockplace(
-                        sheet_id,
+                        &sheet_id,
                         l.start,
                         l.cnt as usize,
                         true,
@@ -79,7 +79,7 @@ impl DataExecutor {
                             old_navigator.get_block_size(sheet_id, block_id).unwrap();
                         let master = old_navigator.get_master_cell(sheet_id, block_id).unwrap();
                         let (master_row, master_col) =
-                            old_navigator.fetch_cell_idx(sheet_id, &master).unwrap();
+                            old_navigator.fetch_cell_idx(&sheet_id, &master).unwrap();
                         let start_row = master_row + row_cnt;
                         let end_row = start_row + l.cnt as usize - 1;
                         let start_col = master_col;
@@ -87,7 +87,7 @@ impl DataExecutor {
                         cross_product_usize(start_row, end_row, start_col, end_col)
                             .into_iter()
                             .for_each(|(r, c)| {
-                                if let Some(cid) = old_navigator.fetch_cell_id(sheet_id, r, c) {
+                                if let Some(cid) = old_navigator.fetch_cell_id(&sheet_id, r, c) {
                                     deleted_cells.push(cid)
                                 }
                             });
@@ -111,7 +111,7 @@ impl DataExecutor {
                 }
                 (Direction::Vertical, ShiftType::Delete) => {
                     let bids = old_navigator.get_affected_blockplace(
-                        sheet_id,
+                        &sheet_id,
                         l.start,
                         l.cnt as usize,
                         false,
@@ -122,7 +122,7 @@ impl DataExecutor {
                             old_navigator.get_block_size(sheet_id, block_id).unwrap();
                         let master = old_navigator.get_master_cell(sheet_id, block_id).unwrap();
                         let (master_row, master_col) =
-                            old_navigator.fetch_cell_idx(sheet_id, &master).unwrap();
+                            old_navigator.fetch_cell_idx(&sheet_id, &master).unwrap();
                         let start_row = master_row;
                         let end_row = master_row + row_cnt as usize - 1;
                         let start_col = master_col + col_cnt;
@@ -130,7 +130,7 @@ impl DataExecutor {
                         cross_product_usize(start_row, end_row, start_col, end_col)
                             .into_iter()
                             .for_each(|(r, c)| {
-                                if let Some(cid) = old_navigator.fetch_cell_id(sheet_id, r, c) {
+                                if let Some(cid) = old_navigator.fetch_cell_id(&sheet_id, r, c) {
                                     deleted_cells.push(cid)
                                 }
                             });
@@ -175,7 +175,7 @@ impl DataExecutor {
                     let end_col = start_col + c.col_cnt - 1;
                     let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                         .into_iter()
-                        .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                        .map(|(r, c)| navigator.fetch_cell_id(&sheet_id, r, c))
                         .filter(|c| c.is_some())
                         .map(|c| c.unwrap())
                         .collect::<Vec<_>>();
@@ -193,7 +193,7 @@ impl DataExecutor {
                         Some(bp) => {
                             let (row_cnt, col_cnt) = bp.get_block_size();
                             let (master_row, master_col) = navigator
-                                .fetch_normal_cell_idx(sheet_id, &bp.master)
+                                .fetch_normal_cell_idx(&sheet_id, &bp.master)
                                 .unwrap();
                             let start_row = master_row + row_cnt;
                             let end_row = start_row + c.insert_cnt - 1;
@@ -201,7 +201,7 @@ impl DataExecutor {
                             let end_col = master_col + col_cnt - 1;
                             let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                                 .into_iter()
-                                .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                                .map(|(r, c)| navigator.fetch_cell_id(&sheet_id, r, c))
                                 .filter(|c| c.is_some())
                                 .map(|c| c.unwrap())
                                 .collect::<Vec<_>>();
@@ -222,7 +222,7 @@ impl DataExecutor {
                         Some(bp) => {
                             let (row_cnt, col_cnt) = bp.get_block_size();
                             let (master_row, master_col) = navigator
-                                .fetch_normal_cell_idx(sheet_id, &bp.master)
+                                .fetch_normal_cell_idx(&sheet_id, &bp.master)
                                 .unwrap();
                             let start_row = master_row;
                             let end_row = master_row + row_cnt - 1;
@@ -230,7 +230,7 @@ impl DataExecutor {
                             let end_col = start_col + c.insert_cnt - 1;
                             let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                                 .into_iter()
-                                .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                                .map(|(r, c)| navigator.fetch_cell_id(&sheet_id, r, c))
                                 .filter(|c| c.is_some())
                                 .map(|c| c.unwrap())
                                 .collect::<Vec<_>>();
@@ -251,7 +251,7 @@ impl DataExecutor {
                         Some(bp) => {
                             let (_, col_cnt) = bp.get_block_size();
                             let (master_row, master_col) = navigator
-                                .fetch_normal_cell_idx(sheet_id, &bp.master)
+                                .fetch_normal_cell_idx(&sheet_id, &bp.master)
                                 .unwrap();
                             let start_row = master_row + dr.idx;
                             let end_row = start_row + dr.delete_cnt - 1;
@@ -259,7 +259,7 @@ impl DataExecutor {
                             let end_col = start_col + col_cnt - 1;
                             let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                                 .into_iter()
-                                .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                                .map(|(r, c)| navigator.fetch_cell_id(&sheet_id, r, c))
                                 .filter(|c| c.is_some())
                                 .map(|c| c.unwrap())
                                 .collect::<Vec<_>>();
@@ -280,7 +280,7 @@ impl DataExecutor {
                         Some(bp) => {
                             let (row_cnt, _) = bp.get_block_size();
                             let (master_row, master_col) = navigator
-                                .fetch_normal_cell_idx(sheet_id, &bp.master)
+                                .fetch_normal_cell_idx(&sheet_id, &bp.master)
                                 .unwrap();
                             let start_row = master_row;
                             let end_row = start_row + row_cnt - 1;
@@ -288,7 +288,7 @@ impl DataExecutor {
                             let end_col = start_col + dc.delete_cnt - 1;
                             let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                                 .into_iter()
-                                .map(|(r, c)| navigator.fetch_cell_id(sheet_id, r, c))
+                                .map(|(r, c)| navigator.fetch_cell_id(&sheet_id, r, c))
                                 .filter(|c| c.is_some())
                                 .map(|c| c.unwrap())
                                 .collect::<Vec<_>>();
@@ -308,9 +308,9 @@ impl DataExecutor {
                 let master_row = c.master_row;
                 let master_col = c.master_col;
                 if let Some(CellId::NormalCell(master)) =
-                    navigator.fetch_cell_id(sheet_id, master_row, master_col)
+                    navigator.fetch_cell_id(&sheet_id, master_row, master_col)
                 {
-                    navigator.create_block(sheet_id, master, c.row_cnt, c.col_cnt);
+                    navigator.create_block(&sheet_id, master, c.row_cnt, c.col_cnt);
                     navigator
                 } else {
                     navigator
@@ -364,16 +364,16 @@ impl DataExecutor {
                 let master_row = m.new_master_row;
                 let master_col = m.new_master_col;
                 if let Some(CellId::NormalCell(master)) =
-                    navigator.fetch_cell_id(sheet_id, master_row, master_col)
+                    navigator.fetch_cell_id(&sheet_id, master_row, master_col)
                 {
-                    navigator.move_block(sheet_id, m.block_id, master);
+                    navigator.move_block(&sheet_id, &m.block_id, master);
                     navigator
                 } else {
                     navigator
                 }
             }
             BlockPayload::Remove(r) => {
-                navigator.remove_block(sheet_id, r.block_id);
+                navigator.remove_block(&sheet_id, &r.block_id);
                 navigator
             }
         };
@@ -393,7 +393,7 @@ impl DataExecutor {
         value: &CellValue,
     ) -> Self {
         let mut res = self.clone();
-        if let Some(id) = res.navigator.fetch_cell_id(sheet_id, row, col) {
+        if let Some(id) = res.navigator.fetch_cell_id(&sheet_id, row, col) {
             if let Some(c) = res.container.get_cell(sheet_id, &id) {
                 c.value = value.clone();
             } else {
@@ -413,7 +413,7 @@ impl DataExecutor {
         p: &CellStylePayload,
     ) -> Self {
         let mut res = self.clone();
-        let id = res.navigator.fetch_cell_id(sheet_id, row, col);
+        let id = res.navigator.fetch_cell_id(&sheet_id, row, col);
         if id.is_none() {
             return res;
         }
@@ -445,7 +445,7 @@ impl DataExecutor {
             mut container,
             deleted_cells,
         } = self;
-        let row_id = navigator.fetch_row_id(sheet_id, row).unwrap_or(0);
+        let row_id = navigator.fetch_row_id(&sheet_id, row).unwrap_or(0);
         let mut info = container
             .get_row_info(sheet_id, row_id)
             .map_or(RowInfo::default(), |r| r.clone());
@@ -480,7 +480,7 @@ impl DataExecutor {
             mut container,
             deleted_cells,
         } = self;
-        let col_id = navigator.fetch_col_id(sheet_id, col).unwrap_or(0);
+        let col_id = navigator.fetch_col_id(&sheet_id, col).unwrap_or(0);
         let mut info = container
             .get_col_info(sheet_id, col_id)
             .map_or(ColInfo::default(), |r| r.clone());
@@ -552,11 +552,11 @@ mod tests {
         });
         let mut executor = executor.execute(&block_payload_to_proc(move_payload, sheet_id));
         assert!(matches!(
-            executor.navigator.fetch_cell_id(sheet_id, row, col),
+            executor.navigator.fetch_cell_id(&sheet_id, row, col),
             Some(CellId::NormalCell(_))
         ));
         assert!(matches!(
-            executor.navigator.fetch_cell_id(sheet_id, 8, 8),
+            executor.navigator.fetch_cell_id(&sheet_id, 8, 8),
             Some(CellId::BlockCell(_))
         ));
     }
@@ -587,7 +587,7 @@ fn get_norm_cell_ids_by_line(
         .iter()
         .for_each(|(cid, _)| match cid {
             CellId::NormalCell(nc) => {
-                let cidx = navigator.fetch_cell_idx(sheet_id, cid);
+                let cidx = navigator.fetch_cell_idx(&sheet_id, cid);
                 match cidx {
                     Some((r, c)) => {
                         if is_row && r >= idx && r <= idx + cnt - 1 {

@@ -126,7 +126,7 @@ pub enum Reference {
     Addr(Addr),
     ColumnRange(ColRange),
     RowRange(RowRange),
-    Range(Range),
+    Range(Addr, Addr),
 }
 
 #[derive(Debug, Clone)]

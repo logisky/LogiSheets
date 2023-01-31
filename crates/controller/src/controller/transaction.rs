@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use logisheets_base::{Addr, CellId, SheetId};
+use logisheets_base::{Addr, BlockRange, CellId, NormalRange, Range, SheetId};
 
 use super::status::Status;
 use crate::async_func_manager::AsyncFuncManager;
 use crate::calc_engine::CalcEngine;
 use crate::connectors::{CalcConnector, VertexConnector};
 use crate::data_executor::DataExecutor;
+use crate::formula_manager::{FormulaExecContext, Vertex};
 use crate::payloads::name::NamePayload;
 use crate::payloads::sheet_process::SheetProcess;
 use crate::payloads::sheet_shift::{SheetRenamePayload, SheetShiftPayload};
@@ -30,25 +31,30 @@ impl<'a> Transaction<'a> {
     pub fn start(self) -> Status {
         let context = self.context;
         let mut async_func_manager = self.async_func_manager;
-        let Status {
-            mut vertex_manager,
-            mut navigator,
-            mut container,
-            sheet_id_manager,
-            mut func_id_manager,
-            mut text_id_manager,
-            mut external_links_manager,
-            name_id_manager,
-            sheet_pos_manager,
-            style_manager,
-            cell_attachment_manager,
-        } = self
-            .proc
-            .into_iter()
-            .fold(self.status, |prev, proc| handle(prev, proc, &context));
-        let vm = vertex_manager.clone_for_calc();
+        let (
+            Status {
+                mut navigator,
+                mut container,
+                sheet_id_manager,
+                mut func_id_manager,
+                mut text_id_manager,
+                mut external_links_manager,
+                name_id_manager,
+                sheet_pos_manager,
+                style_manager,
+                cell_attachment_manager,
+                formula_manager,
+            },
+            calc_nodes,
+        ) = self.proc.into_iter().fold(
+            (self.status, HashSet::<Vertex>::new()),
+            |(prev_status, prev_calc_nodes), proc| {
+                let (new_status, mut calc_nodes) = handle(prev_status, proc, &context);
+                calc_nodes.extend(prev_calc_nodes);
+                (new_status, calc_nodes)
+            },
+        );
         let connector = CalcConnector {
-            vertex_status: &vertex_manager.status,
             navigator: &mut navigator,
             container: &mut container,
             ext_links: &mut external_links_manager,
@@ -61,16 +67,17 @@ impl<'a> Transaction<'a> {
             active_sheet: 0,
             curr_addr: Addr::default(),
             async_funcs: &context.async_funcs,
+            formula_manager: &formula_manager,
         };
         let calc_engine = CalcEngine {
-            vertex_manager: vm,
             config: context.calc_config,
             connector,
+            formula_manager: &formula_manager,
+            dirty_vertices: calc_nodes,
         };
         calc_engine.start();
         Status {
             navigator,
-            vertex_manager,
             container,
             sheet_id_manager,
             func_id_manager,
@@ -80,27 +87,47 @@ impl<'a> Transaction<'a> {
             sheet_pos_manager,
             style_manager,
             cell_attachment_manager,
+            formula_manager,
         }
     }
 }
 
-fn handle(status: Status, proc: Process, context: &TransactionContext) -> Status {
+fn handle(
+    status: Status,
+    proc: Process,
+    context: &TransactionContext,
+) -> (Status, HashSet<Vertex>) {
     match proc {
         Process::Sheet(sheet_proc) => handle_sheet_proc(status, sheet_proc, context),
-        Process::Name(p) => handle_name_proc(status, p, context),
-        Process::SheetShift(sheet_shift) => handle_sheet_shift_payload(status, sheet_shift),
-        Process::SheetRename(rename) => handle_sheet_rename_payload(status, rename),
+        Process::Name(p) => (handle_name_proc(status, p, context), HashSet::new()),
+        Process::SheetShift(sheet_shift) => (
+            handle_sheet_shift_payload(status, sheet_shift),
+            HashSet::new(),
+        ),
+        Process::SheetRename(rename) => {
+            (handle_sheet_rename_payload(status, rename), HashSet::new())
+        }
         Process::Recalc(dirty) => handle_recalc_proc(status, dirty),
     }
 }
 
-fn handle_recalc_proc(status: Status, dirty: Vec<(SheetId, CellId)>) -> Status {
-    let mut res = status.clone();
-    let vertex_manager = &mut res.vertex_manager;
-    dirty.into_iter().for_each(|(sheet_id, cell_id)| {
-        vertex_manager.dirty_nodes.insert((sheet_id, cell_id));
-    });
-    res
+fn handle_recalc_proc(status: Status, dirty: Vec<(SheetId, CellId)>) -> (Status, HashSet<Vertex>) {
+    let calc_nodes = dirty
+        .into_iter()
+        .map(|(sheet_id, cell_id)| {
+            let range = match cell_id {
+                CellId::NormalCell(nid) => Range::Normal(NormalRange::Single(nid)),
+                CellId::BlockCell(bid) => Range::Block(BlockRange::Single(bid)),
+            };
+            let range_id = status
+                .formula_manager
+                .range_manager
+                .get_range_id_assert(&sheet_id, &range)
+                .unwrap();
+            Vertex::Range(sheet_id, range_id)
+        })
+        .collect();
+    (status, calc_nodes)
 }
 
 fn handle_sheet_rename_payload(status: Status, payload: SheetRenamePayload) -> Status {
@@ -112,8 +139,8 @@ fn handle_sheet_rename_payload(status: Status, payload: SheetRenamePayload) -> S
 
 fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Status {
     let Status {
+        formula_manager,
         navigator,
-        vertex_manager,
         container,
         mut sheet_id_manager,
         func_id_manager,
@@ -126,8 +153,8 @@ fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Sta
     } = status;
     let sheet_pos = sheet_pos_manager.execute(&payload, &mut sheet_id_manager);
     Status {
+        formula_manager,
         navigator,
-        vertex_manager,
         container,
         sheet_id_manager,
         func_id_manager,
@@ -148,10 +175,14 @@ fn handle_name_proc(
     todo!()
 }
 
-fn handle_sheet_proc(status: Status, proc: SheetProcess, context: &TransactionContext) -> Status {
+fn handle_sheet_proc(
+    status: Status,
+    proc: SheetProcess,
+    context: &TransactionContext,
+) -> (Status, HashSet<Vertex>) {
     let Status {
         navigator,
-        vertex_manager,
+        formula_manager,
         container,
         mut sheet_id_manager,
         mut func_id_manager,
@@ -173,13 +204,15 @@ fn handle_sheet_proc(status: Status, proc: SheetProcess, context: &TransactionCo
         navigator: mut new_navigator,
         container: mut new_container,
         style_manager: new_style_manager,
-        deleted_cells,
+        deleted_cells: _,
     } = data_executor.execute(&proc);
     let active_sheet = proc.sheet_id;
-    let vertex_manager = vertex_manager.execute_sheet_proc(
+    let FormulaExecContext {
+        manager: formula_manager,
+        dirty_vertices,
+    } = formula_manager.execute_sheet_proc(
         proc,
         &mut VertexConnector {
-            deleted_cells,
             book_name: context.book_name,
             active_sheet,
             container: &mut new_container,
@@ -193,9 +226,9 @@ fn handle_sheet_proc(status: Status, proc: SheetProcess, context: &TransactionCo
             external_links_manager: &mut external_links_manager,
         },
     );
-    Status {
+    let status = Status {
         navigator: new_navigator,
-        vertex_manager,
+        formula_manager,
         sheet_id_manager,
         container: new_container,
         func_id_manager,
@@ -205,5 +238,6 @@ fn handle_sheet_proc(status: Status, proc: SheetProcess, context: &TransactionCo
         sheet_pos_manager,
         style_manager: new_style_manager,
         cell_attachment_manager,
-    }
+    };
+    (status, dirty_vertices)
 }

@@ -2,7 +2,9 @@ use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
 
-use crate::operator::{CheckError, CheckNum, CheckString, Input, Operator, Statement, Switch};
+use crate::operator::{
+    CheckError, CheckNum, CheckString, Input, Operator, ShiftData, Statement, Switch,
+};
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -64,6 +66,34 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
             let (row, col) = parse_position(position).unwrap();
             let expect = iter.next().unwrap().as_str().to_string();
             Ok(Operator::CheckString(CheckString { row, col, expect }))
+        }
+        Rule::insert_row => {
+            let mut iter = s.into_inner();
+            let row = iter.next().unwrap();
+            let from = row.as_str().parse::<u32>().unwrap() - 1;
+            let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            Ok(Operator::InsertRow(ShiftData { from, cnt }))
+        }
+        Rule::insert_col => {
+            let mut iter = s.into_inner();
+            let col = iter.next().unwrap();
+            let from = column_label_to_index(col.as_str());
+            let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            Ok(Operator::InsertCol(ShiftData { from, cnt }))
+        }
+        Rule::delete_row => {
+            let mut iter = s.into_inner();
+            let row = iter.next().unwrap();
+            let from = row.as_str().parse::<u32>().unwrap() - 1;
+            let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            Ok(Operator::DeleteRow(ShiftData { from, cnt }))
+        }
+        Rule::delete_col => {
+            let mut iter = s.into_inner();
+            let col = iter.next().unwrap();
+            let from = column_label_to_index(col.as_str());
+            let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            Ok(Operator::DeleteCol(ShiftData { from, cnt }))
         }
         _ => unreachable!(),
     }

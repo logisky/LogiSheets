@@ -29,7 +29,7 @@ impl SheetNav {
     }
 
     pub fn get_fetcher(&mut self) -> Fetcher {
-        Fetcher::from(&self.data, &mut self.cache, self.version)
+        Fetcher::from(&self.data, &mut self.cache)
     }
 }
 
@@ -43,10 +43,6 @@ impl Default for SheetNav {
 pub struct Data {
     pub rows: Vector<RowId>,
     pub cols: Vector<ColId>,
-    pub row_index_changes: HashMap<RowId, Vector<IndexChange>>,
-    pub col_index_changes: HashMap<ColId, Vector<IndexChange>>,
-    pub row_version: HashMap<RowId, u32>,
-    pub col_version: HashMap<ColId, u32>,
     pub blocks: HashMap<BlockId, BlockPlace>,
 }
 
@@ -55,10 +51,6 @@ impl Data {
         Data {
             rows: (0..row_max).collect::<Vector<_>>(),
             cols: (0..col_max).collect::<Vector<_>>(),
-            row_index_changes: HashMap::new(),
-            col_index_changes: HashMap::new(),
-            row_version: HashMap::new(),
-            col_version: HashMap::new(),
             blocks: HashMap::new(),
         }
     }
@@ -67,10 +59,6 @@ impl Data {
         Data {
             rows,
             cols: self.cols,
-            row_index_changes: self.row_index_changes,
-            col_index_changes: self.col_index_changes,
-            row_version: self.row_version,
-            col_version: self.col_version,
             blocks: self.blocks,
         }
     }
@@ -79,86 +67,6 @@ impl Data {
         Data {
             rows: self.rows,
             cols,
-            row_index_changes: self.row_index_changes,
-            col_index_changes: self.col_index_changes,
-            row_version: self.row_version,
-            col_version: self.col_version,
-            blocks: self.blocks,
-        }
-    }
-
-    pub fn add_row_index_change(self, row_id: RowId, change: IndexChange) -> Self {
-        let curr_changes = self.row_index_changes.get(&row_id);
-        let new_changes = match curr_changes {
-            Some(c) => {
-                let mut changes = c.clone();
-                changes.push_back(change);
-                changes
-            }
-            None => Vector::from(vec![change]),
-        };
-        let row_index_change = self.row_index_changes.update(row_id, new_changes);
-        self.update_row_index_changes(row_index_change)
-    }
-
-    pub fn add_col_index_change(self, col_id: ColId, change: IndexChange) -> Self {
-        let curr_changes = self.col_index_changes.get(&col_id);
-        let new_changes = match curr_changes {
-            Some(c) => {
-                let mut changes = c.clone();
-                changes.push_back(change);
-                changes
-            }
-            None => Vector::from(vec![change]),
-        };
-        let col_index_change = self.col_index_changes.update(col_id, new_changes);
-        self.update_col_index_changes(col_index_change)
-    }
-
-    pub fn update_row_index_changes(self, changes: HashMap<RowId, Vector<IndexChange>>) -> Self {
-        Data {
-            rows: self.rows,
-            cols: self.cols,
-            row_index_changes: changes,
-            col_index_changes: self.col_index_changes,
-            row_version: HashMap::new(),
-            col_version: HashMap::new(),
-            blocks: self.blocks,
-        }
-    }
-
-    pub fn update_col_index_changes(self, changes: HashMap<ColId, Vector<IndexChange>>) -> Self {
-        Data {
-            rows: self.rows,
-            cols: self.cols,
-            row_index_changes: self.row_index_changes,
-            col_index_changes: changes,
-            row_version: self.row_version,
-            col_version: self.col_version,
-            blocks: self.blocks,
-        }
-    }
-
-    pub fn update_row_version(self, version: HashMap<RowId, u32>) -> Self {
-        Data {
-            rows: self.rows,
-            cols: self.cols,
-            row_index_changes: self.row_index_changes,
-            col_index_changes: self.col_index_changes,
-            row_version: version,
-            col_version: self.col_version,
-            blocks: self.blocks,
-        }
-    }
-
-    pub fn update_col_version(self, version: HashMap<RowId, u32>) -> Self {
-        Data {
-            rows: self.rows,
-            cols: self.cols,
-            row_index_changes: self.row_index_changes,
-            col_index_changes: self.col_index_changes,
-            row_version: self.row_version,
-            col_version: version,
             blocks: self.blocks,
         }
     }
@@ -167,10 +75,6 @@ impl Data {
         Data {
             rows: self.rows,
             cols: self.cols,
-            row_index_changes: self.row_index_changes,
-            col_index_changes: self.col_index_changes,
-            row_version: self.row_version,
-            col_version: self.col_version,
             blocks,
         }
     }
@@ -186,13 +90,6 @@ pub struct IndexChange {
     pub offset: u32,
     pub free_id: Id,
     pub version: u32,
-    pub ty: ChangeType,
-}
-
-#[derive(Debug, Clone)]
-pub enum ChangeType {
-    Insert,
-    Delete,
 }
 
 #[derive(Debug, Clone, Default)]

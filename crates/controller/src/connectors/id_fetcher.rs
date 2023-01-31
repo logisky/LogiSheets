@@ -3,7 +3,7 @@ use crate::{
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
 };
-use logisheets_base::{id_fetcher::IdFetcherTrait, ExtBookId};
+use logisheets_base::{id_fetcher::IdFetcherTrait, ExtBookId, SheetId};
 
 pub struct IdFetcher<'a> {
     pub sheet_id_manager: &'a mut SheetIdManager,
@@ -17,7 +17,7 @@ pub struct IdFetcher<'a> {
 impl<'a> IdFetcherTrait for IdFetcher<'a> {
     fn fetch_row_id(
         &mut self,
-        sheet_id: logisheets_base::SheetId,
+        sheet_id: &SheetId,
         row_idx: usize,
     ) -> Option<logisheets_base::RowId> {
         self.navigator.fetch_row_id(sheet_id, row_idx)
@@ -25,7 +25,7 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
 
     fn fetch_col_id(
         &mut self,
-        sheet_id: logisheets_base::SheetId,
+        sheet_id: &SheetId,
         col_idx: usize,
     ) -> Option<logisheets_base::ColId> {
         self.navigator.fetch_col_id(sheet_id, col_idx)
@@ -33,14 +33,14 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
 
     fn fetch_cell_id(
         &mut self,
-        sheet_id: logisheets_base::SheetId,
+        sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
     ) -> Option<logisheets_base::CellId> {
         self.navigator.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 
-    fn fetch_sheet_id(&mut self, sheet_name: &str) -> logisheets_base::SheetId {
+    fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId {
         self.sheet_id_manager.get_id(sheet_name)
     }
 

@@ -5,9 +5,11 @@ use crate::{
 };
 
 use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, ColId, ExtBookId, RowId, SheetId,
+    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockCellId, ColId, ExtBookId,
+    NormalCellId, RowId, SheetId,
 };
 use logisheets_workbook::workbook::Workbook;
+
 pub struct Fetcher<'a> {
     pub sheet_id_manager: &'a mut SheetIdManager,
     pub text_id_manager: &'a mut TextIdManager,
@@ -19,17 +21,17 @@ pub struct Fetcher<'a> {
 }
 
 impl<'a> IdFetcherTrait for Fetcher<'a> {
-    fn fetch_row_id(&mut self, sheet_id: SheetId, row_idx: usize) -> Option<RowId> {
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId> {
         self.navigator.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: SheetId, col_idx: usize) -> Option<ColId> {
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId> {
         self.navigator.fetch_col_id(sheet_id, col_idx)
     }
 
     fn fetch_cell_id(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
     ) -> Option<logisheets_base::CellId> {
@@ -83,23 +85,40 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
 }
 
 impl<'a> IndexFetcherTrait for Fetcher<'a> {
-    fn fetch_row_index(&mut self, sheet_id: SheetId, row_id: RowId) -> Option<usize> {
+    fn fetch_row_index(&mut self, sheet_id: &SheetId, row_id: &RowId) -> Option<usize> {
         self.navigator.fetch_row_idx(sheet_id, row_id)
     }
 
-    fn fetch_col_index(&mut self, sheet_id: SheetId, col_id: ColId) -> Option<usize> {
+    fn fetch_col_index(&mut self, sheet_id: &SheetId, col_id: &ColId) -> Option<usize> {
         self.navigator.fetch_col_idx(sheet_id, col_id)
     }
 
     fn fetch_cell_index(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         cell_id: &logisheets_base::CellId,
     ) -> Option<(usize, usize)> {
         self.navigator.fetch_cell_idx(sheet_id, cell_id)
     }
 
-    fn fetch_sheet_index(&mut self, sheet_id: SheetId) -> Option<usize> {
-        Some(sheet_id as usize)
+    fn fetch_sheet_index(&mut self, sheet_id: &SheetId) -> Option<usize> {
+        Some(sheet_id.clone() as usize)
+    }
+
+    fn fetch_normal_cell_index(
+        &mut self,
+        sheet_id: &SheetId,
+        normal_cell_id: &NormalCellId,
+    ) -> Option<(usize, usize)> {
+        self.navigator
+            .fetch_normal_cell_idx(sheet_id, normal_cell_id)
+    }
+
+    fn fetch_block_cell_index(
+        &mut self,
+        sheet: &SheetId,
+        block_cell_id: &BlockCellId,
+    ) -> Option<(usize, usize)> {
+        self.navigator.fetch_block_cell_idx(sheet, block_cell_id)
     }
 }

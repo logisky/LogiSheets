@@ -163,7 +163,7 @@ prefix_op = {
     minus_op | plus_op
 }
 
-a1_reference_range = {a1_reference ~ ws* ~ ":" ~ ws* ~ a1_reference}
+a1_reference_range = {a1_addr ~ ws* ~ ":" ~ ws* ~ a1_addr}
 
 r1c1_reference_range = {r1c1_reference ~ ws* ~ ":" ~ ws* ~ r1c1_reference}
 

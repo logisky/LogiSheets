@@ -142,11 +142,12 @@ pub mod tests_utils {
     use logisheets_base::get_active_sheet::GetActiveSheetTrait;
     use logisheets_base::get_curr_addr::GetCurrAddrTrait;
     use logisheets_base::set_curr_cell::SetCurrCellTrait;
+    use logisheets_base::SheetId;
     use logisheets_parser::ast;
 
     use crate::calc_engine::calculator::calc_vertex::{CalcValue, CalcVertex};
     use crate::calc_engine::connector::Connector;
-    use crate::vertex_manager::vertex::FormulaId;
+    use crate::CellId;
 
     pub struct TestFetcher {}
     impl AsyncFuncCommitTrait for TestFetcher {
@@ -219,16 +220,20 @@ pub mod tests_utils {
             todo!()
         }
 
-        fn commit_calc_values(
-            &mut self,
-            _vertex: FormulaId,
-            _result: CalcValue,
-        ) -> std::collections::HashSet<crate::vertex_manager::vertex::FormulaId> {
+        fn commit_calc_values(&mut self, _vertex: (SheetId, CellId), _result: CalcValue) {
             todo!()
         }
 
         fn is_async_func(&self, _func_name: &str) -> bool {
             false
+        }
+
+        fn get_range(
+            &self,
+            _sheet_id: &logisheets_base::SheetId,
+            _range: &logisheets_base::RangeId,
+        ) -> logisheets_base::Range {
+            todo!()
         }
     }
 }

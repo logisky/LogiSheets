@@ -1,5 +1,7 @@
 use chrono::{DateTime, FixedOffset};
-use logisheets_base::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId};
+use logisheets_base::{
+    CellId, ColId, CubeId, ExtBookId, ExtRefId, FuncId, NameId, RangeId, RefAbs, RowId, SheetId,
+};
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -183,29 +185,35 @@ pub enum A1Reference {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct A1ReferenceRange {
-    pub start: A1Reference,
-    pub end: A1Reference,
+    pub start: Address,
+    pub end: Address,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum CellReference {
-    Mut(MutRefWithPrefix),
-    UnMut(UnMutRefWithPrefix),
+    Mut(RangeDisplay),
+    UnMut(CubeDisplay),
+    Ext(ExtRefDisplay),
     Name(NameId),
 }
 
-impl CellReference {
-    pub fn from_cell_id(sheet_id: SheetId, cell_id: CellId) -> Self {
-        let addr = Address {
-            cell_id,
-            row_abs: false,
-            col_abs: false,
-        };
-        CellReference::Mut(MutRefWithPrefix {
-            sheet_id,
-            reference: MutRef::A1Reference(A1Reference::Addr(addr)),
-        })
-    }
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct RangeDisplay {
+    pub sheet_id: SheetId,
+    pub range_id: RangeId,
+    pub ref_abs: RefAbs,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct CubeDisplay {
+    pub cube_id: CubeId,
+    pub ref_abs: RefAbs,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct ExtRefDisplay {
+    pub ext_ref_id: ExtRefId,
+    pub ref_abs: RefAbs,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -228,19 +236,8 @@ pub struct UnMutRefWithPrefix {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum UnMutRefPrefix {
-    Local(LocalUnMutRefPrefix),
-    External(ExternalUnMutRefPrefix),
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum LocalUnMutRefPrefix {
-    SheetToSheet(LocalSheetToSheet),
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum ExternalUnMutRefPrefix {
-    Sheet(ExternalSheet),
-    SheetToSheet(ExternalSheetToSheet),
+    Local(LocalSheetToSheet),
+    External(ExternalPrefix),
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -249,16 +246,10 @@ pub struct LocalSheetToSheet {
     pub to_sheet: SheetId,
 }
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct ExternalSheetToSheet {
+pub struct ExternalPrefix {
     pub workbook: ExtBookId,
-    pub from_sheet: SheetId,
+    pub from_sheet: Option<SheetId>,
     pub to_sheet: SheetId,
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct ExternalSheet {
-    pub workbook: ExtBookId,
-    pub sheet: SheetId,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -276,8 +267,8 @@ pub enum UnMutA1Reference {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UnMutA1ReferenceRange {
-    pub start: UnMutA1Reference,
-    pub end: UnMutA1Reference,
+    pub start: UnMutAddress,
+    pub end: UnMutAddress,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

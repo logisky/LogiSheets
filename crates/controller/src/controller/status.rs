@@ -3,6 +3,7 @@ use im::HashMap;
 use crate::cell_attachments::CellAttachmentsManager;
 use crate::container::DataContainer;
 use crate::ext_book_manager::ExtBooksManager;
+use crate::formula_manager::FormulaManager;
 use crate::id_manager::FuncIdManager;
 use crate::id_manager::NameIdManager;
 use crate::id_manager::SheetIdManager;
@@ -10,13 +11,12 @@ use crate::id_manager::TextIdManager;
 use crate::navigator::Navigator;
 
 use crate::style_manager::StyleManager;
-use crate::vertex_manager::VertexManager;
 use crate::workbook::sheet_pos_manager::SheetPosManager;
 
 #[derive(Debug, Clone)]
 pub struct Status {
     pub navigator: Navigator,
-    pub vertex_manager: VertexManager,
+    pub formula_manager: FormulaManager,
     pub container: DataContainer,
     pub sheet_id_manager: SheetIdManager,
     pub func_id_manager: FuncIdManager,
@@ -32,7 +32,7 @@ impl Default for Status {
     fn default() -> Self {
         Status {
             navigator: Navigator::default(),
-            vertex_manager: VertexManager::default(),
+            formula_manager: FormulaManager::new(),
             container: DataContainer {
                 data: HashMap::new(),
             },

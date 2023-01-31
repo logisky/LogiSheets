@@ -10,13 +10,11 @@ use logisheets_base::{
     BlockCellId, BlockId, CellId, ColId, ExtBookId, FuncId, NameId, NormalCellId, RowId, SheetId,
     TextId,
 };
-use logisheets_parser::context::ContextTrait as ParserTrait;
 
 use crate::container::DataContainer;
 use crate::ext_book_manager::ExtBooksManager;
 use crate::id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager};
 use crate::navigator::Navigator;
-use crate::vertex_manager::context::{ContextTrait, GetDeletedCellsTrait};
 use crate::workbook::sheet_pos_manager::SheetPosManager;
 
 use super::{IdFetcher, IndexFetcher};
@@ -24,7 +22,6 @@ use super::{IdFetcher, IndexFetcher};
 pub struct VertexConnector<'a> {
     pub book_name: &'a str,
     pub active_sheet: SheetId,
-    pub deleted_cells: Vec<(SheetId, CellId)>,
     pub container: &'a mut DataContainer,
     pub sheet_pos_manager: &'a mut SheetPosManager,
     pub sheet_id_manager: &'a mut SheetIdManager,
@@ -74,7 +71,7 @@ impl<'a> VertexConnector<'a> {
             .iter()
             .for_each(|(cid, _)| match cid {
                 CellId::NormalCell(nc) => {
-                    let cidx = self.fetch_cell_index(sheet_id, cid);
+                    let cidx = self.fetch_cell_index(&sheet_id, cid);
                     match cidx {
                         Some((r, c)) => {
                             if is_row && r >= idx && r <= idx + cnt - 1 {
@@ -93,17 +90,17 @@ impl<'a> VertexConnector<'a> {
 }
 
 impl<'a> IdFetcherTrait for VertexConnector<'a> {
-    fn fetch_row_id(&mut self, sheet_id: SheetId, row_idx: usize) -> Option<RowId> {
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId> {
         self.get_id_fetcher().fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: SheetId, col_idx: usize) -> Option<ColId> {
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId> {
         self.get_id_fetcher().fetch_col_id(sheet_id, col_idx)
     }
 
     fn fetch_cell_id(
         &mut self,
-        sheet_id: SheetId,
+        sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
     ) -> Option<CellId> {
@@ -133,20 +130,38 @@ impl<'a> IdFetcherTrait for VertexConnector<'a> {
 }
 
 impl<'a> IndexFetcherTrait for VertexConnector<'a> {
-    fn fetch_row_index(&mut self, sheet_id: SheetId, row_id: RowId) -> Option<usize> {
+    fn fetch_row_index(&mut self, sheet_id: &SheetId, row_id: &RowId) -> Option<usize> {
         self.get_idx_fetcher().fetch_row_index(sheet_id, row_id)
     }
 
-    fn fetch_col_index(&mut self, sheet_id: SheetId, col_id: ColId) -> Option<usize> {
+    fn fetch_col_index(&mut self, sheet_id: &SheetId, col_id: &ColId) -> Option<usize> {
         self.get_idx_fetcher().fetch_col_index(sheet_id, col_id)
     }
 
-    fn fetch_cell_index(&mut self, sheet_id: SheetId, cell_id: &CellId) -> Option<(usize, usize)> {
+    fn fetch_cell_index(&mut self, sheet_id: &SheetId, cell_id: &CellId) -> Option<(usize, usize)> {
         self.get_idx_fetcher().fetch_cell_index(sheet_id, cell_id)
     }
 
-    fn fetch_sheet_index(&mut self, sheet_id: SheetId) -> Option<usize> {
+    fn fetch_sheet_index(&mut self, sheet_id: &SheetId) -> Option<usize> {
         self.get_idx_fetcher().fetch_sheet_index(sheet_id)
+    }
+
+    fn fetch_normal_cell_index(
+        &mut self,
+        sheet_id: &SheetId,
+        normal_cell_id: &NormalCellId,
+    ) -> Option<(usize, usize)> {
+        self.get_idx_fetcher()
+            .fetch_normal_cell_index(sheet_id, normal_cell_id)
+    }
+
+    fn fetch_block_cell_index(
+        &mut self,
+        sheet: &SheetId,
+        block_cell_id: &BlockCellId,
+    ) -> Option<(usize, usize)> {
+        self.get_idx_fetcher()
+            .fetch_block_cell_index(sheet, block_cell_id)
     }
 }
 
@@ -260,7 +275,7 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
         is_row: bool,
     ) -> Vec<BlockId> {
         self.id_navigator
-            .get_affected_blockplace(sheet_id, from_idx, cnt, is_row)
+            .get_affected_blockplace(&sheet_id, from_idx, cnt, is_row)
     }
 }
 
@@ -271,18 +286,6 @@ impl<'a> GetNormCellIdTrait for VertexConnector<'a> {
         row: usize,
         col: usize,
     ) -> Option<NormalCellId> {
-        self.id_navigator.fetch_norm_cell_id(sheet_id, row, col)
+        self.id_navigator.fetch_norm_cell_id(&sheet_id, row, col)
     }
 }
-
-impl<'a> ParserTrait for VertexConnector<'a> {}
-
-impl<'a> GetDeletedCellsTrait for VertexConnector<'a> {
-    fn get_deleted_cells(&mut self) -> Vec<(SheetId, CellId)> {
-        let mut empty = Vec::<(SheetId, CellId)>::new();
-        std::mem::swap(&mut empty, &mut self.deleted_cells);
-        empty
-    }
-}
-
-impl<'a> ContextTrait for VertexConnector<'a> {}

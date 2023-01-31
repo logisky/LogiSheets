@@ -55,8 +55,8 @@ impl SheetPosManager {
         Some(id.clone())
     }
 
-    pub fn get_sheet_idx(&self, id: SheetId) -> Option<usize> {
-        let result = self.pos.iter().find_position(|each| **each == id);
+    pub fn get_sheet_idx(&self, id: &SheetId) -> Option<usize> {
+        let result = self.pos.iter().find_position(|each| *each == id);
         match result {
             Some(r) => Some(r.0),
             None => None,

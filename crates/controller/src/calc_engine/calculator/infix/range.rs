@@ -1,6 +1,6 @@
 use logisheets_parser::ast;
 
-use super::super::calc_vertex::{CalcReference, CalcVertex, ColRange, Range, Reference, RowRange};
+use super::super::calc_vertex::{CalcReference, CalcVertex, ColRange, Reference, RowRange};
 use logisheets_base::Addr as Address;
 
 pub fn get_range(lhs: CalcVertex, rhs: CalcVertex) -> CalcVertex {
@@ -34,8 +34,8 @@ pub fn get_range_without_prefix(l_ref: Reference, r_ref: Reference) -> Option<Re
         (Reference::Addr(addr), Reference::RowRange(rr)) => {
             get_range_of_addr_and_row_range(addr, rr)
         }
-        (Reference::Addr(addr), Reference::Range(range)) => {
-            get_range_of_addr_and_range(addr, range)
+        (Reference::Addr(addr), Reference::Range(start, end)) => {
+            get_range_of_addr_and_range(addr, start, end)
         }
         (Reference::ColumnRange(cr), Reference::Addr(addr)) => {
             get_range_of_addr_and_col_range(addr, cr)
@@ -46,8 +46,8 @@ pub fn get_range_without_prefix(l_ref: Reference, r_ref: Reference) -> Option<Re
         (Reference::ColumnRange(cr), Reference::RowRange(rr)) => {
             get_range_of_col_range_and_row_range(cr, rr)
         }
-        (Reference::ColumnRange(cr), Reference::Range(range)) => {
-            get_range_of_range_and_col_range(range, cr)
+        (Reference::ColumnRange(cr), Reference::Range(start, end)) => {
+            get_range_of_range_and_col_range(start, end, cr)
         }
         (Reference::RowRange(rr), Reference::Addr(addr)) => {
             get_range_of_addr_and_row_range(addr, rr)
@@ -56,41 +56,48 @@ pub fn get_range_without_prefix(l_ref: Reference, r_ref: Reference) -> Option<Re
             get_range_of_col_range_and_row_range(cr, rr)
         }
         (Reference::RowRange(lrr), Reference::RowRange(rrr)) => get_range_of_row_ranges(lrr, rrr),
-        (Reference::RowRange(rr), Reference::Range(range)) => {
-            get_range_of_range_and_row_range(range, rr)
+        (Reference::RowRange(rr), Reference::Range(start, end)) => {
+            get_range_of_range_and_row_range(start, end, rr)
         }
-        (Reference::Range(range), Reference::Addr(addr)) => {
-            get_range_of_addr_and_range(addr, range)
+        (Reference::Range(start, end), Reference::Addr(addr)) => {
+            get_range_of_addr_and_range(addr, start, end)
         }
-        (Reference::Range(range), Reference::ColumnRange(cr)) => {
-            get_range_of_range_and_col_range(range, cr)
+        (Reference::Range(start, end), Reference::ColumnRange(cr)) => {
+            get_range_of_range_and_col_range(start, end, cr)
         }
-        (Reference::Range(range), Reference::RowRange(rr)) => {
-            get_range_of_range_and_row_range(range, rr)
+        (Reference::Range(start, end), Reference::RowRange(rr)) => {
+            get_range_of_range_and_row_range(start, end, rr)
         }
-        (Reference::Range(lr), Reference::Range(rr)) => get_range_of_ranges(lr, rr),
+        (Reference::Range(left_start, left_end), Reference::Range(right_start, right_end)) => {
+            get_range_of_ranges(left_start, left_end, right_start, right_end)
+        }
     }
 }
 
 fn get_range_of_addresses(la: Address, ra: Address) -> Option<Reference> {
-    Some(Reference::Range(Range { start: la, end: ra }))
+    Some(Reference::Range(la, ra))
 }
 
-fn get_range_of_ranges(lr: Range, rr: Range) -> Option<Reference> {
+fn get_range_of_ranges(
+    lr_start: Address,
+    lr_end: Address,
+    rr_start: Address,
+    rr_end: Address,
+) -> Option<Reference> {
     let (col_start, col_end) =
-        get_range_of_intervals((lr.start.col, lr.end.col), (rr.start.col, rr.end.col));
+        get_range_of_intervals((lr_start.col, lr_end.col), (rr_start.col, rr_end.col));
     let (row_start, row_end) =
-        get_range_of_intervals((lr.start.row, lr.end.row), (rr.start.row, rr.end.row));
-    Some(Reference::Range(Range {
-        start: Address {
+        get_range_of_intervals((lr_start.row, lr_end.row), (rr_start.row, rr_end.row));
+    Some(Reference::Range(
+        Address {
             col: col_start,
             row: row_start,
         },
-        end: Address {
+        Address {
             col: col_end,
             row: row_end,
         },
-    }))
+    ))
 }
 
 fn get_range_of_col_ranges(lcr: ColRange, rcr: ColRange) -> Option<Reference> {
@@ -103,21 +110,25 @@ fn get_range_of_row_ranges(lrr: RowRange, rrr: RowRange) -> Option<Reference> {
     Some(Reference::RowRange(RowRange { start, end }))
 }
 
-fn get_range_of_addr_and_range(addr: Address, range: Range) -> Option<Reference> {
+fn get_range_of_addr_and_range(
+    addr: Address,
+    range_start: Address,
+    range_end: Address,
+) -> Option<Reference> {
     let (col_start, col_end) =
-        get_range_of_point_and_interval(addr.col, (range.start.col, range.end.col));
+        get_range_of_point_and_interval(addr.col, (range_start.col, range_end.col));
     let (row_start, row_end) =
-        get_range_of_point_and_interval(addr.row, (range.start.row, range.end.row));
-    Some(Reference::Range(Range {
-        start: Address {
+        get_range_of_point_and_interval(addr.row, (range_start.row, range_end.row));
+    Some(Reference::Range(
+        Address {
             col: col_start,
             row: row_start,
         },
-        end: Address {
+        Address {
             col: col_end,
             row: row_end,
         },
-    }))
+    ))
 }
 
 fn get_range_of_addr_and_col_range(addr: Address, cr: ColRange) -> Option<Reference> {
@@ -130,12 +141,20 @@ fn get_range_of_addr_and_row_range(addr: Address, rr: RowRange) -> Option<Refere
     Some(Reference::RowRange(RowRange { start, end }))
 }
 
-fn get_range_of_range_and_col_range(range: Range, cr: ColRange) -> Option<Reference> {
-    let (start, end) = get_range_of_intervals((range.start.col, range.end.col), (cr.start, cr.end));
+fn get_range_of_range_and_col_range(
+    range_start: Address,
+    range_end: Address,
+    cr: ColRange,
+) -> Option<Reference> {
+    let (start, end) = get_range_of_intervals((range_start.col, range_end.col), (cr.start, cr.end));
     Some(Reference::ColumnRange(ColRange { start, end }))
 }
-fn get_range_of_range_and_row_range(range: Range, rr: RowRange) -> Option<Reference> {
-    let (start, end) = get_range_of_intervals((range.start.row, range.end.row), (rr.start, rr.end));
+fn get_range_of_range_and_row_range(
+    range_start: Address,
+    range_end: Address,
+    rr: RowRange,
+) -> Option<Reference> {
+    let (start, end) = get_range_of_intervals((range_start.row, range_end.row), (rr.start, rr.end));
     Some(Reference::RowRange(RowRange { start, end }))
 }
 
@@ -176,7 +195,7 @@ mod tests {
     use super::super::{CalcValue, Value};
     use super::{
         ast, get_range, get_range_without_prefix, Address, CalcReference, CalcVertex, ColRange,
-        Range, Reference, RowRange,
+        Reference, RowRange,
     };
 
     #[test]
@@ -186,25 +205,22 @@ mod tests {
         let r = get_range_without_prefix(addr.clone(), Reference::Addr(Address { row: 4, col: 1 }));
         assert!(matches!(
             r,
-            Some(Reference::Range(Range {
-                start: Address { row: 2, col: 3 },
-                end: Address { row: 4, col: 1 }
-            })),
+            Some(Reference::Range(
+                Address { row: 2, col: 3 },
+                Address { row: 4, col: 1 }
+            )),
         ));
 
         let r = get_range_without_prefix(
             addr.clone(),
-            Reference::Range(Range {
-                start: Address { row: 4, col: 2 },
-                end: Address { row: 6, col: 5 },
-            }),
+            Reference::Range(Address { row: 4, col: 2 }, Address { row: 6, col: 5 }),
         );
         assert!(matches!(
             r,
-            Some(Reference::Range(Range {
-                start: Address { row: 2, col: 2 },
-                end: Address { row: 6, col: 5 }
-            })),
+            Some(Reference::Range(
+                Address { row: 2, col: 2 },
+                Address { row: 6, col: 5 }
+            )),
         ));
 
         let r = get_range_without_prefix(
@@ -228,24 +244,18 @@ mod tests {
 
     #[test]
     fn range_test() {
-        let range = Reference::Range(Range {
-            start: Address { row: 6, col: 3 },
-            end: Address { row: 4, col: 6 },
-        });
+        let range = Reference::Range(Address { row: 6, col: 3 }, Address { row: 4, col: 6 });
 
         let r = get_range_without_prefix(
             range.clone(),
-            Reference::Range(Range {
-                start: Address { row: 3, col: 2 },
-                end: Address { row: 5, col: 8 },
-            }),
+            Reference::Range(Address { row: 3, col: 2 }, Address { row: 5, col: 8 }),
         );
         assert!(matches!(
             r,
-            Some(Reference::Range(Range {
-                start: Address { row: 3, col: 2 },
-                end: Address { row: 6, col: 8 }
-            })),
+            Some(Reference::Range(
+                Address { row: 3, col: 2 },
+                Address { row: 6, col: 8 }
+            )),
         ));
 
         let r = get_range_without_prefix(
@@ -318,10 +328,7 @@ mod tests {
             CalcVertex::Reference(CalcReference {
                 from_sheet: None,
                 sheet: 1,
-                reference: Reference::Range(Range {
-                    start: Address { row: 1, col: 1 },
-                    end: Address { row: 2, col: 2 },
-                })
+                reference: Reference::Range(Address { row: 1, col: 1 }, Address { row: 2, col: 2 },)
             })
         ));
 

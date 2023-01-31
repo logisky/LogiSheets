@@ -15,11 +15,18 @@ not_space_or_tab = _{
     !(" "| "\t") ~ ANY
 }
 
+number = {ASCII_DIGIT+}
+
 input_op = {"INPUT" ~ ws+ ~ position ~ ws+ ~ content}
 switch_op = {"SWITCH"~ ws+ ~ content}
 checknum_op = {"CHECKNUM"~ ws+ ~ position ~ ws+ ~ float}
 checkstr_op = {"CHECKSTR" ~ ws+ ~ position ~ ws+ ~ content}
 checkerr_op = {"CHECKERR" ~ ws+ ~ position ~ ws+ ~ content}
+
+insert_row = {"INSERTROW" ~ ws+ ~ row ~ ws+ ~ number}
+insert_col = {"INSERTCOL" ~ ws+ ~ col ~ ws+ ~ number}
+delete_row = {"DELETEROW" ~ ws+ ~ row ~ ws+ ~ number}
+delete_col = {"DELETECOL" ~ ws+ ~ col ~ ws+ ~ number}
 
 statement = _{
     input_op
@@ -27,4 +34,8 @@ statement = _{
     | checkerr_op
     | checknum_op
     | checkstr_op
+    | insert_row
+    | insert_col
+    | delete_row
+    | delete_col
 }

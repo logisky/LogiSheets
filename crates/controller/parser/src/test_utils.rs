@@ -1,21 +1,22 @@
-use logisheets_base::id_fetcher::IdFetcherTrait;
+use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
 use logisheets_base::name_fetcher::NameFetcherTrait;
 use logisheets_base::{
-    CellId, ColId, ExtBookId, FuncId, NameId, NormalCellId, RowId, SheetId, TextId,
+    CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalCellId, Range,
+    RangeId, RowId, SheetId, TextId,
 };
 
-pub struct TestFetcher {}
+pub struct TestIdFetcher {}
 
-impl IdFetcherTrait for TestFetcher {
-    fn fetch_row_id(&mut self, sheet_id: SheetId, row_idx: usize) -> Option<RowId> {
-        Some(sheet_id as u32 + row_idx as u32)
+impl IdFetcherTrait for TestIdFetcher {
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId> {
+        Some(sheet_id.clone() as u32 + row_idx as u32)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: SheetId, col_idx: usize) -> Option<ColId> {
-        Some(sheet_id as u32 + col_idx as u32)
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId> {
+        Some(sheet_id.clone() as u32 + col_idx as u32)
     }
 
-    fn fetch_cell_id(&mut self, _: SheetId, row_idx: usize, col_idx: usize) -> Option<CellId> {
+    fn fetch_cell_id(&mut self, _: &SheetId, row_idx: usize, col_idx: usize) -> Option<CellId> {
         Some(CellId::NormalCell(NormalCellId {
             row: row_idx as u32,
             col: col_idx as u32,
@@ -45,7 +46,7 @@ impl IdFetcherTrait for TestFetcher {
     }
 }
 
-impl NameFetcherTrait for TestFetcher {
+impl NameFetcherTrait for TestIdFetcher {
     fn fetch_text(&self, _text_id: &TextId) -> String {
         String::from("testtext")
     }
@@ -86,5 +87,33 @@ impl NameFetcherTrait for TestFetcher {
 
     fn fetch_col_idx(&mut self, _sheet_id: &SheetId, col_id: &ColId) -> usize {
         col_id.clone() as usize
+    }
+
+    fn fetch_range(&mut self, _: &SheetId, _: &RangeId) -> Option<Range> {
+        todo!()
+    }
+
+    fn fetch_cube(&mut self, _cube_id: &CubeId) -> Cube {
+        todo!()
+    }
+
+    fn fetch_ext_ref(&mut self, _ext_ref_id: &ExtRefId) -> ExtRef {
+        todo!()
+    }
+}
+
+pub struct TestVertexFetcher {}
+
+impl VertexFetcherTrait for TestVertexFetcher {
+    fn fetch_range_id(&mut self, _: &SheetId, _range: &Range) -> RangeId {
+        1
+    }
+
+    fn fetch_cube_id(&mut self, _cube: &Cube) -> CubeId {
+        1
+    }
+
+    fn fetch_ext_ref_id(&mut self, _ext_ref: &ExtRef) -> ExtRefId {
+        1
     }
 }
