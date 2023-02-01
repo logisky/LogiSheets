@@ -2,6 +2,16 @@
 
 [![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT/Mit-blue.svg)](./LICENSE)
 
+## Crates
+
+This repo contains these crates. Feel free to create issues and PRs about them.
+
+| Crate name | Version | Descritption |
+|:--:|:--:|:--:|
+|LogiSheets|![crates.io](https://img.shields.io/crates/v/LogiSheets.svg)| A rust library to handle .xlsx file and also a develop-friendly web spreadsheet application|
+|[gents](https://github.com/proclml/LogiSheets/tree/master/crates/gents)|![crates.io](https://img.shields.io/crates/v/gents.svg)| A library for helping generate the TypeScript interfaces from Rust structs. Useful in communicating between Rust and TypeScript|
+|[xmlserde](https://github.com/proclml/LogiSheets/tree/master/crates/xmlserde)|![crates.io](https://img.shields.io/crates/v/xmlserde.svg)|A user-friendly library to serialize and deserialize xml files|
+
 ## What is LogiSheets?
 
 LogiSheets is a web spreadsheet application that is compatible with Excel and designed for easy further development. Most important of all, it's free! And LogiSheets is written in Rust, and you are able to create, read and write .xlsx files.
