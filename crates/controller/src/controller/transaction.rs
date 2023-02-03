@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 
 use logisheets_base::{Addr, BlockRange, CellId, NormalRange, Range, SheetId};
@@ -28,32 +29,29 @@ pub struct Transaction<'a> {
 }
 
 impl<'a> Transaction<'a> {
-    pub fn start(self) -> Status {
+    pub fn start(self) -> Result<Status> {
         let context = self.context;
         let mut async_func_manager = self.async_func_manager;
-        let (
-            Status {
-                mut navigator,
-                mut container,
-                sheet_id_manager,
-                mut func_id_manager,
-                mut text_id_manager,
-                mut external_links_manager,
-                name_id_manager,
-                sheet_pos_manager,
-                style_manager,
-                cell_attachment_manager,
-                formula_manager,
-            },
-            calc_nodes,
-        ) = self.proc.into_iter().fold(
-            (self.status, HashSet::<Vertex>::new()),
-            |(prev_status, prev_calc_nodes), proc| {
-                let (new_status, mut calc_nodes) = handle(prev_status, proc, &context);
-                calc_nodes.extend(prev_calc_nodes);
-                (new_status, calc_nodes)
-            },
-        );
+        let mut status = self.status;
+        let mut calc_nodes = HashSet::<Vertex>::new();
+        for proc in self.proc {
+            let (new_status, nodes) = handle(status, proc, &context)?;
+            calc_nodes.extend(nodes);
+            status = new_status;
+        }
+        let Status {
+            mut navigator,
+            mut container,
+            sheet_id_manager,
+            mut func_id_manager,
+            mut text_id_manager,
+            mut external_links_manager,
+            name_id_manager,
+            sheet_pos_manager,
+            style_manager,
+            cell_attachment_manager,
+            formula_manager,
+        } = status;
         let connector = CalcConnector {
             navigator: &mut navigator,
             container: &mut container,
@@ -76,7 +74,7 @@ impl<'a> Transaction<'a> {
             dirty_vertices: calc_nodes,
         };
         calc_engine.start();
-        Status {
+        Ok(Status {
             navigator,
             container,
             sheet_id_manager,
@@ -88,7 +86,7 @@ impl<'a> Transaction<'a> {
             style_manager,
             cell_attachment_manager,
             formula_manager,
-        }
+        })
     }
 }
 
@@ -96,18 +94,18 @@ fn handle(
     status: Status,
     proc: Process,
     context: &TransactionContext,
-) -> (Status, HashSet<Vertex>) {
+) -> Result<(Status, HashSet<Vertex>)> {
     match proc {
         Process::Sheet(sheet_proc) => handle_sheet_proc(status, sheet_proc, context),
-        Process::Name(p) => (handle_name_proc(status, p, context), HashSet::new()),
-        Process::SheetShift(sheet_shift) => (
+        Process::Name(p) => Ok((handle_name_proc(status, p, context), HashSet::new())),
+        Process::SheetShift(sheet_shift) => Ok((
             handle_sheet_shift_payload(status, sheet_shift),
             HashSet::new(),
-        ),
+        )),
         Process::SheetRename(rename) => {
-            (handle_sheet_rename_payload(status, rename), HashSet::new())
+            Ok((handle_sheet_rename_payload(status, rename), HashSet::new()))
         }
-        Process::Recalc(dirty) => handle_recalc_proc(status, dirty),
+        Process::Recalc(dirty) => Ok(handle_recalc_proc(status, dirty)),
     }
 }
 
@@ -179,7 +177,7 @@ fn handle_sheet_proc(
     status: Status,
     proc: SheetProcess,
     context: &TransactionContext,
-) -> (Status, HashSet<Vertex>) {
+) -> Result<(Status, HashSet<Vertex>)> {
     let Status {
         navigator,
         formula_manager,
@@ -205,7 +203,7 @@ fn handle_sheet_proc(
         container: mut new_container,
         style_manager: new_style_manager,
         deleted_cells: _,
-    } = data_executor.execute(&proc);
+    } = data_executor.execute(&proc)?;
     let active_sheet = proc.sheet_id;
     let FormulaExecContext {
         manager: formula_manager,
@@ -225,7 +223,7 @@ fn handle_sheet_proc(
             idx_navigator: &mut old_navigator,
             external_links_manager: &mut external_links_manager,
         },
-    );
+    )?;
     let status = Status {
         navigator: new_navigator,
         formula_manager,
@@ -239,5 +237,5 @@ fn handle_sheet_proc(
         style_manager: new_style_manager,
         cell_attachment_manager,
     };
-    (status, dirty_vertices)
+    Ok((status, dirty_vertices))
 }

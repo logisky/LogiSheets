@@ -1,6 +1,7 @@
 mod executors;
 pub mod graph;
 
+use anyhow::Result;
 use graph::Graph;
 use im::HashMap;
 use logisheets_base::{
@@ -62,7 +63,11 @@ impl FormulaManager {
         add_ast_node(self, sheet_id, cell_id, range_id, ast)
     }
 
-    pub fn execute_sheet_proc<C>(self, proc: SheetProcess, ctx: &mut C) -> FormulaExecContext
+    pub fn execute_sheet_proc<C>(
+        self,
+        proc: SheetProcess,
+        ctx: &mut C,
+    ) -> Result<FormulaExecContext>
     where
         C: IdFetcherTrait
             + IndexFetcherTrait
@@ -148,13 +153,13 @@ impl FormulaManager {
                     payload.new_master_col,
                     ctx,
                 ),
-                BlockPayload::Remove(_) => exec_ctx,
+                BlockPayload::Remove(_) => Ok(exec_ctx),
             },
             SheetPayload::Cell(cp) => match cp.change {
                 CellChange::Value(v) => input_value(exec_ctx, sheet_id, cp.row, cp.col, v, ctx),
-                _ => exec_ctx,
+                _ => Ok(exec_ctx),
             },
-            _ => exec_ctx,
+            _ => Ok(exec_ctx),
         }
     }
 }

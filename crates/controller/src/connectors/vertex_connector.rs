@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 use logisheets_base::block_affect::BlockAffectTrait;
 use logisheets_base::get_active_sheet::GetActiveSheetTrait;
 use logisheets_base::get_book_name::GetBookNameTrait;
@@ -73,14 +75,14 @@ impl<'a> VertexConnector<'a> {
                 CellId::NormalCell(nc) => {
                     let cidx = self.fetch_cell_index(&sheet_id, cid);
                     match cidx {
-                        Some((r, c)) => {
+                        Ok((r, c)) => {
                             if is_row && r >= idx && r <= idx + cnt - 1 {
                                 result.push(nc.clone())
                             } else if !is_row && c >= idx && c <= idx + cnt - 1 {
                                 result.push(nc.clone())
                             }
                         }
-                        None => {}
+                        Err(_) => {}
                     }
                 }
                 CellId::BlockCell(_) => {}
@@ -90,11 +92,11 @@ impl<'a> VertexConnector<'a> {
 }
 
 impl<'a> IdFetcherTrait for VertexConnector<'a> {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId> {
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
         self.get_id_fetcher().fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId> {
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
         self.get_id_fetcher().fetch_col_id(sheet_id, col_idx)
     }
 
@@ -103,7 +105,7 @@ impl<'a> IdFetcherTrait for VertexConnector<'a> {
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Option<CellId> {
+    ) -> Result<CellId> {
         self.get_id_fetcher()
             .fetch_cell_id(sheet_id, row_idx, col_idx)
     }
@@ -130,19 +132,19 @@ impl<'a> IdFetcherTrait for VertexConnector<'a> {
 }
 
 impl<'a> IndexFetcherTrait for VertexConnector<'a> {
-    fn fetch_row_index(&mut self, sheet_id: &SheetId, row_id: &RowId) -> Option<usize> {
+    fn fetch_row_index(&mut self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize> {
         self.get_idx_fetcher().fetch_row_index(sheet_id, row_id)
     }
 
-    fn fetch_col_index(&mut self, sheet_id: &SheetId, col_id: &ColId) -> Option<usize> {
+    fn fetch_col_index(&mut self, sheet_id: &SheetId, col_id: &ColId) -> Result<usize> {
         self.get_idx_fetcher().fetch_col_index(sheet_id, col_id)
     }
 
-    fn fetch_cell_index(&mut self, sheet_id: &SheetId, cell_id: &CellId) -> Option<(usize, usize)> {
+    fn fetch_cell_index(&mut self, sheet_id: &SheetId, cell_id: &CellId) -> Result<(usize, usize)> {
         self.get_idx_fetcher().fetch_cell_index(sheet_id, cell_id)
     }
 
-    fn fetch_sheet_index(&mut self, sheet_id: &SheetId) -> Option<usize> {
+    fn fetch_sheet_index(&mut self, sheet_id: &SheetId) -> Result<usize> {
         self.get_idx_fetcher().fetch_sheet_index(sheet_id)
     }
 
@@ -150,7 +152,7 @@ impl<'a> IndexFetcherTrait for VertexConnector<'a> {
         &mut self,
         sheet_id: &SheetId,
         normal_cell_id: &NormalCellId,
-    ) -> Option<(usize, usize)> {
+    ) -> Result<(usize, usize)> {
         self.get_idx_fetcher()
             .fetch_normal_cell_index(sheet_id, normal_cell_id)
     }
@@ -159,7 +161,7 @@ impl<'a> IndexFetcherTrait for VertexConnector<'a> {
         &mut self,
         sheet: &SheetId,
         block_cell_id: &BlockCellId,
-    ) -> Option<(usize, usize)> {
+    ) -> Result<(usize, usize)> {
         self.get_idx_fetcher()
             .fetch_block_cell_index(sheet, block_cell_id)
     }
@@ -197,14 +199,14 @@ impl<'a> GetBookNameTrait for VertexConnector<'a> {
     }
 }
 impl<'a> BlockAffectTrait for VertexConnector<'a> {
-    fn get_all_block_cells(&self, sheet_id: SheetId, block_id: BlockId) -> Vec<BlockCellId> {
-        let bp = self.id_navigator.get_block_place(sheet_id, block_id);
-        if bp.is_none() {
-            return Vec::new();
-        }
-        let bp = bp.unwrap();
+    fn get_all_block_cells(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+    ) -> Result<Vec<BlockCellId>> {
+        let bp = self.id_navigator.get_block_place(sheet_id, block_id)?;
         let mut res = Vec::<BlockCellId>::new();
-        bp.rows.iter().for_each(|r| {
+        let cells = bp.rows.iter().for_each(|r| {
             bp.cols.iter().for_each(|c| {
                 let bid = BlockCellId {
                     block_id,
@@ -214,13 +216,11 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
                 res.push(bid)
             })
         });
-        res
+        Ok(res)
     }
 
-    fn get_master_cell(&self, sheet_id: SheetId, block_id: BlockId) -> CellId {
-        self.id_navigator
-            .get_master_cell(sheet_id, block_id)
-            .unwrap()
+    fn get_master_cell(&self, sheet_id: SheetId, block_id: BlockId) -> Result<CellId> {
+        self.id_navigator.get_master_cell(sheet_id, block_id)
     }
 
     fn get_block_cells_by_line(
@@ -230,12 +230,8 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
         idx: usize,
         cnt: usize,
         is_row: bool,
-    ) -> Vec<BlockCellId> {
-        let bp = self.id_navigator.get_block_place(sheet_id, block_id);
-        if bp.is_none() {
-            return Vec::new();
-        }
-        let bp = bp.unwrap();
+    ) -> Result<Vec<BlockCellId>> {
+        let bp = self.id_navigator.get_block_place(sheet_id, block_id)?;
         let (row_cnt, col_cnt) = bp.get_block_size();
         let (sr, sc, er, ec) = if is_row {
             let start_row = idx;
@@ -246,9 +242,9 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
             let end_col = start_col + cnt - 1;
             (0, start_col, row_cnt - 1, end_col)
         };
-        cross_product_usize(sr, er, sc, ec)
-            .into_iter()
-            .fold(Vec::new(), |prev, (r, c)| match bp.get_inner_id(r, c) {
+        let cells = cross_product_usize(sr, er, sc, ec).into_iter().fold(
+            Vec::new(),
+            |prev, (r, c)| match bp.get_inner_id(r, c) {
                 Some((rid, cid)) => {
                     let bid = BlockCellId {
                         block_id,
@@ -260,10 +256,12 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
                     res
                 }
                 None => prev,
-            })
+            },
+        );
+        Ok(cells)
     }
 
-    fn get_block_size(&self, sheet_id: SheetId, block_id: BlockId) -> Option<(usize, usize)> {
+    fn get_block_size(&self, sheet_id: SheetId, block_id: BlockId) -> Result<(usize, usize)> {
         self.id_navigator.get_block_size(sheet_id, block_id)
     }
 
@@ -273,7 +271,7 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
         from_idx: usize,
         cnt: usize,
         is_row: bool,
-    ) -> Vec<BlockId> {
+    ) -> Result<Vec<BlockId>> {
         self.id_navigator
             .get_affected_blockplace(&sheet_id, from_idx, cnt, is_row)
     }
@@ -285,7 +283,7 @@ impl<'a> GetNormCellIdTrait for VertexConnector<'a> {
         sheet_id: SheetId,
         row: usize,
         col: usize,
-    ) -> Option<NormalCellId> {
+    ) -> Result<NormalCellId> {
         self.id_navigator.fetch_norm_cell_id(&sheet_id, row, col)
     }
 }

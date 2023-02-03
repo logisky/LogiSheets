@@ -1,3 +1,4 @@
+use anyhow::Result;
 use logisheets_base::{
     get_active_sheet::GetActiveSheetTrait,
     get_book_name::GetBookNameTrait,
@@ -195,11 +196,11 @@ struct Context<'a, 'b, 'c> {
 }
 
 impl<'a, 'b, 'c> IdFetcherTrait for Context<'a, 'b, 'c> {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId> {
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
         self.vertex_connector.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId> {
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
         self.vertex_connector.fetch_col_id(sheet_id, col_idx)
     }
 
@@ -208,7 +209,7 @@ impl<'a, 'b, 'c> IdFetcherTrait for Context<'a, 'b, 'c> {
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Option<CellId> {
+    ) -> Result<CellId> {
         self.vertex_connector
             .fetch_cell_id(sheet_id, row_idx, col_idx)
     }

@@ -148,6 +148,7 @@ pub mod tests_utils {
     use crate::calc_engine::calculator::calc_vertex::{CalcValue, CalcVertex};
     use crate::calc_engine::connector::Connector;
     use crate::CellId;
+    use anyhow::Result;
 
     pub struct TestFetcher {}
     impl AsyncFuncCommitTrait for TestFetcher {
@@ -195,11 +196,11 @@ pub mod tests_utils {
             }
         }
 
-        fn get_text(&self, _: &logisheets_base::TextId) -> Option<String> {
+        fn get_text(&self, _: &logisheets_base::TextId) -> Result<String> {
             todo!()
         }
 
-        fn get_func_name(&self, _: &logisheets_base::FuncId) -> Option<String> {
+        fn get_func_name(&self, _: &logisheets_base::FuncId) -> Result<String> {
             todo!()
         }
 
@@ -207,8 +208,8 @@ pub mod tests_utils {
             &mut self,
             _sheet_id: logisheets_base::SheetId,
             _cell_id: &logisheets_base::CellId,
-        ) -> Option<(usize, usize)> {
-            Some((0, 0))
+        ) -> Result<(usize, usize)> {
+            Ok((0, 0))
         }
 
         fn get_cell_id(
@@ -216,7 +217,7 @@ pub mod tests_utils {
             _sheet_id: logisheets_base::SheetId,
             _row: usize,
             _col: usize,
-        ) -> Option<logisheets_base::CellId> {
+        ) -> Result<CellId> {
             todo!()
         }
 

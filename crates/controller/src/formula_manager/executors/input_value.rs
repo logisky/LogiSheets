@@ -1,3 +1,4 @@
+use anyhow::Result;
 use logisheets_base::{
     block_affect::BlockAffectTrait, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
     CellValue,
@@ -21,7 +22,7 @@ pub fn input_value<C>(
     col: usize,
     value: CellValue,
     ctx: &mut C,
-) -> FormulaExecContext
+) -> Result<FormulaExecContext>
 where
     C: IdFetcherTrait + IndexFetcherTrait + BlockAffectTrait,
 {
@@ -49,7 +50,7 @@ where
         manager: range_manager,
         dirty_ranges,
         removed_ranges,
-    } = range_manager.execute_sheet_proc(sp.clone(), ctx);
+    } = range_manager.execute_sheet_proc(sp.clone(), ctx)?;
     add_dirty_vertices_from_ranges(&mut dirty_vertices, dirty_ranges);
     add_dirty_vertices_from_ranges(&mut dirty_vertices, removed_ranges);
 
@@ -70,8 +71,8 @@ where
         names,
     };
 
-    FormulaExecContext {
+    Ok(FormulaExecContext {
         manager: new_manager,
         dirty_vertices,
-    }
+    })
 }

@@ -61,7 +61,7 @@ pub fn load_merge_cells(
             let start_id = navigator.fetch_cell_id(&sheet_id, start_row, start_col);
             let end_id = navigator.fetch_cell_id(&sheet_id, end_row, end_col);
             match (start_id, end_id) {
-                (Some(start), Some(end)) => match (start, end) {
+                (Ok(start), Ok(end)) => match (start, end) {
                     (CellId::NormalCell(s), CellId::NormalCell(e)) => {
                         cell_attachment_manager
                             .merge_cells
@@ -93,7 +93,7 @@ pub fn load_comments(
         .iter()
         .for_each(|c| match parse_cell(&c.reference) {
             Some((row, col)) => {
-                if let Some(cell_id) = navigator.fetch_cell_id(&sheet_id, row, col) {
+                if let Ok(cell_id) = navigator.fetch_cell_id(&sheet_id, row, col) {
                     let text = rst_to_plain_text(&c.text);
                     let author = authors.get(c.author_id as usize).unwrap();
                     let author_id = cell_attachment_manager.comments.authors.get_id(author);

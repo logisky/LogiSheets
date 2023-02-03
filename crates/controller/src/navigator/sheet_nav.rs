@@ -2,12 +2,13 @@ use super::block::BlockPlace;
 use super::id_manager::IdManager;
 use super::{executor, fetcher::Fetcher};
 use im::{HashMap, Vector};
-use logisheets_base::{BlockId, CellId, ColId, Id, RowId};
+use logisheets_base::{BlockId, CellId, ColId, Id, RowId, SheetId};
 
 use crate::payloads::sheet_process::ShiftPayload;
 
 #[derive(Debug, Clone)]
 pub struct SheetNav {
+    pub sheet_id: SheetId,
     pub data: Data,
     pub cache: Cache,
     pub version: u32,
@@ -15,8 +16,9 @@ pub struct SheetNav {
 }
 
 impl SheetNav {
-    pub fn init(row_max: u32, col_max: u32) -> Self {
+    pub fn init(row_max: u32, col_max: u32, sheet_id: SheetId) -> Self {
         SheetNav {
+            sheet_id,
             data: Data::init(row_max, col_max),
             id_manager: IdManager::new(row_max, col_max, 0),
             cache: Cache::default(),
@@ -29,13 +31,13 @@ impl SheetNav {
     }
 
     pub fn get_fetcher(&mut self) -> Fetcher {
-        Fetcher::from(&self.data, &mut self.cache)
+        Fetcher::from(&self.data, &mut self.cache, self.sheet_id)
     }
 }
 
 impl Default for SheetNav {
     fn default() -> Self {
-        SheetNav::init(1000, 200)
+        SheetNav::init(1000, 200, 0)
     }
 }
 
@@ -99,6 +101,6 @@ pub struct Cache {
     pub col_index: HashMap<ColId, usize>,
     pub col_id: HashMap<usize, ColId>,
 
-    pub cell_id: HashMap<(usize, usize), Option<CellId>>,
-    pub cell_idx: HashMap<CellId, Option<(usize, usize)>>,
+    pub cell_id: HashMap<(usize, usize), CellId>,
+    pub cell_idx: HashMap<CellId, (usize, usize)>,
 }

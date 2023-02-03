@@ -1,6 +1,7 @@
 pub mod ast;
 mod climber;
 pub mod context;
+pub mod errors;
 mod reference;
 #[cfg(test)]
 mod test_utils;

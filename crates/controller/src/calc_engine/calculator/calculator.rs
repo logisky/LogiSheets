@@ -62,8 +62,8 @@ where
         ast::Operator::Function(fid) => {
             let name = fetcher.get_func_name(fid);
             match name {
-                Some(func) => funcs::function_calculate(&func, args, fetcher),
-                None => CalcVertex::from_error(ast::Error::Unspecified),
+                Ok(func) => funcs::function_calculate(&func, args, fetcher),
+                Err(_) => CalcVertex::from_error(ast::Error::Unspecified),
             }
         }
         ast::Operator::Comma => {

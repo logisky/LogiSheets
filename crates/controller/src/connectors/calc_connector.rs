@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 
 use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
@@ -12,6 +13,7 @@ use logisheets_base::{BlockRange, CubeCross, NormalRange, Range};
 use logisheets_parser::ast;
 
 use crate::formula_manager::FormulaManager;
+use crate::id_manager::errors::IdError;
 use crate::{
     async_func_manager::AsyncFuncManager,
     calc_engine::calculator::calc_vertex::Value,
@@ -278,23 +280,30 @@ impl<'a> Connector for CalcConnector<'a> {
         }
     }
 
-    fn get_text(&self, tid: &TextId) -> Option<String> {
-        self.text_id_manager.get_string(tid)
+    #[inline]
+    fn get_text(&self, tid: &TextId) -> Result<String> {
+        self.text_id_manager
+            .get_string(tid)
+            .ok_or(IdError::TextIdNotFound(*tid).into())
     }
 
-    fn get_func_name(&self, fid: &FuncId) -> Option<String> {
-        self.func_id_manager.get_string(fid)
+    #[inline]
+    fn get_func_name(&self, fid: &FuncId) -> Result<String> {
+        self.func_id_manager
+            .get_string(fid)
+            .ok_or(IdError::FuncIdNotFound(*fid).into())
     }
 
     fn get_cell_idx(
         &mut self,
         sheet_id: SheetId,
         cell_id: &logisheets_base::CellId,
-    ) -> Option<(usize, usize)> {
+    ) -> Result<(usize, usize)> {
         self.navigator.fetch_cell_idx(&sheet_id, cell_id)
     }
 
-    fn get_cell_id(&mut self, sheet_id: SheetId, row: usize, col: usize) -> Option<CellId> {
+    #[inline]
+    fn get_cell_id(&mut self, sheet_id: SheetId, row: usize, col: usize) -> Result<CellId> {
         self.navigator.fetch_cell_id(&sheet_id, row, col)
     }
 
@@ -365,7 +374,7 @@ impl<'a> CalcConnector<'a> {
         let mut matrix = MatrixValue::<Value>::new(row_end - row_start + 1, 65535);
         sheet_container.cells.iter().for_each(|(id, cell)| {
             let idx = self.navigator.fetch_cell_idx(&sheet_id, id);
-            if let Some((r, c)) = idx {
+            if let Ok((r, c)) = idx {
                 if r >= row_start && r <= row_end {
                     let v = Value::from_cell_value(cell.value.clone(), &|t| {
                         self.text_id_manager.get_string(t)
@@ -392,7 +401,7 @@ impl<'a> CalcConnector<'a> {
         let mut matrix = MatrixValue::<Value>::new(65535, col_end - col_start + 1);
         sheet_container.cells.iter().for_each(|(id, cell)| {
             let idx = self.navigator.fetch_cell_idx(&sheet_id, id);
-            if let Some((r, c)) = idx {
+            if let Ok((r, c)) = idx {
                 if c >= col_start && c <= col_end {
                     let v = Value::from_cell_value(cell.value.clone(), &|t| {
                         self.text_id_manager.get_string(t)
@@ -446,12 +455,15 @@ impl<'a> CalcConnector<'a> {
         sheet_id: SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Option<CellValue> {
+    ) -> Result<CellValue> {
         let cid = self.navigator.fetch_cell_id(&sheet_id, row_idx, col_idx)?;
         let sheet = self.container.get_sheet_container(sheet_id);
-        let cell = sheet.cells.get(&cid)?;
-        let value = cell.value.clone();
-        Some(value)
+        if let Some(cell) = sheet.cells.get(&cid) {
+            let value = cell.value.clone();
+            Ok(value)
+        } else {
+            Ok(CellValue::Blank)
+        }
     }
 
     fn set_cell_value(
@@ -461,7 +473,7 @@ impl<'a> CalcConnector<'a> {
         col_idx: usize,
         value: CellValue,
     ) {
-        if let Some(cid) = self.navigator.fetch_cell_id(&sheet_id, row_idx, col_idx) {
+        if let Ok(cid) = self.navigator.fetch_cell_id(&sheet_id, row_idx, col_idx) {
             let sheet = self.container.get_sheet_container(sheet_id);
             if let Some(c) = sheet.cells.get_mut(&cid) {
                 c.value = value

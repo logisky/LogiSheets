@@ -3,6 +3,7 @@ use crate::{
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
 };
+use anyhow::Result;
 use logisheets_base::{id_fetcher::IdFetcherTrait, ExtBookId, SheetId};
 
 pub struct IdFetcher<'a> {
@@ -19,7 +20,7 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
         &mut self,
         sheet_id: &SheetId,
         row_idx: usize,
-    ) -> Option<logisheets_base::RowId> {
+    ) -> Result<logisheets_base::RowId> {
         self.navigator.fetch_row_id(sheet_id, row_idx)
     }
 
@@ -27,7 +28,7 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
         &mut self,
         sheet_id: &SheetId,
         col_idx: usize,
-    ) -> Option<logisheets_base::ColId> {
+    ) -> Result<logisheets_base::ColId> {
         self.navigator.fetch_col_id(sheet_id, col_idx)
     }
 
@@ -36,7 +37,7 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Option<logisheets_base::CellId> {
+    ) -> Result<logisheets_base::CellId> {
         self.navigator.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 
