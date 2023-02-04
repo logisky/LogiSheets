@@ -1,15 +1,16 @@
-use super::{fill_manager::FillPayload, StyleManager};
+use super::{errors::StyleError, fill_manager::FillPayload, StyleManager};
 use crate::{
     payloads::sheet_process::style::CellStylePayload,
     style_manager::{border_manager::BorderPayload, font_manager::FontPayload},
 };
+use anyhow::Result;
 use logisheets_base::StyleId;
 
 pub fn execute_style_payload(
     sm: StyleManager,
     payload: &CellStylePayload,
     id: StyleId,
-) -> Option<(StyleManager, StyleId)> {
+) -> Result<(StyleManager, StyleId)> {
     let StyleManager {
         mut font_manager,
         mut border_manager,
@@ -18,7 +19,10 @@ pub fn execute_style_payload(
         mut fill_manager,
         num_fmt_manager,
     } = sm;
-    let mut xf = cell_xfs_manager.get_data(id)?.clone();
+    let mut xf = cell_xfs_manager
+        .get_data(id)
+        .ok_or(StyleError::StyleIdNotFound(id))?
+        .clone();
     match payload {
         CellStylePayload::Font(fp) => {
             let p = FontPayload {
@@ -60,5 +64,5 @@ pub fn execute_style_payload(
         fill_manager,
         num_fmt_manager,
     };
-    Some((manager, new_id))
+    Ok((manager, new_id))
 }

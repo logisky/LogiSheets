@@ -1,5 +1,6 @@
 mod executors;
 
+use anyhow::Result;
 use im::{HashMap, HashSet};
 use logisheets_base::{
     block_affect::BlockAffectTrait, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
@@ -55,7 +56,7 @@ impl RangeManager {
         }
     }
 
-    pub fn execute_sheet_proc<C>(self, proc: SheetProcess, ctx: &mut C) -> RangeExecContext
+    pub fn execute_sheet_proc<C>(self, proc: SheetProcess, ctx: &mut C) -> Result<RangeExecContext>
     where
         C: IdFetcherTrait + IndexFetcherTrait + BlockAffectTrait,
     {
@@ -66,7 +67,7 @@ impl RangeManager {
             calc_updates,
         } = self.sheet_exec(proc, ctx);
         result.data.insert(sheet_id, manager);
-        RangeExecContext {
+        Ok(RangeExecContext {
             manager: result,
             dirty_ranges: calc_updates
                 .dirty_ranges
@@ -78,7 +79,7 @@ impl RangeManager {
                 .into_iter()
                 .map(|d| (sheet_id, d))
                 .collect(),
-        }
+        })
     }
 
     fn sheet_exec<C>(self, proc: SheetProcess, ctx: &mut C) -> SheetRangeExecContext
@@ -304,7 +305,7 @@ impl RangeExecContext {
             removed_ranges: std::collections::HashSet::new(),
         }
     }
-    pub fn execute_sheet_proc<C>(self, proc: SheetProcess, ctx: &mut C) -> RangeExecContext
+    pub fn execute_sheet_proc<C>(self, proc: SheetProcess, ctx: &mut C) -> Result<RangeExecContext>
     where
         C: IdFetcherTrait + IndexFetcherTrait + BlockAffectTrait,
     {
@@ -317,14 +318,14 @@ impl RangeExecContext {
             manager,
             mut dirty_ranges,
             mut removed_ranges,
-        } = manager.execute_sheet_proc(proc, ctx);
+        } = manager.execute_sheet_proc(proc, ctx)?;
         dirty_ranges.extend(&dirties);
         removed_ranges.extend(&removes);
-        RangeExecContext {
+        Ok(RangeExecContext {
             manager,
             dirty_ranges,
             removed_ranges,
-        }
+        })
     }
 }
 

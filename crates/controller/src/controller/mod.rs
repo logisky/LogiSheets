@@ -12,6 +12,7 @@ use crate::file_loader2::load;
 use crate::payloads::sheet_shift::{SheetShiftPayload, SheetShiftType};
 use crate::payloads::Process;
 use crate::settings::Settings;
+use anyhow::Result;
 use edit_action::{ActionEffect, Converter};
 use status::Status;
 use transaction::{Transaction, TransactionContext};
@@ -124,7 +125,7 @@ impl Controller {
         Some(ActionEffect::default())
     }
 
-    fn handle_process(&mut self, proc: Vec<Process>, undoable: bool) {
+    fn handle_process(&mut self, proc: Vec<Process>, undoable: bool) -> Result<()> {
         let context = TransactionContext {
             book_name: &self.curr_book_name,
             calc_config: self.settings.calc_config.clone(),
@@ -136,11 +137,12 @@ impl Controller {
             context,
             proc,
         };
-        let mut new_status = transcation.start();
+        let mut new_status = transcation.start()?;
         std::mem::swap(&mut new_status, &mut self.status);
         if undoable {
             self.undo_stack.push(new_status);
         }
+        Ok(())
     }
 
     pub fn get_display_response(&mut self, req: DisplayRequest) -> DisplayResponse {

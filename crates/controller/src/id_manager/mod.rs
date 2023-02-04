@@ -10,6 +10,7 @@ pub type FuncIdManager = IdManager<FuncId>;
 pub type AuthorIdManager = IdManager<AuthorId>;
 pub type NameIdManager = name_id_manager::NameIdManager;
 
+pub mod errors;
 mod name_id_manager;
 
 #[derive(Debug, Clone)]

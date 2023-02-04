@@ -13,7 +13,7 @@ where
     let sheet_id = fetcher.get_active_sheet();
     let curr_cell = fetcher.get_curr_addr();
     let cid = fetcher.get_cell_id(sheet_id, curr_cell.row, curr_cell.col);
-    assert_or_return!(cid.is_some(), ast::Error::Unspecified);
+    assert_or_return!(cid.is_ok(), ast::Error::Unspecified);
     let cid = cid.unwrap();
     let async_args = args
         .into_iter()

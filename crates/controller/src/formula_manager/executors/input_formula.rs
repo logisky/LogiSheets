@@ -1,3 +1,4 @@
+use anyhow::Result;
 use logisheets_base::{
     block_affect::BlockAffectTrait,
     get_active_sheet::GetActiveSheetTrait,
@@ -26,7 +27,7 @@ pub fn input_formula<C>(
     col: usize,
     formula: String,
     ctx: &mut C,
-) -> FormulaExecContext
+) -> Result<FormulaExecContext>
 where
     C: IdFetcherTrait
         + IndexFetcherTrait
@@ -70,10 +71,10 @@ where
             ext_ref_manager,
             names,
         };
-        return FormulaExecContext {
+        return Ok(FormulaExecContext {
             manager,
             dirty_vertices: exec_ctx.dirty_vertices,
-        };
+        });
     }
     let ast = ast.unwrap();
 
@@ -111,7 +112,7 @@ where
         manager: new_range_manager,
         dirty_ranges,
         removed_ranges: _, // No invalid ranges should be generated in InputFormula.
-    } = range_manager.execute_sheet_proc(process.clone(), ctx);
+    } = range_manager.execute_sheet_proc(process.clone(), ctx)?;
     let mut dirty_vertices: HashSet<Vertex> = dirty_ranges
         .into_iter()
         .map(|(s, r)| Vertex::Range(s, r))
@@ -130,7 +131,7 @@ where
             dirty_vertices.insert(v);
         });
 
-    FormulaExecContext {
+    Ok(FormulaExecContext {
         manager: FormulaManager {
             graph,
             formulas,
@@ -140,7 +141,7 @@ where
             names,
         },
         dirty_vertices,
-    }
+    })
 }
 
 // This method is only used in loading a file (especially for shared formula).
@@ -224,11 +225,11 @@ impl<'a, C> IdFetcherTrait for ParserContext<'a, C>
 where
     C: IdFetcherTrait + GetActiveSheetTrait + GetBookNameTrait,
 {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId> {
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
         self.ctx.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId> {
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
         self.ctx.fetch_col_id(sheet_id, col_idx)
     }
 
@@ -237,7 +238,7 @@ where
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Option<CellId> {
+    ) -> Result<CellId> {
         self.ctx.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 

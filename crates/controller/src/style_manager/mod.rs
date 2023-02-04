@@ -1,8 +1,6 @@
-extern crate quick_xml;
-extern crate serde;
-
 mod border_manager;
 pub mod defaults;
+pub mod errors;
 mod execute;
 mod fill_manager;
 mod font_manager;
@@ -10,6 +8,7 @@ mod manager;
 mod num_fmt_manager;
 pub mod xf_manager;
 
+use anyhow::Result;
 use border_manager::BorderManager;
 use fill_manager::FillManager;
 use font_manager::FontManager;
@@ -46,7 +45,7 @@ impl StyleManager {
         self,
         payload: &CellStylePayload,
         idx: StyleId,
-    ) -> Option<(Self, StyleId)> {
+    ) -> Result<(Self, StyleId)> {
         execute_style_payload(self, payload, idx)
     }
 

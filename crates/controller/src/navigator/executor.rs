@@ -39,6 +39,7 @@ fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left
     };
     SheetNav {
+        sheet_id: sheet_nav.sheet_id,
         version,
         data: sheet_nav.data.update_rows(new_rows),
         cache: Cache::default(),
@@ -60,6 +61,7 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left
     };
     SheetNav {
+        sheet_id: sheet_nav.sheet_id,
         version,
         data: sheet_nav.data.update_cols(new_cols),
         cache: Cache::default(),
@@ -68,6 +70,7 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
 }
 
 fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
+    let sheet_id = sheet_nav.sheet_id;
     let mut result = sheet_nav;
     let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_row_ids(cnt);
@@ -86,13 +89,14 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
             let (row, col) = result.get_fetcher().get_norm_cell_idx(master).unwrap();
             if row >= idx && row <= idx + cnt as usize - 1 {
                 let new_row = idx + cnt as usize;
-                let new_master_id = result.get_fetcher().get_norm_cell_id(new_row, col).unwrap();
+                let new_master_id = result.get_fetcher().get_norm_cell_id(new_row, col);
                 bp.master = new_master_id;
             }
         });
         old_blocks
     };
     SheetNav {
+        sheet_id,
         version: result.version + 1,
         data: result.data.update_rows(new_rows).update_blocks(new_blocks),
         cache: Cache::default(),
@@ -101,6 +105,7 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
 }
 
 fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
+    let sheet_id = sheet_nav.sheet_id;
     let mut result = sheet_nav;
     let version = result.version.clone() + 1;
     let mut new_id_manager = result.id_manager.clone();
@@ -120,13 +125,14 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
             let (row, col) = result.get_fetcher().get_norm_cell_idx(master).unwrap();
             if col >= idx && col <= idx + cnt as usize - 1 {
                 let new_col = idx + cnt as usize;
-                let new_master_id = result.get_fetcher().get_norm_cell_id(row, new_col).unwrap();
+                let new_master_id = result.get_fetcher().get_norm_cell_id(row, new_col);
                 bp.master = new_master_id;
             }
         });
         old_blocks
     };
     SheetNav {
+        sheet_id,
         version,
         data: result.data.update_cols(new_cols).update_blocks(new_blocks),
         cache: Cache::default(),
@@ -143,7 +149,7 @@ mod tests {
 
     #[test]
     fn delete_row_test() {
-        let sheet_nav = SheetNav::init(5, 5);
+        let sheet_nav = SheetNav::init(5, 5, 0);
         assert_eq!(&sheet_nav.data.rows, &Vector::from(vec![0, 1, 2, 3, 4]));
         let new_sheet_nav = delete_rows(sheet_nav, 1, 1);
         assert_eq!(&new_sheet_nav.data.rows, &Vector::from(vec![0, 2, 3, 4, 5]));
@@ -151,7 +157,7 @@ mod tests {
 
     #[test]
     fn delete_col_test() {
-        let sheet_nav = SheetNav::init(5, 5);
+        let sheet_nav = SheetNav::init(5, 5, 0);
         assert_eq!(&sheet_nav.data.cols, &Vector::from(vec![0, 1, 2, 3, 4]));
         let new_sheet_nav = delete_cols(sheet_nav, 1, 1);
         assert_eq!(&new_sheet_nav.data.cols, &Vector::from(vec![0, 2, 3, 4, 5]));

@@ -1,7 +1,9 @@
 use crate::{
     ast::{CubeDisplay, ExtRefDisplay, RangeDisplay},
     context::ContextTrait,
+    errors::ParseError,
 };
+use anyhow::Result;
 
 use super::ast;
 use logisheets_base::{
@@ -21,7 +23,7 @@ lazy_static! {
     static ref ROW_REGEX: Regex = Regex::new(r#"(\$)?([0-9]+)"#).unwrap();
 }
 
-pub fn build_cell_reference<T>(pair: Pair<Rule>, context: &mut T) -> Option<ast::PureNode>
+pub fn build_cell_reference<T>(pair: Pair<Rule>, context: &mut T) -> Result<ast::PureNode>
 where
     T: ContextTrait,
 {
@@ -36,51 +38,52 @@ where
         }
         _ => unreachable!(),
     }?;
-    Some(ast::PureNode::Reference(r))
+    Ok(ast::PureNode::Reference(r))
 }
 
 fn build_a1_reference_range_with_prefix<T>(
     pair: Pair<Rule>,
     curr_sheet: SheetId,
     id_fetcher: &mut T,
-) -> Option<ast::CellReference>
+) -> Result<ast::CellReference>
 where
     T: ContextTrait,
 {
     let mut iter = pair.into_inner();
     let first = iter.next().unwrap();
-    let build_mut_ref_range = |pair: Pair<Rule>, sheet_id: SheetId, id_fetcher: &mut T| {
-        let a1_ref = build_mut_a1_reference_range(pair, sheet_id, id_fetcher)?;
-        let start = a1_ref.start;
-        let end = a1_ref.end;
-        let ref_abs =
-            RefAbs::from_addr_range(start.row_abs, end.row_abs, start.col_abs, end.col_abs);
-        match (start.cell_id, end.cell_id) {
-            (CellId::NormalCell(s), CellId::NormalCell(e)) => {
-                let range = Range::Normal(NormalRange::AddrRange(s, e));
-                let range_id = id_fetcher.fetch_range_id(&curr_sheet, &range);
-                Some(ast::CellReference::Mut(RangeDisplay {
-                    range_id,
-                    ref_abs,
-                    sheet_id,
-                }))
-            }
-            (CellId::BlockCell(s), CellId::BlockCell(e)) => {
-                if s.block_id != e.block_id {
-                    panic!("")
+    let build_mut_ref_range =
+        |pair: Pair<Rule>, sheet_id: SheetId, id_fetcher: &mut T| -> Result<ast::CellReference> {
+            let a1_ref = build_mut_a1_reference_range(pair, sheet_id, id_fetcher)?;
+            let start = a1_ref.start;
+            let end = a1_ref.end;
+            let ref_abs =
+                RefAbs::from_addr_range(start.row_abs, end.row_abs, start.col_abs, end.col_abs);
+            match (start.cell_id, end.cell_id) {
+                (CellId::NormalCell(s), CellId::NormalCell(e)) => {
+                    let range = Range::Normal(NormalRange::AddrRange(s, e));
+                    let range_id = id_fetcher.fetch_range_id(&curr_sheet, &range);
+                    Ok(ast::CellReference::Mut(RangeDisplay {
+                        range_id,
+                        ref_abs,
+                        sheet_id,
+                    }))
                 }
+                (CellId::BlockCell(s), CellId::BlockCell(e)) => {
+                    if s.block_id != e.block_id {
+                        panic!("")
+                    }
 
-                let range = Range::Block(BlockRange::AddrRange(s, e));
-                let range_id = id_fetcher.fetch_range_id(&curr_sheet, &range);
-                Some(ast::CellReference::Mut(RangeDisplay {
-                    range_id,
-                    ref_abs,
-                    sheet_id,
-                }))
+                    let range = Range::Block(BlockRange::AddrRange(s, e));
+                    let range_id = id_fetcher.fetch_range_id(&curr_sheet, &range);
+                    Ok(ast::CellReference::Mut(RangeDisplay {
+                        range_id,
+                        ref_abs,
+                        sheet_id,
+                    }))
+                }
+                _ => panic!(),
             }
-            _ => panic!(),
-        }
-    };
+        };
     match first.as_rule() {
         Rule::work_sheet_prefix => {
             let prefix = build_work_sheet_prefix(first);
@@ -115,10 +118,7 @@ where
                                         cross,
                                     };
                                     let cube_id = id_fetcher.fetch_cube_id(&cube);
-                                    Some(ast::CellReference::UnMut(CubeDisplay {
-                                        cube_id,
-                                        ref_abs,
-                                    }))
+                                    Ok(ast::CellReference::UnMut(CubeDisplay { cube_id, ref_abs }))
                                 }
                                 ast::UnMutRefPrefix::External(ext_prefix) => {
                                     let ext_ref = ExtRef {
@@ -128,7 +128,7 @@ where
                                         cross,
                                     };
                                     let ext_ref_id = id_fetcher.fetch_ext_ref_id(&ext_ref);
-                                    Some(ast::CellReference::Ext(ExtRefDisplay {
+                                    Ok(ast::CellReference::Ext(ExtRefDisplay {
                                         ext_ref_id,
                                         ref_abs,
                                     }))
@@ -153,13 +153,16 @@ fn build_a1_reference_with_prefix<T>(
     pair: Pair<Rule>,
     curr_sheet: SheetId,
     id_fetcher: &mut T,
-) -> Option<ast::CellReference>
+) -> Result<ast::CellReference>
 where
     T: ContextTrait,
 {
     let mut p_iter = pair.into_inner();
     let first = p_iter.next().unwrap();
-    let build_mut_ref = |pair: Pair<Rule>, sheet_id: SheetId, id_fetcher: &mut T| {
+    let build_mut_ref = |pair: Pair<Rule>,
+                         sheet_id: SheetId,
+                         id_fetcher: &mut T|
+     -> Result<ast::CellReference> {
         let a1_ref = build_mut_a1_reference(pair, sheet_id, id_fetcher)?;
         let range_display = match a1_ref {
             ast::A1Reference::A1ColumnRange(col_range) => {
@@ -213,7 +216,7 @@ where
                 }
             }
         };
-        Some(ast::CellReference::Mut(range_display))
+        Ok(ast::CellReference::Mut(range_display))
     };
     match first.as_rule() {
         Rule::work_sheet_prefix => {
@@ -241,10 +244,7 @@ where
                                         col_range.end_abs,
                                     );
                                     let cube_id = id_fetcher.fetch_cube_id(&cube);
-                                    Some(ast::CellReference::UnMut(CubeDisplay {
-                                        cube_id,
-                                        ref_abs,
-                                    }))
+                                    Ok(ast::CellReference::UnMut(CubeDisplay { cube_id, ref_abs }))
                                 }
                                 (
                                     ast::UnMutRefPrefix::Local(sts),
@@ -260,10 +260,7 @@ where
                                         row_range.end_abs,
                                     );
                                     let cube_id = id_fetcher.fetch_cube_id(&cube);
-                                    Some(ast::CellReference::UnMut(CubeDisplay {
-                                        cube_id,
-                                        ref_abs,
-                                    }))
+                                    Ok(ast::CellReference::UnMut(CubeDisplay { cube_id, ref_abs }))
                                 }
                                 (
                                     ast::UnMutRefPrefix::Local(sts),
@@ -276,10 +273,7 @@ where
                                     };
                                     let ref_abs = RefAbs::from_addr(addr.row_abs, addr.col_abs);
                                     let cube_id = id_fetcher.fetch_cube_id(&cube);
-                                    Some(ast::CellReference::UnMut(CubeDisplay {
-                                        cube_id,
-                                        ref_abs,
-                                    }))
+                                    Ok(ast::CellReference::UnMut(CubeDisplay { cube_id, ref_abs }))
                                 }
                                 (
                                     ast::UnMutRefPrefix::External(ext_prefix),
@@ -297,7 +291,7 @@ where
                                         cross,
                                     };
                                     let ext_ref_id = id_fetcher.fetch_ext_ref_id(&ext_ref);
-                                    Some(ast::CellReference::Ext(ExtRefDisplay {
+                                    Ok(ast::CellReference::Ext(ExtRefDisplay {
                                         ext_ref_id,
                                         ref_abs,
                                     }))
@@ -318,7 +312,7 @@ where
                                         cross,
                                     };
                                     let ext_ref_id = id_fetcher.fetch_ext_ref_id(&ext_ref);
-                                    Some(ast::CellReference::Ext(ExtRefDisplay {
+                                    Ok(ast::CellReference::Ext(ExtRefDisplay {
                                         ext_ref_id,
                                         ref_abs,
                                     }))
@@ -336,7 +330,7 @@ where
                                         cross,
                                     };
                                     let ext_ref_id = id_fetcher.fetch_ext_ref_id(&ext_ref);
-                                    Some(ast::CellReference::Ext(ExtRefDisplay {
+                                    Ok(ast::CellReference::Ext(ExtRefDisplay {
                                         ext_ref_id,
                                         ref_abs,
                                     }))
@@ -425,7 +419,7 @@ fn build_mut_a1_reference_range<T>(
     pair: Pair<Rule>,
     sheet_id: SheetId,
     id_fetcher: &mut T,
-) -> Option<ast::A1ReferenceRange>
+) -> Result<ast::A1ReferenceRange>
 where
     T: ContextTrait,
 {
@@ -434,14 +428,14 @@ where
     let start = build_mut_a1_addr(first, sheet_id, id_fetcher)?;
     let second = iter.next().unwrap();
     let end = build_mut_a1_addr(second, sheet_id, id_fetcher)?;
-    Some(ast::A1ReferenceRange { start, end })
+    Ok(ast::A1ReferenceRange { start, end })
 }
 
 fn build_mut_a1_reference<T>(
     pair: Pair<Rule>,
     sheet_id: SheetId,
     id_fetcher: &mut T,
-) -> Option<ast::A1Reference>
+) -> Result<ast::A1Reference>
 where
     T: IdFetcherTrait,
 {
@@ -449,15 +443,15 @@ where
     match first.as_rule() {
         Rule::a1_addr => {
             let addr = build_mut_a1_addr(first, sheet_id, id_fetcher)?;
-            Some(ast::A1Reference::Addr(addr))
+            Ok(ast::A1Reference::Addr(addr))
         }
         Rule::a1_column_range => {
             let cr = build_mut_a1_column_range(first, sheet_id, id_fetcher)?;
-            Some(ast::A1Reference::A1ColumnRange(cr))
+            Ok(ast::A1Reference::A1ColumnRange(cr))
         }
         Rule::a1_row_range => {
             let rr = build_mut_a1_row_range(first, sheet_id, id_fetcher)?;
-            Some(ast::A1Reference::A1RowRange(rr))
+            Ok(ast::A1Reference::A1RowRange(rr))
         }
         _ => unreachable!(),
     }
@@ -486,14 +480,14 @@ fn build_mut_a1_addr(
     pair: Pair<Rule>,
     sheet_id: SheetId,
     id_fetcher: &mut dyn IdFetcherTrait,
-) -> Option<ast::Address> {
+) -> Result<ast::Address> {
     let mut iter = pair.into_inner();
     let column_pair = iter.next().unwrap();
     let row_pair = iter.next().unwrap();
     let (col_abs, col) = build_column(column_pair).unwrap_or((false, 1));
     let (row_abs, row) = build_row(row_pair).unwrap_or((false, 1));
     let cell_id = id_fetcher.fetch_cell_id(&sheet_id, row, col)?;
-    Some(ast::Address {
+    Ok(ast::Address {
         cell_id,
         row_abs,
         col_abs,
@@ -546,7 +540,7 @@ fn build_mut_a1_column_range(
     pair: Pair<Rule>,
     sheet_id: SheetId,
     id_fetcher: &mut dyn IdFetcherTrait,
-) -> Option<ast::ColRange> {
+) -> Result<ast::ColRange> {
     let mut iter = pair.into_inner();
     let first = iter.next().unwrap();
     let (start_abs, start) = build_column(first).unwrap_or((false, 1));
@@ -554,7 +548,7 @@ fn build_mut_a1_column_range(
     let (end_abs, end) = build_column(second).unwrap_or((false, 1));
     let start_id = id_fetcher.fetch_col_id(&sheet_id, start)?;
     let end_id = id_fetcher.fetch_col_id(&sheet_id, end)?;
-    Some(ast::ColRange {
+    Ok(ast::ColRange {
         start: start_id,
         start_abs,
         end_abs,
@@ -566,7 +560,7 @@ fn build_mut_a1_row_range(
     pair: Pair<Rule>,
     sheet_id: SheetId,
     id_fetcher: &mut dyn IdFetcherTrait,
-) -> Option<ast::RowRange> {
+) -> Result<ast::RowRange> {
     let mut iter = pair.into_inner();
     let first = iter.next().unwrap();
     let (start_abs, start) = build_row(first).unwrap_or((false, 1));
@@ -574,7 +568,7 @@ fn build_mut_a1_row_range(
     let (end_abs, end) = build_row(second).unwrap_or((false, 1));
     let start_id = id_fetcher.fetch_row_id(&sheet_id, start)?;
     let end_id = id_fetcher.fetch_row_id(&sheet_id, end)?;
-    Some(ast::RowRange {
+    Ok(ast::RowRange {
         start: start_id,
         end: end_id,
         end_abs,
@@ -582,36 +576,47 @@ fn build_mut_a1_row_range(
     })
 }
 
-fn build_column(pair: Pair<Rule>) -> Option<(bool, usize)> {
+fn build_column(pair: Pair<Rule>) -> Result<(bool, usize)> {
     parse_column(pair.as_str())
 }
 
-fn build_row(pair: Pair<Rule>) -> Option<(bool, usize)> {
+fn build_row(pair: Pair<Rule>) -> Result<(bool, usize)> {
     parse_row(pair.as_str())
 }
 
-fn parse_row(row: &str) -> Option<(bool, usize)> {
-    ROW_REGEX.captures_iter(row).next().map_or(None, |c| {
-        let abs = c.get(1).is_some();
-        let idx = c.get(2).map_or(None, |s| {
-            let label = s.as_str();
-            let idx = label.parse::<usize>().unwrap_or(0);
-            Some(idx - 1)
-        })?;
-        Some((abs, idx))
-    })
+fn parse_row(row: &str) -> Result<(bool, usize)> {
+    let result = ROW_REGEX.captures_iter(row).next().map_or(
+        Err(ParseError::ParseRowFailed(row.to_string())),
+        |c| {
+            let abs = c.get(1).is_some();
+            let label = c
+                .get(2)
+                .ok_or(ParseError::ParseRowFailed(row.to_string()))?
+                .as_str();
+            let idx = label
+                .parse::<usize>()
+                .or(Err(ParseError::ParseRowFailed(row.to_string())))?
+                - 1;
+            Ok((abs, idx))
+        },
+    )?;
+    Ok(result)
 }
 
-fn parse_column(col: &str) -> Option<(bool, usize)> {
-    COLUMN_REGEX.captures_iter(col).next().map_or(None, |c| {
-        let abs = c.get(1).is_some();
-        let idx = c.get(2).map_or(None, |s| {
-            let label = s.as_str();
+fn parse_column(col: &str) -> Result<(bool, usize)> {
+    let result = COLUMN_REGEX.captures_iter(col).next().map_or(
+        Err(ParseError::ParseColFailed(col.to_string())),
+        |c| {
+            let abs = c.get(1).is_some();
+            let label = c
+                .get(2)
+                .ok_or(ParseError::ParseColFailed(col.to_string()))?
+                .as_str();
             let i = column_label_to_index(label);
-            Some(i)
-        })?;
-        Some((abs, idx))
-    })
+            Ok((abs, i))
+        },
+    )?;
+    Ok(result)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -653,9 +658,9 @@ mod tests {
     fn parse_column_test() {
         let col = "B";
         let result = parse_column(col);
-        assert!(matches!(result, Some((false, 1))));
+        assert!(matches!(result, Ok((false, 1))));
         let col = "$AB";
         let result = parse_column(col);
-        assert!(matches!(result, Some((true, 27))));
+        assert!(matches!(result, Ok((true, 27))));
     }
 }

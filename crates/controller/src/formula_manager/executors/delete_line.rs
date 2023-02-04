@@ -1,3 +1,4 @@
+use anyhow::Result;
 use logisheets_base::{
     block_affect::BlockAffectTrait, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
 };
@@ -23,7 +24,7 @@ pub fn delete_line<C>(
     idx: usize,
     cnt: u32,
     ctx: &mut C,
-) -> FormulaExecContext
+) -> Result<FormulaExecContext>
 where
     C: IdFetcherTrait + IndexFetcherTrait + BlockAffectTrait,
 {
@@ -36,41 +37,39 @@ where
         names,
     } = exec_ctx.manager;
 
-    let blocks = ctx.get_blocks_across_line(sheet_id, idx, cnt as usize, is_horizontal);
-    let (range_exec_ctx, cube_exec_ctx) = blocks.into_iter().fold(
-        (
-            RangeExecContext::new(range_manager),
-            CubeExecContext::new(cube_manager),
-        ),
-        |(range_exec_ctx, cube_exec_ctx), block_id| {
-            let master_id = ctx.get_master_cell(sheet_id, block_id);
-            let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, block_id).unwrap();
-            let (master_row, master_col) = ctx.fetch_cell_index(&sheet_id, &master_id).unwrap();
+    let blocks = ctx.get_blocks_across_line(sheet_id, idx, cnt as usize, is_horizontal)?;
+    let mut range_exec_ctx = RangeExecContext::new(range_manager);
+    let mut cube_exec_ctx = CubeExecContext::new(cube_manager);
 
-            let (occupied_master_row, occupied_master_col, occupied_row_cnt, occupied_col_cnt) =
-                if is_horizontal {
-                    (master_row + row_cnt, master_col, cnt as usize, col_cnt)
-                } else {
-                    (master_row, master_col + col_cnt, row_cnt, cnt as usize)
-                };
-            // We use a create block payload to tell range/cube manager to occupy the area.
-            // but there is no new block is created.
-            // TODO: use an elegant way to handle this.
-            let removed_payload = SheetProcess {
-                sheet_id,
-                payload: SheetPayload::Block(BlockPayload::Create(CreateBlock {
-                    block_id,
-                    master_row: occupied_master_row,
-                    master_col: occupied_master_col,
-                    row_cnt: occupied_row_cnt,
-                    col_cnt: occupied_col_cnt,
-                })),
+    for block_id in blocks {
+        let master_id = ctx.get_master_cell(sheet_id, block_id)?;
+        let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, block_id)?;
+        let (master_row, master_col) = ctx.fetch_cell_index(&sheet_id, &master_id).unwrap();
+
+        let (occupied_master_row, occupied_master_col, occupied_row_cnt, occupied_col_cnt) =
+            if is_horizontal {
+                (master_row + row_cnt, master_col, cnt as usize, col_cnt)
+            } else {
+                (master_row, master_col + col_cnt, row_cnt, cnt as usize)
             };
-            let range_exec_ctx = range_exec_ctx.execute_sheet_proc(removed_payload.clone(), ctx);
-            let cube_exec_ctx = cube_exec_ctx.execute_sheet_proc(removed_payload, ctx);
-            (range_exec_ctx, cube_exec_ctx)
-        },
-    );
+        // We use a create block payload to tell range/cube manager to occupy the area.
+        // but there is no new block is created.
+        // TODO: use an elegant way to handle this.
+        let removed_payload = SheetProcess {
+            sheet_id,
+            payload: SheetPayload::Block(BlockPayload::Create(CreateBlock {
+                block_id,
+                master_row: occupied_master_row,
+                master_col: occupied_master_col,
+                row_cnt: occupied_row_cnt,
+                col_cnt: occupied_col_cnt,
+            })),
+        };
+        let new_range_exec_ctx = range_exec_ctx.execute_sheet_proc(removed_payload.clone(), ctx)?;
+        let new_cube_exec_ctx = cube_exec_ctx.execute_sheet_proc(removed_payload, ctx);
+        range_exec_ctx = new_range_exec_ctx;
+        cube_exec_ctx = new_cube_exec_ctx;
+    }
 
     let delete_line_proc = SheetProcess {
         sheet_id,
@@ -91,7 +90,7 @@ where
         manager: range_manager,
         dirty_ranges,
         removed_ranges,
-    } = range_exec_ctx.execute_sheet_proc(delete_line_proc.clone(), ctx);
+    } = range_exec_ctx.execute_sheet_proc(delete_line_proc.clone(), ctx)?;
     add_dirty_vertices_from_ranges(&mut dirty_vertices, dirty_ranges);
     add_dirty_vertices_from_ranges(&mut dirty_vertices, removed_ranges);
 
@@ -112,8 +111,8 @@ where
         names,
     };
 
-    FormulaExecContext {
+    Ok(FormulaExecContext {
         manager: new_manager,
         dirty_vertices,
-    }
+    })
 }

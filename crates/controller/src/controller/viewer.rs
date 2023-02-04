@@ -56,7 +56,7 @@ impl SheetViewer {
                 .into_iter()
                 .for_each(|(col_id, info)| {
                     // TODO: Optimize here.
-                    if let Some(idx) = navigator.fetch_col_idx(&sheet_id, &col_id) {
+                    if let Ok(idx) = navigator.fetch_col_idx(&sheet_id, &col_id) {
                         let info = ColInfo {
                             idx,
                             width: info.width.unwrap_or(get_default_col_width()),
@@ -71,7 +71,7 @@ impl SheetViewer {
                 .into_iter()
                 .for_each(|(row_id, info)| {
                     // TODO: Optimize here.
-                    if let Some(idx) = navigator.fetch_row_idx(&sheet_id, &row_id) {
+                    if let Ok(idx) = navigator.fetch_row_idx(&sheet_id, &row_id) {
                         let info = RowInfo {
                             idx,
                             height: info.ht.unwrap_or(get_default_row_height()),
@@ -85,7 +85,7 @@ impl SheetViewer {
             };
             sheet_data.cells.iter().for_each(|(cell_id, cell)| {
                 let coord = navigator.fetch_cell_idx(&sheet_id, cell_id);
-                if coord.is_none() {
+                if coord.is_err() {
                     panic!()
                 }
                 let (row, col) = coord.unwrap();
@@ -119,7 +119,7 @@ impl SheetViewer {
         if let Some(sheet_comments) = comments.data.get(&sheet_id) {
             sheet_comments.comments.iter().for_each(|(cell_id, c)| {
                 // TODO: Optimize here.
-                if let Some((row, col)) = navigator.fetch_cell_idx(&sheet_id, cell_id) {
+                if let Ok((row, col)) = navigator.fetch_cell_idx(&sheet_id, cell_id) {
                     let author = comments
                         .get_author_name(&c.author)
                         .unwrap_or(String::from("unknown author"));
@@ -135,7 +135,7 @@ impl SheetViewer {
         let merge_cells_manager = &cell_attachments.merge_cells;
         if let Some(merge_cells) = merge_cells_manager.data.get(&sheet_id) {
             merge_cells.iter().for_each(|(start, end)| {
-                if let Some((row_start, col_start)) =
+                if let Ok((row_start, col_start)) =
                     navigator.fetch_normal_cell_idx(&sheet_id, &start)
                 {
                     let (row_end, col_end) =

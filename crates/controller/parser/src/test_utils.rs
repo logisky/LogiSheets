@@ -1,3 +1,4 @@
+use anyhow::Result;
 use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
 use logisheets_base::name_fetcher::NameFetcherTrait;
 use logisheets_base::{
@@ -8,16 +9,16 @@ use logisheets_base::{
 pub struct TestIdFetcher {}
 
 impl IdFetcherTrait for TestIdFetcher {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Option<RowId> {
-        Some(sheet_id.clone() as u32 + row_idx as u32)
+    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
+        Ok(sheet_id.clone() as u32 + row_idx as u32)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Option<ColId> {
-        Some(sheet_id.clone() as u32 + col_idx as u32)
+    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
+        Ok(sheet_id.clone() as u32 + col_idx as u32)
     }
 
-    fn fetch_cell_id(&mut self, _: &SheetId, row_idx: usize, col_idx: usize) -> Option<CellId> {
-        Some(CellId::NormalCell(NormalCellId {
+    fn fetch_cell_id(&mut self, _: &SheetId, row_idx: usize, col_idx: usize) -> Result<CellId> {
+        Ok(CellId::NormalCell(NormalCellId {
             row: row_idx as u32,
             col: col_idx as u32,
             follow_row: None,

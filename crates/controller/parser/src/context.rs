@@ -1,3 +1,4 @@
+use anyhow::Result;
 use logisheets_base::get_active_sheet::GetActiveSheetTrait;
 use logisheets_base::get_book_name::GetBookNameTrait;
 use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
@@ -75,7 +76,7 @@ where
         &mut self,
         sheet_id: &SheetId,
         row_idx: usize,
-    ) -> Option<logisheets_base::RowId> {
+    ) -> Result<logisheets_base::RowId> {
         self.id_fetcher.fetch_row_id(sheet_id, row_idx)
     }
 
@@ -83,7 +84,7 @@ where
         &mut self,
         sheet_id: &SheetId,
         col_idx: usize,
-    ) -> Option<logisheets_base::ColId> {
+    ) -> Result<logisheets_base::ColId> {
         self.id_fetcher.fetch_col_id(sheet_id, col_idx)
     }
 
@@ -92,7 +93,7 @@ where
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Option<logisheets_base::CellId> {
+    ) -> Result<logisheets_base::CellId> {
         self.id_fetcher.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 

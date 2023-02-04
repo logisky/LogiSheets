@@ -1,3 +1,4 @@
+use anyhow::Result;
 use logisheets_base::{
     block_affect::BlockAffectTrait, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
 };
@@ -24,13 +25,13 @@ pub fn insert_block_line<C>(
     idx: usize,
     cnt: usize,
     ctx: &mut C,
-) -> FormulaExecContext
+) -> Result<FormulaExecContext>
 where
     C: IdFetcherTrait + IndexFetcherTrait + BlockAffectTrait,
 {
-    let master_id = ctx.get_master_cell(sheet_id, block_id);
-    let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, block_id).unwrap();
-    let (master_row, master_col) = ctx.fetch_cell_index(&sheet_id, &master_id).unwrap();
+    let master_id = ctx.get_master_cell(sheet_id, block_id)?;
+    let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, block_id)?;
+    let (master_row, master_col) = ctx.fetch_cell_index(&sheet_id, &master_id)?;
 
     let (occupied_master_row, occupied_master_col, occupied_row_cnt, occupied_col_cnt) =
         if is_horizontal {
@@ -61,7 +62,7 @@ where
         names,
     } = exec_ctx.manager;
 
-    let range_exec_ctx = range_manager.execute_sheet_proc(removed_proc.clone(), ctx);
+    let range_exec_ctx = range_manager.execute_sheet_proc(removed_proc.clone(), ctx)?;
     let cube_exec_ctx = cube_manager.execute_sheet_proc(removed_proc, ctx);
 
     let payload = if is_horizontal {
@@ -84,7 +85,7 @@ where
         manager: range_manager,
         dirty_ranges,
         removed_ranges,
-    } = range_exec_ctx.execute_sheet_proc(proc.clone(), ctx);
+    } = range_exec_ctx.execute_sheet_proc(proc.clone(), ctx)?;
     let cube_exec_ctx = cube_exec_ctx.execute_sheet_proc(proc.clone(), ctx);
     add_dirty_vertices_from_ranges(&mut dirty_vertices, dirty_ranges);
     add_dirty_vertices_from_ranges(&mut dirty_vertices, removed_ranges);
@@ -106,8 +107,8 @@ where
         names,
     };
 
-    FormulaExecContext {
+    Ok(FormulaExecContext {
         manager: new_manager,
         dirty_vertices,
-    }
+    })
 }

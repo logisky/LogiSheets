@@ -120,7 +120,7 @@ pub struct Worksheet<'a> {
 
 impl<'a> Worksheet<'a> {
     pub fn get_value(&mut self, row: usize, col: usize) -> Result<Value, Err> {
-        if let Some(cell_id) =
+        if let Ok(cell_id) =
             self.controller
                 .status
                 .navigator
@@ -159,7 +159,7 @@ impl<'a> Worksheet<'a> {
     }
 
     pub fn get_formula(&mut self, row: usize, col: usize) -> Result<String, Err> {
-        if let Some(cell_id) =
+        if let Ok(cell_id) =
             self.controller
                 .status
                 .navigator
@@ -192,7 +192,7 @@ impl<'a> Worksheet<'a> {
     }
 
     pub fn get_style(&mut self, row: usize, col: usize) -> Result<Style, Err> {
-        if let Some(cell_id) =
+        if let Ok(cell_id) =
             self.controller
                 .status
                 .navigator
@@ -275,7 +275,7 @@ impl<'a> Worksheet<'a> {
                         .navigator
                         .fetch_normal_cell_idx(&self.sheet_id, end);
                     match (s, e) {
-                        (Some((row_start, col_start)), Some((row_end, col_end))) => {
+                        (Ok((row_start, col_start)), Ok((row_end, col_end))) => {
                             let m = MergeCell {
                                 row_start,
                                 col_start,
@@ -307,7 +307,7 @@ impl<'a> Worksheet<'a> {
                 .clone()
                 .iter()
                 .fold(vec![], |mut prev, (id, c)| {
-                    if let Some((row, col)) = self
+                    if let Ok((row, col)) = self
                         .controller
                         .status
                         .navigator
@@ -357,12 +357,12 @@ impl<'a> Worksheet<'a> {
                     .navigator
                     .fetch_cell_idx(&self.sheet_id, id);
                 match cell_idx {
-                    Some((row, col)) => {
+                    Ok((row, col)) => {
                         let r = if r > row { r } else { row };
                         let c = if c > col { c } else { col };
                         (r, c)
                     }
-                    None => (r, c),
+                    Err(_) => (r, c),
                 }
             })
     }
