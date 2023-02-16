@@ -1,4 +1,4 @@
-use logisheets_base::{BlockId, ColId, NormalCellId, RowId, SheetId};
+use logisheets_base::{BlockId, ColId, RowId, SheetId};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -7,10 +7,10 @@ pub enum NavError {
     CannotGetSheetById(SheetId),
     #[error("cannot find a block by id: sheet:{0}, block:{1}")]
     CannotGetBlockById(SheetId, BlockId),
-    #[error("cannot fetch col id with sheet:{0} and col idx:{1}")]
-    CannotFetchColId(SheetId, usize),
-    #[error("cannot fetch row id with sheet:{0} and row idx:{1}")]
-    CannotFetchRowId(SheetId, usize),
+    // #[error("cannot fetch col id with sheet:{0} and col idx:{1}")]
+    // CannotFetchColId(SheetId, usize),
+    // #[error("cannot fetch row id with sheet:{0} and row idx:{1}")]
+    // CannotFetchRowId(SheetId, usize),
     #[error("cannot fetch row idx with sheet:{0} and row id:{1}")]
     CannotFetchRowIdx(SheetId, RowId),
     #[error("cannot fetch col idx with sheet:{0} and row id:{1}")]

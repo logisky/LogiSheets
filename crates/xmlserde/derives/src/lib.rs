@@ -1,6 +1,3 @@
-extern crate proc_macro;
-extern crate proc_macro2;
-extern crate syn;
 #[macro_use]
 extern crate quote;
 
@@ -12,8 +9,10 @@ mod symbol;
 
 use de::get_de_impl_block;
 use map_obj::get_map_obj_impl_block;
-use proc_macro::TokenStream;
 use ser::get_ser_impl_block;
+
+use proc_macro::TokenStream;
+
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(XmlDeserialize, attributes(xmlserde))]

@@ -45,7 +45,7 @@ impl Default for Controller {
             idx: 0,
             ty: SheetShiftType::Insert,
         });
-        empty.handle_process(vec![add_sheet], false);
+        empty.handle_process(vec![add_sheet], false).unwrap();
         empty
     }
 }
@@ -101,7 +101,7 @@ impl Controller {
                     text_id_manager: &mut self.status.text_id_manager,
                 };
                 let proc = c.convert_edit_payloads(action.payloads);
-                self.handle_process(proc, action.undoable);
+                self.handle_process(proc, action.undoable).ok()?;
                 let (tasks, dirties) = self.async_func_manager.get_calc_tasks();
                 Some(ActionEffect {
                     sheets: vec![],
@@ -121,7 +121,8 @@ impl Controller {
         tasks.into_iter().zip(res.into_iter()).for_each(|(t, r)| {
             self.async_func_manager.add_value(t, r);
         });
-        self.handle_process(vec![Process::Recalc(dirtys)], false);
+        self.handle_process(vec![Process::Recalc(dirtys)], false)
+            .ok()?;
         Some(ActionEffect::default())
     }
 

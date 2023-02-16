@@ -206,7 +206,7 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
     ) -> Result<Vec<BlockCellId>> {
         let bp = self.id_navigator.get_block_place(sheet_id, block_id)?;
         let mut res = Vec::<BlockCellId>::new();
-        let cells = bp.rows.iter().for_each(|r| {
+        bp.rows.iter().for_each(|r| {
             bp.cols.iter().for_each(|c| {
                 let bid = BlockCellId {
                     block_id,
