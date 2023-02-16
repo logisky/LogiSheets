@@ -7,6 +7,6 @@ description = "A simple script for building and testing LogiSheets"
 
 [dependencies]
 pest = "2.1.3"
-pest_derive = "2.1.0"
+pest_derive = "2.5.5"
 
 logisheets_controller = {version = "*", path = "../controller"}
