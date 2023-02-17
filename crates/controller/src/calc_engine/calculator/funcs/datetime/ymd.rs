@@ -1,4 +1,4 @@
-use logisheets_base::datetime::{get_date_by_serial_num_1900, Date};
+use logisheets_base::datetime::{get_date_by_serial_num_1900, EasyDate};
 use logisheets_parser::ast;
 
 use crate::calc_engine::connector::Connector;
@@ -29,7 +29,7 @@ where
 fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex
 where
     C: Connector,
-    F: Fn(Date) -> u32,
+    F: Fn(EasyDate) -> u32,
 {
     assert_or_return!(args.len() == 1, ast::Error::Unspecified);
     let first = fetcher.get_calc_value(args.into_iter().next().unwrap());

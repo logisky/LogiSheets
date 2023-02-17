@@ -1,13 +1,13 @@
 use chrono::{prelude::*, Duration};
 
 #[derive(Debug)]
-pub struct Date {
+pub struct EasyDate {
     pub year: u32,
     pub month: u32,
     pub day: u32,
 }
 
-impl Date {
+impl EasyDate {
     pub fn to_triple(&self) -> (u32, u32, u32) {
         (self.year, self.month, self.day)
     }
@@ -77,12 +77,12 @@ pub fn get_serial_num_by_date_1900(year: u32, month: u32, day: u32) -> Option<u3
     }
 }
 
-pub fn get_date_by_serial_num_1900(n: u32) -> Date {
+pub fn get_date_by_serial_num_1900(n: u32) -> EasyDate {
     if n == 60 {
         // This is a date which does not exist. This is why we do not use
         // NaiveDate as the return type. NaiveDate::from_ymd(1900, 2, 29) will
         // panic.
-        return Date {
+        return EasyDate {
             year: 1900,
             month: 2,
             day: 29,
@@ -91,7 +91,7 @@ pub fn get_date_by_serial_num_1900(n: u32) -> Date {
     let n = if n <= 60 { n } else { n - 1 };
     let zero_date = NaiveDate::from_ymd(1899, 12, 31);
     let target = zero_date + Duration::days(n as i64);
-    Date {
+    EasyDate {
         year: target.year() as u32,
         month: target.month() as u32,
         day: target.day() as u32,
@@ -126,7 +126,7 @@ mod tests {
     use super::get_decimal_num_by_time;
     use super::get_serial_num_by_date_1900;
     use super::get_time_by_decimal_num;
-    use super::Date;
+    use super::EasyDate;
 
     #[test]
     fn f64_to_u32() {
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn date_add_months1() {
-        let mut date = Date {
+        let mut date = EasyDate {
             year: 2017,
             month: 6,
             day: 19,
@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn date_add_months2() {
-        let mut date = Date {
+        let mut date = EasyDate {
             year: 2017,
             month: 6,
             day: 19,
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn date_add_months3() {
-        let mut date = Date {
+        let mut date = EasyDate {
             year: 2017,
             month: 6,
             day: 19,

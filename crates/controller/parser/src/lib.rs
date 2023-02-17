@@ -6,8 +6,6 @@ mod reference;
 #[cfg(test)]
 mod test_utils;
 pub mod unparse;
-// mod update;
-// pub mod walker;
 
 #[macro_use]
 extern crate lazy_static;
@@ -50,11 +48,11 @@ lazy_static! {
 pub struct Parser {}
 
 impl Parser {
-    pub fn parse<T>(&self, formula: &str, context: &mut T) -> Option<ast::Node>
+    pub fn parse<T>(&self, f: &str, context: &mut T) -> Option<ast::Node>
     where
         T: ContextTrait,
     {
-        let pair = lex(formula.trim())?;
+        let pair = lex(f.trim())?;
         let formula = pair.into_inner().next()?;
         Some(self.parse_from_pair(formula, context, false))
     }
@@ -185,7 +183,20 @@ impl Parser {
                     bracket: false,
                 }
             }
-            _ => unimplemented!(),
+            // Convert this formula to a constant.
+            Rule::array_constant => {
+                let first = pair.into_inner().next().unwrap();
+                let constant = build_numerical_constant(first);
+                ast::Node {
+                    pure: constant,
+                    bracket: false,
+                }
+            }
+            _ => {
+                println!("{:?}", pair.as_str());
+                println!("{:?}", pair.as_rule());
+                unimplemented!()
+            }
         }
     }
 
@@ -232,6 +243,10 @@ impl Parser {
                     bracket: false,
                 }
             }
+            Rule::empty_arg => ast::Node {
+                pure: ast::PureNode::Value(ast::Value::Blank),
+                bracket: false,
+            },
             _ => unreachable!(),
         }
     }
@@ -502,6 +517,9 @@ mod tests {
         };
         let parser = Parser {};
         let f = "SUM(1,2)";
+        let r = parser.parse(f, &mut context).unwrap().pure;
+        assert!(matches!(r, ast::PureNode::Func(_)));
+        let f = "SUM(,2)";
         let r = parser.parse(f, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "SUM(1,)";
