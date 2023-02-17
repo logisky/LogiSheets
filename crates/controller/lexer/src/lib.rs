@@ -1,5 +1,6 @@
 use pest::Parser;
 use pest_derive::Parser;
+use tracing::error;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -12,7 +13,10 @@ pub fn lex(s: &str) -> Option<pest::iterators::Pair<Rule>> {
             let tokens = r.next().unwrap();
             Some(tokens)
         }
-        Err(_e) => None,
+        Err(e) => {
+            error!("parse formula failed: {}\nMeet error: {}", s, e);
+            None
+        }
     }
 }
 
@@ -114,5 +118,13 @@ mod tests {
     fn func_name_has_num() {
         let r = lex("LOG10(10)").unwrap();
         println!("{:?}", r)
+    }
+
+    #[test]
+    fn func_empty_arg() {
+        let r = lex("WEEKDAY(,2)").unwrap();
+        println!("{:?}", r);
+        let r = lex("WEEKDAY( ,2)").unwrap();
+        println!("{:?}", r);
     }
 }

@@ -206,6 +206,7 @@ where
         "UPPER" => scalar_text::calc_upper(args, fetcher),
         "VAR" => distribution::statistics::calc_var(args, fetcher),
         "VAR.S" => distribution::statistics::calc_var(args, fetcher),
+        "WEEKDAY" => datetime::weekday::calc(args, fetcher),
         "YEAR" => datetime::ymd::calc_year(args, fetcher),
         _ => CalcVertex::from_error(ast::Error::Name),
     }

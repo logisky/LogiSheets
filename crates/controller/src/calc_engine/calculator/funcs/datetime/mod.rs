@@ -7,4 +7,5 @@ pub mod hms;
 pub mod now;
 pub mod time;
 pub mod today;
+pub mod weekday;
 pub mod ymd;

@@ -86,7 +86,7 @@ mod test_6 {
         use logisheets::Workbook;
         use std::fs;
         let mut buf = fs::read("tests/builtin_style.xlsx").unwrap();
-        let mut wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
+        let mut wb = Workbook::from_file(&mut buf, String::from("builtin_style")).unwrap();
         let mut ws = wb.get_sheet_by_idx(0).unwrap();
         let (row_cnt, col_cnt) = ws.get_sheet_dimension();
         for r in 0..row_cnt {
@@ -94,5 +94,16 @@ mod test_6 {
                 let _ = ws.get_style(r, c).unwrap();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod calc_test {
+    use logisheets::Workbook;
+    use std::fs;
+    #[test]
+    fn test_calc_test() {
+        let mut buf = fs::read("tests/calc_test.xlsx").unwrap();
+        let _ = Workbook::from_file(&mut buf, String::from("calc_test")).unwrap();
     }
 }

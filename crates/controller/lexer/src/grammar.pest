@@ -101,9 +101,9 @@ array_constant = {
 
 constant_list_rows = {constant_list_row ~ (semicolon ~ constant_list_row)*}
 
-semicolon = {";"}
+semicolon = _{";"}
 
-constant_list_row = {constant ~ (comma ~ constant)*}
+constant_list_row = _{constant ~ (comma ~ constant)*}
 
 space = {" "}
 
@@ -342,15 +342,31 @@ function_name = {
 }
 
 argument_list = _{
-    argument ~ ( ws* ~ "," ~ ws* ~ argument?)*
+    (argument_or_empty_with_comma+ ~ argument_or_empty)
+    | argument
+}
+
+argument_or_empty_with_comma = _{
+    argument_or_empty ~ ws* ~ "," ~ ws*
 }
 
 argument = _{
     comma_node | expression
 }
 
+empty_arg = {""}
+
+argument_or_empty = _{
+    argument | empty_arg
+}
+
 comma_node = {
-    "(" ~ ws* ~ argument ~ ws* ~ comma ~ (ws* ~ argument ~ ws* ~ comma?)+ ~ ")"
+    "(" ~ ws* ~ argument_or_empty ~ ws* ~ comma ~ comma_node_internal+ ~ ")"
+}
+
+comma_node_internal = _{
+    (ws* ~ argument ~ ws* ~ comma?)
+    | (ws* ~ empty_arg ~ ws* ~ comma)
 }
 
 name = {

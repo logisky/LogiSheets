@@ -1,20 +1,15 @@
-import { Payload } from './payloads'
+import {Payload} from './payloads'
 
 export class UndoTransaction {
     public static type = 'undo'
 }
 
 export class RedoTransaction {
-
     public static type = 'redo'
 }
 
-
 export class PayloadsTransaction {
-    public constructor(
-        payloads: Payload[],
-        public readonly undoable: boolean,
-    ) {
+    public constructor(payloads: Payload[], public readonly undoable: boolean) {
         this.payloads = payloads
     }
 
