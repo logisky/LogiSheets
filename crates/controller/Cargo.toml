@@ -21,7 +21,7 @@ num-traits = "0.2"
 quick-xml = {version = "0.22.0", features = ["serialize"]}
 rand = "0.8.4"
 regex = "1"
-serde = {version = "1.0.125", features = ["derive"]}
+serde = {version = "1.0.152", features = ["derive"]}
 statrs = "0.16.0"
 unicode-segmentation = "1.8.0"
 
