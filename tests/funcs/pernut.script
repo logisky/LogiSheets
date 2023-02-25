@@ -1,2 +1,2 @@
 INPUT   P2  =PERMUT(2,2)
-##CHECKNUM    P2    2
+CHECKNUM    P2    2

@@ -7,28 +7,48 @@ pub fn calc_average<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    calc_mean(args, fetcher, &|a, b| a + b, &|sum, cnt| sum / cnt as f64)
+    calc_mean(
+        args,
+        fetcher,
+        &|a, b| a + b,
+        &|sum, cnt| sum / cnt as f64,
+        0.,
+    )
 }
 
 pub fn calc_geomean<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    calc_mean(args, fetcher, &|a, b| a * b, &|sum, cnt| {
-        sum.powf(1. / cnt as f64)
-    })
+    calc_mean(
+        args,
+        fetcher,
+        &|a, b| a * b,
+        &|sum, cnt| sum.powf(1. / cnt as f64),
+        1.,
+    )
 }
 
 pub fn calc_harmean<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    calc_mean(args, fetcher, &|a, b| a + 1. / b, &|sum, cnt| {
-        sum / cnt as f64
-    })
+    calc_mean(
+        args,
+        fetcher,
+        &|a, b| a + 1. / b,
+        &|sum, cnt| sum / cnt as f64,
+        0.,
+    )
 }
 
-fn calc_mean<C, F, A>(args: Vec<CalcVertex>, fetcher: &mut C, sum: &F, average: &A) -> CalcVertex
+fn calc_mean<C, F, A>(
+    args: Vec<CalcVertex>,
+    fetcher: &mut C,
+    sum: &F,
+    average: &A,
+    init_value: f64,
+) -> CalcVertex
 where
     C: Connector,
     F: Fn(f64, f64) -> f64,
@@ -37,9 +57,9 @@ where
     let result = args
         .into_iter()
         .map(|arg| fetcher.get_calc_value(arg))
-        .try_fold((0_f64, 0_u32), |prev, this| {
-            let diff = count_and_sum_value(this, &|a, b| a + b)?;
-            Ok((sum(prev.0, diff.0), prev.1 + diff.1))
+        .try_fold((init_value, 0_u32), |prev, this| {
+            let (s, cnt) = count_and_sum_value(this, &|a, b| a + b)?;
+            Ok((sum(prev.0, s), prev.1 + cnt))
         });
     match result {
         Ok((s, c)) => {
