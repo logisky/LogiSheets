@@ -14,7 +14,8 @@ where
     let second = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(nper, second);
     let nper = nper.floor() as i32;
-    assert_or_return!(nper > 0, ast::Error::Num);
+    assert_or_return!(nper > 1, ast::Error::Num);
+    assert_or_return!(rate > 0., ast::Error::Num);
     let res = calc_effect(rate, nper);
     CalcVertex::from_number(res)
 }

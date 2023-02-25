@@ -1,2 +1,2 @@
- INPUT   R15    =ROW()
+INPUT   R15    =ROW()
 CHECKNUM R15 15

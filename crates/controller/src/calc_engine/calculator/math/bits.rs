@@ -76,7 +76,7 @@ pub fn dec2bin(n: f64, places: Option<usize>) -> Option<String> {
     }
 
     let n = n.floor() as i64;
-    let s = format!("{:o}", n);
+    let s = format!("{:b}", n);
     let max_len: usize = 10;
     match places {
         Some(p) => {
@@ -250,7 +250,14 @@ mod tests {
     use super::dec2hex;
     use super::dec2oct;
     use super::hex2dec;
+    use super::oct2bin;
     use super::oct2dec;
+
+    #[test]
+    fn test_oct2bin() {
+        let result = oct2bin("44", None).unwrap();
+        assert_eq!(result, "100100");
+    }
 
     #[test]
     fn dec2hex_places_is_none_test() {
