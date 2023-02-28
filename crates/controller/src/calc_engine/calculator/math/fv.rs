@@ -1,9 +1,9 @@
 pub fn calc_fv(rate: f64, nper: f64, pmt: f64, pv: f64, begining: bool) -> f64 {
-    if rate == 0. {
+    if rate == 0.0 {
         return -(pv + pmt * nper);
     }
-    let pmt_at_begining = if begining { 1_f64 } else { 0_f64 };
-    let f = (1_f64 + rate).powf(nper);
+    let pmt_at_begining = if begining { 1.0 } else { 0.0 };
+    let f = (1.0 + rate).powf(nper);
     -pv * f - pmt * (1.0 + rate * pmt_at_begining) / rate * (f - 1.0)
 }
 

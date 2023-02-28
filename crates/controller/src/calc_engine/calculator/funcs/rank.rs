@@ -14,7 +14,7 @@ where
         }
         let pos = array.iter().position(|x| (*x - n).abs() < 10e-7);
         match pos {
-            Some(f) => Some(f as f64),
+            Some(f) => Some(1. + f as f64),
             None => None,
         }
     };
@@ -36,7 +36,7 @@ where
         array.into_iter().enumerate().for_each(|(idx, curr)| {
             if (*curr - n).abs() < 10e-7 {
                 cnt += 1.;
-                sum += idx as f64;
+                sum += idx as f64 + 1.;
             }
         });
         if cnt == 0. {

@@ -20,9 +20,9 @@ pub fn calc_cumipmt(
     let mut s = start;
     if start == 1 {
         if !payment_flag {
-            s += 1;
             interest = -pv;
         }
+        s += 1;
     }
 
     for i in s..end + 1 {
@@ -45,5 +45,13 @@ mod tests {
         assert!(actual - -488_961.5711288557 < 10e-7);
         let actual = calc_cumipmt(0.1, 36, 800_000.0, 6, 12, false).unwrap();
         assert!(actual - -537_857.7282417413 < 10e-7);
+    }
+
+    #[test]
+    fn test2() {
+        let actual = calc_cumipmt(0.05, 12, 240., 1, 12, true).unwrap();
+        assert!((actual - -69.46398177137938).abs() < 10e-7);
+        let actual = calc_cumipmt(0.05, 12, 240., 1, 12, false).unwrap();
+        assert!((actual - -84.93718085994834).abs() < 10e-7);
     }
 }
