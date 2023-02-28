@@ -19,13 +19,17 @@ where
     assert_f64_from_calc_value!(start, start_arg);
     let end_arg = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(end, end_arg);
+    let ty_arg = fetcher.get_calc_value(args_iter.next().unwrap());
+    assert_f64_from_calc_value!(ty, ty_arg);
+    assert_or_return!(ty == 0. || ty == 1., ast::Error::Num);
+
     let res = calc_cumipmt(
         rate,
         nper.floor() as usize,
         pv,
         start.floor() as i64,
         end.floor() as i64,
-        (end.abs() - 1.) < 10e-7,
+        ty == 1.,
     );
     match res {
         Some(r) => CalcVertex::from_number(r),

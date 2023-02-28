@@ -1,11 +1,19 @@
 pub fn calc_pmt(rate: f64, nper: usize, pv: f64, fv: f64, beginning: bool) -> f64 {
-    let begin = if beginning { 1_f64 } else { 0_f64 };
-    if rate < 1e-7 {
-        -1_f64 * (fv + pv) / (nper as f64)
-    } else {
-        rate * (fv + pv * (1. + rate).powi(nper as i32))
-            / ((1. + rate * begin) * (1. - (1. + rate).powi(nper as i32)))
+    if nper == 0 {
+        return 0.0;
     }
+
+    if rate == 0.0 {
+        return -(fv + pv) / (nper as f64);
+    }
+
+    let pvif = (1.0 + rate).powf(nper as f64);
+    let pmt = (rate / (pvif - 1.0)) * -(pv * pvif + fv);
+
+    if !beginning {
+        return pmt;
+    }
+    pmt / (1.0 + rate)
 }
 
 pub fn calc_ipmt(rate: f64, per: usize, nper: usize, pv: f64, fv: f64, beginning: bool) -> f64 {

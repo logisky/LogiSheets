@@ -5,7 +5,8 @@ ws = _{" "}
 row = {ASCII_DIGIT+}
 col = {LETTER+}
 
-float = {ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)?}
+signed = _{"+" | "-"}
+float = {signed? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)?}
 
 position = {col ~ row}
 
