@@ -1,4 +1,4 @@
-use gents::TS;
+use gents_derives::TS;
 use logisheets_base::{async_func::Task, CellId};
 use serde::Serialize;
 

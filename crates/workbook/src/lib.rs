@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate xmlserde;
 mod ooxml;
 pub mod reader;
 pub mod rtypes;

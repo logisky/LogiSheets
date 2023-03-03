@@ -1,4 +1,5 @@
 use super::complex_types::PlainTextString;
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"cp:coreProperties")]

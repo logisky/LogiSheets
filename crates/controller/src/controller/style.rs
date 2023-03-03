@@ -1,6 +1,6 @@
 use crate::style_manager::RawStyle;
 use crate::theme_manager::ThemeManager;
-use gents::TS;
+use gents_derives::TS;
 use logisheets_workbook::prelude::{
     CtBorder, CtBorderPr, CtCellAlignment, CtCellProtection, CtColor, CtFill, CtFont, CtFontFamily,
     CtFontName, CtFontScheme, CtUnderlineProperty, CtVerticalAlignFontProperty, StBorderStyle,

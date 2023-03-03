@@ -2632,14 +2632,14 @@
       },
       "license": "MIT"
     },
-    "logisheets_derives 0.3.0": {
-      "name": "logisheets_derives",
+    "xmlserde_derives 0.3.0": {
+      "name": "xmlserde_derives",
       "version": "0.3.0",
       "repository": null,
       "targets": [
         {
           "ProcMacro": {
-            "crate_name": "logisheets_derives",
+            "crate_name": "xmlserde_derives",
             "crate_root": "src/lib.rs",
             "srcs": {
               "include": [
@@ -2650,7 +2650,7 @@
           }
         }
       ],
-      "library_target_name": "logisheets_derives",
+      "library_target_name": "xmlserde_derives",
       "common_attrs": {
         "compile_data_glob": [
           "**"
@@ -7088,7 +7088,7 @@
     "logisheets_astchecker 0.3.0": "crates/controller/ast_checker",
     "logisheets_base 0.3.0": "crates/controller/base",
     "logisheets_controller 0.3.0": "crates/controller",
-    "logisheets_derives 0.3.0": "crates/xmlserde/derives",
+    "xmlserde_derives 0.3.0": "crates/xmlserde/derives",
     "logisheets_lexer 0.3.0": "crates/controller/lexer",
     "logisheets_parser 0.3.0": "crates/controller/parser",
     "logisheets_wasm_fc 0.3.0": "src/wasms/fc",

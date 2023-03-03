@@ -1,5 +1,6 @@
 use super::complex_types::*;
 use crate::Unparsed;
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(XmlSerialize, XmlDeserialize, Debug)]
 #[xmlserde(root = b"styleSheet")]

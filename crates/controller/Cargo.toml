@@ -24,8 +24,9 @@ regex = "1"
 serde = {version = "1.0.152", features = ["derive"]}
 statrs = "0.16.0"
 unicode-segmentation = "1.8.0"
+gents = "0.3.0"
+gents_derives = "0.3.0"
 
-gents = {version = "0.2.0", path = "../gents"}
 logisheets_base = {version = "0.3.0", path = "./base"}
 logisheets_lexer = {version = "0.3.0", path = "./lexer"}
 logisheets_parser = {version = "0.3.0", path = "./parser"}

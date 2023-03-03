@@ -14,7 +14,7 @@ pub mod name_fetcher;
 pub mod set_curr_cell;
 
 use chrono::{DateTime, FixedOffset};
-use gents::TS;
+use gents_derives::TS;
 use logisheets_workbook::prelude::*;
 use serde::Serialize;
 use std::hash::Hash;

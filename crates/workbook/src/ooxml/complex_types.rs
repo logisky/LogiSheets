@@ -1,7 +1,8 @@
 use super::defaults::*;
 use super::simple_types::*;
-use gents::TS;
+use gents_derives::TS;
 use logisheets_workbook_derives::MapObj;
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(XmlSerialize, XmlDeserialize, Default, Debug, Clone)]
 pub struct CtRst {

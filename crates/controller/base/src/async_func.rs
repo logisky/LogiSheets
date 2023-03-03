@@ -1,4 +1,4 @@
-use gents::TS;
+use gents_derives::TS;
 use serde::{Deserialize, Serialize};
 
 use crate::{CellId, SheetId};

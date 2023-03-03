@@ -17,11 +17,9 @@ edition = "2018"
 [workspace]
 members = [
     "crates/controller",
-    "crates/gents",
     "crates/logiscript",
     "crates/workbook",
     "crates/xmldiff",
-    "crates/xmlserde",
     "crates/buildtools",
     "src/wasms/fc",
     "src/wasms/server",

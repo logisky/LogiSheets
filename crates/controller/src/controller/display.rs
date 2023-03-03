@@ -1,5 +1,5 @@
 use super::style::Style;
-use gents::TS;
+use gents_derives::TS;
 use logisheets_base::BlockId;
 use serde::Serialize;
 
