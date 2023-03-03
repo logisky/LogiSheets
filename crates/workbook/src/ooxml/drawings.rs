@@ -12,6 +12,7 @@ use super::simple_types::{
     StTextWrappingType,
 };
 use xmlserde::Unparsed;
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub enum EgObjectChoices {

@@ -1,4 +1,4 @@
-use gents::TS;
+use gents_derives::TS;
 use xmlserde::xml_serde_enum;
 
 xml_serde_enum! {

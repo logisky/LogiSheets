@@ -1,6 +1,7 @@
 use super::complex_types::PlainTextString;
 use super::defaults::string_0_percent;
 use super::defaults::string_100_percent;
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub enum EgColorChoice {

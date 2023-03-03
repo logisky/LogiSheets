@@ -1,5 +1,6 @@
 use super::defaults::*;
 use super::simple_types::*;
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"Relationships")]

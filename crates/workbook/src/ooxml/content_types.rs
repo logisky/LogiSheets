@@ -1,4 +1,4 @@
-use xmlserde::{XmlDeserialize, XmlSerialize};
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(

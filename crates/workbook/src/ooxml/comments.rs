@@ -1,5 +1,5 @@
 use super::complex_types::*;
-use xmlserde::{XmlDeserialize, XmlSerialize};
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/spreadsheetml/2006/main")]

@@ -3,6 +3,7 @@ use super::{
     defaults::*,
     simple_types::{StCellRef, StCellType},
 };
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"externalLink")]

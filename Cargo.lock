@@ -320,14 +320,15 @@ dependencies = [
 
 [[package]]
 name = "gents"
-version = "0.2.0"
-dependencies = [
- "gents_derives",
-]
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c6ab52bc7c3dcefb1d0d6ead7a9ccaf01cd53aeb0508426ec411862bd029515"
 
 [[package]]
 name = "gents_derives"
-version = "0.1.0"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eeedd2ec2fd0e6ed65d871b4e26b660af4e5f2eed70ac1d43c6e6abb90b128d3"
 dependencies = [
  "paste",
  "proc-macro2",
@@ -477,6 +478,7 @@ dependencies = [
  "chrono",
  "futures",
  "gents",
+ "gents_derives",
  "im",
  "logisheets_workbook",
  "serde",
@@ -491,6 +493,7 @@ dependencies = [
  "colorsys",
  "futures",
  "gents",
+ "gents_derives",
  "im",
  "itertools",
  "lazy_static",
@@ -509,16 +512,6 @@ dependencies = [
  "statrs",
  "thiserror",
  "unicode-segmentation",
-]
-
-[[package]]
-name = "logisheets_derives"
-version = "0.3.0"
-dependencies = [
- "paste",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -578,6 +571,7 @@ name = "logisheets_workbook"
 version = "0.3.0"
 dependencies = [
  "gents",
+ "gents_derives",
  "logisheets_workbook_derives",
  "quick-xml",
  "regex",
@@ -586,6 +580,7 @@ dependencies = [
  "thiserror",
  "xmldiff",
  "xmlserde",
+ "xmlserde_derives",
  "zip",
 ]
 
@@ -1340,11 +1335,12 @@ dependencies = [
 
 [[package]]
 name = "xmlserde"
-version = "0.4.1"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74aaa8921b7eafa7407daf2b534692cb6ae7d40f13b4aa83104419587dec95e5"
 dependencies = [
  "convert_case",
  "linked-hash-map",
- "logisheets_derives",
  "paste",
  "quick-xml",
  "regex",
@@ -1353,6 +1349,18 @@ dependencies = [
  "serde_repr",
  "thiserror",
  "ts-rs",
+]
+
+[[package]]
+name = "xmlserde_derives"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0abb20d65f33f95ffffc981f819e84d65b0439be7c2c6b148a2b7eb352cdc5d1"
+dependencies = [
+ "paste",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

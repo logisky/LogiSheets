@@ -1,6 +1,7 @@
 use super::defaults::default_zero_u8;
 use super::enum_groups::EgColorChoice;
-use xmlserde::{Unparsed, XmlDeserialize, XmlSerialize};
+use xmlserde::Unparsed;
+use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 // Ct_OfficeStyleSheet 20.1.6.2
 #[derive(Debug, XmlSerialize, XmlDeserialize)]

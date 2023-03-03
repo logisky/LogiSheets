@@ -1,5 +1,5 @@
 use super::super::style::PatternFill;
-use gents::TS;
+use gents_derives::TS;
 use logisheets_workbook::prelude::*;
 use serde::Serialize;
 

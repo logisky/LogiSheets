@@ -14,7 +14,7 @@ rust_library(
         proc_macro = True,
     ) + [
         "//crates/workbook/derives:logisheets_workbook_derives",
-        "//crates/xmlserde/derives:logisheets_derives",
+        "//crates/xmlserde/derives:xmlserde_derives",
     ],
     edition = "2018",
 )
