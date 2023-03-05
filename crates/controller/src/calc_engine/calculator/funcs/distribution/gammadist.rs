@@ -22,12 +22,12 @@ where
     let v = get_condition_result(forth);
     match v {
         ConditionResult::True => {
-            let n = Gamma::new(alpha, beta).unwrap();
+            let n = Gamma::new(alpha, 1. / beta).unwrap();
             let r = n.cdf(x);
             CalcVertex::from_number(r)
         }
         ConditionResult::False => {
-            let n = Gamma::new(alpha, beta).unwrap();
+            let n = Gamma::new(alpha, 1. / beta).unwrap();
             let r = n.pdf(x);
             CalcVertex::from_number(r)
         }
