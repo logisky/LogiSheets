@@ -16,14 +16,14 @@ pub fn calc_month<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    calc(args, fetcher, |d| d.month)
+    calc(args, fetcher, |d| d.month as u32)
 }
 
 pub fn calc_day<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    calc(args, fetcher, |d| d.day)
+    calc(args, fetcher, |d| d.day as u32)
 }
 
 fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex

@@ -18,7 +18,7 @@ where
     let delta_months = delta_months.floor() as i32;
     let mut date = get_date_by_serial_num_1900(date_num.floor() as u32);
     date.add_delta_months(delta_months);
-    let res = get_serial_num_by_date_1900(date.year, date.month, date.day);
+    let res = get_serial_num_by_date_1900(date.year, date.month as u32, date.day as u32);
     if let Some(r) = res {
         CalcVertex::from_number(r as f64)
     } else {

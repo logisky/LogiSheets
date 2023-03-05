@@ -40,7 +40,7 @@ where
         12 => 30,
         _ => 30,
     };
-    let res = get_serial_num_by_date_1900(year, month, day);
+    let res = get_serial_num_by_date_1900(year, month as u32, day);
     if let Some(r) = res {
         CalcVertex::from_number(r as f64)
     } else {

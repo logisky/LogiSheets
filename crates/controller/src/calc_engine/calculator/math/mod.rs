@@ -1,4 +1,5 @@
 pub mod bits;
+pub mod bond;
 pub mod combine;
 pub mod complex;
 pub mod cumipmt;

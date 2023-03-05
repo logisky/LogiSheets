@@ -1,24 +1,57 @@
 use chrono::{prelude::*, Duration};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct EasyDate {
     pub year: u32,
-    pub month: u32,
-    pub day: u32,
+    pub month: u8,
+    pub day: u8,
 }
 
 impl EasyDate {
-    pub fn to_triple(&self) -> (u32, u32, u32) {
+    pub fn to_triple(&self) -> (u32, u8, u8) {
         (self.year, self.month, self.day)
     }
 
+    pub fn last_day_of_this_month(&self) -> EasyDate {
+        let month_30_days: [u8; 4] = [4, 6, 9, 11];
+        if month_30_days
+            .iter()
+            .position(|e| e == &self.month)
+            .is_some()
+        {
+            let mut res = self.clone();
+            res.day = 30;
+            res
+        } else if self.month == 2 {
+            let day = if self.year % 100 == 0 && self.year % 400 == 0 {
+                29
+            } else if self.year % 100 != 0 && self.year % 4 == 0 {
+                29
+            } else {
+                28
+            };
+            let mut res = self.clone();
+            res.day = day;
+            res
+        } else {
+            let mut res = self.clone();
+            res.day = 30;
+            res
+        }
+    }
+
+    pub fn is_last_date_of_this_month(&self) -> bool {
+        &self.last_day_of_this_month() == self
+    }
+
+    // Add delta months and adjust the day
     pub fn add_delta_months(&mut self, m: i32) {
         let curr = self.month as i32;
         let months = curr + m;
         let (mut y_delta, mut month) = if months > 0 {
             (months / 12, months % 12)
         } else {
-            (-months / 12, months % 12)
+            (months / 12 - 1, months % 12 + 12)
         };
         if month == 0 {
             y_delta -= 1;
@@ -33,7 +66,45 @@ impl EasyDate {
             }
         };
         self.year = year;
-        self.month = month as u32;
+        self.month = month as u8;
+
+        let month_30_days: [u8; 4] = [4, 6, 9, 11];
+        if month_30_days
+            .iter()
+            .position(|e| e == &self.month)
+            .is_some()
+            && self.day == 31
+        {
+            self.day = 30
+        } else if self.month == 2 && self.day > 28 {
+            if self.year % 100 == 0 && self.year % 400 == 0 {
+                self.day = 29
+            } else if self.year % 100 != 0 && self.year % 4 == 0 {
+                self.day = 29
+            } else {
+                self.day = 28
+            }
+        }
+    }
+}
+
+impl PartialOrd for EasyDate {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self.year.partial_cmp(&other.year) {
+            Some(core::cmp::Ordering::Equal) | None => {}
+            ord => return ord,
+        }
+        match self.month.partial_cmp(&other.month) {
+            Some(core::cmp::Ordering::Equal) | None => {}
+            ord => return ord,
+        }
+        self.day.partial_cmp(&other.day)
+    }
+}
+
+impl From<u32> for EasyDate {
+    fn from(n: u32) -> Self {
+        get_date_by_serial_num_1900(n)
     }
 }
 
@@ -93,8 +164,8 @@ pub fn get_date_by_serial_num_1900(n: u32) -> EasyDate {
     let target = zero_date + Duration::days(n as i64);
     EasyDate {
         year: target.year() as u32,
-        month: target.month() as u32,
-        day: target.day() as u32,
+        month: target.month() as u8,
+        day: target.day() as u8,
     }
 }
 

@@ -4,6 +4,7 @@ mod and;
 mod asyncs;
 mod average;
 mod bits;
+mod bonds;
 mod boolean;
 mod complex;
 mod concatenate;
@@ -89,6 +90,8 @@ where
         "COTH" => scalar_number::calc_coth(args, fetcher),
         "COUNT" => count::calc(args, fetcher),
         "COUNTIF" => countif::calc(args, fetcher),
+        "COUPNCD" => bonds::coupncd::calc(args, fetcher),
+        "COUPPCD" => bonds::couppcd::calc(args, fetcher),
         "CSC" => scalar_number::calc_csc(args, fetcher),
         "CUMIPMT" => cumipmt::cumipmt(args, fetcher),
         "DATE" => datetime::date::calc(args, fetcher),
