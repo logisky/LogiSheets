@@ -9,7 +9,7 @@ license = "MIT"
 [dependencies]
 anyhow = "1.0"
 thiserror = "1.0"
-chrono = "0.4.19"
+chrono = "0.4.24"
 futures = "0.3.19"
 colorsys = "0.6.7"
 im = "15.0.0"
