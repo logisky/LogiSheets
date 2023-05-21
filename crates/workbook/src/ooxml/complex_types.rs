@@ -261,12 +261,12 @@ pub enum CtFill {
 impl crate::XmlSerialize for CtFill {
     fn serialize<W: std::io::Write>(&self, tag: &[u8], writer: &mut quick_xml::Writer<W>) {
         use quick_xml::events::*;
-        let _ = writer.write_event(Event::Start(BytesStart::borrowed_name(tag)));
+        let _ = writer.write_event(Event::Start(BytesStart::new(String::from_utf8_lossy(tag))));
         match self {
             CtFill::PatternFill(p) => p.serialize(b"patternFill", writer),
             CtFill::GradientFill(f) => f.serialize(b"gradientFill", writer),
         }
-        let _ = writer.write_event(Event::End(BytesEnd::borrowed(tag)));
+        let _ = writer.write_event(Event::End(BytesEnd::new(String::from_utf8_lossy(tag))));
     }
 }
 
@@ -281,8 +281,8 @@ impl crate::XmlDeserialize for CtFill {
         let mut buf = Vec::<u8>::new();
         let mut result = Option::<Self>::None;
         loop {
-            match reader.read_event(&mut buf) {
-                Ok(Event::Start(s)) => match s.name() {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(s)) => match s.name().into_inner() {
                     b"patternFill" => {
                         let r = CtPatternFill::deserialize(
                             b"patternFill",
@@ -303,7 +303,7 @@ impl crate::XmlDeserialize for CtFill {
                     }
                     _ => {}
                 },
-                Ok(Event::Empty(s)) => match s.name() {
+                Ok(Event::Empty(s)) => match s.name().into_inner() {
                     b"patternFill" => {
                         let r = CtPatternFill::deserialize(
                             b"patternFill",
@@ -325,7 +325,7 @@ impl crate::XmlDeserialize for CtFill {
                     _ => {}
                 },
                 Ok(Event::End(e)) => {
-                    if e.name() == tag {
+                    if e.name().into_inner() == tag {
                         break;
                     }
                 }

@@ -5,7 +5,7 @@ edition = "2018"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 
 [dependencies]
-gents = "0.3.0"
+gents = "0.3.1"
 
 logisheets_controller = {version = "*", path = "../controller"}
 

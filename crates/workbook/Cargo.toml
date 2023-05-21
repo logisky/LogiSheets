@@ -7,18 +7,18 @@ license = "MIT"
 description = "Tools for LogiSheets to unarchive and write .xlsx file"
 
 [dependencies]
-quick-xml = {version = "0.22.0", features = ["serialize"]}
+quick-xml = {version = "0.28", features = ["serialize"]}
 regex = "1"
 serde = {version = "1.0.152", features = ["derive"]}
 serde_json = "1.0.95"
 thiserror = "1.0.24"
-gents = "0.3.0"
-gents_derives = "0.3.0"
+gents = "0.3.1"
+gents_derives = "0.3.1"
 zip = {version = "0.6.0", default-features = false, features = ["deflate"]}
 
 logisheets_workbook_derives = {version = "0.3.0", path = "./derives"}
-xmlserde = "0.5.0"
-xmlserde_derives = "0.5.0"
+xmlserde = "0.5.1"
+xmlserde_derives = "0.5.1"
 
 [dev-dependencies]
 xmldiff = {version = "0.3.0", path = "../xmldiff"}

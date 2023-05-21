@@ -13,9 +13,9 @@ pub fn to_tree(xml: &str) -> String {
     let mut writer = Writer::new_with_indent(Vec::new(), 32, 4);
     loop {
         let mut buf = Vec::<u8>::new();
-        match reader.read_event(&mut buf) {
+        match reader.read_event_into(&mut buf) {
             Ok(Event::Eof) => break,
-            Ok(Event::Text(t)) if t.escaped() == b"" => {}
+            Ok(Event::Text(t)) if t.is_empty() => {}
             Ok(e) => {
                 let _ = writer.write_event(e);
             }

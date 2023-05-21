@@ -320,15 +320,15 @@ dependencies = [
 
 [[package]]
 name = "gents"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c6ab52bc7c3dcefb1d0d6ead7a9ccaf01cd53aeb0508426ec411862bd029515"
+checksum = "0f90141facb90dcbf825916c076780f9b76fb0434b9047e94137455f4e5f06fa"
 
 [[package]]
 name = "gents_derives"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eeedd2ec2fd0e6ed65d871b4e26b660af4e5f2eed70ac1d43c6e6abb90b128d3"
+checksum = "b72ed7d80bc1ce3658ef97b103e09960384159db772cc3288f55ab480b315ca6"
 dependencies = [
  "paste",
  "proc-macro2",
@@ -505,7 +505,7 @@ dependencies = [
  "num",
  "num-bigint",
  "num-traits",
- "quick-xml",
+ "quick-xml 0.28.2",
  "rand",
  "regex",
  "serde",
@@ -573,7 +573,7 @@ dependencies = [
  "gents",
  "gents_derives",
  "logisheets_workbook_derives",
- "quick-xml",
+ "quick-xml 0.28.2",
  "regex",
  "serde",
  "serde_json",
@@ -738,9 +738,9 @@ checksum = "2f7254b99e31cad77da24b08ebf628882739a608578bb1bcdfc1f9c21260d7c0"
 
 [[package]]
 name = "paste"
-version = "1.0.11"
+version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d01a5bd0424d00070b0098dd17ebca6f961a959dead1dbcbbbc1d1cd8d3deeba"
+checksum = "9f746c4065a8fa3fe23974dd82f15431cc8d40779821001404d10d2e79ca7d79"
 
 [[package]]
 name = "pest"
@@ -818,6 +818,16 @@ name = "quick-xml"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8533f14c8382aaad0d592c812ac3b826162128b65662331e1127b45c3d18536b"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.28.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ce5e73202a820a31f8a0ee32ada5e21029c81fd9e3ebf668a40832e4219d9d1"
 dependencies = [
  "memchr",
  "serde",
@@ -1330,19 +1340,19 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 name = "xmldiff"
 version = "0.3.0"
 dependencies = [
- "quick-xml",
+ "quick-xml 0.22.0",
 ]
 
 [[package]]
 name = "xmlserde"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74aaa8921b7eafa7407daf2b534692cb6ae7d40f13b4aa83104419587dec95e5"
+checksum = "0fb704c976c228cfec6b5912264d5bbdf67e2653c4ad51595f6b07045fcf1e77"
 dependencies = [
  "convert_case",
  "linked-hash-map",
  "paste",
- "quick-xml",
+ "quick-xml 0.28.2",
  "regex",
  "serde",
  "serde_json",
@@ -1353,9 +1363,9 @@ dependencies = [
 
 [[package]]
 name = "xmlserde_derives"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0abb20d65f33f95ffffc981f819e84d65b0439be7c2c6b148a2b7eb352cdc5d1"
+checksum = "ab20b9d2f43859bb0f887b42ef991d213c4416da48b2b0d6cc42065839443199"
 dependencies = [
  "paste",
  "proc-macro2",
