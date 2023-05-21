@@ -505,7 +505,7 @@ dependencies = [
  "num",
  "num-bigint",
  "num-traits",
- "quick-xml 0.28.2",
+ "quick-xml",
  "rand",
  "regex",
  "serde",
@@ -573,7 +573,7 @@ dependencies = [
  "gents",
  "gents_derives",
  "logisheets_workbook_derives",
- "quick-xml 0.28.2",
+ "quick-xml",
  "regex",
  "serde",
  "serde_json",
@@ -811,16 +811,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d727cae5b39d21da60fa540906919ad737832fe0b1c165da3a34d6548c849d6"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8533f14c8382aaad0d592c812ac3b826162128b65662331e1127b45c3d18536b"
-dependencies = [
- "memchr",
- "serde",
 ]
 
 [[package]]
@@ -1340,7 +1330,7 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 name = "xmldiff"
 version = "0.3.0"
 dependencies = [
- "quick-xml 0.22.0",
+ "quick-xml",
 ]
 
 [[package]]
@@ -1352,7 +1342,7 @@ dependencies = [
  "convert_case",
  "linked-hash-map",
  "paste",
- "quick-xml 0.28.2",
+ "quick-xml",
  "regex",
  "serde",
  "serde_json",

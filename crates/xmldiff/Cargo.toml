@@ -8,4 +8,4 @@ description = "compare 2 .xml files and show their differences"
 repository = "https://github.com/proclml/LogiSheets/crates/xmldiff"
 
 [dependencies]
-quick-xml = {version = "0.22.0", features = ["serialize"]}
+quick-xml = { version = "0.28", features = ["serialize"] }
