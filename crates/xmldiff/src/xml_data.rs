@@ -42,11 +42,10 @@ pub fn to_xml_data(xml: &str) -> XmlData {
     let mut key_values = Vec::<KeyValue>::new();
     let mut decl = Option::<Decl>::None;
     loop {
-        let mut buf = Vec::<u8>::new();
-        match reader.read_event(&mut buf) {
+        match reader.read_event() {
             Ok(Event::Start(s)) => {
                 let position = reader.buffer_position();
-                let name = String::from_utf8(s.name().to_vec()).unwrap();
+                let name = String::from_utf8(s.name().0.to_vec()).unwrap();
                 let obj = get_object(&mut reader, &name, s).unwrap();
                 key_values.push(KeyValue {
                     key: name,
@@ -55,13 +54,13 @@ pub fn to_xml_data(xml: &str) -> XmlData {
                 });
             }
             Ok(Event::Empty(e)) => {
-                let name = get_string(e.name());
+                let name = get_string(e.name().0);
                 let mut res = Vec::<KeyValue>::new();
                 let position = reader.buffer_position();
                 // Elements like <b/> only have attributes.
                 e.attributes().into_iter().for_each(|attr| match attr {
                     Ok(a) => {
-                        let key = get_string(a.key);
+                        let key = get_string(a.key.0);
                         let value = get_string(&a.value);
                         res.push(KeyValue {
                             key,
@@ -115,7 +114,7 @@ pub fn get_object(
         .into_iter()
         .for_each(|attr| match attr {
             Ok(a) => {
-                let key = get_string(a.key);
+                let key = get_string(a.key.0);
                 let value = get_string(&a.value);
                 key_values.push(KeyValue {
                     key,
@@ -126,11 +125,10 @@ pub fn get_object(
             Err(_) => {}
         });
     loop {
-        let mut buf = Vec::<u8>::new();
-        match reader.read_event(&mut buf) {
+        match reader.read_event() {
             Ok(Event::Start(s)) => {
                 let position = reader.buffer_position();
-                let name = get_string(s.name());
+                let name = get_string(s.name().0);
                 let object = get_object(reader, &name, s).unwrap();
                 key_values.push(KeyValue {
                     key: name,
@@ -140,7 +138,7 @@ pub fn get_object(
             }
             Ok(Event::Text(t)) => {
                 let position = reader.buffer_position();
-                let str = get_string(t.escaped());
+                let str = get_string(&t.into_inner());
                 if str != "" {
                     key_values.push(KeyValue {
                         key: String::from("__text__"),
@@ -150,13 +148,13 @@ pub fn get_object(
                 }
             }
             Ok(Event::Empty(e)) => {
-                let name = get_string(e.name());
+                let name = get_string(e.name().0);
                 let mut res = Vec::<KeyValue>::new();
                 let position = reader.buffer_position();
                 // Elements like <b/> only have attributes.
                 e.attributes().into_iter().for_each(|attr| match attr {
                     Ok(a) => {
-                        let key = get_string(a.key);
+                        let key = get_string(a.key.0);
                         let value = get_string(&a.value);
                         res.push(KeyValue {
                             key,
@@ -174,7 +172,7 @@ pub fn get_object(
             }
             Ok(Event::End(e)) => {
                 let position = reader.buffer_position();
-                let end_name = get_string(e.name());
+                let end_name = get_string(e.name().0);
                 if end_name != name {
                     panic!("error in {}: unmatched open tag", position)
                 }
