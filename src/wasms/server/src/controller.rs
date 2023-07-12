@@ -80,14 +80,14 @@ pub fn transaction_end(undoable: bool) -> JsValue {
         }
         None => TransactionEndResult::from_err_code(TransactionCode::Err),
     };
-    JsValue::from_serde(&result).unwrap()
+    serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
 /// Input: AsyncFuncResult
 /// Output: TransactionEndResult
 #[wasm_bindgen]
 pub fn input_async_result(result: &JsValue) -> JsValue {
-    let r: AsyncFuncResult = result.into_serde().unwrap();
+    let r: AsyncFuncResult = serde_wasm_bindgen::from_value(result.clone()).unwrap();
     let transaction_result = match ASYNC_HELPER.lock().unwrap().get_pending_task(r.async_id) {
         Some(pending) => {
             let values = r
@@ -124,7 +124,7 @@ pub fn input_async_result(result: &JsValue) -> JsValue {
         }
         None => TransactionEndResult::from_err_code(TransactionCode::Err),
     };
-    JsValue::from_serde(&transaction_result).unwrap()
+    serde_wasm_bindgen::to_value(&transaction_result).unwrap()
 }
 
 #[wasm_bindgen]
@@ -135,11 +135,14 @@ pub fn get_patches(sheet_idx: u32, version: u32) -> JsValue {
         sheet_idx: sheet_idx as usize,
         version,
     });
-    let res = JsValue::from_serde(&response);
+    let res = serde_wasm_bindgen::to_value(&response);
     match res {
         Ok(r) => r,
         Err(err) => {
-            web_sys::console::log_1(&err.to_string().into());
+            #[allow(unused_unsafe)]
+            unsafe {
+                web_sys::console::log_1(&err.to_string().into())
+            };
             panic!()
         }
     }
