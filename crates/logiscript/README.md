@@ -67,7 +67,7 @@ CHECKNUM A1 3
 
 ### CHECKSTR
 
-Check whether the cell is equal to a string.
+Check whether the value of a specific cell is equal to a string.
 
 ```ls
 CHECKSTR A1 aaa
@@ -75,8 +75,16 @@ CHECKSTR A1 aaa
 
 ### CHECKERROR
 
-Check whether the cell is equal to an error.
+Check whether the value of a specific cell is equal to an error.
 
 ```ls
 CHECKERROR A1 #NUM!
+```
+
+### CHECKFORMULA
+
+Check the formula of a cell.
+
+```ls
+CHECKFORMULA A1 SUM(1, 2)
 ```

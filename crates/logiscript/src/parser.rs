@@ -3,7 +3,7 @@ use pest::Parser;
 use pest_derive::Parser;
 
 use crate::operator::{
-    CheckError, CheckNum, CheckString, Input, Operator, ShiftData, Statement, Switch,
+    CheckError, CheckFormula, CheckNum, CheckString, Input, Operator, ShiftData, Statement, Switch,
 };
 
 #[derive(Parser)]
@@ -66,6 +66,13 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
             let (row, col) = parse_position(position).unwrap();
             let expect = iter.next().unwrap().as_str().to_string();
             Ok(Operator::CheckString(CheckString { row, col, expect }))
+        }
+        Rule::checkformula_op => {
+            let mut iter = s.into_inner();
+            let position = iter.next().unwrap();
+            let (row, col) = parse_position(position).unwrap();
+            let expect = iter.next().unwrap().as_str().to_string();
+            Ok(Operator::CheckFormula(CheckFormula { row, col, expect }))
         }
         Rule::insert_row => {
             let mut iter = s.into_inner();
