@@ -235,6 +235,47 @@ impl CellValue {
         }
     }
 
+    pub fn to_ct_value(self) -> Option<(PlainTextString, StCellType)> {
+        match self {
+            CellValue::Blank => None,
+            CellValue::Boolean(b) => Some((
+                PlainTextString {
+                    value: if b {
+                        String::from("1")
+                    } else {
+                        String::from("0")
+                    },
+                    space: None,
+                },
+                StCellType::B,
+            )),
+            CellValue::Date(_) => todo!(),
+            CellValue::Error(e) => Some((
+                PlainTextString {
+                    value: e.to_string(),
+                    space: None,
+                },
+                StCellType::E,
+            )),
+            CellValue::String(id) => {
+                let plain_text_string = PlainTextString {
+                    value: id.to_string(),
+                    space: None,
+                };
+                Some((plain_text_string, StCellType::S))
+            }
+            CellValue::Number(num) => Some((
+                PlainTextString {
+                    value: num.to_string(),
+                    space: None,
+                },
+                StCellType::N,
+            )),
+            CellValue::InlineStr(_) => todo!(),
+            CellValue::FormulaStr(_) => todo!(),
+        }
+    }
+
     fn get_value<F>(
         t: &StCellType,
         value: Option<&PlainTextString>,

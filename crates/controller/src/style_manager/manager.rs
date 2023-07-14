@@ -1,4 +1,5 @@
 use im::HashMap;
+use itertools::Itertools;
 use num::{Num, NumCast};
 use std::{hash::Hash, ops::AddAssign};
 
@@ -16,7 +17,7 @@ where
 impl<T, I> Manager<T, I>
 where
     T: Hash + Eq + Clone,
-    I: Copy + Eq + AddAssign + Num + NumCast + Hash,
+    I: Copy + Eq + AddAssign + Num + NumCast + Hash + Ord,
 {
     pub fn new(init_id: I) -> Self {
         Manager {
@@ -34,8 +35,18 @@ where
         }
     }
 
-    pub fn get_data(&self, id: I) -> Option<&T> {
+    pub fn get_item(&self, id: I) -> Option<&T> {
         self.id_to_data.get(&id)
+    }
+
+    // return the vector of the data sorted by id
+    pub fn get_data_sorted_by_id(&self) -> Vec<T> {
+        let id_data = self.id_to_data.clone();
+        id_data
+            .into_iter()
+            .sorted_by(|(a, _), (b, _)| Ord::cmp(a, b))
+            .map(|(_, v)| v)
+            .collect()
     }
 
     fn registry(&mut self, data: T) -> I {

@@ -18,8 +18,8 @@ pub struct IdManager<T>
 where
     T: Copy + Num + AddAssign + NumCast + Eq,
 {
-    pub next_available: T,
-    pub ids: HashMap<String, T>,
+    next_available: T,
+    ids: HashMap<String, T>,
 }
 
 impl<T> IdManager<T>
@@ -71,6 +71,10 @@ where
             Some(r) => Some(r.0.clone()),
             None => None,
         }
+    }
+
+    pub fn get_all_ids(&self) -> Vec<T> {
+        self.ids.iter().map(|(_, id)| id.clone()).collect()
     }
 }
 

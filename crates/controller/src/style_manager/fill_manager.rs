@@ -19,7 +19,7 @@ impl FillManager {
     pub fn execute(self, payload: &FillPayload) -> (Self, FillId) {
         let mut res = self.clone();
         let base = payload.id;
-        if let Some(fill) = res.get_data(base) {
+        if let Some(fill) = res.get_item(base) {
             let mut new_fill = fill.clone();
             handle(&mut new_fill, payload.change.clone());
             let new_id = res.get_id(&new_fill);

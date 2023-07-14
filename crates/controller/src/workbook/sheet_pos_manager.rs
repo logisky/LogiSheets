@@ -50,6 +50,10 @@ impl SheetPosManager {
         }
     }
 
+    pub fn is_hidden(&self, sheet_id: &SheetId) -> bool {
+        self.hiddens.contains(sheet_id)
+    }
+
     pub fn get_sheet_id(&self, idx: usize) -> Option<SheetId> {
         let id = self.pos.get(idx)?;
         Some(id.clone())

@@ -3,7 +3,7 @@ use super::defaults::string_0_percent;
 use super::defaults::string_100_percent;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub enum EgColorChoice {
     #[xmlserde(name = b"a:sysClr")]
     SysClr(CtSystemColor),
@@ -33,7 +33,7 @@ impl EgColorChoice {
     }
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct CtSystemColor {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: String,
@@ -41,7 +41,7 @@ pub struct CtSystemColor {
     pub last_clr: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct CtSrgbColor {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: String,

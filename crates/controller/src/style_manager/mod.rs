@@ -1,11 +1,11 @@
-mod border_manager;
+pub mod border_manager;
 pub mod defaults;
 pub mod errors;
 mod execute;
-mod fill_manager;
-mod font_manager;
+pub mod fill_manager;
+pub mod font_manager;
 mod manager;
-mod num_fmt_manager;
+pub mod num_fmt_manager;
 pub mod xf_manager;
 
 use anyhow::Result;
@@ -52,28 +52,28 @@ impl StyleManager {
     pub fn get_cell_style(&self, id: StyleId) -> RawStyle {
         let xf = self
             .cell_xfs_manager
-            .get_data(id)
-            .unwrap_or(self.cell_xfs_manager.get_data(0).unwrap());
+            .get_item(id)
+            .unwrap_or(self.cell_xfs_manager.get_item(0).unwrap());
         let font_id = xf.font_id.unwrap_or(0);
         let font = self
             .font_manager
-            .get_data(font_id)
-            .unwrap_or(self.font_manager.get_data(0).unwrap());
+            .get_item(font_id)
+            .unwrap_or(self.font_manager.get_item(0).unwrap());
         let fill_id = xf.fill_id.unwrap_or(0);
         let fill = self
             .fill_manager
-            .get_data(fill_id)
-            .unwrap_or(self.fill_manager.get_data(0).unwrap());
+            .get_item(fill_id)
+            .unwrap_or(self.fill_manager.get_item(0).unwrap());
         let border_id = xf.border_id.unwrap_or(0);
         let border = self
             .border_manager
-            .get_data(border_id)
-            .unwrap_or(self.border_manager.get_data(0).unwrap());
+            .get_item(border_id)
+            .unwrap_or(self.border_manager.get_item(0).unwrap());
         let num_fmt_id = xf.num_fmt_id.unwrap_or(0);
         let num_fmt = self
             .num_fmt_manager
-            .get_data(num_fmt_id)
-            .unwrap_or(self.num_fmt_manager.get_data(0).unwrap());
+            .get_item(num_fmt_id)
+            .unwrap_or(self.num_fmt_manager.get_item(0).unwrap());
         let alignment = xf.alignment.clone();
         let protection = xf.protection.clone();
         RawStyle {

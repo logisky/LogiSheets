@@ -42,7 +42,7 @@ where
                             use logisheets_workbook::prelude::StCellType;
                             let val = match &ext_cell.t {
                                 StCellType::B => {
-                                    let b = if val_str == "TRUE" || val_str == "0" {
+                                    let b = if val_str == "TRUE" || val_str == "1" {
                                         true
                                     } else {
                                         false

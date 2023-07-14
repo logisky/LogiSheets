@@ -65,7 +65,7 @@ pub fn load_merge_cells(
                     (CellId::NormalCell(s), CellId::NormalCell(e)) => {
                         cell_attachment_manager
                             .merge_cells
-                            .add_merge_cell2(sheet_id, s, e);
+                            .add_merge_cell(sheet_id, s, e);
                     }
                     _ => {}
                 },
