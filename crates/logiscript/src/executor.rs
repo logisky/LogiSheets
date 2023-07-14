@@ -4,7 +4,7 @@ use logisheets_controller::controller::edit_action::{
 use logisheets_controller::{Value, Workbook};
 
 use crate::operator::{
-    CheckError, CheckNum, CheckString, Input, Operator, ShiftData, Statement, Switch,
+    CheckError, CheckFormula, CheckNum, CheckString, Input, Operator, ShiftData, Statement, Switch,
 };
 use crate::parser::{parse, ParseError};
 
@@ -53,6 +53,9 @@ fn execute(statements: Vec<Statement>) -> Option<ExecError> {
             Operator::CheckNum(check_num) => exec_check_num(&mut ctx, check_num, line),
             Operator::CheckString(check_str) => exec_check_string(&mut ctx, check_str, line),
             Operator::CheckError(check_err) => exec_check_error(&mut ctx, check_err, line),
+            Operator::CheckFormula(check_formula) => {
+                exec_check_formula(&mut ctx, check_formula, line)
+            }
             Operator::InsertRow(data) => exec_shift_row(&mut ctx, data, line, true),
             Operator::InsertCol(data) => exec_shift_col(&mut ctx, data, line, true),
             Operator::DeleteRow(data) => exec_shift_row(&mut ctx, data, line, false),
@@ -206,6 +209,32 @@ fn exec_check_num(ctx: &mut ExecContext, check_num: CheckNum, line: usize) -> Op
     }
 }
 
+fn exec_check_formula(
+    ctx: &mut ExecContext,
+    check_formula: CheckFormula,
+    line: usize,
+) -> Option<ExecError> {
+    let row = check_formula.row as usize;
+    let col = check_formula.col as usize;
+    let ws = ctx.workbook.get_sheet_by_name(&ctx.sheet_name);
+    if let Err(_) = ws {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", &ctx.sheet_name),
+        });
+    }
+    let mut ws = ws.unwrap();
+    let f = ws.get_formula(row, col).unwrap();
+    if f != check_formula.expect {
+        Some(ExecError {
+            line,
+            msg: format!("expect {} but found {}", check_formula.expect, f),
+        })
+    } else {
+        None
+    }
+}
+
 fn exec_check_string(
     ctx: &mut ExecContext,
     check_str: CheckString,
@@ -352,6 +381,17 @@ CHECKNUM B2 6
 INPUT A1 =2/0
 CHECKERR A1 #DIV/0!
 "#;
+        if let Some(err) = execute_script(script) {
+            panic!("{}", err.to_string())
+        }
+    }
+
+    #[test]
+    fn script_test5() {
+        let script = r#"
+    INPUT A1 =SUM(1,2)
+    CHECKFORMULA A1 SUM(1, 2)
+    "#;
         if let Some(err) = execute_script(script) {
             panic!("{}", err.to_string())
         }

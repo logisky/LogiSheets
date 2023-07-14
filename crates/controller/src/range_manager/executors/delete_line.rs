@@ -20,7 +20,7 @@ where
 {
     let mut func = |range: &NormalRange, range_id: &RangeId| -> RangeUpdateType {
         let (range_start, range_end) =
-            get_lower_upper_bound_of_range(sheet, range, !horizontal, ctx);
+            get_lower_upper_bound_of_range(sheet, range, horizontal, ctx);
         let delete_start = idx;
         let delete_end = (idx + cnt as usize - 1) as usize;
         if range_start > delete_end || range_end < delete_start {

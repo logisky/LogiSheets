@@ -70,3 +70,15 @@ pub fn cut_and_get_new_bound(
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cut_and_get_new_bound() {
+        let (start, end) = cut_and_get_new_bound(1, 3, 3, 3).unwrap();
+        assert_eq!(start, 1);
+        assert_eq!(end, 2);
+    }
+}
