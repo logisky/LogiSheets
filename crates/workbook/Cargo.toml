@@ -10,7 +10,7 @@ description = "Tools for LogiSheets to unarchive and write .xlsx file"
 quick-xml = {version = "0.28", features = ["serialize"]}
 regex = "1"
 serde = {version = "1.0.152", features = ["derive"]}
-serde_json = "1.0.95"
+serde_json = "1.0.103"
 thiserror = "1.0.24"
 gents = "0.3.1"
 gents_derives = "0.3.1"
