@@ -11,6 +11,7 @@ use xmlserde::*;
 pub mod prelude {
     pub use super::ooxml::comments::*;
     pub use super::ooxml::complex_types::*;
+    pub use super::ooxml::external_links::*;
     pub use super::ooxml::simple_types::*;
     pub use super::ooxml::sst::SstPart;
     pub use super::ooxml::style_sheet::StylesheetPart;
@@ -19,6 +20,7 @@ pub mod prelude {
     pub use super::ooxml::worksheet::*;
     pub use super::reader::*;
     pub use super::workbook::Workbook;
+    pub use super::writer::*;
     pub use super::SerdeErr;
 }
 

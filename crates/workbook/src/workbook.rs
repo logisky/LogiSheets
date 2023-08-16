@@ -37,6 +37,9 @@ pub struct Worksheet {
 #[derive(Debug)]
 pub struct ExternalLink {
     pub external_link_part: ExternalLinkPart,
+    // In the standard of OOXML, target points to the location of the exact files.
+    // Though it is not supported to reference a external workbook in LogiSheets directly,
+    // it's available to read the existed references.
     pub target: String,
 }
 

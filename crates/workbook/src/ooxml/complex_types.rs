@@ -2418,7 +2418,7 @@ pub struct CtSheetData {
     pub rows: Vec<CtRow>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Default)]
 pub struct CtRow {
     #[xmlserde(name = b"c", ty = "child")]
     pub cells: Vec<CtCell>,
@@ -2470,37 +2470,6 @@ pub struct CtCell {
     pub ph: bool,
 }
 
-mod tests {
-    use super::*;
-
-    #[derive(Debug, XmlSerialize, XmlDeserialize)]
-    pub struct CtFormula {
-        #[xmlserde(ty = "text")]
-        pub formula: Option<String>,
-        #[xmlserde(name = b"t", ty = "attr", default = "st_cell_formula_type_normal")]
-        pub t: StCellFormulaType,
-        #[xmlserde(name = b"aca", ty = "attr", default = "default_false")]
-        pub aca: bool,
-        #[xmlserde(name = b"ref", ty = "attr")]
-        pub reference: Option<StRef>,
-        #[xmlserde(name = b"dt2D", ty = "attr", default = "default_false")]
-        pub dt_2d: bool,
-        #[xmlserde(name = b"del1", ty = "attr", default = "default_false")]
-        pub del1: bool,
-        #[xmlserde(name = b"del2", ty = "attr", default = "default_false")]
-        pub del2: bool,
-        #[xmlserde(name = b"r1", ty = "attr")]
-        pub r1: Option<StCellRef>,
-        #[xmlserde(name = b"r2", ty = "attr")]
-        pub r2: Option<StCellRef>,
-        #[xmlserde(name = b"ca", ty = "attr", default = "default_false")]
-        pub ca: bool,
-        #[xmlserde(name = b"si", ty = "attr")]
-        pub si: Option<u32>,
-        #[xmlserde(name = b"bx", ty = "attr", default = "default_false")]
-        pub bx: bool,
-    }
-}
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct CtFormula {
     #[xmlserde(ty = "text")]

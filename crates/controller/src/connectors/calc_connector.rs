@@ -457,7 +457,7 @@ impl<'a> CalcConnector<'a> {
         col_idx: usize,
     ) -> Result<CellValue> {
         let cid = self.navigator.fetch_cell_id(&sheet_id, row_idx, col_idx)?;
-        let sheet = self.container.get_sheet_container(sheet_id);
+        let sheet = self.container.get_sheet_container_mut(sheet_id);
         if let Some(cell) = sheet.cells.get(&cid) {
             let value = cell.value.clone();
             Ok(value)
@@ -474,7 +474,7 @@ impl<'a> CalcConnector<'a> {
         value: CellValue,
     ) {
         if let Ok(cid) = self.navigator.fetch_cell_id(&sheet_id, row_idx, col_idx) {
-            let sheet = self.container.get_sheet_container(sheet_id);
+            let sheet = self.container.get_sheet_container_mut(sheet_id);
             if let Some(c) = sheet.cells.get_mut(&cid) {
                 c.value = value
             } else {

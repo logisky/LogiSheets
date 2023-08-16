@@ -19,7 +19,7 @@ impl BorderManager {
     pub fn execute(self, payload: &BorderPayload) -> (Self, BorderId) {
         let mut res = self.clone();
         let base = payload.id;
-        if let Some(border) = res.get_data(base) {
+        if let Some(border) = res.get_item(base) {
             let mut new_border = border.clone();
             handle(&mut new_border, payload.change.clone());
             let new_id = res.get_id(&new_border);

@@ -3,7 +3,7 @@ use anyhow::Result;
 use im::HashMap;
 use logisheets_base::{BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId};
 
-use self::{
+pub use self::{
     block::BlockPlace,
     errors::NavError,
     sheet_nav::{Cache, SheetNav},

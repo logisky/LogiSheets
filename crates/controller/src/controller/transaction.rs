@@ -192,17 +192,12 @@ fn handle_sheet_proc(
         cell_attachment_manager,
     } = status;
     let mut old_navigator = navigator.clone();
-    let data_executor = DataExecutor {
-        navigator,
-        container,
-        style_manager,
-        deleted_cells: vec![],
-    };
+    let data_executor = DataExecutor::new(navigator, style_manager, container);
     let DataExecutor {
         navigator: mut new_navigator,
         container: mut new_container,
         style_manager: new_style_manager,
-        deleted_cells: _,
+        ..
     } = data_executor.execute(&proc)?;
     let active_sheet = proc.sheet_id;
     let FormulaExecContext {

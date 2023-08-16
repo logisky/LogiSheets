@@ -4,7 +4,7 @@ use xmlserde::Unparsed;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 // Ct_OfficeStyleSheet 20.1.6.2
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 #[xmlserde(root = b"a:theme")]
 #[xmlserde(with_custom_ns(b"a", b"http://schemas.openxmlformats.org/drawingml/2006/main"))]
 pub struct ThemePart {
@@ -18,7 +18,7 @@ pub struct ThemePart {
     // pub ext_lst: Option<CtOfficeArtExtensionList>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct CtBaseStyles {
     #[xmlserde(name = b"a:clrScheme", ty = "child")]
     pub clr_scheme: CtColorScheme,
@@ -28,7 +28,7 @@ pub struct CtBaseStyles {
     pub fmt_scheme: Unparsed,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct CtColorScheme {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
@@ -58,7 +58,7 @@ pub struct CtColorScheme {
     pub fol_hlink: EgColorChoice,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct ThemeCtFontScheme {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
@@ -68,7 +68,7 @@ pub struct ThemeCtFontScheme {
     pub minor_font: CtFontCollection,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct CtFontCollection {
     #[xmlserde(name = b"a:latin", ty = "child")]
     pub latin: CtTextFont,
@@ -80,7 +80,7 @@ pub struct CtFontCollection {
     pub fonts: Vec<CtSupplementalFont>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct CtTextFont {
     #[xmlserde(name = b"typeface", ty = "attr")]
     pub typeface: String,
@@ -96,7 +96,7 @@ fn default_charset() -> u8 {
     1
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone)]
 pub struct CtSupplementalFont {
     #[xmlserde(name = b"script", ty = "attr")]
     pub script: String,

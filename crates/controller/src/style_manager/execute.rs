@@ -20,7 +20,7 @@ pub fn execute_style_payload(
         num_fmt_manager,
     } = sm;
     let mut xf = cell_xfs_manager
-        .get_data(id)
+        .get_item(id)
         .ok_or(StyleError::StyleIdNotFound(id))?
         .clone();
     match payload {

@@ -23,10 +23,23 @@ pub struct DataExecutor {
     pub navigator: Navigator,
     pub style_manager: StyleManager,
     pub container: DataContainer,
-    pub deleted_cells: Vec<(SheetId, CellId)>,
+    // todo: remove it?
+    deleted_cells: Vec<(SheetId, CellId)>,
 }
 
 impl DataExecutor {
+    pub fn new(
+        navigator: Navigator,
+        style_manager: StyleManager,
+        container: DataContainer,
+    ) -> Self {
+        DataExecutor {
+            navigator,
+            style_manager,
+            container,
+            deleted_cells: vec![],
+        }
+    }
     pub fn execute(self, proc: &SheetProcess) -> Result<Self> {
         let sheet_id = proc.sheet_id;
         match &proc.payload {

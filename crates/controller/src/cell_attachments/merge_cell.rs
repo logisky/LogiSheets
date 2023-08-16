@@ -9,23 +9,7 @@ pub struct MergeCells {
 }
 
 impl MergeCells {
-    // todo: remove this
     pub fn add_merge_cell(
-        self,
-        sheet_id: SheetId,
-        start_cell: NormalCellId,
-        end_cell: NormalCellId,
-    ) -> Self {
-        let mut set = self
-            .data
-            .get(&sheet_id)
-            .map_or(HashMap::new(), |s| s.clone());
-        set.insert(start_cell, end_cell);
-        let new_data = self.data.update(sheet_id, set);
-        MergeCells { data: new_data }
-    }
-
-    pub fn add_merge_cell2(
         &mut self,
         sheet_id: SheetId,
         start_cell: NormalCellId,

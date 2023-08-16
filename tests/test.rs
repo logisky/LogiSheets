@@ -49,7 +49,9 @@ mod test_6 {
         match v {
             Value::Empty => {}
             _ => panic!(),
-        }
+        };
+        let buf = wb.save().unwrap();
+        fs::write("tests/6_save.xlsx", buf).unwrap()
     }
 
     #[test]

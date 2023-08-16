@@ -26,12 +26,12 @@ impl DataContainer {
     }
 
     pub fn get_cell(&mut self, sheet_id: SheetId, cell_id: &CellId) -> Option<&mut Cell> {
-        let container = self.get_sheet_container(sheet_id);
+        let container = self.get_sheet_container_mut(sheet_id);
         container.cells.get_mut(cell_id)
     }
 
     pub fn get_row_info(&mut self, sheet_id: SheetId, row_id: RowId) -> Option<&RowInfo> {
-        let container = self.get_sheet_container(sheet_id);
+        let container = self.get_sheet_container_mut(sheet_id);
         let row_info = &container.row_info;
         row_info.get_row_info(row_id)
     }
@@ -43,29 +43,33 @@ impl DataContainer {
     }
 
     pub fn set_row_info(&mut self, sheet_id: SheetId, row_id: RowId, info: RowInfo) {
-        let container = self.get_sheet_container(sheet_id);
+        let container = self.get_sheet_container_mut(sheet_id);
         container.row_info.set_row_info(row_id, info);
     }
 
     pub fn update_col_info(self, sheet_id: SheetId, col_id: ColId, info: ColInfo) -> Self {
         let mut c = self.clone();
-        let container = c.get_sheet_container(sheet_id);
+        let container = c.get_sheet_container_mut(sheet_id);
         container.col_info.set_col_info(col_id, info);
         c
     }
 
     pub fn get_col_info(&mut self, sheet_id: SheetId, col_id: ColId) -> Option<&ColInfo> {
-        let container = self.get_sheet_container(sheet_id);
+        let container = self.get_sheet_container_mut(sheet_id);
         let col_info = &container.col_info;
         col_info.get_col_info(col_id)
     }
 
     pub fn set_col_info(&mut self, sheet_id: SheetId, col_id: ColId, info: ColInfo) {
-        let container = self.get_sheet_container(sheet_id);
+        let container = self.get_sheet_container_mut(sheet_id);
         container.col_info.set_col_info(col_id, info);
     }
 
-    pub fn get_sheet_container(&mut self, sheet_id: SheetId) -> &mut SheetDataContainer {
+    pub fn get_sheet_container(&self, sheet_id: SheetId) -> Option<&SheetDataContainer> {
+        self.data.get(&sheet_id)
+    }
+
+    pub fn get_sheet_container_mut(&mut self, sheet_id: SheetId) -> &mut SheetDataContainer {
         if let Some(_) = self.data.get(&sheet_id) {
             self.data.get_mut(&sheet_id).unwrap()
         } else {
@@ -75,7 +79,7 @@ impl DataContainer {
     }
 
     pub fn add_cell(&mut self, sheet_id: SheetId, cell_id: CellId, cell: Cell) {
-        let sheet_container = self.get_sheet_container(sheet_id);
+        let sheet_container = self.get_sheet_container_mut(sheet_id);
         sheet_container.cells.insert(cell_id, cell);
     }
 }

@@ -1,7 +1,7 @@
 use logisheets_base::async_func::{AsyncCalcResult, Task};
 use logisheets_base::{CellId, SheetId};
 
-use logisheets_workbook::prelude::{read, SerdeErr};
+use logisheets_workbook::prelude::{read, write, SerdeErr};
 pub mod display;
 pub mod edit_action;
 pub mod status;
@@ -9,6 +9,7 @@ pub mod style;
 mod transaction;
 mod viewer;
 use crate::file_loader2::load;
+use crate::file_saver::{save_file, SaveError};
 use crate::payloads::sheet_shift::{SheetShiftPayload, SheetShiftType};
 use crate::payloads::Process;
 use crate::settings::Settings;
@@ -51,8 +52,9 @@ impl Default for Controller {
 }
 
 impl Controller {
-    pub fn save(&self) -> Vec<u8> {
-        vec![]
+    pub fn save(&self) -> Result<Vec<u8>, SaveError> {
+        let workbook = save_file(self)?;
+        write(workbook).map_err(|_| SaveError::ZipError)
     }
 
     pub fn from(status: Status, book_name: String, settings: Settings) -> Self {
@@ -67,11 +69,8 @@ impl Controller {
     }
 
     pub fn from_file(name: String, f: &[u8]) -> Result<Self, SerdeErr> {
-        let res = read(f);
-        match res {
-            Ok(ss) => Ok(load(ss, name)),
-            Err(e) => Err(e),
-        }
+        let res = read(f)?;
+        Ok(load(res, name))
     }
 
     pub fn get_sheet_id_by_idx(&self, idx: usize) -> Option<SheetId> {

@@ -26,6 +26,7 @@ statrs = "0.16.0"
 unicode-segmentation = "1.10.1"
 gents = "0.3.1"
 gents_derives = "0.3.1"
+uuid ={ version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"]}
 
 logisheets_base = {version = "0.3.0", path = "./base"}
 logisheets_lexer = {version = "0.3.0", path = "./lexer"}

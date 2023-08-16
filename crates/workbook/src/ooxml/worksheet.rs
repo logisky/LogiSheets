@@ -18,7 +18,7 @@ use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 ))]
 #[xmlserde(with_custom_ns(b"mc", b"http://schemas.openxmlformats.org/markup-compatibility/2006"))]
 #[xmlserde(with_custom_ns(b"etc", b"http://www.wps.cn/officeDocument/2017/etCustomData"))]
-// Some worksheet contains an legacyDrawing element. We just ignored it.
+// Some worksheets contain an legacyDrawing element. We just ignore it.
 pub struct WorksheetPart {
     #[xmlserde(name = b"sheetPr", ty = "child")]
     pub sheet_pr: Option<CtSheetPr>,

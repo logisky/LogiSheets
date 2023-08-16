@@ -20,7 +20,7 @@ impl FontManager {
     pub fn execute(self, payload: &FontPayload) -> (Self, FontId) {
         let mut res = self.clone();
         let base = payload.id;
-        if let Some(font) = res.get_data(base) {
+        if let Some(font) = res.get_item(base) {
             let mut new_font = font.clone();
             handle(&mut new_font, payload.change.clone());
             let new_id = res.get_id(&new_font);

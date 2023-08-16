@@ -13,6 +13,7 @@ mod data_executor;
 mod ext_book_manager;
 mod ext_ref_manager;
 mod file_loader2;
+mod file_saver;
 mod formula_manager;
 mod id_manager;
 mod navigator;
@@ -30,6 +31,7 @@ pub use controller::{
     Controller,
 };
 use controller::{edit_action::EditAction, style::StyleConverter};
+use file_saver::SaveError;
 use logisheets_parser::unparse;
 pub use logisheets_workbook::prelude::SerdeErr;
 
@@ -51,12 +53,13 @@ pub fn lex_success(f: &str) -> bool {
 
 #[derive(Debug)]
 pub enum Err {
-    SerdeErr(SerdeErr),
+    Serde(SerdeErr),
+    Save(SaveError),
     NotFound,
 }
 
 pub struct Workbook {
-    pub controller: Controller,
+    controller: Controller,
 }
 
 impl Default for Workbook {
@@ -75,8 +78,12 @@ impl Workbook {
     pub fn from_file(buf: &[u8], book_name: String) -> Result<Self, Err> {
         match Controller::from_file(book_name, buf) {
             Ok(controller) => Ok(Workbook { controller }),
-            Err(e) => Err(Err::SerdeErr(e)),
+            Err(e) => Err(Err::Serde(e)),
         }
+    }
+
+    pub fn save(&self) -> Result<Vec<u8>, Err> {
+        self.controller.save().map_err(|e| Err::Save(e))
     }
 
     pub fn get_sheet_by_name(&mut self, name: &str) -> Result<Worksheet, Err> {
@@ -345,7 +352,7 @@ impl<'a> Worksheet<'a> {
             .controller
             .status
             .container
-            .get_sheet_container(self.sheet_id);
+            .get_sheet_container_mut(self.sheet_id);
         sheet_container
             .cells
             .clone()

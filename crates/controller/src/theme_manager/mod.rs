@@ -1,8 +1,8 @@
 use logisheets_workbook::prelude::{CtColorScheme, ThemePart};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ThemeManager {
-    theme: Option<ThemePart>,
+    pub theme: Option<ThemePart>,
 }
 
 impl ThemeManager {
