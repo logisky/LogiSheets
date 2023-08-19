@@ -1,10 +1,11 @@
 import {useState, FC, useEffect} from 'react'
 import styles from './sheets-tab.module.scss'
 import {ContextMenuComponent} from './contextmenu'
-import {InsertSheetBuilder} from '@/api'
+import {DeleteSheetBuilder, InsertSheetBuilder} from '@/api'
 import {Backend, SheetService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
+import {Tabs, Dropdown} from 'antd'
 import {Subscription} from 'rxjs'
 
 export type SheetsTabprops = Record<string, unknown>
@@ -29,7 +30,8 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
         }
     }, [])
 
-    const onTabChange = (i: number) => {
+    const onTabChange = (key: string) => {
+        const i = sheets.findIndex((s) => s === key)
         setActive(i)
         SHEET_SERVICE.setActiveSheet(i)
     }
@@ -38,24 +40,48 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
         const payload = new InsertSheetBuilder().sheetIdx(active).build()
         BACKEND_SERVICE.sendTransaction([payload])
     }
+
+    const onDelete = (i: number) => {
+        const payload = new DeleteSheetBuilder().sheetIdx(i).build()
+        BACKEND_SERVICE.sendTransaction([payload])
+    }
     return (
         <div className={styles['host']}>
             <div className={styles['pre-btns']}></div>
-            {sheets.map((sheet, i) => (
-                <div
-                    className={['tab', `${i === active ? 'active' : ''}`].join(
-                        ' '
-                    )}
-                    onClick={() => onTabChange(i)}
-                    onContextMenu={() => setIsOpen(true)}
-                    key={i}
-                >
-                    {sheet}
-                </div>
-            ))}
-            <div className={styles['add-btn']} onClick={add}>
-                +
-            </div>
+            <Tabs
+                type="editable-card"
+                tabPosition="bottom"
+                items={sheets.map((sheet, i) => ({
+                    key: sheet,
+                    label: (
+                        <span
+                            onContextMenu={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setActive(i)
+                                setIsOpen(true)
+                            }}
+                        >
+                            {sheet}
+                        </span>
+                    ),
+                    closable: true,
+                }))}
+                onChange={onTabChange}
+                onEdit={(e, action) => {
+                    if (action === 'add') {
+                        const payload = new InsertSheetBuilder()
+                            .sheetIdx(sheets.length)
+                            .build()
+                        BACKEND_SERVICE.sendTransaction([payload])
+                    } else if (action === 'remove') {
+                        if (typeof e !== 'string') return
+                        const i = sheets.findIndex((s) => s === e)
+                        onDelete(i)
+                    }
+                }}
+                activeKey={sheets[active]}
+            ></Tabs>
             <ContextMenuComponent
                 isOpen={isOpen}
                 setIsOpen={setIsOpen}

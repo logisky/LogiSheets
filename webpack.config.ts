@@ -51,7 +51,7 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             }),
             new HtmlWebpackPlugin({
                 publicPath: path.join(__dirname, 'dist'),
-                template: path.resolve(__dirname, '/public/index.html'),
+                template: path.resolve(__dirname, 'public/index.html'),
             }),
             new DefinePlugin({
                 STAND_ALONE: standAlone,
