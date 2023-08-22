@@ -1,5 +1,5 @@
 import { Subject, ReplaySubject } from 'rxjs'
-import { BlockInput, CellInput, ColShift, CreateBlock, DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload, MoveBlock, RowShift } from '@/bindings'
+import { BlockInput, CellInput, ColShift, CreateBlock, DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload, MoveBlock, RowShift, SheetShift } from '@/bindings'
 import { ClientSend, ServerSend, OpenFile } from '@/message'
 import initWasm, {
     read_file,
@@ -150,6 +150,9 @@ export class Service {
                 blockInput.input,
             )
         }
+        // if (hasOwnProperty(p, 'SheetShift')) {
+        //     const sheetShift = p.SheetShift as SheetShift
+        // }
         console.log('Unimplemented!')
     }
 

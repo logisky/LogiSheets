@@ -173,7 +173,19 @@ export function adaptPayload(p: Payload): EditPayload {
         case 'setBorder':
             return adaptSetBorder(p)
         case 'deleteSheet':
+            return {
+                SheetShift: {
+                    idx: p.sheetIdx,
+                    insert: false,
+                },
+            }
         case 'insertSheet':
+            return {
+                SheetShift: {
+                    idx: p.sheetIdx,
+                    insert: true,
+                },
+            }
         default:
             throw Error(`unimplemented: ${p}`)
     }
