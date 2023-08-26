@@ -131,10 +131,10 @@ pub fn get_serial_num_by_date_1900(year: u32, month: u32, day: u32) -> Option<u3
             (y, m)
         }
     };
-    let init_date = NaiveDate::from_ymd(year as i32, month, 1);
+    let init_date = NaiveDate::from_ymd_opt(year as i32, month, 1).unwrap();
     let duration = Duration::days((day - 1) as i64);
     let new_date = init_date + duration;
-    let duration = new_date.signed_duration_since(NaiveDate::from_ymd(1899, 12, 31));
+    let duration = new_date.signed_duration_since(NaiveDate::from_ymd_opt(1899, 12, 31).unwrap());
     let r = duration.num_days();
     if r < 1 {
         None
@@ -160,7 +160,7 @@ pub fn get_date_by_serial_num_1900(n: u32) -> EasyDate {
         };
     }
     let n = if n <= 60 { n } else { n - 1 };
-    let zero_date = NaiveDate::from_ymd(1899, 12, 31);
+    let zero_date = NaiveDate::from_ymd_opt(1899, 12, 31).unwrap();
     let target = zero_date + Duration::days(n as i64);
     EasyDate {
         year: target.year() as u32,

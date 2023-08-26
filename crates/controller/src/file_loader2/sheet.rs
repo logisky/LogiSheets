@@ -226,6 +226,10 @@ pub fn load_sheet_format_pr(
         .insert(sheet_id, sheet_format_pr.clone());
 }
 
+pub fn load_sheet_views(settings: &mut Settings, sheet_id: SheetId, sheet_views: &CtSheetViews) {
+    settings.sheet_views.insert(sheet_id, sheet_views.clone());
+}
+
 fn rst_to_plain_text(rst: &CtRst) -> String {
     match &rst.t {
         Some(p) => p.value.to_string(),

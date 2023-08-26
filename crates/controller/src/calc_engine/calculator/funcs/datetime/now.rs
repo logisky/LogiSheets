@@ -7,7 +7,7 @@ use super::super::CalcVertex;
 pub fn calc(args: Vec<CalcVertex>) -> CalcVertex {
     assert_or_return!(args.len() == 0, ast::Error::Unspecified);
     let datetime = Local::now();
-    let date = datetime.date();
+    let date = datetime.date_naive();
     let year = date.year();
     let month = date.month();
     let day = date.day();

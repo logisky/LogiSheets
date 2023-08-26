@@ -2,7 +2,7 @@ use gents_derives::TS;
 use xmlserde::xml_serde_enum;
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StAxis {
         AxisRow => "axisRow",
         AxisCol => "axisCol",
@@ -576,7 +576,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.52
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StPane {
         BottomRight => "bottomRight",
         TopRight => "topRight",
@@ -587,7 +587,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.53
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StPaneState {
         Split => "split",
         Frozen => "frozen",
@@ -655,7 +655,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.58
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StPivotAreaType {
         None => "none",
         Normal => "normal",
@@ -815,7 +815,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.69
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StSheetViewType {
         Normal => "normal",
         PageBreakPreview => "pageBreakPreview",

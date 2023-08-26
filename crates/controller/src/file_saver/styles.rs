@@ -90,11 +90,10 @@ fn save_fills(manager: &FillManager) -> Option<CtFills> {
 
 fn save_num_fmts(manager: &NumFmtManager) -> Option<CtNumFmts> {
     let num_fmts: Vec<_> = manager
-        .get_data_sorted_by_id()
+        .get_data_with_id_sorted_by_id()
         .into_iter()
-        .enumerate()
         .map(|(id, v)| CtNumFmt {
-            num_fmt_id: id as u32, // todo
+            num_fmt_id: id,
             format_code: v,
         })
         .collect();
