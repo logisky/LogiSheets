@@ -98,12 +98,13 @@ fn save_worksheet_part<S: SaverTrait>(
     let sheet_data = save_sheet_data(sheet_id, sheet_data_container, formula_manager, saver);
     let merge_cells = save_merge_cells(sheet_id, attachment_manager, saver);
     let sheet_format_pr = settings.sheet_format_pr.get(&sheet_id).map(|e| e.clone());
+    let sheet_views = settings.sheet_views.get(&sheet_id).map(|e| e.clone());
     WorksheetPart {
         cols,
         sheet_data,
         sheet_pr: None,
         dimension: None,
-        sheet_views: None,
+        sheet_views,
         sheet_format_pr,
         sheet_calc_pr: None,
         sheet_protection: None,
@@ -266,11 +267,7 @@ fn save_sheet_data<S: SaverTrait>(
         .into_iter()
         .map(|(id, cell)| {
             let (r, c) = saver.fetch_cell_index(&sheet_id, &id).unwrap();
-            let cell_value = cell.value.to_ct_value();
-            if cell_value.is_none() {
-                return None;
-            }
-            let (v, t) = cell_value.unwrap();
+            let (v, t) = cell.value.to_ct_value();
             let f = formula_manager
                 .formulas
                 .get(&(sheet_id, id))
@@ -294,7 +291,7 @@ fn save_sheet_data<S: SaverTrait>(
             let reference = unparse_cell(r, c);
             let ct_cell = CtCell {
                 f,
-                v: Some(v),
+                v,
                 is: None,
                 r: Some(reference),
                 s: cell.style,

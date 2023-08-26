@@ -34,9 +34,9 @@ impl<'a> StyleLoader<'a> {
                 return 0;
             }
             let xf = xf.unwrap();
-            let font_id = if let Some(idx) = xf.font_id {
+            let font_id = if let Some(i) = xf.font_id {
                 if let Some(fonts) = &self.part.fonts {
-                    if let Some(f) = fonts.fonts.get(idx as usize) {
+                    if let Some(f) = fonts.fonts.get(i as usize) {
                         self.manager.font_manager.get_id(f)
                     } else {
                         0
@@ -47,9 +47,9 @@ impl<'a> StyleLoader<'a> {
             } else {
                 0
             };
-            let fill_id = if let Some(idx) = xf.fill_id {
+            let fill_id = if let Some(i) = xf.fill_id {
                 if let Some(fills) = &self.part.fills {
-                    if let Some(f) = fills.fills.get(idx as usize) {
+                    if let Some(f) = fills.fills.get(i as usize) {
                         self.manager.fill_manager.get_id(f)
                     } else {
                         0
@@ -60,22 +60,24 @@ impl<'a> StyleLoader<'a> {
             } else {
                 0
             };
-            let num_fmt_id = if let Some(idx) = xf.num_fmt_id {
+            let num_fmt_id = if let Some(i) = xf.num_fmt_id {
                 if let Some(num_fmts) = &self.part.num_fmts {
-                    if let Some(f) = num_fmts.num_fmts.get(idx as usize) {
+                    let pos = num_fmts.num_fmts.iter().position(|fmt| fmt.num_fmt_id == i);
+                    if let Some(p) = pos {
+                        let f = num_fmts.num_fmts.get(p).unwrap();
                         self.manager.num_fmt_manager.get_id(&f.format_code)
                     } else {
-                        0
+                        i
                     }
                 } else {
-                    0
+                    i
                 }
             } else {
                 0
             };
-            let border_id = if let Some(idx) = xf.border_id {
+            let border_id = if let Some(i) = xf.border_id {
                 if let Some(borders) = &self.part.borders {
-                    if let Some(f) = borders.borders.get(idx as usize) {
+                    if let Some(f) = borders.borders.get(i as usize) {
                         self.manager.border_manager.get_id(f)
                     } else {
                         0

@@ -21,6 +21,8 @@ use crate::{
     settings::Settings,
     theme_manager::ThemeManager,
 };
+
+use self::sheet::load_sheet_views;
 pub struct SheetIdFetcher<'a> {
     pub sheet_id_manager: &'a mut SheetIdManager,
 }
@@ -62,6 +64,8 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         settings.calc_config.error = calc_pr.iterate_delta as f32;
     }
     let mut style_loader = StyleLoader::new(&mut style_manager, &wb.xl.styles.1);
+    // TODO: Here we should we `.into_iter()` to take the ownership logically
+    // rather than call `.clone()` below.
     wb.xl
         .workbook_part
         .sheets
@@ -103,6 +107,9 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
                 }
                 if let Some(sheet_format_pr) = &ws.worksheet_part.sheet_format_pr {
                     load_sheet_format_pr(&mut settings, sheet_id, sheet_format_pr)
+                }
+                if let Some(sheet_views) = &ws.worksheet_part.sheet_views {
+                    load_sheet_views(&mut settings, sheet_id, sheet_views);
                 }
                 load_sheet_data(
                     sheet_id,

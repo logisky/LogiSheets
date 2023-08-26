@@ -12,6 +12,8 @@ where
     data_to_id: HashMap<T, I>,
     id_to_data: HashMap<I, T>,
     next_available: I,
+    // It helps us skip the builtin values when saving files
+    init_id: I,
 }
 
 impl<T, I> Manager<T, I>
@@ -23,6 +25,22 @@ where
         Manager {
             data_to_id: HashMap::<T, I>::new(),
             id_to_data: HashMap::<I, T>::new(),
+            init_id,
+            next_available: init_id,
+        }
+    }
+
+    pub fn new_with_builtin_values(init_id: I, values: Vec<(I, T)>) -> Self {
+        let mut data_to_id = HashMap::<T, I>::new();
+        let mut id_to_data = HashMap::<I, T>::new();
+        values.into_iter().for_each(|(k, v)| {
+            data_to_id.insert(v.clone(), k.clone());
+            id_to_data.insert(k, v);
+        });
+        Manager {
+            data_to_id,
+            id_to_data,
+            init_id,
             next_available: init_id,
         }
     }
@@ -39,13 +57,23 @@ where
         self.id_to_data.get(&id)
     }
 
-    // return the vector of the data sorted by id
+    // return the vector of the data whose id is larger than init_id and sort them by id.
     pub fn get_data_sorted_by_id(&self) -> Vec<T> {
         let id_data = self.id_to_data.clone();
         id_data
             .into_iter()
+            .filter(|(i, _)| *i >= self.init_id)
             .sorted_by(|(a, _), (b, _)| Ord::cmp(a, b))
             .map(|(_, v)| v)
+            .collect()
+    }
+
+    pub fn get_data_with_id_sorted_by_id(&self) -> Vec<(I, T)> {
+        let id_data = self.id_to_data.clone();
+        id_data
+            .into_iter()
+            .filter(|(i, _)| *i >= self.init_id)
+            .sorted_by(|(a, _), (b, _)| Ord::cmp(a, b))
             .collect()
     }
 

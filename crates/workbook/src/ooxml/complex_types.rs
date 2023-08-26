@@ -1160,13 +1160,13 @@ pub struct CtSheetDimension {
     pub reference: StRef,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheetViews {
     #[xmlserde(name = b"sheetView", ty = "child")]
     pub sheet_views: Vec<CtSheetView>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheetView {
     #[xmlserde(name = b"pane", ty = "child")]
     pub pane: Option<CtPane>,
@@ -1222,7 +1222,7 @@ pub struct CtSheetView {
     pub workbook_view_id: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPane {
     #[xmlserde(name = b"xSplit", ty = "attr", default = "default_zero_f64")]
     pub x_split: f64,
@@ -1236,7 +1236,7 @@ pub struct CtPane {
     pub state: StPaneState,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSelection {
     #[xmlserde(name = b"pane", ty = "attr", default = "st_pane_top_left")]
     pub pane: StPane,
@@ -1248,7 +1248,7 @@ pub struct CtSelection {
     pub sqref: Option<String>, // todo
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPivotSelection {
     #[xmlserde(name = b"pivotArea", ty = "child")]
     pub pivot_area: CtPivotArea,
@@ -1288,7 +1288,7 @@ pub struct CtPivotSelection {
     pub id: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPivotArea {
     #[xmlserde(name = b"references", ty = "child")]
     pub references: Option<CtPivotAreaReferences>,
@@ -1322,7 +1322,7 @@ pub struct CtPivotArea {
     pub field_position: Option<u32>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPivotAreaReferences {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -1330,7 +1330,7 @@ pub struct CtPivotAreaReferences {
     pub references: Vec<CtPivotAreaReference>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPivotAreaReference {
     #[xmlserde(name = b"x", ty = "child", vec_size = "count")]
     pub xs: Vec<CtIndex>,
@@ -1370,7 +1370,7 @@ pub struct CtPivotAreaReference {
     pub std_var_p_subtotal: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtIndex {
     #[xmlserde(name = b"v", ty = "attr")]
     pub v: u32,
