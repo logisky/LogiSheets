@@ -25,8 +25,8 @@ where
         ast::Error::Num
     );
 
-    let forth = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_f64_from_calc_value!(base, forth);
+    let fourth = fetcher.get_calc_value(args_iter.next().unwrap());
+    assert_f64_from_calc_value!(base, fourth);
     assert_or_return!(base >= 0. && base <= 4., ast::Error::Num);
 
     assert_or_return!(settle_num < maturity_num, ast::Error::Num);

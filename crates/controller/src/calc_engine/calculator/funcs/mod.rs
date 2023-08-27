@@ -64,6 +64,8 @@ where
     }
     match name.to_uppercase().as_str() {
         "ABS" => scalar_number::calc_abs(args, fetcher),
+        "ACCRINT" => bonds::accrint::calc_accrint(args, fetcher),
+        "ACCRINTM" => bonds::accrint::calc_accrintm(args, fetcher),
         "ACOS" => scalar_number::calc_acos(args, fetcher),
         "ACOSH" => scalar_number::calc_acosh(args, fetcher),
         "AND" => and::calc(args, fetcher),

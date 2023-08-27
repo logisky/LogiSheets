@@ -2,6 +2,7 @@ use chrono::{prelude::*, Duration};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct EasyDate {
+    // todo: make these fields private
     pub year: u32,
     pub month: u8,
     pub day: u8,
@@ -108,6 +109,13 @@ impl From<u32> for EasyDate {
     }
 }
 
+impl From<EasyDate> for u32 {
+    fn from(date: EasyDate) -> Self {
+        // todo
+        get_serial_num_by_date_1900(date.year, date.month as u32, date.day as u32).unwrap()
+    }
+}
+
 #[derive(Debug)]
 pub struct Time {
     pub hour: u32,
@@ -141,7 +149,7 @@ pub fn get_serial_num_by_date_1900(year: u32, month: u32, day: u32) -> Option<u3
     } else if r <= 60 {
         // 60 represents the date 1900/2/29, though this date does not exist.
         // This was a mistake made by Microsoft Excel and we make a special
-        // treament here.
+        // treatment here.
         Some(r as u32)
     } else {
         Some(1 + r as u32)
