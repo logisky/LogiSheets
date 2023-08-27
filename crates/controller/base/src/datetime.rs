@@ -45,6 +45,14 @@ impl EasyDate {
         &self.last_day_of_this_month() == self
     }
 
+    pub fn is_last_date_of_feburary(&self) -> bool {
+        if self.month != 2 {
+            false
+        } else {
+            self.is_last_date_of_this_month()
+        }
+    }
+
     // Add delta months and adjust the day
     pub fn add_delta_months(&mut self, m: i32) {
         let curr = self.month as i32;

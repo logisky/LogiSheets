@@ -183,6 +183,8 @@ where
         "PI" => pi::calc(args),
         "PMT" => pmt::pmt(args, fetcher),
         "PPMT" => pmt::ppmt(args, fetcher),
+        "PRICE" => bonds::price::calc(args, fetcher),
+        "PRICEMAT" => bonds::pricemat::calc(args, fetcher),
         "PV" => fvpv::pv(args, fetcher),
         "QUOTIENT" => quotient::calc(args, fetcher),
         "RADIANS" => scalar_number::calc_radians(args, fetcher),
