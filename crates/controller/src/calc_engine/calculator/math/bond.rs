@@ -1,29 +1,20 @@
-use logisheets_base::datetime::{
-    get_date_by_serial_num_1900, get_serial_num_by_date_1900, EasyDate,
+use logisheets_base::datetime::{get_date_by_serial_num_1900, EasyDate};
+
+use crate::calc_engine::calculator::math::day_count::{
+    find_next_coupon_date, find_previous_coupon_date, get_coupon_num, get_price_yield_factors,
+    PriceYieldFactors,
 };
+
+pub use super::day_count::DayCountBasis;
+use super::day_count::{get_mat_factors, DayCountTools, MatFactors};
 
 pub fn couppcd(settle: u32, maturity: u32, freq: u8) -> u32 {
     assert!(freq == 1 || freq == 2 || freq == 4);
     let settle_date = EasyDate::from(settle);
     let maturity_date = EasyDate::from(maturity);
 
-    let delta_month = -12 / freq as i32;
-
-    let mut idx = 1;
-
-    loop {
-        let mut curr = maturity_date.clone();
-        curr.add_delta_months(idx * delta_month);
-        if curr < settle_date {
-            if maturity_date.is_last_date_of_this_month() {
-                curr = curr.last_day_of_this_month();
-            }
-            return get_serial_num_by_date_1900(curr.year, curr.month as u32, curr.day as u32)
-                .unwrap();
-        } else {
-            idx += 1;
-        }
-    }
+    let result = find_previous_coupon_date(settle_date, maturity_date, freq);
+    result.into()
 }
 
 pub fn coupncd(settle: u32, maturity: u32, freq: u8) -> u32 {
@@ -31,29 +22,67 @@ pub fn coupncd(settle: u32, maturity: u32, freq: u8) -> u32 {
     let settle_date = EasyDate::from(settle);
     let maturity_date = EasyDate::from(maturity);
 
-    let delta_month = -12 / freq as i32;
+    let result = find_next_coupon_date(settle_date, maturity_date, freq);
+    result.into()
+}
 
-    let mut idx = 1;
+pub fn price<T: DayCountTools>(
+    settle: u32,
+    maturity: u32,
+    rate: f64,
+    yld: f64,
+    redemption: f64,
+    freq: u8,
+) -> f64 {
+    assert!(freq == 1 || freq == 2 || freq == 4);
+    let settlement = EasyDate::from(settle);
+    let maturity_date = EasyDate::from(maturity);
+    let PriceYieldFactors {
+        n,
+        pcd: _,
+        a,
+        e,
+        dsc,
+    } = get_price_yield_factors::<T>(settlement, maturity_date, freq);
 
-    loop {
-        let mut curr = maturity_date.clone();
-        curr.add_delta_months(idx * delta_month);
-        if curr < settle_date {
-            if maturity_date.is_last_date_of_this_month() {
-                curr = curr.last_day_of_this_month();
-            }
+    let coupon = 100. * rate / freq as f64;
+    let accrint = 100. * rate * a as f64 / e as f64 / freq as f64;
 
-            curr.add_delta_months(-delta_month);
+    if n == 1 {
+        (redemption + coupon) / (1. + dsc as f64 / e as f64 * yld / freq as f64) - accrint
+    } else {
+        let pv_factor = |k: usize| {
+            let base = 1. + yld / freq as f64;
+            let exp = k as f64 - 1. + dsc as f64 / e as f64;
+            base.powf(exp)
+        };
+        let mut pv_of_coupons = 0.;
 
-            if curr > maturity_date {
-                curr = maturity_date
-            }
-            return get_serial_num_by_date_1900(curr.year, curr.month as u32, curr.day as u32)
-                .unwrap();
-        } else {
-            idx += 1;
+        for k in 1..=n as usize {
+            pv_of_coupons += coupon / pv_factor(k);
         }
+        let pv_of_redemption = redemption / pv_factor(n as usize);
+        pv_of_redemption + pv_of_coupons - accrint
     }
+}
+
+pub fn price_mat<T: DayCountTools>(
+    settle: u32,
+    maturity: u32,
+    issue: u32,
+    rate: f64,
+    yld: f64,
+) -> f64 {
+    let settlement = EasyDate::from(settle);
+    let maturity_date = EasyDate::from(maturity);
+    let issue_date = EasyDate::from(issue);
+    let MatFactors { b, dim, a, dsm } = get_mat_factors::<T>(settlement, maturity_date, issue_date);
+
+    let num1 = 100. + (dim as f64 / b as f64 * rate * 100.);
+    let den1 = 1. + (dsm as f64 / b as f64 * yld);
+    let fact2 = a as f64 / b as f64 * rate * 100.;
+
+    num1 / den1 - fact2
 }
 
 // https://github.com/formula/formula/blob/master/src/accrint.js#L10
@@ -65,51 +94,13 @@ pub fn accrint(issue: u32, settlement: u32, rate: f64, par: f64, basis: DayCount
 
 pub fn coupnum(settle: u32, maturity: u32, freq: u8) -> u32 {
     assert!(freq == 1 || freq == 2 || freq == 4);
-    let pcd = couppcd(settle, maturity, freq);
-    let pc_date = get_date_by_serial_num_1900(pcd);
+    let settle_date = get_date_by_serial_num_1900(settle);
     let maturity_date = get_date_by_serial_num_1900(maturity);
-
-    let mut months = (maturity_date.year - pc_date.year) * 12;
-    if maturity_date.month >= pc_date.month {
-        months += (maturity_date.month - pc_date.month) as u32;
-    } else {
-        months -= (pc_date.month - maturity_date.month) as u32;
-    }
-    months * freq as u32 / 12
+    get_coupon_num(settle_date, maturity_date, freq)
 }
 
-// pub fn days_between_360(start: EasyDate, end: EasyDate) -> i32 {
-//     let end_year = end.year as i32;
-//     let start_year = start.year as i32;
-//     let end_month = end.month as i32;
-//     let start_month = start.month as i32;
-//     let end_day = end.day as i32;
-//     let start_day = start.day as i32;
-//     (end_year - start_year) * 360 + (end_month - start_month) * 30 + end_day - start_day
-// }
-
-// Use this function should assert the year of date is after 1900.
-// fn days_between_365(start: EasyDate, end: EasyDate) -> i32 {
-//     let start_num =
-//         get_serial_num_by_date_1900(start.year, start.month as u32, start.day as u32).unwrap();
-//     let end_num = get_serial_num_by_date_1900(end.year, end.month as u32, end.day as u32).unwrap();
-//     let days = (end_num - start_num) as i32;
-//     let leap_days = (start.year..end.year).into_iter().fold(0, |prev, y| {
-//         if (y % 100 == 0 && y % 4 == 0) || (y % 100 != 0 && y % 4 == 0) {
-//             prev + 1
-//         } else {
-//             prev
-//         }
-//     });
-//     if end.year >= start.year {
-//         days - leap_days
-//     } else {
-//         days + leap_days
-//     }
-// }
-
 // https://github.com/formula/formula/blob/master/src/yearfrac.js#L7
-pub fn yearfrac(start: EasyDate, end: EasyDate, basis: DayCountBasis) -> f64 {
+fn yearfrac(start: EasyDate, end: EasyDate, basis: DayCountBasis) -> f64 {
     let mut sd = start.day as i32;
     let sm = start.month as i32;
     let sy = start.year as i32;
@@ -162,14 +153,6 @@ pub fn yearfrac(start: EasyDate, end: EasyDate, basis: DayCountBasis) -> f64 {
             ((ed + em * 30 + ey * 360 - (sd + sm * 30 + sy * 360)) as f64) / 360.
         }
     }
-}
-
-pub enum DayCountBasis {
-    US30Divide360,
-    ActualDivideActual,
-    ActualDivide360,
-    ActualDivide365,
-    Euro30Divide360,
 }
 
 #[cfg(test)]

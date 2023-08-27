@@ -3,6 +3,7 @@ pub mod bond;
 pub mod combine;
 pub mod complex;
 pub mod cumipmt;
+pub mod day_count;
 pub mod effect;
 pub mod fact;
 pub mod fv;
