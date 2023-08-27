@@ -56,6 +56,13 @@ pub fn coupncd(settle: u32, maturity: u32, freq: u8) -> u32 {
     }
 }
 
+// https://github.com/formula/formula/blob/master/src/accrint.js#L10
+pub fn accrint(issue: u32, settlement: u32, rate: f64, par: f64, basis: DayCountBasis) -> f64 {
+    let issue_date = EasyDate::from(issue);
+    let settlement_date = EasyDate::from(settlement);
+    par * rate * yearfrac(issue_date, settlement_date, basis)
+}
+
 pub fn coupnum(settle: u32, maturity: u32, freq: u8) -> u32 {
     assert!(freq == 1 || freq == 2 || freq == 4);
     let pcd = couppcd(settle, maturity, freq);
@@ -100,6 +107,70 @@ pub fn coupnum(settle: u32, maturity: u32, freq: u8) -> u32 {
 //         days + leap_days
 //     }
 // }
+
+// https://github.com/formula/formula/blob/master/src/yearfrac.js#L7
+pub fn yearfrac(start: EasyDate, end: EasyDate, basis: DayCountBasis) -> f64 {
+    let mut sd = start.day as i32;
+    let sm = start.month as i32;
+    let sy = start.year as i32;
+    let mut ed = end.day as i32;
+    let em = end.month as i32;
+    let ey = end.year as i32;
+    match basis {
+        DayCountBasis::US30Divide360 => {
+            if sd == 31 && ed == 31 {
+                sd = 30;
+                ed = 30;
+            } else if sd == 31 {
+                sd = 30
+            } else if sd == 30 && ed == 31 {
+                ed = 30
+            }
+            let days = (ed + em * 30 + ey * 360 - (sd + sm * 30 + sy * 360)) as f64;
+            days / 360.
+        }
+        DayCountBasis::ActualDivideActual => {
+            let s_days: u32 = start.into();
+            let e_days: u32 = end.into();
+            let actual_days = (e_days - s_days) as f64;
+            let sy_first_day: u32 = EasyDate {
+                year: sy as u32,
+                month: 1,
+                day: 1,
+            }
+            .into();
+            let ey_first_day: u32 = EasyDate {
+                year: (ey + 1) as u32,
+                month: 1,
+                day: 1,
+            }
+            .into();
+            let average = ((ey_first_day - sy_first_day) as f64) / ((ey - sy + 1) as f64);
+            actual_days / average
+        }
+        DayCountBasis::ActualDivide360 => {
+            let s_days: u32 = start.into();
+            let e_days: u32 = end.into();
+            ((e_days - s_days) as f64) / 360.
+        }
+        DayCountBasis::ActualDivide365 => {
+            let s_days: u32 = start.into();
+            let e_days: u32 = end.into();
+            ((e_days - s_days) as f64) / 365.
+        }
+        DayCountBasis::Euro30Divide360 => {
+            ((ed + em * 30 + ey * 360 - (sd + sm * 30 + sy * 360)) as f64) / 360.
+        }
+    }
+}
+
+pub enum DayCountBasis {
+    US30Divide360,
+    ActualDivideActual,
+    ActualDivide360,
+    ActualDivide365,
+    Euro30Divide360,
+}
 
 #[cfg(test)]
 mod tests {

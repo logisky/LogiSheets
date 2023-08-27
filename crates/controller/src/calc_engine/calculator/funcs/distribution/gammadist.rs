@@ -18,8 +18,8 @@ where
     let third = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(beta, third);
     assert_or_return!(beta > 0. && alpha > 0., ast::Error::Num);
-    let forth = fetcher.get_calc_value(args_iter.next().unwrap());
-    let v = get_condition_result(forth);
+    let fourth = fetcher.get_calc_value(args_iter.next().unwrap());
+    let v = get_condition_result(fourth);
     match v {
         ConditionResult::True => {
             let n = Gamma::new(alpha, 1. / beta).unwrap();

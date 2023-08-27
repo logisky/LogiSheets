@@ -18,8 +18,8 @@ where
     let third = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(std_dev, third);
     assert_or_return!(std_dev > 0., ast::Error::Num);
-    let forth = fetcher.get_calc_value(args_iter.next().unwrap());
-    let v = get_condition_result(forth);
+    let fourth = fetcher.get_calc_value(args_iter.next().unwrap());
+    let v = get_condition_result(fourth);
     match v {
         ConditionResult::True => {
             let n = Normal::new(mean, std_dev).unwrap();
