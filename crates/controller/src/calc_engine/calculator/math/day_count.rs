@@ -354,6 +354,16 @@ pub fn get_mat_factors<T: DayCountTools>(
     MatFactors { b, dim, a, dsm }
 }
 
+pub fn get_common_factors<T: DayCountTools>(
+    settlement: EasyDate,
+    maturity: EasyDate,
+) -> CommonFactors {
+    let dim = T::days_between(settlement, maturity, NumDenumPosition::Numerator);
+    let b = T::days_in_year(settlement, maturity);
+
+    CommonFactors { dim, b }
+}
+
 pub enum Method360Us {
     ModifyStartDate,
     ModifyBothDates,
@@ -385,4 +395,9 @@ pub struct MatFactors {
     pub dim: i32,
     pub a: i32,
     pub dsm: i32,
+}
+
+pub struct CommonFactors {
+    pub dim: i32,
+    pub b: f64,
 }

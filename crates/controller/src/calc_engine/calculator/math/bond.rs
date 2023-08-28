@@ -6,7 +6,9 @@ use crate::calc_engine::calculator::math::day_count::{
 };
 
 pub use super::day_count::DayCountBasis;
-use super::day_count::{get_mat_factors, DayCountTools, MatFactors};
+use super::day_count::{
+    get_common_factors, get_mat_factors, CommonFactors, DayCountTools, MatFactors,
+};
 
 pub fn couppcd(settle: u32, maturity: u32, freq: u8) -> u32 {
     assert!(freq == 1 || freq == 2 || freq == 4);
@@ -66,7 +68,7 @@ pub fn price<T: DayCountTools>(
     }
 }
 
-pub fn price_mat<T: DayCountTools>(
+pub fn pricemat<T: DayCountTools>(
     settle: u32,
     maturity: u32,
     issue: u32,
@@ -83,6 +85,83 @@ pub fn price_mat<T: DayCountTools>(
     let fact2 = a as f64 / b as f64 * rate * 100.;
 
     num1 / den1 - fact2
+}
+
+pub fn yieldmat<T: DayCountTools>(
+    settle: u32,
+    maturity: u32,
+    issue: u32,
+    rate: f64,
+    pr: f64,
+) -> f64 {
+    let settlement = EasyDate::from(settle);
+    let maturity_date = EasyDate::from(maturity);
+    let issue_date = EasyDate::from(issue);
+    let MatFactors { b, dim, a, dsm } = get_mat_factors::<T>(settlement, maturity_date, issue_date);
+
+    let term1 = dim as f64 / b * rate + 1. - pr / 100. - a as f64 / b * rate;
+    let term2 = pr / 100. + a as f64 / b * rate;
+    let term3 = b / dsm as f64;
+
+    term1 / term2 * term3
+}
+
+pub fn intrate<T: DayCountTools>(
+    settle: u32,
+    maturity: u32,
+    investment: f64,
+    redemption: f64,
+) -> f64 {
+    let settlement = EasyDate::from(settle);
+    let maturity_date = EasyDate::from(maturity);
+
+    let CommonFactors { dim, b } = get_common_factors::<T>(settlement, maturity_date);
+
+    (redemption - investment) / investment * b / dim as f64
+}
+
+pub fn received<T: DayCountTools>(
+    settle: u32,
+    maturity: u32,
+    investment: f64,
+    discount: f64,
+) -> f64 {
+    let settlement = EasyDate::from(settle);
+    let maturity_date = EasyDate::from(maturity);
+
+    let CommonFactors { dim, b } = get_common_factors::<T>(settlement, maturity_date);
+
+    investment / (1. - discount * dim as f64 / b)
+}
+
+pub fn disc<T: DayCountTools>(settle: u32, maturity: u32, pr: f64, redemption: f64) -> f64 {
+    let settlement = EasyDate::from(settle);
+    let maturity_date = EasyDate::from(maturity);
+
+    let CommonFactors { dim, b } = get_common_factors::<T>(settlement, maturity_date);
+
+    (-pr / redemption + 1.) * b / dim as f64
+}
+
+pub fn pricedisc<T: DayCountTools>(
+    settle: u32,
+    maturity: u32,
+    discount: f64,
+    redemption: f64,
+) -> f64 {
+    let settlement = EasyDate::from(settle);
+    let maturity_date = EasyDate::from(maturity);
+
+    let CommonFactors { dim, b } = get_common_factors::<T>(settlement, maturity_date);
+    redemption - discount * redemption * dim as f64 / b
+}
+
+pub fn yielddisc<T: DayCountTools>(settle: u32, maturity: u32, pr: f64, redemption: f64) -> f64 {
+    let settlement = EasyDate::from(settle);
+    let maturity_date = EasyDate::from(maturity);
+
+    let CommonFactors { dim, b } = get_common_factors::<T>(settlement, maturity_date);
+    (redemption - pr) / pr * b / dim as f64
 }
 
 // https://github.com/formula/formula/blob/master/src/accrint.js#L10

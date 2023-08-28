@@ -1,4 +1,4 @@
-use crate::calc_engine::calculator::math::bond::pricemat;
+use crate::calc_engine::calculator::math::bond::yieldmat;
 use crate::calc_engine::calculator::math::day_count::{
     Actual360, Actual365, ActualActual, Europe30_360, UsPsa30_360,
 };
@@ -24,15 +24,15 @@ where
 
     let third = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(issue, third);
-    assert_or_return!(issue > 0., ast::Error::Value);
+    assert_or_return!(issue > 0., ast::Error::Num);
 
     let fourth = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(rate, fourth);
     assert_or_return!(rate >= 0., ast::Error::Num);
 
     let fifth = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_f64_from_calc_value!(yld, fifth);
-    assert_or_return!(yld >= 0., ast::Error::Num);
+    assert_f64_from_calc_value!(pr, fifth);
+    assert_or_return!(pr >= 0., ast::Error::Num);
 
     assert_or_return!(settlement < maturity, ast::Error::Num);
 
@@ -44,15 +44,15 @@ where
         assert_f64_from_calc_value!(b, fetcher.get_calc_value(arg));
         assert_or_return!(b >= 0. && b <= 4., ast::Error::Num);
         match b.floor() as u8 {
-            0 => pricemat::<UsPsa30_360>(settle, maturity, issue, rate, yld),
-            1 => pricemat::<ActualActual>(settle, maturity, issue, rate, yld),
-            2 => pricemat::<Actual360>(settle, maturity, issue, rate, yld),
-            3 => pricemat::<Actual365>(settle, maturity, issue, rate, yld),
-            4 => pricemat::<Europe30_360>(settle, maturity, issue, rate, yld),
+            0 => yieldmat::<UsPsa30_360>(settle, maturity, issue, rate, pr),
+            1 => yieldmat::<ActualActual>(settle, maturity, issue, rate, pr),
+            2 => yieldmat::<Actual360>(settle, maturity, issue, rate, pr),
+            3 => yieldmat::<Actual365>(settle, maturity, issue, rate, pr),
+            4 => yieldmat::<Europe30_360>(settle, maturity, issue, rate, pr),
             _ => unreachable!(),
         }
     } else {
-        pricemat::<UsPsa30_360>(settle, maturity, issue, rate, yld)
+        yieldmat::<UsPsa30_360>(settle, maturity, issue, rate, pr)
     };
     CalcVertex::from_number(result)
 }
