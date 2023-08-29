@@ -10,6 +10,7 @@ mod complex;
 mod concatenate;
 mod condition;
 mod count;
+mod countblank;
 mod countif;
 mod cumipmt;
 mod datetime;
@@ -92,6 +93,7 @@ where
         "COT" => scalar_number::calc_cot(args, fetcher),
         "COTH" => scalar_number::calc_coth(args, fetcher),
         "COUNT" => count::calc(args, fetcher),
+        "COUNTBLANK" => countblank::calc(args, fetcher),
         "COUNTIF" => countif::calc(args, fetcher),
         "COUPNCD" => bonds::coupncd::calc(args, fetcher),
         "COUPNUM" => bonds::coupnum::calc(args, fetcher),
