@@ -16,3 +16,4 @@ pub mod pduration;
 pub mod pmt;
 pub mod pv;
 pub mod sln;
+pub mod tbill;

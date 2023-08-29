@@ -47,6 +47,7 @@ mod scalar_text;
 mod sln;
 mod sum;
 mod switch;
+mod tbill;
 mod utils;
 mod vlookup;
 
@@ -211,6 +212,9 @@ where
         "SWITCH" => switch::calc(args, fetcher),
         "TAN" => scalar_number::calc_tan(args, fetcher),
         "TANH" => scalar_number::calc_tanh(args, fetcher),
+        "TBILLEQ" => tbill::calc_tbilleq(args, fetcher),
+        "TBILLPRICE" => tbill::calc_tbillprice(args, fetcher),
+        "TBILLYIELD" => tbill::calc_tbillyield(args, fetcher),
         "TIME" => datetime::time::calc(args, fetcher),
         "TODAY" => datetime::today::calc(args),
         "TRIM" => scalar_text::calc_trim(args, fetcher),
