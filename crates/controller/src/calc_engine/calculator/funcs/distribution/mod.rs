@@ -1,5 +1,11 @@
+pub mod binom;
 pub mod chisqdist;
+pub mod exp;
+pub mod fisher;
 pub mod gammadist;
+pub mod negative_binomial;
 pub mod normdist;
 pub mod norminv;
+pub mod poisson;
 pub mod statistics;
+pub mod weibull;
