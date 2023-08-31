@@ -2,7 +2,7 @@ use logisheets_base::BlockId;
 
 #[derive(Debug, Clone)]
 pub struct CreateBlockPayload {
-    // block id is assigned by block creater. Block creater is responsible for
+    // block id is assigned by block creator. Block creator is responsible for
     // the uniqueness of block id. Block occupying this id would be removed
     // before creating.
     pub block_id: BlockId,

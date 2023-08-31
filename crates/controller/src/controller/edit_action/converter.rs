@@ -2,8 +2,8 @@ use logisheets_base::{BlockId, CellValue, TextId};
 
 use super::style_payload::{StyleUpdate, StyleUpdateType};
 use super::{
-    CellInput, ColShift, CreateBlock, EditPayload, LineShiftInBlock, MoveBlock, RowShift,
-    SetColWidth, SetRowHeight, SheetShift,
+    CellInput, ColShift, CreateBlock, EditPayload, LineShiftInBlock, MoveBlock, RemoveBlock,
+    RowShift, SetColWidth, SetRowHeight, SheetShift,
 };
 use crate::container::DataContainer;
 use crate::id_manager::TextIdManager;
@@ -13,7 +13,8 @@ use crate::payloads::sheet_process::{
     BlockDeleteColsPayload, BlockDeleteRowsPayload, BlockInsertColsPayload, BlockInsertRowsPayload,
     BlockPayload, CellChange, CellPayload, ColInfoUpdate, CreateBlock as EditCreateBlock,
     Direction, FormulaPayload, LineInfoUpdate, LinePayload, LineShift, MoveBlock as EditMoveBlock,
-    RowInfoUpdate, SheetPayload, SheetProcess, ShiftPayload, ShiftType,
+    RemoveBlock as EditRemoveBlock, RowInfoUpdate, SheetPayload, SheetProcess, ShiftPayload,
+    ShiftType,
 };
 use crate::payloads::sheet_shift::{SheetRenamePayload, SheetShiftPayload, SheetShiftType};
 use crate::payloads::Process;
@@ -50,6 +51,7 @@ impl<'a> Converter<'a> {
                 EditPayload::SetRowHeight(srh) => self.convert_set_row_height(srh),
                 EditPayload::SetVisible(_) => todo!(),
                 EditPayload::SheetShift(ss) => self.convert_sheet_shift(ss),
+                EditPayload::RemoveBlock(rb) => self.convert_remove_block(rb),
             };
             match proc {
                 Some(p) => {
@@ -187,6 +189,15 @@ impl<'a> Converter<'a> {
             master_col,
             row_cnt,
             col_cnt,
+        }));
+        Some(Process::Sheet(SheetProcess { sheet_id, payload }))
+    }
+
+    fn convert_remove_block(&mut self, rb: RemoveBlock) -> Option<Process> {
+        let RemoveBlock { sheet_idx, id } = rb;
+        let sheet_id = self.sheet_pos_manager.get_sheet_id(sheet_idx)?;
+        let payload = SheetPayload::Block(BlockPayload::Remove(EditRemoveBlock {
+            block_id: id as BlockId,
         }));
         Some(Process::Sheet(SheetProcess { sheet_id, payload }))
     }

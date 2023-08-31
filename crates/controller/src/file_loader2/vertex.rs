@@ -4,8 +4,8 @@ use logisheets_base::{
     get_book_name::GetBookNameTrait,
     id_fetcher::{IdFetcherTrait, VertexFetcherTrait},
     index_fetcher::IndexFetcherTrait,
-    CellId, ColId, Cube, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalRange, Range, RowId,
-    SheetId, TextId,
+    CellId, ColId, Cube, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalCellId, NormalRange,
+    Range, RowId, SheetId, TextId,
 };
 use logisheets_parser::{ast, context::ContextTrait, Parser};
 
@@ -232,6 +232,16 @@ impl<'a, 'b, 'c> IdFetcherTrait for Context<'a, 'b, 'c> {
 
     fn fetch_func_id(&mut self, func_name: &str) -> FuncId {
         self.vertex_connector.fetch_func_id(func_name)
+    }
+
+    fn fetch_norm_cell_id(
+        &mut self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> Result<NormalCellId> {
+        self.vertex_connector
+            .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
     }
 }
 

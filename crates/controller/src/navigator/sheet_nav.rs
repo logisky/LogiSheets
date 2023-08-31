@@ -104,3 +104,20 @@ pub struct Cache {
     pub cell_id: HashMap<(usize, usize), CellId>,
     pub cell_idx: HashMap<CellId, (usize, usize)>,
 }
+
+impl Cache {
+    pub fn clean(&mut self) {
+        self.row_id.clear();
+        self.row_index.clear();
+        self.col_index.clear();
+        self.col_id.clear();
+
+        self.clean_cell();
+    }
+
+    // Used in block action handler.
+    pub fn clean_cell(&mut self) {
+        self.cell_id.clear();
+        self.cell_idx.clear();
+    }
+}
