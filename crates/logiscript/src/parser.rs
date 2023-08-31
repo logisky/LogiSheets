@@ -1,3 +1,6 @@
+use logisheets_controller::controller::edit_action::{
+    CreateBlock, LineShiftInBlock, MoveBlock, RemoveBlock,
+};
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
@@ -102,6 +105,98 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
             let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
             Ok(Operator::DeleteCol(ShiftData { from, cnt }))
         }
+        Rule::block_create => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let range_pair = iter.next().unwrap();
+            let ((start_row, start_col), (end_row, end_col)) = parse_range(range_pair).unwrap();
+            let start_row = start_row as usize;
+            let start_col = start_col as usize;
+            let end_row = end_row as usize;
+            let end_col = end_col as usize;
+            Ok(Operator::CreateBlock(CreateBlock {
+                sheet_idx: 1, // dummy sheet_idx
+                id,
+                master_row: start_row,
+                master_col: start_col,
+                row_cnt: end_row - start_row + 1,
+                col_cnt: end_col - start_col + 1,
+            }))
+        }
+        Rule::block_move => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let position_pair = iter.next().unwrap();
+            let (row, col) = parse_position(position_pair).unwrap();
+            Ok(Operator::MoveBlock(MoveBlock {
+                sheet_idx: 1, // dummy sheet_idx
+                id,
+                new_master_row: row as usize,
+                new_master_col: col as usize,
+            }))
+        }
+        Rule::block_remove => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            // dummy sheet_idx
+            Ok(Operator::RemoveBlock(RemoveBlock { sheet_idx: 1, id }))
+        }
+        Rule::block_insert_row => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let idx = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            Ok(Operator::LineShiftInBlock(LineShiftInBlock {
+                sheet_idx: 1, // dummy sheet_idx
+                block_id: id,
+                idx,
+                cnt,
+                horizontal: true,
+                insert: true,
+            }))
+        }
+        Rule::block_insert_col => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let idx = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            Ok(Operator::LineShiftInBlock(LineShiftInBlock {
+                sheet_idx: 1, // dummy sheet_idx
+                block_id: id,
+                idx,
+                cnt,
+                horizontal: false,
+                insert: true,
+            }))
+        }
+        Rule::block_delete_row => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let idx = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            Ok(Operator::LineShiftInBlock(LineShiftInBlock {
+                sheet_idx: 1, // dummy sheet_idx
+                block_id: id,
+                idx,
+                cnt,
+                horizontal: true,
+                insert: false,
+            }))
+        }
+        Rule::block_delete_col => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let idx = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            Ok(Operator::LineShiftInBlock(LineShiftInBlock {
+                sheet_idx: 1, // dummy sheet_idx
+                block_id: id,
+                idx,
+                cnt,
+                horizontal: false,
+                insert: false,
+            }))
+        }
         _ => unreachable!(),
     }
 }
@@ -112,6 +207,13 @@ fn column_label_to_index(label: &str) -> u32 {
         result += (c as u32 - 64) * 26u32.pow(i as u32);
     }
     result - 1
+}
+
+fn parse_range(p: Pair<Rule>) -> Option<((u32, u32), (u32, u32))> {
+    let mut p = p.into_inner();
+    let start = parse_position(p.next().unwrap())?;
+    let end = parse_position(p.next().unwrap())?;
+    Some((start, end))
 }
 
 fn parse_position(p: Pair<Rule>) -> Option<(u32, u32)> {

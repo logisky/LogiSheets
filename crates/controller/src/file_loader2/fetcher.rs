@@ -83,6 +83,16 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
     fn fetch_func_id(&mut self, func_name: &str) -> logisheets_base::FuncId {
         self.func_id_manager.get_func_id(func_name)
     }
+
+    fn fetch_norm_cell_id(
+        &mut self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> Result<NormalCellId> {
+        self.navigator
+            .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
+    }
 }
 
 impl<'a> IndexFetcherTrait for Fetcher<'a> {

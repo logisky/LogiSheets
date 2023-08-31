@@ -1,3 +1,7 @@
+use logisheets_controller::controller::edit_action::{
+    CreateBlock, LineShiftInBlock, MoveBlock, RemoveBlock,
+};
+
 #[derive(Debug)]
 pub struct Statement {
     pub op: Operator,
@@ -16,6 +20,10 @@ pub enum Operator {
     InsertCol(ShiftData),
     DeleteRow(ShiftData),
     DeleteCol(ShiftData),
+    CreateBlock(CreateBlock), // ignore the sheet_idx
+    MoveBlock(MoveBlock),
+    RemoveBlock(RemoveBlock),
+    LineShiftInBlock(LineShiftInBlock),
 }
 
 #[derive(Debug)]

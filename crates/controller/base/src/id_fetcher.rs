@@ -1,4 +1,4 @@
-use crate::{Cube, CubeId, ExtRef, ExtRefId, Range, RangeId};
+use crate::{Cube, CubeId, ExtRef, ExtRefId, NormalCellId, Range, RangeId};
 use anyhow::Result;
 
 use super::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId, TextId};
@@ -16,6 +16,13 @@ pub trait IdFetcherTrait {
         row_idx: usize,
         col_idx: usize,
     ) -> Result<CellId>;
+
+    fn fetch_norm_cell_id(
+        &mut self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> Result<NormalCellId>;
 
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId;
 

@@ -4,7 +4,7 @@ use anyhow::Result;
 use im::{HashMap, HashSet};
 use logisheets_base::{
     block_affect::BlockAffectTrait, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
-    BlockRange, CellId::NormalCell, NormalRange, Range, RangeId, SheetId,
+    BlockRange, NormalRange, Range, RangeId, SheetId,
 };
 
 use crate::payloads::sheet_process::{
@@ -119,21 +119,16 @@ impl RangeManager {
             SheetPayload::Block(bp) => match bp {
                 BlockPayload::Create(create) => {
                     let start = ctx
-                        .fetch_cell_id(&sheet_id, create.master_row, create.master_col)
+                        .fetch_norm_cell_id(&sheet_id, create.master_row, create.master_col)
                         .unwrap();
                     let end = ctx
-                        .fetch_cell_id(
+                        .fetch_norm_cell_id(
                             &sheet_id,
                             create.master_row + create.row_cnt - 1,
                             create.master_col + create.col_cnt - 1,
                         )
                         .unwrap();
-                    match (start, end) {
-                        (NormalCell(s), NormalCell(e)) => {
-                            occupy_addr_range(exec_ctx, sheet_id, s, e, ctx)
-                        }
-                        _ => panic!("attempt to occupy the block area"),
-                    }
+                    occupy_addr_range(exec_ctx, sheet_id, start, end, ctx)
                 }
                 BlockPayload::DeleteCols(dc) => delete_block_line(
                     exec_ctx,
@@ -174,21 +169,16 @@ impl RangeManager {
                 BlockPayload::Move(mv) => {
                     let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, mv.block_id).unwrap();
                     let start = ctx
-                        .fetch_cell_id(&sheet_id, mv.new_master_row, mv.new_master_col)
+                        .fetch_norm_cell_id(&sheet_id, mv.new_master_row, mv.new_master_col)
                         .unwrap();
                     let end = ctx
-                        .fetch_cell_id(
+                        .fetch_norm_cell_id(
                             &sheet_id,
                             mv.new_master_row + row_cnt - 1,
                             mv.new_master_col + col_cnt - 1,
                         )
                         .unwrap();
-                    match (start, end) {
-                        (NormalCell(s), NormalCell(e)) => {
-                            occupy_addr_range(exec_ctx, sheet_id, s, e, ctx)
-                        }
-                        _ => panic!(""),
-                    }
+                    occupy_addr_range(exec_ctx, sheet_id, start, end, ctx)
                 }
                 BlockPayload::Remove(rb) => remove_block(exec_ctx, rb.block_id),
             },

@@ -39,13 +39,14 @@ pub enum EditPayload {
     CreateBlock(CreateBlock),
     LineShiftInBlock(LineShiftInBlock),
     MoveBlock(MoveBlock),
+    RemoveBlock(RemoveBlock),
     RowShift(RowShift),
     SetColWidth(SetColWidth),
     SetRowHeight(SetRowHeight),
-    StyleUpdate(StyleUpdate),
-    SheetRename(SheetRename),
     SetVisible(SetVisible),
+    SheetRename(SheetRename),
     SheetShift(SheetShift),
+    StyleUpdate(StyleUpdate),
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -131,6 +132,14 @@ pub struct MoveBlock {
     pub id: usize,
     pub new_master_row: usize,
     pub new_master_col: usize,
+}
+
+#[derive(Debug, Serialize, TS)]
+#[ts(file_name = "remove_block.ts", rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveBlock {
+    pub sheet_idx: usize,
+    pub id: usize,
 }
 
 #[derive(Debug, Serialize, TS)]

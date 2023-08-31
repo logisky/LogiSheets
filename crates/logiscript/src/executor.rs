@@ -1,5 +1,6 @@
 use logisheets_controller::controller::edit_action::{
-    CellInput, ColShift, EditAction, EditPayload, PayloadsAction, RowShift, SheetRename, SheetShift,
+    CellInput, ColShift, CreateBlock, EditAction, EditPayload, LineShiftInBlock, MoveBlock,
+    PayloadsAction, RemoveBlock, RowShift, SheetRename, SheetShift,
 };
 use logisheets_controller::{Value, Workbook};
 
@@ -60,6 +61,10 @@ fn execute(statements: Vec<Statement>) -> Option<ExecError> {
             Operator::InsertCol(data) => exec_shift_col(&mut ctx, data, line, true),
             Operator::DeleteRow(data) => exec_shift_row(&mut ctx, data, line, false),
             Operator::DeleteCol(data) => exec_shift_col(&mut ctx, data, line, false),
+            Operator::CreateBlock(p) => exec_create_block(&mut ctx, p, line),
+            Operator::MoveBlock(p) => exec_move_block(&mut ctx, p, line),
+            Operator::RemoveBlock(p) => exec_remove_block(&mut ctx, p, line),
+            Operator::LineShiftInBlock(p) => exec_block_line_shift(&mut ctx, p, line),
         };
         if res.is_some() {
             return res;
@@ -167,6 +172,94 @@ fn exec_input(ctx: &mut ExecContext, input: Input, line: usize) -> Option<ExecEr
     None
 }
 
+fn exec_create_block(
+    ctx: &mut ExecContext,
+    mut payload: CreateBlock,
+    line: usize,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    payload.sheet_idx = sheet_idx;
+    ctx.workbook
+        .handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CreateBlock(payload)],
+            undoable: false,
+        }));
+    None
+}
+
+fn exec_move_block(
+    ctx: &mut ExecContext,
+    mut payload: MoveBlock,
+    line: usize,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    payload.sheet_idx = sheet_idx;
+    ctx.workbook
+        .handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::MoveBlock(payload)],
+            undoable: false,
+        }));
+    None
+}
+
+fn exec_remove_block(
+    ctx: &mut ExecContext,
+    mut payload: RemoveBlock,
+    line: usize,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    payload.sheet_idx = sheet_idx;
+    ctx.workbook
+        .handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::RemoveBlock(payload)],
+            undoable: false,
+        }));
+    None
+}
+
+fn exec_block_line_shift(
+    ctx: &mut ExecContext,
+    mut payload: LineShiftInBlock,
+    line: usize,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    payload.sheet_idx = sheet_idx;
+    ctx.workbook
+        .handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::LineShiftInBlock(payload)],
+            undoable: false,
+        }));
+    None
+}
+
 fn exec_check_num(ctx: &mut ExecContext, check_num: CheckNum, line: usize) -> Option<ExecError> {
     let row = check_num.row;
     let col = check_num.col;
@@ -188,7 +281,7 @@ fn exec_check_num(ctx: &mut ExecContext, check_num: CheckNum, line: usize) -> Op
                     } else {
                         Some(ExecError {
                             line,
-                            msg: format!("find: {}, expect: {}", num, check_num.expect),
+                            msg: format!("found: {}, expect: {}", num, check_num.expect),
                         })
                     }
                 }

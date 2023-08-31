@@ -45,6 +45,20 @@ impl IdFetcherTrait for TestIdFetcher {
     fn fetch_func_id(&mut self, _: &str) -> FuncId {
         1
     }
+
+    fn fetch_norm_cell_id(
+        &mut self,
+        _sheet_id: &SheetId,
+        _row_idx: usize,
+        _col_idx: usize,
+    ) -> Result<NormalCellId> {
+        Ok(NormalCellId {
+            row: 0,
+            col: 0,
+            follow_row: None,
+            follow_col: None,
+        })
+    }
 }
 
 impl NameFetcherTrait for TestIdFetcher {

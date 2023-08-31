@@ -57,6 +57,62 @@ Delete cols at the given position.
 DELETECOL B 3
 ```
 
+### BLOCKCREATE
+
+Create a block with the given id and range.
+
+```ls
+BLOCKCREATE  1   A1:C3
+```
+
+### BLOCKREMOVE
+
+Remove a block with given id.
+
+```ls
+BLOCKREMOVE 1
+```
+
+### BLOCKMOVE
+
+Move a block by specifying new position of its master cell.
+
+```ls
+BLOCKMOVE 1  D4
+```
+
+### BLOCKINSERTROW
+
+Insert some rows in a block.
+
+```ls
+BLOCKINSERTROW {block_id}  {idx}  {cnt}
+```
+
+### BLOCKINSERTCOL
+
+Insert some cols in a block.
+
+```ls
+BLOCKINSERTCOL {block_id}  {idx}  {cnt}
+```
+
+### BLOCKDELETEROW
+
+Delete som rows in a block.
+
+```ls
+BLOCKDELETEROW  {block_id}  {idx}  {cnt}
+```
+
+### BLOCKDELETECOL
+
+Delete some cols in a block.
+
+```ls
+BLOCKDELTECOL {block_id}  {idx}  {cnt}
+```
+
 ### CHECKNUM
 
 Check whether the cell is equal to a given number.

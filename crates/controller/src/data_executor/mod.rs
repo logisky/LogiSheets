@@ -6,7 +6,7 @@ use logisheets_base::{
 use crate::{
     cell::Cell,
     container::{col_info_manager::ColInfo, row_info_manager::RowInfo, DataContainer},
-    navigator::Navigator,
+    navigator::{BlockPlace, Navigator},
     payloads::sheet_process::{
         block::BlockPayload,
         cell::CellChange,
@@ -198,6 +198,12 @@ impl DataExecutor {
                         .filter(|c| c.is_ok())
                         .map(|c| c.unwrap())
                         .collect::<Vec<_>>();
+                    let master = navigator.fetch_norm_cell_id(&sheet_id, start_row, start_col)?;
+                    navigator = navigator.add_block_place(
+                        sheet_id,
+                        c.block_id,
+                        BlockPlace::new(master, c.row_cnt as u32, c.col_cnt as u32),
+                    );
                     (
                         self.container.delete_cells(sheet_id, &cells),
                         cells.into_iter().map(|c| (sheet_id, c)).collect(),
@@ -362,8 +368,7 @@ impl DataExecutor {
             BlockPayload::Move(m) => {
                 let master_row = m.new_master_row;
                 let master_col = m.new_master_col;
-                if let Ok(CellId::NormalCell(master)) =
-                    navigator.fetch_cell_id(&sheet_id, master_row, master_col)
+                if let Ok(master) = navigator.fetch_norm_cell_id(&sheet_id, master_row, master_col)
                 {
                     navigator.move_block(&sheet_id, &m.block_id, master);
                     navigator

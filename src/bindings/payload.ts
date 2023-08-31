@@ -6,6 +6,7 @@ import {ColShift} from './col_shift'
 import {CreateBlock} from './create_block'
 import {LineShiftInBlock} from './line_shift_in_block'
 import {MoveBlock} from './move_block'
+import {RemoveBlock} from './remove_block'
 import {RowShift} from './row_shift'
 import {SetColWidth} from './set_col_width'
 import {SetRowHeight} from './set_row_height'
@@ -22,10 +23,11 @@ export type EditPayload =
     | {CreateBlock: CreateBlock}
     | {LineShiftInBlock: LineShiftInBlock}
     | {MoveBlock: MoveBlock}
+    | {RemoveBlock: RemoveBlock}
     | {RowShift: RowShift}
     | {SetColWidth: SetColWidth}
     | {SetRowHeight: SetRowHeight}
-    | {StyleUpdate: StyleUpdate}
-    | {SheetRename: SheetRename}
     | {SetVisible: SetVisible}
+    | {SheetRename: SheetRename}
     | {SheetShift: SheetShift}
+    | {StyleUpdate: StyleUpdate}

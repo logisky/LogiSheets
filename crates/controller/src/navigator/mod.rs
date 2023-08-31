@@ -197,6 +197,7 @@ impl Navigator {
         match sheet_nav {
             Some(sn) => {
                 sn.data.blocks.insert(block_id, bp);
+                sn.cache.clean_cell();
                 res
             }
             None => res,

@@ -129,6 +129,16 @@ impl<'a> IdFetcherTrait for VertexConnector<'a> {
     fn fetch_func_id(&mut self, func_name: &str) -> FuncId {
         self.get_id_fetcher().fetch_func_id(func_name)
     }
+
+    fn fetch_norm_cell_id(
+        &mut self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> Result<NormalCellId> {
+        self.get_id_fetcher()
+            .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
+    }
 }
 
 impl<'a> IndexFetcherTrait for VertexConnector<'a> {

@@ -3,7 +3,8 @@ use logisheets_base::get_active_sheet::GetActiveSheetTrait;
 use logisheets_base::get_book_name::GetBookNameTrait;
 use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
 use logisheets_base::{
-    Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, Range, RangeId, SheetId, TextId,
+    Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalCellId, Range, RangeId,
+    SheetId, TextId,
 };
 
 pub trait ContextTrait:
@@ -115,5 +116,15 @@ where
 
     fn fetch_func_id(&mut self, func_name: &str) -> FuncId {
         self.id_fetcher.fetch_func_id(func_name)
+    }
+
+    fn fetch_norm_cell_id(
+        &mut self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> Result<NormalCellId> {
+        self.id_fetcher
+            .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
     }
 }

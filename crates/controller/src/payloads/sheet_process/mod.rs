@@ -20,6 +20,7 @@ pub type Direction = shift::Direction;
 pub type BlockPayload = block::BlockPayload;
 pub type CreateBlock = block::CreateBlockPayload;
 pub type MoveBlock = block::MoveBlockPayload;
+pub type RemoveBlock = block::RemoveBlockPayload;
 pub type BlockInsertColsPayload = block::InsertColsPayload;
 pub type BlockInsertRowsPayload = block::InsertRowsPayload;
 pub type BlockDeleteColsPayload = block::DeleteColsPayload;
