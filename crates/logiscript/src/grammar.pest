@@ -9,6 +9,7 @@ signed = _{"+" | "-"}
 float = {signed? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)?}
 
 position = {col ~ row}
+range = {position ~ ":" ~ position}
 
 content = {not_space_or_tab ~ ANY*}
 
@@ -17,6 +18,8 @@ not_space_or_tab = _{
 }
 
 number = {ASCII_DIGIT+}
+block_id = {ASCII_DIGIT+}
+idx = {ASCII_DIGIT+}
 
 input_op = {"INPUT" ~ ws+ ~ position ~ ws+ ~ content}
 switch_op = {"SWITCH"~ ws+ ~ content}
@@ -30,6 +33,14 @@ insert_col = {"INSERTCOL" ~ ws+ ~ col ~ ws+ ~ number}
 delete_row = {"DELETEROW" ~ ws+ ~ row ~ ws+ ~ number}
 delete_col = {"DELETECOL" ~ ws+ ~ col ~ ws+ ~ number}
 
+block_create = {"BLOCKCREATE" ~ ws+ ~ block_id ~ ws+ ~ range}
+block_remove = {"BLOCKREMOVE" ~ ws+ ~ block_id}
+block_move = {"BLOCKMOVE" ~ ws+ ~ block_id ~ ws+ ~ position}
+block_insert_row = {"BLOCKINSERTROW" ~ ws+ ~ block_id ~ ws+ ~ idx ~ ws+ ~ number}
+block_insert_col = {"BLOCKINSERTCOL" ~ ws+ ~ block_id ~ ws+ ~ idx ~ ws+ ~ number}
+block_delete_row = {"BLOCKDELETEROW" ~ ws+ ~ block_id ~ ws+ ~ idx ~ ws+ ~ number}
+block_delete_col = {"BLOCKDELETECOL" ~ ws+ ~ block_id ~ ws+ ~ idx ~ ws+ ~ number}
+
 statement = _{
     input_op
     | switch_op
@@ -41,4 +52,11 @@ statement = _{
     | insert_col
     | delete_row
     | delete_col
+    | block_create
+    | block_remove
+    | block_move
+    | block_insert_col
+    | block_insert_row
+    | block_delete_col
+    | block_delete_row
 }
