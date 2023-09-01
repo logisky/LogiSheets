@@ -118,10 +118,25 @@ impl Navigator {
     }
 
     pub fn move_block(&mut self, sheet_id: &SheetId, block_id: &BlockId, new_master: NormalCellId) {
-        let sheet_nav = self.get_sheet_nav(sheet_id);
-        if let Some(mut bp) = sheet_nav.data.blocks.get_mut(&block_id) {
-            bp.master = new_master;
-            sheet_nav.cache = Cache::default()
+        if let Ok((row_cnt, col_cnt)) = self.get_block_size(*sheet_id, *block_id) {
+            if let Ok((new_master_row, new_master_col)) =
+                self.fetch_normal_cell_idx(sheet_id, &new_master)
+            {
+                if !self.any_other_blocks_in(
+                    *sheet_id,
+                    *block_id,
+                    new_master_row,
+                    new_master_col,
+                    new_master_row + row_cnt - 1,
+                    new_master_col + col_cnt - 1,
+                ) {
+                    let sheet_nav = self.get_sheet_nav(sheet_id);
+                    if let Some(mut bp) = sheet_nav.data.blocks.get_mut(&block_id) {
+                        bp.master = new_master;
+                        sheet_nav.cache = Cache::default()
+                    }
+                }
+            }
         }
     }
 
@@ -208,6 +223,28 @@ impl Navigator {
         if let Some(sn) = self.sheet_navs.get_mut(&sheet_id) {
             sn.cache = Cache::default();
         }
+    }
+
+    pub fn any_other_blocks_in(
+        &mut self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        start_row: usize,
+        end_row: usize,
+        start_col: usize,
+        end_col: usize,
+    ) -> bool {
+        for i in start_row..=start_col {
+            for j in end_row..=end_col {
+                let cell_id = self.fetch_cell_id(&sheet_id, i, j).unwrap();
+                if let CellId::BlockCell(b) = cell_id {
+                    if b.block_id != block_id {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 }
 

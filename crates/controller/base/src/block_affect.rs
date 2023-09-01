@@ -21,4 +21,13 @@ pub trait BlockAffectTrait {
         cnt: usize,
         is_row: bool,
     ) -> Result<Vec<BlockId>>;
+    fn any_other_blocks_in(
+        &mut self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        start_row: usize,
+        end_row: usize,
+        start_col: usize,
+        end_col: usize,
+    ) -> bool;
 }

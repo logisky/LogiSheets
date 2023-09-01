@@ -285,6 +285,19 @@ impl<'a> BlockAffectTrait for VertexConnector<'a> {
         self.id_navigator
             .get_affected_blockplace(&sheet_id, from_idx, cnt, is_row)
     }
+
+    fn any_other_blocks_in(
+        &mut self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        start_row: usize,
+        end_row: usize,
+        start_col: usize,
+        end_col: usize,
+    ) -> bool {
+        self.idx_navigator
+            .any_other_blocks_in(sheet_id, block_id, start_row, end_row, start_col, end_col)
+    }
 }
 
 impl<'a> GetNormCellIdTrait for VertexConnector<'a> {
