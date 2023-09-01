@@ -168,17 +168,28 @@ impl RangeManager {
                 ),
                 BlockPayload::Move(mv) => {
                     let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, mv.block_id).unwrap();
-                    let start = ctx
-                        .fetch_norm_cell_id(&sheet_id, mv.new_master_row, mv.new_master_col)
-                        .unwrap();
-                    let end = ctx
-                        .fetch_norm_cell_id(
-                            &sheet_id,
-                            mv.new_master_row + row_cnt - 1,
-                            mv.new_master_col + col_cnt - 1,
-                        )
-                        .unwrap();
-                    occupy_addr_range(exec_ctx, sheet_id, start, end, ctx)
+                    if ctx.any_other_blocks_in(
+                        sheet_id,
+                        mv.block_id,
+                        mv.new_master_row,
+                        mv.new_master_col,
+                        row_cnt + mv.new_master_row - 1,
+                        col_cnt + mv.new_master_col - 1,
+                    ) {
+                        exec_ctx
+                    } else {
+                        let start = ctx
+                            .fetch_norm_cell_id(&sheet_id, mv.new_master_row, mv.new_master_col)
+                            .unwrap();
+                        let end = ctx
+                            .fetch_norm_cell_id(
+                                &sheet_id,
+                                mv.new_master_row + row_cnt - 1,
+                                mv.new_master_col + col_cnt - 1,
+                            )
+                            .unwrap();
+                        occupy_addr_range(exec_ctx, sheet_id, start, end, ctx)
+                    }
                 }
                 BlockPayload::Remove(rb) => remove_block(exec_ctx, rb.block_id),
             },
