@@ -27,6 +27,7 @@ checknum_op = {"CHECKNUM"~ ws+ ~ position ~ ws+ ~ float}
 checkstr_op = {"CHECKSTR" ~ ws+ ~ position ~ ws+ ~ content}
 checkerr_op = {"CHECKERR" ~ ws+ ~ position ~ ws+ ~ content}
 checkformula_op = {"CHECKFORMULA" ~ ws+ ~ position ~ ws+ ~ content}
+checkempty_op = {"CHECKEMPTY" ~ ws+ ~ position}
 
 insert_row = {"INSERTROW" ~ ws+ ~ row ~ ws+ ~ number}
 insert_col = {"INSERTCOL" ~ ws+ ~ col ~ ws+ ~ number}
@@ -48,6 +49,7 @@ statement = _{
     | checknum_op
     | checkstr_op
     | checkformula_op
+    | checkempty_op
     | insert_row
     | insert_col
     | delete_row
