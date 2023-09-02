@@ -53,11 +53,11 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     let new_ids = new_id_manager.get_col_ids(cnt);
     let new_cols = {
         let cols = sheet_nav.data.cols.clone();
-        let row_max = cols.len();
+        let col_max = cols.len();
         let (mut left, right) = cols.split_at(idx);
         left.append(new_ids.clone());
         left.append(right);
-        left.truncate(row_max);
+        left.truncate(col_max);
         left
     };
     SheetNav {

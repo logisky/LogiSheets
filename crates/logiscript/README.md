@@ -144,3 +144,11 @@ Check the formula of a cell.
 ```ls
 CHECKFORMULA A1 SUM(1, 2)
 ```
+
+### CHECKEMPTY
+
+Check if the cell is blank
+
+```ls
+CHECKEMPTY A1
+```

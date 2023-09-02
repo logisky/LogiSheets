@@ -16,6 +16,7 @@ pub enum Operator {
     CheckString(CheckString),
     CheckError(CheckError),
     CheckFormula(CheckFormula),
+    CheckEmpty(CheckEmpty),
     InsertRow(ShiftData),
     InsertCol(ShiftData),
     DeleteRow(ShiftData),
@@ -50,6 +51,12 @@ pub struct CheckString {
     pub row: u32,
     pub col: u32,
     pub expect: String,
+}
+
+#[derive(Debug)]
+pub struct CheckEmpty {
+    pub row: u32,
+    pub col: u32,
 }
 
 #[derive(Debug)]

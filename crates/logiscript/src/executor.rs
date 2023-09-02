@@ -5,7 +5,8 @@ use logisheets_controller::controller::edit_action::{
 use logisheets_controller::{Value, Workbook};
 
 use crate::operator::{
-    CheckError, CheckFormula, CheckNum, CheckString, Input, Operator, ShiftData, Statement, Switch,
+    CheckEmpty, CheckError, CheckFormula, CheckNum, CheckString, Input, Operator, ShiftData,
+    Statement, Switch,
 };
 use crate::parser::{parse, ParseError};
 
@@ -57,6 +58,7 @@ fn execute(statements: Vec<Statement>) -> Option<ExecError> {
             Operator::CheckFormula(check_formula) => {
                 exec_check_formula(&mut ctx, check_formula, line)
             }
+            Operator::CheckEmpty(c) => exec_check_empty(&mut ctx, c, line),
             Operator::InsertRow(data) => exec_shift_row(&mut ctx, data, line, true),
             Operator::InsertCol(data) => exec_shift_col(&mut ctx, data, line, true),
             Operator::DeleteRow(data) => exec_shift_row(&mut ctx, data, line, false),
@@ -258,6 +260,39 @@ fn exec_block_line_shift(
             undoable: false,
         }));
     None
+}
+
+fn exec_check_empty(ctx: &mut ExecContext, c: CheckEmpty, line: usize) -> Option<ExecError> {
+    let row = c.row as usize;
+    let col = c.col as usize;
+    let ws = ctx.workbook.get_sheet_by_name(&ctx.sheet_name);
+    if let Err(_) = ws {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", &ctx.sheet_name),
+        });
+    }
+    let mut ws = ws.unwrap();
+    let v = ws.get_value(row, col).unwrap();
+    match v {
+        Value::Str(s) => Some(ExecError {
+            line,
+            msg: format!("expect empty, found string: {}", s),
+        }),
+        Value::Bool(b) => Some(ExecError {
+            line,
+            msg: format!("expect empty, found bool: {}", b),
+        }),
+        Value::Number(n) => Some(ExecError {
+            line,
+            msg: format!("expect empty, found number: {}", n),
+        }),
+        Value::Error(e) => Some(ExecError {
+            line,
+            msg: format!("expect empty, found {}", e),
+        }),
+        Value::Empty => None,
+    }
 }
 
 fn exec_check_num(ctx: &mut ExecContext, check_num: CheckNum, line: usize) -> Option<ExecError> {
