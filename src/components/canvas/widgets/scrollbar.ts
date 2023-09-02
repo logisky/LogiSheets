@@ -1,84 +1,90 @@
-import {EventType, on} from '@/core/events'
-import {ScrollbarAttr, ScrollbarType} from '@/components/scrollbar'
+import { CustomScrollEvent, ScrollbarType, xScrollbarStore, yScrollbarStore} from '@/components/scrollbar'
+import {useLocalStore} from 'mobx-react'
+import {autorun, runInAction} from 'mobx'
 import {CANVAS_OFFSET, SheetService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {RefObject, useEffect, useReducer} from 'react'
-import {Subscription} from 'rxjs'
-const reducer = (
-    prevState: ScrollbarAttr,
-    newState: Partial<ScrollbarAttr>
-) => {
-    const s = {...prevState}
-    if (newState.offsetHeight !== undefined)
-        s.offsetHeight = newState.offsetHeight
-    if (newState.scrollHeight !== undefined)
-        s.scrollHeight = newState.scrollHeight
-    if (newState.scrollTop !== undefined) s.scrollTop = newState.scrollTop
-    return s
-}
-interface ScrollbarProps {
-    readonly canvas: RefObject<HTMLCanvasElement>
-}
-export const useScrollbar = ({canvas}: ScrollbarProps) => {
+import {WheelEvent, useEffect} from 'react'
+import {useEventListener} from 'ahooks'
+import { canvasStore } from '../store'
+import { Buttons } from '@/core'
+export const useScrollbar = () => {
+    const xScrollbar = useLocalStore(() => xScrollbarStore)
+    const yScrollbar = useLocalStore(() => yScrollbarStore)
+    const canvas = useLocalStore(() => canvasStore)
     const sheetSvc = useInjection<SheetService>(TYPES.Sheet)
-    const [xScrollbarAttr, setXScrollbarAttr] = useReducer(reducer, {
-        direction: 'x',
-    })
-    const [yScrollbarAttr, setYScrollbarAttr] = useReducer(reducer, {
-        direction: 'y',
-    })
 
     useEffect(() => {
-        if (!canvas.current) return
-        const {offsetHeight: height, offsetWidth: width} = canvas.current
-        setXScrollbarAttr({
-            offsetHeight: width,
-            scrollHeight: width + CANVAS_OFFSET,
+        const sub = canvas.obs().subscribe(data => {
+            if (data.type === 'wheel') {
+                const e = data.args as WheelEvent
+                const delta = e.deltaY
+                const newScroll = mouseWheelScrolling(delta, 'y') ?? 0
+                const oldScroll = sheetSvc.getSheet()?.scroll.y
+                if (oldScroll !== newScroll) {
+                    sheetSvc.getSheet()?.scroll?.update('y', newScroll)
+                }
+                canvas.emit('yScroll', {e, oldScroll, newScroll})
+            }
         })
-        setYScrollbarAttr({
-            offsetHeight: height,
-            scrollHeight: height + CANVAS_OFFSET,
-        })
-    }, [])
-
-    useEffect(() => {
-        const subs = new Subscription()
-        subs.add(
-            on(window, EventType.RESIZE).subscribe(() => {
-                if (!canvas.current) throw Error('not have canvas')
-                const sheet = sheetSvc.getSheet()
-                if (!sheet) throw Error('not have a sheet')
-                const {offsetHeight: canvasHeight, offsetWidth: canvasWidth} =
-                    canvas.current
-                const scrollWidth =
-                    sheet.maxWidth() > canvasWidth
-                        ? sheet.maxWidth()
-                        : sheet.scroll.x + canvasWidth + CANVAS_OFFSET
-                const scrollHeight =
-                    sheet.maxHeight() > canvasHeight
-                        ? sheet.maxHeight()
-                        : sheet.scroll.y + canvasHeight + CANVAS_OFFSET
-                setXScrollbarAttr({
-                    offsetHeight: canvasWidth,
-                    scrollHeight: scrollWidth,
-                })
-                setYScrollbarAttr({offsetHeight: canvasHeight, scrollHeight})
-            })
-        )
         return () => {
-            subs.unsubscribe()
+            sub.unsubscribe()
         }
     }, [])
 
-    const setScrollTop = (scrollTop: number, type: ScrollbarType) => {
-        if (type === 'x') setXScrollbarAttr({scrollTop: scrollTop})
-        else if (type === 'y') setYScrollbarAttr({scrollTop: scrollTop})
-    }
+    useEffect(() => {
+        const newScroll = xScrollbar.scrollTop
+        const oldScroll = sheetSvc.getSheet()?.scroll.x
+        if (oldScroll !== newScroll) sheetSvc.getSheet()?.scroll?.update('x', newScroll)
+        const customEvent: CustomScrollEvent = {buttons: Buttons.UNDEFINED} 
+        canvas.emit('xScroll', {e: customEvent, newScroll, oldScroll})
+    }, [xScrollbar.scrollTop])
+
+    useEffect(() => {
+        const newScroll = yScrollbar.scrollTop
+        const oldScroll = sheetSvc.getSheet()?.scroll.y
+        if (oldScroll !== newScroll) sheetSvc.getSheet()?.scroll?.update('y', newScroll)
+        const customEvent: CustomScrollEvent = {buttons: Buttons.UNDEFINED} 
+        canvas.emit('yScroll', {e: customEvent, newScroll, oldScroll})
+    }, [yScrollbar.scrollTop])
+
+    useEffect(() => {
+        autorun(() => {
+            if (!canvas.canvas) return
+            const {offsetHeight: height, offsetWidth: width} = canvas.canvas
+            runInAction(() => {
+                xScrollbar.offsetHeight = width
+                xScrollbar.scrollHeight = width + CANVAS_OFFSET
+                yScrollbar.offsetHeight = height
+                yScrollbar.scrollHeight = height + CANVAS_OFFSET
+            })
+        })
+    }, [])
+    useEventListener('resize', () => {
+        if (!canvas.canvas) throw Error('not have canvas')
+        const sheet = sheetSvc.getSheet()
+        if (!sheet) throw Error('not have a sheet')
+        const {offsetHeight: canvasHeight, offsetWidth: canvasWidth} =
+            canvas.canvas
+        const scrollWidth =
+            sheet.maxWidth() > canvasWidth
+                ? sheet.maxWidth()
+                : sheet.scroll.x + canvasWidth + CANVAS_OFFSET
+        const scrollHeight =
+            sheet.maxHeight() > canvasHeight
+                ? sheet.maxHeight()
+                : sheet.scroll.y + canvasHeight + CANVAS_OFFSET
+        runInAction(() => {
+            xScrollbar.offsetHeight = canvasWidth
+            xScrollbar.scrollHeight = scrollWidth
+            yScrollbar.offsetHeight = canvasHeight
+            yScrollbar.scrollHeight = scrollHeight
+        })
+    })
 
     const mouseWheelScrolling = (delta: number, type: ScrollbarType) => {
         const sheet = sheetSvc.getSheet()
-        if (!sheet || !canvas.current) return
+        if (!sheet || !canvas.canvas) return
         const oldScroll = type === 'x' ? sheet.scroll.x : sheet.scroll.y
         let newScroll = oldScroll + delta
         if (delta === 0) return
@@ -87,25 +93,22 @@ export const useScrollbar = ({canvas}: ScrollbarProps) => {
         if (newScroll === oldScroll) return
         if (type === 'y') {
             sheet.viewHeight =
-                newScroll + canvas.current.offsetHeight + CANVAS_OFFSET
-            setYScrollbarAttr({
-                scrollTop: newScroll,
-                scrollHeight: sheet.maxHeight(),
+                newScroll + canvas.canvas.offsetHeight + CANVAS_OFFSET
+            runInAction(() => {
+                yScrollbar.scrollTop = newScroll
+                yScrollbar.scrollHeight = sheet.maxHeight()
             })
         } else if (type === 'x') {
             sheet.viewWidth =
-                newScroll + canvas.current.offsetWidth + CANVAS_OFFSET
-            setXScrollbarAttr({
-                scrollTop: newScroll,
-                scrollHeight: sheet.maxWidth(),
+                newScroll + canvas.canvas.offsetWidth + CANVAS_OFFSET
+            runInAction(() => {
+                xScrollbar.scrollTop = newScroll
+                xScrollbar.scrollHeight = sheet.maxWidth()
             })
         }
         return newScroll
     }
     return {
-        xScrollbarAttr,
-        yScrollbarAttr,
-        setScrollTop,
         mouseWheelScrolling,
     }
 }

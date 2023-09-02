@@ -7,7 +7,7 @@ export type CellType =
     | 'FixedTopHeader'
     | 'unknown'
 export class Cell extends RenderCell {
-    constructor(public type: CellType) {
+    constructor(public type: CellType = 'unknown') {
         super()
     }
     override equals(cell: Cell): boolean {

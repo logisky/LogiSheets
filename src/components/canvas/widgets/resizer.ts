@@ -1,11 +1,13 @@
 import {pxToPt} from '@/core'
+import {useLocalStore} from 'mobx-react'
 import {Backend, DataService, RenderCell, SheetService} from '@/core/data'
 import {Range} from '@/core/standable'
-import {RefObject, useRef, useState} from 'react'
+import {RefObject, useEffect, useRef, useState} from 'react'
 import {getOffset} from '../defs'
 import {SetColWidthBuilder, SetRowHeightBuilder} from '@logisheets_bg'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
+import { canvasStore } from '../store'
 interface ResizerProps {
     /**
      * Resizer的位置信息
@@ -18,13 +20,24 @@ interface ResizerProps {
     readonly leftCell: RenderCell
 }
 const RESIZER_SIZE = 4
-export const useResizers = (canvas: RefObject<HTMLCanvasElement>) => {
+export const useResizers = () => {
     const [resizers, setResizers] = useState<ResizerProps[]>([])
     const [active, setActive] = useState<ResizerProps>()
     const [moving, setMoving] = useState({x: 0, y: 0})
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const canvasHost = useLocalStore(() => canvasStore)
+
+    useEffect(() => {
+        const sub = canvasHost.obs().subscribe(data => {
+            if (data.type === 'render') init()
+            else if (data.type === 'mouseup') mouseup()
+        })
+        return () => {
+            sub.unsubscribe()
+        }
+    }, [])
     /**
      * 拖动过程中显示的宽度信息
      */
@@ -62,8 +75,8 @@ export const useResizers = (canvas: RefObject<HTMLCanvasElement>) => {
         setResizers(rowResizers.concat(colResizers))
     }
     const mousedown = (e: MouseEvent) => {
-        if (!canvas.current) return
-        const {x, y} = getOffset(e.clientX, e.clientY, canvas.current)
+        if (!canvasHost.canvas) return
+        const {x, y} = getOffset(e.clientX, e.clientY, canvasHost.canvas)
         const mousedownRange = new Range()
             .setStartRow(y)
             .setEndRow(y)
@@ -138,7 +151,6 @@ export const useResizers = (canvas: RefObject<HTMLCanvasElement>) => {
         active,
         moving,
         hoverText,
-        init,
         mousedown,
         mousemove,
         mouseup,

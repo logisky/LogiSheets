@@ -1,8 +1,14 @@
-import {SelectorProps} from '@/components/selector'
+import {SelectorProps, selectorStore} from '@/components/selector'
+import {useInjection} from '@/core/ioc/provider'
+import {DataService, RenderCell} from '@/core/data'
+import {TYPES} from '@/core/ioc/types'
+import {useLocalStore} from 'mobx-react'
 import {Cell} from '../defs'
-import {RefObject, useEffect, useState} from 'react'
-import {StartCellEvent} from './start-cell'
+import {MouseEvent, WheelEvent, useEffect, useRef} from 'react'
 import {Range} from '@/core/standable'
+import { canvasStore as _canvasStore, canvasStore } from '../store'
+import { Buttons } from '@/core'
+import { CustomScrollEvent } from '@/components/scrollbar'
 
 export const getPosition = (selector: SelectorProps) => {
     return new Range()
@@ -65,79 +71,100 @@ export const getSelector = (
     return selector
 }
 
-export type SelectorChange = (selector?: {
-    startCell: Cell
-    endCell: Cell
-}) => void
+export const useSelector = () => {
+    const moving = useRef(false)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const selector = useLocalStore(() => selectorStore)
+    const canvas = useLocalStore(() => canvasStore)
 
-interface UseSelectorProps {
-    readonly canvas: RefObject<HTMLCanvasElement>
-    readonly selectorChange: SelectorChange
-}
-
-export const useSelector = ({canvas, selectorChange}: UseSelectorProps) => {
-    const [selector, setSelector] = useState<SelectorProps>()
-    const [startCellInner, setStartCell] = useState<Cell>()
-    const [endCell, setEndCell] = useState<Cell | undefined>(undefined)
-
-    // 更新selector
     useEffect(() => {
-        if (startCellInner === undefined || canvas.current === null) {
-            _setSelector()
+        const sub = canvas.obs().subscribe(data => {
+            if (data.type === 'yScroll') {
+                const {e, newScroll, oldScroll} = data.args
+                if (newScroll !== oldScroll) scroll(e)
+            } else if (data.type === 'xScroll') {
+                const {e, newScroll, oldScroll} = data.args
+                if (newScroll !== oldScroll) scroll(e)
+            } else if (data.type === 'mouseup') onMouseUp()
+            else if (data.type === 'mousemove') {
+                const {e, startCell} = data.args
+                if (!canvas.resizing && !canvas.dnding) onMouseMove(startCell)
+            } else if (data.type === 'mousedown') {
+                const {e, cell} = data.args
+                onMouseDown(e, cell)
+            } else if (data.type === 'contextmenu') {
+                const {e, cell} = data.args
+                onMouseDown(e, cell)
+            }
+        })
+        return () => {
+            sub.unsubscribe()
+        }
+    }, [])
+
+    const onContextmenu = (e: MouseEvent, startCell: Cell) => {
+        selector.setCells(startCell, {e, changed: true}, startCell)
+    }
+
+    const onMouseMove = (endCell: Cell) => {
+        if (!selector.startCell || !selector.startCellInfo || !moving.current) return
+        selector.setCells(selector.startCell, selector.startCellInfo, endCell)
+    }
+    const onMouseDown = (e: MouseEvent, matchCell: Cell) => {
+        const buttons = e.buttons
+        if (buttons !== Buttons.LEFT) return
+        moving.current = true
+        selector.setCells(matchCell, {
+            e,
+            changed: !!(selector.startCell && matchCell.equals(selector.startCell))
+        }, matchCell)
+    }
+
+    const scroll = (e: WheelEvent | CustomScrollEvent) => {
+        const oldStartCell = selector.startCell
+        if (
+            !oldStartCell ||
+            oldStartCell.type === 'LeftTop' ||
+            oldStartCell.type === 'unknown'
+        )
+            return
+        let renderCell: RenderCell | undefined
+        const viewRange = DATA_SERVICE.cachedViewRange
+        if (oldStartCell.type === 'FixedLeftHeader')
+            renderCell = viewRange.rows.find((r) =>
+                r.coodinate.cover(oldStartCell.coodinate)
+            )
+        else if (oldStartCell.type === 'FixedTopHeader')
+            renderCell = viewRange.cols.find((c) =>
+                c.coodinate.cover(oldStartCell.coodinate)
+            )
+        else if (oldStartCell.type === 'Cell')
+            renderCell = viewRange.cells.find((c) =>
+                c.coodinate.cover(oldStartCell.coodinate)
+            )
+        else return
+        if (!renderCell) {
+            selector.reset()
             return
         }
-        const selector = getSelector(canvas.current, startCellInner, endCell)
-        _setSelector(selector)
-    }, [canvas, endCell, startCellInner])
-
-    const _setSelector = (selector?: SelectorProps) => {
-        setSelector(selector)
-        if (!selector || !startCellInner) selectorChange()
-        else
-            selectorChange({
-                startCell: startCellInner,
-                endCell: endCell ?? startCellInner,
-            })
+        const newStartCell = new Cell(oldStartCell.type).copyByRenderCell(
+            renderCell
+        )
+        selector.setCells(newStartCell, {
+            e,
+            changed: false,
+            scroll: true,
+        }, newStartCell)
+    }
+    const onMouseUp = () => {
+        moving.current = false
     }
 
-    const onContextmenu = (startCell: Cell) => {
-        setEndCell(undefined)
-        setStartCell(startCell)
-    }
-
-    const onMouseDown = (startCell: Cell) => {
-        setEndCell(undefined)
-        setStartCell(startCell)
-    }
-
-    const onMouseMove = (matchCell: Cell) => {
-        setEndCell(matchCell)
-    }
-
-    const onScroll = (startCell: Cell) => {
-        setEndCell(undefined)
-        setStartCell(startCell)
-    }
-
-    const startCellChange = (e?: StartCellEvent) => {
-        if (e?.cell === undefined) {
-            _setSelector()
-            return
-        }
-        if (e.from === 'scroll') onScroll(e.cell)
-        else if (!e.same) {
-            if (e.from === 'mousedown') onMouseDown(e.cell)
-            else if (e.from === 'contextmenu') onContextmenu(e.cell)
-            else _setSelector()
-        }
-    }
     return {
-        selector,
-        startCell: startCellInner,
-        endCell,
-        startCellChange,
         onContextmenu,
-        onMouseDown,
         onMouseMove,
+        onMouseDown,
+        onMouseUp,
+        scroll,
     }
 }

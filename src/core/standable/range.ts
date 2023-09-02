@@ -72,4 +72,12 @@ export class Range {
             other.#endRow === this.#endRow
         )
     }
+    toString() {
+        return {
+            startRow: this.#startRow,
+            startCol: this.#startCol,
+            endRow: this.#endRow,
+            endCol: this.#endCol
+        }
+    }
 }

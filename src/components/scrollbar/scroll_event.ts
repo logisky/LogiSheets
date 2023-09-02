@@ -1,4 +1,4 @@
-import {ScrollbarType} from './scrollbar'
+import {ScrollbarType} from './types'
 export class ScrollEvent {
     public type: ScrollbarType = 'x'
     public delta = 0

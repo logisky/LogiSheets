@@ -1,9 +1,9 @@
-import {Range, StandardBlock} from '@/core/standable'
-import {SelectBlockComponent} from './select-block'
-import {Cell} from './defs'
-import {useState, ReactElement, MouseEvent} from 'react'
-import {useInjection} from '@/core/ioc/provider'
-import {ContextMenuComponent, ContextMenuItem} from '@/ui/contextmenu'
+import { Range, StandardBlock } from '@/core/standable'
+import { SelectBlockComponent } from './select-block'
+import { Cell } from './defs'
+import { useState, ReactElement, useEffect } from 'react'
+import { useInjection } from '@/core/ioc/provider'
+import { ContextMenuComponent, ContextMenuItem } from '@/ui/contextmenu'
 import {
     DeleteBlockColsBuilder,
     DeleteColsBuilder,
@@ -16,23 +16,41 @@ import {
     DeleteRowsBuilder,
     CreateBlockBuilder,
 } from '@logisheets_bg'
-import {TYPES} from '@/core/ioc/types'
+import { TYPES } from '@/core/ioc/types'
 import {Backend, SheetService} from '@/core/data'
+import { observer, useLocalStore } from 'mobx-react'
+import { canvasStore } from './store'
+import { selectorStore } from '../selector'
 
-export interface ContextmenuProps {
-    mouseevent: MouseEvent
-    startCell: Cell
-    endCell?: Cell
-    isOpen: boolean
-    setIsOpen: (isOpen: boolean) => void
-}
-
-export const ContextmenuComponent = (props: ContextmenuProps) => {
-    const {mouseevent, startCell, isOpen, setIsOpen, endCell} = props
+export const ContextmenuComponent = observer(() => {
+    const [isOpen, setIsOpen] = useState(false)
+    const [mouseevent, setMouseEvent] = useState()
+    const canvas = useLocalStore(() => canvasStore)
+    const selector = useLocalStore(() => selectorStore)
+    const startCell = selector.startCell
+    const endCell = selector.endCell ?? startCell
     const [blockMenuOpened, setBlockMenuOpened] = useState(false)
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     let selectBlock: ReactElement | undefined
+
+    useEffect(() => {
+        const sub = canvas.obs().subscribe(data => {
+            if (data.type === 'contextmenu') {
+                setMouseEvent(data.args.e)
+                const cell = data.args.cell as Cell
+                if (cell.type !== 'Cell') {
+                    setIsOpen(false)
+                    return
+                }
+                setIsOpen(true)
+            }
+        })
+        return () => {
+            sub.unsubscribe()
+        }
+    }, [])
+
     const _blockProcess = (
         blocks: readonly StandardBlock[],
         cb: (blks: readonly StandardBlock[]) => Payload[]
@@ -243,7 +261,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             {blockMenuOpened ? selectBlock : null}
         </div>
     )
-}
+})
 
 const getMessage = (blocks: readonly StandardBlock[]) => {
     return blocks.length === 1

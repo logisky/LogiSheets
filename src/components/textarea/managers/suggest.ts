@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react'
-import {Candidate, SpanItem} from '@/components/suggest'
+import {useLocalStore} from 'mobx-react'
+import {Candidate, SpanItem, suggestStore} from '@/components/suggest'
 import {lcsLenMatch} from '@/core/algo/lcs'
 import {
     fullFilterSnippet,
@@ -7,33 +8,35 @@ import {
     Snippet,
     getAllFormulas,
 } from '@/core/snippet'
-import {TextManager} from './text'
-import {useCursor} from './cursor'
+import {getCursorInOneLine, useCursor} from './cursor'
 import {SubType, TokenType} from '@/core/formula'
 import {KeyboardEventCode, StandardKeyboardEvent} from '@/core/events'
 import {TokenManager} from './token'
+import { autorun } from 'mobx'
+import { internalTextareaStore } from './store'
 
-export const useSuggest = <T>(
-    textMng: TextManager<T>,
-    cursorMng: ReturnType<typeof useCursor>
-) => {
-    const [showSuggest$, setShowSuggest] = useState(false)
+export const useSuggest = () => {
     const [activeCandidate$, setActiveCandidate] = useState<Candidate>()
+    const store = useLocalStore(() => internalTextareaStore)
+    const suggest = useLocalStore(() => suggestStore)
     const [candidates$, setCandidates] = useState<Candidate[]>([])
     const replaceRange = useRef<{start: number; count: number}>()
 
     useEffect(() => {
-        // 监听光标移动，高亮用户可能需要输入的内容
-        onTrigger(textMng.getPlainText())
-    }, [cursorMng.cursor$])
+        autorun(() => {
+            if (store.curosrColumn === -1 || store.cursorLineNumber === -1 || !store.showCursor) return
+            // 监听光标移动，高亮用户可能需要输入的内容
+            onType()
+        })
+    })
 
     const tokenMng = useRef(new TokenManager())
 
     const onType = () => {
-        onTrigger(textMng.getPlainText())
+        onTrigger(store.texts.getPlainText())
     }
     const onKeydown = (e: StandardKeyboardEvent) => {
-        if (!showSuggest$) return false
+        suggest.show = false
         if (e.keyCodeId === KeyboardEventCode.ARROW_UP) {
             if (!activeCandidate$) {
                 setActiveCandidate(candidates$[0])
@@ -76,24 +79,24 @@ export const useSuggest = <T>(
 
     const onTrigger = (text: string) => {
         if (!shouldShowSuggest(text)) {
-            setShowSuggest(false)
+            suggest.show =false
             return
         }
         replaceRange.current = undefined
-        const cursor = cursorMng.getCursorInOneLine()
+        const cursor = getCursorInOneLine(store)
         const tokenManager = tokenMng.current
         const tokenIndex = tokenManager.getTokenIndexByCursor(cursor, text)
         const token = tokenManager.getToken(tokenIndex)
         const newCandidates: Candidate[] = []
         if (!token) {
-            setShowSuggest(false)
+            suggest.show = false
             return
         }
         // 如果当前光标停在function，则匹配function并提示
         if (tokenManager.isFunctionStart(token)) {
             const candidates = fuzzyFilterFormula(token.value)
             if (candidates.length === 0) {
-                setShowSuggest(false)
+                suggest.show = false
                 return
             }
             replaceRange.current = tokenManager.getTokenPosition(token)
@@ -102,13 +105,13 @@ export const useSuggest = <T>(
         } else if (tokenManager.isOperandStart(token)) {
             const {fnIndex, paramCount} = tokenManager.getFnInfo(token)
             if (fnIndex === -1) {
-                setShowSuggest(false)
+                suggest.show = false
                 return
             }
             const fnName = tokenManager.getToken(fnIndex)?.value ?? ''
             const snippet = fullFilterSnippet(fnName)
             if (!snippet?.hasParams()) {
-                setShowSuggest(false)
+                suggest.show = false
                 return
             }
             let paramIndex = -1
@@ -121,33 +124,18 @@ export const useSuggest = <T>(
             newCandidates.push(...(candidate ? [candidate] : []))
         }
         if (newCandidates.length === 0) {
-            setShowSuggest(false)
+            suggest.show = false
             return
         }
-        setShowSuggest(true)
+            suggest.show = true
         setCandidates(newCandidates)
         setActiveCandidate(newCandidates[0])
     }
     const onSuggest = (candidate: Candidate) => {
-        setShowSuggest(false)
+        suggest.show = false
         if (!replaceRange.current) return
         const {start, count} = replaceRange.current
-        textMng.replace(candidate.plainText, start, count)
-        // 将光标设到函数括号中间
-        if (candidate.quoteStart) {
-            const newCursor = start + candidate.quoteStart + 1
-            cursorMng.setCursor(newCursor)
-        }
-    }
-
-    return {
-        onType,
-        setShowSuggest,
-        onKeydown,
-        onSuggest,
-        showSuggest$,
-        candidates$,
-        activeCandidate$,
+        store.emit('suggest', {candidate, start, count})
     }
 }
 export interface ReplaceEvent {

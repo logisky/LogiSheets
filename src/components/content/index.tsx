@@ -1,8 +1,8 @@
 import {SelectedCell, CanvasComponent} from '@/components/canvas'
 import {FC, useRef} from 'react'
 import styles from './content.module.scss'
-import {EditBarComponent} from './edit-bar'
-import {SheetsTabComponent} from '@/components/sheets-tab'
+import { EditBarComponent } from './edit-bar'
+import { SheetsTabComponent } from '@/components/sheets-tab'
 
 export interface ContentProps {
     selectedCell$: (cell: SelectedCell) => void

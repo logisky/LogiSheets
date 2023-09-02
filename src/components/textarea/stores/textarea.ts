@@ -1,5 +1,34 @@
-import {Position} from '../input'
-export class Context<T> {
+import {makeAutoObservable} from 'mobx'
+import { Position } from '../input'
+export interface IContext {
+    text: string
+    eof: string
+    cellWidth: number
+    cellHeight: number
+    clientX: number
+    clientY: number
+    canvasOffsetX: number
+    canvasOffsetY: number
+    /**
+     * -1 means in the end
+     */
+    textareaOffsetX: number
+    /**
+     * -1 means in the end
+     */
+    textareaOffsetY: number
+    bindingData?: any
+    lineHeight: () => number
+    getOffset: (
+        x: number,
+        y: number
+    ) => readonly [offsetX: number, offsetY: number]
+    getTexts: (
+        startPosition?: Position,
+        endPosition?: Position
+    ) => readonly string[]
+}
+export class Context<T> implements IContext {
     public text = ''
     public eof = '\n'
     public cellWidth = 0
@@ -53,3 +82,23 @@ export class Context<T> {
         return r
     }
 }
+
+
+export class TextareaStore {
+    constructor() {
+        makeAutoObservable(this, {}, {autoBind: true})
+    }
+    editing = false
+    context: IContext = new Context()
+    setEditing(editing: boolean) {
+        this.editing = editing
+    }
+    setContext(ctx: IContext) {
+        this.context = ctx
+    }
+    reset() {
+        this.editing = false
+        this.context = new Context()
+    }
+}
+export const textareaStore = new TextareaStore()

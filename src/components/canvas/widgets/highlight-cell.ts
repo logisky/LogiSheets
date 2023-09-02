@@ -1,10 +1,12 @@
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
+import {useLocalStore} from 'mobx-react'
 import {parseA1notation} from '@/core/a1notation'
 import {getTokens} from '@/core/formula'
 import {Range, StandardColor} from '@/core/standable'
 import {DataService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
+import { canvasStore } from '../store'
 
 const initStyle = (): HighlightCellStyle => {
     return {
@@ -44,6 +46,17 @@ export function equal(cell1: HighlightCell, cell2: HighlightCell) {
 export const useHighlightCell = () => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const [highlightCells, setHighlightCells] = useState<HighlightCell[]>([])
+    const host = useLocalStore(() => canvasStore)
+
+    useEffect(() => {
+        const sub = host.obs().subscribe(data => {
+            if (data.type === 'blur') blur()
+            else if (data.type === 'type') update(data.args)
+        })
+        return () => {
+            sub.unsubscribe()
+        }
+    }, [])
 
     const getRanges = (formula: string) => {
         const tokens = getTokens(formula)
