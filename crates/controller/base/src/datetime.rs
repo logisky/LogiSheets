@@ -207,13 +207,42 @@ pub fn get_decimal_num_by_time(hour: u32, minute: u32, second: u32) -> Option<f6
     Some(r)
 }
 
+// Parse the string as time (represented by `f64`) with as much patterns as possible
+pub fn parse_date_time(s: &str) -> Option<f64> {
+    let f = |d: NaiveDate| -> Option<f64> {
+        let date = d;
+        let date_num = get_serial_num_by_date_1900(
+            date.year() as u32,
+            date.month() as u32,
+            date.day() as u32,
+        )?;
+        Some(date_num as f64)
+    };
+    if let Ok(d) = NaiveDate::parse_from_str(s, "%Y/%m/%d") {
+        f(d)
+    } else if let Ok(d) = NaiveDate::parse_from_str(s, "%m/%d/%Y") {
+        f(d)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::get_date_by_serial_num_1900;
     use super::get_decimal_num_by_time;
     use super::get_serial_num_by_date_1900;
     use super::get_time_by_decimal_num;
+    use super::parse_date_time;
     use super::EasyDate;
+
+    #[test]
+    fn parse_time_test() {
+        let p = "2008/08/08";
+        let _ = parse_date_time(p).unwrap();
+        let p = "2008/8/8";
+        let _ = parse_date_time(p).unwrap();
+    }
 
     #[test]
     fn f64_to_u32() {

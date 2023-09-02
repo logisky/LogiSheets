@@ -33,7 +33,7 @@ where
 {
     assert_or_return!(args.len() == 1, ast::Error::Unspecified);
     let first = fetcher.get_calc_value(args.into_iter().next().unwrap());
-    assert_f64_from_calc_value!(n, first);
+    assert_date_serial_num_from_calc_value!(n, first);
     let n = n.trunc() as u32;
     let date = get_date_by_serial_num_1900(n);
     let r = func(date) as f64;
