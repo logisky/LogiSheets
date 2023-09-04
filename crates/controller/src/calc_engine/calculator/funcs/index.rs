@@ -110,7 +110,6 @@ fn get_offset_from_calc_value(value: CalcValue) -> Result<usize, ast::Error> {
                 }
             }
             Value::Error(e) => Err(e),
-            Value::Date(_) => todo!(),
         },
         // WPS does not support.
         _ => Err(ast::Error::Value),

@@ -1,4 +1,3 @@
-use chrono::{DateTime, FixedOffset};
 use logisheets_base::{
     CellId, ColId, CubeId, ExtBookId, ExtRefId, FuncId, NameId, RangeId, RefAbs, RowId, SheetId,
 };
@@ -84,7 +83,6 @@ pub enum Value {
     Text(String),
     Boolean(bool),
     Error(Error),
-    Date(DateTime<FixedOffset>),
 }
 
 #[derive(Debug, Clone)]

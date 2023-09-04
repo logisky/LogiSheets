@@ -54,7 +54,6 @@ where
             }
         }
         Value::Error(e) => Value::Error(e.clone()),
-        Value::Date(_) => todo!(),
     }
 }
 

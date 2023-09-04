@@ -341,7 +341,6 @@ impl Stringify for Value {
             }
             .to_string(),
             Value::Error(e) => e.unparse(fetcher, curr_sheet),
-            Value::Date(_) => todo!(),
         }
     }
 }

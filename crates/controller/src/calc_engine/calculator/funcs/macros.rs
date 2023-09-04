@@ -31,7 +31,6 @@ macro_rules! assert_f64_from_calc_value {
                 }
             }
             Value::Error(e) => Err(e),
-            Value::Date(_) => todo!(),
         };
         if let Err(e) = _res {
             return CalcVertex::from_error(e);
@@ -69,7 +68,6 @@ macro_rules! assert_date_serial_num_from_calc_value {
                 }
             }
             Value::Error(e) => Err(e),
-            Value::Date(_) => todo!(),
         };
         if let Err(e) = _res {
             return CalcVertex::from_error(e);
@@ -100,7 +98,6 @@ macro_rules! assert_text_from_calc_value {
                 }
             }
             Value::Error(e) => Err(e),
-            Value::Date(_) => todo!(),
         };
         if let Err(e) = _res {
             return CalcVertex::from_error(e);

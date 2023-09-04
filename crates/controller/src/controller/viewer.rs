@@ -250,7 +250,6 @@ fn convert_value(
             }
         }
         CellValue::Boolean(b) => Value::Bool(*b),
-        CellValue::Date(_) => todo!(),
         CellValue::Error(e) => Value::Error(e.to_string()),
         CellValue::String(s) => Value::Str(
             text_id_manager

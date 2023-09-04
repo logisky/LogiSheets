@@ -1,5 +1,3 @@
-use chrono::DateTime;
-use chrono::FixedOffset;
 use logisheets_base::cube_value::CubeValue;
 use logisheets_base::matrix_value::MatrixValue;
 use logisheets_base::Addr;
@@ -60,7 +58,6 @@ impl CalcValue {
                     }
                 }
                 Value::Error(e) => e.get_err_str().to_string(),
-                Value::Date(_) => todo!(),
             },
             CalcValue::Range(_) => todo!(),
             CalcValue::Cube(_) => todo!(),
@@ -76,7 +73,6 @@ pub enum Value {
     Text(String),
     Boolean(bool),
     Error(ast::Error),
-    Date(DateTime<FixedOffset>),
 }
 
 impl Default for Value {
@@ -93,7 +89,6 @@ impl Value {
             ast::Value::Text(s) => Value::Text(s.clone()),
             ast::Value::Boolean(b) => Value::Boolean(b.clone()),
             ast::Value::Error(e) => Value::Error(e.clone()),
-            ast::Value::Date(d) => Value::Date(d.clone()),
         }
     }
 
@@ -104,7 +99,6 @@ impl Value {
         match v {
             CellValue::Blank => Value::Blank,
             CellValue::Boolean(b) => Value::Boolean(b),
-            CellValue::Date(_) => todo!(),
             CellValue::Error(e) => Value::Error(ast::Error::from_err_str(&e.to_string())),
             CellValue::String(tid) => Value::Text(fetcher(&tid).unwrap_or(String::from(""))),
             CellValue::Number(f) => Value::Number(f),

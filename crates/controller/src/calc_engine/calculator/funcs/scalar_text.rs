@@ -53,7 +53,6 @@ where
             }
         }
         Value::Error(e) => Value::Text(func(e.get_err_str())),
-        Value::Date(_) => todo!(),
     }
 }
 

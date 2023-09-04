@@ -1,7 +1,7 @@
 use crate::{Cube, CubeId, ExtRef, ExtRefId, NormalCellId, Range, RangeId};
 use anyhow::Result;
 
-use super::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId, TextId};
+use crate::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId, TextId};
 
 pub trait SheetIdFetcherTrait {
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId;

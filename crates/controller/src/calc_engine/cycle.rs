@@ -75,7 +75,6 @@ fn meet_error(v1: &CalcValue, v2: &CalcValue, error: f32) -> bool {
             (Value::Text(t1), Value::Text(t2)) => t1 == t2,
             (Value::Boolean(b1), Value::Boolean(b2)) => *b1 == *b2,
             (Value::Error(e1), Value::Error(e2)) => e1 == e2,
-            (Value::Date(d1), Value::Date(d2)) => d1 == d2,
             _ => false,
         },
         (CalcValue::Range(_), CalcValue::Range(_)) => true,

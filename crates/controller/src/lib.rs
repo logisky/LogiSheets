@@ -143,7 +143,6 @@ impl<'a> Worksheet<'a> {
                 let v = match value {
                     logisheets_base::CellValue::Blank => Value::Empty,
                     logisheets_base::CellValue::Boolean(b) => Value::Bool(*b),
-                    logisheets_base::CellValue::Date(_) => Value::Empty,
                     logisheets_base::CellValue::Error(e) => Value::Error(e.to_string()),
                     logisheets_base::CellValue::String(s) => {
                         let text = self.controller.status.text_id_manager.get_string(s);

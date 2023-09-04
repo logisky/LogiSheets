@@ -506,6 +506,5 @@ where
             ast::Error::Value => CellValue::Error(Error::Value),
             ast::Error::GettingData => CellValue::Error(Error::GettingData),
         },
-        Value::Date(d) => CellValue::Date(d),
     }
 }

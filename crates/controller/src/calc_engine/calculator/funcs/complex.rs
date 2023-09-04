@@ -34,7 +34,6 @@ where
                     },
                     Value::Boolean(_) => CalcVertex::from_error(ast::Error::Value),
                     Value::Error(e) => CalcVertex::from_error(e),
-                    Value::Date(_) => CalcVertex::from_error(ast::Error::Value),
                 },
                 _ => CalcVertex::from_error(ast::Error::Value),
             }

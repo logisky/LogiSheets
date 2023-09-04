@@ -1,7 +1,6 @@
-use crate::{BlockCellId, NormalCellId};
 use anyhow::Result;
 
-use super::{CellId, ColId, RowId, SheetId};
+use crate::{BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId};
 
 pub trait IndexFetcherTrait {
     fn fetch_row_index(&mut self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize>;

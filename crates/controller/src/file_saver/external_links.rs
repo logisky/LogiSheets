@@ -40,7 +40,6 @@ pub fn save_external_link<S: SaverTrait>(
                     },
                 ),
                 Value::Error(e) => (StCellType::E, e.get_err_str().to_string()),
-                Value::Date(_) => todo!(),
             };
             let ext_cell = CtExternalCell {
                 v: Some(PlainTextString {
