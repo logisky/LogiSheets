@@ -90,12 +90,12 @@ pub struct Saver<'a> {
 }
 
 impl<'a> IndexFetcherTrait for Saver<'a> {
-    fn fetch_row_index(&mut self, sheet_id: &SheetId, row_id: &RowId) -> anyhow::Result<usize> {
+    fn fetch_row_index(&self, sheet_id: &SheetId, row_id: &RowId) -> anyhow::Result<usize> {
         self.navigator.fetch_row_idx(sheet_id, row_id)
     }
 
     fn fetch_col_index(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         col_id: &logisheets_base::ColId,
     ) -> anyhow::Result<usize> {
@@ -103,21 +103,21 @@ impl<'a> IndexFetcherTrait for Saver<'a> {
     }
 
     fn fetch_cell_index(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         cell_id: &logisheets_base::CellId,
     ) -> anyhow::Result<(usize, usize)> {
         self.navigator.fetch_cell_idx(sheet_id, cell_id)
     }
 
-    fn fetch_sheet_index(&mut self, sheet_id: &SheetId) -> anyhow::Result<usize> {
+    fn fetch_sheet_index(&self, sheet_id: &SheetId) -> anyhow::Result<usize> {
         self.sheet_pos_manager
             .get_sheet_idx(sheet_id)
             .ok_or(IdError::SheetIdNotFound(*sheet_id).into())
     }
 
     fn fetch_normal_cell_index(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         normal_cell_id: &logisheets_base::NormalCellId,
     ) -> anyhow::Result<(usize, usize)> {
@@ -126,7 +126,7 @@ impl<'a> IndexFetcherTrait for Saver<'a> {
     }
 
     fn fetch_block_cell_index(
-        &mut self,
+        &self,
         sheet: &SheetId,
         block_cell_id: &logisheets_base::BlockCellId,
     ) -> anyhow::Result<(usize, usize)> {
@@ -169,23 +169,23 @@ impl<'a> NameFetcherTrait for Saver<'a> {
     }
 
     fn fetch_cell_idx(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         cell_id: &logisheets_base::CellId,
     ) -> (usize, usize) {
         self.navigator.fetch_cell_idx(sheet_id, cell_id).unwrap()
     }
 
-    fn fetch_row_idx(&mut self, sheet_id: &SheetId, row_id: &RowId) -> usize {
+    fn fetch_row_idx(&self, sheet_id: &SheetId, row_id: &RowId) -> usize {
         self.navigator.fetch_row_idx(sheet_id, row_id).unwrap()
     }
 
-    fn fetch_col_idx(&mut self, sheet_id: &SheetId, col_id: &logisheets_base::ColId) -> usize {
+    fn fetch_col_idx(&self, sheet_id: &SheetId, col_id: &logisheets_base::ColId) -> usize {
         self.navigator.fetch_col_idx(sheet_id, col_id).unwrap()
     }
 
     fn fetch_range(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         range_id: &logisheets_base::RangeId,
     ) -> Option<logisheets_base::Range> {
@@ -194,7 +194,7 @@ impl<'a> NameFetcherTrait for Saver<'a> {
             .get_range(sheet_id, range_id)
     }
 
-    fn fetch_cube(&mut self, cube_id: &logisheets_base::CubeId) -> logisheets_base::Cube {
+    fn fetch_cube(&self, cube_id: &logisheets_base::CubeId) -> logisheets_base::Cube {
         self.formula_manager.cube_manager.get_cube(cube_id).unwrap()
     }
 

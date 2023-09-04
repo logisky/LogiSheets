@@ -3,6 +3,7 @@ use super::id_manager::IdManager;
 use super::{executor, fetcher::Fetcher};
 use im::{HashMap, Vector};
 use logisheets_base::{BlockId, CellId, ColId, Id, RowId, SheetId};
+use std::cell::RefCell;
 
 use crate::payloads::sheet_process::ShiftPayload;
 
@@ -10,7 +11,7 @@ use crate::payloads::sheet_process::ShiftPayload;
 pub struct SheetNav {
     pub sheet_id: SheetId,
     pub data: Data,
-    pub cache: Cache,
+    pub cache: RefCell<Cache>,
     pub version: u32,
     pub id_manager: IdManager,
 }
@@ -21,7 +22,7 @@ impl SheetNav {
             sheet_id,
             data: Data::init(row_max, col_max),
             id_manager: IdManager::new(row_max, col_max, 0),
-            cache: Cache::default(),
+            cache: Default::default(),
             version: 1,
         }
     }
@@ -30,8 +31,8 @@ impl SheetNav {
         executor::execute_shift_payload(self, &shift_payload)
     }
 
-    pub fn get_fetcher(&mut self) -> Fetcher {
-        Fetcher::from(&self.data, &mut self.cache, self.sheet_id)
+    pub fn get_fetcher(&self) -> Fetcher {
+        Fetcher::from(&self.data, &self.cache, self.sheet_id)
     }
 }
 

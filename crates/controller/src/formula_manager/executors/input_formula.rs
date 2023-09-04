@@ -225,20 +225,15 @@ impl<'a, C> IdFetcherTrait for ParserContext<'a, C>
 where
     C: IdFetcherTrait + GetActiveSheetTrait + GetBookNameTrait,
 {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
+    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
         self.ctx.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
+    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
         self.ctx.fetch_col_id(sheet_id, col_idx)
     }
 
-    fn fetch_cell_id(
-        &mut self,
-        sheet_id: &SheetId,
-        row_idx: usize,
-        col_idx: usize,
-    ) -> Result<CellId> {
+    fn fetch_cell_id(&self, sheet_id: &SheetId, row_idx: usize, col_idx: usize) -> Result<CellId> {
         self.ctx.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 
@@ -263,7 +258,7 @@ where
     }
 
     fn fetch_norm_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,

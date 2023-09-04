@@ -54,6 +54,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "atomic_refcell"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "112ef6b3f6cb3cb6fc5b6b494ef7a848492cff1ab0ef4de10b0f7d572861c905"
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -563,11 +569,11 @@ version = "0.3.0"
 dependencies = [
  "console_error_panic_hook",
  "getrandom",
- "lazy_static",
  "logisheets_controller",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "singlyton",
  "wasm-bindgen",
  "wasm-bindgen-test",
  "web-sys",
@@ -1018,6 +1024,15 @@ dependencies = [
  "num-traits",
  "paste",
  "wide",
+]
+
+[[package]]
+name = "singlyton"
+version = "4.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d920bedcb124f2e219f9e8401e252f3ed013370d9c19fd7ae9c6fe2266db35ec"
+dependencies = [
+ "atomic_refcell",
 ]
 
 [[package]]

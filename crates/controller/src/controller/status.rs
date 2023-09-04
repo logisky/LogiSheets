@@ -36,7 +36,7 @@ impl Default for Status {
             container: DataContainer {
                 data: HashMap::new(),
             },
-            sheet_id_manager: SheetIdManager::new(0),
+            sheet_id_manager: SheetIdManager::new_with_default_sheet(),
             func_id_manager: FuncIdManager::new(0),
             text_id_manager: TextIdManager::new(0),
             name_id_manager: NameIdManager::new(0),

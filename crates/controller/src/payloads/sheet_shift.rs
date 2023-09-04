@@ -1,7 +1,10 @@
+use logisheets_base::SheetId;
+
 #[derive(Debug, Clone)]
 pub struct SheetShiftPayload {
     pub idx: usize,
     pub ty: SheetShiftType,
+    pub id: SheetId,
 }
 
 #[derive(Debug, Clone)]

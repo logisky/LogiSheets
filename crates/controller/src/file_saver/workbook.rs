@@ -42,7 +42,9 @@ pub fn save_workbook<S: SaverTrait>(
         .get_all_ids()
         .into_iter()
         .flat_map(|id| {
-            let sheet_data_container = data_container.get_sheet_container(id).unwrap();
+            let sheet_data_container = data_container
+                .get_sheet_container(id)
+                .ok_or(SaveError::SheetIdPosError(id))?;
             save_sheets(
                 id,
                 sheet_data_container,

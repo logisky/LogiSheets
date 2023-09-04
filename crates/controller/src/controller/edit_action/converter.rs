@@ -6,7 +6,7 @@ use super::{
     RowShift, SetColWidth, SetRowHeight, SheetShift,
 };
 use crate::container::DataContainer;
-use crate::id_manager::TextIdManager;
+use crate::id_manager::{SheetIdManager, TextIdManager};
 use crate::navigator::Navigator;
 use crate::payloads::sheet_process::style::{CellStylePayload, FontPayloadType};
 use crate::payloads::sheet_process::{
@@ -25,6 +25,7 @@ pub struct Converter<'a> {
     pub navigator: &'a mut Navigator,
     pub container: &'a mut DataContainer,
     pub text_id_manager: &'a mut TextIdManager,
+    pub sheet_id_manager: &'a mut SheetIdManager,
 }
 
 impl<'a> Converter<'a> {
@@ -64,13 +65,20 @@ impl<'a> Converter<'a> {
     }
 
     fn convert_sheet_shift(&mut self, ss: SheetShift) -> Option<Process> {
-        let payload = SheetShiftPayload {
-            idx: ss.idx,
-            ty: if ss.insert {
-                SheetShiftType::Insert
-            } else {
-                SheetShiftType::Insert
-            },
+        let payload = if ss.insert {
+            let new_name = self.sheet_id_manager.get_new_available_name();
+            let id = self.sheet_id_manager.get_id(&new_name);
+            SheetShiftPayload {
+                idx: ss.idx,
+                ty: SheetShiftType::Insert,
+                id,
+            }
+        } else {
+            SheetShiftPayload {
+                idx: ss.idx,
+                ty: SheetShiftType::Delete,
+                id: self.sheet_pos_manager.get_sheet_id(ss.idx).unwrap(),
+            }
         };
         Some(Process::SheetShift(payload))
     }

@@ -7,14 +7,17 @@ use crate::{
     cell::Cell,
     container::{col_info_manager::ColInfo, row_info_manager::RowInfo, DataContainer},
     navigator::{BlockPlace, Navigator},
-    payloads::sheet_process::{
-        block::BlockPayload,
-        cell::CellChange,
-        line::{ColInfoUpdate, LineInfoUpdate, RowInfoUpdate},
-        style::CellStylePayload,
-        Direction, ShiftPayload, ShiftType,
-    },
     payloads::sheet_process::{SheetPayload, SheetProcess},
+    payloads::{
+        sheet_process::{
+            block::BlockPayload,
+            cell::CellChange,
+            line::{ColInfoUpdate, LineInfoUpdate, RowInfoUpdate},
+            style::CellStylePayload,
+            Direction, ShiftPayload, ShiftType,
+        },
+        sheet_shift::SheetShiftPayload,
+    },
     style_manager::StyleManager,
 };
 
@@ -40,7 +43,20 @@ impl DataExecutor {
             deleted_cells: vec![],
         }
     }
-    pub fn execute(self, proc: &SheetProcess) -> Result<Self> {
+
+    pub fn execute_sheet_shift(self, proc: &SheetShiftPayload) -> Result<Self> {
+        let sheet_id = proc.id;
+        let mut navigator = self.navigator;
+        navigator.add_sheet_id(&sheet_id);
+        Ok(Self {
+            navigator,
+            style_manager: self.style_manager,
+            container: self.container,
+            deleted_cells: self.deleted_cells,
+        })
+    }
+
+    pub fn execute_sheet_proc(self, proc: &SheetProcess) -> Result<Self> {
         let sheet_id = proc.sheet_id;
         match &proc.payload {
             SheetPayload::Cell(cp) => {
@@ -442,7 +458,7 @@ impl DataExecutor {
         p: RowInfoUpdate,
     ) -> Result<Self> {
         let DataExecutor {
-            mut navigator,
+            navigator,
             mut style_manager,
             mut container,
             deleted_cells,
@@ -479,7 +495,7 @@ impl DataExecutor {
         p: ColInfoUpdate,
     ) -> Result<Self> {
         let DataExecutor {
-            mut navigator,
+            navigator,
             mut style_manager,
             mut container,
             deleted_cells,
@@ -521,8 +537,10 @@ mod tests {
 
     #[test]
     fn test_move_block() {
+        let mut nav = Navigator::default();
+        nav.add_sheet_id(&1);
         let init = DataExecutor {
-            navigator: Navigator::default(),
+            navigator: nav,
             style_manager: StyleManager::default(),
             container: DataContainer::default(),
             deleted_cells: vec![],
@@ -537,7 +555,7 @@ mod tests {
             col_cnt: 4,
         });
         let create_proc = block_payload_to_proc(create, sheet_id);
-        let executor = init.execute(&create_proc).unwrap();
+        let executor = init.execute_sheet_proc(&create_proc).unwrap();
         let row = 2;
         let col = 2;
         let change = CellChange::Value(CellValue::Number(2.0));
@@ -545,14 +563,14 @@ mod tests {
             sheet_id,
             payload: SheetPayload::Cell(CellPayload { row, col, change }),
         };
-        let executor = executor.execute(&value_proc).unwrap();
+        let executor = executor.execute_sheet_proc(&value_proc).unwrap();
         let move_payload = BlockPayload::Move(MoveBlock {
             block_id,
             new_master_row: 6,
             new_master_col: 6,
         });
-        let mut executor = executor
-            .execute(&block_payload_to_proc(move_payload, sheet_id))
+        let executor = executor
+            .execute_sheet_proc(&block_payload_to_proc(move_payload, sheet_id))
             .unwrap();
         assert!(matches!(
             executor.navigator.fetch_cell_id(&sheet_id, row, col),
