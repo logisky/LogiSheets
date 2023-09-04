@@ -268,7 +268,7 @@ impl Stringify for RangeDisplay {
 
         let range_str = match range {
             Range::Normal(normal_range) => {
-                let mut get_normal_cell_str =
+                let get_normal_cell_str =
                     |sheet: &SheetId, id: NormalCellId, row_abs: bool, col_abs: bool| -> String {
                         let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::NormalCell(id));
                         let row_str = get_row_string(row_abs, row);
@@ -302,7 +302,7 @@ impl Stringify for RangeDisplay {
                 }
             }
             Range::Block(block_range) => {
-                let mut get_block_cell_str =
+                let get_block_cell_str =
                     |sheet: &SheetId, id: BlockCellId, row_abs: bool, col_abs: bool| -> String {
                         let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::BlockCell(id));
                         let row_str = get_row_string(row_abs, row);

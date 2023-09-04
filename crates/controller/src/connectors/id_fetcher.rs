@@ -12,28 +12,20 @@ pub struct IdFetcher<'a> {
     pub func_id_manager: &'a mut FuncIdManager,
     pub name_id_manager: &'a mut NameIdManager,
     pub external_links_manager: &'a mut ExtBooksManager,
-    pub navigator: &'a mut Navigator,
+    pub navigator: &'a Navigator,
 }
 
 impl<'a> IdFetcherTrait for IdFetcher<'a> {
-    fn fetch_row_id(
-        &mut self,
-        sheet_id: &SheetId,
-        row_idx: usize,
-    ) -> Result<logisheets_base::RowId> {
+    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<logisheets_base::RowId> {
         self.navigator.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(
-        &mut self,
-        sheet_id: &SheetId,
-        col_idx: usize,
-    ) -> Result<logisheets_base::ColId> {
+    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<logisheets_base::ColId> {
         self.navigator.fetch_col_id(sheet_id, col_idx)
     }
 
     fn fetch_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
@@ -66,7 +58,7 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
     }
 
     fn fetch_norm_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,

@@ -13,6 +13,27 @@ pub type NameIdManager = name_id_manager::NameIdManager;
 pub mod errors;
 mod name_id_manager;
 
+impl SheetIdManager {
+    pub fn get_new_available_name(&self) -> String {
+        let mut x = 1;
+        let mut name = format!("Sheet{}", x);
+        while self.has(&name).is_some() {
+            x += 1;
+            name = format!("Sheet{}", x);
+        }
+        name
+    }
+
+    pub fn new_with_default_sheet() -> Self {
+        let mut ids = HashMap::new();
+        ids.insert("Sheet1".to_string(), 0);
+        Self {
+            next_available: 1,
+            ids,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct IdManager<T>
 where

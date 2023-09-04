@@ -8,17 +8,12 @@ pub trait SheetIdFetcherTrait {
 }
 
 pub trait IdFetcherTrait {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId>;
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId>;
-    fn fetch_cell_id(
-        &mut self,
-        sheet_id: &SheetId,
-        row_idx: usize,
-        col_idx: usize,
-    ) -> Result<CellId>;
+    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId>;
+    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId>;
+    fn fetch_cell_id(&self, sheet_id: &SheetId, row_idx: usize, col_idx: usize) -> Result<CellId>;
 
     fn fetch_norm_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,

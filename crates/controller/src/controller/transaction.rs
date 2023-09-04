@@ -140,7 +140,7 @@ fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Sta
         formula_manager,
         navigator,
         container,
-        mut sheet_id_manager,
+        sheet_id_manager,
         func_id_manager,
         text_id_manager,
         name_id_manager,
@@ -149,7 +149,15 @@ fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Sta
         style_manager,
         cell_attachment_manager,
     } = status;
-    let sheet_pos = sheet_pos_manager.execute(&payload, &mut sheet_id_manager);
+    let DataExecutor {
+        navigator,
+        style_manager,
+        container,
+        ..
+    } = DataExecutor::new(navigator, style_manager, container)
+        .execute_sheet_shift(&payload)
+        .unwrap();
+    let sheet_pos = sheet_pos_manager.execute(&payload);
     Status {
         formula_manager,
         navigator,
@@ -198,7 +206,7 @@ fn handle_sheet_proc(
         container: mut new_container,
         style_manager: new_style_manager,
         ..
-    } = data_executor.execute(&proc)?;
+    } = data_executor.execute_sheet_proc(&proc)?;
     let active_sheet = proc.sheet_id;
     let FormulaExecContext {
         manager: formula_manager,

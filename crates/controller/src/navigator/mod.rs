@@ -33,67 +33,63 @@ impl Navigator {
         }
     }
 
-    pub fn fetch_row_id(&mut self, sheet_id: &SheetId, row: usize) -> Result<RowId> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+    pub fn fetch_row_id(&self, sheet_id: &SheetId, row: usize) -> Result<RowId> {
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         let row_id = fetcher.get_row_id(row);
         Ok(row_id)
     }
 
-    pub fn fetch_row_idx(&mut self, sheet_id: &SheetId, row: &RowId) -> Result<usize> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+    pub fn fetch_row_idx(&self, sheet_id: &SheetId, row: &RowId) -> Result<usize> {
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         fetcher.get_row_idx(*row)
     }
 
-    pub fn fetch_col_id(&mut self, sheet_id: &SheetId, col: usize) -> Result<ColId> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+    pub fn fetch_col_id(&self, sheet_id: &SheetId, col: usize) -> Result<ColId> {
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         let col_id = fetcher.get_col_id(col.clone());
         Ok(col_id)
     }
 
-    pub fn fetch_col_idx(&mut self, sheet_id: &SheetId, col: &ColId) -> Result<usize> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+    pub fn fetch_col_idx(&self, sheet_id: &SheetId, col: &ColId) -> Result<usize> {
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         fetcher.get_col_idx(*col)
     }
 
-    pub fn fetch_cell_id(&mut self, sheet_id: &SheetId, row: usize, col: usize) -> Result<CellId> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+    pub fn fetch_cell_id(&self, sheet_id: &SheetId, row: usize, col: usize) -> Result<CellId> {
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         fetcher.get_cell_id(row, col)
     }
 
     pub fn fetch_norm_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row: usize,
         col: usize,
     ) -> Result<NormalCellId> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         Ok(fetcher.get_norm_cell_id(row, col))
     }
 
-    pub fn fetch_cell_idx(
-        &mut self,
-        sheet_id: &SheetId,
-        cell_id: &CellId,
-    ) -> Result<(usize, usize)> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+    pub fn fetch_cell_idx(&self, sheet_id: &SheetId, cell_id: &CellId) -> Result<(usize, usize)> {
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         fetcher.get_cell_idx(&cell_id)
     }
 
     pub fn fetch_normal_cell_idx(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         cell_id: &NormalCellId,
     ) -> Result<(usize, usize)> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         fetcher.get_norm_cell_idx(cell_id)
     }
 
     pub fn fetch_block_cell_idx(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         cell_id: &BlockCellId,
     ) -> Result<(usize, usize)> {
-        let mut fetcher = self.get_sheet_nav(sheet_id).get_fetcher();
+        let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         fetcher.get_block_cell_idx(cell_id)
     }
 
@@ -104,17 +100,17 @@ impl Navigator {
         row_cnt: usize,
         col_cnt: usize,
     ) {
-        let sheet_nav = self.get_sheet_nav(sheet_id);
+        let sheet_nav = self.get_sheet_nav_mut(sheet_id);
         let block_place = BlockPlace::new(master, row_cnt as u32, col_cnt as u32);
         let block_id = sheet_nav.id_manager.get_block_id();
         sheet_nav.data.blocks.insert(block_id, block_place);
-        sheet_nav.cache = Cache::default();
+        sheet_nav.cache = Default::default();
     }
 
     pub fn remove_block(&mut self, sheet_id: &SheetId, block_id: &BlockId) {
-        let sheet_nav = self.get_sheet_nav(sheet_id);
+        let sheet_nav = self.get_sheet_nav_mut(sheet_id);
         sheet_nav.data.blocks.remove(&block_id);
-        sheet_nav.cache = Cache::default();
+        sheet_nav.cache = Default::default();
     }
 
     pub fn move_block(&mut self, sheet_id: &SheetId, block_id: &BlockId, new_master: NormalCellId) {
@@ -130,10 +126,10 @@ impl Navigator {
                     new_master_row + row_cnt - 1,
                     new_master_col + col_cnt - 1,
                 ) {
-                    let sheet_nav = self.get_sheet_nav(sheet_id);
+                    let sheet_nav = self.get_sheet_nav_mut(sheet_id);
                     if let Some(mut bp) = sheet_nav.data.blocks.get_mut(&block_id) {
                         bp.master = new_master;
-                        sheet_nav.cache = Cache::default()
+                        sheet_nav.cache = Default::default()
                     }
                 }
             }
@@ -196,7 +192,11 @@ impl Navigator {
         Ok(CellId::NormalCell(nc))
     }
 
-    fn get_sheet_nav(&mut self, sheet_id: &SheetId) -> &mut SheetNav {
+    pub fn add_sheet_id(&mut self, sheet_id: &SheetId) {
+        self.get_sheet_nav_mut(sheet_id);
+    }
+
+    fn get_sheet_nav_mut(&mut self, sheet_id: &SheetId) -> &mut SheetNav {
         if let Some(_) = self.sheet_navs.get(&sheet_id) {
             self.sheet_navs.get_mut(&sheet_id).unwrap()
         } else {
@@ -206,13 +206,19 @@ impl Navigator {
         }
     }
 
+    fn get_sheet_nav(&self, sheet_id: &SheetId) -> Result<&SheetNav> {
+        self.sheet_navs
+            .get(sheet_id)
+            .ok_or(anyhow::anyhow!(NavError::CannotGetSheetById(*sheet_id)))
+    }
+
     pub fn add_block_place(self, sheet_id: SheetId, block_id: BlockId, bp: BlockPlace) -> Self {
         let mut res = self;
         let sheet_nav = res.sheet_navs.get_mut(&sheet_id);
         match sheet_nav {
             Some(sn) => {
                 sn.data.blocks.insert(block_id, bp);
-                sn.cache.clean_cell();
+                sn.cache.borrow_mut().clean_cell();
                 res
             }
             None => res,
@@ -221,7 +227,7 @@ impl Navigator {
 
     pub fn clean_cache(&mut self, sheet_id: SheetId) {
         if let Some(sn) = self.sheet_navs.get_mut(&sheet_id) {
-            sn.cache = Cache::default();
+            sn.cache = Default::default();
         }
     }
 

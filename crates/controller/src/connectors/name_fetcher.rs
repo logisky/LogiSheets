@@ -51,25 +51,25 @@ impl<'a> NameFetcherTrait for NameFetcher<'a> {
         }
     }
 
-    fn fetch_cell_idx(&mut self, sheet_id: &SheetId, cell_id: &CellId) -> (usize, usize) {
+    fn fetch_cell_idx(&self, sheet_id: &SheetId, cell_id: &CellId) -> (usize, usize) {
         self.navigator.fetch_cell_idx(sheet_id, cell_id).unwrap()
     }
 
-    fn fetch_row_idx(&mut self, sheet_id: &SheetId, row_id: &logisheets_base::RowId) -> usize {
+    fn fetch_row_idx(&self, sheet_id: &SheetId, row_id: &logisheets_base::RowId) -> usize {
         self.navigator.fetch_row_idx(sheet_id, row_id).unwrap()
     }
 
-    fn fetch_col_idx(&mut self, sheet_id: &SheetId, col_id: &logisheets_base::ColId) -> usize {
+    fn fetch_col_idx(&self, sheet_id: &SheetId, col_id: &logisheets_base::ColId) -> usize {
         self.navigator.fetch_col_idx(sheet_id, col_id).unwrap()
     }
 
-    fn fetch_range(&mut self, sheet_id: &SheetId, range_id: &u32) -> Option<Range> {
+    fn fetch_range(&self, sheet_id: &SheetId, range_id: &u32) -> Option<Range> {
         self.formula_manager
             .range_manager
             .get_range(sheet_id, range_id)
     }
 
-    fn fetch_cube(&mut self, cube_id: &u32) -> logisheets_base::Cube {
+    fn fetch_cube(&self, cube_id: &u32) -> logisheets_base::Cube {
         self.formula_manager.cube_manager.get_cube(cube_id).unwrap()
     }
 

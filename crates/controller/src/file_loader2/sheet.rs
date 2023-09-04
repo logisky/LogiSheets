@@ -126,6 +126,8 @@ pub fn load_sheet_data(
     style_loader: &mut StyleLoader,
     workbook: &Workbook,
 ) {
+    navigator.add_sheet_id(&sheet_id);
+
     sheet_data.rows.iter().for_each(|row| {
         let style_id = style_loader.load_xf(row.s);
         if let Some(idx) = row.r {

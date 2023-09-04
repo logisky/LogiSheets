@@ -45,6 +45,7 @@ impl Default for Controller {
         let add_sheet = Process::SheetShift(SheetShiftPayload {
             idx: 0,
             ty: SheetShiftType::Insert,
+            id: 0,
         });
         empty.handle_process(vec![add_sheet], false).unwrap();
         empty
@@ -98,6 +99,7 @@ impl Controller {
                     navigator: &mut self.status.navigator,
                     container: &mut self.status.container,
                     text_id_manager: &mut self.status.text_id_manager,
+                    sheet_id_manager: &mut self.status.sheet_id_manager,
                 };
                 let proc = c.convert_edit_payloads(action.payloads);
                 self.handle_process(proc, action.undoable).ok()?;

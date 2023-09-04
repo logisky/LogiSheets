@@ -47,7 +47,7 @@ impl<'a> VertexConnector<'a> {
         }
     }
 
-    fn get_idx_fetcher(&mut self) -> IndexFetcher {
+    fn get_idx_fetcher(&self) -> IndexFetcher {
         IndexFetcher {
             navigator: self.idx_navigator,
             sheet_pos_manager: self.sheet_pos_manager,
@@ -92,22 +92,16 @@ impl<'a> VertexConnector<'a> {
 }
 
 impl<'a> IdFetcherTrait for VertexConnector<'a> {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
-        self.get_id_fetcher().fetch_row_id(sheet_id, row_idx)
+    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
+        self.id_navigator.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
-        self.get_id_fetcher().fetch_col_id(sheet_id, col_idx)
+    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
+        self.id_navigator.fetch_col_id(sheet_id, col_idx)
     }
 
-    fn fetch_cell_id(
-        &mut self,
-        sheet_id: &SheetId,
-        row_idx: usize,
-        col_idx: usize,
-    ) -> Result<CellId> {
-        self.get_id_fetcher()
-            .fetch_cell_id(sheet_id, row_idx, col_idx)
+    fn fetch_cell_id(&self, sheet_id: &SheetId, row_idx: usize, col_idx: usize) -> Result<CellId> {
+        self.id_navigator.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId {
@@ -131,35 +125,35 @@ impl<'a> IdFetcherTrait for VertexConnector<'a> {
     }
 
     fn fetch_norm_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
     ) -> Result<NormalCellId> {
-        self.get_id_fetcher()
+        self.id_navigator
             .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
     }
 }
 
 impl<'a> IndexFetcherTrait for VertexConnector<'a> {
-    fn fetch_row_index(&mut self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize> {
+    fn fetch_row_index(&self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize> {
         self.get_idx_fetcher().fetch_row_index(sheet_id, row_id)
     }
 
-    fn fetch_col_index(&mut self, sheet_id: &SheetId, col_id: &ColId) -> Result<usize> {
+    fn fetch_col_index(&self, sheet_id: &SheetId, col_id: &ColId) -> Result<usize> {
         self.get_idx_fetcher().fetch_col_index(sheet_id, col_id)
     }
 
-    fn fetch_cell_index(&mut self, sheet_id: &SheetId, cell_id: &CellId) -> Result<(usize, usize)> {
+    fn fetch_cell_index(&self, sheet_id: &SheetId, cell_id: &CellId) -> Result<(usize, usize)> {
         self.get_idx_fetcher().fetch_cell_index(sheet_id, cell_id)
     }
 
-    fn fetch_sheet_index(&mut self, sheet_id: &SheetId) -> Result<usize> {
+    fn fetch_sheet_index(&self, sheet_id: &SheetId) -> Result<usize> {
         self.get_idx_fetcher().fetch_sheet_index(sheet_id)
     }
 
     fn fetch_normal_cell_index(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         normal_cell_id: &NormalCellId,
     ) -> Result<(usize, usize)> {
@@ -168,7 +162,7 @@ impl<'a> IndexFetcherTrait for VertexConnector<'a> {
     }
 
     fn fetch_block_cell_index(
-        &mut self,
+        &self,
         sheet: &SheetId,
         block_cell_id: &BlockCellId,
     ) -> Result<(usize, usize)> {

@@ -1,4 +1,4 @@
-use super::{sheet_nav::Cache, SheetNav};
+use super::SheetNav;
 use crate::payloads::sheet_process::{Direction, LineShift, ShiftPayload, ShiftType};
 
 pub fn execute_shift_payload(sheet_nav: SheetNav, payload: &ShiftPayload) -> SheetNav {
@@ -42,7 +42,7 @@ fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         sheet_id: sheet_nav.sheet_id,
         version,
         data: sheet_nav.data.update_rows(new_rows),
-        cache: Cache::default(),
+        cache: Default::default(),
         id_manager: new_id_manager,
     }
 }
@@ -64,14 +64,14 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         sheet_id: sheet_nav.sheet_id,
         version,
         data: sheet_nav.data.update_cols(new_cols),
-        cache: Cache::default(),
+        cache: Default::default(),
         id_manager: new_id_manager,
     }
 }
 
 fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     let sheet_id = sheet_nav.sheet_id;
-    let mut result = sheet_nav;
+    let result = sheet_nav;
     let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_row_ids(cnt);
     let new_rows = {
@@ -99,14 +99,14 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         sheet_id,
         version: result.version + 1,
         data: result.data.update_rows(new_rows).update_blocks(new_blocks),
-        cache: Cache::default(),
+        cache: Default::default(),
         id_manager: new_id_manager,
     }
 }
 
 fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     let sheet_id = sheet_nav.sheet_id;
-    let mut result = sheet_nav;
+    let result = sheet_nav;
     let version = result.version.clone() + 1;
     let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_col_ids(cnt);
@@ -135,7 +135,7 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         sheet_id,
         version,
         data: result.data.update_cols(new_cols).update_blocks(new_blocks),
-        cache: Cache::default(),
+        cache: Default::default(),
         id_manager: new_id_manager,
     }
 }

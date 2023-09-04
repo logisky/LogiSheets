@@ -9,15 +9,15 @@ use logisheets_base::{
 pub struct TestIdFetcher {}
 
 impl IdFetcherTrait for TestIdFetcher {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
+    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
         Ok(sheet_id.clone() as u32 + row_idx as u32)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
+    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
         Ok(sheet_id.clone() as u32 + col_idx as u32)
     }
 
-    fn fetch_cell_id(&mut self, _: &SheetId, row_idx: usize, col_idx: usize) -> Result<CellId> {
+    fn fetch_cell_id(&self, _: &SheetId, row_idx: usize, col_idx: usize) -> Result<CellId> {
         Ok(CellId::NormalCell(NormalCellId {
             row: row_idx as u32,
             col: col_idx as u32,
@@ -47,7 +47,7 @@ impl IdFetcherTrait for TestIdFetcher {
     }
 
     fn fetch_norm_cell_id(
-        &mut self,
+        &self,
         _sheet_id: &SheetId,
         _row_idx: usize,
         _col_idx: usize,
@@ -82,7 +82,7 @@ impl NameFetcherTrait for TestIdFetcher {
         nid.to_string()
     }
 
-    fn fetch_cell_idx(&mut self, _sheet_id: &SheetId, cell_id: &CellId) -> (usize, usize) {
+    fn fetch_cell_idx(&self, _sheet_id: &SheetId, cell_id: &CellId) -> (usize, usize) {
         if let CellId::NormalCell(NormalCellId {
             row,
             col,
@@ -96,19 +96,19 @@ impl NameFetcherTrait for TestIdFetcher {
         }
     }
 
-    fn fetch_row_idx(&mut self, _sheet_id: &SheetId, row_id: &RowId) -> usize {
+    fn fetch_row_idx(&self, _sheet_id: &SheetId, row_id: &RowId) -> usize {
         row_id.clone() as usize
     }
 
-    fn fetch_col_idx(&mut self, _sheet_id: &SheetId, col_id: &ColId) -> usize {
+    fn fetch_col_idx(&self, _sheet_id: &SheetId, col_id: &ColId) -> usize {
         col_id.clone() as usize
     }
 
-    fn fetch_range(&mut self, _: &SheetId, _: &RangeId) -> Option<Range> {
+    fn fetch_range(&self, _: &SheetId, _: &RangeId) -> Option<Range> {
         todo!()
     }
 
-    fn fetch_cube(&mut self, _cube_id: &CubeId) -> Cube {
+    fn fetch_cube(&self, _cube_id: &CubeId) -> Cube {
         todo!()
     }
 

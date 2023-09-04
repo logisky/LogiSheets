@@ -74,6 +74,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         .for_each(|ct_sheet| {
             let sheet_name = &ct_sheet.name;
             let sheet_id = sheet_id_manager.get_id(sheet_name);
+            navigator.add_sheet_id(&sheet_id);
             sheet_pos_manager.pos.push_back(sheet_id);
             if ct_sheet.state != StSheetState::Visible {
                 sheet_pos_manager.hiddens.insert(sheet_id);

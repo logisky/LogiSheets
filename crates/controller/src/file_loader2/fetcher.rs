@@ -22,16 +22,16 @@ pub struct Fetcher<'a> {
 }
 
 impl<'a> IdFetcherTrait for Fetcher<'a> {
-    fn fetch_row_id(&mut self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
+    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
         self.navigator.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&mut self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
+    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
         self.navigator.fetch_col_id(sheet_id, col_idx)
     }
 
     fn fetch_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
@@ -85,7 +85,7 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
     }
 
     fn fetch_norm_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
@@ -96,28 +96,28 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
 }
 
 impl<'a> IndexFetcherTrait for Fetcher<'a> {
-    fn fetch_row_index(&mut self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize> {
+    fn fetch_row_index(&self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize> {
         self.navigator.fetch_row_idx(sheet_id, row_id)
     }
 
-    fn fetch_col_index(&mut self, sheet_id: &SheetId, col_id: &ColId) -> Result<usize> {
+    fn fetch_col_index(&self, sheet_id: &SheetId, col_id: &ColId) -> Result<usize> {
         self.navigator.fetch_col_idx(sheet_id, col_id)
     }
 
     fn fetch_cell_index(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         cell_id: &logisheets_base::CellId,
     ) -> Result<(usize, usize)> {
         self.navigator.fetch_cell_idx(sheet_id, cell_id)
     }
 
-    fn fetch_sheet_index(&mut self, sheet_id: &SheetId) -> Result<usize> {
+    fn fetch_sheet_index(&self, sheet_id: &SheetId) -> Result<usize> {
         Ok(sheet_id.clone() as usize)
     }
 
     fn fetch_normal_cell_index(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         normal_cell_id: &NormalCellId,
     ) -> Result<(usize, usize)> {
@@ -126,7 +126,7 @@ impl<'a> IndexFetcherTrait for Fetcher<'a> {
     }
 
     fn fetch_block_cell_index(
-        &mut self,
+        &self,
         sheet: &SheetId,
         block_cell_id: &BlockCellId,
     ) -> Result<(usize, usize)> {

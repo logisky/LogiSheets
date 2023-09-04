@@ -1,7 +1,6 @@
 use crate::async_helper::PendingTask;
 
 use super::async_helper::AsyncHelper;
-use lazy_static::lazy_static;
 use logisheets_controller::controller::edit_action::{
     BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock,
     PayloadsAction, RowShift,
@@ -9,22 +8,28 @@ use logisheets_controller::controller::edit_action::{
 use logisheets_controller::controller::{display::DisplayRequest, Controller};
 use logisheets_controller::{AsyncCalcResult, AsyncErr, Task};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use singlyton::{Singleton, SingletonUninit};
 use wasm_bindgen::prelude::*;
 
-lazy_static! {
-    static ref CONTROLLER: Mutex<Controller> = Mutex::new(Controller::default());
-    static ref PAYLOADS: Mutex<Vec<EditPayload>> = Mutex::new(vec![]);
-    static ref ASYNC_HELPER: Mutex<AsyncHelper> = Mutex::new(AsyncHelper::default());
+static INIT: Singleton<bool> = Singleton::new(false);
+static CONTROLLER: SingletonUninit<Controller> = SingletonUninit::uninit();
+static ASYNC_HELPER: SingletonUninit<AsyncHelper> = SingletonUninit::uninit();
+static PAYLOADS: Singleton<Vec<EditPayload>> = Singleton::new(vec![]);
+
+fn init() {
+    if *INIT.get() {
+        return;
+    }
+    CONTROLLER.init(Controller::default());
+    ASYNC_HELPER.init(AsyncHelper::default());
 }
 
 #[wasm_bindgen]
 pub fn read_file(name: String, buf: &[u8]) -> ReadFileResult {
-    let mut old_ctrl = CONTROLLER.lock().unwrap();
     let ctrl = Controller::from_file(name, buf);
     match ctrl {
         Ok(c) => {
-            *old_ctrl = c;
+            CONTROLLER.replace(c);
             ReadFileResult::Ok
         }
         Err(_) => ReadFileResult::FileErr,
@@ -33,28 +38,33 @@ pub fn read_file(name: String, buf: &[u8]) -> ReadFileResult {
 
 #[wasm_bindgen]
 pub fn undo() -> bool {
-    let mut ctrl = CONTROLLER.lock().unwrap();
+    init();
+    let mut ctrl = CONTROLLER.get_mut();
     ctrl.undo()
 }
 
 #[wasm_bindgen]
 pub fn redo() -> bool {
-    let mut ctrl = CONTROLLER.lock().unwrap();
+    init();
+    let mut ctrl = CONTROLLER.get_mut();
     ctrl.redo()
 }
 
 #[wasm_bindgen]
 pub fn transaction_start() -> TransactionStartResult {
+    init();
+    PAYLOADS.get_mut().clear();
     TransactionStartResult::Ok
 }
 
 #[wasm_bindgen]
 /// The JSON format of `TransactionEndResult`.
 pub fn transaction_end(undoable: bool) -> JsValue {
-    let mut empty = Vec::<EditPayload>::new();
-    let mut payloads = PAYLOADS.lock().unwrap();
+    init();
+    let mut empty = vec![];
+    let mut payloads = PAYLOADS.get_mut();
     std::mem::swap(&mut empty, &mut payloads);
-    let mut ctrl = CONTROLLER.lock().unwrap();
+    let mut ctrl = CONTROLLER.get_mut();
     let action = EditAction::Payloads(PayloadsAction {
         payloads: empty,
         undoable,
@@ -66,7 +76,7 @@ pub fn transaction_end(undoable: bool) -> JsValue {
                     tasks: effect.async_tasks.clone(),
                     dirtys: effect.dirtys.clone(),
                 };
-                ASYNC_HELPER.lock().unwrap().add_pending_task(t)
+                ASYNC_HELPER.get_mut().add_pending_task(t)
             } else {
                 0
             };
@@ -87,8 +97,9 @@ pub fn transaction_end(undoable: bool) -> JsValue {
 /// Output: TransactionEndResult
 #[wasm_bindgen]
 pub fn input_async_result(result: &JsValue) -> JsValue {
+    init();
     let r: AsyncFuncResult = serde_wasm_bindgen::from_value(result.clone()).unwrap();
-    let transaction_result = match ASYNC_HELPER.lock().unwrap().get_pending_task(r.async_id) {
+    let transaction_result = match ASYNC_HELPER.get_mut().get_pending_task(r.async_id) {
         Some(pending) => {
             let values = r
                 .values
@@ -98,8 +109,7 @@ pub fn input_async_result(result: &JsValue) -> JsValue {
             let tasks = pending.tasks;
             let dirtys = pending.dirtys;
             let action_effect = CONTROLLER
-                .lock()
-                .unwrap()
+                .get_mut()
                 .handle_async_calc_results(tasks, values, dirtys);
             match action_effect {
                 Some(effect) => {
@@ -108,7 +118,7 @@ pub fn input_async_result(result: &JsValue) -> JsValue {
                             tasks: effect.async_tasks.clone(),
                             dirtys: effect.dirtys.clone(),
                         };
-                        ASYNC_HELPER.lock().unwrap().add_pending_task(t)
+                        ASYNC_HELPER.get_mut().add_pending_task(t)
                     } else {
                         0
                     };
@@ -130,7 +140,8 @@ pub fn input_async_result(result: &JsValue) -> JsValue {
 #[wasm_bindgen]
 /// logisheets_controller::DisplayResponse
 pub fn get_patches(sheet_idx: u32, version: u32) -> JsValue {
-    let mut ctrl = CONTROLLER.lock().unwrap();
+    init();
+    let mut ctrl = CONTROLLER.get_mut();
     let response = ctrl.get_display_response(DisplayRequest {
         sheet_idx: sheet_idx as usize,
         version,
@@ -150,7 +161,8 @@ pub fn get_patches(sheet_idx: u32, version: u32) -> JsValue {
 
 #[wasm_bindgen]
 pub fn cell_input(sheet_idx: usize, row: usize, col: usize, content: String) {
-    let mut payloads = PAYLOADS.lock().unwrap();
+    init();
+    let mut payloads = PAYLOADS.get_mut();
     payloads.push(EditPayload::CellInput(CellInput {
         sheet_idx,
         row,
@@ -161,7 +173,8 @@ pub fn cell_input(sheet_idx: usize, row: usize, col: usize, content: String) {
 
 #[wasm_bindgen]
 pub fn row_insert(sheet_idx: usize, start: usize, count: usize) {
-    let mut payloads = PAYLOADS.lock().unwrap();
+    init();
+    let mut payloads = PAYLOADS.get_mut();
     payloads.push(EditPayload::RowShift(RowShift {
         sheet_idx,
         row: start,
@@ -172,7 +185,8 @@ pub fn row_insert(sheet_idx: usize, start: usize, count: usize) {
 
 #[wasm_bindgen]
 pub fn row_delete(sheet_idx: usize, start: usize, count: usize) {
-    let mut payloads = PAYLOADS.lock().unwrap();
+    init();
+    let mut payloads = PAYLOADS.get_mut();
     payloads.push(EditPayload::RowShift(RowShift {
         sheet_idx,
         row: start,
@@ -183,7 +197,8 @@ pub fn row_delete(sheet_idx: usize, start: usize, count: usize) {
 
 #[wasm_bindgen]
 pub fn col_insert(sheet_idx: usize, start: usize, count: usize) {
-    let mut payloads = PAYLOADS.lock().unwrap();
+    init();
+    let mut payloads = PAYLOADS.get_mut();
     payloads.push(EditPayload::ColShift(ColShift {
         sheet_idx,
         col: start,
@@ -194,7 +209,8 @@ pub fn col_insert(sheet_idx: usize, start: usize, count: usize) {
 
 #[wasm_bindgen]
 pub fn col_delete(sheet_idx: usize, start: usize, count: usize) {
-    let mut payloads = PAYLOADS.lock().unwrap();
+    init();
+    let mut payloads = PAYLOADS.get_mut();
     payloads.push(EditPayload::ColShift(ColShift {
         sheet_idx,
         col: start,
@@ -212,6 +228,7 @@ pub fn create_block(
     row_cnt: usize,
     col_cnt: usize,
 ) {
+    init();
     let b = CreateBlock {
         sheet_idx,
         master_row,
@@ -220,24 +237,26 @@ pub fn create_block(
         col_cnt,
         id,
     };
-    let mut payloads = PAYLOADS.lock().unwrap();
+    let mut payloads = PAYLOADS.get_mut();
     payloads.push(EditPayload::CreateBlock(b));
 }
 
 #[wasm_bindgen]
 pub fn move_block(sheet_idx: usize, id: usize, row: usize, col: usize) {
+    init();
     let m = MoveBlock {
         sheet_idx,
         id,
         new_master_row: row,
         new_master_col: col,
     };
-    let mut payloads = PAYLOADS.lock().unwrap();
+    let mut payloads = PAYLOADS.get_mut();
     payloads.push(EditPayload::MoveBlock(m));
 }
 
 #[wasm_bindgen]
 pub fn block_input(sheet_idx: usize, block_id: usize, row: usize, col: usize, input: String) {
+    init();
     let bi = BlockInput {
         sheet_idx,
         block_id,
@@ -245,7 +264,7 @@ pub fn block_input(sheet_idx: usize, block_id: usize, row: usize, col: usize, in
         col,
         input,
     };
-    let mut payloads = PAYLOADS.lock().unwrap();
+    let mut payloads = PAYLOADS.get_mut();
     payloads.push(EditPayload::BlockInput(bi));
 }
 

@@ -2,10 +2,7 @@ use im::{HashSet, Vector};
 use itertools::Itertools;
 use logisheets_base::SheetId;
 
-use crate::{
-    id_manager::SheetIdManager, payloads::sheet_shift::SheetShiftPayload,
-    payloads::sheet_shift::SheetShiftType,
-};
+use crate::{payloads::sheet_shift::SheetShiftPayload, payloads::sheet_shift::SheetShiftType};
 
 #[derive(Debug, Clone, Default)]
 pub struct SheetPosManager {
@@ -14,24 +11,11 @@ pub struct SheetPosManager {
 }
 
 impl SheetPosManager {
-    pub fn execute(
-        self,
-        payload: &SheetShiftPayload,
-        sheet_id_manager: &mut SheetIdManager,
-    ) -> Self {
+    pub fn execute(self, payload: &SheetShiftPayload) -> Self {
         match payload.ty {
             SheetShiftType::Insert => {
-                let new_name = {
-                    let mut x = 1;
-                    let mut name = format!("Sheet{}", x);
-                    while sheet_id_manager.has(&name).is_some() {
-                        x += 1;
-                        name = format!("Sheet{}", x);
-                    }
-                    name
-                };
                 let (mut left, right) = self.pos.split_at(payload.idx);
-                let id = sheet_id_manager.get_id(&new_name);
+                let id = payload.id;
                 left.push_back(id);
                 left.append(right);
                 SheetPosManager {

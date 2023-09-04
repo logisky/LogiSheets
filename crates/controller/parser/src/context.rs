@@ -73,24 +73,16 @@ where
     T: IdFetcherTrait,
     F: VertexFetcherTrait,
 {
-    fn fetch_row_id(
-        &mut self,
-        sheet_id: &SheetId,
-        row_idx: usize,
-    ) -> Result<logisheets_base::RowId> {
+    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<logisheets_base::RowId> {
         self.id_fetcher.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(
-        &mut self,
-        sheet_id: &SheetId,
-        col_idx: usize,
-    ) -> Result<logisheets_base::ColId> {
+    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<logisheets_base::ColId> {
         self.id_fetcher.fetch_col_id(sheet_id, col_idx)
     }
 
     fn fetch_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
@@ -119,7 +111,7 @@ where
     }
 
     fn fetch_norm_cell_id(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
