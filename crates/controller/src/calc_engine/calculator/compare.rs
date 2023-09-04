@@ -16,7 +16,6 @@ pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
         (Value::Blank, Value::Text(_)) => CompareResult::Less,
         (Value::Blank, Value::Boolean(_)) => CompareResult::Less,
         (Value::Blank, Value::Error(e)) => CompareResult::Error(e.clone()),
-        (Value::Blank, Value::Date(_)) => unimplemented!(),
         (Value::Number(num), Value::Blank) => {
             if *num > 0_f64 && *num > 1e-10 {
                 CompareResult::Greater
@@ -38,7 +37,6 @@ pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
         (Value::Number(_), Value::Text(_)) => CompareResult::Less,
         (Value::Number(_), Value::Boolean(_)) => CompareResult::Less,
         (Value::Number(_), Value::Error(e)) => CompareResult::Error(e.clone()),
-        (Value::Number(_), Value::Date(_)) => unimplemented!(),
         (Value::Text(_), Value::Blank) => CompareResult::Greater,
         (Value::Text(_), Value::Number(_)) => CompareResult::Greater,
         (Value::Text(l_text), Value::Text(r_text)) => {
@@ -52,7 +50,6 @@ pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
         }
         (Value::Text(_), Value::Boolean(_)) => CompareResult::Less,
         (Value::Text(_), Value::Error(e)) => CompareResult::Error(e.clone()),
-        (Value::Text(_), Value::Date(_)) => unimplemented!(),
         (Value::Boolean(_), Value::Blank) => CompareResult::Greater,
         (Value::Boolean(_), Value::Number(_)) => CompareResult::Greater,
         (Value::Boolean(_), Value::Text(_)) => CompareResult::Greater,
@@ -68,9 +65,7 @@ pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
             }
         }
         (Value::Boolean(_), Value::Error(e)) => CompareResult::Error(e.clone()),
-        (Value::Boolean(_), Value::Date(_)) => unimplemented!(),
         (Value::Error(e), _) => CompareResult::Error(e.clone()),
-        (Value::Date(_), _) => unimplemented!(),
     }
 }
 

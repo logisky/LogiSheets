@@ -215,7 +215,6 @@ fn expect_number(n: &Value) -> Result<f64, ast::Error> {
                 Ok(0_f64)
             }
         }
-        Value::Date(_) => unimplemented!(),
     }
 }
 
@@ -232,6 +231,5 @@ fn expect_string(n: &Value) -> Result<String, ast::Error> {
             }
         }
         Value::Error(e) => Err(e.clone()),
-        Value::Date(_) => unimplemented!(),
     }
 }

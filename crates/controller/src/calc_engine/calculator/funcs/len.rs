@@ -69,7 +69,6 @@ where
             }
         }
         Value::Error(e) => e.get_err_str().len(),
-        Value::Date(_) => todo!(),
     }
 }
 

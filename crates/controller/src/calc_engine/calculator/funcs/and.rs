@@ -39,10 +39,6 @@ fn cal_and_result(and: AndResult, v: Value) -> Result<AndResult, ast::Error> {
             AndResult::Bool(b) => Ok(AndResult::Bool(b && n != 0_f64)),
             AndResult::Blank => Ok(AndResult::Bool(n != 0_f64)),
         },
-        Value::Date(_) => match and {
-            AndResult::Bool(_) => Ok(and),
-            AndResult::Blank => Ok(AndResult::Bool(true)),
-        },
         Value::Error(e) => Err(e),
         _ => Ok(and),
     }
@@ -53,7 +49,6 @@ mod tests {
     use super::super::utils::tests_utils::TestFetcher;
     use super::calc;
     use super::{CalcValue, CalcVertex, Value};
-    use chrono::DateTime;
     use logisheets_base::matrix_value::MatrixValue;
     use logisheets_parser::ast::Error;
 
@@ -64,9 +59,6 @@ mod tests {
             CalcVertex::from_number(1_f64),
             CalcVertex::from_string(String::from("test")),
             CalcVertex::Value(CalcValue::Scalar(Value::Blank)),
-            CalcVertex::Value(CalcValue::Scalar(Value::Date(
-                DateTime::parse_from_rfc3339("2021-01-01T00:00:00-00:00").unwrap(),
-            ))),
             CalcVertex::Value(CalcValue::Range(MatrixValue::from(vec![
                 vec![Value::Boolean(true)],
                 vec![Value::Number(1_f64)],

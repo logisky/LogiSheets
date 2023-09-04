@@ -24,14 +24,12 @@ fn sum_calc_value(value: CalcValue) -> Result<f64, ast::Error> {
         CalcValue::Scalar(s) => match s {
             Value::Number(f) => Ok(f),
             Value::Error(e) => Err(e),
-            Value::Date(_) => todo!(),
             _ => Ok(0_f64),
         },
         CalcValue::Range(r) => {
             let result = r.into_iter().try_fold(0_f64, |s, e| match e {
                 Value::Number(n) => Ok(s + n),
                 Value::Error(e) => Err(e),
-                Value::Date(_) => todo!(),
                 _ => Ok(s),
             })?;
             Ok(result)
@@ -40,7 +38,6 @@ fn sum_calc_value(value: CalcValue) -> Result<f64, ast::Error> {
             let result = c.into_iter().try_fold(0_f64, |s, e| match e {
                 Value::Number(n) => Ok(s + n),
                 Value::Error(e) => Err(e),
-                Value::Date(_) => todo!(),
                 _ => Ok(s),
             })?;
             Ok(result)

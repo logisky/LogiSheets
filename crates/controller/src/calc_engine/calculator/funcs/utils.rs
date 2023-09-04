@@ -28,7 +28,6 @@ pub fn get_condition_result(calc_value: CalcValue) -> ConditionResult {
                 }
             }
             Value::Error(e) => ConditionResult::Error(e),
-            Value::Date(_) => ConditionResult::True,
         },
         CalcValue::Union(_) => ConditionResult::Error(ast::Error::Value),
         // WPS neither support this.
@@ -53,7 +52,6 @@ pub fn convert_f64(value: Value) -> Result<f64, ast::Error> {
             }
         }
         Value::Error(e) => Err(e),
-        Value::Date(_) => todo!(),
     }
 }
 

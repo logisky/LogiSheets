@@ -1,39 +1,17 @@
 pub mod async_func;
-pub mod block_affect;
-pub mod cube_value;
-pub mod datetime;
-pub mod get_active_sheet;
-pub mod get_book_name;
-pub mod get_curr_addr;
-pub mod get_norm_cell_id;
-pub mod get_norm_cells_in_line;
-pub mod id_fetcher;
-pub mod index_fetcher;
-pub mod matrix_value;
-pub mod name_fetcher;
-pub mod set_curr_cell;
+pub mod traits;
+pub mod types;
+pub use traits::*;
+pub use types::cube_value;
+pub use types::datetime;
+pub use types::id::*;
+pub use types::matrix_value;
+pub mod error;
 
-use chrono::{DateTime, FixedOffset};
 use gents_derives::TS;
 use logisheets_workbook::prelude::*;
 use serde::Serialize;
 use std::hash::Hash;
-
-pub type Id = u32;
-pub type RowId = u32;
-pub type ColId = u32;
-pub type RangeId = u32;
-pub type CubeId = u32;
-pub type ExtRefId = u32;
-pub type SheetId = u16;
-pub type TextId = u32;
-pub type NameId = u8;
-pub type FuncId = u16;
-pub type BlockId = u16;
-pub const CURR_BOOK: ExtBookId = 0;
-pub type ExtBookId = u8;
-pub type AuthorId = u8;
-pub type StyleId = u32;
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize, TS)]
 #[ts(file_name = "cell_id.ts")]
@@ -195,7 +173,6 @@ impl Error {
 pub enum CellValue {
     Blank,
     Boolean(bool),
-    Date(DateTime<FixedOffset>),
     Error(Error),
     String(TextId),
     Number(f64),
@@ -249,7 +226,6 @@ impl CellValue {
                 }),
                 StCellType::B,
             ),
-            CellValue::Date(_) => todo!(),
             CellValue::Error(e) => (
                 Some(PlainTextString {
                     value: e.to_string(),
@@ -318,13 +294,7 @@ impl CellValue {
                     }
                 }
                 StCellType::Str => CellValue::FormulaStr(text.value.clone()),
-                StCellType::D => {
-                    let dt = DateTime::parse_from_rfc3339(&text.value);
-                    match dt {
-                        Ok(d) => CellValue::Date(d),
-                        Err(_) => CellValue::Blank,
-                    }
-                }
+                StCellType::D => todo!(),
                 StCellType::E => {
                     let e = {
                         if &text.value == "#DIV/0!" {

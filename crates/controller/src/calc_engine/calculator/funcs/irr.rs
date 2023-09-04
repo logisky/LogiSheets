@@ -91,7 +91,6 @@ fn convert(value: Value) -> ConvertResult {
         Value::Text(_) => ConvertResult::None,
         Value::Boolean(_) => ConvertResult::None,
         Value::Error(e) => ConvertResult::Err(e),
-        Value::Date(_) => todo!(),
     }
 }
 

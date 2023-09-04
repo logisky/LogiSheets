@@ -101,6 +101,5 @@ fn get_num_from_value(value: Value) -> Result<u32, ast::Error> {
             }
         }
         Value::Error(e) => Err(e),
-        Value::Date(_) => todo!(),
     }
 }

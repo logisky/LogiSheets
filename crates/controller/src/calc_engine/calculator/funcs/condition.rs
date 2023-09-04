@@ -85,7 +85,6 @@ pub fn get_condition_value(value: &Value) -> ConditionValue {
             ConditionValue::Text(value)
         }
         Value::Error(e) => ConditionValue::Text(e.get_err_str().to_string()),
-        Value::Date(_) => todo!(),
     }
 }
 
