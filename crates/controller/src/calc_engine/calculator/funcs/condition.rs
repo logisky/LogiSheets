@@ -1,16 +1,17 @@
-use regex::Regex;
-
 use crate::calc_engine::calculator::calc_vertex::Value;
 
+#[derive(Debug)]
 pub enum Condition {
     Logical(LogicalCondition),
     TextPattern(String),
 }
+#[derive(Debug)]
 pub struct LogicalCondition {
     pub op: Op,
     pub value: ConditionValue,
 }
 
+#[derive(Debug)]
 pub enum Op {
     Eq,
     Ge,
@@ -20,6 +21,7 @@ pub enum Op {
     Neq,
 }
 
+#[derive(Debug)]
 pub enum ConditionValue {
     Number(f64),
     Text(String),
@@ -67,7 +69,7 @@ pub fn parse_condition(text: &str) -> Option<Condition> {
             })),
         }
     } else {
-        Some(Condition::TextPattern(chars.collect::<String>()))
+        Some(Condition::TextPattern(text.to_string()))
     }
 }
 
@@ -119,15 +121,8 @@ pub fn match_condition(cond: &Condition, value: &Value) -> bool {
 }
 
 fn match_text_pattern(pattern: &str, text: &str) -> bool {
-    let regex_str = format!("^{}$", pattern.replace("?", ".{1}").replace("*", ".*"));
-    let regex = Regex::new(&regex_str);
-    match regex {
-        Ok(r) => match r.captures_iter(text).next() {
-            Some(_) => true,
-            None => false,
-        },
-        Err(_) => false,
-    }
+    let pattern = wildescape::WildMatch::new(pattern);
+    pattern.matches(text)
 }
 
 #[cfg(test)]

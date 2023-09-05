@@ -525,6 +525,7 @@ dependencies = [
  "thiserror",
  "unicode-segmentation",
  "uuid",
+ "wildescape",
 ]
 
 [[package]]
@@ -1371,6 +1372,12 @@ dependencies = [
  "bytemuck",
  "safe_arch",
 ]
+
+[[package]]
+name = "wildescape"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9776e2b22ae5c889d04e0e3186583ec235808c6a744ff16cd8331fe51e274d0"
 
 [[package]]
 name = "winapi"
