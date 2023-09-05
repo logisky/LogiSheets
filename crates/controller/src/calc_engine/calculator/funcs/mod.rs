@@ -48,6 +48,7 @@ mod scalar_number;
 mod scalar_text;
 mod sln;
 mod sum;
+mod sumif;
 mod switch;
 mod tbill;
 mod utils;
@@ -226,6 +227,7 @@ where
         "SQRTPI" => scalar_number::calc_sqrtpi(args, fetcher),
         "STDEV" => distribution::statistics::calc_stdev(args, fetcher),
         "SUM" => sum::calc(args, fetcher),
+        "SUMIF" => sumif::calc(args, fetcher),
         "SWITCH" => switch::calc(args, fetcher),
         "SYD" => sln::syd(args, fetcher),
         "TAN" => scalar_number::calc_tan(args, fetcher),

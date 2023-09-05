@@ -262,14 +262,6 @@ where
         if avail_size.0 == 0 || avail_size.1 == 0 {
             return vec![].into_iter();
         }
-        if self.default_value.len() == 0 {
-            return self
-                .data
-                .iter()
-                .map(|(_, v)| v.clone())
-                .collect::<Vec<_>>()
-                .into_iter();
-        }
         cross_product_usize(0, avail_size.0 - 1, 0, avail_size.1 - 1)
             .into_iter()
             .map(|(i, j)| match self.visit(i, j) {

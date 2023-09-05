@@ -6,6 +6,19 @@ macro_rules! assert_or_return {
     };
 }
 
+macro_rules! assert_range_from_calc_value {
+    ($var:ident, $value:expr) => {
+        let _v = match $value {
+            CalcValue::Range(r) => Some(r),
+            _ => None,
+        };
+        if _v.is_none() {
+            return CalcVertex::from_error(ast::Error::Num);
+        }
+        let $var = _v.unwrap();
+    };
+}
+
 macro_rules! assert_f64_from_calc_value {
     ($var:ident, $value:expr) => {
         let _v = match $value {
