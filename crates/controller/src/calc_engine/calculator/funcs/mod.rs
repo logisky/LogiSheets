@@ -31,6 +31,7 @@ mod irr;
 mod iserr;
 mod leftright;
 mod len;
+mod mode;
 mod na;
 mod norm_s_dist;
 mod npv;
@@ -175,6 +176,8 @@ where
         "LOG10" => scalar_number::calc_log10(args, fetcher),
         "LOWER" => scalar_text::calc_lower(args, fetcher),
         "MINUTE" => datetime::hms::calc_minute(args, fetcher),
+        "MODE" => mode::calc(args, fetcher),
+        "MODE.SNGL" => mode::calc(args, fetcher),
         "MONTH" => datetime::ymd::calc_month(args, fetcher),
         "NA" => na::calc(args),
         "NEGBINOM.DIST" => distribution::negative_binomial::calc(args, fetcher),
