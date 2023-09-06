@@ -96,7 +96,10 @@ pub fn load_comments(
                 if let Ok(cell_id) = navigator.fetch_cell_id(&sheet_id, row, col) {
                     let text = rst_to_plain_text(&c.text);
                     let author = authors.get(c.author_id as usize).unwrap();
-                    let author_id = cell_attachment_manager.comments.authors.get_id(author);
+                    let author_id = cell_attachment_manager
+                        .comments
+                        .authors
+                        .get_or_register_id(author);
                     let comment = Comment {
                         author: author_id,
                         text,
@@ -150,7 +153,7 @@ pub fn load_sheet_data(
                     let cv = CellValue::from_cell(ct_cell, |idx| {
                         let rst = workbook.xl.sst.as_ref().unwrap().1.si.get(idx).unwrap();
                         let string = rst_to_plain_text(rst);
-                        text_id_manager.get_id(&string)
+                        text_id_manager.get_or_register_id(&string)
                     });
                     let id = navigator.fetch_cell_id(&sheet_id, row, col).unwrap();
                     let style_id = style_loader.load_xf(ct_cell.s);

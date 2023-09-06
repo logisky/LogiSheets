@@ -25,7 +25,7 @@ impl ExtBooksManager {
     }
 
     pub fn fetch_ext_book_id(&mut self, name: &str) -> ExtBookId {
-        self.book_id_manager.get_id(name)
+        self.book_id_manager.get_or_register_id(name)
     }
 
     fn check(&mut self, book_id: ExtBookId, sheet_id: SheetId) {

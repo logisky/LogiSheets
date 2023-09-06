@@ -14,6 +14,7 @@ use logisheets_parser::ast;
 
 use crate::formula_manager::FormulaManager;
 use crate::id_manager::errors::IdError;
+use crate::id_manager::SheetIdManager;
 use crate::{
     async_func_manager::AsyncFuncManager,
     calc_engine::calculator::calc_vertex::Value,
@@ -36,6 +37,7 @@ pub struct CalcConnector<'a> {
     pub ext_links: &'a mut ExtBooksManager,
     pub text_id_manager: &'a mut TextIdManager,
     pub func_id_manager: &'a FuncIdManager,
+    pub sheet_id_manager: &'a SheetIdManager,
     pub names_storage: HashMap<NameId, CalcValue>,
     pub cells_stroage: HashMap<(SheetId, CellId), CalcValue>,
     pub sheet_pos_manager: &'a SheetPosManager,
@@ -295,7 +297,7 @@ impl<'a> Connector for CalcConnector<'a> {
     }
 
     fn get_cell_idx(
-        &mut self,
+        &self,
         sheet_id: SheetId,
         cell_id: &logisheets_base::CellId,
     ) -> Result<(usize, usize)> {
@@ -303,7 +305,7 @@ impl<'a> Connector for CalcConnector<'a> {
     }
 
     #[inline]
-    fn get_cell_id(&mut self, sheet_id: SheetId, row: usize, col: usize) -> Result<CellId> {
+    fn get_cell_id(&self, sheet_id: SheetId, row: usize, col: usize) -> Result<CellId> {
         self.navigator.fetch_cell_id(&sheet_id, row, col)
     }
 
@@ -313,7 +315,8 @@ impl<'a> Connector for CalcConnector<'a> {
         let cell_idx = self.navigator.fetch_cell_idx(&sheet_id, &cell_id).unwrap();
         match result {
             CalcValue::Scalar(v) => {
-                let cell_value = value_to_cell_value(v, &mut |t| self.text_id_manager.get_id(&t));
+                let cell_value =
+                    value_to_cell_value(v, &mut |t| self.text_id_manager.get_or_register_id(&t));
                 self.set_cell_value(sheet_id, cell_idx.0, cell_idx.1, cell_value);
             }
             CalcValue::Range(_) => unreachable!(),
@@ -338,6 +341,14 @@ impl<'a> Connector for CalcConnector<'a> {
             .range_manager
             .get_range(sheet_id, range)
             .unwrap()
+    }
+
+    fn get_sheet_id_by_name(&self, name: &str) -> Result<SheetId> {
+        let id = self.sheet_id_manager.get_id(name);
+        match id {
+            Some(id) => Ok(*id),
+            None => Err(IdError::SheetNameNotFound(name.to_string()).into()),
+        }
     }
 }
 

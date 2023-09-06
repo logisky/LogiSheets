@@ -67,7 +67,7 @@ impl<'a> Converter<'a> {
     fn convert_sheet_shift(&mut self, ss: SheetShift) -> Option<Process> {
         let payload = if ss.insert {
             let new_name = self.sheet_id_manager.get_new_available_name();
-            let id = self.sheet_id_manager.get_id(&new_name);
+            let id = self.sheet_id_manager.get_or_register_id(&new_name);
             SheetShiftPayload {
                 idx: ss.idx,
                 ty: SheetShiftType::Insert,
@@ -177,7 +177,9 @@ impl<'a> Converter<'a> {
             content,
         } = input;
         let sheet_id = self.sheet_pos_manager.get_sheet_id(sheet_idx)?;
-        let payload = get_input_payload(row, col, content, &mut |t| self.text_id_manager.get_id(t));
+        let payload = get_input_payload(row, col, content, &mut |t| {
+            self.text_id_manager.get_or_register_id(t)
+        });
         Some(Process::Sheet(SheetProcess { sheet_id, payload }))
     }
 
