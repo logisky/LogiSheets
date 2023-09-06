@@ -55,6 +55,18 @@ pub fn convert_f64(value: Value) -> Result<f64, ast::Error> {
     }
 }
 
+pub fn is_na_error(value: &CalcValue) -> bool {
+    match value {
+        CalcValue::Scalar(s) => match s {
+            Value::Error(e) => *e == ast::Error::Na,
+            _ => false,
+        },
+        CalcValue::Range(_) => false,
+        CalcValue::Cube(_) => true,
+        CalcValue::Union(_) => false,
+    }
+}
+
 pub fn is_error(value: &CalcValue) -> bool {
     match value {
         CalcValue::Scalar(s) => match s {
@@ -63,7 +75,7 @@ pub fn is_error(value: &CalcValue) -> bool {
         },
         CalcValue::Range(_) => false,
         CalcValue::Cube(_) => true,
-        CalcValue::Union(_) => todo!(),
+        CalcValue::Union(_) => false,
     }
 }
 
