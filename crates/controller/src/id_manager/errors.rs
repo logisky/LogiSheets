@@ -9,4 +9,6 @@ pub enum IdError {
     SheetIdNotFound(SheetId),
     #[error("cannot find the func id: {0}")]
     FuncIdNotFound(FuncId),
+    #[error("cannot find the sheet name: {0}")]
+    SheetNameNotFound(String),
 }

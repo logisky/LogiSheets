@@ -215,7 +215,7 @@ pub mod tests_utils {
         }
 
         fn get_cell_idx(
-            &mut self,
+            &self,
             _sheet_id: logisheets_base::SheetId,
             _cell_id: &logisheets_base::CellId,
         ) -> Result<(usize, usize)> {
@@ -223,7 +223,7 @@ pub mod tests_utils {
         }
 
         fn get_cell_id(
-            &mut self,
+            &self,
             _sheet_id: logisheets_base::SheetId,
             _row: usize,
             _col: usize,
@@ -244,6 +244,10 @@ pub mod tests_utils {
             _sheet_id: &logisheets_base::SheetId,
             _range: &logisheets_base::RangeId,
         ) -> logisheets_base::Range {
+            todo!()
+        }
+
+        fn get_sheet_id_by_name(&self, _name: &str) -> Result<SheetId> {
             todo!()
         }
     }

@@ -34,7 +34,7 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
     }
 
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId {
-        self.sheet_id_manager.get_id(sheet_name)
+        self.sheet_id_manager.get_or_register_id(sheet_name)
     }
 
     fn fetch_name_id(&mut self, workbook: &Option<&str>, name: &str) -> logisheets_base::NameId {
@@ -50,7 +50,7 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
     }
 
     fn fetch_text_id(&mut self, text: &str) -> logisheets_base::TextId {
-        self.text_id_manager.get_id(text)
+        self.text_id_manager.get_or_register_id(text)
     }
 
     fn fetch_func_id(&mut self, func_name: &str) -> logisheets_base::FuncId {

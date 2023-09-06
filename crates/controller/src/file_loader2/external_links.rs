@@ -70,7 +70,7 @@ where
         })
     }
     let b = ExtBook { sheets, data_set };
-    let bid = manager.book_id_manager.get_id(&ext.target);
+    let bid = manager.book_id_manager.get_or_register_id(&ext.target);
     manager.books.insert(bid, b);
     manager.orders.push_back(bid);
     bid

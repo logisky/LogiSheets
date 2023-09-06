@@ -79,11 +79,15 @@ where
         self.ids.insert(new_name, id);
     }
 
-    pub fn get_id(&mut self, name: &str) -> T {
+    pub fn get_or_register_id(&mut self, name: &str) -> T {
         match self.ids.get(name) {
             Some(r) => r.clone(),
             None => self.registry(name.to_owned()),
         }
+    }
+
+    pub fn get_id(&self, name: &str) -> Option<&T> {
+        self.ids.get(name)
     }
 
     pub fn get_string(&self, id: &T) -> Option<String> {
@@ -102,6 +106,6 @@ where
 impl FuncIdManager {
     pub fn get_func_id(&mut self, name: &str) -> FuncId {
         let s = name.to_uppercase();
-        self.get_id(&s)
+        self.get_or_register_id(&s)
     }
 }

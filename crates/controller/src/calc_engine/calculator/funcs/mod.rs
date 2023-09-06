@@ -27,6 +27,7 @@ mod iferror;
 mod ifs;
 mod im;
 mod index;
+mod indirect;
 mod irr;
 mod iserr;
 mod leftright;
@@ -165,6 +166,7 @@ where
         "IMTAN" => im::calc_imtan(args, fetcher),
         "IMTANH" => im::calc_imtanh(args, fetcher),
         "INDEX" => index::calc(args, fetcher),
+        "INDIRECT" => indirect::calc(args, fetcher),
         "INTRATE" => bonds::intrate::calc(args, fetcher),
         "IPMT" => pmt::ipmt(args, fetcher),
         "IRR" => irr::calc(args, fetcher),

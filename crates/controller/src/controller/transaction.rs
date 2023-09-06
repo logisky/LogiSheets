@@ -58,6 +58,7 @@ impl<'a> Transaction<'a> {
             ext_links: &mut external_links_manager,
             text_id_manager: &mut text_id_manager,
             func_id_manager: &mut func_id_manager,
+            sheet_id_manager: &sheet_id_manager,
             names_storage: HashMap::new(),
             cells_stroage: HashMap::new(),
             sheet_pos_manager: &sheet_pos_manager,

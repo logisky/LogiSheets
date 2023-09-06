@@ -29,7 +29,7 @@ pub struct SheetIdFetcher<'a> {
 
 impl<'a> SheetIdFetcherTrait for SheetIdFetcher<'a> {
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> logisheets_base::SheetId {
-        self.sheet_id_manager.get_id(sheet_name)
+        self.sheet_id_manager.get_or_register_id(sheet_name)
     }
 }
 
@@ -73,7 +73,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         .iter()
         .for_each(|ct_sheet| {
             let sheet_name = &ct_sheet.name;
-            let sheet_id = sheet_id_manager.get_id(sheet_name);
+            let sheet_id = sheet_id_manager.get_or_register_id(sheet_name);
             navigator.add_sheet_id(&sheet_id);
             sheet_pos_manager.pos.push_back(sheet_id);
             if ct_sheet.state != StSheetState::Visible {
