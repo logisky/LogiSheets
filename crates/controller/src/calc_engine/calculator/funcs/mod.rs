@@ -43,6 +43,7 @@ mod quotient;
 mod rand;
 mod rank;
 mod rept;
+mod round;
 mod row;
 mod scalar_number;
 mod scalar_text;
@@ -143,7 +144,8 @@ where
         "HEX2OCT" => bits::hob2hob::calc_hex2oct(args, fetcher),
         "HOUR" => datetime::hms::calc_hour(args, fetcher),
         "IF" => if_plugin::calc(args, fetcher),
-        "IFERROR" => iferror::calc(args, fetcher),
+        "IFERROR" => iferror::calc_iferror(args, fetcher),
+        "IFNA" => iferror::calc_ifna(args, fetcher),
         "IFS" => ifs::calc(args, fetcher),
         "IMABS" => im::calc_imabs(args, fetcher),
         "IMAGINARY" => im::calc_imaginary(args, fetcher),
@@ -180,6 +182,7 @@ where
         "MODE" => mode::calc(args, fetcher),
         "MODE.SNGL" => mode::calc(args, fetcher),
         "MONTH" => datetime::ymd::calc_month(args, fetcher),
+        "MROUND" => round::calc_mround(args, fetcher),
         "NA" => na::calc(args),
         "NEGBINOM.DIST" => distribution::negative_binomial::calc(args, fetcher),
         "NEGBINOMDIST" => distribution::negative_binomial::calc(args, fetcher),
@@ -211,12 +214,16 @@ where
         "QUOTIENT" => quotient::calc(args, fetcher),
         "RADIANS" => scalar_number::calc_radians(args, fetcher),
         "RAND" => rand::calc(args),
+        "RANDBETWEEN" => rand::calc_randbetween(args, fetcher),
         "RANK" => rank::calc_rank(args, fetcher),
         "RANK.AVG" => rank::calc_rank_avg(args, fetcher),
         "RANK.EQ" => rank::calc_rank(args, fetcher),
         "RECEIVED" => bonds::received::calc(args, fetcher),
         "REPT" => rept::calc(args, fetcher),
         "RIGHT" => leftright::calc_right(args, fetcher),
+        "ROUND" => round::calc_round(args, fetcher),
+        "ROUNDUP" => round::calc_roundup(args, fetcher),
+        "ROUNDDOWN" => round::calc_rounddown(args, fetcher),
         "ROW" => row::calc(args, fetcher),
         "RRI" => pduration::rri(args, fetcher),
         "SECOND" => datetime::hms::calc_second(args, fetcher),
@@ -228,6 +235,7 @@ where
         "STDEV" => distribution::statistics::calc_stdev(args, fetcher),
         "SUM" => sum::calc(args, fetcher),
         "SUMIF" => sumif::calc(args, fetcher),
+        "SUMSQ" => sum::calc_sumsq(args, fetcher),
         "SWITCH" => switch::calc(args, fetcher),
         "SYD" => sln::syd(args, fetcher),
         "TAN" => scalar_number::calc_tan(args, fetcher),

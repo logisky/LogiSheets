@@ -19,6 +19,23 @@ where
     }
 }
 
+pub fn calc_sumsq<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    let sum_result = args
+        .into_iter()
+        .map(|arg| fetcher.get_calc_value(arg))
+        .try_fold(0_f64, |sum, v| match sum_calc_value(v) {
+            Ok(n) => Ok(sum + n.powi(2)),
+            Err(e) => Err(e),
+        });
+    match sum_result {
+        Ok(num) => CalcVertex::from_number(num),
+        Err(e) => CalcVertex::from_error(e),
+    }
+}
+
 fn sum_calc_value(value: CalcValue) -> Result<f64, ast::Error> {
     match value {
         CalcValue::Scalar(s) => match s {
