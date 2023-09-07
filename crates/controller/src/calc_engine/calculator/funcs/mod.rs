@@ -6,6 +6,7 @@ mod average;
 mod bits;
 mod bonds;
 mod boolean;
+mod choose;
 mod complex;
 mod concatenate;
 mod condition;
@@ -93,6 +94,9 @@ where
         "BITXOR" => bits::bit::calc_bitxor(args, fetcher),
         "CHISQ.DIST" => distribution::chisqdist::calc_chisqdist(args, fetcher),
         "CHISQ.DIST.RT" => distribution::chisqdist::calc_chisqdist_rt(args, fetcher),
+        "CHOOSE" => choose::calc(args, fetcher),
+        "COLUMN" => row::calc_column(args, fetcher),
+        "COLUMNS" => row::calc_columns(args, fetcher),
         "COMBIN" => permutation::calc_combine(args, fetcher),
         "COMPLEX" => complex::calc(args, fetcher),
         "CONCATENATE" => concatenate::calc(args, fetcher),
@@ -226,7 +230,8 @@ where
         "ROUND" => round::calc_round(args, fetcher),
         "ROUNDUP" => round::calc_roundup(args, fetcher),
         "ROUNDDOWN" => round::calc_rounddown(args, fetcher),
-        "ROW" => row::calc(args, fetcher),
+        "ROW" => row::calc_row(args, fetcher),
+        "ROWS" => row::calc_rows(args, fetcher),
         "RRI" => pduration::rri(args, fetcher),
         "SECOND" => datetime::hms::calc_second(args, fetcher),
         "SIGN" => scalar_number::calc_sign(args, fetcher),
