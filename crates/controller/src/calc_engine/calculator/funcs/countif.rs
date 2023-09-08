@@ -16,9 +16,9 @@ where
     let mut iter = args.into_iter();
     let first = fetcher.get_calc_value(iter.next().unwrap());
     let second = fetcher.get_calc_value(iter.next().unwrap());
-    let condition = match second {
+    let condition = match &second {
         CalcValue::Scalar(v) => match v {
-            Value::Text(t) => parse_condition(&t),
+            Value::Text(t) => parse_condition(t),
             _ => {
                 let value = get_condition_value(&v);
                 let condition = Condition::Logical(LogicalCondition { op: Op::Eq, value });

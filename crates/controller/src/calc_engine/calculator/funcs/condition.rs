@@ -1,17 +1,17 @@
 use crate::calc_engine::calculator::calc_vertex::Value;
 
-#[derive(Debug)]
-pub enum Condition {
+#[derive(Debug, Clone)]
+pub enum Condition<'a> {
     Logical(LogicalCondition),
-    TextPattern(String),
+    TextPattern(&'a str),
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LogicalCondition {
     pub op: Op,
     pub value: ConditionValue,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Op {
     Eq,
     Ge,
@@ -21,10 +21,10 @@ pub enum Op {
     Neq,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConditionValue {
     Number(f64),
-    Text(String),
+    Text(String), // todo if using reference is available
 }
 
 pub fn parse_condition(text: &str) -> Option<Condition> {
@@ -69,7 +69,7 @@ pub fn parse_condition(text: &str) -> Option<Condition> {
             })),
         }
     } else {
-        Some(Condition::TextPattern(text.to_string()))
+        Some(Condition::TextPattern(&text))
     }
 }
 
@@ -102,17 +102,23 @@ pub fn match_condition(cond: &Condition, value: &Value) -> bool {
                 Op::Lt => lhs < *rhs,
                 Op::Neq => lhs != *rhs,
             },
-            ConditionValue::Text(_) => false,
+            ConditionValue::Text(_) => match l.op {
+                Op::Neq => true,
+                _ => false,
+            },
         },
         (Condition::Logical(l), ConditionValue::Text(lhs)) => match &l.value {
-            ConditionValue::Number(_) => false,
+            ConditionValue::Number(_) => match &l.op {
+                Op::Neq => true,
+                _ => false,
+            },
             ConditionValue::Text(rhs) => match &l.op {
-                Op::Eq => lhs == *rhs,
+                Op::Eq => match_text_pattern(rhs, &lhs),
+                Op::Neq => !match_text_pattern(&rhs, &lhs),
                 Op::Ge => lhs >= *rhs,
                 Op::Gt => lhs > *rhs,
                 Op::Le => lhs <= *rhs,
                 Op::Lt => lhs < *rhs,
-                Op::Neq => lhs != *rhs,
             },
         },
         (Condition::TextPattern(_), ConditionValue::Number(_)) => false,
