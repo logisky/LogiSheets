@@ -31,6 +31,7 @@ mod index;
 mod indirect;
 mod irr;
 mod iserr;
+mod large;
 mod leftright;
 mod len;
 mod mode;
@@ -108,6 +109,7 @@ where
         "COUNT" => count::calc(args, fetcher),
         "COUNTBLANK" => countblank::calc(args, fetcher),
         "COUNTIF" => countif::calc(args, fetcher),
+        "COUNTIFS" => sumif::calc_countifs(args, fetcher),
         "COUPNCD" => bonds::coupncd::calc(args, fetcher),
         "COUPNUM" => bonds::coupnum::calc(args, fetcher),
         "COUPPCD" => bonds::couppcd::calc(args, fetcher),
@@ -179,6 +181,7 @@ where
         "ISERR" => iserr::calc(args, fetcher, iserr::IsErrType::ExceptNa),
         "ISERROR" => iserr::calc(args, fetcher, iserr::IsErrType::All),
         "ISNA" => iserr::calc(args, fetcher, iserr::IsErrType::Na),
+        "LARGE" => large::calc_large(args, fetcher),
         "LCM" => gcdlcm::calc_lcm(args, fetcher),
         "LEFT" => leftright::calc_left(args, fetcher),
         "LEN" => len::calc_len(args, fetcher),
@@ -241,6 +244,7 @@ where
         "SIGN" => scalar_number::calc_sign(args, fetcher),
         "SIN" => scalar_number::calc_sin(args, fetcher),
         "SLN" => sln::sln(args, fetcher),
+        "SMALL" => large::calc_small(args, fetcher),
         "SQRT" => scalar_number::calc_sqrt(args, fetcher),
         "SQRTPI" => scalar_number::calc_sqrtpi(args, fetcher),
         "STDEV" => distribution::statistics::calc_stdev(args, fetcher),
