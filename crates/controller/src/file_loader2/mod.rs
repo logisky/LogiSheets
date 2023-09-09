@@ -46,6 +46,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         mut style_manager,
         mut cell_attachment_manager,
         mut formula_manager,
+        dirty_cells,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {
         sheet_id_manager: &mut sheet_id_manager,
@@ -142,6 +143,7 @@ pub fn load(wb: Workbook, book_name: String) -> Controller {
         sheet_pos_manager,
         style_manager,
         cell_attachment_manager,
+        dirty_cells,
     };
     if let Some(theme) = wb.xl.theme {
         settings.theme = ThemeManager::from(theme.1);

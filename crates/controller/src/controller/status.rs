@@ -1,4 +1,7 @@
 use im::HashMap;
+use im::HashSet;
+use logisheets_base::CellId;
+use logisheets_base::SheetId;
 
 use crate::cell_attachments::CellAttachmentsManager;
 use crate::container::DataContainer;
@@ -26,6 +29,8 @@ pub struct Status {
     pub sheet_pos_manager: SheetPosManager,
     pub style_manager: StyleManager,
     pub cell_attachment_manager: CellAttachmentsManager,
+
+    pub dirty_cells: HashSet<(SheetId, CellId)>,
 }
 
 impl Default for Status {
@@ -44,6 +49,7 @@ impl Default for Status {
             sheet_pos_manager: SheetPosManager::default(),
             style_manager: StyleManager::default(),
             cell_attachment_manager: CellAttachmentsManager::default(),
+            dirty_cells: HashSet::new(),
         }
     }
 }
