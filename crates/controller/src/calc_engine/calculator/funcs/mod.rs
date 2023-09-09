@@ -30,6 +30,7 @@ mod im;
 mod index;
 mod indirect;
 mod irr;
+mod is;
 mod iserr;
 mod large;
 mod leftright;
@@ -178,9 +179,13 @@ where
         "INTRATE" => bonds::intrate::calc(args, fetcher),
         "IPMT" => pmt::ipmt(args, fetcher),
         "IRR" => irr::calc(args, fetcher),
+        "ISBLANK" => is::calc_isblank(args, fetcher),
         "ISERR" => iserr::calc(args, fetcher, iserr::IsErrType::ExceptNa),
         "ISERROR" => iserr::calc(args, fetcher, iserr::IsErrType::All),
+        "ISLOGICAL" => is::calc_islogical(args, fetcher),
         "ISNA" => iserr::calc(args, fetcher, iserr::IsErrType::Na),
+        "ISNUMBER" => is::calc_isnumber(args, fetcher),
+        "ISTEXT" => is::calc_istext(args, fetcher),
         "LARGE" => large::calc_large(args, fetcher),
         "LCM" => gcdlcm::calc_lcm(args, fetcher),
         "LEFT" => leftright::calc_left(args, fetcher),
