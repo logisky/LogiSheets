@@ -85,6 +85,15 @@ where
     calc_ifs(args, fetcher, &result, &sum_func)
 }
 
+pub fn calc_countifs<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    let func = |_, _| -> f64 { 0. };
+    let result = |_: f64, cnt: f64| CalcVertex::from_number(cnt);
+    calc_ifs(args, fetcher, &result, &func)
+}
+
 fn calc_ifs<C, F, SF>(args: Vec<CalcVertex>, fetcher: &mut C, f: &F, sum_func: &SF) -> CalcVertex
 where
     C: Connector,
