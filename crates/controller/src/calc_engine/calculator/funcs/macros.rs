@@ -9,6 +9,10 @@ macro_rules! assert_or_return {
 macro_rules! assert_range_from_calc_value {
     ($var:ident, $value:expr) => {
         let _v = match $value {
+            CalcValue::Scalar(v) => {
+                let matrix_value = logisheets_base::matrix_value::MatrixValue::from(vec![vec![v]]);
+                Some(matrix_value)
+            }
             CalcValue::Range(r) => Some(r),
             _ => None,
         };

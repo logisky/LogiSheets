@@ -35,6 +35,7 @@ mod iserr;
 mod large;
 mod leftright;
 mod len;
+mod lookup;
 mod mode;
 mod na;
 mod norm_s_dist;
@@ -152,6 +153,7 @@ where
         "HEX2BIN" => bits::hob2hob::calc_hex2bin(args, fetcher),
         "HEX2DEC" => bits::hob2dec::calc_hex2dec(args, fetcher),
         "HEX2OCT" => bits::hob2hob::calc_hex2oct(args, fetcher),
+        "HLOOKUP" => lookup::calc_hlookup(args, fetcher),
         "HOUR" => datetime::hms::calc_hour(args, fetcher),
         "IF" => if_plugin::calc(args, fetcher),
         "IFERROR" => iferror::calc_iferror(args, fetcher),
@@ -271,6 +273,7 @@ where
         "UPPER" => scalar_text::calc_upper(args, fetcher),
         "VAR" => distribution::statistics::calc_var(args, fetcher),
         "VAR.S" => distribution::statistics::calc_var(args, fetcher),
+        "VLOOKUP" => lookup::calc_vlookup(args, fetcher),
         "WEEKDAY" => datetime::weekday::calc(args, fetcher),
         "WEIBULL" => distribution::weibull::calc(args, fetcher),
         "WEIBULL.DIST" => distribution::weibull::calc(args, fetcher),
