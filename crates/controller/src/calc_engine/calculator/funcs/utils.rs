@@ -250,5 +250,9 @@ pub mod tests_utils {
         fn get_sheet_id_by_name(&self, _name: &str) -> Result<SheetId> {
             todo!()
         }
+
+        fn set_curr_as_dirty(&mut self) -> Result<()> {
+            todo!()
+        }
     }
 }

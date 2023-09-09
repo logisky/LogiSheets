@@ -45,6 +45,8 @@ pub struct CalcConnector<'a> {
     pub async_funcs: &'a HashSet<String>,
     pub active_sheet: SheetId,
     pub curr_addr: Addr,
+
+    pub dirty_cells_in_next_run: &'a mut im::HashSet<(SheetId, CellId)>,
 }
 
 impl<'a> GetActiveSheetTrait for CalcConnector<'a> {
@@ -349,6 +351,14 @@ impl<'a> Connector for CalcConnector<'a> {
             Some(id) => Ok(*id),
             None => Err(IdError::SheetNameNotFound(name.to_string()).into()),
         }
+    }
+
+    fn set_curr_as_dirty(&mut self) -> Result<()> {
+        let Addr { row, col } = self.get_curr_addr();
+        let sheet_id = self.get_active_sheet();
+        let cell_id = self.get_cell_id(sheet_id, row, col)?;
+        self.dirty_cells_in_next_run.insert((sheet_id, cell_id));
+        Ok(())
     }
 }
 

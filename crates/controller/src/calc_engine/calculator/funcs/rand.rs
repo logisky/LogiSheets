@@ -5,10 +5,14 @@ use crate::calc_engine::{
 use logisheets_parser::ast;
 use rand::{thread_rng, Rng};
 
-pub fn calc(args: Vec<CalcVertex>) -> CalcVertex {
-    if args.len() > 0 {
-        return CalcVertex::from_error(ast::Error::Unspecified);
-    }
+pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    assert_or_return!(args.len() == 0, ast::Error::Unspecified);
+
+    let _ = fetcher.set_curr_as_dirty();
+
     let mut rng = thread_rng();
     CalcVertex::from_number(rng.gen())
 }
@@ -25,6 +29,9 @@ where
     assert_f64_from_calc_value!(end, second);
 
     assert_or_return!(end > start, ast::Error::Num);
+
+    let _ = fetcher.set_curr_as_dirty();
+
     let bottom = start.trunc() as i32;
     let top = end.trunc() as i32;
 

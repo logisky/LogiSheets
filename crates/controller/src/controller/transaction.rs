@@ -50,8 +50,21 @@ impl<'a> Transaction<'a> {
             sheet_pos_manager,
             style_manager,
             cell_attachment_manager,
-            formula_manager,
+            mut formula_manager,
+            dirty_cells,
         } = status;
+        dirty_cells.into_iter().for_each(|(sheet_id, cell_id)| {
+            let range = match cell_id {
+                CellId::NormalCell(c) => Range::Normal(NormalRange::Single(c)),
+                CellId::BlockCell(b) => Range::Block(BlockRange::Single(b)),
+            };
+            let r_id = formula_manager
+                .range_manager
+                .get_range_id(&sheet_id, &range);
+            let vertex = Vertex::Range(sheet_id, r_id);
+            calc_nodes.insert(vertex);
+        });
+        let mut dirty_cells_in_next_run = im::HashSet::new();
         let connector = CalcConnector {
             navigator: &mut navigator,
             container: &mut container,
@@ -67,6 +80,7 @@ impl<'a> Transaction<'a> {
             curr_addr: Addr::default(),
             async_funcs: &context.async_funcs,
             formula_manager: &formula_manager,
+            dirty_cells_in_next_run: &mut dirty_cells_in_next_run,
         };
         let calc_engine = CalcEngine {
             config: context.calc_config,
@@ -87,6 +101,7 @@ impl<'a> Transaction<'a> {
             style_manager,
             cell_attachment_manager,
             formula_manager,
+            dirty_cells: dirty_cells_in_next_run,
         })
     }
 }
@@ -149,6 +164,7 @@ fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Sta
         sheet_pos_manager,
         style_manager,
         cell_attachment_manager,
+        dirty_cells,
     } = status;
     let DataExecutor {
         navigator,
@@ -171,6 +187,7 @@ fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Sta
         sheet_pos_manager: sheet_pos,
         style_manager,
         cell_attachment_manager,
+        dirty_cells,
     }
 }
 
@@ -199,6 +216,7 @@ fn handle_sheet_proc(
         mut sheet_pos_manager,
         style_manager,
         cell_attachment_manager,
+        dirty_cells,
     } = status;
     let mut old_navigator = navigator.clone();
     let data_executor = DataExecutor::new(navigator, style_manager, container);
@@ -240,6 +258,7 @@ fn handle_sheet_proc(
         sheet_pos_manager,
         style_manager: new_style_manager,
         cell_attachment_manager,
+        dirty_cells,
     };
     Ok((status, dirty_vertices))
 }

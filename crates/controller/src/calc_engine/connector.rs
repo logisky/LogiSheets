@@ -21,4 +21,9 @@ pub trait Connector:
     fn commit_calc_values(&mut self, vertex: (SheetId, CellId), result: CalcValue);
     fn is_async_func(&self, func_name: &str) -> bool;
     fn get_range(&self, sheet_id: &SheetId, range: &RangeId) -> Range;
+
+    // This is always used in calculating the functions like RAND and TODAY.
+    // These functions should be calculated every time the engine runs.
+    // So every time these functions are calculated the current cell should marked as dirty cells in the next process.
+    fn set_curr_as_dirty(&mut self) -> Result<()>;
 }
