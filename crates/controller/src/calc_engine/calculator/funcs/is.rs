@@ -68,6 +68,22 @@ where
     calc(args, fetcher, &f)
 }
 
+pub fn calc_isnontext<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    let f = |v: &CalcValue| -> Result<bool, ast::Error> {
+        match v {
+            CalcValue::Scalar(s) => match s {
+                Value::Text(_) => Ok(false),
+                _ => Ok(true),
+            },
+            _ => Ok(true),
+        }
+    };
+    calc(args, fetcher, &f)
+}
+
 fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, f: &F) -> CalcVertex
 where
     C: Connector,

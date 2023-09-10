@@ -126,7 +126,7 @@ pub fn match_condition(cond: &Condition, value: &Value) -> bool {
     }
 }
 
-fn match_text_pattern(pattern: &str, text: &str) -> bool {
+pub fn match_text_pattern(pattern: &str, text: &str) -> bool {
     let pattern = wildescape::WildMatch::new(pattern);
     pattern.matches(text)
 }
