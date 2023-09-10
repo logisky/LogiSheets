@@ -186,6 +186,7 @@ where
         "ISERROR" => iserr::calc(args, fetcher, iserr::IsErrType::All),
         "ISLOGICAL" => is::calc_islogical(args, fetcher),
         "ISNA" => iserr::calc(args, fetcher, iserr::IsErrType::Na),
+        "ISNONTEXT" => is::calc_isnontext(args, fetcher),
         "ISNUMBER" => is::calc_isnumber(args, fetcher),
         "ISTEXT" => is::calc_istext(args, fetcher),
         "LARGE" => large::calc_large(args, fetcher),
