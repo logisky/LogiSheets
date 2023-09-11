@@ -1,23 +1,27 @@
 use crate::{Cube, CubeId, ExtRef, ExtRefId, NormalCellId, Range, RangeId};
-use anyhow::Result;
 
-use crate::{CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId, TextId};
+use crate::{errors::BasicError, CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId, TextId};
 
 pub trait SheetIdFetcherTrait {
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId;
 }
 
 pub trait IdFetcherTrait {
-    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId>;
-    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId>;
-    fn fetch_cell_id(&self, sheet_id: &SheetId, row_idx: usize, col_idx: usize) -> Result<CellId>;
+    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId, BasicError>;
+    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId, BasicError>;
+    fn fetch_cell_id(
+        &self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> Result<CellId, BasicError>;
 
     fn fetch_norm_cell_id(
         &self,
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Result<NormalCellId>;
+    ) -> Result<NormalCellId, BasicError>;
 
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId;
 

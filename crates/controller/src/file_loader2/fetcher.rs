@@ -3,11 +3,10 @@ use crate::{
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
 };
-use anyhow::Result;
 
 use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockCellId, ColId, ExtBookId,
-    NormalCellId, RowId, SheetId,
+    errors::Result, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockCellId,
+    ColId, ExtBookId, NormalCellId, RowId, SheetId,
 };
 use logisheets_workbook::workbook::Workbook;
 

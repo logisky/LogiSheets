@@ -107,7 +107,7 @@ impl SheetViewer {
 
                 let (formula, has_formula) =
                     match formula_manager.formulas.get(&(sheet_id, cell_id.clone())) {
-                        Some(n) => (n.unparse(&mut name_fetcher, sheet_id), true),
+                        Some(n) => (n.unparse(&mut name_fetcher, sheet_id).unwrap(), true),
                         None => (String::from(""), false),
                     };
                 let v = convert_value(row, col, &cell.value, formula, has_formula, text_id_manager);

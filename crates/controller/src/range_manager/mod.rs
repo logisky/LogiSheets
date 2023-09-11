@@ -1,23 +1,27 @@
 mod executors;
 
-use anyhow::Result;
 use im::{HashMap, HashSet};
 use logisheets_base::{
     block_affect::BlockAffectTrait, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
     BlockRange, NormalRange, Range, RangeId, SheetId,
 };
 
-use crate::payloads::sheet_process::{
-    block::BlockPayload,
-    cell::CellChange,
-    shift::{Direction, ShiftPayload, ShiftType},
-    SheetPayload, SheetProcess,
+use crate::{
+    errors::Error,
+    payloads::sheet_process::{
+        block::BlockPayload,
+        cell::CellChange,
+        shift::{Direction, ShiftPayload, ShiftType},
+        SheetPayload, SheetProcess,
+    },
 };
 
 use self::executors::{
     delete_block_line, delete_line, input, insert_block_line, insert_line, occupy_addr_range,
     remove_block,
 };
+
+type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone, Default)]
 pub struct RangeManager {

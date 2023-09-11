@@ -1,7 +1,6 @@
 mod executors;
 pub mod graph;
 
-use anyhow::Result;
 use graph::Graph;
 use im::HashMap;
 use logisheets_base::{
@@ -13,6 +12,7 @@ use logisheets_parser::ast;
 
 use crate::{
     cube_manager::CubeManger,
+    errors::Error,
     ext_ref_manager::ExtRefManager,
     payloads::sheet_process::{
         block::BlockPayload,
@@ -28,6 +28,8 @@ use self::executors::{
     add_ast_node, create_block, delete_block_line, delete_line, input_formula, input_value,
     insert_block_line, insert_line, move_block,
 };
+
+type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone)]
 pub struct FormulaManager {

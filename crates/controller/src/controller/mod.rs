@@ -13,7 +13,6 @@ use crate::file_saver::{save_file, SaveError};
 use crate::payloads::sheet_shift::{SheetShiftPayload, SheetShiftType};
 use crate::payloads::Process;
 use crate::settings::Settings;
-use anyhow::Result;
 use edit_action::{ActionEffect, Converter};
 use status::Status;
 use transaction::{Transaction, TransactionContext};
@@ -127,7 +126,11 @@ impl Controller {
         Some(ActionEffect::default())
     }
 
-    fn handle_process(&mut self, proc: Vec<Process>, undoable: bool) -> Result<()> {
+    fn handle_process(
+        &mut self,
+        proc: Vec<Process>,
+        undoable: bool,
+    ) -> Result<(), crate::errors::Error> {
         let context = TransactionContext {
             book_name: &self.curr_book_name,
             calc_config: self.settings.calc_config.clone(),

@@ -11,12 +11,14 @@ pub mod unparse;
 extern crate lazy_static;
 use crate::climber::{Assoc, Climber, ClimberBuilder, Operator};
 use context::ContextTrait;
+use errors::ParseError;
 use logisheets_base::id_fetcher::IdFetcherTrait;
 use logisheets_lexer::*;
 use pest::iterators::Pair;
 use reference::build_cell_reference;
 use regex::Regex;
 
+type Result<T> = std::result::Result<T, ParseError>;
 lazy_static! {
     static ref CLIMBER: Climber<Rule> = ClimberBuilder::new()
         .op(Operator::new(Rule::comma, Assoc::Left))

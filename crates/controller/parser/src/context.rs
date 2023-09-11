@@ -1,4 +1,4 @@
-use anyhow::Result;
+use logisheets_base::errors::BasicError;
 use logisheets_base::get_active_sheet::GetActiveSheetTrait;
 use logisheets_base::get_book_name::GetBookNameTrait;
 use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
@@ -73,11 +73,19 @@ where
     T: IdFetcherTrait,
     F: VertexFetcherTrait,
 {
-    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<logisheets_base::RowId> {
+    fn fetch_row_id(
+        &self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+    ) -> std::result::Result<logisheets_base::RowId, BasicError> {
         self.id_fetcher.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<logisheets_base::ColId> {
+    fn fetch_col_id(
+        &self,
+        sheet_id: &SheetId,
+        col_idx: usize,
+    ) -> std::result::Result<logisheets_base::ColId, BasicError> {
         self.id_fetcher.fetch_col_id(sheet_id, col_idx)
     }
 
@@ -86,7 +94,7 @@ where
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Result<logisheets_base::CellId> {
+    ) -> std::result::Result<logisheets_base::CellId, BasicError> {
         self.id_fetcher.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 
@@ -115,7 +123,7 @@ where
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Result<NormalCellId> {
+    ) -> std::result::Result<NormalCellId, BasicError> {
         self.id_fetcher
             .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
     }

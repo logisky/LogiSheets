@@ -3,9 +3,10 @@ use crate::{
     context::ContextTrait,
     errors::ParseError,
 };
-use anyhow::Result;
 
 use super::ast;
+use super::Result;
+
 use logisheets_base::{
     column_label_to_index, id_fetcher::IdFetcherTrait, Addr, BlockRange, CellId, Cube, CubeCross,
     ExtRef, NormalRange, Range, RefAbs, SheetId,
@@ -476,11 +477,14 @@ fn build_unmut_a1_reference(pair: Pair<Rule>) -> ast::UnMutA1Reference {
     }
 }
 
-fn build_mut_a1_addr(
+fn build_mut_a1_addr<T>(
     pair: Pair<Rule>,
     sheet_id: SheetId,
-    id_fetcher: &mut dyn IdFetcherTrait,
-) -> Result<ast::Address> {
+    id_fetcher: &mut T,
+) -> Result<ast::Address>
+where
+    T: IdFetcherTrait,
+{
     let mut iter = pair.into_inner();
     let column_pair = iter.next().unwrap();
     let row_pair = iter.next().unwrap();
@@ -536,11 +540,14 @@ fn build_unmut_a1_row_range(pair: Pair<Rule>) -> ast::UnMutRowRange {
     }
 }
 
-fn build_mut_a1_column_range(
+fn build_mut_a1_column_range<T>(
     pair: Pair<Rule>,
     sheet_id: SheetId,
-    id_fetcher: &mut dyn IdFetcherTrait,
-) -> Result<ast::ColRange> {
+    id_fetcher: &mut T,
+) -> Result<ast::ColRange>
+where
+    T: IdFetcherTrait,
+{
     let mut iter = pair.into_inner();
     let first = iter.next().unwrap();
     let (start_abs, start) = build_column(first).unwrap_or((false, 1));
@@ -556,11 +563,14 @@ fn build_mut_a1_column_range(
     })
 }
 
-fn build_mut_a1_row_range(
+fn build_mut_a1_row_range<T>(
     pair: Pair<Rule>,
     sheet_id: SheetId,
-    id_fetcher: &mut dyn IdFetcherTrait,
-) -> Result<ast::RowRange> {
+    id_fetcher: &mut T,
+) -> Result<ast::RowRange>
+where
+    T: IdFetcherTrait,
+{
     let mut iter = pair.into_inner();
     let first = iter.next().unwrap();
     let (start_abs, start) = build_row(first).unwrap_or((false, 1));

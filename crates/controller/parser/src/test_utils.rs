@@ -1,10 +1,12 @@
-use anyhow::Result;
+use logisheets_base::errors::BasicError;
 use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
 use logisheets_base::name_fetcher::NameFetcherTrait;
 use logisheets_base::{
     CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalCellId, Range,
     RangeId, RowId, SheetId, TextId,
 };
+
+type Result<T> = std::result::Result<T, BasicError>;
 
 pub struct TestIdFetcher {}
 
@@ -62,27 +64,27 @@ impl IdFetcherTrait for TestIdFetcher {
 }
 
 impl NameFetcherTrait for TestIdFetcher {
-    fn fetch_text(&self, _text_id: &TextId) -> String {
-        String::from("testtext")
+    fn fetch_text(&self, _text_id: &TextId) -> Result<String> {
+        Ok(String::from("testtext"))
     }
 
-    fn fetch_func_name(&self, _func_id: &FuncId) -> String {
-        String::from("SUM")
+    fn fetch_func_name(&self, _func_id: &FuncId) -> Result<String> {
+        Ok(String::from("SUM"))
     }
 
-    fn fetch_sheet_name(&self, sheet_id: &SheetId) -> String {
-        sheet_id.to_string()
+    fn fetch_sheet_name(&self, sheet_id: &SheetId) -> Result<String> {
+        Ok(sheet_id.to_string())
     }
 
-    fn fetch_book_name(&self, book_id: &ExtBookId) -> String {
-        book_id.to_string()
+    fn fetch_book_name(&self, book_id: &ExtBookId) -> Result<String> {
+        Ok(book_id.to_string())
     }
 
-    fn fetch_defined_name(&self, nid: &NameId) -> String {
-        nid.to_string()
+    fn fetch_defined_name(&self, nid: &NameId) -> Result<String> {
+        Ok(nid.to_string())
     }
 
-    fn fetch_cell_idx(&self, _sheet_id: &SheetId, cell_id: &CellId) -> (usize, usize) {
+    fn fetch_cell_idx(&self, _sheet_id: &SheetId, cell_id: &CellId) -> Result<(usize, usize)> {
         if let CellId::NormalCell(NormalCellId {
             row,
             col,
@@ -90,29 +92,29 @@ impl NameFetcherTrait for TestIdFetcher {
             follow_col: _,
         }) = cell_id
         {
-            (row.clone() as usize, col.clone() as usize)
+            Ok((row.clone() as usize, col.clone() as usize))
         } else {
-            panic!()
+            Ok((0, 0))
         }
     }
 
-    fn fetch_row_idx(&self, _sheet_id: &SheetId, row_id: &RowId) -> usize {
-        row_id.clone() as usize
+    fn fetch_row_idx(&self, _sheet_id: &SheetId, row_id: &RowId) -> Result<usize> {
+        Ok(row_id.clone() as usize)
     }
 
-    fn fetch_col_idx(&self, _sheet_id: &SheetId, col_id: &ColId) -> usize {
-        col_id.clone() as usize
+    fn fetch_col_idx(&self, _sheet_id: &SheetId, col_id: &ColId) -> Result<usize> {
+        Ok(col_id.clone() as usize)
     }
 
-    fn fetch_range(&self, _: &SheetId, _: &RangeId) -> Option<Range> {
+    fn fetch_range(&self, _: &SheetId, _: &RangeId) -> Result<Range> {
         todo!()
     }
 
-    fn fetch_cube(&self, _cube_id: &CubeId) -> Cube {
+    fn fetch_cube(&self, _cube_id: &CubeId) -> Result<Cube> {
         todo!()
     }
 
-    fn fetch_ext_ref(&mut self, _ext_ref_id: &ExtRefId) -> ExtRef {
+    fn fetch_ext_ref(&mut self, _ext_ref_id: &ExtRefId) -> Result<ExtRef> {
         todo!()
     }
 }

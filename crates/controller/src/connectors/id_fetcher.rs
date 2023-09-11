@@ -3,8 +3,7 @@ use crate::{
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
 };
-use anyhow::Result;
-use logisheets_base::{id_fetcher::IdFetcherTrait, ExtBookId, SheetId};
+use logisheets_base::{errors::Result, id_fetcher::IdFetcherTrait, ExtBookId, SheetId};
 
 pub struct IdFetcher<'a> {
     pub sheet_id_manager: &'a mut SheetIdManager,
