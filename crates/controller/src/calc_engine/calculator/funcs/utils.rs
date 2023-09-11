@@ -157,8 +157,8 @@ pub mod tests_utils {
 
     use crate::calc_engine::calculator::calc_vertex::{CalcValue, CalcVertex};
     use crate::calc_engine::connector::Connector;
+    use crate::errors::Result;
     use crate::CellId;
-    use anyhow::Result;
 
     pub struct TestFetcher {}
     impl AsyncFuncCommitTrait for TestFetcher {

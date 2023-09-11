@@ -1,4 +1,3 @@
-use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 
 use logisheets_base::{Addr, BlockRange, CellId, NormalRange, Range, SheetId};
@@ -8,6 +7,7 @@ use crate::async_func_manager::AsyncFuncManager;
 use crate::calc_engine::CalcEngine;
 use crate::connectors::{CalcConnector, VertexConnector};
 use crate::data_executor::DataExecutor;
+use crate::errors::Result;
 use crate::formula_manager::{FormulaExecContext, Vertex};
 use crate::payloads::name::NamePayload;
 use crate::payloads::sheet_process::SheetProcess;

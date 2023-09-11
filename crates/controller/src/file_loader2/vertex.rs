@@ -1,5 +1,5 @@
-use anyhow::Result;
 use logisheets_base::{
+    errors::Result,
     get_active_sheet::GetActiveSheetTrait,
     get_book_name::GetBookNameTrait,
     id_fetcher::{IdFetcherTrait, VertexFetcherTrait},

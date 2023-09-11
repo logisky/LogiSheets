@@ -1,4 +1,4 @@
-use anyhow::Result;
+use super::super::Result;
 use logisheets_base::{
     block_affect::BlockAffectTrait, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
 };

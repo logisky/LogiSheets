@@ -1,5 +1,6 @@
 use logisheets_base::{
-    index_fetcher::IndexFetcherTrait, name_fetcher::NameFetcherTrait, RowId, SheetId, TextId,
+    errors::BasicError, index_fetcher::IndexFetcherTrait, name_fetcher::NameFetcherTrait, ColId,
+    Cube, RowId, SheetId, TextId,
 };
 use logisheets_workbook::workbook::Workbook;
 
@@ -7,13 +8,14 @@ use crate::{
     ext_book_manager::ExtBooksManager,
     file_saver::workbook::save_workbook,
     formula_manager::FormulaManager,
-    id_manager::{errors::IdError, FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
+    id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
     workbook::sheet_pos_manager::SheetPosManager,
     Controller,
 };
 
 pub use self::error::SaveError;
+type Result<T> = std::result::Result<T, BasicError>;
 
 mod error;
 mod external_links;
@@ -23,7 +25,7 @@ mod utils;
 mod workbook;
 mod worksheet;
 
-pub fn save_file(controller: &Controller) -> Result<Workbook, SaveError> {
+pub fn save_file(controller: &Controller) -> std::result::Result<Workbook, SaveError> {
     let func_manager = &controller.status.func_id_manager;
     let external_links_manager = &controller.status.external_links_manager;
     let text_id_manager = &controller.status.text_id_manager;
@@ -90,15 +92,11 @@ pub struct Saver<'a> {
 }
 
 impl<'a> IndexFetcherTrait for Saver<'a> {
-    fn fetch_row_index(&self, sheet_id: &SheetId, row_id: &RowId) -> anyhow::Result<usize> {
+    fn fetch_row_index(&self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize> {
         self.navigator.fetch_row_idx(sheet_id, row_id)
     }
 
-    fn fetch_col_index(
-        &self,
-        sheet_id: &SheetId,
-        col_id: &logisheets_base::ColId,
-    ) -> anyhow::Result<usize> {
+    fn fetch_col_index(&self, sheet_id: &SheetId, col_id: &ColId) -> Result<usize> {
         self.navigator.fetch_col_idx(sheet_id, col_id)
     }
 
@@ -106,21 +104,21 @@ impl<'a> IndexFetcherTrait for Saver<'a> {
         &self,
         sheet_id: &SheetId,
         cell_id: &logisheets_base::CellId,
-    ) -> anyhow::Result<(usize, usize)> {
+    ) -> Result<(usize, usize)> {
         self.navigator.fetch_cell_idx(sheet_id, cell_id)
     }
 
-    fn fetch_sheet_index(&self, sheet_id: &SheetId) -> anyhow::Result<usize> {
+    fn fetch_sheet_index(&self, sheet_id: &SheetId) -> Result<usize> {
         self.sheet_pos_manager
             .get_sheet_idx(sheet_id)
-            .ok_or(IdError::SheetIdNotFound(*sheet_id).into())
+            .ok_or(BasicError::SheetIdNotFound(*sheet_id))
     }
 
     fn fetch_normal_cell_index(
         &self,
         sheet_id: &SheetId,
         normal_cell_id: &logisheets_base::NormalCellId,
-    ) -> anyhow::Result<(usize, usize)> {
+    ) -> Result<(usize, usize)> {
         self.navigator
             .fetch_normal_cell_idx(sheet_id, normal_cell_id)
     }
@@ -129,80 +127,85 @@ impl<'a> IndexFetcherTrait for Saver<'a> {
         &self,
         sheet: &SheetId,
         block_cell_id: &logisheets_base::BlockCellId,
-    ) -> anyhow::Result<(usize, usize)> {
+    ) -> Result<(usize, usize)> {
         self.navigator.fetch_block_cell_idx(sheet, block_cell_id)
     }
 }
 
 impl<'a> NameFetcherTrait for Saver<'a> {
-    fn fetch_text(&self, text_id: &TextId) -> String {
-        println!("text id: {}", text_id);
-        println!("text: {:?}", self.text_id_manager.get_string(text_id));
+    fn fetch_text(&self, text_id: &TextId) -> Result<String> {
         self.text_id_manager
             .get_string(text_id)
-            .unwrap_or(String::from(""))
+            .ok_or(BasicError::TextIdNotFound(*text_id))
     }
 
-    fn fetch_func_name(&self, func_id: &logisheets_base::FuncId) -> String {
+    fn fetch_func_name(&self, func_id: &logisheets_base::FuncId) -> Result<String> {
         self.func_manager
             .get_string(func_id)
-            .unwrap_or(String::from(""))
+            .ok_or(BasicError::FuncIdNotFound(*func_id))
     }
 
-    fn fetch_sheet_name(&self, sheet_id: &SheetId) -> String {
+    fn fetch_sheet_name(&self, sheet_id: &SheetId) -> Result<String> {
         self.sheet_id_manager
             .get_string(sheet_id)
-            .unwrap_or(String::from("Unknown"))
+            .ok_or(BasicError::SheetIdNotFound(*sheet_id))
     }
 
-    fn fetch_book_name(&self, book_id: &logisheets_base::ExtBookId) -> String {
+    fn fetch_book_name(&self, book_id: &logisheets_base::ExtBookId) -> Result<String> {
         self.external_links_manager
             .fetch_book_name(book_id)
-            .unwrap_or(String::from(""))
+            .ok_or_else(|| BasicError::BookIdNotFound(*book_id))
     }
 
-    fn fetch_defined_name(&self, nid: &logisheets_base::NameId) -> String {
-        match self.name_id_manager.get_string(nid) {
-            Some((_, name)) => name,
-            None => String::from(""),
-        }
+    fn fetch_defined_name(&self, nid: &logisheets_base::NameId) -> Result<String> {
+        self.name_id_manager
+            .get_string(nid)
+            .and_then(|(_, s)| Some(s))
+            .ok_or(BasicError::NameNotFound(*nid))
     }
 
     fn fetch_cell_idx(
         &self,
         sheet_id: &SheetId,
         cell_id: &logisheets_base::CellId,
-    ) -> (usize, usize) {
-        self.navigator.fetch_cell_idx(sheet_id, cell_id).unwrap()
+    ) -> Result<(usize, usize)> {
+        self.navigator.fetch_cell_idx(sheet_id, cell_id)
     }
 
-    fn fetch_row_idx(&self, sheet_id: &SheetId, row_id: &RowId) -> usize {
-        self.navigator.fetch_row_idx(sheet_id, row_id).unwrap()
+    fn fetch_row_idx(&self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize> {
+        self.navigator.fetch_row_idx(sheet_id, row_id)
     }
 
-    fn fetch_col_idx(&self, sheet_id: &SheetId, col_id: &logisheets_base::ColId) -> usize {
-        self.navigator.fetch_col_idx(sheet_id, col_id).unwrap()
+    fn fetch_col_idx(&self, sheet_id: &SheetId, col_id: &ColId) -> Result<usize> {
+        self.navigator.fetch_col_idx(sheet_id, col_id)
     }
 
     fn fetch_range(
         &self,
         sheet_id: &SheetId,
         range_id: &logisheets_base::RangeId,
-    ) -> Option<logisheets_base::Range> {
+    ) -> Result<logisheets_base::Range> {
         self.formula_manager
             .range_manager
             .get_range(sheet_id, range_id)
+            .ok_or(BasicError::RangeIdNotFound(*range_id))
     }
 
-    fn fetch_cube(&self, cube_id: &logisheets_base::CubeId) -> logisheets_base::Cube {
-        self.formula_manager.cube_manager.get_cube(cube_id).unwrap()
+    fn fetch_cube(&self, cube_id: &logisheets_base::CubeId) -> Result<Cube> {
+        self.formula_manager
+            .cube_manager
+            .get_cube(cube_id)
+            .ok_or(BasicError::CubeIdNotFound(*cube_id))
     }
 
-    fn fetch_ext_ref(&mut self, ext_ref_id: &logisheets_base::ExtRefId) -> logisheets_base::ExtRef {
+    fn fetch_ext_ref(
+        &mut self,
+        ext_ref_id: &logisheets_base::ExtRefId,
+    ) -> Result<logisheets_base::ExtRef> {
         self.formula_manager
             .ext_ref_manager
             .get_ext_ref(ext_ref_id)
-            .unwrap()
+            .ok_or(BasicError::ExtRefIdNotFound(*ext_ref_id))
     }
 }
 

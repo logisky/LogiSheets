@@ -6,7 +6,7 @@ pub use types::cube_value;
 pub use types::datetime;
 pub use types::id::*;
 pub use types::matrix_value;
-pub mod error;
+pub mod errors;
 
 use gents_derives::TS;
 use logisheets_workbook::prelude::*;

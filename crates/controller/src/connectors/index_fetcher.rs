@@ -1,9 +1,8 @@
-use crate::{
-    id_manager::errors::IdError, navigator::Navigator, workbook::sheet_pos_manager::SheetPosManager,
-};
-use anyhow::Result;
+use crate::{navigator::Navigator, workbook::sheet_pos_manager::SheetPosManager};
 use logisheets_base::{
-    index_fetcher::IndexFetcherTrait, BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId,
+    errors::{BasicError, Result},
+    index_fetcher::IndexFetcherTrait,
+    BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId,
 };
 pub struct IndexFetcher<'a> {
     pub navigator: &'a Navigator,
@@ -26,7 +25,7 @@ impl<'a> IndexFetcherTrait for IndexFetcher<'a> {
     fn fetch_sheet_index(&self, sheet_id: &SheetId) -> Result<usize> {
         self.sheet_pos_manager
             .get_sheet_idx(sheet_id)
-            .ok_or(IdError::SheetIdNotFound(*sheet_id).into())
+            .ok_or(BasicError::SheetIdNotFound(*sheet_id))
     }
 
     fn fetch_normal_cell_index(

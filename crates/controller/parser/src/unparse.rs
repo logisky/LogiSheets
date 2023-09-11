@@ -9,8 +9,9 @@ use crate::ast::{
 };
 
 use super::ast::Node;
+use super::Result;
 
-pub fn unparse<T>(node: &Node, fetcher: &mut T, curr_sheet: SheetId) -> String
+pub fn unparse<T>(node: &Node, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
 where
     T: NameFetcherTrait,
 {
@@ -18,18 +19,18 @@ where
 }
 
 pub trait Stringify {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
     where
         T: NameFetcherTrait;
 }
 
 impl Stringify for Node {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
         if self.bracket {
-            format!("({})", self.pure.unparse(fetcher, curr_sheet))
+            Ok(format!("({})", self.pure.unparse(fetcher, curr_sheet)?))
         } else {
             self.pure.unparse(fetcher, curr_sheet)
         }
@@ -37,7 +38,7 @@ impl Stringify for Node {
 }
 
 impl Stringify for PureNode {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -50,14 +51,14 @@ impl Stringify for PureNode {
 }
 
 impl Stringify for Func {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
         let args = &self.args;
         match &self.op {
             Operator::Function(fid) => {
-                let func_name = fetcher.fetch_func_name(fid);
+                let func_name = fetcher.fetch_func_name(fid)?;
                 let args_str =
                     args.iter()
                         .enumerate()
@@ -65,34 +66,33 @@ impl Stringify for Func {
                             if idx > 0 {
                                 prev.push_str(", ");
                             }
-                            let arg_str = arg.unparse(fetcher, curr_sheet);
+                            let arg_str = arg
+                                .unparse(fetcher, curr_sheet)
+                                .unwrap_or(String::from("error")); // todo
                             prev.push_str(&arg_str);
                             prev
                         });
-                format!("{}({})", func_name, args_str)
+                Ok(format!("{}({})", func_name, args_str))
             }
             Operator::Infix(op) => {
-                format!(
+                let r = format!(
                     "{} {} {}",
-                    args.get(0).unwrap().unparse(fetcher, curr_sheet),
-                    op.unparse(fetcher, curr_sheet),
-                    args.get(1).unwrap().unparse(fetcher, curr_sheet),
-                )
+                    args.get(0).unwrap().unparse(fetcher, curr_sheet)?,
+                    op.unparse(fetcher, curr_sheet)?,
+                    args.get(1).unwrap().unparse(fetcher, curr_sheet)?,
+                );
+                Ok(r)
             }
-            Operator::Postfix(op) => {
-                format!(
-                    "{}{}",
-                    args.get(0).unwrap().unparse(fetcher, curr_sheet),
-                    op.unparse(fetcher, curr_sheet),
-                )
-            }
-            Operator::Prefix(op) => {
-                format!(
-                    "{}{}",
-                    op.unparse(fetcher, curr_sheet),
-                    args.get(0).unwrap().unparse(fetcher, curr_sheet),
-                )
-            }
+            Operator::Postfix(op) => Ok(format!(
+                "{}{}",
+                args.get(0).unwrap().unparse(fetcher, curr_sheet)?,
+                op.unparse(fetcher, curr_sheet)?,
+            )),
+            Operator::Prefix(op) => Ok(format!(
+                "{}{}",
+                op.unparse(fetcher, curr_sheet)?,
+                args.get(0).unwrap().unparse(fetcher, curr_sheet)?,
+            )),
             Operator::Comma => {
                 let args_str =
                     args.iter()
@@ -101,38 +101,40 @@ impl Stringify for Func {
                             if idx > 0 {
                                 prev.push_str(", ");
                             }
-                            let arg_str = arg.unparse(fetcher, curr_sheet);
+                            let arg_str = arg
+                                .unparse(fetcher, curr_sheet)
+                                .unwrap_or(String::from("error"));
                             prev.push_str(&arg_str);
                             prev
                         });
-                format!("({})", args_str)
+                Ok(format!("({})", args_str))
             }
         }
     }
 }
 
 impl Stringify for CellReference {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
         match self {
             CellReference::Mut(mutref) => mutref.unparse(fetcher, curr_sheet),
             CellReference::UnMut(unmut_ref) => unmut_ref.unparse(fetcher, curr_sheet),
-            CellReference::Name(nid) => fetcher.fetch_defined_name(nid),
+            CellReference::Name(nid) => fetcher.fetch_defined_name(nid).map_err(|e| e.into()),
             CellReference::Ext(ext_ref) => ext_ref.unparse(fetcher, curr_sheet),
         }
     }
 }
 
 impl Stringify for CubeDisplay {
-    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
-        let cube = fetcher.fetch_cube(&self.cube_id);
-        let from_sheet = fetcher.fetch_sheet_name(&cube.from_sheet);
-        let to_sheet = fetcher.fetch_sheet_name(&cube.to_sheet);
+        let cube = fetcher.fetch_cube(&self.cube_id)?;
+        let from_sheet = fetcher.fetch_sheet_name(&cube.from_sheet)?;
+        let to_sheet = fetcher.fetch_sheet_name(&cube.to_sheet)?;
         let prefix = format!("{}:{}", from_sheet, to_sheet);
         let RefAbs {
             start_row,
@@ -164,22 +166,22 @@ impl Stringify for CubeDisplay {
                 format!("{}{}:{}{}", sc, sr, ec, er)
             }
         };
-        format!("{}!{}", prefix, cross_str)
+        Ok(format!("{}!{}", prefix, cross_str))
     }
 }
 
 impl Stringify for ExtRefDisplay {
-    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
-        let ext_ref = fetcher.fetch_ext_ref(&self.ext_ref_id);
-        let workbook_name = fetcher.fetch_book_name(&ext_ref.ext_book);
+        let ext_ref = fetcher.fetch_ext_ref(&self.ext_ref_id)?;
+        let workbook_name = fetcher.fetch_book_name(&ext_ref.ext_book)?;
         let sheet = {
-            let to_sheet = fetcher.fetch_sheet_name(&ext_ref.to_sheet);
+            let to_sheet = fetcher.fetch_sheet_name(&ext_ref.to_sheet)?;
             match ext_ref.from_sheet {
                 Some(s) => {
-                    let from_sheet = fetcher.fetch_sheet_name(&s);
+                    let from_sheet = fetcher.fetch_sheet_name(&s)?;
                     format!("{}:{}", from_sheet, to_sheet)
                 }
                 None => to_sheet,
@@ -215,7 +217,7 @@ impl Stringify for ExtRefDisplay {
                 format!("{}{}:{}{}", sc, sr, ec, er)
             }
         };
-        format!("[{}]{}!{}", workbook_name, sheet, cross_str)
+        Ok(format!("[{}]{}!{}", workbook_name, sheet, cross_str))
     }
 }
 
@@ -238,14 +240,14 @@ fn get_col_string(abs: bool, idx: usize) -> String {
 }
 
 impl Stringify for RangeDisplay {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
         let prefix = if self.sheet_id == curr_sheet {
             String::new()
         } else {
-            let sheet_name = fetcher.fetch_sheet_name(&self.sheet_id);
+            let sheet_name = fetcher.fetch_sheet_name(&self.sheet_id)?;
             if sheet_name.len() > 0 {
                 format!("{}!", sheet_name)
             } else {
@@ -253,12 +255,8 @@ impl Stringify for RangeDisplay {
             }
         };
 
-        let range = fetcher.fetch_range(&self.sheet_id, &self.range_id);
-        if range.is_none() {
-            return format!("{}#REF!", prefix);
-        }
+        let range = fetcher.fetch_range(&self.sheet_id, &self.range_id)?;
 
-        let range = range.unwrap();
         let RefAbs {
             start_row,
             start_col,
@@ -268,70 +266,76 @@ impl Stringify for RangeDisplay {
 
         let range_str = match range {
             Range::Normal(normal_range) => {
-                let get_normal_cell_str =
-                    |sheet: &SheetId, id: NormalCellId, row_abs: bool, col_abs: bool| -> String {
-                        let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::NormalCell(id));
-                        let row_str = get_row_string(row_abs, row);
-                        let col_str = get_col_string(col_abs, col);
-                        format!("{}{}", col_str, row_str)
-                    };
+                let get_normal_cell_str = |sheet: &SheetId,
+                                           id: NormalCellId,
+                                           row_abs: bool,
+                                           col_abs: bool|
+                 -> Result<String> {
+                    let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::NormalCell(id))?;
+                    let row_str = get_row_string(row_abs, row);
+                    let col_str = get_col_string(col_abs, col);
+                    Ok(format!("{}{}", col_str, row_str))
+                };
                 match normal_range {
                     NormalRange::Single(normal_cell) => {
                         get_normal_cell_str(&curr_sheet, normal_cell, start_row, start_col)
                     }
                     NormalRange::RowRange(start, end) => {
-                        let start_idx = fetcher.fetch_row_idx(&curr_sheet, &start);
-                        let end_idx = fetcher.fetch_row_idx(&curr_sheet, &end);
+                        let start_idx = fetcher.fetch_row_idx(&curr_sheet, &start)?;
+                        let end_idx = fetcher.fetch_row_idx(&curr_sheet, &end)?;
                         let start_str = get_row_string(start_row, start_idx);
                         let end_str = get_row_string(end_row, end_idx);
-                        format!("{}:{}", start_str, end_str)
+                        Ok(format!("{}:{}", start_str, end_str))
                     }
                     NormalRange::ColRange(start, end) => {
-                        let start_idx = fetcher.fetch_col_idx(&curr_sheet, &start);
-                        let end_idx = fetcher.fetch_col_idx(&curr_sheet, &end);
+                        let start_idx = fetcher.fetch_col_idx(&curr_sheet, &start)?;
+                        let end_idx = fetcher.fetch_col_idx(&curr_sheet, &end)?;
                         let start_str = get_col_string(start_row, start_idx);
                         let end_str = get_col_string(end_row, end_idx);
-                        format!("{}:{}", start_str, end_str)
+                        Ok(format!("{}:{}", start_str, end_str))
                     }
                     NormalRange::AddrRange(start, end) => {
                         let start_str =
-                            get_normal_cell_str(&curr_sheet, start, start_row, start_col);
-                        let end_str = get_normal_cell_str(&curr_sheet, end, end_row, end_col);
-                        format!("{}:{}", start_str, end_str)
+                            get_normal_cell_str(&curr_sheet, start, start_row, start_col)?;
+                        let end_str = get_normal_cell_str(&curr_sheet, end, end_row, end_col)?;
+                        Ok(format!("{}:{}", start_str, end_str))
                     }
                 }
             }
             Range::Block(block_range) => {
-                let get_block_cell_str =
-                    |sheet: &SheetId, id: BlockCellId, row_abs: bool, col_abs: bool| -> String {
-                        let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::BlockCell(id));
-                        let row_str = get_row_string(row_abs, row);
-                        let col_str = get_col_string(col_abs, col);
-                        format!("{}{}", col_str, row_str)
-                    };
+                let get_block_cell_str = |sheet: &SheetId,
+                                          id: BlockCellId,
+                                          row_abs: bool,
+                                          col_abs: bool|
+                 -> Result<String> {
+                    let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::BlockCell(id))?;
+                    let row_str = get_row_string(row_abs, row);
+                    let col_str = get_col_string(col_abs, col);
+                    Ok(format!("{}{}", col_str, row_str))
+                };
                 match block_range {
                     BlockRange::Single(block_cell_id) => {
                         get_block_cell_str(&curr_sheet, block_cell_id, start_row, start_col)
                     }
                     BlockRange::AddrRange(start, end) => {
                         let start_str =
-                            get_block_cell_str(&curr_sheet, start, start_row, start_col);
-                        let end_str = get_block_cell_str(&curr_sheet, end, end_row, end_col);
-                        format!("{}:{}", start_str, end_str)
+                            get_block_cell_str(&curr_sheet, start, start_row, start_col)?;
+                        let end_str = get_block_cell_str(&curr_sheet, end, end_row, end_col)?;
+                        Ok(format!("{}:{}", start_str, end_str))
                     }
                 }
             }
-        };
-        format!("{}{}", prefix, range_str)
+        }?;
+        Ok(format!("{}{}", prefix, range_str))
     }
 }
 
 impl Stringify for Value {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> String
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
-        match self {
+        let result = match self {
             Value::Blank => String::from(""),
             Value::Number(f) => format!("{}", f),
             Value::Text(id) => format!("\"{}\"", id),
@@ -340,26 +344,27 @@ impl Stringify for Value {
                 false => "FALSE",
             }
             .to_string(),
-            Value::Error(e) => e.unparse(fetcher, curr_sheet),
-        }
+            Value::Error(e) => e.unparse(fetcher, curr_sheet)?,
+        };
+        Ok(result)
     }
 }
 
 impl Stringify for Error {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> String
+    fn unparse<T>(&self, _: &mut T, _: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
-        self.get_err_str().to_string()
+        Ok(self.get_err_str().to_string())
     }
 }
 
 impl Stringify for InfixOperator {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> String
+    fn unparse<T>(&self, _: &mut T, _: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
-        match self {
+        let s = match self {
             InfixOperator::Colon => String::from(":"),
             InfixOperator::Space => String::from(" "),
             InfixOperator::Exp => String::from("^"),
@@ -374,29 +379,31 @@ impl Stringify for InfixOperator {
             InfixOperator::Le => String::from("<="),
             InfixOperator::Gt => String::from(">"),
             InfixOperator::Ge => String::from(">="),
-        }
+        };
+        Ok(s)
     }
 }
 
 impl Stringify for PrefixOperator {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> String
+    fn unparse<T>(&self, _: &mut T, _: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
-        match self {
+        let s = match self {
             PrefixOperator::Minus => String::from("-"),
             PrefixOperator::Plus => String::from("+"),
-        }
+        };
+        Ok(s)
     }
 }
 
 impl Stringify for PostfixOperator {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> String
+    fn unparse<T>(&self, _: &mut T, _: SheetId) -> Result<String>
     where
         T: NameFetcherTrait,
     {
         match self {
-            PostfixOperator::Percent => String::from("%"),
+            PostfixOperator::Percent => Ok(String::from("%")),
         }
     }
 }
@@ -421,7 +428,7 @@ mod tests {
             vertex_fetcher: &mut vertex_fetcher,
         };
         let node = parser.parse(sum, &mut context).unwrap();
-        let a = unparse(&node, &mut id_fetcher, 0);
+        let a = unparse(&node, &mut id_fetcher, 0).unwrap();
         assert_eq!(a, "SUM((2, 3), 3)")
     }
 
@@ -438,7 +445,7 @@ mod tests {
             vertex_fetcher: &mut vertex_fetcher,
         };
         let node = parser.parse(sum, &mut context).unwrap();
-        let a = unparse(&node, &mut id_fetcher, 0);
+        let a = unparse(&node, &mut id_fetcher, 0).unwrap();
         assert_eq!(a, "1 * (3 - 2)")
     }
 }

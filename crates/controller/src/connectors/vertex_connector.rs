@@ -1,6 +1,5 @@
-use anyhow::Result;
-
 use logisheets_base::block_affect::BlockAffectTrait;
+use logisheets_base::errors::BasicError;
 use logisheets_base::get_active_sheet::GetActiveSheetTrait;
 use logisheets_base::get_book_name::GetBookNameTrait;
 use logisheets_base::get_norm_cell_id::GetNormCellIdTrait;
@@ -20,6 +19,8 @@ use crate::navigator::Navigator;
 use crate::workbook::sheet_pos_manager::SheetPosManager;
 
 use super::{IdFetcher, IndexFetcher};
+
+type Result<T> = std::result::Result<T, BasicError>;
 
 pub struct VertexConnector<'a> {
     pub book_name: &'a str,

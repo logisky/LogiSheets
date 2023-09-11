@@ -1,6 +1,7 @@
-use anyhow::Result;
+use super::super::Result;
 use logisheets_base::{
     block_affect::BlockAffectTrait,
+    errors::BasicError,
     get_active_sheet::GetActiveSheetTrait,
     get_book_name::GetBookNameTrait,
     id_fetcher::{IdFetcherTrait, VertexFetcherTrait},
@@ -225,15 +226,28 @@ impl<'a, C> IdFetcherTrait for ParserContext<'a, C>
 where
     C: IdFetcherTrait + GetActiveSheetTrait + GetBookNameTrait,
 {
-    fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId> {
+    fn fetch_row_id(
+        &self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+    ) -> std::result::Result<RowId, BasicError> {
         self.ctx.fetch_row_id(sheet_id, row_idx)
     }
 
-    fn fetch_col_id(&self, sheet_id: &SheetId, col_idx: usize) -> Result<ColId> {
+    fn fetch_col_id(
+        &self,
+        sheet_id: &SheetId,
+        col_idx: usize,
+    ) -> std::result::Result<ColId, BasicError> {
         self.ctx.fetch_col_id(sheet_id, col_idx)
     }
 
-    fn fetch_cell_id(&self, sheet_id: &SheetId, row_idx: usize, col_idx: usize) -> Result<CellId> {
+    fn fetch_cell_id(
+        &self,
+        sheet_id: &SheetId,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> std::result::Result<CellId, BasicError> {
         self.ctx.fetch_cell_id(sheet_id, row_idx, col_idx)
     }
 
@@ -262,7 +276,7 @@ where
         sheet_id: &SheetId,
         row_idx: usize,
         col_idx: usize,
-    ) -> Result<logisheets_base::NormalCellId> {
+    ) -> std::result::Result<logisheets_base::NormalCellId, BasicError> {
         self.ctx.fetch_norm_cell_id(sheet_id, row_idx, col_idx)
     }
 }

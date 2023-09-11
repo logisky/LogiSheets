@@ -1,7 +1,7 @@
-use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 
 use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
+use logisheets_base::errors::BasicError;
 use logisheets_base::get_active_sheet::GetActiveSheetTrait;
 use logisheets_base::get_curr_addr::GetCurrAddrTrait;
 use logisheets_base::set_curr_cell::SetCurrCellTrait;
@@ -13,7 +13,6 @@ use logisheets_base::{BlockRange, CubeCross, NormalRange, Range};
 use logisheets_parser::ast;
 
 use crate::formula_manager::FormulaManager;
-use crate::id_manager::errors::IdError;
 use crate::id_manager::SheetIdManager;
 use crate::{
     async_func_manager::AsyncFuncManager,
@@ -29,6 +28,8 @@ use crate::{
     navigator::Navigator,
     workbook::sheet_pos_manager::SheetPosManager,
 };
+
+use crate::errors::Result;
 
 pub struct CalcConnector<'a> {
     pub formula_manager: &'a FormulaManager,
@@ -288,14 +289,14 @@ impl<'a> Connector for CalcConnector<'a> {
     fn get_text(&self, tid: &TextId) -> Result<String> {
         self.text_id_manager
             .get_string(tid)
-            .ok_or(IdError::TextIdNotFound(*tid).into())
+            .ok_or(BasicError::TextIdNotFound(*tid).into())
     }
 
     #[inline]
     fn get_func_name(&self, fid: &FuncId) -> Result<String> {
         self.func_id_manager
             .get_string(fid)
-            .ok_or(IdError::FuncIdNotFound(*fid).into())
+            .ok_or(BasicError::FuncIdNotFound(*fid).into())
     }
 
     fn get_cell_idx(
@@ -303,12 +304,16 @@ impl<'a> Connector for CalcConnector<'a> {
         sheet_id: SheetId,
         cell_id: &logisheets_base::CellId,
     ) -> Result<(usize, usize)> {
-        self.navigator.fetch_cell_idx(&sheet_id, cell_id)
+        self.navigator
+            .fetch_cell_idx(&sheet_id, cell_id)
+            .map_err(|e| e.into())
     }
 
     #[inline]
     fn get_cell_id(&self, sheet_id: SheetId, row: usize, col: usize) -> Result<CellId> {
-        self.navigator.fetch_cell_id(&sheet_id, row, col)
+        self.navigator
+            .fetch_cell_id(&sheet_id, row, col)
+            .map_err(|e| e.into())
     }
 
     fn commit_calc_values(&mut self, vertex: (SheetId, CellId), result: CalcValue) {
@@ -349,7 +354,7 @@ impl<'a> Connector for CalcConnector<'a> {
         let id = self.sheet_id_manager.get_id(name);
         match id {
             Some(id) => Ok(*id),
-            None => Err(IdError::SheetNameNotFound(name.to_string()).into()),
+            None => Err(BasicError::SheetNameNotFound(name.to_string()).into()),
         }
     }
 

@@ -1,9 +1,9 @@
 use super::{errors::StyleError, fill_manager::FillPayload, StyleManager};
 use crate::{
+    errors::Result,
     payloads::sheet_process::style::CellStylePayload,
     style_manager::{border_manager::BorderPayload, font_manager::FontPayload},
 };
-use anyhow::Result;
 use logisheets_base::StyleId;
 
 pub fn execute_style_payload(

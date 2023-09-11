@@ -1,3 +1,4 @@
+use logisheets_base::errors::BasicError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -6,4 +7,6 @@ pub enum ParseError {
     ParseColFailed(String),
     #[error("parse row error: {0}")]
     ParseRowFailed(String),
+    #[error(transparent)]
+    Basic(#[from] BasicError),
 }

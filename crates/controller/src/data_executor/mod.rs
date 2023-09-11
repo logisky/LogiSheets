@@ -1,4 +1,3 @@
-use anyhow::Result;
 use logisheets_base::{
     matrix_value::cross_product_usize, CellId, CellValue, NormalCellId, SheetId,
 };
@@ -6,6 +5,7 @@ use logisheets_base::{
 use crate::{
     cell::Cell,
     container::{col_info_manager::ColInfo, row_info_manager::RowInfo, DataContainer},
+    errors::Result,
     navigator::{BlockPlace, Navigator},
     payloads::sheet_process::{SheetPayload, SheetProcess},
     payloads::{

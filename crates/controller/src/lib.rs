@@ -10,6 +10,7 @@ mod container;
 pub mod controller;
 mod cube_manager;
 mod data_executor;
+mod errors;
 mod ext_book_manager;
 mod ext_ref_manager;
 mod file_loader2;
@@ -187,7 +188,8 @@ impl<'a> Worksheet<'a> {
                     navigator: &mut self.controller.status.navigator,
                     formula_manager: &self.controller.status.formula_manager,
                 };
-                let f = unparse::unparse(node, &mut name_fetcher, self.sheet_id);
+                let f = unparse::unparse(node, &mut name_fetcher, self.sheet_id)
+                    .map_err(|_| Err::NotFound)?;
                 Ok(f)
             } else {
                 Ok(String::from(""))

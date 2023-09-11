@@ -8,7 +8,6 @@ mod manager;
 pub mod num_fmt_manager;
 pub mod xf_manager;
 
-use anyhow::Result;
 use border_manager::BorderManager;
 use fill_manager::FillManager;
 use font_manager::FontManager;
@@ -45,7 +44,7 @@ impl StyleManager {
         self,
         payload: &CellStylePayload,
         idx: StyleId,
-    ) -> Result<(Self, StyleId)> {
+    ) -> Result<(Self, StyleId), crate::errors::Error> {
         execute_style_payload(self, payload, idx)
     }
 

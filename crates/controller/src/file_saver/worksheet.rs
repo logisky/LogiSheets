@@ -159,7 +159,7 @@ fn save_comments<S: SaverTrait>(
                 .unwrap_or_default();
             let author_id = author_sorted_set.insert(author) as u32;
             let comment_plain_text = convert_string_to_plain_text_string(comment.text.clone());
-            let (row, col) = saver.fetch_cell_idx(&sheet_id, cell_id);
+            let (row, col) = saver.fetch_cell_idx(&sheet_id, cell_id).unwrap();
             let reference = unparse_cell(row, col);
             CtComment {
                 text: CtRst {
@@ -230,7 +230,7 @@ fn save_cols<S: SaverTrait>(
         .get_all_col_info()
         .into_iter()
         .map(|(id, info)| {
-            let idx = saver.fetch_col_idx(&sheet_id, &id);
+            let idx = saver.fetch_col_idx(&sheet_id, &id).unwrap();
             (idx, info)
         })
         .sorted_by_key(|a| a.0)
@@ -272,7 +272,7 @@ fn save_sheet_data<S: SaverTrait>(
                 .formulas
                 .get(&(sheet_id, id))
                 .and_then(|node| {
-                    let f = node.unparse(saver, sheet_id);
+                    let f = node.unparse(saver, sheet_id).unwrap();
                     Some(CtFormula {
                         formula: Some(f),
                         t: StCellFormulaType::Normal, // we only support normal formula for now

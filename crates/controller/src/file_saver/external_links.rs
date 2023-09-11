@@ -65,7 +65,7 @@ pub fn save_external_link<S: SaverTrait>(
                 .collect();
             sheet_data.insert(sheet_id.clone() as u32, rows);
             names.push(CtExternalSheetName {
-                val: saver.fetch_sheet_name(sheet_id),
+                val: saver.fetch_sheet_name(sheet_id).unwrap(),
             });
         });
 

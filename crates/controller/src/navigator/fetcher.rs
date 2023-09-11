@@ -1,11 +1,11 @@
 use std::cell::RefCell;
 
-use super::{
-    errors::NavError,
-    sheet_nav::{Cache, Data},
+use super::sheet_nav::{Cache, Data};
+use logisheets_base::{
+    errors::BasicError, BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId,
 };
-use anyhow::Result;
-use logisheets_base::{BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId};
+
+type Result<T> = std::result::Result<T, BasicError>;
 
 pub struct Fetcher<'a> {
     sheet_id: SheetId,
@@ -53,7 +53,7 @@ impl<'a> Fetcher<'a> {
                         cache.row_id.insert(r, row);
                         Ok(r)
                     }
-                    None => Err(NavError::CannotFetchRowIdx(self.sheet_id, row).into()),
+                    None => Err(BasicError::RowIndexUnavailable(row)),
                 }
             }
         }
@@ -90,7 +90,7 @@ impl<'a> Fetcher<'a> {
                         cache.col_id.insert(r, col);
                         Ok(r)
                     }
-                    None => Err(NavError::CannotFetchColIdx(self.sheet_id, col).into()),
+                    None => Err(BasicError::ColIndexUnavailable(col)),
                 }
             }
         }
@@ -147,12 +147,12 @@ impl<'a> Fetcher<'a> {
             .data
             .blocks
             .get(&bid)
-            .ok_or(NavError::CannotGetBlockById(self.sheet_id, bid))?;
+            .ok_or(BasicError::BlockIdNotFound(self.sheet_id, bid))?;
         let master = &bp.master;
         let (m_row, m_col) = self.get_norm_cell_idx(master)?;
         let (row_idx, col_idx) = bp
             .get_inner_idx(block_cell_id.row, block_cell_id.col)
-            .ok_or(NavError::CannotFindIdxInBlock(
+            .ok_or(BasicError::CannotFindIdxInBlock(
                 self.sheet_id,
                 bid,
                 block_cell_id.row,
