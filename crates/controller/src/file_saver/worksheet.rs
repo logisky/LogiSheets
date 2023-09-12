@@ -316,15 +316,20 @@ fn save_sheet_data<S: SaverTrait>(
         .map(|(row_idx, cells)| {
             let row_id = saver.fetch_row_id(sheet_id, row_idx);
             if let Some(row_info) = sheet_data_container.row_info.get_row_info(row_id) {
+                let s = if row_info.custom_format {
+                    row_info.style + 1
+                } else {
+                    0
+                };
                 CtRow {
                     cells,
-                    r: Some(row_idx as u32),
+                    r: Some(1 + row_idx as u32),
                     spans: None, // TODO: clearfy this one
-                    s: row_info.style,
+                    s,
                     custom_format: row_info.custom_format,
                     ht: row_info.ht,
                     hidden: row_info.hidden,
-                    custom_height: false,
+                    custom_height: row_info.custom_height,
                     outline_level: row_info.outline_level,
                     collapsed: row_info.collapsed,
                     thick_top: false,
@@ -334,7 +339,7 @@ fn save_sheet_data<S: SaverTrait>(
             } else {
                 CtRow {
                     cells,
-                    r: Some(row_idx as u32),
+                    r: Some(1 + row_idx as u32),
                     spans: None,
                     s: 0,
                     custom_format: false,
@@ -357,7 +362,7 @@ fn save_sheet_data<S: SaverTrait>(
     // We have collected cells and grouped them by rows, here we will find the
     // empty row and keep the row number continuous.
     let mut new_rows: Vec<CtRow> = Vec::with_capacity(rows.last().unwrap().r.unwrap() as usize);
-    let mut next = 0;
+    let mut next = 1;
     rows.into_iter().for_each(|mut row| {
         // safe to unwrap
         let r = row.r.unwrap();

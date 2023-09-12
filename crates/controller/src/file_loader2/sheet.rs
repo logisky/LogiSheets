@@ -30,7 +30,11 @@ pub fn load_cols(
     cols.iter().for_each(|col| {
         let min = col.min - 1;
         let max = col.max - 1;
-        let col_style_id = style_loader.load_xf(col.style);
+        let col_style_id = if col.style > 0 {
+            style_loader.load_xf(col.style)
+        } else {
+            0
+        };
         (min..max + 1).into_iter().for_each(|col_idx| {
             let col_id = navigator
                 .fetch_col_id(&sheet_id, col_idx as usize)
@@ -131,22 +135,30 @@ pub fn load_sheet_data(
 ) {
     navigator.add_sheet_id(&sheet_id);
 
+    let mut base_curr_idx = 0;
+    let mut offset = 0;
     sheet_data.rows.iter().for_each(|row| {
         let style_id = style_loader.load_xf(row.s);
         if let Some(idx) = row.r {
-            if idx >= 1 {
-                let row_info = RowInfo {
-                    collapsed: row.collapsed,
-                    custom_format: row.custom_format,
-                    hidden: row.hidden,
-                    ht: row.ht,
-                    outline_level: row.outline_level,
-                    style: style_id,
-                };
-                let id = navigator.fetch_row_id(&sheet_id, idx as usize - 1).unwrap();
-                container.set_row_info(sheet_id, id, row_info);
-            }
+            base_curr_idx = idx;
+            offset = 0;
         }
+
+        let row_info = RowInfo {
+            collapsed: row.collapsed,
+            custom_format: row.custom_format,
+            custom_height: row.custom_height,
+            hidden: row.hidden,
+            ht: row.ht,
+            outline_level: row.outline_level,
+            style: style_id,
+        };
+        let idx = base_curr_idx + offset;
+        let id = navigator.fetch_row_id(&sheet_id, idx as usize).unwrap();
+        container.set_row_info(sheet_id, id, row_info);
+
+        offset += 1;
+
         row.cells.iter().for_each(|ct_cell| {
             if let Some(r) = &ct_cell.r {
                 if let Some((row, col)) = parse_cell(r) {
