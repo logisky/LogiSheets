@@ -24,6 +24,7 @@ impl RowInfoManager {
 pub struct RowInfo {
     pub collapsed: bool,
     pub custom_format: bool,
+    pub custom_height: bool,
     pub hidden: bool,
     pub ht: Option<f64>,
     pub outline_level: u8,
@@ -35,6 +36,7 @@ impl Default for RowInfo {
         RowInfo {
             collapsed: false,
             custom_format: false,
+            custom_height: false,
             hidden: false,
             ht: None,
             outline_level: 0,
