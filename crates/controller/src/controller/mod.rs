@@ -1,15 +1,16 @@
 use logisheets_base::async_func::{AsyncCalcResult, Task};
 use logisheets_base::{CellId, SheetId};
 
-use logisheets_workbook::prelude::{read, write, SerdeErr};
+use logisheets_workbook::prelude::{read, write};
 pub mod display;
 pub mod edit_action;
 pub mod status;
 pub mod style;
 mod transaction;
 mod viewer;
+use crate::errors::{Error, Result};
 use crate::file_loader2::load;
-use crate::file_saver::{save_file, SaveError};
+use crate::file_saver::save_file;
 use crate::payloads::sheet_shift::{SheetShiftPayload, SheetShiftType};
 use crate::payloads::Process;
 use crate::settings::Settings;
@@ -52,9 +53,9 @@ impl Default for Controller {
 }
 
 impl Controller {
-    pub fn save(&self) -> Result<Vec<u8>, SaveError> {
+    pub fn save(&self) -> Result<Vec<u8>> {
         let workbook = save_file(self)?;
-        write(workbook).map_err(|_| SaveError::ZipError)
+        write(workbook).map_err(|e| Error::Serde(e.into()))
     }
 
     pub fn from(status: Status, book_name: String, settings: Settings) -> Self {
@@ -68,7 +69,7 @@ impl Controller {
         }
     }
 
-    pub fn from_file(name: String, f: &[u8]) -> Result<Self, SerdeErr> {
+    pub fn from_file(name: String, f: &[u8]) -> Result<Self> {
         let res = read(f)?;
         Ok(load(res, name))
     }
@@ -126,11 +127,7 @@ impl Controller {
         Some(ActionEffect::default())
     }
 
-    fn handle_process(
-        &mut self,
-        proc: Vec<Process>,
-        undoable: bool,
-    ) -> Result<(), crate::errors::Error> {
+    fn handle_process(&mut self, proc: Vec<Process>, undoable: bool) -> Result<()> {
         let context = TransactionContext {
             book_name: &self.curr_book_name,
             calc_config: self.settings.calc_config.clone(),
@@ -150,7 +147,7 @@ impl Controller {
         Ok(())
     }
 
-    pub fn get_display_response(&mut self, req: DisplayRequest) -> DisplayResponse {
+    pub fn get_display_response(&self, req: DisplayRequest) -> DisplayResponse {
         let viewer = SheetViewer::default();
         let response = viewer.display(self, req.sheet_idx);
         response

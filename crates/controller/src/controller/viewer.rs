@@ -26,7 +26,7 @@ pub struct SheetViewer {
 }
 
 impl SheetViewer {
-    pub fn display(self, controller: &mut Controller, sheet_idx: usize) -> DisplayResponse {
+    pub fn display(self, controller: &Controller, sheet_idx: usize) -> DisplayResponse {
         let sheet_id = controller
             .status
             .sheet_pos_manager
@@ -38,9 +38,9 @@ impl SheetViewer {
         DisplayResponse { patches }
     }
 
-    fn load_sheet(&mut self, controller: &mut Controller, sheet_id: SheetId) {
+    fn load_sheet(&mut self, controller: &Controller, sheet_id: SheetId) {
         let s = &controller.status.container;
-        let navigator = &mut controller.status.navigator;
+        let navigator = &controller.status.navigator;
         let style_manager = &controller.status.style_manager;
         let formula_manager = &controller.status.formula_manager;
         let func_manager = &controller.status.func_id_manager;

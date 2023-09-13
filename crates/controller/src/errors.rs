@@ -1,4 +1,5 @@
 use logisheets_base::errors::BasicError;
+use logisheets_parser::errors::ParseError;
 use logisheets_workbook::SerdeErr;
 use thiserror::Error;
 
@@ -16,4 +17,8 @@ pub enum Error {
     Serde(#[from] SerdeErr),
     #[error(transparent)]
     Save(#[from] SaveError),
+    #[error(transparent)]
+    Parse(#[from] ParseError),
+    #[error("unavailable sheet idx: {0}")]
+    UnavailableSheetIdx(usize),
 }

@@ -17,7 +17,7 @@ pub struct NameFetcher<'a> {
     pub external_links_manager: &'a ExtBooksManager,
     pub text_id_manager: &'a TextIdManager,
     pub name_id_manager: &'a NameIdManager,
-    pub navigator: &'a mut Navigator,
+    pub navigator: &'a Navigator,
     pub formula_manager: &'a FormulaManager,
 }
 

@@ -141,7 +141,7 @@ pub fn input_async_result(result: &JsValue) -> JsValue {
 /// logisheets_controller::DisplayResponse
 pub fn get_patches(sheet_idx: u32, version: u32) -> JsValue {
     init();
-    let mut ctrl = CONTROLLER.get_mut();
+    let ctrl = CONTROLLER.get();
     let response = ctrl.get_display_response(DisplayRequest {
         sheet_idx: sheet_idx as usize,
         version,
