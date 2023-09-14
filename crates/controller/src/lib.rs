@@ -23,6 +23,7 @@ mod range_manager;
 mod settings;
 mod style_manager;
 mod theme_manager;
+mod version_manager;
 mod workbook;
 
 use crate::errors::Result;

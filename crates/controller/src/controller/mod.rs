@@ -14,6 +14,7 @@ use crate::file_saver::save_file;
 use crate::payloads::sheet_shift::{SheetShiftPayload, SheetShiftType};
 use crate::payloads::Process;
 use crate::settings::Settings;
+use crate::version_manager::VersionManager;
 use edit_action::{ActionEffect, Converter};
 use status::Status;
 use transaction::{Transaction, TransactionContext};
@@ -28,8 +29,7 @@ pub struct Controller {
     pub async_func_manager: AsyncFuncManager,
     pub curr_book_name: String,
     pub settings: Settings,
-    pub undo_stack: Vec<Status>,
-    pub redo_stack: Vec<Status>,
+    pub version_manager: VersionManager,
 }
 
 impl Default for Controller {
@@ -38,8 +38,7 @@ impl Default for Controller {
             status: Status::default(),
             curr_book_name: String::from("Book1"),
             settings: Settings::default(),
-            undo_stack: vec![],
-            redo_stack: vec![],
+            version_manager: VersionManager::default(),
             async_func_manager: AsyncFuncManager::default(),
         };
         let add_sheet = Process::SheetShift(SheetShiftPayload {
@@ -61,10 +60,9 @@ impl Controller {
     pub fn from(status: Status, book_name: String, settings: Settings) -> Self {
         Controller {
             curr_book_name: book_name,
-            redo_stack: Vec::new(),
             settings,
             status,
-            undo_stack: Vec::new(),
+            version_manager: VersionManager::default(),
             async_func_manager: AsyncFuncManager::default(),
         }
     }
@@ -137,12 +135,14 @@ impl Controller {
             async_func_manager: &mut self.async_func_manager,
             status: self.status.clone(),
             context,
-            proc,
+            proc: &proc,
         };
-        let mut new_status = transcation.start()?;
+        let (mut new_status, calc_cells) = transcation.start()?;
+
         std::mem::swap(&mut new_status, &mut self.status);
         if undoable {
-            self.undo_stack.push(new_status);
+            self.version_manager
+                .record(new_status.clone(), proc, calc_cells);
         }
         Ok(())
     }
@@ -154,10 +154,9 @@ impl Controller {
     }
 
     pub fn undo(&mut self) -> bool {
-        match self.undo_stack.pop() {
+        match self.version_manager.undo() {
             Some(mut last_status) => {
                 std::mem::swap(&mut self.status, &mut last_status);
-                self.redo_stack.push(last_status);
                 true
             }
             None => false,
@@ -165,10 +164,9 @@ impl Controller {
     }
 
     pub fn redo(&mut self) -> bool {
-        match self.redo_stack.pop() {
+        match self.version_manager.redo() {
             Some(mut next_status) => {
                 std::mem::swap(&mut self.status, &mut next_status);
-                self.undo_stack.push(next_status);
                 true
             }
             None => false,

@@ -2,6 +2,7 @@ mod calc_order;
 pub mod calculator;
 pub mod connector;
 mod cycle;
+
 use logisheets_base::{Addr, BlockRange, NormalRange, Range};
 
 use crate::formula_manager::{FormulaManager, Vertex};

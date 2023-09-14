@@ -30,7 +30,7 @@ pub struct Status {
     pub style_manager: StyleManager,
     pub cell_attachment_manager: CellAttachmentsManager,
 
-    pub dirty_cells: HashSet<(SheetId, CellId)>,
+    pub dirty_cells_next_round: HashSet<(SheetId, CellId)>,
 }
 
 impl Default for Status {
@@ -49,7 +49,7 @@ impl Default for Status {
             sheet_pos_manager: SheetPosManager::default(),
             style_manager: StyleManager::default(),
             cell_attachment_manager: CellAttachmentsManager::default(),
-            dirty_cells: HashSet::new(),
+            dirty_cells_next_round: HashSet::new(),
         }
     }
 }
