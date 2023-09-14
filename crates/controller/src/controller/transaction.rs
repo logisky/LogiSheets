@@ -25,11 +25,11 @@ pub struct Transaction<'a> {
     pub status: Status,
     pub async_func_manager: &'a mut AsyncFuncManager,
     pub context: TransactionContext<'a>,
-    pub proc: Vec<Process>,
+    pub proc: &'a Vec<Process>,
 }
 
 impl<'a> Transaction<'a> {
-    pub fn start(self) -> Result<Status> {
+    pub fn start(self) -> Result<(Status, HashSet<(SheetId, CellId)>)> {
         let context = self.context;
         let mut async_func_manager = self.async_func_manager;
         let mut status = self.status;
@@ -51,7 +51,7 @@ impl<'a> Transaction<'a> {
             style_manager,
             cell_attachment_manager,
             mut formula_manager,
-            dirty_cells,
+            dirty_cells_next_round: dirty_cells,
         } = status;
         dirty_cells.into_iter().for_each(|(sheet_id, cell_id)| {
             let range = match cell_id {
@@ -65,6 +65,7 @@ impl<'a> Transaction<'a> {
             calc_nodes.insert(vertex);
         });
         let mut dirty_cells_in_next_run = im::HashSet::new();
+        let mut calc_cells: HashSet<(SheetId, CellId)> = HashSet::new();
         let connector = CalcConnector {
             navigator: &mut navigator,
             container: &mut container,
@@ -81,6 +82,7 @@ impl<'a> Transaction<'a> {
             async_funcs: &context.async_funcs,
             formula_manager: &formula_manager,
             dirty_cells_in_next_run: &mut dirty_cells_in_next_run,
+            calc_cells: &mut calc_cells,
         };
         let calc_engine = CalcEngine {
             config: context.calc_config,
@@ -89,7 +91,8 @@ impl<'a> Transaction<'a> {
             dirty_vertices: calc_nodes,
         };
         calc_engine.start();
-        Ok(Status {
+
+        let s = Status {
             navigator,
             container,
             sheet_id_manager,
@@ -101,14 +104,15 @@ impl<'a> Transaction<'a> {
             style_manager,
             cell_attachment_manager,
             formula_manager,
-            dirty_cells: dirty_cells_in_next_run,
-        })
+            dirty_cells_next_round: dirty_cells_in_next_run,
+        };
+        Ok((s, calc_cells))
     }
 }
 
 fn handle(
     status: Status,
-    proc: Process,
+    proc: &Process,
     context: &TransactionContext,
 ) -> Result<(Status, HashSet<Vertex>)> {
     match proc {
@@ -121,7 +125,7 @@ fn handle(
         Process::SheetRename(rename) => {
             Ok((handle_sheet_rename_payload(status, rename), HashSet::new()))
         }
-        Process::Recalc(dirty) => Ok(handle_recalc_proc(status, dirty)),
+        Process::Recalc(dirty) => Ok(handle_recalc_proc(status, dirty.clone())),
     }
 }
 
@@ -144,14 +148,14 @@ fn handle_recalc_proc(status: Status, dirty: Vec<(SheetId, CellId)>) -> (Status,
     (status, calc_nodes)
 }
 
-fn handle_sheet_rename_payload(status: Status, payload: SheetRenamePayload) -> Status {
+fn handle_sheet_rename_payload(status: Status, payload: &SheetRenamePayload) -> Status {
     let mut res = status;
     res.sheet_id_manager
-        .rename(&payload.old_name, payload.new_name);
+        .rename(&payload.old_name, payload.new_name.to_string());
     res
 }
 
-fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Status {
+fn handle_sheet_shift_payload(status: Status, payload: &SheetShiftPayload) -> Status {
     let Status {
         formula_manager,
         navigator,
@@ -164,7 +168,7 @@ fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Sta
         sheet_pos_manager,
         style_manager,
         cell_attachment_manager,
-        dirty_cells,
+        dirty_cells_next_round: dirty_cells,
     } = status;
     let DataExecutor {
         navigator,
@@ -187,13 +191,13 @@ fn handle_sheet_shift_payload(status: Status, payload: SheetShiftPayload) -> Sta
         sheet_pos_manager: sheet_pos,
         style_manager,
         cell_attachment_manager,
-        dirty_cells,
+        dirty_cells_next_round: dirty_cells,
     }
 }
 
 fn handle_name_proc(
     _status: Status,
-    _payload: NamePayload,
+    _payload: &NamePayload,
     _context: &TransactionContext,
 ) -> Status {
     todo!()
@@ -201,7 +205,7 @@ fn handle_name_proc(
 
 fn handle_sheet_proc(
     status: Status,
-    proc: SheetProcess,
+    proc: &SheetProcess,
     context: &TransactionContext,
 ) -> Result<(Status, HashSet<Vertex>)> {
     let Status {
@@ -216,7 +220,7 @@ fn handle_sheet_proc(
         mut sheet_pos_manager,
         style_manager,
         cell_attachment_manager,
-        dirty_cells,
+        dirty_cells_next_round: dirty_cells,
     } = status;
     let mut old_navigator = navigator.clone();
     let data_executor = DataExecutor::new(navigator, style_manager, container);
@@ -225,7 +229,7 @@ fn handle_sheet_proc(
         container: mut new_container,
         style_manager: new_style_manager,
         ..
-    } = data_executor.execute_sheet_proc(&proc)?;
+    } = data_executor.execute_sheet_proc(proc)?;
     let active_sheet = proc.sheet_id;
     let FormulaExecContext {
         manager: formula_manager,
@@ -258,7 +262,7 @@ fn handle_sheet_proc(
         sheet_pos_manager,
         style_manager: new_style_manager,
         cell_attachment_manager,
-        dirty_cells,
+        dirty_cells_next_round: dirty_cells,
     };
     Ok((status, dirty_vertices))
 }

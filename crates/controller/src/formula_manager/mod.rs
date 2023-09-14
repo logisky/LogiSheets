@@ -67,7 +67,7 @@ impl FormulaManager {
 
     pub fn execute_sheet_proc<C>(
         self,
-        proc: SheetProcess,
+        proc: &SheetProcess,
         ctx: &mut C,
     ) -> Result<FormulaExecContext>
     where
@@ -79,9 +79,9 @@ impl FormulaManager {
     {
         let sheet_id = proc.sheet_id;
         let exec_ctx = FormulaExecContext::new(self);
-        match proc.payload {
+        match &proc.payload {
             SheetPayload::Shift(shift_payload) => match shift_payload {
-                ShiftPayload::Line(ls) => match (ls.ty, ls.direction) {
+                ShiftPayload::Line(ls) => match (&ls.ty, &ls.direction) {
                     (ShiftType::Delete, Direction::Horizontal) => {
                         delete_line(exec_ctx, sheet_id, true, ls.start, ls.cnt, ctx)
                     }
@@ -97,9 +97,14 @@ impl FormulaManager {
                 },
                 ShiftPayload::Range(_) => todo!(),
             },
-            SheetPayload::Formula(fp) => {
-                input_formula(exec_ctx, sheet_id, fp.row, fp.col, fp.formula, ctx)
-            }
+            SheetPayload::Formula(fp) => input_formula(
+                exec_ctx,
+                sheet_id,
+                fp.row,
+                fp.col,
+                fp.formula.to_string(),
+                ctx,
+            ),
             SheetPayload::Block(block_payload) => match block_payload {
                 BlockPayload::Create(payload) => create_block(
                     exec_ctx,
@@ -157,8 +162,10 @@ impl FormulaManager {
                 ),
                 BlockPayload::Remove(_) => Ok(exec_ctx),
             },
-            SheetPayload::Cell(cp) => match cp.change {
-                CellChange::Value(v) => input_value(exec_ctx, sheet_id, cp.row, cp.col, v, ctx),
+            SheetPayload::Cell(cp) => match &cp.change {
+                CellChange::Value(v) => {
+                    input_value(exec_ctx, sheet_id, cp.row, cp.col, v.clone(), ctx)
+                }
                 _ => Ok(exec_ctx),
             },
             _ => Ok(exec_ctx),

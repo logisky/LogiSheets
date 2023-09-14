@@ -48,6 +48,7 @@ pub struct CalcConnector<'a> {
     pub curr_addr: Addr,
 
     pub dirty_cells_in_next_run: &'a mut im::HashSet<(SheetId, CellId)>,
+    pub calc_cells: &'a mut HashSet<(SheetId, CellId)>,
 }
 
 impl<'a> GetActiveSheetTrait for CalcConnector<'a> {
@@ -317,6 +318,8 @@ impl<'a> Connector for CalcConnector<'a> {
     }
 
     fn commit_calc_values(&mut self, vertex: (SheetId, CellId), result: CalcValue) {
+        self.calc_cells.insert(vertex);
+
         let sheet_id = vertex.0;
         let cell_id = vertex.1;
         let cell_idx = self.navigator.fetch_cell_idx(&sheet_id, &cell_id).unwrap();
