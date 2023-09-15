@@ -562,6 +562,7 @@ version = "0.3.0"
 dependencies = [
  "console_error_panic_hook",
  "getrandom",
+ "logisheets_base",
  "logisheets_controller",
  "serde",
  "serde-wasm-bindgen",

@@ -149,7 +149,7 @@ impl Controller {
 
     pub fn get_display_response(&self, req: DisplayRequest) -> DisplayResponse {
         let viewer = SheetViewer::default();
-        let response = viewer.display(self, req.sheet_idx);
+        let response = viewer.display_with_idx(self, req.sheet_idx);
         response
     }
 

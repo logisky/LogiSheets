@@ -11,6 +11,10 @@ impl ColInfoManager {
         self.data.get(&col_id)
     }
 
+    pub fn get_col_info_mut(&mut self, col_id: ColId) -> Option<&mut ColInfo> {
+        self.data.get_mut(&col_id)
+    }
+
     pub fn set_col_info(&mut self, col_id: ColId, info: ColInfo) {
         self.data.insert(col_id, info);
     }

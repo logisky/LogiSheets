@@ -272,7 +272,7 @@ fn exec_check_empty(ctx: &mut ExecContext, c: CheckEmpty, line: usize) -> Option
             msg: format!("Sheet {} is not found", &ctx.sheet_name),
         });
     }
-    let mut ws = ws.unwrap();
+    let ws = ws.unwrap();
     let v = ws.get_value(row, col).unwrap();
     match v {
         Value::Str(s) => Some(ExecError {
@@ -299,7 +299,7 @@ fn exec_check_num(ctx: &mut ExecContext, check_num: CheckNum, line: usize) -> Op
     let row = check_num.row;
     let col = check_num.col;
     match ctx.workbook.get_sheet_by_name(&ctx.sheet_name) {
-        Ok(mut ws) => {
+        Ok(ws) => {
             let v = ws.get_value(row as usize, col as usize).unwrap();
             match v {
                 Value::Str(_) => Some(ExecError {
@@ -351,7 +351,7 @@ fn exec_check_formula(
             msg: format!("Sheet {} is not found", &ctx.sheet_name),
         });
     }
-    let mut ws = ws.unwrap();
+    let ws = ws.unwrap();
     let f = ws.get_formula(row, col).unwrap();
     if f != check_formula.expect {
         Some(ExecError {
@@ -371,7 +371,7 @@ fn exec_check_string(
     let row = check_str.row;
     let col = check_str.col;
     match ctx.workbook.get_sheet_by_name(&ctx.sheet_name) {
-        Ok(mut ws) => {
+        Ok(ws) => {
             let v = ws.get_value(row as usize, col as usize).unwrap();
             match v {
                 Value::Str(s) => {
@@ -424,7 +424,7 @@ fn exec_check_error(
     let row = check_err.row;
     let col = check_err.col;
     match ctx.workbook.get_sheet_by_name(&ctx.sheet_name) {
-        Ok(mut ws) => {
+        Ok(ws) => {
             let v = ws.get_value(row as usize, col as usize).unwrap();
             match v {
                 Value::Error(e) => {

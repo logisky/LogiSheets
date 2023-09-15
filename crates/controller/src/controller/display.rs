@@ -138,7 +138,7 @@ pub fn get_default_col_width() -> f64 {
     8.38
 }
 
-#[derive(Debug, Clone, Serialize, TS)]
+#[derive(Debug, Clone, Serialize, TS, Default)]
 #[ts(file_name = "value.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub enum Value {
@@ -146,6 +146,7 @@ pub enum Value {
     Bool(bool),
     Number(f64),
     Error(String),
+    #[default]
     Empty,
 }
 

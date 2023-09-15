@@ -6,6 +6,8 @@ use crate::controller::display::{
     SheetColInfo, SheetComments, SheetMergeCells, SheetRowInfo, SheetStyles, SheetValues, Value,
 };
 use crate::id_manager::TextIdManager;
+use crate::version_manager::diff::{Diff, SheetDiff};
+use crate::Worksheet;
 
 use super::display::{
     BlockInfo, CellFormulaValue, CellStyle, ColInfo, Comment, DisplayPatch, DisplayResponse,
@@ -26,7 +28,93 @@ pub struct SheetViewer {
 }
 
 impl SheetViewer {
-    pub fn display(self, controller: &Controller, sheet_idx: usize) -> DisplayResponse {
+    #[allow(unused)]
+    pub fn display_with_diff(
+        mut self,
+        controller: &Controller,
+        sheet_id: SheetId,
+        diff: SheetDiff,
+    ) -> DisplayResponse {
+        if diff.diff_unavailable() {
+            self.load_sheet(controller, sheet_id);
+        } else {
+            let ws = Worksheet::from(sheet_id, controller);
+            diff.data.into_iter().for_each(|diff| match diff {
+                Diff::CellValue(cell_id) => {
+                    let formula = ws.get_formula_by_id(cell_id).unwrap_or_default();
+                    let value = ws.get_value_by_id(cell_id).unwrap_or_default();
+                    if let Ok((row, col)) = ws.get_cell_idx(cell_id) {
+                        self.values.push(CellFormulaValue {
+                            row,
+                            col,
+                            formula,
+                            value,
+                        });
+                    }
+                }
+                Diff::CellStyle(cell_id) => {
+                    let style = ws.get_style_by_id(cell_id).unwrap();
+                    if let Ok((row, col)) = ws.get_cell_idx(cell_id) {
+                        self.styles.push(CellStyle { row, col, style })
+                    }
+                }
+                Diff::RowInfo(row_id) => {
+                    if let Some(info) = ws.get_row_info_by_id(row_id) {
+                        self.row_infos.push(info);
+                    }
+                }
+                Diff::ColInfo(col_id) => {
+                    if let Some(info) = ws.get_col_info_by_id(col_id) {
+                        self.col_infos.push(info);
+                    }
+                }
+                Diff::BlockUpdate { id, cnt, row } => {
+                    let (mut row_cnt, mut col_cnt) = ws.get_block_size(id).unwrap();
+                    if row {
+                        row_cnt += cnt;
+                    } else {
+                        col_cnt += cnt;
+                    }
+                    let (master_row, master_col) = ws.get_block_master_cell(id).unwrap();
+                    for r in master_row..=row_cnt {
+                        for c in master_col..=col_cnt {
+                            let style = ws.get_style(r, c);
+                            let formula = ws.get_formula(r, c);
+                            let value = ws.get_value(r, c);
+                            match (style, formula, value) {
+                                (Ok(s), Ok(f), Ok(v)) => {
+                                    self.values.push(CellFormulaValue {
+                                        row: r,
+                                        col: c,
+                                        formula: f,
+                                        value: v,
+                                    });
+                                    self.styles.push(CellStyle {
+                                        row: r,
+                                        col: c,
+                                        style: s,
+                                    });
+                                }
+                                _ => continue,
+                            }
+                        }
+                    }
+                }
+                Diff::SheetProperty => todo!(),
+                Diff::Unavailable => unreachable!(),
+            });
+        }
+
+        let idx = controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_idx(&sheet_id)
+            .unwrap();
+        let patches = self.to_patches(idx);
+        DisplayResponse { patches }
+    }
+
+    pub fn display_with_idx(self, controller: &Controller, sheet_idx: usize) -> DisplayResponse {
         let sheet_id = controller
             .status
             .sheet_pos_manager

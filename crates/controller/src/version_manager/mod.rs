@@ -1,4 +1,4 @@
-mod diff;
+pub mod diff;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -32,6 +32,7 @@ impl VersionManager {
     ) {
         let diffs = convert_payloads_to_sheet_diff(&status, processes, updated_cells);
         self.add_status(status, diffs);
+        self.version += 1;
     }
 
     fn add_status(&mut self, current: Status, sheet_diff: HashMap<SheetId, SheetDiff>) {
