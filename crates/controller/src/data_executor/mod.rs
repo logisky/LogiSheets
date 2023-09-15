@@ -4,7 +4,7 @@ use logisheets_base::{
 
 use crate::{
     cell::Cell,
-    container::{col_info_manager::ColInfo, row_info_manager::RowInfo, DataContainer},
+    container::DataContainer,
     errors::Result,
     navigator::{BlockPlace, Navigator},
     payloads::sheet_process::{SheetPayload, SheetProcess},
@@ -415,7 +415,7 @@ impl DataExecutor {
     ) -> Result<Self> {
         let mut res = self.clone();
         if let Ok(id) = res.navigator.fetch_cell_id(&sheet_id, row, col) {
-            if let Some(c) = res.container.get_cell(sheet_id, &id) {
+            if let Some(c) = res.container.get_cell_mut(sheet_id, &id) {
                 c.value = value.clone();
             } else {
                 let mut c = Cell::default();
@@ -435,10 +435,10 @@ impl DataExecutor {
     ) -> Result<Self> {
         let mut res = self.clone();
         let id = res.navigator.fetch_cell_id(&sheet_id, row, col)?;
-        let mut cell = res.container.get_cell(sheet_id, &id);
+        let mut cell = res.container.get_cell_mut(sheet_id, &id);
         if cell.is_none() {
             res.container.add_cell(sheet_id, id, Cell::default());
-            cell = res.container.get_cell(sheet_id, &id);
+            cell = res.container.get_cell_mut(sheet_id, &id);
         }
         let mut cell = cell.unwrap();
         let old_style = cell.style;
@@ -464,9 +464,7 @@ impl DataExecutor {
             deleted_cells,
         } = self;
         let row_id = navigator.fetch_row_id(&sheet_id, row).unwrap_or(0);
-        let mut info = container
-            .get_row_info(sheet_id, row_id)
-            .map_or(RowInfo::default(), |r| r.clone());
+        let mut info = container.get_row_info_mut(sheet_id, row_id);
         match p {
             RowInfoUpdate::Collapsed(c) => info.collapsed = c,
             RowInfoUpdate::Hidden(h) => info.hidden = h,
@@ -479,11 +477,10 @@ impl DataExecutor {
                 style_manager = manager;
             }
         };
-        let new_container = container.update_row_info(sheet_id, row_id, info);
         Ok(DataExecutor {
             navigator,
             style_manager,
-            container: new_container,
+            container,
             deleted_cells,
         })
     }
@@ -501,9 +498,7 @@ impl DataExecutor {
             deleted_cells,
         } = self;
         let col_id = navigator.fetch_col_id(&sheet_id, col)?;
-        let mut info = container
-            .get_col_info(sheet_id, col_id)
-            .map_or(ColInfo::default(), |r| r.clone());
+        let mut info = container.get_col_info_mut(sheet_id, col_id);
         match p {
             ColInfoUpdate::Collapsed(c) => info.collapsed = c,
             ColInfoUpdate::Hidden(h) => info.hidden = h,
@@ -516,11 +511,10 @@ impl DataExecutor {
                 style_manager = manager;
             }
         };
-        let new_container = container.update_col_info(sheet_id, col_id, info);
         Ok(DataExecutor {
             navigator,
             style_manager,
-            container: new_container,
+            container,
             deleted_cells,
         })
     }

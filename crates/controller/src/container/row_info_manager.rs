@@ -11,6 +11,10 @@ impl RowInfoManager {
         self.data.get(&row_id)
     }
 
+    pub fn get_row_info_mut(&mut self, row_id: RowId) -> Option<&mut RowInfo> {
+        self.data.get_mut(&row_id)
+    }
+
     pub fn set_row_info(&mut self, row_id: RowId, info: RowInfo) {
         self.data.insert(row_id, info);
     }

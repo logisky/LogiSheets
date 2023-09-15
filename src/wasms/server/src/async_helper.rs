@@ -1,4 +1,5 @@
-use logisheets_controller::{CellId, SheetId, Task};
+use logisheets_base::{CellId, SheetId};
+use logisheets_controller::Task;
 use std::collections::HashMap;
 
 #[derive(Debug)]

@@ -25,21 +25,30 @@ impl DataContainer {
         }
     }
 
-    pub fn get_cell(&mut self, sheet_id: SheetId, cell_id: &CellId) -> Option<&mut Cell> {
+    pub fn get_cell(&self, sheet_id: SheetId, cell_id: &CellId) -> Option<&Cell> {
+        let container = self.get_sheet_container(sheet_id)?;
+        container.cells.get(cell_id)
+    }
+
+    pub fn get_cell_mut(&mut self, sheet_id: SheetId, cell_id: &CellId) -> Option<&mut Cell> {
         let container = self.get_sheet_container_mut(sheet_id);
         container.cells.get_mut(cell_id)
     }
 
-    pub fn get_row_info(&mut self, sheet_id: SheetId, row_id: RowId) -> Option<&RowInfo> {
-        let container = self.get_sheet_container_mut(sheet_id);
-        let row_info = &container.row_info;
-        row_info.get_row_info(row_id)
+    pub fn get_row_info(&self, sheet_id: SheetId, row_id: RowId) -> Option<&RowInfo> {
+        self.get_sheet_container(sheet_id)?
+            .row_info
+            .get_row_info(row_id)
     }
 
-    pub fn update_row_info(self, sheet_id: SheetId, row_id: RowId, info: RowInfo) -> Self {
-        let mut c = self.clone();
-        c.set_row_info(sheet_id, row_id, info);
-        c
+    pub fn get_row_info_mut(&mut self, sheet_id: SheetId, row_id: RowId) -> &mut RowInfo {
+        let container = self.get_sheet_container_mut(sheet_id);
+        let row_info = &mut container.row_info;
+        if let Some(_) = row_info.get_row_info(row_id) {
+            return row_info.get_row_info_mut(row_id).unwrap();
+        }
+        row_info.set_row_info(row_id, RowInfo::default());
+        row_info.get_row_info_mut(row_id).unwrap()
     }
 
     pub fn set_row_info(&mut self, sheet_id: SheetId, row_id: RowId, info: RowInfo) {
@@ -47,17 +56,20 @@ impl DataContainer {
         container.row_info.set_row_info(row_id, info);
     }
 
-    pub fn update_col_info(self, sheet_id: SheetId, col_id: ColId, info: ColInfo) -> Self {
-        let mut c = self.clone();
-        let container = c.get_sheet_container_mut(sheet_id);
-        container.col_info.set_col_info(col_id, info);
-        c
+    pub fn get_col_info(&self, sheet_id: SheetId, col_id: ColId) -> Option<&ColInfo> {
+        self.get_sheet_container(sheet_id)?
+            .col_info
+            .get_col_info(col_id)
     }
 
-    pub fn get_col_info(&mut self, sheet_id: SheetId, col_id: ColId) -> Option<&ColInfo> {
+    pub fn get_col_info_mut(&mut self, sheet_id: SheetId, col_id: ColId) -> &mut ColInfo {
         let container = self.get_sheet_container_mut(sheet_id);
-        let col_info = &container.col_info;
-        col_info.get_col_info(col_id)
+        let col_info = &mut container.col_info;
+        if let Some(_) = col_info.get_col_info(col_id) {
+            return col_info.get_col_info_mut(col_id).unwrap();
+        }
+        col_info.set_col_info(col_id, ColInfo::default());
+        col_info.get_col_info_mut(col_id).unwrap()
     }
 
     pub fn set_col_info(&mut self, sheet_id: SheetId, col_id: ColId, info: ColInfo) {
