@@ -7,6 +7,7 @@ use serde::Serialize;
 #[ts(file_name = "display_response.ts", rename_all = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct DisplayResponse {
+    pub incremental: bool,
     pub patches: Vec<DisplayPatch>,
 }
 
