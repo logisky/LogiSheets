@@ -111,7 +111,10 @@ impl SheetViewer {
             .get_sheet_idx(&sheet_id)
             .unwrap();
         let patches = self.to_patches(idx);
-        DisplayResponse { patches }
+        DisplayResponse {
+            patches,
+            incremental: true,
+        }
     }
 
     pub fn display_with_idx(self, controller: &Controller, sheet_idx: usize) -> DisplayResponse {
@@ -123,7 +126,10 @@ impl SheetViewer {
         let mut viewer = self;
         viewer.load_sheet(controller, sheet_id);
         let patches = viewer.to_patches(sheet_idx);
-        DisplayResponse { patches }
+        DisplayResponse {
+            patches,
+            incremental: false,
+        }
     }
 
     fn load_sheet(&mut self, controller: &Controller, sheet_id: SheetId) {

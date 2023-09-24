@@ -2,5 +2,6 @@
 import {DisplayPatch} from './display_patch'
 
 export interface DisplayResponse {
+    incremental: boolean
     patches: readonly DisplayPatch[]
 }
