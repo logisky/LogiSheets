@@ -24,6 +24,10 @@ pub struct VersionManager {
 }
 
 impl VersionManager {
+    pub fn version(&self) -> u32 {
+        self.version
+    }
+
     pub fn record(
         &mut self,
         status: Status,

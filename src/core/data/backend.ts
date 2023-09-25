@@ -32,9 +32,6 @@ export class Backend {
         return this._render$
     }
 
-    get sheetUpdated$(): Observable<readonly number[]> {
-        return this._sheetUpdated$
-    }
     send$ = new ReplaySubject<Blob>(5)
     handleResponse(msg: ServerSend) {
         this._handleServerSend(msg)
@@ -56,7 +53,6 @@ export class Backend {
     }
     private _render$ = new Subject<void>()
     // Sever tolds the client that these sheets are dirty.
-    private _sheetUpdated$ = new Subject<readonly number[]>()
     private _wasmSvc = new StandAloneService([])
     private _handleServerSend(serverSend: ServerSend) {
         if (serverSend.$case === 'displayResponse') {
@@ -69,8 +65,8 @@ export class Backend {
             })
             this._render$.next()
         } else if (serverSend.$case === 'actionEffect') {
-            const sheetUpdated = serverSend.actionEffect.sheets
-            this._sheetUpdated$.next(sheetUpdated)
+            // todo: update the version number which is used
+            // when getting incremental display response
         }
     }
 

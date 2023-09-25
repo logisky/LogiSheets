@@ -78,7 +78,7 @@ impl<'a> AsyncFuncCommitTrait for CalcConnector<'a> {
         task: Task,
     ) -> Option<AsyncCalcResult> {
         self.async_func_manager
-            .query_or_commit(task, sheet_id, cell_id)
+            .query_or_commit_task(task, sheet_id, cell_id)
     }
 }
 
