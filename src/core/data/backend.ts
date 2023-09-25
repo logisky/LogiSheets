@@ -61,7 +61,9 @@ export class Backend {
     private _handleServerSend(serverSend: ServerSend) {
         if (serverSend.$case === 'displayResponse') {
             const e = serverSend.displayResponse
-            this.sheetSvc.clear()
+            if (!e.incremental) {
+                this.sheetSvc.clear()
+            }
             e.patches.forEach((p) => {
                 this._handleDisplayArea(p)
             })
