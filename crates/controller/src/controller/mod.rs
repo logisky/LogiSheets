@@ -1,5 +1,5 @@
 use logisheets_base::async_func::{AsyncCalcResult, Task};
-use logisheets_base::{CellId, SheetId};
+use logisheets_base::SheetId;
 
 use logisheets_workbook::prelude::{read, write};
 pub mod display;
@@ -67,6 +67,10 @@ impl Controller {
         }
     }
 
+    pub fn version(&self) -> u32 {
+        self.version_manager.version()
+    }
+
     pub fn from_file(name: String, f: &[u8]) -> Result<Self> {
         let res = read(f)?;
         Ok(load(res, name))
@@ -101,11 +105,10 @@ impl Controller {
                 };
                 let proc = c.convert_edit_payloads(action.payloads);
                 self.handle_process(proc, action.undoable).ok()?;
-                let (tasks, dirties) = self.async_func_manager.get_calc_tasks();
+                let tasks = self.async_func_manager.get_calc_tasks();
                 Some(ActionEffect {
-                    sheets: vec![],
                     async_tasks: tasks,
-                    dirtys: dirties,
+                    version: self.version(),
                 })
             }
         }
@@ -115,12 +118,13 @@ impl Controller {
         &mut self,
         tasks: Vec<Task>,
         res: Vec<AsyncCalcResult>,
-        dirtys: Vec<(SheetId, CellId)>,
     ) -> Option<ActionEffect> {
+        let mut pending_cells = vec![];
         tasks.into_iter().zip(res.into_iter()).for_each(|(t, r)| {
-            self.async_func_manager.add_value(t, r);
+            let cells = self.async_func_manager.commit_value(t, r);
+            pending_cells.extend(cells);
         });
-        self.handle_process(vec![Process::Recalc(dirtys)], false)
+        self.handle_process(vec![Process::Recalc(pending_cells)], false)
             .ok()?;
         Some(ActionEffect::default())
     }

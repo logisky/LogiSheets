@@ -1,9 +1,10 @@
+// TODO: Use `gents` to generate these interfaces and move them to `src/bindings`.
+
+import { ActionEffect } from "@/bindings"
 
 export interface TransactionEndResult {
     readonly code: TransactionCode
-    readonly tasks: Task[]
-    readonly asyncId: number
-    readonly sheetIdx: number[]
+    readonly effect: ActionEffect
 }
 
 export const enum TransactionCode {
@@ -17,7 +18,7 @@ export interface Task {
 }
 
 export interface AsyncFuncResult {
-    asyncId: number,
+    tasks: Task[]
     values: string[]
 }
 

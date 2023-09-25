@@ -1,8 +1,5 @@
-use crate::async_helper::PendingTask;
-
-use super::async_helper::AsyncHelper;
 use logisheets_controller::controller::edit_action::{
-    BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock,
+    ActionEffect, BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock,
     PayloadsAction, RowShift,
 };
 use logisheets_controller::controller::{display::DisplayRequest, Controller};
@@ -13,7 +10,6 @@ use wasm_bindgen::prelude::*;
 
 static INIT: Singleton<bool> = Singleton::new(false);
 static CONTROLLER: SingletonUninit<Controller> = SingletonUninit::uninit();
-static ASYNC_HELPER: SingletonUninit<AsyncHelper> = SingletonUninit::uninit();
 static PAYLOADS: Singleton<Vec<EditPayload>> = Singleton::new(vec![]);
 
 fn init() {
@@ -21,7 +17,6 @@ fn init() {
         return;
     }
     CONTROLLER.init(Controller::default());
-    ASYNC_HELPER.init(AsyncHelper::default());
 }
 
 #[wasm_bindgen]
@@ -71,20 +66,9 @@ pub fn transaction_end(undoable: bool) -> JsValue {
     });
     let result = match ctrl.handle_action(action) {
         Some(effect) => {
-            let async_id = if effect.async_tasks.len() > 0 {
-                let t = PendingTask {
-                    tasks: effect.async_tasks.clone(),
-                    dirtys: effect.dirtys.clone(),
-                };
-                ASYNC_HELPER.get_mut().add_pending_task(t)
-            } else {
-                0
-            };
             let r = TransactionEndResult {
-                sheet_idx: effect.sheets,
-                tasks: effect.async_tasks,
-                async_id,
                 code: TransactionCode::Ok,
+                effect,
             };
             r
         }
@@ -99,40 +83,24 @@ pub fn transaction_end(undoable: bool) -> JsValue {
 pub fn input_async_result(result: &JsValue) -> JsValue {
     init();
     let r: AsyncFuncResult = serde_wasm_bindgen::from_value(result.clone()).unwrap();
-    let transaction_result = match ASYNC_HELPER.get_mut().get_pending_task(r.async_id) {
-        Some(pending) => {
-            let values = r
-                .values
-                .into_iter()
-                .map(|v| parse_async_value(v))
-                .collect::<Vec<_>>();
-            let tasks = pending.tasks;
-            let dirtys = pending.dirtys;
-            let action_effect = CONTROLLER
-                .get_mut()
-                .handle_async_calc_results(tasks, values, dirtys);
-            match action_effect {
-                Some(effect) => {
-                    let async_id = if effect.async_tasks.len() > 0 {
-                        let t = PendingTask {
-                            tasks: effect.async_tasks.clone(),
-                            dirtys: effect.dirtys.clone(),
-                        };
-                        ASYNC_HELPER.get_mut().add_pending_task(t)
-                    } else {
-                        0
-                    };
-                    TransactionEndResult {
-                        sheet_idx: effect.sheets,
-                        tasks: effect.async_tasks,
-                        async_id,
-                        code: TransactionCode::Ok,
-                    }
-                }
-                None => TransactionEndResult::from_err_code(TransactionCode::Err),
-            }
-        }
-        None => TransactionEndResult::from_err_code(TransactionCode::Err),
+    let values = r
+        .values
+        .into_iter()
+        .map(|v| parse_async_value(v))
+        .collect::<Vec<_>>();
+    let tasks = r.tasks;
+    let result = CONTROLLER
+        .get_mut()
+        .handle_async_calc_results(tasks, values);
+    let transaction_result = match result {
+        Some(effect) => TransactionEndResult {
+            code: TransactionCode::Ok,
+            effect,
+        },
+        None => TransactionEndResult {
+            code: TransactionCode::Err,
+            effect: Default::default(),
+        },
     };
     serde_wasm_bindgen::to_value(&transaction_result).unwrap()
 }
@@ -280,28 +248,24 @@ pub enum TransactionStartResult {
 }
 
 #[derive(Serialize)]
-/// Since `Vec<T>` is not supported type in `wasm-bindgen`, we serialize the
-/// result as a JSON.
+// Since `Vec<T>` is not a supported type in `wasm-bindgen`,
+// we will serialize the result as a JSON format string.
 pub struct TransactionEndResult {
-    sheet_idx: Vec<usize>,
-    tasks: Vec<Task>,
-    async_id: u32,
     code: TransactionCode,
+    effect: ActionEffect,
 }
 
 #[derive(Deserialize)]
 pub struct AsyncFuncResult {
-    async_id: u32,
+    tasks: Vec<Task>,
     values: Vec<String>,
 }
 
 impl TransactionEndResult {
     pub fn from_err_code(code: TransactionCode) -> Self {
         TransactionEndResult {
-            sheet_idx: vec![],
-            tasks: vec![],
-            async_id: 0,
             code,
+            effect: Default::default(),
         }
     }
 }

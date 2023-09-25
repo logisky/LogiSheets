@@ -44,7 +44,7 @@ export class Service {
             const r = input_async_result(res) as TransactionEndResult
             const serverSend: ServerSend = {
                 $case: 'actionEffect',
-                actionEffect: {sheets: r.sheetIdx, asyncTasks: [], dirtys: []} // todo!()
+                actionEffect: r.effect
             }
             this.output$.next(serverSend)
         })
@@ -67,7 +67,7 @@ export class Service {
         if (r === ReadFileResult.Ok) {
             return {
                 $case: 'actionEffect',
-                actionEffect: {sheets: [], asyncTasks: [], dirtys: []},
+                actionEffect: { asyncTasks: [], version: 0},
             }
         }
         throw Error('read file Error!')
@@ -94,7 +94,7 @@ export class Service {
         }
         return {
             $case: 'actionEffect',
-            actionEffect: {sheets: [], dirtys: [], asyncTasks:[]}
+            actionEffect: result.effect
         }
     }
 
@@ -162,7 +162,7 @@ export class Service {
             console.log('undo failed')
         return {
             $case: 'actionEffect',
-            actionEffect: {sheets: [], dirtys: [], asyncTasks:[]}
+            actionEffect: {asyncTasks:[], version: 0}
         }
     }
 
@@ -172,7 +172,7 @@ export class Service {
             console.log('redo failed')
         return {
             $case: 'actionEffect',
-            actionEffect: {sheets: [], dirtys: [], asyncTasks:[]}
+            actionEffect: { asyncTasks:[], version: 0}
         }
     }
 
