@@ -28,7 +28,6 @@ pub struct SheetViewer {
 }
 
 impl SheetViewer {
-    #[allow(unused)]
     pub fn display_with_diff(
         mut self,
         controller: &Controller,
