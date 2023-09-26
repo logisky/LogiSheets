@@ -85,12 +85,10 @@ impl VersionManager {
     }
 
     // `None` means that users can not update the workbook to the latest one incremently.
-    pub fn get_sheet_diffs_from_version(
-        &self,
-        sheet: SheetId,
-        version: u32,
-    ) -> Option<HashSet<Diff>> {
-        assert!(version <= self.version);
+    pub fn get_sheet_diffs_from_version(&self, sheet: SheetId, version: u32) -> Option<SheetDiff> {
+        if version > self.version {
+            return None;
+        }
 
         if self.version - HISTORY_SIZE as u32 >= version {
             return None;
@@ -114,6 +112,6 @@ impl VersionManager {
             }
         }
 
-        Some(result)
+        Some(SheetDiff { data: result })
     }
 }

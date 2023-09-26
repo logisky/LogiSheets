@@ -153,8 +153,27 @@ impl Controller {
 
     pub fn get_display_response(&self, req: DisplayRequest) -> DisplayResponse {
         let viewer = SheetViewer::default();
-        let response = viewer.display_with_idx(self, req.sheet_idx);
-        response
+        if req.version == 0 {
+            return viewer.display_with_idx(self, req.sheet_idx);
+        }
+
+        let sheet_id = self.get_sheet_id_by_idx(req.sheet_idx);
+        if sheet_id.is_none() {
+            return DisplayResponse {
+                incremental: false,
+                patches: vec![],
+            };
+        }
+
+        let sheet_id = sheet_id.unwrap();
+        if let Some(diff) = self
+            .version_manager
+            .get_sheet_diffs_from_version(sheet_id, req.version)
+        {
+            viewer.display_with_diff(self, sheet_id, diff)
+        } else {
+            viewer.display_with_idx(self, req.sheet_idx)
+        }
     }
 
     pub fn undo(&mut self) -> bool {
