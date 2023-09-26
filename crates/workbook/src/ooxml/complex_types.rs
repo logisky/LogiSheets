@@ -1,6 +1,5 @@
 use super::defaults::*;
 use super::simple_types::*;
-use gents_derives::TS;
 use logisheets_workbook_derives::MapObj;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
@@ -73,9 +72,13 @@ pub struct CtRPrElt {
 }
 
 #[derive(
-    XmlSerialize, XmlDeserialize, Default, Debug, Hash, PartialEq, Eq, Clone, serde::Serialize, TS,
+    XmlSerialize, XmlDeserialize, Default, Debug, Hash, PartialEq, Eq, Clone, serde::Serialize,
 )]
-#[ts(file_name = "font_name.ts", rename_all = "camelCase")]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "font_name.ts", rename_all = "camelCase")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CtFontName {
     #[xmlserde(name = b"val", ty = "attr")]
@@ -337,8 +340,12 @@ impl crate::XmlDeserialize for CtFill {
     }
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, PartialEq, Eq, Clone, Hash, serde::Serialize, TS)]
-#[ts(file_name = "cell_alignment.ts", rename_all = "camelCase")]
+#[derive(Debug, XmlSerialize, XmlDeserialize, PartialEq, Eq, Clone, Hash, serde::Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "cell_alignment.ts", rename_all = "camelCase")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CtCellAlignment {
     #[xmlserde(name = b"horizontal", ty = "attr")]
@@ -361,8 +368,12 @@ pub struct CtCellAlignment {
     pub reading_order: Option<u32>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone, serde::Serialize, TS)]
-#[ts(file_name = "cell_protection.ts", rename_all = "camelCase")]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone, serde::Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "cell_protection.ts", rename_all = "camelCase")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CtCellProtection {
     #[xmlserde(name = b"locked", ty = "attr")]
@@ -371,8 +382,12 @@ pub struct CtCellProtection {
     pub hidden: Option<bool>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize, TS)]
-#[ts(file_name = "font_scheme.ts")]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "font_scheme.ts", rename_all = "camelCase")
+)]
 pub struct CtFontScheme {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: StFontScheme,
@@ -420,10 +435,14 @@ pub struct CtFont {
     pub scheme: Option<CtFontScheme>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize, TS)]
-#[ts(
-    file_name = "vertical_align_font_property.ts",
-    rename_all = "camelCase"
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(
+        file_name = "vertical_align_font_property.ts",
+        rename_all = "camelCase"
+    )
 )]
 #[serde(rename_all = "camelCase")]
 pub struct CtVerticalAlignFontProperty {
@@ -431,31 +450,47 @@ pub struct CtVerticalAlignFontProperty {
     pub val: StVerticalAlignRun,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, MapObj, Clone, serde::Serialize, TS)]
-#[ts(file_name = "font_size.ts", rename_all = "camelCase")]
+#[derive(Debug, XmlSerialize, XmlDeserialize, MapObj, Clone, serde::Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "font_size.ts", rename_all = "camelCase")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CtFontSize {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: f64,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize, TS)]
-#[ts(file_name = "int_property.ts", rename_all = "camelCase")]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "int_property.ts", rename_all = "camelCase")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CtIntProperty {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: i32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize, TS)]
-#[ts(file_name = "underline_property.ts")]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "underline_property.ts", rename_all = "camelCase")
+)]
 pub struct CtUnderlineProperty {
     #[xmlserde(name = b"val", ty = "attr", default = "st_underline_values_single")]
     pub val: StUnderlineValues,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize, TS)]
-#[ts(file_name = "font_family.ts", rename_all = "camelCase")]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, serde::Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "font_family.ts", rename_all = "camelCase")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CtFontFamily {
     #[xmlserde(name = b"val", ty = "attr")]

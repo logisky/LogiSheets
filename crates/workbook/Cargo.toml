@@ -11,14 +11,18 @@ quick-xml = {version = "0.29", features = ["serialize"]}
 regex = "1"
 serde = {version = "1.0.152", features = ["derive"]}
 serde_json = "1.0.95"
-thiserror = "1.0.24"
-gents = "0.3.1"
-gents_derives = "0.3.1"
+thiserror = "1.0.48"
 zip = {version = "0.6.0", default-features = false, features = ["deflate"]}
 
 logisheets_workbook_derives = {version = "0.3.0", path = "./derives"}
-xmlserde = "0.5.3"
-xmlserde_derives = "0.5.3"
+
+xmlserde = "0.5.5"
+xmlserde_derives = "0.5.5"
+gents = {version = "0.4.1", optional = true}
+gents_derives = {version = "0.4.1", optional = true}
 
 [dev-dependencies]
 xmldiff = {version = "0.3.0", path = "../xmldiff"}
+
+[features]
+gents = ["dep:gents", "dep:gents_derives"]

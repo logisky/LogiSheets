@@ -9,10 +9,14 @@ edition = "2018"
 [dependencies]
 chrono = "0.4.19"
 futures = "0.3.19"
-gents = "0.3.1"
-gents_derives = "0.3.1"
 im = "15.0.0"
 serde = {version = "1.0.125", features = ["derive"]}
-thiserror = "1.0"
+thiserror = "1.0.48"
 
 logisheets_workbook = {version = "0.3.0", path = "../../workbook"}
+
+gents = {version = "0.4.1", optional = true}
+gents_derives = {version = "0.4.1", optional = true}
+
+[features]
+gents = ["dep:gents", "dep:gents_derives"]
