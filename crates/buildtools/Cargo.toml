@@ -5,9 +5,9 @@ edition = "2018"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 
 [dependencies]
-gents = "0.3.1"
+gents = "0.4.1"
 
-logisheets_controller = {version = "*", path = "../controller"}
+logisheets_controller = {path = "../controller", features = ["gents"]}
 
 [[bin]]
 name = "generate"

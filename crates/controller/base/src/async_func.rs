@@ -1,10 +1,10 @@
-use gents_derives::TS;
 use serde::{Deserialize, Serialize};
 
 use crate::{CellId, SheetId};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[ts(file_name = "task.ts")]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(feature = "gents", ts(file_name = "task.ts"))]
 pub struct Task {
     pub async_func: String,
     pub args: Vec<String>,
