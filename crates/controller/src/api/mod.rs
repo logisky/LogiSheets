@@ -28,10 +28,19 @@ impl Default for Workbook {
 }
 
 impl Workbook {
+    /// Create an empty workbook.
+    pub fn new() -> Self {
+        Workbook {
+            controller: Default::default(),
+        }
+    }
+
+    /// Execute the `EditAction`
     pub fn handle_action(&mut self, action: EditAction) {
         self.controller.handle_action(action);
     }
 
+    /// Create a workbook from a .xlsx file.
     pub fn from_file(buf: &[u8], book_name: String) -> Result<Self> {
         let controller = Controller::from_file(book_name, buf)?;
         Ok(Workbook { controller })
@@ -426,7 +435,7 @@ impl<'a> Worksheet<'a> {
             .map_err(|e| e.into())
     }
 
-    fn get_default_row_height(&self) -> f64 {
+    pub fn get_default_row_height(&self) -> f64 {
         self.controller
             .settings
             .sheet_format_pr
@@ -435,7 +444,7 @@ impl<'a> Worksheet<'a> {
             .default_row_height
     }
 
-    fn get_default_col_width(&self) -> f64 {
+    pub fn get_default_col_width(&self) -> f64 {
         self.controller
             .settings
             .sheet_format_pr

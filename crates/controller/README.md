@@ -9,8 +9,8 @@ Here we will introduce some implementations.
 
 - `Cell Id Manager` assigns Cell Id for every cell.
 Cell Id identifies a cell even this cell is removed.
-Cell Id is different from the cell position which would be changed when
-inserting or removing some cells. 
+Cell Id is different from the cell position which would be changed after
+inserting or removing some rows or columns.
 You may find that we also use **Sheetid** to identify a worksheet,
 and use **NameId** to identify a name. That's because in a spreadsheet
 application, almost everything can be renamed or moved. Id Manager is
@@ -21,10 +21,10 @@ the foundation.
 
 - `Navigator` is responsible for making convertion between cell id and
 cell position. For now, LogiSheets do only support inserting or removing rows and columns,
-we use a simple algo to make this convertion. 
+we use a simple algorithm to realize this.
 `Navigator` stores a vector of **RowId** and a vector of **ColId**, and we use a tuple
 (**RowId**, **ColId**) as a **CellId**. After a `navigator` of a sheet is initialized,
-every row and column has an Id and therefore, every cell can be identified by (**RowId**, **ColId**). 
+every row and column has an Id and therefore, every cell can be identified by (**RowId**, **ColId**).
 For example, when indexing a cell by position, like **B4** or r4c2, `Navigator` takes
 the 4th **RowId** and 2nd **ColId**, and you can then get the **CellId**.
 Users' inserting or removing rows/cols will do some effect on the **RowId** vector or **ColId** vector.
@@ -38,7 +38,7 @@ Users' inserting or removing rows/cols will do some effect on the **RowId** vect
 
 ## Undo / Redo
 
-We use [persistent data struct](https://en.wikipedia.org/wiki/Persistent_data_structure)
+We use [persistent data structure](https://en.wikipedia.org/wiki/Persistent_data_structure)
 to store the state of a workbook, which helps us easyily implement an undo/redo system.
 
 We use the [`im`](https://github.com/bodil/im-rs) crate to do this. It would be nice if
