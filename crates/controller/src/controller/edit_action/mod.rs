@@ -17,6 +17,11 @@ pub enum EditAction {
     Payloads(PayloadsAction),
 }
 
+/// A `PayloadsAction` contains one or more `EditPayload`. These `EditPayload`s will be withdrawn at
+/// the same time if user undo it.
+/// An `EditPayload` represents an atomic update of a workbook and they will be
+/// executed in sequence. That means it is a totally different result between
+/// updating a cell at B4 before inserting and after inserting.
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(

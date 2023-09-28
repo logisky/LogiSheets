@@ -23,9 +23,9 @@ LogiSheets is still in the **very** early stages of development. Your issues or 
 
 ### Use it in Rust
 
-Now, LogiSheets provides APIs to read a **.xlsx** file. More APIs to manipulate the spreadsheets(like input a formula and calculate or write a file) is on the way.
+Now, LogiSheets provides APIs to read and write a **.xlsx** file. More APIs to manipulate the spreadsheets(like input a formula and calculate or write a file) is on the way.
 
-Read a file:
+Load a file:
 
 ```rust
 use logisheets::{Value, Workbook};
