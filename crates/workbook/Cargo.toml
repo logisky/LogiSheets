@@ -2,7 +2,7 @@
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 edition = "2018"
 name = "logisheets_workbook"
-version = "0.3.0"
+version = "0.4.0"
 license = "MIT"
 description = "Tools for LogiSheets to unarchive and write .xlsx file"
 
@@ -14,7 +14,7 @@ serde_json = "1.0.95"
 thiserror = "1.0.48"
 zip = {version = "0.6.0", default-features = false, features = ["deflate"]}
 
-logisheets_workbook_derives = {version = "0.3.0", path = "./derives"}
+logisheets_workbook_derives = {version = "0.4.0", path = "./derives"}
 
 xmlserde = "0.5.5"
 xmlserde_derives = "0.5.5"

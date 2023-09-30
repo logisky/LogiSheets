@@ -455,7 +455,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_astchecker"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "logisheets_base",
  "logisheets_parser",
@@ -463,7 +463,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_base"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "futures",
@@ -477,7 +477,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_controller"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "colorsys",
@@ -508,7 +508,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_lexer"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "pest",
  "pest_derive",
@@ -517,7 +517,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_parser"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "lazy_static",
@@ -561,7 +561,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_workbook"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -579,7 +579,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_workbook_derives"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "paste",
  "proc-macro2",

@@ -17,7 +17,7 @@ console_error_panic_hook = {version = "0.1.6", optional = true}
 # Specify the feature of the crate used in `logisheets_controller`.
 getrandom = {version = "0.2.8", features = ["js"]}
 
-logisheets_controller = {version = "0.3.0", path = '../../../crates/controller'}
+logisheets_controller = {version = "*", path = '../../../crates/controller'}
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.30"

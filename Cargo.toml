@@ -26,8 +26,8 @@ members = [
 ]
 
 [dependencies]
-logisheets_controller = {path = "crates/controller", version = "0.3.0"}
-logisheets_workbook = {path = "crates/workbook", version = "0.3.0"}
+logisheets_controller = {path = "crates/controller", version = "0.4.0"}
+logisheets_workbook = {path = "crates/workbook", version = "0.4.0"}
 
 [dev-dependencies]
 glob = "0.3.1"
