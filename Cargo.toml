@@ -1,6 +1,6 @@
 [package]
 name = "logisheets"
-version = "0.3.0"
+version = "0.4.0"
 description = "A web spreadsheets application written in Rust and Typescript"
 keywords = ["excel", "spreadsheets", "ooxml", "logisheets"]
 readme = "README.md"
@@ -31,4 +31,4 @@ logisheets_workbook = {path = "crates/workbook", version = "0.4.0"}
 
 [dev-dependencies]
 glob = "0.3.1"
-logiscript = {path = "crates/logiscript", version = "*"}
+logiscript = {path = "crates/logiscript", version = "0.1.0"}
