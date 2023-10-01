@@ -49,7 +49,7 @@ export class DataService {
     }
     private _viewRange = new ViewRange()
     private _handleBackend(): void {
-        this.backend.sheetUpdated$.subscribe(() => {
+        this.backend.version$.subscribe(() => {
             this.sendDisplayArea()
         })
     }

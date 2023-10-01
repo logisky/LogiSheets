@@ -19,7 +19,7 @@ import initWasm, {
     ReadFileResult,
     col_insert,
 } from '../wasms/server/pkg'
-import { Calculator, Executor } from './calculator'
+import { Calculator, Executor, Tasks } from './calculator'
 import { TransactionCode, TransactionEndResult } from './jsvalues'
 import { hasOwnProperty } from '@/core'
 
@@ -39,7 +39,11 @@ export class Service {
         this.input$.subscribe((req: ClientSend): void => {
             const response = this._execute(req)
             this.output$.next(response)
+            if (response.$case == 'actionEffect' && response.actionEffect.asyncTasks.length > 0) {
+                this._calculator.input$.next(new Tasks(response.actionEffect.asyncTasks))
+            }
         })
+
         this._calculator.output$.subscribe(res => {
             const r = input_async_result(res) as TransactionEndResult
             const serverSend: ServerSend = {
@@ -47,6 +51,7 @@ export class Service {
                 actionEffect: r.effect
             }
             this.output$.next(serverSend)
+
         })
     }
 
