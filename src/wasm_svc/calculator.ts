@@ -1,11 +1,14 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 
 import {Subject} from 'rxjs'
-import {AsyncFuncResult, Task} from './jsvalues'
+import {AsyncFuncResult} from './jsvalues'
+import {Task} from 'src/bindings'
 
 export type Executor = (args: readonly string[]) => Promise<string | CalcException>
 type FuncName = string
 
+// Calculator is responsible for calculating the functions defined customly by users.
+// Custom function is useful because of its ability of accessing the internet.
 export class Calculator {
     public constructor() {
         this.input$.subscribe(async (tasks): Promise<void> => {
@@ -26,7 +29,7 @@ export class Calculator {
                         return '#UNKNOWN!'
                     }
                 })
-                const asyncFuncResult: AsyncFuncResult = {asyncId: tasks.id, values: res}
+                const asyncFuncResult: AsyncFuncResult = {tasks: tasks.tasks,  values: res}
                 this.output$.next(asyncFuncResult)
             })
         })
@@ -62,7 +65,6 @@ export const enum CalcException {
 
 export class Tasks {
     public constructor(
-        public readonly id: number,
-        public readonly tasks: Task[],
+        public readonly tasks: readonly Task[],
     ) {}
 }

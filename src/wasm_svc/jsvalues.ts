@@ -1,6 +1,7 @@
 // TODO: Use `gents` to generate these interfaces and move them to `src/bindings`.
 
-import { ActionEffect } from "@/bindings"
+import {ActionEffect} from "@/bindings"
+import {Task} from "@/bindings"
 
 export interface TransactionEndResult {
     readonly code: TransactionCode
@@ -12,14 +13,9 @@ export const enum TransactionCode {
     Err,
 }
 
-export interface Task {
-    readonly asyncFunc: string,
-    readonly args: string[],
-}
-
 export interface AsyncFuncResult {
-    tasks: Task[]
-    values: string[]
+    tasks: readonly Task[]
+    values: readonly string[]
 }
 
 export interface DisplayResponse {
