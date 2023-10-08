@@ -17,7 +17,7 @@ export interface SetBorder {
     readonly diagonalDown?: boolean
 }
 
-export class SetBorderBuilder{
+export class SetBorderBuilder {
     private _sheetIdx?: number
     private _row?: number
     private _col?: number

@@ -1,6 +1,6 @@
 import { Subject, ReplaySubject } from 'rxjs'
 import { BlockInput, CellInput, ColShift, CreateBlock, DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload, MoveBlock, RowShift, SheetShift } from '@/bindings'
-import { ClientSend, ServerSend, OpenFile } from '@/message'
+import { ClientRequest, ServerResponse, OpenFile } from '@/message'
 import initWasm, {
     read_file,
     block_input,
@@ -31,22 +31,24 @@ export class Service {
         this._init()
     }
 
-    public input$ = new ReplaySubject<ClientSend>(1)
-    public output$: Subject<ServerSend> = new Subject()
+    public input$ = new ReplaySubject<ClientRequest>(1)
+    public output$: Subject<ServerResponse> = new Subject()
     private _calculator: Calculator = new Calculator()
     private async _init() {
         await initWasm()
-        this.input$.subscribe((req: ClientSend): void => {
+        this.input$.subscribe((req: ClientRequest): void => {
             const response = this._execute(req)
             this.output$.next(response)
             if (response.$case == 'actionEffect' && response.actionEffect.asyncTasks.length > 0) {
+                // This case means some custom functions are needed to calculate, server sends
+                // tasks to the JS side.
                 this._calculator.input$.next(new Tasks(response.actionEffect.asyncTasks))
             }
         })
 
         this._calculator.output$.subscribe(res => {
             const r = input_async_result(res) as TransactionEndResult
-            const serverSend: ServerSend = {
+            const serverSend: ServerResponse = {
                 $case: 'actionEffect',
                 actionEffect: r.effect
             }
@@ -55,7 +57,7 @@ export class Service {
         })
     }
 
-    private _execute(req: ClientSend): ServerSend {
+    private _execute(req: ClientRequest): ServerResponse {
         const clientSend = req
         if (clientSend.$case === 'transaction')
             return this._execTransaction(clientSend.transaction)
@@ -67,7 +69,7 @@ export class Service {
             throw Error(`Not support ${clientSend}`)
     }
 
-    private _execOpenFile(req: OpenFile): ServerSend {
+    private _execOpenFile(req: OpenFile): ServerResponse {
         const r = read_file(req.name, req.content)
         if (r === ReadFileResult.Ok) {
             return {
@@ -78,12 +80,12 @@ export class Service {
         throw Error('read file Error!')
     }
 
-    private _execDisplayReq(req: DisplayRequest): ServerSend {
+    private _execDisplayReq(req: DisplayRequest): ServerResponse {
         const displayResponse = get_patches(req.sheetIdx, req.version) as DisplayResponse
         return { $case: 'displayResponse', displayResponse}
     }
 
-    private _execTransaction(transaction: Transaction): ServerSend {
+    private _execTransaction(transaction: Transaction): ServerResponse {
         if (transaction === 'Undo')
             return this._execUndo()
         if (transaction === 'Redo')
@@ -161,7 +163,7 @@ export class Service {
         console.log('Unimplemented!')
     }
 
-    private _execUndo(): ServerSend {
+    private _execUndo(): ServerResponse {
         const r = undo()
         if (!r)
             console.log('undo failed')
@@ -171,7 +173,7 @@ export class Service {
         }
     }
 
-    private _execRedo(): ServerSend {
+    private _execRedo(): ServerResponse {
         const r = redo()
         if (!r)
             console.log('redo failed')

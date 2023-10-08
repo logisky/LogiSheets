@@ -29,7 +29,6 @@ export class InsertBlockRowsBuilder {
         return this
     }
     public build(): InsertBlockRows {
-
         if (this._sheetIdx === undefined) throw Error('sheetIdx is undefined!')
         if (this._blockId === undefined) throw Error('blockId is undefined!')
         if (this._rowIdx === undefined) throw Error('rowIdx is undefined!')

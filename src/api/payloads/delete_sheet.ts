@@ -1,4 +1,3 @@
-
 export interface DeleteSheet {
     type: 'deleteSheet'
     sheetIdx: number

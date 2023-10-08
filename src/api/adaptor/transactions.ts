@@ -23,7 +23,7 @@ export function adaptTransaction(t: Transaction): EditAction {
     throw Error('unknown transaction type!')
 }
 
-export function adaptPayload(p: Payload): EditPayload {
+function adaptPayload(p: Payload): EditPayload {
     switch (p.type) {
         case 'sheetRename':
             return {

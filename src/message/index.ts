@@ -4,7 +4,7 @@ import {
     DisplayResponse,
     EditAction,
 } from '../bindings'
-export type ClientSend =
+export type ClientRequest =
     | {$case: 'transaction'; transaction: EditAction}
     | {$case: 'displayRequest'; displayRequest: DisplayRequest}
     | {$case: 'openFile'; openFile: OpenFile}
@@ -14,7 +14,7 @@ export interface OpenFile {
     content: Uint8Array
 }
 
-export type ServerSend =
+export type ServerResponse =
     | {$case: 'displayResponse'; displayResponse: DisplayResponse}
     | {$case: 'actionEffect'; actionEffect: ActionEffect}
 

@@ -1,4 +1,3 @@
-
 export interface DeleteBlockCols {
     readonly type: 'deleteBlockCols'
     readonly sheetIdx: number

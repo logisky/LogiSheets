@@ -1,4 +1,3 @@
-
 export interface SetRowVisible {
     readonly type: 'setRowVisible'
     readonly sheetIdx: number
@@ -7,9 +6,9 @@ export interface SetRowVisible {
 }
 
 export class SetRowVisibleBuilder {
-    private  _sheetIdx?: number
-    private  _row?: number
-    private  _visible?: boolean
+    private _sheetIdx?: number
+    private _row?: number
+    private _visible?: boolean
     public sheetIdx(sheetIdx: number): this {
         this._sheetIdx = sheetIdx
         return this

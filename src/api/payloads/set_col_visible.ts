@@ -6,9 +6,9 @@ export interface SetColVisible {
 }
 
 export class SetColVisibleBuilder {
-    private  _sheetIdx?: number
-    private  _col?: number
-    private  _visible?: boolean
+    private _sheetIdx?: number
+    private _col?: number
+    private _visible?: boolean
     public sheetIdx(sheetIdx: number): this {
         this._sheetIdx = sheetIdx
         return this
