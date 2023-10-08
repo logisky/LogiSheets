@@ -46,12 +46,24 @@ export class CreateBlockBuilder {
     }
 
     public build(): CreateBlock {
-        if (this._sheetIdx === undefined) { throw Error('sheetIdx is undefined!')}
-        if (this._blockId === undefined) { throw Error('blockId is undefined!')}
-        if (this._masterRow === undefined) { throw Error('masterRow is undefined!')}
-        if (this._masterCol === undefined) { throw Error('masterCol is undefined!')}
-        if (this._rowCnt === undefined) { throw Error('rowCnt is undefined!')}
-        if (this._colCnt === undefined) { throw Error('colCnt is undefined!')}
+        if (this._sheetIdx === undefined) {
+            throw Error('sheetIdx is undefined!')
+        }
+        if (this._blockId === undefined) {
+            throw Error('blockId is undefined!')
+        }
+        if (this._masterRow === undefined) {
+            throw Error('masterRow is undefined!')
+        }
+        if (this._masterCol === undefined) {
+            throw Error('masterCol is undefined!')
+        }
+        if (this._rowCnt === undefined) {
+            throw Error('rowCnt is undefined!')
+        }
+        if (this._colCnt === undefined) {
+            throw Error('colCnt is undefined!')
+        }
 
         return {
             type: 'createBlock',

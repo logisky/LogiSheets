@@ -1,5 +1,3 @@
-
-
 export interface DeleteRows {
     readonly type: 'deleteRows'
     readonly sheetIdx: number
@@ -8,9 +6,9 @@ export interface DeleteRows {
 }
 
 export class DeleteRowsBuilder {
-    private  _sheetIdx?: number
-    private  _start?: number
-    private  _cnt?: number
+    private _sheetIdx?: number
+    private _start?: number
+    private _cnt?: number
     public sheetIdx(sheetIdx: number): this {
         this._sheetIdx = sheetIdx
         return this
@@ -36,5 +34,4 @@ export class DeleteRowsBuilder {
             cnt: this._cnt,
         }
     }
-
 }

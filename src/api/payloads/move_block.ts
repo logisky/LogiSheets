@@ -30,8 +30,10 @@ export class MoveBlockBuilder {
     public build(): MoveBlock {
         if (this._sheetIdx === undefined) throw Error('sheetIdx is undefined!')
         if (this._blockId === undefined) throw Error('blockId is undefined!')
-        if (this._newMasterRow === undefined) throw Error('newMasterRow is undefined!')
-        if (this._newMasterCol === undefined) throw Error('newMasterCol is undefined!')
+        if (this._newMasterRow === undefined)
+            throw Error('newMasterRow is undefined!')
+        if (this._newMasterCol === undefined)
+            throw Error('newMasterCol is undefined!')
         return {
             type: 'moveBlock',
             sheetIdx: this._sheetIdx,

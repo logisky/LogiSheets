@@ -1,4 +1,3 @@
-
 export interface DeleteBlockRows {
     readonly type: 'deleteBlockRows'
     readonly sheetIdx: number

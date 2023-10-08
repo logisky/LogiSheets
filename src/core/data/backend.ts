@@ -11,7 +11,7 @@ import {
     SheetStyles,
     SheetValues,
 } from '@/bindings'
-import {ClientSend, ServerSend} from '@/message'
+import {ClientRequest, ServerResponse} from '@/message'
 import {Payload, PayloadsTransaction, adaptTransaction} from '@/api'
 import {hasOwnProperty} from '@/core'
 import {SheetService} from '@/core/data/sheet'
@@ -37,7 +37,7 @@ export class Backend {
     }
 
     send$ = new ReplaySubject<Blob>(5)
-    handleResponse(msg: ServerSend) {
+    handleResponse(msg: ServerResponse) {
         this._handleServerSend(msg)
     }
     /**
@@ -51,7 +51,7 @@ export class Backend {
         this.send({$case: 'transaction', transaction: msg})
     }
 
-    send(msg: ClientSend) {
+    send(msg: ClientRequest) {
         this._wasmSvc.input$.next(msg)
         return
     }
@@ -59,7 +59,7 @@ export class Backend {
     // Server notifies the latest version.
     private _version$ = new Subject<number>()
     private _wasmSvc = new StandAloneService([])
-    private _handleServerSend(serverSend: ServerSend) {
+    private _handleServerSend(serverSend: ServerResponse) {
         if (serverSend.$case === 'displayResponse') {
             const e = serverSend.displayResponse
             if (!e.incremental) {

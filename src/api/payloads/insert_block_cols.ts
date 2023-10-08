@@ -1,4 +1,3 @@
-
 export interface InsertBlockCols {
     readonly type: 'insertBlockCols'
     readonly sheetIdx: number
@@ -30,7 +29,6 @@ export class InsertBlockColsBuilder {
         return this
     }
     public build(): InsertBlockCols {
-
         if (this._sheetIdx === undefined) throw Error('sheetIdx is undefined!')
         if (this._blockId === undefined) throw Error('blockId is undefined!')
         if (this._colIdx === undefined) throw Error('colIdx is undefined!')

@@ -19,7 +19,6 @@ import {SheetRename} from './sheet_rename'
 import {DeleteSheet} from './delete_sheet'
 import {InsertSheet} from './insert_sheet'
 
-
 export * from './cell_input'
 export * from './create_block'
 export * from './delete_block_cols'
