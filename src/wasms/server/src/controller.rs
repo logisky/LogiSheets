@@ -17,6 +17,8 @@ fn init() {
         return;
     }
     CONTROLLER.init(Controller::default());
+    let mut init = INIT.get_mut();
+    *init = true;
 }
 
 #[wasm_bindgen]

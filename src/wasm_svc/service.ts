@@ -81,7 +81,8 @@ export class Service {
     }
 
     private _execDisplayReq(req: DisplayRequest): ServerResponse {
-        const displayResponse = get_patches(req.sheetIdx, req.version) as DisplayResponse
+        // TODO
+        const displayResponse = get_patches(req.sheetIdx, 0) as DisplayResponse
         return { $case: 'displayResponse', displayResponse}
     }
 
