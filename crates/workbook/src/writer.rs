@@ -12,7 +12,7 @@ use xmlserde::xml_serialize_with_decl;
 use zip::write::{FileOptions, ZipWriter};
 use zip::CompressionMethod;
 
-use crate::workbook::{DocProps, Workbook, Worksheet, Xl};
+use crate::workbook::{DocProps, Wb, Worksheet, Xl};
 use zip::result::ZipResult;
 
 macro_rules! define_se_func {
@@ -64,7 +64,7 @@ pub struct WriteProof {
 
 type Writer<'a> = ZipWriter<Cursor<&'a mut Vec<u8>>>;
 
-pub fn write(wb: Workbook) -> ZipResult<Vec<u8>> {
+pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     let mut buf = Vec::<u8>::with_capacity(65535);
     let mut writer: Writer = ZipWriter::new(Cursor::new(&mut buf));
     let mut prooves = Vec::<WriteProof>::with_capacity(30);
@@ -385,7 +385,7 @@ mod tests {
     #[test]
     fn write_test_1() {
         let mut buf = fs::read("../../tests/builtin_style.xlsx").unwrap();
-        let wb = crate::workbook::Workbook::from_file(&mut buf).unwrap();
+        let wb = crate::workbook::Wb::from_file(&mut buf).unwrap();
         assert!(wb.doc_props.app.is_some());
         assert!(wb.doc_props.core.is_some());
         assert!(wb.doc_props.custom.is_some());
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn write_test_2() {
         let mut buf = fs::read("../../tests/6.xlsx").unwrap();
-        let wb = crate::workbook::Workbook::from_file(&mut buf).unwrap();
+        let wb = crate::workbook::Wb::from_file(&mut buf).unwrap();
         let res = write(wb).unwrap();
         let mut f = fs::File::create("tests_output/6.zip").unwrap();
         f.write_all(&res).unwrap();

@@ -15,3 +15,7 @@ jobs:
         run: cargo build --verbose --workspace
       - name: Run tests
         run: cargo test --verbose --workspace
+
+      - name: generate bindings and ensure clean
+        run: cargo run --package buildtools --bin generate --all-features
+      - uses: numtide/clean-git-action@v1

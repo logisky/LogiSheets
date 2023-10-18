@@ -33,7 +33,7 @@ impl<'a> SheetIdFetcherTrait for SheetIdFetcher<'a> {
     }
 }
 
-pub fn load(wb: Workbook, book_name: String) -> Controller {
+pub fn load(wb: Wb, book_name: String) -> Controller {
     let Status {
         mut navigator,
         mut container,

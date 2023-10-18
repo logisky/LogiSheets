@@ -80,6 +80,16 @@ mod test_6 {
             Value::Empty => {}
             _ => panic!(),
         };
+    }
+
+    #[ignore]
+    #[test]
+    fn test_save() {
+        use logisheets::Workbook;
+        use std::fs;
+        let mut buf = fs::read("tests/6.xlsx").unwrap();
+        let wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
+
         let buf = wb.save().unwrap();
         fs::write("tests/6_save.xlsx", buf).unwrap()
     }

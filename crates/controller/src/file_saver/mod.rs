@@ -2,7 +2,7 @@ use logisheets_base::{
     errors::BasicError, index_fetcher::IndexFetcherTrait, name_fetcher::NameFetcherTrait, ColId,
     Cube, RowId, SheetId, TextId,
 };
-use logisheets_workbook::workbook::Workbook;
+use logisheets_workbook::workbook::Wb;
 
 use crate::{
     ext_book_manager::ExtBooksManager,
@@ -25,7 +25,7 @@ mod utils;
 mod workbook;
 mod worksheet;
 
-pub fn save_file(controller: &Controller) -> std::result::Result<Workbook, SaveError> {
+pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> {
     let func_manager = &controller.status.func_id_manager;
     let external_links_manager = &controller.status.external_links_manager;
     let text_id_manager = &controller.status.text_id_manager;

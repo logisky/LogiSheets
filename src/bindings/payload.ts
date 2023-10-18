@@ -15,6 +15,8 @@ import {SheetRename} from './sheet_rename'
 import {SheetShift} from './sheet_shift'
 import {StyleUpdate} from './style_update'
 
+// `EditPayload` is the basic update unit of the Workbook. Developers can config their own
+// `EditAction` (e.g. setting a button to create a table) to facilitate their users.
 export type EditPayload =
     | {BlockInput: BlockInput}
     | {BlockStyleUpdate: BlockStyleUpdate}
