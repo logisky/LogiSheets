@@ -43,6 +43,10 @@ fn handle(f: &mut CtFont, ty: FontPayloadType) {
         FontPayloadType::Size(s) => f.sz = Some(CtFontSize { val: s }),
         FontPayloadType::Shadow(s) => f.shadow = s,
         FontPayloadType::Underline(u) => f.underline = Some(CtUnderlineProperty { val: u }),
+        FontPayloadType::Name(n) => f.name = Some(CtFontName { val: n }),
+        FontPayloadType::Outline(b) => f.outline = b,
+        FontPayloadType::Strike(b) => f.strike = b,
+        FontPayloadType::Condense(b) => f.condense = b,
         // _ => unimplemented!(),
     };
 }

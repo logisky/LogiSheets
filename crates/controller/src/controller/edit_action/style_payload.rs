@@ -46,5 +46,6 @@ pub struct StyleUpdateType {
     pub set_bottom_border_style: Option<StBorderStyle>,
     pub set_border_giagonal_up: Option<bool>,
     pub set_border_giagonal_down: Option<bool>,
+    pub set_border_outline: Option<bool>,
     pub set_pattern_fill: Option<PatternFill>,
 }

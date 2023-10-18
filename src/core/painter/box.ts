@@ -25,18 +25,18 @@ export class Box {
             // default
             // 常规
             // 居中
-            case 'General':
+            case 'general':
             case 'Center':
                 textAlign = 'center'
                 tx = x + this.width / 2
                 break
             // 靠左(缩进)
-            case 'Left':
+            case 'left':
                 textAlign = 'left'
                 tx = x
                 break
             // 靠右(缩进)
-            case 'Right':
+            case 'right':
                 textAlign = 'right'
                 tx = x + this.width
                 break
@@ -69,18 +69,18 @@ export class Box {
         const alignY = vertical ?? 'Center'
         switch (alignY) {
             // 靠上
-            case 'Top':
+            case 'top':
                 textBaseline = 'top'
                 ty = y
                 break
             // default
             // 居中
-            case 'Center':
+            case 'center':
                 textBaseline = 'middle'
                 ty = y + this.height / 2
                 break
             // 靠下
-            case 'Bottom':
+            case 'bottom':
                 textBaseline = 'bottom'
                 ty = y + this.height
                 break

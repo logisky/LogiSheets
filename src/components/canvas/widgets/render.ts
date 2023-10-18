@@ -146,7 +146,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
         if (patternFill.fgColor) {
             const color = StandardColor.fromCtColor(patternFill.fgColor)
             painterSvc.current.fillFgColor(
-                patternFill?.patternType ?? 'None',
+                patternFill?.patternType ?? 'none',
                 color.css(),
                 box
             )
