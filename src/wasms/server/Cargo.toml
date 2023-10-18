@@ -33,6 +33,9 @@ wee_alloc = {version = "0.4.5", optional = true}
 
 logisheets_controller = {version = "*", path = "../../../crates/controller"}
 logisheets_base = {version = "*", path = "../../../crates/controller/base"}
+logisheets_workbook = {version = "*", path = "../../../crates/workbook"}
+
+xmlserde = {version = "0.5.5"}
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.30"

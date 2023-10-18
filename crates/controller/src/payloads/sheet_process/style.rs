@@ -7,6 +7,10 @@ pub enum FontPayloadType {
     Size(f64),
     Shadow(bool),
     Underline(StUnderlineValues),
+    Name(String),
+    Outline(bool),
+    Strike(bool),
+    Condense(bool),
 }
 
 #[derive(Debug, Clone)]

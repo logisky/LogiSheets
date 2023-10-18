@@ -1,12 +1,15 @@
+use logisheets_controller::controller::edit_action::style_payload::{StyleUpdate, StyleUpdateType};
 use logisheets_controller::controller::edit_action::{
     ActionEffect, BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload, MoveBlock,
     PayloadsAction, RowShift,
 };
 use logisheets_controller::controller::{display::DisplayRequest, Controller};
 use logisheets_controller::{AsyncCalcResult, AsyncErr, Task};
+use logisheets_workbook::prelude::{StBorderStyle, StUnderlineValues};
 use serde::{Deserialize, Serialize};
 use singlyton::{Singleton, SingletonUninit};
 use wasm_bindgen::prelude::*;
+use xmlserde::XmlValue;
 
 static INIT: Singleton<bool> = Singleton::new(false);
 static CONTROLLER: SingletonUninit<Controller> = SingletonUninit::uninit();
@@ -30,6 +33,22 @@ pub fn read_file(name: String, buf: &[u8]) -> ReadFileResult {
             ReadFileResult::Ok
         }
         Err(_) => ReadFileResult::FileErr,
+    }
+}
+
+#[wasm_bindgen]
+pub fn save_file() -> SaveFileResult {
+    let ctrl = CONTROLLER.get();
+    if let Ok(data) = ctrl.save() {
+        SaveFileResult {
+            data,
+            code: TransactionCode::Ok,
+        }
+    } else {
+        SaveFileResult {
+            data: vec![],
+            code: TransactionCode::Err,
+        }
     }
 }
 
@@ -127,6 +146,108 @@ pub fn get_patches(sheet_idx: u32, version: u32) -> JsValue {
             panic!()
         }
     }
+}
+
+#[wasm_bindgen]
+pub fn set_font(
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    bold: Option<bool>,
+    italic: Option<bool>,
+    name: Option<String>,
+    underline: Option<String>,
+    color: Option<String>,
+    size: Option<f64>,
+    outline: Option<bool>,
+    shadow: Option<bool>,
+    strike: Option<bool>,
+    condense: Option<bool>,
+) {
+    let p = EditPayload::StyleUpdate(StyleUpdate {
+        sheet_idx,
+        row,
+        col,
+        ty: StyleUpdateType {
+            set_font_bold: bold,
+            set_font_italic: italic,
+            set_font_underline: underline.map(|s| StUnderlineValues::deserialize(&s).unwrap()),
+            set_font_color: color,
+            set_font_size: size,
+            set_font_name: name,
+            set_font_outline: outline,
+            set_font_shadow: shadow,
+            set_font_strike: strike,
+            set_font_condense: condense,
+            set_left_border_color: None,
+            set_right_border_color: None,
+            set_top_border_color: None,
+            set_bottom_border_color: None,
+            set_left_border_style: None,
+            set_right_border_style: None,
+            set_top_border_style: None,
+            set_bottom_border_style: None,
+            set_border_giagonal_up: None,
+            set_border_giagonal_down: None,
+            set_border_outline: None,
+            set_pattern_fill: None,
+        },
+    });
+    let mut payloads = PAYLOADS.get_mut();
+    payloads.push(p);
+}
+
+#[wasm_bindgen]
+pub fn set_border(
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    left_color: Option<String>,
+    right_color: Option<String>,
+    top_color: Option<String>,
+    bottom_color: Option<String>,
+    left_border_type: Option<String>,
+    right_border_type: Option<String>,
+    top_border_type: Option<String>,
+    bottom_border_type: Option<String>,
+    outline: Option<bool>,
+    diagonal_up: Option<bool>,
+    diagonal_down: Option<bool>,
+) {
+    let p = EditPayload::StyleUpdate(StyleUpdate {
+        sheet_idx,
+        row,
+        col,
+        ty: StyleUpdateType {
+            set_font_bold: None,
+            set_font_italic: None,
+            set_font_underline: None,
+            set_font_color: None,
+            set_font_size: None,
+            set_font_name: None,
+            set_font_outline: None,
+            set_font_shadow: None,
+            set_font_strike: None,
+            set_font_condense: None,
+            set_left_border_color: left_color,
+            set_right_border_color: right_color,
+            set_top_border_color: top_color,
+            set_bottom_border_color: bottom_color,
+            set_left_border_style: left_border_type
+                .map(|b| StBorderStyle::deserialize(&b).unwrap()),
+            set_right_border_style: right_border_type
+                .map(|b| StBorderStyle::deserialize(&b).unwrap()),
+            set_top_border_style: top_border_type.map(|b| StBorderStyle::deserialize(&b).unwrap()),
+            set_bottom_border_style: bottom_border_type
+                .map(|b| StBorderStyle::deserialize(&b).unwrap()),
+            set_border_giagonal_up: diagonal_up,
+            set_border_giagonal_down: diagonal_down,
+            set_border_outline: outline,
+            set_pattern_fill: None,
+        },
+    });
+    let mut payloads = PAYLOADS.get_mut();
+    payloads.push(p);
 }
 
 #[wasm_bindgen]
@@ -242,6 +363,13 @@ pub fn block_input(sheet_idx: usize, block_id: usize, row: usize, col: usize, in
 pub enum ReadFileResult {
     Ok,
     FileErr,
+}
+
+#[wasm_bindgen]
+#[derive(Serialize)]
+pub struct SaveFileResult {
+    data: Vec<u8>,
+    code: TransactionCode,
 }
 
 #[wasm_bindgen]

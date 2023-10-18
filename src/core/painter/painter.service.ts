@@ -17,7 +17,7 @@ export class PainterService extends CanvasApi {
         attr.fillStyle = color
         this.attr(attr)
         switch (type) {
-            case 'Solid':
+            case 'solid':
                 {
                     const {startRow: y, startCol: x} = box.position
                     this.fillRect(x, y, box.width, box.height)
@@ -60,45 +60,45 @@ export class PainterService extends CanvasApi {
         borderAttr.strokeStyle = stdColor.css()
         borderAttr.lineWidth = thinLine
         switch (border.style) {
-            case 'Dashed':
+            case 'dashed':
                 segments.push(dash)
                 break
-            case 'DashDot':
+            case 'dashDot':
                 segments.push(dash, dot)
                 break
-            case 'DashDotDot':
+            case 'dashDotDot':
                 segments.push(dash, dot, dot)
                 break
-            case 'Dotted':
+            case 'dotted':
                 segments.push(dot)
                 break
-            case 'Hair':
+            case 'hair':
                 segments.push(hair)
                 break
-            case 'Medium':
+            case 'medium':
                 borderAttr.lineWidth = mediumLine
                 break
-            case 'MediumDashed':
+            case 'mediumDashed':
                 borderAttr.lineWidth = mediumLine
                 segments.push(dash)
                 break
-            case 'MediumDashDot':
+            case 'mediumDashDot':
                 borderAttr.lineWidth = mediumLine
                 segments.push(dash, dot)
                 break
-            case 'MediumDashDotDot':
+            case 'mediumDashDotDot':
                 borderAttr.lineWidth = mediumLine
                 segments.push(dash, dot, dot, dot)
                 break
-            case 'None':
+            case 'none':
                 return
-            case 'SlantDashDot':
+            case 'slantDashDot':
                 this.restore()
                 return
-            case 'Thick':
+            case 'thick':
                 borderAttr.lineWidth = thickLine
                 break
-            case 'Thin':
+            case 'thin':
                 borderAttr.lineWidth = thinLine
                 break
             default:
@@ -106,7 +106,7 @@ export class PainterService extends CanvasApi {
         if (segments.length) this.setLineDash(segments)
         this.attr(borderAttr)
         const {startRow, startCol, endRow, endCol} = box.position
-        const isDouble = border.style === 'Double'
+        const isDouble = border.style === 'double'
         switch (type) {
             case 'top':
                 this.line([
@@ -192,35 +192,35 @@ export class PainterService extends CanvasApi {
         const underline = attr.font.underline?.val ?? 'None'
         const vertical = attr.alignment?.vertical ?? 'Center'
         switch (underline) {
-            case 'Double':
+            case 'double':
                 break
-            case 'None':
+            case 'none':
                 return
-            case 'Single':
+            case 'single':
                 lineAttr.lineWidth = npxLine(1)
                 yOffset += attr.font.size / 2
                 switch (vertical) {
-                    case 'Bottom':
+                    case 'bottom':
                         yOffset += attr.font.size
                         break
-                    case 'Center':
+                    case 'center':
                         yOffset += attr.font.size / 2
                         break
-                    case 'Top':
+                    case 'top':
                         break
                     default:
                         yOffset += attr.font.size / 2
                         break
                 }
                 switch (horizontal) {
-                    case 'General':
-                    case 'Center':
+                    case 'general':
+                    case 'center':
                         xOffset -= textWidth / 2
                         break
-                    case 'Right':
+                    case 'right':
                         xOffset -= textWidth
                         break
-                    case 'Left':
+                    case 'left':
                         break
                     default:
                         useToast().toast.error(

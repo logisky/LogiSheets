@@ -549,6 +549,7 @@ dependencies = [
  "getrandom",
  "logisheets_base",
  "logisheets_controller",
+ "logisheets_workbook",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
@@ -557,6 +558,7 @@ dependencies = [
  "wasm-bindgen-test",
  "web-sys",
  "wee_alloc",
+ "xmlserde",
 ]
 
 [[package]]

@@ -8,7 +8,7 @@ use super::{
 use crate::container::DataContainer;
 use crate::id_manager::{SheetIdManager, TextIdManager};
 use crate::navigator::Navigator;
-use crate::payloads::sheet_process::style::{CellStylePayload, FontPayloadType};
+use crate::payloads::sheet_process::style::{BorderPayloadType, CellStylePayload, FontPayloadType};
 use crate::payloads::sheet_process::{
     BlockDeleteColsPayload, BlockDeleteRowsPayload, BlockInsertColsPayload, BlockInsertRowsPayload,
     BlockPayload, CellChange, CellPayload, ColInfoUpdate, CreateBlock as EditCreateBlock,
@@ -324,6 +324,54 @@ fn get_style_payload(sut: StyleUpdateType) -> Vec<CellStylePayload> {
     if let Some(fs) = sut.set_font_shadow {
         result.push(CellStylePayload::Font(FontPayloadType::Shadow(fs)));
     }
-    // todo!()
+    if let Some(fs) = sut.set_font_name {
+        result.push(CellStylePayload::Font(FontPayloadType::Name(fs)));
+    }
+    if let Some(fs) = sut.set_font_strike {
+        result.push(CellStylePayload::Font(FontPayloadType::Strike(fs)));
+    }
+    if let Some(fs) = sut.set_font_condense {
+        result.push(CellStylePayload::Font(FontPayloadType::Condense(fs)));
+    }
+    if let Some(c) = sut.set_left_border_color {
+        result.push(CellStylePayload::Border(
+            BorderPayloadType::LeftBorderColor(c),
+        ));
+    }
+    if let Some(c) = sut.set_right_border_color {
+        result.push(CellStylePayload::Border(
+            BorderPayloadType::RightBorderColor(c),
+        ));
+    }
+    if let Some(c) = sut.set_top_border_color {
+        result.push(CellStylePayload::Border(BorderPayloadType::TopBorderColor(
+            c,
+        )));
+    }
+    if let Some(c) = sut.set_bottom_border_color {
+        result.push(CellStylePayload::Border(
+            BorderPayloadType::BottomBorderColor(c),
+        ));
+    }
+    if let Some(s) = sut.set_left_border_style {
+        result.push(CellStylePayload::Border(
+            BorderPayloadType::LeftBorderStyle(s),
+        ))
+    }
+    if let Some(s) = sut.set_right_border_style {
+        result.push(CellStylePayload::Border(
+            BorderPayloadType::RightBorderStyle(s),
+        ))
+    }
+    if let Some(s) = sut.set_top_border_style {
+        result.push(CellStylePayload::Border(BorderPayloadType::TopBorderStyle(
+            s,
+        )))
+    }
+    if let Some(s) = sut.set_bottom_border_style {
+        result.push(CellStylePayload::Border(
+            BorderPayloadType::BottomBorderStyle(s),
+        ))
+    }
     result
 }
