@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod api;
+pub mod api;
 mod async_func_manager;
 mod calc_engine;
 mod cell;

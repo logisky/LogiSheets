@@ -13,7 +13,7 @@ use crate::SerdeErr;
 pub type Id = String;
 
 #[derive(Debug)]
-pub struct Workbook {
+pub struct Wb {
     pub xl: Xl,
     pub doc_props: DocProps,
 }
@@ -56,7 +56,7 @@ impl DocProps {
     }
 }
 
-impl Workbook {
+impl Wb {
     pub fn get_sheet_by_name(&self, name: &str) -> Option<&Worksheet> {
         let sheet = self
             .xl

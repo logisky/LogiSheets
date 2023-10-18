@@ -8,6 +8,7 @@ pub mod style_payload;
 
 pub type Converter<'a> = converter::Converter<'a>;
 
+/// `EditAction` represents your update behavior to the workbook.
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(feature = "gents", ts(file_name = "edit_action.ts"))]
@@ -17,8 +18,11 @@ pub enum EditAction {
     Payloads(PayloadsAction),
 }
 
-/// A `PayloadsAction` contains one or more `EditPayload`. These `EditPayload`s will be withdrawn at
-/// the same time if user undo it.
+/// A `PayloadsAction` contains one or more `EditPayload`.
+/// These `EditPayload`s will be withdrawn at the same time if user undo it.
+/// And if one of the payload is failed to be executed, this `EditAction` will
+/// not do anything at all.
+///
 /// An `EditPayload` represents an atomic update of a workbook and they will be
 /// executed in sequence. That means it is a totally different result between
 /// updating a cell at B4 before inserting and after inserting.
@@ -34,6 +38,8 @@ pub struct PayloadsAction {
     pub undoable: bool,
 }
 
+/// `EditPayload` is the basic update unit of the Workbook. Developers can config their own
+/// `EditAction` (e.g. setting a button to create a table) to facilitate their users.
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(feature = "gents", ts(file_name = "payload.ts"))]
@@ -55,6 +61,7 @@ pub enum EditPayload {
     StyleUpdate(StyleUpdate),
 }
 
+/// Insert a new sheet or delele an existed sheet.
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(feature = "gents", ts(file_name = "sheet_shift.ts"))]
@@ -63,6 +70,7 @@ pub struct SheetShift {
     pub insert: bool,
 }
 
+/// Find a sheet by its name and rename it. If no sheet is found, do nothing.
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(
@@ -103,6 +111,7 @@ pub struct ColShift {
     pub insert: bool,
 }
 
+/// Take the `content` as input to the cell. The type of the `content` can be referred automatically.
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(
@@ -117,6 +126,11 @@ pub struct CellInput {
     pub content: String,
 }
 
+/// Create a new block.
+///
+/// Note that the block id is assigned by you. You are supposed to
+/// manage all your blocks. If the `block id` is already existed, engines
+/// will remove the old one.
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(
@@ -245,6 +259,12 @@ pub struct SetVisible {
     pub visible: bool,
 }
 
+/// `ActionEffect` represents the result of handling `EditAction`.
+/// `version` would be increased if the action is successfully handled.
+///
+/// What's more, since `LogiSheets` provides developers with the ability
+/// of developing their own functions, in these cases, `engine` will not know
+/// how to compute them and just return it the JS side.
 #[derive(Default, Debug, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(

@@ -19,7 +19,7 @@ pub mod prelude {
     pub use super::ooxml::workbook::*;
     pub use super::ooxml::worksheet::*;
     pub use super::reader::*;
-    pub use super::workbook::Workbook;
+    pub use super::workbook::Wb;
     pub use super::writer::*;
     pub use super::SerdeErr;
 }

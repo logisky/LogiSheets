@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use logisheets_workbook::{
     prelude::{CtExternalReference, CtExternalReferences, CtSheet, CtSheets, WorkbookPart},
-    workbook::{DocProps, Workbook, Worksheet, Xl},
+    workbook::{DocProps, Wb, Worksheet, Xl},
 };
 use std::collections::HashMap;
 
@@ -34,7 +34,7 @@ pub fn save_workbook<S: SaverTrait>(
     text_id_manager: &TextIdManager,
     settings: &Settings,
     saver: &mut S,
-) -> Result<Workbook, SaveError> {
+) -> Result<Wb, SaveError> {
     let mut worksheets: HashMap<String, Worksheet> = HashMap::new();
     let mut ct_sheets: Vec<CtSheet> = vec![];
 
@@ -90,7 +90,7 @@ pub fn save_workbook<S: SaverTrait>(
     } else {
         None
     };
-    let workbook = Workbook {
+    let workbook = Wb {
         xl: Xl {
             workbook_part: get_workbook(ct_sheets, ct_references),
             styles: (style_id, styles),

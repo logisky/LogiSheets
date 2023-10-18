@@ -264,5 +264,6 @@ function initStyleUpdate(): StyleUpdateType {
         setRightBorderStyle: null,
         setTopBorderColor: null,
         setTopBorderStyle: null,
+        setBorderOutline: null,
     }
 }

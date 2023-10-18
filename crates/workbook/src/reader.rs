@@ -22,11 +22,11 @@ use crate::workbook::DocProps;
 use crate::workbook::ExternalLink;
 use crate::{
     rtypes::RType,
-    workbook::{Workbook, Worksheet},
+    workbook::{Wb, Worksheet},
     xml_deserialize_from_reader,
 };
 
-pub fn read(buf: &[u8]) -> Result<Workbook, SerdeErr> {
+pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
     let reader = Cursor::new(buf);
     let mut archive = ZipArchive::new(reader)?;
     let root = "_rels/.rels";
@@ -86,7 +86,7 @@ pub fn read(buf: &[u8]) -> Result<Workbook, SerdeErr> {
         custom: doc_prop_custom,
         core: doc_prop_core,
     };
-    Ok(Workbook { xl, doc_props })
+    Ok(Wb { xl, doc_props })
 }
 
 fn de_external_link<R: Read + Seek>(

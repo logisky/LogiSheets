@@ -131,7 +131,7 @@ pub fn load_sheet_data(
     container: &mut DataContainer,
     formula_manager: &mut FormulaManager,
     style_loader: &mut StyleLoader,
-    workbook: &Workbook,
+    workbook: &Wb,
 ) {
     navigator.add_sheet_id(&sheet_id);
 

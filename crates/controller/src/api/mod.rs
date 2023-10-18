@@ -46,6 +46,8 @@ impl Workbook {
         Ok(Workbook { controller })
     }
 
+    // TODO: Due to the UUID generating, we can' just `assert_eq!(file1, file2)` where
+    // `file1` and `file2` are binary got from saving of the same file. Fix it.
     pub fn save(&self) -> Result<Vec<u8>> {
         self.controller.save()
     }

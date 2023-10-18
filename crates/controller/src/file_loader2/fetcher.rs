@@ -8,7 +8,7 @@ use logisheets_base::{
     errors::Result, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockCellId,
     ColId, ExtBookId, NormalCellId, RowId, SheetId,
 };
-use logisheets_workbook::workbook::Workbook;
+use logisheets_workbook::workbook::Wb;
 
 pub struct Fetcher<'a> {
     pub sheet_id_manager: &'a mut SheetIdManager,
@@ -17,7 +17,7 @@ pub struct Fetcher<'a> {
     pub name_id_manager: &'a mut NameIdManager,
     pub navigator: &'a mut Navigator,
     pub ext_books_manager: &'a mut ExtBooksManager,
-    pub workbook: &'a Workbook,
+    pub workbook: &'a Wb,
 }
 
 impl<'a> IdFetcherTrait for Fetcher<'a> {

@@ -24,5 +24,6 @@ export interface StyleUpdateType {
     setBottomBorderStyle: StBorderStyle | null
     setBorderGiagonalUp: boolean | null
     setBorderGiagonalDown: boolean | null
+    setBorderOutline: boolean | null
     setPatternFill: PatternFill | null
 }
