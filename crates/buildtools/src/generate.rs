@@ -8,5 +8,10 @@ fn main() {
     file_group.add::<DisplayResponse>();
     file_group.add::<EditAction>();
     file_group.add::<ActionEffect>();
+
+    use logisheets_sequencer::{SequencerMessage, UserMessage};
+    file_group.add::<SequencerMessage>();
+    file_group.add::<UserMessage>();
+
     file_group.gen_files(path, true);
 }
