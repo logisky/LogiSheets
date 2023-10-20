@@ -1,5 +1,5 @@
 import { Subject, ReplaySubject } from 'rxjs'
-import { BlockInput, CellInput, ColShift, CreateBlock, DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload, MoveBlock, RowShift, SheetShift } from '@/bindings'
+import { BlockInput, CellInput, ColShift, CreateBlock, DisplayRequest, DisplayResponse, EditAction as Transaction, EditPayload as Payload, MoveBlock, RowShift, SheetShift, StyleUpdate } from '@/bindings'
 import { ClientRequest, ServerResponse, OpenFile } from '@/message'
 import initWasm, {
     read_file,
@@ -18,10 +18,13 @@ import initWasm, {
     undo,
     ReadFileResult,
     col_insert,
+    set_font,
+    set_border,
 } from '../wasms/server/pkg'
 import { Calculator, Executor, Tasks } from './calculator'
 import { TransactionCode, TransactionEndResult } from './jsvalues'
 import { hasOwnProperty } from '@/core'
+import { nullToUndefined } from './utils'
 
 export class Service {
     public constructor(funcs: readonly CustomFunc[]) {
@@ -157,6 +160,47 @@ export class Service {
                 blockInput.col,
                 blockInput.input,
             )
+        }
+        if (hasOwnProperty(p, 'StyleUpdate')) {
+            const update = p.StyleUpdate as StyleUpdate
+            // Due to different behavior of generating bindings between `gents` and `wasm-pack`, we
+            // need to make a conversion here.
+            // `gents` maps `Option<T>` to `T | null` but `wasm-pack` regards it as `T | undefined`.
+            // (Though `gents` is written by me, I don't think it makes sense to map the `None` to `undefined`.)
+            let ty = nullToUndefined(update.ty);
+            // TODO: combine these in one wasm api.
+            set_font(
+                update.sheetIdx,
+                update.row,
+                update.col,
+                ty.setFontBold,
+                ty.setFontItalic,
+                ty.setFontName,
+                ty.setFontUnderline,
+                ty.setFontColor,
+                ty.setFontSize,
+                ty.setFontOutline,
+                ty.setFontShadow,
+                ty.setFontStrike,
+                ty.setFontCondense,
+            );
+            set_border(
+                update.sheetIdx,
+                update.row,
+                update.col,
+                ty.setLeftBorderColor,
+                ty.setRightBorderColor,
+                ty.setTopBorderColor,
+                ty.setBottomBorderColor,
+                ty.setLeftBorderStyle,
+                ty.setRightBorderStyle,
+                ty.setTopBorderStyle,
+                ty.setBottomBorderStyle,
+                ty.setBorderOutline,
+                ty.setBorderGiagonalUp,
+                ty.setBorderGiagonalDown,
+            );
+            return
         }
         // if (hasOwnProperty(p, 'SheetShift')) {
         //     const sheetShift = p.SheetShift as SheetShift
