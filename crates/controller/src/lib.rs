@@ -18,6 +18,7 @@ mod file_loader2;
 mod file_saver;
 mod formula_manager;
 mod id_manager;
+mod lock;
 mod navigator;
 mod payloads;
 mod range_manager;

@@ -3,15 +3,15 @@ use super::id_manager::IdManager;
 use super::{executor, fetcher::Fetcher};
 use im::{HashMap, Vector};
 use logisheets_base::{BlockId, CellId, ColId, Id, RowId, SheetId};
-use std::cell::RefCell;
 
+use crate::lock::Locked;
 use crate::payloads::sheet_process::ShiftPayload;
 
 #[derive(Debug, Clone)]
 pub struct SheetNav {
     pub sheet_id: SheetId,
     pub data: Data,
-    pub cache: RefCell<Cache>,
+    pub cache: Locked<Cache>,
     pub version: u32,
     pub id_manager: IdManager,
 }
