@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use crate::lock::{locked_read, locked_write, Locked};
 
 use super::sheet_nav::{Cache, Data};
 use logisheets_base::{
@@ -10,11 +10,11 @@ type Result<T> = std::result::Result<T, BasicError>;
 pub struct Fetcher<'a> {
     sheet_id: SheetId,
     data: &'a Data,
-    cache: &'a RefCell<Cache>,
+    cache: &'a Locked<Cache>,
 }
 
 impl<'a> Fetcher<'a> {
-    pub fn from(data: &'a Data, cache: &'a RefCell<Cache>, sheet_id: SheetId) -> Self {
+    pub fn from(data: &'a Data, cache: &'a Locked<Cache>, sheet_id: SheetId) -> Self {
         Fetcher {
             data,
             cache,
@@ -23,14 +23,14 @@ impl<'a> Fetcher<'a> {
     }
 
     pub fn get_row_id(&self, row: usize) -> RowId {
-        let cache = self.cache.borrow();
+        let cache = locked_read(&self.cache);
         let cache_id = cache.row_id.get(&row);
         match cache_id {
             Some(result) => *result,
             None => {
                 drop(cache);
                 let result = *self.data.rows.get(row).unwrap();
-                let mut cache = self.cache.borrow_mut();
+                let mut cache = locked_write(&self.cache);
                 cache.row_id.insert(row, result);
                 cache.row_index.insert(result, row);
                 result
@@ -39,7 +39,7 @@ impl<'a> Fetcher<'a> {
     }
 
     pub fn get_row_idx(&self, row: RowId) -> Result<usize> {
-        let cache = self.cache.borrow();
+        let cache = locked_read(&self.cache);
         let cache_idx = cache.row_index.get(&row);
         match cache_idx {
             Some(r) => Ok(*r),
@@ -48,9 +48,10 @@ impl<'a> Fetcher<'a> {
                 let idx = self.data.rows.iter().position(|e| *e == row);
                 match idx {
                     Some(r) => {
-                        let mut cache = self.cache.borrow_mut();
+                        let mut cache = locked_write(&self.cache);
                         cache.row_index.insert(row, r);
                         cache.row_id.insert(r, row);
+                        drop(cache);
                         Ok(r)
                     }
                     None => Err(BasicError::RowIndexUnavailable(row)),
@@ -60,14 +61,14 @@ impl<'a> Fetcher<'a> {
     }
 
     pub fn get_col_id(&self, col: usize) -> ColId {
-        let cache = self.cache.borrow();
+        let cache = locked_read(&self.cache);
         let cache_id = cache.col_id.get(&col);
         match cache_id {
             Some(result) => *result,
             None => {
                 drop(cache);
                 let result = *self.data.cols.get(col).unwrap();
-                let mut cache = self.cache.borrow_mut();
+                let mut cache = locked_write(&self.cache);
                 cache.col_id.insert(col, result);
                 cache.col_index.insert(result, col);
                 result
@@ -76,7 +77,7 @@ impl<'a> Fetcher<'a> {
     }
 
     pub fn get_col_idx(&self, col: ColId) -> Result<usize> {
-        let cache = self.cache.borrow();
+        let cache = locked_read(&self.cache);
         let cache_idx = cache.col_index.get(&col);
         match cache_idx {
             Some(r) => Ok(*r),
@@ -85,7 +86,7 @@ impl<'a> Fetcher<'a> {
                 match idx {
                     Some(r) => {
                         drop(cache);
-                        let mut cache = self.cache.borrow_mut();
+                        let mut cache = locked_write(&self.cache);
                         cache.col_index.insert(col, r);
                         cache.col_id.insert(r, col);
                         Ok(r)
@@ -97,9 +98,11 @@ impl<'a> Fetcher<'a> {
     }
 
     pub fn get_cell_id(&self, row: usize, col: usize) -> Result<CellId> {
-        if let Some(r) = self.cache.borrow().cell_id.get(&(row, col)) {
+        let cache = locked_read(&self.cache);
+        if let Some(r) = cache.cell_id.get(&(row, col)) {
             return Ok(r.clone());
         }
+        drop(cache);
         let mut res: Option<CellId> = None;
         for (id, bp) in self.data.blocks.iter() {
             let master = &bp.master;
@@ -122,11 +125,15 @@ impl<'a> Fetcher<'a> {
             }
         }
         if let Some(res) = res {
-            self.cache.borrow_mut().cell_id.insert((row, col), res);
+            let mut cache = locked_write(&self.cache);
+            cache.cell_id.insert((row, col), res);
+            drop(cache);
             return Ok(res);
         }
         let res = CellId::NormalCell(self.get_norm_cell_id(row, col));
-        self.cache.borrow_mut().cell_id.insert((row, col), res);
+        let mut cache = locked_write(&self.cache);
+        cache.cell_id.insert((row, col), res);
+        drop(cache);
         Ok(res)
     }
 
@@ -162,17 +169,18 @@ impl<'a> Fetcher<'a> {
     }
 
     pub fn get_cell_idx(&self, cell_id: &CellId) -> Result<(usize, usize)> {
-        if let Some(r) = self.cache.borrow().cell_idx.get(cell_id) {
+        let cache = locked_read(&self.cache);
+        if let Some(r) = cache.cell_idx.get(cell_id) {
             return Ok(r.clone());
         }
+        drop(cache);
         let res = match cell_id {
             CellId::NormalCell(c) => self.get_norm_cell_idx(c),
             CellId::BlockCell(b) => self.get_block_cell_idx(b),
         }?;
-        self.cache
-            .borrow_mut()
-            .cell_idx
-            .insert(cell_id.clone(), res);
+        let mut cache = locked_write(&self.cache);
+        cache.cell_idx.insert(cell_id.clone(), res);
+        drop(cache);
         Ok(res)
     }
 

@@ -1,4 +1,4 @@
-use crate::payloads::sheet_process::ShiftPayload;
+use crate::{lock::locked_write, payloads::sheet_process::ShiftPayload};
 use im::HashMap;
 use logisheets_base::{
     errors::BasicError, BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId,
@@ -238,7 +238,9 @@ impl Navigator {
         match sheet_nav {
             Some(sn) => {
                 sn.data.blocks.insert(block_id, bp);
-                sn.cache.borrow_mut().clean_cell();
+                let mut cache = locked_write(&sn.cache);
+                cache.clean_cell();
+                drop(cache);
                 res
             }
             None => res,
