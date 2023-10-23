@@ -1,26 +1,17 @@
-#![allow(dead_code, unused_imports)]
 use async_trait::async_trait;
 use ezsockets::{Error, SessionExt};
 use ezsockets::{Server, ServerExt};
-use tokio::sync::mpsc::{Receiver, Sender};
 
 use std::collections::HashMap;
 
-use logisheets_controller::Workbook;
-
-use crate::{FileId, SequencerMessage, UserId, UserMessage};
+use super::room::RoomHandle;
+use crate::{FileId, UserId, UserMessage};
 
 type Session = ezsockets::Session<UserId, ()>;
 
-pub struct Room {
-    users: Vec<UserId>,
-    sender: Sender<UserMessage>,
-    receiver: Receiver<SequencerMessage>,
-}
-
 struct SequencerServer {
     sessions: HashMap<UserId, Session>,
-    rooms: HashMap<FileId, Room>,
+    rooms: HashMap<FileId, RoomHandle>,
     handle: Server<Self>,
 }
 
