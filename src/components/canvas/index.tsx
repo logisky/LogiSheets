@@ -9,6 +9,7 @@ import {
     FC,
     WheelEvent,
     KeyboardEvent,
+    useEffect,
 } from 'react'
 import {
     useSelector,
@@ -47,16 +48,51 @@ import {TYPES} from '@/core/ioc/types'
 export const OFFSET = 100
 
 export interface CanvasProps {
+    selectedCell: SelectedCell
     selectedCell$: (e: SelectedCell) => void
 }
 
-export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
+export const CanvasComponent: FC<CanvasProps> = ({
+    selectedCell,
+    selectedCell$,
+}) => {
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [contextMenuEl, setContextMenu] = useState<ReactElement>()
     const canvasEl = useRef<HTMLCanvasElement>(null)
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+
+    // Return the render cell
+    // 0: keep horizontal scroll value unchanged
+    // 1: keep veritical scroll value unchanged
+    // 2: don't keep any of them
+    const jumpTo = (row: number, col: number, keep: 0 | 1 | 2) => {
+        const result = DATA_SERVICE.tryJumpTo(row, col)
+
+        if (result instanceof RenderCell) return result
+
+        const scrollX = result[0]
+        const scrollY = result[1]
+
+        const scroll = SHEET_SERVICE.getSheet()?.scroll
+        if (!scroll) throw Error('No active sheet')
+
+        if (keep == 0) {
+            scroll.update('y', scrollY)
+        } else if (keep == 1) {
+            scroll.update('x', scrollX)
+        } else {
+            scroll.update('x', scrollX)
+            scroll.update('y', scrollY)
+        }
+
+        renderMng.render()
+        const newResult = DATA_SERVICE.jumpTo(row, col)
+        if (!newResult) throw Error('jump to function error')
+
+        return newResult
+    }
 
     const scrollbarMng = useScrollbar({canvas: canvasEl})
     const dndMng = useDnd(canvasEl)
@@ -65,6 +101,17 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
     const matchMng = useMatch(canvasEl)
 
     const focus$ = useRef(new Subject<void>())
+
+    useEffect(() => {
+        if (selectedCell.source != 'editbar') return
+
+        canvasEl.current?.focus()
+        const renderCell = jumpTo(selectedCell.row, selectedCell.col, 2)
+        const c = new Cell('Cell').copyByRenderCell(renderCell)
+        const e = new StartCellEvent(c, 'scroll')
+        selectorMng.startCellChange(e)
+        textMng.startCellChange(e)
+    }, [selectedCell])
 
     const rendered = () => {
         resizerMng.init()
@@ -81,7 +128,7 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
         if (e === undefined || e.same) return
         if (e?.cell?.type !== 'Cell') return
         const {startRow: row, startCol: col} = e.cell.coordinate
-        selectedCell$({row, col})
+        selectedCell$({row, col, source: 'none'})
     }
     const startCellMng = useStartCell({startCellChange})
 
@@ -188,30 +235,6 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
 
         if (!currSelected || currSelected.type != 'Cell') return
 
-        const jumpTo = (row: number, col: number, keepHorizontal: boolean) => {
-            const result = DATA_SERVICE.tryJumpTo(row, col)
-
-            if (result instanceof RenderCell) return result
-
-            const scrollX = result[0]
-            const scrollY = result[1]
-
-            const scroll = SHEET_SERVICE.getSheet()?.scroll
-            if (!scroll) throw Error('No active sheet')
-
-            if (keepHorizontal) {
-                scroll.update('y', scrollY)
-            } else {
-                scroll.update('x', scrollX)
-            }
-
-            renderMng.render()
-            const newResult = DATA_SERVICE.jumpTo(row, col)
-            if (!newResult) throw Error('jump to function error')
-
-            return newResult
-        }
-
         const startRow = currSelected.coordinate.startRow
         const startCol = currSelected.coordinate.startCol
         const endRow = currSelected.coordinate.endRow
@@ -221,22 +244,22 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
         switch (e.key) {
             case KeyboardEventCode.ARROW_UP: {
                 const newStartRow = Math.max(startRow - 1, 0)
-                renderCell = jumpTo(newStartRow, startCol, true)
+                renderCell = jumpTo(newStartRow, startCol, 0)
                 break
             }
             case KeyboardEventCode.ARROW_DOWN: {
                 const newRow = Math.min(endRow + 1, MAX_COUNT)
-                renderCell = jumpTo(newRow, endCol, true)
+                renderCell = jumpTo(newRow, endCol, 0)
                 break
             }
             case KeyboardEventCode.ARROW_LEFT: {
                 const newCol = Math.max(startCol - 1, 0)
-                renderCell = jumpTo(startRow, newCol, false)
+                renderCell = jumpTo(startRow, newCol, 1)
                 break
             }
             case KeyboardEventCode.ARROW_RIGHT: {
                 const newCol = Math.min(endCol + 1, MAX_COUNT)
-                renderCell = jumpTo(startRow, newCol, false)
+                renderCell = jumpTo(startRow, newCol, 1)
                 break
             }
             default:

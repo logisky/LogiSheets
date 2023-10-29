@@ -10,6 +10,7 @@ export const RootContainer = () => {
     const [selectedCell, setSelectedCell] = useState<SelectedCell>({
         row: 0,
         col: 0,
+        source: 'none',
     })
     return (
         <div className={styles.host}>

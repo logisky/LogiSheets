@@ -89,18 +89,18 @@ export class DataService {
             // compute the new scroll
             for (let i = startRow; i > row - 1; i -= 1)
                 scrollY -= this.sheetSvc.getRowInfo(i).px ?? 0
-        else
+        else if (startRow < row)
             for (let i = startRow; i < row + 1; i += 1)
-                scrollY += this.sheetSvc.getRowInfo(i).px ?? 0
+                scrollY += i === 0 ? 0 : this.sheetSvc.getRowInfo(i).px ?? 0
 
         if (startCol > col)
             for (let j = startCol; j > col - 1; j -= 1)
                 scrollX -= this.sheetSvc.getColInfo(j).px ?? 0
-        else
+        else if (startCol < col)
             for (let j = startCol; j < col + 1; j += 1)
-                scrollX += this.sheetSvc.getColInfo(j).px ?? 0
+                scrollX += j === 0 ? 0 : this.sheetSvc.getColInfo(j).px ?? 0
 
-        return [scrollX, scrollY]
+        return [Math.max(0, scrollX), Math.max(0, scrollY)]
     }
 
     jumpTo(row: number, col: number): RenderCell | null {

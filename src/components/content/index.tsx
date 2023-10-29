@@ -15,10 +15,14 @@ export const ContentComponent: FC<ContentProps> = ({
 }) => {
     return (
         <div className={styles.host}>
-            <EditBarComponent selectedCell={selectedCell}></EditBarComponent>
+            <EditBarComponent
+                selectedCell={selectedCell}
+                selectedCell$={selectedCell$}
+            ></EditBarComponent>
             <div className={styles.middle}>
                 <div className={styles.canvas}>
                     <CanvasComponent
+                        selectedCell={selectedCell}
                         selectedCell$={selectedCell$}
                     ></CanvasComponent>
                 </div>
