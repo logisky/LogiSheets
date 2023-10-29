@@ -47,14 +47,58 @@ export class DataService {
         // This case should not happen.
         if (!sheet) return this._viewRange.cells[0]
 
-        // compute the new scroll
-        let scrollY = 0
-        for (let i = 0; i < row - 1; i += 1)
-            scrollY += this.sheetSvc.getRowInfo(i).px ?? 0
+        // Choose a closer point to calculate the value of scroll.
+        // It would make jumpping smoothly and quickly
+        const currFromRow = this._viewRange.fromRow
+        const currToRow = this._viewRange.toRow
+        const currFromCol = this._viewRange.fromCol
+        const currToCol = this._viewRange.toCol
 
+        const currScrollX = sheet.scroll.x
+        const currScrollY = sheet.scroll.y
+
+        const findStart = (s: number, e: number, target: number): number => {
+            let result = 0
+            let min = target
+            // We aim to a decide to use 0 or current scroll as the start point
+            // to compute the jump scroll. An offset set here because we prefer
+            // using the current scroll, which is good for user experience
+            const offset = 1
+            const fromDist = Math.abs(s - target)
+            if (fromDist <= min + offset) {
+                min = fromDist
+                result = s
+            }
+            const toDist = Math.abs(e - target)
+            if (toDist <= min + offset) {
+                min = toDist
+                result = e
+            }
+            return result
+        }
+
+        const startRow = findStart(currFromRow, currToRow, row)
+        let scrollY = 0
+        if (startRow != 0) scrollY = currScrollY
+
+        const startCol = findStart(currFromCol, currToCol, col)
         let scrollX = 0
-        for (let j = 0; j < col - 1; j += 1)
-            scrollX += this.sheetSvc.getColInfo(j).px ?? 0
+        if (startCol != 0) scrollX = currScrollX
+
+        if (startRow > row)
+            // compute the new scroll
+            for (let i = startRow; i > row - 1; i -= 1)
+                scrollY -= this.sheetSvc.getRowInfo(i).px ?? 0
+        else
+            for (let i = startRow; i < row + 1; i += 1)
+                scrollY += this.sheetSvc.getRowInfo(i).px ?? 0
+
+        if (startCol > col)
+            for (let j = startCol; j > col - 1; j -= 1)
+                scrollX -= this.sheetSvc.getColInfo(j).px ?? 0
+        else
+            for (let j = startCol; j < col + 1; j += 1)
+                scrollX += this.sheetSvc.getColInfo(j).px ?? 0
 
         return [scrollX, scrollY]
     }
