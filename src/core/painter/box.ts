@@ -20,13 +20,13 @@ export class Box {
         let textAlign: CanvasTextAlign
         const {startCol: x} = this.position
         // set default to center
-        const alignX = align ?? 'Center'
+        const alignX = align ?? 'center'
         switch (alignX) {
             // default
             // 常规
             // 居中
             case 'general':
-            case 'Center':
+            case 'center':
                 textAlign = 'center'
                 tx = x + this.width / 2
                 break

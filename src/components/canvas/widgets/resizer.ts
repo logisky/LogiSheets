@@ -75,7 +75,7 @@ export const useResizers = (canvas: RefObject<HTMLCanvasElement>) => {
         if (!activeResizer) return false
         movingStart.current = {x: e.clientX, y: e.clientY}
         const sheet = SHEET_SERVICE
-        const {startCol, startRow} = activeResizer.leftCell.coodinate
+        const {startCol, startRow} = activeResizer.leftCell.coordinate
         const info = activeResizer.isRow
             ? sheet.getRowInfo(startCol)
             : sheet.getColInfo(startRow)
@@ -114,7 +114,7 @@ export const useResizers = (canvas: RefObject<HTMLCanvasElement>) => {
         if (_active.current) {
             const {
                 isRow,
-                leftCell: {coodinate, width, height},
+                leftCell: {coordinate: coodinate, width, height},
             } = _active.current
             const payload = !isRow
                 ? new SetColWidthBuilder()

@@ -77,7 +77,7 @@ export const useHighlightCell = () => {
                     .setStartRow(newCell.rowStart)
                     .setEndCol(newCell.colEnd ?? newCell.colStart)
                     .setEndRow(newCell.rowEnd ?? newCell.rowStart)
-                return c.coodinate.cover(range)
+                return c.coordinate.cover(range)
             })
             if (!cell) return
             const oldCell = find(newCell)
@@ -117,7 +117,7 @@ export const useHighlightCell = () => {
                     .setStartCol(newCell.colStart)
                     .setEndCol(newCell.colEnd ?? newCell.colStart)
                     .setEndRow(newCell.rowEnd ?? newCell.rowStart)
-                return c.coodinate.cover(range)
+                return c.coordinate.cover(range)
             })
             if (!cell) return
             const currColors = newCells.map((c) => c.style.bgColor)

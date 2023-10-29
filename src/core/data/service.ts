@@ -1,6 +1,6 @@
 import {MAX_COUNT, SheetService} from './sheet'
 import {SETTINGS} from '@/core/settings'
-import {RenderCell, ViewRange} from './view_range'
+import {RenderCell, RenderCellSegment, ViewRange} from './view_range'
 import {Backend} from './backend'
 import {DisplayRequest} from '@/bindings'
 import {Range} from '@/core/standable'
@@ -32,17 +32,69 @@ export class DataService {
     }
 
     /**
+     * Try to jump to the given cell. If the render cell is already in the view range, return it.
+     * If not, return the scroll where we can find this cell.
+     */
+    tryJumpTo(
+        row: number,
+        col: number
+    ): RenderCell | readonly [number, number] {
+        const result = this.jumpTo(row, col)
+        if (result) return result
+
+        const sheet = this.sheetSvc.getSheet()
+
+        // This case should not happen.
+        if (!sheet) return this._viewRange.cells[0]
+
+        // compute the new scroll
+        let scrollY = 0
+        for (let i = 0; i < row - 1; i += 1)
+            scrollY += this.sheetSvc.getRowInfo(i).px ?? 0
+
+        let scrollX = 0
+        for (let j = 0; j < col - 1; j += 1)
+            scrollX += this.sheetSvc.getColInfo(j).px ?? 0
+
+        return [scrollX, scrollY]
+    }
+
+    jumpTo(row: number, col: number): RenderCell | null {
+        for (let i = 0; i < this._viewRange.cells.length; i += 1) {
+            const c = this._viewRange.cells[i]
+            if (
+                c.cover(
+                    new RenderCell().setCoordinate(
+                        new Range()
+                            .setStartRow(row)
+                            .setEndRow(row)
+                            .setStartCol(col)
+                            .setEndCol(col)
+                    )
+                )
+            ) {
+                return c
+            }
+        }
+        return null
+    }
+
+    /**
      * filter?, freeze, scroll, hidden
      */
     initViewRange(maxWidth: number, maxHeight: number) {
         const scroll = this._getScrollPosition()
         const rows = this._initRows(maxHeight, scroll.row)
         const cols = this._initCols(maxWidth, scroll.col)
-        const cells = this._initCells(rows, cols)
+        const cells = this._initCells(rows.cells, cols.cells)
         const viewRange = new ViewRange()
-        viewRange.rows = rows
-        viewRange.cols = cols
+        viewRange.rows = rows.cells
+        viewRange.cols = cols.cells
         viewRange.cells = cells
+        viewRange.fromRow = rows.from
+        viewRange.toRow = rows.to
+        viewRange.fromCol = cols.from
+        viewRange.toCol = cols.to
         this._viewRange = viewRange
         // console.log('init view range', viewRange)
         return this._viewRange
@@ -86,8 +138,9 @@ export class DataService {
         const rows: RenderCell[] = []
         const getHeight = (i: number) => this.sheetSvc.getRowInfo(i).px
         const staticWidth = SETTINGS.leftTop.width
+        let i = scrollY
         for (
-            let i = scrollY, y = SETTINGS.leftTop.height;
+            let y = SETTINGS.leftTop.height;
             i <= MAX_COUNT && y <= maxHeight;
             i += 1
         ) {
@@ -106,15 +159,16 @@ export class DataService {
             rows.push(cell)
             y += height
         }
-        return rows
+        return new RenderCellSegment(scrollY, i, rows)
     }
 
     private _initCols(maxWidth: number, scrollX: number) {
         const cols: RenderCell[] = []
         const getWidth = (i: number) => this.sheetSvc.getColInfo(i).px
         const staticHeight = SETTINGS.leftTop.height
+        let i = scrollX
         for (
-            let i = scrollX, x = SETTINGS.leftTop.width;
+            let x = SETTINGS.leftTop.width;
             i <= MAX_COUNT && x <= maxWidth;
             i += 1
         ) {
@@ -133,7 +187,7 @@ export class DataService {
             cols.push(cell)
             x += width
         }
-        return cols
+        return new RenderCellSegment(scrollX, i, cols)
     }
 
     private _initCells(
@@ -146,13 +200,13 @@ export class DataService {
         rows.forEach((startRow) => {
             // tslint:disable-next-line: max-func-body-length
             cols.forEach((startCol) => {
-                const key = `${startRow.coodinate.startRow}-${startCol.coodinate.startCol}`
+                const key = `${startRow.coordinate.startRow}-${startCol.coordinate.startCol}`
                 if (renderedCells.has(key)) return
                 const coordinate = new Range()
-                    .setStartRow(startRow.coodinate.startRow)
-                    .setEndRow(startRow.coodinate.endRow)
-                    .setStartCol(startCol.coodinate.startCol)
-                    .setEndCol(startCol.coodinate.endCol)
+                    .setStartRow(startRow.coordinate.startRow)
+                    .setEndRow(startRow.coordinate.endRow)
+                    .setStartCol(startCol.coordinate.startCol)
+                    .setEndCol(startCol.coordinate.endCol)
                 const mCells = merges.filter((m) => m.cover(coordinate))
                 // no merge cell
                 if (mCells.length === 0) {
@@ -173,23 +227,23 @@ export class DataService {
                     let endRow = startRow
                     let endCol = startCol
                     for (
-                        let mr = startRow.coodinate.startRow;
+                        let mr = startRow.coordinate.startRow;
                         mr <= cell.endRow;
                         mr += 1
                     ) {
                         const tmpRow = rows.find(
-                            (r) => r.coodinate.startRow === mr
+                            (r) => r.coordinate.startRow === mr
                         )
                         if (!tmpRow) continue
                         endRow = tmpRow
                     }
                     for (
-                        let mc = startCol.coodinate.startCol;
+                        let mc = startCol.coordinate.startCol;
                         mc <= cell.endCol;
                         mc += 1
                     ) {
                         const tmpCol = cols.find(
-                            (c) => c.coodinate.startCol === mc
+                            (c) => c.coordinate.startCol === mc
                         )
                         if (!tmpCol) continue
                         endCol = tmpCol
@@ -204,20 +258,20 @@ export class DataService {
                         )
                         .setCoordinate(
                             new Range()
-                                .setStartRow(startRow.coodinate.startRow)
-                                .setStartCol(startCol.coodinate.startCol)
-                                .setEndCol(endCol.coodinate.endCol)
-                                .setEndRow(endRow.coodinate.endRow)
+                                .setStartRow(startRow.coordinate.startRow)
+                                .setStartCol(startCol.coordinate.startCol)
+                                .setEndCol(endCol.coordinate.endCol)
+                                .setEndRow(endRow.coordinate.endRow)
                         )
                     cells.push(c)
                     for (
-                        let i = c.coodinate.startRow;
-                        i <= c.coodinate.endRow;
+                        let i = c.coordinate.startRow;
+                        i <= c.coordinate.endRow;
                         i += 1
                     )
                         for (
-                            let j = c.coodinate.startCol;
-                            j <= c.coodinate.endCol;
+                            let j = c.coordinate.startCol;
+                            j <= c.coordinate.endCol;
                             j += 1
                         )
                             renderedCells.add(`${i}-${j}`)

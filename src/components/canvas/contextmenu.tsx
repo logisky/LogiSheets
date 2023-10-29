@@ -56,7 +56,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     const _addCol = () => {
         const sheet = SHEET_SERVICE.getActiveSheet()
         const {
-            coodinate: {startCol: start},
+            coordinate: {startCol: start},
         } = startCell
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
@@ -83,7 +83,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 
     const _removeCol = () => {
         const {
-            coodinate: {startCol: start},
+            coordinate: {startCol: start},
         } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
@@ -111,7 +111,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 
     const _addRow = () => {
         const {
-            coodinate: {startRow: start},
+            coordinate: {startRow: start},
         } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
@@ -138,7 +138,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 
     const _removeRow = () => {
         const {
-            coodinate: {startRow: start},
+            coordinate: {startRow: start},
         } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
@@ -165,8 +165,8 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 
     const _addBlock = () => {
         const endCellTruthy = endCell ?? startCell
-        const start = startCell.coodinate
-        const end = endCellTruthy.coodinate
+        const start = startCell.coordinate
+        const end = endCellTruthy.coordinate
         const payload = new CreateBlockBuilder()
             .blockId(1)
             .sheetIdx(SHEET_SERVICE.getActiveSheet())
@@ -179,8 +179,8 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     }
 
     const _checkBlock = () => {
-        const {coodinate: start} = startCell
-        const {coodinate: end} = endCell ?? startCell
+        const {coordinate: start} = startCell
+        const {coordinate: end} = endCell ?? startCell
         const curr = new Range()
             .setStartRow(start.startRow)
             .setStartCol(start.startCol)
