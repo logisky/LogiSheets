@@ -1,5 +1,5 @@
 import {SelectedCell} from '@/components/canvas'
-import {toA1notation} from '@/core'
+import {toA1notation, parseA1notation} from '@/core'
 import {CellInputBuilder} from '@/api'
 import {FC, useEffect, useState} from 'react'
 import styles from './edit-bar.module.scss'
@@ -8,9 +8,13 @@ import {Backend, SheetService} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 export interface EditBarProps {
     selectedCell: SelectedCell
+    selectedCell$: (e: SelectedCell) => void
 }
 
-export const EditBarComponent: FC<EditBarProps> = ({selectedCell}) => {
+export const EditBarComponent: FC<EditBarProps> = ({
+    selectedCell,
+    selectedCell$,
+}) => {
     const sheetSvc = useInjection<SheetService>(TYPES.Sheet)
     const backendSvc = useInjection<Backend>(TYPES.Backend)
     const [coordinate, setCoordinate] = useState('')
@@ -24,7 +28,7 @@ export const EditBarComponent: FC<EditBarProps> = ({selectedCell}) => {
         if (cell.formula === '') setFormula(cell.getText())
         else setFormula(cell.getFormular())
     }, [selectedCell])
-    const textChange = (newText: string) => {
+    const formulaTextChange = (newText: string) => {
         const payload = new CellInputBuilder()
             .sheetIdx(sheetSvc.getActiveSheet())
             .row(selectedCell.row)
@@ -33,13 +37,26 @@ export const EditBarComponent: FC<EditBarProps> = ({selectedCell}) => {
             .build()
         backendSvc.sendTransaction([payload], true)
     }
+    const locationChange = (newText: string) => {
+        const result = parseA1notation(newText)
+
+        if (!result) {
+            return
+        }
+
+        selectedCell$({row: result.rs, col: result.cs, source: 'editbar'})
+    }
     return (
         <div className={styles.host}>
-            <div className={styles.a1notation}>{coordinate}</div>
+            <input
+                className={styles.a1notation}
+                defaultValue={coordinate}
+                onBlur={(e) => locationChange(e.target.value)}
+            ></input>
             <div className={styles.middle}></div>
             <input
                 className={styles.formula}
-                onChange={(e) => textChange(e.target.value)}
+                onChange={(e) => formulaTextChange(e.target.value)}
                 value={formula}
             ></input>
         </div>
