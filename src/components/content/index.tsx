@@ -1,5 +1,5 @@
 import {SelectedCell, CanvasComponent} from '@/components/canvas'
-import {FC} from 'react'
+import {FC, useRef} from 'react'
 import styles from './content.module.scss'
 import {EditBarComponent} from './edit-bar'
 import {SheetsTabComponent} from '@/components/sheets-tab'

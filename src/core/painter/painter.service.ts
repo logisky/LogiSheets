@@ -188,9 +188,9 @@ export class PainterService extends CanvasApi {
         let yOffset = 0
         const lineAttr = new CanvasAttr()
         lineAttr.strokeStyle = attr.font.standardColor.css()
-        const horizontal = attr.alignment?.horizontal ?? 'General'
-        const underline = attr.font.underline?.val ?? 'None'
-        const vertical = attr.alignment?.vertical ?? 'Center'
+        const horizontal = attr.alignment?.horizontal ?? 'general'
+        const underline = attr.font.underline?.val ?? 'none'
+        const vertical = attr.alignment?.vertical ?? 'center'
         switch (underline) {
             case 'double':
                 break

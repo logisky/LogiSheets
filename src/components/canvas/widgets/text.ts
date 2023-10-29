@@ -70,7 +70,7 @@ export const useText = ({canvas, onEdit}: TextProps) => {
         const {
             height,
             width,
-            coodinate: {startRow: row, startCol: col},
+            coordinate: {startRow: row, startCol: col},
             position: {startCol: x, startRow: y},
         } = startCell
         const info = SHEET_SERVICE.getCell(row, col)

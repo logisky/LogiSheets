@@ -21,8 +21,8 @@ export class Cell extends RenderCell {
 
 export function visibleCells(cell: Cell, end: Cell, sheetSvc: SheetService) {
     const cells: {readonly row: number; readonly col: number}[] = []
-    const {startCol, startRow} = cell.coodinate
-    const {endCol, endRow} = end.coodinate
+    const {startCol, startRow} = cell.coordinate
+    const {endCol, endRow} = end.coordinate
     for (let row = startRow; row <= endRow; row++) {
         for (let col = startCol; col < endCol; col++) {
             if (sheetSvc.getColInfo(col).hidden) continue

@@ -41,15 +41,15 @@ export const useStartCell = ({startCellChange}: StartCellProps) => {
         const viewRange = DATA_SERVICE.cachedViewRange
         if (oldStartCell.type === 'FixedLeftHeader')
             renderCell = viewRange.rows.find((r) =>
-                r.coodinate.cover(oldStartCell.coodinate)
+                r.coordinate.cover(oldStartCell.coordinate)
             )
         else if (oldStartCell.type === 'FixedTopHeader')
             renderCell = viewRange.cols.find((c) =>
-                c.coodinate.cover(oldStartCell.coodinate)
+                c.coordinate.cover(oldStartCell.coordinate)
             )
         else if (oldStartCell.type === 'Cell')
             renderCell = viewRange.cells.find((c) =>
-                c.coodinate.cover(oldStartCell.coodinate)
+                c.coordinate.cover(oldStartCell.coordinate)
             )
         else return
         if (!renderCell) {

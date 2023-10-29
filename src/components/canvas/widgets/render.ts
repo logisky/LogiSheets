@@ -55,7 +55,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
         rendered()
     }
     const _renderCell = (renderCell: RenderCell) => {
-        const {coodinate: range, position} = renderCell
+        const {coordinate: range, position} = renderCell
         const style = sheetSvc.getCell(range.startRow, range.startCol)?.style
         const box = new Box()
         box.position = position
@@ -90,7 +90,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
             box.position = r.position
             const attr = new TextAttr()
             attr.font = SETTINGS.fixedHeader.font
-            const position = (r.coodinate.startRow + 1).toString()
+            const position = (r.coordinate.startRow + 1).toString()
             painterSvc.current.text(position, attr, box)
         })
         painterSvc.current.restore()
@@ -106,7 +106,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
                 [startCol, endRow],
                 [startCol, startRow],
             ])
-            const a1Notation = toA1notation(c.coodinate.startCol)
+            const a1Notation = toA1notation(c.coordinate.startCol)
             const box = new Box()
             box.position = c.position
             const attr = new TextAttr()

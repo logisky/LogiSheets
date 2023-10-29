@@ -8,7 +8,7 @@ export class RenderCell {
         return this.position.height
     }
     setCoordinate(coordinate: Range) {
-        this.coodinate = coordinate
+        this.coordinate = coordinate
         return this
     }
     setPosition(position: Range) {
@@ -18,13 +18,13 @@ export class RenderCell {
     /**
      * start/end row/col index
      */
-    public coodinate = new Range()
+    public coordinate = new Range()
     /**
      * start/end row/col pixel distance
      */
     public position = new Range()
     cover(cell: RenderCell) {
-        return this.coodinate.cover(cell.coodinate)
+        return this.coordinate.cover(cell.coordinate)
     }
 
     equals(cell: RenderCell) {
@@ -32,7 +32,19 @@ export class RenderCell {
     }
 }
 
+export class RenderCellSegment {
+    public constructor(
+        public readonly from: number,
+        public readonly to: number,
+        public cells: readonly RenderCell[]
+    ) {}
+}
+
 export class ViewRange {
+    public fromRow = 0
+    public toRow = 0
+    public fromCol = 0
+    public toCol = 0
     /**
      * visible rows.
      */

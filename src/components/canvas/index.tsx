@@ -1,7 +1,15 @@
 import {SelectedCell} from './events'
 import {Subscription, Subject} from 'rxjs'
 import styles from './canvas.module.scss'
-import {MouseEvent, ReactElement, useRef, useState, FC, WheelEvent} from 'react'
+import {
+    MouseEvent,
+    ReactElement,
+    useRef,
+    useState,
+    FC,
+    WheelEvent,
+    KeyboardEvent,
+} from 'react'
 import {
     useSelector,
     useStartCell,
@@ -17,7 +25,7 @@ import {
 } from './widgets'
 import {Cell} from './defs'
 import {ScrollbarComponent} from '@/components/scrollbar'
-import {EventType, on} from '@/core/events'
+import {EventType, KeyboardEventCode, on} from '@/core/events'
 import {ContextmenuComponent} from './contextmenu'
 import {SelectorComponent} from '@/components/selector'
 import {ResizerComponent} from '@/components/resize'
@@ -28,7 +36,13 @@ import {Buttons} from '@/core'
 import {CellInputBuilder} from '@/api'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
-import {Backend, DataService, SheetService} from '@/core/data'
+import {
+    Backend,
+    DataService,
+    MAX_COUNT,
+    RenderCell,
+    SheetService,
+} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 export const OFFSET = 100
 
@@ -66,7 +80,7 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
         textMng.startCellChange(e)
         if (e === undefined || e.same) return
         if (e?.cell?.type !== 'Cell') return
-        const {startRow: row, startCol: col} = e.cell.coodinate
+        const {startRow: row, startCol: col} = e.cell.coordinate
         selectedCell$({row, col})
     }
     const startCellMng = useStartCell({startCellChange})
@@ -106,10 +120,11 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
         startCellMng.scroll()
     }
 
-    const onMousedown = async (e: MouseEvent) => {
+    const onMouseDown = async (e: MouseEvent) => {
         e.stopPropagation()
         e.preventDefault()
         const mousedown = async () => {
+            canvasEl.current?.focus()
             const isBlur = await textMng.blur()
             if (!isBlur) {
                 focus$.current.next()
@@ -163,6 +178,76 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
         )
     }
 
+    const onKeyDown = async (e: KeyboardEvent) => {
+        e.stopPropagation()
+        e.preventDefault()
+
+        if (e.metaKey || e.altKey || e.shiftKey || e.ctrlKey) return
+
+        const currSelected = selectorMng.startCell
+
+        if (!currSelected || currSelected.type != 'Cell') return
+
+        const jumpTo = (row: number, col: number, keepHorizontal: boolean) => {
+            const result = DATA_SERVICE.tryJumpTo(row, col)
+
+            if (result instanceof RenderCell) return result
+
+            const scrollX = result[0]
+            const scrollY = result[1]
+
+            const scroll = SHEET_SERVICE.getSheet()?.scroll
+            if (!scroll) throw Error('No active sheet')
+
+            if (keepHorizontal) {
+                scroll.update('y', scrollY)
+            } else {
+                scroll.update('x', scrollX)
+            }
+
+            renderMng.render()
+            const newResult = DATA_SERVICE.jumpTo(row, col)
+            if (!newResult) throw Error('jump to function error')
+
+            return newResult
+        }
+
+        const startRow = currSelected.coordinate.startRow
+        const startCol = currSelected.coordinate.startCol
+        const endRow = currSelected.coordinate.endRow
+        const endCol = currSelected.coordinate.endCol
+
+        let renderCell: RenderCell | null = null
+        switch (e.key) {
+            case KeyboardEventCode.ARROW_UP: {
+                const newStartRow = Math.max(startRow - 1, 0)
+                renderCell = jumpTo(newStartRow, startCol, true)
+                break
+            }
+            case KeyboardEventCode.ARROW_DOWN: {
+                const newRow = Math.min(endRow + 1, MAX_COUNT)
+                renderCell = jumpTo(newRow, endCol, true)
+                break
+            }
+            case KeyboardEventCode.ARROW_LEFT: {
+                const newCol = Math.max(startCol - 1, 0)
+                renderCell = jumpTo(startRow, newCol, false)
+                break
+            }
+            case KeyboardEventCode.ARROW_RIGHT: {
+                const newCol = Math.min(endCol + 1, MAX_COUNT)
+                renderCell = jumpTo(startRow, newCol, false)
+                break
+            }
+            default:
+                return
+        }
+        if (renderCell) {
+            const c = new Cell('Cell').copyByRenderCell(renderCell)
+            startCellChange(new StartCellEvent(c, 'scroll'))
+        }
+    }
+
     const blur = (e: BlurEvent<Cell>) => {
         const oldText = textMng.context?.text ?? ''
         textMng.blur()
@@ -171,8 +256,8 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
         const newText = textMng.currText.current.trim()
         if (oldText === newText) return
         const payload = new CellInputBuilder()
-            .row(e.bindingData.coodinate.startRow)
-            .col(e.bindingData.coodinate.startCol)
+            .row(e.bindingData.coordinate.startRow)
+            .col(e.bindingData.coordinate.startCol)
             .sheetIdx(SHEET_SERVICE.getActiveSheet())
             .input(newText)
             .build()
@@ -209,13 +294,15 @@ export const CanvasComponent: FC<CanvasProps> = ({selectedCell$}) => {
     return (
         <div
             onContextMenu={(e) => onContextMenu(e)}
-            onMouseDown={onMousedown}
+            onMouseDown={onMouseDown}
             className={styles.host}
         >
             <canvas
+                tabIndex={0}
                 className={styles.canvas}
                 ref={canvasEl}
                 onWheel={onMouseWheel}
+                onKeyDown={onKeyDown}
             >
                 你的浏览器不支持canvas，请升级浏览器
             </canvas>
