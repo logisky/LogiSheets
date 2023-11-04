@@ -1,4 +1,4 @@
-import {Style} from '@/bindings'
+import {Style} from '@logisheets_bg'
 import {StandardValue} from './value'
 import {format} from 'ssf'
 import {StandardStyle} from './style'

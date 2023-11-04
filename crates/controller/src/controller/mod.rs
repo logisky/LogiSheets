@@ -85,16 +85,10 @@ impl Controller {
     }
 
     // Handle an action and get the affected sheet indices.
-    pub fn handle_action(&mut self, action: EditAction) -> Option<ActionEffect> {
+    pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
         match action {
-            EditAction::Undo => match self.undo() {
-                true => Some(ActionEffect::default()),
-                false => None,
-            },
-            EditAction::Redo => match self.redo() {
-                true => Some(ActionEffect::default()),
-                false => None,
-            },
+            EditAction::Undo => ActionEffect::from_bool(self.undo()),
+            EditAction::Redo => ActionEffect::from_bool(self.redo()),
             EditAction::Payloads(action) => {
                 let mut c = Converter {
                     sheet_pos_manager: &self.status.sheet_pos_manager,
@@ -104,12 +98,14 @@ impl Controller {
                     sheet_id_manager: &mut self.status.sheet_id_manager,
                 };
                 let proc = c.convert_edit_payloads(action.payloads);
-                self.handle_process(proc, action.undoable).ok()?;
-                let tasks = self.async_func_manager.get_calc_tasks();
-                Some(ActionEffect {
-                    async_tasks: tasks,
-                    version: self.version(),
-                })
+                let res = self.handle_process(proc, action.undoable);
+                if let Err(_) = res {
+                    // todo!()
+                    ActionEffect::from_err(1)
+                } else {
+                    let tasks = self.async_func_manager.get_calc_tasks();
+                    ActionEffect::from(self.version(), tasks)
+                }
             }
         }
     }
@@ -118,15 +114,18 @@ impl Controller {
         &mut self,
         tasks: Vec<Task>,
         res: Vec<AsyncCalcResult>,
-    ) -> Option<ActionEffect> {
+    ) -> ActionEffect {
         let mut pending_cells = vec![];
         tasks.into_iter().zip(res.into_iter()).for_each(|(t, r)| {
             let cells = self.async_func_manager.commit_value(t, r);
             pending_cells.extend(cells);
         });
-        self.handle_process(vec![Process::Recalc(pending_cells)], false)
-            .ok()?;
-        Some(ActionEffect::default())
+        let res = self.handle_process(vec![Process::Recalc(pending_cells)], false);
+        if let Err(_) = res {
+            ActionEffect::from_err(1)
+        } else {
+            ActionEffect::from(self.version(), vec![])
+        }
     }
 
     fn handle_process(&mut self, proc: Vec<Process>, undoable: bool) -> Result<()> {

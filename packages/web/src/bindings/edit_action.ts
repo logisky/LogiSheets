@@ -3,6 +3,6 @@ import {PayloadsAction} from './payloads_action'
 
 // `EditAction` represents your update behavior to the workbook.
 export type EditAction =
-    | 'Undo'
-    | 'Redo'
-    | {Payloads: PayloadsAction}
+    | 'undo'
+    | 'redo'
+    | {payloads: PayloadsAction}

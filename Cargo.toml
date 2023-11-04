@@ -4,7 +4,7 @@ version = "0.4.0"
 description = "A web spreadsheets application written in Rust and Typescript"
 keywords = ["excel", "spreadsheets", "ooxml", "logisheets", "xlsx"]
 readme = "README.md"
-repository = "https://github.com/proclml/LogiSheets"
+repository = "https://github.com/logisky/LogiSheets"
 license = "MIT"
 include = [
     "crates/workbook/**/*",
@@ -21,10 +21,10 @@ members = [
     "crates/formatter",
     "crates/logiscript",
     "crates/sequencer",
+    "crates/wasms/fc",
+    "crates/wasms/server",
     "crates/workbook",
     "crates/xmldiff",
-    "src/wasms/fc",
-    "src/wasms/server",
 ]
 
 [dependencies]

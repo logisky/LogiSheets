@@ -5,15 +5,9 @@ use logisheets_workbook::prelude::{
     CtFontName, CtFontScheme, CtUnderlineProperty, CtVerticalAlignFontProperty, StBorderStyle,
     StGradientType, StPatternType,
 };
-use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(
-    feature = "gents",
-    ts(file_name = "style.ts", rename_all = "camelCase")
-)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "style.ts"))]
 pub struct Style {
     pub font: Font,
     pub fill: Fill,
@@ -23,10 +17,8 @@ pub struct Style {
     pub formatter: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "font.ts", rename_all = "camelCase"))]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "font.ts"))]
 pub struct Font {
     pub bold: bool,
     pub italic: bool,
@@ -45,35 +37,29 @@ pub struct Font {
     pub scheme: Option<CtFontScheme>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "fill.ts", rename_all = "camelCase"))]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "fill.ts"))]
 pub enum Fill {
     PatternFill(PatternFill),
     GradientFill(GradientFill),
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "pattern_fill.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "pattern_fill.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct PatternFill {
     pub fg_color: Option<Color>,
     pub bg_color: Option<Color>,
     pub pattern_type: Option<StPatternType>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "gradient_fill.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "gradient_fill.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct GradientFill {
     pub stops: Vec<GradientStop>,
     pub ty: StGradientType,
@@ -84,37 +70,31 @@ pub struct GradientFill {
     pub bottom: f64,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "gradient_stop.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "gradient_stop.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct GradientStop {
     pub color: Color,
     pub position: f64,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "border_pr.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "border_pr.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct BorderPr {
     pub color: Option<Color>,
     pub style: StBorderStyle,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "border.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "border.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct Border {
     pub left: Option<BorderPr>,
     pub right: Option<BorderPr>,
@@ -128,13 +108,8 @@ pub struct Border {
     pub outline: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(
-    feature = "gents",
-    ts(file_name = "color.ts", rename_all = "camelCase")
-)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "color.ts"))]
 pub struct Color {
     pub red: Option<f64>,
     pub green: Option<f64>,

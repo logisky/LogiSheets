@@ -1,4 +1,4 @@
-import {SheetRenameBuilder, DeleteSheetBuilder} from '@/api'
+import {SheetRenameBuilder, DeleteSheetBuilder} from '@logisheets_bg'
 import {useState} from 'react'
 import Modal from 'react-modal'
 import {Backend} from '@/core/data'

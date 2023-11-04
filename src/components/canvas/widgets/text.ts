@@ -4,7 +4,9 @@ import {StandardKeyboardEvent} from '@/core/events'
 import {RefObject, useRef, useState} from 'react'
 import {shallowCopy} from '@/core'
 import {StartCellEvent} from './start-cell'
-import initFc, {formula_check} from '../../../wasms/fc/pkg/logisheets_wasm_fc'
+import initFc, {
+    formula_check,
+} from '../../../../crates/wasms/fc/pkg/logisheets_wasm_fc'
 import {isFormula} from '@/core/snippet'
 import {SheetService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'

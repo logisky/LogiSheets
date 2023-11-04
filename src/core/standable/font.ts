@@ -1,4 +1,4 @@
-import {Font, CtFontName, CtUnderlineProperty, Color} from '@/bindings'
+import {Font, CtFontName, CtUnderlineProperty, Color} from '@logisheets_bg'
 import {shallowCopy} from '@/core'
 import {StandardColor} from './color'
 const DEFAULT_FONT_SIZE = 10

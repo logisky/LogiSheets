@@ -1,7 +1,7 @@
 import {useState, FC, useEffect} from 'react'
 import styles from './sheets-tab.module.scss'
 import {ContextMenuComponent} from './contextmenu'
-import {DeleteSheetBuilder, InsertSheetBuilder} from '@/api'
+import {DeleteSheetBuilder, InsertSheetBuilder} from '@logisheets_bg'
 import {Backend, SheetService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'

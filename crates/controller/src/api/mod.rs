@@ -1,9 +1,17 @@
-use logisheets_base::{errors::BasicError, CellId, ColId, RowId, SheetId};
+use logisheets_base::{
+    async_func::{AsyncCalcResult, Task},
+    errors::BasicError,
+    CellId, ColId, RowId, SheetId,
+};
 use logisheets_parser::unparse;
 
 use crate::{
     connectors::NameFetcher,
-    controller::{display::get_default_col_width, style::StyleConverter},
+    controller::{
+        display::{get_default_col_width, DisplayRequest, DisplayResponse},
+        edit_action::ActionEffect,
+        style::StyleConverter,
+    },
     Controller,
 };
 
@@ -14,6 +22,8 @@ pub use crate::{
     Comment, MergeCell, Style, Value,
 };
 pub use logisheets_base::BlockId;
+mod types;
+pub use types::*;
 
 pub struct Workbook {
     controller: Controller,
@@ -36,8 +46,8 @@ impl Workbook {
     }
 
     /// Execute the `EditAction`
-    pub fn handle_action(&mut self, action: EditAction) {
-        self.controller.handle_action(action);
+    pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
+        self.controller.handle_action(action)
     }
 
     /// Create a workbook from a .xlsx file.
@@ -48,21 +58,46 @@ impl Workbook {
 
     // TODO: Due to the UUID generating, we can' just `assert_eq!(file1, file2)` where
     // `file1` and `file2` are binary got from saving of the same file. Fix it.
+    #[inline]
     pub fn save(&self) -> Result<Vec<u8>> {
         self.controller.save()
     }
 
-    pub fn get_sheet_by_name(&mut self, name: &str) -> Result<Worksheet> {
+    #[inline]
+    pub fn undo(&mut self) -> bool {
+        self.controller.undo()
+    }
+
+    #[inline]
+    pub fn redo(&mut self) -> bool {
+        self.controller.redo()
+    }
+
+    #[inline]
+    pub fn get_display_response(&self, req: DisplayRequest) -> DisplayResponse {
+        self.controller.get_display_response(req)
+    }
+
+    #[inline]
+    pub fn handle_async_calc_results(
+        &mut self,
+        tasks: Vec<Task>,
+        results: Vec<AsyncCalcResult>,
+    ) -> ActionEffect {
+        self.controller.handle_async_calc_results(tasks, results)
+    }
+
+    pub fn get_sheet_by_name(&self, name: &str) -> Result<Worksheet> {
         match self.controller.get_sheet_id_by_name(name) {
             Some(sheet_id) => Ok(Worksheet {
                 sheet_id,
-                controller: &mut self.controller,
+                controller: &self.controller,
             }),
             None => Err(BasicError::SheetNameNotFound(name.to_string()).into()),
         }
     }
 
-    pub fn get_sheet_idx_by_name(&mut self, name: &str) -> Result<usize> {
+    pub fn get_sheet_idx_by_name(&self, name: &str) -> Result<usize> {
         let sheet_id = self.controller.get_sheet_id_by_name(name);
         if let Some(id) = sheet_id {
             if let Some(idx) = self.controller.status.sheet_pos_manager.get_sheet_idx(&id) {
@@ -75,11 +110,11 @@ impl Workbook {
         }
     }
 
-    pub fn get_sheet_by_idx(&mut self, idx: usize) -> Result<Worksheet> {
+    pub fn get_sheet_by_idx(&self, idx: usize) -> Result<Worksheet> {
         match self.controller.get_sheet_id_by_idx(idx) {
             Some(sheet_id) => Ok(Worksheet {
                 sheet_id,
-                controller: &mut self.controller,
+                controller: &self.controller,
             }),
             None => Err(Error::UnavailableSheetIdx(idx)),
         }
@@ -92,7 +127,7 @@ pub struct Worksheet<'a> {
 }
 
 impl<'a> Worksheet<'a> {
-    pub fn from(sheet_id: SheetId, controller: &'a Controller) -> Self {
+    pub(crate) fn from(sheet_id: SheetId, controller: &'a Controller) -> Self {
         Worksheet {
             sheet_id,
             controller,

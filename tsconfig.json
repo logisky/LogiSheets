@@ -23,6 +23,7 @@
     "types": ["reflect-metadata", "jest", "node"],
     "paths": {
       "@/*": ["src/*"],
+      "@logisheets_bg": ["packages/web"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -40,6 +41,7 @@
   ],
   "include": [
     "src/**/*.tsx",
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "packages/web/**/*.ts"
   ]
 }

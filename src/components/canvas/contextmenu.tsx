@@ -15,7 +15,7 @@ import {
     DeleteBlockRowsBuilder,
     DeleteRowsBuilder,
     CreateBlockBuilder,
-} from '@/api'
+} from '@logisheets_bg'
 import {TYPES} from '@/core/ioc/types'
 import {Backend, SheetService} from '@/core/data'
 

@@ -1,7 +1,7 @@
 import {
     StVerticalAlignment as AlignY,
     StHorizontalAlignment as AlignX,
-} from '@/bindings'
+} from '@logisheets_bg'
 import {Range} from '@/core/standable'
 export class Box {
     public position = new Range()
@@ -66,7 +66,7 @@ export class Box {
         let textBaseline: CanvasTextBaseline
         const {startRow: y} = this.position
         // set default to center
-        const alignY = vertical ?? 'Center'
+        const alignY = vertical ?? 'center'
         switch (alignY) {
             // 靠上
             case 'top':

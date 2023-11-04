@@ -5,7 +5,7 @@ name = "xmldiff"
 version = "0.3.0"
 license = "MIT"
 description = "compare 2 .xml files and show their differences"
-repository = "https://github.com/proclml/LogiSheets/crates/xmldiff"
+repository = "https://github.com/logisky/LogiSheets/crates/xmldiff"
 
 [dependencies]
 quick-xml = { version = "0.28", features = ["serialize"] }

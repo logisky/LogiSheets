@@ -1,5 +1,4 @@
 use logisheets_base::async_func::Task;
-use serde::Serialize;
 
 use self::style_payload::{StyleUpdate, StyleUpdateType};
 
@@ -9,9 +8,11 @@ pub mod style_payload;
 pub type Converter<'a> = converter::Converter<'a>;
 
 /// `EditAction` represents your update behavior to the workbook.
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "edit_action.ts"))]
+#[derive(Debug)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "edit_action.ts")
+)]
 pub enum EditAction {
     Undo,
     Redo,
@@ -26,13 +27,11 @@ pub enum EditAction {
 /// An `EditPayload` represents an atomic update of a workbook and they will be
 /// executed in sequence. That means it is a totally different result between
 /// updating a cell at B4 before inserting and after inserting.
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "payloads_action.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "payloads_action.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct PayloadsAction {
     pub payloads: Vec<EditPayload>,
     pub undoable: bool,
@@ -40,9 +39,11 @@ pub struct PayloadsAction {
 
 /// `EditPayload` is the basic update unit of the Workbook. Developers can config their own
 /// `EditAction` (e.g. setting a button to create a table) to facilitate their users.
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "payload.ts"))]
+#[derive(Debug)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "payload.ts")
+)]
 pub enum EditPayload {
     BlockInput(BlockInput),
     BlockStyleUpdate(BlockStyleUpdate),
@@ -62,34 +63,32 @@ pub enum EditPayload {
 }
 
 /// Insert a new sheet or delele an existed sheet.
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "sheet_shift.ts"))]
+#[derive(Debug)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "sheet_shift.ts")
+)]
 pub struct SheetShift {
     pub idx: usize,
     pub insert: bool,
 }
 
 /// Find a sheet by its name and rename it. If no sheet is found, do nothing.
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "sheet_rename.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "sheet_rename.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct SheetRename {
     pub old_name: String,
     pub new_name: String,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "row_shift.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "row_shift.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct RowShift {
     pub sheet_idx: usize,
     pub row: usize,
@@ -97,13 +96,11 @@ pub struct RowShift {
     pub insert: bool,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "col_shift.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "col_shift.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct ColShift {
     pub sheet_idx: usize,
     pub col: usize,
@@ -112,13 +109,11 @@ pub struct ColShift {
 }
 
 /// Take the `content` as input to the cell. The type of the `content` can be referred automatically.
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "cell_input.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "cell_input.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct CellInput {
     pub sheet_idx: usize,
     pub row: usize,
@@ -131,13 +126,11 @@ pub struct CellInput {
 /// Note that the block id is assigned by you. You are supposed to
 /// manage all your blocks. If the `block id` is already existed, engines
 /// will remove the old one.
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "create_block.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "create_block.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct CreateBlock {
     pub sheet_idx: usize,
     pub id: usize,
@@ -147,39 +140,33 @@ pub struct CreateBlock {
     pub col_cnt: usize,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "set_row_height.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "set_row_height.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct SetRowHeight {
     pub sheet_idx: usize,
     pub row: usize,
     pub height: f64,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "set_col_width.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "set_col_width.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct SetColWidth {
     pub sheet_idx: usize,
     pub col: usize,
     pub width: f64,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "move_block.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "move_block.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct MoveBlock {
     pub sheet_idx: usize,
     pub id: usize,
@@ -187,25 +174,21 @@ pub struct MoveBlock {
     pub new_master_col: usize,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "remove_block.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "remove_block.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct RemoveBlock {
     pub sheet_idx: usize,
     pub id: usize,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "block_input.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "block_input.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct BlockInput {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -214,13 +197,11 @@ pub struct BlockInput {
     pub input: String,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "line_shift_in_block.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "line_shift_in_block.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct LineShiftInBlock {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -230,13 +211,11 @@ pub struct LineShiftInBlock {
     pub insert: bool,
 }
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "block_style_update.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "block_style_update.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct BlockStyleUpdate {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -245,13 +224,11 @@ pub struct BlockStyleUpdate {
     pub style_update: StyleUpdateType,
 }
 
-#[derive(Default, Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Default, Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "set_visible.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "set_visible.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct SetVisible {
     pub is_row: bool,
     pub sheet_idx: usize,
@@ -265,16 +242,70 @@ pub struct SetVisible {
 /// What's more, since `LogiSheets` provides developers with the ability
 /// of developing their own functions, in these cases, `engine` will not know
 /// how to compute them and just return it the JS side.
-#[derive(Default, Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Default, Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "action_effect.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "action_effect.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct ActionEffect {
-    // The latest version after processing an action
+    /// The latest version after processing an action
     pub version: u32,
-    // Tasks should be calculated outside this engine(because of async limitted)
+    /// Tasks should be calculated outside this engine(because of async limitted)
     pub async_tasks: Vec<Task>,
+    pub status: StatusCode,
+}
+
+impl ActionEffect {
+    pub fn from_bool(b: bool) -> Self {
+        ActionEffect {
+            status: StatusCode::Ok(b),
+            ..Default::default()
+        }
+    }
+
+    pub fn from_err(e: u8) -> Self {
+        ActionEffect {
+            status: StatusCode::Err(e),
+            ..Default::default()
+        }
+    }
+
+    pub fn from(version: u32, tasks: Vec<Task>) -> Self {
+        ActionEffect {
+            version,
+            async_tasks: tasks,
+            status: StatusCode::Ok(true),
+        }
+    }
+}
+
+/// The results of the tasks which are passed to JS side to calculate previously.
+#[derive(Default, Debug)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "async_func_result.ts")
+)]
+pub struct AsyncFuncResult {
+    pub tasks: Vec<Task>,
+    /// These strings can be numbers, strings and other things.
+    /// Note that now error types are hardcoded, which means if the
+    /// value is equal to the a specific string like `#TIMEOUT!`,
+    /// it is reagarded as an error.
+    pub values: Vec<String>,
+}
+
+#[derive(Debug)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "status_code.ts")
+)]
+pub enum StatusCode {
+    Ok(bool), // when there is no other history version for undo/redo, return false.
+    Err(u8),
+}
+
+impl Default for StatusCode {
+    fn default() -> Self {
+        Self::Ok(true)
+    }
 }
