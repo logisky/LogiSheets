@@ -1,5 +1,5 @@
 [package]
-authors = ["Jiangming He"]
+authors = ["Jeremy He<yiliang.he@qq.com>"]
 edition = "2018"
 name = "logisheets_wasm_server"
 version = "0.3.0"
@@ -31,9 +31,9 @@ console_error_panic_hook = {version = "0.1.6", optional = true}
 # Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
 wee_alloc = {version = "0.4.5", optional = true}
 
-logisheets_controller = {version = "*", path = "../../../crates/controller"}
-logisheets_base = {version = "*", path = "../../../crates/controller/base"}
-logisheets_workbook = {version = "*", path = "../../../crates/workbook"}
+logisheets_controller = {version = "*", path = "../../controller", features = ["gents"]}
+logisheets_base = {version = "*", path = "../../controller/base"}
+logisheets_workbook = {version = "*", path = "../../workbook"}
 
 xmlserde = {version = "0.5.5"}
 

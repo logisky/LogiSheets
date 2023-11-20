@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 
 import {Subject} from 'rxjs'
-import {AsyncFuncResult} from './jsvalues'
-import {Task} from 'src/bindings'
+import {Task, AsyncFuncResult} from '@logisheets_bg'
 
-export type Executor = (args: readonly string[]) => Promise<string | CalcException>
+export type Executor = (
+    args: readonly string[]
+) => Promise<string | CalcException>
 type FuncName = string
 
 // Calculator is responsible for calculating the functions defined customly by users.
@@ -12,24 +13,29 @@ type FuncName = string
 export class Calculator {
     public constructor() {
         this.input$.subscribe(async (tasks): Promise<void> => {
-            const promises = tasks.tasks.map(t => this.calc(t.asyncFunc, t.args))
-            Promise.all(promises).then(values => {
+            const promises = tasks.tasks.map((t) =>
+                this.calc(t.asyncFunc, t.args)
+            )
+            Promise.all(promises).then((values) => {
                 const res = values.map((v): string => {
                     if (typeof v === 'string') {
                         return v
                     }
                     switch (v) {
-                    case CalcException.ArgErr:
-                        return '#ARGERR!'
-                    case CalcException.TimeOut:
-                        return '#TIMEOUT!'
-                    case CalcException.NotFound:
-                        return '#NOTFOUND!'
-                    default:
-                        return '#UNKNOWN!'
+                        case CalcException.ArgErr:
+                            return '#ARGERR!'
+                        case CalcException.TimeOut:
+                            return '#TIMEOUT!'
+                        case CalcException.NotFound:
+                            return '#NOTFOUND!'
+                        default:
+                            return '#UNKNOWN!'
                     }
                 })
-                const asyncFuncResult: AsyncFuncResult = {tasks: tasks.tasks,  values: res}
+                const asyncFuncResult: AsyncFuncResult = {
+                    tasks: tasks.tasks,
+                    values: res,
+                }
                 this.output$.next(asyncFuncResult)
             })
         })
@@ -40,7 +46,7 @@ export class Calculator {
 
     public async calc(
         func: FuncName,
-        args: readonly string[],
+        args: readonly string[]
     ): Promise<string | CalcException> {
         const executor = this._registry.get(func)
         if (executor === undefined) {
@@ -64,7 +70,5 @@ export const enum CalcException {
 }
 
 export class Tasks {
-    public constructor(
-        public readonly tasks: readonly Task[],
-    ) {}
+    public constructor(public readonly tasks: readonly Task[]) {}
 }

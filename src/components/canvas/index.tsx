@@ -34,7 +34,7 @@ import {BlurEvent, TextContainerComponent} from '@/components/textarea'
 import {DndComponent} from '@/components/dnd'
 import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons} from '@/core'
-import {CellInputBuilder} from '@/api'
+import {CellInputBuilder} from '@logisheets_bg'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
 import {

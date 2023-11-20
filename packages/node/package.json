@@ -1,0 +1,26 @@
+{
+  "name": "logisheets",
+  "version": "1.0.0",
+  "description": "Read and write the xlsx files",
+  "main": "index.js",
+  "scripts": {
+    "wasm-build": "wasm-pack build ../crates/wasms/server --out-dir ../../../packages/node/wasm --target nodejs",
+    "link": "rm -rf ./src && cp -r ../web/src ./src",
+    "prepublishOnly": "yarn link && yarn wasm-build",
+    "prepare": "yarn link && yarn wasm-build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/logisky/LogiSheets.git"
+  },
+  "keywords": [
+    "xlsx",
+    "spreadsheets"
+  ],
+  "author": "Jeremy He<yiliang.he@qq.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/logisky/LogiSheets/issues"
+  },
+  "homepage": "https://github.com/logisky/LogiSheets"
+}

@@ -5,7 +5,7 @@ edition = "2018"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 
 [dependencies]
-gents = "0.6.0"
+gents = "0.7.0"
 
 logisheets_controller = {path = "../controller", features = ["gents"]}
 logisheets_sequencer = {path = "../sequencer", features = ["gents"]}

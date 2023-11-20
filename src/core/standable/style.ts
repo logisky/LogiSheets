@@ -5,7 +5,7 @@ import {
     Fill,
     Style,
     CtCellProtection,
-} from '@/bindings'
+} from '@logisheets_bg'
 import {shallowCopy} from '@/core'
 import {StandardFont} from './font'
 

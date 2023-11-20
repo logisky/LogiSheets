@@ -2,10 +2,11 @@ import {
     ActionEffect,
     DisplayRequest,
     DisplayResponse,
-    EditAction,
-} from '../bindings'
+    Transaction,
+} from '@logisheets_bg'
 export type ClientRequest =
-    | {$case: 'transaction'; transaction: EditAction}
+    | {$case: 'transaction'; transaction: Transaction}
+    | {$case: 'history'; undo: boolean}
     | {$case: 'displayRequest'; displayRequest: DisplayRequest}
     | {$case: 'openFile'; openFile: OpenFile}
 

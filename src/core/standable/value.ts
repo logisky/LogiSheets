@@ -1,4 +1,4 @@
-import {Value} from '@/bindings'
+import {Value} from '@logisheets_bg'
 import {hasOwnProperty} from '@/core'
 export class StandardValue {
     cellValueOneof?:

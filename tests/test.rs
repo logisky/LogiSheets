@@ -41,7 +41,7 @@ mod test_builtin_style {
         use logisheets_controller::Fill;
         use std::fs;
         let mut buf = fs::read("tests/builtin_style.xlsx").unwrap();
-        let mut wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
+        let wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
         let ws = wb.get_sheet_by_idx(0).unwrap();
         let s = ws.get_style(3, 1).unwrap();
         match s.fill {
@@ -63,7 +63,7 @@ mod test_6 {
         use logisheets::{Value, Workbook};
         use std::fs;
         let mut buf = fs::read("tests/6.xlsx").unwrap();
-        let mut wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
+        let wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
         let ws = wb.get_sheet_by_idx(0).unwrap();
         let v = ws.get_value(9, 1).unwrap();
         match v {
@@ -99,7 +99,7 @@ mod test_6 {
         use logisheets::Workbook;
         use std::fs;
         let mut buf = fs::read("tests/6.xlsx").unwrap();
-        let mut wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
+        let wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
         let ws = wb.get_sheet_by_idx(0).unwrap();
         let f = ws.get_formula(9, 1).unwrap();
         assert_eq!(f, "B18")
@@ -110,7 +110,7 @@ mod test_6 {
         use logisheets::{StUnderlineValues, Workbook};
         use std::fs;
         let mut buf = fs::read("tests/6.xlsx").unwrap();
-        let mut wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
+        let wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
         let ws = wb.get_sheet_by_idx(0).unwrap();
         let style = ws.get_style(9, 1).unwrap();
         let underline = style.font.underline.unwrap().val;
@@ -128,7 +128,7 @@ mod test_6 {
         use logisheets::Workbook;
         use std::fs;
         let mut buf = fs::read("tests/builtin_style.xlsx").unwrap();
-        let mut wb = Workbook::from_file(&mut buf, String::from("builtin_style")).unwrap();
+        let wb = Workbook::from_file(&mut buf, String::from("builtin_style")).unwrap();
         let ws = wb.get_sheet_by_idx(0).unwrap();
         let (row_cnt, col_cnt) = ws.get_sheet_dimension();
         for r in 0..row_cnt {

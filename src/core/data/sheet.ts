@@ -6,7 +6,7 @@ import {
     RowInfo,
     Style,
     Value,
-} from '@/bindings'
+} from '@logisheets_bg'
 import {
     StandardBlock,
     StandardRowInfo,

@@ -1,10 +1,7 @@
-use serde::{Deserialize, Serialize};
-
 use crate::{CellId, SheetId};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "task.ts", rename_all = "camelCase"))]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "task.ts"))]
 pub struct Task {
     pub async_func: String,
     pub args: Vec<String>,
@@ -16,6 +13,7 @@ pub type AsyncCalcResult = Result<String, AsyncErr>;
 pub enum AsyncErr {
     ArgErr,
     TimeOut,
+    NotFound,
 }
 
 pub trait AsyncFuncCommitTrait {

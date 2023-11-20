@@ -10,9 +10,10 @@ import {
     SheetRowInfo,
     SheetStyles,
     SheetValues,
-} from '@/bindings'
+    Transaction,
+} from '@logisheets_bg'
 import {ClientRequest, ServerResponse} from '@/message'
-import {Payload, PayloadsTransaction, adaptTransaction} from '@/api'
+import {Payload} from '@logisheets_bg'
 import {hasOwnProperty} from '@/core'
 import {SheetService} from '@/core/data/sheet'
 import {Service as StandAloneService} from '@/wasm_svc/service'
@@ -38,7 +39,7 @@ export class Backend {
 
     send$ = new ReplaySubject<Blob>(5)
     handleResponse(msg: ServerResponse) {
-        this._handleServerSend(msg)
+        this._handleServerResponse(msg)
     }
     /**
      * Send payloads to backend for transaction.
@@ -46,8 +47,7 @@ export class Backend {
      */
     sendTransaction(payloads: Payload[], undoable = true) {
         if (payloads.length === 0) return
-        const t = new PayloadsTransaction(payloads, undoable)
-        const msg = adaptTransaction(t)
+        const msg = new Transaction(payloads, undoable)
         this.send({$case: 'transaction', transaction: msg})
     }
 
@@ -59,7 +59,7 @@ export class Backend {
     // Server notifies the latest version.
     private _version$ = new Subject<number>()
     private _wasmSvc = new StandAloneService([])
-    private _handleServerSend(serverSend: ServerResponse) {
+    private _handleServerResponse(serverSend: ServerResponse) {
         if (serverSend.$case === 'displayResponse') {
             const e = serverSend.displayResponse
             if (!e.incremental) {

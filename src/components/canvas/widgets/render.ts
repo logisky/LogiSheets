@@ -9,7 +9,7 @@ import {useInjection} from '@/core/ioc/provider'
 import {RefObject, useEffect, useRef} from 'react'
 import {Subscription} from 'rxjs'
 import {EventType, on} from '@/core/events'
-import {PatternFill} from '@/bindings'
+import {PatternFill} from '@logisheets_bg'
 
 interface RenderProps {
     readonly canvas: RefObject<HTMLCanvasElement>

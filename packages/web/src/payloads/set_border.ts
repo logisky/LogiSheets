@@ -1,4 +1,4 @@
-import {StBorderStyle} from '@/bindings'
+import {StBorderStyle} from '../bindings'
 export interface SetBorder {
     readonly type: 'setBorder'
     readonly sheetIdx: number

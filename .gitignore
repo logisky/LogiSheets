@@ -24,3 +24,7 @@ tests_output
 
 # bazel related
 /bazel-*
+
+.vscode
+
+/packages/node/src

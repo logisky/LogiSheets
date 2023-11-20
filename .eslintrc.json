@@ -24,8 +24,9 @@
     "ignorePatterns": [
         "craco.config.js",
         "src/bindings/**/*",
-        "src/wasm_svc/**/*",
-        "src/wasms/**/*"
+        "crates/wasms/**/*",
+        "packages/**/bindings/**/*",
+        "packages/**/wasm/**/*"
     ],
     "rules": {
         "max-lines": ["off"],
@@ -33,6 +34,6 @@
         "no-console": "error",
         "no-alert": "error",
         "no-debugger": "error",
-        "@typescript-eslint/no-unused-vars": "off" 
+        "@typescript-eslint/no-unused-vars": "off"
     }
 }

@@ -3,7 +3,7 @@ import {Backend, DataService, RenderCell, SheetService} from '@/core/data'
 import {Range} from '@/core/standable'
 import {RefObject, useRef, useState} from 'react'
 import {getOffset} from '../defs'
-import {SetColWidthBuilder, SetRowHeightBuilder} from '@/api'
+import {SetColWidthBuilder, SetRowHeightBuilder} from '@logisheets_bg'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 interface ResizerProps {

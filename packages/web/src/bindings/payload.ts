@@ -18,18 +18,18 @@ import {StyleUpdate} from './style_update'
 // `EditPayload` is the basic update unit of the Workbook. Developers can config their own
 // `EditAction` (e.g. setting a button to create a table) to facilitate their users.
 export type EditPayload =
-    | {BlockInput: BlockInput}
-    | {BlockStyleUpdate: BlockStyleUpdate}
-    | {CellInput: CellInput}
-    | {ColShift: ColShift}
-    | {CreateBlock: CreateBlock}
-    | {LineShiftInBlock: LineShiftInBlock}
-    | {MoveBlock: MoveBlock}
-    | {RemoveBlock: RemoveBlock}
-    | {RowShift: RowShift}
-    | {SetColWidth: SetColWidth}
-    | {SetRowHeight: SetRowHeight}
-    | {SetVisible: SetVisible}
-    | {SheetRename: SheetRename}
-    | {SheetShift: SheetShift}
-    | {StyleUpdate: StyleUpdate}
+    | {blockInput: BlockInput}
+    | {blockStyleUpdate: BlockStyleUpdate}
+    | {cellInput: CellInput}
+    | {colShift: ColShift}
+    | {createBlock: CreateBlock}
+    | {lineShiftInBlock: LineShiftInBlock}
+    | {moveBlock: MoveBlock}
+    | {removeBlock: RemoveBlock}
+    | {rowShift: RowShift}
+    | {setColWidth: SetColWidth}
+    | {setRowHeight: SetRowHeight}
+    | {setVisible: SetVisible}
+    | {sheetRename: SheetRename}
+    | {sheetShift: SheetShift}
+    | {styleUpdate: StyleUpdate}

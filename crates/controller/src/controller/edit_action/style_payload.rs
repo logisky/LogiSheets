@@ -1,14 +1,11 @@
 use super::super::style::PatternFill;
 use logisheets_workbook::prelude::*;
-use serde::Serialize;
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "style_update.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "style_update.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct StyleUpdate {
     pub sheet_idx: usize,
     pub row: usize,
@@ -18,13 +15,11 @@ pub struct StyleUpdate {
 
 pub type Color = String;
 
-#[derive(Debug, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[derive(Debug)]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "style_update_type.ts", rename_all = "camelCase")
+    gents_derives::gents_header(file_name = "style_update_type.ts")
 )]
-#[serde(rename_all = "camelCase")]
 pub struct StyleUpdateType {
     pub set_font_bold: Option<bool>,
     pub set_font_italic: Option<bool>,
