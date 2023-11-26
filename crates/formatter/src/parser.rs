@@ -1,6 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::{CharType, FmtChar};
+
 lazy_static! {
     static ref NUMBER_PLACEHOLDER_REGEX: Regex = Regex::new(r#"^[?#0]+"#).unwrap();
     static ref COMMA_REGEX: Regex = Regex::new(r#"^,+"#).unwrap();
@@ -30,7 +32,7 @@ impl Parser {
             curr += seg.len();
             idx += 1;
 
-            segments[idx] = seg;
+            segments.push(seg);
         }
 
         let mut iter = segments.into_iter();
@@ -50,10 +52,10 @@ impl Parser {
 pub struct Segment {
     pub tokens: Vec<Token>,
 
-    last_comma: i8,
-    first_dot: i8,
-    slash: i8,
-    len: usize,
+    pub last_comma: i8,
+    pub first_dot: i8,
+    pub slash: i8,
+    pub len: usize,
 }
 
 impl Segment {
@@ -86,6 +88,9 @@ impl Segment {
     }
 
     pub fn add_token<'a>(&mut self, s: &'a str) -> Result<ParsingSegment<'a>, ()> {
+        if s.is_empty() {
+            return Ok(ParsingSegment::Stop(s));
+        }
         let mut stop = false;
         let size = if let Some(r) = NUMBER_PLACEHOLDER_REGEX.find(s) {
             let holders = r.as_str().to_string();
@@ -157,4 +162,54 @@ pub enum Token {
     Comma(u8),
     Dot(u8),
     Slash,
+}
+
+impl Token {
+    pub fn comma_len(&self) -> u8 {
+        if let Token::Comma(i) = self {
+            return *i;
+        }
+        panic!("")
+    }
+
+    pub fn to_fmt_char(&self) -> FmtChar {
+        match self {
+            Token::Display(c) => FmtChar {
+                c: c.clone(),
+                char_type: CharType::None,
+            },
+            Token::NumberPlaceHolder(c) => FmtChar {
+                c: c.clone(),
+                char_type: CharType::None,
+            },
+            Token::Underscore(u) => FmtChar {
+                c: u.to_string(),
+                char_type: CharType::Underscore,
+            },
+            Token::Comma(c) => FmtChar {
+                c: ",".repeat(*c as usize).to_string(),
+                char_type: CharType::None,
+            },
+            Token::Dot(c) => FmtChar {
+                c: ".".repeat(*c as usize).to_string(),
+                char_type: CharType::None,
+            },
+            Token::Slash => FmtChar {
+                c: "/".to_string(),
+                char_type: CharType::None,
+            },
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn parse_test() {
+        let s = "###,###";
+        let mut parser = Parser {};
+        let result = parser.parse(&s).first;
+        assert_eq!(result.tokens.len(), 3);
+    }
 }
