@@ -2,13 +2,13 @@
 use crate::{FmtChar, FormattedString, Segment, Token};
 
 pub fn render_number(mut num: f64, seg: Segment) -> FormattedString {
-    if seg.tokens.len() as i8 == seg.last_comma && seg.first_dot < 0 {
-        let tok = seg.tokens.get(seg.last_comma as usize).unwrap();
-        let len = tok.comma_len() as f64;
-        num = num / 1000f64.powf(len);
-    }
     let mut result: Vec<FmtChar> = vec![];
     if seg.slash < 0 {
+        if seg.tokens.len() as i8 == seg.last_comma && seg.first_dot < 0 {
+            let tok = seg.tokens.get(seg.last_comma as usize).unwrap();
+            let len = tok.comma_len() as f64;
+            num = num / 1000f64.powf(len);
+        }
         // Find out how many digits there are after the decimal point
         let dot_idx = if seg.first_dot < 0 {
             seg.tokens.len()
@@ -18,7 +18,7 @@ pub fn render_number(mut num: f64, seg: Segment) -> FormattedString {
         let mut digits = 0;
         for i in dot_idx..seg.tokens.len() {
             let tok = seg.tokens.get(i).unwrap();
-            if let Token::NumberPlaceHolder(s) = tok {
+            if let Token::NumberPlaceholder(s) = tok {
                 digits += s.len();
             }
         }
@@ -32,7 +32,7 @@ pub fn render_number(mut num: f64, seg: Segment) -> FormattedString {
         for j in dot_idx..=0 {
             let tok = seg.tokens.get(j).unwrap();
             let fmt_char = match tok {
-                Token::NumberPlaceHolder(s) => {
+                Token::NumberPlaceholder(s) => {
                     let l = s.len();
                     let (first, second) = split_u64(integer_part, l);
                     integer_part = first;
@@ -46,7 +46,7 @@ pub fn render_number(mut num: f64, seg: Segment) -> FormattedString {
         for k in dot_idx + 1..seg.tokens.len() {
             let tok = seg.tokens.get(k).unwrap();
             let fmt_char = match tok {
-                Token::NumberPlaceHolder(s) => {
+                Token::NumberPlaceholder(s) => {
                     let l = s.len();
                     digits = digits - l;
                     let (first, second) = split_u64(decimal_part, digits);
@@ -63,7 +63,75 @@ pub fn render_number(mut num: f64, seg: Segment) -> FormattedString {
             color: None,
         };
     }
-    todo!()
+
+    let mut integer: Option<usize> = None;
+    let mut numerator: Option<usize> = None;
+    let mut denominator: Option<usize> = None;
+    // Find out the placeholders of `integer`, `numerator`. `denominator`
+    for i in 0..seg.tokens.len() {
+        let idx = i as i8;
+        if idx == seg.slash {
+            continue;
+        }
+        let tok = seg.tokens.get(i).unwrap();
+        if let Token::NumberPlaceholder(_) = tok {
+            if idx < seg.slash {
+                if integer.is_none() {
+                    integer = Some(i);
+                } else if numerator.is_none() {
+                    numerator = Some(i);
+                } else {
+                    integer = numerator;
+                    numerator = Some(i);
+                }
+            } else {
+                if denominator.is_none() {
+                    denominator = Some(i);
+                    break;
+                }
+            }
+        }
+    }
+
+    // If denomintaor is None, regard the slash as a display token and render it again.
+    if denominator.is_none() {
+        let mut new_seg = seg;
+        let mut slash_tok = new_seg.tokens.get_mut(new_seg.slash as usize).unwrap();
+        let mut tok = Token::Display("/".to_string());
+        std::mem::swap(&mut tok, &mut slash_tok);
+        new_seg.slash = -1;
+        return render_number(num, new_seg);
+    }
+
+    let (n, den, i) = if integer.is_some() {
+        let i = num.trunc() as u64;
+        let d = num - num.trunc();
+        let (n, den) = find_fraction(d);
+        (n, den, i)
+    } else {
+        let (n, den) = find_fraction(num);
+        (n, den, 0)
+    };
+    for j in 0..seg.tokens.len() {
+        let tok = seg.tokens.get(j).unwrap();
+        let c = if j == integer.unwrap_or(seg.tokens.len()) {
+            let ph = tok.downcast_placeholder();
+            render_placeholders_before_dot(i, ph, seg.last_comma >= 0)
+        } else if j == denominator.unwrap() {
+            let ph = tok.downcast_placeholder();
+            render_placeholders_before_dot(den, ph, seg.last_comma >= 0)
+        } else if j == numerator.unwrap() {
+            let ph = tok.downcast_placeholder();
+            render_placeholders_before_dot(n, ph, seg.last_comma >= 0)
+        } else {
+            tok.to_fmt_char()
+        };
+        result.push(c)
+    }
+    FormattedString {
+        color: None,
+        chars: result,
+    }
 }
 
 pub fn render_placeholders_before_dot(num: u64, placeholder: &str, has_comma: bool) -> FmtChar {
@@ -136,6 +204,18 @@ pub fn render_placeholders_after_dot(num: u64, placeholder: &str) -> FmtChar {
     }
 }
 
+fn find_fraction_approximately(decimal: f64, denominator_digits: u8) -> (u64, u64) {
+    let (numerator, denominator) = find_fraction(decimal);
+    let curr_digits = get_digits(denominator);
+    if curr_digits <= denominator_digits {
+        return (numerator, denominator);
+    }
+    // use a nicer solution
+    let base = 10_f64.powf(curr_digits as f64);
+    let round = (decimal * base).round() / 10_f64.powf(curr_digits as f64);
+    return find_fraction(round);
+}
+
 fn find_fraction(decimal: f64) -> (u64, u64) {
     const MAX_DIGITS: u64 = 1_000_000;
 
@@ -168,9 +248,32 @@ fn split_u64(n: u64, digits: usize) -> (u64, u64) {
     (first, second)
 }
 
+#[inline]
+fn get_digits(n: u64) -> u8 {
+    let mut curr = n;
+    let mut r = 0;
+    while curr > 0 {
+        r += 1;
+        curr /= 10;
+    }
+    r
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::parser::Parser;
+
     use super::*;
+
+    #[test]
+    fn test_fraction() {
+        let n = 1.75;
+        let fmt = "# #/#";
+        let mut parser = Parser {};
+        let seg = parser.parse(fmt).first;
+        let fmt_str = render_number(n, seg).to_string();
+        assert_eq!(fmt_str, "1 3/4")
+    }
 
     #[test]
     fn find_fraction_test() {
