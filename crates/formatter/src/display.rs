@@ -3,6 +3,16 @@ pub struct FormattedString {
     pub color: Option<u8>,
 }
 
+impl FormattedString {
+    pub fn to_string(&self) -> String {
+        self.chars.iter().fold(String::from(""), |mut prev, c| {
+            let s = &c.c;
+            prev.push_str(s);
+            prev
+        })
+    }
+}
+
 pub struct FmtChar {
     pub c: String,
     pub char_type: CharType,

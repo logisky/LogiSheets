@@ -11,6 +11,7 @@ lazy_static! {
     static ref LITERAL_REGEX: Regex = Regex::new(r#"^"(.*)""#).unwrap();
     static ref SEMICOLON_REGEX: Regex = Regex::new(r#"^;"#).unwrap();
     static ref UNDERSCORE_REGEX: Regex = Regex::new(r#"^_(.)?"#).unwrap();
+    static ref DISPLAYED_REGEX: Regex = Regex::new(r#"^[$\-+()!:~{}= '&]+"#).unwrap();
 }
 
 pub struct ParseResult {
@@ -94,7 +95,7 @@ impl Segment {
         let mut stop = false;
         let size = if let Some(r) = NUMBER_PLACEHOLDER_REGEX.find(s) {
             let holders = r.as_str().to_string();
-            let token = Token::NumberPlaceHolder(holders);
+            let token = Token::NumberPlaceholder(holders);
             self.tokens.push(token);
             r.len()
         } else if let Some(r) = COMMA_REGEX.find(s) {
@@ -133,6 +134,11 @@ impl Segment {
             let token = Token::Underscore(c);
             self.tokens.push(token);
             r.len()
+        } else if let Some(r) = DISPLAYED_REGEX.find(s) {
+            let s = &r.as_str();
+            let token = Token::Display(s.to_string());
+            self.tokens.push(token);
+            r.len()
         } else {
             return Err(());
         };
@@ -157,7 +163,7 @@ pub enum ParsingSegment<'a> {
 #[derive(Debug)]
 pub enum Token {
     Display(String),
-    NumberPlaceHolder(String),
+    NumberPlaceholder(String),
     Underscore(char),
     Comma(u8),
     Dot(u8),
@@ -172,13 +178,21 @@ impl Token {
         panic!("")
     }
 
+    pub fn downcast_placeholder(&self) -> &str {
+        if let Token::NumberPlaceholder(s) = self {
+            s
+        } else {
+            panic!("Not number placeholders")
+        }
+    }
+
     pub fn to_fmt_char(&self) -> FmtChar {
         match self {
             Token::Display(c) => FmtChar {
                 c: c.clone(),
                 char_type: CharType::None,
             },
-            Token::NumberPlaceHolder(c) => FmtChar {
+            Token::NumberPlaceholder(c) => FmtChar {
                 c: c.clone(),
                 char_type: CharType::None,
             },
