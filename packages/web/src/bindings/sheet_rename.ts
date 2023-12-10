@@ -2,6 +2,7 @@
 
 // Find a sheet by its name and rename it. If no sheet is found, do nothing.
 export interface SheetRename {
-    oldName: string
+    oldName: string | null
+    idx: number | null
     newName: string
 }

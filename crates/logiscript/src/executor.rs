@@ -142,7 +142,8 @@ fn exec_switch(ctx: &mut ExecContext, switch: Switch, _line: usize) -> Option<Ex
                             insert: true,
                         }),
                         EditPayload::SheetRename(SheetRename {
-                            old_name: String::from("Sheet2"),
+                            idx: None,
+                            old_name: Some(String::from("Sheet2")),
                             new_name: switch.sheet.clone(),
                         }),
                     ],

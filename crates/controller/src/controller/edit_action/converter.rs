@@ -43,7 +43,13 @@ impl<'a> Converter<'a> {
                 EditPayload::BlockInput(_) => todo!(),
                 EditPayload::BlockStyleUpdate(_) => todo!(),
                 EditPayload::SheetRename(sheet_rename) => {
+                    let sheet_id = if let Some(idx) = sheet_rename.idx {
+                        self.sheet_pos_manager.get_sheet_id(idx)
+                    } else {
+                        None
+                    };
                     Some(Process::SheetRename(SheetRenamePayload {
+                        sheet_id,
                         old_name: sheet_rename.old_name,
                         new_name: sheet_rename.new_name,
                     }))

@@ -80,7 +80,8 @@ pub struct SheetShift {
     gents_derives::gents_header(file_name = "sheet_rename.ts")
 )]
 pub struct SheetRename {
-    pub old_name: String,
+    pub old_name: Option<String>,
+    pub idx: Option<usize>,
     pub new_name: String,
 }
 
@@ -250,7 +251,7 @@ pub struct SetVisible {
 pub struct ActionEffect {
     /// The latest version after processing an action
     pub version: u32,
-    /// Tasks should be calculated outside this engine(because of async limitted)
+    /// Tasks should be calculated outside this engine(mainly because of network limitations and customer defined)
     pub async_tasks: Vec<Task>,
     pub status: StatusCode,
 }
