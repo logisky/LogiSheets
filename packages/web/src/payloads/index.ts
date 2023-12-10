@@ -1,13 +1,16 @@
-import {CreateBlock} from './create_block'
+import {BlockInput} from './block_input'
 import {CellInput} from './cell_input'
+import {CreateBlock} from './create_block'
 import {DeleteBlockCols} from './delete_block_cols'
 import {DeleteBlockRows} from './delete_block_rows'
 import {DeleteCols} from './delete_cols'
 import {DeleteRows} from './delete_rows'
+import {DeleteSheet} from './delete_sheet'
 import {InsertBlockCols} from './insert_block_cols'
 import {InsertBlockRows} from './insert_block_rows'
 import {InsertCols} from './insert_cols'
 import {InsertRows} from './insert_rows'
+import {InsertSheet} from './insert_sheet'
 import {MoveBlock} from './move_block'
 import {SetBorder} from './set_border'
 import {SetColVisible} from './set_col_visible'
@@ -16,8 +19,6 @@ import {SetFont} from './set_font'
 import {SetRowHeight} from './set_row_height'
 import {SetRowVisible} from './set_row_visible'
 import {SheetRename} from './sheet_rename'
-import {DeleteSheet} from './delete_sheet'
-import {InsertSheet} from './insert_sheet'
 
 export * from './cell_input'
 export * from './create_block'
@@ -39,16 +40,22 @@ export * from './set_font'
 export * from './set_row_height'
 export * from './set_row_visible'
 export * from './sheet_rename'
+export * from './block_input'
+
 export type Payload =
+    | BlockInput
+    | CellInput
     | CreateBlock
     | DeleteBlockCols
     | DeleteBlockRows
     | DeleteCols
     | DeleteRows
+    | DeleteSheet
     | InsertBlockCols
     | InsertBlockRows
     | InsertCols
     | InsertRows
+    | InsertSheet
     | MoveBlock
     | SetBorder
     | SetColVisible
@@ -57,6 +64,3 @@ export type Payload =
     | SetRowHeight
     | SetRowVisible
     | SheetRename
-    | CellInput
-    | InsertSheet
-    | DeleteSheet

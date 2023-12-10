@@ -11,7 +11,7 @@ import {Task} from './task'
 export interface ActionEffect {
     // The latest version after processing an action
     version: number
-    // Tasks should be calculated outside this engine(because of async limitted)
+    // Tasks should be calculated outside this engine(mainly because of network limitations and customer defined)
     asyncTasks: readonly Task[]
     status: StatusCode
 }

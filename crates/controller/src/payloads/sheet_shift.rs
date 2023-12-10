@@ -15,6 +15,7 @@ pub enum SheetShiftType {
 
 #[derive(Debug, Clone)]
 pub struct SheetRenamePayload {
-    pub old_name: String,
+    pub sheet_id: Option<SheetId>,
+    pub old_name: Option<String>,
     pub new_name: String,
 }

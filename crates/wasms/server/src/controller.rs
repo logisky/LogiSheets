@@ -2,7 +2,7 @@ use logisheets_controller::controller::display::DisplayRequest;
 use logisheets_controller::controller::edit_action::style_payload::{StyleUpdate, StyleUpdateType};
 use logisheets_controller::controller::edit_action::{
     AsyncFuncResult, BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload,
-    MoveBlock, PayloadsAction, RowShift,
+    LineShiftInBlock, MoveBlock, PayloadsAction, RowShift, SheetRename, SheetShift,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StUnderlineValues};
@@ -442,6 +442,61 @@ pub fn block_input(
     };
     let mut manager = MANAGER.get_mut();
     manager.add_payload(id, EditPayload::BlockInput(bi));
+}
+
+#[wasm_bindgen]
+pub fn block_line_shift(
+    id: usize,
+    sheet_idx: usize,
+    block_id: usize,
+    start: usize,
+    cnt: usize,
+    horizontal: bool,
+    insert: bool,
+) {
+    init();
+    let p = LineShiftInBlock {
+        sheet_idx,
+        block_id,
+        idx: start,
+        cnt,
+        horizontal,
+        insert,
+    };
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, EditPayload::LineShiftInBlock(p));
+}
+
+#[wasm_bindgen]
+pub fn sheet_rename_by_name(id: usize, old_name: String, new_name: String) {
+    init();
+    let p = SheetRename {
+        idx: None,
+        old_name: Some(old_name),
+        new_name,
+    };
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, EditPayload::SheetRename(p));
+}
+
+#[wasm_bindgen]
+pub fn sheet_rename_by_idx(id: usize, idx: usize, new_name: String) {
+    init();
+    let p = SheetRename {
+        idx: Some(idx),
+        old_name: None,
+        new_name,
+    };
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, EditPayload::SheetRename(p));
+}
+
+#[wasm_bindgen]
+pub fn sheet_shift(id: usize, idx: usize, insert: bool) {
+    init();
+    let p = SheetShift { idx, insert };
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, EditPayload::SheetShift(p));
 }
 
 fn parse_async_value(s: String) -> AsyncCalcResult {

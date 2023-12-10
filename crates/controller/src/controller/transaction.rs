@@ -150,8 +150,19 @@ fn handle_recalc_proc(status: Status, dirty: Vec<(SheetId, CellId)>) -> (Status,
 
 fn handle_sheet_rename_payload(status: Status, payload: &SheetRenamePayload) -> Status {
     let mut res = status;
-    res.sheet_id_manager
-        .rename(&payload.old_name, payload.new_name.to_string());
+    if let Some(old_name) = &payload.old_name {
+        res.sheet_id_manager
+            .rename(old_name, payload.new_name.to_string());
+        return res;
+    }
+    if let Some(id) = payload.sheet_id {
+        let old_name = res.sheet_id_manager.get_string(&id);
+        if old_name.is_none() {
+            return res;
+        }
+        res.sheet_id_manager
+            .rename(&old_name.unwrap(), payload.new_name.to_string())
+    }
     res
 }
 

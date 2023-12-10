@@ -1,5 +1,4 @@
 import {Payload} from '../payloads'
-import {nullToUndefined} from '../utils'
 import {
     new_workbook,
     undo,
@@ -20,19 +19,12 @@ import {
     release,
     input_async_result,
     get_patches,
+    block_line_shift,
+    sheet_rename_by_idx,
+    sheet_rename_by_name,
+    sheet_shift,
 } from '../../wasm/logisheets_wasm_server'
-import {
-    ActionEffect,
-    AsyncFuncResult,
-    BlockInput,
-    CellInput,
-    ColShift,
-    CreateBlock,
-    DisplayResponse,
-    MoveBlock,
-    RowShift,
-    StyleUpdate,
-} from '../bindings'
+import {ActionEffect, AsyncFuncResult, DisplayResponse} from '../bindings'
 import {Transaction} from '../transactions'
 
 export type ReturnCode = number
@@ -140,6 +132,68 @@ export class Workbook {
                 p.strike,
                 p.condense
             )
+        if (p.type === 'blockInput')
+            return block_input(
+                this._id,
+                p.sheetIdx,
+                p.blockId,
+                p.row,
+                p.col,
+                p.input
+            )
+
+        if (p.type === 'insertBlockCols')
+            return block_line_shift(
+                this._id,
+                p.sheetIdx,
+                p.blockId,
+                p.colIdx,
+                p.cnt,
+                false,
+                true
+            )
+        if (p.type === 'insertBlockRows')
+            return block_line_shift(
+                this._id,
+                p.sheetIdx,
+                p.blockId,
+                p.rowIdx,
+                p.cnt,
+                true,
+                true
+            )
+        if (p.type === 'deleteBlockRows')
+            return block_line_shift(
+                this._id,
+                p.sheetIdx,
+                p.blockId,
+                p.rowIdx,
+                p.cnt,
+                true,
+                false
+            )
+        if (p.type === 'deleteBlockCols')
+            return block_line_shift(
+                this._id,
+                p.sheetIdx,
+                p.blockId,
+                p.colIdx,
+                p.cnt,
+                true,
+                true
+            )
+        if (p.type === 'sheetRename') {
+            if (p.oldName) {
+                return sheet_rename_by_name(this._id, p.oldName, p.newName)
+            }
+            if (p.idx) {
+                return sheet_rename_by_idx(this._id, p.idx, p.newName)
+            }
+        }
+        if (p.type === 'deleteSheet')
+            return sheet_shift(this._id, p.sheetIdx, false)
+        if (p.type === 'insertSheet')
+            return sheet_shift(this._id, p.sheetIdx, true)
         // if (hasOwnProperty(p, 'SheetShift')) {
         //     const sheetShift = p.SheetShift as SheetShift
         // }
@@ -147,11 +201,4 @@ export class Workbook {
         console.log('Unimplemented!')
     }
     private _id: number
-}
-
-function hasOwnProperty<T, K extends PropertyKey>(
-    obj: T,
-    prop: K
-): obj is T & Record<K, unknown> {
-    return Object.prototype.hasOwnProperty.call(obj, prop)
 }
