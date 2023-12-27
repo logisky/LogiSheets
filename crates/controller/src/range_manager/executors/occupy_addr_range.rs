@@ -1,23 +1,20 @@
-use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, CellId, NormalCellId,
-    NormalRange, Range, RangeId, SheetId,
-};
+use logisheets_base::{CellId, NormalCellId, NormalRange, Range, RangeId, SheetId};
 
-use crate::range_manager::{NewRange, RangeUpdateType, SheetRangeExecContext};
+use super::{NewRange, RangeExecCtx, RangeExecutor, RangeUpdateType};
 
 use super::utils::cut_and_get_new_bound;
 
 // A normal addr range would be occupied by a block and therefore some
 // ranges will be cut or removed.
 pub fn occupy_addr_range<C>(
-    exec_ctx: SheetRangeExecContext,
+    exec_ctx: RangeExecutor,
     sheet: SheetId,
     start: NormalCellId,
     end: NormalCellId,
-    ctx: &mut C,
-) -> SheetRangeExecContext
+    ctx: &C,
+) -> RangeExecutor
 where
-    C: IdFetcherTrait + IndexFetcherTrait,
+    C: RangeExecCtx,
 {
     let (occupy_start_row, occupy_start_col) = ctx.fetch_normal_cell_index(&sheet, &start).unwrap();
     let (occupy_end_row, occupy_end_col) = ctx.fetch_normal_cell_index(&sheet, &end).unwrap();
@@ -121,6 +118,6 @@ where
             }
         }
     };
-    let result = exec_ctx.normal_range_update(&mut func);
+    let result = exec_ctx.normal_range_update(&sheet, &mut func);
     result
 }

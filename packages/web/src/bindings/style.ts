@@ -9,7 +9,7 @@ export interface Style {
     font: Font
     fill: Fill
     border: Border
-    alignment: CtCellAlignment | null
-    protection: CtCellProtection | null
+    alignment?: CtCellAlignment
+    protection?: CtCellProtection
     formatter: string
 }

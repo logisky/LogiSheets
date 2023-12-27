@@ -15,8 +15,8 @@ thiserror = "1.0.48"
 
 logisheets_workbook = {version = "0.4.0", path = "../../workbook"}
 
-gents = {version = "0.7.0", optional = true}
-gents_derives = {version = "0.7.0", optional = true}
+gents = {version = "0.8.0", optional = true}
+gents_derives = {version = "0.8.0", optional = true}
 
 [features]
 gents = ["dep:gents", "dep:gents_derives"]

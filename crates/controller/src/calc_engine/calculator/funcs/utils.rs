@@ -149,7 +149,6 @@ pub fn get_nums_from_value(value: CalcValue) -> Result<Vec<f64>, ast::Error> {
 #[cfg(test)]
 pub mod tests_utils {
     use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
-    use logisheets_base::get_active_sheet::GetActiveSheetTrait;
     use logisheets_base::get_curr_addr::GetCurrAddrTrait;
     use logisheets_base::set_curr_cell::SetCurrCellTrait;
     use logisheets_base::SheetId;
@@ -171,15 +170,10 @@ pub mod tests_utils {
             None
         }
     }
-    impl GetActiveSheetTrait for TestFetcher {
-        fn get_active_sheet(&self) -> logisheets_base::SheetId {
-            todo!()
-        }
-    }
 
     impl GetCurrAddrTrait for TestFetcher {
         fn get_curr_addr(&self) -> logisheets_base::Addr {
-            todo!()
+            unreachable!()
         }
     }
 
@@ -189,13 +183,13 @@ pub mod tests_utils {
             _active_sheet: logisheets_base::SheetId,
             _addr: logisheets_base::Addr,
         ) {
-            todo!()
+            unreachable!()
         }
     }
 
     impl Connector for TestFetcher {
         fn convert(&mut self, _: &ast::CellReference) -> CalcVertex {
-            todo!()
+            unreachable!()
         }
 
         fn get_calc_value(&mut self, vertex: CalcVertex) -> CalcValue {
@@ -228,11 +222,11 @@ pub mod tests_utils {
             _row: usize,
             _col: usize,
         ) -> Result<CellId> {
-            todo!()
+            unreachable!()
         }
 
         fn commit_calc_values(&mut self, _vertex: (SheetId, CellId), _result: CalcValue) {
-            todo!()
+            unreachable!()
         }
 
         fn is_async_func(&self, _func_name: &str) -> bool {
@@ -243,16 +237,20 @@ pub mod tests_utils {
             &self,
             _sheet_id: &logisheets_base::SheetId,
             _range: &logisheets_base::RangeId,
-        ) -> logisheets_base::Range {
-            todo!()
+        ) -> Option<logisheets_base::Range> {
+            unreachable!()
         }
 
         fn get_sheet_id_by_name(&self, _name: &str) -> Result<SheetId> {
-            todo!()
+            unreachable!()
         }
 
         fn set_curr_as_dirty(&mut self) -> Result<()> {
-            todo!()
+            unreachable!()
+        }
+
+        fn get_active_sheet(&self) -> SheetId {
+            1
         }
     }
 }

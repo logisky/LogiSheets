@@ -1,26 +1,21 @@
-use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockId, BlockRange, CellId,
-    Range, RangeId,
-};
+use logisheets_base::{BlockId, BlockRange, CellId, Range, RangeId};
 
-use crate::{
-    range_manager::{NewRange, RangeUpdateType, SheetRangeExecContext},
-    SheetId,
-};
+use super::{NewRange, RangeUpdateType};
+use crate::{range_manager::ctx::RangeExecCtx, SheetId};
 
-use super::utils::cut_and_get_new_bound;
+use super::{utils::cut_and_get_new_bound, RangeExecutor};
 
 pub fn delete_block_line<C>(
-    exec_ctx: SheetRangeExecContext,
+    exec_ctx: RangeExecutor,
     sheet: SheetId,
     block: BlockId,
     horizontal: bool,
     idx: u32,
     cnt: u32,
-    ctx: &mut C,
-) -> SheetRangeExecContext
+    ctx: &C,
+) -> RangeExecutor
 where
-    C: IdFetcherTrait + IndexFetcherTrait,
+    C: RangeExecCtx,
 {
     let delete_start = idx as usize;
     let delete_end = (idx + cnt - 1) as usize;
@@ -82,6 +77,6 @@ where
             None => RangeUpdateType::None,
         }
     };
-    let result = exec_ctx.block_range_update(&mut func);
+    let result = exec_ctx.block_range_update(&sheet, &mut func);
     result
 }

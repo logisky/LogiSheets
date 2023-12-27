@@ -67,7 +67,11 @@ impl SheetViewer {
                         self.col_infos.push(info);
                     }
                 }
-                Diff::BlockUpdate { id, cnt, row } => {
+                Diff::BlockUpdate {
+                    id,
+                    cnt,
+                    is_row: row,
+                } => {
                     let (mut row_cnt, mut col_cnt) = ws.get_block_size(id).unwrap();
                     if row {
                         row_cnt += cnt;
@@ -136,6 +140,9 @@ impl SheetViewer {
         let navigator = &controller.status.navigator;
         let style_manager = &controller.status.style_manager;
         let formula_manager = &controller.status.formula_manager;
+        let range_manager = &controller.status.range_manager;
+        let cube_manager = &controller.status.cube_manager;
+        let ext_ref_manager = &controller.status.ext_ref_manager;
         let func_manager = &controller.status.func_id_manager;
         let sheet_id_manager = &controller.status.sheet_id_manager;
         let external_links_manager = &controller.status.external_links_manager;
@@ -196,6 +203,9 @@ impl SheetViewer {
                     name_id_manager,
                     navigator,
                     formula_manager,
+                    range_manager,
+                    cube_manager,
+                    ext_ref_manager,
                 };
 
                 let (formula, has_formula) =

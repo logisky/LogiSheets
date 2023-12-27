@@ -1,5 +1,6 @@
-use logisheets_controller::controller::edit_action::{
-    CreateBlock, LineShiftInBlock, MoveBlock, RemoveBlock,
+use logisheets_controller::{
+    edit_action::{CreateBlock, MoveBlock, RemoveBlock},
+    BlockId,
 };
 
 #[derive(Debug)]
@@ -24,7 +25,10 @@ pub enum Operator {
     CreateBlock(CreateBlock), // ignore the sheet_idx
     MoveBlock(MoveBlock),
     RemoveBlock(RemoveBlock),
-    LineShiftInBlock(LineShiftInBlock),
+    BlockInsertRow(BlockShiftData),
+    BlockInsertCol(BlockShiftData),
+    BlockDeleteRow(BlockShiftData),
+    BlockDeleteCol(BlockShiftData),
 }
 
 #[derive(Debug)]
@@ -75,6 +79,13 @@ pub struct CheckFormula {
 
 #[derive(Debug)]
 pub struct ShiftData {
+    pub from: u32,
+    pub cnt: u32,
+}
+
+#[derive(Debug)]
+pub struct BlockShiftData {
+    pub block_id: BlockId,
     pub from: u32,
     pub cnt: u32,
 }

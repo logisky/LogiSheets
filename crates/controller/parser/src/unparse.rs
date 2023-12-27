@@ -422,12 +422,11 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertex_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertex_fetcher,
         };
-        let node = parser.parse(sum, &mut context).unwrap();
+        let node = parser.parse(sum, 1, &mut context).unwrap();
         let a = unparse(&node, &mut id_fetcher, 0).unwrap();
         assert_eq!(a, "SUM((2, 3), 3)")
     }
@@ -439,12 +438,11 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertex_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertex_fetcher,
         };
-        let node = parser.parse(sum, &mut context).unwrap();
+        let node = parser.parse(sum, 1, &mut context).unwrap();
         let a = unparse(&node, &mut id_fetcher, 0).unwrap();
         assert_eq!(a, "1 * (3 - 2)")
     }

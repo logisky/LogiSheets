@@ -1,8 +1,9 @@
 use logisheets_controller::controller::display::DisplayRequest;
-use logisheets_controller::controller::edit_action::style_payload::{StyleUpdate, StyleUpdateType};
-use logisheets_controller::controller::edit_action::{
-    AsyncFuncResult, BlockInput, CellInput, ColShift, CreateBlock, EditAction, EditPayload,
-    LineShiftInBlock, MoveBlock, PayloadsAction, RowShift, SheetRename, SheetShift,
+use logisheets_controller::edit_action::{
+    AsyncFuncResult, BlockInput, CellInput, CreateBlock, CreateSheet, DeleteCols,
+    DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
+    InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, MoveBlock, PayloadsAction,
+    SheetRename, StyleUpdate, StyleUpdateType,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StUnderlineValues};
@@ -333,11 +334,10 @@ pub fn row_insert(id: usize, sheet_idx: usize, start: usize, count: usize) {
     let mut manager = MANAGER.get_mut();
     manager.add_payload(
         id,
-        EditPayload::RowShift(RowShift {
+        EditPayload::InsertRows(InsertRows {
             sheet_idx,
-            row: start,
+            start,
             count,
-            insert: true,
         }),
     );
 }
@@ -348,11 +348,10 @@ pub fn row_delete(id: usize, sheet_idx: usize, start: usize, count: usize) {
     let mut manager = MANAGER.get_mut();
     manager.add_payload(
         id,
-        EditPayload::RowShift(RowShift {
+        EditPayload::DeleteRows(DeleteRows {
             sheet_idx,
-            row: start,
+            start,
             count,
-            insert: false,
         }),
     );
 }
@@ -363,11 +362,10 @@ pub fn col_insert(id: usize, sheet_idx: usize, start: usize, count: usize) {
     let mut manager = MANAGER.get_mut();
     manager.add_payload(
         id,
-        EditPayload::ColShift(ColShift {
+        EditPayload::InsertCols(InsertCols {
             sheet_idx,
-            col: start,
+            start,
             count,
-            insert: true,
         }),
     );
 }
@@ -378,11 +376,10 @@ pub fn col_delete(id: usize, sheet_idx: usize, start: usize, count: usize) {
     let mut manager = MANAGER.get_mut();
     manager.add_payload(
         id,
-        EditPayload::ColShift(ColShift {
+        EditPayload::DeleteCols(DeleteCols {
             sheet_idx,
-            col: start,
+            start,
             count,
-            insert: false,
         }),
     );
 }
@@ -455,16 +452,37 @@ pub fn block_line_shift(
     insert: bool,
 ) {
     init();
-    let p = LineShiftInBlock {
-        sheet_idx,
-        block_id,
-        idx: start,
-        cnt,
-        horizontal,
-        insert,
+    let p = if horizontal && insert {
+        EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+            sheet_idx,
+            block_id,
+            start,
+            cnt,
+        })
+    } else if !horizontal && insert {
+        EditPayload::InsertColsInBlock(InsertColsInBlock {
+            sheet_idx,
+            block_id,
+            start,
+            cnt,
+        })
+    } else if horizontal && !insert {
+        EditPayload::DeleteRowsInBlock(DeleteRowsInBlock {
+            sheet_idx,
+            block_id,
+            start,
+            cnt,
+        })
+    } else {
+        EditPayload::DeleteColsInBlock(DeleteColsInBlock {
+            sheet_idx,
+            block_id,
+            start,
+            cnt,
+        })
     };
     let mut manager = MANAGER.get_mut();
-    manager.add_payload(id, EditPayload::LineShiftInBlock(p));
+    manager.add_payload(id, p);
 }
 
 #[wasm_bindgen]
@@ -492,11 +510,22 @@ pub fn sheet_rename_by_idx(id: usize, idx: usize, new_name: String) {
 }
 
 #[wasm_bindgen]
-pub fn sheet_shift(id: usize, idx: usize, insert: bool) {
+pub fn create_sheet(id: usize, idx: usize, name: String) {
     init();
-    let p = SheetShift { idx, insert };
+    let p = CreateSheet {
+        idx,
+        new_name: name,
+    };
     let mut manager = MANAGER.get_mut();
-    manager.add_payload(id, EditPayload::SheetShift(p));
+    manager.add_payload(id, EditPayload::CreateSheet(p));
+}
+
+#[wasm_bindgen]
+pub fn delete_sheet(id: usize, idx: usize) {
+    init();
+    let p = DeleteSheet { idx };
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, EditPayload::DeleteSheet(p));
 }
 
 fn parse_async_value(s: String) -> AsyncCalcResult {

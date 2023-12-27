@@ -65,4 +65,16 @@ impl<'a> IdFetcherTrait for IdFetcher<'a> {
         self.navigator
             .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
     }
+
+    fn fetch_block_cell_id(
+        &self,
+        sheet_id: &SheetId,
+        block_id: &logisheets_base::BlockId,
+        row: usize,
+        col: usize,
+    ) -> std::prelude::v1::Result<logisheets_base::BlockCellId, logisheets_base::errors::BasicError>
+    {
+        self.navigator
+            .fetch_block_cell_id(sheet_id, block_id, row, col)
+    }
 }

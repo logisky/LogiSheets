@@ -1,12 +1,13 @@
-use logisheets_controller::controller::edit_action::{
-    CellInput, ColShift, CreateBlock, EditAction, EditPayload, LineShiftInBlock, MoveBlock,
-    PayloadsAction, RemoveBlock, RowShift, SheetRename, SheetShift,
+use logisheets_controller::edit_action::{
+    CellInput, CreateBlock, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows,
+    DeleteRowsInBlock, EditAction, EditPayload, InsertCols, InsertColsInBlock, InsertRows,
+    InsertRowsInBlock, MoveBlock, PayloadsAction, RemoveBlock,
 };
 use logisheets_controller::{Value, Workbook};
 
 use crate::operator::{
-    CheckEmpty, CheckError, CheckFormula, CheckNum, CheckString, Input, Operator, ShiftData,
-    Statement, Switch,
+    BlockShiftData, CheckEmpty, CheckError, CheckFormula, CheckNum, CheckString, Input, Operator,
+    ShiftData, Statement, Switch,
 };
 use crate::parser::{parse, ParseError};
 
@@ -66,7 +67,10 @@ fn execute(statements: Vec<Statement>) -> Option<ExecError> {
             Operator::CreateBlock(p) => exec_create_block(&mut ctx, p, line),
             Operator::MoveBlock(p) => exec_move_block(&mut ctx, p, line),
             Operator::RemoveBlock(p) => exec_remove_block(&mut ctx, p, line),
-            Operator::LineShiftInBlock(p) => exec_block_line_shift(&mut ctx, p, line),
+            Operator::BlockInsertRow(data) => exec_block(&mut ctx, true, true, data, line),
+            Operator::BlockInsertCol(data) => exec_block(&mut ctx, false, true, data, line),
+            Operator::BlockDeleteRow(data) => exec_block(&mut ctx, true, false, data, line),
+            Operator::BlockDeleteCol(data) => exec_block(&mut ctx, false, false, data, line),
         };
         if res.is_some() {
             return res;
@@ -89,16 +93,20 @@ fn exec_shift_row(
         });
     }
     let sheet_idx = sheet.unwrap();
-    ctx.workbook
-        .handle_action(EditAction::Payloads(PayloadsAction {
-            payloads: vec![EditPayload::RowShift(RowShift {
-                sheet_idx,
-                row: data.from as usize,
-                count: data.cnt as usize,
-                insert,
-            })],
-            undoable: false,
-        }));
+    let action = if insert {
+        PayloadsAction::new(false).add_payload(InsertRows {
+            sheet_idx,
+            start: data.from as usize,
+            count: data.cnt as usize,
+        })
+    } else {
+        PayloadsAction::new(false).add_payload(DeleteRows {
+            sheet_idx,
+            start: data.from as usize,
+            count: data.cnt as usize,
+        })
+    };
+    ctx.workbook.handle_action(EditAction::Payloads(action));
     None
 }
 
@@ -116,16 +124,20 @@ fn exec_shift_col(
         });
     }
     let sheet_idx = sheet.unwrap();
-    ctx.workbook
-        .handle_action(EditAction::Payloads(PayloadsAction {
-            payloads: vec![EditPayload::ColShift(ColShift {
-                sheet_idx,
-                col: data.from as usize,
-                count: data.cnt as usize,
-                insert,
-            })],
-            undoable: false,
-        }));
+    let action = if insert {
+        PayloadsAction::new(false).add_payload(InsertCols {
+            sheet_idx,
+            start: data.from as usize,
+            count: data.cnt as usize,
+        })
+    } else {
+        PayloadsAction::new(false).add_payload(DeleteCols {
+            sheet_idx,
+            start: data.from as usize,
+            count: data.cnt as usize,
+        })
+    };
+    ctx.workbook.handle_action(EditAction::Payloads(action));
     None
 }
 
@@ -133,21 +145,12 @@ fn exec_switch(ctx: &mut ExecContext, switch: Switch, _line: usize) -> Option<Ex
     match ctx.workbook.get_sheet_by_name(&switch.sheet) {
         Ok(_) => (),
         Err(_) => {
-            ctx.workbook
-                .handle_action(EditAction::Payloads(PayloadsAction {
-                    undoable: false,
-                    payloads: vec![
-                        EditPayload::SheetShift(SheetShift {
-                            idx: 0,
-                            insert: true,
-                        }),
-                        EditPayload::SheetRename(SheetRename {
-                            idx: None,
-                            old_name: Some(String::from("Sheet2")),
-                            new_name: switch.sheet.clone(),
-                        }),
-                    ],
-                }));
+            ctx.workbook.handle_action(EditAction::Payloads(
+                PayloadsAction::new(false).add_payload(CreateSheet {
+                    idx: 0,
+                    new_name: switch.sheet.clone(),
+                }),
+            ));
         }
     };
     ctx.sheet_name = switch.sheet;
@@ -242,28 +245,6 @@ fn exec_remove_block(
     None
 }
 
-fn exec_block_line_shift(
-    ctx: &mut ExecContext,
-    mut payload: LineShiftInBlock,
-    line: usize,
-) -> Option<ExecError> {
-    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
-    if let Err(_) = sheet {
-        return Some(ExecError {
-            line,
-            msg: format!("Sheet {} is not found", ctx.sheet_name),
-        });
-    }
-    let sheet_idx = sheet.unwrap();
-    payload.sheet_idx = sheet_idx;
-    ctx.workbook
-        .handle_action(EditAction::Payloads(PayloadsAction {
-            payloads: vec![EditPayload::LineShiftInBlock(payload)],
-            undoable: false,
-        }));
-    None
-}
-
 fn exec_check_empty(ctx: &mut ExecContext, c: CheckEmpty, line: usize) -> Option<ExecError> {
     let row = c.row as usize;
     let col = c.col as usize;
@@ -337,6 +318,54 @@ fn exec_check_num(ctx: &mut ExecContext, check_num: CheckNum, line: usize) -> Op
             msg: format!("Sheet {} is not found", &ctx.sheet_name),
         }),
     }
+}
+
+fn exec_block(
+    ctx: &mut ExecContext,
+    is_row: bool,
+    insert: bool,
+    data: BlockShiftData,
+    line: usize,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    let action = if is_row && insert {
+        PayloadsAction::new(false).add_payload(InsertRowsInBlock {
+            sheet_idx,
+            block_id: data.block_id,
+            start: data.from as usize,
+            cnt: data.cnt as usize,
+        })
+    } else if !is_row && insert {
+        PayloadsAction::new(false).add_payload(InsertColsInBlock {
+            sheet_idx,
+            block_id: data.block_id,
+            start: data.from as usize,
+            cnt: data.cnt as usize,
+        })
+    } else if is_row && !insert {
+        PayloadsAction::new(false).add_payload(DeleteRowsInBlock {
+            sheet_idx,
+            block_id: data.block_id,
+            start: data.from as usize,
+            cnt: data.cnt as usize,
+        })
+    } else {
+        PayloadsAction::new(false).add_payload(DeleteColsInBlock {
+            sheet_idx,
+            block_id: data.block_id,
+            start: data.from as usize,
+            cnt: data.cnt as usize,
+        })
+    };
+    ctx.workbook.handle_action(EditAction::Payloads(action));
+    None
 }
 
 fn exec_check_formula(

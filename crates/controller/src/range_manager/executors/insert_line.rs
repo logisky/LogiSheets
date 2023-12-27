@@ -1,21 +1,18 @@
-use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, NormalRange, RangeId, SheetId,
-};
-
-use crate::range_manager::{RangeUpdateType, SheetRangeExecContext};
+use logisheets_base::{NormalRange, RangeId, SheetId};
 
 use super::utils::get_lower_upper_bound_of_range;
+use super::{RangeExecCtx, RangeExecutor, RangeUpdateType};
 
 pub fn insert_line<C>(
-    exec_ctx: SheetRangeExecContext,
+    exec_ctx: RangeExecutor,
     sheet: SheetId,
     row: bool,
     idx: usize,
     _cnt: u32,
-    ctx: &mut C,
-) -> SheetRangeExecContext
+    ctx: &C,
+) -> RangeExecutor
 where
-    C: IdFetcherTrait + IndexFetcherTrait,
+    C: RangeExecCtx,
 {
     let mut func = |range: &NormalRange, _: &RangeId| -> RangeUpdateType {
         if let NormalRange::Single(_) = range {
@@ -29,6 +26,6 @@ where
             RangeUpdateType::Dirty
         }
     };
-    let result = exec_ctx.normal_range_update(&mut func);
+    let result = exec_ctx.normal_range_update(&sheet, &mut func);
     result
 }

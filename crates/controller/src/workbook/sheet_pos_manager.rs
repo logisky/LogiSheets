@@ -2,7 +2,9 @@ use im::{HashSet, Vector};
 use itertools::Itertools;
 use logisheets_base::SheetId;
 
-use crate::{payloads::sheet_shift::SheetShiftPayload, payloads::sheet_shift::SheetShiftType};
+use crate::edit_action::EditPayload;
+
+use super::ctx::SheetPosExecCtx;
 
 #[derive(Debug, Clone, Default)]
 pub struct SheetPosManager {
@@ -11,11 +13,11 @@ pub struct SheetPosManager {
 }
 
 impl SheetPosManager {
-    pub fn execute(self, payload: &SheetShiftPayload) -> Self {
-        match payload.ty {
-            SheetShiftType::Insert => {
-                let (mut left, right) = self.pos.split_at(payload.idx);
-                let id = payload.id;
+    pub fn execute<C: SheetPosExecCtx>(mut self, payload: &EditPayload, ctx: &mut C) -> Self {
+        match payload {
+            EditPayload::CreateSheet(p) => {
+                let (mut left, right) = self.pos.split_at(p.idx);
+                let id = ctx.fetch_sheet_id(&p.new_name);
                 left.push_back(id);
                 left.append(right);
                 SheetPosManager {
@@ -23,14 +25,11 @@ impl SheetPosManager {
                     hiddens: self.hiddens,
                 }
             }
-            SheetShiftType::Delete => {
-                let mut pos = self.pos;
-                pos.remove(payload.idx);
-                SheetPosManager {
-                    pos,
-                    hiddens: self.hiddens,
-                }
+            EditPayload::DeleteSheet(p) => {
+                self.pos.remove(p.idx);
+                self
             }
+            _ => self,
         }
     }
 

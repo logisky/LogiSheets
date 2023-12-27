@@ -12,7 +12,7 @@ extern crate lazy_static;
 use crate::climber::{Assoc, Climber, ClimberBuilder, Operator};
 use context::ContextTrait;
 use errors::ParseError;
-use logisheets_base::id_fetcher::IdFetcherTrait;
+use logisheets_base::{id_fetcher::IdFetcherTrait, SheetId};
 use logisheets_lexer::*;
 use pest::iterators::Pair;
 use reference::build_cell_reference;
@@ -50,22 +50,28 @@ lazy_static! {
 pub struct Parser {}
 
 impl Parser {
-    pub fn parse<T>(&self, f: &str, context: &mut T) -> Option<ast::Node>
+    pub fn parse<T>(&self, f: &str, curr_sheet: SheetId, context: &mut T) -> Option<ast::Node>
     where
         T: ContextTrait,
     {
         let pair = lex(f.trim())?;
         let formula = pair.into_inner().next()?;
-        Some(self.parse_from_pair(formula, context, false))
+        Some(self.parse_from_pair(formula, curr_sheet, context, false))
     }
 
-    fn parse_from_pair<T>(&self, formula: Pair<Rule>, context: &mut T, bracket: bool) -> ast::Node
+    fn parse_from_pair<T>(
+        &self,
+        formula: Pair<Rule>,
+        curr_sheet: SheetId,
+        context: &mut T,
+        bracket: bool,
+    ) -> ast::Node
     where
         T: ContextTrait,
     {
         let ast = CLIMBER.climb(
             formula.into_inner(),
-            |pair: Pair<Rule>| self.primary(pair, context),
+            |pair: Pair<Rule>| self.primary(pair, curr_sheet, context),
             |lhs: ast::Node, pair: Pair<Rule>, rhs: ast::Node| -> ast::Node {
                 let infix_op = match pair.as_rule() {
                     Rule::colon_op => ast::InfixOperator::Colon,
@@ -121,12 +127,12 @@ impl Parser {
         ast
     }
 
-    fn primary<T>(&self, pair: Pair<Rule>, context: &mut T) -> ast::Node
+    fn primary<T>(&self, pair: Pair<Rule>, curr_sheet: SheetId, context: &mut T) -> ast::Node
     where
         T: ContextTrait,
     {
         match pair.as_rule() {
-            Rule::expression => self.parse_from_pair(pair, context, false),
+            Rule::expression => self.parse_from_pair(pair, curr_sheet, context, false),
             Rule::logical_constant => {
                 let pure = build_bool(pair);
                 ast::Node {
@@ -156,7 +162,7 @@ impl Parser {
                 }
             }
             Rule::cell_reference => {
-                let pure = build_cell_reference(pair, context)
+                let pure = build_cell_reference(pair, curr_sheet, context)
                     .unwrap_or(ast::PureNode::Value(ast::Value::Error(ast::Error::Ref)));
                 ast::Node {
                     pure,
@@ -165,10 +171,10 @@ impl Parser {
             }
             Rule::expression_bracket => {
                 let rule = pair.into_inner().next().unwrap();
-                self.parse_from_pair(rule, context, true)
+                self.parse_from_pair(rule, curr_sheet, context, true)
             }
             Rule::function_call => {
-                let pure = self.build_func_call(pair, context);
+                let pure = self.build_func_call(pair, curr_sheet, context);
                 ast::Node {
                     pure,
                     bracket: false,
@@ -202,7 +208,12 @@ impl Parser {
         }
     }
 
-    fn build_func_call<T>(&self, pair: Pair<Rule>, context: &mut T) -> ast::PureNode
+    fn build_func_call<T>(
+        &self,
+        pair: Pair<Rule>,
+        curr_sheet: SheetId,
+        context: &mut T,
+    ) -> ast::PureNode
     where
         T: ContextTrait,
     {
@@ -211,7 +222,7 @@ impl Parser {
         let mut args: Vec<ast::Node> = vec![];
         while iter.peek().is_some() {
             let arg = iter.next().unwrap();
-            let arg_node = self.build_arg(arg, context);
+            let arg_node = self.build_arg(arg, curr_sheet, context);
             args.push(arg_node);
         }
         let op = ast::Operator::Function(context.fetch_func_id(&func_name));
@@ -219,21 +230,21 @@ impl Parser {
         ast::PureNode::Func(func)
     }
 
-    fn build_arg<T>(&self, pair: Pair<Rule>, context: &mut T) -> ast::Node
+    fn build_arg<T>(&self, pair: Pair<Rule>, curr_sheet: SheetId, context: &mut T) -> ast::Node
     where
         T: ContextTrait,
     {
         match pair.as_rule() {
-            Rule::expression => self.parse_from_pair(pair, context, false),
+            Rule::expression => self.parse_from_pair(pair, curr_sheet, context, false),
             Rule::comma_node => {
                 let mut args = Vec::<ast::Node>::new();
                 pair.into_inner().for_each(|p| match p.as_rule() {
                     Rule::expression => {
-                        let n = self.build_arg(p, context);
+                        let n = self.build_arg(p, curr_sheet, context);
                         args.push(n);
                     }
                     Rule::comma_node => {
-                        let n = self.build_arg(p, context);
+                        let n = self.build_arg(p, curr_sheet, context);
                         args.push(n);
                     }
                     _ => {}
@@ -369,13 +380,12 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let f1 = "INDEX((A1:B2, C3:D4), 1, 2, 2)";
-        let r1 = parser.parse(f1, &mut context).unwrap().pure;
+        let r1 = parser.parse(f1, 1, &mut context).unwrap().pure;
         match r1 {
             ast::PureNode::Func(f) => {
                 assert_eq!(f.args.len(), 4);
@@ -400,16 +410,15 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let f1 = "-A1:B$2";
-        let r1 = parser.parse(f1, &mut context).unwrap().pure;
+        let r1 = parser.parse(f1, 1, &mut context).unwrap().pure;
         assert!(matches!(r1, ast::PureNode::Func(_)));
         let f1 = "-A1:B$2+2";
-        let r1 = parser.parse(f1, &mut context).unwrap().pure;
+        let r1 = parser.parse(f1, 1, &mut context).unwrap().pure;
         match r1 {
             ast::PureNode::Func(func) => {
                 assert!(matches!(
@@ -427,13 +436,12 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let f1 = "+K96-K97";
-        let r1 = parser.parse(f1, &mut context).unwrap().pure;
+        let r1 = parser.parse(f1, 1, &mut context).unwrap().pure;
         match r1 {
             ast::PureNode::Func(func) => {
                 assert!(matches!(
@@ -444,7 +452,7 @@ mod tests {
             _ => panic!(),
         }
         let f1 = "BD199/+BD5";
-        let r1 = parser.parse(f1, &mut context).unwrap().pure;
+        let r1 = parser.parse(f1, 1, &mut context).unwrap().pure;
         match r1 {
             ast::PureNode::Func(func) => {
                 assert!(matches!(
@@ -468,14 +476,13 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f1 = "3.14%";
-        let r1 = parser.parse(f1, &mut context).unwrap().pure;
+        let r1 = parser.parse(f1, 1, &mut context).unwrap().pure;
         assert!(matches!(r1, ast::PureNode::Func(_)));
     }
 
@@ -484,26 +491,25 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "3+3.2";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "3-3.2";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "3*3.2";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "3/3.2";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "A1:B2 B2:C3";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
     }
 
@@ -512,23 +518,22 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "SUM(1,2)";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "SUM(,2)";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "SUM(1,)";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "SUM(1:2)";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         match r {
             ast::PureNode::Func(f) => {
                 assert_eq!(f.args.len(), 1);
@@ -544,14 +549,13 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "1+2*3";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         match r {
             ast::PureNode::Func(op) => {
                 assert!(matches!(
@@ -562,7 +566,7 @@ mod tests {
             _ => panic!(),
         };
         let f = "(1+2)*3";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         match r {
             ast::PureNode::Func(op) => {
                 assert!(matches!(
@@ -579,14 +583,13 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "1 + 2 * 3";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         match r {
             ast::PureNode::Func(op) => {
                 assert!(matches!(
@@ -597,13 +600,13 @@ mod tests {
             _ => panic!(),
         };
         let f = "B2 : B3";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Reference(_)));
         let f = "B2  B3";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
         let f = "SUM( 1  , 2, 3 )";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
     }
 
@@ -612,14 +615,13 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "-1 + SUM(1+3.14, 2)% * 3e-4";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         match r {
             ast::PureNode::Func(func) => {
                 let ast::Func { op, args: _ } = func;
@@ -628,7 +630,7 @@ mod tests {
             _ => panic!(),
         };
         let f = "1*(2-3)";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         match r {
             ast::PureNode::Func(func) => {
                 let ast::Func { op, args: _ } = func;
@@ -646,20 +648,19 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "\\costum_name.1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(
             r,
             ast::PureNode::Reference(ast::CellReference::Name(_)),
         ));
         let f = "workbook.xlsx!\\costum_name.1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(
             r,
             ast::PureNode::Reference(ast::CellReference::Name(_)),
@@ -671,41 +672,40 @@ mod tests {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let parser = Parser {};
         let f = "#N/A";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(
             r,
             ast::PureNode::Value(ast::Value::Error(ast::Error::Na))
         ));
         let f = "FALSE";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(
             r,
             ast::PureNode::Value(ast::Value::Boolean(false))
         ));
         let f = "FALSE";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(
             r,
             ast::PureNode::Value(ast::Value::Boolean(false))
         ));
         let f = "123.e-10";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Value(ast::Value::Number(_))));
         let f = ".123e-10";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Value(ast::Value::Number(_))));
         let f = "\"a\"\"b\"";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Value(ast::Value::Text(_))));
         let f = "1";
-        let r = parser.parse(f, &mut context).unwrap().pure;
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
         assert!(matches!(r, ast::PureNode::Value(ast::Value::Number(_))));
     }
 
@@ -715,12 +715,11 @@ mod tests {
         let mut vertext_fetcher = TestVertexFetcher {};
         let mut id_fetcher = TestIdFetcher {};
         let mut context = Context {
-            sheet_id: 1,
             book_name: "book",
             id_fetcher: &mut id_fetcher,
             vertex_fetcher: &mut vertext_fetcher,
         };
         let f = "NORM.S.DIST(2,TRUE)";
-        let _ = parser.parse(f, &mut context).unwrap().pure;
+        let _ = parser.parse(f, 1, &mut context).unwrap().pure;
     }
 }

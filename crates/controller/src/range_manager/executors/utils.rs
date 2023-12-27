@@ -1,15 +1,15 @@
-use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, CellId, NormalRange, SheetId,
-};
+use logisheets_base::{CellId, NormalRange, SheetId};
+
+use crate::range_manager::ctx::RangeExecCtx;
 
 pub fn get_lower_upper_bound_of_range<C>(
     sheet_id: SheetId,
     range: &NormalRange,
     horizontal: bool,
-    context: &mut C,
+    context: &C,
 ) -> (usize, usize)
 where
-    C: IdFetcherTrait + IndexFetcherTrait,
+    C: RangeExecCtx,
 {
     match range {
         NormalRange::RowRange(start, end) => {

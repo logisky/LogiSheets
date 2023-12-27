@@ -143,8 +143,6 @@ impl<'a> Fetcher<'a> {
         NormalCellId {
             row: row_id,
             col: col_id,
-            follow_row: None,
-            follow_col: None,
         }
     }
 
@@ -185,17 +183,8 @@ impl<'a> Fetcher<'a> {
     }
 
     pub fn get_norm_cell_idx(&self, cell_id: &NormalCellId) -> Result<(usize, usize)> {
-        let (row_id, col_id) = {
-            if let Some(fr) = cell_id.follow_row {
-                (fr, cell_id.col.clone())
-            } else if let Some(fc) = cell_id.follow_col {
-                (cell_id.row.clone(), fc)
-            } else {
-                (cell_id.row.clone(), cell_id.col.clone())
-            }
-        };
-        let row_idx = self.get_row_idx(row_id)?;
-        let col_idx = self.get_col_idx(col_id)?;
+        let row_idx = self.get_row_idx(cell_id.row)?;
+        let col_idx = self.get_col_idx(cell_id.col)?;
         Ok((row_idx, col_idx))
     }
 }

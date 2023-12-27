@@ -1,22 +1,20 @@
-use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, CellId::NormalCell, NormalRange,
-    Range, RangeId, SheetId,
-};
+use logisheets_base::{CellId::NormalCell, NormalRange, Range, RangeId, SheetId};
 
-use crate::range_manager::{NewRange, RangeUpdateType, SheetRangeExecContext};
+use super::{NewRange, RangeExecutor, RangeUpdateType};
+use crate::range_manager::ctx::RangeExecCtx;
 
 use super::utils::{cut_and_get_new_bound, get_lower_upper_bound_of_range};
 
 pub fn delete_line<C>(
-    exec_ctx: SheetRangeExecContext,
+    exec_ctx: RangeExecutor,
     sheet: SheetId,
     horizontal: bool,
     idx: usize,
     cnt: u32,
-    ctx: &mut C,
-) -> SheetRangeExecContext
+    ctx: &C,
+) -> RangeExecutor
 where
-    C: IdFetcherTrait + IndexFetcherTrait,
+    C: RangeExecCtx,
 {
     let mut func = |range: &NormalRange, range_id: &RangeId| -> RangeUpdateType {
         let (range_start, range_end) =
@@ -93,6 +91,6 @@ where
             }
         }
     };
-    let result = exec_ctx.normal_range_update(&mut func);
+    let result = exec_ctx.normal_range_update(&sheet, &mut func);
     result
 }

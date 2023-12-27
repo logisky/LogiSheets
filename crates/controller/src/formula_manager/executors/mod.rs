@@ -1,18 +1,54 @@
-mod create_block;
-mod delete_block_line;
-mod delete_line;
 mod input_formula;
-mod input_value;
-mod insert_block_line;
-mod insert_line;
-mod move_block;
-mod utils;
 
-pub use create_block::create_block;
-pub use delete_block_line::delete_block_line;
-pub use delete_line::delete_line;
+use std::collections::HashSet;
+
 pub use input_formula::{add_ast_node, input_formula};
-pub use input_value::input_value;
-pub use insert_block_line::insert_block_line;
-pub use insert_line::insert_line;
-pub use move_block::move_block;
+
+use crate::{edit_action::EditPayload, Error};
+
+use super::{ctx::FormulaExecCtx, FormulaManager, Vertex};
+
+pub struct FormulaExecutor {
+    pub manager: FormulaManager,
+    pub dirty_vertices: HashSet<Vertex>,
+}
+
+impl FormulaExecutor {
+    pub fn execute<C: FormulaExecCtx>(
+        self,
+        payload: EditPayload,
+        ctx: &mut C,
+    ) -> Result<Self, Error> {
+        let mut executor = match payload {
+            EditPayload::CellInput(mut cell_input) => {
+                if cell_input.content.starts_with("=") {
+                    let formula = cell_input.content.split_off(1);
+                    input_formula(
+                        self,
+                        cell_input.sheet_idx,
+                        cell_input.row,
+                        cell_input.col,
+                        formula,
+                        ctx,
+                    )
+                } else {
+                    Ok(self)
+                }
+            }
+            _ => Ok(self),
+        }?;
+        ctx.get_dirty_range_ids()
+            .into_iter()
+            .map(|(s, r)| Vertex::Range(s, r))
+            .for_each(|v| {
+                executor.dirty_vertices.insert(v);
+            });
+        ctx.get_dirty_cube_ids()
+            .into_iter()
+            .map(|c| Vertex::Cube(c))
+            .for_each(|v| {
+                executor.dirty_vertices.insert(v);
+            });
+        Ok(executor)
+    }
+}

@@ -18,8 +18,8 @@ logisheets_workbook_derives = {version = "0.4.0", path = "./derives"}
 
 xmlserde = "0.5.5"
 xmlserde_derives = "0.5.5"
-gents = {version = "0.7.0", optional = true}
-gents_derives = {version = "0.7.0", optional = true}
+gents = {version = "0.8.0", optional = true}
+gents_derives = {version = "0.8.0", optional = true}
 
 [dev-dependencies]
 xmldiff = {version = "0.3.0", path = "../xmldiff"}

@@ -5,14 +5,20 @@ use logisheets_base::{
 };
 
 use crate::{
+    cube_manager::CubeManager,
     ext_book_manager::ExtBooksManager,
+    ext_ref_manager::ExtRefManager,
     formula_manager::FormulaManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
+    range_manager::RangeManager,
 };
 
 pub struct NameFetcher<'a> {
     pub func_manager: &'a FuncIdManager,
+    pub range_manager: &'a RangeManager,
+    pub cube_manager: &'a CubeManager,
+    pub ext_ref_manager: &'a ExtRefManager,
     pub sheet_id_manager: &'a SheetIdManager,
     pub external_links_manager: &'a ExtBooksManager,
     pub text_id_manager: &'a TextIdManager,
@@ -66,22 +72,19 @@ impl<'a> NameFetcherTrait for NameFetcher<'a> {
     }
 
     fn fetch_range(&self, sheet_id: &SheetId, range_id: &u32) -> Result<Range> {
-        self.formula_manager
-            .range_manager
+        self.range_manager
             .get_range(sheet_id, range_id)
             .ok_or(BasicError::RangeIdNotFound(*range_id))
     }
 
     fn fetch_cube(&self, cube_id: &u32) -> Result<logisheets_base::Cube> {
-        self.formula_manager
-            .cube_manager
+        self.cube_manager
             .get_cube(cube_id)
             .ok_or(BasicError::CubeIdNotFound(*cube_id))
     }
 
     fn fetch_ext_ref(&mut self, ext_ref_id: &u32) -> Result<ExtRef> {
-        self.formula_manager
-            .ext_ref_manager
+        self.ext_ref_manager
             .get_ext_ref(ext_ref_id)
             .ok_or(BasicError::ExtRefIdNotFound(*ext_ref_id))
     }

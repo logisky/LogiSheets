@@ -20,6 +20,15 @@ pub enum CellId {
     BlockCell(BlockCellId),
 }
 
+impl CellId {
+    pub fn assert_normal_cell_id(self) -> NormalCellId {
+        match self {
+            CellId::NormalCell(n) => n,
+            CellId::BlockCell(_) => panic!("this cell id should be normal cell id"),
+        }
+    }
+}
+
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize)]
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(feature = "gents", ts(file_name = "normal_cell_id.ts"))]
@@ -27,8 +36,6 @@ pub enum CellId {
 pub struct NormalCellId {
     pub row: RowId,
     pub col: ColId,
-    pub follow_row: Option<RowId>,
-    pub follow_col: Option<ColId>,
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -95,6 +102,15 @@ pub enum BlockRange {
 pub enum Range {
     Normal(NormalRange),
     Block(BlockRange),
+}
+
+impl From<CellId> for Range {
+    fn from(value: CellId) -> Self {
+        match value {
+            CellId::NormalCell(n) => Range::Normal(NormalRange::Single(n)),
+            CellId::BlockCell(b) => Range::Block(BlockRange::Single(b)),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]

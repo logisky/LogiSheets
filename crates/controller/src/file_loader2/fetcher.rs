@@ -6,7 +6,7 @@ use crate::{
 
 use logisheets_base::{
     errors::Result, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockCellId,
-    ColId, ExtBookId, NormalCellId, RowId, SheetId,
+    BlockId, ColId, ExtBookId, NormalCellId, RowId, SheetId,
 };
 use logisheets_workbook::workbook::Wb;
 
@@ -91,6 +91,17 @@ impl<'a> IdFetcherTrait for Fetcher<'a> {
     ) -> Result<NormalCellId> {
         self.navigator
             .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
+    }
+
+    fn fetch_block_cell_id(
+        &self,
+        sheet_id: &SheetId,
+        block_id: &BlockId,
+        row: usize,
+        col: usize,
+    ) -> Result<BlockCellId> {
+        self.navigator
+            .fetch_block_cell_id(sheet_id, block_id, row, col)
     }
 }
 

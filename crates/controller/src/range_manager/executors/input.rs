@@ -1,21 +1,15 @@
-use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockRange, NormalRange, RangeId,
-};
-
-use crate::{
-    range_manager::{RangeUpdateType, SheetRangeExecContext},
-    SheetId,
-};
+use super::{RangeExecCtx, RangeExecutor, RangeUpdateType};
+use logisheets_base::{errors::BasicError, BlockRange, NormalRange, Range, RangeId, SheetId};
 
 pub fn input<C>(
-    exec_ctx: SheetRangeExecContext,
+    exec_ctx: RangeExecutor,
     sheet: SheetId,
     row: usize,
     col: usize,
-    ctx: &mut C,
-) -> SheetRangeExecContext
+    ctx: &C,
+) -> Result<RangeExecutor, BasicError>
 where
-    C: IdFetcherTrait + IndexFetcherTrait,
+    C: RangeExecCtx,
 {
     let mut normal_func = |range: &NormalRange, _: &RangeId| -> RangeUpdateType {
         match range {
@@ -49,7 +43,7 @@ where
             }
         }
     };
-    let exec_ctx = exec_ctx.normal_range_update(&mut normal_func);
+    let exec_ctx = exec_ctx.normal_range_update(&sheet, &mut normal_func);
 
     let mut block_range_func = |range: &BlockRange, _: &RangeId| -> RangeUpdateType {
         match range {
@@ -65,5 +59,11 @@ where
             }
         }
     };
-    exec_ctx.block_range_update(&mut block_range_func)
+    let mut result = exec_ctx.block_range_update(&sheet, &mut block_range_func);
+    let this_cell_id = ctx.fetch_cell_id(&sheet, row, col)?;
+    let range_id = result
+        .manager
+        .get_range_id(&sheet, &Range::from(this_cell_id));
+    result.dirty_ranges.insert((sheet, range_id));
+    Ok(result)
 }

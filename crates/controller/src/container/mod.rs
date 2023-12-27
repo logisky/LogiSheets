@@ -1,11 +1,14 @@
 use crate::cell::Cell;
 use im::hashmap::HashMap;
-use logisheets_base::{CellId, ColId, RowId, SheetId};
+use logisheets_base::{CellId, CellValue, ColId, RowId, SheetId};
 
 use self::col_info_manager::{ColInfo, ColInfoManager};
 use self::row_info_manager::{RowInfo, RowInfoManager};
 pub mod col_info_manager;
+pub mod ctx;
+mod executor;
 pub mod row_info_manager;
+pub use executor::ContainerExecutor;
 
 #[derive(Debug, Clone, Default)]
 pub struct DataContainer {
@@ -93,6 +96,17 @@ impl DataContainer {
     pub fn add_cell(&mut self, sheet_id: SheetId, cell_id: CellId, cell: Cell) {
         let sheet_container = self.get_sheet_container_mut(sheet_id);
         sheet_container.cells.insert(cell_id, cell);
+    }
+
+    pub fn update_value(&mut self, sheet_id: SheetId, cell_id: CellId, value: CellValue) {
+        let sheet_container = self.get_sheet_container_mut(sheet_id);
+        if let Some(v) = sheet_container.cells.get_mut(&cell_id) {
+            v.value = value;
+        } else {
+            let mut cell = Cell::default();
+            cell.value = value;
+            sheet_container.cells.insert(cell_id, cell);
+        }
     }
 }
 

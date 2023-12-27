@@ -1,28 +1,29 @@
+use std::collections::HashSet;
+
 use logisheets_base::async_func::{AsyncCalcResult, Task};
-use logisheets_base::SheetId;
+use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId};
 
 use logisheets_workbook::prelude::{read, write};
 pub mod display;
-pub mod edit_action;
+mod executor;
 pub mod status;
 pub mod style;
-mod transaction;
 mod viewer;
+use crate::edit_action::{
+    ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, StatusCode,
+};
 use crate::errors::{Error, Result};
 use crate::file_loader2::load;
 use crate::file_saver::save_file;
-use crate::payloads::sheet_shift::{SheetShiftPayload, SheetShiftType};
-use crate::payloads::Process;
+use crate::formula_manager::Vertex;
 use crate::settings::Settings;
 use crate::version_manager::VersionManager;
-use edit_action::{ActionEffect, Converter};
+use executor::Executor;
 use status::Status;
-use transaction::{Transaction, TransactionContext};
 use viewer::SheetViewer;
 
 use self::display::{DisplayRequest, DisplayResponse};
 use crate::async_func_manager::AsyncFuncManager;
-use edit_action::EditAction;
 
 pub struct Controller {
     pub status: Status,
@@ -41,12 +42,11 @@ impl Default for Controller {
             version_manager: VersionManager::default(),
             async_func_manager: AsyncFuncManager::default(),
         };
-        let add_sheet = Process::SheetShift(SheetShiftPayload {
+        let add_sheet = PayloadsAction::new(false).add_payload(CreateSheet {
             idx: 0,
-            ty: SheetShiftType::Insert,
-            id: 0,
+            new_name: String::from("Sheet1"),
         });
-        empty.handle_process(vec![add_sheet], false).unwrap();
+        empty.handle_action(EditAction::Payloads(add_sheet));
         empty
     }
 }
@@ -89,22 +89,66 @@ impl Controller {
         match action {
             EditAction::Undo => ActionEffect::from_bool(self.undo()),
             EditAction::Redo => ActionEffect::from_bool(self.redo()),
-            EditAction::Payloads(action) => {
-                let mut c = Converter {
-                    sheet_pos_manager: &self.status.sheet_pos_manager,
-                    navigator: &mut self.status.navigator,
-                    container: &mut self.status.container,
-                    text_id_manager: &mut self.status.text_id_manager,
-                    sheet_id_manager: &mut self.status.sheet_id_manager,
+            EditAction::Payloads(payloads_action) => {
+                let executor = Executor {
+                    status: self.status.clone(),
+                    version_manager: &mut self.version_manager,
+                    async_func_manager: &mut self.async_func_manager,
+                    book_name: &self.curr_book_name,
+                    calc_config: self.settings.calc_config,
+                    async_funcs: &self.settings.async_funcs,
+                    updated_cells: HashSet::new(),
+                    dirty_vertices: HashSet::new(),
                 };
-                let proc = c.convert_edit_payloads(action.payloads);
-                let res = self.handle_process(proc, action.undoable);
-                if let Err(_) = res {
-                    // todo!()
-                    ActionEffect::from_err(1)
+
+                let result = executor.execute_and_calc(payloads_action);
+                match result {
+                    Ok(result) => {
+                        self.status = result.status;
+                        ActionEffect {
+                            version: result.version_manager.version(),
+                            async_tasks: result.async_func_manager.get_calc_tasks(),
+                            status: StatusCode::Ok(false),
+                        }
+                    }
+                    Err(e) => {
+                        println!("{:?}", e.to_string());
+                        ActionEffect::from_err(1) // todo
+                    }
+                }
+            }
+            EditAction::Recalc(cells) => {
+                let dirty_vertices = cells
+                    .into_iter()
+                    .map(|recalc_sheet| {
+                        let sheet_id = recalc_sheet.sheet_id;
+                        let cell_id = recalc_sheet.cell_id;
+                        let range = match cell_id {
+                            CellId::NormalCell(c) => Range::Normal(NormalRange::Single(c)),
+                            CellId::BlockCell(b) => Range::Block(BlockRange::Single(b)),
+                        };
+                        let range_id = self.status.range_manager.get_range_id(&sheet_id, &range);
+                        Vertex::Range(sheet_id, range_id)
+                    })
+                    .collect::<HashSet<_>>();
+                let executor = Executor {
+                    status: self.status.clone(),
+                    version_manager: &mut self.version_manager,
+                    async_func_manager: &mut self.async_func_manager,
+                    book_name: &self.curr_book_name,
+                    calc_config: self.settings.calc_config,
+                    async_funcs: &self.settings.async_funcs,
+                    updated_cells: HashSet::new(),
+                    dirty_vertices,
+                };
+                if let Ok(result) = executor.calc() {
+                    ActionEffect {
+                        version: result.version_manager.version(),
+                        async_tasks: vec![],
+                        status: StatusCode::Ok(false),
+                    }
                 } else {
-                    let tasks = self.async_func_manager.get_calc_tasks();
-                    ActionEffect::from(self.version(), tasks)
+                    ActionEffect::from_err(1)
                 }
             }
         }
@@ -117,37 +161,17 @@ impl Controller {
     ) -> ActionEffect {
         let mut pending_cells = vec![];
         tasks.into_iter().zip(res.into_iter()).for_each(|(t, r)| {
-            let cells = self.async_func_manager.commit_value(t, r);
+            let cells = self
+                .async_func_manager
+                .commit_value(t, r)
+                .into_iter()
+                .map(|(s, c)| RecalcCell {
+                    sheet_id: s,
+                    cell_id: c,
+                });
             pending_cells.extend(cells);
         });
-        let res = self.handle_process(vec![Process::Recalc(pending_cells)], false);
-        if let Err(_) = res {
-            ActionEffect::from_err(1)
-        } else {
-            ActionEffect::from(self.version(), vec![])
-        }
-    }
-
-    fn handle_process(&mut self, proc: Vec<Process>, undoable: bool) -> Result<()> {
-        let context = TransactionContext {
-            book_name: &self.curr_book_name,
-            calc_config: self.settings.calc_config.clone(),
-            async_funcs: &self.settings.async_funcs,
-        };
-        let transcation = Transaction {
-            async_func_manager: &mut self.async_func_manager,
-            status: self.status.clone(),
-            context,
-            proc: &proc,
-        };
-        let (mut new_status, calc_cells) = transcation.start()?;
-
-        std::mem::swap(&mut new_status, &mut self.status);
-        if undoable {
-            self.version_manager
-                .record(new_status.clone(), proc, calc_cells);
-        }
-        Ok(())
+        self.handle_action(EditAction::Recalc(pending_cells))
     }
 
     pub fn get_display_response(&self, req: DisplayRequest) -> DisplayResponse {
@@ -198,12 +222,9 @@ impl Controller {
 
 #[cfg(test)]
 mod tests {
-    use crate::controller::edit_action::PayloadsAction;
+    use crate::edit_action::{CellInput, EditAction, EditPayload, PayloadsAction};
 
-    use super::{
-        edit_action::{CellInput, EditAction, EditPayload},
-        Controller,
-    };
+    use super::Controller;
 
     #[test]
     fn controller_default_test() {

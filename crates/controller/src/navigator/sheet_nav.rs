@@ -1,18 +1,16 @@
 use super::block::BlockPlace;
+use super::fetcher::Fetcher;
 use super::id_manager::IdManager;
-use super::{executor, fetcher::Fetcher};
 use im::{HashMap, Vector};
-use logisheets_base::{BlockId, CellId, ColId, Id, RowId, SheetId};
+use logisheets_base::{BlockId, CellId, ColId, RowId, SheetId};
 
 use crate::lock::Locked;
-use crate::payloads::sheet_process::ShiftPayload;
 
 #[derive(Debug, Clone)]
 pub struct SheetNav {
     pub sheet_id: SheetId,
     pub data: Data,
     pub cache: Locked<Cache>,
-    pub version: u32,
     pub id_manager: IdManager,
 }
 
@@ -23,12 +21,7 @@ impl SheetNav {
             data: Data::init(row_max, col_max),
             id_manager: IdManager::new(row_max, col_max, 0),
             cache: Default::default(),
-            version: 1,
         }
-    }
-
-    pub fn execute_shift(self, shift_payload: &ShiftPayload) -> Self {
-        executor::execute_shift_payload(self, &shift_payload)
     }
 
     pub fn get_fetcher(&self) -> Fetcher {
@@ -81,18 +74,10 @@ impl Data {
             blocks,
         }
     }
-}
 
-/// When inserting or deleting an area in a worksheet, we build an IndexChange
-/// to record this change. When visiting the cell by the position, IndexCHange
-/// helps to find out the offset to calculate the correct Id.
-///
-#[derive(Debug, Clone)]
-pub struct IndexChange {
-    pub start: usize,
-    pub offset: u32,
-    pub free_id: Id,
-    pub version: u32,
+    pub fn has_block_id(&self, block: &BlockId) -> bool {
+        self.blocks.contains_key(block)
+    }
 }
 
 #[derive(Debug, Clone, Default)]

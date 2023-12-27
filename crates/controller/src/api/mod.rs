@@ -9,15 +9,15 @@ use crate::{
     connectors::NameFetcher,
     controller::{
         display::{get_default_col_width, DisplayRequest, DisplayResponse},
-        edit_action::ActionEffect,
         style::StyleConverter,
     },
+    edit_action::ActionEffect,
     Controller,
 };
 
 pub use crate::{
     controller::display::{ColInfo, RowInfo},
-    controller::edit_action::EditAction,
+    edit_action::EditAction,
     errors::{Error, Result},
     Comment, MergeCell, Style, Value,
 };
@@ -56,7 +56,7 @@ impl Workbook {
         Ok(Workbook { controller })
     }
 
-    // TODO: Due to the UUID generating, we can' just `assert_eq!(file1, file2)` where
+    // TODO: Due to the UUID generating, we can't just `assert_eq!(file1, file2)` where
     // `file1` and `file2` are binary got from saving of the same file. Fix it.
     #[inline]
     pub fn save(&self) -> Result<Vec<u8>> {
@@ -188,6 +188,9 @@ impl<'a> Worksheet<'a> {
                 name_id_manager: &self.controller.status.name_id_manager,
                 navigator: &self.controller.status.navigator,
                 formula_manager: &self.controller.status.formula_manager,
+                range_manager: &self.controller.status.range_manager,
+                cube_manager: &self.controller.status.cube_manager,
+                ext_ref_manager: &self.controller.status.ext_ref_manager,
             };
             let f = unparse::unparse(node, &mut name_fetcher, self.sheet_id)?;
             Ok(f)
@@ -495,7 +498,7 @@ impl<'a> Worksheet<'a> {
         self.controller
             .status
             .navigator
-            .get_block_size(self.sheet_id, block_id)
+            .get_block_size(&self.sheet_id, &block_id)
             .map_err(|e| e.into())
     }
 
@@ -504,12 +507,12 @@ impl<'a> Worksheet<'a> {
             .controller
             .status
             .navigator
-            .get_master_cell(self.sheet_id, block_id)?;
+            .get_master_cell(&self.sheet_id, &block_id)?;
         let result = self
             .controller
             .status
             .navigator
-            .fetch_cell_idx(&self.sheet_id, &master_cell_id)?;
+            .fetch_normal_cell_idx(&self.sheet_id, &master_cell_id)?;
         Ok(result)
     }
 }
