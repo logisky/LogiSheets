@@ -1,11 +1,11 @@
 [package]
 name = "logisheets_astchecker"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2018"
 description = "validate the arguments in ast"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 license = "MIT"
 
 [dependencies]
-logisheets_parser = {version = "0.4.0", path = "../parser"}
-logisheets_base = {version = "0.4.0", path = "../base"}
+logisheets_parser = {version = "0.5.0", path = "../parser"}
+logisheets_base = {version = "0.5.0", path = "../base"}
