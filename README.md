@@ -4,19 +4,20 @@
 
 ## What is LogiSheets?
 
-LogiSheets is a web spreadsheet application that is compatible with Excel and designed for easy further development. Most important of all, it's free! And LogiSheets is written in Rust, and you are able to create, read and write .xlsx files.
+LogiSheets is a web-based spreadsheet application that seamlessly integrates with Excel and is crafted for expansion. Notably, it comes at no cost!
 
-This repo contains some our tools too, feel free and just make issues
-or PRs about them!
+You can utilize the Rust crate and Node package to efficiently read, perform operations, and write .xlsx files.
+
+We are also working on a user interface to enable users to use spreadsheets directly in their web browsers.
 
 ## WARNING
 
-LogiSheets is still in the **very** early stages of development. Your issues or PRs are welcome!
+LogiSheets is currently in its **early development** stages. We welcome your feedback, issues, or pull requests!
 
 ## Design goals
 
 - **Easy further development**: LogiSheets provides rich APIs to help you develop your plugins.
-- **Structural Data Support**: LogiSheets provides a data structure (temporary named _Block_) to ensure the relative positions of cells in a certain area keep unchanged.
+- **Structural Data Support**: LogiSheets introduces a data structure (temporarily named Block) to maintain the consistent positions of cells within a specified area.
 - **Supporting Cowork**
 
 ## Get Started

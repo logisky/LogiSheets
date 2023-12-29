@@ -10,6 +10,6 @@ We are also working on a user interface to enable users to use spreadsheets dire
 
 ## WARNING
 
-This version is specifically used for Node. If you are seeking a version compatible with web browsers, please see [`logisheets-web`](https://www.npmjs.com/package/logisheets-web).
+This version is specifically used for browsers. If you are seeking a version used in Node, please see `logisheets`.
 
 LogiSheets is currently in its **early development** stages. We welcome your feedback, issues, or pull requests!
