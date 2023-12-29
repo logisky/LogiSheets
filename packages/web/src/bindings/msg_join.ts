@@ -5,5 +5,5 @@ import {WorkbookFile} from './workbook_file'
 export interface Join {
     file: string
     user: string
-    wbFile: WorkbookFile | null
+    wbFile?: WorkbookFile
 }

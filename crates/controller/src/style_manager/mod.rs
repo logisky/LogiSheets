@@ -15,8 +15,9 @@ use logisheets_base::StyleId;
 use num_fmt_manager::NumFmtManager;
 use xf_manager::XfManager;
 
-use crate::payloads::sheet_process::style::CellStylePayload;
 use logisheets_workbook::prelude::{CtBorder, CtCellAlignment, CtCellProtection, CtFill, CtFont};
+
+use crate::{edit_action::StyleUpdateType, Error};
 
 use self::execute::execute_style_payload;
 
@@ -41,11 +42,11 @@ pub struct StyleManager {
 
 impl StyleManager {
     pub fn execute_style_payload(
-        self,
-        payload: &CellStylePayload,
-        idx: StyleId,
-    ) -> Result<(Self, StyleId), crate::errors::Error> {
-        execute_style_payload(self, payload, idx)
+        &mut self,
+        payload: StyleUpdateType,
+        id: StyleId,
+    ) -> Result<StyleId, Error> {
+        execute_style_payload(self, payload, id)
     }
 
     pub fn get_cell_style(&self, id: StyleId) -> RawStyle {

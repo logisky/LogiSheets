@@ -32,13 +32,12 @@ export class StandardFont implements Font {
     }
 
     name: CtFontName = {val: 'Arial'}
-    underline: CtUnderlineProperty | null = null
+    underline?: CtUnderlineProperty
     fontSizeUnit: FontSizeUnit = 'px'
     lineHeight = '100%'
     standardColor = StandardColor.from(0, 0, 0, 1)
     bold = false
     color!: Color
-    family = null
     sz = 10
     condense = false
     italic = false
@@ -46,9 +45,6 @@ export class StandardFont implements Font {
     shadow = false
     strike = false
     extend = false
-    charset = null
-    vertAlign = null
-    scheme = null
 
     setSize(s: number) {
         this.sz = s

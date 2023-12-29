@@ -1,10 +1,11 @@
+pub mod ctx;
 pub mod diff;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use logisheets_base::{CellId, SheetId};
 
-use crate::{controller::status::Status, payloads::Process};
+use crate::{controller::status::Status, edit_action::PayloadsAction};
 
 use self::diff::{convert_payloads_to_sheet_diff, Diff, SheetDiff};
 
@@ -30,11 +31,11 @@ impl VersionManager {
 
     pub fn record(
         &mut self,
-        status: Status,
-        processes: Vec<Process>,
+        mut status: Status,
+        processes: PayloadsAction,
         updated_cells: HashSet<(SheetId, CellId)>,
     ) {
-        let diffs = convert_payloads_to_sheet_diff(&status, processes, updated_cells);
+        let diffs = convert_payloads_to_sheet_diff(&mut status, processes, updated_cells);
         self.add_status(status, diffs);
         self.version += 1;
     }

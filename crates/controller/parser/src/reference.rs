@@ -24,13 +24,16 @@ lazy_static! {
     static ref ROW_REGEX: Regex = Regex::new(r#"(\$)?([0-9]+)"#).unwrap();
 }
 
-pub fn build_cell_reference<T>(pair: Pair<Rule>, context: &mut T) -> Result<ast::PureNode>
+pub fn build_cell_reference<T>(
+    pair: Pair<Rule>,
+    curr_sheet: SheetId,
+    context: &mut T,
+) -> Result<ast::PureNode>
 where
     T: ContextTrait,
 {
     let mut pairs = pair.into_inner();
     let p = pairs.next().unwrap();
-    let curr_sheet = context.get_active_sheet();
     let id_fetcher = context;
     let r = match p.as_rule() {
         Rule::a1_reference_with_prefix => build_a1_reference_with_prefix(p, curr_sheet, id_fetcher),

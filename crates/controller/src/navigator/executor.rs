@@ -1,32 +1,185 @@
-use super::SheetNav;
-use crate::payloads::sheet_process::{Direction, LineShift, ShiftPayload, ShiftType};
+use logisheets_base::{errors::BasicError, CellId};
 
-pub fn execute_shift_payload(sheet_nav: SheetNav, payload: &ShiftPayload) -> SheetNav {
-    match payload {
-        ShiftPayload::Line(ls) => execute_line_shift(sheet_nav, ls),
-        ShiftPayload::Range(_) => unreachable!(),
-    }
+use super::{ctx::NavExecCtx, BlockPlace, Navigator, SheetNav};
+use crate::{edit_action::EditPayload, Error};
+
+pub struct NavExecutor {
+    pub nav: Navigator,
 }
 
-fn execute_line_shift(sheet_nav: SheetNav, ls: &LineShift) -> SheetNav {
-    match (&ls.ty, &ls.direction) {
-        (ShiftType::Delete, Direction::Horizontal) => {
-            delete_rows(sheet_nav, ls.start as usize, ls.cnt)
-        }
-        (ShiftType::Delete, Direction::Vertical) => {
-            delete_cols(sheet_nav, ls.start as usize, ls.cnt)
-        }
-        (ShiftType::Insert, Direction::Horizontal) => {
-            insert_new_rows(sheet_nav, ls.start as usize, ls.cnt)
-        }
-        (ShiftType::Insert, Direction::Vertical) => {
-            insert_new_cols(sheet_nav, ls.start as usize, ls.cnt)
+impl NavExecutor {
+    pub fn new(nav: Navigator) -> Self {
+        NavExecutor { nav }
+    }
+
+    pub fn execute<C: NavExecCtx>(mut self, ctx: &C, payload: EditPayload) -> Result<Self, Error> {
+        match payload {
+            EditPayload::MoveBlock(move_block) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(move_block.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = self.nav.fetch_cell_id(
+                    &sheet_id,
+                    move_block.new_master_row,
+                    move_block.new_master_col,
+                )?;
+                if let CellId::BlockCell(id) = cell_id {
+                    if id.block_id != move_block.id {
+                        return Err(BasicError::CreatingBlockOn(id.block_id).into());
+                    }
+                }
+                self.nav.move_block(
+                    &sheet_id,
+                    &move_block.id,
+                    move_block.new_master_row,
+                    move_block.new_master_col,
+                );
+                Ok(self)
+            }
+            EditPayload::RemoveBlock(remove_block) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(remove_block.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                self.nav.remove_block(&sheet_id, &remove_block.id);
+                Ok(self)
+            }
+            EditPayload::CreateBlock(create_block) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(create_block.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = self.nav.fetch_cell_id(
+                    &sheet_id,
+                    create_block.master_row,
+                    create_block.master_col,
+                )?;
+                if let CellId::BlockCell(id) = cell_id {
+                    return Err(BasicError::CreatingBlockOn(id.block_id).into());
+                }
+                let cell_id = cell_id.assert_normal_cell_id();
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id);
+                if sheet_nav.data.has_block_id(&create_block.id) {
+                    return Err(BasicError::BlockIdHasAlreadyExisted(create_block.id).into());
+                }
+                let block_place = BlockPlace::new(
+                    cell_id,
+                    create_block.row_cnt as u32,
+                    create_block.col_cnt as u32,
+                );
+                let block_id = create_block.id;
+                sheet_nav.data.blocks.insert(block_id, block_place);
+                sheet_nav.cache = Default::default();
+                Ok(self)
+            }
+            EditPayload::CreateSheet(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                self.nav.create_sheet(sheet_id);
+                Ok(self)
+            }
+            EditPayload::DeleteSheet(delete_sheet) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(delete_sheet.idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                self.nav.delete_sheet(&sheet_id);
+                Ok(self)
+            }
+            EditPayload::InsertCols(insert_cols) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(insert_cols.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
+                let new_sheet_nav =
+                    insert_new_cols(sheet_nav, insert_cols.start, insert_cols.count as u32);
+                let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
+                let res = NavExecutor {
+                    nav: Navigator { sheet_navs },
+                };
+                Ok(res)
+            }
+            EditPayload::DeleteCols(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
+                let new_sheet_nav = delete_cols(sheet_nav, p.start, p.count as u32);
+                let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
+                let res = NavExecutor {
+                    nav: Navigator { sheet_navs },
+                };
+                Ok(res)
+            }
+            EditPayload::InsertRows(insert_rows) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(insert_rows.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
+                let new_sheet_nav =
+                    insert_new_rows(sheet_nav, insert_rows.start, insert_rows.count as u32);
+                let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
+                let res = NavExecutor {
+                    nav: Navigator { sheet_navs },
+                };
+                Ok(res)
+            }
+            EditPayload::DeleteRows(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
+                let new_sheet_nav = delete_rows(sheet_nav, p.start, p.count as u32);
+                let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
+                let res = NavExecutor {
+                    nav: Navigator { sheet_navs },
+                };
+                Ok(res)
+            }
+            EditPayload::InsertColsInBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                let new_bp = bp.add_new_cols(p.start, p.cnt as u32);
+                let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
+                let result = NavExecutor { nav };
+                Ok(result)
+            }
+            EditPayload::DeleteColsInBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                let new_bp = bp.delete_cols(p.start, p.cnt as u32);
+                let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
+                let result = NavExecutor { nav };
+                Ok(result)
+            }
+            EditPayload::InsertRowsInBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                let new_bp = bp.add_new_rows(p.start, p.cnt as u32);
+                let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
+                let result = NavExecutor { nav };
+                Ok(result)
+            }
+            EditPayload::DeleteRowsInBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                let new_bp = bp.delete_rows(p.start, p.cnt as u32);
+                let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
+                let result = NavExecutor { nav };
+                Ok(result)
+            }
+            _ => Ok(self),
         }
     }
 }
 
 fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
-    let version = sheet_nav.version + 1;
     let mut new_id_manager = sheet_nav.id_manager.clone();
     let new_ids = new_id_manager.get_row_ids(cnt);
     let new_rows = {
@@ -40,7 +193,6 @@ fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     };
     SheetNav {
         sheet_id: sheet_nav.sheet_id,
-        version,
         data: sheet_nav.data.update_rows(new_rows),
         cache: Default::default(),
         id_manager: new_id_manager,
@@ -48,7 +200,6 @@ fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
 }
 
 fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
-    let version = sheet_nav.version + 1;
     let mut new_id_manager = sheet_nav.id_manager.clone();
     let new_ids = new_id_manager.get_col_ids(cnt);
     let new_cols = {
@@ -62,7 +213,6 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     };
     SheetNav {
         sheet_id: sheet_nav.sheet_id,
-        version,
         data: sheet_nav.data.update_cols(new_cols),
         cache: Default::default(),
         id_manager: new_id_manager,
@@ -97,7 +247,6 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     };
     SheetNav {
         sheet_id,
-        version: result.version + 1,
         data: result.data.update_rows(new_rows).update_blocks(new_blocks),
         cache: Default::default(),
         id_manager: new_id_manager,
@@ -107,7 +256,6 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
 fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     let sheet_id = sheet_nav.sheet_id;
     let result = sheet_nav;
-    let version = result.version.clone() + 1;
     let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_col_ids(cnt);
     let new_cols = {
@@ -133,7 +281,6 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
     };
     SheetNav {
         sheet_id,
-        version,
         data: result.data.update_cols(new_cols).update_blocks(new_blocks),
         cache: Default::default(),
         id_manager: new_id_manager,

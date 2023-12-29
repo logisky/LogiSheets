@@ -18,6 +18,10 @@ pub enum BasicError {
     ColIndexUnavailable(ColId),
     #[error("Failed to fetch block by the block id: {1} in sheet {0}")]
     BlockIdNotFound(SheetId, BlockId),
+    #[error("Failed to fetch block cell by the block id: {1}, row: {2}, col: {3} in sheet {0}")]
+    BlockCellIdNotFound(SheetId, BlockId, usize, usize),
+    #[error("Failed to create block because the block id is already existed")]
+    BlockIdHasAlreadyExisted(BlockId),
     #[error("Failed to fetch sheet by the sheet id: {0}")]
     SheetIdNotFound(SheetId),
     #[error(
@@ -40,6 +44,10 @@ pub enum BasicError {
 
     #[error("sheet name not found: {0}")]
     SheetNameNotFound(String),
+    #[error("sheet idx exceed the maximum: {0}")]
+    SheetIdxExceed(usize),
+    #[error("creating block on an existed block: {0}")]
+    CreatingBlockOn(BlockId),
     #[error("ext ref id not found: {0}")]
     ExtRefIdNotFound(ExtRefId),
 }

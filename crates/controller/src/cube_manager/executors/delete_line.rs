@@ -1,21 +1,17 @@
-use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, Cube, CubeId, SheetId,
-};
+use logisheets_base::{Cube, CubeId, SheetId};
 
-use crate::cube_manager::{CubeExecContext, CubeUpdateType};
-
-use super::utils::get_lower_upper_bound_of_cross;
+use super::{utils::get_lower_upper_bound_of_cross, CubeExecCtx, CubeExecutor, CubeUpdateType};
 
 pub fn delete_line<C>(
-    exec_ctx: CubeExecContext,
+    exec_ctx: CubeExecutor,
     sheet: SheetId,
     is_horizontal: bool,
     idx: usize,
     cnt: u32,
-    old_ctx: &mut C,
-) -> CubeExecContext
+    old_ctx: &C,
+) -> CubeExecutor
 where
-    C: IdFetcherTrait + IndexFetcherTrait,
+    C: CubeExecCtx,
 {
     let mut func = |cube: &Cube, _: &CubeId| -> CubeUpdateType {
         let from_idx = old_ctx.fetch_sheet_index(&cube.from_sheet).unwrap();

@@ -1,11 +1,21 @@
 mod calc_connector;
+mod container_connector;
+mod cube_connector;
+mod formula_connector;
 mod id_fetcher;
 mod index_fetcher;
 mod name_fetcher;
-mod vertex_connector;
+mod navigator_connector;
+mod range_connector;
+mod sheet_pos_connector;
 
 pub use calc_connector::CalcConnector;
+pub use container_connector::ContainerConnector;
+pub use cube_connector::CubeConnector;
+pub use formula_connector::FormulaConnector;
 pub use id_fetcher::IdFetcher;
 pub use index_fetcher::IndexFetcher;
 pub use name_fetcher::NameFetcher;
-pub use vertex_connector::VertexConnector;
+pub use navigator_connector::NavigatorConnector;
+pub use range_connector::RangeConnector;
+pub use sheet_pos_connector::SheetPosConnector;

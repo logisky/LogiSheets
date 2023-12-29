@@ -5,11 +5,14 @@ use logisheets_base::{
 use logisheets_workbook::workbook::Wb;
 
 use crate::{
+    cube_manager::CubeManager,
     ext_book_manager::ExtBooksManager,
+    ext_ref_manager::ExtRefManager,
     file_saver::workbook::save_workbook,
     formula_manager::FormulaManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
+    range_manager::RangeManager,
     workbook::sheet_pos_manager::SheetPosManager,
     Controller,
 };
@@ -31,6 +34,9 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
     let text_id_manager = &controller.status.text_id_manager;
     let name_id_manager = &controller.status.name_id_manager;
     let formula_manager = &controller.status.formula_manager;
+    let range_manager = &controller.status.range_manager;
+    let cube_manager = &controller.status.cube_manager;
+    let ext_ref_manager = &controller.status.ext_ref_manager;
 
     let data_container = &controller.status.container;
     let attachment_manager = &controller.status.cell_attachment_manager;
@@ -47,6 +53,9 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
         part_count: 0,
         external_count: 0,
         func_manager,
+        range_manager,
+        cube_manager,
+        ext_ref_manager,
         sheet_id_manager,
         external_links_manager,
         text_id_manager,
@@ -88,6 +97,9 @@ pub struct Saver<'a> {
     pub name_id_manager: &'a NameIdManager,
     pub navigator: &'a mut Navigator,
     pub formula_manager: &'a FormulaManager,
+    pub range_manager: &'a RangeManager,
+    pub cube_manager: &'a CubeManager,
+    pub ext_ref_manager: &'a ExtRefManager,
     pub sheet_pos_manager: &'a SheetPosManager,
 }
 
@@ -185,15 +197,13 @@ impl<'a> NameFetcherTrait for Saver<'a> {
         sheet_id: &SheetId,
         range_id: &logisheets_base::RangeId,
     ) -> Result<logisheets_base::Range> {
-        self.formula_manager
-            .range_manager
+        self.range_manager
             .get_range(sheet_id, range_id)
             .ok_or(BasicError::RangeIdNotFound(*range_id))
     }
 
     fn fetch_cube(&self, cube_id: &logisheets_base::CubeId) -> Result<Cube> {
-        self.formula_manager
-            .cube_manager
+        self.cube_manager
             .get_cube(cube_id)
             .ok_or(BasicError::CubeIdNotFound(*cube_id))
     }
@@ -202,8 +212,7 @@ impl<'a> NameFetcherTrait for Saver<'a> {
         &mut self,
         ext_ref_id: &logisheets_base::ExtRefId,
     ) -> Result<logisheets_base::ExtRef> {
-        self.formula_manager
-            .ext_ref_manager
+        self.ext_ref_manager
             .get_ext_ref(ext_ref_id)
             .ok_or(BasicError::ExtRefIdNotFound(*ext_ref_id))
     }

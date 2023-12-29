@@ -1,13 +1,11 @@
-use logisheets_controller::controller::edit_action::{
-    CreateBlock, LineShiftInBlock, MoveBlock, RemoveBlock,
-};
+use logisheets_controller::edit_action::{CreateBlock, MoveBlock, RemoveBlock};
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
 
 use crate::operator::{
-    CheckEmpty, CheckError, CheckFormula, CheckNum, CheckString, Input, Operator, ShiftData,
-    Statement, Switch,
+    BlockShiftData, CheckEmpty, CheckError, CheckFormula, CheckNum, CheckString, Input, Operator,
+    ShiftData, Statement, Switch,
 };
 
 #[derive(Parser)]
@@ -151,57 +149,45 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
         Rule::block_insert_row => {
             let mut iter = s.into_inner();
             let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            let idx = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            let cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            Ok(Operator::LineShiftInBlock(LineShiftInBlock {
-                sheet_idx: 1, // dummy sheet_idx
+            let idx = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            Ok(Operator::BlockInsertRow(BlockShiftData {
                 block_id: id,
-                idx,
+                from: idx,
                 cnt,
-                horizontal: true,
-                insert: true,
             }))
         }
         Rule::block_insert_col => {
             let mut iter = s.into_inner();
             let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            let idx = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            let cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            Ok(Operator::LineShiftInBlock(LineShiftInBlock {
-                sheet_idx: 1, // dummy sheet_idx
+            let idx = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            Ok(Operator::BlockInsertCol(BlockShiftData {
                 block_id: id,
-                idx,
+                from: idx,
                 cnt,
-                horizontal: false,
-                insert: true,
             }))
         }
         Rule::block_delete_row => {
             let mut iter = s.into_inner();
             let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            let idx = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            let cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            Ok(Operator::LineShiftInBlock(LineShiftInBlock {
-                sheet_idx: 1, // dummy sheet_idx
+            let idx = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            Ok(Operator::BlockDeleteRow(BlockShiftData {
                 block_id: id,
-                idx,
+                from: idx,
                 cnt,
-                horizontal: true,
-                insert: false,
             }))
         }
         Rule::block_delete_col => {
             let mut iter = s.into_inner();
             let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            let idx = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            let cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
-            Ok(Operator::LineShiftInBlock(LineShiftInBlock {
-                sheet_idx: 1, // dummy sheet_idx
+            let idx = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            let cnt = iter.next().unwrap().as_str().parse::<u32>().unwrap();
+            Ok(Operator::BlockDeleteCol(BlockShiftData {
                 block_id: id,
-                idx,
+                from: idx,
                 cnt,
-                horizontal: false,
-                insert: false,
             }))
         }
         _ => unreachable!(),

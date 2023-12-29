@@ -4,5 +4,5 @@
 export interface SequencerInitWorkbook {
     version: number
     fileId: string
-    data: Uint8Array | null
+    data?: Uint8Array
 }

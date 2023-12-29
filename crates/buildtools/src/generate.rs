@@ -1,8 +1,8 @@
 fn main() {
     use gents::FileGroup;
     use logisheets_controller::controller::display::{DisplayRequest, DisplayResponse};
-    use logisheets_controller::controller::edit_action::AsyncFuncResult;
-    use logisheets_controller::controller::edit_action::{ActionEffect, EditAction};
+    use logisheets_controller::edit_action::AsyncFuncResult;
+    use logisheets_controller::edit_action::{ActionEffect, EditAction};
     let path = "packages/web/src/bindings";
     let mut file_group = FileGroup::new();
     file_group.add::<DisplayRequest>();

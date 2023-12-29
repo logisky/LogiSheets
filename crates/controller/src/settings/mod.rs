@@ -29,7 +29,7 @@ impl Default for Settings {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct CalcConfig {
     pub iter_limit: u16,
     pub error: f32,

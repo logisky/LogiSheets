@@ -1,15 +1,20 @@
+use std::collections::HashSet;
+
 use logisheets_base::{CellId, CellValue, SheetId};
 use logisheets_workbook::prelude::*;
 
 use crate::{
     cell::Cell,
     cell_attachments::{comment::Comment, CellAttachmentsManager},
-    connectors::VertexConnector,
+    connectors::FormulaConnector,
     container::{col_info_manager::ColInfo, row_info_manager::RowInfo, DataContainer},
+    cube_manager::CubeManager,
     ext_book_manager::ExtBooksManager,
+    ext_ref_manager::ExtRefManager,
     formula_manager::FormulaManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
+    range_manager::RangeManager,
     settings::Settings,
     workbook::sheet_pos_manager::SheetPosManager,
 };
@@ -130,6 +135,9 @@ pub fn load_sheet_data(
     ext_books_manager: &mut ExtBooksManager,
     container: &mut DataContainer,
     formula_manager: &mut FormulaManager,
+    range_manager: &mut RangeManager,
+    cube_manager: &mut CubeManager,
+    ext_ref_manager: &mut ExtRefManager,
     style_loader: &mut StyleLoader,
     workbook: &Wb,
 ) {
@@ -175,9 +183,8 @@ pub fn load_sheet_data(
                     };
                     container.add_cell(sheet_id, id, cell);
                     if let Some(formula) = &ct_cell.f {
-                        let mut vertex_connector = VertexConnector {
+                        let mut connector = FormulaConnector {
                             book_name,
-                            active_sheet: sheet_id,
                             container,
                             sheet_pos_manager,
                             sheet_id_manager,
@@ -187,6 +194,11 @@ pub fn load_sheet_data(
                             id_navigator: &mut navigator.clone(),
                             idx_navigator: navigator,
                             external_links_manager: ext_books_manager,
+                            range_manager,
+                            cube_manager,
+                            ext_ref_manager,
+                            dirty_ranges: HashSet::new(),
+                            dirty_cubes: HashSet::new(),
                         };
                         if let Some(f) = &formula.formula {
                             if let Some(reference) = &formula.reference {
@@ -203,7 +215,7 @@ pub fn load_sheet_data(
                                         row_end,
                                         col_end,
                                         f,
-                                        &mut vertex_connector,
+                                        &mut connector,
                                     )
                                 } else if let Some((row_idx, col_idx)) = parse_cell(reference) {
                                     load_normal_formula(
@@ -212,7 +224,7 @@ pub fn load_sheet_data(
                                         row_idx,
                                         col_idx,
                                         f,
-                                        &mut vertex_connector,
+                                        &mut connector,
                                     )
                                 }
                             } else {
@@ -222,7 +234,7 @@ pub fn load_sheet_data(
                                     row,
                                     col,
                                     f,
-                                    &mut vertex_connector,
+                                    &mut connector,
                                 )
                             }
                         }

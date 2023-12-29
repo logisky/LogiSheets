@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
 use logisheets_base::errors::BasicError;
-use logisheets_base::get_active_sheet::GetActiveSheetTrait;
 use logisheets_base::get_curr_addr::GetCurrAddrTrait;
 use logisheets_base::set_curr_cell::SetCurrCellTrait;
 use logisheets_base::{
@@ -12,8 +11,9 @@ use logisheets_base::{
 use logisheets_base::{BlockRange, CubeCross, NormalRange, Range};
 use logisheets_parser::ast;
 
-use crate::formula_manager::FormulaManager;
+use crate::cube_manager::CubeManager;
 use crate::id_manager::SheetIdManager;
+use crate::range_manager::RangeManager;
 use crate::{
     async_func_manager::AsyncFuncManager,
     calc_engine::calculator::calc_vertex::Value,
@@ -32,7 +32,8 @@ use crate::{
 use crate::errors::Result;
 
 pub struct CalcConnector<'a> {
-    pub formula_manager: &'a FormulaManager,
+    pub range_manager: &'a RangeManager,
+    pub cube_manager: &'a CubeManager,
     pub navigator: &'a mut Navigator,
     pub container: &'a mut DataContainer,
     pub ext_links: &'a mut ExtBooksManager,
@@ -49,12 +50,6 @@ pub struct CalcConnector<'a> {
 
     pub dirty_cells_in_next_run: &'a mut im::HashSet<(SheetId, CellId)>,
     pub calc_cells: &'a mut HashSet<(SheetId, CellId)>,
-}
-
-impl<'a> GetActiveSheetTrait for CalcConnector<'a> {
-    fn get_active_sheet(&self) -> SheetId {
-        self.active_sheet
-    }
 }
 
 impl<'a> GetCurrAddrTrait for CalcConnector<'a> {
@@ -88,10 +83,7 @@ impl<'a> Connector for CalcConnector<'a> {
             ast::CellReference::Mut(range_display) => {
                 let sheet_id = range_display.sheet_id;
                 let range_id = range_display.range_id;
-                let range = self
-                    .formula_manager
-                    .range_manager
-                    .get_range(&sheet_id, &range_id);
+                let range = self.range_manager.get_range(&sheet_id, &range_id);
                 match range {
                     Some(range) => match range {
                         Range::Normal(nomral_range) => match nomral_range {
@@ -194,11 +186,7 @@ impl<'a> Connector for CalcConnector<'a> {
             }
             ast::CellReference::UnMut(cube) => {
                 let cube_id = cube.cube_id;
-                let cube = self
-                    .formula_manager
-                    .cube_manager
-                    .get_cube(&cube_id)
-                    .unwrap();
+                let cube = self.cube_manager.get_cube(&cube_id).unwrap();
                 match cube.cross {
                     CubeCross::Single(row, col) => CalcVertex::Reference(CalcReference {
                         from_sheet: Some(cube.from_sheet),
@@ -322,21 +310,15 @@ impl<'a> Connector for CalcConnector<'a> {
 
         let sheet_id = vertex.0;
         let cell_id = vertex.1;
-        let cell_idx = self.navigator.fetch_cell_idx(&sheet_id, &cell_id).unwrap();
         match result {
             CalcValue::Scalar(v) => {
                 let cell_value =
                     value_to_cell_value(v, &mut |t| self.text_id_manager.get_or_register_id(&t));
-                self.set_cell_value(sheet_id, cell_idx.0, cell_idx.1, cell_value);
+                self.set_cell_value(sheet_id, cell_id, cell_value);
             }
             CalcValue::Range(_) => unreachable!(),
             CalcValue::Union(_) => {
-                self.set_cell_value(
-                    sheet_id,
-                    cell_idx.0,
-                    cell_idx.1,
-                    CellValue::Error(Error::Value),
-                );
+                self.set_cell_value(sheet_id, cell_id, CellValue::Error(Error::Value));
             }
             CalcValue::Cube(_) => unreachable!(),
         }
@@ -346,11 +328,8 @@ impl<'a> Connector for CalcConnector<'a> {
         self.async_funcs.get(func_name).is_some()
     }
 
-    fn get_range(&self, sheet_id: &SheetId, range: &u32) -> Range {
-        self.formula_manager
-            .range_manager
-            .get_range(sheet_id, range)
-            .unwrap()
+    fn get_range(&self, sheet_id: &SheetId, range: &u32) -> Option<Range> {
+        self.range_manager.get_range(sheet_id, range)
     }
 
     fn get_sheet_id_by_name(&self, name: &str) -> Result<SheetId> {
@@ -367,6 +346,10 @@ impl<'a> Connector for CalcConnector<'a> {
         let cell_id = self.get_cell_id(sheet_id, row, col)?;
         self.dirty_cells_in_next_run.insert((sheet_id, cell_id));
         Ok(())
+    }
+
+    fn get_active_sheet(&self) -> SheetId {
+        self.active_sheet
     }
 }
 
@@ -495,22 +478,14 @@ impl<'a> CalcConnector<'a> {
         }
     }
 
-    fn set_cell_value(
-        &mut self,
-        sheet_id: SheetId,
-        row_idx: usize,
-        col_idx: usize,
-        value: CellValue,
-    ) {
-        if let Ok(cid) = self.navigator.fetch_cell_id(&sheet_id, row_idx, col_idx) {
-            let sheet = self.container.get_sheet_container_mut(sheet_id);
-            if let Some(c) = sheet.cells.get_mut(&cid) {
-                c.value = value
-            } else {
-                let mut cell = Cell::default();
-                cell.value = value;
-                self.container.add_cell(sheet_id, cid, cell)
-            }
+    fn set_cell_value(&mut self, sheet_id: SheetId, cell_id: CellId, value: CellValue) {
+        let sheet = self.container.get_sheet_container_mut(sheet_id);
+        if let Some(c) = sheet.cells.get_mut(&cell_id) {
+            c.value = value
+        } else {
+            let mut cell = Cell::default();
+            cell.value = value;
+            self.container.add_cell(sheet_id, cell_id, cell)
         }
     }
 }

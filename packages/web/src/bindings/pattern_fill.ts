@@ -3,7 +3,7 @@ import {Color} from './color'
 import {StPatternType} from './st_pattern_type'
 
 export interface PatternFill {
-    fgColor: Color | null
-    bgColor: Color | null
-    patternType: StPatternType | null
+    fgColor?: Color
+    bgColor?: Color
+    patternType?: StPatternType
 }

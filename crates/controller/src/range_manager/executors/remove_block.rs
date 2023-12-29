@@ -1,8 +1,8 @@
-use logisheets_base::{BlockId, BlockRange, RangeId};
+use logisheets_base::{BlockId, BlockRange, RangeId, SheetId};
 
-use crate::range_manager::{RangeUpdateType, SheetRangeExecContext};
+use super::{RangeExecutor, RangeUpdateType};
 
-pub fn remove_block(exec_ctx: SheetRangeExecContext, block: BlockId) -> SheetRangeExecContext {
+pub fn remove_block(exec_ctx: RangeExecutor, sheet_id: SheetId, block: BlockId) -> RangeExecutor {
     let mut func = |range: &BlockRange, _: &RangeId| -> RangeUpdateType {
         match range {
             BlockRange::Single(c) => {
@@ -21,6 +21,6 @@ pub fn remove_block(exec_ctx: SheetRangeExecContext, block: BlockId) -> SheetRan
             }
         }
     };
-    let result = exec_ctx.block_range_update(&mut func);
+    let result = exec_ctx.block_range_update(&sheet_id, &mut func);
     result
 }

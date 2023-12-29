@@ -441,15 +441,15 @@ dependencies = [
 
 [[package]]
 name = "gents"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0232dbd9c0c056b9feab654e80ac30b3c2745d659f885478465ac6596e8f2318"
+checksum = "f7b3f2f9b6b4b27113e933c519953c072e93010a9f9d5fc5782401485dc5ec58"
 
 [[package]]
 name = "gents_derives"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83bc7c674bcfca098f6cb4facb810ef46e5611f2bcbee7aff9a6b00610df2ea8"
+checksum = "ef8c87573ae04d6bae6c8c03eb55f0e5597c3c9fc08d31537a9dab78dda71a16"
 dependencies = [
  "paste",
  "proc-macro2",

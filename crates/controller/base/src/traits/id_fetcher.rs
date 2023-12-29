@@ -1,9 +1,14 @@
-use crate::{Cube, CubeId, ExtRef, ExtRefId, NormalCellId, Range, RangeId};
+use crate::{BlockCellId, BlockId, Cube, CubeId, ExtRef, ExtRefId, NormalCellId, Range, RangeId};
 
 use crate::{errors::BasicError, CellId, ColId, ExtBookId, FuncId, NameId, RowId, SheetId, TextId};
 
 pub trait SheetIdFetcherTrait {
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId;
+}
+
+pub trait SheetIdFetcherByIdxTrait {
+    // Return the count of sheets if `idx` exceeds.
+    fn fetch_sheet_id_by_index(&self, idx: usize) -> Result<SheetId, usize>;
 }
 
 pub trait IdFetcherTrait {
@@ -22,6 +27,13 @@ pub trait IdFetcherTrait {
         row_idx: usize,
         col_idx: usize,
     ) -> Result<NormalCellId, BasicError>;
+    fn fetch_block_cell_id(
+        &self,
+        sheet_id: &SheetId,
+        block_id: &BlockId,
+        row: usize,
+        col: usize,
+    ) -> Result<BlockCellId, BasicError>;
 
     fn fetch_sheet_id(&mut self, sheet_name: &str) -> SheetId;
 

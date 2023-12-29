@@ -2,18 +2,16 @@ use logisheets_base::{
     id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, Cube, CubeId, SheetId,
 };
 
-use crate::cube_manager::{CubeExecContext, CubeUpdateType};
-
-use super::utils::get_lower_upper_bound_of_cross;
+use super::{utils::get_lower_upper_bound_of_cross, CubeExecutor, CubeUpdateType};
 
 pub fn insert_line<C>(
-    exec_ctx: CubeExecContext,
+    exec_ctx: CubeExecutor,
     sheet: SheetId,
     is_horizontal: bool,
     idx: usize,
     _cnt: u32,
-    old_ctx: &mut C,
-) -> CubeExecContext
+    old_ctx: &C,
+) -> CubeExecutor
 where
     C: IdFetcherTrait + IndexFetcherTrait,
 {

@@ -22,8 +22,8 @@ export class StandardColor {
         color.#blue = parseInt(rgb.slice(4, 6), 16)
         return color
     }
-    static fromCtColor(color: Color | null) {
-        if (color === null) {
+    static fromCtColor(color?: Color) {
+        if (color === undefined) {
             return new StandardColor()
         }
         const result = new StandardColor()
@@ -89,9 +89,9 @@ export class StandardColor {
         const b = transfer(this.#blue ?? 0)
         return `${a}${r}${g}${b}`
     }
-    #red: number | null = null
-    #green: number | null = null
-    #blue: number | null = null
+    #red?: number
+    #green?: number
+    #blue?: number
     #alpha = ALPHA
     private _valid() {
         return (

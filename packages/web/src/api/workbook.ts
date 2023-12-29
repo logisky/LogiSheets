@@ -22,7 +22,8 @@ import {
     block_line_shift,
     sheet_rename_by_idx,
     sheet_rename_by_name,
-    sheet_shift,
+    create_sheet,
+    delete_sheet,
 } from '../../wasm/logisheets_wasm_server'
 import {ActionEffect, AsyncFuncResult, DisplayResponse} from '../bindings'
 import {Transaction} from '../transactions'
@@ -190,13 +191,9 @@ export class Workbook {
                 return sheet_rename_by_idx(this._id, p.idx, p.newName)
             }
         }
-        if (p.type === 'deleteSheet')
-            return sheet_shift(this._id, p.sheetIdx, false)
+        if (p.type === 'deleteSheet') return delete_sheet(this._id, p.sheetIdx)
         if (p.type === 'insertSheet')
-            return sheet_shift(this._id, p.sheetIdx, true)
-        // if (hasOwnProperty(p, 'SheetShift')) {
-        //     const sheetShift = p.SheetShift as SheetShift
-        // }
+            return create_sheet(this._id, p.sheetIdx, p.name)
         // eslint-disable-next-line no-console
         console.log('Unimplemented!')
     }

@@ -1,68 +1,32 @@
-use super::{errors::StyleError, fill_manager::FillPayload, StyleManager};
-use crate::{
-    errors::Result,
-    payloads::sheet_process::style::CellStylePayload,
-    style_manager::{border_manager::BorderPayload, font_manager::FontPayload},
-};
+use super::{errors::StyleError, StyleManager};
+use crate::{edit_action::StyleUpdateType, Error};
 use logisheets_base::StyleId;
 
 pub fn execute_style_payload(
-    sm: StyleManager,
-    payload: &CellStylePayload,
+    sm: &mut StyleManager,
+    update_type: StyleUpdateType,
     id: StyleId,
-) -> Result<(StyleManager, StyleId)> {
-    let StyleManager {
-        mut font_manager,
-        mut border_manager,
-        mut cell_xfs_manager,
-        cell_style_xfs_manager,
-        mut fill_manager,
-        num_fmt_manager,
-    } = sm;
+) -> Result<StyleId, Error> {
+    let font_manager = &mut sm.font_manager;
+    let border_manager = &mut sm.border_manager;
+    let fill_manager = &mut sm.fill_manager;
+    let cell_xfs_manager = &mut sm.cell_xfs_manager;
     let mut xf = cell_xfs_manager
         .get_item(id)
         .ok_or(StyleError::StyleIdNotFound(id))?
         .clone();
-    match payload {
-        CellStylePayload::Font(fp) => {
-            let p = FontPayload {
-                id: xf.font_id.unwrap_or(0),
-                change: fp.clone(),
-            };
-            let (new_manager, fid) = font_manager.execute(&p);
-            xf.font_id = Some(fid);
-            xf.apply_font = Some(true);
-            font_manager = new_manager;
-        }
-        CellStylePayload::Border(bp) => {
-            let p = BorderPayload {
-                id: xf.border_id.unwrap_or(0),
-                change: bp.clone(),
-            };
-            let (new_manager, sid) = border_manager.execute(&p);
-            xf.border_id = Some(sid);
-            xf.apply_border = Some(true);
-            border_manager = new_manager;
-        }
-        CellStylePayload::Fill(fp) => {
-            let p = FillPayload {
-                id: xf.fill_id.unwrap_or(0),
-                change: fp.clone(),
-            };
-            let (new_manager, fid) = fill_manager.execute(&p);
-            xf.fill_id = Some(fid);
-            xf.apply_fill = Some(true);
-            fill_manager = new_manager;
-        }
-    };
+    if let Some(new_font_id) = font_manager.execute(xf.font_id.unwrap_or(0), &update_type) {
+        xf.font_id = Some(new_font_id);
+        xf.apply_font = Some(true);
+    }
+    if let Some(new_border_id) = border_manager.execute(xf.border_id.unwrap_or(0), &update_type) {
+        xf.border_id = Some(new_border_id);
+        xf.apply_border = Some(true);
+    }
+    if let Some(new_fill_id) = fill_manager.execute(xf.fill_id.unwrap_or(0), &update_type) {
+        xf.fill_id = Some(new_fill_id);
+        xf.apply_fill = Some(true)
+    }
     let new_id = cell_xfs_manager.get_id(&xf);
-    let manager = StyleManager {
-        font_manager,
-        border_manager,
-        cell_xfs_manager,
-        cell_style_xfs_manager,
-        fill_manager,
-        num_fmt_manager,
-    };
-    Ok((manager, new_id))
+    Ok(new_id)
 }

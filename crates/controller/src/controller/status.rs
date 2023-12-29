@@ -5,7 +5,9 @@ use logisheets_base::SheetId;
 
 use crate::cell_attachments::CellAttachmentsManager;
 use crate::container::DataContainer;
+use crate::cube_manager::CubeManager;
 use crate::ext_book_manager::ExtBooksManager;
+use crate::ext_ref_manager::ExtRefManager;
 use crate::formula_manager::FormulaManager;
 use crate::id_manager::FuncIdManager;
 use crate::id_manager::NameIdManager;
@@ -13,12 +15,16 @@ use crate::id_manager::SheetIdManager;
 use crate::id_manager::TextIdManager;
 use crate::navigator::Navigator;
 
+use crate::range_manager::RangeManager;
 use crate::style_manager::StyleManager;
 use crate::workbook::sheet_pos_manager::SheetPosManager;
 
 #[derive(Debug, Clone)]
 pub struct Status {
     pub navigator: Navigator,
+    pub range_manager: RangeManager,
+    pub cube_manager: CubeManager,
+    pub ext_ref_manager: ExtRefManager,
     pub formula_manager: FormulaManager,
     pub container: DataContainer,
     pub sheet_id_manager: SheetIdManager,
@@ -38,10 +44,13 @@ impl Default for Status {
         Status {
             navigator: Navigator::default(),
             formula_manager: FormulaManager::new(),
+            range_manager: RangeManager::new(),
+            cube_manager: CubeManager::new(),
+            ext_ref_manager: ExtRefManager::new(),
             container: DataContainer {
                 data: HashMap::new(),
             },
-            sheet_id_manager: SheetIdManager::new_with_default_sheet(),
+            sheet_id_manager: SheetIdManager::new(0),
             func_id_manager: FuncIdManager::new(0),
             text_id_manager: TextIdManager::new(0),
             name_id_manager: NameIdManager::new(0),

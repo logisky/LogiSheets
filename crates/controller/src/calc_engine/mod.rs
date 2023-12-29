@@ -74,7 +74,8 @@ where
 {
     match v {
         Vertex::Range(sheet_id, range_id) => {
-            let range = connector.get_range(sheet_id, range_id);
+            // None means that this range is already removed.
+            let range = connector.get_range(sheet_id, range_id)?;
             match range {
                 Range::Normal(normal_range) => match normal_range {
                     NormalRange::Single(nid) => Some((*sheet_id, CellId::NormalCell(nid))),

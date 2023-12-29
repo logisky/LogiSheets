@@ -46,6 +46,9 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
         mut style_manager,
         mut cell_attachment_manager,
         mut formula_manager,
+        mut range_manager,
+        mut cube_manager,
+        mut ext_ref_manager,
         dirty_cells_next_round: dirty_cells,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {
@@ -126,6 +129,9 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
                     &mut external_links_manager,
                     &mut container,
                     &mut formula_manager,
+                    &mut range_manager,
+                    &mut cube_manager,
+                    &mut ext_ref_manager,
                     &mut style_loader,
                     &wb,
                 )
@@ -144,6 +150,9 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
         style_manager,
         cell_attachment_manager,
         dirty_cells_next_round: dirty_cells,
+        range_manager,
+        cube_manager,
+        ext_ref_manager,
     };
     if let Some(theme) = wb.xl.theme {
         settings.theme = ThemeManager::from(theme.1);

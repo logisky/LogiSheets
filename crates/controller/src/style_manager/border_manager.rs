@@ -1,6 +1,7 @@
+use crate::edit_action::StyleUpdateType;
+
 use super::defaults::get_init_border;
 use super::manager::Manager;
-use crate::payloads::sheet_process::style::BorderPayloadType;
 use logisheets_workbook::prelude::*;
 
 pub type BorderId = u32;
@@ -16,137 +17,80 @@ impl Default for BorderManager {
 }
 
 impl BorderManager {
-    pub fn execute(self, payload: &BorderPayload) -> (Self, BorderId) {
-        let mut res = self.clone();
-        let base = payload.id;
-        if let Some(border) = res.get_item(base) {
-            let mut new_border = border.clone();
-            handle(&mut new_border, payload.change.clone());
-            let new_id = res.get_id(&new_border);
-            (res, new_id)
+    pub fn execute(&mut self, id: BorderId, update_type: &StyleUpdateType) -> Option<BorderId> {
+        let mut border = if let Some(border) = self.get_item(id) {
+            border.clone()
         } else {
-            (res, 0)
-        }
-    }
-}
+            get_init_border()
+        };
 
-pub struct BorderPayload {
-    pub id: BorderId,
-    pub change: BorderPayloadType,
-}
-
-fn handle(border: &mut CtBorder, ty: BorderPayloadType) {
-    match ty {
-        BorderPayloadType::LeftBorderColor(s) => match &mut border.left {
-            Some(pr) => match &mut pr.color {
-                Some(c) => c.rgb = Some(s),
-                None => {
-                    let color = new_color_with_rgb(s);
-                    pr.color = Some(color);
+        macro_rules! update_border_color {
+            ($payload_pr:ident, $pr:ident) => {
+                if let Some(s) = &update_type.$payload_pr {
+                    match &mut border.$pr {
+                        Some(pr) => match &mut pr.color {
+                            Some(c) => c.rgb = Some(s.clone()),
+                            None => {
+                                let color = new_color_with_rgb(s.clone());
+                                pr.color = Some(color);
+                            }
+                        },
+                        None => {
+                            let color = new_color_with_rgb(s.clone());
+                            border.$pr = Some(CtBorderPr {
+                                color: Some(color),
+                                style: StBorderStyle::None,
+                            })
+                        }
+                    }
                 }
-            },
-            None => {
-                let color = new_color_with_rgb(s);
-                border.left = Some(CtBorderPr {
-                    color: Some(color),
-                    style: StBorderStyle::None,
-                });
-            }
-        },
-        BorderPayloadType::RightBorderColor(s) => match &mut border.right {
-            Some(pr) => match &mut pr.color {
-                Some(c) => c.rgb = Some(s),
-                None => {
-                    let color = new_color_with_rgb(s);
-                    pr.color = Some(color);
-                }
-            },
-            None => {
-                let color = new_color_with_rgb(s);
-                border.right = Some(CtBorderPr {
-                    color: Some(color),
-                    style: StBorderStyle::None,
-                });
-            }
-        },
-        BorderPayloadType::TopBorderColor(s) => match &mut border.top {
-            Some(pr) => match &mut pr.color {
-                Some(c) => c.rgb = Some(s),
-                None => {
-                    let color = new_color_with_rgb(s);
-                    pr.color = Some(color);
-                }
-            },
-            None => {
-                let color = new_color_with_rgb(s);
-                border.top = Some(CtBorderPr {
-                    color: Some(color),
-                    style: StBorderStyle::None,
-                });
-            }
-        },
-        BorderPayloadType::BottomBorderColor(s) => match &mut border.bottom {
-            Some(pr) => match &mut pr.color {
-                Some(c) => c.rgb = Some(s),
-                None => {
-                    let color = new_color_with_rgb(s);
-                    pr.color = Some(color);
-                }
-            },
-            None => {
-                let color = new_color_with_rgb(s);
-                border.bottom = Some(CtBorderPr {
-                    color: Some(color),
-                    style: StBorderStyle::None,
-                });
-            }
-        },
-        BorderPayloadType::LeftBorderStyle(s) => match &mut border.left {
-            Some(pr) => pr.style = s,
-            None => {
-                border.left = Some(CtBorderPr {
-                    color: None,
-                    style: s,
-                })
-            }
-        },
-        BorderPayloadType::RightBorderStyle(s) => match &mut border.right {
-            Some(pr) => pr.style = s,
-            None => {
-                border.right = Some(CtBorderPr {
-                    color: None,
-                    style: s,
-                })
-            }
-        },
-        BorderPayloadType::TopBorderStyle(s) => match &mut border.top {
-            Some(pr) => pr.style = s,
-            None => {
-                border.top = Some(CtBorderPr {
-                    color: None,
-                    style: s,
-                })
-            }
-        },
-        BorderPayloadType::BottomBorderStyle(s) => match &mut border.bottom {
-            Some(pr) => pr.style = s,
-            None => {
-                border.bottom = Some(CtBorderPr {
-                    color: None,
-                    style: s,
-                })
-            }
-        },
-        BorderPayloadType::BorderDiagonalUp(b) => {
-            border.diagonal_up = Some(b);
+            };
         }
-        BorderPayloadType::BorderDiagonalDown(b) => {
+        update_border_color! {set_left_border_color, left};
+        update_border_color! {set_right_border_color, right};
+        update_border_color! {set_top_border_color, top};
+        update_border_color! {set_bottom_border_color, bottom};
+
+        macro_rules! update_border_style {
+            ($payload_pr:ident, $pr:ident) => {
+                if let Some(s) = &update_type.$payload_pr {
+                    match &mut border.$pr {
+                        Some(pr) => pr.style = s.clone(),
+                        None => {
+                            border.$pr = Some(CtBorderPr {
+                                color: None,
+                                style: s.clone(),
+                            })
+                        }
+                    }
+                }
+            };
+        }
+
+        update_border_style!(set_left_border_style, left);
+        update_border_style!(set_right_border_style, right);
+        update_border_style!(set_top_border_style, top);
+        update_border_style!(set_bottom_border_style, bottom);
+
+        if let Some(b) = update_type.set_border_giagonal_down {
             border.diagonal_down = Some(b);
         }
-        BorderPayloadType::Outline(b) => {
+
+        if let Some(b) = update_type.set_border_giagonal_up {
+            border.diagonal_up = Some(b);
+        }
+
+        if let Some(b) = update_type.set_border_outline {
             border.outline = b;
         }
-    };
+
+        let new_id = self.get_id(&border);
+        if new_id != id {
+            Some(new_id)
+        } else {
+            None
+        }
+    }
 }
 
 fn new_color_with_rgb(c: String) -> CtColor {

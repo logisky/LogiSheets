@@ -1,5 +1,4 @@
 use logisheets_base::errors::BasicError;
-use logisheets_base::get_active_sheet::GetActiveSheetTrait;
 use logisheets_base::get_book_name::GetBookNameTrait;
 use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
 use logisheets_base::{
@@ -7,17 +6,13 @@ use logisheets_base::{
     SheetId, TextId,
 };
 
-pub trait ContextTrait:
-    IdFetcherTrait + GetActiveSheetTrait + GetBookNameTrait + VertexFetcherTrait
-{
-}
+pub trait ContextTrait: IdFetcherTrait + GetBookNameTrait + VertexFetcherTrait {}
 
 pub struct Context<'a, T, F>
 where
     T: IdFetcherTrait,
     F: VertexFetcherTrait,
 {
-    pub sheet_id: SheetId,
     pub book_name: &'a str,
     pub id_fetcher: &'a mut T,
     pub vertex_fetcher: &'a mut F,
@@ -45,16 +40,6 @@ where
 
     fn fetch_ext_ref_id(&mut self, ext_ref: &ExtRef) -> ExtRefId {
         self.vertex_fetcher.fetch_ext_ref_id(ext_ref)
-    }
-}
-
-impl<'a, T, F> GetActiveSheetTrait for Context<'a, T, F>
-where
-    T: IdFetcherTrait,
-    F: VertexFetcherTrait,
-{
-    fn get_active_sheet(&self) -> SheetId {
-        self.sheet_id
     }
 }
 
@@ -126,5 +111,16 @@ where
     ) -> std::result::Result<NormalCellId, BasicError> {
         self.id_fetcher
             .fetch_norm_cell_id(sheet_id, row_idx, col_idx)
+    }
+
+    fn fetch_block_cell_id(
+        &self,
+        sheet_id: &SheetId,
+        block_id: &logisheets_base::BlockId,
+        row: usize,
+        col: usize,
+    ) -> Result<logisheets_base::BlockCellId, BasicError> {
+        self.id_fetcher
+            .fetch_block_cell_id(sheet_id, block_id, row, col)
     }
 }

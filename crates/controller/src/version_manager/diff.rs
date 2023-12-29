@@ -1,17 +1,14 @@
 use std::collections::{HashMap, HashSet};
 
-use logisheets_base::{BlockId, CellId, ColId, RowId, SheetId};
+use logisheets_base::{errors::BasicError, BlockId, CellId, ColId, RowId, SheetId};
 
 use crate::{
     controller::status::Status,
-    navigator::Navigator,
-    payloads::{
-        sheet_process::{
-            block::BlockPayload, cell::CellChange, line::LineInfoUpdate, SheetPayload,
-        },
-        Process,
-    },
+    edit_action::{EditPayload, PayloadsAction},
+    Error,
 };
+
+use super::ctx::{VersionExecCtx, VersionExecCtxImpl};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff {
@@ -19,7 +16,11 @@ pub enum Diff {
     CellStyle(CellId),
     RowInfo(RowId),
     ColInfo(ColId),
-    BlockUpdate { id: BlockId, cnt: usize, row: bool },
+    BlockUpdate {
+        id: BlockId,
+        cnt: usize,
+        is_row: bool,
+    },
     SheetProperty, // like tab color and hidden
     Unavailable,
 }
@@ -45,28 +46,19 @@ impl SheetDiff {
 
 // Turning `Process` into `SheetDiff` is for recording the `id` rather than `idx`.
 pub fn convert_payloads_to_sheet_diff(
-    status: &Status,
-    process: Vec<Process>,
+    status: &mut Status,
+    process: PayloadsAction,
     updated_cells: HashSet<(SheetId, CellId)>,
 ) -> HashMap<SheetId, SheetDiff> {
-    let navigator = &status.navigator;
-
     let mut result: HashMap<SheetId, SheetDiff> = HashMap::new();
+    let ctx = VersionExecCtxImpl::new(status);
 
-    process
-        .into_iter()
-        .flat_map(|p| match p {
-            Process::Sheet(s) => Some(s),
-            _ => None,
-        })
-        .for_each(|sp| {
-            let sheet_id = sp.sheet_id;
-            let payload = sp.payload;
-            if let Some(diff) = convert_diff(sheet_id, payload, navigator) {
-                let sheet_diff = result.entry(sheet_id).or_insert(SheetDiff::default());
-                sheet_diff.insert_diff(diff);
-            }
-        });
+    process.payloads.into_iter().for_each(|sp| {
+        if let Ok(Some((diff, sheet_id))) = convert_diff(sp, &ctx) {
+            let sheet_diff = result.entry(sheet_id).or_insert(SheetDiff::default());
+            sheet_diff.insert_diff(diff);
+        }
+    });
 
     updated_cells.into_iter().for_each(|(sheet_id, cell_id)| {
         let diff = Diff::CellValue(cell_id);
@@ -78,60 +70,130 @@ pub fn convert_payloads_to_sheet_diff(
 }
 
 #[inline]
-fn convert_diff(sheet_id: SheetId, payload: SheetPayload, navigator: &Navigator) -> Option<Diff> {
+fn convert_diff<C: VersionExecCtx>(
+    payload: EditPayload,
+    ctx: &C,
+) -> Result<Option<(Diff, SheetId)>, Error> {
     match payload {
-        SheetPayload::Shift(_) => Some(Diff::Unavailable),
-        SheetPayload::Line(l) => match l.change {
-            LineInfoUpdate::Row(_) => {
-                let id = navigator.fetch_row_id(&sheet_id, l.idx).ok()?;
-                Some(Diff::RowInfo(id))
-            }
-            LineInfoUpdate::Col(_) => {
-                let id = navigator.fetch_col_id(&sheet_id, l.idx).ok()?;
-                Some(Diff::ColInfo(id))
-            }
-        },
-        SheetPayload::Property(_) => None,
-        SheetPayload::Block(bp) => match bp {
-            BlockPayload::Create(create) => Some(Diff::BlockUpdate {
-                id: create.block_id,
-                cnt: 0,
-                row: true,
-            }),
-            BlockPayload::DeleteCols(dc) => Some(Diff::BlockUpdate {
-                id: dc.block_id,
-                cnt: 0,
-                row: false,
-            }),
-            BlockPayload::DeleteRows(dr) => Some(Diff::BlockUpdate {
-                id: dr.block_id,
-                cnt: 0,
-                row: true,
-            }),
-            BlockPayload::InsertCols(ic) => Some(Diff::BlockUpdate {
-                id: ic.block_id,
-                cnt: ic.insert_cnt,
-                row: true,
-            }),
-            BlockPayload::InsertRows(ir) => Some(Diff::BlockUpdate {
-                id: ir.block_id,
-                cnt: ir.insert_cnt,
-                row: true,
-            }),
-            BlockPayload::Move(_) => Some(Diff::Unavailable),
-            BlockPayload::Remove(_) => Some(Diff::Unavailable),
-        },
-        SheetPayload::Formula(f) => {
-            let cell_id = navigator.fetch_cell_id(&sheet_id, f.row, f.col).ok()?;
-            Some(Diff::CellValue(cell_id))
+        EditPayload::BlockInput(bi) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(bi.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let cell_id = ctx.fetch_block_cell_id(&sheet_id, &bi.block_id, bi.row, bi.col)?;
+            Ok(Some((
+                Diff::CellValue(CellId::BlockCell(cell_id)),
+                sheet_id,
+            )))
         }
-        SheetPayload::Cell(cp) => {
-            let cell_id = navigator.fetch_cell_id(&sheet_id, cp.row, cp.col).ok()?;
-            match cp.change {
-                CellChange::Recalc => None,
-                CellChange::Value(_) => Some(Diff::CellValue(cell_id)),
-                CellChange::DiffStyle(_) => Some(Diff::CellStyle(cell_id)),
-            }
+        EditPayload::MoveBlock(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::RemoveBlock(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::CreateBlock(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::StyleUpdate(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
+            Ok(Some((Diff::CellStyle(id), sheet_id)))
+        }
+        EditPayload::BlockStyleUpdate(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let id = ctx.fetch_block_cell_id(&sheet_id, &p.block_id, p.row, p.col)?;
+            Ok(Some((Diff::CellStyle(CellId::BlockCell(id)), sheet_id)))
+        }
+        EditPayload::CellInput(ci) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(ci.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let cell_id = ctx.fetch_cell_id(&sheet_id, ci.row, ci.col)?;
+            Ok(Some((Diff::CellValue(cell_id), sheet_id)))
+        }
+        EditPayload::SetColWidth(col) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(col.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let col_id = ctx.fetch_col_id(&sheet_id, col.col)?;
+            Ok(Some((Diff::ColInfo(col_id), sheet_id)))
+        }
+        EditPayload::SetRowHeight(row) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(row.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let row_id = ctx.fetch_row_id(&sheet_id, row.row)?;
+            Ok(Some((Diff::RowInfo(row_id), sheet_id)))
+        }
+        EditPayload::SetVisible(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::SheetProperty, sheet_id)))
+        }
+        EditPayload::SheetRename(_) => Ok(Some((Diff::SheetProperty, 0))),
+        EditPayload::CreateSheet(_) => Ok(Some((Diff::SheetProperty, 0))),
+        EditPayload::DeleteSheet(_) => Ok(Some((Diff::SheetProperty, 0))),
+        EditPayload::InsertCols(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::DeleteCols(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::InsertRows(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::DeleteRows(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::InsertColsInBlock(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::DeleteColsInBlock(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::InsertRowsInBlock(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::DeleteRowsInBlock(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
         }
     }
 }

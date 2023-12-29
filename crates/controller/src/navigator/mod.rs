@@ -1,4 +1,4 @@
-use crate::{lock::locked_write, payloads::sheet_process::ShiftPayload};
+use crate::lock::locked_write;
 use im::HashMap;
 use logisheets_base::{
     errors::BasicError, BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId,
@@ -10,10 +10,12 @@ pub use self::{
 };
 
 mod block;
+pub mod ctx;
 mod executor;
 mod fetcher;
 mod id_manager;
 mod sheet_nav;
+pub use executor::NavExecutor;
 
 #[derive(Debug, Clone, Default)]
 pub struct Navigator {
@@ -21,17 +23,6 @@ pub struct Navigator {
 }
 
 impl Navigator {
-    pub fn execute_shift(self, sheet_id: SheetId, payload: &ShiftPayload) -> Self {
-        if let Some(nav) = self.sheet_navs.get(&sheet_id) {
-            let new_nav = nav.clone().execute_shift(payload);
-            Navigator {
-                sheet_navs: self.sheet_navs.update(sheet_id, new_nav),
-            }
-        } else {
-            self
-        }
-    }
-
     pub fn fetch_row_id(&self, sheet_id: &SheetId, row: usize) -> Result<RowId, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         let row_id = fetcher.get_row_id(row);
@@ -62,6 +53,27 @@ impl Navigator {
     ) -> Result<CellId, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
         fetcher.get_cell_id(row, col)
+    }
+
+    pub fn fetch_block_cell_id(
+        &self,
+        sheet_id: &SheetId,
+        block_id: &BlockId,
+        row: usize,
+        col: usize,
+    ) -> Result<BlockCellId, BasicError> {
+        let bp = self.get_block_place(sheet_id, block_id)?;
+        if let Some((rid, cid)) = bp.get_inner_id(row, col) {
+            Ok(BlockCellId {
+                block_id: block_id.clone(),
+                row: rid,
+                col: cid,
+            })
+        } else {
+            Err(BasicError::BlockCellIdNotFound(
+                *sheet_id, *block_id, row, col,
+            ))
+        }
     }
 
     pub fn fetch_norm_cell_id(
@@ -121,31 +133,44 @@ impl Navigator {
         sheet_nav.cache = Default::default();
     }
 
-    pub fn move_block(&mut self, sheet_id: &SheetId, block_id: &BlockId, new_master: NormalCellId) {
-        if let Ok((row_cnt, col_cnt)) = self.get_block_size(*sheet_id, *block_id) {
-            if let Ok((new_master_row, new_master_col)) =
-                self.fetch_normal_cell_idx(sheet_id, &new_master)
-            {
-                if !self.any_other_blocks_in(
-                    *sheet_id,
-                    *block_id,
-                    new_master_row,
-                    new_master_col,
-                    new_master_row + row_cnt - 1,
-                    new_master_col + col_cnt - 1,
-                ) {
-                    let sheet_nav = self.get_sheet_nav_mut(sheet_id);
-                    if let Some(mut bp) = sheet_nav.data.blocks.get_mut(&block_id) {
-                        bp.master = new_master;
-                        sheet_nav.cache = Default::default()
-                    }
+    pub fn move_block(
+        &mut self,
+        sheet_id: &SheetId,
+        block_id: &BlockId,
+        row_idx: usize,
+        col_idx: usize,
+    ) {
+        if let Ok((row_cnt, col_cnt)) = self.get_block_size(sheet_id, block_id) {
+            if !self.any_other_blocks_in(
+                *sheet_id,
+                *block_id,
+                row_idx,
+                col_idx,
+                row_idx + row_cnt - 1,
+                col_idx + col_cnt - 1,
+            ) {
+                let new_master = self
+                    .fetch_norm_cell_id(&sheet_id, row_idx, col_idx)
+                    .unwrap();
+                let sheet_nav = self.get_sheet_nav_mut(sheet_id);
+                if let Some(mut bp) = sheet_nav.data.blocks.get_mut(&block_id) {
+                    bp.master = new_master;
+                    sheet_nav.cache = Default::default();
                 }
             }
         }
     }
 
+    pub fn delete_sheet(&mut self, sheet_id: &SheetId) {
+        self.sheet_navs.remove(&sheet_id);
+    }
+
+    pub fn create_sheet(&mut self, sheet_id: SheetId) {
+        self.sheet_navs.insert(sheet_id, SheetNav::default());
+    }
+
     pub fn get_affected_blockplace(
-        &mut self,
+        &self,
         sheet_id: &SheetId,
         line_idx: usize,
         cnt: usize,
@@ -156,7 +181,7 @@ impl Navigator {
             .get(&sheet_id)
             .ok_or(BasicError::SheetIdNotFound(*sheet_id))?;
         let mut result: Vec<BlockId> = vec![];
-        sheet_nav.data.blocks.clone().iter().for_each(|(b_id, bp)| {
+        sheet_nav.data.blocks.iter().for_each(|(b_id, bp)| {
             let master = &bp.master;
             let master_idx = self.fetch_normal_cell_idx(sheet_id, &master);
             if let Ok((m_row, m_col)) = master_idx {
@@ -176,26 +201,26 @@ impl Navigator {
     #[inline]
     pub fn get_block_place(
         &self,
-        sheet_id: SheetId,
-        block_id: BlockId,
+        sheet_id: &SheetId,
+        block_id: &BlockId,
     ) -> Result<&BlockPlace, BasicError> {
         let sheet_nav = self
             .sheet_navs
-            .get(&sheet_id)
-            .ok_or(BasicError::SheetIdNotFound(sheet_id))?;
+            .get(sheet_id)
+            .ok_or(BasicError::SheetIdNotFound(*sheet_id))?;
         let block_place = sheet_nav
             .data
             .blocks
-            .get(&block_id)
-            .ok_or(BasicError::BlockIdNotFound(sheet_id, block_id))?;
+            .get(block_id)
+            .ok_or(BasicError::BlockIdNotFound(*sheet_id, *block_id))?;
         Ok(block_place)
     }
 
     #[inline]
     pub fn get_block_size(
         &self,
-        sheet_id: SheetId,
-        block_id: BlockId,
+        sheet_id: &SheetId,
+        block_id: &BlockId,
     ) -> Result<(usize, usize), BasicError> {
         let bp = self.get_block_place(sheet_id, block_id)?;
         Ok(bp.get_block_size())
@@ -204,12 +229,12 @@ impl Navigator {
     #[inline]
     pub fn get_master_cell(
         &self,
-        sheet_id: SheetId,
-        block_id: BlockId,
-    ) -> Result<CellId, BasicError> {
+        sheet_id: &SheetId,
+        block_id: &BlockId,
+    ) -> Result<NormalCellId, BasicError> {
         let bp = self.get_block_place(sheet_id, block_id)?;
         let nc = bp.master;
-        Ok(CellId::NormalCell(nc))
+        Ok(nc)
     }
 
     pub fn add_sheet_id(&mut self, sheet_id: &SheetId) {
@@ -254,7 +279,7 @@ impl Navigator {
     }
 
     pub fn any_other_blocks_in(
-        &mut self,
+        &self,
         sheet_id: SheetId,
         block_id: BlockId,
         start_row: usize,

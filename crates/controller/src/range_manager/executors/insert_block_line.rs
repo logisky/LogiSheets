@@ -1,19 +1,18 @@
+use super::{RangeExecutor, RangeUpdateType};
 use logisheets_base::{
     id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockId, BlockRange, RangeId,
     SheetId,
 };
 
-use crate::range_manager::{RangeUpdateType, SheetRangeExecContext};
-
 pub fn insert_block_line<C>(
-    exec_ctx: SheetRangeExecContext,
-    _sheet: SheetId,
+    exec_ctx: RangeExecutor,
+    sheet: SheetId,
     block: BlockId,
     _is_row: bool,
     _idx: u32,
     _cnt: u32,
-    _ctx: &mut C,
-) -> SheetRangeExecContext
+    _ctx: &C,
+) -> RangeExecutor
 where
     C: IdFetcherTrait + IndexFetcherTrait,
 {
@@ -33,6 +32,6 @@ where
             }
         }
     };
-    let result = exec_ctx.block_range_update(&mut func);
+    let result = exec_ctx.block_range_update(&sheet, &mut func);
     result
 }

@@ -23,8 +23,6 @@ impl IdFetcherTrait for TestIdFetcher {
         Ok(CellId::NormalCell(NormalCellId {
             row: row_idx as u32,
             col: col_idx as u32,
-            follow_row: None,
-            follow_col: None,
         }))
     }
 
@@ -54,12 +52,17 @@ impl IdFetcherTrait for TestIdFetcher {
         _row_idx: usize,
         _col_idx: usize,
     ) -> Result<NormalCellId> {
-        Ok(NormalCellId {
-            row: 0,
-            col: 0,
-            follow_row: None,
-            follow_col: None,
-        })
+        Ok(NormalCellId { row: 0, col: 0 })
+    }
+
+    fn fetch_block_cell_id(
+        &self,
+        _sheet_id: &SheetId,
+        _block_id: &logisheets_base::BlockId,
+        _row: usize,
+        _col: usize,
+    ) -> Result<logisheets_base::BlockCellId> {
+        unreachable!()
     }
 }
 
@@ -85,13 +88,7 @@ impl NameFetcherTrait for TestIdFetcher {
     }
 
     fn fetch_cell_idx(&self, _sheet_id: &SheetId, cell_id: &CellId) -> Result<(usize, usize)> {
-        if let CellId::NormalCell(NormalCellId {
-            row,
-            col,
-            follow_row: _,
-            follow_col: _,
-        }) = cell_id
-        {
+        if let CellId::NormalCell(NormalCellId { row, col }) = cell_id {
             Ok((row.clone() as usize, col.clone() as usize))
         } else {
             Ok((0, 0))
