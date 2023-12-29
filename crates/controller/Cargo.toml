@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_controller"
-version = "0.4.0"
+version = "0.5.0"
 description = "the core of LogiSheets"
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 edition = "2018"
@@ -26,11 +26,11 @@ unicode-segmentation = "1.10.1"
 wildescape = "0.1.0"
 uuid ={ version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"]}
 
-logisheets_base = {version = "0.4.0", path = "./base", features = ["gents"]}
-logisheets_lexer = {version = "0.4.0", path = "./lexer"}
-logisheets_parser = {version = "0.4.0", path = "./parser"}
-logisheets_workbook = {version = "0.4.0", path = "../workbook", features = ["gents"]}
-logisheets_astchecker = {version = "0.4.0", path = "./ast_checker"}
+logisheets_base = {version = "0.5.0", path = "./base", features = ["gents"]}
+logisheets_lexer = {version = "0.5.0", path = "./lexer"}
+logisheets_parser = {version = "0.5.0", path = "./parser"}
+logisheets_workbook = {version = "0.5.0", path = "../workbook", features = ["gents"]}
+logisheets_astchecker = {version = "0.5.0", path = "./ast_checker"}
 
 gents = {version = "0.8.0", optional = true}
 gents_derives = {version = "0.8.0", optional = true}
