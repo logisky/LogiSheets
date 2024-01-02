@@ -8,7 +8,7 @@ use logisheets_parser::unparse;
 use crate::{
     connectors::NameFetcher,
     controller::{
-        display::{get_default_col_width, DisplayRequest, DisplayResponse},
+        display::{get_default_col_width, get_default_row_height, DisplayRequest, DisplayResponse},
         style::StyleConverter,
     },
     edit_action::ActionEffect,
@@ -118,6 +118,10 @@ impl Workbook {
             }),
             None => Err(Error::UnavailableSheetIdx(idx)),
         }
+    }
+
+    pub fn get_sheet_count(&self) -> usize {
+        self.controller.status.sheet_pos_manager.pos.len()
     }
 }
 
@@ -436,6 +440,53 @@ impl<'a> Worksheet<'a> {
         })
     }
 
+    pub fn get_row_height(&self, row: usize) -> Option<f64> {
+        let row_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_row_id(&self.sheet_id, row)
+            .ok()?;
+        let row_info = self
+            .controller
+            .status
+            .container
+            .data
+            .get(&self.sheet_id)?
+            .row_info
+            .get_row_info(row_id)?;
+
+        if row_info.custom_height {
+            row_info.ht
+        } else {
+            Some(self.get_default_row_height())
+        }
+    }
+
+    pub fn get_col_width(&self, col: usize) -> Option<f64> {
+        let col_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_col_id(&self.sheet_id, col)
+            .ok()?;
+
+        let col_info = self
+            .controller
+            .status
+            .container
+            .data
+            .get(&self.sheet_id)?
+            .col_info
+            .get_col_info(col_id)?;
+
+        if col_info.custom_width {
+            col_info.width
+        } else {
+            Some(self.get_default_col_width())
+        }
+    }
+
     pub(crate) fn get_col_info_by_id(&self, col_id: ColId) -> Option<ColInfo> {
         let col_info = self
             .controller
@@ -480,8 +531,14 @@ impl<'a> Worksheet<'a> {
             .settings
             .sheet_format_pr
             .get(&self.sheet_id)
-            .unwrap()
-            .default_row_height
+            .map(|pr| {
+                if pr.custom_height {
+                    pr.default_row_height
+                } else {
+                    get_default_row_height()
+                }
+            })
+            .unwrap_or(get_default_row_height())
     }
 
     pub fn get_default_col_width(&self) -> f64 {
@@ -489,8 +546,7 @@ impl<'a> Worksheet<'a> {
             .settings
             .sheet_format_pr
             .get(&self.sheet_id)
-            .unwrap()
-            .default_col_width
+            .map(|e| e.default_col_width.unwrap_or(get_default_col_width()))
             .unwrap_or(get_default_col_width())
     }
 

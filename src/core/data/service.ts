@@ -178,7 +178,7 @@ export class DataService {
         return {row: rowIndex, col: colIndex}
     }
 
-    private _initRows(maxHeight: number, scrollY: number) {
+    private _initRows(maxHeight: number, scrollY: number): RenderCellSegment {
         const rows: RenderCell[] = []
         const getHeight = (i: number) => this.sheetSvc.getRowInfo(i).px
         const staticWidth = SETTINGS.leftTop.width
@@ -206,7 +206,7 @@ export class DataService {
         return new RenderCellSegment(scrollY, i, rows)
     }
 
-    private _initCols(maxWidth: number, scrollX: number) {
+    private _initCols(maxWidth: number, scrollX: number): RenderCellSegment {
         const cols: RenderCell[] = []
         const getWidth = (i: number) => this.sheetSvc.getColInfo(i).px
         const staticHeight = SETTINGS.leftTop.height
@@ -237,7 +237,7 @@ export class DataService {
     private _initCells(
         rows: readonly RenderCell[],
         cols: readonly RenderCell[]
-    ) {
+    ): RenderCell[] {
         const renderedCells = new Set<string>()
         const merges = this.sheetSvc.getSheet()?.merges ?? []
         const cells: RenderCell[] = []

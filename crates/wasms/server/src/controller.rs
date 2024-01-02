@@ -169,6 +169,14 @@ pub fn get_patches(id: usize, sheet_idx: u32, version: u32) -> JsValue {
     }
 }
 
+#[wasm_bindgen]
+pub fn get_sheet_count(id: usize) -> usize {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    wb.get_sheet_count()
+}
+
 /// Result<Option<RowInfo>, u8>
 /// RowInfo -> Ok(RowInfo)
 /// 0 -> Ok(None)
@@ -188,6 +196,30 @@ pub fn get_row_info(id: usize, sheet_idx: usize, row_idx: usize) -> JsValue {
             }
         }
         Err(_) => serde_wasm_bindgen::to_value(&1).unwrap(),
+    }
+}
+
+/// -1 if sheet_idx exceeds the length
+#[wasm_bindgen]
+pub fn get_row_height(id: usize, sheet_idx: usize, row_idx: usize) -> f64 {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    match wb.get_sheet_by_idx(sheet_idx) {
+        Ok(ws) => ws.get_row_height(row_idx).unwrap_or(-1_f64),
+        Err(_) => -1_f64,
+    }
+}
+
+/// -1 if sheet_idx exceeds the length
+#[wasm_bindgen]
+pub fn get_col_width(id: usize, sheet_idx: usize, col_idx: usize) -> f64 {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    match wb.get_sheet_by_idx(sheet_idx) {
+        Ok(ws) => ws.get_col_width(col_idx).unwrap_or(-1_f64),
+        Err(_) => -1_f64,
     }
 }
 
