@@ -161,11 +161,11 @@ pub struct ColInfo {
 }
 
 pub fn get_default_row_height() -> f64 {
-    14.25
+    15.
 }
 
 pub fn get_default_col_width() -> f64 {
-    8.38
+    8.43
 }
 
 #[derive(Debug, Clone, Default)]
