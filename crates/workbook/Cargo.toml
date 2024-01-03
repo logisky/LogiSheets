@@ -2,7 +2,7 @@
 authors = ["ImJeremyHe<yiliang.he@qq.com>"]
 edition = "2018"
 name = "logisheets_workbook"
-version = "0.5.0"
+version = "0.6.0"
 license = "MIT"
 description = "Tools for LogiSheets to unarchive and write .xlsx file"
 
