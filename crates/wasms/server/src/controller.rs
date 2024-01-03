@@ -5,7 +5,8 @@ use logisheets_controller::edit_action::{
     InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, MoveBlock, PayloadsAction,
     SheetRename, StyleUpdate, StyleUpdateType,
 };
-use logisheets_controller::{AsyncCalcResult, AsyncErr, SaveFileResult, Workbook};
+use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
+use logisheets_controller::{ColInfo, ErrorMessage};
 use logisheets_workbook::prelude::{StBorderStyle, StUnderlineValues};
 use singlyton::{Singleton, SingletonUninit};
 use wasm_bindgen::prelude::*;
@@ -15,6 +16,16 @@ use crate::manager::Manager;
 
 static INIT: Singleton<bool> = Singleton::new(false);
 static MANAGER: SingletonUninit<Manager> = SingletonUninit::uninit();
+
+macro_rules! handle_result {
+    ($r:ident) => {
+        if let Err(e) = $r {
+            let e = ErrorMessage::from(e);
+            return serde_wasm_bindgen::to_value(&e).unwrap();
+        }
+        let $r = $r.unwrap();
+    };
+}
 
 fn init() {
     if *INIT.get() {
@@ -177,71 +188,102 @@ pub fn get_sheet_count(id: usize) -> usize {
     wb.get_sheet_count()
 }
 
-/// Result<Option<RowInfo>, u8>
-/// RowInfo -> Ok(RowInfo)
-/// 0 -> Ok(None)
-/// 1 -> Err(_)
 #[wasm_bindgen]
 pub fn get_row_info(id: usize, sheet_idx: usize, row_idx: usize) -> JsValue {
     init();
     let manager = MANAGER.get();
     let wb = manager.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_idx(sheet_idx);
-    match ws {
-        Ok(ws) => {
-            if let Some(row) = ws.get_row_info(row_idx) {
-                serde_wasm_bindgen::to_value(&row).unwrap()
-            } else {
-                serde_wasm_bindgen::to_value(&0).unwrap()
-            }
-        }
-        Err(_) => serde_wasm_bindgen::to_value(&1).unwrap(),
-    }
+    handle_result!(ws);
+    let row_info = ws
+        .get_row_info(row_idx)
+        .unwrap_or(RowInfo::default(row_idx));
+    serde_wasm_bindgen::to_value(&row_info).unwrap()
 }
 
-/// -1 if sheet_idx exceeds the length
 #[wasm_bindgen]
-pub fn get_row_height(id: usize, sheet_idx: usize, row_idx: usize) -> f64 {
+pub fn get_row_height(id: usize, sheet_idx: usize, row_idx: usize) -> JsValue {
     init();
     let manager = MANAGER.get();
     let wb = manager.get_workbook(&id).unwrap();
-    match wb.get_sheet_by_idx(sheet_idx) {
-        Ok(ws) => ws.get_row_height(row_idx).unwrap_or(-1_f64),
-        Err(_) => -1_f64,
-    }
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let row_height = ws.get_row_height(row_idx);
+    handle_result!(row_height);
+    serde_wasm_bindgen::to_value(&row_height).unwrap()
 }
 
-/// -1 if sheet_idx exceeds the length
 #[wasm_bindgen]
-pub fn get_col_width(id: usize, sheet_idx: usize, col_idx: usize) -> f64 {
+pub fn get_col_width(id: usize, sheet_idx: usize, col_idx: usize) -> JsValue {
     init();
     let manager = MANAGER.get();
     let wb = manager.get_workbook(&id).unwrap();
-    match wb.get_sheet_by_idx(sheet_idx) {
-        Ok(ws) => ws.get_col_width(col_idx).unwrap_or(-1_f64),
-        Err(_) => -1_f64,
-    }
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let col_width = ws.get_col_width(col_idx);
+    handle_result!(col_width);
+    serde_wasm_bindgen::to_value(&col_width).unwrap()
 }
 
-/// Result<Option<ColInfo>, u8>
-/// ColInfo -> Ok(ColInfo)
-/// 0 -> Ok(None)
-/// 1 -> Err(_)
+#[wasm_bindgen]
+pub fn get_cell_info(id: usize, sheet_idx: usize, row: usize, col: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let cell = ws.get_cell_info(row, col);
+    handle_result!(cell);
+    serde_wasm_bindgen::to_value(&cell).unwrap()
+}
+
+#[wasm_bindgen]
 pub fn get_col_info(id: usize, sheet_idx: usize, col_idx: usize) -> JsValue {
     init();
     let manager = MANAGER.get();
     let wb = manager.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_idx(sheet_idx);
-    match ws {
-        Ok(ws) => {
-            if let Some(row) = ws.get_col_info(col_idx) {
-                serde_wasm_bindgen::to_value(&row).unwrap()
-            } else {
-                serde_wasm_bindgen::to_value(&0).unwrap()
-            }
-        }
-        Err(_) => serde_wasm_bindgen::to_value(&1).unwrap(),
-    }
+    handle_result!(ws);
+    let col_info = ws
+        .get_col_info(col_idx)
+        .unwrap_or(ColInfo::default(col_idx));
+    serde_wasm_bindgen::to_value(&col_info).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_value(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let value = ws.get_value(row_idx, col_idx);
+    handle_result!(value);
+    serde_wasm_bindgen::to_value(&value).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_formula(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let formula = ws.get_formula(row_idx, col_idx);
+    handle_result!(formula);
+    serde_wasm_bindgen::to_value(&formula).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_style(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let style = ws.get_style(row_idx, col_idx);
+    handle_result!(style);
+    serde_wasm_bindgen::to_value(&style).unwrap()
 }
 
 #[wasm_bindgen]

@@ -22,3 +22,45 @@ pub enum Error {
     #[error("unavailable sheet idx: {0}")]
     UnavailableSheetIdx(usize),
 }
+
+// A cleaner way for users to know about the error and a more convenient
+// way to use in WASM.
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "error_message.ts")
+)]
+pub struct ErrorMessage {
+    pub msg: String,
+    pub ty: usize,
+}
+
+impl From<Error> for ErrorMessage {
+    fn from(value: Error) -> Self {
+        match value {
+            Error::Basic(e) => {
+                let msg = e.to_string();
+                ErrorMessage { msg, ty: 0 }
+            }
+            Error::Style(e) => {
+                let msg = e.to_string();
+                ErrorMessage { msg, ty: 1 }
+            }
+            Error::Serde(e) => {
+                let msg = e.to_string();
+                ErrorMessage { msg, ty: 2 }
+            }
+            Error::Save(e) => {
+                let msg = e.to_string();
+                ErrorMessage { msg, ty: 3 }
+            }
+            Error::Parse(e) => {
+                let msg = e.to_string();
+                ErrorMessage { msg, ty: 4 }
+            }
+            Error::UnavailableSheetIdx(e) => {
+                let msg = e.to_string();
+                ErrorMessage { msg, ty: 5 }
+            }
+        }
+    }
+}

@@ -138,6 +138,16 @@ pub struct RowInfo {
     pub hidden: bool,
 }
 
+impl RowInfo {
+    pub fn default(idx: usize) -> RowInfo {
+        Self {
+            idx,
+            height: get_default_row_height(),
+            hidden: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
@@ -158,6 +168,16 @@ pub struct ColInfo {
     pub idx: usize,
     pub width: f64,
     pub hidden: bool,
+}
+
+impl ColInfo {
+    pub fn default(idx: usize) -> Self {
+        Self {
+            idx,
+            width: get_default_col_width(),
+            hidden: false,
+        }
+    }
 }
 
 pub fn get_default_row_height() -> f64 {

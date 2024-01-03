@@ -1,6 +1,6 @@
 {
   "name": "logisheets",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Read and write the xlsx files",
   "main": "index.js",
   "scripts": {
