@@ -258,8 +258,12 @@ pub enum CtFill {
 }
 
 impl crate::XmlSerialize for CtFill {
-    fn serialize<W: std::io::Write>(&self, tag: &[u8], writer: &mut quick_xml::Writer<W>) {
-        use quick_xml::events::*;
+    fn serialize<W: std::io::Write>(
+        &self,
+        tag: &[u8],
+        writer: &mut xmlserde::quick_xml::Writer<W>,
+    ) {
+        use xmlserde::quick_xml::events::*;
         let _ = writer.write_event(Event::Start(BytesStart::new(String::from_utf8_lossy(tag))));
         match self {
             CtFill::PatternFill(p) => p.serialize(b"patternFill", writer),
@@ -272,11 +276,11 @@ impl crate::XmlSerialize for CtFill {
 impl crate::XmlDeserialize for CtFill {
     fn deserialize<B: std::io::BufRead>(
         tag: &[u8],
-        reader: &mut quick_xml::Reader<B>,
-        _attrs: quick_xml::events::attributes::Attributes,
+        reader: &mut xmlserde::quick_xml::Reader<B>,
+        _attrs: xmlserde::quick_xml::events::attributes::Attributes,
         _is_empty: bool,
     ) -> Self {
-        use quick_xml::events::*;
+        use xmlserde::quick_xml::events::*;
         let mut buf = Vec::<u8>::new();
         let mut result = Option::<Self>::None;
         loop {
