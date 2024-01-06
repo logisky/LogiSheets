@@ -53,8 +53,8 @@ export class Workbook {
         return transaction_end(this._id, undoable) as ActionEffect
     }
 
-    public load(buf: Uint8Array, book_name: string): ReturnCode {
-        return read_file(this._id, book_name, buf)
+    public load(buf: Uint8Array, bookName: string): ReturnCode {
+        return read_file(this._id, bookName, buf)
     }
 
     public release() {
@@ -70,12 +70,12 @@ export class Workbook {
         return res as DisplayResponse
     }
 
-    public get_sheet_count(): number {
+    public getSheetCount(): number {
         return get_sheet_count(this._id)
     }
 
-    public get_worksheet(idx: number): Worksheet {
-        if (idx >= this.get_sheet_count())
+    public getWorksheet(idx: number): Worksheet {
+        if (idx >= this.getSheetCount())
             throw Error(`invalid sheet index: ${idx}`)
         return new Worksheet(this._id, idx)
     }

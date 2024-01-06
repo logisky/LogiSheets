@@ -6,7 +6,6 @@ import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin'
 import 'webpack-dev-server'
 module.exports = (env: NodeJS.ProcessEnv): Configuration => {
     const mode = env['dev'] ? 'development' : 'production'
-    // standalone，开启wasm模式。非standalone，开启websocket连接后台模式
     const standAlone = !!env['stand-alone']
     return {
         entry: './src/index.tsx',
