@@ -1,12 +1,14 @@
 {
   "name": "logisheets",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Read and write the xlsx files",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "wasm-build": "wasm-pack build ../../crates/wasms/server --out-dir ../../../packages/node/wasm --target nodejs",
     "link": "rm -rf ./src && cp -r ../web/src ./src",
-    "prepublishOnly": "yarn link && yarn wasm-build",
+    "build": "tsc",
+    "prepublishOnly": "yarn run link && yarn wasm-build && yarn build",
     "prepare": "yarn link && yarn wasm-build"
   },
   "repository": {
@@ -25,7 +27,6 @@
   "homepage": "https://github.com/logisky/LogiSheets",
   "files": [
     "wasm/*",
-    "src/*",
-    "index.ts"
+    "dist/*"
   ]
 }
