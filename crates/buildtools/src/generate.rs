@@ -1,5 +1,6 @@
 fn main() {
     use gents::FileGroup;
+    use logisheets_controller::controller::display::DisplayWindow;
     use logisheets_controller::controller::display::{DisplayRequest, DisplayResponse};
     use logisheets_controller::edit_action::AsyncFuncResult;
     use logisheets_controller::edit_action::{ActionEffect, EditAction};
@@ -10,6 +11,7 @@ fn main() {
     let mut file_group = FileGroup::new();
     file_group.add::<DisplayRequest>();
     file_group.add::<DisplayResponse>();
+    file_group.add::<DisplayWindow>();
     file_group.add::<EditAction>();
     file_group.add::<ActionEffect>();
     file_group.add::<AsyncFuncResult>();

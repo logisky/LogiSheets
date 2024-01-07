@@ -48,13 +48,10 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
              * The difference between clientHeight, offsetHeight, scrollHeight, offsetTop, and scrollTop
              * https://www.programmersought.com/article/76801676023/
              */
-            // 除法要注意判断分母是否为0
-            let scrollRadio = scrollTop / scrollHeight
-            let thumbRadio = offsetHeight / scrollHeight
-            if (scrollHeight === 0) {
-                scrollRadio = 0
-                thumbRadio = 0
-            }
+            const scrollRadio =
+                scrollHeight === 0 ? 0 : scrollTop / scrollHeight
+            const thumbRadio =
+                scrollHeight === 0 ? 0 : offsetHeight / scrollHeight
             const containerStyle = getComputedStyle(thumbContainer)
             const newThumbStyle: CSSProperties = {}
             if (xScrollbar()) {
