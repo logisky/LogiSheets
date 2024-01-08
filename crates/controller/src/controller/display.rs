@@ -1,3 +1,5 @@
+use crate::CellInfo;
+
 use super::style::Style;
 use logisheets_base::BlockId;
 use serde::Serialize;
@@ -10,6 +12,19 @@ use serde::Serialize;
 pub struct DisplayResponse {
     pub incremental: bool,
     pub patches: Vec<DisplayPatch>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "display_window.ts")
+)]
+pub struct DisplayWindow {
+    pub cells: Vec<CellInfo>,
+    pub rows: Vec<RowInfo>,
+    pub cols: Vec<ColInfo>,
+    pub comments: Vec<Comment>,
+    pub merge_cells: Vec<MergeCell>,
 }
 
 #[derive(Debug, Clone)]

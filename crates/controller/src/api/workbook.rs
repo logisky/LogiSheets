@@ -1,7 +1,7 @@
 use super::worksheet::Worksheet;
 use crate::{
     controller::display::{DisplayRequest, DisplayResponse},
-    edit_action::ActionEffect,
+    edit_action::{ActionEffect, StatusCode},
     Controller,
 };
 use crate::{
@@ -44,8 +44,6 @@ impl Workbook {
         Ok(Workbook { controller })
     }
 
-    // TODO: Due to the UUID generating, we can't just `assert_eq!(file1, file2)` where
-    // `file1` and `file2` are binary got from saving of the same file. Fix it.
     #[inline]
     pub fn save(&self) -> Result<Vec<u8>> {
         self.controller.save()
@@ -72,6 +70,13 @@ impl Workbook {
         tasks: Vec<Task>,
         results: Vec<AsyncCalcResult>,
     ) -> ActionEffect {
+        if tasks.len() != results.len() {
+            return ActionEffect {
+                version: 0,
+                async_tasks: vec![],
+                status: StatusCode::Err(1),
+            };
+        }
         self.controller.handle_async_calc_results(tasks, results)
     }
 

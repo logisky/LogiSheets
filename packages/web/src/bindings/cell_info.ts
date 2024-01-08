@@ -6,4 +6,5 @@ export interface CellInfo {
     value: Value
     formula: string
     style: Style
+    blockId?: number
 }

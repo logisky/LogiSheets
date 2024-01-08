@@ -1,3 +1,4 @@
+use crate::controller::display::DisplayWindow;
 use crate::errors::Result;
 use crate::{
     connectors::NameFetcher,
@@ -99,14 +100,118 @@ impl<'a> Worksheet<'a> {
     }
 
     pub fn get_cell_info(&self, row: usize, col: usize) -> Result<CellInfo> {
-        let formula = self.get_formula(row, col)?;
-        let value = self.get_value(row, col)?;
-        let style = self.get_style(row, col)?;
+        let cell_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_id(&self.sheet_id, row, col)?;
+        let block_id = if let CellId::BlockCell(b) = cell_id {
+            Some(b.block_id)
+        } else {
+            None
+        };
+        let formula = self.get_formula_by_id(cell_id)?;
+        let value = self.get_value_by_id(cell_id)?;
+        let style = self.get_style_by_id(cell_id)?;
         Ok(CellInfo {
             value,
             formula,
             style,
+            block_id,
         })
+    }
+
+    pub fn get_comment(&self, row: usize, col: usize) -> Option<Comment> {
+        let cell_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_id(&self.sheet_id, row, col)
+            .ok()?;
+        let comment = self
+            .controller
+            .status
+            .cell_attachment_manager
+            .comments
+            .get_comment(&self.sheet_id, &cell_id)?;
+        let author = self
+            .controller
+            .status
+            .cell_attachment_manager
+            .comments
+            .get_author_name(&comment.author)
+            .unwrap_or(String::from(""));
+        Some(Comment {
+            row,
+            col,
+            author,
+            content: comment.text.clone(),
+        })
+    }
+
+    pub fn get_display_window(
+        &self,
+        start_row: usize,
+        start_col: usize,
+        end_row: usize,
+        end_col: usize,
+    ) -> Result<DisplayWindow> {
+        let mut cells: Vec<CellInfo> = vec![];
+        let mut row_infos: Vec<RowInfo> = vec![];
+        let mut col_infos: Vec<ColInfo> = vec![];
+        let mut comments: Vec<Comment> = vec![];
+        let mut merge_cells: Vec<MergeCell> = vec![];
+
+        for row in start_row..=end_row {
+            let row_info = self.get_row_info(row).unwrap_or(RowInfo::default(row));
+            row_infos.push(row_info);
+
+            for col in start_col..=end_col {
+                let col_info = self.get_col_info(col).unwrap_or(ColInfo::default(col));
+                col_infos.push(col_info);
+
+                if let Some(comment) = self.get_comment(row, col) {
+                    comments.push(comment);
+                }
+
+                let info = self.get_cell_info(row, col)?;
+                cells.push(info);
+            }
+        }
+        self.get_merge_cells().into_iter().for_each(|m| {
+            if m.row_start >= start_row
+                && m.row_end <= end_row
+                && m.col_start >= start_col
+                && m.col_end <= end_col
+            {
+                merge_cells.push(m);
+            }
+        });
+
+        Ok(DisplayWindow {
+            cells,
+            rows: row_infos,
+            cols: col_infos,
+            comments,
+            merge_cells,
+        })
+    }
+
+    pub fn get_cell_info_in_window(
+        &self,
+        start_row: usize,
+        start_col: usize,
+        end_row: usize,
+        end_col: usize,
+    ) -> Result<Vec<CellInfo>> {
+        let mut res = vec![];
+        for i in start_row..=end_row {
+            for j in start_col..=end_col {
+                let cell_info = self.get_cell_info(i, j)?;
+                res.push(cell_info);
+            }
+        }
+        Ok(res)
     }
 
     pub(crate) fn get_style_by_id(&self, cell_id: CellId) -> Result<Style> {
