@@ -287,6 +287,25 @@ pub fn get_style(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) ->
 }
 
 #[wasm_bindgen]
+pub fn get_display_window(
+    id: usize,
+    sheet_idx: usize,
+    start_row: usize,
+    end_row: usize,
+    start_col: usize,
+    end_col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let window = ws.get_display_window(start_row, start_col, end_row, end_col);
+    handle_result!(window);
+    serde_wasm_bindgen::to_value(&window).unwrap()
+}
+
+#[wasm_bindgen]
 pub fn set_font(
     id: usize,
     sheet_idx: usize,

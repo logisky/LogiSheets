@@ -7,8 +7,9 @@ import {
     get_row_info,
     get_style,
     get_value,
+    get_display_window,
 } from '../../wasm'
-import {ColInfo, RowInfo, Style, Value} from '../bindings'
+import {ColInfo, DisplayWindow, RowInfo, Style, Value} from '../bindings'
 import {CellInfo} from '../bindings/cell_info'
 import {Result} from './utils'
 
@@ -18,49 +19,57 @@ export class Worksheet {
         this._sheetIdx = idx
     }
 
-    public get_row_height(row_idx: number): Result<number> {
-        return get_row_height(this._id, this._sheetIdx, row_idx)
-    }
-
-    public get_col_width(col_idx: number): Result<number> {
-        return get_col_width(this._id, this._sheetIdx, col_idx)
-    }
-
-    public get_row_info(row_idx: number): Result<RowInfo> {
-        return get_row_info(
+    public getDisplayWindow(
+        startRow: number,
+        endRow: number,
+        startCol: number,
+        endCol: number
+    ): Result<DisplayWindow> {
+        return get_display_window(
             this._id,
             this._sheetIdx,
-            row_idx
-        ) as Result<RowInfo>
+            startRow,
+            endRow,
+            startCol,
+            endCol
+        )
     }
 
-    public get_col_info(col_idx: number): Result<ColInfo> {
-        return get_col_info(
-            this._id,
-            this._sheetIdx,
-            col_idx
-        ) as Result<ColInfo>
+    public getRowHeight(rowIdx: number): Result<number> {
+        return get_row_height(this._id, this._sheetIdx, rowIdx)
     }
 
-    public get_cell_info(row_idx: number, col_idx: number): Result<CellInfo> {
+    public getColWidth(colIdx: number): Result<number> {
+        return get_col_width(this._id, this._sheetIdx, colIdx)
+    }
+
+    public getRowInfo(rowIdx: number): Result<RowInfo> {
+        return get_row_info(this._id, this._sheetIdx, rowIdx) as Result<RowInfo>
+    }
+
+    public getColInfo(colIdx: number): Result<ColInfo> {
+        return get_col_info(this._id, this._sheetIdx, colIdx) as Result<ColInfo>
+    }
+
+    public getCellInfo(rowIdx: number, colIdx: number): Result<CellInfo> {
         return get_cell_info(
             this._id,
             this._sheetIdx,
-            row_idx,
-            col_idx
+            rowIdx,
+            colIdx
         ) as Result<CellInfo>
     }
 
-    public get_formula(row_idx: number, col_idx: number): Result<string> {
-        return get_formula(this._id, this._sheetIdx, row_idx, col_idx)
+    public getFormula(rowIdx: number, colIdx: number): Result<string> {
+        return get_formula(this._id, this._sheetIdx, rowIdx, colIdx)
     }
 
-    public get_style(row_idx: number, col_idx: number): Result<Style> {
-        return get_style(this._id, this._sheetIdx, row_idx, col_idx)
+    public getStyle(rowIdx: number, colIdx: number): Result<Style> {
+        return get_style(this._id, this._sheetIdx, rowIdx, colIdx)
     }
 
-    public get_value(row_idx: number, col_idx: number): Result<Value> {
-        return get_value(this._id, this._sheetIdx, row_idx, col_idx)
+    public getValue(rowIdx: number, colIdx: number): Result<Value> {
+        return get_value(this._id, this._sheetIdx, rowIdx, colIdx)
     }
 
     private _id: number
