@@ -1,20 +1,17 @@
 /* eslint-disable no-console */
 import {Subject, ReplaySubject} from 'rxjs'
 import {ClientRequest, ServerResponse, OpenFile} from '@/message'
-import {Calculator, Executor, Tasks} from './calculator'
 import {
     initWasm,
     Workbook,
-    ActionEffect,
     Transaction,
     DisplayRequest,
+    CustomFunc,
 } from '@logisheets_bg'
 
 export class Service {
     public constructor(funcs: readonly CustomFunc[]) {
-        funcs.forEach((f: CustomFunc): void => {
-            this._calculator.registry(f.name, f.executor)
-        })
+        funcs.forEach((f) => this._workbook.registryCustomFunc(f))
         this._init()
     }
 
@@ -26,25 +23,6 @@ export class Service {
         this.input$.subscribe((req: ClientRequest): void => {
             const response = this._execute(req)
             this.output$.next(response)
-            if (
-                response.$case == 'actionEffect' &&
-                response.actionEffect.asyncTasks.length > 0
-            ) {
-                // This case means some custom functions are needed to calculate, server sends
-                // tasks to the JS side.
-                this._calculator.input$.next(
-                    new Tasks(response.actionEffect.asyncTasks)
-                )
-            }
-        })
-
-        this._calculator.output$.subscribe((res) => {
-            const r = this._workbook.inputAsyncResult(res) as ActionEffect
-            const serverSend: ServerResponse = {
-                $case: 'actionEffect',
-                actionEffect: r,
-            }
-            this.output$.next(serverSend)
         })
     }
 
@@ -105,12 +83,4 @@ export class Service {
         throw Error('get workbook without initializing')
     }
     private _workbookImpl: Workbook | undefined
-    private _calculator: Calculator = new Calculator()
-}
-
-export class CustomFunc {
-    public constructor(
-        public readonly name: string,
-        public readonly executor: Executor
-    ) {}
 }
