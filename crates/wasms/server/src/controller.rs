@@ -1,4 +1,4 @@
-use logisheets_controller::controller::display::DisplayRequest;
+use logisheets_controller::controller::display::{DisplayRequest, DisplayWindowWithStartPoint};
 use logisheets_controller::edit_action::{
     AsyncFuncResult, BlockInput, CellInput, CreateBlock, CreateSheet, DeleteCols,
     DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
@@ -303,6 +303,81 @@ pub fn get_display_window(
     let window = ws.get_display_window(start_row, start_col, end_row, end_col);
     handle_result!(window);
     serde_wasm_bindgen::to_value(&window).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_display_window_with_start_point(
+    id: usize,
+    sheet_idx: usize,
+    start_x: f64,
+    start_y: f64,
+    end_x: f64,
+    end_y: f64,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let mut start_row = 0;
+    let mut end_row = 0;
+    let mut start_col = 0;
+    let mut end_col = 0;
+    let mut start_point_x = 0_f64;
+    let mut start_point_y = 0_f64;
+
+    let mut curr_idx = 0;
+    let mut curr = 0_f64;
+    let mut last_value = 0_f64;
+    let mut s_flag = false;
+    let mut e_flag = false;
+    while !s_flag || !e_flag {
+        if !s_flag && curr >= start_y {
+            start_row = if curr_idx > 0 { curr_idx - 1 } else { curr_idx };
+            s_flag = true;
+            start_point_y = curr - last_value;
+        }
+
+        if !e_flag && curr >= end_y {
+            end_row = curr_idx + 1;
+            e_flag = true;
+        }
+        let h = ws.get_row_height(curr_idx);
+        handle_result!(h);
+        last_value = h;
+        curr += h;
+        curr_idx += 1;
+    }
+    let mut curr_idx = 0;
+    let mut curr = 0_f64;
+    let mut last_value = 0_f64;
+    let mut s_flag = false;
+    let mut e_flag = false;
+    while !s_flag || !e_flag {
+        if !s_flag && curr >= start_x {
+            start_col = if curr_idx > 0 { curr_idx - 1 } else { curr_idx };
+            s_flag = true;
+            start_point_x = curr - last_value;
+        }
+
+        if !e_flag && curr >= end_x {
+            end_col = curr_idx + 1;
+            e_flag = true;
+        }
+        let w = ws.get_col_width(curr_idx);
+        handle_result!(w);
+        last_value = w;
+        curr += w;
+        curr_idx += 1;
+    }
+    let window = ws.get_display_window(start_row, start_col, end_row, end_col);
+    handle_result!(window);
+    let result = DisplayWindowWithStartPoint {
+        window,
+        start_x: start_point_x,
+        start_y: start_point_y,
+    };
+    serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
 #[wasm_bindgen]

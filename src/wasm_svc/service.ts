@@ -11,15 +11,15 @@ import {
 
 export class Service {
     public constructor(funcs: readonly CustomFunc[]) {
-        funcs.forEach((f) => this._workbook.registryCustomFunc(f))
-        this._init()
+        this._init(funcs)
     }
 
     public input$ = new ReplaySubject<ClientRequest>(1)
     public output$: Subject<ServerResponse> = new Subject()
-    private async _init() {
+    private async _init(funcs: readonly CustomFunc[]) {
         await initWasm()
         this._workbookImpl = new Workbook()
+        funcs.forEach((f) => this._workbook.registryCustomFunc(f))
         this.input$.subscribe((req: ClientRequest): void => {
             const response = this._execute(req)
             this.output$.next(response)

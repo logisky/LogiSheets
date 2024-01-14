@@ -30,6 +30,17 @@ pub struct DisplayWindow {
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
+    gents_derives::gents_header(file_name = "display_window_with_start_point.ts")
+)]
+pub struct DisplayWindowWithStartPoint {
+    pub window: DisplayWindow,
+    pub start_x: f64,
+    pub start_y: f64,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
     gents_derives::gents_header(file_name = "display_patch.ts")
 )]
 pub enum DisplayPatch {
