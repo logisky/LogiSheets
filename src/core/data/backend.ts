@@ -1,6 +1,5 @@
 import {Observable, ReplaySubject, Subject} from 'rxjs'
 import {
-    ColInfo,
     DisplayPatch,
     SheetBlocks,
     SheetColInfo,

@@ -8,8 +8,16 @@ import {
     get_style,
     get_value,
     get_display_window,
+    get_display_window_with_start_point,
 } from '../../wasm'
-import {ColInfo, DisplayWindow, RowInfo, Style, Value} from '../bindings'
+import {
+    ColInfo,
+    DisplayWindow,
+    DisplayWindowWithStartPoint,
+    RowInfo,
+    Style,
+    Value,
+} from '../bindings'
 import {CellInfo} from '../bindings/cell_info'
 import {Result} from './utils'
 
@@ -32,6 +40,22 @@ export class Worksheet {
             endRow,
             startCol,
             endCol
+        )
+    }
+
+    public getDisplayWindowWithStartPoint(
+        startX: number,
+        startY: number,
+        endX: number,
+        endY: number
+    ): DisplayWindowWithStartPoint {
+        return get_display_window_with_start_point(
+            this._id,
+            this._sheetIdx,
+            startX,
+            startY,
+            endX,
+            endY
         )
     }
 
