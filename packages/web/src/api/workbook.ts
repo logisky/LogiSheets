@@ -2,6 +2,7 @@ import {Payload} from '../payloads'
 import {
     block_input,
     block_line_shift,
+    cell_clear,
     cell_input,
     col_delete,
     col_insert,
@@ -224,6 +225,8 @@ export class Workbook {
         if (p.type === 'deleteSheet') return delete_sheet(this._id, p.sheetIdx)
         if (p.type === 'insertSheet')
             return create_sheet(this._id, p.sheetIdx, p.name)
+        if (p.type === 'cellClear')
+            return cell_clear(this._id, p.sheetIdx, p.row, p.col)
         // eslint-disable-next-line no-console
         console.log('Unimplemented!')
     }

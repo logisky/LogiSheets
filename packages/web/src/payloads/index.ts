@@ -19,6 +19,7 @@ import {SetFont} from './set_font'
 import {SetRowHeight} from './set_row_height'
 import {SetRowVisible} from './set_row_visible'
 import {SheetRename} from './sheet_rename'
+import {CellClear} from './cell_clear'
 
 export * from './cell_input'
 export * from './create_block'
@@ -41,10 +42,12 @@ export * from './set_row_height'
 export * from './set_row_visible'
 export * from './sheet_rename'
 export * from './block_input'
+export * from './cell_clear'
 
 export type Payload =
     | BlockInput
     | CellInput
+    | CellClear
     | CreateBlock
     | DeleteBlockCols
     | DeleteBlockRows

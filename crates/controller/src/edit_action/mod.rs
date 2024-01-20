@@ -97,6 +97,7 @@ pub enum EditPayload {
     BlockStyleUpdate(BlockStyleUpdate),
 
     CellInput(CellInput),
+    CellClear(CellClear),
     SetColWidth(SetColWidth),
     SetRowHeight(SetRowHeight),
     SetVisible(SetVisible),
@@ -209,6 +210,18 @@ pub struct CellInput {
     pub row: usize,
     pub col: usize,
     pub content: String,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "cell_clear.ts", rename_all = "camelCase")
+)]
+pub struct CellClear {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
 }
 
 /// Create a new block.

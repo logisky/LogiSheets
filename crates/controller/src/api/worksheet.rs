@@ -164,10 +164,16 @@ impl<'a> Worksheet<'a> {
 
         for row in start_row..=end_row {
             let row_info = self.get_row_info(row).unwrap_or(RowInfo::default(row));
+            if row_info.hidden {
+                continue;
+            }
             row_infos.push(row_info);
 
-            for col in start_col..=end_col {
+            'col: for col in start_col..=end_col {
                 let col_info = self.get_col_info(col).unwrap_or(ColInfo::default(col));
+                if col_info.hidden {
+                    continue 'col;
+                }
                 col_infos.push(col_info);
 
                 if let Some(comment) = self.get_comment(row, col) {
