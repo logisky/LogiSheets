@@ -77,6 +77,14 @@ impl ContainerExecutor {
                 self.container.update_value(sheet_id, cell_id, cell_value);
                 Ok(self)
             }
+            EditPayload::CellClear(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
+                self.container.remove_cell(sheet_id, &cell_id);
+                Ok(self)
+            }
             EditPayload::SetColWidth(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)

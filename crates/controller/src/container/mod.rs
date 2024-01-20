@@ -98,6 +98,11 @@ impl DataContainer {
         sheet_container.cells.insert(cell_id, cell);
     }
 
+    pub fn remove_cell(&mut self, sheet_id: SheetId, cell_id: &CellId) {
+        let sheet_container = self.get_sheet_container_mut(sheet_id);
+        sheet_container.cells.remove(cell_id);
+    }
+
     pub fn update_value(&mut self, sheet_id: SheetId, cell_id: CellId, value: CellValue) {
         let sheet_container = self.get_sheet_container_mut(sheet_id);
         if let Some(v) = sheet_container.cells.get_mut(&cell_id) {

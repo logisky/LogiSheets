@@ -1,6 +1,6 @@
 use logisheets_controller::controller::display::{DisplayRequest, DisplayWindowWithStartPoint};
 use logisheets_controller::edit_action::{
-    AsyncFuncResult, BlockInput, CellInput, CreateBlock, CreateSheet, DeleteCols,
+    AsyncFuncResult, BlockInput, CellClear, CellInput, CreateBlock, CreateSheet, DeleteCols,
     DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
     InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, MoveBlock, PayloadsAction,
     SheetRename, StyleUpdate, StyleUpdateType,
@@ -492,6 +492,19 @@ pub fn cell_input(id: usize, sheet_idx: usize, row: usize, col: usize, content: 
             row,
             col,
             content,
+        }),
+    );
+}
+
+#[wasm_bindgen]
+pub fn cell_clear(id: usize, sheet_idx: usize, row: usize, col: usize) {
+    init();
+    MANAGER.get_mut().add_payload(
+        id,
+        EditPayload::CellClear(CellClear {
+            sheet_idx,
+            row,
+            col,
         }),
     );
 }

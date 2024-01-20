@@ -42,6 +42,13 @@ impl CubeExecutor {
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 Ok(input(self, sheet_id, cell_input.row, cell_input.col, ctx))
             }
+            EditPayload::CellClear(cell_clear) => {
+                let sheet_idx = cell_clear.sheet_idx;
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                Ok(input(self, sheet_id, cell_clear.row, cell_clear.col, ctx))
+            }
             EditPayload::InsertCols(insert_cols) => {
                 let sheet_idx = insert_cols.sheet_idx;
                 let sheet_id = ctx

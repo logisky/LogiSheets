@@ -103,6 +103,13 @@ impl RangeExecutor {
                 let res = input(self, sheet_id, p.row, p.col, ctx)?;
                 Ok(res)
             }
+            EditPayload::CellClear(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let res = input(self, sheet_id, p.row, p.col, ctx)?;
+                Ok(res)
+            }
             EditPayload::DeleteSheet(_) => todo!(),
             EditPayload::InsertCols(insert_cols) => {
                 let sheet_id = ctx

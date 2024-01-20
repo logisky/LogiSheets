@@ -195,5 +195,12 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             Ok(Some((Diff::Unavailable, sheet_id)))
         }
+        EditPayload::CellClear(cr) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(cr.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let cell_id = ctx.fetch_cell_id(&sheet_id, cr.row, cr.col)?;
+            Ok(Some((Diff::CellValue(cell_id), sheet_id)))
+        }
     }
 }

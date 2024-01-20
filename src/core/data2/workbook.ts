@@ -6,8 +6,8 @@ import {
     Transaction,
     Workbook,
     initWasm,
+    DisplayWindowWithStartPoint,
 } from '@logisheets_bg'
-import {DisplayWindowWithStartPoint} from 'packages/web/src/bindings'
 
 @injectable()
 export class WorkbookService {
