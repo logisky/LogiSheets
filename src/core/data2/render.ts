@@ -10,13 +10,27 @@ export class RenderDataProvider {
     readonly id = getID()
     constructor(@inject(TYPES.Data) private _workbook: WorkbookService) {}
 
-    public getRenderData(
+    public current: ViewRange = new ViewRange()
+    public currentSheet = 0
+
+    public display(
         sheetIdx: number,
         startX: number,
         startY: number,
         endX: number,
         endY: number
-    ): RenderCell[] {
+    ) {
+        this.currentSheet = sheetIdx
+        this.current = this._getRenderData(sheetIdx, startX, startY, endX, endY)
+    }
+
+    private _getRenderData(
+        sheetIdx: number,
+        startX: number,
+        startY: number,
+        endX: number,
+        endY: number
+    ): ViewRange {
         const window = this._workbook.getDisplayWindow(
             sheetIdx,
             startX,
@@ -104,7 +118,11 @@ export class RenderDataProvider {
                 }
             }
         })
-        return cells
+        const view = new ViewRange()
+        view.setRows(rows)
+        view.setCols(cols)
+        view.setCells(cells)
+        return view
     }
 }
 
@@ -173,4 +191,28 @@ export class ViewRange {
      * visible cells
      */
     public cells: readonly RenderCell[] = []
+
+    public setRows(rows: readonly RenderCell[]) {
+        if (rows.length == 0) {
+            return
+        }
+
+        this.fromRow = rows[0].coordinate.startRow
+        this.toRow = rows[rows.length - 1].coordinate.endRow
+        this.rows = rows
+    }
+
+    public setCols(cols: readonly RenderCell[]) {
+        if (cols.length == 0) {
+            return
+        }
+
+        this.fromCol = cols[0].coordinate.startCol
+        this.toCol = cols[cols.length - 1].coordinate.endCol
+        this.cols = cols
+    }
+
+    public setCells(cells: readonly RenderCell[]) {
+        this.cells = cells
+    }
 }

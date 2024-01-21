@@ -38,12 +38,11 @@ import {CellInputBuilder} from '@logisheets_bg'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
 import {
-    Backend,
-    DataService,
     MAX_COUNT,
     RenderCell,
-    SheetService,
-} from '@/core/data'
+    RenderDataProvider,
+    WorkbookService,
+} from '@/core/data2'
 import {TYPES} from '@/core/ioc/types'
 export const OFFSET = 100
 
@@ -59,9 +58,8 @@ export const CanvasComponent: FC<CanvasProps> = ({
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [contextMenuEl, setContextMenu] = useState<ReactElement>()
     const canvasEl = useRef<HTMLCanvasElement>(null)
-    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
-    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const BACKEND_SERVICE = useInjection<WorkbookService>(TYPES.Backend)
+    const DATA_SERVICE = useInjection<RenderDataProvider>(TYPES.Data)
 
     // Return the render cell
     // 0: keep horizontal scroll value unchanged

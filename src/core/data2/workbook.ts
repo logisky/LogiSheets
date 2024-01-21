@@ -3,11 +3,14 @@ import {injectable} from 'inversify'
 import {
     ActionEffect,
     CustomFunc,
+    DisplayWindowWithStartPoint,
+    RowInfo,
     Transaction,
     Workbook,
     initWasm,
-    DisplayWindowWithStartPoint,
+    isErrorMessage,
 } from '@logisheets_bg'
+import {ColInfo} from '@logisheets_bg'
 
 @injectable()
 export class WorkbookService {
@@ -41,6 +44,22 @@ export class WorkbookService {
     ): DisplayWindowWithStartPoint {
         const ws = this._workbook.getWorksheet(sheetIdx)
         return ws.getDisplayWindowWithStartPoint(startX, startY, endX, endY)
+    }
+
+    public getRowInfo(sheetIdx: number, row: number): RowInfo {
+        const rowInfo = this._workbook.getWorksheet(sheetIdx).getRowInfo(row)
+        if (isErrorMessage(rowInfo)) {
+            throw Error(rowInfo.msg)
+        }
+        return rowInfo
+    }
+
+    public getColInfo(sheetIdx: number, col: number): ColInfo {
+        const colInfo = this._workbook.getWorksheet(sheetIdx).getColInfo(col)
+        if (isErrorMessage(colInfo)) {
+            throw Error(colInfo.msg)
+        }
+        return colInfo
     }
 
     public undo() {

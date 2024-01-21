@@ -1,5 +1,5 @@
 import {Cell} from '../defs'
-import {DataService, RenderCell} from '@/core/data'
+import {RenderDataProvider, RenderCell} from '@/core/data2'
 import {MouseEvent, useRef} from 'react'
 import {Buttons} from '@/core'
 import {SelectorProps} from '@/components/selector'
@@ -26,7 +26,7 @@ interface StartCellProps {
 }
 
 export const useStartCell = ({startCellChange}: StartCellProps) => {
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const DATA_SERVICE = useInjection<RenderDataProvider>(TYPES.Data)
     const startCell = useRef<Cell>()
 
     const scroll = () => {
@@ -38,7 +38,7 @@ export const useStartCell = ({startCellChange}: StartCellProps) => {
         )
             return
         let renderCell: RenderCell | undefined
-        const viewRange = DATA_SERVICE.cachedViewRange
+        const viewRange = DATA_SERVICE.current
         if (oldStartCell.type === 'FixedLeftHeader')
             renderCell = viewRange.rows.find((r) =>
                 r.coordinate.cover(oldStartCell.coordinate)
@@ -66,7 +66,7 @@ export const useStartCell = ({startCellChange}: StartCellProps) => {
     }
 
     const canvasChange = () => {
-        const viewRange = DATA_SERVICE.cachedViewRange
+        const viewRange = DATA_SERVICE.current
         const oldStartCell = startCell.current
         const row = viewRange.rows.find((r) => oldStartCell?.cover(r))
         if (row === undefined) {
