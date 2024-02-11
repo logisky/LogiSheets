@@ -1,5 +1,4 @@
 import {PainterService, Box, TextAttr, CanvasAttr} from '@/core/painter'
-import {Backend, DataService, RenderCell, SheetService} from '@/core/data'
 import {StandardColor, Range} from '@/core/standable'
 import {SETTINGS} from '@/core/settings'
 import {hasOwnProperty, toA1notation} from '@/core'
@@ -10,6 +9,7 @@ import {RefObject, useEffect, useRef} from 'react'
 import {Subscription} from 'rxjs'
 import {EventType, on} from '@/core/events'
 import {PatternFill} from '@logisheets_bg'
+import {RenderDataProvider, WorkbookService, RenderCell} from '@/core/data2'
 
 interface RenderProps {
     readonly canvas: RefObject<HTMLCanvasElement>
@@ -17,26 +17,22 @@ interface RenderProps {
 }
 
 export const useRender = ({canvas, rendered}: RenderProps) => {
-    const dataSvc = useInjection<DataService>(TYPES.Data)
-    const sheetSvc = useInjection<SheetService>(TYPES.Sheet)
-    const backendSvc = useInjection<Backend>(TYPES.Backend)
+    const dataSvc = useInjection<RenderDataProvider>(TYPES.Data)
+    const backendSvc = useInjection<WorkbookService>(TYPES.Backend)
 
     const painterSvc = useRef(new PainterService())
 
     useEffect(() => {
         const subs = new Subscription()
         render()
-        subs.add(
-            backendSvc.render$.subscribe(() => {
-                render()
-            })
-        )
+        backendSvc.registryRender(() => {
+            render()
+        })
         subs.add(
             on(window, EventType.RESIZE).subscribe(() => {
                 render()
             })
         )
-        dataSvc.sendDisplayArea()
         return () => {
             subs.unsubscribe()
         }
@@ -46,7 +42,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
         if (!canvas.current) throw Error('canvas not found')
         painterSvc.current.setupCanvas(canvas.current)
         const rect = canvas.current.getBoundingClientRect()
-        dataSvc.initViewRange(rect.width, rect.height)
+        dataSvc.display(0, rect.x, rect.y, rect.width, rect.height)
         _renderGrid(canvas.current)
         _renderContent()
         _renderLeftHeader()
@@ -69,7 +65,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
      * main content + freeze content.
      */
     const _renderContent = () => {
-        dataSvc.cachedViewRange.cells.forEach((cell) => {
+        dataSvc.current.cells.forEach((cell) => {
             painterSvc.current.save()
             _renderCell(cell)
             painterSvc.current.restore()
@@ -78,7 +74,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
 
     const _renderLeftHeader = () => {
         painterSvc.current.save()
-        dataSvc.cachedViewRange.rows.forEach((r) => {
+        dataSvc.current.rows.forEach((r) => {
             const {startRow, startCol, endRow, endCol} = r.position
             painterSvc.current.line([
                 [startCol, startRow],
@@ -98,7 +94,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
 
     const _renderTopHeader = () => {
         painterSvc.current.save()
-        dataSvc.cachedViewRange.cols.forEach((c) => {
+        dataSvc.current.cols.forEach((c) => {
             const {startRow, startCol, endRow, endCol} = c.position
             painterSvc.current.line([
                 [endCol, startRow],
@@ -174,7 +170,7 @@ export const useRender = ({canvas, rendered}: RenderProps) => {
     }
 
     const _renderGrid = (canvas: HTMLCanvasElement) => {
-        const {cachedViewRange: viewRange} = dataSvc
+        const {current: viewRange} = dataSvc
         const {grid, leftTop} = SETTINGS
         painterSvc.current.save()
         const attr = new CanvasAttr()
