@@ -17,6 +17,8 @@ pub struct SheetPosConnector<'a> {
     pub name_id_manager: &'a mut NameIdManager,
     pub external_links_manager: &'a mut ExtBooksManager,
     pub navigator: &'a Navigator,
+
+    pub updated: bool,
 }
 
 impl<'a> IdFetcherTrait for SheetPosConnector<'a> {
@@ -83,4 +85,8 @@ impl<'a> IdFetcherTrait for SheetPosConnector<'a> {
     }
 }
 
-impl<'a> SheetPosExecCtx for SheetPosConnector<'a> {}
+impl<'a> SheetPosExecCtx for SheetPosConnector<'a> {
+    fn has_updated(&mut self) {
+        self.updated = true
+    }
+}

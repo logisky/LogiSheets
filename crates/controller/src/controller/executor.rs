@@ -32,6 +32,9 @@ pub struct Executor<'a> {
     pub async_funcs: &'a HashSet<String>,
     pub updated_cells: HashSet<(SheetId, CellId)>,
     pub dirty_vertices: HashSet<Vertex>,
+
+    pub sheet_updated: bool,
+    pub cell_updated: bool, // todo: updated celll
 }
 
 impl<'a> Executor<'a> {
@@ -55,7 +58,7 @@ impl<'a> Executor<'a> {
 
     fn execute_payload(self, payload: EditPayload) -> Result<Self, Error> {
         let mut result = self;
-        let sheet_pos_manager = result.execute_sheet_pos(&payload)?;
+        let (sheet_pos_manager, sheet_updated) = result.execute_sheet_pos(&payload)?;
         result.status.sheet_pos_manager = sheet_pos_manager;
 
         let old_navigator = result.status.navigator.clone();
@@ -64,7 +67,7 @@ impl<'a> Executor<'a> {
         let range_executor = result.execute_range(payload.clone())?;
         let cube_executor = result.execute_cube(payload.clone())?;
 
-        let container_executor = result.execute_container(payload.clone())?;
+        let (container_executor, updated) = result.execute_container(payload.clone())?;
         result.status.container = container_executor.container;
 
         let mut dirty_ranges = range_executor.dirty_ranges;
@@ -82,6 +85,12 @@ impl<'a> Executor<'a> {
 
         let formula_executor =
             result.execute_formula(payload, &old_navigator, dirty_ranges, dirty_cubes)?;
+
+        let cell_updated = if updated {
+            true
+        } else {
+            result.updated_cells.len() > 0
+        };
 
         Ok(Executor {
             status: Status {
@@ -108,6 +117,8 @@ impl<'a> Executor<'a> {
             async_funcs: result.async_funcs,
             dirty_vertices: formula_executor.dirty_vertices,
             updated_cells: result.updated_cells,
+            sheet_updated,
+            cell_updated,
         })
     }
 
@@ -181,7 +192,10 @@ impl<'a> Executor<'a> {
         executor.execute(&ctx, payload)
     }
 
-    fn execute_container(&mut self, payload: EditPayload) -> Result<ContainerExecutor, Error> {
+    fn execute_container(
+        &mut self,
+        payload: EditPayload,
+    ) -> Result<(ContainerExecutor, bool), Error> {
         let mut ctx = ContainerConnector {
             sheet_id_manager: &mut self.status.sheet_id_manager,
             text_id_manager: &mut self.status.text_id_manager,
@@ -196,7 +210,10 @@ impl<'a> Executor<'a> {
         executor.execute(&mut ctx, payload)
     }
 
-    fn execute_sheet_pos(&mut self, payload: &EditPayload) -> Result<SheetPosManager, Error> {
+    fn execute_sheet_pos(
+        &mut self,
+        payload: &EditPayload,
+    ) -> Result<(SheetPosManager, bool), Error> {
         let mut ctx = SheetPosConnector {
             sheet_id_manager: &mut self.status.sheet_id_manager,
             text_id_manager: &mut self.status.text_id_manager,
@@ -204,13 +221,14 @@ impl<'a> Executor<'a> {
             name_id_manager: &mut self.status.name_id_manager,
             external_links_manager: &mut self.status.external_links_manager,
             navigator: &self.status.navigator,
+            updated: false,
         };
         let new_manager = self
             .status
             .sheet_pos_manager
             .clone()
             .execute(payload, &mut ctx);
-        Ok(new_manager)
+        Ok((new_manager, ctx.updated))
     }
 
     fn execute_formula(

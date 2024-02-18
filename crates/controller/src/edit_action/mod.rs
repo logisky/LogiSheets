@@ -404,7 +404,7 @@ pub struct SetVisible {
     ts(file_name = "action_effect.ts", rename_all = "camelCase")
 )]
 pub struct ActionEffect {
-    /// The latest version after processing an action
+    /// The latest version after processing an action. 0 means latest version
     pub version: u32,
     /// Tasks should be calculated outside this engine(mainly because of network limitations and customer defined)
     pub async_tasks: Vec<Task>,
@@ -412,13 +412,6 @@ pub struct ActionEffect {
 }
 
 impl ActionEffect {
-    pub fn from_bool(b: bool) -> Self {
-        ActionEffect {
-            status: StatusCode::Ok(b),
-            ..Default::default()
-        }
-    }
-
     pub fn from_err(e: u8) -> Self {
         ActionEffect {
             status: StatusCode::Err(e),
@@ -426,11 +419,11 @@ impl ActionEffect {
         }
     }
 
-    pub fn from(version: u32, tasks: Vec<Task>) -> Self {
+    pub fn from(version: u32, tasks: Vec<Task>, ty: WorkbookUpdateType) -> Self {
         ActionEffect {
             version,
             async_tasks: tasks,
-            status: StatusCode::Ok(true),
+            status: StatusCode::Ok(ty),
         }
     }
 }
@@ -458,13 +451,30 @@ pub struct AsyncFuncResult {
     ts(file_name = "status_code.ts", rename_all = "camelCase")
 )]
 pub enum StatusCode {
-    Ok(bool), // when there is no other history version for undo/redo, return false.
+    Ok(WorkbookUpdateType), // when there is no other history version for undo/redo, return false.
     Err(u8),
+}
+
+#[derive(Debug, Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "workbook_update_type.ts", rename_all = "camelCase")
+)]
+pub enum WorkbookUpdateType {
+    DoNothing,
+    Cell,
+    Sheet,
+    SheetAndCell,
+    UndoNothing,
+    RedoNothing,
+    Undo,
+    Redo,
 }
 
 impl Default for StatusCode {
     fn default() -> Self {
-        Self::Ok(true)
+        Self::Ok(WorkbookUpdateType::Cell)
     }
 }
 

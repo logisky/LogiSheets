@@ -11,6 +11,7 @@ pub mod style;
 mod viewer;
 use crate::edit_action::{
     ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, StatusCode,
+    WorkbookUpdateType,
 };
 use crate::errors::{Error, Result};
 use crate::file_loader2::load;
@@ -22,7 +23,7 @@ use executor::Executor;
 use status::Status;
 use viewer::SheetViewer;
 
-use self::display::{DisplayRequest, DisplayResponse};
+use self::display::{DisplayRequest, DisplayResponse, SheetInfo};
 use crate::async_func_manager::AsyncFuncManager;
 
 pub struct Controller {
@@ -86,11 +87,40 @@ impl Controller {
         self.status.sheet_id_manager.has(name)
     }
 
+    pub fn get_all_sheet_info(&self) -> Vec<SheetInfo> {
+        let id_manager = &self.status.sheet_id_manager;
+        let pos_manager = &self.status.sheet_pos_manager;
+        pos_manager
+            .pos
+            .iter()
+            .map(|id| SheetInfo {
+                name: id_manager.get_string(id).unwrap_or(String::new()),
+                id: *id,
+                hidden: pos_manager.is_hidden(id),
+                tab_color: String::from(""),
+            })
+            .collect()
+    }
+
     // Handle an action and get the affected sheet indices.
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
         match action {
-            EditAction::Undo => ActionEffect::from_bool(self.undo()),
-            EditAction::Redo => ActionEffect::from_bool(self.redo()),
+            EditAction::Undo => {
+                let c = if self.undo() {
+                    WorkbookUpdateType::Undo
+                } else {
+                    WorkbookUpdateType::UndoNothing
+                };
+                ActionEffect::from(0, vec![], c)
+            }
+            EditAction::Redo => {
+                let c = if self.redo() {
+                    WorkbookUpdateType::Redo
+                } else {
+                    WorkbookUpdateType::RedoNothing
+                };
+                ActionEffect::from(0, vec![], c)
+            }
             EditAction::Payloads(payloads_action) => {
                 let executor = Executor {
                     status: self.status.clone(),
@@ -101,16 +131,27 @@ impl Controller {
                     async_funcs: &self.settings.async_funcs,
                     updated_cells: HashSet::new(),
                     dirty_vertices: HashSet::new(),
+                    sheet_updated: false,
+                    cell_updated: false,
                 };
 
                 let result = executor.execute_and_calc(payloads_action);
                 match result {
                     Ok(result) => {
+                        let c = if result.cell_updated && result.sheet_updated {
+                            WorkbookUpdateType::SheetAndCell
+                        } else if result.cell_updated {
+                            WorkbookUpdateType::Cell
+                        } else if result.sheet_updated {
+                            WorkbookUpdateType::Sheet
+                        } else {
+                            WorkbookUpdateType::DoNothing
+                        };
                         self.status = result.status;
                         ActionEffect {
                             version: result.version_manager.version(),
                             async_tasks: result.async_func_manager.get_calc_tasks(),
-                            status: StatusCode::Ok(false),
+                            status: StatusCode::Ok(c),
                         }
                     }
                     Err(e) => {
@@ -142,12 +183,14 @@ impl Controller {
                     async_funcs: &self.settings.async_funcs,
                     updated_cells: HashSet::new(),
                     dirty_vertices,
+                    sheet_updated: false,
+                    cell_updated: false,
                 };
                 if let Ok(result) = executor.calc() {
                     ActionEffect {
                         version: result.version_manager.version(),
                         async_tasks: vec![],
-                        status: StatusCode::Ok(false),
+                        status: StatusCode::Ok(WorkbookUpdateType::Cell),
                     }
                 } else {
                     ActionEffect::from_err(1)

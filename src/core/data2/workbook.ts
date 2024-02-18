@@ -22,7 +22,7 @@ export class WorkbookService {
     }
 
     public registryRender(render: () => void) {
-        this._workbook.registerUpdateCallback(render)
+        this._workbook.registerCellUpdatedCallback(render)
     }
 
     public handleTransaction(

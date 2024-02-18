@@ -20,12 +20,14 @@ impl SheetPosManager {
                 let id = ctx.fetch_sheet_id(&p.new_name);
                 left.push_back(id);
                 left.append(right);
+                ctx.has_updated();
                 SheetPosManager {
                     pos: left,
                     hiddens: self.hiddens,
                 }
             }
             EditPayload::DeleteSheet(p) => {
+                ctx.has_updated();
                 self.pos.remove(p.idx);
                 self
             }

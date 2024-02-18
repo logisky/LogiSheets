@@ -189,6 +189,15 @@ pub fn get_sheet_count(id: usize) -> usize {
 }
 
 #[wasm_bindgen]
+pub fn get_all_sheet_info(id: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let result = wb.get_all_sheet_info();
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
 pub fn get_row_info(id: usize, sheet_idx: usize, row_idx: usize) -> JsValue {
     init();
     let manager = MANAGER.get();

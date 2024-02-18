@@ -1,6 +1,6 @@
 use super::worksheet::Worksheet;
 use crate::{
-    controller::display::{DisplayRequest, DisplayResponse},
+    controller::display::{DisplayRequest, DisplayResponse, SheetInfo},
     edit_action::{ActionEffect, StatusCode},
     Controller,
 };
@@ -78,6 +78,11 @@ impl Workbook {
             };
         }
         self.controller.handle_async_calc_results(tasks, results)
+    }
+
+    #[inline]
+    pub fn get_all_sheet_info(&self) -> Vec<SheetInfo> {
+        self.controller.get_all_sheet_info()
     }
 
     pub fn get_sheet_by_name(&self, name: &str) -> Result<Worksheet> {
