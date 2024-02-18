@@ -9,7 +9,7 @@ import {Task} from './task'
 // of developing their own functions, in these cases, `engine` will not know
 // how to compute them and just return it the JS side.
 export interface ActionEffect {
-    // The latest version after processing an action
+    // The latest version after processing an action. 0 means latest version
     version: number
     // Tasks should be calculated outside this engine(mainly because of network limitations and customer defined)
     asyncTasks: readonly Task[]

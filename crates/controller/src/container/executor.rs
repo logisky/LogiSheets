@@ -20,7 +20,7 @@ impl ContainerExecutor {
         mut self,
         ctx: &mut C,
         payload: EditPayload,
-    ) -> Result<Self, Error> {
+    ) -> Result<(Self, bool), Error> {
         match payload {
             EditPayload::BlockInput(p) => {
                 let sheet_id = ctx
@@ -31,9 +31,9 @@ impl ContainerExecutor {
                 let cell_id = ctx.get_block_cell_id(sheet_id, p.block_id, p.row, p.col)?;
                 self.container
                     .update_value(sheet_id, CellId::BlockCell(cell_id), cell_value);
-                Ok(self)
+                Ok((self, true))
             }
-            EditPayload::MoveBlock(_) => Ok(self),
+            EditPayload::MoveBlock(_) => Ok((self, false)),
             EditPayload::RemoveBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
@@ -44,7 +44,7 @@ impl ContainerExecutor {
                     .map(|bid| CellId::BlockCell(bid))
                     .collect();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok(Self { container })
+                Ok((Self { container }, true))
             }
             EditPayload::CreateBlock(p) => {
                 let sheet_id = ctx
@@ -61,12 +61,12 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok(Self { container })
+                Ok((Self { container }, true))
             }
             EditPayload::CellInput(p) => {
                 if p.content.starts_with("=") {
                     // Formula
-                    return Ok(self);
+                    return Ok((self, false));
                 }
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
@@ -75,7 +75,7 @@ impl ContainerExecutor {
                     CellValue::from_string(p.content, &mut |t| -> TextId { ctx.fetch_text_id(t) });
                 let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
                 self.container.update_value(sheet_id, cell_id, cell_value);
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::CellClear(p) => {
                 let sheet_id = ctx
@@ -83,7 +83,7 @@ impl ContainerExecutor {
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
                 self.container.remove_cell(sheet_id, &cell_id);
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::SetColWidth(p) => {
                 let sheet_id = ctx
@@ -93,7 +93,7 @@ impl ContainerExecutor {
                 let mut info = self.container.get_col_info_mut(sheet_id, col_id);
                 info.custom_width = true;
                 info.width = Some(p.width);
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::SetRowHeight(p) => {
                 let sheet_id = ctx
@@ -103,14 +103,14 @@ impl ContainerExecutor {
                 let mut info = self.container.get_row_info_mut(sheet_id, row_id);
                 info.custom_height = true;
                 info.ht = Some(p.height);
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::DeleteSheet(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 self.container.data.remove(&sheet_id);
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::DeleteCols(p) => {
                 let sheet_id = ctx
@@ -143,7 +143,7 @@ impl ContainerExecutor {
                     .for_each(|c| deleted_cells.push(CellId::NormalCell(c)));
 
                 let container = self.container.delete_cells(sheet_id, &deleted_cells);
-                Ok(Self { container })
+                Ok((Self { container }, true))
             }
             EditPayload::DeleteRows(p) => {
                 let sheet_id = ctx
@@ -176,7 +176,7 @@ impl ContainerExecutor {
                     .for_each(|c| deleted_cells.push(CellId::NormalCell(c)));
 
                 let container = self.container.delete_cells(sheet_id, &deleted_cells);
-                Ok(Self { container })
+                Ok((Self { container }, true))
             }
             EditPayload::InsertColsInBlock(p) => {
                 let sheet_id = ctx
@@ -196,7 +196,7 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok(Self { container })
+                Ok((Self { container }, true))
             }
             EditPayload::DeleteColsInBlock(p) => {
                 let sheet_id = ctx
@@ -216,7 +216,7 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok(Self { container })
+                Ok((Self { container }, true))
             }
             EditPayload::InsertRowsInBlock(p) => {
                 let sheet_id = ctx
@@ -236,7 +236,7 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok(Self { container })
+                Ok((Self { container }, true))
             }
             EditPayload::DeleteRowsInBlock(p) => {
                 let sheet_id = ctx
@@ -256,7 +256,7 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok(Self { container })
+                Ok((Self { container }, true))
             }
             EditPayload::BlockStyleUpdate(payload) => {
                 let sheet_id = ctx
@@ -282,7 +282,7 @@ impl ContainerExecutor {
                         },
                     );
                 }
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::StyleUpdate(style_update) => {
                 let sheet_id = ctx
@@ -303,9 +303,9 @@ impl ContainerExecutor {
                         },
                     );
                 }
-                Ok(self)
+                Ok((self, true))
             }
-            _ => Ok(self),
+            _ => Ok((self, false)),
         }
     }
 

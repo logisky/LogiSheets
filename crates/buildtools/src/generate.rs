@@ -1,7 +1,7 @@
 fn main() {
     use gents::FileGroup;
     use logisheets_controller::controller::display::DisplayWindowWithStartPoint;
-    use logisheets_controller::controller::display::{DisplayRequest, DisplayResponse};
+    use logisheets_controller::controller::display::{DisplayRequest, DisplayResponse, SheetInfo};
     use logisheets_controller::edit_action::AsyncFuncResult;
     use logisheets_controller::edit_action::{ActionEffect, EditAction};
     use logisheets_controller::CellInfo;
@@ -13,6 +13,7 @@ fn main() {
     file_group.add::<DisplayResponse>();
     file_group.add::<DisplayWindowWithStartPoint>();
     file_group.add::<EditAction>();
+    file_group.add::<SheetInfo>();
     file_group.add::<ActionEffect>();
     file_group.add::<AsyncFuncResult>();
 

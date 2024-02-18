@@ -1,7 +1,7 @@
 use crate::CellInfo;
 
 use super::style::Style;
-use logisheets_base::BlockId;
+use logisheets_base::{BlockId, SheetId};
 use serde::Serialize;
 
 #[derive(Debug, Clone)]
@@ -61,6 +61,18 @@ pub enum DisplayPatch {
 )]
 pub struct SheetNames {
     pub names: Vec<String>,
+}
+
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "sheet_info.ts")
+)]
+#[derive(Debug, Clone)]
+pub struct SheetInfo {
+    pub name: String,
+    pub id: SheetId,
+    pub hidden: bool,
+    pub tab_color: String,
 }
 
 #[derive(Debug, Clone)]
