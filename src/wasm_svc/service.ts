@@ -49,6 +49,7 @@ export class Service {
         const status = {ok: isDone}
         return {
             $case: 'actionEffect',
+            // @ts-expect-error fix it
             actionEffect: {asyncTasks: [], version: 0, status: status},
         }
     }
@@ -58,6 +59,7 @@ export class Service {
         if (ret === 0) {
             return {
                 $case: 'actionEffect',
+                // @ts-expect-error fix it
                 actionEffect: {asyncTasks: [], version: 0, status: {ok: false}},
             }
         }
