@@ -48,7 +48,6 @@ export class CanvasApi {
         const h = height ?? c.getBoundingClientRect().height
         c.width = w * dpr()
         c.height = h * dpr()
-        c.style.backgroundColor = '#fff'
         const ctx = c.getContext('2d')
         if (!ctx) {
             useToast().toast('Unexpected error, please refresh website!')

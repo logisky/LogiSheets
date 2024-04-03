@@ -11,7 +11,7 @@ jobs:
       - name: Test using Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "17"
+          node-version: "18"
       - run: yarn install
       - run: yarn test
 

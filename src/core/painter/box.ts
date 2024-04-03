@@ -13,6 +13,11 @@ export class Box {
         return this.position.height
     }
 
+    setPosition(position: Range) {
+        this.position = position
+        return this
+    }
+
     public textX(
         align?: AlignX | null
     ): readonly [tx: number, textAlign: CanvasTextAlign] {

@@ -8,9 +8,10 @@ import initFc, {
     formula_check,
 } from '../../../../crates/wasms/fc/pkg/logisheets_wasm_fc'
 import {isFormula} from '@/core/snippet'
-import {SheetService} from '@/core/data'
+import {Backend, SheetService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
+import { CellInputBuilder } from '@logisheets_bg'
 
 interface TextProps {
     readonly canvas: RefObject<HTMLCanvasElement>
@@ -19,27 +20,27 @@ interface TextProps {
 
 export const useText = ({canvas, onEdit}: TextProps) => {
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
+    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
     const [editing, setEditing] = useState(false)
     const [context, setContext] = useState<Context<Cell>>()
-    const [validFormulaOpen, setValidFormulaOpen] = useState(false)
     const currText = useRef('')
 
     const _lastMouseDownTime = useRef(0)
 
     const blur = async () => {
-        const check = await checkFormula()
-        if (!check) return false
-        _setEditing(false)
-        return true
-    }
-    const checkFormula = async () => {
         if (!editing) return true
-        const formula = currText.current
-        if (!isFormula(formula)) return true
-        await initFc()
-        const checked = formula_check(formula)
-        setValidFormulaOpen(!checked)
-        return checked
+        const newText = currText.current.trim()
+        const checked = await checkFormula(newText)
+        if (!checked || !context?.bindingData) return false
+        _setEditing(false)
+        const payload = new CellInputBuilder()
+            .row(context.bindingData.coordinate.startRow)
+            .col(context.bindingData.coordinate.startCol)
+            .sheetIdx(SHEET_SERVICE.getActiveSheet())
+            .input(newText)
+            .build()
+        BACKEND_SERVICE.sendTransaction([payload])
+        return true
     }
 
     const keydown = (e: KeyboardEvent, startCell?: Cell) => {
@@ -87,6 +88,7 @@ export const useText = ({canvas, onEdit}: TextProps) => {
         context.clientY = clientY ?? -1
         context.cellHeight = height
         context.cellWidth = width
+        context.bindingData = startCell
         context.textareaOffsetX =
             (event as globalThis.MouseEvent).clientX - clientX
         context.textareaOffsetY =
@@ -109,11 +111,15 @@ export const useText = ({canvas, onEdit}: TextProps) => {
         editing,
         context,
         currText,
-        setValidFormulaOpen,
-        validFormulaOpen,
-        checkFormula,
         blur,
         keydown,
         startCellChange,
     }
+}
+
+
+const checkFormula = async (formula: string) => {
+    if (!isFormula(formula)) return true
+    await initFc()
+    return formula_check(formula)
 }

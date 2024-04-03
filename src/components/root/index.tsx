@@ -1,8 +1,8 @@
-import {RootContainer} from './container'
+import { RootContainer } from './container'
 import styles from './root.module.scss'
-import {WsCommponent} from './ws'
-import {ErrorBoundary} from '@/ui/error'
-import {NotificatonComponent} from '@/ui/notification'
+import { WsCommponent } from './ws'
+import { ErrorBoundary } from '@/ui/error'
+import { NotificatonComponent } from '@/ui/notification'
 
 export const SpreadsheetRoot = () => {
     return (

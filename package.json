@@ -9,11 +9,14 @@
     "@types/webpack": "^5.28.0",
     "@types/webpack-dev-server": "^4.7.2",
     "@wasm-tool/wasm-pack-plugin": "^1.6.0",
+    "ahooks": "^3.7.11",
     "antd": "^5.8.3",
     "craco-plugin-scoped-css": "^1.1.1",
     "css-loader": "^6.6.0",
     "eslint-plugin-react-hooks": "^4.3.0",
     "html-webpack-plugin": "^5.5.0",
+    "mobx": "^6.12.3",
+    "mobx-react": "^9.1.1",
     "node-sass": "^7.0.1",
     "numfmt": "2.1.0",
     "react": "^17.0.2",
@@ -42,7 +45,7 @@
     "webpack-dev-server": "^4.7.4"
   },
   "scripts": {
-    "test": "jest -c jest.config.ts",
+    "test": "vitest run",
     "run-scripts": "ts-node scripts/index.ts",
     "start:react": "react-scripts start",
     "start:dev": "webpack serve --config=webpack.config.ts --hot --env=dev",
@@ -102,6 +105,7 @@
     "react-toastify": "^9.0.5",
     "reflect-metadata": "^0.1.13",
     "ts-jest": "^27.1.3",
+    "vitest": "^1.4.0",
     "webpack-cli": "^4.9.2"
   }
 }

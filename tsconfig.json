@@ -20,7 +20,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "outDir": "./dist/",
-    "types": ["reflect-metadata", "jest", "node"],
+    "types": ["reflect-metadata", "vitest/globals", "node"],
     "paths": {
       "@/*": ["src/*"],
       "@logisheets_bg": ["packages/web"]

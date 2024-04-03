@@ -28,6 +28,7 @@ interface StartCellProps {
 export const useStartCell = ({startCellChange}: StartCellProps) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const startCell = useRef<Cell>()
+    const isMouseDown = useRef(false)
 
     const scroll = () => {
         const oldStartCell = startCell.current
@@ -100,6 +101,7 @@ export const useStartCell = ({startCellChange}: StartCellProps) => {
                 .setEndCol(selector.x + selector.borderRightWidth)
             if (range.cover(matchCell.position)) return
         }
+        isMouseDown.current = true
         const event = new StartCellEvent(
             matchCell,
             buttons === Buttons.LEFT ? 'mousedown' : 'contextmenu'
@@ -111,6 +113,7 @@ export const useStartCell = ({startCellChange}: StartCellProps) => {
     }
     return {
         startCell,
+        isMouseDown,
         scroll,
         canvasChange,
         mousedown,

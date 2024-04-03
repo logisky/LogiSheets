@@ -1,19 +1,16 @@
-import {Styles} from './styles'
-import {FC, MouseEvent, useState} from 'react'
-import {Candidate} from './item'
-import {SuggestDetailsComponent} from './details'
+import { Styles } from './styles'
+import { FC, MouseEvent, useState } from 'react'
+import { Candidate } from './item'
+import { SuggestDetailsComponent } from './details'
 import styles from './suggest.module.scss'
 export * from './item'
 export * from './styles'
 export interface SuggestProps {
     readonly show$: boolean
-    // 关闭suggest
     readonly close$: () => void
-    // 选择某个candidate
-    readonly select$: (candidate: Candidate) => void
+    readonly select$: (candidate: number) => void
     readonly sugggestStyles: Styles
-    readonly acitveCandidate?: Candidate
-    // 所有candidates
+    readonly acitveCandidate?: number
     readonly candidates?: Candidate[]
 }
 export const SuggestComponent: FC<SuggestProps> = ({
@@ -26,10 +23,11 @@ export const SuggestComponent: FC<SuggestProps> = ({
 }) => {
     const [showDetails, setShowDetails] = useState(false)
 
-    const mouseDown = (e: MouseEvent, candidate: Candidate) => {
+    const mouseDown = (e: MouseEvent, candidate: number) => {
+        const _active = candidates[candidate]
         e.preventDefault()
         e.stopPropagation()
-        if (candidate.textOnly) return
+        if (_active.textOnly) return
         select$(candidate)
         close$()
     }
@@ -49,16 +47,15 @@ export const SuggestComponent: FC<SuggestProps> = ({
                         className={`${styles.suggest}
 					${candidate.disable ? styles.disabled : ''}
 					${candidate.textOnly ? styles['text-only'] : ''}
-					${candidate === acitveCandidate ? styles['active'] : ''}`}
-                        onMouseDown={(e) => mouseDown(e, candidate)}
+					${i === acitveCandidate ? styles['active'] : ''}`}
+                        onMouseDown={(e) => mouseDown(e, i)}
                     >
                         {candidate.spans.map((s, j) => {
                             return (
                                 <span
                                     key={j}
-                                    className={`${styles['suggest-span']} ${
-                                        s.highlight ? styles['highlight'] : ''
-                                    }`}
+                                    className={`${styles['suggest-span']} ${s.highlight ? styles['highlight'] : ''
+                                        }`}
                                 >
                                     {s.text}
                                 </span>
