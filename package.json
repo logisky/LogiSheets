@@ -39,7 +39,7 @@
     "ts-node": "^10.9.1",
     "ts-proto": "^1.104.0",
     "tsconfig-paths-webpack-plugin": "^3.5.2",
-    "typescript": "4.8",
+    "typescript": "*",
     "web-vitals": "^2.1.4",
     "webpack": "^5.69.0",
     "webpack-dev-server": "^4.7.4"
@@ -59,15 +59,6 @@
     "lint": "eslint . -c .eslintrc.json --fix",
     "prepare": "husky install"
   },
-  "lint-staged": {
-    "*.(ts|tsx|js|jsx)": "eslint -c .eslintrc.json --fix"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -84,15 +75,19 @@
     "@types/enzyme": "^3.10.12",
     "@types/glob": "^7.2.0",
     "@types/jest": "^27.4.0",
-    "@typescript-eslint/eslint-plugin": "^5.30.5",
-    "@typescript-eslint/parser": "^5.30.5",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^7.5.0",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.6.7",
     "enzyme": "^3.11.0",
     "esbuild-loader": "^2.18.0",
-    "eslint": "^8.19.0",
+    "eslint": "^8.0.1",
     "eslint-config-prettier": "^8.5.0",
+    "eslint-config-standard-with-typescript": "^43.0.1",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-n": "^15.0.0 || ^16.0.0 ",
     "eslint-plugin-prettier": "^4.2.1",
-    "eslint-plugin-react": "^7.30.1",
+    "eslint-plugin-promise": "^6.0.0",
+    "eslint-plugin-react": "^7.34.1",
     "fork-ts-checker-webpack-plugin": "^7.2.13",
     "glob": "^8.0.3",
     "husky": "^8.0.1",

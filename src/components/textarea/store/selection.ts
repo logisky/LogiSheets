@@ -16,7 +16,7 @@ export class Selection {
     }
 
     init(selectionCanvas: HTMLCanvasElement) {
-        this._painterSvc.setupCanvas(selectionCanvas)
+        this._painterSvc.setupCanvas(selectionCanvas, 1, 1)
         this.clear()
     }
 

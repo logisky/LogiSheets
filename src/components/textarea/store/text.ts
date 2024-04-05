@@ -17,6 +17,9 @@ export class TextManager {
     get texts() {
         return this._texts.texts
     }
+    init(canvas: HTMLCanvasElement) {
+        this._canvas = canvas
+    }
     getNewSize(): readonly [width: number, height: number] {
         const texts = this.getTwoDimensionalTexts()
         const baseHeight = this.store.context.lineHeight()
@@ -24,14 +27,14 @@ export class TextManager {
         const widths = texts.map((ts) =>
             ts.map((t) => t.width()).reduce((p, c) => p + c)
         )
-        const width = Math.max(...widths)
-        return [width, height]
+        const width = Math.max(...widths, 1)
+        return [width, Math.max(height, 1)]
     }
 
-    drawText(canvas?: HTMLCanvasElement) {
+    drawText() {
         const [width, height] = this.getNewSize()
         const paddingRight = 10
-        this._painterSvc.setupCanvas(canvas, width + paddingRight, height)
+        this._painterSvc.setupCanvas(this._canvas, width + paddingRight, height)
         const baseHeight = this.store.context.lineHeight()
         let y = 0
         let x = 0
@@ -85,20 +88,6 @@ export class TextManager {
         return this._texts.getPlainText()
     }
 
-    undo() {
-        let texts = this._history.undo()
-        if (texts === undefined) texts = this._texts
-        this.drawText()
-        return texts.getPlainText()
-    }
-
-    redo() {
-        let texts = this._history.redo()
-        if (texts === undefined) texts = this._texts
-        this.drawText()
-        return texts.getPlainText()
-    }
-
     remove(start: number, end: number) {
         const r = this._texts.remove(start, end)
         this.drawText()
@@ -137,6 +126,7 @@ export class TextManager {
         this.drawText()
         return newTexts.texts
     }
+    private _canvas?: HTMLCanvasElement
 
     private _texts = new Texts()
     private _history = new History()
