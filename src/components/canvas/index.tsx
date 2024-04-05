@@ -1,5 +1,5 @@
-import {SelectedCell} from './events'
-import {Subscription, Subject} from 'rxjs'
+import { SelectedCell } from './events'
+import { Subscription, Subject } from 'rxjs'
 import styles from './canvas.module.scss'
 import {
     MouseEvent,
@@ -24,19 +24,19 @@ import {
     StartCellEvent,
     SelectorChange,
 } from './widgets'
-import {Cell} from './defs'
-import {ScrollbarComponent} from '@/components/scrollbar'
-import {EventType, KeyboardEventCode, on} from '@/core/events'
-import {ContextmenuComponent} from './contextmenu'
-import {SelectorComponent} from '@/components/selector'
-import {ResizerComponent} from '@/components/resize'
-import {BlurEvent, TextContainerComponent} from '@/components/textarea'
-import {DndComponent} from '@/components/dnd'
-import {InvalidFormulaComponent} from './invalid-formula'
-import {Buttons} from '@/core'
-import {CellInputBuilder} from '@logisheets_bg'
-import {DialogComponent} from '@/ui/dialog'
-import {useInjection} from '@/core/ioc/provider'
+import { Cell } from './defs'
+import { ScrollbarComponent } from '@/components/scrollbar'
+import { EventType, KeyboardEventCode, on } from '@/core/events'
+import { ContextmenuComponent } from './contextmenu'
+import { SelectorComponent } from '@/components/selector'
+import { ResizerComponent } from '@/components/resize'
+import { ITextareaInstance, TextContainerComponent } from '@/components/textarea'
+import { DndComponent } from '@/components/dnd'
+import { InvalidFormulaComponent } from './invalid-formula'
+import { Buttons } from '@/core'
+import { CellInputBuilder } from '@logisheets_bg'
+import { DialogComponent } from '@/ui/dialog'
+import { useInjection } from '@/core/ioc/provider'
 import {
     Backend,
     DataService,
@@ -44,7 +44,7 @@ import {
     RenderCell,
     SheetService,
 } from '@/core/data'
-import {TYPES} from '@/core/ioc/types'
+import { TYPES } from '@/core/ioc/types'
 export const OFFSET = 100
 
 export interface CanvasProps {
@@ -57,9 +57,10 @@ export const CanvasComponent: FC<CanvasProps> = ({
     selectedCell$,
 }) => {
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
+    const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
     const [contextMenuEl, setContextMenu] = useState<ReactElement>()
     const canvasEl = useRef<HTMLCanvasElement>(null)
-    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
+    const textEl = useRef<ITextareaInstance>()
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
 
@@ -94,13 +95,11 @@ export const CanvasComponent: FC<CanvasProps> = ({
         return newResult
     }
 
-    const scrollbarMng = useScrollbar({canvas: canvasEl})
+    const scrollbarMng = useScrollbar({ canvas: canvasEl })
     const dndMng = useDnd(canvasEl)
     const highlights = useHighlightCell()
     const resizerMng = useResizers(canvasEl)
     const matchMng = useMatch(canvasEl)
-
-    const focus$ = useRef(new Subject<void>())
 
     useEffect(() => {
         if (selectedCell.source != 'editbar') return
@@ -112,6 +111,46 @@ export const CanvasComponent: FC<CanvasProps> = ({
         selectorMng.startCellChange(e)
         textMng.startCellChange(e)
     }, [selectedCell])
+
+    useEffect(() => {
+        const sub = on(window, EventType.MOUSE_MOVE).subscribe((mme) => {
+            mme.preventDefault()
+            if (!startCellMng.isMouseDown.current) return
+            const startCell = matchMng.match(
+                mme.clientX,
+                mme.clientY,
+                DATA_SERVICE.cachedViewRange
+            )
+            if (!startCell) return
+            const isResize = resizerMng.mousemove(mme)
+            if (isResize) return
+            if (
+                startCellMng.startCell.current?.equals(startCell) === false
+            ) {
+                const isDnd = dndMng.onMouseMove(
+                    mme,
+                    startCell,
+                    selectorMng.endCell ?? startCell
+                )
+                if (isDnd) return
+            }
+            selectorMng.onMouseMove(startCell)
+        })
+        return () => {
+            sub.unsubscribe()
+        }
+    }, [])
+
+    useEffect(() => {
+        const sub = on(window, EventType.MOUSE_UP).subscribe(() => {
+            startCellMng.isMouseDown.current = false
+            dndMng.onMouseUp()
+            resizerMng.mouseup()
+        })
+        return () => {
+            sub.unsubscribe()
+        }
+    }, [])
 
     const rendered = () => {
         resizerMng.init()
@@ -127,27 +166,27 @@ export const CanvasComponent: FC<CanvasProps> = ({
         textMng.startCellChange(e)
         if (e === undefined || e.same) return
         if (e?.cell?.type !== 'Cell') return
-        const {startRow: row, startCol: col} = e.cell.coordinate
-        selectedCell$({row, col, source: 'none'})
+        const { startRow: row, startCol: col } = e.cell.coordinate
+        selectedCell$({ row, col, source: 'none' })
     }
-    const startCellMng = useStartCell({startCellChange})
+    const startCellMng = useStartCell({ startCellChange })
 
     const selectorChange: SelectorChange = (selector) => {
         if (!selector) {
             dndMng.clean()
             return
         }
-        const {startCell: start, endCell: end} = selector
-        dndMng.selectorChange({start, end})
+        const { startCell: start, endCell: end } = selector
+        dndMng.selectorChange({ start, end })
     }
-    const selectorMng = useSelector({canvas: canvasEl, selectorChange})
+    const selectorMng = useSelector({ canvas: canvasEl, selectorChange })
 
     const onEdit = (editing: boolean, text?: string) => {
         if (!editing) return
         if (text === undefined) return
         highlights.init(text)
     }
-    const textMng = useText({canvas: canvasEl, onEdit})
+    const textMng = useText({ canvas: canvasEl, onEdit })
 
     const setScrollTop = (scrollTop: number, type: 'x' | 'y') => {
         scrollbarMng.setScrollTop(scrollTop, type)
@@ -170,59 +209,24 @@ export const CanvasComponent: FC<CanvasProps> = ({
     const onMouseDown = async (e: MouseEvent) => {
         e.stopPropagation()
         e.preventDefault()
-        const mousedown = async () => {
-            canvasEl.current?.focus()
-            const isBlur = await textMng.blur()
-            if (!isBlur) {
-                focus$.current.next()
-                return
-            }
-            if (e.buttons === Buttons.RIGHT) return
-            const matchCell = matchMng.match(
-                e.clientX,
-                e.clientY,
-                DATA_SERVICE.cachedViewRange
-            )
-            if (!matchCell) return
-            const isResize = resizerMng.mousedown(e.nativeEvent)
-            if (isResize) return
-            const isDnd = dndMng.onMouseDown(e.nativeEvent)
-            if (isDnd) return
-            startCellMng.mousedown(e, matchCell)
+        const isBlur = await onBlur()
+        if (!isBlur) {
+            textEl.current?.focus()
+            return
         }
-        mousedown()
-        const sub = new Subscription()
-        sub.add(
-            on(window, EventType.MOUSE_UP).subscribe(() => {
-                dndMng.onMouseUp()
-                resizerMng.mouseup()
-                sub.unsubscribe()
-            })
+        canvasEl.current?.focus()
+        if (e.buttons === Buttons.RIGHT) return
+        const matchCell = matchMng.match(
+            e.clientX,
+            e.clientY,
+            DATA_SERVICE.cachedViewRange
         )
-        sub.add(
-            on(window, EventType.MOUSE_MOVE).subscribe((mme) => {
-                mme.preventDefault()
-                const startCell = matchMng.match(
-                    mme.clientX,
-                    mme.clientY,
-                    DATA_SERVICE.cachedViewRange
-                )
-                if (!startCell) return
-                const isResize = resizerMng.mousemove(mme)
-                if (isResize) return
-                if (
-                    startCellMng.startCell.current?.equals(startCell) === false
-                ) {
-                    const isDnd = dndMng.onMouseMove(
-                        mme,
-                        startCell,
-                        selectorMng.endCell ?? startCell
-                    )
-                    if (isDnd) return
-                }
-                selectorMng.onMouseMove(startCell)
-            })
-        )
+        if (!matchCell) return
+        const isResize = resizerMng.mousedown(e.nativeEvent)
+        if (isResize) return
+        const isDnd = dndMng.onMouseDown(e.nativeEvent)
+        if (isDnd) return
+        startCellMng.mousedown(e, matchCell)
     }
 
     const onKeyDown = async (e: KeyboardEvent) => {
@@ -271,20 +275,18 @@ export const CanvasComponent: FC<CanvasProps> = ({
         }
     }
 
-    const blur = (e: BlurEvent<Cell>) => {
-        const oldText = textMng.context?.text ?? ''
-        textMng.blur()
+    const onBlur = async () => {
+        const isBlur = await textMng.blur()
+        if (!isBlur) {
+            setInvalidFormulaWarning(true)
+            return false
+        }
         highlights.blur()
-        if (e.bindingData === undefined) return
-        const newText = textMng.currText.current.trim()
-        if (oldText === newText) return
-        const payload = new CellInputBuilder()
-            .row(e.bindingData.coordinate.startRow)
-            .col(e.bindingData.coordinate.startCol)
-            .sheetIdx(SHEET_SERVICE.getActiveSheet())
-            .input(newText)
-            .build()
-        BACKEND_SERVICE.sendTransaction([payload])
+        return true
+    }
+    const onCloseInvalidFormulaWarning = () => {
+        setInvalidFormulaWarning(false)
+        textEl.current?.focus()
     }
 
     const onContextMenu = (e: MouseEvent) => {
@@ -343,15 +345,14 @@ export const CanvasComponent: FC<CanvasProps> = ({
                 {...scrollbarMng.yScrollbarAttr}
                 setScrollTop={(e) => setScrollTop(e, 'y')}
             ></ScrollbarComponent>
-            {textMng.context && textMng.editing ? (
+            {textMng.context && textMng.editing && (
                 <TextContainerComponent
+                    ref={textEl}
                     context={textMng.context}
-                    blur={blur}
+                    blur={onBlur}
                     type={type}
-                    checkFormula={textMng.checkFormula}
-                    focus$={focus$.current}
-                ></TextContainerComponent>
-            ) : null}
+                />
+            )}
             {dndMng.range ? (
                 <DndComponent
                     dragging={dndMng.dragging !== undefined}
@@ -363,15 +364,9 @@ export const CanvasComponent: FC<CanvasProps> = ({
                     draggingY={dndMng.dragging?.startRow}
                 ></DndComponent>
             ) : null}
-            <DialogComponent
-                content={
-                    <InvalidFormulaComponent
-                        close$={() => textMng.setValidFormulaOpen(false)}
-                    ></InvalidFormulaComponent>
-                }
-                close$={() => textMng.setValidFormulaOpen(false)}
-                isOpen={textMng.validFormulaOpen}
-            ></DialogComponent>
+            <DialogComponent isOpen={invalidFormulaWarning}>
+                <InvalidFormulaComponent close$={onCloseInvalidFormulaWarning} />
+            </DialogComponent>
             {highlights.highlightCells.map((cell, i) => {
                 const cellStyle = cell.style
                 return (
@@ -389,8 +384,8 @@ export const CanvasComponent: FC<CanvasProps> = ({
                 )
             })}
             {resizerMng.resizers.map((resizer, i) => {
-                const {startCol: x, startRow: y, width, height} = resizer.range
-                const {isRow} = resizer
+                const { startCol: x, startRow: y, width, height } = resizer.range
+                const { isRow } = resizer
                 const rect = (
                     canvasEl.current as HTMLCanvasElement
                 ).getBoundingClientRect()

@@ -1,18 +1,25 @@
-import {Text, Texts, History, Context} from '../defs'
+import {Text, Texts, History} from '../defs'
 import {Box, PainterService, TextAttr} from '@/core/painter'
 import {Range} from '@/core/standable'
-import {BehaviorSubject, Observable} from 'rxjs'
-export class TextManager<T> {
-    constructor(public readonly context: Context<T>) {
-        this._texts = Texts.from(this.context.text, this.context.eof)
-        this._textChange$.next(this.getPlainText())
+import type {TextareaStore} from './store'
+
+export interface ITwoDimensionalInfo {
+    startLine: number
+    startColumn: number
+    endLine: number
+    endColumn: number
+}
+
+export class TextManager {
+    constructor(public readonly store: TextareaStore) {
+        this._texts = Texts.from(this.store.context.text, this.store.context.eof)
     }
-    textChanged(): Observable<string> {
-        return this._textChange$
+    get texts() {
+        return this._texts.texts
     }
     getNewSize(): readonly [width: number, height: number] {
         const texts = this.getTwoDimensionalTexts()
-        const baseHeight = this.context.lineHeight()
+        const baseHeight = this.store.context.lineHeight()
         const height = baseHeight * texts.length
         const widths = texts.map((ts) =>
             ts.map((t) => t.width()).reduce((p, c) => p + c)
@@ -25,26 +32,36 @@ export class TextManager<T> {
         const [width, height] = this.getNewSize()
         const paddingRight = 10
         this._painterSvc.setupCanvas(canvas, width + paddingRight, height)
-        const texts = this.getTwoDimensionalTexts()
-        const baseHeight = this.context.lineHeight()
-        texts.forEach((ts, i) => {
-            const y = i * baseHeight
-            let x = 0
-            ts.forEach((t) => {
-                const position = new Range()
-                    .setStartRow(y)
-                    .setEndRow(y + this.context.lineHeight())
-                    .setStartCol(x)
-                    .setEndCol(x + t.width() + 2)
-                const box = new Box()
-                box.position = position
-                const attr = new TextAttr()
-                attr.setFont(t.font)
-                this._painterSvc.text(t.char, attr, box)
-                x += t.width()
-            })
+        const baseHeight = this.store.context.lineHeight()
+        let y = 0
+        let x = 0
+        this._texts.texts.forEach((text) => {
+            const position = new Range()
+                .setStartRow(y)
+                .setEndRow(y + baseHeight)
+                .setStartCol(x)
+                .setEndCol(x + text.width() + 2)
+            const box = new Box().setPosition(position)
+            const attr = new TextAttr()
+            attr.setFont(text.font)
+            this._painterSvc.text(text.char, attr, box)
+            if (text.isEof) {
+                y += baseHeight
+                x = 0
+                this._painterSvc.text(
+                    '',
+                    new TextAttr(),
+                    new Box().setPosition(
+                        new Range()
+                            .setStartRow(y)
+                            .setEndRow(y + baseHeight)
+                            .setStartCol(x)
+                            .setEndCol(x)
+                    ))
+            } else {
+                x += text.width()
+            }
         })
-        this._textChange$.next(this.getPlainText())
     }
 
     /**
@@ -82,21 +99,14 @@ export class TextManager<T> {
         return texts.getPlainText()
     }
 
-    remove(
-        startLine: number,
-        startColumn: number,
-        endLine: number,
-        endColumn: number
-    ) {
-        const [start, end] = this._twoDimensionalToOneDimensinal(
-            startLine,
-            startColumn,
-            endLine,
-            endColumn
-        )
+    remove(start: number, end: number) {
         const r = this._texts.remove(start, end)
         this.drawText()
         return r
+    }
+    removeInTwoDimensional(info: ITwoDimensionalInfo) {
+        const [start, end] = this._twoDimensionalToOneDimensinal(info)
+        return this.remove(start, end)
     }
 
     replace(
@@ -104,7 +114,7 @@ export class TextManager<T> {
         start: number,
         count: number
     ): readonly [added: readonly Text[], removed: readonly Text[]] {
-        const eof = this.context.eof
+        const eof = this.store.context.eof
         const newTexts = Texts.from(content, eof)
         const removed = this._texts.replace(newTexts, start, count)
         this._history.add(this._texts)
@@ -112,45 +122,27 @@ export class TextManager<T> {
         return [newTexts.texts, removed]
     }
 
-    add(content: string, line: number, column: number) {
-        const eof = this.context.eof
+    add(content: string, line?: number, column?: number) {
+        const l = line ?? this.store.cursor.lineNumber
+        const c = column ?? this.store.cursor.column
+        const eof = this.store.context.eof
         const newTexts = Texts.from(content, eof)
-        const [start] = this._twoDimensionalToOneDimensinal(
-            line,
-            column,
-            line,
-            column
-        )
+        const [start] = this._twoDimensionalToOneDimensinal({
+            startLine: l,
+            endLine: l,
+            startColumn: c,
+            endColumn: c
+        })
         this._texts.add(newTexts, start)
         this.drawText()
         return newTexts.texts
     }
 
-    getText(
-        startLine: number,
-        startColumn: number,
-        endLine: number,
-        endColumn: number
-    ): readonly Text[] {
-        const [start, end] = this._twoDimensionalToOneDimensinal(
-            startLine,
-            startColumn,
-            endLine,
-            endColumn
-        )
-        return this._texts.texts.slice(start, end)
-    }
-    // private _textChanged$ = new Subject<undefined>()
     private _texts = new Texts()
     private _history = new History()
     private _painterSvc = new PainterService()
-    private _textChange$ = new BehaviorSubject('')
-    private _twoDimensionalToOneDimensinal(
-        startLine: number,
-        startColumn: number,
-        endLine: number,
-        endColumn: number
-    ): readonly [start: number, end: number] {
+    private _twoDimensionalToOneDimensinal(props: ITwoDimensionalInfo): readonly [start: number, end: number] {
+        const {startColumn, startLine, endColumn, endLine} = props
         const texts = this.getTwoDimensionalTexts()
         if (texts.length === 0) return [0, 0]
         let [start, end] = [0, 0]

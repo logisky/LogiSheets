@@ -1,27 +1,37 @@
-import {equal} from '@/core'
+import { equal } from "@/core"
 
 export class BaseInfo {
-    public x = 0
-    public y = 0
-    public lineNumber = 0
-    public column = 0
+    x = 0
+    y = 0
+    lineNumber = 0
+    column = 0
+    setX(x: number) {
+        let _x = Math.max(x, 0)
+        this.x = _x
+        return this
+    }
+    setY(y: number) {
+        let _y = Math.max(y, 0)
+        this.y = _y
+        return this
+    }
+    setLineNumber(lineNumber: number) {
+        let _l = Math.max(lineNumber, 0)
+        this.lineNumber = _l
+        return this
+    }
+    setColumn(column: number) {
+        let _c = Math.max(column, 0)
+        this.column = _c
+        return this
+    }
     equal(baseInfo: BaseInfo) {
         return equal(baseInfo, this)
     }
 
     biggerThan(baseInfo: BaseInfo): boolean {
-        if (this.y > baseInfo.y) return true
-        if (this.y === baseInfo.y && this.x > baseInfo.x) return true
-        return false
-    }
-}
-
-export class CursorInfo extends BaseInfo {
-    public height = 0
-    updateFromBaseInfo(baseInfo: BaseInfo): void {
-        this.x = baseInfo.x
-        this.y = baseInfo.y
-        this.lineNumber = baseInfo.lineNumber
-        this.column = baseInfo.column
+        if (this.lineNumber > baseInfo.lineNumber) return true
+        if (this.lineNumber < baseInfo.lineNumber) return false
+        return this.column >= baseInfo.column
     }
 }

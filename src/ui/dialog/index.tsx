@@ -1,9 +1,8 @@
-import Modal, {Props} from 'react-modal'
+import Modal, { Props } from 'react-modal'
 import './dialog.scss'
 
 export interface DialogProps extends Props {
-    readonly close$: () => void
-    readonly content?: any
+    readonly close$?: () => void
 }
 
 export const DialogComponent = (props: DialogProps) => {
@@ -14,8 +13,6 @@ export const DialogComponent = (props: DialogProps) => {
             shouldCloseOnOverlayClick={true}
             onRequestClose={props.close$}
             {...props}
-        >
-            {props.content}
-        </Modal>
+        />
     )
 }

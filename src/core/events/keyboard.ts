@@ -15,39 +15,34 @@ export class StandardKeyboardEvent {
     keyCodeId: KeyboardEventCode
     isKeyBinding: boolean
     isComposing: boolean
+    getInputValue() {
+        if (this.keyCodeId.startsWith('Key')) {
+            const base = this.keyCodeId.at(-1) ?? ''
+            return this.isUpperCase() ? base.toUpperCase() : base.toLowerCase()
+        }
+        return ''
+    }
+    isUpperCase() {
+        return this.e.getModifierState('CapsLock')
+    }
 
     isAlt() {
-        return isAlt(this.keyCodeId)
+        return isAlt(this.keyCodeId) || this.e.altKey
     }
 
     isCtrl() {
-        return isCtrl(this.keyCodeId)
+        return isCtrl(this.keyCodeId) || this.e.ctrlKey
     }
 
     isShift() {
-        return isShift(this.keyCodeId)
+        return isShift(this.keyCodeId) || this.e.shiftKey
     }
 
     isMeta() {
         return isMeta(this.keyCodeId)
     }
-    // private _computeKeyBinding() {
-    //     let key = KeyboardEventCode.UNKNOWN
-    //     if (!isKeyBinding(this.keyCodeId))
-    //         key = this.keyCodeId
-    //     let result = 0
-    //     if (this.e.ctrlKey)
-    //         result |= isMac() ? KeyMod.WIN_CTRL : KeyMod.CTRL_CMD
-    //     if (this.e.altKey)
-    //         result |= KeyMod.ALT
-    //     if (this.e.shiftKey)
-    //         result |= KeyMod.SHIFT
-    //     if (this.e.metaKey)
-    //         result |= isMac() ? KeyMod.CTRL_CMD : KeyMod.WIN_CTRL
-    //     result |= key
-    //     return result
-    // }
 }
+
 function isKeyBinding(id: KeyboardEventCode) {
     return isCtrl(id) || isShift(id) || isAlt(id) || isMeta(id)
 }
