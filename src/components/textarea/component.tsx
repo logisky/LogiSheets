@@ -33,7 +33,7 @@ export const TextContainerComponent = forwardRef((props: TextContainerProps, ref
 
 const InternalComponent = observer(forwardRef((props: TextContainerProps, ref) => {
     const { context, blur, type } = props
-    const { cursor, selection } = useContext(TextareaContext)
+    const { cursor, selection, textManager } = useContext(TextareaContext)
 
     useImperativeHandle(ref, () => {
         return {
@@ -48,6 +48,7 @@ const InternalComponent = observer(forwardRef((props: TextContainerProps, ref) =
 
     useEffect(() => {
         selection.init(selectionEl.current!)
+        textManager.init(textEl.current!)
     }, [])
 
     useEffect(() => {
@@ -63,8 +64,8 @@ const InternalComponent = observer(forwardRef((props: TextContainerProps, ref) =
 
     const onBlur = (event: SyntheticEvent) => {
         // TODO: implement brace if has formula
-        // store.cursor.blur()
-        // blur()
+        store.cursor.blur()
+        blur()
     }
 
     const onType = (value: string, event: SyntheticEvent) => {
@@ -79,7 +80,7 @@ const InternalComponent = observer(forwardRef((props: TextContainerProps, ref) =
         setTimeout(() => {
             textareaEl.current?.focus()
             if (textEl.current)
-                store.textManager.drawText(textEl.current)
+                store.textManager.drawText()
             store.cursor.focus()
         })
     }

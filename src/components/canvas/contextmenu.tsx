@@ -1,9 +1,9 @@
-import { Range, StandardBlock } from '@/core/standable'
-import { SelectBlockComponent } from './select-block'
-import { Cell } from './defs'
-import { useState, ReactElement, MouseEvent } from 'react'
-import { useInjection } from '@/core/ioc/provider'
-import { ContextMenuComponent, ContextMenuItem } from '@/ui/contextmenu'
+import {Range, StandardBlock} from '@/core/standable'
+import {SelectBlockComponent} from './select-block'
+import {Cell} from './defs'
+import {useState, ReactElement, MouseEvent} from 'react'
+import {useInjection} from '@/core/ioc/provider'
+import {ContextMenuComponent, ContextMenuItem} from '@/ui/contextmenu'
 import {
     DeleteBlockColsBuilder,
     DeleteColsBuilder,
@@ -16,8 +16,8 @@ import {
     DeleteRowsBuilder,
     CreateBlockBuilder,
 } from '@logisheets_bg'
-import { TYPES } from '@/core/ioc/types'
-import { Backend, SheetService } from '@/core/data'
+import {TYPES} from '@/core/ioc/types'
+import {Backend, SheetService} from '@/core/data'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent
@@ -28,7 +28,7 @@ export interface ContextmenuProps {
 }
 
 export const ContextmenuComponent = (props: ContextmenuProps) => {
-    const { mouseevent, startCell, isOpen, setIsOpen, endCell } = props
+    const {mouseevent, startCell, isOpen, setIsOpen, endCell} = props
     const [blockMenuOpened, setBlockMenuOpened] = useState(false)
     const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
     const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
@@ -48,7 +48,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
                     message={getMessage(blocks)}
                     blocks={blocks}
                     close$={close$}
-                ></SelectBlockComponent>
+                />
             </div>
         )
         setBlockMenuOpened(true)
@@ -56,7 +56,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     const _addCol = () => {
         const sheet = SHEET_SERVICE.getActiveSheet()
         const {
-            coordinate: { startCol: start },
+            coordinate: {startCol: start},
         } = startCell
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
@@ -83,7 +83,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 
     const _removeCol = () => {
         const {
-            coordinate: { startCol: start },
+            coordinate: {startCol: start},
         } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
@@ -111,7 +111,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 
     const _addRow = () => {
         const {
-            coordinate: { startRow: start },
+            coordinate: {startRow: start},
         } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
@@ -138,7 +138,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 
     const _removeRow = () => {
         const {
-            coordinate: { startRow: start },
+            coordinate: {startRow: start},
         } = startCell
         const sheet = SHEET_SERVICE.getActiveSheet()
         const blocks = _checkBlock()
@@ -179,8 +179,8 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     }
 
     const _checkBlock = () => {
-        const { coordinate: start } = startCell
-        const { coordinate: end } = endCell ?? startCell
+        const {coordinate: start} = startCell
+        const {coordinate: end} = endCell ?? startCell
         const curr = new Range()
             .setStartRow(start.startRow)
             .setStartCol(start.startCol)
@@ -239,7 +239,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
                         padding: '8px 0',
                     },
                 }}
-            ></ContextMenuComponent>
+            />
             {blockMenuOpened ? selectBlock : null}
         </div>
     )
