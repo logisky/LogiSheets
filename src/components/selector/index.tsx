@@ -1,4 +1,9 @@
+import { makeAutoObservable } from 'mobx'
+import {observer} from 'mobx-react'
 export class SelectorProps {
+    constructor() {
+        makeAutoObservable(this)
+    }
     editing? = false
     x = 0
     y = 0
@@ -8,9 +13,13 @@ export class SelectorProps {
     borderLeftWidth = 0
     borderTopWidth = 0
     borderBottomWidth = 0
+}
+export interface ISelectorProps {
+    selector: SelectorProps
     keydown$?: (e: KeyboardEvent) => void
 }
-export const SelectorComponent = (props: SelectorProps) => {
+export const SelectorComponent = observer((props: ISelectorProps) => {
+    const {selector} = props
     const {
         editing,
         x,
@@ -21,7 +30,7 @@ export const SelectorComponent = (props: SelectorProps) => {
         borderLeftWidth,
         borderTopWidth,
         borderBottomWidth,
-    } = props
+    } = selector
     return (
         <div
             style={{
@@ -50,4 +59,4 @@ export const SelectorComponent = (props: SelectorProps) => {
             ></div>
         </div>
     )
-}
+})

@@ -19,8 +19,8 @@ class Settings {
 }
 
 export class Grid {
-    public showHorizontal = false
-    public showVertical = false
+    public showHorizontal = true
+    public showVertical = true
     public fillStyle = '#ffffff'
     public strokeStyle = '#000000'
     public lineWidth = 1

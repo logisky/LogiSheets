@@ -18,14 +18,10 @@ export const TopBar = ({selectedCell}: TopBarProps) => {
         let content: ReactElement | null = null
         switch (mainMenuType) {
             case MainMenuType.START:
-                content = (
-                    <StartComponent
-                        selectedCell={selectedCell}
-                    ></StartComponent>
-                )
+                content = <StartComponent selectedCell={selectedCell} />
                 break
             case MainMenuType.FILE:
-                content = <FileComponent></FileComponent>
+                content = <FileComponent />
                 break
             default:
         }
@@ -37,7 +33,7 @@ export const TopBar = ({selectedCell}: TopBarProps) => {
             <MainMenu
                 currType={mainMenuType}
                 mainMenuChanged$={setMainMenuType}
-            ></MainMenu>
+            />
             {menuContent}
         </div>
     )
