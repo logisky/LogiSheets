@@ -41,6 +41,12 @@ export class CanvasStore {
     dnd: Dnd
     scrollbar: ScrollBar
     textarea: Textarea
+    reset() {
+        this.highlights.reset()
+        this.selector.reset()
+        this.dnd.reset()
+        this.textarea.reset()
+    }
 
     match(clientX: number, clientY: number) {
         const viewRange = this.dataSvc.cachedViewRange
@@ -90,9 +96,7 @@ export class CanvasStore {
             )
         else return
         if (!renderCell) {
-            this.dnd.reset()
-            this.highlights.reset()
-            this.selector.reset()
+            this.reset()
             return
         }
         const newStartCell = new Cell(startCell.type).copyByRenderCell(

@@ -1,27 +1,24 @@
 import {makeObservable} from 'mobx'
 import {CanvasStore} from './store'
 import {Box, CanvasAttr, PainterService, TextAttr} from '@/core/painter'
-import {toA1notation} from '@/core'
+import {simpleUuid, toA1notation} from '@/core'
 import {RenderCell} from '@/core/data'
 import {SETTINGS} from '@/core/settings'
 import {StandardColor, Range} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {PatternFill} from '@logisheets_bg'
+export const CANVAS_ID = simpleUuid()
 
 export class Render {
     constructor(public readonly store: CanvasStore) {
         makeObservable(this)
     }
-
-    canvas!: HTMLCanvasElement
-
-    init(canvas: HTMLCanvasElement) {
-        this.canvas = canvas
-        this._painterService.setupCanvas(canvas)
-        this.render()
+    get canvas() {
+        return document.getElementById(CANVAS_ID) as HTMLCanvasElement
     }
 
     render() {
+        this._painterService.setupCanvas(this.canvas)
         this._painterService.clear()
         const rect = this.canvas.getBoundingClientRect()
         this.store.dataSvc.initViewRange(rect.width, rect.height)
