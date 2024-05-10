@@ -11,7 +11,6 @@ import {
     useEffect,
     useContext,
 } from 'react'
-import {useStartCell, StartCellEvent} from './widgets'
 import {Cell} from './defs'
 import {ScrollbarComponent} from '@/components/scrollbar'
 import {EventType, KeyboardEventCode, on} from '@/core/events'
