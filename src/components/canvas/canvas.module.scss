@@ -14,6 +14,7 @@ $x-scrollbar-height: 16px;
 .canvas {
   width: calc(100% - #{$y-scrollbar-width});
   height: calc(100% - #{$x-scrollbar-height});
+  outline: none;
 }
 .middle-y-scrollbar {
   position: absolute;
