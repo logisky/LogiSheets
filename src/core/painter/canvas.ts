@@ -30,9 +30,10 @@ export class CanvasApi {
 
     clear(canvas?: HTMLCanvasElement) {
         const c = canvas ?? this._canvas
-        if (!c) return
-        const height = c.height
-        c.height = height
+        if (!c) throw Error('canvas not found')
+        const ctx = c.getContext('2d')
+        if (!ctx) throw Error('ctx not found')
+        ctx.clearRect(0, 0, c.width, c.height)
     }
 
     /**

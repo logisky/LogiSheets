@@ -11,6 +11,7 @@ import {
     useEffect,
     useContext,
 } from 'react'
+import {debounceTime} from 'rxjs/operators'
 import {Cell} from './defs'
 import {ScrollbarComponent} from '@/components/scrollbar'
 import {EventType, KeyboardEventCode, on} from '@/core/events'
@@ -20,7 +21,7 @@ import {ResizerComponent} from '@/components/resize'
 import {ITextareaInstance, TextContainerComponent} from '@/components/textarea'
 import {DndComponent} from '@/components/dnd'
 import {InvalidFormulaComponent} from './invalid-formula'
-import {Buttons} from '@/core'
+import {Buttons, simpleUuid} from '@/core'
 import {CellInputBuilder} from '@logisheets_bg'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
@@ -32,9 +33,12 @@ import {
     SheetService,
 } from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
-import {CanvasStore, CanvasStoreContext} from './store'
+import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
-export const OFFSET = 100
+const CANVAS_HOST_ID = simpleUuid()
+const canvasHost = () => {
+    return document.getElementById(CANVAS_HOST_ID) as HTMLDivElement
+}
 
 export interface CanvasProps {
     selectedCell: SelectedCell
@@ -59,11 +63,16 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
     const [contextMenuEl, setContextMenu] = useState<ReactElement>()
-    const canvasEl = useRef<HTMLCanvasElement>(null)
     const textEl = useRef<ITextareaInstance>()
 
+    const setCanvasSize = () => {
+        store.render.canvas.width = canvasHost().getBoundingClientRect().width
+        store.render.canvas.height = canvasHost().getBoundingClientRect().height
+    }
+
     useEffect(() => {
-        store.render.init(canvasEl.current!)
+        setCanvasSize()
+        store.render.render()
         store.scrollbar.init()
         const sub = store.backendSvc.render$.subscribe(() => {
             store.render.render()
@@ -107,7 +116,7 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
     useEffect(() => {
         if (selectedCell.source != 'editbar') return
 
-        canvasEl.current?.focus()
+        store.render.canvas.focus()
         jumpTo(selectedCell.row, selectedCell.col, 2)
         store.selector.reset()
         store.textarea.reset()
@@ -142,8 +151,15 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
             store.dnd.onMouseUp()
             store.resizer.mouseup()
         })
+        const resizeSub = on(window, EventType.RESIZE).pipe(debounceTime(100)).subscribe(() => {
+            store.reset()
+            setCanvasSize()
+            store.render.render()
+            store.scrollbar.onResize()
+        })
         return () => {
             sub.unsubscribe()
+            resizeSub.unsubscribe()
         }
     }, [])
 
@@ -171,7 +187,7 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
             textEl.current?.focus()
             return
         }
-        canvasEl.current?.focus()
+        store.render.canvas.focus()
         if (e.buttons !== Buttons.LEFT) return
         const matchCell = store.match(e.clientX, e.clientY)
         if (!matchCell) return
@@ -274,15 +290,17 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
             onMouseDown={onMouseDown}
             className={styles.host}
         >
-            <canvas
-                tabIndex={0}
-                className={styles.canvas}
-                ref={canvasEl}
-                onWheel={onMouseWheel}
-                onKeyDown={onKeyDown}
-            >
-                你的浏览器不支持canvas，请升级浏览器
-            </canvas>
+            <div id={CANVAS_HOST_ID} style={{width: '100%', height: '100%'}}>
+                <canvas
+                    tabIndex={0}
+                    className={styles.canvas}
+                    id={CANVAS_ID}
+                    onWheel={onMouseWheel}
+                    onKeyDown={onKeyDown}
+                >
+                    你的浏览器不支持canvas，请升级浏览器
+                </canvas>
+            </div>
             {contextmenuOpen && contextMenuEl ? contextMenuEl : null}
             {store.selector.selector && (
                     <SelectorComponent selector={store.selector.selector} />
@@ -338,9 +356,7 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
             {store.resizer.resizers.map((resizer, i) => {
                 const {startCol: x, startRow: y, width, height} = resizer.range
                 const {isRow} = resizer
-                const rect = (
-                    canvasEl.current as HTMLCanvasElement
-                ).getBoundingClientRect()
+                const rect = store.render.canvas.getBoundingClientRect()
                 return (
                     <ResizerComponent
                         hoverText={store.resizer.hoverText}
