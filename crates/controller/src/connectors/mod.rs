@@ -14,7 +14,6 @@ pub use container_connector::ContainerConnector;
 pub use cube_connector::CubeConnector;
 pub use formula_connector::FormulaConnector;
 pub use id_fetcher::IdFetcher;
-pub use index_fetcher::IndexFetcher;
 pub use name_fetcher::NameFetcher;
 pub use navigator_connector::NavigatorConnector;
 pub use range_connector::RangeConnector;

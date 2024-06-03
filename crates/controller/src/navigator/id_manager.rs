@@ -52,7 +52,7 @@ impl IdManager {
             .find(|p| {
                 !row_ids
                     .iter()
-                    .any(|c| self.has_allocated.contains(&(*p.clone(), c.clone())))
+                    .any(|c| self.has_allocated.contains(&(**p, c.clone())))
             })
             .map_or(
                 {
@@ -75,7 +75,7 @@ impl IdManager {
             .find(|p| {
                 !row_ids
                     .iter()
-                    .any(|r| self.has_allocated.contains(&(r.clone(), *p.clone())))
+                    .any(|r| self.has_allocated.contains(&(r.clone(), **p)))
             })
             .map_or(
                 {
