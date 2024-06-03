@@ -44,7 +44,7 @@ fn count_an_arg(
             Value::Number(num) => {
                 let s = num.to_string();
                 let l = bmap.len();
-                let mut insert = bmap.entry(s).or_insert((0, l));
+                let insert = bmap.entry(s).or_insert((0, l));
                 insert.0 += 1;
                 Ok(())
             }
@@ -56,7 +56,7 @@ fn count_an_arg(
                 Value::Number(num) => {
                     let s = num.to_string();
                     let l = bmap.len();
-                    let mut insert = bmap.entry(s).or_insert((0, l));
+                    let insert = bmap.entry(s).or_insert((0, l));
                     insert.0 += 1;
                 }
                 _ => {}
@@ -68,7 +68,7 @@ fn count_an_arg(
                 Value::Number(num) => {
                     let s = num.to_string();
                     let l = bmap.len();
-                    let mut insert = bmap.entry(s).or_insert((0, l));
+                    let insert = bmap.entry(s).or_insert((0, l));
                     insert.0 += 1;
                 }
                 _ => {}

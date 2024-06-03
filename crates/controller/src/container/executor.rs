@@ -90,7 +90,7 @@ impl ContainerExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let col_id = ctx.fetch_col_id(&sheet_id, p.col)?;
-                let mut info = self.container.get_col_info_mut(sheet_id, col_id);
+                let info = self.container.get_col_info_mut(sheet_id, col_id);
                 info.custom_width = true;
                 info.width = Some(p.width);
                 Ok((self, true))
@@ -100,7 +100,7 @@ impl ContainerExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let row_id = ctx.fetch_row_id(&sheet_id, p.row)?;
-                let mut info = self.container.get_row_info_mut(sheet_id, row_id);
+                let info = self.container.get_row_info_mut(sheet_id, row_id);
                 info.custom_height = true;
                 info.ht = Some(p.height);
                 Ok((self, true))

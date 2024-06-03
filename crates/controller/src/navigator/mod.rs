@@ -4,10 +4,7 @@ use logisheets_base::{
     errors::BasicError, BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId,
 };
 
-pub use self::{
-    block::BlockPlace,
-    sheet_nav::{Cache, SheetNav},
-};
+pub use self::{block::BlockPlace, sheet_nav::SheetNav};
 
 mod block;
 pub mod ctx;
@@ -153,7 +150,7 @@ impl Navigator {
                     .fetch_norm_cell_id(&sheet_id, row_idx, col_idx)
                     .unwrap();
                 let sheet_nav = self.get_sheet_nav_mut(sheet_id);
-                if let Some(mut bp) = sheet_nav.data.blocks.get_mut(&block_id) {
+                if let Some(bp) = sheet_nav.data.blocks.get_mut(&block_id) {
                     bp.master = new_master;
                     sheet_nav.cache = Default::default();
                 }
