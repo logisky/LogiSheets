@@ -68,17 +68,3 @@ where
     let result = n.inverse_cdf(alpha);
     CalcVertex::from_number(result as f64)
 }
-
-#[cfg(test)]
-mod tests {
-    use statrs::distribution::{Binomial, DiscreteCDF};
-
-    // A bug from statrs described here:
-    // https://github.com/statrs-dev/statrs/issues/185
-    #[ignore]
-    #[test]
-    fn binomial() {
-        let result = Binomial::new(0.5, 6).unwrap().inverse_cdf(0.75);
-        assert_eq!(result, 4);
-    }
-}
