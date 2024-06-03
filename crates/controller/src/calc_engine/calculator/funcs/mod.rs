@@ -91,7 +91,7 @@ where
         "BIN2OCT" => bits::hob2hob::calc_bin2oct(args, fetcher),
         "BINOM.DIST" => distribution::binom::calc(args, fetcher),
         "BINOMDIST" => distribution::binom::calc(args, fetcher),
-        "#BINOM.INV" => distribution::binom::calc_inv(args, fetcher),
+        "BINOM.INV" => distribution::binom::calc_inv(args, fetcher),
         "BITAND" => bits::bit::calc_bitand(args, fetcher),
         "BITLSHIFT" => bits::bit::calc_bitlshift(args, fetcher),
         "BITOR" => bits::bit::calc_bitor(args, fetcher),
