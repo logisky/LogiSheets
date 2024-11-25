@@ -15,8 +15,8 @@ zip = {version = "0.6.0", default-features = false, features = ["deflate"]}
 
 logisheets_workbook_derives = {version = "0.4.0", path = "./derives"}
 
-xmlserde = "0.7"
-xmlserde_derives = "0.7"
+xmlserde = "0.10"
+xmlserde_derives = "0.10"
 gents = {version = "0.8.0", optional = true}
 gents_derives = {version = "0.8.0", optional = true}
 

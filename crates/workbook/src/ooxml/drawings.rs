@@ -294,7 +294,7 @@ pub struct CtGeomGuide {
 pub struct CtTextParagraph {
     #[xmlserde(name = b"pPr", ty = "child")]
     pub p_pr: Option<CtTextParagraphProperties>,
-    #[xmlserde(ty = "untag")]
+    #[xmlserde(ty = "untagged_enum")]
     pub text_runs: Vec<EgTextRun>,
     #[xmlserde(name = b"endParaRPr", ty = "child")]
     pub end_para_r_pr: Option<CtTextCharacterProperties>,

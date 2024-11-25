@@ -29,7 +29,7 @@ logisheets_controller = {version = "*", path = "../../controller", features = ["
 logisheets_base = {version = "*", path = "../../controller/base"}
 logisheets_workbook = {version = "*", path = "../../workbook"}
 
-xmlserde = "0.7"
+xmlserde = "0.10"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.30"
