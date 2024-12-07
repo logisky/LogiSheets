@@ -1,4 +1,3 @@
-import {getID} from '@/core/ioc/id'
 import {injectable} from 'inversify'
 import {
     ActionEffect,
@@ -11,8 +10,6 @@ import {
 
 @injectable()
 export class WorkbookService {
-    readonly id = getID()
-
     public constructor(funcs: readonly CustomFunc[]) {
         this._init(funcs)
     }
@@ -21,8 +18,8 @@ export class WorkbookService {
         this._workbook.registryCustomFunc(f)
     }
 
-    public registryRender(render: () => void) {
-        this._workbook.registerCellUpdatedCallback(render)
+    public registryCellUpdatedCallback(f: () => void) {
+        this._workbook.registerCellUpdatedCallback(f)
     }
 
     public handleTransaction(
@@ -36,11 +33,22 @@ export class WorkbookService {
         sheetIdx: number,
         startX: number,
         startY: number,
-        endX: number,
-        endY: number
+        height: number,
+        width: number
     ): DisplayWindowWithStartPoint {
         const ws = this._workbook.getWorksheet(sheetIdx)
-        return ws.getDisplayWindowWithStartPoint(startX, startY, endX, endY)
+        return ws.getDisplayWindowWithStartPoint(startX, startY, height, width)
+    }
+
+    public getDisplayWindowWithCellPosition(
+        sheetIdx: number,
+        row: number,
+        col: number,
+        height: number,
+        width: number
+    ): DisplayWindowWithStartPoint {
+        const ws = this._workbook.getWorksheet(sheetIdx)
+        return ws.getDisplayWindowWithCellPosition(row, col, height, width)
     }
 
     public undo() {

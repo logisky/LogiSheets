@@ -49,3 +49,11 @@ pub fn locked_write<T>(value: &Locked<T>) -> LockGuardMut<T> {
     #[cfg(feature = "sequencer")]
     return value.write().unwrap();
 }
+
+pub fn new_locked<T>(value: T) -> Locked<T> {
+    #[cfg(not(feature = "sequencer"))]
+    return std::cell::RefCell::new(value);
+
+    #[cfg(feature = "sequencer")]
+    return Locked::new(std::sync::RwLock::new(value));
+}

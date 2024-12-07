@@ -9,6 +9,7 @@ import {
     get_value,
     get_display_window,
     get_display_window_with_start_point,
+    get_display_window_within_cell,
 } from '../../wasm'
 import {
     ColInfo,
@@ -46,16 +47,32 @@ export class Worksheet {
     public getDisplayWindowWithStartPoint(
         startX: number,
         startY: number,
-        endX: number,
-        endY: number
+        height: number,
+        width: number
     ): DisplayWindowWithStartPoint {
         return get_display_window_with_start_point(
             this._id,
             this._sheetIdx,
             startX,
             startY,
-            endX,
-            endY
+            height,
+            width
+        )
+    }
+
+    public getDisplayWindowWithCellPosition(
+        row: number,
+        col: number,
+        height: number,
+        width: number
+    ): DisplayWindowWithStartPoint {
+        return get_display_window_within_cell(
+            this._id,
+            this._sheetIdx,
+            row,
+            col,
+            height,
+            width
         )
     }
 

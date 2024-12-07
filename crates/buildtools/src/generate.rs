@@ -1,7 +1,10 @@
 fn main() {
     use gents::FileGroup;
+    use logisheets_controller::controller::display::CellPosition;
     use logisheets_controller::controller::display::DisplayWindowWithStartPoint;
-    use logisheets_controller::controller::display::{DisplayRequest, DisplayResponse, SheetInfo};
+    use logisheets_controller::controller::display::{
+        DisplayResponse, DisplaySheetRequest, DisplayWindowRequest, SheetInfo,
+    };
     use logisheets_controller::edit_action::AsyncFuncResult;
     use logisheets_controller::edit_action::{ActionEffect, EditAction};
     use logisheets_controller::CellInfo;
@@ -9,8 +12,10 @@ fn main() {
 
     let path = "packages/web/src/bindings";
     let mut file_group = FileGroup::new();
-    file_group.add::<DisplayRequest>();
+    file_group.add::<DisplaySheetRequest>();
+    file_group.add::<DisplayWindowRequest>();
     file_group.add::<DisplayResponse>();
+    file_group.add::<CellPosition>();
     file_group.add::<DisplayWindowWithStartPoint>();
     file_group.add::<EditAction>();
     file_group.add::<SheetInfo>();

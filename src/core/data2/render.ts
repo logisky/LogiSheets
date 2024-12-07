@@ -1,28 +1,31 @@
 import {getID} from '@/core/ioc/id'
-import {Range} from '@/core/standable'
+import {Range, StandardCell} from '@/core/standable'
 import {inject, injectable} from 'inversify'
 import {WorkbookService} from './workbook'
 import {TYPES} from '../ioc/types'
 import {CellInfo} from '@logisheets_bg'
+import {StandardValue} from '../standable/value'
 
 @injectable()
 export class RenderDataProvider {
     readonly id = getID()
     constructor(@inject(TYPES.Data) private _workbook: WorkbookService) {}
 
+    public viewRange = new ViewRange()
+
     public getRenderData(
         sheetIdx: number,
         startX: number,
         startY: number,
-        endX: number,
-        endY: number
+        height: number,
+        width: number
     ): RenderCell[] {
         const window = this._workbook.getDisplayWindow(
             sheetIdx,
             startX,
             startY,
-            endX,
-            endY
+            height,
+            width
         )
 
         let y = window.startY
@@ -125,9 +128,15 @@ export class RenderCell {
         return this
     }
     setInfo(info: CellInfo) {
-        this.info = info
+        let c = this.info
+        if (!c) c = new StandardCell()
+        if (info.style) c.setStyle(info.style)
+        if (info.value) c.value = StandardValue.from(info.value)
+        if (info.formula !== undefined) c.formula = info.formula
         return this
     }
+
+    public hidden = false
     /**
      * start/end row/col index
      */
@@ -136,7 +145,7 @@ export class RenderCell {
      * start/end row/col pixel distance
      */
     public position = new Range()
-    public info?: CellInfo
+    public info?: StandardCell
     public skipRender = false
 
     cover(cell: RenderCell) {

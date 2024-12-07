@@ -4,6 +4,7 @@ pub use crate::{
     errors::{Error, ErrorMessage, Result},
     Comment, MergeCell, Style, Value,
 };
+mod cell_positioner;
 mod types;
 mod workbook;
 mod worksheet;

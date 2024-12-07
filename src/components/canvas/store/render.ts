@@ -2,9 +2,9 @@ import {makeObservable} from 'mobx'
 import {CanvasStore} from './store'
 import {Box, CanvasAttr, PainterService, TextAttr} from '@/core/painter'
 import {simpleUuid, toA1notation} from '@/core'
-import {RenderCell} from '@/core/data'
+import {RenderCell} from '@/core/data2'
 import {SETTINGS} from '@/core/settings'
-import {StandardColor, Range} from '@/core/standable'
+import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {PatternFill} from '@logisheets_bg'
 export const CANVAS_ID = simpleUuid()
@@ -21,7 +21,8 @@ export class Render {
         this._painterService.setupCanvas(this.canvas)
         this._painterService.clear()
         const rect = this.canvas.getBoundingClientRect()
-        this.store.dataSvc.initViewRange(rect.width, rect.height)
+        this.store.dataSvc.setWindowSize(rect.height, rect.width)
+        this.store.dataSvc.getCellViewData()
         this._renderGrid()
         this._renderContent()
         this._renderLeftHeader()
@@ -35,24 +36,23 @@ export class Render {
     private _painterService = new PainterService()
 
     private _renderCell(renderCell: RenderCell) {
-        const {coordinate: range, position} = renderCell
-        const style = this.store.sheetSvc.getCell(
-            range.startRow,
-            range.startCol
-        )?.style
+        const {coordinate: range, position, info} = renderCell
+        const style = info?.style
         const box = new Box()
         box.position = position
         this._fill(box, style)
         this._border(box, position, style)
-        this._text(box, range, style)
-        this._comment(box, range)
+        if (info) {
+            this._text(box, info)
+            // this._comment(box, info)
+        }
     }
 
     /**
      * main content + freeze content.
      */
     private _renderContent() {
-        this.store.dataSvc.cachedViewRange.cells.forEach((cell) => {
+        this.store.dataSvc.getCellViewData().cells.forEach((cell) => {
             this._painterService.save()
             this._renderCell(cell)
             this._painterService.restore()
@@ -61,7 +61,7 @@ export class Render {
 
     private _renderLeftHeader() {
         this._painterService.save()
-        this.store.dataSvc.cachedViewRange.rows.forEach((r) => {
+        this.store.dataSvc.getCellViewData().rows.forEach((r) => {
             const {startRow, startCol, endRow, endCol} = r.position
             this._painterService.line([
                 [startCol, startRow],
@@ -81,7 +81,7 @@ export class Render {
 
     private _renderTopHeader() {
         this._painterService.save()
-        this.store.dataSvc.cachedViewRange.cols.forEach((c) => {
+        this.store.dataSvc.getCellViewData().cols.forEach((c) => {
             const {startRow, startCol, endRow, endCol} = c.position
             this._painterService.line([
                 [endCol, startRow],
@@ -158,7 +158,7 @@ export class Render {
     }
 
     private _renderGrid() {
-        const {cachedViewRange: viewRange} = this.store.dataSvc
+        const viewRange = this.store.dataSvc.getCellViewData()
         const {grid, leftTop} = SETTINGS
         this._painterService.save()
         const attr = new CanvasAttr()
@@ -184,21 +184,16 @@ export class Render {
         this._painterService.restore()
     }
 
-    private _comment(box: Box, range: Range) {
-        const comment = this.store.sheetSvc
-            .getSheet()
-            ?.getComment(range.startRow, range.startCol)
-        if (!comment) return
-        this._painterService.comment(box)
-    }
+    // private _comment(box: Box, comment: Comment | undefined) {
+    //     if (!comment) return
+    //     this._painterService.comment(box)
+    // }
 
-    private _text(box: Box, range: Range, style?: StandardStyle) {
-        const info = this.store.sheetSvc.getCell(range.startRow, range.startCol)
-        if (!info) return
+    private _text(box: Box, info: StandardCell) {
         const textAttr = new TextAttr()
-        if (style) {
-            textAttr.alignment = style.alignment
-            textAttr.setFont(style.getFont())
+        if (info.style) {
+            textAttr.alignment = info.style.alignment
+            textAttr.setFont(info.style.getFont())
         }
         this._painterService.text(info.getFormattedText(), textAttr, box)
     }

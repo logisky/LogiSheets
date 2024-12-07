@@ -25,6 +25,7 @@
         "src/bindings/**/*",
         "crates/wasms/**/*",
         "packages/**/bindings/**/*",
+        "packages/**/dist/**/*",
         "packages/**/wasm/**/*"
     ],
     "rules": {

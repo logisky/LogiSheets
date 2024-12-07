@@ -1,4 +1,4 @@
-import {RenderCell, SheetService} from '@/core/data'
+import {RenderCell} from '@/core/data2'
 import {shallowCopy} from '@/core'
 export type CellType =
     | 'Cell'
@@ -17,18 +17,4 @@ export class Cell extends RenderCell {
         shallowCopy(cell, this)
         return this
     }
-}
-
-export function visibleCells(cell: Cell, end: Cell, sheetSvc: SheetService) {
-    const cells: {readonly row: number; readonly col: number}[] = []
-    const {startCol, startRow} = cell.coordinate
-    const {endCol, endRow} = end.coordinate
-    for (let row = startRow; row <= endRow; row++) {
-        for (let col = startCol; col < endCol; col++) {
-            if (sheetSvc.getColInfo(col).hidden) continue
-            if (sheetSvc.getRowInfo(row).hidden) continue
-            cells.push({row, col})
-        }
-    }
-    return cells
 }

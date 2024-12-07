@@ -18,7 +18,7 @@ export type {
     CtFontScheme,
     CtUnderlineProperty,
     DisplayPatch,
-    DisplayRequest,
+    DisplaySheetRequest,
     DisplayResponse,
     DisplayWindow,
     DisplayWindowWithStartPoint,
