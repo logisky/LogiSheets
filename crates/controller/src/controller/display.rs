@@ -17,6 +17,16 @@ pub struct DisplayResponse {
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
+    gents_derives::gents_header(file_name = "cell_position.ts")
+)]
+pub struct CellPosition {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
     gents_derives::gents_header(file_name = "display_window.ts")
 )]
 pub struct DisplayWindow {
@@ -25,6 +35,7 @@ pub struct DisplayWindow {
     pub cols: Vec<ColInfo>,
     pub comments: Vec<Comment>,
     pub merge_cells: Vec<MergeCell>,
+    pub blocks: Vec<BlockInfo>,
 }
 
 #[derive(Debug, Clone)]
@@ -102,12 +113,27 @@ pub struct BlockInfo {
 #[cfg_attr(feature = "gents", derive(gents_derives::TS))]
 #[cfg_attr(
     feature = "gents",
-    ts(file_name = "display_request.ts", rename_all = "camelCase")
+    ts(file_name = "display_sheet_request.ts", rename_all = "camelCase")
 )]
 #[serde(rename_all = "camelCase")]
-pub struct DisplayRequest {
+pub struct DisplaySheetRequest {
     pub sheet_idx: usize,
     pub version: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
+#[cfg_attr(
+    feature = "gents",
+    ts(file_name = "display_window_request.ts", rename_all = "camelCase")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct DisplayWindowRequest {
+    pub sheet_idx: usize,
+    pub height: f64,
+    pub width: f64,
+    pub start_x: f64,
+    pub start_y: f64,
 }
 
 #[derive(Debug, Clone)]

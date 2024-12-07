@@ -22,16 +22,9 @@ import {ITextareaInstance, TextContainerComponent} from '@/components/textarea'
 import {DndComponent} from '@/components/dnd'
 import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid} from '@/core'
-import {CellInputBuilder} from '@logisheets_bg'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
-import {
-    Backend,
-    DataService,
-    MAX_COUNT,
-    RenderCell,
-    SheetService,
-} from '@/core/data'
+import {DataService, MAX_COUNT, RenderCell} from '@/core/data2'
 import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
@@ -45,12 +38,8 @@ export interface CanvasProps {
     selectedCell$: (e: SelectedCell) => void
 }
 export const CanvasComponent = (props: CanvasProps) => {
-    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
-    const store = useRef(
-        new CanvasStore(SHEET_SERVICE, DATA_SERVICE, BACKEND_SERVICE)
-    )
+    const store = useRef(new CanvasStore(DATA_SERVICE))
     return (
         <CanvasStoreContext.Provider value={store.current}>
             <Internal {...props} />
@@ -74,50 +63,16 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
         setCanvasSize()
         store.render.render()
         store.scrollbar.init()
-        const sub = store.backendSvc.render$.subscribe(() => {
+        store.dataSvc.registryCellUpdatedCallback(() => {
             store.render.render()
         })
-        return () => {
-            sub.unsubscribe()
-        }
     }, [])
-
-    // Return the render cell
-    // 0: keep horizontal scroll value unchanged
-    // 1: keep veritical scroll value unchanged
-    // 2: don't keep any of them
-    const jumpTo = (row: number, col: number, keep: 0 | 1 | 2) => {
-        const result = store.dataSvc.tryJumpTo(row, col)
-
-        if (result instanceof RenderCell) return result
-
-        const scrollX = result[0]
-        const scrollY = result[1]
-
-        const scroll = store.sheetSvc.getSheet()?.scroll
-        if (!scroll) throw Error('No active sheet')
-
-        if (keep == 0) {
-            scroll.update('y', scrollY)
-        } else if (keep == 1) {
-            scroll.update('x', scrollX)
-        } else {
-            scroll.update('x', scrollX)
-            scroll.update('y', scrollY)
-        }
-
-        store.render.render()
-        const newResult = store.dataSvc.jumpTo(row, col)
-        if (!newResult) throw Error('jump to function error')
-
-        return newResult
-    }
 
     useEffect(() => {
         if (selectedCell.source != 'editbar') return
 
         store.render.canvas.focus()
-        jumpTo(selectedCell.row, selectedCell.col, 2)
+        // jumpTo(selectedCell.row, selectedCell.col, 2)
         store.selector.reset()
         store.textarea.reset()
     }, [selectedCell])
@@ -151,12 +106,14 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
             store.dnd.onMouseUp()
             store.resizer.mouseup()
         })
-        const resizeSub = on(window, EventType.RESIZE).pipe(debounceTime(100)).subscribe(() => {
-            store.reset()
-            setCanvasSize()
-            store.render.render()
-            store.scrollbar.onResize()
-        })
+        const resizeSub = on(window, EventType.RESIZE)
+            .pipe(debounceTime(100))
+            .subscribe(() => {
+                store.reset()
+                setCanvasSize()
+                store.render.render()
+                store.scrollbar.onResize()
+            })
         return () => {
             sub.unsubscribe()
             resizeSub.unsubscribe()
@@ -169,12 +126,12 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
     }
 
     const onMouseWheel = (e: WheelEvent) => {
-        // only support y scrollbar
+        // only support y scrollbar currently
         const delta = e.deltaY
         const newScroll = store.scrollbar.mouseWheelScrolling(delta, 'y') ?? 0
-        const oldScroll = store.sheetSvc.getSheet()?.scroll.y
+        const oldScroll = store.dataSvc.getScroll()?.y
         if (oldScroll === newScroll) return
-        store.sheetSvc.getSheet()?.scroll?.update('y', newScroll)
+        store.dataSvc.updateScroll('y', newScroll)
         store.render.render()
         store.scroll()
     }
@@ -216,26 +173,26 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
         const endRow = currSelected.coordinate.endRow
         const endCol = currSelected.coordinate.endCol
 
-        let renderCell: RenderCell | null = null
+        const renderCell: RenderCell | null = null
         switch (e.key) {
             case KeyboardEventCode.ARROW_UP: {
                 const newStartRow = Math.max(startRow - 1, 0)
-                renderCell = jumpTo(newStartRow, startCol, 0)
+                // renderCell = jumpTo(newStartRow, startCol, 0)
                 break
             }
             case KeyboardEventCode.ARROW_DOWN: {
                 const newRow = Math.min(endRow + 1, MAX_COUNT)
-                renderCell = jumpTo(newRow, endCol, 0)
+                // renderCell = jumpTo(newRow, endCol, 0)
                 break
             }
             case KeyboardEventCode.ARROW_LEFT: {
                 const newCol = Math.max(startCol - 1, 0)
-                renderCell = jumpTo(startRow, newCol, 1)
+                // renderCell = jumpTo(startRow, newCol, 1)
                 break
             }
             case KeyboardEventCode.ARROW_RIGHT: {
                 const newCol = Math.min(endCol + 1, MAX_COUNT)
-                renderCell = jumpTo(startRow, newCol, 1)
+                // renderCell = jumpTo(startRow, newCol, 1)
                 break
             }
             default:
@@ -303,7 +260,7 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
             </div>
             {contextmenuOpen && contextMenuEl ? contextMenuEl : null}
             {store.selector.selector && (
-                    <SelectorComponent selector={store.selector.selector} />
+                <SelectorComponent selector={store.selector.selector} />
             )}
             <ScrollbarComponent
                 {...store.scrollbar.xScrollbar}

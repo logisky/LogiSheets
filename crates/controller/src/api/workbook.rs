@@ -1,7 +1,10 @@
-use super::worksheet::Worksheet;
+use std::collections::HashMap;
+
+use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
-    controller::display::{DisplayRequest, DisplayResponse, SheetInfo},
+    controller::display::{DisplayResponse, DisplaySheetRequest, SheetInfo},
     edit_action::{ActionEffect, StatusCode},
+    lock::{locked_write, new_locked, Locked},
     Controller,
 };
 use crate::{
@@ -11,16 +14,21 @@ use crate::{
 use logisheets_base::{
     async_func::{AsyncCalcResult, Task},
     errors::BasicError,
+    SheetId,
 };
+
+pub(crate) type CellPositionerDefault = CellPositioner<1000>;
 
 pub struct Workbook {
     controller: Controller,
+    cell_positioners: Locked<HashMap<SheetId, Locked<CellPositionerDefault>>>,
 }
 
 impl Default for Workbook {
     fn default() -> Self {
         Self {
             controller: Default::default(),
+            cell_positioners: new_locked(HashMap::new()),
         }
     }
 }
@@ -30,6 +38,7 @@ impl Workbook {
     pub fn new() -> Self {
         Workbook {
             controller: Default::default(),
+            cell_positioners: new_locked(HashMap::new()),
         }
     }
 
@@ -41,7 +50,10 @@ impl Workbook {
     /// Create a workbook from a .xlsx file.
     pub fn from_file(buf: &[u8], book_name: String) -> Result<Self> {
         let controller = Controller::from_file(book_name, buf)?;
-        Ok(Workbook { controller })
+        Ok(Workbook {
+            controller,
+            cell_positioners: new_locked(HashMap::new()),
+        })
     }
 
     #[inline]
@@ -60,8 +72,8 @@ impl Workbook {
     }
 
     #[inline]
-    pub fn get_display_response(&self, req: DisplayRequest) -> DisplayResponse {
-        self.controller.get_display_response(req)
+    pub fn get_display_sheet_response(&self, req: DisplaySheetRequest) -> Result<DisplayResponse> {
+        self.controller.get_display_sheet_response(req)
     }
 
     #[inline]
@@ -85,14 +97,29 @@ impl Workbook {
         self.controller.get_all_sheet_info()
     }
 
+    #[inline]
+    pub fn get_cell_positioner(&self, sheet: SheetId) -> Locked<CellPositionerDefault> {
+        let mut cell_positioners = locked_write(&self.cell_positioners);
+        let entry = cell_positioners
+            .entry(sheet)
+            .or_insert_with(|| new_locked(CellPositionerDefault::new()));
+
+        entry.clone()
+    }
+
     pub fn get_sheet_by_name(&self, name: &str) -> Result<Worksheet> {
-        match self.controller.get_sheet_id_by_name(name) {
-            Some(sheet_id) => Ok(Worksheet {
-                sheet_id,
-                controller: &self.controller,
-            }),
-            None => Err(BasicError::SheetNameNotFound(name.to_string()).into()),
+        let id = self.controller.get_sheet_id_by_name(name);
+        if id.is_none() {
+            return Err(BasicError::SheetNameNotFound(name.to_string()).into());
         }
+        let sheet_id = id.unwrap();
+        let positioner = self.get_cell_positioner(sheet_id);
+        let c = &self.controller;
+        Ok(Worksheet {
+            sheet_id,
+            controller: c,
+            positioner,
+        })
     }
 
     pub fn get_sheet_idx_by_name(&self, name: &str) -> Result<usize> {
@@ -113,6 +140,7 @@ impl Workbook {
             Some(sheet_id) => Ok(Worksheet {
                 sheet_id,
                 controller: &self.controller,
+                positioner: self.get_cell_positioner(sheet_id),
             }),
             None => Err(Error::UnavailableSheetIdx(idx)),
         }

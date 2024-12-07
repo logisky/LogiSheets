@@ -1,4 +1,3 @@
-import {Backend, DataService, RenderCell, SheetService} from '@/core/data'
 import {action, makeObservable, observable} from 'mobx'
 import {createContext, type MouseEvent} from 'react'
 import {Render} from './render'
@@ -9,13 +8,10 @@ import {Selector} from './selector'
 import {Dnd} from './dnd'
 import {ScrollBar} from './scrollbar'
 import {Textarea} from './textarea'
+import {RenderCell, DataService} from '@/core/data2'
 
 export class CanvasStore {
-    constructor(
-        public readonly sheetSvc: SheetService,
-        public readonly dataSvc: DataService,
-        public readonly backendSvc: Backend
-    ) {
+    constructor(public readonly dataSvc: DataService) {
         makeObservable(this)
         this.render = new Render(this)
         this.resizer = new Resizer(this)
@@ -49,7 +45,7 @@ export class CanvasStore {
     }
 
     match(clientX: number, clientY: number) {
-        const viewRange = this.dataSvc.cachedViewRange
+        const viewRange = this.dataSvc.getCellViewData()
         return match(clientX, clientY, this.render.canvas, viewRange)
     }
 
@@ -81,17 +77,17 @@ export class CanvasStore {
         if (!startCell) return
         if (startCell.type === 'LeftTop' || startCell.type === 'unknown') return
         let renderCell: RenderCell | undefined
-        const viewRange = this.dataSvc.cachedViewRange
+        const cellView = this.dataSvc.getCellViewData()
         if (startCell.type === 'FixedLeftHeader')
-            renderCell = viewRange.rows.find((r) =>
+            renderCell = cellView.rows.find((r) =>
                 r.coordinate.cover(startCell.coordinate)
             )
         else if (startCell.type === 'FixedTopHeader')
-            renderCell = viewRange.cols.find((c) =>
+            renderCell = cellView.cols.find((c) =>
                 c.coordinate.cover(startCell.coordinate)
             )
         else if (startCell.type === 'Cell')
-            renderCell = viewRange.cells.find((c) =>
+            renderCell = cellView.cells.find((c) =>
                 c.coordinate.cover(startCell.coordinate)
             )
         else return

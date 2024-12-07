@@ -1,5 +1,10 @@
-use crate::controller::display::DisplayWindow;
+use std::collections::HashSet;
+
+use crate::controller::display::{
+    BlockInfo, CellPosition, DisplayWindow, DisplayWindowWithStartPoint,
+};
 use crate::errors::Result;
+use crate::lock::{locked_write, new_locked, Locked};
 use crate::{
     connectors::NameFetcher,
     controller::{
@@ -12,9 +17,13 @@ use crate::{CellInfo, ColInfo, Comment, MergeCell, RowInfo, Style, Value};
 use logisheets_base::{BlockId, CellId, ColId, RowId, SheetId};
 use logisheets_parser::unparse;
 
+use super::workbook::CellPositionerDefault;
+
+// Use a cache to record the coordinate
 pub struct Worksheet<'a> {
-    pub sheet_id: SheetId,
-    pub controller: &'a Controller,
+    pub(crate) sheet_id: SheetId,
+    pub(crate) controller: &'a Controller,
+    pub(crate) positioner: Locked<CellPositionerDefault>,
 }
 
 impl<'a> Worksheet<'a> {
@@ -22,6 +31,7 @@ impl<'a> Worksheet<'a> {
         Worksheet {
             sheet_id,
             controller,
+            positioner: new_locked(CellPositionerDefault::new()),
         }
     }
 
@@ -161,6 +171,7 @@ impl<'a> Worksheet<'a> {
         let mut col_infos: Vec<ColInfo> = vec![];
         let mut comments: Vec<Comment> = vec![];
         let mut merge_cells: Vec<MergeCell> = vec![];
+        let mut block_ids = HashSet::<BlockId>::new();
 
         for row in start_row..=end_row {
             let row_info = self.get_row_info(row).unwrap_or(RowInfo::default(row));
@@ -181,6 +192,9 @@ impl<'a> Worksheet<'a> {
                 }
 
                 let info = self.get_cell_info(row, col)?;
+                if let Some(block_id) = info.block_id {
+                    block_ids.insert(block_id);
+                }
                 cells.push(info);
             }
         }
@@ -193,6 +207,10 @@ impl<'a> Worksheet<'a> {
                 merge_cells.push(m);
             }
         });
+        let blocks = block_ids
+            .into_iter()
+            .flat_map(|b| self.get_block_info(b))
+            .collect();
 
         Ok(DisplayWindow {
             cells,
@@ -200,6 +218,39 @@ impl<'a> Worksheet<'a> {
             cols: col_infos,
             comments,
             merge_cells,
+            blocks,
+        })
+    }
+
+    pub fn get_cell_position(&self, row: usize, col: usize) -> Result<CellPosition> {
+        let mut positioner = locked_write(&self.positioner);
+        let y = positioner.get_row_start_y(row, &self)?;
+        let x = positioner.get_col_start_x(col, &self)?;
+        Ok(CellPosition { x, y })
+    }
+
+    pub fn get_display_window_response(
+        &self,
+        start_x: f64,
+        start_y: f64,
+        width: f64,
+        height: f64,
+    ) -> Result<DisplayWindowWithStartPoint> {
+        let mut positioner = locked_write(&self.positioner);
+        let (start_row, start_point_y) =
+            positioner.get_nearest_row_before_given_y(start_y, &self)?;
+        let (start_col, start_point_x) =
+            positioner.get_nearest_col_before_given_x(start_x, &self)?;
+        let (end_row, _) =
+            positioner.get_nearest_row_before_given_y(start_y + height + 100., &self)?;
+        let (end_col, _) =
+            positioner.get_nearest_col_before_given_x(start_x + width + 50., &self)?;
+
+        let window = self.get_display_window(start_row, start_col, end_row, end_col)?;
+        Ok(DisplayWindowWithStartPoint {
+            window,
+            start_x: start_point_x,
+            start_y: start_point_y,
         })
     }
 
@@ -448,6 +499,24 @@ impl<'a> Worksheet<'a> {
         })
     }
 
+    pub fn is_row_hidden(&self, row: usize) -> bool {
+        let info = self.get_row_info(row);
+        if let Some(info) = info {
+            info.hidden
+        } else {
+            false
+        }
+    }
+
+    pub fn is_col_hidden(&self, col: usize) -> bool {
+        let info = self.get_col_info(col);
+        if let Some(info) = info {
+            info.hidden
+        } else {
+            false
+        }
+    }
+
     pub fn get_row_height(&self, row: usize) -> Result<f64> {
         let row_id = self
             .controller
@@ -559,6 +628,18 @@ impl<'a> Worksheet<'a> {
             .get(&self.sheet_id)
             .map(|e| e.default_col_width.unwrap_or(get_default_col_width()))
             .unwrap_or(get_default_col_width())
+    }
+
+    pub fn get_block_info(&self, block_id: BlockId) -> Result<BlockInfo> {
+        let (row_cnt, col_cnt) = self.get_block_size(block_id)?;
+        let (row_start, col_start) = self.get_block_master_cell(block_id)?;
+        Ok(BlockInfo {
+            block_id,
+            row_start,
+            row_cnt,
+            col_start,
+            col_cnt,
+        })
     }
 
     pub fn get_block_size(&self, block_id: BlockId) -> Result<(usize, usize)> {

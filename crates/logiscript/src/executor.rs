@@ -142,18 +142,19 @@ fn exec_shift_col(
 }
 
 fn exec_switch(ctx: &mut ExecContext, switch: Switch, _line: usize) -> Option<ExecError> {
-    match ctx.workbook.get_sheet_by_name(&switch.sheet) {
-        Ok(_) => (),
-        Err(_) => {
-            ctx.workbook.handle_action(EditAction::Payloads(
-                PayloadsAction::new(false).add_payload(CreateSheet {
-                    idx: 0,
-                    new_name: switch.sheet.clone(),
-                }),
-            ));
-        }
-    };
+    let workbook = &mut ctx.workbook;
+
+    if workbook.get_sheet_by_name(&switch.sheet).is_err() {
+        workbook.handle_action(EditAction::Payloads(
+            PayloadsAction::new(false).add_payload(CreateSheet {
+                idx: 0,
+                new_name: switch.sheet.clone(),
+            }),
+        ));
+    }
+
     ctx.sheet_name = switch.sheet;
+
     None
 }
 

@@ -15,7 +15,7 @@ export interface Scroll {
     readonly y: number
     update(type: 'x' | 'y', value: number): void
 }
-class ScrollImpl implements Scroll {
+export class ScrollImpl implements Scroll {
     x = 0
     y = 0
     update(type: 'x' | 'y', value: number) {

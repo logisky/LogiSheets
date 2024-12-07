@@ -23,7 +23,7 @@ use executor::Executor;
 use status::Status;
 use viewer::SheetViewer;
 
-use self::display::{DisplayRequest, DisplayResponse, SheetInfo};
+use self::display::{DisplayResponse, DisplaySheetRequest, SheetInfo};
 use crate::async_func_manager::AsyncFuncManager;
 
 pub struct Controller {
@@ -219,28 +219,22 @@ impl Controller {
         self.handle_action(EditAction::Recalc(pending_cells))
     }
 
-    pub fn get_display_response(&self, req: DisplayRequest) -> DisplayResponse {
+    pub fn get_display_sheet_response(&self, req: DisplaySheetRequest) -> Result<DisplayResponse> {
         let viewer = SheetViewer::default();
         if req.version == 0 {
-            return viewer.display_with_idx(self, req.sheet_idx);
+            return Ok(viewer.display_with_idx(self, req.sheet_idx));
         }
 
-        let sheet_id = self.get_sheet_id_by_idx(req.sheet_idx);
-        if sheet_id.is_none() {
-            return DisplayResponse {
-                incremental: false,
-                patches: vec![],
-            };
-        }
-
-        let sheet_id = sheet_id.unwrap();
+        let sheet_id = self
+            .get_sheet_id_by_idx(req.sheet_idx)
+            .ok_or(Error::UnavailableSheetIdx(req.sheet_idx))?;
         if let Some(diff) = self
             .version_manager
             .get_sheet_diffs_from_version(sheet_id, req.version)
         {
-            viewer.display_with_diff(self, sheet_id, diff)
+            Ok(viewer.display_with_diff(self, sheet_id, diff))
         } else {
-            viewer.display_with_idx(self, req.sheet_idx)
+            Ok(viewer.display_with_idx(self, req.sheet_idx))
         }
     }
 
