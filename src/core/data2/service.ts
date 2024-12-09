@@ -2,12 +2,12 @@ import {inject, injectable} from 'inversify'
 import {getID} from '../ioc/id'
 import {TYPES} from '../ioc/types'
 import {WorkbookService} from './workbook'
-import {RenderCell, RenderDataProvider, ViewRange} from './render'
-import {ActionEffect, CustomFunc, Transaction, Comment} from '@logisheets_bg'
-import {Scroll, ScrollImpl} from '../standable'
+import {RenderCell} from './render'
+import {ActionEffect, CustomFunc, Transaction, Workbook} from '@logisheets_bg'
 import {Range} from '@/core/standable'
-import {ScrollbarType} from '@/components/scrollbar'
 import {DisplayWindowWithStartPoint} from '@logisheets_bg'
+import {CellViewResponse, ViewManager} from './view_manager'
+import {CellViewData} from './types'
 
 export const MAX_COUNT = 100000000
 export const CANVAS_OFFSET = 100
@@ -15,31 +15,39 @@ export const CANVAS_OFFSET = 100
 export interface DataService {
     registryCustomFunc: (f: CustomFunc) => void
     registryCellUpdatedCallback: (f: () => void) => void
-    handleTransaction: (t: Transaction, undoable: boolean) => ActionEffect
+    handleTransaction: (t: Transaction) => ActionEffect
     undo: () => void
     redo: () => void
 
-    getCurrentSheet: () => number
-    setCurrentSheet: (sheet: number) => void
-    updateScroll: (type: ScrollbarType, top: number) => void
-    getScroll: () => Scroll
+    getWorkbook: () => Workbook
 
-    setWindowSize: (height: number, width: number) => void
-    // According to the sheet scroll and the currentthe current window size,
-    // fetch the cache or load data from WASM
-    getCellViewData: () => CellViewData
-    // Given the cell coordinate, get the cell view data
-    jumpTo: (row: number, col: number) => CellViewData
+    getCellView: (
+        sheetIdx: number,
+        startX: number,
+        startY: number,
+        height: number,
+        width: number
+    ) => CellViewResponse
+
+    getCellViewWithCell: (
+        sheetIdx: number,
+        row: number,
+        col: number,
+        height: number,
+        width: number
+    ) => CellViewResponse
+
+    getCurrentCellView: (sheetIdx: number) => readonly CellViewData[]
 }
 
 @injectable()
 export class DataServiceImpl implements DataService {
     readonly id = getID()
-    constructor(
-        @inject(TYPES.Data) private _workbook: WorkbookService,
-        @inject(TYPES.Render) private _render: RenderDataProvider
-    ) {
+    constructor(@inject(TYPES.Data) private _workbook: WorkbookService) {
         this._init()
+    }
+    public getWorkbook(): Workbook {
+        return this._workbook.workbook
     }
 
     public registryCustomFunc(f: CustomFunc) {
@@ -50,11 +58,8 @@ export class DataServiceImpl implements DataService {
         return this._workbook.registryCellUpdatedCallback(f)
     }
 
-    public handleTransaction(
-        transaction: Transaction,
-        undoable: boolean
-    ): ActionEffect {
-        return this._workbook.handleTransaction(transaction, undoable)
+    public handleTransaction(transaction: Transaction): ActionEffect {
+        return this._workbook.handleTransaction(transaction, true)
     }
 
     public undo(): void {
@@ -65,76 +70,44 @@ export class DataServiceImpl implements DataService {
         return this._workbook.redo()
     }
 
-    public setWindowSize(height: number, width: number): void {
-        this._windowSize = {height, width}
-    }
-
-    public getCellViewData(): CellViewData {
-        const sheet = this._currentSheet
-        let cellView = this._cellViews.get(sheet)
-        if (cellView?.data) return cellView.data
-        if (!cellView) {
-            cellView = new CellView()
+    public getCurrentCellView(sheetIdx: number): readonly CellViewData[] {
+        const cacheManager = this._cellViews.get(sheetIdx)
+        if (cacheManager) {
+            return cacheManager.dataChunks
         }
-        const data = this._getCellViewData(
-            sheet,
-            cellView.scroll.x,
-            cellView.scroll.y,
-            this._windowSize.height,
-            this._windowSize.width
-        )
-        cellView.data = data
-        this._cellViews.set(sheet, cellView)
-        return data
+        throw Error('trying to get cell view before rendering a sheet')
     }
 
-    public updateScroll(type: ScrollbarType, top: number): void {
-        const sheet = this._currentSheet
-        let cellView = this._cellViews.get(sheet)
-        if (!cellView) {
-            cellView = new CellView()
+    public getCellViewWithCell(
+        sheetIdx: number,
+        row: number,
+        col: number,
+        height: number,
+        width: number
+    ): CellViewResponse {
+        const cacheManager = this._cellViews.get(sheetIdx)
+        if (!cacheManager) {
+            const manager = new ViewManager(this._workbook, sheetIdx)
+            this._cellViews.set(sheetIdx, manager)
         }
-        cellView.scroll.update(type, top)
-        this._cellViews.set(sheet, cellView)
-        return
+        const viewManager = this._cellViews.get(sheetIdx) as ViewManager
+        return viewManager.getViewResponseWithCell(row, col, height, width)
     }
 
-    public getScroll(): Scroll {
-        const sheet = this._currentSheet
-        let cellView = this._cellViews.get(sheet)
-        if (!cellView) {
-            cellView = new CellView()
-            this._cellViews.set(this._currentSheet, cellView)
+    public getCellView(
+        sheetIdx: number,
+        startX: number,
+        startY: number,
+        height: number,
+        width: number
+    ): CellViewResponse {
+        const cacheManager = this._cellViews.get(sheetIdx)
+        if (!cacheManager) {
+            const manager = new ViewManager(this._workbook, sheetIdx)
+            this._cellViews.set(sheetIdx, manager)
         }
-        return cellView.scroll
-    }
-
-    public getCurrentSheet(): number {
-        return this._currentSheet
-    }
-
-    public setCurrentSheet(sheet: number): void {
-        this._currentSheet = sheet
-        return
-    }
-
-    public jumpTo(row: number, col: number): CellViewData {
-        const window = this._workbook.getDisplayWindowWithCellPosition(
-            this._currentSheet,
-            row,
-            col,
-            this._windowSize.height,
-            this._windowSize.width
-        )
-        const scroll = new ScrollImpl()
-        scroll.update('x', window.startX)
-        scroll.update('y', window.startY)
-
-        const result = parseDisplayWindow(window)
-
-        const cellView = new CellView(result, scroll)
-        this._cellViews.set(this._currentSheet, cellView)
-        return result
+        const viewManager = this._cellViews.get(sheetIdx) as ViewManager
+        return viewManager.getViewResponse(startX, startY, height, width)
     }
 
     private _init() {
@@ -143,65 +116,12 @@ export class DataServiceImpl implements DataService {
             this._cellViews = new Map()
         })
     }
-
-    private _getCellViewData(
-        sheetIdx: number,
-        startX: number,
-        startY: number,
-        height: number,
-        width: number
-    ): CellViewData {
-        const window = this._workbook.getDisplayWindow(
-            sheetIdx,
-            startX,
-            startY,
-            height,
-            width
-        )
-        const result = parseDisplayWindow(window)
-        return result
-    }
-
-    private _windowSize: {height: number; width: number} = {height: 0, width: 0}
-
-    private _cellViews: Map<number, CellView> = new Map()
-    private _currentSheet = 0
+    private _cellViews: Map<number, ViewManager> = new Map()
 }
 
-export class CellView {
-    public constructor(data?: CellViewData, scroll?: ScrollImpl) {
-        if (data) {
-            this.data = data
-        }
-        if (scroll) {
-            this.scroll = scroll
-        }
-    }
-
-    public data: CellViewData | null = null
-    public scroll = new ScrollImpl()
-}
-
-export class CellViewData {
-    public fromRow = 0
-    public toRow = 0
-    public fromCol = 0
-    public toCol = 0
-
-    constructor(
-        public rows: readonly RenderCell[],
-        public cols: readonly RenderCell[],
-        public cells: readonly RenderCell[],
-        public comments: readonly Comment[]
-    ) {
-        this.fromRow = rows[0].coordinate.startRow
-        this.toRow = rows[-1].coordinate.endRow
-        this.fromCol = cols[0].coordinate.startCol
-        this.toCol = cols[-1].coordinate.endCol
-    }
-}
-
-function parseDisplayWindow(window: DisplayWindowWithStartPoint): CellViewData {
+export function parseDisplayWindow(
+    window: DisplayWindowWithStartPoint
+): CellViewData {
     let y = window.startY
     const rows = window.window.rows.map((r) => {
         const renderRow = new RenderCell()

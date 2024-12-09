@@ -10,8 +10,10 @@ import {
     get_display_window,
     get_display_window_with_start_point,
     get_display_window_within_cell,
+    get_cell_position,
 } from '../../wasm'
 import {
+    CellPosition,
     ColInfo,
     DisplayWindow,
     DisplayWindowWithStartPoint,
@@ -58,6 +60,10 @@ export class Worksheet {
             height,
             width
         )
+    }
+
+    public getCellPosition(row: number, col: number): CellPosition {
+        return get_cell_position(this._id, this._sheetIdx, row, col)
     }
 
     public getDisplayWindowWithCellPosition(

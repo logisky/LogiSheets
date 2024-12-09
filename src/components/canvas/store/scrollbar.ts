@@ -26,11 +26,10 @@ export class ScrollBar {
 
     @action
     onResize() {
-        const scroll = this.store.dataSvc.getScroll()
         const {offsetHeight: canvasHeight, offsetWidth: canvasWidth} =
             this.store.render.canvas
-        const scrollWidth = scroll.x + canvasWidth + CANVAS_OFFSET
-        const scrollHeight = scroll.y + canvasHeight + CANVAS_OFFSET
+        const scrollWidth = canvasWidth + CANVAS_OFFSET
+        const scrollHeight = +canvasHeight + CANVAS_OFFSET
 
         this.xScrollbar.offsetHeight = canvasWidth
         this.xScrollbar.scrollHeight = scrollWidth
@@ -45,28 +44,6 @@ export class ScrollBar {
         } else if (type === 'y') {
             this.yScrollbar.scrollTop = scrollTop
         }
-        this.store.dataSvc.updateScroll(type, scrollTop)
         this.store.render.render()
-    }
-
-    @action
-    mouseWheelScrolling = (delta: number, type: ScrollbarType) => {
-        const scroll = this.store.dataSvc.getScroll()
-        const oldScroll = type === 'x' ? scroll.x : scroll.y
-        let newScroll = oldScroll + delta
-        const canvas = this.store.render.canvas
-        if (delta === 0) return
-        if (newScroll < 0) newScroll = 0
-        if (newScroll === oldScroll) return
-        if (type === 'y') {
-            const max = newScroll + canvas.offsetHeight + CANVAS_OFFSET
-            this.yScrollbar.scrollTop = newScroll
-            this.yScrollbar.scrollHeight = max
-        } else if (type === 'x') {
-            const max = newScroll + canvas.offsetWidth + CANVAS_OFFSET
-            this.xScrollbar.scrollTop = newScroll
-            this.xScrollbar.scrollHeight = max
-        }
-        return newScroll
     }
 }

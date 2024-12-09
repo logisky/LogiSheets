@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx'
+import {makeAutoObservable} from 'mobx'
 import {observer} from 'mobx-react'
 export class SelectorProps {
     constructor() {
@@ -56,7 +56,7 @@ export const SelectorComponent = observer((props: ISelectorProps) => {
                     borderTopWidth: `${borderTopWidth}px`,
                     borderBottomWidth: `${borderBottomWidth}px`,
                 }}
-            ></div>
+            />
         </div>
     )
 })

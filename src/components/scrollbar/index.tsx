@@ -160,7 +160,7 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
                         ref={_thumbEl}
                         style={thumbStyle}
                         onMouseDown={(e) => thumbMouseDown(e)}
-                    ></span>
+                    />
                 </div>
             </div>
         </div>

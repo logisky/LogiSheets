@@ -8,7 +8,7 @@ import {Selector} from './selector'
 import {Dnd} from './dnd'
 import {ScrollBar} from './scrollbar'
 import {Textarea} from './textarea'
-import {RenderCell, DataService} from '@/core/data2'
+import {RenderCell, DataService, CellViewData} from '@/core/data2'
 
 export class CanvasStore {
     constructor(public readonly dataSvc: DataService) {
@@ -29,6 +29,7 @@ export class CanvasStore {
      * left mousedown the same cell
      */
     same = false
+    currSheetIdx = 0
 
     render: Render
     resizer: Resizer
@@ -37,6 +38,10 @@ export class CanvasStore {
     dnd: Dnd
     scrollbar: ScrollBar
     textarea: Textarea
+
+    getCurrentCellView(): readonly CellViewData[] {
+        return this.dataSvc.getCurrentCellView(this.currSheetIdx)
+    }
     reset() {
         this.highlights.reset()
         this.selector.reset()
@@ -45,8 +50,8 @@ export class CanvasStore {
     }
 
     match(clientX: number, clientY: number) {
-        const viewRange = this.dataSvc.getCellViewData()
-        return match(clientX, clientY, this.render.canvas, viewRange)
+        const data = this.getCurrentCellView()
+        return match(clientX, clientY, this.render.canvas, data)
     }
 
     @action
@@ -77,19 +82,19 @@ export class CanvasStore {
         if (!startCell) return
         if (startCell.type === 'LeftTop' || startCell.type === 'unknown') return
         let renderCell: RenderCell | undefined
-        const cellView = this.dataSvc.getCellViewData()
+        const cellView = this.getCurrentCellView()
         if (startCell.type === 'FixedLeftHeader')
-            renderCell = cellView.rows.find((r) =>
-                r.coordinate.cover(startCell.coordinate)
-            )
+            renderCell = cellView
+                .flatMap((d) => d.rows)
+                .find((r) => r.coordinate.cover(startCell.coordinate))
         else if (startCell.type === 'FixedTopHeader')
-            renderCell = cellView.cols.find((c) =>
-                c.coordinate.cover(startCell.coordinate)
-            )
+            renderCell = cellView
+                .flatMap((d) => d.cols)
+                .find((c) => c.coordinate.cover(startCell.coordinate))
         else if (startCell.type === 'Cell')
-            renderCell = cellView.cells.find((c) =>
-                c.coordinate.cover(startCell.coordinate)
-            )
+            renderCell = cellView
+                .flatMap((d) => d.cells)
+                .find((c) => c.coordinate.cover(startCell.coordinate))
         else return
         if (!renderCell) {
             this.reset()

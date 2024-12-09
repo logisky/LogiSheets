@@ -1,7 +1,7 @@
 import {SETTINGS} from '@/core/settings'
 import {Range} from '@/core/standable'
 import {Cell} from './cell'
-import {ViewRange} from '@/core/data2'
+import {CellViewData} from '@/core/data2'
 
 export function getOffset(
     clientX: number,
@@ -19,7 +19,7 @@ export function match(
     clientX: number,
     clientY: number,
     canvas: HTMLCanvasElement,
-    {rows, cols, cells}: ViewRange
+    data: readonly CellViewData[]
 ) {
     const {x, y} = getOffset(clientX, clientY, canvas)
     const clickPosition = new Range()
@@ -28,9 +28,16 @@ export function match(
         .setEndCol(x)
         .setEndRow(y)
     const {width: leftTopWidth, height: leftTopHeight} = SETTINGS.leftTop
-    const col = cols.find((c) => c.position.cover(clickPosition))
-    const row = rows.find((r) => r.position.cover(clickPosition))
-    const renderCell = cells.find((c) => c.position.cover(clickPosition))
+    const col = data
+        .flatMap((d) => d.cols)
+        .find((c) => c.position.cover(clickPosition))
+    const row = data
+        .flatMap((d) => d.rows)
+        .find((r) => r.position.cover(clickPosition))
+    const renderCell = data
+        .flatMap((d) => d.cols)
+        .flat()
+        .find((c) => c.position.cover(clickPosition))
     if (x <= leftTopWidth && y <= leftTopHeight) return new Cell('LeftTop')
     else if (row) return new Cell('FixedLeftHeader').copyByRenderCell(row)
     else if (col) return new Cell('FixedTopHeader').copyByRenderCell(col)

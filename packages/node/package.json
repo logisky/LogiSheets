@@ -1,6 +1,6 @@
 {
   "name": "logisheets",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Read and write the xlsx files",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
