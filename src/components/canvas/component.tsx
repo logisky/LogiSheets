@@ -24,7 +24,7 @@ import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid} from '@/core'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
-import {DataService, MAX_COUNT, RenderCell} from '@/core/data2'
+import {DataServiceImpl, MAX_COUNT, RenderCell} from '@/core/data2'
 import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
@@ -38,7 +38,7 @@ export interface CanvasProps {
     selectedCell$: (e: SelectedCell) => void
 }
 export const CanvasComponent = (props: CanvasProps) => {
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
     const store = useRef(new CanvasStore(DATA_SERVICE))
     return (
         <CanvasStoreContext.Provider value={store.current}>
@@ -127,11 +127,6 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
 
     const onMouseWheel = (e: WheelEvent) => {
         // only support y scrollbar currently
-        const delta = e.deltaY
-        const newScroll = store.scrollbar.mouseWheelScrolling(delta, 'y') ?? 0
-        const oldScroll = store.dataSvc.getScroll()?.y
-        if (oldScroll === newScroll) return
-        store.dataSvc.updateScroll('y', newScroll)
         store.render.render()
         store.scroll()
     }

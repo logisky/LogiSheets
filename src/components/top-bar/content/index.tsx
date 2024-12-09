@@ -3,7 +3,7 @@ import {ColorResult, SketchPicker} from 'react-color'
 import styles from './start.module.scss'
 import {useEffect, useState} from 'react'
 import {StandardColor} from '@/core/standable'
-import {SheetService} from '@/core/data'
+import {DataService} from '@/core/data2'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 
@@ -17,7 +17,7 @@ export interface StartProps {
 }
 
 export const StartComponent = ({selectedCell}: StartProps) => {
-    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const [openSketchPicker, setOpenSketchPicker] = useState(false)
     const [fontColor, setFontColor] = useState('#000')
 
@@ -61,7 +61,7 @@ export const StartComponent = ({selectedCell}: StartProps) => {
     const _initStyle = () => {
         if (!selectedCell) return
         const {row, col} = selectedCell
-        const style = SHEET_SERVICE.getCell(row, col)?.style
+        const style = DATA_SERVICE.getCell(row, col)?.style
         if (style === undefined) return
         const font = style.getFont()
         setFontColor(font.standardColor.css())
@@ -122,7 +122,7 @@ export const StartComponent = ({selectedCell}: StartProps) => {
     }
     return (
         <div className={styles.host}>
-            <div className={styles.left}></div>
+            <div className={styles.left} />
             <div
                 className={styles['font-color']}
                 onClick={() => setOpenSketchPicker(true)}
@@ -131,14 +131,14 @@ export const StartComponent = ({selectedCell}: StartProps) => {
                 <div
                     className={styles['color-bar']}
                     style={{backgroundColor: fontColor}}
-                ></div>
+                />
             </div>
             {openSketchPicker ? (
                 <SketchPicker
                     color={fontColor}
                     onChangeComplete={onColorPick}
                     className={styles['color-picker']}
-                ></SketchPicker>
+                />
             ) : null}
         </div>
     )

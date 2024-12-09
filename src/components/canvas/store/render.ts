@@ -2,12 +2,13 @@ import {makeObservable} from 'mobx'
 import {CanvasStore} from './store'
 import {Box, CanvasAttr, PainterService, TextAttr} from '@/core/painter'
 import {simpleUuid, toA1notation} from '@/core'
-import {RenderCell} from '@/core/data2'
+import {CellViewData, CellViewRespType, RenderCell} from '@/core/data2'
 import {SETTINGS} from '@/core/settings'
 import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {PatternFill} from '@logisheets_bg'
 export const CANVAS_ID = simpleUuid()
+const BUFFER_SIZE = 200
 
 export class Render {
     constructor(public readonly store: CanvasStore) {
@@ -18,16 +19,26 @@ export class Render {
     }
 
     render() {
-        this._painterService.setupCanvas(this.canvas)
-        this._painterService.clear()
         const rect = this.canvas.getBoundingClientRect()
-        this.store.dataSvc.setWindowSize(rect.height, rect.width)
-        this.store.dataSvc.getCellViewData()
-        this._renderGrid()
-        this._renderContent()
-        this._renderLeftHeader()
-        this._renderTopHeader()
-        this._renderLeftTop()
+        const resp = this.store.dataSvc.getCellView(
+            this.store.currSheetIdx,
+            rect.x - BUFFER_SIZE,
+            rect.y - BUFFER_SIZE,
+            rect.height + BUFFER_SIZE * 3,
+            rect.width + BUFFER_SIZE * 1.5
+        )
+        if (resp.type === CellViewRespType.New) {
+            this._painterService.setupCanvas(this.canvas)
+            this._painterService.clear()
+        }
+        if (resp.type !== CellViewRespType.Existed) {
+            const data = resp.data
+            this._renderGrid(data)
+            this._renderContent(data)
+            this._renderLeftHeader(data)
+            this._renderTopHeader(data)
+            this._renderLeftTop()
+        }
 
         // rerender resizer
         this.store.resizer.init()
@@ -51,50 +62,56 @@ export class Render {
     /**
      * main content + freeze content.
      */
-    private _renderContent() {
-        this.store.dataSvc.getCellViewData().cells.forEach((cell) => {
-            this._painterService.save()
-            this._renderCell(cell)
-            this._painterService.restore()
-        })
-    }
-
-    private _renderLeftHeader() {
+    private _renderContent(data: readonly CellViewData[]) {
         this._painterService.save()
-        this.store.dataSvc.getCellViewData().rows.forEach((r) => {
-            const {startRow, startCol, endRow, endCol} = r.position
-            this._painterService.line([
-                [startCol, startRow],
-                [endCol, startRow],
-                [endCol, endRow],
-                [startCol, endRow],
-            ])
-            const box = new Box()
-            box.position = r.position
-            const attr = new TextAttr()
-            attr.font = SETTINGS.fixedHeader.font
-            const position = (r.coordinate.startRow + 1).toString()
-            this._painterService.text(position, attr, box)
+        data.forEach((d) => {
+            d.cells.forEach((cell) => {
+                this._renderCell(cell)
+            })
         })
         this._painterService.restore()
     }
 
-    private _renderTopHeader() {
+    private _renderLeftHeader(data: readonly CellViewData[]) {
         this._painterService.save()
-        this.store.dataSvc.getCellViewData().cols.forEach((c) => {
-            const {startRow, startCol, endRow, endCol} = c.position
-            this._painterService.line([
-                [endCol, startRow],
-                [endCol, endRow],
-                [startCol, endRow],
-                [startCol, startRow],
-            ])
-            const a1Notation = toA1notation(c.coordinate.startCol)
-            const box = new Box()
-            box.position = c.position
-            const attr = new TextAttr()
-            attr.font = SETTINGS.fixedHeader.font
-            this._painterService.text(a1Notation, attr, box)
+        data.forEach((d) => {
+            d.rows.forEach((r) => {
+                const {startRow, startCol, endRow, endCol} = r.position
+                this._painterService.line([
+                    [startCol, startRow],
+                    [endCol, startRow],
+                    [endCol, endRow],
+                    [startCol, endRow],
+                ])
+                const box = new Box()
+                box.position = r.position
+                const attr = new TextAttr()
+                attr.font = SETTINGS.fixedHeader.font
+                const position = (r.coordinate.startRow + 1).toString()
+                this._painterService.text(position, attr, box)
+            })
+        })
+        this._painterService.restore()
+    }
+
+    private _renderTopHeader(data: readonly CellViewData[]) {
+        this._painterService.save()
+        data.forEach((d) => {
+            d.cols.forEach((c) => {
+                const {startRow, startCol, endRow, endCol} = c.position
+                this._painterService.line([
+                    [endCol, startRow],
+                    [endCol, endRow],
+                    [startCol, endRow],
+                    [startCol, startRow],
+                ])
+                const a1Notation = toA1notation(c.coordinate.startCol)
+                const box = new Box()
+                box.position = c.position
+                const attr = new TextAttr()
+                attr.font = SETTINGS.fixedHeader.font
+                this._painterService.text(a1Notation, attr, box)
+            })
         })
         this._painterService.restore()
     }
@@ -157,8 +174,7 @@ export class Render {
             ])
     }
 
-    private _renderGrid() {
-        const viewRange = this.store.dataSvc.getCellViewData()
+    private _renderGrid(data: readonly CellViewData[]) {
         const {grid, leftTop} = SETTINGS
         this._painterService.save()
         const attr = new CanvasAttr()
@@ -166,20 +182,24 @@ export class Render {
         this._painterService.attr(attr)
         const rect = this.canvas.getBoundingClientRect()
         if (grid.showHorizontal)
-            viewRange.rows.forEach((r) => {
-                const y = r.position.startRow
-                this._painterService.line([
-                    [leftTop.width, y],
-                    [rect.width, y],
-                ])
+            data.forEach((d) => {
+                d.rows.forEach((r) => {
+                    const y = r.position.startRow
+                    this._painterService.line([
+                        [leftTop.width, y],
+                        [rect.width, y],
+                    ])
+                })
             })
         if (grid.showVertical)
-            viewRange.cols.forEach((c) => {
-                const x = c.position.startCol
-                this._painterService.line([
-                    [x, leftTop.height],
-                    [x, rect.height],
-                ])
+            data.forEach((d) => {
+                d.cols.forEach((c) => {
+                    const x = c.position.startCol
+                    this._painterService.line([
+                        [x, leftTop.height],
+                        [x, rect.height],
+                    ])
+                })
             })
         this._painterService.restore()
     }

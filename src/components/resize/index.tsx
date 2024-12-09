@@ -44,7 +44,7 @@ export const ResizerComponent: FC<ResizerProps> = ({
                     top: type === 'row' ? `${-height / 2}px` : 0,
                     cursor: type === 'row' ? 'row-resize' : 'col-resize',
                 }}
-            ></div>
+            />
             <div
                 className={Styles['hover-text']}
                 style={{
@@ -62,7 +62,7 @@ export const ResizerComponent: FC<ResizerProps> = ({
                     left: `${movingX}px`,
                     top: `${movingY}px`,
                 }}
-            ></div>
+            />
         </div>
     )
 }

@@ -37,7 +37,7 @@ export class Highlights {
     update(text: string) {
         const ranges = getRanges(text)
         const newCells: HighlightCell[] = []
-        const viewRange = this.store.dataSvc.cachedViewRange
+        const viewRange = this.store.getCurrentCellView()
         const find = (cell: HighlightCell) => {
             return this.highlightCells.find((c) => equal(c, cell))
         }
@@ -52,14 +52,16 @@ export class Highlights {
                 colEnd,
                 style: new HighlightCellStyle(),
             }
-            const cell = viewRange.cells.find((c) => {
-                const range = new Range()
-                    .setStartCol(newCell.colStart)
-                    .setStartRow(newCell.rowStart)
-                    .setEndCol(newCell.colEnd ?? newCell.colStart)
-                    .setEndRow(newCell.rowEnd ?? newCell.rowStart)
-                return c.coordinate.cover(range)
-            })
+            const cell = viewRange
+                .flatMap((d) => d.cells)
+                .find((c) => {
+                    const range = new Range()
+                        .setStartCol(newCell.colStart)
+                        .setStartRow(newCell.rowStart)
+                        .setEndCol(newCell.colEnd ?? newCell.colStart)
+                        .setEndRow(newCell.rowEnd ?? newCell.rowStart)
+                    return c.coordinate.cover(range)
+                })
             if (!cell) return
             const oldCell = find(newCell)
             if (oldCell) newCell.style = oldCell.style

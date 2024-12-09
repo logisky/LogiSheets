@@ -14,18 +14,18 @@ export const RootContainer = () => {
     })
     return (
         <div className={styles.host}>
-            {DEBUG ? <div className="debug-toolbar"></div> : null}
+            {DEBUG ? <div className="debug-toolbar" /> : null}
             <div style={{height: SETTINGS.topBar}}>
-                <TopBar selectedCell={selectedCell}></TopBar>
+                <TopBar selectedCell={selectedCell} />
             </div>
             <div className={styles.content}>
                 <ContentComponent
                     selectedCell$={setSelectedCell}
                     selectedCell={selectedCell}
-                ></ContentComponent>
+                />
             </div>
             <div style={{height: SETTINGS.bottomBar}}>
-                <BottomBarComponent></BottomBarComponent>
+                <BottomBarComponent />
             </div>
         </div>
     )

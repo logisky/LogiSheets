@@ -1,7 +1,7 @@
 import {ChangeEvent, FC, useRef} from 'react'
 import styles from './file.module.scss'
 import {getU8} from '@/core/file'
-import {Backend, SheetService} from '@/core/data'
+import {DataService} from '@/core/data2'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {useToast} from '@/ui/notification/useToast'
@@ -10,8 +10,7 @@ export type FileProps = Record<string, unknown>
 
 export const FileComponent: FC<FileProps> = () => {
     const fileId = useRef(1)
-    const backendSvc = useInjection<Backend>(TYPES.Backend)
-    const dataSvc = useInjection<SheetService>(TYPES.Sheet)
+    const dataSvc = useInjection<DataService>(TYPES.Data)
     const upload = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.item(0)
         if (!file) return

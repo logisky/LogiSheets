@@ -7,6 +7,7 @@ import {
     initWasm,
     DisplayWindowWithStartPoint,
 } from '@logisheets_bg'
+import {Worksheet} from '@logisheets_bg'
 
 @injectable()
 export class WorkbookService {
@@ -15,18 +16,18 @@ export class WorkbookService {
     }
 
     public registryCustomFunc(f: CustomFunc) {
-        this._workbook.registryCustomFunc(f)
+        this.workbook.registryCustomFunc(f)
     }
 
     public registryCellUpdatedCallback(f: () => void) {
-        this._workbook.registerCellUpdatedCallback(f)
+        this.workbook.registerCellUpdatedCallback(f)
     }
 
     public handleTransaction(
         transaction: Transaction,
         undoable: boolean
     ): ActionEffect {
-        return this._workbook.execTransaction(transaction, undoable)
+        return this.workbook.execTransaction(transaction, undoable)
     }
 
     public getDisplayWindow(
@@ -36,7 +37,7 @@ export class WorkbookService {
         height: number,
         width: number
     ): DisplayWindowWithStartPoint {
-        const ws = this._workbook.getWorksheet(sheetIdx)
+        const ws = this.workbook.getWorksheet(sheetIdx)
         return ws.getDisplayWindowWithStartPoint(startX, startY, height, width)
     }
 
@@ -47,32 +48,36 @@ export class WorkbookService {
         height: number,
         width: number
     ): DisplayWindowWithStartPoint {
-        const ws = this._workbook.getWorksheet(sheetIdx)
+        const ws = this.workbook.getWorksheet(sheetIdx)
         return ws.getDisplayWindowWithCellPosition(row, col, height, width)
     }
 
+    public getSheetByIdx(sheetIdx: number): Worksheet {
+        return this.workbook.getWorksheet(sheetIdx)
+    }
+
     public undo() {
-        this._workbook.undo()
+        this.workbook.undo()
         return
     }
 
     public redo() {
-        this._workbook.redo()
+        this.workbook.redo()
     }
 
     public loadWorkbook(content: Uint8Array, name: string) {
-        this._workbook.load(content, name)
+        this.workbook.load(content, name)
     }
 
     private async _init(funcs: readonly CustomFunc[]) {
         await initWasm()
         this._workbookImpl = new Workbook()
         funcs.forEach((f) => {
-            this._workbook.registryCustomFunc(f)
+            this.workbook.registryCustomFunc(f)
         })
     }
 
-    private get _workbook(): Workbook {
+    public get workbook(): Workbook {
         if (!this._workbookImpl) throw Error('')
         return this._workbookImpl
     }

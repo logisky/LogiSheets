@@ -158,7 +158,6 @@ export const getSelector = (
     const selector = new SelectorProps()
     selector.width = width
     selector.height = height
-    // 在单元格内框选
     if (endPos.startRow < startPos.startRow) {
         selector.borderTopWidth = startPos.startRow - endPos.startRow
         selector.y = endPos.startRow
