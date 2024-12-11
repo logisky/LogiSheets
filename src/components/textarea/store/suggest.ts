@@ -1,10 +1,15 @@
-import { action, computed, makeObservable, observable } from "mobx";
-import { TextareaStore } from "./store";
-import { Candidate, SpanItem } from "@/components/suggest";
-import { lcsLenMatch } from "@/core/algo/lcs";
-import { isFormula, Snippet, getAllFormulas, fullFilterSnippet } from "@/core/snippet";
-import { TokenType, SubType } from "@/core/formula";
-import { TokenManager } from "./token";
+import {action, computed, makeObservable, observable} from 'mobx'
+import {TextareaStore} from './store'
+import {Candidate, SpanItem} from '@/components/suggest'
+import {lcsLenMatch} from '@/core/algo/lcs'
+import {
+    isFormula,
+    Snippet,
+    getAllFormulas,
+    fullFilterSnippet,
+} from '@/core/snippet'
+import {TokenType, SubType} from '@/core/formula'
+import {TokenManager} from './token'
 
 export class Suggest {
     constructor(public readonly store: TextareaStore) {
@@ -18,7 +23,8 @@ export class Suggest {
     set activeCandidate(active: number) {
         let _active = active
         if (_active < 0) _active = 0
-        if (_active >= this.candidates.length - 1) _active = this.candidates.length - 1
+        if (_active >= this.candidates.length - 1)
+            _active = this.candidates.length - 1
         this._activeCandidate = _active
     }
     @observable
@@ -27,9 +33,8 @@ export class Suggest {
     @observable
     candidates: Candidate[] = []
 
-
     @action
-    onType ()  {
+    onType() {
         this.onTrigger(this.store.textManager.getPlainText())
     }
 
@@ -53,14 +58,17 @@ export class Suggest {
     private replaceRange?: {start: number; count: number}
 
     @action
-    private onTrigger (text: string) {
+    private onTrigger(text: string) {
         if (!shouldShowSuggest(text)) {
             this.showSuggest = false
             return
         }
         this.replaceRange = undefined
         const cursor = this.store.cursor.cursorPosition
-        const tokenIndex = this._tokenManager.getTokenIndexByCursor(cursor, text)
+        const tokenIndex = this._tokenManager.getTokenIndexByCursor(
+            cursor,
+            text
+        )
         const token = this._tokenManager.getToken(tokenIndex)
         const newCandidates: Candidate[] = []
         if (!token) {
@@ -71,7 +79,7 @@ export class Suggest {
         if (this._tokenManager.isFunctionStart(token)) {
             const candidates = fuzzyFilterFormula(token.value)
             if (candidates.length === 0) {
-            this.showSuggest = false
+                this.showSuggest = false
                 return
             }
             this.replaceRange = this._tokenManager.getTokenPosition(token)
@@ -99,7 +107,7 @@ export class Suggest {
             newCandidates.push(...(candidate ? [candidate] : []))
         }
         if (newCandidates.length === 0) {
-                this.showSuggest = false
+            this.showSuggest = false
             return
         }
         this.showSuggest = true

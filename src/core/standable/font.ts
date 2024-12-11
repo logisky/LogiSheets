@@ -3,15 +3,16 @@ import {shallowCopy} from '@/core'
 import {StandardColor} from './color'
 const DEFAULT_FONT_SIZE = 10
 /**
- * https://developer.mozilla.org/zh-CN/docs/Web/CSS/font
- * css font: font-style | font-variant | font-weight | font-size | line-height | font-family
+ * https://developer.mozilla.org/en-US/docs/Web/CSS/font
+ * CSS font: font-style | font-variant | font-weight | font-size | line-height | font-family
  *
- * font-family（字体族）: “Arial”、“Times New Roman”、“宋体”、“黑体”等;
- * font-style（字体样式）: normal（正常）、italic（斜体）或oblique（倾斜）;
- * font-variant (字体变化): normal（正常）或small-caps（小体大写字母）;
- * font-weight (字体浓淡): 是normal（正常）或bold（加粗）。有些浏览器甚至支持采用100到900之间的数字（以百为单位）;
- * font-size（字体大小）: 可通过多种不同单位（比如像素或百分比等）来设置, 如：12xp，12pt，120%，1em
+ * font-family: Specifies the typeface, such as "Arial," "Times New Roman," "SimSun," or "SimHei."
+ * font-style: Defines the style of the font, such as normal (default), italic, or oblique.
+ * font-variant: Controls text transformation; options include normal (default) or small-caps (small uppercase letters).
+ * font-weight: Specifies the weight (thickness) of the font, such as normal (default) or bold. Some browsers support numeric values ranging from 100 to 900 in increments of 100.
+ * font-size: Defines the size of the font, which can be set using various units like pixels, points, percentages, or relative units such as em. Examples: 12px, 12pt, 120%, 1em.
  */
+
 export type FontSizeUnit = 'px' | 'pt'
 export class StandardFont implements Font {
     static from(font: Font): StandardFont {
@@ -19,7 +20,6 @@ export class StandardFont implements Font {
         if (font.color === null) f.standardColor = StandardColor.from(0, 0, 0)
         else f.standardColor = StandardColor.fromCtColor(font.color)
         shallowCopy(font, f)
-        // ooxml标准存的是pt
         f.fontSizeUnit = 'pt'
         if (font.sz === 0) {
             f.fontSizeUnit = 'px'

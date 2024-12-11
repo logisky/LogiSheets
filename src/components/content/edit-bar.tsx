@@ -1,11 +1,12 @@
 import {SelectedCell} from '@/components/canvas'
 import {toA1notation, parseA1notation} from '@/core'
-import {CellInputBuilder} from '@logisheets_bg'
+import {CellInputBuilder, Transaction} from '@logisheets_bg'
 import {FC, useEffect, useState} from 'react'
 import styles from './edit-bar.module.scss'
 import {useInjection} from '@/core/ioc/provider'
-import {Backend, SheetService} from '@/core/data'
+import {DataService} from '@/core/data2'
 import {TYPES} from '@/core/ioc/types'
+import {isErrorMessage} from 'packages/web/src/api/utils'
 export interface EditBarProps {
     selectedCell: SelectedCell
     selectedCell$: (e: SelectedCell) => void
@@ -15,27 +16,27 @@ export const EditBarComponent: FC<EditBarProps> = ({
     selectedCell,
     selectedCell$,
 }) => {
-    const sheetSvc = useInjection<SheetService>(TYPES.Sheet)
-    const backendSvc = useInjection<Backend>(TYPES.Backend)
+    const dataSvc = useInjection<DataService>(TYPES.Data)
     const [coordinate, setCoordinate] = useState('')
     const [formula, setFormula] = useState('')
     useEffect(() => {
         const {row, col} = selectedCell
         const notation = toA1notation(selectedCell.col)
         setCoordinate(`${notation}${row + 1}`)
-        const cell = sheetSvc.getCell(row, col)
-        if (cell === undefined) return
-        if (cell.formula === '') setFormula(cell.getText())
-        else setFormula(cell.getFormular())
+        const sheet = dataSvc.getActiveSheet()
+        const cell = sheet.getCell(row, col)
+        if (isErrorMessage(cell)) return
+        if (cell.getFormula() === '') setFormula(cell.getText())
+        else setFormula(cell.getFormula())
     }, [selectedCell])
     const formulaTextChange = (newText: string) => {
         const payload = new CellInputBuilder()
-            .sheetIdx(sheetSvc.getActiveSheet())
+            .sheetIdx(dataSvc.getCurrentSheetIdx())
             .row(selectedCell.row)
             .col(selectedCell.col)
             .input(newText)
             .build()
-        backendSvc.sendTransaction([payload], true)
+        dataSvc.handleTransaction(new Transaction([payload], true))
     }
     const locationChange = (newText: string) => {
         const result = parseA1notation(newText)
@@ -52,13 +53,13 @@ export const EditBarComponent: FC<EditBarProps> = ({
                 className={styles.a1notation}
                 defaultValue={coordinate}
                 onBlur={(e) => locationChange(e.target.value)}
-            ></input>
-            <div className={styles.middle}></div>
+            />
+            <div className={styles.middle} />
             <input
                 className={styles.formula}
                 onChange={(e) => formulaTextChange(e.target.value)}
                 value={formula}
-            ></input>
+            />
         </div>
     )
 }

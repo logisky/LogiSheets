@@ -22,7 +22,8 @@ import {
     Value,
 } from '../bindings'
 import {CellInfo} from '../bindings/cell_info'
-import {Result} from './utils'
+import {Cell} from './cell'
+import {isErrorMessage, Result} from './utils'
 
 export class Worksheet {
     public constructor(id: number, idx: number) {
@@ -98,13 +99,17 @@ export class Worksheet {
         return get_col_info(this._id, this._sheetIdx, colIdx) as Result<ColInfo>
     }
 
-    public getCellInfo(rowIdx: number, colIdx: number): Result<CellInfo> {
-        return get_cell_info(
+    public getCell(rowIdx: number, colIdx: number): Result<Cell> {
+        const cellInfo = get_cell_info(
             this._id,
             this._sheetIdx,
             rowIdx,
             colIdx
         ) as Result<CellInfo>
+        if (isErrorMessage(cellInfo)) {
+            return cellInfo
+        }
+        return new Cell(cellInfo)
     }
 
     public getFormula(rowIdx: number, colIdx: number): Result<string> {

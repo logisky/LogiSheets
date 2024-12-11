@@ -67,12 +67,12 @@ export class Workbook {
         return get_all_sheet_info(this._id)
     }
 
-    public execTransaction(tx: Transaction, undoable: boolean): ActionEffect {
+    public execTransaction(tx: Transaction): ActionEffect {
         transaction_start(this._id)
         tx.payloads.forEach((p: Payload) => {
             this._addPayload(p)
         })
-        const result = transaction_end(this._id, undoable) as ActionEffect
+        const result = transaction_end(this._id, tx.undoable) as ActionEffect
         if (result.asyncTasks.length > 0) {
             const asyncResult = this._calculator.calc(result.asyncTasks)
             asyncResult.then((result) => {

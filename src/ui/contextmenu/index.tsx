@@ -1,5 +1,5 @@
-import { CSSProperties, MouseEvent } from 'react'
-import { DialogComponent, DialogProps } from '@/ui/dialog'
+import {CSSProperties, MouseEvent} from 'react'
+import {DialogComponent, DialogProps} from '@/ui/dialog'
 import './contextmenu.scss'
 export interface ContextMenuProps extends DialogProps {
     items: readonly ContextMenuItem[]
@@ -10,7 +10,7 @@ export interface ContextMenuProps extends DialogProps {
 }
 
 export const ContextMenuComponent = (props: ContextMenuProps) => {
-    const { items, mouseevent, close$ } = props
+    const {items, mouseevent, close$} = props
     const contentStyle: CSSProperties = {
         ...props.style?.content,
         left: mouseevent?.clientX,
@@ -21,10 +21,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
         close$?.()
     }
     return (
-        <DialogComponent
-            {...props}
-            style={{ content: contentStyle }}
-        >
+        <DialogComponent {...props} style={{content: contentStyle}}>
             <div>
                 {items.map((item, key) => {
                     switch (item.type) {
@@ -39,9 +36,9 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                                 </div>
                             )
                         case 'divider':
-                            return <div className="divider" key={key}></div>
+                            return <div className="divider" key={key} />
                         default:
-                            return <div key={key}></div>
+                            return <div key={key} />
                     }
                 })}
             </div>
@@ -53,5 +50,5 @@ export class ContextMenuItem {
     public type: ContextMenuType = 'text'
     public text = ''
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    public click: () => void = () => { }
+    public click: () => void = () => {}
 }

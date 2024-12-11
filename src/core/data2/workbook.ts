@@ -23,11 +23,8 @@ export class WorkbookService {
         this.workbook.registerCellUpdatedCallback(f)
     }
 
-    public handleTransaction(
-        transaction: Transaction,
-        undoable: boolean
-    ): ActionEffect {
-        return this.workbook.execTransaction(transaction, undoable)
+    public handleTransaction(transaction: Transaction): ActionEffect {
+        return this.workbook.execTransaction(transaction)
     }
 
     public getDisplayWindow(
@@ -66,7 +63,10 @@ export class WorkbookService {
     }
 
     public loadWorkbook(content: Uint8Array, name: string) {
-        this.workbook.load(content, name)
+        const result = this.workbook.load(content, name)
+        if (result != 0) {
+            throw Error('error opening file')
+        }
     }
 
     private async _init(funcs: readonly CustomFunc[]) {

@@ -1,7 +1,11 @@
-import {SheetRenameBuilder, DeleteSheetBuilder} from '@logisheets_bg'
+import {
+    SheetRenameBuilder,
+    DeleteSheetBuilder,
+    Transaction,
+} from '@logisheets_bg'
 import {useState} from 'react'
 import Modal from 'react-modal'
-import {Backend} from '@/core/data'
+import {DataService} from '@/core/data2'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 
@@ -17,7 +21,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
     const [renameIsOpen, setRenameIsOpen] = useState(false)
     const oldName = sheetnames[index]
     const [sheetName, setSheetName] = useState(oldName)
-    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Sheet)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const openRename = () => {
         setRenameIsOpen(true)
         setIsOpen(false)
@@ -28,12 +32,12 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
             .oldName(oldName)
             .newName(sheetName)
             .build()
-        BACKEND_SERVICE.sendTransaction([sheetRename])
+        DATA_SERVICE.handleTransaction(new Transaction([sheetRename], true))
     }
 
     const deleteSheet = () => {
         const payload = new DeleteSheetBuilder().sheetIdx(index).build()
-        BACKEND_SERVICE.sendTransaction([payload])
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
     return (
         <div>

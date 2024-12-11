@@ -10,17 +10,19 @@ vi.mock('@/core/standable', async (asyncImport) => {
             }
             measureText() {
                 return {
-                    width: 1
+                    width: 1,
                 }
             }
-        }
+        },
     }
 })
 
 describe('text test', () => {
     let manager: TextManager
     beforeEach(() => {
-        manager = new TextManager({context: {text: '1234', eof: '\n', lineHeight: () => 1}})
+        manager = new TextManager({
+            context: {text: '1234', eof: '\n', lineHeight: () => 1},
+        })
         vi.spyOn(manager, 'drawText').mockImplementation(() => {})
     })
     test('remove one item', () => {

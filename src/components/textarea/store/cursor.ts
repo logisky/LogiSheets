@@ -1,8 +1,8 @@
-import { action, computed, makeObservable, observable } from 'mobx'
-import { Text } from '../defs'
-import { BaseInfo } from '../cursor'
-import type { TextareaStore } from './store'
-import { Subject } from 'rxjs'
+import {action, computed, makeObservable, observable} from 'mobx'
+import {Text} from '../defs'
+import {BaseInfo} from '../cursor'
+import type {TextareaStore} from './store'
+import {Subject} from 'rxjs'
 
 export class Cursor {
     constructor(public readonly store: TextareaStore) {
@@ -13,7 +13,7 @@ export class Cursor {
     compositionStart = -1
 
     @computed
-    get cursorPosition () {
+    get cursorPosition() {
         return this._getCursorInOneLine()
     }
 
@@ -46,7 +46,7 @@ export class Cursor {
      * update it by this.updatePostion
      */
     column = 0
-    toBaseInfo () {
+    toBaseInfo() {
         return new BaseInfo()
             .setColumn(this.column)
             .setLineNumber(this.lineNumber)
@@ -54,28 +54,29 @@ export class Cursor {
             .setY(this.y)
     }
 
-
     @action
-    focus () {
+    focus() {
         this.updatePosition(0)
         this.showCursor = true
     }
 
     @action
-    blur () {
+    blur() {
         this.showCursor = false
     }
 
     @action
-    type (added: readonly Text[], removed: readonly Text[]) {
+    type(added: readonly Text[], removed: readonly Text[]) {
         let currPosition = this.cursorPosition
         if (this.store.selection?.selection) {
-            const {startColumn, startLine, startX, startY} = this.store.selection.selection
-            this._updateByCursorInfo(new BaseInfo()
-                .setColumn(startColumn)
-                .setLineNumber(startLine)
-                .setX(startX)
-                .setY(startY)
+            const {startColumn, startLine, startX, startY} =
+                this.store.selection.selection
+            this._updateByCursorInfo(
+                new BaseInfo()
+                    .setColumn(startColumn)
+                    .setLineNumber(startLine)
+                    .setX(startX)
+                    .setY(startY)
             )
             return
         } else currPosition -= removed.length
@@ -84,20 +85,20 @@ export class Cursor {
     }
 
     @action
-    mousedown (e: MouseEvent) {
+    mousedown(e: MouseEvent) {
         const [x, y] = this.store.context.getOffset(e.clientX, e.clientY)
         const cursor = this.getCursorInfoByPosition(x, y)
         this._updateByCursorInfo(cursor)
     }
 
     @action
-    updatePosition (cursorPosition: number) {
+    updatePosition(cursorPosition: number) {
         const info = this.getCursorInfoByOneLineCoordinate(cursorPosition)
         this._updateByCursorInfo(info)
     }
 
     @action
-    updateTwoDimensionalPosition (line: number, column: number) {
+    updateTwoDimensionalPosition(line: number, column: number) {
         const baseInfo = new BaseInfo()
 
         const texts = this.store.textManager.getTwoDimensionalTexts()
@@ -109,7 +110,11 @@ export class Cursor {
                 continue
             }
             baseInfo.setColumn(Math.min(t.length, column))
-            baseInfo.setX(t.slice(0, baseInfo.column).reduce((pre, cur) => pre + cur.width(), 0))
+            baseInfo.setX(
+                t
+                    .slice(0, baseInfo.column)
+                    .reduce((pre, cur) => pre + cur.width(), 0)
+            )
         }
         baseInfo.setY(baseInfo.lineNumber * this.store.context.lineHeight())
 
@@ -120,14 +125,15 @@ export class Cursor {
      * @param offsetX -1 represent the last column of current line
      * @param offsetY -1 represent the last line
      */
-    getCursorInfoByPosition (offsetX: number, offsetY: number) {
+    getCursorInfoByPosition(offsetX: number, offsetY: number) {
         const baseHeight = this.store.context.lineHeight()
         const lineNumber = Math.floor(offsetY / baseHeight)
-        const baseInfo = new BaseInfo().setLineNumber(lineNumber).setY(lineNumber * baseHeight)
+        const baseInfo = new BaseInfo()
+            .setLineNumber(lineNumber)
+            .setY(lineNumber * baseHeight)
         const texts = this.store.textManager.getTwoDimensionalTexts()
         if (texts.length === 0) return baseInfo
-        if (offsetY === -1)
-            baseInfo.setY((texts.length - 1) * baseHeight)
+        if (offsetY === -1) baseInfo.setY((texts.length - 1) * baseHeight)
         let currLineTexts = texts[lineNumber]
         if (currLineTexts === undefined) {
             const l = texts.length - 1
@@ -159,13 +165,11 @@ export class Cursor {
             x += t.width()
             column = i + 1
         }
-        return baseInfo
-            .setColumn(column)
-            .setX(x)
+        return baseInfo.setColumn(column).setX(x)
     }
 
     @action
-    private _updateByCursorInfo (info: BaseInfo) {
+    private _updateByCursorInfo(info: BaseInfo) {
         this.x = info.x
         this.y = info.y
         this.lineNumber = info.lineNumber
@@ -173,7 +177,7 @@ export class Cursor {
         this.cursor$.next(undefined)
     }
 
-    private _getCursorInfoByCoordinate (line: number, column: number) {
+    private _getCursorInfoByCoordinate(line: number, column: number) {
         const texts = this.store.textManager.getTwoDimensionalTexts()
         const baseInfo = new BaseInfo()
             .setColumn(column)
@@ -187,7 +191,7 @@ export class Cursor {
         return baseInfo
     }
 
-    private _getCursorInOneLine () {
+    private _getCursorInOneLine() {
         let result = 0
         let line = 0
         const texts = this.store.textManager.texts
@@ -198,12 +202,12 @@ export class Cursor {
                 break
             } else {
                 result += 1
-                line += (t.isEof ? 1 : 0)
+                line += t.isEof ? 1 : 0
             }
         }
         return result
     }
-    private getCursorInfoByOneLineCoordinate (cursor: number) {
+    private getCursorInfoByOneLineCoordinate(cursor: number) {
         const baseInfo = new BaseInfo()
         const texts = this.store.textManager.texts
         for (let i = 0; i < texts.length; i++) {
@@ -223,5 +227,4 @@ export class Cursor {
         }
         return baseInfo
     }
-
 }

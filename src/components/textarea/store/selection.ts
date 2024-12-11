@@ -1,7 +1,7 @@
-import { makeObservable, observable } from "mobx";
-import { TextareaStore } from "./store";
-import { CanvasAttr, PainterService } from "@/core/painter";
-import { BaseInfo } from "../cursor";
+import {makeObservable} from 'mobx'
+import {TextareaStore} from './store'
+import {CanvasAttr, PainterService} from '@/core/painter'
+import {BaseInfo} from '../cursor'
 
 export class Selection {
     constructor(public readonly store: TextareaStore) {
@@ -55,7 +55,7 @@ export class Selection {
         this._drawSelection()
     }
 
-    private _drawSelection ()  {
+    private _drawSelection() {
         if (this.selection === undefined) return
         const [totalWidth, totalHeight] = this.store.textManager.getNewSize()
         this._painterSvc.setupCanvas(undefined, totalWidth, totalHeight)
@@ -85,8 +85,6 @@ export class Selection {
         }
         this._painterSvc.restore()
     }
-
-
 
     private _painterSvc = new PainterService()
 }

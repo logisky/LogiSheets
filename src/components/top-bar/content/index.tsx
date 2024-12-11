@@ -2,10 +2,11 @@ import {SelectedCell} from '@/components/canvas'
 import {ColorResult, SketchPicker} from 'react-color'
 import styles from './start.module.scss'
 import {useEffect, useState} from 'react'
-import {StandardColor} from '@/core/standable'
+import {StandardColor, StandardFont} from '@/core/standable'
 import {DataService} from '@/core/data2'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
+import {isErrorMessage} from 'packages/web/src/api/utils'
 
 export * from './font-size'
 export * from './start-item'
@@ -61,9 +62,12 @@ export const StartComponent = ({selectedCell}: StartProps) => {
     const _initStyle = () => {
         if (!selectedCell) return
         const {row, col} = selectedCell
-        const style = DATA_SERVICE.getCell(row, col)?.style
-        if (style === undefined) return
-        const font = style.getFont()
+        const sheet = DATA_SERVICE.getActiveSheet()
+        const cellInfo = sheet.getCellInfo(row, col)
+        if (isErrorMessage(cellInfo)) return
+        const style = cellInfo?.style
+        if (!style) return
+        const font = style.font as StandardFont
         setFontColor(font.standardColor.css())
     }
 

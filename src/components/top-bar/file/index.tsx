@@ -21,15 +21,7 @@ export const FileComponent: FC<FileProps> = () => {
                         reject('read file error')
                         return
                     }
-                    dataSvc.clearAllData()
-                    backendSvc.send({
-                        $case: 'openFile',
-                        openFile: {
-                            content: u8,
-                            fileId: `${fileId.current++}`,
-                            name: file.name,
-                        },
-                    })
+                    dataSvc.loadWorkbook(u8, file.name)
                     resolve('')
                 },
                 (err) => {

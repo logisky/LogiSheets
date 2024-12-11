@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class Context<T = any> {
     public text = ''
     public eof = '\n'

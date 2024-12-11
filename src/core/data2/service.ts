@@ -3,9 +3,15 @@ import {getID} from '../ioc/id'
 import {TYPES} from '../ioc/types'
 import {WorkbookService} from './workbook'
 import {RenderCell} from './render'
-import {ActionEffect, CustomFunc, Transaction, Workbook} from '@logisheets_bg'
+import {
+    ActionEffect,
+    CustomFunc,
+    Transaction,
+    Workbook,
+    Worksheet,
+    DisplayWindowWithStartPoint,
+} from '@logisheets_bg'
 import {Range} from '@/core/standable'
-import {DisplayWindowWithStartPoint} from '@logisheets_bg'
 import {CellViewResponse, ViewManager} from './view_manager'
 import {CellViewData} from './types'
 
@@ -20,6 +26,8 @@ export interface DataService {
     redo: () => void
 
     getWorkbook: () => Workbook
+    loadWorkbook: (buf: Uint8Array, name: string) => void
+    getActiveSheet: () => Worksheet
 
     getCellView: (
         sheetIdx: number,
@@ -38,6 +46,9 @@ export interface DataService {
     ) => CellViewResponse
 
     getCurrentCellView: (sheetIdx: number) => readonly CellViewData[]
+
+    getCurrentSheetIdx: () => number
+    setCurrentSheetIDx: (idx: number) => void
 }
 
 @injectable()
@@ -46,6 +57,25 @@ export class DataServiceImpl implements DataService {
     constructor(@inject(TYPES.Data) private _workbook: WorkbookService) {
         this._init()
     }
+
+    public loadWorkbook(buf: Uint8Array, name: string): void {
+        this._workbook.loadWorkbook(buf, name)
+        this._sheetIdx = 0
+        this._cellViews = new Map()
+    }
+
+    public getActiveSheet(): Worksheet {
+        return this._workbook.getSheetByIdx(this._sheetIdx)
+    }
+
+    public getCurrentSheetIdx(): number {
+        return this._sheetIdx
+    }
+
+    public setCurrentSheetIDx(idx: number): void {
+        this._sheetIdx = idx
+    }
+
     public getWorkbook(): Workbook {
         return this._workbook.workbook
     }
@@ -59,7 +89,7 @@ export class DataServiceImpl implements DataService {
     }
 
     public handleTransaction(transaction: Transaction): ActionEffect {
-        return this._workbook.handleTransaction(transaction, true)
+        return this._workbook.handleTransaction(transaction)
     }
 
     public undo(): void {
@@ -117,6 +147,8 @@ export class DataServiceImpl implements DataService {
         })
     }
     private _cellViews: Map<number, ViewManager> = new Map()
+
+    private _sheetIdx = 0
 }
 
 export function parseDisplayWindow(
