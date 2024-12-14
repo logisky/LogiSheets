@@ -7,7 +7,7 @@ import {
     SetColWidthBuilder,
     SetRowHeightBuilder,
     Transaction,
-} from '@logisheets_bg'
+} from 'logisheets-web'
 import {getOffset} from '../defs'
 import {isErrorMessage} from 'packages/web/src/api/utils'
 

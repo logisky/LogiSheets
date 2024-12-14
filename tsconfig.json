@@ -23,7 +23,6 @@
     "types": ["reflect-metadata", "vitest/globals", "node"],
     "paths": {
       "@/*": ["src/*"],
-      "@logisheets_bg": ["packages/web"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -36,9 +35,6 @@
       "module": "CommonJS"
     }
   },
-  "files": [
-    "src/global.d.ts"
-  ],
   "include": [
     "src/**/*.tsx",
     "src/**/*.ts",

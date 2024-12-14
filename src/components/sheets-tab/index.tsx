@@ -1,18 +1,22 @@
 import {useState, FC, useEffect} from 'react'
 import styles from './sheets-tab.module.scss'
 import {ContextMenuComponent} from './contextmenu'
-import {DeleteSheetBuilder, InsertSheetBuilder} from '@logisheets_bg'
+import {
+    DeleteSheetBuilder,
+    InsertSheetBuilder,
+    Transaction,
+} from 'logisheets-web'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {Tabs, Dropdown} from 'antd'
+import {Tabs} from 'antd'
 import {Subscription} from 'rxjs'
 import {DataService} from '@/core/data2'
 
 export type SheetsTabprops = Record<string, unknown>
 
 export const SheetsTabComponent: FC<SheetsTabprops> = () => {
-    const DATASERVICE = useInjection<DataService>(TYPES.Data)
-    const getSheets = () => DATASERVICE.getSheets().map((s) => s.name)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const getSheets = () => DATA_SERVICE.getAllSheetInfo().map((s) => s.name)
     const [sheets, setSheets] = useState(getSheets())
     const [active, setActive] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
@@ -20,7 +24,7 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
     useEffect(() => {
         const subs = new Subscription()
         subs.add(
-            DATASERVICE.render$.subscribe(() => {
+            DATA_SERVICE.registrySheetUpdatedCallback(() => {
                 setSheets(getSheets())
             })
         )
@@ -32,17 +36,17 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
     const onTabChange = (key: string) => {
         const i = sheets.findIndex((s) => s === key)
         setActive(i)
-        SHEET_SERVICE.setActiveSheet(i)
+        DATA_SERVICE.setCurrentSheetIDx(i)
     }
 
     const add = () => {
         const payload = new InsertSheetBuilder().sheetIdx(active).build()
-        DATASERVICE.sendTransaction([payload])
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
     const onDelete = (i: number) => {
         const payload = new DeleteSheetBuilder().sheetIdx(i).build()
-        DATASERVICE.sendTransaction([payload])
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
     return (
         <div className={styles['host']}>
@@ -72,7 +76,9 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
                         const payload = new InsertSheetBuilder()
                             .sheetIdx(sheets.length)
                             .build()
-                        DATASERVICE.sendTransaction([payload])
+                        DATA_SERVICE.handleTransaction(
+                            new Transaction([payload], true)
+                        )
                     } else if (action === 'remove') {
                         if (typeof e !== 'string') return
                         const i = sheets.findIndex((s) => s === e)

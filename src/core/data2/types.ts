@@ -1,5 +1,5 @@
 import {RenderCell} from './render'
-import {Comment} from '@logisheets_bg'
+import {Comment} from 'logisheets-web'
 
 export class CellViewData {
     public fromRow = 0

@@ -1,6 +1,6 @@
 import {SelectedCell} from '@/components/canvas'
 import {toA1notation, parseA1notation} from '@/core'
-import {CellInputBuilder, Transaction} from '@logisheets_bg'
+import {CellInputBuilder, Transaction} from 'logisheets-web'
 import {FC, useEffect, useState} from 'react'
 import styles from './edit-bar.module.scss'
 import {useInjection} from '@/core/ioc/provider'

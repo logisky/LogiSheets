@@ -1,4 +1,4 @@
-import {Style} from '@logisheets_bg'
+import {Style} from 'logisheets-web'
 import {StandardValue} from './value'
 import {format} from 'ssf'
 import {StandardStyle} from './style'

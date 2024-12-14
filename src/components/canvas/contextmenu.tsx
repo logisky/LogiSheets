@@ -15,9 +15,10 @@ import {
     DeleteBlockRowsBuilder,
     DeleteRowsBuilder,
     CreateBlockBuilder,
-} from '@logisheets_bg'
+    Transaction,
+} from 'logisheets-web'
 import {TYPES} from '@/core/ioc/types'
-import {Backend, SheetService} from '@/core/data'
+import {DataService} from '@/core/data2'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent
@@ -30,8 +31,7 @@ export interface ContextmenuProps {
 export const ContextmenuComponent = (props: ContextmenuProps) => {
     const {mouseevent, startCell, isOpen, setIsOpen, endCell} = props
     const [blockMenuOpened, setBlockMenuOpened] = useState(false)
-    const BACKEND_SERVICE = useInjection<Backend>(TYPES.Backend)
-    const SHEET_SERVICE = useInjection<SheetService>(TYPES.Sheet)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     let selectBlock: ReactElement | undefined
     const _blockProcess = (
         blocks: readonly StandardBlock[],
@@ -40,7 +40,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const close$ = (blks: readonly StandardBlock[]) => {
             setIsOpen(false)
             setBlockMenuOpened(false)
-            BACKEND_SERVICE.sendTransaction(cb(blks))
+            DATA_SERVICE.handleTransaction(new Transaction(cb(blks), true))
         }
         selectBlock = (
             <div>
@@ -54,7 +54,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         setBlockMenuOpened(true)
     }
     const _addCol = () => {
-        const sheet = SHEET_SERVICE.getActiveSheet()
+        const sheet = DATA_SERVICE.getCurrentSheetIdx()
         const {
             coordinate: {startCol: start},
         } = startCell
@@ -78,14 +78,14 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .start(start)
             .cnt(1)
             .build()
-        BACKEND_SERVICE.sendTransaction([payload])
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
     const _removeCol = () => {
         const {
             coordinate: {startCol: start},
         } = startCell
-        const sheet = SHEET_SERVICE.getActiveSheet()
+        const sheet = DATA_SERVICE.getCurrentSheetIdx()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
@@ -106,14 +106,14 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .cnt(1)
             .start(start)
             .build()
-        BACKEND_SERVICE.sendTransaction([payload])
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
     const _addRow = () => {
         const {
             coordinate: {startRow: start},
         } = startCell
-        const sheet = SHEET_SERVICE.getActiveSheet()
+        const sheet = DATA_SERVICE.getCurrentSheetIdx()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
@@ -133,14 +133,14 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .start(start)
             .cnt(1)
             .build()
-        BACKEND_SERVICE.sendTransaction([payload])
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
     const _removeRow = () => {
         const {
             coordinate: {startRow: start},
         } = startCell
-        const sheet = SHEET_SERVICE.getActiveSheet()
+        const sheet = DATA_SERVICE.getCurrentSheetIdx()
         const blocks = _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
@@ -160,7 +160,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
             .cnt(1)
             .start(start)
             .build()
-        BACKEND_SERVICE.sendTransaction([payload])
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
     const _addBlock = () => {
@@ -169,13 +169,13 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const end = endCellTruthy.coordinate
         const payload = new CreateBlockBuilder()
             .blockId(1)
-            .sheetIdx(SHEET_SERVICE.getActiveSheet())
+            .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
             .rowCnt(Math.abs(end.endRow - start.startRow) + 1)
             .colCnt(Math.abs(end.endCol - start.startCol) + 1)
             .masterRow(Math.min(start.startRow, end.startRow))
             .masterCol(Math.min(start.startCol, end.startCol))
             .build()
-        BACKEND_SERVICE.sendTransaction([payload])
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
     const _checkBlock = () => {

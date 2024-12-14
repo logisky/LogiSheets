@@ -52,9 +52,6 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
                 publicPath: path.join(__dirname, 'dist'),
                 template: path.resolve(__dirname, 'public/index.html'),
             }),
-            new DefinePlugin({
-                STAND_ALONE: standAlone,
-            }),
             // https://rustwasm.github.io/wasm-pack/book/commands/build.html
             // new WasmPackPlugin({
             // 	crateDirectory: path.resolve(__dirname, 'src/wasms/server'),

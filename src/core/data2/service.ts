@@ -10,7 +10,8 @@ import {
     Workbook,
     Worksheet,
     DisplayWindowWithStartPoint,
-} from '@logisheets_bg'
+    SheetInfo,
+} from 'logisheets-web'
 import {Range} from '@/core/standable'
 import {CellViewResponse, ViewManager} from './view_manager'
 import {CellViewData} from './types'
@@ -21,6 +22,7 @@ export const CANVAS_OFFSET = 100
 export interface DataService {
     registryCustomFunc: (f: CustomFunc) => void
     registryCellUpdatedCallback: (f: () => void) => void
+    registrySheetUpdatedCallback: (f: () => void) => void
     handleTransaction: (t: Transaction) => ActionEffect
     undo: () => void
     redo: () => void
@@ -49,6 +51,8 @@ export interface DataService {
 
     getCurrentSheetIdx: () => number
     setCurrentSheetIDx: (idx: number) => void
+
+    getAllSheetInfo: () => readonly SheetInfo[]
 }
 
 @injectable()
@@ -56,6 +60,14 @@ export class DataServiceImpl implements DataService {
     readonly id = getID()
     constructor(@inject(TYPES.Data) private _workbook: WorkbookService) {
         this._init()
+    }
+
+    public registrySheetUpdatedCallback(f: () => void): void {
+        return this._workbook.registrySheetUpdatedCallback(f)
+    }
+
+    public getAllSheetInfo(): readonly SheetInfo[] {
+        return this._workbook.getAllSheetInfo()
     }
 
     public loadWorkbook(buf: Uint8Array, name: string): void {

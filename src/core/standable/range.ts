@@ -1,4 +1,4 @@
-import {MergeCell} from '@logisheets_bg'
+import {MergeCell} from 'logisheets-web'
 export class Range {
     static fromMergeCell(mergeCell: MergeCell) {
         return new Range()

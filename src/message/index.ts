@@ -3,7 +3,7 @@ import {
     DisplayRequest,
     DisplayResponse,
     Transaction,
-} from '@logisheets_bg'
+} from 'logisheets-web'
 export type ClientRequest =
     | {$case: 'transaction'; transaction: Transaction}
     | {$case: 'history'; undo: boolean}

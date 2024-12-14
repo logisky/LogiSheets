@@ -2,12 +2,13 @@ import {injectable} from 'inversify'
 import {
     ActionEffect,
     CustomFunc,
+    DisplayWindowWithStartPoint,
     Transaction,
     Workbook,
+    Worksheet,
+    SheetInfo,
     initWasm,
-    DisplayWindowWithStartPoint,
-} from '@logisheets_bg'
-import {Worksheet} from '@logisheets_bg'
+} from 'logisheets-web'
 
 @injectable()
 export class WorkbookService {
@@ -23,8 +24,16 @@ export class WorkbookService {
         this.workbook.registerCellUpdatedCallback(f)
     }
 
+    public registrySheetUpdatedCallback(f: () => void) {
+        this.workbook.registerSheetInfoUpdateCallback(f)
+    }
+
     public handleTransaction(transaction: Transaction): ActionEffect {
         return this.workbook.execTransaction(transaction)
+    }
+
+    public getAllSheetInfo(): readonly SheetInfo[] {
+        return this.workbook.getAllSheetInfo()
     }
 
     public getDisplayWindow(
