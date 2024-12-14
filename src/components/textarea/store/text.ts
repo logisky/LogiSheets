@@ -12,7 +12,10 @@ export interface ITwoDimensionalInfo {
 
 export class TextManager {
     constructor(public readonly store: TextareaStore) {
-        this._texts = Texts.from(this.store.context.text, this.store.context.eof)
+        this._texts = Texts.from(
+            this.store.context.text,
+            this.store.context.eof
+        )
     }
     get texts() {
         return this._texts.texts
@@ -60,7 +63,8 @@ export class TextManager {
                             .setEndRow(y + baseHeight)
                             .setStartCol(x)
                             .setEndCol(x)
-                    ))
+                    )
+                )
             } else {
                 x += text.width()
             }
@@ -120,7 +124,7 @@ export class TextManager {
             startLine: l,
             endLine: l,
             startColumn: c,
-            endColumn: c
+            endColumn: c,
         })
         this._texts.add(newTexts, start)
         this.drawText()
@@ -131,7 +135,9 @@ export class TextManager {
     private _texts = new Texts()
     private _history = new History()
     private _painterSvc = new PainterService()
-    private _twoDimensionalToOneDimensinal(props: ITwoDimensionalInfo): readonly [start: number, end: number] {
+    private _twoDimensionalToOneDimensinal(
+        props: ITwoDimensionalInfo
+    ): readonly [start: number, end: number] {
         const {startColumn, startLine, endColumn, endLine} = props
         const texts = this.getTwoDimensionalTexts()
         if (texts.length === 0) return [0, 0]

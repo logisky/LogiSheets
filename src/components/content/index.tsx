@@ -18,16 +18,16 @@ export const ContentComponent: FC<ContentProps> = ({
             <EditBarComponent
                 selectedCell={selectedCell}
                 selectedCell$={selectedCell$}
-            ></EditBarComponent>
+            />
             <div className={styles.middle}>
                 <div className={styles.canvas}>
                     <CanvasComponent
                         selectedCell={selectedCell}
                         selectedCell$={selectedCell$}
-                    ></CanvasComponent>
+                    />
                 </div>
             </div>
-            <SheetsTabComponent></SheetsTabComponent>
+            <SheetsTabComponent />
         </div>
     )
 }

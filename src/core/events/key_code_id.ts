@@ -188,8 +188,8 @@ export const enum KeyCodeId {
     RIGHTSHIFT = 112,
     RIGHTCTRL = 113,
     RIGHTALT = 114,
-    RIGHTMETA = 114,
-    NUMPAD_EQUAL = 115,
+    RIGHTMETA = 115,
+    NUMPAD_EQUAL = 116,
 
     /**
      * Placed last to cover the length of the enum.

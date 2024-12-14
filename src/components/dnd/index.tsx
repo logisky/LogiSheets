@@ -37,7 +37,7 @@ export const DndComponent: FC<DndProps> = ({
                 <div
                     className={styles['dragging-mask']}
                     data-selector-dnd-mask
-                ></div>
+                />
             </div>
             <div
                 className={styles.dragging}
@@ -48,7 +48,7 @@ export const DndComponent: FC<DndProps> = ({
                     width: `${width}px`,
                     height: `${height}px`,
                 }}
-            ></div>
+            />
         </div>
     )
 }

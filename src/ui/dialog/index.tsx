@@ -1,4 +1,4 @@
-import Modal, { Props } from 'react-modal'
+import Modal, {Props} from 'react-modal'
 import './dialog.scss'
 
 export interface DialogProps extends Props {

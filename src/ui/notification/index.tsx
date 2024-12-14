@@ -16,6 +16,6 @@ export const NotificatonComponent: FC<NotificationProps> = (props) => {
             draggable
             pauseOnHover
             {...props}
-        ></ToastContainer>
+        />
     )
 }

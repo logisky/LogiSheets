@@ -1,8 +1,8 @@
-import { action, makeObservable, observable } from "mobx";
-import { createContext } from "react";
-import { Cursor } from "./cursor";
-import { Context } from "../defs";
-import { TextManager } from "./text";
+import {action, makeObservable, observable} from 'mobx'
+import {createContext} from 'react'
+import {Cursor} from './cursor'
+import {Context} from '../defs'
+import {TextManager} from './text'
 import {Suggest} from './suggest'
 import {Selection} from './selection'
 
