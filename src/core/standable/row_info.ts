@@ -1,4 +1,4 @@
-import {RowInfo} from '@logisheets_bg'
+import {RowInfo} from 'logisheets-web'
 import {shallowCopy, ptToPx} from '@/core'
 import {SETTINGS} from '@/core/settings'
 export class StandardRowInfo implements RowInfo {

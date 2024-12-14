@@ -1,5 +1,5 @@
 import {StandardFont} from '@/core/standable'
-import {CtCellAlignment, Font} from '@logisheets_bg'
+import {CtCellAlignment, Font} from 'logisheets-web'
 
 export class TextAttr {
     setFont(font?: StandardFont | Font) {

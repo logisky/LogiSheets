@@ -1,4 +1,4 @@
-import {Value} from '@logisheets_bg'
+import {Value} from 'logisheets-web'
 import {hasOwnProperty} from '@/core'
 export class StandardValue {
     cellValueOneof?:

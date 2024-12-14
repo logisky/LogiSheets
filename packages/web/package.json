@@ -1,12 +1,14 @@
 {
   "name": "logisheets-web",
+  "author": "Jeremy He<yiliang.he@qq.com>",
+  "license": "MIT",
   "version": "0.8.0",
   "description": "Read and write the xlsx files",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
     "wasm-build": "wasm-pack build ../../crates/wasms/server --out-dir ../../../packages/web/wasm --target web",
-    "build": "tsc",
+    "build": "yarn wasm-build && npx tsc && cp -R wasm dist/",
     "prepublishOnly": "yarn wasm-build && yarn build",
     "prepare": "yarn wasm-build"
   },
@@ -18,14 +20,12 @@
     "xlsx",
     "spreadsheets"
   ],
-  "author": "Jeremy He<yiliang.he@qq.com>",
-  "license": "MIT",
+  "files": [
+    "dist",
+    "wasm"
+  ],
   "bugs": {
     "url": "https://github.com/logisky/LogiSheets/issues"
   },
-  "homepage": "https://github.com/logisky/LogiSheets",
-  "files": [
-    "wasm/*",
-    "dist/*"
-  ]
+  "homepage": "https://github.com/logisky/LogiSheets"
 }

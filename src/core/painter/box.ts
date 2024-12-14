@@ -1,7 +1,7 @@
 import {
     StVerticalAlignment as AlignY,
     StHorizontalAlignment as AlignX,
-} from '@logisheets_bg'
+} from 'logisheets-web'
 import {Range} from '@/core/standable'
 export class Box {
     public position = new Range()

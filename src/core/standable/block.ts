@@ -1,5 +1,5 @@
 import {shallowCopy} from '@/core'
-import {BlockInfo} from '@logisheets_bg'
+import {BlockInfo} from 'logisheets-web'
 import {Range} from './range'
 export class StandardBlock implements BlockInfo {
     rowCnt = 0

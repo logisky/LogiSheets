@@ -5,7 +5,7 @@ import initFc, {
     formula_check,
 } from '../../../../crates/wasms/fc/pkg/logisheets_wasm_fc'
 import {Context} from '@/components/textarea'
-import {CellInputBuilder} from '@logisheets_bg'
+import {CellInputBuilder, isErrorMessage, Transaction} from 'logisheets-web'
 import {Cell} from '../defs'
 import {StandardKeyboardEvent} from '@/core/events'
 import {shallowCopy} from '@/core'
@@ -33,10 +33,10 @@ export class Textarea {
         const payload = new CellInputBuilder()
             .row(this.context.bindingData.coordinate.startRow)
             .col(this.context.bindingData.coordinate.startCol)
-            .sheetIdx(this.store.sheetSvc.getActiveSheet())
+            .sheetIdx(this.store.dataSvc.getCurrentSheetIdx())
             .input(newText)
             .build()
-        this.store.backendSvc.sendTransaction([payload])
+        this.store.dataSvc.handleTransaction(new Transaction([payload], true))
         return true
     }
 
@@ -75,8 +75,12 @@ export class Textarea {
             coordinate: {startRow: row, startCol: col},
             position: {startCol: x, startRow: y},
         } = startCell
-        const info = this.store.sheetSvc.getCell(row, col)
-        const text = info?.formula ? info.getFormular() : info?.getText() ?? ''
+        const info = this.store.dataSvc.getActiveSheet().getCell(row, col)
+        if (isErrorMessage(info)) {
+            return
+        }
+        const text =
+            info.getFormula() === '' ? info.getFormula() : info.getText() ?? ''
         const rect = this.store.render.canvas.getBoundingClientRect()
         const [clientX, clientY] = [rect.x + x, rect.y + y]
         const context = new Context()

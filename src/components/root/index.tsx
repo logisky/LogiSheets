@@ -1,6 +1,5 @@
 import {RootContainer} from './container'
 import styles from './root.module.scss'
-import {WsCommponent} from './ws'
 import {ErrorBoundary} from '@/ui/error'
 import {NotificatonComponent} from '@/ui/notification'
 import {SettingContext, Settings} from '@/core/settings'
@@ -18,7 +17,7 @@ export const SpreadsheetRoot = () => {
             <GlobalContext.Provider value={globalStore}>
                 <ErrorBoundary>
                     <SettingContext.Provider value={new Settings()}>
-                        {STAND_ALONE ? <RootContainer /> : <WsCommponent />}
+                        <RootContainer />
                     </SettingContext.Provider>
                 </ErrorBoundary>
             </GlobalContext.Provider>

@@ -2,7 +2,7 @@ import {
     SheetRenameBuilder,
     DeleteSheetBuilder,
     Transaction,
-} from '@logisheets_bg'
+} from 'logisheets-web'
 import {useState} from 'react'
 import Modal from 'react-modal'
 import {DataService} from '@/core/data2'

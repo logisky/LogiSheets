@@ -1,4 +1,4 @@
-import {Comment} from '@logisheets_bg'
+import {Comment} from 'logisheets-web'
 import {Range} from './range'
 
 export interface TopLeftCell {

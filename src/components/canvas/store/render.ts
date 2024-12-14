@@ -6,7 +6,7 @@ import {CellViewData, CellViewRespType, RenderCell} from '@/core/data2'
 import {SETTINGS} from '@/core/settings'
 import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
-import {PatternFill} from '@logisheets_bg'
+import {PatternFill} from 'logisheets-web'
 export const CANVAS_ID = simpleUuid()
 const BUFFER_SIZE = 200
 
