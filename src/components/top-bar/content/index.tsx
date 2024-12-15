@@ -63,10 +63,9 @@ export const StartComponent = ({selectedCell}: StartProps) => {
         if (!selectedCell) return
         const {row, col} = selectedCell
         const sheet = DATA_SERVICE.getActiveSheet()
-        const cellInfo = sheet.getCellInfo(row, col)
+        const cellInfo = sheet.getCell(row, col)
         if (isErrorMessage(cellInfo)) return
-        const style = cellInfo?.style
-        if (!style) return
+        const style = cellInfo.getStyle()
         const font = style.font as StandardFont
         setFontColor(font.standardColor.css())
     }

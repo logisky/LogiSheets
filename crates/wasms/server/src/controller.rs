@@ -204,6 +204,24 @@ pub fn get_sheet_count(id: usize) -> usize {
 }
 
 #[wasm_bindgen]
+pub fn get_all_fully_covered_blocks(
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    row_cnt: usize,
+    col_cnt: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let result = ws.get_all_fully_covered_blocks(row, col, row + row_cnt - 1, col + col_cnt - 1);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
 pub fn get_all_sheet_info(id: usize) -> JsValue {
     init();
     let manager = MANAGER.get();

@@ -55,7 +55,9 @@ export class Dnd {
             oldEnd.position.startCol + moved.x,
             oldEnd.position.startRow + moved.y,
             this.store.render.canvas,
-            this.store.dataSvc.cachedViewRange
+            this.store.dataSvc.getCurrentCellView(
+                this.store.dataSvc.getCurrentSheetIdx()
+            )
         )
         if (endCell.type !== 'Cell') return true
         this._setEnd({start: startCell, end: endCell})

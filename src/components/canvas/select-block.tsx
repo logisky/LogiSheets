@@ -1,14 +1,14 @@
-import {StandardBlock} from '@/core/standable'
+import {BlockInfo} from 'logisheets-web'
 import {SelectionModel} from '@/core/selection'
 
 export interface SelectBlockProps {
     readonly message: string
-    readonly blocks: readonly StandardBlock[]
-    readonly close$: (blocks: readonly StandardBlock[]) => void
+    readonly blocks: readonly BlockInfo[]
+    readonly close$: (blocks: readonly BlockInfo[]) => void
 }
 export const SelectBlockComponent = (props: SelectBlockProps) => {
     const {message, blocks, close$} = props
-    const selectionModel = new SelectionModel<StandardBlock>(false)
+    const selectionModel = new SelectionModel<BlockInfo>(false)
     return (
         <div>
             <h2>{message}</h2>
