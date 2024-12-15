@@ -1,4 +1,3 @@
-import {Range, StandardBlock} from '@/core/standable'
 import {SelectBlockComponent} from './select-block'
 import {Cell} from './defs'
 import {useState, ReactElement, MouseEvent} from 'react'
@@ -16,6 +15,8 @@ import {
     DeleteRowsBuilder,
     CreateBlockBuilder,
     Transaction,
+    isErrorMessage,
+    BlockInfo,
 } from 'logisheets-web'
 import {TYPES} from '@/core/ioc/types'
 import {DataService} from '@/core/data2'
@@ -34,10 +35,10 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     let selectBlock: ReactElement | undefined
     const _blockProcess = (
-        blocks: readonly StandardBlock[],
-        cb: (blks: readonly StandardBlock[]) => Payload[]
+        blocks: readonly BlockInfo[],
+        cb: (blks: readonly BlockInfo[]) => Payload[]
     ) => {
-        const close$ = (blks: readonly StandardBlock[]) => {
+        const close$ = (blks: readonly BlockInfo[]) => {
             setIsOpen(false)
             setBlockMenuOpened(false)
             DATA_SERVICE.handleTransaction(new Transaction(cb(blks), true))
@@ -181,13 +182,16 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     const _checkBlock = () => {
         const {coordinate: start} = startCell
         const {coordinate: end} = endCell ?? startCell
-        const curr = new Range()
-            .setStartRow(start.startRow)
-            .setStartCol(start.startCol)
-            .setEndRow(end.endRow)
-            .setEndCol(end.endCol)
-        const blocks = SHEET_SERVICE.getBlocks()
-        return blocks.filter((b) => b.coordinate.cover(curr))
+        const result = DATA_SERVICE.getActiveSheet().getFullyCoveredBlocks(
+            start.startRow,
+            start.startCol,
+            end.endRow - start.startRow + 1,
+            end.endCol - start.startCol + 1
+        )
+        if (isErrorMessage(result)) {
+            return []
+        }
+        return result
     }
 
     const rows: ContextMenuItem[] = [
@@ -245,7 +249,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     )
 }
 
-const getMessage = (blocks: readonly StandardBlock[]) => {
+const getMessage = (blocks: readonly BlockInfo[]) => {
     return blocks.length === 1
         ? '当前选择范围属于一个block，是否继续？'
         : '选择一个block'

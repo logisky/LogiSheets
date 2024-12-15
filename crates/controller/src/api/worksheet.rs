@@ -411,6 +411,65 @@ impl<'a> Worksheet<'a> {
         }
     }
 
+    pub fn get_all_fully_covered_blocks(
+        &self,
+        start_row: usize,
+        start_col: usize,
+        end_row: usize,
+        end_col: usize,
+    ) -> Vec<BlockInfo> {
+        let all_blocks = self.get_all_blocks();
+        let result = all_blocks
+            .into_iter()
+            .filter(|b| {
+                let bp_end_row = b.row_start + b.row_cnt - 1;
+                let bp_end_col = b.col_start + b.col_cnt - 1;
+
+                bp_end_row <= end_row
+                    && b.row_start >= start_row
+                    && bp_end_col <= end_col
+                    && b.col_start >= start_col
+            })
+            .collect::<Vec<_>>();
+        result
+    }
+
+    pub fn get_all_blocks(&self) -> Vec<BlockInfo> {
+        let sheet_nav = self
+            .controller
+            .status
+            .navigator
+            .sheet_navs
+            .get(&self.sheet_id);
+        if sheet_nav.is_none() {
+            return vec![];
+        }
+        let sheet_nav = sheet_nav.unwrap();
+        let blocks = sheet_nav
+            .data
+            .blocks
+            .clone()
+            .into_iter()
+            .map(|(id, block_place)| {
+                let mc = block_place.master;
+                let (row, col) = self
+                    .controller
+                    .status
+                    .navigator
+                    .fetch_normal_cell_idx(&self.sheet_id, &mc)
+                    .unwrap();
+                BlockInfo {
+                    block_id: id,
+                    row_start: row,
+                    row_cnt: block_place.rows.len(),
+                    col_start: col,
+                    col_cnt: block_place.cols.len(),
+                }
+            })
+            .collect::<Vec<_>>();
+        return blocks;
+    }
+
     /// Get the dimension of the sheet.
     pub fn get_sheet_dimension(&self) -> (usize, usize) {
         let sheet_container = self

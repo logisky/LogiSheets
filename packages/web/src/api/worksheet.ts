@@ -11,8 +11,10 @@ import {
     get_display_window_with_start_point,
     get_display_window_within_cell,
     get_cell_position,
+    get_all_fully_covered_blocks,
 } from '../../wasm'
 import {
+    BlockInfo,
     CellPosition,
     ColInfo,
     DisplayWindow,
@@ -122,6 +124,22 @@ export class Worksheet {
 
     public getValue(rowIdx: number, colIdx: number): Result<Value> {
         return get_value(this._id, this._sheetIdx, rowIdx, colIdx)
+    }
+
+    public getFullyCoveredBlocks(
+        rowIdx: number,
+        colIdx: number,
+        rowCnt: number,
+        colCnt: number
+    ): Result<BlockInfo[]> {
+        return get_all_fully_covered_blocks(
+            this._id,
+            this._sheetIdx,
+            rowIdx,
+            colIdx,
+            rowCnt,
+            colCnt
+        )
     }
 
     private _id: number
