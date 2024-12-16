@@ -1,11 +1,11 @@
 [package]
-authors = ["ImJeremyHe<yiliang.he@qq.com>"]
-edition = "2018"
 name = "xmldiff"
-version = "0.3.0"
-license = "MIT"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
 description = "compare 2 .xml files and show their differences"
 repository = "https://github.com/logisky/LogiSheets/crates/xmldiff"
 
 [dependencies]
-quick-xml = { version = "0.31", features = ["serialize"] }
+quick-xml = { workspace = true, features = ["serialize"] }

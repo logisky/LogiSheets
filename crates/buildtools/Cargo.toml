@@ -1,14 +1,14 @@
 [package]
 name = "buildtools"
-version = "0.1.0"
-edition = "2018"
-authors = ["ImJeremyHe<yiliang.he@qq.com>"]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
 
 [dependencies]
-gents = "0.8.0"
+gents = { workspace = true }
 
-logisheets_controller = {path = "../controller", features = ["gents"]}
-logisheets_sequencer = {path = "../sequencer", features = ["gents"]}
+logisheets_controller = { path = "../controller", features = ["gents"] }
+logisheets_sequencer = { path = "../sequencer", features = ["gents"] }
 
 [[bin]]
 name = "generate"

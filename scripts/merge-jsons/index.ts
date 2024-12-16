@@ -20,12 +20,12 @@ interface OutputFile {
 }
 
 /**
- * 
+ *
  *  Files to merge, and output path.
  */
 interface IMergeJsonFiles {
-    files: string[];
-    outputPath: string;
+    files: string[]
+    outputPath: string
 }
 interface Options {
     debug?: boolean
@@ -43,17 +43,19 @@ export class MergeJsonWebpackPlugin {
     logger: Logger
 
     constructor(options: Options) {
-        this.options = Object.assign({
-            debug: false,
-            encoding: UTF8_ENCODING,
-            overwrite: true,
-            mergeToArray: false,
-            cwd: process.cwd(),
-        }, options)
+        this.options = Object.assign(
+            {
+                debug: false,
+                encoding: UTF8_ENCODING,
+                overwrite: true,
+                mergeToArray: false,
+                cwd: process.cwd(),
+            },
+            options
+        )
         this.logger = new Logger(this.options.debug)
         this.logger.debug(JSON.stringify(this.options, undefined, 2))
     }
-
 
     /**
      * Extract files from the input options.
@@ -69,31 +71,29 @@ export class MergeJsonWebpackPlugin {
 
         // check if groupby
         if (groupBy) {
-            const defaultGlobOptions = { mark: true, cwd: this.options.cwd }
+            const defaultGlobOptions = {mark: true, cwd: this.options.cwd}
             // glob option
-            const globOptions = { ...defaultGlobOptions, ...this.options.globOptions }
+            const globOptions = {
+                ...defaultGlobOptions,
+                ...this.options.globOptions,
+            }
             // extract files
             groupBy.map((g) => {
-                const { pattern, fileName } = g
+                const {pattern, fileName} = g
                 const files = glob.sync(pattern, globOptions)
-                filesToProcess.push(
-                    {
-                        files,
-                        outputPath: fileName
-                    }
-                )
+                filesToProcess.push({
+                    files,
+                    outputPath: fileName,
+                })
             })
         } else if (files) {
-            filesToProcess.push(
-                {
-                    files,
-                    outputPath: this.options.output?.fileName
-                }
-            )
+            filesToProcess.push({
+                files,
+                outputPath: this.options.output?.fileName,
+            })
         }
         return filesToProcess
     }
-
 
     apply() {
         this.logger.debug('Running apply() ::::::')
@@ -102,26 +102,26 @@ export class MergeJsonWebpackPlugin {
         for (const opt of fileList) {
             this.processFiles(opt)
         }
-
     }
 
     /**
-     * 
+     *
      * @param compilation webpack compilation object.
      * @param files List of file names.
      * @param outputPath Output path to write merged json files.
      */
     processFiles = (filesInfo: IMergeJsonFiles) => {
         const initValue = this.options.mergeToArray ? [] : {}
-        const mergedJSON = filesInfo.files.map(file => {
-            try {
-                const content = this.readContent(file)
-                return this.parseJson(file, content.toString())
-            } catch (e) {
-                this.logger.error(e)
-            }
-            return {}
-        })
+        const mergedJSON = filesInfo.files
+            .map((file) => {
+                try {
+                    const content = this.readContent(file) as Buffer
+                    return this.parseJson(file, content.toString())
+                } catch (e) {
+                    this.logger.error(e)
+                }
+                return {}
+            })
             .reduce((acc, curr) => this.mergeDeep(acc, curr), initValue)
         this.logger.debug(JSON.stringify(mergedJSON), 'result json')
         // add assets to compilation.
@@ -129,14 +129,15 @@ export class MergeJsonWebpackPlugin {
         const outputPathInfo = path.parse(filesInfo.outputPath)
         if (!fs.existsSync(outputPathInfo.dir))
             fs.mkdirSync(outputPathInfo.dir, {recursive: true})
-        fs.writeFileSync(filesInfo.outputPath, content, {encoding: this.options.encoding})
+        fs.writeFileSync(filesInfo.outputPath, content, {
+            encoding: this.options.encoding,
+        })
     }
-
 
     /**
      * Reads a file from file system, if not found it will search in assets.
-     * @param compilation 
-     * @param contextPath 
+     * @param compilation
+     * @param contextPath
      * @param compilation fileName
      */
     readContent = (fileName: string) => {
@@ -152,18 +153,20 @@ export class MergeJsonWebpackPlugin {
     }
 
     /**
-     * 
-     * @param fileName 
-     * @param content 
+     *
+     * @param fileName
+     * @param content
      */
     parseJson(fileName: string, content: string) {
         if (!content) {
-            throw new Error(`Data appears to be empty in the file := [ ${fileName} ]`)
+            throw new Error(
+                `Data appears to be empty in the file := [ ${fileName} ]`
+            )
         }
         // Source: https://github.com/sindresorhus/strip-bom/blob/master/index.js
         // Catches EFBBBF (UTF-8 BOM) because the buffer-to-string
         // conversion translates it to FEFF (UTF-16 BOM)
-        if (content.charCodeAt(0) === 0xFEFF) {
+        if (content.charCodeAt(0) === 0xfeff) {
             content = content.slice(1)
         }
         // try to get a JSON object from the file data
@@ -171,7 +174,7 @@ export class MergeJsonWebpackPlugin {
         // eslint-disable-next-line no-useless-catch
         try {
             const fileContent = JSON.parse(content)
-            //to prefix object with filename ,requirement as request in issue#31            
+            //to prefix object with filename ,requirement as request in issue#31
             if (this.options.prefixFileName) {
                 if (typeof this.options.prefixFileName === 'function') {
                     json[this.options.prefixFileName(fileName)] = fileContent
@@ -195,7 +198,11 @@ export class MergeJsonWebpackPlugin {
      * code contributed by @leonardopurro
      */
     mergeDeep = (target, source) => {
-        if (Array.isArray(target) && typeof source === 'object' && this.options.mergeToArray)
+        if (
+            Array.isArray(target) &&
+            typeof source === 'object' &&
+            this.options.mergeToArray
+        )
             target.push(source)
         else if (typeof target == 'object' && typeof source == 'object') {
             for (const key in source) {

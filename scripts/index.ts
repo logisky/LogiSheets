@@ -13,10 +13,10 @@ const plugins = [
             ],
         },
         globOptions: {
-            nosort: true
-        }
+            nosort: true,
+        },
     }),
 ]
-plugins.forEach(plugin => {
+plugins.forEach((plugin) => {
     plugin.apply()
 })
