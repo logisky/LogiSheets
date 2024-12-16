@@ -1,23 +1,27 @@
 [package]
 name = "logisheets"
-version = "0.6.0"
+version.workspace = true
 description = "A web spreadsheets application written in Rust and Typescript"
 keywords = ["excel", "spreadsheets", "ooxml", "logisheets", "xlsx"]
 readme = "README.md"
 repository = "https://github.com/logisky/LogiSheets"
-license = "MIT"
+license.workspace = true
 include = [
     "crates/workbook/**/*",
     "crates/controller/**/*",
     "src/lib.rs",
     "Cargo.toml",
 ]
-edition = "2018"
+edition.workspace = true
 
 [workspace]
 members = [
     "crates/buildtools",
     "crates/controller",
+    "crates/controller/ast_checker",
+    "crates/controller/base",
+    "crates/controller/lexer",
+    "crates/controller/parser",
     "crates/formatter",
     "crates/logiscript",
     "crates/sequencer",
@@ -27,10 +31,42 @@ members = [
     "crates/xmldiff",
 ]
 
+[workspace.package]
+version = "0.7.0"
+authors = ["JeremyHe <yiliang.he@qq.com>"]
+license = "MIT"
+edition = "2018"
+
+[workspace.dependencies]
+chrono = "0.4"
+futures = "0.3"
+gents = "0.8"
+gents_derives = "0.8"
+getrandom = "0.2"
+im = "15.0"
+lazy_static = "1.4"
+pest = "2.7"
+pest_derive = "2.5"
+quick-xml = "0.31"
+regex = "1"
+serde = "1"
+serde_json = "1"
+thiserror = "1.0"
+xmlserde = "0.10"
+xmlserde_derives = "0.10"
+
+logisheets_lexer = { path = "crates/controller/lexer", version = "0.7.0" }
+logisheets_parser = { path = "crates/controller/parser", version = "0.7.0" }
+logisheets_base = { path = "crates/controller/base", version = "0.7.0" }
+logisheets_controller = { path = "crates/controller", version = "0.7.0" }
+
+logisheets_workbook_derives = { path = "crates/workbook/derives", version = "0.7.0" }
+logisheets_workbook = { path = "crates/workbook", version = "0.7.0" }
+
 [dependencies]
-logisheets_controller = {path = "crates/controller", version = "0.6.0"}
-logisheets_workbook = {path = "crates/workbook", version = "0.6.0"}
+logisheets_controller = { workspace = true }
+logisheets_workbook = { workspace = true }
 
 [dev-dependencies]
 glob = "0.3.1"
-logiscript = {path = "crates/logiscript", version = "0.1.0"}
+logiscript = { path = "crates/logiscript" }

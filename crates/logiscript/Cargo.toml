@@ -1,13 +1,13 @@
 [package]
-authors = ["ImJeremyHe<yiliang.he@qq.com>"]
-edition = "2018"
 name = "logiscript"
+authors.workspace = true
+edition.workspace = true
 version = "0.1.0"
 description = "A simple script for building and testing LogiSheets"
-license = "MIT"
+license.workspace = true
 
 [dependencies]
-pest = "2.7.0"
-pest_derive = "2.5.6"
+pest = { workspace = true }
+pest_derive = { workspace = true }
 
-logisheets_controller = {version = "*", path = "../controller"}
+logisheets_controller = { workspace = true }

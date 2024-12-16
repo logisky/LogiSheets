@@ -1,10 +1,11 @@
 [package]
 name = "logisheets_formatter"
-edition = "2018"
-version = "0.1.0"
 description = "LogiSheets Custom Number Formatter"
-license = "MIT"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+authors.workspace = true
 
 [dependencies]
-lazy_static = "1.4.0"
-regex = "1"
+lazy_static = { workspace = true }
+regex = { workspace = true }

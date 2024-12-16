@@ -1,8 +1,8 @@
 [package]
-authors = ["Jeremy He<yiliang.he@qq.com>"]
-edition = "2018"
+authors.workspace = true
+edition.workspace = true
 name = "logisheets_wasm_server"
-version = "0.3.0"
+version.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -12,24 +12,24 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 singlyton = "4.1.1"
-wasm-bindgen = {version = "0.2.84", features = ["serde-serialize"]}
-web-sys = {version = "0.3.56", features = ["console"]}
+wasm-bindgen = { version = "0.2.84", features = ["serde-serialize"] }
+web-sys = { version = "0.3.56", features = ["console"] }
 # Specify the feature of the crate used in `logisheets_controller`.
-getrandom = {version = "0.2.8", features = ["js"]}
-serde = {version = "1.0", features = ["derive"]}
-serde_json = "1.0"
+getrandom = { workspace = true, features = ["js"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 serde-wasm-bindgen = "0.5"
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
-console_error_panic_hook = {version = "0.1.6", optional = true}
+console_error_panic_hook = { version = "0.1.6", optional = true }
 
-logisheets_controller = {version = "*", path = "../../controller", features = ["gents"]}
-logisheets_base = {version = "*", path = "../../controller/base"}
-logisheets_workbook = {version = "*", path = "../../workbook"}
+logisheets_controller = { workspace = true, features = ["gents"] }
+logisheets_base = { workspace = true }
+logisheets_workbook = { workspace = true }
 
-xmlserde = "0.10"
+xmlserde = { workspace = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.30"
