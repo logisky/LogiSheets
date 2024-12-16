@@ -20,7 +20,7 @@ xmlserde_derives = { workspace = true }
 logisheets_workbook_derives = { workspace = true }
 
 [dev-dependencies]
-xmldiff = { version = "*", path = "../xmldiff" }
+xmldiff = { workspace = true }
 
 [features]
 gents = ["dep:gents", "dep:gents_derives"]
