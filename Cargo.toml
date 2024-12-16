@@ -61,6 +61,7 @@ logisheets_base = { path = "crates/controller/base", version = "0.7.0" }
 logisheets_controller = { path = "crates/controller", version = "0.7.0" }
 
 logisheets_workbook_derives = { path = "crates/workbook/derives", version = "0.7.0" }
+xmldiff = { path = "crates/xmldiff", version = "0.7.0" }
 logisheets_workbook = { path = "crates/workbook", version = "0.7.0" }
 
 [dependencies]
