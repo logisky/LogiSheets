@@ -1,20 +1,17 @@
 # LogiSheets Development
 
-We are glad that you are interested in joining our development.
+Thank you for your interest in contributing to the development of **LogiSheets**.
 
-In this project, we are going to design the best spreadsheet application
-and explore the best practice about Rust and Typescript application.
+In this project, we aim to build the best spreadsheet application while exploring best practices for integrating Rust and TypeScript.
 
 ## Concept
 
-`LogiSheets` is a Rust library, a web component or maybe in the future, a co-work supporting product.
-We do not attemp to use more names to identify these concepts.
-They all are `LogiSheets`.
+**LogiSheets** is a Rust-based library, a web component, and possibly a collaborative product in the future. For now, we use the name "LogiSheets" to refer to all these concepts.
 
-## Code Management
+## Development Environment
 
-All the `LogiSheets` related code is in this one repo.
-You should have **Rust** and **yarn** installed.
-Since we compile the **Rust** code into web assembly, you should have [wasm-pack](https://rustwasm.github.io/docs/wasm-pack/commands/build.html) installed too.
+We are using [Nix](https://nixos.org/) to set up the development environment. To get started, simply run:
 
-TODO
+```bash
+nix develop
+```
