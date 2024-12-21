@@ -181,11 +181,13 @@ impl<'a> Worksheet<'a> {
             row_infos.push(row_info);
 
             'col: for col in start_col..=end_col {
-                let col_info = self.get_col_info(col).unwrap_or(ColInfo::default(col));
-                if col_info.hidden {
-                    continue 'col;
+                if row == start_row {
+                    let col_info = self.get_col_info(col).unwrap_or(ColInfo::default(col));
+                    if col_info.hidden {
+                        continue 'col;
+                    }
+                    col_infos.push(col_info);
                 }
-                col_infos.push(col_info);
 
                 if let Some(comment) = self.get_comment(row, col) {
                     comments.push(comment);
@@ -238,13 +240,13 @@ impl<'a> Worksheet<'a> {
     ) -> Result<DisplayWindowWithStartPoint> {
         let mut positioner = locked_write(&self.positioner);
         let (start_row, start_point_y) =
-            positioner.get_nearest_row_before_given_y(start_y, &self)?;
+            positioner.get_nearest_row_with_given_y(start_y, true, &self)?;
         let (start_col, start_point_x) =
-            positioner.get_nearest_col_before_given_x(start_x, &self)?;
+            positioner.get_nearest_col_with_given_x(start_x, true, &self)?;
         let (end_row, _) =
-            positioner.get_nearest_row_before_given_y(start_y + height + 100., &self)?;
+            positioner.get_nearest_row_with_given_y(start_y + height, false, &self)?;
         let (end_col, _) =
-            positioner.get_nearest_col_before_given_x(start_x + width + 50., &self)?;
+            positioner.get_nearest_col_with_given_x(start_x + width, false, &self)?;
 
         let window = self.get_display_window(start_row, start_col, end_row, end_col)?;
         Ok(DisplayWindowWithStartPoint {

@@ -13,10 +13,19 @@ export class CellViewData {
         public cells: readonly RenderCell[],
         public comments: readonly Comment[]
     ) {
+        if (rows.length == 0) {
+            throw Error('rows should not be empty')
+        }
+        if (cols.length == 0) {
+            throw Error('cols should not be empty')
+        }
+        if (cells.length == 0) {
+            throw Error('cells should not be empty')
+        }
         this.fromRow = rows[0].coordinate.startRow
-        this.toRow = rows[-1].coordinate.endRow
+        this.toRow = rows[rows.length - 1].coordinate.endRow
         this.fromCol = cols[0].coordinate.startCol
-        this.toCol = cols[-1].coordinate.endCol
+        this.toCol = cols[cols.length - 1].coordinate.endCol
     }
 }
 

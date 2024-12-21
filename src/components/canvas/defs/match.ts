@@ -1,4 +1,4 @@
-import {SETTINGS} from '@/core/settings'
+import {LeftTop, SETTINGS} from '@/core/settings'
 import {Range} from '@/core/standable'
 import {Cell} from './cell'
 import {CellViewData} from '@/core/data2'
@@ -27,7 +27,6 @@ export function match(
         .setStartRow(y)
         .setEndCol(x)
         .setEndRow(y)
-    const {width: leftTopWidth, height: leftTopHeight} = SETTINGS.leftTop
     const col = data
         .flatMap((d) => d.cols)
         .find((c) => c.position.cover(clickPosition))
@@ -38,7 +37,7 @@ export function match(
         .flatMap((d) => d.cols)
         .flat()
         .find((c) => c.position.cover(clickPosition))
-    if (x <= leftTopWidth && y <= leftTopHeight) return new Cell('LeftTop')
+    if (x <= LeftTop.width && y <= LeftTop.height) return new Cell('LeftTop')
     else if (row) return new Cell('FixedLeftHeader').copyByRenderCell(row)
     else if (col) return new Cell('FixedTopHeader').copyByRenderCell(col)
     else if (renderCell) return new Cell('Cell').copyByRenderCell(renderCell)

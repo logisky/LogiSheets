@@ -1,6 +1,7 @@
 import {Range, StandardCell} from '@/core/standable'
 import {CellInfo} from 'logisheets-web'
 import {StandardValue} from '../standable/value'
+import {LeftTop} from '../settings'
 
 export class RenderCell {
     get width() {
@@ -54,4 +55,29 @@ export class RenderCellSegment {
         public readonly to: number,
         public cells: readonly RenderCell[]
     ) {}
+}
+
+export function toCanvasPosition(
+    pos: Range,
+    anchorX: number,
+    anchorY: number,
+    type?: 'row' | 'col' | 'cell'
+): Range {
+    let rowOffset = 0
+    let colOffset = 0
+    if (type == 'row') {
+        rowOffset = LeftTop.height - anchorY
+        colOffset = 0
+    } else if (type == 'cell') {
+        rowOffset = LeftTop.height - anchorY
+        colOffset = LeftTop.width - anchorX
+    } else {
+        rowOffset = 0
+        colOffset = LeftTop.width - anchorX
+    }
+    return new Range()
+        .setStartRow(Math.max(0, pos.startRow + rowOffset))
+        .setEndRow(Math.max(0, pos.endRow + rowOffset))
+        .setStartCol(Math.max(0, pos.startCol + colOffset))
+        .setEndCol(Math.max(0, pos.endCol + colOffset))
 }

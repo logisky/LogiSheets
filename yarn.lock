@@ -2146,6 +2146,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@inversifyjs/common@npm:1.4.0":
+  version: 1.4.0
+  resolution: "@inversifyjs/common@npm:1.4.0"
+  checksum: 10c0/03f76538de4d678f09c1d8a84351bcbedd5add502c46af27b8ce439d07162c428fccf26d23f0452e2adf1aaa893e179372c04f2aa9bfc3554e3125e43a76dd2b
+  languageName: node
+  linkType: hard
+
+"@inversifyjs/core@npm:1.3.5":
+  version: 1.3.5
+  resolution: "@inversifyjs/core@npm:1.3.5"
+  dependencies:
+    "@inversifyjs/common": "npm:1.4.0"
+    "@inversifyjs/reflect-metadata-utils": "npm:0.2.4"
+  checksum: 10c0/c0b08d574be8a5a6b4c69910b443491b9b48f37a122e606e5b1a23c5d988f89f87571ef06c01465d20284515941a86685fd0eb1967be3d2e4957f8ea1fb602e5
+  languageName: node
+  linkType: hard
+
+"@inversifyjs/reflect-metadata-utils@npm:0.2.4":
+  version: 0.2.4
+  resolution: "@inversifyjs/reflect-metadata-utils@npm:0.2.4"
+  peerDependencies:
+    reflect-metadata: 0.2.2
+  checksum: 10c0/cfe93bf2366ea8fbf8e968c06e422b93ad20e5a264706aa632bca481a35f2324c38f826d639b8039181760e6a2a8cf9ef89ca57b7cec9851638cf99a1377596a
+  languageName: node
+  linkType: hard
+
 "@isaacs/cliui@npm:^8.0.2":
   version: 8.0.2
   resolution: "@isaacs/cliui@npm:8.0.2"
@@ -3422,10 +3448,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^17.0.18":
+"@types/node@npm:*, @types/node@npm:>=13.7.0":
   version: 17.0.24
   resolution: "@types/node@npm:17.0.24"
   checksum: 10c0/38a7008b0021c70cd5f443350abcda7937044ccab8e7f5482256265c666401c36bc90acab8ee4ae74dd1f8145e5603c78688c2ad7cb33e3f23e8c5f1557a400e
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^18":
+  version: 18.19.68
+  resolution: "@types/node@npm:18.19.68"
+  dependencies:
+    undici-types: "npm:~5.26.4"
+  checksum: 10c0/8c7f01be218c6e3c1e643173662af27e9a2b568f36c0fe83e4295cf7674fe2a0abb4a1c5d7c7abd3345b9114581387dfd3f14b6d0338daebdce9273cd7ba59ab
   languageName: node
   linkType: hard
 
@@ -10258,10 +10293,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"inversify@npm:^6.0.1":
-  version: 6.0.1
-  resolution: "inversify@npm:6.0.1"
-  checksum: 10c0/2d0b67663e7ab8b08704e1a2c0ab7a181c412ab0bec5c3d6144946d77ec38a7f213b88f81a92a717f856910baed50b34e75754f25fc3d2160ec74bd62285bf97
+"inversify@npm:^6.2.0":
+  version: 6.2.1
+  resolution: "inversify@npm:6.2.1"
+  dependencies:
+    "@inversifyjs/common": "npm:1.4.0"
+    "@inversifyjs/core": "npm:1.3.5"
+  peerDependencies:
+    reflect-metadata: ~0.2.2
+  checksum: 10c0/a7c4d0802ae3cbf3d21f1c97a24e066917a2560ff0a8f00c6401147f7c48846549959de3110e9849197eed2ccf6ac64f1208a1295a4beda8fe9ea8e5cdf5f197
   languageName: node
   linkType: hard
 
@@ -16284,7 +16324,7 @@ __metadata:
     "@types/glob": "npm:^7.2.0"
     "@types/jest": "npm:^27.4.0"
     "@types/lodash": "npm:^4.17.1"
-    "@types/node": "npm:^17.0.18"
+    "@types/node": "npm:^18"
     "@types/react": "npm:^17.0.38"
     "@types/react-color": "npm:^3.0.6"
     "@types/react-dom": "npm:^17.0.11"
@@ -16317,7 +16357,7 @@ __metadata:
     husky: "npm:^8.0.1"
     i18next: "npm:^21.8.16"
     i18next-browser-languagedetector: "npm:^6.1.4"
-    inversify: "npm:^6.0.1"
+    inversify: "npm:^6.2.0"
     jest: "npm:^27.5.1"
     lint-staged: "npm:^13.0.3"
     lodash: "npm:^4.17.21"
@@ -18397,6 +18437,13 @@ __metadata:
     has-symbols: "npm:^1.0.3"
     which-boxed-primitive: "npm:^1.0.2"
   checksum: 10c0/81ca2e81134167cc8f75fa79fbcc8a94379d6c61de67090986a2273850989dd3bae8440c163121b77434b68263e34787a675cbdcb34bb2f764c6b9c843a11b66
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~5.26.4":
+  version: 5.26.5
+  resolution: "undici-types@npm:5.26.5"
+  checksum: 10c0/bb673d7876c2d411b6eb6c560e0c571eef4a01c1c19925175d16e3a30c4c428181fb8d7ae802a261f283e4166a0ac435e2f505743aa9e45d893f9a3df017b501
   languageName: node
   linkType: hard
 

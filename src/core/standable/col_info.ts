@@ -1,13 +1,14 @@
 import {ColInfo} from 'logisheets-web'
-import {findMdwColw, shallowCopy, width2px} from '@/core'
+import {findMdwColw, ptToPx, shallowCopy, width2px, widthToPx} from '@/core'
 import {SETTINGS} from '@/core/settings'
 export class StandardColInfo implements ColInfo {
     constructor(public readonly idx: number) {}
     hidden = false
     width = SETTINGS.defaultCellSize.width
     get px() {
-        findMdwColw(this.width)
-        return parseFloat(width2px(this.width).toFixed(1))
+        // findMdwColw(this.width)
+        // return parseFloat(width2px(this.width).toFixed(1))
+        return widthToPx(this.width)
     }
 
     get pt() {

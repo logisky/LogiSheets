@@ -10,7 +10,7 @@ export class StandardRowInfo implements RowInfo {
     }
 
     get px() {
-        return parseFloat(ptToPx(this.height).toFixed(2))
+        return ptToPx(this.height)
     }
 
     static from(rowInfo: RowInfo) {

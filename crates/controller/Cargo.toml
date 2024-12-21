@@ -23,7 +23,7 @@ regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 statrs = "0.16.1"
 unicode-segmentation = "1.10.1"
-wildescape = "0.1.0"
+wildescape = { workspace = true }
 uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
 
 logisheets_base = { path = "./base", features = ["gents"], version = "0.7.0" }
