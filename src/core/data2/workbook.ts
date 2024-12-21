@@ -12,8 +12,10 @@ import {
 
 @injectable()
 export class WorkbookService {
-    public constructor(funcs: readonly CustomFunc[]) {
-        this._init(funcs)
+    public static async create(): Promise<WorkbookService> {
+        const instance = new WorkbookService()
+        await instance._init()
+        return instance
     }
 
     public registryCustomFunc(f: CustomFunc) {
@@ -78,16 +80,13 @@ export class WorkbookService {
         }
     }
 
-    private async _init(funcs: readonly CustomFunc[]) {
+    private async _init() {
         await initWasm()
         this._workbookImpl = new Workbook()
-        funcs.forEach((f) => {
-            this.workbook.registryCustomFunc(f)
-        })
     }
 
     public get workbook(): Workbook {
-        if (!this._workbookImpl) throw Error('')
+        if (!this._workbookImpl) throw Error("haven't been initialized")
         return this._workbookImpl
     }
 

@@ -27,12 +27,12 @@ export class Grid {
 }
 
 export class LeftTop {
-    public width = 32
-    public height = 24
+    public static width = 32
+    public static height = 24
     /**
      * Fixed header content color.
      */
-    public strokeStyle = '#f4f5f8'
+    public static strokeStyle = '#f4f5f8'
 }
 
 export class FixedHeaderStyle {

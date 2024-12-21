@@ -31,6 +31,8 @@ export class CanvasStore {
     same = false
     currSheetIdx = 0
 
+    anchorX = 0
+    anchorY = 0
     render: Render
     resizer: Resizer
     highlights: Highlights

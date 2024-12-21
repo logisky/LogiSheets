@@ -8,7 +8,6 @@ export function dpr(): number {
 }
 
 export function npx(px: number): number {
-    // tslint:disable-next-line: ban
     return parseInt((px * dpr()).toString(), 10)
 }
 

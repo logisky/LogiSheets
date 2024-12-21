@@ -66,7 +66,7 @@ export const StartComponent = ({selectedCell}: StartProps) => {
         const cellInfo = sheet.getCell(row, col)
         if (isErrorMessage(cellInfo)) return
         const style = cellInfo.getStyle()
-        const font = style.font as StandardFont
+        const font = StandardFont.from(style.font)
         setFontColor(font.standardColor.css())
     }
 

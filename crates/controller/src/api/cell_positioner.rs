@@ -60,9 +60,10 @@ impl<const INTERVAL: usize> CellPositioner<INTERVAL> {
         Ok(result)
     }
 
-    pub fn get_nearest_row_before_given_y(
+    pub fn get_nearest_row_with_given_y(
         &mut self,
         y: f64,
+        before: bool,
         ws: &Worksheet,
     ) -> Result<(usize, f64)> {
         let (mut curr_idx, mut curr_h) = self.find_closest_cache_before_y(y);
@@ -78,28 +79,41 @@ impl<const INTERVAL: usize> CellPositioner<INTERVAL> {
             self.add_cache(true, curr_idx, curr_h);
         }
 
-        return Ok((curr_idx - 1, curr_h - h));
+        if before {
+            if curr_idx > 1 && curr_h > h {
+                curr_idx -= 1;
+                curr_h -= h;
+            }
+        }
+        return Ok((curr_idx, curr_h));
     }
 
-    pub fn get_nearest_col_before_given_x(
+    pub fn get_nearest_col_with_given_x(
         &mut self,
         x: f64,
+        before: bool,
         ws: &Worksheet,
     ) -> Result<(usize, f64)> {
         let (mut curr_idx, mut curr_w) = self.find_closest_cache_before_x(x);
         let mut w = 0.;
         while curr_w < x {
-            if ws.is_row_hidden(curr_idx) {
+            if ws.is_col_hidden(curr_idx) {
                 curr_idx += 1;
                 continue;
             }
-            w = ws.get_row_height(curr_idx)?;
+            w = ws.get_col_width(curr_idx)?;
             curr_idx += 1;
             curr_w += w;
             self.add_cache(false, curr_idx, curr_w);
         }
 
-        return Ok((curr_idx - 1, curr_w - w));
+        if before {
+            if curr_idx > 1 && curr_w > w {
+                curr_idx -= 1;
+                curr_w -= w;
+            }
+        }
+        return Ok((curr_idx, curr_w));
     }
 
     fn find_closest_cache_before_x(&self, x: f64) -> (usize, f64) {
@@ -109,7 +123,11 @@ impl<const INTERVAL: usize> CellPositioner<INTERVAL> {
 
         let r = self.cache_width.iter().find_position(|(_, v)| *v > x);
         if let Some((idx, _)) = r {
-            self.cache_width.get(idx - 1).unwrap().clone()
+            if idx > 0 {
+                self.cache_width.get(idx - 1).unwrap().clone()
+            } else {
+                (0, 0.)
+            }
         } else {
             self.cache_width.last().unwrap().clone()
         }
@@ -122,7 +140,11 @@ impl<const INTERVAL: usize> CellPositioner<INTERVAL> {
 
         let r = self.cache_height.iter().find_position(|(_, v)| *v > y);
         if let Some((idx, _)) = r {
-            self.cache_height.get(idx - 1).unwrap().clone()
+            if idx > 0 {
+                self.cache_height.get(idx - 1).unwrap().clone()
+            } else {
+                (0, 0.)
+            }
         } else {
             self.cache_height.last().unwrap().clone()
         }

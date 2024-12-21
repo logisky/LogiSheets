@@ -2,17 +2,14 @@ import {inject, injectable} from 'inversify'
 import {getID} from '../ioc/id'
 import {TYPES} from '../ioc/types'
 import {WorkbookService} from './workbook'
-import {RenderCell} from './render'
 import {
     ActionEffect,
     CustomFunc,
     Transaction,
     Workbook,
     Worksheet,
-    DisplayWindowWithStartPoint,
     SheetInfo,
 } from 'logisheets-web'
-import {Range} from '@/core/standable'
 import {CellViewResponse, ViewManager} from './view_manager'
 import {CellViewData} from './types'
 
@@ -58,7 +55,7 @@ export interface DataService {
 @injectable()
 export class DataServiceImpl implements DataService {
     readonly id = getID()
-    constructor(@inject(TYPES.Data) private _workbook: WorkbookService) {
+    constructor(@inject(TYPES.Workbook) private _workbook: WorkbookService) {
         this._init()
     }
 
@@ -161,90 +158,4 @@ export class DataServiceImpl implements DataService {
     private _cellViews: Map<number, ViewManager> = new Map()
 
     private _sheetIdx = 0
-}
-
-export function parseDisplayWindow(
-    window: DisplayWindowWithStartPoint
-): CellViewData {
-    let y = window.startY
-    const rows = window.window.rows.map((r) => {
-        const renderRow = new RenderCell()
-            .setCoordinate(new Range().setStartRow(r.idx).setEndRow(r.idx))
-            .setPosition(
-                new Range()
-                    .setStartRow(y)
-                    .setEndRow(y + r.height)
-                    .setEndCol(window.startX)
-            )
-        y += r.height
-        return renderRow
-    })
-
-    let x = window.startX
-    const cols = window.window.cols.map((c) => {
-        const renderCol = new RenderCell()
-            .setCoordinate(new Range().setStartCol(c.idx).setEndCol(c.idx))
-            .setPosition(
-                new Range()
-                    .setStartCol(x)
-                    .setEndCol(x + c.width)
-                    .setEndRow(window.startY)
-            )
-        x += renderCol.width
-        return renderCol
-    })
-
-    const cells: RenderCell[] = []
-    let idx = 0
-    for (let r = 0; r < rows.length; r += 1) {
-        for (let c = 0; c < cols.length; c += 1) {
-            const row = rows[r]
-            const col = cols[c]
-            const corrdinate = new Range()
-                .setStartRow(row.coordinate.startRow)
-                .setEndRow(row.coordinate.endRow)
-                .setStartCol(col.coordinate.startCol)
-                .setEndCol(col.coordinate.endCol)
-
-            const position = new Range()
-                .setStartRow(row.position.startRow)
-                .setEndRow(row.position.endRow)
-                .setStartCol(col.position.startCol)
-                .setEndCol(col.position.endCol)
-            const renderCell = new RenderCell()
-                .setPosition(position)
-                .setCoordinate(corrdinate)
-                .setInfo(window.window.cells[idx])
-            cells.push(renderCell)
-            idx += 1
-        }
-    }
-
-    window.window.mergeCells.forEach((m) => {
-        let s: RenderCell | undefined
-        for (const i in cells) {
-            const cell = cells[i]
-            if (
-                cell.coordinate.startRow == m.rowStart &&
-                cell.coordinate.startCol == m.colStart
-            ) {
-                s = cell
-            } else if (
-                cell.coordinate.endRow == m.rowEnd &&
-                cell.coordinate.endCol == m.colEnd
-            ) {
-                if (s) s.setPosition(cell.position)
-                return
-            } else if (
-                cell.coordinate.endRow < m.rowEnd &&
-                cell.coordinate.endCol < m.colEnd &&
-                cell.coordinate.startRow > m.rowStart &&
-                cell.coordinate.startCol > m.colStart
-            ) {
-                cell.skipRender = true
-            }
-        }
-    })
-
-    return new CellViewData(rows, cols, cells, window.window.comments)
 }

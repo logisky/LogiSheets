@@ -1,14 +1,19 @@
 import {makeObservable} from 'mobx'
 import {CanvasStore} from './store'
 import {Box, CanvasAttr, PainterService, TextAttr} from '@/core/painter'
-import {simpleUuid, toA1notation} from '@/core'
-import {CellViewData, CellViewRespType, RenderCell} from '@/core/data2'
-import {SETTINGS} from '@/core/settings'
+import {pxToPt, simpleUuid, toA1notation} from '@/core'
+import {
+    CellViewData,
+    CellViewRespType,
+    RenderCell,
+    toCanvasPosition,
+} from '@/core/data2'
+import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {PatternFill} from 'logisheets-web'
 export const CANVAS_ID = simpleUuid()
-const BUFFER_SIZE = 200
+const BUFFER_SIZE = 0
 
 export class Render {
     constructor(public readonly store: CanvasStore) {
@@ -22,23 +27,19 @@ export class Render {
         const rect = this.canvas.getBoundingClientRect()
         const resp = this.store.dataSvc.getCellView(
             this.store.currSheetIdx,
-            rect.x - BUFFER_SIZE,
-            rect.y - BUFFER_SIZE,
-            rect.height + BUFFER_SIZE * 3,
-            rect.width + BUFFER_SIZE * 1.5
+            this.store.anchorX,
+            this.store.anchorY,
+            rect.height + BUFFER_SIZE * 2,
+            rect.width
         )
-        if (resp.type === CellViewRespType.New) {
-            this._painterService.setupCanvas(this.canvas)
-            this._painterService.clear()
-        }
-        if (resp.type !== CellViewRespType.Existed) {
-            const data = resp.data
-            this._renderGrid(data)
-            this._renderContent(data)
-            this._renderLeftHeader(data)
-            this._renderTopHeader(data)
-            this._renderLeftTop()
-        }
+        this._painterService.setupCanvas(this.canvas)
+        this._painterService.clear()
+        const data = resp.data
+        this._renderGrid(data)
+        this._renderContent(data)
+        this._renderLeftHeader(data)
+        this._renderTopHeader(data)
+        this._renderLeftTop()
 
         // rerender resizer
         this.store.resizer.init()
@@ -47,10 +48,14 @@ export class Render {
     private _painterService = new PainterService()
 
     private _renderCell(renderCell: RenderCell) {
-        const {coordinate: range, position, info} = renderCell
+        const {coordinate: _, position, info} = renderCell
         const style = info?.style
         const box = new Box()
-        box.position = position
+        box.position = toCanvasPosition(
+            position,
+            this.store.anchorX,
+            this.store.anchorY
+        )
         this._fill(box, style)
         this._border(box, position, style)
         if (info) {
@@ -76,18 +81,24 @@ export class Render {
         this._painterService.save()
         data.forEach((d) => {
             d.rows.forEach((r) => {
-                const {startRow, startCol, endRow, endCol} = r.position
+                const pos = toCanvasPosition(
+                    r.position,
+                    this.store.anchorX,
+                    this.store.anchorY,
+                    'row'
+                )
                 this._painterService.line([
-                    [startCol, startRow],
-                    [endCol, startRow],
-                    [endCol, endRow],
-                    [startCol, endRow],
+                    [pos.startCol, pos.startRow],
+                    [pos.endCol, pos.startRow],
+                    [pos.endCol, pos.endRow],
+                    [pos.startCol, pos.endRow],
                 ])
                 const box = new Box()
-                box.position = r.position
+                box.position = pos
                 const attr = new TextAttr()
                 attr.font = SETTINGS.fixedHeader.font
                 const position = (r.coordinate.startRow + 1).toString()
+                this._painterService.fillFgColor('solid', '#ffffff', box)
                 this._painterService.text(position, attr, box)
             })
         })
@@ -98,18 +109,24 @@ export class Render {
         this._painterService.save()
         data.forEach((d) => {
             d.cols.forEach((c) => {
-                const {startRow, startCol, endRow, endCol} = c.position
+                const pos = toCanvasPosition(
+                    c.position,
+                    this.store.anchorX,
+                    this.store.anchorY,
+                    'col'
+                )
                 this._painterService.line([
-                    [endCol, startRow],
-                    [endCol, endRow],
-                    [startCol, endRow],
-                    [startCol, startRow],
+                    [pos.endCol, pos.startRow],
+                    [pos.endCol, pos.endRow],
+                    [pos.startCol, pos.endRow],
+                    [pos.startCol, pos.startRow],
                 ])
                 const a1Notation = toA1notation(c.coordinate.startCol)
                 const box = new Box()
-                box.position = c.position
+                box.position = pos
                 const attr = new TextAttr()
                 attr.font = SETTINGS.fixedHeader.font
+                this._painterService.fillFgColor('solid', '#ffffff', box)
                 this._painterService.text(a1Notation, attr, box)
             })
         })
@@ -118,11 +135,15 @@ export class Render {
 
     private _renderLeftTop() {
         this._painterService.save()
-        const leftTop = SETTINGS.leftTop
         const attr = new CanvasAttr()
-        attr.strokeStyle = leftTop.strokeStyle
+        attr.strokeStyle = LeftTop.strokeStyle
         this._painterService.attr(attr)
-        this._painterService.strokeRect(0, 0, leftTop.width, leftTop.height)
+        this._painterService.strokeRect(50, 50, LeftTop.width, LeftTop.height)
+        const box = new Box()
+        box.position = new Range()
+            .setEndCol(LeftTop.width)
+            .setEndRow(LeftTop.width)
+        this._painterService.fillFgColor('solid', '#ffffff', box)
         this._painterService.restore()
     }
 
@@ -175,7 +196,7 @@ export class Render {
     }
 
     private _renderGrid(data: readonly CellViewData[]) {
-        const {grid, leftTop} = SETTINGS
+        const {grid} = SETTINGS
         this._painterService.save()
         const attr = new CanvasAttr()
         attr.lineWidth = grid.lineWidth
@@ -184,9 +205,12 @@ export class Render {
         if (grid.showHorizontal)
             data.forEach((d) => {
                 d.rows.forEach((r) => {
-                    const y = r.position.startRow
+                    const y =
+                        r.position.startRow -
+                        this.store.anchorY +
+                        LeftTop.height
                     this._painterService.line([
-                        [leftTop.width, y],
+                        [LeftTop.width, y],
                         [rect.width, y],
                     ])
                 })
@@ -194,9 +218,10 @@ export class Render {
         if (grid.showVertical)
             data.forEach((d) => {
                 d.cols.forEach((c) => {
-                    const x = c.position.startCol
+                    const x =
+                        c.position.startCol - this.store.anchorX + LeftTop.width
                     this._painterService.line([
-                        [x, leftTop.height],
+                        [x, LeftTop.height],
                         [x, rect.height],
                     ])
                 })

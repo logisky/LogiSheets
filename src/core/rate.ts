@@ -4,12 +4,19 @@ let MDW = 8
 const MAX_MDW = 15
 const MIN_MDW = 1
 export function ptToPx(pt: number): number {
-    // return pt * PPI / 96
-    return (pt * 96) / 72
+    return Math.round(((pt * PPI) / 72) * 100) / 100
 }
 
 export function pxToPt(px: number): number {
-    return (px * 96) / PPI
+    return Math.round(((px * 72) / PPI) * 100) / 100
+}
+
+export function widthToPx(w: number): number {
+    return w * 7
+}
+
+export function pxToWidth(px: number): number {
+    return px / 7
 }
 
 export function emToPt(em: number): number {

@@ -5,8 +5,6 @@ import HtmlWebpackPlugin from 'html-webpack-plugin'
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin'
 import 'webpack-dev-server'
 module.exports = (env: NodeJS.ProcessEnv): Configuration => {
-    const mode = env['dev'] ? 'development' : 'production'
-    const standAlone = !!env['stand-alone']
     return {
         entry: './src/index.tsx',
         mode: 'development',
