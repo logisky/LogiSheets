@@ -2,10 +2,10 @@ import {pxToPt, pxToWidth} from '../rate'
 import {LeftTop} from '../settings'
 import {RenderCell} from './render'
 import {CellViewData, Rect, overlap, OverlapType} from './types'
-import {WorkbookService} from './workbook'
 import {Range, StandardColInfo, StandardRowInfo} from '@/core/standable'
 import {ptToPx, width2px} from '@/core/rate'
-import {DisplayWindowWithStartPoint} from 'logisheets-web'
+import {DisplayWindowWithStartPoint, isErrorMessage} from 'logisheets-web'
+import {Resp, WorkbookClient} from './workbook'
 
 /**
  * The `ViewManager` is responsible for efficiently and seamlessly generating `CellViewData`.
@@ -15,28 +15,30 @@ import {DisplayWindowWithStartPoint} from 'logisheets-web'
  * and the WASM module, ensuring smooth performance by avoiding redundant calculations.
  */
 export class ViewManager {
-    constructor(
-        private _workbook: WorkbookService,
-        private _sheetIdx: number
-    ) {}
+    constructor(private _workbook: WorkbookClient, private _sheetIdx: number) {}
 
-    public getViewResponseWithCell(
+    public async getViewResponseWithCell(
         row: number,
         col: number,
         height: number,
         width: number
-    ): CellViewResponse {
-        const sheet = this._workbook.getSheetByIdx(this._sheetIdx)
-        const {x, y} = sheet.getCellPosition(row, col)
+    ): Resp<CellViewResponse> {
+        const result = await this._workbook.getCellPosition({
+            sheetIdx: this._sheetIdx,
+            row,
+            col,
+        })
+        if (isErrorMessage(result)) return result
+        const {x, y} = result
         return this.getViewResponse(x, y, height, width)
     }
 
-    public getViewResponse(
+    public async getViewResponse(
         startX: number,
         startY: number,
         height: number,
         width: number
-    ): CellViewResponse {
+    ): Promise<CellViewResponse> {
         const x = Math.max(0, startX)
         const y = Math.max(0, startY)
         let targets = [new Rect(x, y, width, height)]
@@ -67,16 +69,27 @@ export class ViewManager {
             ? CellViewRespType.Existed
             : CellViewRespType.Incremental
 
-        let data = targets.map((t) => {
-            const window = this._workbook.getDisplayWindow(
-                this._sheetIdx,
-                pxToWidth(t.startX),
-                pxToPt(t.startY),
-                pxToPt(t.height),
-                pxToWidth(t.width)
-            )
-            return parseDisplayWindow(window)
+        const windowsPromise = targets.map((t) => {
+            const window = this._workbook.getDisplayWindow({
+                sheetIdx: this._sheetIdx,
+                startX: pxToWidth(t.startX),
+                startY: pxToPt(t.startY),
+                height: pxToPt(t.height),
+                width: pxToWidth(t.width),
+            })
+            return window
+            // return parseDisplayWindow(window)
         })
+        const windows = await Promise.all(windowsPromise)
+        let data = windows
+            .filter((w) => {
+                if (isErrorMessage(w)) {
+                    //
+                    return false
+                }
+                return true
+            })
+            .map((w) => parseDisplayWindow(w as DisplayWindowWithStartPoint))
 
         if (type === CellViewRespType.New) {
             this.dataChunks = data

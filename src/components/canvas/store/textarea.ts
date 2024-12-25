@@ -75,29 +75,30 @@ export class Textarea {
             coordinate: {startRow: row, startCol: col},
             position: {startCol: x, startRow: y},
         } = startCell
-        const info = this.store.dataSvc.getActiveSheet().getCell(row, col)
-        if (isErrorMessage(info)) {
-            return
-        }
-        const text =
-            info.getFormula() === '' ? info.getFormula() : info.getText() ?? ''
-        const rect = this.store.render.canvas.getBoundingClientRect()
-        const [clientX, clientY] = [rect.x + x, rect.y + y]
-        const context = new Context()
-        context.text = text
-        context.canvasOffsetX = x
-        context.canvasOffsetY = y
-        context.clientX = clientX ?? -1
-        context.clientY = clientY ?? -1
-        context.cellHeight = height
-        context.cellWidth = width
-        context.bindingData = startCell
-        context.textareaOffsetX =
-            (event as globalThis.MouseEvent).clientX - clientX
-        context.textareaOffsetY =
-            (event as globalThis.MouseEvent).clientY - clientY
-        context.bindingData = startCell
-        this._setEditing(true, context)
+        const sheet = this.store.dataSvc.getCurrentSheetIdx()
+        const info = this.store.dataSvc.getCellInfo(sheet, row, col)
+        info.then((c) => {
+            if (isErrorMessage(c)) return
+            const text =
+                c.getFormula() === '' ? c.getFormula() : c.getText() ?? ''
+            const rect = this.store.render.canvas.getBoundingClientRect()
+            const [clientX, clientY] = [rect.x + x, rect.y + y]
+            const context = new Context()
+            context.text = text
+            context.canvasOffsetX = x
+            context.canvasOffsetY = y
+            context.clientX = clientX ?? -1
+            context.clientY = clientY ?? -1
+            context.cellHeight = height
+            context.cellWidth = width
+            context.bindingData = startCell
+            context.textareaOffsetX =
+                (event as globalThis.MouseEvent).clientX - clientX
+            context.textareaOffsetY =
+                (event as globalThis.MouseEvent).clientY - clientY
+            context.bindingData = startCell
+            this._setEditing(true, context)
+        })
     }
 
     @action

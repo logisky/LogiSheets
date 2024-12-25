@@ -1,80 +1,103 @@
 import {inject, injectable} from 'inversify'
 import {getID} from '../ioc/id'
 import {TYPES} from '../ioc/types'
-import {WorkbookService} from './workbook'
 import {
     ActionEffect,
     CustomFunc,
     Transaction,
-    Workbook,
-    Worksheet,
     SheetInfo,
+    Cell,
+    BlockInfo,
 } from 'logisheets-web'
 import {CellViewResponse, ViewManager} from './view_manager'
 import {CellViewData} from './types'
+import {Resp, WorkbookClient} from './workbook'
 
 export const MAX_COUNT = 100000000
 export const CANVAS_OFFSET = 100
 
 export interface DataService {
-    registryCustomFunc: (f: CustomFunc) => void
-    registryCellUpdatedCallback: (f: () => void) => void
-    registrySheetUpdatedCallback: (f: () => void) => void
-    handleTransaction: (t: Transaction) => ActionEffect
-    undo: () => void
-    redo: () => void
+    registryCustomFunc(f: CustomFunc): Resp<void>
+    registryCellUpdatedCallback(f: () => void): void
+    registrySheetUpdatedCallback(f: () => void): void
+    handleTransaction(t: Transaction): Resp<ActionEffect>
+    undo(): Resp<void>
+    redo(): Resp<void>
 
-    getWorkbook: () => Workbook
-    loadWorkbook: (buf: Uint8Array, name: string) => void
-    getActiveSheet: () => Worksheet
+    loadWorkbook(buf: Uint8Array, name: string): Resp<void>
 
-    getCellView: (
+    getCellView(
         sheetIdx: number,
         startX: number,
         startY: number,
         height: number,
         width: number
-    ) => CellViewResponse
+    ): Resp<CellViewResponse>
 
-    getCellViewWithCell: (
+    getCellViewWithCell(
         sheetIdx: number,
         row: number,
         col: number,
         height: number,
         width: number
-    ) => CellViewResponse
+    ): Resp<CellViewResponse>
 
-    getCurrentCellView: (sheetIdx: number) => readonly CellViewData[]
+    getFullyCoveredBlocks(
+        sheetIdx: number,
+        startRow: number,
+        startCol: number,
+        endRow: number,
+        endCol: number
+    ): Resp<readonly BlockInfo[]>
 
-    getCurrentSheetIdx: () => number
-    setCurrentSheetIDx: (idx: number) => void
+    getCurrentCellView(sheetIdx: number): readonly CellViewData[]
 
-    getAllSheetInfo: () => readonly SheetInfo[]
+    getCurrentSheetIdx(): number
+    setCurrentSheetIDx(idx: number): void
+
+    getAllSheetInfo(): Resp<readonly SheetInfo[]>
+    getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell>
 }
 
 @injectable()
 export class DataServiceImpl implements DataService {
     readonly id = getID()
-    constructor(@inject(TYPES.Workbook) private _workbook: WorkbookService) {
+    constructor(@inject(TYPES.Workbook) private _workbook: WorkbookClient) {
         this._init()
+    }
+
+    public getFullyCoveredBlocks(
+        sheetIdx: number,
+        row: number,
+        col: number,
+        height: number,
+        width: number
+    ): Resp<readonly BlockInfo[]> {
+        return this._workbook.getFullyCoveredBlocks({
+            sheetIdx,
+            row,
+            col,
+            height,
+            width,
+        })
+    }
+
+    public getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell> {
+        return this._workbook.getCell({sheetIdx, row, col})
     }
 
     public registrySheetUpdatedCallback(f: () => void): void {
         return this._workbook.registrySheetUpdatedCallback(f)
     }
 
-    public getAllSheetInfo(): readonly SheetInfo[] {
+    public async getAllSheetInfo(): Resp<readonly SheetInfo[]> {
         return this._workbook.getAllSheetInfo()
     }
 
-    public loadWorkbook(buf: Uint8Array, name: string): void {
-        this._workbook.loadWorkbook(buf, name)
+    public async loadWorkbook(buf: Uint8Array, name: string): Resp<void> {
+        await this._workbook.loadWorkbook({content: buf, name})
         this._sheetIdx = 0
         this._cellViews = new Map()
-    }
-
-    public getActiveSheet(): Worksheet {
-        return this._workbook.getSheetByIdx(this._sheetIdx)
     }
 
     public getCurrentSheetIdx(): number {
@@ -85,11 +108,7 @@ export class DataServiceImpl implements DataService {
         this._sheetIdx = idx
     }
 
-    public getWorkbook(): Workbook {
-        return this._workbook.workbook
-    }
-
-    public registryCustomFunc(f: CustomFunc) {
+    public async registryCustomFunc(f: CustomFunc) {
         return this._workbook.registryCustomFunc(f)
     }
 
@@ -97,15 +116,15 @@ export class DataServiceImpl implements DataService {
         return this._workbook.registryCellUpdatedCallback(f)
     }
 
-    public handleTransaction(transaction: Transaction): ActionEffect {
-        return this._workbook.handleTransaction(transaction)
+    public handleTransaction(transaction: Transaction): Resp<ActionEffect> {
+        return this._workbook.handleTransaction({transaction})
     }
 
-    public undo(): void {
+    public undo(): Resp<void> {
         return this._workbook.undo()
     }
 
-    public redo(): void {
+    public redo(): Resp<void> {
         return this._workbook.redo()
     }
 
@@ -123,7 +142,7 @@ export class DataServiceImpl implements DataService {
         col: number,
         height: number,
         width: number
-    ): CellViewResponse {
+    ): Resp<CellViewResponse> {
         const cacheManager = this._cellViews.get(sheetIdx)
         if (!cacheManager) {
             const manager = new ViewManager(this._workbook, sheetIdx)
@@ -139,7 +158,7 @@ export class DataServiceImpl implements DataService {
         startY: number,
         height: number,
         width: number
-    ): CellViewResponse {
+    ): Resp<CellViewResponse> {
         const cacheManager = this._cellViews.get(sheetIdx)
         if (!cacheManager) {
             const manager = new ViewManager(this._workbook, sheetIdx)

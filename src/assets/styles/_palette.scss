@@ -1,3 +1,6 @@
+@use "sass:color";
+@use "sass:map";
+@use "sass:meta";
 @use "./brand.scss";
 
 $header-bar-bg: brand.$header-background;
@@ -21,15 +24,15 @@ $header-bar-fg: brand.$header-foreground;
  *     logi-color($logi-brand, 600, 0,6)
  */
 @function logi-color($palette, $hue: 600, $opacity: null) {
-  @if type-of($hue) == number and $hue >= 0 and $hue <= 1 {
+  @if meta.type-of($hue) == number and $hue >= 0 and $hue <= 1 {
     @return logi-color($palette, 600, $hue);
   }
 
-  $color: map-get($palette, $hue);
-  @if (type-of($color) != color) {
+  $color: map.get($palette, $hue);
+  @if (meta.type-of($color) != color) {
     @return $color;
   }
-  @return rgba($color, if($opacity == null, opacity($color), $opacity));
+  @return rgba($color, if($opacity == null, color.opacity($color), $opacity));
 }
 
 $logi-brand: (
@@ -46,7 +49,7 @@ $logi-brand: (
 );
 
 @function logi-brand($opacity: 1) {
-  @return rgba(map-get($logi-brand, 600), $opacity);
+  @return rgba(map.get($logi-brand, 600), $opacity);
 }
 
 $aris-brand: (
@@ -63,7 +66,7 @@ $aris-brand: (
 );
 
 @function aris-brand($opacity: 1) {
-  @return rgba(map-get($aris-brand, 600), $opacity);
+  @return rgba(map.get($aris-brand, 600), $opacity);
 }
 
 $logi-green: (
@@ -80,7 +83,7 @@ $logi-green: (
 );
 
 @function logi-green($opacity: 1) {
-  @return rgba(map-get($logi-green, 600), $opacity);
+  @return rgba(map.get($logi-green, 600), $opacity);
 }
 
 $logi-aqua: (
@@ -97,7 +100,7 @@ $logi-aqua: (
 );
 
 @function logi-aqua($opacity: 1) {
-  @return rgba(map-get($logi-aqua, 600), $opacity);
+  @return rgba(map.get($logi-aqua, 600), $opacity);
 }
 
 $logi-orange: (
@@ -114,7 +117,7 @@ $logi-orange: (
 );
 
 @function logi-orange($opacity: 1) {
-  @return rgba(map-get($logi-orange, 600), $opacity);
+  @return rgba(map.get($logi-orange, 600), $opacity);
 }
 
 $logi-purple: (
@@ -131,7 +134,7 @@ $logi-purple: (
 );
 
 @function logi-purple($opacity: 1) {
-  @return rgba(map-get($logi-purple, 600), $opacity);
+  @return rgba(map.get($logi-purple, 600), $opacity);
 }
 
 $logi-red: (
@@ -148,7 +151,7 @@ $logi-red: (
 );
 
 @function logi-red($opacity: 1) {
-  @return rgba(map-get($logi-red, 600), $opacity);
+  @return rgba(map.get($logi-red, 600), $opacity);
 }
 
 $logi-grey: (
@@ -165,5 +168,5 @@ $logi-grey: (
 );
 
 @function logi-grey($opacity: 1) {
-  @return rgba(map-get($logi-grey, 600), $opacity);
+  @return rgba(map.get($logi-grey, 600), $opacity);
 }

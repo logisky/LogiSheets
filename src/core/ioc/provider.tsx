@@ -8,6 +8,8 @@ const InversifyContainer = createContext<{container: Container}>({
 
 interface IIocProvider {
     readonly container: Container
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly children: any
 }
 
 export const IocProvider: FC<IIocProvider> = ({container, children}) => {

@@ -83,17 +83,17 @@ export class Resizer {
         const activeResizer = this.resizers[i]
         if (!activeResizer) return false
         this.movingStart = {x: e.clientX, y: e.clientY}
-        const sheet = this.store.dataSvc
-            .getWorkbook()
-            .getWorksheet(this.store.currSheetIdx)
-        const {startCol, startRow} = activeResizer.leftCell.coordinate
-        const info = activeResizer.isRow
-            ? sheet.getRowHeight(startCol)
-            : sheet.getColWidth(startRow)
-        if (isErrorMessage(info)) {
-            throw Error(info.msg)
-        }
-        const value = (this.hoverText = `${info}px`)
+        // const sheet = this.store.dataSvc
+        //     .getWorkbook()
+        //     .getWorksheet(this.store.currSheetIdx)
+        // const {startCol, startRow} = activeResizer.leftCell.coordinate
+        // const info = activeResizer.isRow
+        //     ? sheet.getRowHeight(startCol)
+        //     : sheet.getColWidth(startRow)
+        // if (isErrorMessage(info)) {
+        //     throw Error(info.msg)
+        // }
+        // const value = (this.hoverText = `${info}px`)
         this.active = activeResizer
         this.moving = {x: 0, y: 0}
         return true
