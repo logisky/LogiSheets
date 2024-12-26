@@ -4,6 +4,7 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "esModuleInterop": true,
+    "types": ["reflect-metadata", "vitest/globals", "node"],
     "forceConsistentCasingInFileNames": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -12,15 +13,14 @@
     "lib": [
       "dom",
       "dom.iterable",
-      "esnext"
+      "ESNext"
     ],
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "node",
     "noEmit": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "outDir": "./dist/",
-    "types": ["reflect-metadata", "vitest/globals", "node"],
     "paths": {
       "@/*": ["src/*"],
     },
@@ -28,7 +28,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "esnext"
+    "target": "ESNext"
   },
   "ts-node": {
     "compilerOptions": {

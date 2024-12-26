@@ -4,6 +4,7 @@ import {ContextMenuComponent} from './contextmenu'
 import {
     DeleteSheetBuilder,
     InsertSheetBuilder,
+    isErrorMessage,
     Transaction,
 } from 'logisheets-web'
 import {useInjection} from '@/core/ioc/provider'
@@ -16,8 +17,13 @@ export type SheetsTabprops = Record<string, unknown>
 
 export const SheetsTabComponent: FC<SheetsTabprops> = () => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const getSheets = () => DATA_SERVICE.getAllSheetInfo().map((s) => s.name)
-    const [sheets, setSheets] = useState(getSheets())
+    const getSheets = () => {
+        const sheetInfo = DATA_SERVICE.getAllSheetInfo().then((info) => {
+            if (!isErrorMessage(info)) return info.map((s) => s.name)
+        })
+        return sheetInfo
+    }
+    const [sheets, setSheets] = useState([] as string[])
     const [active, setActive] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
 
@@ -25,7 +31,9 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
         const subs = new Subscription()
         subs.add(
             DATA_SERVICE.registrySheetUpdatedCallback(() => {
-                setSheets(getSheets())
+                getSheets().then((v) => {
+                    if (v) setSheets(v)
+                })
             })
         )
         return () => {

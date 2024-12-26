@@ -52,7 +52,7 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
     const [contextMenuEl, setContextMenu] = useState<ReactElement>()
-    const textEl = useRef<ITextareaInstance>()
+    const textEl = useRef<ITextareaInstance>(null)
 
     const setCanvasSize = () => {
         store.render.canvas.width = canvasHost().getBoundingClientRect().width

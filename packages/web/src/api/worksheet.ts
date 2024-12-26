@@ -101,13 +101,18 @@ export class Worksheet {
         return get_col_info(this._id, this._sheetIdx, colIdx) as Result<ColInfo>
     }
 
-    public getCell(rowIdx: number, colIdx: number): Result<Cell> {
+    public getCellInfo(rowIdx: number, colIdx: number): Result<CellInfo> {
         const cellInfo = get_cell_info(
             this._id,
             this._sheetIdx,
             rowIdx,
             colIdx
         ) as Result<CellInfo>
+        return cellInfo
+    }
+
+    public getCell(rowIdx: number, colIdx: number): Result<Cell> {
+        const cellInfo = this.getCellInfo(rowIdx, colIdx)
         if (isErrorMessage(cellInfo)) {
             return cellInfo
         }

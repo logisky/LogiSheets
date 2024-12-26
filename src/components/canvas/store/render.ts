@@ -11,7 +11,7 @@ import {
 import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
-import {PatternFill} from 'logisheets-web'
+import {isErrorMessage, PatternFill} from 'logisheets-web'
 export const CANVAS_ID = simpleUuid()
 const BUFFER_SIZE = 0
 
@@ -32,17 +32,20 @@ export class Render {
             rect.height + BUFFER_SIZE * 2,
             rect.width
         )
-        this._painterService.setupCanvas(this.canvas)
-        this._painterService.clear()
-        const data = resp.data
-        this._renderGrid(data)
-        this._renderContent(data)
-        this._renderLeftHeader(data)
-        this._renderTopHeader(data)
-        this._renderLeftTop()
+        resp.then((r) => {
+            if (isErrorMessage(r)) return
+            const data = r.data
+            this._painterService.setupCanvas(this.canvas)
+            this._painterService.clear()
+            this._renderGrid(data)
+            this._renderContent(data)
+            this._renderLeftHeader(data)
+            this._renderTopHeader(data)
+            this._renderLeftTop()
 
-        // rerender resizer
-        this.store.resizer.init()
+            // rerender resizer
+            this.store.resizer.init()
+        })
     }
 
     private _painterService = new PainterService()

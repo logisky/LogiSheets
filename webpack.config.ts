@@ -8,6 +8,7 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
     return {
         entry: './src/index.tsx',
         mode: 'development',
+        target: 'web',
         output: {
             filename: 'bundle.js',
             path: path.resolve(__dirname) + '/dist',
@@ -35,11 +36,12 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
 
         resolve: {
             // Add '.ts' and '.tsx' as resolvable extensions.
-            extensions: ['.ts', '.tsx', '.js', '.json'],
+            extensions: ['.ts', '.tsx', '.js', '.json', '.d.ts'],
             plugins: [
                 new TsconfigPathsPlugin({
                     configFile: './tsconfig.json',
-                }),
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                }) as any,
             ],
         },
         plugins: [
@@ -73,7 +75,7 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
                     loader: 'esbuild-loader',
                     options: {
                         loader: 'tsx',
-                        target: 'es2015',
+                        target: 'ESNext',
                     },
                 },
                 {

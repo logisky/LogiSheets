@@ -54,12 +54,12 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         )
         setBlockMenuOpened(true)
     }
-    const _addCol = () => {
+    const _addCol = async () => {
         const sheet = DATA_SERVICE.getCurrentSheetIdx()
         const {
             coordinate: {startCol: start},
         } = startCell
-        const blocks = _checkBlock()
+        const blocks = await _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
@@ -82,12 +82,12 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
-    const _removeCol = () => {
+    const _removeCol = async () => {
         const {
             coordinate: {startCol: start},
         } = startCell
         const sheet = DATA_SERVICE.getCurrentSheetIdx()
-        const blocks = _checkBlock()
+        const blocks = await _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
@@ -110,12 +110,12 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
-    const _addRow = () => {
+    const _addRow = async () => {
         const {
             coordinate: {startRow: start},
         } = startCell
         const sheet = DATA_SERVICE.getCurrentSheetIdx()
-        const blocks = _checkBlock()
+        const blocks = await _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
@@ -137,12 +137,12 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
-    const _removeRow = () => {
+    const _removeRow = async () => {
         const {
             coordinate: {startRow: start},
         } = startCell
         const sheet = DATA_SERVICE.getCurrentSheetIdx()
-        const blocks = _checkBlock()
+        const blocks = await _checkBlock()
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
@@ -164,7 +164,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
-    const _addBlock = () => {
+    const _addBlock = async () => {
         const endCellTruthy = endCell ?? startCell
         const start = startCell.coordinate
         const end = endCellTruthy.coordinate
@@ -179,10 +179,11 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
-    const _checkBlock = () => {
+    const _checkBlock = async () => {
         const {coordinate: start} = startCell
         const {coordinate: end} = endCell ?? startCell
-        const result = DATA_SERVICE.getActiveSheet().getFullyCoveredBlocks(
+        const result = await DATA_SERVICE.getFullyCoveredBlocks(
+            DATA_SERVICE.getCurrentSheetIdx(),
             start.startRow,
             start.startCol,
             end.endRow - start.startRow + 1,

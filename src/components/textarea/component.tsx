@@ -23,7 +23,7 @@ export interface TextContainerProps {
 export const TextContainerComponent = forwardRef(
     (props: TextContainerProps, ref) => {
         const store = useRef(new TextareaStore(props.context))
-        const internal = useRef()
+        const internal = useRef(null)
 
         useImperativeHandle(ref, () => {
             return internal.current

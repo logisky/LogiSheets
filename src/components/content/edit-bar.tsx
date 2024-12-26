@@ -23,11 +23,13 @@ export const EditBarComponent: FC<EditBarProps> = ({
         const {row, col} = selectedCell
         const notation = toA1notation(selectedCell.col)
         setCoordinate(`${notation}${row + 1}`)
-        const sheet = dataSvc.getActiveSheet()
-        const cell = sheet.getCell(row, col)
-        if (isErrorMessage(cell)) return
-        if (cell.getFormula() === '') setFormula(cell.getText())
-        else setFormula(cell.getFormula())
+        const cell = dataSvc.getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
+        cell.then((c) => {
+            if (isErrorMessage(c)) return
+            console.log(c)
+            if (c.getFormula() === '') setFormula(c.getText())
+            else setFormula(c.getFormula())
+        })
     }, [selectedCell])
     const formulaTextChange = (newText: string) => {
         const payload = new CellInputBuilder()

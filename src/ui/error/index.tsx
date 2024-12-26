@@ -32,8 +32,8 @@ export class ErrorBoundary extends React.Component<
 
     componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         // You can also log the error to an error reporting service
-        useToast().toast.error(error)
-        useToast().toast.error(errorInfo)
+        useToast().toast.error(`${error}`)
+        useToast().toast.error(`${errorInfo}`)
     }
 
     render() {

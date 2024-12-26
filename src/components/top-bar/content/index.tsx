@@ -62,12 +62,14 @@ export const StartComponent = ({selectedCell}: StartProps) => {
     const _initStyle = () => {
         if (!selectedCell) return
         const {row, col} = selectedCell
-        const sheet = DATA_SERVICE.getActiveSheet()
-        const cellInfo = sheet.getCell(row, col)
-        if (isErrorMessage(cellInfo)) return
-        const style = cellInfo.getStyle()
-        const font = StandardFont.from(style.font)
-        setFontColor(font.standardColor.css())
+        const sheet = DATA_SERVICE.getCurrentSheetIdx()
+        const cellInfo = DATA_SERVICE.getCellInfo(sheet, row, col)
+        cellInfo.then((c) => {
+            if (isErrorMessage(c)) return
+            const style = c.getStyle()
+            const font = StandardFont.from(style.font)
+            setFontColor(font.standardColor.css())
+        })
     }
 
     // private _getPayloadType(
@@ -78,7 +80,7 @@ export const StartComponent = ({selectedCell}: StartProps) => {
     //     const col = this._selectedCell.col
     //     const sheet = this._dataSvc.sheetSvc.getActiveSheet()
     //     const item = this._itemMap.get(type)
-    //     if (item === undefined)
+    //     ifx item === undefined)
     //         return
     //     item.setOpened(false)
     //     if (row === -1 || col === -1 || sheet === -1)
