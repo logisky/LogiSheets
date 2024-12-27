@@ -13,7 +13,6 @@ import {TYPES} from './types'
 export const CONTAINER = new Container()
 
 export async function setup() {
-    console.log('gggggnew web worker')
     const workbook = new WorkbookClient()
     CONTAINER.bind<IWorkbookClient>(TYPES.Workbook).toConstantValue(workbook)
     return workbook.isReady().then((_) => {

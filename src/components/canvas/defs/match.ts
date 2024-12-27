@@ -1,4 +1,4 @@
-import {LeftTop, SETTINGS} from '@/core/settings'
+import {LeftTop} from '@/core/settings'
 import {Range} from '@/core/standable'
 import {Cell} from './cell'
 import {CellViewData} from '@/core/data2'
@@ -16,30 +16,49 @@ export function getOffset(
 }
 
 export function match(
-    clientX: number,
-    clientY: number,
-    canvas: HTMLCanvasElement,
+    canvasX: number,
+    canvasY: number,
+    anchorX: number,
+    anchorY: number,
     data: readonly CellViewData[]
 ) {
-    const {x, y} = getOffset(clientX, clientY, canvas)
+    if (canvasX <= LeftTop.width && canvasY <= LeftTop.height)
+        return new Cell('LeftTop')
+    if (canvasX <= LeftTop.width) {
+        // clicking a row
+        const clickPosition = new Range()
+            .setStartCol(0)
+            .setStartRow(canvasY + anchorY - LeftTop.height)
+            .setEndCol(0)
+            .setEndRow(canvasY + anchorY - LeftTop.height)
+        const row = data
+            .flatMap((d) => d.rows)
+            .find((r) => r.position.cover(clickPosition))
+        if (row) return new Cell('FixedLeftHeader').copyByRenderCell(row)
+        return new Cell('unknown')
+    }
+
+    if (canvasY <= LeftTop.height) {
+        // clicking a col
+        const clickPosition = new Range()
+            .setStartCol(canvasX + anchorX - LeftTop.width)
+            .setStartRow(0)
+            .setEndCol(canvasX + anchorX - LeftTop.width)
+            .setEndRow(0)
+        const col = data
+            .flatMap((d) => d.cols)
+            .find((c) => c.position.cover(clickPosition))
+        if (col) return new Cell('FixedTopHeader').copyByRenderCell(col)
+        return new Cell('unknown')
+    }
     const clickPosition = new Range()
-        .setStartCol(x)
-        .setStartRow(y)
-        .setEndCol(x)
-        .setEndRow(y)
-    const col = data
-        .flatMap((d) => d.cols)
-        .find((c) => c.position.cover(clickPosition))
-    const row = data
-        .flatMap((d) => d.rows)
-        .find((r) => r.position.cover(clickPosition))
+        .setStartCol(canvasX + anchorX - LeftTop.width)
+        .setStartRow(canvasY + anchorY - LeftTop.height)
+        .setEndCol(canvasX + anchorX - LeftTop.width)
+        .setEndRow(canvasY + anchorY - LeftTop.height)
     const renderCell = data
-        .flatMap((d) => d.cols)
-        .flat()
+        .flatMap((d) => d.cells)
         .find((c) => c.position.cover(clickPosition))
-    if (x <= LeftTop.width && y <= LeftTop.height) return new Cell('LeftTop')
-    else if (row) return new Cell('FixedLeftHeader').copyByRenderCell(row)
-    else if (col) return new Cell('FixedTopHeader').copyByRenderCell(col)
-    else if (renderCell) return new Cell('Cell').copyByRenderCell(renderCell)
+    if (renderCell) return new Cell('Cell').copyByRenderCell(renderCell)
     return new Cell('unknown')
 }

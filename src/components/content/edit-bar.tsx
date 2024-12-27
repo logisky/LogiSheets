@@ -26,7 +26,6 @@ export const EditBarComponent: FC<EditBarProps> = ({
         const cell = dataSvc.getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
         cell.then((c) => {
             if (isErrorMessage(c)) return
-            console.log(c)
             if (c.getFormula() === '') setFormula(c.getText())
             else setFormula(c.getFormula())
         })

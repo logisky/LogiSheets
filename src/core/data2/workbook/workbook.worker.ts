@@ -73,9 +73,7 @@ class WorkerService implements IWorkbookWorker {
     }
 
     public async init() {
-        console.log(',,,,,,,,')
         await initWasm()
-        console.log('1111111')
         this._workbookImpl = new Workbook()
         this._workbookImpl.registerCellUpdatedCallback(() => {
             ctx.postMessage({id: WorkerUpdate.Cell})
@@ -85,7 +83,6 @@ class WorkerService implements IWorkbookWorker {
         })
         // Inform the client that service is ready
         ctx.postMessage({id: WorkerUpdate.Ready})
-        console.log('????')
     }
 
     public handleTransaction(params: HandleTransactionParams): ActionEffect {
@@ -199,7 +196,6 @@ class WorkerService implements IWorkbookWorker {
 // Worker thread execution
 const workerService = new WorkerService()
 
-console.log('sssssssss')
 workerService.init().then(() => {
     ctx.onmessage = (e) => {
         const request = e.data
