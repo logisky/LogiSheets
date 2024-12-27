@@ -29,7 +29,6 @@ export class Textarea {
         const newText = this.currText.trim()
         const checked = await checkFormula(newText)
         if (!checked || !this.context?.bindingData) return false
-        this._setEditing(false)
         const payload = new CellInputBuilder()
             .row(this.context.bindingData.coordinate.startRow)
             .col(this.context.bindingData.coordinate.startCol)
@@ -37,6 +36,7 @@ export class Textarea {
             .input(newText)
             .build()
         this.store.dataSvc.handleTransaction(new Transaction([payload], true))
+        this._setEditing(false)
         return true
     }
 
@@ -73,8 +73,12 @@ export class Textarea {
             height,
             width,
             coordinate: {startRow: row, startCol: col},
-            position: {startCol: x, startRow: y},
+            position,
+            type,
         } = startCell
+        const pos = this.store.convertToCanvasPosition(position, type)
+        const x = pos.startCol
+        const y = pos.startRow
         const sheet = this.store.dataSvc.getCurrentSheetIdx()
         const info = this.store.dataSvc.getCellInfo(sheet, row, col)
         info.then((c) => {
@@ -96,7 +100,6 @@ export class Textarea {
                 (event as globalThis.MouseEvent).clientX - clientX
             context.textareaOffsetY =
                 (event as globalThis.MouseEvent).clientY - clientY
-            context.bindingData = startCell
             this._setEditing(true, context)
         })
     }

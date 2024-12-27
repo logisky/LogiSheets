@@ -129,6 +129,7 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
         // only support y scrollbar currently
         if (store.anchorY + e.deltaY < 0) return
         store.anchorY += e.deltaY
+
         store.render.render()
         store.scroll()
     }
