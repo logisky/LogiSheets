@@ -1,8 +1,8 @@
 import {action, makeObservable, observable} from 'mobx'
 import {Range} from '@/core/standable'
 import {CanvasStore} from './store'
-import {Cell, match} from '../defs'
-import {getPosition, getSelector} from './selector'
+import {Cell} from '../defs'
+import {getPosition} from './selector'
 import {AttributeName} from '@/core'
 
 export class Dnd {
@@ -51,13 +51,9 @@ export class Dnd {
             y: e.clientY - this._mousedownStart.y,
         }
         if (startCell.type !== 'Cell') return true
-        const endCell = match(
+        const endCell = this.store.match(
             oldEnd.position.startCol + moved.x,
-            oldEnd.position.startRow + moved.y,
-            this.store.render.canvas,
-            this.store.dataSvc.getCurrentCellView(
-                this.store.dataSvc.getCurrentSheetIdx()
-            )
+            oldEnd.position.startRow + moved.y
         )
         if (endCell.type !== 'Cell') return true
         this._setEnd({start: startCell, end: endCell})
@@ -73,11 +69,7 @@ export class Dnd {
     private _setRange(selector?: _Selector) {
         this._selector = selector
         const sel = selector
-            ? getSelector(
-                  this.store.render.canvas,
-                  selector.start,
-                  selector.end
-              )
+            ? this.store.selector?.getSelector(selector.start, selector.end)
             : undefined
         const newRange = sel ? getPosition(sel) : undefined
         this.range = newRange
@@ -91,11 +83,7 @@ export class Dnd {
     private _setEnd = (selector?: _Selector) => {
         this._endSelector = selector
         const sel = selector
-            ? getSelector(
-                  this.store.render.canvas,
-                  selector.start,
-                  selector.end
-              )
+            ? this.store.selector?.getSelector(selector.start, selector.end)
             : undefined
         const draggingRange = sel ? getPosition(sel) : undefined
         this.dragging = draggingRange

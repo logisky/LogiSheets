@@ -35,6 +35,8 @@ export class RenderCell {
     public coordinate = new Range()
     /**
      * start/end row/col pixel distance
+     *
+     * Note: this is the position in the whole sheet
      */
     public position = new Range()
     public info?: StandardCell

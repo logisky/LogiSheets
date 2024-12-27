@@ -47,7 +47,6 @@ export const SelectorComponent = observer((props: ISelectorProps) => {
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    // box-shadow: rgb(255 255 255) 0 0 0 1px, rgb(31 187 125) 0 0 0 3px;
                     border: 'solid rgba(31, 187, 125, 0.1)',
                     width: '100%',
                     height: '100%',

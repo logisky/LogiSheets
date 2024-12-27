@@ -3,12 +3,14 @@ import {createContext, type MouseEvent} from 'react'
 import {Render} from './render'
 import {Resizer} from './resizer'
 import {Highlights} from './highlights'
-import {Cell, match} from '../defs'
+import {Cell, CellType, getOffset, match} from '../defs'
 import {Selector} from './selector'
 import {Dnd} from './dnd'
 import {ScrollBar} from './scrollbar'
 import {Textarea} from './textarea'
 import {RenderCell, DataService, CellViewData} from '@/core/data2'
+import {Range} from '@/core/standable'
+import {LeftTop} from '@/core/settings'
 
 export class CanvasStore {
     constructor(public readonly dataSvc: DataService) {
@@ -52,8 +54,27 @@ export class CanvasStore {
     }
 
     match(clientX: number, clientY: number) {
+        const {x, y} = getOffset(clientX, clientY, this.render.canvas)
         const data = this.getCurrentCellView()
-        return match(clientX, clientY, this.render.canvas, data)
+        return match(x, y, this.anchorX, this.anchorY, data)
+    }
+
+    convertToCanvasPosition(p: Range, ty: CellType): Range {
+        let xOffset = 0
+        let yOffset = 0
+        if (ty === 'Cell') {
+            xOffset = LeftTop.width
+            yOffset = LeftTop.height
+        } else if (ty === 'FixedLeftHeader') {
+            yOffset = LeftTop.height
+        } else if (ty === 'FixedTopHeader') {
+            xOffset = LeftTop.width
+        }
+        return new Range()
+            .setEndCol(p.endCol - this.anchorX + xOffset)
+            .setStartCol(p.startCol - this.anchorX + xOffset)
+            .setEndRow(p.endRow - this.anchorY + yOffset)
+            .setStartRow(p.startRow - this.anchorY + yOffset)
     }
 
     @action

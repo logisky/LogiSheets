@@ -92,8 +92,8 @@ export class Render {
                 )
                 this._painterService.line([
                     [pos.startCol, pos.startRow],
-                    [pos.endCol, pos.startRow],
-                    [pos.endCol, pos.endRow],
+                    [LeftTop.width, pos.startRow],
+                    [LeftTop.width, pos.endRow],
                     [pos.startCol, pos.endRow],
                 ])
                 const box = new Box()
@@ -120,9 +120,9 @@ export class Render {
                 )
                 this._painterService.line([
                     [pos.endCol, pos.startRow],
-                    [pos.endCol, pos.endRow],
+                    [pos.endCol, LeftTop.height],
                     [pos.startCol, pos.endRow],
-                    [pos.startCol, pos.startRow],
+                    [pos.startCol, LeftTop.height],
                 ])
                 const a1Notation = toA1notation(c.coordinate.startCol)
                 const box = new Box()
