@@ -3,5 +3,5 @@ import {BlockCellId} from './block_cell_id'
 import {NormalCellId} from './normal_cell_id'
 
 export type CellId =
-    | {NormalCell: NormalCellId}
-    | {BlockCell: BlockCellId}
+    | {normalCell: NormalCellId}
+    | {blockCell: BlockCellId}

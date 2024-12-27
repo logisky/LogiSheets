@@ -9,12 +9,13 @@ pub use types::matrix_value;
 pub mod errors;
 
 use logisheets_workbook::prelude::*;
-use serde::Serialize;
 use std::hash::Hash;
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "cell_id.ts"))]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "cell_id.ts")
+)]
 pub enum CellId {
     NormalCell(NormalCellId),
     BlockCell(BlockCellId),
@@ -29,10 +30,11 @@ impl CellId {
     }
 }
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "normal_cell_id.ts"))]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "normal_cell_id.ts")
+)]
 pub struct NormalCellId {
     pub row: RowId,
     pub col: ColId,
@@ -139,10 +141,11 @@ pub struct ExtRef {
     pub cross: CubeCross,
 }
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(feature = "gents", ts(file_name = "block_cell_id.ts"))]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "block_cell_id.ts")
+)]
 pub struct BlockCellId {
     pub block_id: BlockId,
     // block inner row id
