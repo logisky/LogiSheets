@@ -72,7 +72,7 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
         if (selectedCell.source != 'editbar') return
 
         store.render.canvas.focus()
-        // jumpTo(selectedCell.row, selectedCell.col, 2)
+        store.render.jumpTo(selectedCell.row, selectedCell.col)
         store.selector.reset()
         store.textarea.reset()
     }, [selectedCell])
@@ -125,11 +125,15 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
         store.scroll()
     }
 
+    let lastScrollTime = 0
     const onMouseWheel = (e: WheelEvent) => {
         // only support y scrollbar currently
         if (store.anchorY + e.deltaY < 0) return
         store.anchorY += e.deltaY
 
+        const now = Date.now()
+        if (now - lastScrollTime < 50) return
+        lastScrollTime = now
         store.render.render()
         store.scroll()
     }

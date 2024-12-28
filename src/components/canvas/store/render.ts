@@ -48,6 +48,35 @@ export class Render {
         })
     }
 
+    jumpTo(row: number, col: number) {
+        const rect = this.canvas.getBoundingClientRect()
+        const resp = this.store.dataSvc.getCellViewWithCell(
+            this.store.currSheetIdx,
+            row,
+            col,
+            rect.height,
+            rect.width
+        )
+        resp.then((r) => {
+            if (isErrorMessage(r)) return
+            if (r.data.length === 0) return
+            const data = r.data.find((v) => {
+                return (
+                    v.fromRow <= row &&
+                    v.toRow >= row &&
+                    v.fromCol <= col &&
+                    v.toCol >= col
+                )
+            })
+            if (!data) return
+            const firstRow = data.rows[0]
+            const firstCol = data.cols[0]
+            this.store.anchorY = firstRow.position.startRow
+            this.store.anchorX = firstCol.position.startCol
+            this.render()
+        })
+    }
+
     private _painterService = new PainterService()
 
     private _renderCell(renderCell: RenderCell) {

@@ -19,17 +19,20 @@ export const EditBarComponent: FC<EditBarProps> = ({
     const dataSvc = useInjection<DataService>(TYPES.Data)
     const [coordinate, setCoordinate] = useState('')
     const [formula, setFormula] = useState('')
+    const [isEditing, setIsEditing] = useState(false)
+
     useEffect(() => {
+        if (isEditing) return
         const {row, col} = selectedCell
-        const notation = toA1notation(selectedCell.col)
+        const notation = toA1notation(col)
         setCoordinate(`${notation}${row + 1}`)
         const cell = dataSvc.getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
         cell.then((c) => {
             if (isErrorMessage(c)) return
-            if (c.getFormula() === '') setFormula(c.getText())
-            else setFormula(c.getFormula())
+            setFormula(c.getFormula() || c.getText())
         })
-    }, [selectedCell])
+    }, [selectedCell, isEditing])
+
     const formulaTextChange = (newText: string) => {
         const payload = new CellInputBuilder()
             .sheetIdx(dataSvc.getCurrentSheetIdx())
@@ -39,20 +42,29 @@ export const EditBarComponent: FC<EditBarProps> = ({
             .build()
         dataSvc.handleTransaction(new Transaction([payload], true))
     }
+
     const locationChange = (newText: string) => {
         const result = parseA1notation(newText)
-
         if (!result) {
+            setCoordinate(
+                `${toA1notation(selectedCell.col)}${selectedCell.row + 1}`
+            )
+            setIsEditing(false)
             return
         }
-
         selectedCell$({row: result.rs, col: result.cs, source: 'editbar'})
+        setIsEditing(false)
     }
+
     return (
         <div className={styles.host}>
             <input
                 className={styles.a1notation}
-                defaultValue={coordinate}
+                value={coordinate}
+                onChange={(e) => {
+                    setCoordinate(e.target.value)
+                    setIsEditing(true)
+                }}
                 onBlur={(e) => locationChange(e.target.value)}
             />
             <div className={styles.middle} />

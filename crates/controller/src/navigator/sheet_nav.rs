@@ -31,7 +31,7 @@ impl SheetNav {
 
 impl Default for SheetNav {
     fn default() -> Self {
-        SheetNav::init(1000, 200, 0)
+        SheetNav::init(1000000, 200, 0)
     }
 }
 

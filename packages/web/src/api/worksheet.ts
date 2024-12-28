@@ -66,7 +66,8 @@ export class Worksheet {
     }
 
     public getCellPosition(row: number, col: number): CellPosition {
-        return get_cell_position(this._id, this._sheetIdx, row, col)
+        const result = get_cell_position(this._id, this._sheetIdx, row, col)
+        return result
     }
 
     public getDisplayWindowWithCellPosition(
