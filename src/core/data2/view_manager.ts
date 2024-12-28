@@ -1,4 +1,4 @@
-import {pxToPt, pxToWidth} from '../rate'
+import {pxToPt, pxToWidth, widthToPx} from '../rate'
 import {LeftTop} from '../settings'
 import {RenderCell} from './render'
 import {CellViewData, Rect, overlap, OverlapType} from './types'
@@ -30,7 +30,7 @@ export class ViewManager {
         })
         if (isErrorMessage(result)) return result
         const {x, y} = result
-        return this.getViewResponse(x, y, height, width)
+        return this.getViewResponse(widthToPx(x), ptToPx(y), height, width)
     }
 
     public async getViewResponse(

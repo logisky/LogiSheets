@@ -4,6 +4,9 @@ use super::Workbook;
 fn new_workbook() {
     let wb = Workbook::default();
     let ws = wb.get_sheet_by_idx(0).unwrap();
+
+    ws.get_cell_position(100, 100).unwrap();
+
     let empty_display_window = ws.get_display_window(0, 0, 100, 100).unwrap();
     let row_cnt = empty_display_window.rows.len();
     let col_cnt = empty_display_window.cols.len();

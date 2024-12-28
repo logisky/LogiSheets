@@ -35,7 +35,8 @@ impl<const INTERVAL: usize> CellPositioner<INTERVAL> {
                 continue;
             }
             let h = ws.get_row_height(curr)?;
-            result += h;
+            result = if reverse { result - h } else { result + h };
+            curr = advance(reverse, curr);
             self.add_cache(true, curr, result);
         }
         Ok(result)
@@ -53,8 +54,9 @@ impl<const INTERVAL: usize> CellPositioner<INTERVAL> {
                 curr = advance(reverse, curr);
                 continue;
             }
-            let h = ws.get_row_height(curr)?;
-            result += h;
+            let w = ws.get_col_width(curr)?;
+            result = if reverse { result - w } else { result + w };
+            curr = advance(reverse, curr);
             self.add_cache(true, curr, result);
         }
         Ok(result)
