@@ -1,13 +1,8 @@
 import {makeObservable} from 'mobx'
 import {CanvasStore} from './store'
 import {Box, CanvasAttr, PainterService, TextAttr} from '@/core/painter'
-import {pxToPt, simpleUuid, toA1notation} from '@/core'
-import {
-    CellViewData,
-    CellViewRespType,
-    RenderCell,
-    toCanvasPosition,
-} from '@/core/data2'
+import {simpleUuid, toA1notation} from '@/core'
+import {CellViewData, RenderCell, toCanvasPosition} from '@/core/data2'
 import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
@@ -71,8 +66,10 @@ export class Render {
             if (!data) return
             const firstRow = data.rows[0]
             const firstCol = data.cols[0]
-            this.store.anchorY = firstRow.position.startRow
-            this.store.anchorX = firstCol.position.startCol
+            this.store.setAnchor(
+                firstRow.position.startRow,
+                firstCol.position.startCol
+            )
             this.render()
         })
     }

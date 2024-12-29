@@ -36,6 +36,8 @@ const canvasHost = () => {
 export interface CanvasProps {
     selectedCell: SelectedCell
     selectedCell$: (e: SelectedCell) => void
+    activeSheet: number
+    activeSheet$: (s: number) => void
 }
 export const CanvasComponent = (props: CanvasProps) => {
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
@@ -47,7 +49,8 @@ export const CanvasComponent = (props: CanvasProps) => {
     )
 }
 
-const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
+const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
+    const {selectedCell, selectedCell$, activeSheet, activeSheet$} = props
     const store = useContext(CanvasStoreContext)
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
@@ -76,6 +79,12 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
         store.selector.reset()
         store.textarea.reset()
     }, [selectedCell])
+
+    useEffect(() => {
+        store.render.canvas.focus()
+        store.dataSvc.setCurrentSheetIdx(activeSheet)
+        store.render.render()
+    }, [activeSheet])
 
     useEffect(() => {
         const sub = on(window, EventType.MOUSE_MOVE).subscribe((mme) => {
@@ -129,7 +138,7 @@ const Internal: FC<CanvasProps> = observer(({selectedCell, selectedCell$}) => {
     const onMouseWheel = (e: WheelEvent) => {
         // only support y scrollbar currently
         if (store.anchorY + e.deltaY < 0) return
-        store.anchorY += e.deltaY
+        store.setAnchor(store.anchorX, store.anchorY + e.deltaY)
 
         const now = Date.now()
         if (now - lastScrollTime < 50) return

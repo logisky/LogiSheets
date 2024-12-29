@@ -31,10 +31,7 @@ export class CanvasStore {
      * left mousedown the same cell
      */
     same = false
-    currSheetIdx = 0
 
-    anchorX = 0
-    anchorY = 0
     render: Render
     resizer: Resizer
     highlights: Highlights
@@ -42,6 +39,28 @@ export class CanvasStore {
     dnd: Dnd
     scrollbar: ScrollBar
     textarea: Textarea
+
+    get currSheetIdx() {
+        return this.dataSvc.getCurrentSheetIdx()
+    }
+
+    get anchorX() {
+        return this._sheetAnchorData.get(this.currSheetIdx)?.anchorX ?? 0
+    }
+
+    get anchorY() {
+        return this._sheetAnchorData.get(this.currSheetIdx)?.anchorY ?? 0
+    }
+
+    setAnchor(x: number, y: number) {
+        const data = this._sheetAnchorData.get(this.currSheetIdx) ?? {
+            anchorX: 0,
+            anchorY: 0,
+        }
+        data.anchorX = x
+        data.anchorY = y
+        this._sheetAnchorData.set(this.currSheetIdx, data)
+    }
 
     getCurrentCellView(): readonly CellViewData[] {
         return this.dataSvc.getCurrentCellView(this.currSheetIdx)
@@ -129,6 +148,11 @@ export class CanvasStore {
         this.same = true
         this.selector.onScroll(newStartCell)
     }
+
+    private _sheetAnchorData = new Map<
+        number,
+        {anchorX: number; anchorY: number}
+    >()
 }
 
 // @ts-expect-error init data when use

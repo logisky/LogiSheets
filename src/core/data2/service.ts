@@ -53,7 +53,7 @@ export interface DataService {
     getCurrentCellView(sheetIdx: number): readonly CellViewData[]
 
     getCurrentSheetIdx(): number
-    setCurrentSheetIDx(idx: number): void
+    setCurrentSheetIdx(idx: number): void
 
     getAllSheetInfo(): Resp<readonly SheetInfo[]>
     getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell>
@@ -104,7 +104,7 @@ export class DataServiceImpl implements DataService {
         return this._sheetIdx
     }
 
-    public setCurrentSheetIDx(idx: number): void {
+    public setCurrentSheetIdx(idx: number): void {
         this._sheetIdx = idx
     }
 
