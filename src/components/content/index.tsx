@@ -1,5 +1,5 @@
 import {SelectedCell, CanvasComponent} from '@/components/canvas'
-import {FC} from 'react'
+import {FC, useState} from 'react'
 import styles from './content.module.scss'
 import {EditBarComponent} from './edit-bar'
 import {SheetsTabComponent} from '@/components/sheets-tab'
@@ -13,6 +13,7 @@ export const ContentComponent: FC<ContentProps> = ({
     selectedCell$,
     selectedCell,
 }) => {
+    const [activeSheet, activeSheet$] = useState<number>(0)
     return (
         <div className={styles.host}>
             <EditBarComponent
@@ -24,10 +25,15 @@ export const ContentComponent: FC<ContentProps> = ({
                     <CanvasComponent
                         selectedCell={selectedCell}
                         selectedCell$={selectedCell$}
+                        activeSheet={activeSheet}
+                        activeSheet$={activeSheet$}
                     />
                 </div>
             </div>
-            <SheetsTabComponent />
+            <SheetsTabComponent
+                activeSheet={activeSheet}
+                activeSheet$={activeSheet$}
+            />
         </div>
     )
 }

@@ -13,9 +13,15 @@ import {Tabs} from 'antd'
 import {Subscription} from 'rxjs'
 import {DataService} from '@/core/data2'
 
-export type SheetsTabprops = Record<string, unknown>
+export interface SheetTabProps {
+    activeSheet: number
+    activeSheet$: (s: number) => void
+}
 
-export const SheetsTabComponent: FC<SheetsTabprops> = () => {
+export const SheetsTabComponent: FC<SheetTabProps> = ({
+    activeSheet,
+    activeSheet$,
+}) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const getSheets = () => {
         const sheetInfo = DATA_SERVICE.getAllSheetInfo().then((info) => {
@@ -24,8 +30,13 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
         return sheetInfo
     }
     const [sheets, setSheets] = useState([] as string[])
-    const [active, setActive] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
+
+    useEffect(() => {
+        getSheets().then((v) => {
+            if (v) setSheets(v)
+        })
+    }, [])
 
     useEffect(() => {
         const subs = new Subscription()
@@ -43,12 +54,12 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
 
     const onTabChange = (key: string) => {
         const i = sheets.findIndex((s) => s === key)
-        setActive(i)
-        DATA_SERVICE.setCurrentSheetIDx(i)
+        activeSheet$(i)
+        DATA_SERVICE.setCurrentSheetIdx(i)
     }
 
     const add = () => {
-        const payload = new InsertSheetBuilder().sheetIdx(active).build()
+        const payload = new InsertSheetBuilder().sheetIdx(activeSheet).build()
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -69,7 +80,7 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
                             onContextMenu={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
-                                setActive(i)
+                                activeSheet$(i)
                                 setIsOpen(true)
                             }}
                         >
@@ -81,26 +92,47 @@ export const SheetsTabComponent: FC<SheetsTabprops> = () => {
                 onChange={onTabChange}
                 onEdit={(e, action) => {
                     if (action === 'add') {
+                        const newSheetName = findNewSheetName(sheets)
+                        const newIdx = sheets.length
                         const payload = new InsertSheetBuilder()
-                            .sheetIdx(sheets.length)
+                            .name(newSheetName)
+                            .sheetIdx(newIdx)
                             .build()
                         DATA_SERVICE.handleTransaction(
                             new Transaction([payload], true)
-                        )
+                        ).then((v) => {
+                            if (isErrorMessage(v)) return
+                            activeSheet$(newIdx)
+                        })
                     } else if (action === 'remove') {
                         if (typeof e !== 'string') return
                         const i = sheets.findIndex((s) => s === e)
                         onDelete(i)
                     }
                 }}
-                activeKey={sheets[active]}
+                activeKey={sheets[activeSheet]}
             />
             <ContextMenuComponent
                 isOpen={isOpen}
                 setIsOpen={setIsOpen}
-                index={active}
+                index={activeSheet}
                 sheetnames={sheets}
             />
         </div>
     )
+}
+
+function findNewSheetName(sheetNames: readonly string[]): string {
+    const sheetPattern = /^Sheet(\d+)$/
+
+    const numbers = sheetNames
+        .map((name) => {
+            const match = name.match(sheetPattern)
+            return match ? parseInt(match[1], 10) : null
+        })
+        .filter((num): num is number => num !== null)
+
+    const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1
+
+    return `Sheet${nextNumber}`
 }
