@@ -2,7 +2,7 @@ import {action, makeObservable, observable} from 'mobx'
 import {CanvasStore} from './store'
 import {RenderCell} from '@/core/data2'
 import {Range} from '@/core/standable'
-import {pxToPt} from '@/core'
+import {pxToPt, pxToWidth} from '@/core'
 import {
     SetColWidthBuilder,
     SetRowHeightBuilder,
@@ -14,9 +14,9 @@ import {getOffset} from '../defs'
 interface ResizerProps {
     readonly range: Range
     readonly isRow: boolean
-    readonly leftCell: RenderCell
+    readonly cell: RenderCell
 }
-const RESIZER_SIZE = 4
+const RESIZER_SIZE = 6
 
 export class Resizer {
     constructor(public readonly store: CanvasStore) {
@@ -42,28 +42,36 @@ export class Resizer {
         const data = this.store.getCurrentCellView()
         const rowResizers = data
             .flatMap((d) => d.rows)
-            .map((cell) => {
+            .map((c) => {
+                const cell = this.store.convertToCanvasPosition(
+                    c.position,
+                    'FixedLeftHeader'
+                )
                 return {
                     range: new Range()
-                        .setStartRow(cell.position.endRow)
-                        .setEndRow(cell.position.endRow + RESIZER_SIZE)
-                        .setStartCol(cell.position.startCol)
-                        .setEndCol(cell.position.endCol),
+                        .setStartRow(cell.endRow - RESIZER_SIZE)
+                        .setEndRow(cell.endRow + RESIZER_SIZE)
+                        .setStartCol(cell.startCol)
+                        .setEndCol(cell.endCol),
                     isRow: true,
-                    leftCell: cell,
+                    cell: c,
                 }
             })
         const colResizers = data
             .flatMap((d) => d.cols)
-            .map((cell) => {
+            .map((c) => {
+                const cell = this.store.convertToCanvasPosition(
+                    c.position,
+                    'FixedTopHeader'
+                )
                 return {
                     range: new Range()
-                        .setStartCol(cell.position.endCol)
-                        .setStartRow(cell.position.startRow)
-                        .setEndCol(cell.position.endCol + RESIZER_SIZE)
-                        .setEndRow(cell.position.endRow),
+                        .setStartCol(cell.endCol - RESIZER_SIZE)
+                        .setStartRow(cell.startRow)
+                        .setEndCol(cell.endCol + RESIZER_SIZE)
+                        .setEndRow(cell.endRow),
                     isRow: false,
-                    leftCell: cell,
+                    cell: c,
                 }
             })
         this.updateResizers(rowResizers.concat(colResizers))
@@ -78,22 +86,18 @@ export class Resizer {
             .setEndRow(y)
             .setStartCol(x)
             .setEndCol(x)
-        const i = this.resizers.findIndex((r) => r.range.cover(mousedownRange))
+        const i = this.resizers.findIndex((r) => {
+            return r.range.cover(mousedownRange)
+        })
         if (i === -1) return false
         const activeResizer = this.resizers[i]
         if (!activeResizer) return false
         this.movingStart = {x: e.clientX, y: e.clientY}
-        // const sheet = this.store.dataSvc
-        //     .getWorkbook()
-        //     .getWorksheet(this.store.currSheetIdx)
-        // const {startCol, startRow} = activeResizer.leftCell.coordinate
-        // const info = activeResizer.isRow
-        //     ? sheet.getRowHeight(startCol)
-        //     : sheet.getColWidth(startRow)
-        // if (isErrorMessage(info)) {
-        //     throw Error(info.msg)
-        // }
-        // const value = (this.hoverText = `${info}px`)
+        const info = activeResizer.isRow
+            ? activeResizer.cell.height
+            : activeResizer.cell.width
+        const result = Math.round(info * 10) / 10
+        this.hoverText = `${result}px`
         this.active = activeResizer
         this.moving = {x: 0, y: 0}
         return true
@@ -104,7 +108,7 @@ export class Resizer {
         if (!this.active || !this.movingStart) return false
         const {
             isRow,
-            leftCell: {
+            cell: {
                 position: {startCol, startRow, endCol, endRow},
             },
         } = this.active
@@ -130,13 +134,13 @@ export class Resizer {
         if (this.active) {
             const {
                 isRow,
-                leftCell: {coordinate: coodinate, width, height},
+                cell: {coordinate: coodinate, width, height},
             } = this.active
             const payload = !isRow
                 ? new SetColWidthBuilder()
                       .sheetIdx(this.store.currSheetIdx)
                       .col(coodinate.startCol)
-                      .width(pxToPt(this.moving.x + width))
+                      .width(pxToWidth(this.moving.x + width))
                       .build()
                 : new SetRowHeightBuilder()
                       .sheetIdx(this.store.currSheetIdx)

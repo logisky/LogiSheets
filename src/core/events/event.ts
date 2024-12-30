@@ -15,7 +15,6 @@ export const enum EventType {
     POINTER_DOWN = 'pointerdown',
     POINTER_MOVE = 'pointermove',
     CONTEXT_MENU = 'contextmenu',
-    WHEEL = 'wheel',
     // Keyboard
     KEY_DOWN = 'keydown',
     KEY_PRESS = 'keypress',
