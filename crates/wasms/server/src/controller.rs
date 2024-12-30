@@ -3,7 +3,7 @@ use logisheets_controller::edit_action::{
     AsyncFuncResult, BlockInput, CellClear, CellInput, CreateBlock, CreateSheet, DeleteCols,
     DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
     InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, MoveBlock, PayloadsAction,
-    SheetRename, StyleUpdate, StyleUpdateType,
+    SetColWidth, SetRowHeight, SheetRename, StyleUpdate, StyleUpdateType,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_controller::{ColInfo, ErrorMessage};
@@ -519,6 +519,20 @@ pub fn cell_clear(id: usize, sheet_idx: usize, row: usize, col: usize) {
 }
 
 #[wasm_bindgen]
+pub fn set_row_height(id: usize, sheet_idx: usize, row: usize, height: f64) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(
+        id,
+        EditPayload::SetRowHeight(SetRowHeight {
+            sheet_idx,
+            row,
+            height,
+        }),
+    );
+}
+
+#[wasm_bindgen]
 pub fn row_insert(id: usize, sheet_idx: usize, start: usize, count: usize) {
     init();
     let mut manager = MANAGER.get_mut();
@@ -570,6 +584,20 @@ pub fn col_delete(id: usize, sheet_idx: usize, start: usize, count: usize) {
             sheet_idx,
             start,
             count,
+        }),
+    );
+}
+
+#[wasm_bindgen]
+pub fn set_col_width(id: usize, sheet_idx: usize, col: usize, width: f64) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(
+        id,
+        EditPayload::SetColWidth(SetColWidth {
+            sheet_idx,
+            col,
+            width,
         }),
     );
 }

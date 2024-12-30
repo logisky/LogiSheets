@@ -11,7 +11,7 @@ import {
     useEffect,
     useContext,
 } from 'react'
-import {debounceTime} from 'rxjs/operators'
+import {debounceTime, take, takeUntil} from 'rxjs/operators'
 import {Cell} from './defs'
 import {ScrollbarComponent} from '@/components/scrollbar'
 import {EventType, KeyboardEventCode, on} from '@/core/events'
@@ -87,34 +87,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     }, [activeSheet])
 
     useEffect(() => {
-        const sub = on(window, EventType.MOUSE_MOVE).subscribe((mme) => {
-            mme.preventDefault()
-            if (store.type !== 'mousedown') return
-            const startCell = store.match(mme.clientX, mme.clientY)
-            if (!startCell) return
-            const isResize = store.resizer.mousemove(mme)
-            if (isResize) return
-            if (store.startCell?.equals(startCell) === false) {
-                const isDnd = store.dnd.onMouseMove(
-                    mme,
-                    startCell,
-                    store.selector.endCell ?? startCell
-                )
-                if (isDnd) return
-            }
-            store.selector.onMouseMove(startCell)
-        })
-        return () => {
-            sub.unsubscribe()
-        }
-    }, [])
-
-    useEffect(() => {
-        const sub = on(window, EventType.MOUSE_UP).subscribe(() => {
-            store.type = undefined
-            store.dnd.onMouseUp()
-            store.resizer.mouseup()
-        })
         const resizeSub = on(window, EventType.RESIZE)
             .pipe(debounceTime(100))
             .subscribe(() => {
@@ -124,7 +96,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 store.scrollbar.onResize()
             })
         return () => {
-            sub.unsubscribe()
             resizeSub.unsubscribe()
         }
     }, [])
@@ -157,12 +128,41 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         }
         store.render.canvas.focus()
         if (e.buttons !== Buttons.LEFT) return
-        const matchCell = store.match(e.clientX, e.clientY)
-        if (!matchCell) return
+
+        const mouseMove$ = on(window, EventType.MOUSE_MOVE)
+        const mouseUp$ = on(window, EventType.MOUSE_UP)
+
+        const sub = mouseMove$.pipe(takeUntil(mouseUp$)).subscribe((mme) => {
+            mme.preventDefault()
+            const isResize = store.resizer.mousemove(mme)
+            if (isResize) return
+            const startCell = store.match(mme.clientX, mme.clientY)
+            if (!startCell) return
+            if (store.startCell?.equals(startCell) === false) {
+                const isDnd = store.dnd.onMouseMove(
+                    mme,
+                    startCell,
+                    store.selector.endCell ?? startCell
+                )
+                if (isDnd) return
+            }
+            store.selector.onMouseMove(startCell)
+        })
+        mouseUp$.pipe(take(1)).subscribe(() => {
+            store.type = undefined
+            store.dnd.onMouseUp()
+            store.resizer.mouseup()
+            sub.unsubscribe()
+        })
+
         const isResize = store.resizer.mousedown(e.nativeEvent)
         if (isResize) return
+
         const isDnd = store.dnd.onMouseDown(e.nativeEvent)
         if (isDnd) return
+
+        const matchCell = store.match(e.clientX, e.clientY)
+        if (!matchCell) return
         store.mousedown(e, matchCell)
         if (matchCell?.type !== 'Cell') return
         const {startRow: row, startCol: col} = matchCell.coordinate
@@ -328,8 +328,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 return (
                     <ResizerComponent
                         hoverText={store.resizer.hoverText}
-                        x={!isRow ? x : 0}
-                        y={!isRow ? 0 : y}
+                        x={!isRow ? x + width / 2 : 0}
+                        y={!isRow ? 0 : y + height / 2}
                         width={width}
                         height={height}
                         key={i}

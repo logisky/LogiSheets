@@ -45,15 +45,17 @@ export const ResizerComponent: FC<ResizerProps> = ({
                     cursor: type === 'row' ? 'row-resize' : 'col-resize',
                 }}
             />
-            <div
-                className={Styles['hover-text']}
-                style={{
-                    left: type === 'row' ? `${width}px` : 0,
-                    top: type === 'col' ? `${height}px` : 0,
-                }}
-            >
-                {hoverText}
-            </div>
+            {hoverText && (
+                <div
+                    className={Styles['hover-text']}
+                    style={{
+                        left: type === 'row' ? `${width}px` : 0,
+                        top: type === 'col' ? `${height}px` : 0,
+                    }}
+                >
+                    {hoverText}
+                </div>
+            )}
             <div
                 className={Styles.moving}
                 style={{

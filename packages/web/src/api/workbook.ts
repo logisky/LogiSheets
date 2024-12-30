@@ -21,7 +21,9 @@ import {
     row_delete,
     row_insert,
     set_border,
+    set_col_width,
     set_font,
+    set_row_height,
     sheet_rename_by_idx,
     sheet_rename_by_name,
     transaction_end,
@@ -259,8 +261,12 @@ export class Workbook {
             return create_sheet(this._id, p.sheetIdx, p.name)
         if (p.type === 'cellClear')
             return cell_clear(this._id, p.sheetIdx, p.row, p.col)
+        if (p.type === 'setColWidth')
+            return set_col_width(this._id, p.sheetIdx, p.col, p.width)
+        if (p.type === 'setRowHeight')
+            return set_row_height(this._id, p.sheetIdx, p.row, p.height)
         // eslint-disable-next-line no-console
-        console.log('Unimplemented!')
+        console.log(`Unimplemented!: ${p.type}`)
     }
 
     private _inputAsyncResult(r: AsyncFuncResult): ActionEffect {
