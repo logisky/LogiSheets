@@ -108,12 +108,16 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     let lastScrollTime = 0
     const onMouseWheel = (e: WheelEvent) => {
         // only support y scrollbar currently
-        if (store.anchorY + e.deltaY < 0) return
-        store.setAnchor(store.anchorX, store.anchorY + e.deltaY)
+        if (store.anchorY + e.deltaY < 0) {
+            store.setAnchor(store.anchorX, 0)
+            return
+        }
 
         const now = Date.now()
-        if (now - lastScrollTime < 50) return
+        if (now - lastScrollTime < 200) return
+
         lastScrollTime = now
+        store.setAnchor(store.anchorX, store.anchorY + e.deltaY)
         store.render.render()
         store.scroll()
     }
