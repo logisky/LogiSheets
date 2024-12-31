@@ -76,7 +76,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
         store.render.canvas.focus()
         store.render.jumpTo(selectedCell.row, selectedCell.col)
-        store.selector.reset()
+        // store.selector.reset()
         store.textarea.reset()
     }, [selectedCell])
 
@@ -188,34 +188,29 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         const endRow = currSelected.coordinate.endRow
         const endCol = currSelected.coordinate.endCol
 
-        const renderCell: RenderCell | null = null
         switch (e.key) {
             case KeyboardEventCode.ARROW_UP: {
                 const newStartRow = Math.max(startRow - 1, 0)
-                // renderCell = jumpTo(newStartRow, startCol, 0)
+                store.render.jumpTo(newStartRow, startCol)
                 break
             }
             case KeyboardEventCode.ARROW_DOWN: {
                 const newRow = Math.min(endRow + 1, MAX_COUNT)
-                // renderCell = jumpTo(newRow, endCol, 0)
+                store.render.jumpTo(newRow, endCol)
                 break
             }
             case KeyboardEventCode.ARROW_LEFT: {
                 const newCol = Math.max(startCol - 1, 0)
-                // renderCell = jumpTo(startRow, newCol, 1)
+                store.render.jumpTo(startRow, newCol)
                 break
             }
             case KeyboardEventCode.ARROW_RIGHT: {
                 const newCol = Math.min(endCol + 1, MAX_COUNT)
-                // renderCell = jumpTo(startRow, newCol, 1)
+                store.render.jumpTo(startRow, newCol)
                 break
             }
             default:
                 return
-        }
-        if (renderCell) {
-            const c = new Cell('Cell').copyByRenderCell(renderCell)
-            store.keydown(e.nativeEvent, c)
         }
     }
 

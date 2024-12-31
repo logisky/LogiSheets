@@ -1,4 +1,4 @@
-import {makeObservable} from 'mobx'
+import {makeObservable, action} from 'mobx'
 import {CanvasStore} from './store'
 import {Box, CanvasAttr, PainterService, TextAttr} from '@/core/painter'
 import {simpleUuid, toA1notation} from '@/core'
@@ -7,6 +7,7 @@ import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {isErrorMessage, PatternFill} from 'logisheets-web'
+import {Cell} from '../defs'
 export const CANVAS_ID = simpleUuid()
 const BUFFER_SIZE = 50
 
@@ -43,7 +44,45 @@ export class Render {
         })
     }
 
+    private _jumpToCellInCurrentView(row: number, col: number): boolean {
+        const cellView = this.store.getCurrentCellView()
+        const currCell = cellView.cells.find((v) => {
+            return (
+                v.coordinate.startRow <= row &&
+                v.coordinate.endRow >= row &&
+                v.coordinate.startCol <= col &&
+                v.coordinate.endCol >= col
+            )
+        })
+
+        if (!currCell) return false
+
+        const position = this.store.convertToCanvasPosition(
+            currCell.position,
+            'Cell'
+        )
+        const {height, width} = this.store.render.canvas.getBoundingClientRect()
+        if (
+            position.endCol > width ||
+            position.endRow > height ||
+            position.startCol < LeftTop.width ||
+            position.startRow < LeftTop.height
+        ) {
+            return false
+        }
+
+        const c = new Cell('Cell').copyByRenderCell(currCell)
+        this.store.startCell = c
+        this.store.selector.onJumpToCell(c)
+        return true
+    }
+
+    @action
     jumpTo(row: number, col: number) {
+        if (this._jumpToCellInCurrentView(row, col)) {
+            // The current cell is in this page. No need to render again
+            return
+        }
         const rect = this.canvas.getBoundingClientRect()
         const resp = this.store.dataSvc.getCellViewWithCell(
             this.store.currSheetIdx,
@@ -70,6 +109,7 @@ export class Render {
                 firstRow.position.startRow
             )
             this.render()
+            this._jumpToCellInCurrentView(row, col)
         })
     }
 
