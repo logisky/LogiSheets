@@ -1,6 +1,55 @@
 import {RenderCell} from './render'
 import {Comment} from 'logisheets-web'
 
+export class CellView {
+    public constructor(public readonly data: CellViewData[]) {}
+
+    public get rows(): readonly RenderCell[] {
+        let curr = -1
+        return this.data
+            .flatMap((d) => d.rows)
+            .sort((a, b) => a.coordinate.startRow - b.coordinate.startRow)
+            .filter((r) => {
+                if (r.position.startRow > curr) {
+                    curr = r.position.startRow
+                    return true
+                }
+                return false
+            })
+    }
+
+    public get cols(): readonly RenderCell[] {
+        let curr = -1
+        return this.data
+            .flatMap((d) => d.cols)
+            .sort((a, b) => a.coordinate.startCol - b.coordinate.startCol)
+            .filter((r) => {
+                if (r.position.startCol > curr) {
+                    curr = r.position.startCol
+                    return true
+                }
+                return false
+            })
+    }
+
+    public get cells(): readonly RenderCell[] {
+        let currRow = -1
+        let currCol = -1
+        return this.data
+            .flatMap((d) => d.cells)
+            .filter((c) => {
+                const col = c.position.startCol
+                const row = c.position.startRow
+                if (col <= currCol && row <= currRow) {
+                    return false
+                }
+                currCol = col
+                currRow = row
+                return true
+            })
+    }
+}
+
 export class CellViewData {
     public fromRow = 0
     public toRow = 0

@@ -1,7 +1,7 @@
 import {pxToPt, pxToWidth, widthToPx} from '../rate'
 import {LeftTop} from '../settings'
 import {RenderCell} from './render'
-import {CellViewData, Rect, overlap, OverlapType} from './types'
+import {CellViewData, Rect, overlap, OverlapType, CellView} from './types'
 import {Range, StandardColInfo, StandardRowInfo} from '@/core/standable'
 import {ptToPx, width2px} from '@/core/rate'
 import {DisplayWindowWithStartPoint, isErrorMessage} from 'logisheets-web'
@@ -41,33 +41,9 @@ export class ViewManager {
     ): Promise<CellViewResponse> {
         const x = Math.max(0, startX)
         const y = Math.max(0, startY)
-        let targets = [new Rect(x, y, width, height)]
+        const targets = [new Rect(x, y, width, height)]
         const newChunks: CellViewData[] = []
-        let uncovered = true
-        let fullCovered = false
-        for (let i = 0; i < this.dataChunks.length; i += 1) {
-            const v = this.dataChunks[i]
-            const rect = Rect.fromCellViewData(v)
-            const result = overlap(targets, rect)
-            if (result.ty === OverlapType.Uncovered) {
-                continue
-            }
-
-            uncovered = false
-
-            newChunks.push(v)
-            targets = result.targets
-
-            if (result.ty === OverlapType.FullyCovered) {
-                fullCovered = true
-                break
-            }
-        }
-        const type = uncovered
-            ? CellViewRespType.New
-            : fullCovered
-            ? CellViewRespType.Existed
-            : CellViewRespType.Incremental
+        const type = CellViewRespType.New
 
         const windowsPromise = targets.map((t) => {
             const window = this._workbook.getDisplayWindow({
@@ -78,17 +54,10 @@ export class ViewManager {
                 width: pxToWidth(t.width),
             })
             return window
-            // return parseDisplayWindow(window)
         })
         const windows = await Promise.all(windowsPromise)
-        let data = windows
-            .filter((w) => {
-                if (isErrorMessage(w)) {
-                    //
-                    return false
-                }
-                return true
-            })
+        const data = windows
+            .filter((w) => !isErrorMessage(w))
             .map((w) => parseDisplayWindow(w as DisplayWindowWithStartPoint))
 
         if (type === CellViewRespType.New) {
@@ -96,13 +65,15 @@ export class ViewManager {
         } else if (type === CellViewRespType.Incremental) {
             newChunks.push(...data)
             this.dataChunks = newChunks
-            data = this.dataChunks
         } else if (type === CellViewRespType.Existed) {
-            data = newChunks
             this.dataChunks = newChunks
         }
+        // make sure chunks are sorted. this matters rendering
+        this.dataChunks.sort((a, b) => {
+            return a.fromRow < b.fromRow || a.fromCol < b.fromCol ? -1 : 1
+        })
 
-        return {type, data}
+        return {type, data: new CellView(this.dataChunks)}
     }
 
     /**
@@ -120,7 +91,7 @@ export enum CellViewRespType {
 
 export interface CellViewResponse {
     readonly type: CellViewRespType
-    readonly data: CellViewData[]
+    readonly data: CellView
 }
 
 export function parseDisplayWindow(

@@ -10,7 +10,7 @@ import {
     BlockInfo,
 } from 'logisheets-web'
 import {CellViewResponse, ViewManager} from './view_manager'
-import {CellViewData} from './types'
+import {CellView, CellViewData} from './types'
 import {Resp, WorkbookClient} from './workbook'
 
 export const MAX_COUNT = 100000000
@@ -50,7 +50,7 @@ export interface DataService {
         endCol: number
     ): Resp<readonly BlockInfo[]>
 
-    getCurrentCellView(sheetIdx: number): readonly CellViewData[]
+    getCurrentCellView(sheetIdx: number): CellView
 
     getCurrentSheetIdx(): number
     setCurrentSheetIdx(idx: number): void
@@ -128,10 +128,10 @@ export class DataServiceImpl implements DataService {
         return this._workbook.redo()
     }
 
-    public getCurrentCellView(sheetIdx: number): readonly CellViewData[] {
+    public getCurrentCellView(sheetIdx: number): CellView {
         const cacheManager = this._cellViews.get(sheetIdx)
         if (cacheManager) {
-            return cacheManager.dataChunks
+            return new CellView(cacheManager.dataChunks)
         }
         throw Error('trying to get cell view before rendering a sheet')
     }

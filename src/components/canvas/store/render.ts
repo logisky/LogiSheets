@@ -2,13 +2,13 @@ import {makeObservable} from 'mobx'
 import {CanvasStore} from './store'
 import {Box, CanvasAttr, PainterService, TextAttr} from '@/core/painter'
 import {simpleUuid, toA1notation} from '@/core'
-import {CellViewData, RenderCell, toCanvasPosition} from '@/core/data2'
+import {CellView, RenderCell, toCanvasPosition} from '@/core/data2'
 import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {isErrorMessage, PatternFill} from 'logisheets-web'
 export const CANVAS_ID = simpleUuid()
-const BUFFER_SIZE = 0
+const BUFFER_SIZE = 50
 
 export class Render {
     constructor(public readonly store: CanvasStore) {
@@ -22,10 +22,10 @@ export class Render {
         const rect = this.canvas.getBoundingClientRect()
         const resp = this.store.dataSvc.getCellView(
             this.store.currSheetIdx,
-            this.store.anchorX,
-            this.store.anchorY,
+            this.store.anchorX - BUFFER_SIZE,
+            this.store.anchorY - BUFFER_SIZE,
             rect.height + BUFFER_SIZE * 2,
-            rect.width
+            rect.width + BUFFER_SIZE
         )
         resp.then((r) => {
             if (isErrorMessage(r)) return
@@ -54,8 +54,7 @@ export class Render {
         )
         resp.then((r) => {
             if (isErrorMessage(r)) return
-            if (r.data.length === 0) return
-            const data = r.data.find((v) => {
+            const data = r.data.data.find((v) => {
                 return (
                     v.fromRow <= row &&
                     v.toRow >= row &&
@@ -97,68 +96,62 @@ export class Render {
     /**
      * main content + freeze content.
      */
-    private _renderContent(data: readonly CellViewData[]) {
+    private _renderContent(data: CellView) {
         this._painterService.save()
-        data.forEach((d) => {
-            d.cells.forEach((cell) => {
-                this._renderCell(cell)
-            })
+        data.cells.forEach((cell) => {
+            this._renderCell(cell)
         })
         this._painterService.restore()
     }
 
-    private _renderLeftHeader(data: readonly CellViewData[]) {
+    private _renderLeftHeader(data: CellView) {
         this._painterService.save()
-        data.forEach((d) => {
-            d.rows.forEach((r) => {
-                const pos = toCanvasPosition(
-                    r.position,
-                    this.store.anchorX,
-                    this.store.anchorY,
-                    'row'
-                )
-                this._painterService.line([
-                    [pos.startCol, pos.startRow],
-                    [LeftTop.width, pos.startRow],
-                    [LeftTop.width, pos.endRow],
-                    [pos.startCol, pos.endRow],
-                ])
-                const box = new Box()
-                box.position = pos
-                const attr = new TextAttr()
-                attr.font = SETTINGS.fixedHeader.font
-                const position = (r.coordinate.startRow + 1).toString()
-                this._painterService.fillFgColor('solid', '#ffffff', box)
-                this._painterService.text(position, attr, box)
-            })
+        data.rows.forEach((r) => {
+            const pos = toCanvasPosition(
+                r.position,
+                this.store.anchorX,
+                this.store.anchorY,
+                'row'
+            )
+            this._painterService.line([
+                [pos.startCol, pos.startRow],
+                [LeftTop.width, pos.startRow],
+                [LeftTop.width, pos.endRow],
+                [pos.startCol, pos.endRow],
+            ])
+            const box = new Box()
+            box.position = pos
+            const attr = new TextAttr()
+            attr.font = SETTINGS.fixedHeader.font
+            const position = (r.coordinate.startRow + 1).toString()
+            this._painterService.fillFgColor('solid', '#ffffff', box)
+            this._painterService.text(position, attr, box)
         })
         this._painterService.restore()
     }
 
-    private _renderTopHeader(data: readonly CellViewData[]) {
+    private _renderTopHeader(data: CellView) {
         this._painterService.save()
-        data.forEach((d) => {
-            d.cols.forEach((c) => {
-                const pos = toCanvasPosition(
-                    c.position,
-                    this.store.anchorX,
-                    this.store.anchorY,
-                    'col'
-                )
-                this._painterService.line([
-                    [pos.endCol, pos.startRow],
-                    [pos.endCol, LeftTop.height],
-                    [pos.startCol, pos.endRow],
-                    [pos.startCol, LeftTop.height],
-                ])
-                const a1Notation = toA1notation(c.coordinate.startCol)
-                const box = new Box()
-                box.position = pos
-                const attr = new TextAttr()
-                attr.font = SETTINGS.fixedHeader.font
-                this._painterService.fillFgColor('solid', '#ffffff', box)
-                this._painterService.text(a1Notation, attr, box)
-            })
+        data.cols.forEach((c) => {
+            const pos = toCanvasPosition(
+                c.position,
+                this.store.anchorX,
+                this.store.anchorY,
+                'col'
+            )
+            this._painterService.line([
+                [pos.endCol, pos.startRow],
+                [pos.endCol, LeftTop.height],
+                [pos.startCol, pos.endRow],
+                [pos.startCol, LeftTop.height],
+            ])
+            const a1Notation = toA1notation(c.coordinate.startCol)
+            const box = new Box()
+            box.position = pos
+            const attr = new TextAttr()
+            attr.font = SETTINGS.fixedHeader.font
+            this._painterService.fillFgColor('solid', '#ffffff', box)
+            this._painterService.text(a1Notation, attr, box)
         })
         this._painterService.restore()
     }
@@ -225,7 +218,7 @@ export class Render {
             ])
     }
 
-    private _renderGrid(data: readonly CellViewData[]) {
+    private _renderGrid(data: CellView) {
         const {grid} = SETTINGS
         this._painterService.save()
         const attr = new CanvasAttr()
@@ -233,28 +226,22 @@ export class Render {
         this._painterService.attr(attr)
         const rect = this.canvas.getBoundingClientRect()
         if (grid.showHorizontal)
-            data.forEach((d) => {
-                d.rows.forEach((r) => {
-                    const y =
-                        r.position.startRow -
-                        this.store.anchorY +
-                        LeftTop.height
-                    this._painterService.line([
-                        [LeftTop.width, y],
-                        [rect.width, y],
-                    ])
-                })
+            data.rows.forEach((r) => {
+                const y =
+                    r.position.startRow - this.store.anchorY + LeftTop.height
+                this._painterService.line([
+                    [LeftTop.width, y],
+                    [rect.width, y],
+                ])
             })
         if (grid.showVertical)
-            data.forEach((d) => {
-                d.cols.forEach((c) => {
-                    const x =
-                        c.position.startCol - this.store.anchorX + LeftTop.width
-                    this._painterService.line([
-                        [x, LeftTop.height],
-                        [x, rect.height],
-                    ])
-                })
+            data.cols.forEach((c) => {
+                const x =
+                    c.position.startCol - this.store.anchorX + LeftTop.width
+                this._painterService.line([
+                    [x, LeftTop.height],
+                    [x, rect.height],
+                ])
             })
         this._painterService.restore()
     }

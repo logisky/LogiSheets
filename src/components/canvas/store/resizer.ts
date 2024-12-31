@@ -40,40 +40,36 @@ export class Resizer {
 
     init() {
         const data = this.store.getCurrentCellView()
-        const rowResizers = data
-            .flatMap((d) => d.rows)
-            .map((c) => {
-                const cell = this.store.convertToCanvasPosition(
-                    c.position,
-                    'FixedLeftHeader'
-                )
-                return {
-                    range: new Range()
-                        .setStartRow(cell.endRow - RESIZER_SIZE)
-                        .setEndRow(cell.endRow + RESIZER_SIZE)
-                        .setStartCol(cell.startCol)
-                        .setEndCol(cell.endCol),
-                    isRow: true,
-                    cell: c,
-                }
-            })
-        const colResizers = data
-            .flatMap((d) => d.cols)
-            .map((c) => {
-                const cell = this.store.convertToCanvasPosition(
-                    c.position,
-                    'FixedTopHeader'
-                )
-                return {
-                    range: new Range()
-                        .setStartCol(cell.endCol - RESIZER_SIZE)
-                        .setStartRow(cell.startRow)
-                        .setEndCol(cell.endCol + RESIZER_SIZE)
-                        .setEndRow(cell.endRow),
-                    isRow: false,
-                    cell: c,
-                }
-            })
+        const rowResizers = data.rows.map((c) => {
+            const cell = this.store.convertToCanvasPosition(
+                c.position,
+                'FixedLeftHeader'
+            )
+            return {
+                range: new Range()
+                    .setStartRow(cell.endRow - RESIZER_SIZE)
+                    .setEndRow(cell.endRow + RESIZER_SIZE)
+                    .setStartCol(cell.startCol)
+                    .setEndCol(cell.endCol),
+                isRow: true,
+                cell: c,
+            }
+        })
+        const colResizers = data.cols.map((c) => {
+            const cell = this.store.convertToCanvasPosition(
+                c.position,
+                'FixedTopHeader'
+            )
+            return {
+                range: new Range()
+                    .setStartCol(cell.endCol - RESIZER_SIZE)
+                    .setStartRow(cell.startRow)
+                    .setEndCol(cell.endCol + RESIZER_SIZE)
+                    .setEndRow(cell.endRow),
+                isRow: false,
+                cell: c,
+            }
+        })
         this.updateResizers(rowResizers.concat(colResizers))
     }
 
