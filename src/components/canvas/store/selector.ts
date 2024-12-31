@@ -58,6 +58,15 @@ export class Selector {
     }
 
     @action
+    onJumpToCell(cell: Cell) {
+        this.startCell = cell
+        this.endCell = undefined
+        this.selector = new SelectorProps()
+        this.updateSelector(this.startCell, this.endCell)
+        this._aftetUpdateSelector()
+    }
+
+    @action
     onMouseMove(matchCell: Cell) {
         this.endCell = matchCell
         this.updateSelector(this.startCell, this.endCell)
