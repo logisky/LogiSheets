@@ -38,7 +38,7 @@ export interface IWorkbookClient {
 
     undo(): Resp<void>
     redo(): Resp<void>
-    handleTransaction(params: HandleTransactionParams): Resp<ActionEffect>
+    handleTransaction(params: HandleTransactionParams): Resp<void>
 
     loadWorkbook(params: LoadWorkbookParams): Resp<void>
 
@@ -130,7 +130,7 @@ export class WorkbookClient implements IWorkbookClient {
         ) as Resp<DisplayWindowWithStartPoint>
     }
 
-    getCell(params: GetCellParams): Resp<Cell> {
+    async getCell(params: GetCellParams): Resp<Cell> {
         const result = this._call('getCell', params) as Resp<CellInfo>
         return result.then((v) => {
             if (!isErrorMessage(v)) return new Cell(v)
@@ -138,11 +138,11 @@ export class WorkbookClient implements IWorkbookClient {
         })
     }
 
-    getCellPosition(params: GetCellParams): Resp<CellPosition> {
+    async getCellPosition(params: GetCellParams): Resp<CellPosition> {
         return this._call('getCellPosition', params) as Resp<CellPosition>
     }
 
-    undo(): Resp<void> {
+    async undo(): Resp<void> {
         return this._call('undo', undefined) as Resp<void>
     }
 
@@ -150,8 +150,8 @@ export class WorkbookClient implements IWorkbookClient {
         return this._call('redo', undefined) as Resp<void>
     }
 
-    handleTransaction(params: HandleTransactionParams): Resp<ActionEffect> {
-        return this._call('handleTransaction', params) as Resp<ActionEffect>
+    async handleTransaction(params: HandleTransactionParams): Resp<void> {
+        return this._call('handleTransaction', params) as Resp<void>
     }
 
     loadWorkbook(params: LoadWorkbookParams): Resp<void> {

@@ -1,8 +1,10 @@
+use crate::edit_action::{EditPayload, PayloadsAction, SheetRename, WorkbookUpdateType};
+
 use super::Workbook;
 
 #[test]
 fn new_workbook() {
-    let wb = Workbook::default();
+    let mut wb = Workbook::default();
     let ws = wb.get_sheet_by_idx(0).unwrap();
 
     ws.get_cell_position(100, 100).unwrap();
@@ -30,4 +32,21 @@ fn new_workbook() {
         .into_iter()
         .fold(0., |p, c| return p + c.width);
     assert!(v > 100.);
+
+    let result = wb.handle_action(crate::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SheetRename(SheetRename {
+            old_name: Some("Sheet1".to_string()),
+            new_name: "abcd".to_string(),
+            idx: None,
+        })],
+        undoable: true,
+    }));
+
+    match result.status {
+        crate::edit_action::StatusCode::Ok(workbook_update_type) => {
+            println!("{:?}", workbook_update_type);
+            assert!(matches!(workbook_update_type, WorkbookUpdateType::Sheet));
+        }
+        crate::edit_action::StatusCode::Err(e) => panic!("{:?}", e),
+    }
 }

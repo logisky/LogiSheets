@@ -20,7 +20,7 @@ export interface DataService {
     registryCustomFunc(f: CustomFunc): Resp<void>
     registryCellUpdatedCallback(f: () => void): void
     registrySheetUpdatedCallback(f: () => void): void
-    handleTransaction(t: Transaction): Resp<ActionEffect>
+    handleTransaction(t: Transaction): Resp<void>
     undo(): Resp<void>
     redo(): Resp<void>
 
@@ -116,7 +116,7 @@ export class DataServiceImpl implements DataService {
         return this._workbook.registryCellUpdatedCallback(f)
     }
 
-    public handleTransaction(transaction: Transaction): Resp<ActionEffect> {
+    public handleTransaction(transaction: Transaction): Resp<void> {
         return this._workbook.handleTransaction({transaction})
     }
 

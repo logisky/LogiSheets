@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use logisheets_base::{Addr, CellId, CubeId, RangeId, SheetId};
+use logisheets_base::{errors::BasicError, Addr, CellId, CubeId, RangeId, SheetId};
 
 use crate::{
     async_func_manager::AsyncFuncManager,
@@ -11,7 +11,7 @@ use crate::{
     },
     container::ContainerExecutor,
     cube_manager::executors::CubeExecutor,
-    edit_action::{EditPayload, PayloadsAction},
+    edit_action::{EditPayload, PayloadsAction, SheetRename},
     formula_manager::{FormulaExecutor, Vertex},
     navigator::{NavExecutor, Navigator},
     range_manager::RangeExecutor,
@@ -58,6 +58,35 @@ impl<'a> Executor<'a> {
 
     fn execute_payload(self, payload: EditPayload) -> Result<Self, Error> {
         let mut result = self;
+
+        if let EditPayload::SheetRename(rename) = payload {
+            let manager = &mut result.status.sheet_id_manager;
+            let SheetRename {
+                old_name,
+                idx,
+                new_name,
+            } = rename;
+            if let Some(old_name) = old_name {
+                manager.rename(&old_name, new_name);
+            } else {
+                if let Some(idx) = idx {
+                    let id = result
+                        .status
+                        .sheet_pos_manager
+                        .get_sheet_id(idx)
+                        .ok_or(Error::Basic(BasicError::SheetIdxExceed(idx)))?;
+                    let old_name = manager
+                        .get_string(&id)
+                        .ok_or(Error::Basic(BasicError::SheetIdNotFound(id)))?;
+                    manager.rename(&old_name, new_name);
+                } else {
+                    return Err(Error::PayloadError("".to_string()));
+                }
+            }
+            result.sheet_updated = true;
+            return Ok(result);
+        }
+
         let (sheet_pos_manager, sheet_updated) = result.execute_sheet_pos(&payload)?;
         result.status.sheet_pos_manager = sheet_pos_manager;
 

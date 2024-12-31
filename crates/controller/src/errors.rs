@@ -21,6 +21,8 @@ pub enum Error {
     Parse(#[from] ParseError),
     #[error("unavailable sheet idx: {0}")]
     UnavailableSheetIdx(usize),
+    #[error("invalid payload: {0}")]
+    PayloadError(String),
 }
 
 // A cleaner way for users to know about the error and a more convenient
@@ -60,6 +62,10 @@ impl From<Error> for ErrorMessage {
             Error::UnavailableSheetIdx(e) => {
                 let msg = e.to_string();
                 ErrorMessage { msg, ty: 5 }
+            }
+            Error::PayloadError(e) => {
+                let msg = e;
+                ErrorMessage { msg, ty: 6 }
             }
         }
     }

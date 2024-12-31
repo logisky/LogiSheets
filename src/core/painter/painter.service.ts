@@ -148,6 +148,7 @@ export class PainterService extends CanvasApi {
     }
 
     public text(txt: string, attr: TextAttr, box: Box): void {
+        if (txt === '') return
         this.save()
         const textWidth = attr.font.measureText(txt).width
         const [tx, textAlign] = box.textX(attr.alignment?.horizontal)

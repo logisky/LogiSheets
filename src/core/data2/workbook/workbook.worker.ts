@@ -42,7 +42,7 @@ interface IWorkbookWorker {
 
     undo(): Result<void>
     redo(): Result<void>
-    handleTransaction(params: HandleTransactionParams): Result<ActionEffect>
+    handleTransaction(params: HandleTransactionParams): Result<void>
 
     loadWorkbook(params: LoadWorkbookParams): Result<void>
 }
@@ -85,8 +85,9 @@ class WorkerService implements IWorkbookWorker {
         ctx.postMessage({id: WorkerUpdate.Ready})
     }
 
-    public handleTransaction(params: HandleTransactionParams): ActionEffect {
-        return this.workbook.execTransaction(params.transaction)
+    public handleTransaction(params: HandleTransactionParams): void {
+        this.workbook.execTransaction(params.transaction)
+        return
     }
 
     public getAllSheetInfo(): readonly SheetInfo[] {
