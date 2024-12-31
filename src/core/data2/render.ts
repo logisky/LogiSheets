@@ -20,11 +20,11 @@ export class RenderCell {
         return this
     }
     setInfo(info: CellInfo) {
-        let c = this.info
-        if (!c) c = new StandardCell()
+        const c = new StandardCell()
         if (info.style) c.setStyle(info.style)
         if (info.value) c.value = StandardValue.from(info.value)
         if (info.formula !== undefined) c.formula = info.formula
+        this.info = c
         return this
     }
 
@@ -70,11 +70,11 @@ export function toCanvasPosition(
     if (type == 'row') {
         rowOffset = LeftTop.height - anchorY
         colOffset = 0
-    } else if (type == 'cell') {
-        rowOffset = LeftTop.height - anchorY
+    } else if (type == 'col') {
+        rowOffset = 0
         colOffset = LeftTop.width - anchorX
     } else {
-        rowOffset = 0
+        rowOffset = LeftTop.height - anchorY
         colOffset = LeftTop.width - anchorX
     }
     return new Range()

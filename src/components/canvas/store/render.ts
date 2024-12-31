@@ -83,7 +83,8 @@ export class Render {
         box.position = toCanvasPosition(
             position,
             this.store.anchorX,
-            this.store.anchorY
+            this.store.anchorY,
+            'cell'
         )
         this._fill(box, style)
         this._border(box, position, style)
@@ -264,11 +265,13 @@ export class Render {
     // }
 
     private _text(box: Box, info: StandardCell) {
+        const t = info.getFormattedText()
+        if (!t) return
         const textAttr = new TextAttr()
         if (info.style) {
             textAttr.alignment = info.style.alignment
             textAttr.setFont(info.style.getFont())
         }
-        this._painterService.text(info.getFormattedText(), textAttr, box)
+        this._painterService.text(t, textAttr, box)
     }
 }

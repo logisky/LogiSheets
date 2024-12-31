@@ -31,6 +31,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     }
     const [sheets, setSheets] = useState([] as string[])
     const [isOpen, setIsOpen] = useState(false)
+    const [modalPosition, setModalPosition] = useState({top: 0, left: 0})
 
     useEffect(() => {
         getSheets().then((v) => {
@@ -82,6 +83,10 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                                 e.stopPropagation()
                                 activeSheet$(i)
                                 setIsOpen(true)
+                                setModalPosition({
+                                    top: e.clientY,
+                                    left: e.clientX,
+                                })
                             }}
                         >
                             {sheet}
@@ -101,7 +106,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                         DATA_SERVICE.handleTransaction(
                             new Transaction([payload], true)
                         ).then((v) => {
-                            if (isErrorMessage(v)) return
+                            if (v) return
                             activeSheet$(newIdx)
                         })
                     } else if (action === 'remove') {
@@ -113,6 +118,8 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                 activeKey={sheets[activeSheet]}
             />
             <ContextMenuComponent
+                left={modalPosition.left}
+                top={modalPosition.top}
                 isOpen={isOpen}
                 setIsOpen={setIsOpen}
                 index={activeSheet}
