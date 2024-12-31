@@ -66,8 +66,8 @@ export class Render {
             const firstRow = data.rows[0]
             const firstCol = data.cols[0]
             this.store.setAnchor(
-                firstRow.position.startRow,
-                firstCol.position.startCol
+                firstCol.position.startCol,
+                firstRow.position.startRow
             )
             this.render()
         })
