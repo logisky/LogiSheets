@@ -58,6 +58,8 @@ mod test_builtin_style {
 
 #[cfg(test)]
 mod test_6 {
+    use logisheets::SheetDimension;
+
     #[test]
     fn test_value1() {
         use logisheets::{Value, Workbook};
@@ -115,7 +117,12 @@ mod test_6 {
         let style = ws.get_style(9, 1).unwrap();
         let underline = style.font.underline.unwrap().val;
         assert!(matches!(underline, StUnderlineValues::Single));
-        let (row_cnt, col_cnt) = ws.get_sheet_dimension();
+        let SheetDimension {
+            max_row: row_cnt,
+            max_col: col_cnt,
+            height: _,
+            width: _,
+        } = ws.get_sheet_dimension().unwrap();
         for r in 0..row_cnt {
             for c in 0..col_cnt {
                 let _ = ws.get_style(r, c).unwrap();
@@ -130,7 +137,12 @@ mod test_6 {
         let mut buf = fs::read("tests/builtin_style.xlsx").unwrap();
         let wb = Workbook::from_file(&mut buf, String::from("builtin_style")).unwrap();
         let ws = wb.get_sheet_by_idx(0).unwrap();
-        let (row_cnt, col_cnt) = ws.get_sheet_dimension();
+        let SheetDimension {
+            max_row: row_cnt,
+            max_col: col_cnt,
+            height: _,
+            width: _,
+        } = ws.get_sheet_dimension().unwrap();
         for r in 0..row_cnt {
             for c in 0..col_cnt {
                 let _ = ws.get_style(r, c).unwrap();

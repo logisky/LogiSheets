@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {injectable} from 'inversify'
 import {
-    ActionEffect,
     Cell,
     CustomFunc,
     DisplayWindowWithStartPoint,
@@ -10,6 +9,7 @@ import {
     ErrorMessage,
     BlockInfo,
     isErrorMessage,
+    SheetDimension,
 } from 'logisheets-web'
 import {
     Callback,
@@ -20,12 +20,15 @@ import {
     LoadWorkbookParams,
     HandleTransactionParams,
     GetFullyCoveredBlocksParams,
+    MethodName,
 } from './types'
 import {CellInfo} from 'packages/web'
 
 export type Resp<T> = Promise<T | ErrorMessage>
 
 export interface IWorkbookClient {
+    isReady(): Promise<void>
+    getSheetDimension(sheetIdx: number): Resp<SheetDimension>
     getAllSheetInfo(params: GetAllSheetInfoParams): Resp<readonly SheetInfo[]>
     getDisplayWindow(
         params: GetDisplayWindowParams
@@ -93,10 +96,17 @@ export class WorkbookClient implements IWorkbookClient {
         return this._readyPromise
     }
 
+    getSheetDimension(sheetIdx: number): Resp<SheetDimension> {
+        return this._call(
+            MethodName.GetSheetDimension,
+            sheetIdx
+        ) as Resp<SheetDimension>
+    }
+
     getFullyCoveredBlocks(
         params: GetFullyCoveredBlocksParams
     ): Resp<readonly BlockInfo[]> {
-        return this._call('getFullyCoveredBlocks', params) as Resp<
+        return this._call(MethodName.GetFullyCoveredBlocks, params) as Resp<
             readonly BlockInfo[]
         >
     }
@@ -116,7 +126,7 @@ export class WorkbookClient implements IWorkbookClient {
     }
 
     getAllSheetInfo(): Resp<readonly SheetInfo[]> {
-        return this._call('getAllSheetInfo', undefined) as Resp<
+        return this._call(MethodName.GetAllSheetInfo, undefined) as Resp<
             readonly SheetInfo[]
         >
     }
@@ -125,13 +135,13 @@ export class WorkbookClient implements IWorkbookClient {
         params: GetDisplayWindowParams
     ): Resp<DisplayWindowWithStartPoint> {
         return this._call(
-            'getDisplayWindow',
+            MethodName.GetDisplayWindow,
             params
         ) as Resp<DisplayWindowWithStartPoint>
     }
 
     async getCell(params: GetCellParams): Resp<Cell> {
-        const result = this._call('getCell', params) as Resp<CellInfo>
+        const result = this._call(MethodName.GetCell, params) as Resp<CellInfo>
         return result.then((v) => {
             if (!isErrorMessage(v)) return new Cell(v)
             return v
@@ -139,23 +149,26 @@ export class WorkbookClient implements IWorkbookClient {
     }
 
     async getCellPosition(params: GetCellParams): Resp<CellPosition> {
-        return this._call('getCellPosition', params) as Resp<CellPosition>
+        return this._call(
+            MethodName.GetCellPosition,
+            params
+        ) as Resp<CellPosition>
     }
 
     async undo(): Resp<void> {
-        return this._call('undo', undefined) as Resp<void>
+        return this._call(MethodName.Undo, undefined) as Resp<void>
     }
 
     redo(): Resp<void> {
-        return this._call('redo', undefined) as Resp<void>
+        return this._call(MethodName.Redo, undefined) as Resp<void>
     }
 
     async handleTransaction(params: HandleTransactionParams): Resp<void> {
-        return this._call('handleTransaction', params) as Resp<void>
+        return this._call(MethodName.HandleTransaction, params) as Resp<void>
     }
 
     loadWorkbook(params: LoadWorkbookParams): Resp<void> {
-        return this._call('loadWorkbook', params) as Resp<void>
+        return this._call(MethodName.LoadWorkbook, params) as Resp<void>
     }
 
     private _call(method: string, params?: any) {

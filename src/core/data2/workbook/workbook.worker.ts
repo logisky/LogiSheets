@@ -4,13 +4,13 @@
 const ctx: Worker = self as any
 
 import {
-    ActionEffect,
     BlockInfo,
     CellInfo,
     CellPosition,
     DisplayWindowWithStartPoint,
     ErrorMessage,
     initWasm,
+    SheetDimension,
     SheetInfo,
     Workbook,
     Worksheet,
@@ -23,6 +23,7 @@ import {
     GetFullyCoveredBlocksParams,
     HandleTransactionParams,
     LoadWorkbookParams,
+    MethodName,
     WorkerUpdate,
 } from './types'
 
@@ -36,6 +37,7 @@ interface IWorkbookWorker {
     ): Result<DisplayWindowWithStartPoint>
     getCell(params: GetCellParams): Result<CellInfo>
     getCellPosition(params: GetCellParams): Result<CellPosition>
+    getSheetDimension(sheetIdx: number): Result<SheetDimension>
     getFullyCoveredBlocks(
         params: GetFullyCoveredBlocksParams
     ): Result<readonly BlockInfo[]>
@@ -48,6 +50,11 @@ interface IWorkbookWorker {
 }
 
 class WorkerService implements IWorkbookWorker {
+    public getSheetDimension(sheetIdx: number): Result<SheetDimension> {
+        const ws = this.getSheet(sheetIdx)
+        return ws.getSheetDimension()
+    }
+
     public isReady(): Result<boolean> {
         return this._workbookImpl != undefined
     }
@@ -151,38 +158,38 @@ class WorkerService implements IWorkbookWorker {
 
         let result
         switch (m) {
-            case 'isReady':
+            case MethodName.IsReady:
                 result = this.isReady()
                 break
-            case 'handleTransaction':
+            case MethodName.HandleTransaction:
                 result = this.handleTransaction(args)
                 break
-            case 'getAllSheetInfo':
+            case MethodName.GetAllSheetInfo:
                 result = this.getAllSheetInfo()
                 break
-            case 'undo':
+            case MethodName.Undo:
                 result = this.undo()
                 break
-            case 'redo':
+            case MethodName.Redo:
                 result = this.redo()
                 break
-            case 'getDisplayWindow':
+            case MethodName.GetDisplayWindow:
                 result = this.getDisplayWindow(args)
                 break
-            case 'getDisplayWindowWithCellPosition':
-                result = this.getDisplayWindowWithCellPosition(args)
-                break
-            case 'getCellPosition':
+            case MethodName.GetCellPosition:
                 result = this.getCellPosition(args)
                 break
-            case 'getCell':
+            case MethodName.GetCell:
                 result = this.getCell(args)
                 break
-            case 'loadWorkbook':
+            case MethodName.LoadWorkbook:
                 result = this.loadWorkbook(args)
                 break
-            case 'getFullyCoveredBlocks':
+            case MethodName.GetFullyCoveredBlocks:
                 result = this.getFullyCoveredBlocks(args)
+                break
+            case MethodName.GetSheetDimension:
+                result = this.getSheetDimension(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

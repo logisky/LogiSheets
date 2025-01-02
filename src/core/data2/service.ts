@@ -2,15 +2,15 @@ import {inject, injectable} from 'inversify'
 import {getID} from '../ioc/id'
 import {TYPES} from '../ioc/types'
 import {
-    ActionEffect,
     CustomFunc,
     Transaction,
     SheetInfo,
     Cell,
     BlockInfo,
+    SheetDimension,
 } from 'logisheets-web'
 import {CellViewResponse, ViewManager} from './view_manager'
-import {CellView, CellViewData} from './types'
+import {CellView} from './types'
 import {Resp, WorkbookClient} from './workbook'
 
 export const MAX_COUNT = 100000000
@@ -50,6 +50,8 @@ export interface DataService {
         endCol: number
     ): Resp<readonly BlockInfo[]>
 
+    getSheetDimension(sheetIdx: number): Resp<SheetDimension>
+
     getCurrentCellView(sheetIdx: number): CellView
 
     getCurrentSheetIdx(): number
@@ -64,6 +66,10 @@ export class DataServiceImpl implements DataService {
     readonly id = getID()
     constructor(@inject(TYPES.Workbook) private _workbook: WorkbookClient) {
         this._init()
+    }
+
+    public getSheetDimension(sheetIdx: number): Resp<SheetDimension> {
+        return this._workbook.getSheetDimension(sheetIdx)
     }
 
     public getFullyCoveredBlocks(

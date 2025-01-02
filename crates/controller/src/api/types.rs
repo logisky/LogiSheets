@@ -22,3 +22,15 @@ pub struct CellInfo {
     pub style: Style,
     pub block_id: Option<BlockId>,
 }
+
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "sheet_dimension.ts")
+)]
+#[derive(Debug, Clone)]
+pub struct SheetDimension {
+    pub max_row: usize,
+    pub max_col: usize,
+    pub height: f64,
+    pub width: f64,
+}

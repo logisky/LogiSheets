@@ -170,6 +170,20 @@ pub fn get_cell_position(id: usize, sheet_idx: usize, row: usize, col: usize) ->
 }
 
 #[wasm_bindgen]
+pub fn get_sheet_dimension(id: usize, sheet_idx: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let result = manager
+        .get_workbook(&id)
+        .unwrap()
+        .get_sheet_by_idx(sheet_idx)
+        .unwrap()
+        .get_sheet_dimension();
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
 /// logisheets_controller::DisplayResponse
 pub fn get_patches(id: usize, sheet_idx: u32, version: u32) -> JsValue {
     init();

@@ -119,6 +119,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         lastScrollTime = now
         store.setAnchor(store.anchorX, store.anchorY + e.deltaY)
         store.render.render()
+        store.scrollbar.update('y')
         store.scroll()
     }
 

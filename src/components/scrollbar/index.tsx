@@ -15,7 +15,7 @@ export * from './scroll_event'
 export type ScrollbarType = 'x' | 'y'
 export interface ScrollbarAttr {
     offsetHeight?: number
-    scrollHeight?: number
+    scrollHeight: number
     scrollTop?: number
     minThumbLength?: number
     direction: ScrollbarType
@@ -48,29 +48,29 @@ export const ScrollbarComponent: FC<ScrollbarProps> = ({
              * The difference between clientHeight, offsetHeight, scrollHeight, offsetTop, and scrollTop
              * https://www.programmersought.com/article/76801676023/
              */
-            const scrollRadio =
+            const scrollRatio =
                 scrollHeight === 0 ? 0 : scrollTop / scrollHeight
-            const thumbRadio =
+            const thumbRatio =
                 scrollHeight === 0 ? 0 : offsetHeight / scrollHeight
             const containerStyle = getComputedStyle(thumbContainer)
             const newThumbStyle: CSSProperties = {}
             if (xScrollbar()) {
                 const containerLength = parseFloat(containerStyle.width)
-                const thumbWidth = containerLength * thumbRadio
+                const thumbWidth = containerLength * thumbRatio
                 const thumbLength = Math.max(thumbWidth, minThumbLength)
                 newThumbStyle.width =
                     thumbLength === containerLength ? 0 : toPx(thumbLength)
-                const left = scrollRadio * containerLength
+                const left = scrollRatio * containerLength
                 if (left + thumbLength > containerLength) {
                     newThumbStyle.right = 0
                 } else newThumbStyle.left = toPx(left)
             } else {
                 const containerLength = parseFloat(containerStyle.height)
-                const thumbHeight = thumbContainer.offsetHeight * thumbRadio
+                const thumbHeight = thumbContainer.offsetHeight * thumbRatio
                 const thumbLength = Math.max(thumbHeight, minThumbLength)
                 newThumbStyle.height =
                     thumbLength === containerLength ? 0 : toPx(thumbLength)
-                const top = scrollRadio * containerLength
+                const top = scrollRatio * containerLength
                 if (top + thumbLength > containerLength) {
                     newThumbStyle.bottom = 0
                 } else newThumbStyle.top = toPx(top)

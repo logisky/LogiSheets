@@ -18,6 +18,7 @@ use logisheets_base::{BlockId, CellId, ColId, RowId, SheetId};
 use logisheets_parser::unparse;
 
 use super::workbook::CellPositionerDefault;
+use super::SheetDimension;
 
 // Use a cache to record the coordinate
 pub struct Worksheet<'a> {
@@ -473,35 +474,51 @@ impl<'a> Worksheet<'a> {
     }
 
     /// Get the dimension of the sheet.
-    pub fn get_sheet_dimension(&self) -> (usize, usize) {
+    pub fn get_sheet_dimension(&self) -> Result<SheetDimension> {
         let sheet_container = self
             .controller
             .status
             .container
             .get_sheet_container(self.sheet_id);
         if sheet_container.is_none() {
-            return (0, 0);
+            return Ok(SheetDimension {
+                max_row: 0,
+                max_col: 0,
+                height: 0.,
+                width: 0.,
+            });
         }
         let sheet_container = sheet_container.unwrap();
-        sheet_container
-            .cells
-            .clone()
-            .iter()
-            .fold((0, 0), |(r, c), (id, _)| {
-                let cell_idx = self
-                    .controller
-                    .status
-                    .navigator
-                    .fetch_cell_idx(&self.sheet_id, id);
-                match cell_idx {
-                    Ok((row, col)) => {
-                        let r = if r > row { r } else { row };
-                        let c = if c > col { c } else { col };
-                        (r, c)
+        let (max_row, max_col) =
+            sheet_container
+                .cells
+                .clone()
+                .iter()
+                .fold((0, 0), |(r, c), (id, _)| {
+                    let cell_idx = self
+                        .controller
+                        .status
+                        .navigator
+                        .fetch_cell_idx(&self.sheet_id, id);
+                    match cell_idx {
+                        Ok((row, col)) => {
+                            let r = if r > row { r } else { row };
+                            let c = if c > col { c } else { col };
+                            (r, c)
+                        }
+                        Err(_) => (r, c),
                     }
-                    Err(_) => (r, c),
-                }
-            })
+                });
+        let CellPosition {
+            y: start_row,
+            x: start_col,
+        } = self.get_cell_position(max_row, max_col)?;
+        Ok(SheetDimension {
+            max_row,
+            max_col,
+            height: start_row,
+            width: start_col,
+        })
     }
 
     pub fn get_row_info(&self, row: usize) -> Option<RowInfo> {
