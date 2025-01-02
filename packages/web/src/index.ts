@@ -33,6 +33,7 @@ export type {
     SheetBlocks,
     SheetColInfo,
     SheetComments,
+    SheetDimension,
     SheetInfo,
     SheetMergeCells,
     SheetNames,

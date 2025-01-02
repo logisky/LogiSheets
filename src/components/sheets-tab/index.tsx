@@ -56,7 +56,6 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     const onTabChange = (key: string) => {
         const i = sheets.findIndex((s) => s === key)
         activeSheet$(i)
-        DATA_SERVICE.setCurrentSheetIdx(i)
     }
 
     const add = () => {

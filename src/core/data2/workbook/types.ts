@@ -54,3 +54,17 @@ export const enum WorkerUpdate {
 }
 
 export type Callback = () => void
+
+export enum MethodName {
+    GetSheetDimension = 'getSheetDimension',
+    GetFullyCoveredBlocks = 'getFullyCoveredBlocks',
+    GetAllSheetInfo = 'getAllSheetInfo',
+    GetDisplayWindow = 'getDisplayWindow',
+    GetCell = 'getCell',
+    GetCellPosition = 'getCellPosition',
+    Undo = 'undo',
+    Redo = 'redo',
+    HandleTransaction = 'handleTransaction',
+    LoadWorkbook = 'loadWorkbook',
+    IsReady = 'isReady',
+}

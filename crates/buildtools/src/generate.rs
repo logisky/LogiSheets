@@ -1,15 +1,12 @@
-fn main() {
-    use gents::FileGroup;
-    use logisheets_controller::controller::display::CellPosition;
-    use logisheets_controller::controller::display::DisplayWindowWithStartPoint;
-    use logisheets_controller::controller::display::{
-        DisplayResponse, DisplaySheetRequest, DisplayWindowRequest, SheetInfo,
-    };
-    use logisheets_controller::edit_action::AsyncFuncResult;
-    use logisheets_controller::edit_action::{ActionEffect, EditAction};
-    use logisheets_controller::CellInfo;
-    use logisheets_controller::ErrorMessage;
+use gents::FileGroup;
+use logisheets_controller::controller::display::{
+    CellPosition, DisplayResponse, DisplaySheetRequest, DisplayWindowRequest,
+    DisplayWindowWithStartPoint, SheetInfo,
+};
+use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditAction};
+use logisheets_controller::{CellInfo, ErrorMessage, SheetDimension};
 
+fn main() {
     let path = "packages/web/src/bindings";
     let mut file_group = FileGroup::new();
     file_group.add::<DisplaySheetRequest>();
@@ -21,6 +18,7 @@ fn main() {
     file_group.add::<SheetInfo>();
     file_group.add::<ActionEffect>();
     file_group.add::<AsyncFuncResult>();
+    file_group.add::<SheetDimension>();
 
     file_group.add::<CellInfo>();
     file_group.add::<ErrorMessage>();

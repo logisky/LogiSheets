@@ -12,6 +12,7 @@ import {
     get_display_window_within_cell,
     get_cell_position,
     get_all_fully_covered_blocks,
+    get_sheet_dimension,
 } from '../../wasm'
 import {
     BlockInfo,
@@ -22,8 +23,9 @@ import {
     RowInfo,
     Style,
     Value,
+    CellInfo,
+    SheetDimension,
 } from '../bindings'
-import {CellInfo} from '../bindings/cell_info'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
 
@@ -31,6 +33,10 @@ export class Worksheet {
     public constructor(id: number, idx: number) {
         this._id = id
         this._sheetIdx = idx
+    }
+
+    public getSheetDimension(): Result<SheetDimension> {
+        return get_sheet_dimension(this._id, this._sheetIdx)
     }
 
     public getDisplayWindow(

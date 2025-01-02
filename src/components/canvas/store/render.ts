@@ -110,6 +110,8 @@ export class Render {
             )
             this.render()
             this._jumpToCellInCurrentView(row, col)
+            this.store.scrollbar.update('x')
+            this.store.scrollbar.update('y')
         })
     }
 
