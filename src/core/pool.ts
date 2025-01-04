@@ -1,9 +1,12 @@
 import {injectable} from 'inversify'
 import {CellView, RenderCell} from './data'
-import {Range} from '@/core/standable'
+import {Range, StandardCell} from '@/core/standable'
+import {StandardValue} from './standable/value'
+import {StandardStyle} from './standable/style'
 
-const RENDER_CELL_COUNT = 1000
-const RANGE_COUNT = 2000
+const RENDER_CELL_COUNT = 5000
+const RANGE_COUNT = 6000
+const CACHE_NUMBER = 2
 
 /**
  * This is an object pool used to manage the creation and reuse of frequently used objects,
@@ -40,6 +43,9 @@ export class Pool {
         c.reset()
         this.releaseRange(c.position)
         this.releaseRange(c.coordinate)
+        if (c.info) {
+            this.releaseStandardCell(c.info)
+        }
         this._renderCells.push(c)
     }
 
@@ -53,16 +59,58 @@ export class Pool {
         this._ranges.push(r)
     }
 
-    releaseCellView(cellView: CellView) {
-        cellView.rows.forEach((c) => {
-            this.releaseRenderCell(c)
-        })
-        cellView.cols.forEach((c) => {
-            this.releaseRenderCell(c)
-        })
-        cellView.cells.forEach((c) => {
-            this.releaseRenderCell(c)
-        })
+    getStandardValue(): StandardValue {
+        if (this._standardValues.length > 0)
+            return this._standardValues.pop() as StandardValue
+        return new StandardValue()
+    }
+
+    releaseStandardValue(v: StandardValue) {
+        v.cellValueOneof = undefined
+        this._standardValues.push(v)
+    }
+
+    getStandardStyle(): StandardStyle {
+        if (this._standardStyles.length > 0) {
+            return this._standardStyles.pop() as StandardStyle
+        }
+        return new StandardStyle()
+    }
+
+    releaseStandardStyle(s: StandardStyle) {
+        this._standardStyles.push(s)
+    }
+
+    getStandardCell(): StandardCell {
+        if (this._standardCells.length > 0)
+            return this._standardCells.pop() as StandardCell
+        return new StandardCell()
+    }
+
+    releaseStandardCell(c: StandardCell) {
+        if (c.value) this.releaseStandardValue(c.value)
+        if (c.style) this.releaseStandardStyle(c.style)
+        this._standardCells.push(c)
+    }
+
+    releaseCellView(v: CellView) {
+        /**
+         * We don't really release the render cells at once since
+         * these render cells are still used in other places.
+         */
+        if (this._cellViews.length >= CACHE_NUMBER) {
+            const cellView = this._cellViews.pop() as CellView
+            cellView.rows.forEach((c) => {
+                this.releaseRenderCell(c)
+            })
+            cellView.cols.forEach((c) => {
+                this.releaseRenderCell(c)
+            })
+            cellView.cells.forEach((c) => {
+                this.releaseRenderCell(c)
+            })
+        }
+        this._cellViews.push(v)
     }
 
     private _renderCells = Array.from(
@@ -71,4 +119,18 @@ export class Pool {
     )
 
     private _ranges = Array.from({length: RANGE_COUNT}, () => new Range())
+    private _standardCells = Array.from(
+        {length: RENDER_CELL_COUNT},
+        () => new StandardCell()
+    )
+    private _standardValues = Array.from(
+        {length: RENDER_CELL_COUNT},
+        () => new StandardValue()
+    )
+    private _standardStyles = Array.from(
+        {length: RENDER_CELL_COUNT},
+        () => new StandardStyle()
+    )
+
+    private _cellViews: CellView[] = []
 }

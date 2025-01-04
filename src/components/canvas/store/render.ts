@@ -24,6 +24,7 @@ export class Render {
 
     render() {
         const rect = this.canvas.getBoundingClientRect()
+
         const resp = this.store.dataSvc.getCellView(
             this.store.currSheetIdx,
             this.store.anchorX - BUFFER_SIZE,

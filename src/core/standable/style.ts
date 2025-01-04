@@ -16,10 +16,9 @@ export class StandardStyle implements Style {
     fill!: Fill
     alignment!: CtCellAlignment
     formatter = ''
-    static from(style: Style) {
-        const s = new StandardStyle()
-        shallowCopy(style, s)
-        return s
+    from(style: Style) {
+        shallowCopy(style, this)
+        return this
     }
 
     getFont() {

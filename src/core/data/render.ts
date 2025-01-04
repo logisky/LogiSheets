@@ -1,7 +1,8 @@
 import {Range, StandardCell} from '@/core/standable'
-import {CellInfo} from 'logisheets-web'
+import {CellInfo, Value} from 'logisheets-web'
 import {StandardValue} from '../standable/value'
 import {LeftTop} from '../settings'
+import {StandardStyle} from '../standable/style'
 
 export class RenderCell {
     get width() {
@@ -19,10 +20,23 @@ export class RenderCell {
         this.position = position
         return this
     }
-    setInfo(info: CellInfo) {
-        const c = new StandardCell()
-        if (info.style) c.setStyle(info.style)
-        if (info.value) c.value = StandardValue.from(info.value)
+    setInfo(
+        info: CellInfo,
+        getStandardCell: () => StandardCell,
+        getStandardValue: () => StandardValue,
+        getStandardStyle: () => StandardStyle
+    ) {
+        const c = getStandardCell()
+        if (info.style) {
+            const style = getStandardStyle()
+            style.from(info.style)
+            c.setStyle(style)
+        }
+        if (info.value) {
+            const value = getStandardValue()
+            value.from(info.value)
+            c.value = value
+        }
         if (info.formula !== undefined) c.formula = info.formula
         this.info = c
         return this
