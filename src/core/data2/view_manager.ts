@@ -73,7 +73,16 @@ export class ViewManager {
             return a.fromRow < b.fromRow || a.fromCol < b.fromCol ? -1 : 1
         })
 
-        return {type, data: new CellView(this.dataChunks)}
+        return {
+            type,
+            data: new CellView(this.dataChunks),
+            request: {
+                startX,
+                startY,
+                height,
+                width,
+            },
+        }
     }
 
     /**
@@ -89,9 +98,17 @@ export enum CellViewRespType {
     New,
 }
 
+export interface CellViewRequest {
+    readonly startX: number
+    readonly startY: number
+    readonly height: number
+    readonly width: number
+}
+
 export interface CellViewResponse {
     readonly type: CellViewRespType
     readonly data: CellView
+    readonly request: CellViewRequest
 }
 
 export function parseDisplayWindow(

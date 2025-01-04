@@ -25,11 +25,17 @@ export class Render {
             this.store.currSheetIdx,
             this.store.anchorX - BUFFER_SIZE,
             this.store.anchorY - BUFFER_SIZE,
-            rect.height + BUFFER_SIZE * 2,
+            rect.height + BUFFER_SIZE,
             rect.width + BUFFER_SIZE
         )
         resp.then((r) => {
             if (isErrorMessage(r)) return
+            const req = r.request
+            // Discard responses that are invisible now
+            if (Math.abs(req.startX - this.store.anchorX) > req.width) return
+            if (Math.abs(req.startY - this.store.anchorY) > req.height) {
+                return
+            }
             const data = r.data
             this._painterService.setupCanvas(this.canvas)
             this._painterService.clear()
