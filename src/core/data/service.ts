@@ -12,6 +12,7 @@ import {
 import {CellViewResponse, ViewManager} from './view_manager'
 import {CellView} from './types'
 import {Resp, WorkbookClient} from './workbook'
+import {Pool} from '../pool'
 
 export const MAX_COUNT = 100000000
 export const CANVAS_OFFSET = 100
@@ -64,7 +65,10 @@ export interface DataService {
 @injectable()
 export class DataServiceImpl implements DataService {
     readonly id = getID()
-    constructor(@inject(TYPES.Workbook) private _workbook: WorkbookClient) {
+    constructor(
+        @inject(TYPES.Workbook) private _workbook: WorkbookClient,
+        @inject(TYPES.Pool) private _pool: Pool
+    ) {
         this._init()
     }
 
@@ -151,7 +155,11 @@ export class DataServiceImpl implements DataService {
     ): Resp<CellViewResponse> {
         const cacheManager = this._cellViews.get(sheetIdx)
         if (!cacheManager) {
-            const manager = new ViewManager(this._workbook, sheetIdx)
+            const manager = new ViewManager(
+                this._workbook,
+                sheetIdx,
+                this._pool
+            )
             this._cellViews.set(sheetIdx, manager)
         }
         const viewManager = this._cellViews.get(sheetIdx) as ViewManager
@@ -167,7 +175,11 @@ export class DataServiceImpl implements DataService {
     ): Resp<CellViewResponse> {
         const cacheManager = this._cellViews.get(sheetIdx)
         if (!cacheManager) {
-            const manager = new ViewManager(this._workbook, sheetIdx)
+            const manager = new ViewManager(
+                this._workbook,
+                sheetIdx,
+                this._pool
+            )
             this._cellViews.set(sheetIdx, manager)
         }
         const viewManager = this._cellViews.get(sheetIdx) as ViewManager

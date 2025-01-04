@@ -51,6 +51,9 @@ export class Range {
         this.#endCol = col
         return this
     }
+    reset() {
+        this.setEndCol(0).setEndRow(0).setStartCol(0).setStartRow(0)
+    }
     #startRow = 0
     #startCol = 0
     #endRow = 0

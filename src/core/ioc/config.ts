@@ -9,10 +9,13 @@ import {
     IWorkbookClient,
 } from '@/core/data'
 import {TYPES} from './types'
+import {Pool} from '../pool'
 
 export const CONTAINER = new Container()
 
 export async function setup() {
+    const pool = new Pool()
+    CONTAINER.bind<Pool>(TYPES.Pool).toConstantValue(pool)
     const workbook = new WorkbookClient()
     CONTAINER.bind<IWorkbookClient>(TYPES.Workbook).toConstantValue(workbook)
     return workbook.isReady().then((_) => {

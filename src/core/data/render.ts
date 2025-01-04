@@ -28,6 +28,13 @@ export class RenderCell {
         return this
     }
 
+    reset() {
+        this.hidden = false
+        this.coordinate.reset()
+        this.position.reset()
+        this.info = undefined
+    }
+
     public hidden = false
     /**
      * start/end row/col index

@@ -8,6 +8,9 @@ import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {isErrorMessage, PatternFill} from 'logisheets-web'
 import {Cell} from '../defs'
+import {CONTAINER} from '@/core/ioc/config'
+import {TYPES} from '@/core/ioc/types'
+import {Pool} from '@/core/pool'
 export const CANVAS_ID = simpleUuid()
 const BUFFER_SIZE = 50
 
@@ -45,6 +48,8 @@ export class Render {
             this._renderTopHeader(data)
             this._renderLeftTop()
 
+            const pool = CONTAINER.get<Pool>(TYPES.Pool)
+            pool.releaseCellView(data)
             // rerender resizer
             this.store.resizer.init()
         })
