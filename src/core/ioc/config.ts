@@ -7,7 +7,7 @@ import {
     DataServiceImpl,
     WorkbookClient,
     IWorkbookClient,
-} from '@/core/data2'
+} from '@/core/data'
 import {TYPES} from './types'
 
 export const CONTAINER = new Container()

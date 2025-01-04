@@ -1,7 +1,7 @@
 import {ChangeEvent, FC, useRef} from 'react'
 import styles from './file.module.scss'
 import {getU8} from '@/core/file'
-import {DataService} from '@/core/data2'
+import {DataService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {useToast} from '@/ui/notification/useToast'

@@ -8,7 +8,7 @@ import {Selector} from './selector'
 import {Dnd} from './dnd'
 import {ScrollBar} from './scrollbar'
 import {Textarea} from './textarea'
-import {RenderCell, DataService, CellViewData, CellView} from '@/core/data2'
+import {RenderCell, DataService, CellViewData, CellView} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
 

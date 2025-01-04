@@ -11,7 +11,7 @@ import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {Tabs} from 'antd'
 import {Subscription} from 'rxjs'
-import {DataService} from '@/core/data2'
+import {DataService} from '@/core/data'
 
 export interface SheetTabProps {
     activeSheet: number

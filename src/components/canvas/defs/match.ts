@@ -1,7 +1,7 @@
 import {LeftTop} from '@/core/settings'
 import {Range} from '@/core/standable'
 import {Cell} from './cell'
-import {CellViewData} from '@/core/data2'
+import {CellViewData} from '@/core/data'
 
 export function getOffset(
     clientX: number,
