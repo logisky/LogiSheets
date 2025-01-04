@@ -19,7 +19,7 @@ import {
     BlockInfo,
 } from 'logisheets-web'
 import {TYPES} from '@/core/ioc/types'
-import {DataService} from '@/core/data2'
+import {DataService} from '@/core/data'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent

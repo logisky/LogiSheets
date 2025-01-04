@@ -24,7 +24,7 @@ import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid} from '@/core'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
-import {DataServiceImpl, MAX_COUNT, RenderCell} from '@/core/data2'
+import {DataServiceImpl, MAX_COUNT, RenderCell} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
@@ -108,16 +108,16 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     let lastScrollTime = 0
     const onMouseWheel = (e: WheelEvent) => {
         // only support y scrollbar currently
-        if (store.anchorY + e.deltaY < 0) {
-            store.setAnchor(store.anchorX, 0)
-            return
+        let delta = e.deltaY
+        if (store.anchorY + delta < 0) {
+            delta = -store.anchorY
         }
 
         const now = Date.now()
-        if (now - lastScrollTime < 200) return
+        if (now - lastScrollTime < 150) return
 
         lastScrollTime = now
-        store.setAnchor(store.anchorX, store.anchorY + e.deltaY)
+        store.setAnchor(store.anchorX, store.anchorY + delta)
         store.render.render()
         store.scrollbar.update('y')
         store.scroll()

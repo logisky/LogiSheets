@@ -5,7 +5,7 @@ import {
 } from 'logisheets-web'
 import {useState} from 'react'
 import Modal from 'react-modal'
-import {DataService} from '@/core/data2'
+import {DataService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {useToast} from '@/ui/notification/useToast'

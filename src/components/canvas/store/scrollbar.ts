@@ -1,7 +1,7 @@
 import {action, makeObservable, observable} from 'mobx'
 import {CanvasStore} from './store'
 import type {ScrollbarAttr, ScrollbarType} from '@/components/scrollbar'
-import {CANVAS_OFFSET} from '@/core/data2'
+import {CANVAS_OFFSET} from '@/core/data'
 import {isErrorMessage} from 'logisheets-web'
 import {ptToPx, widthToPx} from '@/core'
 

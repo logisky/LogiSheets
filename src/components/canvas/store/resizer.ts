@@ -1,6 +1,6 @@
 import {action, makeObservable, observable} from 'mobx'
 import {CanvasStore} from './store'
-import {RenderCell} from '@/core/data2'
+import {RenderCell} from '@/core/data'
 import {Range} from '@/core/standable'
 import {pxToPt, pxToWidth} from '@/core'
 import {

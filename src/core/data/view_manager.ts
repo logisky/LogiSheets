@@ -1,11 +1,12 @@
 import {pxToPt, pxToWidth, widthToPx} from '../rate'
 import {LeftTop} from '../settings'
 import {RenderCell} from './render'
-import {CellViewData, Rect, overlap, OverlapType, CellView} from './types'
+import {CellViewData, Rect, CellView} from './types'
 import {Range, StandardColInfo, StandardRowInfo} from '@/core/standable'
 import {ptToPx, width2px} from '@/core/rate'
 import {DisplayWindowWithStartPoint, isErrorMessage} from 'logisheets-web'
 import {Resp, WorkbookClient} from './workbook'
+import {Pool} from '../pool'
 
 /**
  * The `ViewManager` is responsible for efficiently and seamlessly generating `CellViewData`.
@@ -15,7 +16,11 @@ import {Resp, WorkbookClient} from './workbook'
  * and the WASM module, ensuring smooth performance by avoiding redundant calculations.
  */
 export class ViewManager {
-    constructor(private _workbook: WorkbookClient, private _sheetIdx: number) {}
+    constructor(
+        private _workbook: WorkbookClient,
+        private _sheetIdx: number,
+        private _pool: Pool
+    ) {}
 
     public async getViewResponseWithCell(
         row: number,
@@ -58,7 +63,13 @@ export class ViewManager {
         const windows = await Promise.all(windowsPromise)
         const data = windows
             .filter((w) => !isErrorMessage(w))
-            .map((w) => parseDisplayWindow(w as DisplayWindowWithStartPoint))
+            .map((w) => {
+                return parseDisplayWindow(
+                    w as DisplayWindowWithStartPoint,
+                    this._pool.getRenderCell.bind(this._pool),
+                    this._pool.getRange.bind(this._pool)
+                )
+            })
 
         if (type === CellViewRespType.New) {
             this.dataChunks = data
@@ -73,7 +84,16 @@ export class ViewManager {
             return a.fromRow < b.fromRow || a.fromCol < b.fromCol ? -1 : 1
         })
 
-        return {type, data: new CellView(this.dataChunks)}
+        return {
+            type,
+            data: new CellView(this.dataChunks),
+            request: {
+                startX,
+                startY,
+                height,
+                width,
+            },
+        }
     }
 
     /**
@@ -89,13 +109,23 @@ export enum CellViewRespType {
     New,
 }
 
+export interface CellViewRequest {
+    readonly startX: number
+    readonly startY: number
+    readonly height: number
+    readonly width: number
+}
+
 export interface CellViewResponse {
     readonly type: CellViewRespType
     readonly data: CellView
+    readonly request: CellViewRequest
 }
 
 export function parseDisplayWindow(
-    window: DisplayWindowWithStartPoint
+    window: DisplayWindowWithStartPoint,
+    getRenderCell: () => RenderCell,
+    getRange: () => Range
 ): CellViewData {
     const xStart = width2px(window.startX)
     const yStart = ptToPx(window.startY)
@@ -103,12 +133,12 @@ export function parseDisplayWindow(
     let x = xStart
     const cols = window.window.cols.map((c) => {
         const colInfo = StandardColInfo.from(c)
-        const renderCol = new RenderCell()
+        const renderCol = getRenderCell()
             .setCoordinate(
-                new Range().setStartCol(colInfo.idx).setEndCol(colInfo.idx)
+                getRange().setStartCol(colInfo.idx).setEndCol(colInfo.idx)
             )
             .setPosition(
-                new Range()
+                getRange()
                     .setStartCol(x)
                     .setEndCol(x + colInfo.px)
                     .setStartRow(0)
@@ -121,12 +151,12 @@ export function parseDisplayWindow(
     let y = yStart
     const rows = window.window.rows.map((r) => {
         const rowInfo = StandardRowInfo.from(r)
-        const renderRow = new RenderCell()
+        const renderRow = getRenderCell()
             .setCoordinate(
-                new Range().setStartRow(rowInfo.idx).setEndRow(rowInfo.idx)
+                getRange().setStartRow(rowInfo.idx).setEndRow(rowInfo.idx)
             )
             .setPosition(
-                new Range()
+                getRange()
                     .setStartRow(y)
                     .setEndRow(y + rowInfo.px)
                     .setStartCol(0)
@@ -142,18 +172,18 @@ export function parseDisplayWindow(
         for (let c = 0; c < cols.length; c += 1) {
             const row = rows[r]
             const col = cols[c]
-            const corrdinate = new Range()
+            const corrdinate = getRange()
                 .setStartRow(row.coordinate.startRow)
                 .setEndRow(row.coordinate.endRow)
                 .setStartCol(col.coordinate.startCol)
                 .setEndCol(col.coordinate.endCol)
 
-            const position = new Range()
+            const position = getRange()
                 .setStartRow(row.position.startRow)
                 .setEndRow(row.position.endRow)
                 .setStartCol(col.position.startCol)
                 .setEndCol(col.position.endCol)
-            const renderCell = new RenderCell()
+            const renderCell = getRenderCell()
                 .setPosition(position)
                 .setCoordinate(corrdinate)
                 .setInfo(window.window.cells[idx])

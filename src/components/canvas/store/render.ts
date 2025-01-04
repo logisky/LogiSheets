@@ -2,12 +2,15 @@ import {makeObservable, action} from 'mobx'
 import {CanvasStore} from './store'
 import {Box, CanvasAttr, PainterService, TextAttr} from '@/core/painter'
 import {simpleUuid, toA1notation} from '@/core'
-import {CellView, RenderCell, toCanvasPosition} from '@/core/data2'
+import {CellView, RenderCell, toCanvasPosition} from '@/core/data'
 import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardColor, Range, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {isErrorMessage, PatternFill} from 'logisheets-web'
 import {Cell} from '../defs'
+import {CONTAINER} from '@/core/ioc/config'
+import {TYPES} from '@/core/ioc/types'
+import {Pool} from '@/core/pool'
 export const CANVAS_ID = simpleUuid()
 const BUFFER_SIZE = 50
 
@@ -25,11 +28,17 @@ export class Render {
             this.store.currSheetIdx,
             this.store.anchorX - BUFFER_SIZE,
             this.store.anchorY - BUFFER_SIZE,
-            rect.height + BUFFER_SIZE * 2,
+            rect.height + BUFFER_SIZE,
             rect.width + BUFFER_SIZE
         )
         resp.then((r) => {
             if (isErrorMessage(r)) return
+            const req = r.request
+            // Discard responses that are invisible now
+            if (Math.abs(req.startX - this.store.anchorX) > req.width) return
+            if (Math.abs(req.startY - this.store.anchorY) > req.height) {
+                return
+            }
             const data = r.data
             this._painterService.setupCanvas(this.canvas)
             this._painterService.clear()
@@ -39,6 +48,8 @@ export class Render {
             this._renderTopHeader(data)
             this._renderLeftTop()
 
+            const pool = CONTAINER.get<Pool>(TYPES.Pool)
+            pool.releaseCellView(data)
             // rerender resizer
             this.store.resizer.init()
         })
