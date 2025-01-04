@@ -8,12 +8,8 @@ export class StandardCell {
     style?: StandardStyle
     value?: StandardValue
     formula = ''
-    setStyle(style?: Style) {
-        if (!style) {
-            this.style = undefined
-            return
-        }
-        this.style = StandardStyle.from(style)
+    setStyle(style?: StandardStyle) {
+        this.style = style
     }
 
     getFormattedText() {

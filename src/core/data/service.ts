@@ -53,6 +53,7 @@ export interface DataService {
 
     getSheetDimension(sheetIdx: number): Resp<SheetDimension>
 
+    hasCellView(): boolean
     getCurrentCellView(sheetIdx: number): CellView
 
     getCurrentSheetIdx(): number
@@ -70,6 +71,9 @@ export class DataServiceImpl implements DataService {
         @inject(TYPES.Pool) private _pool: Pool
     ) {
         this._init()
+    }
+    hasCellView(): boolean {
+        return this._cellViews.has(this.getCurrentSheetIdx())
     }
 
     public getSheetDimension(sheetIdx: number): Resp<SheetDimension> {

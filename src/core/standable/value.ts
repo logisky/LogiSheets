@@ -19,16 +19,18 @@ export class StandardValue {
     get valueStr() {
         return this.value.toString()
     }
-    static from(value: Value) {
-        const v = new StandardValue()
+    from(value: Value) {
         if (hasOwnProperty(value, 'str'))
-            v.cellValueOneof = {$case: 'str', str: value.str as string}
+            this.cellValueOneof = {$case: 'str', str: value.str as string}
         else if (hasOwnProperty(value, 'bool'))
-            v.cellValueOneof = {$case: 'bool', bool: value.bool as boolean}
+            this.cellValueOneof = {$case: 'bool', bool: value.bool as boolean}
         else if (hasOwnProperty(value, 'number'))
-            v.cellValueOneof = {$case: 'number', number: value.number as number}
+            this.cellValueOneof = {
+                $case: 'number',
+                number: value.number as number,
+            }
         else if (hasOwnProperty(value, 'error'))
-            v.cellValueOneof = {$case: 'error', error: value.error as string}
-        return v
+            this.cellValueOneof = {$case: 'error', error: value.error as string}
+        return this
     }
 }

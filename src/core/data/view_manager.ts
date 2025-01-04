@@ -2,11 +2,18 @@ import {pxToPt, pxToWidth, widthToPx} from '../rate'
 import {LeftTop} from '../settings'
 import {RenderCell} from './render'
 import {CellViewData, Rect, CellView} from './types'
-import {Range, StandardColInfo, StandardRowInfo} from '@/core/standable'
+import {
+    Range,
+    StandardCell,
+    StandardColInfo,
+    StandardRowInfo,
+} from '@/core/standable'
 import {ptToPx, width2px} from '@/core/rate'
 import {DisplayWindowWithStartPoint, isErrorMessage} from 'logisheets-web'
 import {Resp, WorkbookClient} from './workbook'
 import {Pool} from '../pool'
+import {StandardValue} from '../standable/value'
+import {StandardStyle} from '../standable/style'
 
 /**
  * The `ViewManager` is responsible for efficiently and seamlessly generating `CellViewData`.
@@ -67,7 +74,10 @@ export class ViewManager {
                 return parseDisplayWindow(
                     w as DisplayWindowWithStartPoint,
                     this._pool.getRenderCell.bind(this._pool),
-                    this._pool.getRange.bind(this._pool)
+                    this._pool.getRange.bind(this._pool),
+                    this._pool.getStandardCell.bind(this._pool),
+                    this._pool.getStandardValue.bind(this._pool),
+                    this._pool.getStandardStyle.bind(this._pool)
                 )
             })
 
@@ -125,7 +135,10 @@ export interface CellViewResponse {
 export function parseDisplayWindow(
     window: DisplayWindowWithStartPoint,
     getRenderCell: () => RenderCell,
-    getRange: () => Range
+    getRange: () => Range,
+    getStandardCell: () => StandardCell,
+    getStandardValue: () => StandardValue,
+    getStandardStyle: () => StandardStyle
 ): CellViewData {
     const xStart = width2px(window.startX)
     const yStart = ptToPx(window.startY)
@@ -186,7 +199,12 @@ export function parseDisplayWindow(
             const renderCell = getRenderCell()
                 .setPosition(position)
                 .setCoordinate(corrdinate)
-                .setInfo(window.window.cells[idx])
+                .setInfo(
+                    window.window.cells[idx],
+                    getStandardCell,
+                    getStandardValue,
+                    getStandardStyle
+                )
             cells.push(renderCell)
             idx += 1
         }
