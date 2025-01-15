@@ -1,6 +1,5 @@
 import {action, makeObservable, observable} from 'mobx'
 import {createContext, type MouseEvent} from 'react'
-import {Render} from './render'
 import {Resizer} from './resizer'
 import {Highlights} from './highlights'
 import {Cell, CellType, getOffset, match} from '../defs'
@@ -11,11 +10,12 @@ import {Textarea} from './textarea'
 import {RenderCell, DataService, CellViewData, CellView} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
+import {Renderer} from './renderer/renderer'
 
 export class CanvasStore {
     constructor(public readonly dataSvc: DataService) {
         makeObservable(this)
-        this.render = new Render(this)
+        this.renderer = new Renderer(this)
         this.resizer = new Resizer(this)
         this.highlights = new Highlights(this)
         this.selector = new Selector(this)
@@ -32,7 +32,7 @@ export class CanvasStore {
      */
     same = false
 
-    render: Render
+    renderer: Renderer
     resizer: Resizer
     highlights: Highlights
     selector: Selector
@@ -63,8 +63,9 @@ export class CanvasStore {
     }
 
     getCurrentCellView(): CellView {
-        return this.dataSvc.getCurrentCellView(this.currSheetIdx)
+        return this.renderer.getCurrentData()
     }
+
     reset() {
         this.highlights.reset()
         this.selector.reset()
@@ -73,27 +74,50 @@ export class CanvasStore {
     }
 
     match(clientX: number, clientY: number) {
-        const {x, y} = getOffset(clientX, clientY, this.render.canvas)
+        const {x, y} = getOffset(clientX, clientY, this.renderer.canvas)
         const cellView = this.getCurrentCellView()
         return match(x, y, this.anchorX, this.anchorY, cellView.data)
     }
 
     convertToCanvasPosition(p: Range, ty: CellType): Range {
-        let xOffset = 0
-        let yOffset = 0
-        if (ty === 'Cell') {
-            xOffset = LeftTop.width
-            yOffset = LeftTop.height
-        } else if (ty === 'FixedLeftHeader') {
-            yOffset = LeftTop.height
-        } else if (ty === 'FixedTopHeader') {
-            xOffset = LeftTop.width
+        if (ty === 'LeftTop') return p
+
+        const canvas = this.renderer.canvas
+        const rect = canvas.getBoundingClientRect()
+
+        const convertX = (a: number) => {
+            return a - this.anchorX + LeftTop.width
         }
+
+        const convertY = (a: number) => {
+            return a - this.anchorY + LeftTop.height
+        }
+
+        if (ty === 'FixedLeftHeader') {
+            return new Range()
+                .setStartRow(convertY(p.startRow))
+                .setEndRow(convertY(p.endRow))
+                .setStartCol(0)
+                .setEndCol(LeftTop.width)
+        }
+        if (ty === 'FixedTopHeader')
+            return new Range()
+                .setStartRow(0)
+                .setEndRow(LeftTop.height)
+                .setStartCol(convertX(p.startCol))
+                .setEndCol(convertX(p.endCol))
+
+        const startX = convertX(p.startCol)
+        const endX = convertX(p.endCol)
+
+        const startY = convertY(p.startRow)
+        const endY = convertY(p.endRow)
+
         return new Range()
-            .setEndCol(p.endCol - this.anchorX + xOffset)
-            .setStartCol(p.startCol - this.anchorX + xOffset)
-            .setEndRow(p.endRow - this.anchorY + yOffset)
-            .setStartRow(p.startRow - this.anchorY + yOffset)
+            .setEndCol(endX)
+            .setStartCol(startX)
+            .setEndRow(endY)
+            .setStartRow(startY)
     }
 
     @action

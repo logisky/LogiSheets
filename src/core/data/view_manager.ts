@@ -140,7 +140,7 @@ export function parseDisplayWindow(
     getStandardValue: () => StandardValue,
     getStandardStyle: () => StandardStyle
 ): CellViewData {
-    const xStart = width2px(window.startX)
+    const xStart = widthToPx(window.startX)
     const yStart = ptToPx(window.startY)
 
     let x = xStart
@@ -155,7 +155,7 @@ export function parseDisplayWindow(
                     .setStartCol(x)
                     .setEndCol(x + colInfo.px)
                     .setStartRow(0)
-                    .setEndRow(LeftTop.height)
+                    .setEndRow(0)
             )
         x += colInfo.px
         return renderCol
@@ -173,7 +173,7 @@ export function parseDisplayWindow(
                     .setStartRow(y)
                     .setEndRow(y + rowInfo.px)
                     .setStartCol(0)
-                    .setEndCol(LeftTop.width)
+                    .setEndCol(0)
             )
         y += rowInfo.px
         return renderRow

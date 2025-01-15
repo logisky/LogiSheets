@@ -12,7 +12,6 @@ import {
     useContext,
 } from 'react'
 import {debounceTime, take, takeUntil} from 'rxjs/operators'
-import {Cell} from './defs'
 import {ScrollbarComponent} from '@/components/scrollbar'
 import {EventType, KeyboardEventCode, on} from '@/core/events'
 import {ContextmenuComponent} from './contextmenu'
@@ -29,8 +28,8 @@ import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
 const CANVAS_HOST_ID = simpleUuid()
-const canvasHost = () => {
-    return document.getElementById(CANVAS_HOST_ID) as HTMLDivElement
+const canvas = () => {
+    return document.getElementById(CANVAS_ID) as HTMLDivElement
 }
 
 export interface CanvasProps {
@@ -50,7 +49,7 @@ export const CanvasComponent = (props: CanvasProps) => {
 }
 
 const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
-    const {selectedCell, selectedCell$, activeSheet, activeSheet$} = props
+    const {selectedCell, selectedCell$, activeSheet} = props
     const store = useContext(CanvasStoreContext)
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
@@ -58,46 +57,46 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const textEl = useRef<ITextareaInstance>(null)
 
     const setCanvasSize = () => {
-        store.render.canvas.width = canvasHost().getBoundingClientRect().width
-        store.render.canvas.height = canvasHost().getBoundingClientRect().height
+        store.renderer.canvas.width = canvas().getBoundingClientRect().width
+        store.renderer.canvas.height = canvas().getBoundingClientRect().height
     }
 
     useEffect(() => {
         setCanvasSize()
-        store.render.render()
+        store.renderer.render()
         store.scrollbar.init()
         store.dataSvc.registryCellUpdatedCallback(() => {
-            store.render.render()
+            store.renderer.render()
         })
     }, [])
 
     useEffect(() => {
         if (selectedCell.source != 'editbar') return
 
-        store.render.canvas.focus()
-        store.render.jumpTo(selectedCell.row, selectedCell.col)
+        store.renderer.canvas.focus()
+        store.renderer.jumpTo(selectedCell.row, selectedCell.col)
         // store.selector.reset()
         store.textarea.reset()
     }, [selectedCell])
 
     useEffect(() => {
-        store.render.canvas.focus()
+        store.renderer.canvas.focus()
         store.dataSvc.setCurrentSheetIdx(activeSheet)
-        store.render.render()
+        store.renderer.render()
     }, [activeSheet])
 
     useEffect(() => {
-        const resizeSub = on(window, EventType.RESIZE)
-            .pipe(debounceTime(100))
-            .subscribe(() => {
+        let timeout: number | undefined
+        const observer = new ResizeObserver(() => {
+            if (timeout) window.clearTimeout(timeout)
+            timeout = window.setTimeout(() => {
                 store.reset()
                 setCanvasSize()
-                store.render.render()
+                store.renderer.render()
                 store.scrollbar.onResize()
-            })
-        return () => {
-            resizeSub.unsubscribe()
-        }
+            }, 50)
+        })
+        observer.observe(canvas())
     }, [])
 
     const setScrollTop = (scrollTop: number, type: 'x' | 'y') => {
@@ -118,7 +117,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
         lastScrollTime = now
         store.setAnchor(store.anchorX, store.anchorY + delta)
-        store.render.render()
+        store.renderer.render()
         store.scrollbar.update('y')
         store.scroll()
     }
@@ -131,7 +130,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             textEl.current?.focus()
             return
         }
-        store.render.canvas.focus()
+        store.renderer.canvas.focus()
         if (e.buttons !== Buttons.LEFT) return
 
         const mouseMove$ = on(window, EventType.MOUSE_MOVE)
@@ -192,22 +191,22 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         switch (e.key) {
             case KeyboardEventCode.ARROW_UP: {
                 const newStartRow = Math.max(startRow - 1, 0)
-                store.render.jumpTo(newStartRow, startCol)
+                store.renderer.jumpTo(newStartRow, startCol)
                 break
             }
             case KeyboardEventCode.ARROW_DOWN: {
                 const newRow = Math.min(endRow + 1, MAX_COUNT)
-                store.render.jumpTo(newRow, endCol)
+                store.renderer.jumpTo(newRow, endCol)
                 break
             }
             case KeyboardEventCode.ARROW_LEFT: {
                 const newCol = Math.max(startCol - 1, 0)
-                store.render.jumpTo(startRow, newCol)
+                store.renderer.jumpTo(startRow, newCol)
                 break
             }
             case KeyboardEventCode.ARROW_RIGHT: {
                 const newCol = Math.min(endCol + 1, MAX_COUNT)
-                store.render.jumpTo(startRow, newCol)
+                store.renderer.jumpTo(startRow, newCol)
                 break
             }
             default:
@@ -324,7 +323,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             {store.resizer.resizers.map((resizer, i) => {
                 const {startCol: x, startRow: y, width, height} = resizer.range
                 const {isRow} = resizer
-                const rect = store.render.canvas.getBoundingClientRect()
+                const rect = store.renderer.canvas.getBoundingClientRect()
                 return (
                     <ResizerComponent
                         hoverText={store.resizer.hoverText}

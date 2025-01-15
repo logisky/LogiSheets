@@ -75,7 +75,7 @@ export class Resizer {
 
     @action
     mousedown(e: MouseEvent) {
-        const canvas = this.store.render.canvas
+        const canvas = this.store.renderer.canvas
         const {x, y} = getOffset(e.clientX, e.clientY, canvas)
         const mousedownRange = new Range()
             .setStartRow(y)

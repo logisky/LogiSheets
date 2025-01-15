@@ -85,7 +85,7 @@ export class Textarea {
             if (isErrorMessage(c)) return
             const text =
                 c.getFormula() === '' ? c.getFormula() : c.getText() ?? ''
-            const rect = this.store.render.canvas.getBoundingClientRect()
+            const rect = this.store.renderer.canvas.getBoundingClientRect()
             const [clientX, clientY] = [rect.x + x, rect.y + y]
             const context = new Context()
             context.text = text
