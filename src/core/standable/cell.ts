@@ -1,4 +1,3 @@
-import {Style} from 'logisheets-web'
 import {StandardValue} from './value'
 import {format} from 'ssf'
 import {StandardStyle} from './style'

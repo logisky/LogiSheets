@@ -3,7 +3,6 @@ import {CanvasStore} from './store'
 import {SelectorProps} from '@/components/selector'
 import {Range} from '@/core/standable'
 import {Cell} from '../defs'
-import {LeftTop} from '@/core/settings'
 
 export class Selector {
     constructor(public readonly store: CanvasStore) {
@@ -132,7 +131,7 @@ export class Selector {
         }
 
         const {width: totalWidth, height: totalHeight} =
-            this.store.render.canvas.getBoundingClientRect()
+            this.store.renderer.canvas.getBoundingClientRect()
         if (type === 'LeftTop') {
             selector.x = startPos.startRow
             selector.y = startPos.startCol

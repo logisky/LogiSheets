@@ -34,7 +34,7 @@ export class ScrollBar {
     @action
     _init(dimensionHeight: number, dimensionWidth: number) {
         const {offsetHeight: height, offsetWidth: width} =
-            this.store.render.canvas
+            this.store.renderer.canvas
         const h = Math.max(dimensionHeight, height + CANVAS_OFFSET)
         const w = Math.max(dimensionWidth, width + CANVAS_OFFSET)
         this.xScrollbar.scrollTop = this.store.anchorX
@@ -59,7 +59,7 @@ export class ScrollBar {
     @action
     update(type: ScrollbarType) {
         const {offsetHeight: height, offsetWidth: width} =
-            this.store.render.canvas
+            this.store.renderer.canvas
         if (type === 'x') {
             this.xScrollbar.scrollTop = this.store.anchorX
             const viewLength = this.store.anchorX + width
@@ -86,7 +86,7 @@ export class ScrollBar {
         } else if (type === 'y') {
             this.yScrollbar.scrollTop = scrollTop
         }
-        this.store.render.render()
+        this.store.renderer.render()
     }
 
     private _appropriateHeight: number = 0

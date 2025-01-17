@@ -58,6 +58,21 @@ export class CanvasApi {
         this._ctx = ctx
     }
 
+    /**
+     * Prepare the canvas that is going to be drawn on.
+     *
+     * The caller should be responsible for the validity of canvas
+     */
+    setCanvas(canvas: HTMLCanvasElement) {
+        this._canvas = canvas
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+            useToast().toast('Unexpected error, please refresh website!')
+            return
+        }
+        this._ctx = ctx
+    }
+
     eraseLine(
         x: number,
         y: number,
