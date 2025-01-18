@@ -3,7 +3,11 @@ use logisheets_base::{
     SheetId, TextId,
 };
 
-use crate::{cell::Cell, edit_action::EditPayload, Error};
+use crate::{
+    cell::Cell,
+    edit_action::{EditPayload, StyleUpdateType},
+    Error,
+};
 
 use super::{ctx::ContainerExecCtx, DataContainer};
 
@@ -284,7 +288,7 @@ impl ContainerExecutor {
                 }
                 Ok((self, true))
             }
-            EditPayload::StyleUpdate(style_update) => {
+            EditPayload::CellStyleUpdate(style_update) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(style_update.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
@@ -302,6 +306,25 @@ impl ContainerExecutor {
                             style: new_id,
                         },
                     );
+                }
+                Ok((self, true))
+            }
+            EditPayload::LineStyleUpdate(s) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(s.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                for i in s.from..=s.to {
+                    if s.row {
+                        let row_id = ctx.fetch_row_id(&sheet_id, i)?;
+                        let row = self.container.get_row_info_mut(sheet_id, row_id);
+                        let new_id = ctx.get_new_style_id(row.style, s.ty.clone())?;
+                        row.style = new_id;
+                    } else {
+                        let col_id = ctx.fetch_col_id(&sheet_id, i)?;
+                        let col = self.container.get_col_info_mut(sheet_id, col_id);
+                        let new_id = ctx.get_new_style_id(col.style, s.ty.clone())?;
+                        col.style = new_id;
+                    }
                 }
                 Ok((self, true))
             }

@@ -1,10 +1,10 @@
-:host {
+.host {
   flex-direction: row;
   align-items: center;
   display: flex;
   box-sizing: border-box;
   height: 100%;
-  padding: 11px 24px;
+  padding: 4px 0px;
 }
 .font-color {
   flex-direction: column;
@@ -23,4 +23,24 @@
 .color-picker {
   position: absolute;
   z-index: 1;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+}
+
+.modal-content {
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0);  // 透明背景
+  border: none;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+  z-index: 10000;
 }

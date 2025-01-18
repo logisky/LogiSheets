@@ -4,6 +4,10 @@
     "packages/*"
   ],
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.0",
+    "@mui/material": "^6.4.0",
     "@types/node": "^18",
     "@types/react": "^19",
     "@types/react-color": "^3.0.6",

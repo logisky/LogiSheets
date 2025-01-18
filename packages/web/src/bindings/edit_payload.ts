@@ -3,6 +3,7 @@ import {BlockInput} from './block_input'
 import {BlockStyleUpdate} from './block_style_update'
 import {CellClear} from './cell_clear'
 import {CellInput} from './cell_input'
+import {CellStyleUpdate} from './cell_style_update'
 import {CreateBlock} from './create_block'
 import {CreateSheet} from './create_sheet'
 import {DeleteColsInBlock} from './delete_cols_in_block'
@@ -14,13 +15,13 @@ import {InsertColsInBlock} from './insert_cols_in_block'
 import {InsertCols} from './insert_cols'
 import {InsertRowsInBlock} from './insert_rows_in_block'
 import {InsertRows} from './insert_rows'
+import {LineStyleUpdate} from './line_style_update'
 import {MoveBlock} from './move_block'
 import {RemoveBlock} from './remove_block'
 import {SetColWidth} from './set_col_width'
 import {SetRowHeight} from './set_row_height'
 import {SetVisible} from './set_visible'
 import {SheetRename} from './sheet_rename'
-import {StyleUpdate} from './style_update'
 
 // `EditPayload` is the basic update unit of the Workbook. Developers can config their own
 // `EditAction` (e.g. setting a button to create a table) to facilitate their users.
@@ -29,7 +30,8 @@ export type EditPayload =
     | {moveBlock: MoveBlock}
     | {removeBlock: RemoveBlock}
     | {createBlock: CreateBlock}
-    | {styleUpdate: StyleUpdate}
+    | {cellStyleUpdate: CellStyleUpdate}
+    | {lineStyleUpdate: LineStyleUpdate}
     | {blockStyleUpdate: BlockStyleUpdate}
     | {cellInput: CellInput}
     | {cellClear: CellClear}
