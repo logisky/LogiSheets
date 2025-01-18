@@ -1,4 +1,11 @@
-import {SelectedCell} from '@/components/canvas'
+import {
+    buildSelectedDataFromCell,
+    getFirstCell,
+    getSelectedCellRange,
+    getSelectedLines,
+    SelectedData,
+    SelectedLines,
+} from '@/components/canvas'
 import {toA1notation, parseA1notation} from '@/core'
 import {CellInputBuilder, Transaction} from 'logisheets-web'
 import {FC, useEffect, useState} from 'react'
@@ -8,13 +15,13 @@ import {DataService} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {isErrorMessage} from 'packages/web/src/api/utils'
 export interface EditBarProps {
-    selectedCell: SelectedCell
-    selectedCell$: (e: SelectedCell) => void
+    selectedData: SelectedData
+    selectedData$: (e: SelectedData) => void
 }
 
 export const EditBarComponent: FC<EditBarProps> = ({
-    selectedCell,
-    selectedCell$,
+    selectedData,
+    selectedData$,
 }) => {
     const dataSvc = useInjection<DataService>(TYPES.Data)
     const [coordinate, setCoordinate] = useState('')
@@ -23,7 +30,9 @@ export const EditBarComponent: FC<EditBarProps> = ({
 
     useEffect(() => {
         if (isEditing) return
-        const {row, col} = selectedCell
+        const selectedCell = getSelectedCellRange(selectedData)
+        if (!selectedCell) return
+        const {startRow: row, startCol: col} = selectedCell
         const notation = toA1notation(col)
         setCoordinate(`${notation}${row + 1}`)
         const cell = dataSvc.getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
@@ -31,13 +40,14 @@ export const EditBarComponent: FC<EditBarProps> = ({
             if (isErrorMessage(c)) return
             setFormula(c.getFormula() || c.getText())
         })
-    }, [selectedCell, isEditing])
+    }, [selectedData, isEditing])
 
     const formulaTextChange = (newText: string) => {
+        const cell = getFirstCell(selectedData)
         const payload = new CellInputBuilder()
             .sheetIdx(dataSvc.getCurrentSheetIdx())
-            .row(selectedCell.row)
-            .col(selectedCell.col)
+            .row(cell.r)
+            .col(cell.c)
             .input(newText)
             .build()
         dataSvc.handleTransaction(new Transaction([payload], true))
@@ -45,15 +55,22 @@ export const EditBarComponent: FC<EditBarProps> = ({
 
     const locationChange = (newText: string) => {
         const result = parseA1notation(newText)
+        setIsEditing(false)
         if (!result) {
-            setCoordinate(
-                `${toA1notation(selectedCell.col)}${selectedCell.row + 1}`
-            )
-            setIsEditing(false)
+            const cell = getFirstCell(selectedData)
+            setCoordinate(`${toA1notation(cell.c)}${cell.r + 1}`)
             return
         }
-        selectedCell$({row: result.rs, col: result.cs, source: 'editbar'})
-        setIsEditing(false)
+        selectedData$(
+            buildSelectedDataFromCell(result.rs, result.cs, 'editbar')
+        )
+    }
+
+    const onFormulaBarClick = () => {
+        // If user is trying to modify the formula when multiple cells are selected,
+        // focus on the first cell
+        const cell = getFirstCell(selectedData)
+        selectedData$(buildSelectedDataFromCell(cell.r, cell.c, 'none'))
     }
 
     return (
@@ -71,6 +88,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
             <input
                 className={styles.formula}
                 onChange={(e) => formulaTextChange(e.target.value)}
+                onClick={() => onFormulaBarClick()}
                 value={formula}
             />
         </div>
