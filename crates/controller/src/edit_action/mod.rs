@@ -88,7 +88,8 @@ pub enum EditPayload {
     CreateBlock(CreateBlock),
 
     // Style
-    StyleUpdate(StyleUpdate),
+    CellStyleUpdate(CellStyleUpdate),
+    LineStyleUpdate(LineStyleUpdate),
     BlockStyleUpdate(BlockStyleUpdate),
 
     CellInput(CellInput),
@@ -454,13 +455,26 @@ use logisheets_workbook::prelude::*;
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
-    gents_derives::gents_header(file_name = "style_update.ts")
+    gents_derives::gents_header(file_name = "cell_style_update.ts")
 )]
-pub struct StyleUpdate {
+pub struct CellStyleUpdate {
     pub sheet_idx: usize,
     pub row: usize,
     pub col: usize,
     pub ty: StyleUpdateType,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "line_style_update.ts")
+)]
+pub struct LineStyleUpdate {
+    pub sheet_idx: usize,
+    pub from: usize,
+    pub to: usize,
+    pub ty: StyleUpdateType,
+    pub row: bool,
 }
 
 pub type Color = String;
@@ -540,11 +554,17 @@ impl From<SheetRename> for EditPayload {
         EditPayload::SheetRename(value)
     }
 }
-impl From<StyleUpdate> for EditPayload {
-    fn from(value: StyleUpdate) -> Self {
-        EditPayload::StyleUpdate(value)
+impl From<CellStyleUpdate> for EditPayload {
+    fn from(value: CellStyleUpdate) -> Self {
+        EditPayload::CellStyleUpdate(value)
     }
 }
+impl From<LineStyleUpdate> for EditPayload {
+    fn from(value: LineStyleUpdate) -> Self {
+        EditPayload::LineStyleUpdate(value)
+    }
+}
+
 impl From<InsertCols> for EditPayload {
     fn from(value: InsertCols) -> Self {
         EditPayload::InsertCols(value)
@@ -613,7 +633,8 @@ impl Payload for SetVisible {}
 impl Payload for SheetRename {}
 impl Payload for CreateSheet {}
 impl Payload for DeleteSheet {}
-impl Payload for StyleUpdate {}
+impl Payload for CellStyleUpdate {}
+impl Payload for LineStyleUpdate {}
 impl Payload for InsertCols {}
 impl Payload for InsertRows {}
 impl Payload for DeleteCols {}

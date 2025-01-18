@@ -1,9 +1,9 @@
 use logisheets_controller::controller::display::{CellPosition, DisplaySheetRequest};
 use logisheets_controller::edit_action::{
-    AsyncFuncResult, BlockInput, CellClear, CellInput, CreateBlock, CreateSheet, DeleteCols,
-    DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
-    InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, MoveBlock, PayloadsAction,
-    SetColWidth, SetRowHeight, SheetRename, StyleUpdate, StyleUpdateType,
+    AsyncFuncResult, BlockInput, CellClear, CellInput, CellStyleUpdate, CreateBlock, CreateSheet,
+    DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction,
+    EditPayload, InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, LineStyleUpdate,
+    MoveBlock, PayloadsAction, SetColWidth, SetRowHeight, SheetRename, StyleUpdateType,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_controller::{ColInfo, ErrorMessage};
@@ -404,6 +404,57 @@ pub fn get_display_window_within_cell(
 }
 
 #[wasm_bindgen]
+pub fn set_line_font(
+    id: usize,
+    sheet_idx: usize,
+    from: usize,
+    to: usize,
+    row: bool,
+    bold: Option<bool>,
+    italic: Option<bool>,
+    name: Option<String>,
+    underline: Option<String>,
+    color: Option<String>,
+    size: Option<f64>,
+    outline: Option<bool>,
+    shadow: Option<bool>,
+    strike: Option<bool>,
+    condense: Option<bool>,
+) {
+    let p = EditPayload::LineStyleUpdate(LineStyleUpdate {
+        sheet_idx,
+        from,
+        to,
+        row,
+        ty: StyleUpdateType {
+            set_font_bold: bold,
+            set_font_italic: italic,
+            set_font_underline: underline.map(|s| StUnderlineValues::deserialize(&s).unwrap()),
+            set_font_color: color,
+            set_font_size: size,
+            set_font_name: name,
+            set_font_outline: outline,
+            set_font_shadow: shadow,
+            set_font_strike: strike,
+            set_font_condense: condense,
+            set_left_border_color: None,
+            set_right_border_color: None,
+            set_top_border_color: None,
+            set_bottom_border_color: None,
+            set_left_border_style: None,
+            set_right_border_style: None,
+            set_top_border_style: None,
+            set_bottom_border_style: None,
+            set_border_giagonal_up: None,
+            set_border_giagonal_down: None,
+            set_border_outline: None,
+            set_pattern_fill: None,
+        },
+    });
+    MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
 pub fn set_font(
     id: usize,
     sheet_idx: usize,
@@ -420,7 +471,7 @@ pub fn set_font(
     strike: Option<bool>,
     condense: Option<bool>,
 ) {
-    let p = EditPayload::StyleUpdate(StyleUpdate {
+    let p = EditPayload::CellStyleUpdate(CellStyleUpdate {
         sheet_idx,
         row,
         col,
@@ -470,7 +521,7 @@ pub fn set_border(
     diagonal_up: Option<bool>,
     diagonal_down: Option<bool>,
 ) {
-    let p = EditPayload::StyleUpdate(StyleUpdate {
+    let p = EditPayload::CellStyleUpdate(CellStyleUpdate {
         sheet_idx,
         row,
         col,

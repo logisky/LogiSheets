@@ -103,7 +103,7 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             Ok(Some((Diff::Unavailable, sheet_id)))
         }
-        EditPayload::StyleUpdate(p) => {
+        EditPayload::CellStyleUpdate(p) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(p.sheet_idx)
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
@@ -201,6 +201,12 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             let cell_id = ctx.fetch_cell_id(&sheet_id, cr.row, cr.col)?;
             Ok(Some((Diff::CellValue(cell_id), sheet_id)))
+        }
+        EditPayload::LineStyleUpdate(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
         }
     }
 }
