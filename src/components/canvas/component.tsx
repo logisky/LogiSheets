@@ -1,4 +1,8 @@
-import {SelectedCell} from './events'
+import {
+    buildSelectedDataFromCell,
+    getSelectedCellRange,
+    SelectedData,
+} from './events'
 import styles from './canvas.module.scss'
 import {
     MouseEvent,
@@ -11,7 +15,7 @@ import {
     useEffect,
     useContext,
 } from 'react'
-import {debounceTime, take, takeUntil} from 'rxjs/operators'
+import {take, takeUntil} from 'rxjs/operators'
 import {ScrollbarComponent} from '@/components/scrollbar'
 import {EventType, KeyboardEventCode, on} from '@/core/events'
 import {ContextmenuComponent} from './contextmenu'
@@ -23,7 +27,7 @@ import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid} from '@/core'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
-import {DataServiceImpl, MAX_COUNT, RenderCell} from '@/core/data'
+import {DataServiceImpl, MAX_COUNT} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
@@ -33,8 +37,8 @@ const canvas = () => {
 }
 
 export interface CanvasProps {
-    selectedCell: SelectedCell
-    selectedCell$: (e: SelectedCell) => void
+    selectedData: SelectedData
+    selectedData$: (e: SelectedData) => void
     activeSheet: number
     activeSheet$: (s: number) => void
 }
@@ -49,7 +53,7 @@ export const CanvasComponent = (props: CanvasProps) => {
 }
 
 const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
-    const {selectedCell, selectedCell$, activeSheet} = props
+    const {selectedData, selectedData$, activeSheet} = props
     const store = useContext(CanvasStoreContext)
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
@@ -71,13 +75,15 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     }, [])
 
     useEffect(() => {
-        if (selectedCell.source != 'editbar') return
+        if (selectedData.source != 'editbar') return
+        const selectedCell = getSelectedCellRange(selectedData)
+        if (!selectedCell) return
 
         store.renderer.canvas.focus()
-        store.renderer.jumpTo(selectedCell.row, selectedCell.col)
+        store.renderer.jumpTo(selectedCell.startRow, selectedCell.startCol)
         // store.selector.reset()
         store.textarea.reset()
-    }, [selectedCell])
+    }, [selectedData])
 
     useEffect(() => {
         store.renderer.canvas.focus()
@@ -170,7 +176,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         store.mousedown(e, matchCell)
         if (matchCell?.type !== 'Cell') return
         const {startRow: row, startCol: col} = matchCell.coordinate
-        selectedCell$({row, col, source: 'none'})
+        const data = buildSelectedDataFromCell(row, col, 'none')
+        selectedData$(data)
     }
 
     const onKeyDown = async (e: KeyboardEvent) => {
