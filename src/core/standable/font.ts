@@ -68,6 +68,7 @@ export class StandardFont implements Font {
         const fontSize = `${this.size}${this.fontSizeUnit}`
         const fontFamily = this.name
         const lineHeight = this.lineHeight
-        return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}/${lineHeight} ${fontFamily}`
+        const result = `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}/${lineHeight} ${fontFamily.val}`
+        return result
     }
 }

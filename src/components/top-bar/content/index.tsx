@@ -21,6 +21,8 @@ import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Divider from '@mui/material/Divider'
+import {generateFontPayload} from './payload'
+import {Transaction} from 'logisheets-web'
 
 export * from './font-size'
 export * from './start-item'
@@ -36,7 +38,9 @@ export const StartComponent = ({selectedData}: StartProps) => {
     const [openSketchPicker, setOpenSketchPicker] = useState(false)
     const [fontColor, setFontColor] = useState('#000')
 
-    const [fontFormats, setFontFormats] = useState<string[]>([])
+    const [fontBold, setFontBold] = useState(false)
+    const [fontItalic, setFontItalic] = useState(false)
+    const [fontUnderlined, setFontUnderline] = useState(false)
     const [alignment, setAlignment] = useState<string | null>('left')
 
     useEffect(() => {
@@ -62,11 +66,13 @@ export const StartComponent = ({selectedData}: StartProps) => {
             const style = c.getStyle()
             const font = StandardFont.from(style.font)
             setFontColor(font.standardColor.css())
-            const fontFormat = []
-            if (font.bold) fontFormat.push('bold')
-            if (font.italic) fontFormat.push('italic')
-            if (font.underline?.val != 'none') fontFormat.push('underlined')
-            setFontFormats(fontFormat)
+            setFontBold(font.bold)
+            setFontItalic(font.italic)
+            const v =
+                font.underline === undefined
+                    ? false
+                    : font.underline.val != 'none'
+            setFontUnderline(v)
         })
     }
 
@@ -77,13 +83,52 @@ export const StartComponent = ({selectedData}: StartProps) => {
         setOpenSketchPicker(false)
     }
 
-    const handleFontFormat = (
-        _: React.MouseEvent<HTMLElement>,
-        newFormats: string[]
-    ) => {
-        if (!selectedData || !selectedData.data) {
-            return
-        }
+    const onFontBoldClick = () => {
+        if (!selectedData) return
+        const v = !fontBold
+        const payloads = generateFontPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            v
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) setFontBold(v)
+            }
+        )
+    }
+
+    const onFontUnderlineClick = () => {
+        if (!selectedData) return
+        const v = !fontUnderlined
+        const payloads = generateFontPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            undefined,
+            v
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) setFontUnderline(v)
+            }
+        )
+    }
+
+    const onFontItalicClick = () => {
+        if (!selectedData) return
+        const v = !fontItalic
+        const payloads = generateFontPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            undefined,
+            undefined,
+            v
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) setFontItalic(v)
+            }
+        )
     }
 
     return (
@@ -96,26 +141,37 @@ export const StartComponent = ({selectedData}: StartProps) => {
             >
                 <FromatColorTextIcon />
             </ToggleButton>
-            <ToggleButtonGroup
-                value={fontFormats}
+            <ToggleButton
+                value="bold"
+                aria-label="bold"
                 size="small"
-                onChange={handleFontFormat}
-                aria-label="text formatting"
+                selected={fontBold}
+                onClick={onFontBoldClick}
             >
-                <ToggleButton value="bold" aria-label="bold">
-                    <FormatBoldIcon />
-                </ToggleButton>
-                <ToggleButton value="italic" aria-label="italic">
-                    <FormatItalicIcon />
-                </ToggleButton>
-                <ToggleButton value="underlined" aria-label="underlined">
-                    <FormatUnderlinedIcon />
-                </ToggleButton>
-                <ToggleButton value="color" aria-label="color" disabled>
-                    <FormatColorFillIcon />
-                    <ArrowDropDownIcon />
-                </ToggleButton>
-            </ToggleButtonGroup>
+                <FormatBoldIcon />
+            </ToggleButton>
+            <ToggleButton
+                value="italic"
+                aria-label="italic"
+                size="small"
+                selected={fontItalic}
+                onClick={onFontItalicClick}
+            >
+                <FormatItalicIcon />
+            </ToggleButton>
+            <ToggleButton
+                value="underlined"
+                aria-label="underlined"
+                size="small"
+                selected={fontUnderlined}
+                onClick={onFontUnderlineClick}
+            >
+                <FormatUnderlinedIcon />
+            </ToggleButton>
+            {/* <ToggleButton value="color" aria-label="color" disabled>
+                <FormatColorFillIcon />
+                <ArrowDropDownIcon />
+            </ToggleButton> */}
             <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
             <ToggleButtonGroup
                 value={alignment}

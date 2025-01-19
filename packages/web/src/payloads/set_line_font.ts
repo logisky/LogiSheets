@@ -1,10 +1,11 @@
 import {StUnderlineValues as UnderlineType} from '../bindings'
 
-export interface SetFont {
-    readonly type: 'setFont'
+export interface SetLineFont {
+    readonly type: 'setLineFont'
     readonly sheetIdx: number
-    readonly row: number
-    readonly col: number
+    readonly row: boolean
+    readonly from: number
+    readonly to: number
     readonly bold?: boolean
     readonly italic?: boolean
     readonly name?: string
@@ -17,10 +18,11 @@ export interface SetFont {
     readonly condense?: boolean
 }
 
-export class SetFontBuilder {
+export class SetLineFontBuilder {
     private _sheetIdx?: number
-    private _row?: number
-    private _col?: number
+    private _row?: boolean
+    private _from?: number
+    private _to?: number
     private _bold?: boolean
     private _italic?: boolean
     private _name?: string
@@ -31,16 +33,21 @@ export class SetFontBuilder {
     private _shadow?: boolean
     private _strike?: boolean
     private _condense?: boolean
+
     public sheetIdx(sheetIdx: number): this {
         this._sheetIdx = sheetIdx
         return this
     }
-    public row(row: number): this {
-        this._row = row
+    public from(v: number): this {
+        this._from = v
         return this
     }
-    public col(col: number): this {
-        this._col = col
+    public to(v: number): this {
+        this._to = v
+        return this
+    }
+    public row(v: boolean): this {
+        this._row = v
         return this
     }
     public bold(bold: boolean): this {
@@ -83,15 +90,18 @@ export class SetFontBuilder {
         this._condense = condense
         return this
     }
-    public build(): SetFont {
+
+    public build(): SetLineFont {
         if (this._sheetIdx === undefined) throw Error('sheetIdx is undefined!')
+        if (this._from === undefined) throw Error('from is undefined!')
+        if (this._to === undefined) throw Error('to is undefined!')
         if (this._row === undefined) throw Error('row is undefined!')
-        if (this._col === undefined) throw Error('col is undefined!')
         return {
-            type: 'setFont',
+            type: 'setLineFont',
             sheetIdx: this._sheetIdx,
+            from: this._from,
+            to: this._to,
             row: this._row,
-            col: this._col,
             bold: this._bold,
             italic: this._italic,
             underline: this._underline,

@@ -26,7 +26,7 @@ export const TopBar = ({selectedData}: TopBarProps) => {
             default:
         }
         setMenuContent(content)
-    }, [mainMenuType])
+    }, [mainMenuType, selectedData])
 
     return (
         <div className={styles['host']}>

@@ -15,7 +15,8 @@ import {MoveBlock} from './move_block'
 import {SetBorder} from './set_border'
 import {SetColVisible} from './set_col_visible'
 import {SetColWidth} from './set_col_width'
-import {SetFont} from './set_font'
+import {SetCellFont} from './set_cell_font'
+import {SetLineFont} from './set_line_font'
 import {SetRowHeight} from './set_row_height'
 import {SetRowVisible} from './set_row_visible'
 import {SheetRename} from './sheet_rename'
@@ -37,7 +38,8 @@ export * from './move_block'
 export * from './set_border'
 export * from './set_col_visible'
 export * from './set_col_width'
-export * from './set_font'
+export * from './set_cell_font'
+export * from './set_line_font'
 export * from './set_row_height'
 export * from './set_row_visible'
 export * from './sheet_rename'
@@ -63,7 +65,8 @@ export type Payload =
     | SetBorder
     | SetColVisible
     | SetColWidth
-    | SetFont
+    | SetCellFont
+    | SetLineFont
     | SetRowHeight
     | SetRowVisible
     | SheetRename
