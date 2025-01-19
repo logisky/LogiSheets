@@ -23,6 +23,7 @@ import {
     set_border,
     set_col_width,
     set_font,
+    set_line_font,
     set_row_height,
     sheet_rename_by_idx,
     sheet_rename_by_name,
@@ -181,12 +182,30 @@ export class Workbook {
                 p.diagonalUp,
                 p.diagonalDown
             )
-        if (p.type === 'setFont')
+        if (p.type === 'setCellFont')
             return set_font(
                 this._id,
                 p.sheetIdx,
                 p.row,
                 p.col,
+                p.bold,
+                p.italic,
+                p.name,
+                p.underline,
+                p.color,
+                p.size,
+                p.outline,
+                p.shadow,
+                p.strike,
+                p.condense
+            )
+        if (p.type === 'setLineFont')
+            return set_line_font(
+                this._id,
+                p.sheetIdx,
+                p.from,
+                p.to,
+                p.row,
                 p.bold,
                 p.italic,
                 p.name,

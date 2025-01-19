@@ -350,10 +350,10 @@ export class Renderer {
         const style = info?.style
         const box = new Box()
         box.position = new Range()
-            .setEndRow(position.endRow - anchorX)
+            .setEndRow(position.endRow - anchorY)
             .setStartRow(position.startRow - anchorY)
-            .setEndCol(position.startRow - anchorX)
-            .setStartCol(position.startCol - anchorY)
+            .setEndCol(position.endCol - anchorX)
+            .setStartCol(position.startCol - anchorX)
         this._fill(box, style)
         this._border(box, position, style)
         if (info) {
