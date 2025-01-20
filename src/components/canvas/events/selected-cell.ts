@@ -58,3 +58,34 @@ export function buildSelectedDataFromCell(
         },
     }
 }
+
+export function buildSelectedDataFromCellRange(
+    startRow: number,
+    startCol: number,
+    endRow: number,
+    endCol: number,
+    source: 'editbar' | 'none'
+): SelectedData {
+    return {
+        source,
+        data: {
+            ty: 'cellRange',
+            d: {startRow, endRow, startCol, endCol},
+        },
+    }
+}
+
+export function buildSelectedDataFromLines(
+    start: number,
+    end: number,
+    type: 'row' | 'col',
+    source: 'editbar' | 'none'
+): SelectedData {
+    return {
+        source,
+        data: {
+            ty: 'line',
+            d: {start, end, type},
+        },
+    }
+}

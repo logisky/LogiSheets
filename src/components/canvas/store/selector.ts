@@ -44,6 +44,17 @@ export class Selector {
     }
 
     @action
+    onMouseUp() {
+        if (!this.store.startCell) {
+            this.selector = undefined
+            return
+        }
+        this.selector = new SelectorProps()
+        this.updateSelector(this.startCell, this.endCell)
+        this._aftetUpdateSelector()
+    }
+
+    @action
     onMouseDown() {
         this.endCell = undefined
         this.startCell = this.store.startCell
