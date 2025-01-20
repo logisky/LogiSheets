@@ -52,6 +52,15 @@ impl FontManager {
         if let Some(b) = update_type.set_font_condense {
             font.condense = b;
         }
+        if let Some(c) = &update_type.set_font_color {
+            font.color = Some(CtColor {
+                auto: None,
+                indexed: None,
+                rgb: Some(c.clone()),
+                theme: None,
+                tint: 0.,
+            })
+        }
 
         let new_id = self.get_id(&font);
         if new_id != id {

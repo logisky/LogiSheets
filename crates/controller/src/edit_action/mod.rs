@@ -482,6 +482,45 @@ pub type Color = String;
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
+    gents_derives::gents_header(file_name = "alignment.ts")
+)]
+pub struct Alignment {
+    pub horizontal: Option<HorizontalAlignment>,
+    pub vertical: Option<VerticalAlignment>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "vertical_alignment.ts")
+)]
+pub enum VerticalAlignment {
+    Center,
+    Top,
+    Bottom,
+    Justify,
+    Distributed,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "horizontal_alignment.ts")
+)]
+pub enum HorizontalAlignment {
+    General,
+    Left,
+    Center,
+    Right,
+    Fill,
+    Justify,
+    CenterContinuous,
+    Distributed,
+}
+
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(
+    feature = "gents",
     gents_derives::gents_header(file_name = "style_update_type.ts")
 )]
 pub struct StyleUpdateType {
@@ -507,6 +546,7 @@ pub struct StyleUpdateType {
     pub set_border_giagonal_down: Option<bool>,
     pub set_border_outline: Option<bool>,
     pub set_pattern_fill: Option<PatternFill>,
+    pub set_alignment: Option<Alignment>,
 }
 
 impl From<BlockStyleUpdate> for EditPayload {
@@ -643,3 +683,14 @@ impl Payload for InsertColsInBlock {}
 impl Payload for InsertRowsInBlock {}
 impl Payload for DeleteColsInBlock {}
 impl Payload for DeleteRowsInBlock {}
+
+#[cfg(test)]
+mod tests {
+    use super::VerticalAlignment;
+
+    #[test]
+    fn test_should_have_double_quote() {
+        let s1 = "\"center\"".to_string();
+        let _: VerticalAlignment = serde_json::from_str(&s1).unwrap();
+    }
+}

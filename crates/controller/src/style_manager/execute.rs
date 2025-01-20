@@ -1,6 +1,10 @@
 use super::{errors::StyleError, StyleManager};
-use crate::{edit_action::StyleUpdateType, Error};
+use crate::{
+    edit_action::{HorizontalAlignment, StyleUpdateType, VerticalAlignment},
+    Error,
+};
 use logisheets_base::StyleId;
+use logisheets_workbook::prelude::{CtCellAlignment, StHorizontalAlignment, StVerticalAlignment};
 
 pub fn execute_style_payload(
     sm: &mut StyleManager,
@@ -26,6 +30,45 @@ pub fn execute_style_payload(
     if let Some(new_fill_id) = fill_manager.execute(xf.fill_id.unwrap_or(0), &update_type) {
         xf.fill_id = Some(new_fill_id);
         xf.apply_fill = Some(true)
+    }
+    if let Some(alignment) = update_type.set_alignment {
+        let mut result = CtCellAlignment::default();
+        if let Some(v) = alignment.vertical {
+            match v {
+                VerticalAlignment::Center => result.vertical = Some(StVerticalAlignment::Center),
+                VerticalAlignment::Top => result.vertical = Some(StVerticalAlignment::Top),
+                VerticalAlignment::Bottom => result.vertical = Some(StVerticalAlignment::Bottom),
+                VerticalAlignment::Justify => result.vertical = Some(StVerticalAlignment::Justify),
+                VerticalAlignment::Distributed => {
+                    result.vertical = Some(StVerticalAlignment::Distributed)
+                }
+            }
+        }
+        if let Some(v) = alignment.horizontal {
+            match v {
+                HorizontalAlignment::General => {
+                    result.horizontal = Some(StHorizontalAlignment::General)
+                }
+                HorizontalAlignment::Left => result.horizontal = Some(StHorizontalAlignment::Left),
+                HorizontalAlignment::Center => {
+                    result.horizontal = Some(StHorizontalAlignment::Center)
+                }
+                HorizontalAlignment::Right => {
+                    result.horizontal = Some(StHorizontalAlignment::Right)
+                }
+                HorizontalAlignment::Fill => result.horizontal = Some(StHorizontalAlignment::Fill),
+                HorizontalAlignment::Justify => {
+                    result.horizontal = Some(StHorizontalAlignment::Justify)
+                }
+                HorizontalAlignment::CenterContinuous => {
+                    result.horizontal = Some(StHorizontalAlignment::CenterContinuous)
+                }
+                HorizontalAlignment::Distributed => {
+                    result.horizontal = Some(StHorizontalAlignment::Distributed)
+                }
+            }
+        }
+        xf.alignment = Some(result);
     }
     let new_id = cell_xfs_manager.get_id(&xf);
     Ok(new_id)

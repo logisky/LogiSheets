@@ -21,8 +21,8 @@ import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Divider from '@mui/material/Divider'
-import {generateFontPayload} from './payload'
-import {Transaction} from 'logisheets-web'
+import {generateAlgnmentPayload, generateFontPayload} from './payload'
+import {Transaction, Alignment, HorizontalAlignment} from 'logisheets-web'
 
 export * from './font-size'
 export * from './start-item'
@@ -41,7 +41,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
     const [fontBold, setFontBold] = useState(false)
     const [fontItalic, setFontItalic] = useState(false)
     const [fontUnderlined, setFontUnderline] = useState(false)
-    const [alignment, setAlignment] = useState<string | null>('left')
+    const [alignment, setAlignment] = useState<string | null>(null)
 
     useEffect(() => {
         if (selectedData === undefined) {
@@ -64,6 +64,25 @@ export const StartComponent = ({selectedData}: StartProps) => {
         cellInfo.then((c) => {
             if (isErrorMessage(c)) return
             const style = c.getStyle()
+            const alignment = style.alignment
+            if (alignment) {
+                const hAlign = alignment.horizontal
+                if (hAlign) {
+                    if (hAlign === 'center') {
+                        setAlignment('center')
+                    } else if (hAlign === 'left') {
+                        setAlignment('left')
+                    } else if (hAlign === 'right') {
+                        setAlignment('right')
+                    } else {
+                        setAlignment(null)
+                    }
+                } else {
+                    setAlignment(null)
+                }
+            } else {
+                setAlignment(null)
+            }
             const font = StandardFont.from(style.font)
             setFontColor(font.standardColor.css())
             setFontBold(font.bold)
@@ -77,10 +96,22 @@ export const StartComponent = ({selectedData}: StartProps) => {
     }
 
     const onColorPick = (result: ColorResult) => {
+        if (!selectedData) return
         const {r, g, b, a} = result.rgb
         const standardColor = StandardColor.from(r, g, b, a)
-        setFontColor(standardColor.css())
-        setOpenSketchPicker(false)
+        const payloads = generateFontPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            {color: standardColor.argb()}
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) {
+                    setFontColor(standardColor.css())
+                    setOpenSketchPicker(false)
+                }
+            }
+        )
     }
 
     const onFontBoldClick = () => {
@@ -89,7 +120,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
         const payloads = generateFontPayload(
             DATA_SERVICE.getCurrentSheetIdx(),
             selectedData,
-            v
+            {bold: v}
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {
@@ -104,8 +135,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
         const payloads = generateFontPayload(
             DATA_SERVICE.getCurrentSheetIdx(),
             selectedData,
-            undefined,
-            v
+            {underline: v}
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {
@@ -120,9 +150,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
         const payloads = generateFontPayload(
             DATA_SERVICE.getCurrentSheetIdx(),
             selectedData,
-            undefined,
-            undefined,
-            v
+            {italic: v}
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {
@@ -131,9 +159,28 @@ export const StartComponent = ({selectedData}: StartProps) => {
         )
     }
 
+    const handleAlignment = (
+        _event: React.MouseEvent<HTMLElement>,
+        v: string | null
+    ) => {
+        if (!selectedData || !v) return
+        const hAlign = v as HorizontalAlignment
+        const payloads = generateAlgnmentPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            {horizontal: hAlign}
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) setAlignment(v)
+            }
+        )
+    }
+
     return (
         <div className={styles['host']}>
             <ToggleButton
+                style={{color: fontColor}}
                 value="font-color"
                 size="small"
                 aria-label="font color formatting"
@@ -177,7 +224,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 value={alignment}
                 exclusive
                 size="small"
-                // onChange={handleAlignment}
+                onChange={handleAlignment}
                 aria-label="text alignment"
             >
                 <ToggleButton value="left" aria-label="left aligned">
@@ -194,23 +241,21 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 </ToggleButton>
             </ToggleButtonGroup>
             <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
-            {openSketchPicker ? (
-                <Modal
-                    isOpen={true}
-                    shouldCloseOnEsc={true}
-                    shouldCloseOnOverlayClick={true}
-                    onRequestClose={() => setOpenSketchPicker(false)}
-                    className={styles['modal-content']}
-                    overlayClassName={styles['modal-overlay']}
-                    style={{content: {top: '100px', left: '0px'}}}
-                >
-                    <SketchPicker
-                        color={fontColor}
-                        onChangeComplete={onColorPick}
-                        className={styles['color-picker']}
-                    />
-                </Modal>
-            ) : null}
+            <Modal
+                isOpen={openSketchPicker}
+                shouldCloseOnEsc={true}
+                shouldCloseOnOverlayClick={true}
+                onRequestClose={() => setOpenSketchPicker(false)}
+                className={styles['modal-content']}
+                overlayClassName={styles['modal-overlay']}
+                style={{content: {top: '100px', left: '0px'}}}
+            >
+                <SketchPicker
+                    color={fontColor}
+                    onChangeComplete={onColorPick}
+                    className={styles['color-picker']}
+                />
+            </Modal>
         </div>
     )
 }

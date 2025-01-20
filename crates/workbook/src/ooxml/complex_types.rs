@@ -340,7 +340,7 @@ impl crate::XmlDeserialize for CtFill {
     }
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, PartialEq, Eq, Clone, Hash, Default)]
 #[cfg_attr(
     feature = "gents",
     gents_derives::gents_header(file_name = "cell_alignment.ts")

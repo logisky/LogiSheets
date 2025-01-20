@@ -1,9 +1,10 @@
 use logisheets_controller::controller::display::{CellPosition, DisplaySheetRequest};
 use logisheets_controller::edit_action::{
-    AsyncFuncResult, BlockInput, CellClear, CellInput, CellStyleUpdate, CreateBlock, CreateSheet,
-    DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction,
-    EditPayload, InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, LineStyleUpdate,
-    MoveBlock, PayloadsAction, SetColWidth, SetRowHeight, SheetRename, StyleUpdateType,
+    Alignment, AsyncFuncResult, BlockInput, CellClear, CellInput, CellStyleUpdate, CreateBlock,
+    CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet,
+    EditAction, EditPayload, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
+    InsertRowsInBlock, LineStyleUpdate, MoveBlock, PayloadsAction, SetColWidth, SetRowHeight,
+    SheetRename, StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_controller::{ColInfo, ErrorMessage};
@@ -449,6 +450,7 @@ pub fn set_line_font(
             set_border_giagonal_down: None,
             set_border_outline: None,
             set_pattern_fill: None,
+            set_alignment: None,
         },
     });
     MANAGER.get_mut().add_payload(id, p);
@@ -498,7 +500,77 @@ pub fn set_font(
             set_border_giagonal_down: None,
             set_border_outline: None,
             set_pattern_fill: None,
+            set_alignment: None,
         },
+    });
+    MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn set_cell_alignment(
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    h_align: Option<String>,
+    v_align: Option<String>,
+) {
+    let v: Option<VerticalAlignment> = if let Some(value) = v_align {
+        serde_json::from_str(&format!("\"{}\"", value)).unwrap()
+    } else {
+        None
+    };
+    let h: Option<HorizontalAlignment> = if let Some(value) = h_align {
+        serde_json::from_str(&&format!("\"{}\"", value)).unwrap()
+    } else {
+        None
+    };
+    let mut ty = StyleUpdateType::default();
+    ty.set_alignment = Some(Alignment {
+        vertical: v,
+        horizontal: h,
+    });
+    let p = EditPayload::CellStyleUpdate(CellStyleUpdate {
+        sheet_idx,
+        row,
+        col,
+        ty,
+    });
+
+    MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn set_line_alignment(
+    id: usize,
+    sheet_idx: usize,
+    row: bool,
+    from: usize,
+    to: usize,
+    h_align: Option<String>,
+    v_align: Option<String>,
+) {
+    let v: Option<VerticalAlignment> = if let Some(v_align) = v_align {
+        serde_json::from_str(&v_align).unwrap()
+    } else {
+        None
+    };
+    let h: Option<HorizontalAlignment> = if let Some(h_align) = h_align {
+        serde_json::from_str(&h_align).unwrap()
+    } else {
+        None
+    };
+    let mut ty = StyleUpdateType::default();
+    ty.set_alignment = Some(Alignment {
+        vertical: v,
+        horizontal: h,
+    });
+    let p = EditPayload::LineStyleUpdate(LineStyleUpdate {
+        sheet_idx,
+        row,
+        from,
+        to,
+        ty,
     });
     MANAGER.get_mut().add_payload(id, p);
 }
@@ -551,6 +623,7 @@ pub fn set_border(
             set_border_giagonal_down: diagonal_down,
             set_border_outline: outline,
             set_pattern_fill: None,
+            set_alignment: None,
         },
     });
     MANAGER.get_mut().add_payload(id, p);

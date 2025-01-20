@@ -129,6 +129,7 @@ export class CanvasStore {
     @action
     mousedown(e: MouseEvent, cell: Cell) {
         this.startCell = cell
+        this.endCell = undefined
         this.type = 'mousedown'
         this.same = this.startCell && cell.equals(this.startCell)
         this.selector.onMouseDown()
