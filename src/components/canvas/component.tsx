@@ -1,5 +1,7 @@
 import {
     buildSelectedDataFromCell,
+    buildSelectedDataFromCellRange,
+    buildSelectedDataFromLines,
     getSelectedCellRange,
     SelectedData,
 } from './events'
@@ -157,12 +159,58 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 if (isDnd) return
             }
             store.selector.onMouseMove(startCell)
+            store.endCell = startCell
         })
         mouseUp$.pipe(take(1)).subscribe(() => {
             store.type = undefined
             store.dnd.onMouseUp()
+            store.selector.onMouseUp()
             store.resizer.mouseup()
             sub.unsubscribe()
+            if (!store.startCell) return
+            if (store.startCell?.type !== store.endCell?.type && store.endCell)
+                return
+
+            let data: SelectedData
+            const {startRow, startCol} = store.startCell.coordinate
+            const endRow = store.endCell
+                ? store.endCell.coordinate.startRow
+                : startRow
+            const endCol = store.endCell
+                ? store.endCell.coordinate.startCol
+                : startCol
+            if (store.startCell?.type === 'FixedLeftHeader') {
+                data = buildSelectedDataFromLines(
+                    startRow,
+                    endRow,
+                    'row',
+                    'none'
+                )
+            } else if (store.startCell?.type === 'FixedTopHeader') {
+                data = buildSelectedDataFromLines(
+                    startCol,
+                    endCol,
+                    'col',
+                    'none'
+                )
+            } else if (store.startCell?.type === 'Cell') {
+                if (store.endCell?.type === 'Cell') {
+                    const {startRow: endRow, startCol: endCol} =
+                        store.endCell.coordinate
+                    data = buildSelectedDataFromCellRange(
+                        startRow,
+                        startCol,
+                        endRow,
+                        endCol,
+                        'none'
+                    )
+                } else {
+                    data = buildSelectedDataFromCell(startRow, startCol, 'none')
+                }
+            } else {
+                return
+            }
+            selectedData$(data)
         })
 
         const isResize = store.resizer.mousedown(e.nativeEvent)
@@ -174,9 +222,14 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         const matchCell = store.match(e.clientX, e.clientY)
         if (!matchCell) return
         store.mousedown(e, matchCell)
-        if (matchCell?.type !== 'Cell') return
         const {startRow: row, startCol: col} = matchCell.coordinate
-        const data = buildSelectedDataFromCell(row, col, 'none')
+        let data: SelectedData
+        if (matchCell?.type === 'FixedLeftHeader') {
+            data = buildSelectedDataFromLines(row, row, 'row', 'none')
+        } else if (matchCell?.type === 'FixedTopHeader') {
+            data = buildSelectedDataFromLines(col, col, 'col', 'none')
+        } else if (matchCell?.type !== 'Cell') return
+        data = buildSelectedDataFromCell(row, col, 'none')
         selectedData$(data)
     }
 

@@ -25,6 +25,7 @@ export class CanvasStore {
     }
     @observable.ref
     startCell?: Cell
+    endCell?: Cell
 
     type?: 'mousedown' | 'contextmenu'
     /**
