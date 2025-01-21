@@ -338,7 +338,7 @@ impl<'a> StyleConverter<'a> {
 }
 
 // Convert ARGB hex str and apply the tint to it.
-fn from_hex_str(argb: String, tint: f64) -> Color {
+pub fn from_hex_str(argb: String, tint: f64) -> Color {
     use colorsys::{Hsl, Rgb};
     if argb.len() < 8 {
         return Color {
@@ -375,9 +375,32 @@ fn from_hex_str(argb: String, tint: f64) -> Color {
     }
 }
 
+#[inline]
+fn bound(upper: u8, lower: u8, v: f64) -> u8 {
+    let v = v.round();
+    let result = upper.min(v as u8) as u8;
+    let result = result.max(lower);
+    result
+}
+
+pub fn color_to_ct_color(c: Color) -> CtColor {
+    let r = bound(255, 0, c.red.unwrap_or(0.));
+    let g = bound(255, 0, c.green.unwrap_or(0.));
+    let b = bound(255, 0, c.blue.unwrap_or(0.));
+    let a = bound(255, 0, c.alpha.unwrap_or(255.));
+    let argb = format!("{:02X}{:02X}{:02X}{:02X}", a, r, g, b);
+    CtColor {
+        auto: None,
+        indexed: None,
+        rgb: Some(argb),
+        theme: None,
+        tint: 0.,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::from_hex_str;
+    use super::{color_to_ct_color, from_hex_str, Color};
 
     #[test]
     fn test_from_hex_str() {
@@ -385,5 +408,20 @@ mod tests {
         let tint = 0.1;
         let color = from_hex_str(argb, tint);
         println!("{:?}", color);
+    }
+
+    #[test]
+    fn test_color_to_ct_color() {
+        let color = Color {
+            red: Some(12.),
+            green: Some(28.),
+            blue: Some(100.),
+            alpha: Some(241.),
+        };
+        let result = color_to_ct_color(color);
+        if result.rgb.is_none() {
+            panic!("should not be none")
+        }
+        println!("{:?}", result.rgb.unwrap())
     }
 }

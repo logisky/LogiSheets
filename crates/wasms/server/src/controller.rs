@@ -1,4 +1,5 @@
 use logisheets_controller::controller::display::{CellPosition, DisplaySheetRequest};
+use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
     Alignment, AsyncFuncResult, BlockInput, CellClear, CellInput, CellStyleUpdate, CreateBlock,
     CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet,
@@ -8,7 +9,7 @@ use logisheets_controller::edit_action::{
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_controller::{ColInfo, ErrorMessage};
-use logisheets_workbook::prelude::{StBorderStyle, StUnderlineValues};
+use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
 use singlyton::{Singleton, SingletonUninit};
 use wasm_bindgen::prelude::*;
 use xmlserde::XmlValue;
@@ -627,6 +628,80 @@ pub fn set_border(
         },
     });
     MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn set_line_pattern_fill(
+    id: usize,
+    sheet_idx: usize,
+    row: bool,
+    from: usize,
+    to: usize,
+    fg_color: Option<String>,
+    bg_color: Option<String>,
+    pattern: Option<String>,
+) {
+    init();
+    let update = build_pattern_fill_style_update(fg_color, bg_color, pattern);
+    let payload = EditPayload::LineStyleUpdate(LineStyleUpdate {
+        sheet_idx,
+        from,
+        to,
+        row,
+        ty: update,
+    });
+    MANAGER.get_mut().add_payload(id, payload);
+}
+
+fn build_pattern_fill_style_update(
+    fg_color: Option<String>,
+    bg_color: Option<String>,
+    pattern: Option<String>,
+) -> StyleUpdateType {
+    let fg = if let Some(f) = fg_color {
+        Some(from_hex_str(f, 0.))
+    } else {
+        None
+    };
+    let bg = if let Some(b) = bg_color {
+        Some(from_hex_str(b, 0.))
+    } else {
+        None
+    };
+    let pattern: Option<StPatternType> = if let Some(p) = pattern {
+        serde_json::from_str(&format!("\"{}\"", p)).unwrap()
+    } else {
+        None
+    };
+    let pattern_fill = PatternFill {
+        fg_color: fg,
+        bg_color: bg,
+        pattern_type: pattern,
+    };
+    let mut style_update = StyleUpdateType::default();
+    style_update.set_pattern_fill = Some(pattern_fill);
+    style_update
+}
+
+#[wasm_bindgen]
+pub fn set_cell_pattern_fill(
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    fg_color: Option<String>,
+    bg_color: Option<String>,
+    pattern: Option<String>,
+) {
+    init();
+    let style_update = build_pattern_fill_style_update(fg_color, bg_color, pattern);
+    let payload = EditPayload::CellStyleUpdate(CellStyleUpdate {
+        sheet_idx,
+        row,
+        col,
+        ty: style_update,
+    });
+    MANAGER.get_mut().add_payload(id, payload);
 }
 
 #[wasm_bindgen]

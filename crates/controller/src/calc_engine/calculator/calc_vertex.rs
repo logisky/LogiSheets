@@ -134,8 +134,3 @@ pub struct RowRange {
     pub start: usize,
     pub end: usize,
 }
-#[derive(Debug, Clone)]
-pub struct Range {
-    pub start: Addr,
-    pub end: Addr,
-}

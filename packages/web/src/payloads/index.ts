@@ -16,10 +16,12 @@ import {MoveBlock} from './move_block'
 import {SetBorder} from './set_border'
 import {SetCellAlignment} from './set_cell_alignment'
 import {SetCellFont} from './set_cell_font'
+import {SetCellPatternFill} from './set_cell_pattern_fill'
 import {SetColVisible} from './set_col_visible'
 import {SetColWidth} from './set_col_width'
 import {SetLineAlignment} from './set_line_alignment'
 import {SetLineFont} from './set_line_font'
+import {SetLinePatternFill} from './set_line_pattern_fill'
 import {SetRowHeight} from './set_row_height'
 import {SetRowVisible} from './set_row_visible'
 import {SheetRename} from './sheet_rename'
@@ -42,10 +44,12 @@ export * from './move_block'
 export * from './set_border'
 export * from './set_cell_alignment'
 export * from './set_cell_font'
+export * from './set_cell_pattern_fill'
 export * from './set_col_visible'
 export * from './set_col_width'
 export * from './set_line_alignment'
 export * from './set_line_font'
+export * from './set_line_pattern_fill'
 export * from './set_row_height'
 export * from './set_row_visible'
 export * from './sheet_rename'
@@ -76,3 +80,5 @@ export type Payload =
     | SetRowHeight
     | SetRowVisible
     | SheetRename
+    | SetLinePatternFill
+    | SetCellPatternFill

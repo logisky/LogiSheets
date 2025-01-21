@@ -297,7 +297,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         if (!store.selector.startCell) return
         setContextMenu(
             <ContextmenuComponent
-                isOpen={true}
+                isOpen={contextmenuOpen}
                 mouseevent={e}
                 setIsOpen={setContextMenuOpen}
                 startCell={store.selector.startCell}

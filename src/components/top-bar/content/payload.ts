@@ -4,8 +4,11 @@ import {
     Payload,
     SetCellAlignmentBuilder,
     SetCellFontBuilder,
+    SetCellPatternFillBuilder,
     SetLineAlignmentBuilder,
     SetLineFontBuilder,
+    SetLinePatternFillBuilder,
+    StPatternType,
 } from 'logisheets-web'
 
 export interface FontStyle {
@@ -39,21 +42,21 @@ export function generateFontPayload(
                 result.push(p)
             }
         }
-    } else {
-        const d = data.data.d
-        const builder = new SetLineFontBuilder()
-            .sheetIdx(sheetIdx)
-            .row(d.type === 'row')
-            .from(d.start)
-            .to(d.end)
-        if (update.bold !== undefined) builder.bold(update.bold)
-        if (update.underline !== undefined)
-            builder.underline(update.underline ? 'single' : 'none')
-        if (update.italic !== undefined) builder.italic(update.italic)
-        if (update.color) builder.color(update.color)
-        const p = builder.build()
-        result.push(p)
+        return result
     }
+    const d = data.data.d
+    const builder = new SetLineFontBuilder()
+        .sheetIdx(sheetIdx)
+        .row(d.type === 'row')
+        .from(d.start)
+        .to(d.end)
+    if (update.bold !== undefined) builder.bold(update.bold)
+    if (update.underline !== undefined)
+        builder.underline(update.underline ? 'single' : 'none')
+    if (update.italic !== undefined) builder.italic(update.italic)
+    if (update.color) builder.color(update.color)
+    const p = builder.build()
+    result.push(p)
     return result
 }
 
@@ -78,16 +81,58 @@ export function generateAlgnmentPayload(
                 result.push(p)
             }
         }
-    } else {
-        const d = data.data.d
-        const p = new SetLineAlignmentBuilder()
-            .sheetIdx(sheetIdx)
-            .row(d.type === 'row')
-            .from(d.start)
-            .to(d.end)
-            .alignment(alignment)
-            .build()
-        result.push(p)
+        return result
     }
+    const d = data.data.d
+    const p = new SetLineAlignmentBuilder()
+        .sheetIdx(sheetIdx)
+        .row(d.type === 'row')
+        .from(d.start)
+        .to(d.end)
+        .alignment(alignment)
+        .build()
+    result.push(p)
+
+    return result
+}
+
+export function generatePatternFillPayload(
+    sheetIdx: number,
+    data: SelectedData,
+    fgColor?: string,
+    bgColor?: string,
+    pattern?: StPatternType
+): Payload[] {
+    if (!data.data) return []
+    const result: Payload[] = []
+    const t = data.data.ty
+    if (t === 'cellRange') {
+        const d = data.data.d
+        for (let i = d.startRow; i <= d.endRow; i += 1) {
+            for (let j = d.startCol; j <= d.endCol; j += 1) {
+                const builder = new SetCellPatternFillBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(i)
+                    .col(j)
+                if (fgColor) builder.fgColor(fgColor)
+                if (bgColor) builder.bgColor(bgColor)
+                if (pattern) builder.pattern(pattern)
+                const p = builder.build()
+                result.push(p)
+            }
+        }
+        return result
+    }
+    const d = data.data.d
+    const builder = new SetLinePatternFillBuilder()
+        .sheetIdx(sheetIdx)
+        .from(d.start)
+        .to(d.end)
+        .row(d.type === 'row')
+    if (fgColor) builder.fgColor(fgColor)
+    if (bgColor) builder.bgColor(bgColor)
+    if (pattern) builder.pattern(pattern)
+    const p = builder.build()
+    result.push(p)
     return result
 }

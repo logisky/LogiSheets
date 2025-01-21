@@ -91,7 +91,7 @@ impl<'a> Executor<'a> {
         result.status.sheet_pos_manager = sheet_pos_manager;
 
         let old_navigator = result.status.navigator.clone();
-        let nav_executor = result.execute_navigator(payload.clone())?;
+        let (nav_executor, nav_updated) = result.execute_navigator(payload.clone())?;
 
         let range_executor = result.execute_range(payload.clone())?;
         let cube_executor = result.execute_cube(payload.clone())?;
@@ -115,7 +115,7 @@ impl<'a> Executor<'a> {
         let formula_executor =
             result.execute_formula(payload, &old_navigator, dirty_ranges, dirty_cubes)?;
 
-        let cell_updated = if updated {
+        let cell_updated = if updated || nav_updated {
             true
         } else {
             result.updated_cells.len() > 0
@@ -213,7 +213,7 @@ impl<'a> Executor<'a> {
         executor.execute(&ctx, payload)
     }
 
-    fn execute_navigator(&mut self, payload: EditPayload) -> Result<NavExecutor, Error> {
+    fn execute_navigator(&mut self, payload: EditPayload) -> Result<(NavExecutor, bool), Error> {
         let ctx = NavigatorConnector {
             sheet_pos_manager: &self.status.sheet_pos_manager,
         };
