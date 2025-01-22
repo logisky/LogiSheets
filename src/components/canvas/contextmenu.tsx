@@ -237,6 +237,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
                 items={items}
                 close$={() => setIsOpen(false)}
                 mouseevent={mouseevent}
+                ariaHideApp={false}
                 style={{
                     content: {
                         height: 'fit-content',

@@ -791,6 +791,7 @@ dependencies = [
  "rand",
  "regex",
  "serde",
+ "serde_json",
  "statrs",
  "thiserror",
  "unicode-segmentation",

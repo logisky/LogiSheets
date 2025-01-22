@@ -1,10 +1,10 @@
 import {
-    CtCellAlignment,
     Border,
     Font,
     Fill,
     Style,
     CtCellProtection,
+    Alignment,
 } from 'logisheets-web'
 import {shallowCopy} from '@/core'
 import {StandardFont} from './font'
@@ -14,7 +14,7 @@ export class StandardStyle implements Style {
     border!: Border
     font!: Font
     fill!: Fill
-    alignment!: CtCellAlignment
+    alignment!: Alignment
     formatter = ''
     from(style: Style) {
         shallowCopy(style, this)

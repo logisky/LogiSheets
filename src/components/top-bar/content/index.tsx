@@ -21,8 +21,12 @@ import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Divider from '@mui/material/Divider'
-import {generateFontPayload} from './payload'
-import {Transaction} from 'logisheets-web'
+import {
+    generateAlgnmentPayload,
+    generateFontPayload,
+    generatePatternFillPayload,
+} from './payload'
+import {Transaction, HorizontalAlignment, getPatternFill} from 'logisheets-web'
 
 export * from './font-size'
 export * from './start-item'
@@ -35,13 +39,14 @@ export interface StartProps {
 
 export const StartComponent = ({selectedData}: StartProps) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const [openSketchPicker, setOpenSketchPicker] = useState(false)
     const [fontColor, setFontColor] = useState('#000')
+    const [patternFillColor, setPatternFillColor] = useState('')
+    const [colorPicking, setColorPicking] = useState('')
 
     const [fontBold, setFontBold] = useState(false)
     const [fontItalic, setFontItalic] = useState(false)
     const [fontUnderlined, setFontUnderline] = useState(false)
-    const [alignment, setAlignment] = useState<string | null>('left')
+    const [alignment, setAlignment] = useState<string | null>(null)
 
     useEffect(() => {
         if (selectedData === undefined) {
@@ -64,6 +69,32 @@ export const StartComponent = ({selectedData}: StartProps) => {
         cellInfo.then((c) => {
             if (isErrorMessage(c)) return
             const style = c.getStyle()
+            const alignment = style.alignment
+            if (alignment) {
+                const hAlign = alignment.horizontal
+                if (hAlign) {
+                    if (hAlign === 'center') {
+                        setAlignment('center')
+                    } else if (hAlign === 'left') {
+                        setAlignment('left')
+                    } else if (hAlign === 'right') {
+                        setAlignment('right')
+                    } else {
+                        setAlignment(null)
+                    }
+                } else {
+                    setAlignment(null)
+                }
+            } else {
+                setAlignment(null)
+            }
+            const patternFill = getPatternFill(style.fill)
+            if (patternFill && patternFill.bgColor) {
+                const c = StandardColor.fromCtColor(patternFill.bgColor)
+                setPatternFillColor(c.css())
+            } else {
+                setPatternFillColor('#000')
+            }
             const font = StandardFont.from(style.font)
             setFontColor(font.standardColor.css())
             setFontBold(font.bold)
@@ -77,10 +108,48 @@ export const StartComponent = ({selectedData}: StartProps) => {
     }
 
     const onColorPick = (result: ColorResult) => {
+        if (colorPicking === 'font') return onFontColorPick(result)
+        if (colorPicking === 'fill') return onPatternFillColorPick(result)
+    }
+
+    const onPatternFillColorPick = (result: ColorResult) => {
+        if (!selectedData) return
         const {r, g, b, a} = result.rgb
         const standardColor = StandardColor.from(r, g, b, a)
-        setFontColor(standardColor.css())
-        setOpenSketchPicker(false)
+        const payloads = generatePatternFillPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            undefined,
+            standardColor.argb(),
+            'solid'
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) {
+                    setPatternFillColor(standardColor.css())
+                    setColorPicking('')
+                }
+            }
+        )
+    }
+
+    const onFontColorPick = (result: ColorResult) => {
+        if (!selectedData) return
+        const {r, g, b, a} = result.rgb
+        const standardColor = StandardColor.from(r, g, b, a)
+        const payloads = generateFontPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            {color: standardColor.argb()}
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) {
+                    setFontColor(standardColor.css())
+                    setColorPicking('')
+                }
+            }
+        )
     }
 
     const onFontBoldClick = () => {
@@ -89,7 +158,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
         const payloads = generateFontPayload(
             DATA_SERVICE.getCurrentSheetIdx(),
             selectedData,
-            v
+            {bold: v}
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {
@@ -104,8 +173,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
         const payloads = generateFontPayload(
             DATA_SERVICE.getCurrentSheetIdx(),
             selectedData,
-            undefined,
-            v
+            {underline: v}
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {
@@ -120,9 +188,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
         const payloads = generateFontPayload(
             DATA_SERVICE.getCurrentSheetIdx(),
             selectedData,
-            undefined,
-            undefined,
-            v
+            {italic: v}
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {
@@ -131,13 +197,32 @@ export const StartComponent = ({selectedData}: StartProps) => {
         )
     }
 
+    const handleAlignment = (
+        _event: React.MouseEvent<HTMLElement>,
+        v: string | null
+    ) => {
+        if (!selectedData || !v) return
+        const hAlign = v as HorizontalAlignment
+        const payloads = generateAlgnmentPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            {horizontal: hAlign}
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) setAlignment(v)
+            }
+        )
+    }
+
     return (
         <div className={styles['host']}>
             <ToggleButton
+                style={{color: fontColor}}
                 value="font-color"
                 size="small"
                 aria-label="font color formatting"
-                onClick={() => setOpenSketchPicker(true)}
+                onClick={() => setColorPicking('font')}
             >
                 <FromatColorTextIcon />
             </ToggleButton>
@@ -168,16 +253,22 @@ export const StartComponent = ({selectedData}: StartProps) => {
             >
                 <FormatUnderlinedIcon />
             </ToggleButton>
-            {/* <ToggleButton value="color" aria-label="color" disabled>
+            <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
+            <ToggleButton
+                style={{color: patternFillColor}}
+                value="color"
+                size="small"
+                aria-label="fill color"
+                onClick={() => setColorPicking('fill')}
+            >
                 <FormatColorFillIcon />
-                <ArrowDropDownIcon />
-            </ToggleButton> */}
+            </ToggleButton>
             <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
             <ToggleButtonGroup
                 value={alignment}
                 exclusive
                 size="small"
-                // onChange={handleAlignment}
+                onChange={handleAlignment}
                 aria-label="text alignment"
             >
                 <ToggleButton value="left" aria-label="left aligned">
@@ -189,28 +280,33 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 <ToggleButton value="right" aria-label="right aligned">
                     <FormatAlignRightIcon />
                 </ToggleButton>
-                <ToggleButton value="justify" aria-label="justified" disabled>
+                {/* <ToggleButton value="justify" aria-label="justified" disabled>
                     <FormatAlignJustifyIcon />
-                </ToggleButton>
+                </ToggleButton> */}
             </ToggleButtonGroup>
             <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
-            {openSketchPicker ? (
-                <Modal
-                    isOpen={true}
-                    shouldCloseOnEsc={true}
-                    shouldCloseOnOverlayClick={true}
-                    onRequestClose={() => setOpenSketchPicker(false)}
-                    className={styles['modal-content']}
-                    overlayClassName={styles['modal-overlay']}
-                    style={{content: {top: '100px', left: '0px'}}}
-                >
-                    <SketchPicker
-                        color={fontColor}
-                        onChangeComplete={onColorPick}
-                        className={styles['color-picker']}
-                    />
-                </Modal>
-            ) : null}
+            <Modal
+                isOpen={colorPicking !== ''}
+                shouldCloseOnEsc={true}
+                shouldCloseOnOverlayClick={true}
+                onRequestClose={() => setColorPicking('')}
+                className={styles['modal-content']}
+                overlayClassName={styles['modal-overlay']}
+                style={{content: {top: '100px', left: '0px'}}}
+                ariaHideApp={false}
+            >
+                <SketchPicker
+                    color={
+                        colorPicking === 'fill'
+                            ? patternFillColor
+                            : colorPicking === 'font'
+                            ? fontColor
+                            : '#000'
+                    }
+                    onChangeComplete={onColorPick}
+                    className={styles['color-picker']}
+                />
+            </Modal>
         </div>
     )
 }

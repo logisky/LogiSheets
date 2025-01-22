@@ -1,7 +1,4 @@
-import {
-    StVerticalAlignment as AlignY,
-    StHorizontalAlignment as AlignX,
-} from 'logisheets-web'
+import {VerticalAlignment, HorizontalAlignment} from 'logisheets-web'
 import {Range} from '@/core/standable'
 export class Box {
     public position = new Range()
@@ -19,7 +16,7 @@ export class Box {
     }
 
     public textX(
-        align?: AlignX | null
+        align?: HorizontalAlignment | null
     ): readonly [tx: number, textAlign: CanvasTextAlign] {
         let tx: number
         let textAlign: CanvasTextAlign
@@ -65,7 +62,7 @@ export class Box {
     }
 
     public textY(
-        vertical?: AlignY | null
+        vertical?: VerticalAlignment | null
     ): readonly [number, CanvasTextBaseline] {
         let ty: number
         let textBaseline: CanvasTextBaseline

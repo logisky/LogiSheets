@@ -3,6 +3,7 @@ export * from './payloads'
 export * from './transactions'
 export type {
     ActionEffect,
+    Alignment,
     AsyncFuncResult,
     BlockInfo,
     Border,
@@ -12,7 +13,6 @@ export type {
     ColInfo,
     Color,
     Comment,
-    CtCellAlignment,
     CtCellProtection,
     CtFontFamily,
     CtFontName,
@@ -27,6 +27,7 @@ export type {
     ErrorMessage,
     Fill,
     Font,
+    HorizontalAlignment,
     MergeCell,
     PatternFill,
     RowInfo,
@@ -40,10 +41,9 @@ export type {
     SheetRowInfo,
     SheetStyles,
     SheetValues,
-    StHorizontalAlignment,
     StPatternType,
-    StVerticalAlignment,
     Style,
     Task,
     Value,
+    VerticalAlignment,
 } from './bindings'

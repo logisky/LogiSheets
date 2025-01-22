@@ -21,9 +21,13 @@ import {
     row_delete,
     row_insert,
     set_border,
+    set_cell_alignment,
+    set_cell_pattern_fill,
     set_col_width,
     set_font,
+    set_line_alignment,
     set_line_font,
+    set_line_pattern_fill,
     set_row_height,
     sheet_rename_by_idx,
     sheet_rename_by_name,
@@ -284,6 +288,46 @@ export class Workbook {
             return set_col_width(this._id, p.sheetIdx, p.col, p.width)
         if (p.type === 'setRowHeight')
             return set_row_height(this._id, p.sheetIdx, p.row, p.height)
+        if (p.type === 'setLineAlignment')
+            return set_line_alignment(
+                this._id,
+                p.sheetIdx,
+                p.row,
+                p.from,
+                p.to,
+                p.alignment.horizontal,
+                p.alignment.vertical
+            )
+        if (p.type === 'setCellAlignment')
+            return set_cell_alignment(
+                this._id,
+                p.sheetIdx,
+                p.row,
+                p.col,
+                p.alignment.horizontal,
+                p.alignment.vertical
+            )
+        if (p.type === 'setCellPatternFill')
+            return set_cell_pattern_fill(
+                this._id,
+                p.sheetIdx,
+                p.row,
+                p.col,
+                p.fgColor,
+                p.bgColor,
+                p.pattern
+            )
+        if (p.type === 'setLinePatternFill')
+            return set_line_pattern_fill(
+                this._id,
+                p.sheetIdx,
+                p.row,
+                p.from,
+                p.to,
+                p.fgColor,
+                p.bgColor,
+                p.pattern
+            )
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }

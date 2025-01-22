@@ -3,9 +3,6 @@ import {DialogComponent, DialogProps} from '@/ui/dialog'
 import './contextmenu.scss'
 export interface ContextMenuProps extends DialogProps {
     items: readonly ContextMenuItem[]
-    /**
-     * 若需要根据鼠标事件确定contextmenu的位置，则需要传这个域
-     */
     mouseevent?: MouseEvent
 }
 

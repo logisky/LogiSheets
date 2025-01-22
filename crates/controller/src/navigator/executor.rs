@@ -12,7 +12,11 @@ impl NavExecutor {
         NavExecutor { nav }
     }
 
-    pub fn execute<C: NavExecCtx>(mut self, ctx: &C, payload: EditPayload) -> Result<Self, Error> {
+    pub fn execute<C: NavExecCtx>(
+        mut self,
+        ctx: &C,
+        payload: EditPayload,
+    ) -> Result<(Self, bool), Error> {
         match payload {
             EditPayload::MoveBlock(move_block) => {
                 let sheet_id = ctx
@@ -34,14 +38,14 @@ impl NavExecutor {
                     move_block.new_master_row,
                     move_block.new_master_col,
                 );
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::RemoveBlock(remove_block) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(remove_block.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 self.nav.remove_block(&sheet_id, &remove_block.id);
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::CreateBlock(create_block) => {
                 let sheet_id = ctx
@@ -68,21 +72,21 @@ impl NavExecutor {
                 let block_id = create_block.id;
                 sheet_nav.data.blocks.insert(block_id, block_place);
                 sheet_nav.cache = Default::default();
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::CreateSheet(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 self.nav.create_sheet(sheet_id);
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::DeleteSheet(delete_sheet) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(delete_sheet.idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 self.nav.delete_sheet(&sheet_id);
-                Ok(self)
+                Ok((self, true))
             }
             EditPayload::InsertCols(insert_cols) => {
                 let sheet_id = ctx
@@ -95,7 +99,7 @@ impl NavExecutor {
                 let res = NavExecutor {
                     nav: Navigator { sheet_navs },
                 };
-                Ok(res)
+                Ok((res, true))
             }
             EditPayload::DeleteCols(p) => {
                 let sheet_id = ctx
@@ -107,7 +111,7 @@ impl NavExecutor {
                 let res = NavExecutor {
                     nav: Navigator { sheet_navs },
                 };
-                Ok(res)
+                Ok((res, true))
             }
             EditPayload::InsertRows(insert_rows) => {
                 let sheet_id = ctx
@@ -120,7 +124,7 @@ impl NavExecutor {
                 let res = NavExecutor {
                     nav: Navigator { sheet_navs },
                 };
-                Ok(res)
+                Ok((res, true))
             }
             EditPayload::DeleteRows(p) => {
                 let sheet_id = ctx
@@ -132,7 +136,7 @@ impl NavExecutor {
                 let res = NavExecutor {
                     nav: Navigator { sheet_navs },
                 };
-                Ok(res)
+                Ok((res, true))
             }
             EditPayload::InsertColsInBlock(p) => {
                 let sheet_id = ctx
@@ -142,7 +146,7 @@ impl NavExecutor {
                 let new_bp = bp.add_new_cols(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor { nav };
-                Ok(result)
+                Ok((result, true))
             }
             EditPayload::DeleteColsInBlock(p) => {
                 let sheet_id = ctx
@@ -152,7 +156,7 @@ impl NavExecutor {
                 let new_bp = bp.delete_cols(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor { nav };
-                Ok(result)
+                Ok((result, true))
             }
             EditPayload::InsertRowsInBlock(p) => {
                 let sheet_id = ctx
@@ -162,7 +166,7 @@ impl NavExecutor {
                 let new_bp = bp.add_new_rows(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor { nav };
-                Ok(result)
+                Ok((result, true))
             }
             EditPayload::DeleteRowsInBlock(p) => {
                 let sheet_id = ctx
@@ -172,9 +176,9 @@ impl NavExecutor {
                 let new_bp = bp.delete_rows(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor { nav };
-                Ok(result)
+                Ok((result, true))
             }
-            _ => Ok(self),
+            _ => Ok((self, false)),
         }
     }
 }

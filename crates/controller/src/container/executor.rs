@@ -3,11 +3,7 @@ use logisheets_base::{
     SheetId, TextId,
 };
 
-use crate::{
-    cell::Cell,
-    edit_action::{EditPayload, StyleUpdateType},
-    Error,
-};
+use crate::{cell::Cell, edit_action::EditPayload, Error};
 
 use super::{ctx::ContainerExecCtx, DataContainer};
 

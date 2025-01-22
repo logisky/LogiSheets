@@ -37,6 +37,9 @@ logisheets_astchecker = { path = "./ast_checker", version = "0.7.0" }
 gents = { workspace = true, optional = true }
 gents_derives = { workspace = true, optional = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [features]
 gents = ["dep:gents", "dep:gents_derives"]
 sequencer = []
