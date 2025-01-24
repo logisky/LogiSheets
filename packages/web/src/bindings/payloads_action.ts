@@ -12,4 +12,5 @@ import {EditPayload} from './edit_payload'
 export interface PayloadsAction {
     payloads: readonly EditPayload[]
     undoable: boolean
+    init: boolean
 }

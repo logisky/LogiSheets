@@ -1,34 +1,22 @@
 pub mod ctx;
 pub mod diff;
+mod manager;
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashSet;
 
 use logisheets_base::{CellId, SheetId};
+use manager::VersionManagerHelper;
 
 use crate::{controller::status::Status, edit_action::PayloadsAction};
 
 use self::diff::{convert_payloads_to_sheet_diff, Diff, SheetDiff};
 
 const HISTORY_SIZE: usize = 50;
-
 /// VersionManager records the history of a workbook and the payloads. It can help
 /// users find out the minimal updates at a certain version.
-#[derive(Debug, Default)]
-pub struct VersionManager {
-    version: u32,
-    undo_stack: VecDeque<Status>,
-    redo_stack: VecDeque<Status>,
-    diff_undo_stack: VecDeque<HashMap<SheetId, SheetDiff>>,
-    diff_redo_stack: VecDeque<HashMap<SheetId, SheetDiff>>,
-    current_status: Status,
-    current_diffs: HashMap<SheetId, SheetDiff>,
-}
+pub type VersionManager = VersionManagerHelper<Status, SheetDiff, HISTORY_SIZE>;
 
 impl VersionManager {
-    pub fn version(&self) -> u32 {
-        self.version
-    }
-
     pub fn record(
         &mut self,
         mut status: Status,
@@ -38,51 +26,6 @@ impl VersionManager {
         let diffs = convert_payloads_to_sheet_diff(&mut status, processes, updated_cells);
         self.add_status(status, diffs);
         self.version += 1;
-    }
-
-    fn add_status(&mut self, current: Status, sheet_diff: HashMap<SheetId, SheetDiff>) {
-        self.redo_stack.clear();
-        self.diff_redo_stack.clear();
-
-        if self.undo_stack.len() >= HISTORY_SIZE {
-            self.undo_stack.pop_front();
-            self.diff_undo_stack.pop_front();
-        }
-
-        let mut current = current;
-        let mut sheet_diff = sheet_diff;
-
-        std::mem::swap(&mut current, &mut self.current_status);
-        std::mem::swap(&mut sheet_diff, &mut self.current_diffs);
-
-        self.undo_stack.push_back(current);
-        self.diff_undo_stack.push_back(sheet_diff);
-    }
-
-    pub fn undo(&mut self) -> Option<Status> {
-        let mut status = self.undo_stack.pop_back()?;
-        let mut payloads = self.diff_undo_stack.pop_back()?;
-
-        std::mem::swap(&mut status, &mut self.current_status);
-        std::mem::swap(&mut payloads, &mut self.current_diffs);
-
-        self.redo_stack.push_back(status.clone());
-        self.diff_redo_stack.push_back(payloads);
-
-        Some(status)
-    }
-
-    pub fn redo(&mut self) -> Option<Status> {
-        let mut status = self.redo_stack.pop_back()?;
-        let mut payloads = self.diff_redo_stack.pop_back()?;
-
-        std::mem::swap(&mut status, &mut self.current_status);
-        std::mem::swap(&mut payloads, &mut self.current_diffs);
-
-        self.undo_stack.push_back(status.clone());
-        self.diff_undo_stack.push_back(payloads);
-
-        Some(status)
     }
 
     // `None` means that users can not update the workbook to the latest one incremently.

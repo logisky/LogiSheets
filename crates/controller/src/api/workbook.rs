@@ -49,7 +49,10 @@ impl Workbook {
 
     /// Create a workbook from a .xlsx file.
     pub fn from_file(buf: &[u8], book_name: String) -> Result<Self> {
-        let controller = Controller::from_file(book_name, buf)?;
+        let mut controller = Controller::from_file(book_name, buf)?;
+        controller
+            .version_manager
+            .set_init_status(controller.status.clone());
         Ok(Workbook {
             controller,
             cell_positioners: new_locked(HashMap::new()),

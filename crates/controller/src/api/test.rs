@@ -40,6 +40,7 @@ fn new_workbook() {
             idx: None,
         })],
         undoable: true,
+        init: false,
     }));
 
     match result.status {

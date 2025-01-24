@@ -46,7 +46,11 @@ impl<'a> Executor<'a> {
 
         let result = result.calc()?;
 
-        if payload_action.undoable {
+        if payload_action.init {
+            result
+                .version_manager
+                .set_init_status(result.status.clone());
+        } else if payload_action.undoable {
             result.version_manager.record(
                 result.status.clone(),
                 payload_action,

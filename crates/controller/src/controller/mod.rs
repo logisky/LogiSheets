@@ -43,10 +43,12 @@ impl Default for Controller {
             version_manager: VersionManager::default(),
             async_func_manager: AsyncFuncManager::default(),
         };
-        let add_sheet = PayloadsAction::new(false).add_payload(CreateSheet {
-            idx: 0,
-            new_name: String::from("Sheet1"),
-        });
+        let add_sheet = PayloadsAction::new()
+            .add_payload(CreateSheet {
+                idx: 0,
+                new_name: String::from("Sheet1"),
+            })
+            .set_init(true);
         empty.handle_action(EditAction::Payloads(add_sheet));
         empty
     }
@@ -282,6 +284,7 @@ mod tests {
                 content: String::from("=ABS(1)"),
             })],
             undoable: true,
+            init: false,
         };
         wb.handle_action(EditAction::Payloads(payloads_action));
         let len = wb.status.formula_manager.formulas.len();

@@ -159,7 +159,7 @@ export class WorkbookClient implements IWorkbookClient {
         return this._call(MethodName.Undo, undefined) as Resp<void>
     }
 
-    redo(): Resp<void> {
+    async redo(): Resp<void> {
         return this._call(MethodName.Redo, undefined) as Resp<void>
     }
 
@@ -167,7 +167,7 @@ export class WorkbookClient implements IWorkbookClient {
         return this._call(MethodName.HandleTransaction, params) as Resp<void>
     }
 
-    loadWorkbook(params: LoadWorkbookParams): Resp<void> {
+    async loadWorkbook(params: LoadWorkbookParams): Resp<void> {
         return this._call(MethodName.LoadWorkbook, params) as Resp<void>
     }
 
