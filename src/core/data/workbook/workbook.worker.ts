@@ -101,11 +101,11 @@ class WorkerService implements IWorkbookWorker {
         return this.workbook.getAllSheetInfo()
     }
 
-    public undo() {
+    public undo(): void {
         this.workbook.undo()
     }
 
-    public redo() {
+    public redo(): void {
         this.workbook.redo()
     }
 

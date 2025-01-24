@@ -18,6 +18,8 @@ import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft'
 import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter'
 import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight'
 import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify'
+import UndoIcon from '@mui/icons-material/Undo'
+import RedoIcon from '@mui/icons-material/Redo'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Divider from '@mui/material/Divider'
@@ -215,8 +217,33 @@ export const StartComponent = ({selectedData}: StartProps) => {
         )
     }
 
+    const undo = () => {
+        DATA_SERVICE.undo()
+    }
+
+    const redo = () => {
+        DATA_SERVICE.redo()
+    }
+
     return (
         <div className={styles['host']}>
+            <ToggleButton
+                value="undo"
+                size="small"
+                aria-label="undo"
+                onClick={undo}
+            >
+                <UndoIcon />
+            </ToggleButton>
+            <ToggleButton
+                value="undo"
+                size="small"
+                aria-label="undo"
+                onClick={redo}
+            >
+                <RedoIcon />
+            </ToggleButton>
+            <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
             <ToggleButton
                 style={{color: fontColor}}
                 value="font-color"

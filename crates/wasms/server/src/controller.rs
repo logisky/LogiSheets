@@ -129,7 +129,11 @@ pub fn transaction_start(id: usize) {
 pub fn transaction_end(id: usize, undoable: bool) -> JsValue {
     init();
     let payloads = MANAGER.get_mut().get_payloads(&id);
-    let action = EditAction::Payloads(PayloadsAction { payloads, undoable });
+    let action = EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable,
+        init: false,
+    });
 
     let mut manager = MANAGER.get_mut();
     let wb = manager.get_mut_workbook(&id).unwrap();

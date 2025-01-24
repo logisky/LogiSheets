@@ -94,17 +94,21 @@ fn exec_shift_row(
     }
     let sheet_idx = sheet.unwrap();
     let action = if insert {
-        PayloadsAction::new(false).add_payload(InsertRows {
-            sheet_idx,
-            start: data.from as usize,
-            count: data.cnt as usize,
-        })
+        PayloadsAction::new()
+            .add_payload(InsertRows {
+                sheet_idx,
+                start: data.from as usize,
+                count: data.cnt as usize,
+            })
+            .set_undoable(false)
     } else {
-        PayloadsAction::new(false).add_payload(DeleteRows {
-            sheet_idx,
-            start: data.from as usize,
-            count: data.cnt as usize,
-        })
+        PayloadsAction::new()
+            .set_undoable(false)
+            .add_payload(DeleteRows {
+                sheet_idx,
+                start: data.from as usize,
+                count: data.cnt as usize,
+            })
     };
     ctx.workbook.handle_action(EditAction::Payloads(action));
     None
@@ -125,17 +129,21 @@ fn exec_shift_col(
     }
     let sheet_idx = sheet.unwrap();
     let action = if insert {
-        PayloadsAction::new(false).add_payload(InsertCols {
-            sheet_idx,
-            start: data.from as usize,
-            count: data.cnt as usize,
-        })
+        PayloadsAction::new()
+            .set_undoable(false)
+            .add_payload(InsertCols {
+                sheet_idx,
+                start: data.from as usize,
+                count: data.cnt as usize,
+            })
     } else {
-        PayloadsAction::new(false).add_payload(DeleteCols {
-            sheet_idx,
-            start: data.from as usize,
-            count: data.cnt as usize,
-        })
+        PayloadsAction::new()
+            .set_undoable(false)
+            .add_payload(DeleteCols {
+                sheet_idx,
+                start: data.from as usize,
+                count: data.cnt as usize,
+            })
     };
     ctx.workbook.handle_action(EditAction::Payloads(action));
     None
@@ -146,10 +154,12 @@ fn exec_switch(ctx: &mut ExecContext, switch: Switch, _line: usize) -> Option<Ex
 
     if workbook.get_sheet_by_name(&switch.sheet).is_err() {
         workbook.handle_action(EditAction::Payloads(
-            PayloadsAction::new(false).add_payload(CreateSheet {
-                idx: 0,
-                new_name: switch.sheet.clone(),
-            }),
+            PayloadsAction::new()
+                .set_undoable(false)
+                .add_payload(CreateSheet {
+                    idx: 0,
+                    new_name: switch.sheet.clone(),
+                }),
         ));
     }
 
@@ -169,6 +179,7 @@ fn exec_input(ctx: &mut ExecContext, input: Input, line: usize) -> Option<ExecEr
     let sheet_idx = sheet.unwrap();
     ctx.workbook
         .handle_action(EditAction::Payloads(PayloadsAction {
+            init: false,
             undoable: false,
             payloads: vec![EditPayload::CellInput(CellInput {
                 sheet_idx,
@@ -198,6 +209,7 @@ fn exec_create_block(
         .handle_action(EditAction::Payloads(PayloadsAction {
             payloads: vec![EditPayload::CreateBlock(payload)],
             undoable: false,
+            init: false,
         }));
     None
 }
@@ -220,6 +232,7 @@ fn exec_move_block(
         .handle_action(EditAction::Payloads(PayloadsAction {
             payloads: vec![EditPayload::MoveBlock(payload)],
             undoable: false,
+            init: false,
         }));
     None
 }
@@ -242,6 +255,7 @@ fn exec_remove_block(
         .handle_action(EditAction::Payloads(PayloadsAction {
             payloads: vec![EditPayload::RemoveBlock(payload)],
             undoable: false,
+            init: false,
         }));
     None
 }
@@ -337,33 +351,41 @@ fn exec_block(
     }
     let sheet_idx = sheet.unwrap();
     let action = if is_row && insert {
-        PayloadsAction::new(false).add_payload(InsertRowsInBlock {
-            sheet_idx,
-            block_id: data.block_id,
-            start: data.from as usize,
-            cnt: data.cnt as usize,
-        })
+        PayloadsAction::new()
+            .set_undoable(false)
+            .add_payload(InsertRowsInBlock {
+                sheet_idx,
+                block_id: data.block_id,
+                start: data.from as usize,
+                cnt: data.cnt as usize,
+            })
     } else if !is_row && insert {
-        PayloadsAction::new(false).add_payload(InsertColsInBlock {
-            sheet_idx,
-            block_id: data.block_id,
-            start: data.from as usize,
-            cnt: data.cnt as usize,
-        })
+        PayloadsAction::new()
+            .set_undoable(false)
+            .add_payload(InsertColsInBlock {
+                sheet_idx,
+                block_id: data.block_id,
+                start: data.from as usize,
+                cnt: data.cnt as usize,
+            })
     } else if is_row && !insert {
-        PayloadsAction::new(false).add_payload(DeleteRowsInBlock {
-            sheet_idx,
-            block_id: data.block_id,
-            start: data.from as usize,
-            cnt: data.cnt as usize,
-        })
+        PayloadsAction::new()
+            .set_undoable(false)
+            .add_payload(DeleteRowsInBlock {
+                sheet_idx,
+                block_id: data.block_id,
+                start: data.from as usize,
+                cnt: data.cnt as usize,
+            })
     } else {
-        PayloadsAction::new(false).add_payload(DeleteColsInBlock {
-            sheet_idx,
-            block_id: data.block_id,
-            start: data.from as usize,
-            cnt: data.cnt as usize,
-        })
+        PayloadsAction::new()
+            .set_undoable(false)
+            .add_payload(DeleteColsInBlock {
+                sheet_idx,
+                block_id: data.block_id,
+                start: data.from as usize,
+                cnt: data.cnt as usize,
+            })
     };
     ctx.workbook.handle_action(EditAction::Payloads(action));
     None

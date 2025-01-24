@@ -55,11 +55,21 @@ export class Workbook {
     }
 
     public undo(): boolean {
-        return undo(this._id)
+        const result = undo(this._id)
+        if (result) {
+            this._onCellUpdate()
+            this._onSheetUpdate()
+        }
+        return result
     }
 
     public redo(): boolean {
-        return redo(this._id)
+        const result = redo(this._id)
+        if (result) {
+            this._onCellUpdate()
+            this._onSheetUpdate()
+        }
+        return result
     }
 
     public registerCellUpdatedCallback(callback: Callback) {

@@ -57,14 +57,29 @@ impl From<PayloadsAction> for EditAction {
 pub struct PayloadsAction {
     pub payloads: Vec<EditPayload>,
     pub undoable: bool,
+    // An action that is used to customize the initial status of a new workbook.
+    // This action is `undoable` but its new status should be recorded to hiistory.
+    pub init: bool,
 }
 
 impl PayloadsAction {
-    pub fn new(undoable: bool) -> Self {
+    pub fn new() -> Self {
         PayloadsAction {
             payloads: vec![],
-            undoable,
+            undoable: false,
+            init: false,
         }
+    }
+
+    pub fn set_undoable(mut self, v: bool) -> Self {
+        self.undoable = v;
+        self
+    }
+
+    pub fn set_init(mut self, v: bool) -> Self {
+        self.init = v;
+        self.undoable = false;
+        self
     }
 
     pub fn add_payload<P: Payload>(mut self, payload: P) -> Self {
