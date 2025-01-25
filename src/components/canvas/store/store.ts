@@ -80,6 +80,36 @@ export class CanvasStore {
         return match(x, y, this.anchorX, this.anchorY, cellView.data)
     }
 
+    /**
+     * Due to the change of column width or row height, selector should be
+     * updated
+     */
+    updateStartAndEndCells(data: CellView) {
+        if (!this.startCell) return
+        // const data = this.getCurrentCellView()
+        const updatePosition = (cell: Cell) => {
+            if (cell.type === 'FixedLeftHeader') {
+                const newRow = data.rows.find((r) => {
+                    return r.coordinate.equals(cell.coordinate)
+                })
+                if (newRow) cell.position = newRow.position
+            } else if (cell.type === 'FixedTopHeader') {
+                const newCol = data.cols.find((r) => {
+                    return r.coordinate.equals(cell.coordinate)
+                })
+                if (newCol) cell.position = newCol.position
+            } else if (cell.type === 'Cell') {
+                const newCell = data.cells.find((r) => {
+                    return r.coordinate.equals(cell.coordinate)
+                })
+                if (newCell) cell.position = newCell.position
+            }
+        }
+        updatePosition(this.startCell)
+        if (this.endCell) updatePosition(this.endCell)
+        this.selector.updateSelector(this.startCell, this.endCell)
+    }
+
     convertToCanvasPosition(p: Range, ty: CellType): Range {
         if (ty === 'LeftTop') return p
 

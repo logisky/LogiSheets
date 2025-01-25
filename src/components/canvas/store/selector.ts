@@ -51,7 +51,6 @@ export class Selector {
         }
         this.selector = new SelectorProps()
         this.updateSelector(this.startCell, this.endCell)
-        this._aftetUpdateSelector()
     }
 
     @action
@@ -64,7 +63,6 @@ export class Selector {
         }
         this.selector = new SelectorProps()
         this.updateSelector(this.startCell, this.endCell)
-        this._aftetUpdateSelector()
     }
 
     @action
@@ -73,14 +71,12 @@ export class Selector {
         this.endCell = undefined
         this.selector = new SelectorProps()
         this.updateSelector(this.startCell, this.endCell)
-        this._aftetUpdateSelector()
     }
 
     @action
     onMouseMove(matchCell: Cell) {
         this.endCell = matchCell
         this.updateSelector(this.startCell, this.endCell)
-        this._aftetUpdateSelector()
     }
 
     @action
@@ -88,7 +84,6 @@ export class Selector {
         this.startCell = startCell
         this.endCell = undefined
         this.updateSelector(this.startCell, this.endCell)
-        this._aftetUpdateSelector()
     }
 
     @action
@@ -110,6 +105,7 @@ export class Selector {
         if (!this.selector) return
         const selector = this.getSelector(start, end)
         this.selector = selector
+        this._aftetUpdateSelector()
         return selector
     }
 

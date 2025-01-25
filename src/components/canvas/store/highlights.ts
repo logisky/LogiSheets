@@ -64,13 +64,17 @@ export class Highlights {
             const oldCell = find(newCell)
             if (oldCell) newCell.style = oldCell.style
             else {
+                const canvasPosition = this.store.convertToCanvasPosition(
+                    cell.position,
+                    'Cell'
+                )
                 const currColors = newCells.map((c) => c.style.bgColor)
                 newCell.style = {
                     bgColor: StandardColor.randomColor(currColors),
-                    x: cell.position.startCol,
-                    y: cell.position.startRow,
-                    height: cell.height,
-                    width: cell.width,
+                    x: canvasPosition.startCol,
+                    y: canvasPosition.startRow,
+                    height: canvasPosition.height,
+                    width: canvasPosition.width,
                 }
             }
             newCells.push(newCell)

@@ -96,6 +96,7 @@ export class Renderer {
                 this._offscreen.drawCells(v, drawCellsFn)
 
                 if (!hasDrawn) draw()
+                this.store.updateStartAndEndCells(v.data)
             })
     }
 
