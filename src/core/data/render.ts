@@ -1,7 +1,6 @@
 import {Range, StandardCell} from '@/core/standable'
 import {CellInfo, Value} from 'logisheets-web'
 import {StandardValue} from '../standable/value'
-import {LeftTop} from '../settings'
 import {StandardStyle} from '../standable/style'
 
 export class RenderCell {
