@@ -31,6 +31,7 @@ use crate::{
 
 use crate::errors::Result;
 
+#[allow(unused)]
 pub struct CalcConnector<'a> {
     pub range_manager: &'a RangeManager,
     pub cube_manager: &'a CubeManager,

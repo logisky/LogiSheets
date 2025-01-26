@@ -34,6 +34,8 @@ import {
     transaction_end,
     transaction_start,
     undo,
+    merge_cells,
+    split_merged_cells,
 } from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
@@ -338,6 +340,17 @@ export class Workbook {
                 p.bgColor,
                 p.pattern
             )
+        if (p.type === 'mergeCells')
+            return merge_cells(
+                this._id,
+                p.sheetIdx,
+                p.startRow,
+                p.startCol,
+                p.endRow,
+                p.endCol
+            )
+        if (p.type === 'splitMergedCells')
+            return split_merged_cells(this._id, p.sheetIdx, p.row, p.col)
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }

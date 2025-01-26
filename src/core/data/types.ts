@@ -1,5 +1,5 @@
 import {RenderCell} from './render'
-import {Comment} from 'logisheets-web'
+import {Comment, MergeCell} from 'logisheets-web'
 
 export class CellView {
     public constructor(public readonly data: CellViewData[]) {}
@@ -48,6 +48,23 @@ export class CellView {
                 return true
             })
     }
+
+    public get mergeCells(): readonly RenderCell[] {
+        let currRow = -1
+        let currCol = -1
+        return this.data
+            .flatMap((d) => d.mergeCells)
+            .filter((c) => {
+                const col = c.position.startCol
+                const row = c.position.startRow
+                if (col <= currCol && row <= currRow) {
+                    return false
+                }
+                currCol = col
+                currRow = row
+                return true
+            })
+    }
 }
 
 export class CellViewData {
@@ -60,6 +77,7 @@ export class CellViewData {
         public rows: readonly RenderCell[],
         public cols: readonly RenderCell[],
         public cells: readonly RenderCell[],
+        public mergeCells: readonly RenderCell[],
         public comments: readonly Comment[]
     ) {
         if (rows.length == 0) {

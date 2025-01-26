@@ -112,6 +112,9 @@ pub enum EditPayload {
     SetColWidth(SetColWidth),
     SetRowHeight(SetRowHeight),
     SetVisible(SetVisible),
+    // Merge cells
+    MergeCells(MergeCells),
+    SplitMergedCells(SplitMergedCells),
     // Sheet
     SheetRename(SheetRename),
     CreateSheet(CreateSheet),
@@ -562,6 +565,41 @@ pub struct StyleUpdateType {
     pub set_border_outline: Option<bool>,
     pub set_pattern_fill: Option<PatternFill>,
     pub set_alignment: Option<Alignment>,
+}
+
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "merge_cells.ts")
+)]
+pub struct MergeCells {
+    pub sheet_idx: usize,
+    pub start_row: usize,
+    pub start_col: usize,
+    pub end_row: usize,
+    pub end_col: usize,
+}
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "split_merged_cells.ts")
+)]
+pub struct SplitMergedCells {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
+}
+
+impl From<MergeCells> for EditPayload {
+    fn from(value: MergeCells) -> Self {
+        EditPayload::MergeCells(value)
+    }
+}
+
+impl From<SplitMergedCells> for EditPayload {
+    fn from(value: SplitMergedCells) -> Self {
+        EditPayload::SplitMergedCells(value)
+    }
 }
 
 impl From<BlockStyleUpdate> for EditPayload {

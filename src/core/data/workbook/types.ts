@@ -53,6 +53,14 @@ export const enum WorkerUpdate {
     Ready = 3,
 }
 
+export interface GetMergedCellsParams {
+    sheetIdx: number
+    startRow: number
+    startCol: number
+    endRow: number
+    endCol: number
+}
+
 export type Callback = () => void
 
 export enum MethodName {
@@ -67,4 +75,5 @@ export enum MethodName {
     HandleTransaction = 'handleTransaction',
     LoadWorkbook = 'loadWorkbook',
     IsReady = 'isReady',
+    GetMergedCells = 'getMergedCells',
 }

@@ -4,8 +4,8 @@ use logisheets_controller::edit_action::{
     Alignment, AsyncFuncResult, BlockInput, CellClear, CellInput, CellStyleUpdate, CreateBlock,
     CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet,
     EditAction, EditPayload, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
-    InsertRowsInBlock, LineStyleUpdate, MoveBlock, PayloadsAction, SetColWidth, SetRowHeight,
-    SheetRename, StyleUpdateType, VerticalAlignment,
+    InsertRowsInBlock, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction, SetColWidth,
+    SetRowHeight, SheetRename, SplitMergedCells, StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_controller::{ColInfo, ErrorMessage};
@@ -720,6 +720,58 @@ pub fn cell_input(id: usize, sheet_idx: usize, row: usize, col: usize, content: 
             content,
         }),
     );
+}
+
+#[wasm_bindgen]
+pub fn merge_cells(
+    id: usize,
+    sheet_idx: usize,
+    start_row: usize,
+    start_col: usize,
+    end_row: usize,
+    end_col: usize,
+) {
+    init();
+    MANAGER.get_mut().add_payload(
+        id,
+        EditPayload::MergeCells(MergeCells {
+            sheet_idx,
+            start_row,
+            start_col,
+            end_row,
+            end_col,
+        }),
+    );
+}
+
+#[wasm_bindgen]
+pub fn split_merged_cells(id: usize, sheet_idx: usize, row: usize, col: usize) {
+    init();
+    MANAGER.get_mut().add_payload(
+        id,
+        EditPayload::SplitMergedCells(SplitMergedCells {
+            sheet_idx,
+            row,
+            col,
+        }),
+    );
+}
+
+#[wasm_bindgen]
+pub fn get_merged_cells(
+    id: usize,
+    sheet_idx: usize,
+    start_row: usize,
+    start_col: usize,
+    end_row: usize,
+    end_col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let r = ws.get_merged_cells(start_row, start_col, end_row, end_col);
+    serde_wasm_bindgen::to_value(&r).unwrap()
 }
 
 #[wasm_bindgen]

@@ -56,6 +56,10 @@ export function match(
         .setStartRow(canvasY + anchorY - LeftTop.height)
         .setEndCol(canvasX + anchorX - LeftTop.width)
         .setEndRow(canvasY + anchorY - LeftTop.height)
+    const mergedCell = data
+        .flatMap((d) => d.mergeCells)
+        .find((c) => c.position.cover(clickPosition))
+    if (mergedCell) return new Cell('Cell').copyByRenderCell(mergedCell)
     const renderCell = data
         .flatMap((d) => d.cells)
         .find((c) => c.position.cover(clickPosition))

@@ -9,6 +9,7 @@ import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardStyle} from '@/core/standable/style'
 import {isErrorMessage, PatternFill} from 'logisheets-web'
 import {Cell, CellType} from '../../defs'
+import {MergeCell} from 'packages/web'
 
 export const CANVAS_ID = simpleUuid()
 const BUFFER_SIZE = 50
@@ -72,8 +73,9 @@ export class Renderer {
             this._painter.clear()
             const anchorX = Math.max(resp.request.startX, 0)
             const anchorY = Math.max(resp.request.startY, 0)
-            this._renderGrid(resp.data, anchorX, anchorY)
             this._renderContent(resp.data, anchorX, anchorY)
+            this._renderGrid(resp.data, anchorX, anchorY)
+            this._renderMergeCells(resp.data, anchorX, anchorY)
             this._painter.setCanvas(this.canvas)
         }
         const cacheTarget: Rect = {
@@ -282,6 +284,16 @@ export class Renderer {
             ])
     }
 
+    private _renderMergeCells(
+        data: CellView,
+        anchorX: number,
+        anchorY: number
+    ) {
+        data.mergeCells.forEach((c) => {
+            this._renderCell(c, anchorX, anchorY, true)
+        })
+    }
+
     private _renderGrid(data: CellView, anchorX: number, anchorY: number) {
         const {grid} = SETTINGS
         this._painter.save()
@@ -345,7 +357,8 @@ export class Renderer {
     private _renderCell(
         renderCell: RenderCell,
         anchorX: number,
-        anchorY: number
+        anchorY: number,
+        clearBeforeRender = false
     ) {
         const {coordinate: _, position, info} = renderCell
         const style = info?.style
@@ -355,6 +368,14 @@ export class Renderer {
             .setStartRow(position.startRow - anchorY)
             .setEndCol(position.endCol - anchorX)
             .setStartCol(position.startCol - anchorX)
+        if (clearBeforeRender) {
+            this._painter.clearRect(
+                box.position.startCol,
+                box.position.startRow,
+                box.position.width,
+                box.position.height
+            )
+        }
         this._fill(box, style)
         this._border(box, position, style)
         if (info) {

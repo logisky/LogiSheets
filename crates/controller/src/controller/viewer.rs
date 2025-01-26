@@ -238,16 +238,16 @@ impl SheetViewer {
         let merge_cells_manager = &cell_attachments.merge_cells;
         if let Some(merge_cells) = merge_cells_manager.data.get(&sheet_id) {
             merge_cells.iter().for_each(|(start, end)| {
-                if let Ok((row_start, col_start)) =
+                if let Ok((start_row, start_col)) =
                     navigator.fetch_normal_cell_idx(&sheet_id, &start)
                 {
-                    let (row_end, col_end) =
+                    let (end_row, end_col) =
                         navigator.fetch_normal_cell_idx(&sheet_id, &end).unwrap();
                     let mc = MergeCell {
-                        row_start,
-                        col_start,
-                        row_end,
-                        col_end,
+                        start_row,
+                        start_col,
+                        end_row,
+                        end_col,
                     };
                     self.merge_cells.push(mc);
                 }

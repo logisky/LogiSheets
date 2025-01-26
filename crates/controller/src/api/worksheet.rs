@@ -201,11 +201,11 @@ impl<'a> Worksheet<'a> {
                 cells.push(info);
             }
         }
-        self.get_merge_cells().into_iter().for_each(|m| {
-            if m.row_start >= start_row
-                && m.row_end <= end_row
-                && m.col_start >= start_col
-                && m.col_end <= end_col
+        self.get_all_merged_cells().into_iter().for_each(|m| {
+            if m.start_row >= start_row
+                && m.end_row <= end_row
+                && m.start_col >= start_col
+                && m.end_col <= end_col
             {
                 merge_cells.push(m);
             }
@@ -326,7 +326,7 @@ impl<'a> Worksheet<'a> {
         self.get_style_by_id(cell_id)
     }
 
-    pub fn get_merge_cells(&self) -> Vec<MergeCell> {
+    pub fn get_all_merged_cells(&self) -> Vec<MergeCell> {
         let merges = self
             .controller
             .status
@@ -350,12 +350,12 @@ impl<'a> Worksheet<'a> {
                         .navigator
                         .fetch_normal_cell_idx(&self.sheet_id, end);
                     match (s, e) {
-                        (Ok((row_start, col_start)), Ok((row_end, col_end))) => {
+                        (Ok((start_row, start_col)), Ok((end_row, end_col))) => {
                             let m = MergeCell {
-                                row_start,
-                                col_start,
-                                row_end,
-                                col_end,
+                                start_row,
+                                start_col,
+                                end_row,
+                                end_col,
                             };
                             prev.push(m);
                             prev
@@ -366,6 +366,57 @@ impl<'a> Worksheet<'a> {
         } else {
             vec![]
         }
+    }
+
+    pub fn get_merged_cells(
+        &self,
+        t_start_row: usize,
+        t_start_col: usize,
+        t_end_row: usize,
+        t_end_col: usize,
+    ) -> Vec<MergeCell> {
+        let merged_cells = self
+            .controller
+            .status
+            .cell_attachment_manager
+            .merge_cells
+            .get_all_merged_cells(&self.sheet_id);
+        let result = merged_cells
+            .into_iter()
+            .flat_map(|(s, e)| {
+                let s = self
+                    .controller
+                    .status
+                    .navigator
+                    .fetch_normal_cell_idx(&self.sheet_id, &s);
+                if s.is_err() {
+                    return None;
+                }
+                let (start_row, start_col) = s.unwrap();
+                let e = self
+                    .controller
+                    .status
+                    .navigator
+                    .fetch_normal_cell_idx(&self.sheet_id, &e);
+                if e.is_err() {
+                    return None;
+                }
+                let (end_row, end_col) = e.unwrap();
+                if start_col > t_end_col || start_row > t_end_row {
+                    return None;
+                }
+                if end_col < t_start_col || end_row < t_start_row {
+                    return None;
+                }
+                return Some(MergeCell {
+                    start_row,
+                    start_col,
+                    end_row,
+                    end_col,
+                });
+            })
+            .collect::<Vec<_>>();
+        return result;
     }
 
     pub fn get_comments(&self) -> Vec<Comment> {

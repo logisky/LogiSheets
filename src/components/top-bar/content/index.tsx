@@ -1,4 +1,8 @@
-import {getFirstCell, SelectedData} from '@/components/canvas'
+import {
+    getFirstCell,
+    getSelectedCellRange,
+    SelectedData,
+} from '@/components/canvas'
 import {ColorResult, SketchPicker} from 'react-color'
 import styles from './start.module.scss'
 import {useEffect, useState} from 'react'
@@ -18,6 +22,7 @@ import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft'
 import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter'
 import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight'
 import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify'
+import MergeTypeIcon from '@mui/icons-material/MergeType'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
 import ToggleButton from '@mui/material/ToggleButton'
@@ -28,7 +33,15 @@ import {
     generateFontPayload,
     generatePatternFillPayload,
 } from './payload'
-import {Transaction, HorizontalAlignment, getPatternFill} from 'logisheets-web'
+import {
+    Transaction,
+    HorizontalAlignment,
+    getPatternFill,
+    MergeCell,
+    MergeCellsBuilder,
+    Payload,
+} from 'logisheets-web'
+import {SplitMergedCellsBuilder} from 'packages/web'
 
 export * from './font-size'
 export * from './start-item'
@@ -49,6 +62,10 @@ export const StartComponent = ({selectedData}: StartProps) => {
     const [fontItalic, setFontItalic] = useState(false)
     const [fontUnderlined, setFontUnderline] = useState(false)
     const [alignment, setAlignment] = useState<string | null>(null)
+
+    const [mergedOn, setMergedOn] = useState<boolean | null>(null)
+
+    let mergedCells: readonly MergeCell[] = []
 
     useEffect(() => {
         if (selectedData === undefined) {
@@ -106,6 +123,47 @@ export const StartComponent = ({selectedData}: StartProps) => {
                     ? false
                     : font.underline.val != 'none'
             setFontUnderline(v)
+        })
+
+        const cellRange = getSelectedCellRange(selectedData)
+        if (!cellRange) {
+            setMergedOn(null)
+            return
+        }
+        DATA_SERVICE.getMergedCells(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            cellRange.startRow,
+            cellRange.startCol,
+            cellRange.endRow,
+            cellRange.endCol
+        ).then((v) => {
+            if (isErrorMessage(v)) {
+                setMergedOn(null)
+                return
+            }
+
+            mergedCells = v
+            if (
+                v.length === 1 &&
+                v[0].startRow === cellRange.startRow &&
+                v[0].endRow === cellRange.endRow &&
+                v[0].endCol === cellRange.endCol &&
+                v[0].startCol === cellRange.startCol
+            ) {
+                // The only selected cell is a merged cell
+                setMergedOn(true)
+                return
+            }
+            if (
+                v.length === 0 &&
+                cellRange.endRow === cellRange.startRow &&
+                cellRange.endCol === cellRange.startCol
+            ) {
+                // A single cell is selected
+                setMergedOn(null)
+                return
+            }
+            setMergedOn(false)
         })
     }
 
@@ -195,6 +253,55 @@ export const StartComponent = ({selectedData}: StartProps) => {
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {
                 if (!resp) setFontItalic(v)
+            }
+        )
+    }
+
+    const onMergeOrSplitClick = () => {
+        // This should not happend
+        if (mergedOn === null) return
+        if (!selectedData) return
+        const cellRange = getSelectedCellRange(selectedData)
+        if (!cellRange) return
+
+        const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+
+        if (mergedOn) {
+            return DATA_SERVICE.handleTransaction(
+                new Transaction(
+                    [
+                        new SplitMergedCellsBuilder()
+                            .sheetIdx(sheetIdx)
+                            .row(cellRange.startRow)
+                            .col(cellRange.startCol)
+                            .build(),
+                    ],
+                    true
+                )
+            ).then((resp) => {
+                if (!resp) setMergedOn(false)
+            })
+        }
+
+        const payloads: Payload[] = mergedCells.map((v) => {
+            return new SplitMergedCellsBuilder()
+                .sheetIdx(sheetIdx)
+                .row(v.startRow)
+                .col(v.startCol)
+                .build()
+        })
+        payloads.push(
+            new MergeCellsBuilder()
+                .sheetIdx(sheetIdx)
+                .startRow(cellRange.startRow)
+                .endRow(cellRange.endRow)
+                .startCol(cellRange.startCol)
+                .endCol(cellRange.endCol)
+                .build()
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            (resp) => {
+                if (!resp) setMergedOn(true)
             }
         )
     }
@@ -289,6 +396,16 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 onClick={() => setColorPicking('fill')}
             >
                 <FormatColorFillIcon />
+            </ToggleButton>
+            <ToggleButton
+                value="merge"
+                size="small"
+                aria-label="merge cells"
+                disabled={mergedOn === null}
+                selected={mergedOn === null ? undefined : mergedOn}
+                onClick={onMergeOrSplitClick}
+            >
+                <MergeTypeIcon />
             </ToggleButton>
             <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
             <ToggleButtonGroup

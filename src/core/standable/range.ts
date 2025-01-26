@@ -2,10 +2,10 @@ import {MergeCell} from 'logisheets-web'
 export class Range {
     static fromMergeCell(mergeCell: MergeCell) {
         return new Range()
-            .setEndCol(mergeCell.colEnd)
-            .setStartCol(mergeCell.colStart)
-            .setEndRow(mergeCell.rowEnd)
-            .setStartRow(mergeCell.rowStart)
+            .setEndCol(mergeCell.endCol)
+            .setStartCol(mergeCell.startCol)
+            .setEndRow(mergeCell.endRow)
+            .setStartRow(mergeCell.startRow)
     }
     get width() {
         return this.#endCol - this.#startCol

@@ -16,12 +16,14 @@ import {InsertCols} from './insert_cols'
 import {InsertRowsInBlock} from './insert_rows_in_block'
 import {InsertRows} from './insert_rows'
 import {LineStyleUpdate} from './line_style_update'
+import {MergeCells} from './merge_cells'
 import {MoveBlock} from './move_block'
 import {RemoveBlock} from './remove_block'
 import {SetColWidth} from './set_col_width'
 import {SetRowHeight} from './set_row_height'
 import {SetVisible} from './set_visible'
 import {SheetRename} from './sheet_rename'
+import {SplitMergedCells} from './split_merged_cells'
 
 // `EditPayload` is the basic update unit of the Workbook. Developers can config their own
 // `EditAction` (e.g. setting a button to create a table) to facilitate their users.
@@ -38,6 +40,8 @@ export type EditPayload =
     | {setColWidth: SetColWidth}
     | {setRowHeight: SetRowHeight}
     | {setVisible: SetVisible}
+    | {mergeCells: MergeCells}
+    | {splitMergedCells: SplitMergedCells}
     | {sheetRename: SheetRename}
     | {createSheet: CreateSheet}
     | {deleteSheet: DeleteSheet}

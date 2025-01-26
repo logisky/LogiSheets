@@ -10,6 +10,7 @@ import {
     BlockInfo,
     isErrorMessage,
     SheetDimension,
+    MergeCell,
 } from 'logisheets-web'
 import {
     Callback,
@@ -21,6 +22,7 @@ import {
     HandleTransactionParams,
     GetFullyCoveredBlocksParams,
     MethodName,
+    GetMergedCellsParams,
 } from './types'
 import {CellInfo} from 'packages/web'
 
@@ -48,6 +50,8 @@ export interface IWorkbookClient {
     registryCustomFunc(f: CustomFunc): void
     registryCellUpdatedCallback(f: () => void): void
     registrySheetUpdatedCallback(f: () => void): void
+
+    getMergedCells(params: GetMergedCellsParams): Resp<readonly MergeCell[]>
 }
 
 @injectable()
@@ -89,6 +93,12 @@ export class WorkbookClient implements IWorkbookClient {
             }
             this._resolvers.delete(id)
         }
+    }
+
+    getMergedCells(params: GetMergedCellsParams): Resp<readonly MergeCell[]> {
+        return this._call(MethodName.GetMergedCells, params) as Resp<
+            readonly MergeCell[]
+        >
     }
 
     public async isReady(): Promise<void> {

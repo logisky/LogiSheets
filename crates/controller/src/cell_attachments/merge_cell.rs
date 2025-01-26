@@ -47,4 +47,18 @@ impl MergeCells {
         let end_cell = self.data.get(sheet_id)?.get(start_cell)?;
         Some((start_cell.clone(), end_cell.clone()))
     }
+
+    pub fn get_all_merged_cells(&self, sheet_id: &SheetId) -> Vec<(NormalCellId, NormalCellId)> {
+        let sheet_data = self.data.get(sheet_id);
+        if sheet_data.is_none() {
+            return vec![];
+        }
+
+        let sheet_data = sheet_data.unwrap();
+        let result = sheet_data
+            .iter()
+            .map(|(s, e)| (s.clone(), e.clone()))
+            .collect::<Vec<_>>();
+        result
+    }
 }
