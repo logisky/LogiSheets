@@ -14,6 +14,7 @@ import {
     get_all_fully_covered_blocks,
     get_sheet_dimension,
 } from '../../wasm'
+import {get_merged_cells} from '../../wasm/logisheets_wasm_server'
 import {
     BlockInfo,
     CellPosition,
@@ -25,6 +26,7 @@ import {
     Value,
     CellInfo,
     SheetDimension,
+    MergeCell,
 } from '../bindings'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
@@ -116,6 +118,22 @@ export class Worksheet {
             colIdx
         ) as Result<CellInfo>
         return cellInfo
+    }
+
+    public getMergedCells(
+        startRow: number,
+        startCol: number,
+        endRow: number,
+        endCol: number
+    ): readonly MergeCell[] {
+        return get_merged_cells(
+            this._id,
+            this._sheetIdx,
+            startRow,
+            startCol,
+            endRow,
+            endCol
+        )
     }
 
     public getCell(rowIdx: number, colIdx: number): Result<Cell> {

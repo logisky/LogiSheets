@@ -5,9 +5,10 @@ use logisheets_base::{errors::BasicError, Addr, CellId, CubeId, RangeId, SheetId
 use crate::{
     async_func_manager::AsyncFuncManager,
     calc_engine::CalcEngine,
+    cell_attachments::executor::CellAttachmentsExecutor,
     connectors::{
-        CalcConnector, ContainerConnector, CubeConnector, FormulaConnector, NavigatorConnector,
-        RangeConnector, SheetPosConnector,
+        CalcConnector, CellAttachmentsConnector, ContainerConnector, CubeConnector,
+        FormulaConnector, NavigatorConnector, RangeConnector, SheetPosConnector,
     },
     container::ContainerExecutor,
     cube_manager::executors::CubeExecutor,
@@ -100,8 +101,12 @@ impl<'a> Executor<'a> {
         let range_executor = result.execute_range(payload.clone())?;
         let cube_executor = result.execute_cube(payload.clone())?;
 
-        let (container_executor, updated) = result.execute_container(payload.clone())?;
+        let (container_executor, cell_attatchment_updated) =
+            result.execute_container(payload.clone())?;
         result.status.container = container_executor.container;
+
+        let (cell_attachments, updated) = result.execute_cell_attachments(payload.clone())?;
+        result.status.cell_attachment_manager = cell_attachments.manager;
 
         let mut dirty_ranges = range_executor.dirty_ranges;
         range_executor.removed_ranges.into_iter().for_each(|e| {
@@ -119,7 +124,7 @@ impl<'a> Executor<'a> {
         let formula_executor =
             result.execute_formula(payload, &old_navigator, dirty_ranges, dirty_cubes)?;
 
-        let cell_updated = if updated || nav_updated {
+        let cell_updated = if updated || nav_updated || cell_attatchment_updated {
             true
         } else {
             result.updated_cells.len() > 0
@@ -223,6 +228,23 @@ impl<'a> Executor<'a> {
         };
         let executor = NavExecutor::new(self.status.navigator.clone());
         executor.execute(&ctx, payload)
+    }
+
+    fn execute_cell_attachments(
+        &mut self,
+        payload: EditPayload,
+    ) -> Result<(CellAttachmentsExecutor, bool), Error> {
+        let mut ctx = CellAttachmentsConnector {
+            sheet_pos_manager: &self.status.sheet_pos_manager,
+            navigator: &self.status.navigator,
+            sheet_id_manager: &mut self.status.sheet_id_manager,
+            name_id_manager: &mut self.status.name_id_manager,
+            external_links_manager: &mut self.status.external_links_manager,
+            func_id_manager: &mut self.status.func_id_manager,
+            text_id_manager: &mut self.status.text_id_manager,
+        };
+        let executor = CellAttachmentsExecutor::new(self.status.cell_attachment_manager.clone());
+        executor.execute(&mut ctx, payload)
     }
 
     fn execute_container(

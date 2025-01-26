@@ -162,10 +162,10 @@ pub struct SheetComments {
     gents_derives::gents_header(file_name = "merge_cell.ts")
 )]
 pub struct MergeCell {
-    pub row_start: usize,
-    pub col_start: usize,
-    pub row_end: usize,
-    pub col_end: usize,
+    pub start_row: usize,
+    pub start_col: usize,
+    pub end_row: usize,
+    pub end_col: usize,
 }
 
 #[derive(Debug, Clone)]

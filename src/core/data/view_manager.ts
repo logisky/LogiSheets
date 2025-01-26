@@ -210,31 +210,40 @@ export function parseDisplayWindow(
         }
     }
 
-    window.window.mergeCells.forEach((m) => {
-        let s: RenderCell | undefined
-        for (const i in cells) {
-            const cell = cells[i]
-            if (
-                cell.coordinate.startRow == m.rowStart &&
-                cell.coordinate.startCol == m.colStart
-            ) {
-                s = cell
-            } else if (
-                cell.coordinate.endRow == m.rowEnd &&
-                cell.coordinate.endCol == m.colEnd
-            ) {
-                if (s) s.setPosition(cell.position)
-                return
-            } else if (
-                cell.coordinate.endRow < m.rowEnd &&
-                cell.coordinate.endCol < m.colEnd &&
-                cell.coordinate.startRow > m.rowStart &&
-                cell.coordinate.startCol > m.colStart
-            ) {
-                cell.skipRender = true
-            }
-        }
+    const mergeCells = window.window.mergeCells.map((m) => {
+        const masterIdx = locate(cols.length, m.startRow, m.startCol)
+        const masterCell = cells[masterIdx]
+
+        const endIdx = locate(cols.length, m.endRow, m.endCol)
+        const endCell = cells[endIdx]
+
+        const coordinate = getRange()
+            .setStartRow(masterCell.coordinate.startRow)
+            .setStartCol(masterCell.coordinate.startCol)
+            .setEndRow(endCell.coordinate.endRow)
+            .setEndCol(endCell.coordinate.endCol)
+        const position = getRange()
+            .setStartRow(masterCell.position.startRow)
+            .setStartCol(masterCell.position.startCol)
+            .setEndRow(endCell.position.endRow)
+            .setEndCol(endCell.position.endCol)
+
+        const renderCell = getRenderCell()
+            .setPosition(position)
+            .setCoordinate(coordinate)
+            .setStandardCell(masterCell.info)
+        return renderCell
     })
 
-    return new CellViewData(rows, cols, cells, window.window.comments)
+    return new CellViewData(
+        rows,
+        cols,
+        cells,
+        mergeCells,
+        window.window.comments
+    )
+}
+
+function locate(colCnt: number, row: number, col: number): number {
+    return row * colCnt + col
 }

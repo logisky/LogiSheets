@@ -25,6 +25,8 @@ import {SetLinePatternFill} from './set_line_pattern_fill'
 import {SetRowHeight} from './set_row_height'
 import {SetRowVisible} from './set_row_visible'
 import {SheetRename} from './sheet_rename'
+import {MergeCells} from './merge_cells'
+import {SplitMergedCells} from './split_merged_cells'
 
 export * from './block_input'
 export * from './cell_clear'
@@ -53,6 +55,8 @@ export * from './set_line_pattern_fill'
 export * from './set_row_height'
 export * from './set_row_visible'
 export * from './sheet_rename'
+export * from './merge_cells'
+export * from './split_merged_cells'
 
 export type Payload =
     | BlockInput
@@ -82,3 +86,5 @@ export type Payload =
     | SheetRename
     | SetLinePatternFill
     | SetCellPatternFill
+    | MergeCells
+    | SplitMergedCells

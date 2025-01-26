@@ -8,6 +8,7 @@ import {
     Cell,
     BlockInfo,
     SheetDimension,
+    MergeCell,
 } from 'logisheets-web'
 import {CellViewResponse, ViewManager} from './view_manager'
 import {CellView} from './types'
@@ -54,10 +55,17 @@ export interface DataService {
     getSheetDimension(sheetIdx: number): Resp<SheetDimension>
 
     hasCellView(): boolean
-    getCurrentCellView(sheetIdx: number): CellView
 
     getCurrentSheetIdx(): number
     setCurrentSheetIdx(idx: number): void
+
+    getMergedCells(
+        sheetIdx: number,
+        targetStartRow: number,
+        targetStartCol: number,
+        targetEndRow: number,
+        targetEndCol: number
+    ): Resp<readonly MergeCell[]>
 
     getAllSheetInfo(): Resp<readonly SheetInfo[]>
     getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell>
@@ -71,6 +79,21 @@ export class DataServiceImpl implements DataService {
         @inject(TYPES.Pool) private _pool: Pool
     ) {
         this._init()
+    }
+    getMergedCells(
+        sheetIdx: number,
+        targetStartRow: number,
+        targetStartCol: number,
+        targetEndRow: number,
+        targetEndCol: number
+    ): Resp<readonly MergeCell[]> {
+        return this._workbook.getMergedCells({
+            startRow: targetStartRow,
+            endRow: targetEndRow,
+            startCol: targetStartCol,
+            endCol: targetEndCol,
+            sheetIdx,
+        })
     }
     hasCellView(): boolean {
         return this._cellViews.has(this.getCurrentSheetIdx())
@@ -140,14 +163,6 @@ export class DataServiceImpl implements DataService {
 
     public redo(): Resp<void> {
         return this._workbook.redo()
-    }
-
-    public getCurrentCellView(sheetIdx: number): CellView {
-        const cacheManager = this._cellViews.get(sheetIdx)
-        if (cacheManager) {
-            return new CellView(cacheManager.dataChunks)
-        }
-        throw Error('trying to get cell view before rendering a sheet')
     }
 
     public getCellViewWithCell(

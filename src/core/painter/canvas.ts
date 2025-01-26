@@ -105,6 +105,10 @@ export class CanvasApi {
         this._ctx.fillRect(x, y, w, h)
     }
 
+    clearRect(x: number, y: number, w: number, h: number) {
+        this._ctx.clearRect(x, y, w, h)
+    }
+
     strokeRect(x: number, y: number, w: number, h: number) {
         this._ctx.strokeRect(this._npxLine(x), this._npxLine(y), w, h)
     }

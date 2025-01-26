@@ -10,6 +10,7 @@ import {
     DisplayWindowWithStartPoint,
     ErrorMessage,
     initWasm,
+    MergeCell,
     SheetDimension,
     SheetInfo,
     Workbook,
@@ -21,6 +22,7 @@ import {
     GetDisplayWindowParams,
     GetDisplayWindowWithPositionParams,
     GetFullyCoveredBlocksParams,
+    GetMergedCellsParams,
     HandleTransactionParams,
     LoadWorkbookParams,
     MethodName,
@@ -76,6 +78,18 @@ class WorkerService implements IWorkbookWorker {
             params.col,
             params.height,
             params.width
+        )
+    }
+
+    public getMergedCells(
+        params: GetMergedCellsParams
+    ): Result<readonly MergeCell[]> {
+        const ws = this.getSheet(params.sheetIdx)
+        return ws.getMergedCells(
+            params.startRow,
+            params.startCol,
+            params.endRow,
+            params.endCol
         )
     }
 
@@ -190,6 +204,9 @@ class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetSheetDimension:
                 result = this.getSheetDimension(args)
+                break
+            case MethodName.GetMergedCells:
+                result = this.getMergedCells(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

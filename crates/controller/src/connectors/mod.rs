@@ -1,4 +1,5 @@
 mod calc_connector;
+mod cell_attachments_connector;
 mod container_connector;
 mod cube_connector;
 mod formula_connector;
@@ -10,6 +11,7 @@ mod range_connector;
 mod sheet_pos_connector;
 
 pub use calc_connector::CalcConnector;
+pub use cell_attachments_connector::CellAttachmentsConnector;
 pub use container_connector::ContainerConnector;
 pub use cube_connector::CubeConnector;
 pub use formula_connector::FormulaConnector;

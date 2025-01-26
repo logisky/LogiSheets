@@ -40,6 +40,10 @@ export class RenderCell {
         this.info = c
         return this
     }
+    setStandardCell(info?: StandardCell): this {
+        this.info = info
+        return this
+    }
 
     reset() {
         this.hidden = false

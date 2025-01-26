@@ -172,13 +172,18 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 return
 
             let data: SelectedData
-            const {startRow, startCol} = store.startCell.coordinate
+            const {
+                startRow,
+                startCol,
+                endRow: startEndRow,
+                endCol: startEndCol,
+            } = store.startCell.coordinate
             const endRow = store.endCell
-                ? store.endCell.coordinate.startRow
-                : startRow
+                ? store.endCell.coordinate.endRow
+                : startEndRow
             const endCol = store.endCell
-                ? store.endCell.coordinate.startCol
-                : startCol
+                ? store.endCell.coordinate.endCol
+                : startEndCol
             if (store.startCell?.type === 'FixedLeftHeader') {
                 data = buildSelectedDataFromLines(
                     startRow,
@@ -194,19 +199,17 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     'none'
                 )
             } else if (store.startCell?.type === 'Cell') {
-                if (store.endCell?.type === 'Cell') {
-                    const {startRow: endRow, startCol: endCol} =
-                        store.endCell.coordinate
-                    data = buildSelectedDataFromCellRange(
-                        startRow,
-                        startCol,
-                        endRow,
-                        endCol,
-                        'none'
-                    )
-                } else {
-                    data = buildSelectedDataFromCell(startRow, startCol, 'none')
-                }
+                const {endRow: endRow, endCol: endCol} =
+                    store.endCell?.type === 'Cell'
+                        ? store.endCell.coordinate
+                        : store.startCell.coordinate
+                data = buildSelectedDataFromCellRange(
+                    startRow,
+                    startCol,
+                    endRow,
+                    endCol,
+                    'none'
+                )
             } else {
                 return
             }
