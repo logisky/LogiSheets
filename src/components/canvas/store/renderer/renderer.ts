@@ -8,8 +8,7 @@ import {isFullyCovered, Rect} from './types'
 import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardStyle} from '@/core/standable/style'
 import {isErrorMessage, PatternFill} from 'logisheets-web'
-import {Cell, CellType} from '../../defs'
-import {MergeCell} from 'packages/web'
+import {Cell} from '../../defs'
 
 export const CANVAS_ID = simpleUuid()
 const BUFFER_SIZE = 50

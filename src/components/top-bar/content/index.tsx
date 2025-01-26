@@ -40,8 +40,8 @@ import {
     MergeCell,
     MergeCellsBuilder,
     Payload,
+    SplitMergedCellsBuilder,
 } from 'logisheets-web'
-import {SplitMergedCellsBuilder} from 'packages/web'
 
 export * from './font-size'
 export * from './start-item'
