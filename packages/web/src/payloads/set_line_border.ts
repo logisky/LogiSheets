@@ -1,9 +1,10 @@
 import {StBorderStyle} from '../bindings'
-export interface SetBorder {
-    readonly type: 'setBorder'
+
+export interface SetLineBorder {
+    readonly type: 'setLineBorder'
     readonly sheetIdx: number
-    readonly row: number
-    readonly col: number
+    readonly line: number
+    readonly row: boolean
     readonly leftColor?: string
     readonly rightColor?: string
     readonly topColor?: string
@@ -17,10 +18,10 @@ export interface SetBorder {
     readonly diagonalDown?: boolean
 }
 
-export class SetBorderBuilder {
+export class SetLineBorderBuilder {
     private _sheetIdx?: number
-    private _row?: number
-    private _col?: number
+    private _row?: boolean
+    private _line?: number
     private _leftColor?: string
     private _rightColor?: string
     private _topColor?: string
@@ -32,71 +33,75 @@ export class SetBorderBuilder {
     private _outline?: boolean
     private _diagonalUp?: boolean
     private _diagonalDown?: boolean
+
     public sheetIdx(sheetIdx: number): this {
         this._sheetIdx = sheetIdx
         return this
     }
-    public row(row: number): this {
-        this._row = row
+
+    public row(v: boolean): this {
+        this._row = v
         return this
     }
-    public col(col: number): this {
-        this._col = col
+
+    public line(v: number): this {
+        this._line = v
         return this
     }
-    public leftColor(leftColor: string): this {
-        this._leftColor = leftColor
+    public leftColor(v: string): this {
+        this._leftColor = v
         return this
     }
-    public rightColor(rightColor: string): this {
-        this._rightColor = rightColor
+    public rightColor(v: string): this {
+        this._rightColor = v
         return this
     }
-    public topColor(topColor: string): this {
-        this._topColor = topColor
+    public topColor(v: string): this {
+        this._topColor = v
         return this
     }
-    public bottomColor(bottomColor: string): this {
-        this._bottomColor = bottomColor
+    public bottomColor(v: string): this {
+        this._bottomColor = v
         return this
     }
-    public leftBorderType(leftBorderType: StBorderStyle): this {
-        this._leftBorderType = leftBorderType
+    public leftBorderType(v: StBorderStyle): this {
+        this._leftBorderType = v
         return this
     }
-    public rightBorderType(rightBorderType: StBorderStyle): this {
-        this._rightBorderType = rightBorderType
+    public rightBorderType(v: StBorderStyle): this {
+        this._rightBorderType = v
         return this
     }
-    public topBorderType(topBorderType: StBorderStyle): this {
-        this._topBorderType = topBorderType
+    public topBorderType(v: StBorderStyle): this {
+        this._topBorderType = v
         return this
     }
-    public bottomBorderType(bottomBorderType: StBorderStyle): this {
-        this._bottomBorderType = bottomBorderType
+    public bottomBorderType(v: StBorderStyle): this {
+        this._bottomBorderType = v
         return this
     }
-    public outline(outline: boolean): this {
-        this._outline = outline
+    public outline(v: boolean): this {
+        this._outline = v
         return this
     }
-    public diagonalUp(diagonalUp: boolean): this {
-        this._diagonalUp = diagonalUp
+    public diagonalUp(v: boolean): this {
+        this._diagonalUp = v
         return this
     }
-    public diagonalDown(diagonalDown: boolean): this {
-        this._diagonalDown = diagonalDown
+    public diagonalDown(v: boolean): this {
+        this._diagonalDown = v
         return this
     }
-    public build(): SetBorder {
-        if (this._sheetIdx === undefined) throw Error('sheetIdx is undefined')
-        if (this._row === undefined) throw Error('row is undefined!')
-        if (this._col === undefined) throw Error('col is undefined!')
+
+    public build(): SetLineBorder {
+        if (this._sheetIdx === undefined) throw Error('sheetIdx is undefined!')
+        if (this._line === undefined) throw Error('line is undefined')
+        if (this._row === undefined) throw Error('row is undefined')
         return {
-            type: 'setBorder',
+            type: 'setLineBorder',
             sheetIdx: this._sheetIdx,
+            line: this._line,
             row: this._row,
-            col: this._col,
             leftColor: this._leftColor,
             rightColor: this._rightColor,
             topColor: this._topColor,

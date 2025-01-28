@@ -12,22 +12,24 @@ import {InsertBlockRows} from './insert_block_rows'
 import {InsertCols} from './insert_cols'
 import {InsertRows} from './insert_rows'
 import {InsertSheet} from './insert_sheet'
+import {MergeCells} from './merge_cells'
 import {MoveBlock} from './move_block'
-import {SetBorder} from './set_border'
 import {SetCellAlignment} from './set_cell_alignment'
+import {SetCellBorder} from './set_cell_border'
 import {SetCellFont} from './set_cell_font'
 import {SetCellPatternFill} from './set_cell_pattern_fill'
 import {SetColVisible} from './set_col_visible'
 import {SetColWidth} from './set_col_width'
 import {SetLineAlignment} from './set_line_alignment'
+import {SetLineBorder} from './set_line_border'
 import {SetLineFont} from './set_line_font'
 import {SetLinePatternFill} from './set_line_pattern_fill'
 import {SetRowHeight} from './set_row_height'
 import {SetRowVisible} from './set_row_visible'
 import {SheetRename} from './sheet_rename'
-import {MergeCells} from './merge_cells'
 import {SplitMergedCells} from './split_merged_cells'
 
+export * from './set_line_border'
 export * from './block_input'
 export * from './cell_clear'
 export * from './cell_input'
@@ -43,7 +45,7 @@ export * from './insert_cols'
 export * from './insert_rows'
 export * from './insert_sheet'
 export * from './move_block'
-export * from './set_border'
+export * from './set_cell_border'
 export * from './set_cell_alignment'
 export * from './set_cell_font'
 export * from './set_cell_pattern_fill'
@@ -74,7 +76,7 @@ export type Payload =
     | InsertRows
     | InsertSheet
     | MoveBlock
-    | SetBorder
+    | SetCellBorder
     | SetCellAlignment
     | SetCellFont
     | SetColVisible
@@ -88,3 +90,4 @@ export type Payload =
     | SetCellPatternFill
     | MergeCells
     | SplitMergedCells
+    | SetLineBorder

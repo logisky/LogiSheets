@@ -180,7 +180,7 @@ export class Workbook {
                 p.newMasterRow,
                 p.newMasterCol
             )
-        if (p.type === 'setBorder')
+        if (p.type === 'setCellBorder')
             return set_border(
                 this._id,
                 p.sheetIdx,

@@ -10,6 +10,7 @@ import {StandardStyle} from '@/core/standable/style'
 import {isErrorMessage, PatternFill} from 'logisheets-web'
 import {Cell, CellType} from '../../defs'
 import {MergeCell} from 'packages/web'
+import {BorderHelper} from './border_helper'
 
 export const CANVAS_ID = simpleUuid()
 const BUFFER_SIZE = 50
@@ -74,7 +75,7 @@ export class Renderer {
             const anchorX = Math.max(resp.request.startX, 0)
             const anchorY = Math.max(resp.request.startY, 0)
             this._renderContent(resp.data, anchorX, anchorY)
-            this._renderGrid(resp.data, anchorX, anchorY)
+            this._renderGrid(resp.data)
             this._renderMergeCells(resp.data, anchorX, anchorY)
             this._painter.setCanvas(this.canvas)
         }
@@ -265,25 +266,6 @@ export class Renderer {
         }
     }
 
-    private _border(box: Box, position: Range, style?: StandardStyle) {
-        const border = style?.border
-        if (!border) return
-        if (border.top) this._painter.border(border.top, box, 'top')
-        if (border.bottom) this._painter.border(border.bottom, box, 'bottom')
-        if (border.left) this._painter.border(border.left, box, 'left')
-        if (border.right) this._painter.border(border.right, box, 'right')
-        if (border.diagonalDown)
-            this._painter.line([
-                [position.startCol, position.startRow],
-                [position.endCol, position.endRow],
-            ])
-        if (border.diagonalUp)
-            this._painter.line([
-                [position.startCol, position.endRow],
-                [position.endCol, position.startRow],
-            ])
-    }
-
     private _renderMergeCells(
         data: CellView,
         anchorX: number,
@@ -294,37 +276,22 @@ export class Renderer {
         })
     }
 
-    private _renderGrid(data: CellView, anchorX: number, anchorY: number) {
-        const {grid} = SETTINGS
-        this._painter.save()
-        const attr = new CanvasAttr()
-        attr.lineWidth = grid.lineWidth
-        this._painter.attr(attr)
-        const canvas = this._painter.canvas()
-        if (!canvas)
-            throw Error('attempting to render grid on an undefined canvas')
-
-        const height = canvas.height
-        const width = canvas.width
-        if (grid.showHorizontal)
-            data.rows.forEach((r) => {
-                const y = r.position.startRow - anchorY
-                if (y <= 0) return
-                this._painter.line([
-                    [0, y],
-                    [width, y],
-                ])
+    private _renderGrid(data: CellView) {
+        const borderHelper = new BorderHelper(data)
+        for (let row = data.fromRow; row <= data.toRow; row++) {
+            const border = borderHelper.generateRowBorder(row)
+            border.forEach((b) => {
+                if (!b.pr) return
+                this._painter.borderLine(b.pr, true, b.start, b.from, b.to)
             })
-        if (grid.showVertical)
-            data.cols.forEach((c) => {
-                const x = c.position.startCol - anchorX
-                if (x <= 0) return
-                this._painter.line([
-                    [x, 0],
-                    [x, height],
-                ])
+        }
+        for (let col = data.fromCol; col <= data.toCol; col++) {
+            const border = borderHelper.generateColBorder(col)
+            border.forEach((b) => {
+                if (!b.pr) return
+                this._painter.borderLine(b.pr, false, b.start, b.from, b.to)
             })
-        this._painter.restore()
+        }
     }
 
     // private _comment(box: Box, comment: Comment | undefined) {
@@ -377,7 +344,6 @@ export class Renderer {
             )
         }
         this._fill(box, style)
-        this._border(box, position, style)
         if (info) {
             this._text(box, info)
             // this._comment(box, info)

@@ -46,4 +46,5 @@ export type {
     Task,
     Value,
     VerticalAlignment,
+    StBorderStyle,
 } from './bindings'
