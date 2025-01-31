@@ -46,8 +46,13 @@ export class PainterService extends CanvasApi {
         this.restore()
     }
 
-    border(border: BorderPr, box: Box, type: Direction) {
-        this.save()
+    borderLine(
+        border: BorderPr,
+        horizontal: boolean,
+        start: number,
+        from: number,
+        to: number
+    ) {
         const stdColor = StandardColor.fromCtColor(border.color)
         const dot = npx(1)
         const hair = dot / 2
@@ -56,6 +61,7 @@ export class PainterService extends CanvasApi {
         const mediumLine = npx(2) - 0.5
         const thickLine = npx(3)
         const segments = []
+
         const borderAttr = new CanvasAttr()
         borderAttr.strokeStyle = stdColor.css()
         borderAttr.lineWidth = thinLine
@@ -105,46 +111,19 @@ export class PainterService extends CanvasApi {
         }
         if (segments.length) this.setLineDash(segments)
         this.attr(borderAttr)
-        const {startRow, startCol, endRow, endCol} = box.position
-        const isDouble = border.style === 'double'
-        switch (type) {
-            case 'top':
-                this.line([
-                    [startCol, startRow],
-                    [endCol, startRow],
-                ])
-                break
-            case 'right':
-                this.line([
-                    [endCol, startRow],
-                    [endCol, endRow],
-                ])
-                break
-            case 'bottom':
-                if (isDouble) {
-                    this.line([
-                        [startCol, endRow - 2],
-                        [endCol, endRow - 2],
-                    ])
-                    this.line([
-                        [startCol, endRow],
-                        [endCol, endRow],
-                    ])
-                } else
-                    this.line([
-                        [startCol, endRow],
-                        [endCol, endRow],
-                    ])
-                break
-            case 'left':
-                this.line([
-                    [startCol, startRow],
-                    [startCol, endRow],
-                ])
-                break
-            default:
+        if (horizontal) {
+            this.line([
+                [from, start],
+                [to, start],
+            ])
+        } else {
+            this.line([
+                [start, from],
+                [start, to],
+            ])
         }
         this.restore()
+        return
     }
 
     public text(txt: string, attr: TextAttr, box: Box): void {

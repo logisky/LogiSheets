@@ -54,13 +54,17 @@ impl BorderManager {
         macro_rules! update_border_style {
             ($payload_pr:ident, $pr:ident) => {
                 if let Some(s) = &update_type.$payload_pr {
-                    match &mut border.$pr {
-                        Some(pr) => pr.style = s.clone(),
-                        None => {
-                            border.$pr = Some(CtBorderPr {
-                                color: None,
-                                style: s.clone(),
-                            })
+                    if *s == StBorderStyle::None {
+                        border.$pr = None;
+                    } else {
+                        match &mut border.$pr {
+                            Some(pr) => pr.style = s.clone(),
+                            None => {
+                                border.$pr = Some(CtBorderPr {
+                                    color: None,
+                                    style: s.clone(),
+                                })
+                            }
                         }
                     }
                 }

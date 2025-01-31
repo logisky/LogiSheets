@@ -22,6 +22,7 @@ import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft'
 import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter'
 import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight'
 import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify'
+import BorderClearIcon from '@mui/icons-material/BorderClear'
 import MergeTypeIcon from '@mui/icons-material/MergeType'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
@@ -42,6 +43,8 @@ import {
     Payload,
 } from 'logisheets-web'
 import {SplitMergedCellsBuilder} from 'packages/web'
+import {BorderSettingComponent} from './border-setting'
+import {Tooltip} from '@mui/material'
 
 export * from './font-size'
 export * from './start-item'
@@ -64,6 +67,8 @@ export const StartComponent = ({selectedData}: StartProps) => {
     const [alignment, setAlignment] = useState<string | null>(null)
 
     const [mergedOn, setMergedOn] = useState<boolean | null>(null)
+
+    const [borderSettingOn, setBorderSettingOn] = useState<boolean>(false)
 
     let mergedCells: readonly MergeCell[] = []
 
@@ -405,7 +410,9 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 selected={mergedOn === null ? undefined : mergedOn}
                 onClick={onMergeOrSplitClick}
             >
-                <MergeTypeIcon />
+                <Tooltip title="Merge Cells">
+                    <MergeTypeIcon />
+                </Tooltip>
             </ToggleButton>
             <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
             <ToggleButtonGroup
@@ -429,6 +436,15 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 </ToggleButton> */}
             </ToggleButtonGroup>
             <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
+            <ToggleButton
+                value="border"
+                aria-label="border"
+                size="small"
+                disabled={selectedData === undefined}
+                onClick={() => setBorderSettingOn(!borderSettingOn)}
+            >
+                <BorderClearIcon />
+            </ToggleButton>
             <Modal
                 isOpen={colorPicking !== ''}
                 shouldCloseOnEsc={true}
@@ -449,6 +465,27 @@ export const StartComponent = ({selectedData}: StartProps) => {
                     }
                     onChangeComplete={onColorPick}
                     className={styles['color-picker']}
+                />
+            </Modal>
+            <Modal
+                isOpen={borderSettingOn}
+                shouldCloseOnEsc={true}
+                shouldCloseOnOverlayClick={true}
+                className={styles['modal-content']}
+                overlayClassName={styles['modal-overlay']}
+                onRequestClose={() => setBorderSettingOn(false)}
+                style={{
+                    content: {
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                    },
+                }}
+                ariaHideApp={false}
+            >
+                <BorderSettingComponent
+                    selectedData={selectedData}
+                    close={() => setBorderSettingOn(false)}
                 />
             </Modal>
         </div>

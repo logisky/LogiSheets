@@ -1,4 +1,8 @@
-import {SelectedData} from '@/components/canvas'
+import {
+    getSelectedCellRange,
+    getSelectedLines,
+    SelectedData,
+} from '@/components/canvas'
 import {
     Alignment,
     Payload,
@@ -9,6 +13,9 @@ import {
     SetLineFontBuilder,
     SetLinePatternFillBuilder,
     StPatternType,
+    StBorderStyle,
+    SetCellBorderBuilder,
+    SetLineBorderBuilder,
 } from 'logisheets-web'
 
 export interface FontStyle {
@@ -135,4 +142,481 @@ export function generatePatternFillPayload(
     const p = builder.build()
     result.push(p)
     return result
+}
+
+type Direction = 'top' | 'bottom' | 'left' | 'right'
+
+export type BatchUpdateType =
+    | 'all'
+    | 'top'
+    | 'bottom'
+    | 'left'
+    | 'right'
+    | 'horizontal'
+    | 'vertical'
+    | 'outer'
+    | 'inner'
+    | 'clear'
+
+export interface BorderBatchUpdate {
+    batch: BatchUpdateType
+    color?: string
+    borderType?: StBorderStyle
+}
+
+export interface BorderUpdate {
+    direction: Direction
+    color?: string
+    borderType?: StBorderStyle
+}
+
+export function generateBorderPayloads(
+    sheetIdx: number,
+    data: SelectedData,
+    update: BorderBatchUpdate
+): readonly Payload[] {
+    if (update.color) {
+        if (update.color.startsWith('#')) {
+            update.color = update.color.slice(1)
+        }
+        update.color = update.color.toUpperCase()
+    }
+    const cellRange = getSelectedCellRange(data)
+    if (cellRange) {
+        return generateBorderBatchCellPayload(
+            sheetIdx,
+            cellRange.startRow,
+            cellRange.endRow,
+            cellRange.startCol,
+            cellRange.endCol,
+            update
+        )
+    }
+    return generateBorderBatchLinePayload(sheetIdx, data, update)
+}
+
+function generateBorderBatchLinePayload(
+    sheetIdx: number,
+    data: SelectedData,
+    update: BorderBatchUpdate
+): readonly Payload[] {
+    const lineRange = getSelectedLines(data)
+    if (!lineRange) return []
+    const result: Payload[] = []
+    const drawLeftBorder = () => {
+        result.push(
+            ...generateLineDoubleBorderPayload(
+                sheetIdx,
+                lineRange.start,
+                lineRange.type === 'row',
+                {
+                    direction: 'left',
+                    color: update.color,
+                    borderType: update.borderType,
+                }
+            )
+        )
+    }
+    const drawRightBorder = () => {
+        result.push(
+            ...generateLineDoubleBorderPayload(
+                sheetIdx,
+                lineRange.end,
+                lineRange.type === 'row',
+                {
+                    direction: 'right',
+                    color: update.color,
+                    borderType: update.borderType,
+                }
+            )
+        )
+    }
+
+    const drawTopBorder = () => {
+        result.push(
+            ...generateLineDoubleBorderPayload(
+                sheetIdx,
+                lineRange.start,
+                lineRange.type === 'row',
+                {
+                    direction: 'top',
+                    color: update.color,
+                    borderType: update.borderType,
+                }
+            )
+        )
+    }
+
+    const drawBottomBorder = () => {
+        result.push(
+            ...generateLineDoubleBorderPayload(
+                sheetIdx,
+                lineRange.end,
+                lineRange.type === 'row',
+                {
+                    direction: 'bottom',
+                    color: update.color,
+                    borderType: update.borderType,
+                }
+            )
+        )
+    }
+
+    const position = ['top', 'bottom', 'left', 'right']
+    const drawInnerBorder = () => {
+        for (let i = lineRange.start + 1; i <= lineRange.end - 1; i += 1) {
+            position.forEach((p) => {
+                result.push(
+                    generateLineSingleBorderPayload(
+                        sheetIdx,
+                        i,
+                        lineRange.type === 'row',
+                        {
+                            direction: p as Direction,
+                            color: update.color,
+                            borderType: update.borderType,
+                        }
+                    )
+                )
+            })
+        }
+    }
+
+    switch (update.batch) {
+        case 'all':
+            drawInnerBorder()
+            drawTopBorder()
+            drawBottomBorder()
+            drawLeftBorder()
+            drawRightBorder()
+            break
+        case 'top':
+            if (lineRange.type === 'col') {
+                return []
+            }
+            drawTopBorder()
+            break
+        case 'bottom':
+            if (lineRange.type === 'col') {
+                return []
+            }
+            drawBottomBorder()
+            break
+        case 'left':
+            if (lineRange.type === 'row') {
+                return []
+            }
+            drawLeftBorder()
+            break
+        case 'right':
+            if (lineRange.type === 'row') {
+                return []
+            }
+            drawRightBorder()
+            break
+        case 'horizontal':
+            drawInnerBorder()
+            break
+        case 'vertical':
+            drawInnerBorder()
+            break
+        case 'outer':
+            drawTopBorder()
+            drawBottomBorder()
+            drawLeftBorder()
+            drawRightBorder()
+            break
+        case 'inner':
+            drawInnerBorder()
+            break
+        case 'clear':
+            for (let i = lineRange.start; i <= lineRange.end; i += 1) {
+                position.forEach((d) => {
+                    result.push(
+                        ...generateLineDoubleBorderPayload(
+                            sheetIdx,
+                            i,
+                            lineRange.type === 'row',
+                            {
+                                direction: d as Direction,
+                                borderType: 'none',
+                            }
+                        )
+                    )
+                })
+            }
+    }
+    return result
+}
+
+function generateBorderBatchCellPayload(
+    sheetIdx: number,
+    fromRow: number,
+    toRow: number,
+    fromCol: number,
+    toCol: number,
+    update: BorderBatchUpdate
+): readonly Payload[] {
+    const payloads: Payload[] = []
+    const drawLeftBorder = () => {
+        for (let i = fromRow; i <= toRow; i += 1) {
+            payloads.push(
+                ...generateDoubleBorderPayload(sheetIdx, i, fromCol, {
+                    direction: 'left',
+                    color: update.color,
+                    borderType: update.borderType,
+                })
+            )
+        }
+    }
+    const drawRightBorder = () => {
+        for (let i = fromRow; i <= toRow; i += 1) {
+            payloads.push(
+                ...generateDoubleBorderPayload(sheetIdx, i, toCol, {
+                    direction: 'right',
+                    color: update.color,
+                    borderType: update.borderType,
+                })
+            )
+        }
+    }
+    const drawTopBorder = () => {
+        for (let j = fromCol; j <= toCol; j += 1) {
+            payloads.push(
+                ...generateDoubleBorderPayload(sheetIdx, fromRow, j, {
+                    direction: 'top',
+                    color: update.color,
+                    borderType: update.borderType,
+                })
+            )
+        }
+    }
+    const drawBottomBorder = () => {
+        for (let j = fromCol; j <= toCol; j += 1) {
+            payloads.push(
+                ...generateDoubleBorderPayload(sheetIdx, toRow, j, {
+                    direction: 'bottom',
+                    color: update.color,
+                    borderType: update.borderType,
+                })
+            )
+        }
+    }
+
+    const drawInnerBorder = (type: 'vertical' | 'horizontal' | 'all') => {
+        for (let i = fromRow; i <= toRow; i += 1) {
+            for (let j = fromCol; j <= toCol; j += 1) {
+                if (j < toCol && (type === 'vertical' || type === 'all')) {
+                    payloads.push(
+                        ...generateDoubleBorderPayload(sheetIdx, i, j, {
+                            direction: 'right',
+                            color: update.color,
+                            borderType: update.borderType,
+                        })
+                    )
+                }
+                if (i < toRow && (type === 'horizontal' || type === 'all')) {
+                    payloads.push(
+                        ...generateDoubleBorderPayload(sheetIdx, i, j, {
+                            direction: 'bottom',
+                            color: update.color,
+                            borderType: update.borderType,
+                        })
+                    )
+                }
+            }
+        }
+    }
+
+    switch (update.batch) {
+        case 'all':
+            drawLeftBorder()
+            drawRightBorder()
+            drawTopBorder()
+            drawBottomBorder()
+            drawInnerBorder('all')
+            break
+        case 'top':
+            drawTopBorder()
+            break
+        case 'bottom':
+            drawBottomBorder()
+            break
+        case 'left':
+            drawLeftBorder()
+            break
+        case 'right':
+            drawRightBorder()
+            break
+        case 'horizontal':
+            drawInnerBorder('horizontal')
+            break
+        case 'vertical':
+            drawInnerBorder('vertical')
+            break
+        case 'outer':
+            drawLeftBorder()
+            drawRightBorder()
+            drawTopBorder()
+            drawBottomBorder()
+            break
+        case 'inner':
+            drawInnerBorder('all')
+            break
+        case 'clear':
+    }
+    return payloads
+}
+
+function generateLineDoubleBorderPayload(
+    sheetIdx: number,
+    line: number,
+    row: boolean,
+    update: BorderUpdate
+): Payload[] {
+    const result: Payload[] = []
+    result.push(
+        generateLineSingleBorderPayload(sheetIdx, line, row, {
+            direction: 'bottom',
+            color: update.color,
+            borderType: update.borderType,
+        })
+    )
+    let direction: Direction
+    if (row) {
+        direction = 'top'
+    } else {
+        direction = 'left'
+    }
+    const op = direction === 'top' ? 'bottom' : 'right'
+    if (line - 1 >= 0) {
+        result.push(
+            generateLineSingleBorderPayload(sheetIdx, line - 1, row, {
+                direction: op,
+                color: update.color,
+                borderType: 'none',
+            })
+        )
+    }
+    return result
+}
+
+function generateLineSingleBorderPayload(
+    sheetIdx: number,
+    line: number,
+    row: boolean,
+    update: BorderUpdate
+): Payload {
+    const builder = new SetLineBorderBuilder()
+        .sheetIdx(sheetIdx)
+        .line(line)
+        .row(row)
+    switch (update.direction) {
+        case 'bottom':
+            if (!row) throw Error('can not set a bottom border for columns')
+            if (update.color) builder.bottomColor(update.color)
+            if (update.borderType) builder.bottomBorderType(update.borderType)
+            break
+        case 'top':
+            if (update.color) builder.topColor(update.color)
+            if (update.borderType) builder.topBorderType(update.borderType)
+            break
+        case 'left':
+            if (update.color) builder.leftColor(update.color)
+            if (update.borderType) builder.leftBorderType(update.borderType)
+            break
+        case 'right':
+            if (row) throw Error('can not set a right border for rows')
+            if (update.color) builder.rightColor(update.color)
+            if (update.borderType) builder.rightBorderType(update.borderType)
+            break
+    }
+    return builder.build()
+}
+
+function generateDoubleBorderPayload(
+    sheetIdx: number,
+    row: number,
+    col: number,
+    update: BorderUpdate
+): readonly Payload[] {
+    const payload = generateSingleBorderPayload(sheetIdx, row, col, update)
+    let clear: Payload | undefined
+    switch (update.direction) {
+        case 'bottom':
+            clear = getClearBorderPayload(sheetIdx, row + 1, col, 'top')
+            break
+        case 'top':
+            if (row - 1 >= 0)
+                clear = getClearBorderPayload(sheetIdx, row - 1, col, 'bottom')
+            break
+        case 'left':
+            if (col - 1 >= 0)
+                clear = getClearBorderPayload(sheetIdx, row, col - 1, 'right')
+            break
+        case 'right':
+            clear = getClearBorderPayload(sheetIdx, row, col + 1, 'left')
+            break
+    }
+    const result: Payload[] = [payload]
+    if (clear) result.push(clear)
+    return result
+}
+
+function generateSingleBorderPayload(
+    sheetIdx: number,
+    row: number,
+    col: number,
+    update: BorderUpdate
+): Payload {
+    const builder = new SetCellBorderBuilder()
+        .sheetIdx(sheetIdx)
+        .row(row)
+        .col(col)
+    switch (update.direction) {
+        case 'bottom':
+            if (update.color) builder.bottomColor(update.color)
+            if (update.borderType) builder.bottomBorderType(update.borderType)
+            break
+        case 'top':
+            if (update.color) builder.topColor(update.color)
+            if (update.borderType) builder.topBorderType(update.borderType)
+            break
+        case 'left':
+            if (update.color) builder.leftColor(update.color)
+            if (update.borderType) builder.leftBorderType(update.borderType)
+            break
+        case 'right':
+            if (update.color) builder.rightColor(update.color)
+            if (update.borderType) builder.rightBorderType(update.borderType)
+            break
+    }
+    return builder.build()
+}
+
+function getClearBorderPayload(
+    sheetIdx: number,
+    row: number,
+    col: number,
+    direction: Direction
+): Payload {
+    const builder = new SetCellBorderBuilder()
+        .sheetIdx(sheetIdx)
+        .row(row)
+        .col(col)
+    switch (direction) {
+        case 'top':
+            builder.topBorderType('none')
+            break
+        case 'bottom':
+            builder.bottomBorderType('none')
+            break
+        case 'left':
+            builder.leftBorderType('none')
+            break
+        case 'right':
+            builder.rightBorderType('none')
+            break
+    }
+    return builder.build()
 }

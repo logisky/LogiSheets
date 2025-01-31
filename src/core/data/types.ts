@@ -4,6 +4,46 @@ import {Comment, MergeCell} from 'logisheets-web'
 export class CellView {
     public constructor(public readonly data: CellViewData[]) {}
 
+    public get fromRow(): number {
+        let min = Infinity
+        for (const d of this.data) {
+            if (d.rows.length) {
+                min = Math.min(min, d.rows[0].coordinate.startRow)
+            }
+        }
+        return min
+    }
+
+    public get toRow(): number {
+        let max = -Infinity
+        for (const d of this.data) {
+            if (d.rows.length) {
+                max = Math.max(max, d.rows[d.rows.length - 1].coordinate.endRow)
+            }
+        }
+        return max
+    }
+
+    public get fromCol(): number {
+        let min = Infinity
+        for (const d of this.data) {
+            if (d.cols.length) {
+                min = Math.min(min, d.cols[0].coordinate.startCol)
+            }
+        }
+        return min
+    }
+
+    public get toCol(): number {
+        let max = -Infinity
+        for (const d of this.data) {
+            if (d.cols.length) {
+                max = Math.max(max, d.cols[d.cols.length - 1].coordinate.endCol)
+            }
+        }
+        return max
+    }
+
     public get rows(): readonly RenderCell[] {
         let curr = -1
         return this.data

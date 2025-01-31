@@ -8,7 +8,6 @@ import {
     SetRowHeightBuilder,
     Transaction,
 } from 'logisheets-web'
-import {isErrorMessage} from 'packages/web/src/api/utils'
 import {getOffset} from '../defs'
 
 interface ResizerProps {
