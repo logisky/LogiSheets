@@ -1,4 +1,4 @@
-use logisheets_controller::controller::display::{CellPosition, DisplaySheetRequest};
+use logisheets_controller::controller::display::CellPosition;
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
     Alignment, AsyncFuncResult, BlockInput, CellClear, CellInput, CellStyleUpdate, CreateBlock,
@@ -187,32 +187,6 @@ pub fn get_sheet_dimension(id: usize, sheet_idx: usize) -> JsValue {
         .get_sheet_dimension();
     handle_result!(result);
     serde_wasm_bindgen::to_value(&result).unwrap()
-}
-
-#[wasm_bindgen]
-/// logisheets_controller::DisplayResponse
-pub fn get_patches(id: usize, sheet_idx: u32, version: u32) -> JsValue {
-    init();
-    let manager = MANAGER.get();
-    let response = manager
-        .get_workbook(&id)
-        .unwrap()
-        .get_display_sheet_response(DisplaySheetRequest {
-            sheet_idx: sheet_idx as usize,
-            version,
-        })
-        .unwrap();
-    let res = serde_wasm_bindgen::to_value(&response);
-    match res {
-        Ok(r) => r,
-        Err(err) => {
-            #[allow(unused_unsafe)]
-            unsafe {
-                web_sys::console::log_1(&err.to_string().into())
-            };
-            panic!()
-        }
-    }
 }
 
 #[wasm_bindgen]
@@ -581,7 +555,62 @@ pub fn set_line_alignment(
 }
 
 #[wasm_bindgen]
-pub fn set_border(
+pub fn set_line_border(
+    id: usize,
+    sheet_idx: usize,
+    row: bool,
+    line: usize,
+    left_color: Option<String>,
+    right_color: Option<String>,
+    top_color: Option<String>,
+    bottom_color: Option<String>,
+    left_border_type: Option<String>,
+    right_border_type: Option<String>,
+    top_border_type: Option<String>,
+    bottom_border_type: Option<String>,
+    outline: Option<bool>,
+    diagonal_up: Option<bool>,
+    diagonal_down: Option<bool>,
+) {
+    let p = EditPayload::LineStyleUpdate(LineStyleUpdate {
+        sheet_idx,
+        from: line,
+        to: line,
+        row,
+        ty: StyleUpdateType {
+            set_font_bold: None,
+            set_font_italic: None,
+            set_font_underline: None,
+            set_font_color: None,
+            set_font_size: None,
+            set_font_name: None,
+            set_font_outline: None,
+            set_font_shadow: None,
+            set_font_strike: None,
+            set_font_condense: None,
+            set_left_border_color: left_color,
+            set_right_border_color: right_color,
+            set_top_border_color: top_color,
+            set_bottom_border_color: bottom_color,
+            set_left_border_style: left_border_type
+                .map(|b| StBorderStyle::deserialize(&b).unwrap()),
+            set_right_border_style: right_border_type
+                .map(|b| StBorderStyle::deserialize(&b).unwrap()),
+            set_top_border_style: top_border_type.map(|b| StBorderStyle::deserialize(&b).unwrap()),
+            set_bottom_border_style: bottom_border_type
+                .map(|b| StBorderStyle::deserialize(&b).unwrap()),
+            set_border_giagonal_up: diagonal_up,
+            set_border_giagonal_down: diagonal_down,
+            set_border_outline: outline,
+            set_pattern_fill: None,
+            set_alignment: None,
+        },
+    });
+    MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn set_cell_border(
     id: usize,
     sheet_idx: usize,
     row: usize,

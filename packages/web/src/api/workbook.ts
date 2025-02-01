@@ -10,7 +10,6 @@ import {
     create_sheet,
     delete_sheet,
     get_all_sheet_info,
-    get_patches,
     get_sheet_count,
     input_async_result,
     move_block,
@@ -20,7 +19,8 @@ import {
     release,
     row_delete,
     row_insert,
-    set_border,
+    set_cell_border,
+    set_line_border,
     set_cell_alignment,
     set_cell_pattern_fill,
     set_col_width,
@@ -37,12 +37,7 @@ import {
     merge_cells,
     split_merged_cells,
 } from '../../wasm/logisheets_wasm_server'
-import {
-    ActionEffect,
-    AsyncFuncResult,
-    DisplayResponse,
-    SheetInfo,
-} from '../bindings'
+import {ActionEffect, AsyncFuncResult, SheetInfo} from '../bindings'
 import {Transaction} from '../transactions'
 import {Worksheet} from './worksheet'
 import {Calculator, CustomFunc} from './calculator'
@@ -131,11 +126,6 @@ export class Workbook {
         release(this._id)
     }
 
-    public getPatches(sheet_idx: number, version: number): DisplayResponse {
-        const res = get_patches(this._id, sheet_idx, version)
-        return res as DisplayResponse
-    }
-
     public getSheetCount(): number {
         return get_sheet_count(this._id)
     }
@@ -181,11 +171,29 @@ export class Workbook {
                 p.newMasterCol
             )
         if (p.type === 'setCellBorder')
-            return set_border(
+            return set_cell_border(
                 this._id,
                 p.sheetIdx,
                 p.row,
                 p.col,
+                p.leftColor,
+                p.rightColor,
+                p.topColor,
+                p.bottomColor,
+                p.leftBorderType,
+                p.rightBorderType,
+                p.topBorderType,
+                p.bottomBorderType,
+                p.outline,
+                p.diagonalUp,
+                p.diagonalDown
+            )
+        if (p.type === 'setLineBorder')
+            return set_line_border(
+                this._id,
+                p.sheetIdx,
+                p.row,
+                p.line,
                 p.leftColor,
                 p.rightColor,
                 p.topColor,
