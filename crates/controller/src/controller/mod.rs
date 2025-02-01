@@ -8,7 +8,6 @@ pub mod display;
 mod executor;
 pub mod status;
 pub mod style;
-mod viewer;
 use crate::edit_action::{
     ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, StatusCode,
     WorkbookUpdateType,
@@ -21,9 +20,8 @@ use crate::settings::Settings;
 use crate::version_manager::VersionManager;
 use executor::Executor;
 use status::Status;
-use viewer::SheetViewer;
 
-use self::display::{DisplayResponse, DisplaySheetRequest, SheetInfo};
+use self::display::SheetInfo;
 use crate::async_func_manager::AsyncFuncManager;
 
 pub struct Controller {
@@ -219,25 +217,6 @@ impl Controller {
             pending_cells.extend(cells);
         });
         self.handle_action(EditAction::Recalc(pending_cells))
-    }
-
-    pub fn get_display_sheet_response(&self, req: DisplaySheetRequest) -> Result<DisplayResponse> {
-        let viewer = SheetViewer::default();
-        if req.version == 0 {
-            return Ok(viewer.display_with_idx(self, req.sheet_idx));
-        }
-
-        let sheet_id = self
-            .get_sheet_id_by_idx(req.sheet_idx)
-            .ok_or(Error::UnavailableSheetIdx(req.sheet_idx))?;
-        if let Some(diff) = self
-            .version_manager
-            .get_sheet_diffs_from_version(sheet_id, req.version)
-        {
-            Ok(viewer.display_with_diff(self, sheet_id, diff))
-        } else {
-            Ok(viewer.display_with_idx(self, req.sheet_idx))
-        }
     }
 
     pub fn undo(&mut self) -> bool {

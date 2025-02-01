@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
-    controller::display::{DisplayResponse, DisplaySheetRequest, SheetInfo},
+    controller::display::SheetInfo,
     edit_action::{ActionEffect, StatusCode},
     lock::{locked_write, new_locked, Locked},
     Controller,
@@ -72,11 +72,6 @@ impl Workbook {
     #[inline]
     pub fn redo(&mut self) -> bool {
         self.controller.redo()
-    }
-
-    #[inline]
-    pub fn get_display_sheet_response(&self, req: DisplaySheetRequest) -> Result<DisplayResponse> {
-        self.controller.get_display_sheet_response(req)
     }
 
     #[inline]

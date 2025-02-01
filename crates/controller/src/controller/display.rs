@@ -7,16 +7,6 @@ use serde::Serialize;
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
-    gents_derives::gents_header(file_name = "display_response.ts")
-)]
-pub struct DisplayResponse {
-    pub incremental: bool,
-    pub patches: Vec<DisplayPatch>,
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
     gents_derives::gents_header(file_name = "cell_position.ts")
 )]
 pub struct CellPosition {
@@ -107,18 +97,6 @@ pub struct BlockInfo {
     pub row_cnt: usize,
     pub col_start: usize,
     pub col_cnt: usize,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(
-    feature = "gents",
-    ts(file_name = "display_sheet_request.ts", rename_all = "camelCase")
-)]
-#[serde(rename_all = "camelCase")]
-pub struct DisplaySheetRequest {
-    pub sheet_idx: usize,
-    pub version: u32,
 }
 
 #[derive(Debug, Clone, Serialize)]

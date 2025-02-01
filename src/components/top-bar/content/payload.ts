@@ -204,11 +204,14 @@ function generateBorderBatchLinePayload(
     if (!lineRange) return []
     const result: Payload[] = []
     const drawLeftBorder = () => {
+        if (lineRange.type === 'row') {
+            return
+        }
         result.push(
             ...generateLineDoubleBorderPayload(
                 sheetIdx,
                 lineRange.start,
-                lineRange.type === 'row',
+                false,
                 {
                     direction: 'left',
                     color: update.color,
@@ -218,26 +221,27 @@ function generateBorderBatchLinePayload(
         )
     }
     const drawRightBorder = () => {
+        if (lineRange.type === 'row') {
+            return
+        }
         result.push(
-            ...generateLineDoubleBorderPayload(
-                sheetIdx,
-                lineRange.end,
-                lineRange.type === 'row',
-                {
-                    direction: 'right',
-                    color: update.color,
-                    borderType: update.borderType,
-                }
-            )
+            ...generateLineDoubleBorderPayload(sheetIdx, lineRange.end, false, {
+                direction: 'right',
+                color: update.color,
+                borderType: update.borderType,
+            })
         )
     }
 
     const drawTopBorder = () => {
+        if (lineRange.type !== 'row') {
+            return
+        }
         result.push(
             ...generateLineDoubleBorderPayload(
                 sheetIdx,
                 lineRange.start,
-                lineRange.type === 'row',
+                true,
                 {
                     direction: 'top',
                     color: update.color,
@@ -248,24 +252,38 @@ function generateBorderBatchLinePayload(
     }
 
     const drawBottomBorder = () => {
+        if (lineRange.type !== 'row') {
+            return
+        }
         result.push(
-            ...generateLineDoubleBorderPayload(
-                sheetIdx,
-                lineRange.end,
-                lineRange.type === 'row',
-                {
-                    direction: 'bottom',
-                    color: update.color,
-                    borderType: update.borderType,
-                }
-            )
+            ...generateLineDoubleBorderPayload(sheetIdx, lineRange.end, true, {
+                direction: 'bottom',
+                color: update.color,
+                borderType: update.borderType,
+            })
         )
     }
 
     const position = ['top', 'bottom', 'left', 'right']
     const drawInnerBorder = () => {
-        for (let i = lineRange.start + 1; i <= lineRange.end - 1; i += 1) {
+        for (let i = lineRange.start; i <= lineRange.end; i += 1) {
             position.forEach((p) => {
+                if (lineRange.type === 'row') {
+                    if (p === 'top' && i === lineRange.start) {
+                        return
+                    }
+                    if (p === 'bottom' && i === lineRange.end) {
+                        return
+                    }
+                }
+                if (lineRange.type === 'col') {
+                    if (p === 'left' && i === lineRange.start) {
+                        return
+                    }
+                    if (p === 'right' && i === lineRange.end) {
+                        return
+                    }
+                }
                 result.push(
                     generateLineSingleBorderPayload(
                         sheetIdx,
@@ -477,7 +495,7 @@ function generateLineDoubleBorderPayload(
     const result: Payload[] = []
     result.push(
         generateLineSingleBorderPayload(sheetIdx, line, row, {
-            direction: 'bottom',
+            direction: update.direction,
             color: update.color,
             borderType: update.borderType,
         })
@@ -513,7 +531,7 @@ function generateLineSingleBorderPayload(
         .row(row)
     switch (update.direction) {
         case 'bottom':
-            if (!row) throw Error('can not set a bottom border for columns')
+            if (!row) break
             if (update.color) builder.bottomColor(update.color)
             if (update.borderType) builder.bottomBorderType(update.borderType)
             break
@@ -526,7 +544,7 @@ function generateLineSingleBorderPayload(
             if (update.borderType) builder.leftBorderType(update.borderType)
             break
         case 'right':
-            if (row) throw Error('can not set a right border for rows')
+            if (row) break
             if (update.color) builder.rightColor(update.color)
             if (update.borderType) builder.rightBorderType(update.borderType)
             break
