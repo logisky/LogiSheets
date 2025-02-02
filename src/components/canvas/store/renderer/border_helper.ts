@@ -79,8 +79,9 @@ export class BorderHelper {
         })
     }
 
-    public generateRowBorder(row: number): BorderSegment[] {
+    public generateRowBorder(r: number): BorderSegment[] {
         const result: BorderSegment[] = []
+        const row = r - this._data.fromRow
         let currBorder = this._rowBorderStore[row][0]
         if (!currBorder.pr) {
             currBorder.pr = getDefaultBorder(true)
@@ -103,8 +104,9 @@ export class BorderHelper {
         return result
     }
 
-    public generateColBorder(col: number) {
+    public generateColBorder(c: number) {
         const result: BorderSegment[] = []
+        const col = c - this._data.fromCol
         let currBorder = this._colBorderStore[col][0]
         if (!currBorder.pr) {
             currBorder.pr = getDefaultBorder(false)
