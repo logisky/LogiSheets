@@ -3,7 +3,11 @@ use logisheets_base::{
     SheetId, TextId,
 };
 
-use crate::{cell::Cell, edit_action::EditPayload, Error};
+use crate::{
+    cell::Cell,
+    edit_action::{CellStyleUpdate, EditPayload},
+    Error,
+};
 
 use super::{ctx::ContainerExecCtx, DataContainer};
 
@@ -309,20 +313,55 @@ impl ContainerExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(s.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let mut exec_ctx = self;
                 for i in s.from..=s.to {
                     if s.row {
                         let row_id = ctx.fetch_row_id(&sheet_id, i)?;
-                        let row = self.container.get_row_info_mut(sheet_id, row_id);
+                        let row = exec_ctx.container.get_row_info_mut(sheet_id, row_id);
                         let new_id = ctx.get_new_style_id(row.style, s.ty.clone())?;
                         row.style = new_id;
+                        //
+                        // In ooxml, the style of the cell has the following properties:
+                        // 1. The style of the cell itself.
+                        // 2. The style of the row.
+                        // 3. The style of the column.
+                        //
+                        // When users modify the row or column, we should set the style of the cell to make sure
+                        // the latest style is applied to the cell.
+                        let cells = exec_ctx
+                            .container
+                            .get_to_be_modified_cells_by_row(sheet_id, row_id);
+                        for c in cells {
+                            let (r, c) = ctx.fetch_normal_cell_index(&sheet_id, &c)?;
+                            let p = EditPayload::CellStyleUpdate(CellStyleUpdate {
+                                sheet_idx: s.sheet_idx as usize,
+                                row: r,
+                                col: c,
+                                ty: s.ty.clone(),
+                            });
+                            (exec_ctx, _) = exec_ctx.execute(ctx, p)?;
+                        }
                     } else {
                         let col_id = ctx.fetch_col_id(&sheet_id, i)?;
-                        let col = self.container.get_col_info_mut(sheet_id, col_id);
+                        let col = exec_ctx.container.get_col_info_mut(sheet_id, col_id);
                         let new_id = ctx.get_new_style_id(col.style, s.ty.clone())?;
                         col.style = new_id;
+                        let cells = exec_ctx
+                            .container
+                            .get_to_be_modified_cells_by_col(sheet_id, col_id);
+                        for c in cells {
+                            let (r, c) = ctx.fetch_normal_cell_index(&sheet_id, &c)?;
+                            let p = EditPayload::CellStyleUpdate(CellStyleUpdate {
+                                sheet_idx: s.sheet_idx as usize,
+                                row: r,
+                                col: c,
+                                ty: s.ty.clone(),
+                            });
+                            (exec_ctx, _) = exec_ctx.execute(ctx, p)?;
+                        }
                     }
                 }
-                Ok((self, true))
+                Ok((exec_ctx, true))
             }
             _ => Ok((self, false)),
         }

@@ -8,8 +8,7 @@ import {isFullyCovered, Rect} from './types'
 import {LeftTop, SETTINGS} from '@/core/settings'
 import {StandardStyle} from '@/core/standable/style'
 import {isErrorMessage, PatternFill} from 'logisheets-web'
-import {Cell, CellType} from '../../defs'
-import {MergeCell} from 'packages/web'
+import {Cell} from '../../defs'
 import {BorderHelper} from './border_helper'
 
 export const CANVAS_ID = simpleUuid()
@@ -282,14 +281,27 @@ export class Renderer {
             const border = borderHelper.generateRowBorder(row)
             border.forEach((b) => {
                 if (!b.pr) return
-                this._painter.borderLine(b.pr, true, b.start, b.from, b.to)
+                const {start, from, to} = b
+                this._painter.borderLine(
+                    b.pr,
+                    true,
+                    start - this.store.anchorY,
+                    from - this.store.anchorX,
+                    to - this.store.anchorX
+                )
             })
         }
         for (let col = data.fromCol; col <= data.toCol; col++) {
             const border = borderHelper.generateColBorder(col)
             border.forEach((b) => {
                 if (!b.pr) return
-                this._painter.borderLine(b.pr, false, b.start, b.from, b.to)
+                this._painter.borderLine(
+                    b.pr,
+                    false,
+                    b.start - this.store.anchorX,
+                    b.from - this.store.anchorY,
+                    b.to - this.store.anchorY
+                )
             })
         }
     }

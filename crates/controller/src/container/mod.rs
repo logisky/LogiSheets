@@ -1,6 +1,6 @@
 use crate::cell::Cell;
 use im::hashmap::HashMap;
-use logisheets_base::{CellId, CellValue, ColId, RowId, SheetId};
+use logisheets_base::{CellId, CellValue, ColId, NormalCellId, RowId, SheetId};
 
 use self::col_info_manager::{ColInfo, ColInfoManager};
 use self::row_info_manager::{RowInfo, RowInfoManager};
@@ -112,6 +112,60 @@ impl DataContainer {
             cell.value = value;
             sheet_container.cells.insert(cell_id, cell);
         }
+    }
+
+    /// These functions are used to get the cells whose styles need to be modified
+    /// when the row or column is altered.
+    pub fn get_to_be_modified_cells_by_row(
+        &self,
+        sheet_id: SheetId,
+        row: RowId,
+    ) -> Vec<NormalCellId> {
+        let sheet_container = self.get_sheet_container(sheet_id);
+        if sheet_container.is_none() {
+            return vec![];
+        }
+        let mut res = vec![];
+        let sheet_container = sheet_container.unwrap();
+
+        sheet_container
+            .col_info
+            .get_all_col_info()
+            .iter()
+            .for_each(|(col_id, col_info)| {
+                if col_info.style == 0 {
+                    return;
+                }
+                let cell_id = NormalCellId { row, col: *col_id };
+                res.push(cell_id);
+            });
+        res
+    }
+
+    pub fn get_to_be_modified_cells_by_col(
+        &self,
+        sheet_id: SheetId,
+        col: ColId,
+    ) -> Vec<NormalCellId> {
+        let sheet_container = self.get_sheet_container(sheet_id);
+        if sheet_container.is_none() {
+            return vec![];
+        }
+        let mut res = vec![];
+        let sheet_container = sheet_container.unwrap();
+
+        sheet_container
+            .row_info
+            .get_all_row_info()
+            .iter()
+            .for_each(|(row_id, row_info)| {
+                if row_info.style == 0 {
+                    return;
+                }
+                let cell_id = NormalCellId { row: *row_id, col };
+                res.push(cell_id);
+            });
+        res
     }
 }
 

@@ -4,7 +4,7 @@ use crate::controller::display::{
     BlockInfo, CellPosition, DisplayWindow, DisplayWindowWithStartPoint,
 };
 use crate::errors::Result;
-use crate::lock::{locked_write, new_locked, Locked};
+use crate::lock::{locked_write, Locked};
 use crate::{
     connectors::NameFetcher,
     controller::{
@@ -28,14 +28,6 @@ pub struct Worksheet<'a> {
 }
 
 impl<'a> Worksheet<'a> {
-    pub(crate) fn from(sheet_id: SheetId, controller: &'a Controller) -> Self {
-        Worksheet {
-            sheet_id,
-            controller,
-            positioner: new_locked(CellPositionerDefault::new()),
-        }
-    }
-
     pub(crate) fn get_value_by_id(&self, cell_id: CellId) -> Result<Value> {
         if let Some(cell) = self
             .controller
@@ -727,14 +719,6 @@ impl<'a> Worksheet<'a> {
         Some(info)
     }
 
-    pub(crate) fn get_cell_idx(&self, cell_id: CellId) -> Result<(usize, usize)> {
-        self.controller
-            .status
-            .navigator
-            .fetch_cell_idx(&self.sheet_id, &cell_id)
-            .map_err(|e| e.into())
-    }
-
     pub fn get_default_row_height(&self) -> f64 {
         self.controller
             .settings
@@ -792,4 +776,8 @@ impl<'a> Worksheet<'a> {
             .fetch_normal_cell_idx(&self.sheet_id, &master_cell_id)?;
         Ok(result)
     }
+}
+
+fn merge_style(cell_style: Style, row_style: Style, col_style: Style) -> Style {
+    cell_style
 }
