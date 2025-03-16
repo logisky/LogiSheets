@@ -1,1 +1,1 @@
-export {CANVAS_ID} from './renderer'
+export {Renderer, CANVAS_ID} from './renderer'

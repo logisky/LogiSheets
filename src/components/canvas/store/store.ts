@@ -10,7 +10,7 @@ import {Textarea} from './textarea'
 import {RenderCell, DataService, CellViewData, CellView} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
-import {Renderer} from './renderer/renderer'
+import {Renderer} from './renderer'
 
 export class CanvasStore {
     constructor(public readonly dataSvc: DataService) {
@@ -110,18 +110,27 @@ export class CanvasStore {
         this.selector.updateSelector(this.startCell, this.endCell)
     }
 
-    convertToCanvasPosition(p: Range, ty: CellType): Range {
+    convertToMainCanvasPosition(p: Range, ty: CellType): Range {
+        return this.convertToCanvasPositionWithAnchor(p, ty, 0, 0, true)
+    }
+
+    convertToCanvasPositionWithAnchor(
+        p: Range,
+        ty: CellType,
+        anchorX: number,
+        anchorY: number,
+        toMain = false
+    ): Range {
         if (ty === 'LeftTop') return p
 
-        const canvas = this.renderer.canvas
-        const rect = canvas.getBoundingClientRect()
-
         const convertX = (a: number) => {
-            return a - this.anchorX + LeftTop.width
+            const offset = toMain ? LeftTop.width : 0
+            return a - anchorX + offset
         }
 
         const convertY = (a: number) => {
-            return a - this.anchorY + LeftTop.height
+            const offset = toMain ? LeftTop.height : 0
+            return a - anchorY + offset
         }
 
         if (ty === 'FixedLeftHeader') {
@@ -149,6 +158,15 @@ export class CanvasStore {
             .setStartCol(startX)
             .setEndRow(endY)
             .setStartRow(startY)
+    }
+
+    convertToCanvasPosition(p: Range, ty: CellType): Range {
+        return this.convertToCanvasPositionWithAnchor(
+            p,
+            ty,
+            this.anchorX,
+            this.anchorY
+        )
     }
 
     @action
