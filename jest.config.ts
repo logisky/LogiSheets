@@ -1,4 +1,4 @@
-import type { Config } from '@jest/types'
+import type {Config} from '@jest/types'
 
 const config: Config.InitialOptions = {
     preset: 'ts-jest',
@@ -9,21 +9,16 @@ const config: Config.InitialOptions = {
     testEnvironment: 'node',
     collectCoverage: true,
     moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
-    setupFilesAfterEnv: ['<rootDir>/setup-jest.ts'],
-    testMatch: [
-        '**/?(*.)+(spec|test).[jt]s?(x)',
-    ],
+    testMatch: ['**/?(*.)+(spec|test).[jt]s?(x)'],
     moduleNameMapper: {
         '@/(.*)': '<rootDir>/src/$1',
     },
-    modulePaths: [
-        '<rootDir>'
-    ],
+    modulePaths: ['<rootDir>'],
     globals: {
         'ts-jest': {
             tsconfig: 'tsconfig.json',
-        }
-    }
+        },
+    },
 }
 
 export default config

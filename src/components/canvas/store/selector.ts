@@ -117,8 +117,8 @@ export class Selector {
         const selector = new SelectorProps()
         const endCellInner = end ?? start
         const {position: ep} = endCellInner
-        const startPos = this.store.convertToCanvasPosition(sp, type)
-        const endPos = this.store.convertToCanvasPosition(ep, type)
+        const startPos = this.store.convertToMainCanvasPosition(sp, type)
+        const endPos = this.store.convertToMainCanvasPosition(ep, type)
         selector.width = width
         selector.height = height
 
