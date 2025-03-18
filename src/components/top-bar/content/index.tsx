@@ -1,6 +1,7 @@
 import {
     getFirstCell,
     getSelectedCellRange,
+    getSelectedLines,
     SelectedData,
 } from '@/components/canvas'
 import {ColorResult, SketchPicker} from 'react-color'
@@ -21,6 +22,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft'
 import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter'
 import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight'
+import FormatPaintIcon from '@mui/icons-material/FormatPaint'
 import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify'
 import BorderClearIcon from '@mui/icons-material/BorderClear'
 import MergeTypeIcon from '@mui/icons-material/MergeType'
@@ -41,6 +43,8 @@ import {
     MergeCell,
     MergeCellsBuilder,
     Payload,
+    CellFormatBrushBuilder,
+    LineFormatBrushBuilder,
 } from 'logisheets-web'
 import {SplitMergedCellsBuilder} from 'packages/web'
 import {BorderSettingComponent} from './border-setting'
@@ -69,6 +73,11 @@ export const StartComponent = ({selectedData}: StartProps) => {
     const [mergedOn, setMergedOn] = useState<boolean | null>(null)
 
     const [borderSettingOn, setBorderSettingOn] = useState<boolean>(false)
+    const [formatBrushOn, setFormatBrushOn] = useState<{
+        sheetIdx: number
+        row: number
+        col: number
+    } | null>(null)
 
     let mergedCells: readonly MergeCell[] = []
 
@@ -77,11 +86,60 @@ export const StartComponent = ({selectedData}: StartProps) => {
             _setDefaultStyle()
             return
         }
+        if (formatBrushOn) {
+            const cellRange = getSelectedCellRange(selectedData)
+            if (cellRange) {
+                const payload = new CellFormatBrushBuilder()
+                    .srcSheetIdx(formatBrushOn.sheetIdx)
+                    .srcRow(formatBrushOn.row)
+                    .srcCol(formatBrushOn.col)
+                    .dstRowStart(cellRange.startRow)
+                    .dstColStart(cellRange.startCol)
+                    .dstRowEnd(cellRange.endRow)
+                    .dstColEnd(cellRange.endCol)
+                    .dstSheetIdx(formatBrushOn.sheetIdx)
+                    .build()
+                DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+                setFormatBrushOn(null)
+                return
+            }
+
+            const lineRange = getSelectedLines(selectedData)
+            if (lineRange) {
+                const payload = new LineFormatBrushBuilder()
+                    .srcSheetIdx(formatBrushOn.sheetIdx)
+                    .srcRow(formatBrushOn.row)
+                    .srcCol(formatBrushOn.col)
+                    .from(lineRange.start)
+                    .to(lineRange.end)
+                    .dstSheetIdx(formatBrushOn.sheetIdx)
+                    .row(lineRange.type === 'row')
+                    .build()
+                DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+                setFormatBrushOn(null)
+                return
+            }
+        }
         _initStyle()
     }, [selectedData])
 
     const _setDefaultStyle = () => {
         setFontColor('#000')
+    }
+
+    const handleFormatBrush = () => {
+        if (formatBrushOn) {
+            setFormatBrushOn(null)
+        } else {
+            if (selectedData) {
+                const src = getFirstCell(selectedData)
+                setFormatBrushOn({
+                    sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
+                    row: src.r,
+                    col: src.c,
+                })
+            }
+        }
     }
 
     const _initStyle = () => {
@@ -444,6 +502,17 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 onClick={() => setBorderSettingOn(!borderSettingOn)}
             >
                 <BorderClearIcon />
+            </ToggleButton>
+            <Divider flexItem orientation="vertical" sx={{mx: 0.5, my: 1}} />
+            <ToggleButton
+                value="format-brush"
+                aria-label="format brush"
+                size="small"
+                selected={formatBrushOn !== null}
+                disabled={selectedData === undefined}
+                onClick={() => handleFormatBrush()}
+            >
+                <FormatPaintIcon />
             </ToggleButton>
             <Modal
                 isOpen={colorPicking !== ''}

@@ -2,6 +2,7 @@
 import {BlockInput} from './block_input'
 import {BlockStyleUpdate} from './block_style_update'
 import {CellClear} from './cell_clear'
+import {CellFormatBrush} from './cell_format_brush'
 import {CellInput} from './cell_input'
 import {CellStyleUpdate} from './cell_style_update'
 import {CreateBlock} from './create_block'
@@ -15,6 +16,7 @@ import {InsertColsInBlock} from './insert_cols_in_block'
 import {InsertCols} from './insert_cols'
 import {InsertRowsInBlock} from './insert_rows_in_block'
 import {InsertRows} from './insert_rows'
+import {LineFormatBrush} from './line_format_brush'
 import {LineStyleUpdate} from './line_style_update'
 import {MergeCells} from './merge_cells'
 import {MoveBlock} from './move_block'
@@ -35,6 +37,8 @@ export type EditPayload =
     | {cellStyleUpdate: CellStyleUpdate}
     | {lineStyleUpdate: LineStyleUpdate}
     | {blockStyleUpdate: BlockStyleUpdate}
+    | {cellFormatBrush: CellFormatBrush}
+    | {lineFormatBrush: LineFormatBrush}
     | {cellInput: CellInput}
     | {cellClear: CellClear}
     | {setColWidth: SetColWidth}

@@ -12,6 +12,8 @@ pub enum BasicError {
     RowIdNotFound(usize),
     #[error("Failed to fetch col id by the col index: {0}")]
     ColIdNotFound(usize),
+    #[error("Failed to fetch cell id by the row index and col index: {0}, {0}")]
+    CellIdNotFound(usize, usize),
     #[error("Failed to fetch row index by the row id: {0}")]
     RowIndexUnavailable(RowId),
     #[error("Failed to fetch col index by the col id: {0}")]

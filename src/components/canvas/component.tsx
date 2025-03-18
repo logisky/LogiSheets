@@ -69,10 +69,10 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
     useEffect(() => {
         setCanvasSize()
-        store.renderer.render()
+        store.renderer.render(true)
         store.scrollbar.init()
         store.dataSvc.registryCellUpdatedCallback(() => {
-            store.renderer.render()
+            store.renderer.render(true)
         })
     }, [])
 
@@ -90,7 +90,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     useEffect(() => {
         store.renderer.canvas.focus()
         store.dataSvc.setCurrentSheetIdx(activeSheet)
-        store.renderer.render()
+        store.renderer.render(true)
     }, [activeSheet])
 
     useEffect(() => {
@@ -100,7 +100,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             timeout = window.setTimeout(() => {
                 store.reset()
                 setCanvasSize()
-                store.renderer.render()
+                store.renderer.render(false)
                 store.scrollbar.onResize()
             }, 50)
         })
@@ -125,7 +125,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
         lastScrollTime = now
         store.setAnchor(store.anchorX, store.anchorY + delta)
-        store.renderer.render()
+        store.renderer.render(false)
         store.scrollbar.update('y')
         store.scroll()
     }

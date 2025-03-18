@@ -1,11 +1,12 @@
 use logisheets_controller::controller::display::CellPosition;
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
-    Alignment, AsyncFuncResult, BlockInput, CellClear, CellInput, CellStyleUpdate, CreateBlock,
-    CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet,
-    EditAction, EditPayload, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
-    InsertRowsInBlock, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction, SetColWidth,
-    SetRowHeight, SheetRename, SplitMergedCells, StyleUpdateType, VerticalAlignment,
+    Alignment, AsyncFuncResult, BlockInput, CellClear, CellFormatBrush, CellInput, CellStyleUpdate,
+    CreateBlock, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock,
+    DeleteSheet, EditAction, EditPayload, HorizontalAlignment, InsertCols, InsertColsInBlock,
+    InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock,
+    PayloadsAction, SetColWidth, SetRowHeight, SheetRename, SplitMergedCells, StyleUpdateType,
+    VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_controller::{ColInfo, ErrorMessage};
@@ -659,6 +660,54 @@ pub fn set_cell_border(
             set_pattern_fill: None,
             set_alignment: None,
         },
+    });
+    MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn set_cell_format_brush(
+    id: usize,
+    src_sheet_idx: usize,
+    src_row: usize,
+    src_col: usize,
+    dst_sheet_idx: usize,
+    dst_row_start: usize,
+    dst_col_start: usize,
+    dst_row_end: usize,
+    dst_col_end: usize,
+) {
+    let p = EditPayload::CellFormatBrush(CellFormatBrush {
+        src_sheet_idx,
+        dst_sheet_idx,
+        src_row,
+        src_col,
+        dst_row_start,
+        dst_col_start,
+        dst_row_end,
+        dst_col_end,
+    });
+    MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn set_line_format_brush(
+    id: usize,
+    src_sheet_idx: usize,
+    src_row: usize,
+    src_col: usize,
+    dst_sheet_idx: usize,
+    row: bool,
+    from: usize,
+    to: usize,
+) {
+    let p = EditPayload::LineFormatBrush(LineFormatBrush {
+        src_sheet_idx,
+        dst_sheet_idx,
+        src_row,
+        src_col,
+        row,
+        from,
+        to,
     });
     MANAGER.get_mut().add_payload(id, p);
 }

@@ -107,6 +107,9 @@ pub enum EditPayload {
     LineStyleUpdate(LineStyleUpdate),
     BlockStyleUpdate(BlockStyleUpdate),
 
+    CellFormatBrush(CellFormatBrush),
+    LineFormatBrush(LineFormatBrush),
+
     CellInput(CellInput),
     CellClear(CellClear),
     SetColWidth(SetColWidth),
@@ -159,6 +162,37 @@ pub struct SheetRename {
     pub old_name: Option<String>,
     pub idx: Option<usize>,
     pub new_name: String,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "cell_format_brush.ts")
+)]
+pub struct CellFormatBrush {
+    pub src_sheet_idx: usize,
+    pub src_row: usize,
+    pub src_col: usize,
+    pub dst_sheet_idx: usize,
+    pub dst_row_start: usize,
+    pub dst_col_start: usize,
+    pub dst_row_end: usize,
+    pub dst_col_end: usize,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "line_format_brush.ts")
+)]
+pub struct LineFormatBrush {
+    pub src_sheet_idx: usize,
+    pub src_row: usize,
+    pub src_col: usize,
+    pub dst_sheet_idx: usize,
+    pub row: bool,
+    pub from: usize,
+    pub to: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -714,6 +748,18 @@ impl From<DeleteSheet> for EditPayload {
     }
 }
 
+impl From<CellFormatBrush> for EditPayload {
+    fn from(value: CellFormatBrush) -> Self {
+        EditPayload::CellFormatBrush(value)
+    }
+}
+
+impl From<LineFormatBrush> for EditPayload {
+    fn from(value: LineFormatBrush) -> Self {
+        EditPayload::LineFormatBrush(value)
+    }
+}
+
 impl Payload for BlockInput {}
 impl Payload for BlockStyleUpdate {}
 impl Payload for CellInput {}
@@ -736,6 +782,8 @@ impl Payload for InsertColsInBlock {}
 impl Payload for InsertRowsInBlock {}
 impl Payload for DeleteColsInBlock {}
 impl Payload for DeleteRowsInBlock {}
+impl Payload for CellFormatBrush {}
+impl Payload for LineFormatBrush {}
 
 #[cfg(test)]
 mod tests {

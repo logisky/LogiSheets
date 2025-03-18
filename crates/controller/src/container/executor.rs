@@ -363,6 +363,53 @@ impl ContainerExecutor {
                 }
                 Ok((exec_ctx, true))
             }
+            EditPayload::CellFormatBrush(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.src_sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = ctx.fetch_cell_id(&sheet_id, p.src_row, p.src_col)?;
+                let cell = self.container.get_cell(sheet_id, &cell_id);
+                let id = if let Some(c) = cell { c.style } else { 0 };
+                for r in p.dst_row_start..=p.dst_row_end {
+                    for c in p.dst_col_start..=p.dst_col_end {
+                        let cell_id = ctx.fetch_cell_id(&sheet_id, r, c)?;
+                        let cell = self.container.get_cell_mut(sheet_id, &cell_id);
+                        if let Some(c) = cell {
+                            c.style = id;
+                        } else {
+                            self.container.add_cell(
+                                sheet_id,
+                                cell_id,
+                                Cell {
+                                    value: CellValue::Blank,
+                                    style: id,
+                                },
+                            );
+                        }
+                    }
+                }
+                Ok((self, true))
+            }
+            EditPayload::LineFormatBrush(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.src_sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = ctx.fetch_cell_id(&sheet_id, p.src_row, p.src_col)?;
+                let cell = self.container.get_cell(sheet_id, &cell_id);
+                let cell_id = if let Some(c) = cell { c.style } else { 0 };
+                for l in p.from..=p.to {
+                    if p.row {
+                        let row_id = ctx.fetch_row_id(&sheet_id, l)?;
+                        let row = self.container.get_row_info_mut(sheet_id, row_id);
+                        row.style = cell_id;
+                    } else {
+                        let col_id = ctx.fetch_col_id(&sheet_id, l)?;
+                        let col = self.container.get_col_info_mut(sheet_id, col_id);
+                        col.style = cell_id;
+                    }
+                }
+                Ok((self, true))
+            }
             _ => Ok((self, false)),
         }
     }

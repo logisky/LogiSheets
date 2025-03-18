@@ -58,6 +58,11 @@ export class IncrementalRenderer<T extends DrawContent, C extends Canvas> {
         return current.length > 0
     }
 
+    public clear(): void {
+        this.canvas.clear()
+        this._currentData = []
+    }
+
     public drawTo(ctx: CanvasRenderingContext2D, want: Rect, to: Rect): void {
         ctx.drawImage(
             this.getCanvas(),

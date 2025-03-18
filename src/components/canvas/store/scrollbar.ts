@@ -86,7 +86,7 @@ export class ScrollBar {
         } else if (type === 'y') {
             this.yScrollbar.scrollTop = scrollTop
         }
-        this.store.renderer.render()
+        this.store.renderer.render(false)
     }
 
     private _appropriateHeight: number = 0
