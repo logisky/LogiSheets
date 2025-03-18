@@ -68,7 +68,7 @@ export const MainMenu = ({currType, mainMenuChanged$}: MainMenuProps) => {
                         (o) => o.value === i18n.language
                     )}
                     onChange={onChangeLocale}
-                ></SelectComponent>
+                />
             </div>
         </div>
     )

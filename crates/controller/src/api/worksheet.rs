@@ -777,7 +777,3 @@ impl<'a> Worksheet<'a> {
         Ok(result)
     }
 }
-
-fn merge_style(cell_style: Style, row_style: Style, col_style: Style) -> Style {
-    cell_style
-}

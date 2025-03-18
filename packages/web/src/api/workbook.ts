@@ -12,6 +12,7 @@ import {
     get_all_sheet_info,
     get_sheet_count,
     input_async_result,
+    merge_cells,
     move_block,
     new_workbook,
     read_file,
@@ -19,23 +20,24 @@ import {
     release,
     row_delete,
     row_insert,
-    set_cell_border,
-    set_line_border,
     set_cell_alignment,
+    set_cell_border,
+    set_cell_format_brush,
     set_cell_pattern_fill,
     set_col_width,
     set_font,
     set_line_alignment,
+    set_line_border,
     set_line_font,
+    set_line_format_brush,
     set_line_pattern_fill,
     set_row_height,
     sheet_rename_by_idx,
     sheet_rename_by_name,
+    split_merged_cells,
     transaction_end,
     transaction_start,
     undo,
-    merge_cells,
-    split_merged_cells,
 } from '../../wasm/logisheets_wasm_server'
 import {ActionEffect, AsyncFuncResult, SheetInfo} from '../bindings'
 import {Transaction} from '../transactions'
@@ -359,6 +361,29 @@ export class Workbook {
             )
         if (p.type === 'splitMergedCells')
             return split_merged_cells(this._id, p.sheetIdx, p.row, p.col)
+        if (p.type === 'cellFormatBrush')
+            return set_cell_format_brush(
+                this._id,
+                p.srcSheetIdx,
+                p.srcRow,
+                p.srcCol,
+                p.dstSheetIdx,
+                p.dstRowStart,
+                p.dstColStart,
+                p.dstRowEnd,
+                p.dstColEnd
+            )
+        if (p.type === 'lineFormatBrush')
+            return set_line_format_brush(
+                this._id,
+                p.srcSheetIdx,
+                p.srcRow,
+                p.srcCol,
+                p.dstSheetIdx,
+                p.row,
+                p.from,
+                p.to
+            )
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }

@@ -221,5 +221,17 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             Ok(Some((Diff::Unavailable, sheet_id)))
         }
+        EditPayload::CellFormatBrush(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.dst_sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::LineFormatBrush(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.dst_sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
     }
 }

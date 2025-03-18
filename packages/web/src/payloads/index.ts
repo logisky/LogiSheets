@@ -7,6 +7,8 @@ import {DeleteBlockRows} from './delete_block_rows'
 import {DeleteCols} from './delete_cols'
 import {DeleteRows} from './delete_rows'
 import {DeleteSheet} from './delete_sheet'
+import {CellFormatBrush} from './cell_format_brush'
+import {LineFormatBrush} from './line_format_brush'
 import {InsertBlockCols} from './insert_block_cols'
 import {InsertBlockRows} from './insert_block_rows'
 import {InsertCols} from './insert_cols'
@@ -29,7 +31,6 @@ import {SetRowVisible} from './set_row_visible'
 import {SheetRename} from './sheet_rename'
 import {SplitMergedCells} from './split_merged_cells'
 
-export * from './set_line_border'
 export * from './block_input'
 export * from './cell_clear'
 export * from './cell_input'
@@ -39,25 +40,28 @@ export * from './delete_block_rows'
 export * from './delete_cols'
 export * from './delete_rows'
 export * from './delete_sheet'
+export * from './cell_format_brush'
+export * from './line_format_brush'
 export * from './insert_block_cols'
 export * from './insert_block_rows'
 export * from './insert_cols'
 export * from './insert_rows'
 export * from './insert_sheet'
+export * from './merge_cells'
 export * from './move_block'
-export * from './set_cell_border'
 export * from './set_cell_alignment'
+export * from './set_cell_border'
 export * from './set_cell_font'
 export * from './set_cell_pattern_fill'
 export * from './set_col_visible'
 export * from './set_col_width'
 export * from './set_line_alignment'
+export * from './set_line_border'
 export * from './set_line_font'
 export * from './set_line_pattern_fill'
 export * from './set_row_height'
 export * from './set_row_visible'
 export * from './sheet_rename'
-export * from './merge_cells'
 export * from './split_merged_cells'
 
 export type Payload =
@@ -70,24 +74,26 @@ export type Payload =
     | DeleteCols
     | DeleteRows
     | DeleteSheet
+    | CellFormatBrush
     | InsertBlockCols
     | InsertBlockRows
     | InsertCols
     | InsertRows
     | InsertSheet
+    | MergeCells
     | MoveBlock
-    | SetCellBorder
     | SetCellAlignment
+    | SetCellBorder
     | SetCellFont
+    | SetCellPatternFill
     | SetColVisible
     | SetColWidth
     | SetLineAlignment
+    | SetLineBorder
     | SetLineFont
+    | SetLinePatternFill
     | SetRowHeight
     | SetRowVisible
     | SheetRename
-    | SetLinePatternFill
-    | SetCellPatternFill
-    | MergeCells
     | SplitMergedCells
-    | SetLineBorder
+    | LineFormatBrush

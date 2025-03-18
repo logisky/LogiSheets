@@ -21,7 +21,7 @@ export const CANVAS_ID = simpleUuid()
 export interface RendererInterface {
     canvas: HTMLCanvasElement
     rendering: boolean
-    render(): Promise<void>
+    render(clearBeforeRender?: boolean): Promise<void>
     concatImageToCanvas(): void
     jumpTo(row: number, col: number): void
     getCurrentData(): CellView
@@ -103,13 +103,19 @@ export class Renderer implements RendererInterface {
         return new CellView(dataArray)
     }
 
-    public async render() {
+    public async render(clearBeforeRender = false) {
         const r = this.canvas.getBoundingClientRect()
         const target: Rect = {
             x: this.store.anchorX,
             y: this.store.anchorY,
             width: r.width,
             height: r.height,
+        }
+
+        if (clearBeforeRender) {
+            this._cellRenderer.clear()
+            this._rowRenderer.clear()
+            this._colRenderer.clear()
         }
 
         const {rows, cols} = normalizeForRowsAndCols(target)
