@@ -111,7 +111,13 @@ export class CanvasStore {
     }
 
     convertToMainCanvasPosition(p: Range, ty: CellType): Range {
-        return this.convertToCanvasPositionWithAnchor(p, ty, 0, 0, true)
+        return this.convertToCanvasPositionWithAnchor(
+            p,
+            ty,
+            this.anchorX,
+            this.anchorY,
+            true
+        )
     }
 
     convertToCanvasPositionWithAnchor(

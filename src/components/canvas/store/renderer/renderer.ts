@@ -144,6 +144,7 @@ export class Renderer implements RendererInterface {
             this.rendering = false
         }
         this.concatImageToCanvas()
+        this.store.resizer.init()
     }
 
     public concatImageToCanvas() {
