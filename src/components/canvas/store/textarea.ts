@@ -76,7 +76,7 @@ export class Textarea {
             position,
             type,
         } = startCell
-        const pos = this.store.convertToCanvasPosition(position, type)
+        const pos = this.store.convertToMainCanvasPosition(position, type)
         const x = pos.startCol
         const y = pos.startRow
         const sheet = this.store.dataSvc.getCurrentSheetIdx()

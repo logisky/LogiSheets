@@ -40,7 +40,7 @@ export class Resizer {
     init() {
         const data = this.store.getCurrentCellView()
         const rowResizers = data.rows.map((c) => {
-            const cell = this.store.convertToCanvasPosition(
+            const cell = this.store.convertToMainCanvasPosition(
                 c.position,
                 'FixedLeftHeader'
             )
@@ -55,7 +55,7 @@ export class Resizer {
             }
         })
         const colResizers = data.cols.map((c) => {
-            const cell = this.store.convertToCanvasPosition(
+            const cell = this.store.convertToMainCanvasPosition(
                 c.position,
                 'FixedTopHeader'
             )
