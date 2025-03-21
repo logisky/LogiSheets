@@ -11,7 +11,6 @@ import {
     MergeCell,
 } from 'logisheets-web'
 import {CellViewResponse, ViewManager} from './view_manager'
-import {CellView} from './types'
 import {Resp, WorkbookClient} from './workbook'
 import {Pool} from '../pool'
 

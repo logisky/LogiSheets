@@ -5,6 +5,7 @@ import {useState, ReactElement, useEffect} from 'react'
 import styles from './top-bar.module.scss'
 import {FileComponent} from './file'
 import {StartComponent} from './content'
+import {ViewComponent} from './view'
 
 export interface TopBarProps {
     readonly selectedData?: SelectedData
@@ -22,6 +23,9 @@ export const TopBar = ({selectedData}: TopBarProps) => {
                 break
             case MainMenuType.FILE:
                 content = <FileComponent />
+                break
+            case MainMenuType.VIEW:
+                content = <ViewComponent />
                 break
             default:
         }

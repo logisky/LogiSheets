@@ -1,4 +1,6 @@
 import {StandardFont} from '@/core/standable'
+
+// TODO: move the configs related to view to the view service
 class Settings {
     public leftTop = new LeftTop()
     public grid = new Grid()
@@ -15,7 +17,6 @@ class Settings {
     public defaultSheetName = 'sheet'
     public scrollbarSize = 16
     public emptyFillColor = 'white'
-    public wsUrl = 'ws://localhost:8081/ws/'
 }
 
 export class Grid {

@@ -276,13 +276,6 @@ impl<'a> Connector for CalcConnector<'a> {
     }
 
     #[inline]
-    fn get_text(&self, tid: &TextId) -> Result<String> {
-        self.text_id_manager
-            .get_string(tid)
-            .ok_or(BasicError::TextIdNotFound(*tid).into())
-    }
-
-    #[inline]
     fn get_func_name(&self, fid: &FuncId) -> Result<String> {
         self.func_id_manager
             .get_string(fid)

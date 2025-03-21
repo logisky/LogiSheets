@@ -47,7 +47,7 @@ where
                     error,
                     iter_limit,
                     connector: &mut connector,
-                    names: &names,
+                    _names: &names,
                     formulas: &formulas,
                 };
                 cycle_calc.start();

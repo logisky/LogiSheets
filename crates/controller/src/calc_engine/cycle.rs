@@ -18,7 +18,7 @@ where
     pub error: f32,
     pub iter_limit: u16,
     pub connector: &'a mut C,
-    pub names: &'a HashMap<NameId, ast::Node>,
+    pub _names: &'a HashMap<NameId, ast::Node>,
     pub formulas: &'a HashMap<(SheetId, CellId), ast::Node>,
 }
 
