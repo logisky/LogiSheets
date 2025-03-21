@@ -200,10 +200,6 @@ pub mod tests_utils {
             }
         }
 
-        fn get_text(&self, _: &logisheets_base::TextId) -> Result<String> {
-            todo!()
-        }
-
         fn get_func_name(&self, _: &logisheets_base::FuncId) -> Result<String> {
             todo!()
         }

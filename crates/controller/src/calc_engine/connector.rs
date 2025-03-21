@@ -1,6 +1,6 @@
 use logisheets_base::{
     async_func::AsyncFuncCommitTrait, get_curr_addr::GetCurrAddrTrait,
-    set_curr_cell::SetCurrCellTrait, CellId, FuncId, Range, RangeId, SheetId, TextId,
+    set_curr_cell::SetCurrCellTrait, CellId, FuncId, Range, RangeId, SheetId,
 };
 use logisheets_parser::ast;
 
@@ -11,7 +11,7 @@ use crate::errors::Result;
 pub trait Connector: AsyncFuncCommitTrait + GetCurrAddrTrait + SetCurrCellTrait {
     fn convert(&mut self, v: &ast::CellReference) -> CalcVertex;
     fn get_calc_value(&mut self, vertex: CalcVertex) -> CalcValue;
-    fn get_text(&self, tid: &TextId) -> Result<String>;
+    // fn get_text(&self, tid: &TextId) -> Result<String>;
     fn get_func_name(&self, fid: &FuncId) -> Result<String>;
     fn get_cell_idx(&self, sheet_id: SheetId, cell_id: &CellId) -> Result<(usize, usize)>;
     fn get_cell_id(&self, sheet_id: SheetId, row: usize, col: usize) -> Result<CellId>;

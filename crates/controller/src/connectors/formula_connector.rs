@@ -10,7 +10,6 @@ use logisheets_base::{
     NormalCellId, Range, RangeId, RowId, SheetId, TextId,
 };
 
-use crate::container::DataContainer;
 use crate::cube_manager::CubeManager;
 use crate::ext_book_manager::ExtBooksManager;
 use crate::ext_ref_manager::ExtRefManager;
@@ -26,7 +25,6 @@ type Result<T> = std::result::Result<T, BasicError>;
 
 pub struct FormulaConnector<'a> {
     pub book_name: &'a str,
-    pub container: &'a mut DataContainer,
     pub sheet_pos_manager: &'a mut SheetPosManager,
     pub sheet_id_manager: &'a mut SheetIdManager,
     pub text_id_manager: &'a mut TextIdManager,

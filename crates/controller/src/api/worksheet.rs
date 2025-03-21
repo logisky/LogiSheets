@@ -81,7 +81,6 @@ impl<'a> Worksheet<'a> {
                 text_id_manager: &self.controller.status.text_id_manager,
                 name_id_manager: &self.controller.status.name_id_manager,
                 navigator: &self.controller.status.navigator,
-                formula_manager: &self.controller.status.formula_manager,
                 range_manager: &self.controller.status.range_manager,
                 cube_manager: &self.controller.status.cube_manager,
                 ext_ref_manager: &self.controller.status.ext_ref_manager,

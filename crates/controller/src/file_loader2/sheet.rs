@@ -185,7 +185,6 @@ pub fn load_sheet_data(
                     if let Some(formula) = &ct_cell.f {
                         let mut connector = FormulaConnector {
                             book_name,
-                            container,
                             sheet_pos_manager,
                             sheet_id_manager,
                             text_id_manager,

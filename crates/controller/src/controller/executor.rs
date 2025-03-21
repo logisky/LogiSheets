@@ -295,7 +295,6 @@ impl<'a> Executor<'a> {
     ) -> Result<FormulaExecutor, Error> {
         let mut ctx = FormulaConnector {
             book_name: self.book_name,
-            container: &mut self.status.container,
             sheet_pos_manager: &mut self.status.sheet_pos_manager,
             sheet_id_manager: &mut self.status.sheet_id_manager,
             text_id_manager: &mut self.status.text_id_manager,

@@ -3,7 +3,8 @@
     "topBar": {
         "mainMenu": {
             "file": "文件",
-            "start": "开始"
+            "start": "开始",
+            "view": "视图"
         }
     },
     "functions": {

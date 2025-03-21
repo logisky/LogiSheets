@@ -3,7 +3,8 @@
     "topBar": {
         "mainMenu": {
             "file": "file",
-            "start": "start"
+            "start": "start",
+            "view": "view"
         }
     },
     "functions": {

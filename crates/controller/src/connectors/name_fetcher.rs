@@ -8,7 +8,6 @@ use crate::{
     cube_manager::CubeManager,
     ext_book_manager::ExtBooksManager,
     ext_ref_manager::ExtRefManager,
-    formula_manager::FormulaManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
     range_manager::RangeManager,
@@ -24,7 +23,6 @@ pub struct NameFetcher<'a> {
     pub text_id_manager: &'a TextIdManager,
     pub name_id_manager: &'a NameIdManager,
     pub navigator: &'a Navigator,
-    pub formula_manager: &'a FormulaManager,
 }
 
 impl<'a> NameFetcherTrait for NameFetcher<'a> {
