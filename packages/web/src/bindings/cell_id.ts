@@ -5,3 +5,4 @@ import {NormalCellId} from './normal_cell_id'
 export type CellId =
     | {normalCell: NormalCellId}
     | {blockCell: BlockCellId}
+    | {ephemeralCell: number}

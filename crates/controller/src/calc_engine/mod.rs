@@ -57,8 +57,9 @@ where
                 {
                     if let Some(ast_node) = formulas.get(&(sheet_id, cell_id)) {
                         let curr_sheet = sheet_id;
-                        let (row, col) = connector.get_cell_idx(sheet_id, &cell_id).unwrap();
-                        connector.set_curr_cell(curr_sheet, Addr { row, col });
+                        if let Ok((row, col)) = connector.get_cell_idx(sheet_id, &cell_id) {
+                            connector.set_curr_cell(curr_sheet, Addr { row, col });
+                        }
                         let v = calc(&ast_node, &mut connector);
                         connector.commit_calc_values((sheet_id, cell_id), v);
                     }
@@ -85,6 +86,7 @@ where
                     BlockRange::Single(bid) => Some((*sheet_id, CellId::BlockCell(bid))),
                     BlockRange::AddrRange(_, _) => None,
                 },
+                Range::Ephemeral(id) => Some((*sheet_id, CellId::EphemeralCell(id))),
             }
         }
         _ => None,

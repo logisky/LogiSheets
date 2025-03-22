@@ -1,4 +1,4 @@
-use logisheets_base::{async_func::Task, CellId, SheetId};
+use logisheets_base::{async_func::Task, CellId, EphemeralId, SheetId};
 
 pub trait Payload: Into<EditPayload> {}
 
@@ -104,6 +104,7 @@ pub enum EditPayload {
 
     // Style
     CellStyleUpdate(CellStyleUpdate),
+    EphemeralCellStyleUpdate(EphemeralCellStyleUpdate),
     LineStyleUpdate(LineStyleUpdate),
     BlockStyleUpdate(BlockStyleUpdate),
 
@@ -111,6 +112,7 @@ pub enum EditPayload {
     LineFormatBrush(LineFormatBrush),
 
     CellInput(CellInput),
+    EphemeralCellInput(EphemeralCellInput),
     CellClear(CellClear),
     SetColWidth(SetColWidth),
     SetRowHeight(SetRowHeight),
@@ -249,6 +251,17 @@ pub struct CellInput {
     pub sheet_idx: usize,
     pub row: usize,
     pub col: usize,
+    pub content: String,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "ephemeral_cell_input.ts")
+)]
+pub struct EphemeralCellInput {
+    pub sheet_idx: usize,
+    pub id: EphemeralId,
     pub content: String,
 }
 
@@ -493,6 +506,7 @@ pub enum WorkbookUpdateType {
     RedoNothing,
     Undo,
     Redo,
+    EphemeralCells,
 }
 
 impl Default for StatusCode {
@@ -513,6 +527,17 @@ pub struct CellStyleUpdate {
     pub sheet_idx: usize,
     pub row: usize,
     pub col: usize,
+    pub ty: StyleUpdateType,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "ephemeral_cell_style_update.ts")
+)]
+pub struct EphemeralCellStyleUpdate {
+    pub sheet_idx: usize,
+    pub id: EphemeralId,
     pub ty: StyleUpdateType,
 }
 

@@ -1,7 +1,8 @@
 use thiserror::Error;
 
 use crate::{
-    BlockId, ColId, CubeId, ExtBookId, ExtRefId, FuncId, NameId, RangeId, RowId, SheetId, TextId,
+    BlockId, ColId, CubeId, EphemeralId, ExtBookId, ExtRefId, FuncId, NameId, RangeId, RowId,
+    SheetId, TextId,
 };
 
 pub type Result<T> = std::result::Result<T, BasicError>;
@@ -52,4 +53,6 @@ pub enum BasicError {
     CreatingBlockOn(BlockId),
     #[error("ext ref id not found: {0}")]
     ExtRefIdNotFound(ExtRefId),
+    #[error("ephemeral cell in reference is not allowed: {0}")]
+    EphemeralCellInReference(EphemeralId),
 }

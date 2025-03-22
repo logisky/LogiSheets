@@ -1,5 +1,5 @@
 use im::HashMap;
-use logisheets_base::{BlockRange, NormalRange, Range, RangeId, SheetId};
+use logisheets_base::{BlockRange, EphemeralId, NormalRange, Range, RangeId, SheetId};
 
 #[derive(Debug, Clone, Default)]
 pub struct RangeManager {
@@ -60,6 +60,8 @@ pub struct SheetRangeManager {
     pub normal_range_to_id: HashMap<NormalRange, RangeId>,
     pub id_to_block_range: HashMap<RangeId, BlockRange>,
     pub block_range_to_id: HashMap<BlockRange, RangeId>,
+    pub id_to_ephemeral_range: HashMap<RangeId, EphemeralId>,
+    pub ephemeral_range_to_id: HashMap<EphemeralId, RangeId>,
     pub next_id: RangeId,
 }
 
@@ -70,6 +72,8 @@ impl SheetRangeManager {
             normal_range_to_id: HashMap::new(),
             id_to_block_range: HashMap::new(),
             block_range_to_id: HashMap::new(),
+            id_to_ephemeral_range: HashMap::new(),
+            ephemeral_range_to_id: HashMap::new(),
             next_id: 0,
         }
     }
@@ -78,12 +82,16 @@ impl SheetRangeManager {
         match range {
             Range::Normal(normal) => Some(self.normal_range_to_id.get(normal)?.clone()),
             Range::Block(b) => Some(self.block_range_to_id.get(b)?.clone()),
+            Range::Ephemeral(e) => Some(self.ephemeral_range_to_id.get(e)?.clone()),
         }
     }
 
     pub fn get_range(&self, range_id: &RangeId) -> Option<Range> {
         if let Some(normal_range) = self.id_to_normal_range.get(range_id) {
             return Some(Range::Normal(normal_range.clone()));
+        }
+        if let Some(ephemeral_range) = self.id_to_ephemeral_range.get(range_id) {
+            return Some(Range::Ephemeral(*ephemeral_range));
         }
         match self.id_to_block_range.get(range_id) {
             Some(block_range) => Some(Range::Block(block_range.clone())),
@@ -97,6 +105,9 @@ impl SheetRangeManager {
         }
         if let Some(range) = self.id_to_block_range.remove(range_id) {
             self.block_range_to_id.remove(&range);
+        }
+        if let Some(range) = self.id_to_ephemeral_range.remove(range_id) {
+            self.ephemeral_range_to_id.remove(&range);
         }
     }
 
@@ -120,6 +131,16 @@ impl SheetRangeManager {
                     let id = self.next_id;
                     self.block_range_to_id.insert(r.clone(), id);
                     self.id_to_block_range.insert(id, r);
+                    self.next_id += 1;
+                    id
+                }
+            },
+            Range::Ephemeral(v) => match self.ephemeral_range_to_id.get(v) {
+                Some(id) => *id,
+                None => {
+                    let id = self.next_id;
+                    self.ephemeral_range_to_id.insert(*v, id);
+                    self.id_to_ephemeral_range.insert(id, *v);
                     self.next_id += 1;
                     id
                 }

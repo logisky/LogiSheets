@@ -211,6 +211,7 @@ where
                     CellId::BlockCell(block_cell_id) => {
                         Range::Block(BlockRange::Single(block_cell_id))
                     }
+                    CellId::EphemeralCell(_) => return Err(ParseError::EphemeralCellInReference),
                 };
                 let range_id = id_fetcher.fetch_range_id(&sheet_id, &range);
                 RangeDisplay {

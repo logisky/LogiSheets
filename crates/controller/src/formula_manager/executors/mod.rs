@@ -2,6 +2,7 @@ mod input_formula;
 
 use std::collections::HashSet;
 
+use input_formula::input_ephemeral_formula;
 pub use input_formula::{add_ast_node, input_formula};
 
 use crate::{edit_action::EditPayload, Error};
@@ -34,6 +35,16 @@ impl FormulaExecutor {
                 } else {
                     Ok(self)
                 }
+            }
+            EditPayload::EphemeralCellInput(mut ephemeral_cell_input) => {
+                let formula = ephemeral_cell_input.content.split_off(1);
+                input_ephemeral_formula(
+                    self,
+                    ephemeral_cell_input.sheet_idx,
+                    ephemeral_cell_input.id,
+                    formula,
+                    ctx,
+                )
             }
             _ => Ok(self),
         }?;

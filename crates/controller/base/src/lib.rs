@@ -19,13 +19,19 @@ use std::hash::Hash;
 pub enum CellId {
     NormalCell(NormalCellId),
     BlockCell(BlockCellId),
+    // For better interaction with the web, we add this variant.
+    // EphemeralCell is a cell that will not be saved to the workbook,
+    // and it can not be referenced by other cells.
+    // It's developers' responsibility to ensure the data is saved on their sides.
+    // Developers can use this variant to utilize LogiSheets features in their own ways.
+    EphemeralCell(EphemeralId),
 }
 
 impl CellId {
     pub fn assert_normal_cell_id(self) -> NormalCellId {
         match self {
             CellId::NormalCell(n) => n,
-            CellId::BlockCell(_) => panic!("this cell id should be normal cell id"),
+            _ => panic!("this cell id should be normal cell id"),
         }
     }
 }
@@ -104,6 +110,7 @@ pub enum BlockRange {
 pub enum Range {
     Normal(NormalRange),
     Block(BlockRange),
+    Ephemeral(u32),
 }
 
 impl From<CellId> for Range {
@@ -111,6 +118,7 @@ impl From<CellId> for Range {
         match value {
             CellId::NormalCell(n) => Range::Normal(NormalRange::Single(n)),
             CellId::BlockCell(b) => Range::Block(BlockRange::Single(b)),
+            CellId::EphemeralCell(e) => Range::Ephemeral(e),
         }
     }
 }
