@@ -7,6 +7,7 @@ use crate::ast::{
     CellReference, CubeDisplay, Error, ExtRefDisplay, Func, InfixOperator, Operator,
     PostfixOperator, PrefixOperator, PureNode, RangeDisplay, Value,
 };
+use crate::errors::ParseError;
 
 use super::ast::Node;
 use super::Result;
@@ -325,6 +326,7 @@ impl Stringify for RangeDisplay {
                     }
                 }
             }
+            Range::Ephemeral(_) => return Err(ParseError::EphemeralCellInReference.into()),
         }?;
         Ok(format!("{}{}", prefix, range_str))
     }

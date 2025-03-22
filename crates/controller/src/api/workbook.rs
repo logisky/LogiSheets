@@ -147,4 +147,13 @@ impl Workbook {
     pub fn get_sheet_count(&self) -> usize {
         self.controller.status.sheet_pos_manager.pos.len()
     }
+
+    /// To see if the formula is valid.
+    pub fn check_formula(&self, f: String) -> Result<()> {
+        todo!()
+    }
+
+    pub fn calc_condition(&self, f: String) -> Result<bool> {
+        todo!()
+    }
 }

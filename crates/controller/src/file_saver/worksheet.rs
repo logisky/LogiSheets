@@ -266,7 +266,7 @@ fn save_sheet_data<S: SaverTrait>(
         .clone()
         .into_iter()
         .map(|(id, cell)| {
-            let (r, c) = saver.fetch_cell_index(&sheet_id, &id).unwrap();
+            let (r, c) = saver.fetch_cell_index(&sheet_id, &id).ok()?;
             let (v, t) = cell.value.to_ct_value();
             let f = formula_manager
                 .formulas

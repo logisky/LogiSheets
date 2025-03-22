@@ -1,5 +1,7 @@
 use super::{RangeExecCtx, RangeExecutor, RangeUpdateType};
-use logisheets_base::{errors::BasicError, BlockRange, NormalRange, Range, RangeId, SheetId};
+use logisheets_base::{
+    errors::BasicError, BlockRange, EphemeralId, NormalRange, Range, RangeId, SheetId,
+};
 
 pub fn input<C>(
     exec_ctx: RangeExecutor,
@@ -64,6 +66,17 @@ where
     let range_id = result
         .manager
         .get_range_id(&sheet, &Range::from(this_cell_id));
+    result.dirty_ranges.insert((sheet, range_id));
+    Ok(result)
+}
+
+pub fn input_ephemeral(
+    exec_ctx: RangeExecutor,
+    sheet: SheetId,
+    id: EphemeralId,
+) -> Result<RangeExecutor, BasicError> {
+    let mut result = exec_ctx;
+    let range_id = result.manager.get_range_id(&sheet, &Range::Ephemeral(id));
     result.dirty_ranges.insert((sheet, range_id));
     Ok(result)
 }

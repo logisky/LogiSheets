@@ -81,6 +81,20 @@ impl ContainerExecutor {
                 self.container.update_value(sheet_id, cell_id, cell_value);
                 Ok((self, true))
             }
+            EditPayload::EphemeralCellInput(p) => {
+                if p.content.starts_with("=") {
+                    // Formula
+                    return Ok((self, false));
+                }
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = CellId::EphemeralCell(p.id);
+                let cell_value =
+                    CellValue::from_string(p.content, &mut |t| -> TextId { ctx.fetch_text_id(t) });
+                self.container.update_value(sheet_id, cell_id, cell_value);
+                Ok((self, true))
+            }
             EditPayload::CellClear(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
@@ -440,6 +454,7 @@ impl ContainerExecutor {
                 }
             }
             CellId::BlockCell(_) => {}
+            CellId::EphemeralCell(_) => {}
         });
         result
     }

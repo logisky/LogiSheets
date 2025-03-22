@@ -9,4 +9,6 @@ pub enum ParseError {
     ParseRowFailed(String),
     #[error(transparent)]
     Basic(#[from] BasicError),
+    #[error("using ephemeral cell in reference is not allowed")]
+    EphemeralCellInReference,
 }

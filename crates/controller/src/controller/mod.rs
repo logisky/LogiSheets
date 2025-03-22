@@ -169,6 +169,7 @@ impl Controller {
                         let range = match cell_id {
                             CellId::NormalCell(c) => Range::Normal(NormalRange::Single(c)),
                             CellId::BlockCell(b) => Range::Block(BlockRange::Single(b)),
+                            CellId::EphemeralCell(e) => Range::Ephemeral(e),
                         };
                         let range_id = self.status.range_manager.get_range_id(&sheet_id, &range);
                         Vertex::Range(sheet_id, range_id)
@@ -242,7 +243,11 @@ impl Controller {
 
 #[cfg(test)]
 mod tests {
-    use crate::edit_action::{CellInput, EditAction, EditPayload, PayloadsAction};
+    use logisheets_base::{CellId, CellValue};
+
+    use crate::edit_action::{
+        CellInput, EditAction, EditPayload, EphemeralCellInput, PayloadsAction, StatusCode,
+    };
 
     use super::Controller;
 
@@ -281,5 +286,47 @@ mod tests {
                 panic!()
             }
         }
+    }
+
+    #[test]
+    fn controller_ephemeral_cell_input() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let ephemeral_id = 1;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+        let payloads_action = PayloadsAction {
+            payloads: vec![EditPayload::EphemeralCellInput(EphemeralCellInput {
+                sheet_idx,
+                id: ephemeral_id,
+                content: String::from("1"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        let affect = wb.handle_action(EditAction::Payloads(payloads_action));
+        assert!(matches!(affect.status, StatusCode::Ok(_)));
+        let cell = wb
+            .status
+            .container
+            .get_cell(sheet_id, &CellId::EphemeralCell(ephemeral_id))
+            .unwrap();
+        assert!(matches!(cell.value, CellValue::Number(_)));
+
+        let payloads_action = PayloadsAction {
+            payloads: vec![EditPayload::EphemeralCellInput(EphemeralCellInput {
+                sheet_idx,
+                id: ephemeral_id,
+                content: String::from("=1+1"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        wb.handle_action(EditAction::Payloads(payloads_action));
+        let cell = wb
+            .status
+            .container
+            .get_cell(sheet_id, &CellId::EphemeralCell(ephemeral_id))
+            .unwrap();
+        assert!(matches!(cell.value, CellValue::Number(_)));
     }
 }

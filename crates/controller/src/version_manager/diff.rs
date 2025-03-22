@@ -233,5 +233,7 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             Ok(Some((Diff::Unavailable, sheet_id)))
         }
+        EditPayload::EphemeralCellStyleUpdate(_) => Ok(None),
+        EditPayload::EphemeralCellInput(_) => Ok(None),
     }
 }

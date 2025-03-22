@@ -175,6 +175,7 @@ impl<'a> Fetcher<'a> {
         let res = match cell_id {
             CellId::NormalCell(c) => self.get_norm_cell_idx(c),
             CellId::BlockCell(b) => self.get_block_cell_idx(b),
+            CellId::EphemeralCell(e) => Err(BasicError::EphemeralCellInReference(*e)),
         }?;
         let mut cache = locked_write(&self.cache);
         cache.cell_idx.insert(cell_id.clone(), res);

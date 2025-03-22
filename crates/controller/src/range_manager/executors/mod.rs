@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 use delete_block_line::delete_block_line;
 use delete_line::delete_line;
-use input::input;
+use input::{input, input_ephemeral};
 use insert_block_line::insert_block_line;
 use insert_line::insert_line;
 use logisheets_base::{errors::BasicError, BlockRange, NormalRange, Range, RangeId, SheetId};
@@ -101,6 +101,13 @@ impl RangeExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let res = input(self, sheet_id, p.row, p.col, ctx)?;
+                Ok(res)
+            }
+            EditPayload::EphemeralCellInput(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let res = input_ephemeral(self, sheet_id, p.id)?;
                 Ok(res)
             }
             EditPayload::CellClear(p) => {

@@ -1,6 +1,6 @@
 use super::FormulaExecutor;
 use logisheets_base::errors::BasicError;
-use logisheets_base::{BlockRange, CellId, NormalRange, Range, RangeId, SheetId};
+use logisheets_base::{BlockRange, CellId, EphemeralId, NormalRange, Range, RangeId, SheetId};
 use logisheets_parser::ast;
 use logisheets_parser::Parser;
 use std::collections::HashSet;
@@ -19,10 +19,35 @@ pub fn input_formula<C: FormulaExecCtx>(
         .fetch_sheet_id_by_index(sheet_idx)
         .map_err(|l| BasicError::SheetIdxExceed(l))?;
     let cell_id = ctx.fetch_cell_id(&sheet, row, col)?;
+    input(executor, sheet, cell_id, formula, ctx)
+}
 
+pub fn input_ephemeral_formula<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet_idx: usize,
+    id: EphemeralId,
+    formula: String,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+
+    let cell_id = CellId::EphemeralCell(id);
+    input(executor, sheet, cell_id, formula, ctx)
+}
+
+fn input<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet: SheetId,
+    cell_id: CellId,
+    formula: String,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
     let range = match cell_id {
         CellId::NormalCell(normal) => Range::Normal(NormalRange::Single(normal)),
         CellId::BlockCell(block) => Range::Block(BlockRange::Single(block)),
+        CellId::EphemeralCell(v) => Range::Ephemeral(v),
     };
     let range_id = ctx.fetch_range_id(&sheet, &range);
     let this_vertex = Vertex::Range(sheet, range_id);

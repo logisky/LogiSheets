@@ -160,6 +160,7 @@ fn shift_cell_reference(
                     _ => None,
                 },
                 Range::Block(_) => unreachable!(),
+                Range::Ephemeral(_) => unreachable!(),
             }
         }
         _ => None,
