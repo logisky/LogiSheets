@@ -29,4 +29,5 @@ export class Field {
     type: string
     defaultValue: string
     required: boolean
+    validation: string
 }

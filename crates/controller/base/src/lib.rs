@@ -358,6 +358,22 @@ impl CellValue {
     {
         CellValue::get_value(&c.t, c.v.as_ref(), c.is.as_ref(), f)
     }
+
+    pub fn bool_value(&self) -> bool {
+        match self {
+            CellValue::Boolean(b) => *b,
+            CellValue::Number(n) => *n != 0.0,
+            CellValue::Blank => false,
+            CellValue::String(s) => *s > 0,
+            CellValue::InlineStr(_) => false,
+            CellValue::FormulaStr(_) => false,
+            CellValue::Error(_) => false,
+        }
+    }
+
+    pub fn is_error(&self) -> bool {
+        matches!(self, CellValue::Error(_))
+    }
 }
 
 pub fn column_label_to_index(label: &str) -> usize {

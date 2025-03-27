@@ -55,4 +55,7 @@ pub enum BasicError {
     ExtRefIdNotFound(ExtRefId),
     #[error("ephemeral cell in reference is not allowed: {0}")]
     EphemeralCellInReference(EphemeralId),
+
+    #[error("invalid formula: {0}")]
+    InvalidFormula(String),
 }

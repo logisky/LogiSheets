@@ -2,8 +2,10 @@ import {Payload} from '../payloads'
 import {
     block_input,
     block_line_shift,
+    calc_condition,
     cell_clear,
     cell_input,
+    check_formula,
     col_delete,
     col_insert,
     create_block,
@@ -43,6 +45,7 @@ import {ActionEffect, AsyncFuncResult, SheetInfo} from '../bindings'
 import {Transaction} from '../transactions'
 import {Worksheet} from './worksheet'
 import {Calculator, CustomFunc} from './calculator'
+import {Result} from './utils'
 
 export type ReturnCode = number
 
@@ -81,6 +84,14 @@ export class Workbook {
 
     public getAllSheetInfo(): Array<SheetInfo> {
         return get_all_sheet_info(this._id)
+    }
+
+    public checkFormula(f: string): boolean {
+        return check_formula(this._id, f)
+    }
+
+    public calcCondition(f: string): Result<boolean> {
+        return calc_condition(this._id, f)
     }
 
     public execTransaction(tx: Transaction): ActionEffect {

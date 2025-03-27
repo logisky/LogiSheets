@@ -785,6 +785,12 @@ impl From<LineFormatBrush> for EditPayload {
     }
 }
 
+impl From<EphemeralCellInput> for EditPayload {
+    fn from(value: EphemeralCellInput) -> Self {
+        EditPayload::EphemeralCellInput(value)
+    }
+}
+
 impl Payload for BlockInput {}
 impl Payload for BlockStyleUpdate {}
 impl Payload for CellInput {}
@@ -809,6 +815,7 @@ impl Payload for DeleteColsInBlock {}
 impl Payload for DeleteRowsInBlock {}
 impl Payload for CellFormatBrush {}
 impl Payload for LineFormatBrush {}
+impl Payload for EphemeralCellInput {}
 
 #[cfg(test)]
 mod tests {
