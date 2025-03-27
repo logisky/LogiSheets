@@ -1101,3 +1101,25 @@ fn parse_async_value(s: String) -> AsyncCalcResult {
         _ => Ok(s),
     }
 }
+
+#[wasm_bindgen]
+pub fn check_formula(id: usize, f: String) -> bool {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let r = wb.check_formula(f);
+    match r {
+        Ok(_) => true,
+        Err(_) => false,
+    }
+}
+
+#[wasm_bindgen]
+pub fn calc_condition(id: usize, f: String) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let r = wb.calc_condition(f);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}

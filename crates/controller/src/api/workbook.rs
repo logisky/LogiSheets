@@ -3,25 +3,30 @@ use std::collections::HashMap;
 use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
     controller::display::SheetInfo,
-    edit_action::{ActionEffect, StatusCode},
+    edit_action::{ActionEffect, PayloadsAction, StatusCode},
     lock::{locked_write, new_locked, Locked},
     Controller,
 };
 use crate::{
-    edit_action::EditAction,
+    edit_action::{EditAction, EphemeralCellInput},
     errors::{Error, Result},
 };
 use logisheets_base::{
     async_func::{AsyncCalcResult, Task},
     errors::BasicError,
-    SheetId,
+    CellId, SheetId,
 };
+
+const CALC_CONDITION_EPHEMERAL_ID: u32 = 402;
+const CUSTOM_EPHEMERAL_ID_START: u32 = 1025;
 
 pub(crate) type CellPositionerDefault = CellPositioner<1000>;
 
 pub struct Workbook {
     controller: Controller,
     cell_positioners: Locked<HashMap<SheetId, Locked<CellPositionerDefault>>>,
+
+    ephemeral_id: u32,
 }
 
 impl Default for Workbook {
@@ -29,6 +34,7 @@ impl Default for Workbook {
         Self {
             controller: Default::default(),
             cell_positioners: new_locked(HashMap::new()),
+            ephemeral_id: CUSTOM_EPHEMERAL_ID_START,
         }
     }
 }
@@ -39,6 +45,7 @@ impl Workbook {
         Workbook {
             controller: Default::default(),
             cell_positioners: new_locked(HashMap::new()),
+            ephemeral_id: CUSTOM_EPHEMERAL_ID_START,
         }
     }
 
@@ -56,6 +63,7 @@ impl Workbook {
         Ok(Workbook {
             controller,
             cell_positioners: new_locked(HashMap::new()),
+            ephemeral_id: CUSTOM_EPHEMERAL_ID_START,
         })
     }
 
@@ -149,11 +157,52 @@ impl Workbook {
     }
 
     /// To see if the formula is valid.
-    pub fn check_formula(&self, f: String) -> Result<()> {
-        todo!()
+    pub fn check_formula(&mut self, f: String) -> Result<()> {
+        let effect = self.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+            EphemeralCellInput {
+                sheet_idx: 0,
+                id: CALC_CONDITION_EPHEMERAL_ID as u32,
+                content: f.clone(),
+            },
+        )));
+        if let StatusCode::Ok(_) = effect.status {
+            Ok(())
+        } else {
+            Err(BasicError::InvalidFormula(f).into())
+        }
     }
 
-    pub fn calc_condition(&self, f: String) -> Result<bool> {
-        todo!()
+    pub fn calc_condition(&mut self, f: String) -> Result<bool> {
+        let effect = self.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+            EphemeralCellInput {
+                sheet_idx: 0,
+                id: CALC_CONDITION_EPHEMERAL_ID as u32,
+                content: f.clone(),
+            },
+        )));
+        if let StatusCode::Ok(_) = effect.status {
+            let cell = self
+                .controller
+                .status
+                .container
+                .get_cell(
+                    SheetId::default(),
+                    &CellId::EphemeralCell(CALC_CONDITION_EPHEMERAL_ID as u32),
+                )
+                .unwrap();
+            if cell.value.is_error() {
+                Err(BasicError::InvalidFormula(f).into())
+            } else {
+                Ok(cell.value.bool_value())
+            }
+        } else {
+            Err(BasicError::InvalidFormula(f).into())
+        }
+    }
+
+    pub fn get_ephemeral_id(&mut self) -> u32 {
+        let id = self.ephemeral_id;
+        self.ephemeral_id += 1;
+        id
     }
 }
