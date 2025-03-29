@@ -1,16 +1,59 @@
-import {Craft} from '../base/craft'
+import {Area, Craft, WORKBOOK} from '../base/craft'
+import {DataField, DataValue} from '../base/data'
 import {DataRole} from './roles'
 
 export class DataAccumulator implements Craft {
-    id: string
+    craftId: string
     name: string
     description: string
 
-    constructor() {
-        this.id = 'data-accumulator'
+    constructor(rowCount: number, colCount: number) {
+        this.craftId = 'data-accumulator'
         this.name = 'Data Accumulator'
         this.description = 'Data Accumulator'
+        this.rowCount = rowCount
+        this.colCount = colCount
+        this.keyArea = {
+            fromRow: 1,
+            fromCol: 0,
+            toRow: rowCount - 1,
+            toCol: 0,
+        }
+        this.fieldArea = {
+            fromRow: 0,
+            fromCol: 1,
+            toRow: 0,
+            toCol: colCount - 1,
+        }
+        this.dataArea = {
+            fromRow: 1,
+            fromCol: 1,
+            toRow: rowCount - 1,
+            toCol: colCount - 1,
+        }
     }
+
+    rowCount: number
+    colCount: number
+    keyArea: Area
+    fieldArea: Area
+    dataArea: Area
+
+    getCorrdinate(fieldId: string, key: string): {row: number; col: number} {
+        // let r = 0
+        // for (let i = 0; i < this.dataFields.length; i++) {}
+        throw new Error('Method not implemented.')
+    }
+    getKeyAndField(row: number, col: number): {fieldId: string; key: string} {
+        throw new Error('Method not implemented.')
+    }
+
+    bindBlock(sheetIdx: number, blockId: number): void {
+        throw new Error('Method not implemented.')
+    }
+
+    dataFields: DataField[]
+    dataValues: DataValue[]
 
     editor(): HTMLElement {
         throw new Error('Method not implemented.')
@@ -21,6 +64,8 @@ export class DataAccumulator implements Craft {
     }
 
     private _role: DataRole | null = null
+
+    private _sheetId?: number
 }
 
 export class Field {

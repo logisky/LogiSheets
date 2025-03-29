@@ -58,4 +58,6 @@ pub enum BasicError {
 
     #[error("invalid formula: {0}")]
     InvalidFormula(String),
+    #[error("bind block size mismatch: {0}, {1}, {2}")]
+    BindBlockSizeMismatch(BlockId, usize, usize),
 }

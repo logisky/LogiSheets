@@ -1115,11 +1115,39 @@ pub fn check_formula(id: usize, f: String) -> bool {
 }
 
 #[wasm_bindgen]
-pub fn calc_condition(id: usize, f: String) -> JsValue {
+pub fn calc_condition(id: usize, sheet_idx: usize, f: String) -> JsValue {
     init();
     let mut manager = MANAGER.get_mut();
     let wb = manager.get_mut_workbook(&id).unwrap();
-    let r = wb.calc_condition(f);
+    let r = wb.calc_condition(sheet_idx, f);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn check_bind_block(
+    id: usize,
+    sheet_idx: usize,
+    block_id: usize,
+    row_count: usize,
+    col_count: usize,
+) -> bool {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let r = wb.check_bind_block(sheet_idx, block_id, row_count, col_count);
+    match r {
+        Ok(_) => true,
+        Err(_) => false,
+    }
+}
+
+#[wasm_bindgen]
+pub fn get_available_block_id(id: usize, sheet_idx: usize) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let r = wb.get_available_block_id(sheet_idx);
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
