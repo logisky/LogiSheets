@@ -172,21 +172,67 @@ impl Workbook {
         }
     }
 
-    pub fn calc_condition(&mut self, f: String) -> Result<bool> {
+    pub fn get_available_block_id(&self, sheet_idx: usize) -> Result<usize> {
+        let sheet_id = self
+            .controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_id(sheet_idx)
+            .ok_or(BasicError::SheetIdxExceed(sheet_idx))?;
+        let block_id = self
+            .controller
+            .status
+            .navigator
+            .get_available_block_id(&sheet_id)?;
+        Ok(block_id)
+    }
+
+    pub fn check_bind_block(
+        &mut self,
+        sheet_idx: usize,
+        block_id: usize,
+        row_count: usize,
+        col_count: usize,
+    ) -> Result<SheetId> {
+        let sheet_id = self
+            .controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_id(sheet_idx)
+            .unwrap();
+
+        let block_size = self
+            .controller
+            .status
+            .navigator
+            .get_block_size(&sheet_id, &block_id)?;
+        if row_count > block_size.0 || col_count > block_size.1 {
+            return Err(BasicError::BindBlockSizeMismatch(block_id, row_count, col_count).into());
+        }
+        Ok(sheet_id)
+    }
+
+    pub fn calc_condition(&mut self, sheet_idx: usize, f: String) -> Result<bool> {
         let effect = self.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
             EphemeralCellInput {
-                sheet_idx: 0,
+                sheet_idx,
                 id: CALC_CONDITION_EPHEMERAL_ID as u32,
                 content: f.clone(),
             },
         )));
+        let sheet_id = self
+            .controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_id(sheet_idx)
+            .unwrap();
         if let StatusCode::Ok(_) = effect.status {
             let cell = self
                 .controller
                 .status
                 .container
                 .get_cell(
-                    SheetId::default(),
+                    sheet_id,
                     &CellId::EphemeralCell(CALC_CONDITION_EPHEMERAL_ID as u32),
                 )
                 .unwrap();

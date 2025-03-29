@@ -296,6 +296,22 @@ impl Navigator {
         }
         false
     }
+
+    pub fn get_available_block_id(&self, sheet_id: &SheetId) -> Result<BlockId, BasicError> {
+        let sheet_nav = self.get_sheet_nav(sheet_id)?;
+        let bid =
+            sheet_nav.data.blocks.iter().fold(
+                0 as BlockId,
+                |acc, (b_id, _)| {
+                    if *b_id > acc {
+                        *b_id
+                    } else {
+                        acc
+                    }
+                },
+            );
+        Ok(bid + 1)
+    }
 }
 
 fn intersect(start1: usize, end1: usize, start2: usize, end2: usize) -> bool {
