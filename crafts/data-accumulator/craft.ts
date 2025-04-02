@@ -7,7 +7,7 @@ export class DataAccumulator implements Craft {
     name: string
     description: string
 
-    constructor(rowCount: number, colCount: number) {
+    constructor(sheetIdx: number, rowCount: number, colCount: number) {
         this.craftId = 'data-accumulator'
         this.name = 'Data Accumulator'
         this.description = 'Data Accumulator'
@@ -31,6 +31,13 @@ export class DataAccumulator implements Craft {
             toRow: rowCount - 1,
             toCol: colCount - 1,
         }
+
+        const sheetId = WORKBOOK.getSheetId(sheetIdx)
+        if (typeof sheetId === 'number') {
+            this._sheetId = sheetId
+        } else {
+            throw new Error(sheetId.msg)
+        }
     }
 
     rowCount: number
@@ -40,8 +47,14 @@ export class DataAccumulator implements Craft {
     dataArea: Area
 
     getCorrdinate(fieldId: string, key: string): {row: number; col: number} {
+        // const ws = WORKBOOK.getWorksheet(this._sheetId)
         // let r = 0
-        // for (let i = 0; i < this.dataFields.length; i++) {}
+        // for (let i = 0; i < this.dataFields.length; i++) {
+        //     const value = ws.getValue(
+        //         this.dataArea.fromRow,
+        //         this.dataArea.fromCol + i
+        //     )
+        // }
         throw new Error('Method not implemented.')
     }
     getKeyAndField(row: number, col: number): {fieldId: string; key: string} {
@@ -65,7 +78,7 @@ export class DataAccumulator implements Craft {
 
     private _role: DataRole | null = null
 
-    private _sheetId?: number
+    private _sheetId!: number
 }
 
 export class Field {

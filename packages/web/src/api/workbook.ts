@@ -15,6 +15,7 @@ import {
     get_all_sheet_info,
     get_available_block_id,
     get_sheet_count,
+    get_sheet_id,
     input_async_result,
     merge_cells,
     move_block,
@@ -164,6 +165,10 @@ export class Workbook {
 
     public calcCondition(sheetIdx: number, f: string): Result<boolean> {
         return calc_condition(this._id, sheetIdx, f)
+    }
+
+    public getSheetId(sheetIdx: number): Result<number> {
+        return get_sheet_id(this._id, sheetIdx)
     }
 
     public execTransaction(tx: Transaction): ActionEffect {

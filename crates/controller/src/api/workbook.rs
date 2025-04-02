@@ -119,6 +119,10 @@ impl Workbook {
             return Err(BasicError::SheetNameNotFound(name.to_string()).into());
         }
         let sheet_id = id.unwrap();
+        self.get_sheet_by_id(sheet_id)
+    }
+
+    pub fn get_sheet_by_id(&self, sheet_id: SheetId) -> Result<Worksheet> {
         let positioner = self.get_cell_positioner(sheet_id);
         let c = &self.controller;
         Ok(Worksheet {
@@ -250,5 +254,17 @@ impl Workbook {
         let id = self.ephemeral_id;
         self.ephemeral_id += 1;
         id
+    }
+
+    /// Get the worksheet id by its index.
+    ///
+    /// It is not recommended to use this function because worksheet id is an internal
+    /// conception. Use this only when you know what you are doing.
+    pub fn get_worksheet_id(&self, sheet_idx: usize) -> Result<SheetId> {
+        self.controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_id(sheet_idx)
+            .ok_or(BasicError::SheetIdxExceed(sheet_idx).into())
     }
 }
