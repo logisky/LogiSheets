@@ -226,6 +226,10 @@ export class Workbook {
         return new Worksheet(this._id, idx)
     }
 
+    public getWorksheetById(id: number): Worksheet {
+        return new Worksheet(this._id, id, false)
+    }
+
     public registryCustomFunc(customFunc: CustomFunc) {
         this._calculator.registry(customFunc)
     }
