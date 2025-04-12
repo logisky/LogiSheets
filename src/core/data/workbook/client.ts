@@ -6,56 +6,26 @@ import {
     DisplayWindowWithStartPoint,
     SheetInfo,
     CellPosition,
-    ErrorMessage,
     BlockInfo,
     isErrorMessage,
     SheetDimension,
     MergeCell,
-} from 'logisheets-web'
-import {
+    Resp,
     Callback,
-    WorkerUpdate,
-    GetAllSheetInfoParams,
     GetDisplayWindowParams,
     GetCellParams,
     LoadWorkbookParams,
     HandleTransactionParams,
     GetFullyCoveredBlocksParams,
-    MethodName,
     GetMergedCellsParams,
-} from './types'
-import {CellInfo} from 'packages/web'
-
-export type Resp<T> = Promise<T | ErrorMessage>
-
-export interface IWorkbookClient {
-    isReady(): Promise<void>
-    getSheetDimension(sheetIdx: number): Resp<SheetDimension>
-    getAllSheetInfo(params: GetAllSheetInfoParams): Resp<readonly SheetInfo[]>
-    getDisplayWindow(
-        params: GetDisplayWindowParams
-    ): Resp<DisplayWindowWithStartPoint>
-    getCell(params: GetCellParams): Resp<Cell>
-    getCellPosition(params: GetCellParams): Resp<CellPosition>
-    getFullyCoveredBlocks(
-        params: GetFullyCoveredBlocksParams
-    ): Resp<readonly BlockInfo[]>
-
-    undo(): Resp<void>
-    redo(): Resp<void>
-    handleTransaction(params: HandleTransactionParams): Resp<void>
-
-    loadWorkbook(params: LoadWorkbookParams): Resp<void>
-
-    registryCustomFunc(f: CustomFunc): void
-    registryCellUpdatedCallback(f: () => void): void
-    registrySheetUpdatedCallback(f: () => void): void
-
-    getMergedCells(params: GetMergedCellsParams): Resp<readonly MergeCell[]>
-}
+    CellInfo,
+    Client,
+    CalcConditionParams,
+} from 'logisheets-web'
+import {WorkerUpdate, MethodName} from './types'
 
 @injectable()
-export class WorkbookClient implements IWorkbookClient {
+export class WorkbookClient implements Client {
     constructor() {
         const worker = new Worker(
             new URL('./workbook.worker.ts', import.meta.url)
@@ -93,6 +63,10 @@ export class WorkbookClient implements IWorkbookClient {
             }
             this._resolvers.delete(id)
         }
+    }
+
+    calcCondition(params: CalcConditionParams): Resp<boolean> {
+        return this._call(MethodName.CalcCondition, params) as Resp<boolean>
     }
 
     getMergedCells(params: GetMergedCellsParams): Resp<readonly MergeCell[]> {

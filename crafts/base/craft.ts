@@ -1,11 +1,11 @@
-import type {Workbook, Result} from '../../packages/web'
+import type {Resp, Client} from '../../packages/web'
 import {DataValue, DataField} from './data'
 import {getValueAssertString} from './uitls'
 
 const VALIDATION_PLACEHOLDER = '${this}'
 
 // @ts-expect-error todo fix this
-export const WORKBOOK = window.workbook as Workbook
+export const WORKBOOK_CLIENT = window.workbookClient as Client
 
 export interface Area {
     fromRow: number
@@ -30,8 +30,15 @@ export interface Craft {
     fieldArea: Area
     dataArea: Area
 
-    getCorrdinate(fieldId: string, key: string): {row: number; col: number}
-    getKeyAndField(row: number, col: number): {fieldId: string; key: string}
+    getCorrdinate(
+        fieldId: string,
+        key: string
+    ): Promise<{row: number; col: number}>
+
+    getKeyAndField(
+        row: number,
+        col: number
+    ): Promise<{fieldId: string; key: string}>
 
     /**
      * A block is a place LogiSheets provides to craft to interact with.
@@ -109,7 +116,10 @@ export abstract class CraftBase implements Craft {
         this.dataArea = {fromRow, fromCol, toRow, toCol}
     }
 
-    getCorrdinate(fieldId: string, key: string): {row: number; col: number} {
+    async getCorrdinate(
+        fieldId: string,
+        key: string
+    ): Promise<{row: number; col: number}> {
         let col = -1
         for (let r = this.fieldArea.fromRow; r <= this.fieldArea.toRow; r++) {
             for (
@@ -117,7 +127,7 @@ export abstract class CraftBase implements Craft {
                 c <= this.fieldArea.toCol;
                 c++
             ) {
-                const value = getValueAssertString(this.sheetId, r, c)
+                const value = await getValueAssertString(this.sheetId, r, c)
                 for (const f of this.dataFields) {
                     if (f.id === value) {
                         col = c
@@ -130,7 +140,7 @@ export abstract class CraftBase implements Craft {
         let row = -1
         for (let r = this.keyArea.fromRow; r <= this.keyArea.toRow; r++) {
             for (let c = this.keyArea.fromCol; c <= this.keyArea.toCol; c++) {
-                const value = getValueAssertString(this.sheetId, r, c)
+                const value = await getValueAssertString(this.sheetId, r, c)
                 row = r
                 break
             }
@@ -138,10 +148,13 @@ export abstract class CraftBase implements Craft {
         return {row, col}
     }
 
-    getKeyAndField(row: number, col: number): {fieldId: string; key: string} {
+    async getKeyAndField(
+        row: number,
+        col: number
+    ): Promise<{fieldId: string; key: string}> {
         let field = ''
         for (let r = this.fieldArea.fromRow; r <= this.fieldArea.toRow; r++) {
-            const value = getValueAssertString(this.sheetId, r, col)
+            const value = await getValueAssertString(this.sheetId, r, col)
             for (const f of this.dataFields) {
                 if (f.id === value) {
                     field = f.id
@@ -149,7 +162,7 @@ export abstract class CraftBase implements Craft {
                 }
             }
         }
-        const key = getValueAssertString(
+        const key = await getValueAssertString(
             this.sheetId,
             row,
             this.keyArea.fromCol
@@ -171,25 +184,21 @@ export interface Role {
 }
 
 /**
- * Make sure that the validation is a pure formula which only contains the value,
- * no reference to any cells.
+ * Make sure that the validation is a pure formula which doesn't include any references.
  */
-export function validate(
-    sheetIdx: number,
-    validation: string
-): Result<boolean> {
-    return WORKBOOK.calcCondition(sheetIdx, validation)
+export function validate(sheetIdx: number, validation: string): Resp<boolean> {
+    return WORKBOOK_CLIENT.calcCondition({sheetIdx, condition: validation})
 }
 
 export function validateWithPlaceholder(
     sheetIdx: number,
     validation: string,
     value: string
-): Result<boolean> {
-    return WORKBOOK.calcCondition(
+): Resp<boolean> {
+    return WORKBOOK_CLIENT.calcCondition({
         sheetIdx,
-        validation.replaceAll(VALIDATION_PLACEHOLDER, value)
-    )
+        condition: validation.replaceAll(VALIDATION_PLACEHOLDER, value),
+    })
 }
 
 /**

@@ -15,8 +15,6 @@ import {
     SheetInfo,
     Workbook,
     Worksheet,
-} from 'logisheets-web'
-import {
     GetAllSheetInfoParams,
     GetCellParams,
     GetDisplayWindowParams,
@@ -25,9 +23,9 @@ import {
     GetMergedCellsParams,
     HandleTransactionParams,
     LoadWorkbookParams,
-    MethodName,
-    WorkerUpdate,
-} from './types'
+    CalcConditionParams,
+} from 'logisheets-web'
+import {WorkerUpdate, MethodName} from './types'
 
 type Result<T> = T | ErrorMessage
 
@@ -145,6 +143,11 @@ class WorkerService implements IWorkbookWorker {
         return
     }
 
+    public calcCondition(params: CalcConditionParams): Result<boolean> {
+        const {sheetIdx, condition} = params
+        return this.workbook.calcCondition(sheetIdx, condition)
+    }
+
     public getSheet(idx: number): Worksheet {
         return this.workbook.getWorksheet(idx)
     }
@@ -207,6 +210,9 @@ class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetMergedCells:
                 result = this.getMergedCells(args)
+                break
+            case MethodName.CalcCondition:
+                result = this.calcCondition(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)
