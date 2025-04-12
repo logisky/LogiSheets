@@ -9,9 +9,10 @@ import {
     BlockInfo,
     SheetDimension,
     MergeCell,
+    Resp,
 } from 'logisheets-web'
 import {CellViewResponse, ViewManager} from './view_manager'
-import {Resp, WorkbookClient} from './workbook'
+import {WorkbookClient} from './workbook'
 import {Pool} from '../pool'
 
 export const MAX_COUNT = 100000000

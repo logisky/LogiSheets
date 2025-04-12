@@ -1,6 +1,7 @@
 export * from './api'
 export * from './payloads'
 export * from './transactions'
+export * from './client'
 export type {
     ActionEffect,
     Alignment,
