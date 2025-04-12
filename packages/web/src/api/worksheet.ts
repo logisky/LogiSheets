@@ -33,9 +33,13 @@ import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
 
 export class Worksheet {
-    public constructor(id: number, sheetIdx: number) {
+    public constructor(id: number, sheetIdxOrId: number, isSheetIdx = true) {
         this._id = id
-        this._sheetId = get_sheet_id(id, sheetIdx)
+        if (isSheetIdx) {
+            this._sheetId = get_sheet_id(id, sheetIdxOrId)
+        } else {
+            this._sheetId = sheetIdxOrId
+        }
     }
 
     public getSheetDimension(): Result<SheetDimension> {
