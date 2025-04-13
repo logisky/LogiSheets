@@ -10,9 +10,15 @@ import {ViewComponent} from './view'
 export interface TopBarProps {
     readonly selectedData?: SelectedData
     readonly setAttr?: (e: SetAttrEvent) => void
+    readonly isBlockViewVisible: boolean
+    readonly setBlockViewVisible: (visible: boolean) => void
 }
 
-export const TopBar = ({selectedData}: TopBarProps) => {
+export const TopBar = ({
+    selectedData,
+    isBlockViewVisible,
+    setBlockViewVisible,
+}: TopBarProps) => {
     const [mainMenuType, setMainMenuType] = useState(MainMenuType.START)
     const [menuContent, setMenuContent] = useState<ReactElement | null>()
     useEffect(() => {
@@ -25,7 +31,13 @@ export const TopBar = ({selectedData}: TopBarProps) => {
                 content = <FileComponent />
                 break
             case MainMenuType.VIEW:
-                content = <ViewComponent />
+                content = (
+                    <ViewComponent
+                        selectedData={selectedData}
+                        isBlockViewVisible={isBlockViewVisible}
+                        setBlockViewVisible={setBlockViewVisible}
+                    />
+                )
                 break
             default:
         }
