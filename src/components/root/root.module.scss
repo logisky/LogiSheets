@@ -2,16 +2,41 @@
   flex-direction: column;
   display: flex;
   height: 100%;
+  width: 100%;
   background-color: #f2f4f7;
   font-size: 12px;
 }
 .content {
   flex: 1;
   overflow: hidden;
+  height: 100%;
+  width: 100%;
 }
 .debug-toolbar {
   position: absolute;
   z-index: 999;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16);
   background-color: white;
+}
+
+.block-view-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 0%;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 100;
+
+  &.visible {
+      transform: translateX(0);
+  }
+}
+
+.container {
+  flex-direction: row;
+  display: flex;
+  height: 100%;
+  width: 100%;
 }
