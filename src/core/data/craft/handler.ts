@@ -26,6 +26,10 @@ import {
     CraftState,
     CraftHandler as CraftHandlerInterface,
     CraftId,
+    GetCraftStateMethodName,
+    GetCoordinateMethodName,
+    GetAllKeysMethodName,
+    GetAllFieldsMethodName,
 } from 'logisheets-craft'
 
 export interface CraftIframeManager {
@@ -37,16 +41,73 @@ export class CraftHandler implements CraftHandlerInterface {
         private readonly _workbookClient: WorkbookClient,
         private readonly _craftIframeManager: CraftIframeManager
     ) {}
-
-    getCraftState(craftId: CraftId): Promise<CraftState> {
+    getAllKeys(craftId: CraftId): Promise<string[]> {
         const message = {
-            m: 'getCraftState',
+            m: GetAllKeysMethodName,
             toCraft: craftId,
         }
         const iframe = this._craftIframeManager.getIframe(craftId)
         return new Promise((resolve) => {
             const callback = (e: MessageEvent) => {
-                if (e.data.m === 'getCraftState') {
+                if (e.data.m === GetAllKeysMethodName) {
+                    resolve(e.data.keys)
+                    window.removeEventListener('message', callback)
+                }
+            }
+            window.addEventListener('message', callback)
+            iframe.contentWindow?.postMessage(message, '*')
+        })
+    }
+    getAllFields(craftId: CraftId): Promise<string[]> {
+        const message = {
+            m: GetAllFieldsMethodName,
+            toCraft: craftId,
+        }
+        const iframe = this._craftIframeManager.getIframe(craftId)
+        return new Promise((resolve) => {
+            const callback = (e: MessageEvent) => {
+                if (e.data.m === GetAllFieldsMethodName) {
+                    resolve(e.data.fields)
+                    window.removeEventListener('message', callback)
+                }
+            }
+            window.addEventListener('message', callback)
+            iframe.contentWindow?.postMessage(message, '*')
+        })
+    }
+    getCoordinate(
+        craftId: CraftId,
+        key: string,
+        value: string
+    ): Promise<{row: number; col: number}> {
+        const message = {
+            m: GetCoordinateMethodName,
+            toCraft: craftId,
+            key,
+            value,
+        }
+        const iframe = this._craftIframeManager.getIframe(craftId)
+        return new Promise((resolve) => {
+            const callback = (e: MessageEvent) => {
+                if (e.data.m === GetCoordinateMethodName) {
+                    resolve(e.data.coordinate)
+                    window.removeEventListener('message', callback)
+                }
+            }
+            window.addEventListener('message', callback)
+            iframe.contentWindow?.postMessage(message, '*')
+        })
+    }
+
+    getCraftState(craftId: CraftId): Promise<CraftState> {
+        const message = {
+            m: GetCraftStateMethodName,
+            toCraft: craftId,
+        }
+        const iframe = this._craftIframeManager.getIframe(craftId)
+        return new Promise((resolve) => {
+            const callback = (e: MessageEvent) => {
+                if (e.data.m === GetCraftStateMethodName) {
                     resolve(e.data.state)
                     window.removeEventListener('message', callback)
                 }

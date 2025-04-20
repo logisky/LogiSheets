@@ -28,6 +28,9 @@ import {
     CraftId,
     CraftSpecific,
     CraftState,
+    GetAllFieldsMethodName,
+    GetAllKeysMethodName,
+    GetCoordinateMethodName,
     GetCraftStateMethodName,
 } from './types'
 
@@ -36,14 +39,53 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
         window.addEventListener('message', (e) => {
             const {m, toCraft} = e.data
             if (toCraft !== this._craftId) return
-            if (m !== GetCraftStateMethodName) return
-
-            const state = this.getCraftState()
-            e.source?.postMessage({
-                m: GetCraftStateMethodName,
-                state,
-            })
+            if (m === GetCraftStateMethodName) {
+                const state = this.getCraftState()
+                e.source?.postMessage({
+                    m: GetCraftStateMethodName,
+                    state,
+                })
+            } else if (m === GetAllKeysMethodName) {
+                const keys = this.getAllKeys()
+                e.source?.postMessage({
+                    m: GetAllKeysMethodName,
+                    keys,
+                })
+            } else if (m === GetAllFieldsMethodName) {
+                const fields = this.getAllFields()
+                e.source?.postMessage({
+                    m: GetAllFieldsMethodName,
+                    fields,
+                })
+            } else if (m === GetCoordinateMethodName) {
+                const {key, value} = e.data
+                const coordinate = this.getCoordinate(key, value)
+                e.source?.postMessage({
+                    m: GetCoordinateMethodName,
+                    coordinate,
+                })
+            }
         })
+    }
+    getAllKeys(): string[] {
+        if (!this._getAllKeys) {
+            throw new Error('getAllKeys is not set')
+        }
+        return this._getAllKeys()
+    }
+
+    getAllFields(): string[] {
+        if (!this._getAllFields) {
+            throw new Error('getAllFields is not set')
+        }
+        return this._getAllFields()
+    }
+
+    getCoordinate(key: string, value: string): {row: number; col: number} {
+        if (!this._getCoordinate) {
+            throw new Error('getCoordinate is not set')
+        }
+        return this._getCoordinate(key, value)
     }
 
     getCraftState(): CraftState {
@@ -55,6 +97,23 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
 
     setGetCraftState(getCraftState: () => Promise<CraftState>) {
         this._getCraftState = getCraftState
+    }
+
+    setGetAllKeys(getAllKeys: () => string[]) {
+        this._getAllKeys = getAllKeys
+    }
+
+    setGetAllFields(getAllFields: () => string[]) {
+        this._getAllFields = getAllFields
+    }
+
+    setGetCoordinate(
+        getCoordinate: (
+            key: string,
+            value: string
+        ) => {row: number; col: number}
+    ) {
+        this._getCoordinate = getCoordinate
     }
 
     isReady(): Promise<void> {
@@ -169,6 +228,12 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
     private _cellUpdatedCallbacks: Callback[] = []
     private _sheetUpdatedCallbacks: Callback[] = []
     private _getCraftState?: () => Promise<CraftState>
+    private _getAllKeys?: () => string[]
+    private _getAllFields?: () => string[]
+    private _getCoordinate?: (
+        key: string,
+        value: string
+    ) => {row: number; col: number}
 }
 
 export enum MethodName {
