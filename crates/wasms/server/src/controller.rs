@@ -1,3 +1,4 @@
+use logisheets_base::{BlockId, SheetId};
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
     Alignment, AsyncFuncResult, BlockInput, CellClear, CellFormatBrush, CellInput, CellStyleUpdate,
@@ -948,6 +949,40 @@ pub fn get_sheet_id(id: usize, sheet_idx: usize) -> JsValue {
     let mut manager = MANAGER.get_mut();
     let wb = manager.get_mut_workbook(&id).unwrap();
     let r = wb.get_worksheet_id(sheet_idx);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_block_row_id(
+    id: usize,
+    sheet_id: SheetId,
+    block_id: BlockId,
+    row_idx: usize,
+) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id);
+    handle_result!(ws);
+    let r = ws.get_block_row_id(block_id, row_idx);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_block_col_id(
+    id: usize,
+    sheet_id: SheetId,
+    block_id: BlockId,
+    col_idx: usize,
+) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id);
+    handle_result!(ws);
+    let r = ws.get_block_col_id(block_id, col_idx);
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
 }

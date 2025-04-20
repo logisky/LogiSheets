@@ -1,0 +1,23 @@
+{
+    "name": "logisheets-craft",
+    "author": "Jeremy He<yiliang.he@qq.com>",
+    "license": "MIT",
+    "version": "0.1.0",
+    "description": "Crafts for LogiSheets",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "npx tsc"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/logisky/LogiSheets.git"
+    },
+    "keywords": [
+        "craft",
+        "logisheets"
+    ],
+    "dependencies": {
+        "logisheets-web": "^0.8.0"
+    }
+}

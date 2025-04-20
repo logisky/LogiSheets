@@ -12593,7 +12593,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"logisheets-web@workspace:*, logisheets-web@workspace:packages/web":
+"logisheets-craft@workspace:packages/craft":
+  version: 0.0.0-use.local
+  resolution: "logisheets-craft@workspace:packages/craft"
+  dependencies:
+    logisheets-web: "npm:^0.8.0"
+  languageName: unknown
+  linkType: soft
+
+"logisheets-web@npm:^0.8.0, logisheets-web@workspace:*, logisheets-web@workspace:packages/web":
   version: 0.0.0-use.local
   resolution: "logisheets-web@workspace:packages/web"
   languageName: unknown

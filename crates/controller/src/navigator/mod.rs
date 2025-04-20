@@ -73,6 +73,38 @@ impl Navigator {
         }
     }
 
+    pub fn fetch_block_row_id(
+        &self,
+        sheet_id: &SheetId,
+        block_id: &BlockId,
+        row_idx: usize,
+    ) -> Result<RowId, BasicError> {
+        let bp = self.get_block_place(sheet_id, block_id)?;
+        if let Some((rid, _)) = bp.get_inner_id(row_idx, 0) {
+            Ok(rid)
+        } else {
+            Err(BasicError::BlockRowIdNotFound(
+                *sheet_id, *block_id, row_idx,
+            ))
+        }
+    }
+
+    pub fn fetch_block_col_id(
+        &self,
+        sheet_id: &SheetId,
+        block_id: &BlockId,
+        col_idx: usize,
+    ) -> Result<ColId, BasicError> {
+        let bp = self.get_block_place(sheet_id, block_id)?;
+        if let Some((_, cid)) = bp.get_inner_id(0, col_idx) {
+            Ok(cid)
+        } else {
+            Err(BasicError::BlockColIdNotFound(
+                *sheet_id, *block_id, col_idx,
+            ))
+        }
+    }
+
     pub fn fetch_norm_cell_id(
         &self,
         sheet_id: &SheetId,

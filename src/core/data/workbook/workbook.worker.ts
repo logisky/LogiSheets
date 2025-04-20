@@ -24,6 +24,10 @@ import {
     HandleTransactionParams,
     LoadWorkbookParams,
     CalcConditionParams,
+    GetBlockRowIdParams,
+    RowId,
+    GetBlockColIdParams,
+    ColId,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -111,6 +115,16 @@ class WorkerService implements IWorkbookWorker {
 
     public getAllSheetInfo(): readonly SheetInfo[] {
         return this.workbook.getAllSheetInfo()
+    }
+
+    public getBlockRowId(params: GetBlockRowIdParams): Result<RowId> {
+        const {sheetId, blockId, rowIdx} = params
+        return this.workbook.getBlockRowId(sheetId, blockId, rowIdx)
+    }
+
+    public getBlockColId(params: GetBlockColIdParams): Result<ColId> {
+        const {sheetId, blockId, colIdx} = params
+        return this.workbook.getBlockColId(sheetId, blockId, colIdx)
     }
 
     public undo(): void {
@@ -213,6 +227,12 @@ class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.CalcCondition:
                 result = this.calcCondition(args)
+                break
+            case MethodName.GetBlockRowId:
+                result = this.getBlockRowId(args)
+                break
+            case MethodName.GetBlockColId:
+                result = this.getBlockColId(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

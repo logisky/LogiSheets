@@ -1,6 +1,6 @@
 export * from './api'
 export * from './payloads'
-export * from './transactions'
+export * from './types'
 export * from './client'
 export type {
     ActionEffect,

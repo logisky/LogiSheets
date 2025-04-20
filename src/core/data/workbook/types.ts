@@ -19,4 +19,7 @@ export enum MethodName {
     IsReady = 'isReady',
     GetMergedCells = 'getMergedCells',
     CalcCondition = 'calcCondition',
+
+    GetBlockRowId = 'getBlockRowId',
+    GetBlockColId = 'getBlockColId',
 }

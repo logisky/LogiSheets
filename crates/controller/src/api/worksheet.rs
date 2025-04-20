@@ -775,4 +775,20 @@ impl<'a> Worksheet<'a> {
             .fetch_normal_cell_idx(&self.sheet_id, &master_cell_id)?;
         Ok(result)
     }
+
+    pub fn get_block_row_id(&self, block_id: BlockId, row_idx: usize) -> Result<RowId> {
+        self.controller
+            .status
+            .navigator
+            .fetch_block_row_id(&self.sheet_id, &block_id, row_idx)
+            .map_err(|e| e.into())
+    }
+
+    pub fn get_block_col_id(&self, block_id: BlockId, col_idx: usize) -> Result<ColId> {
+        self.controller
+            .status
+            .navigator
+            .fetch_block_col_id(&self.sheet_id, &block_id, col_idx)
+            .map_err(|e| e.into())
+    }
 }
