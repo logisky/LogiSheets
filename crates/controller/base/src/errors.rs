@@ -23,6 +23,10 @@ pub enum BasicError {
     BlockIdNotFound(SheetId, BlockId),
     #[error("Failed to fetch block cell by the block id: {1}, row: {2}, col: {3} in sheet {0}")]
     BlockCellIdNotFound(SheetId, BlockId, usize, usize),
+    #[error("Failed to fetch block row id by the block id: {1}, row index: {2} in sheet {0}")]
+    BlockRowIdNotFound(SheetId, BlockId, usize),
+    #[error("Failed to fetch block col id by the block id: {1}, col index: {2} in sheet {0}")]
+    BlockColIdNotFound(SheetId, BlockId, usize),
     #[error("Failed to create block because the block id is already existed")]
     BlockIdHasAlreadyExisted(BlockId),
     #[error("Failed to fetch sheet by the sheet id: {0}")]

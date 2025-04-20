@@ -21,6 +21,10 @@ import {
     CellInfo,
     Client,
     CalcConditionParams,
+    ColId,
+    GetBlockColIdParams,
+    GetBlockRowIdParams,
+    RowId,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -63,6 +67,12 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    getBlockRowId(params: GetBlockRowIdParams): Resp<RowId> {
+        return this._call(MethodName.GetBlockRowId, params) as Resp<RowId>
+    }
+    getBlockColId(params: GetBlockColIdParams): Resp<ColId> {
+        return this._call(MethodName.GetBlockColId, params) as Resp<ColId>
     }
 
     calcCondition(params: CalcConditionParams): Resp<boolean> {

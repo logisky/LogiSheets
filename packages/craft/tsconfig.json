@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "declaration": true,
+        "module": "ESNext",
+        "moduleResolution": "Node",
+        "noImplicitAny": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "outDir": "./dist/",
+        "target": "ESNext"
+    },
+    "files": [
+        "index.ts",
+    ],
+    "include": [
+        "src/**/*.ts",
+    ]
+}

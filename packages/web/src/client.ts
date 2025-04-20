@@ -8,7 +8,7 @@ import type {
     ErrorMessage,
 } from './bindings'
 import type {Cell, CustomFunc} from './api'
-import type {Transaction} from './transactions'
+import type {Transaction, RowId, ColId} from './types'
 
 export type Resp<T> = Promise<T | ErrorMessage>
 
@@ -41,6 +41,9 @@ export interface Client {
 
     getMergedCells(params: GetMergedCellsParams): Resp<readonly MergeCell[]>
     calcCondition(params: CalcConditionParams): Resp<boolean>
+
+    getBlockRowId(params: GetBlockRowIdParams): Resp<RowId>
+    getBlockColId(params: GetBlockColIdParams): Resp<ColId>
 }
 
 export interface GetAllSheetInfoParams {}
@@ -107,4 +110,16 @@ export interface GetMergedCellsParams {
     startCol: number
     endRow: number
     endCol: number
+}
+
+export interface GetBlockRowIdParams {
+    sheetId: number
+    blockId: number
+    rowIdx: number
+}
+
+export interface GetBlockColIdParams {
+    sheetId: number
+    blockId: number
+    colIdx: number
 }

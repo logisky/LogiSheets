@@ -14,6 +14,8 @@ import {
     delete_sheet,
     get_all_sheet_info,
     get_available_block_id,
+    get_block_col_id,
+    get_block_row_id,
     get_sheet_count,
     get_sheet_id,
     input_async_result,
@@ -45,7 +47,7 @@ import {
     undo,
 } from '../../wasm/logisheets_wasm_server'
 import {ActionEffect, AsyncFuncResult, SheetInfo} from '../bindings'
-import {Transaction} from '../transactions'
+import {ColId, RowId, Transaction} from '../types'
 import {Worksheet} from './worksheet'
 import {Calculator, CustomFunc} from './calculator'
 import {Result} from './utils'
@@ -169,6 +171,22 @@ export class Workbook {
 
     public getSheetId(sheetIdx: number): Result<number> {
         return get_sheet_id(this._id, sheetIdx)
+    }
+
+    public getBlockRowId(
+        sheetId: number,
+        blockId: number,
+        rowIdx: number
+    ): Result<RowId> {
+        return get_block_row_id(this._id, sheetId, blockId, rowIdx)
+    }
+
+    public getBlockColId(
+        sheetId: number,
+        blockId: number,
+        colIdx: number
+    ): Result<ColId> {
+        return get_block_col_id(this._id, sheetId, blockId, colIdx)
     }
 
     public execTransaction(tx: Transaction): ActionEffect {

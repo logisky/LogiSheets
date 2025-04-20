@@ -1,5 +1,8 @@
 import {Payload} from './payloads'
 
+export type RowId = number
+export type ColId = number
+
 export class Transaction {
     public constructor(
         public payloads: readonly Payload[],
