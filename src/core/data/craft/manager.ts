@@ -1,10 +1,11 @@
 import {injectable} from 'inversify'
+import {BlockId, CraftId, CraftState} from 'logisheets-craft'
 
 export interface CraftManifest {
     /**
      * The craft's unique identifier.
      */
-    id: string
+    id: CraftId
     /**
      * The craft's icon url.
      */
@@ -51,7 +52,7 @@ export class CraftManager {
     /**
      * Bind a block to a craft.`
      */
-    public bindBlock(blockId: number, craftId: string) {
+    public bindBlock(blockId: BlockId, craftId: CraftId) {
         if (this._blockToCraft.has(blockId)) {
             throw new Error(
                 `Block with id ${blockId} already bound to craft ${this._blockToCraft.get(
@@ -62,16 +63,7 @@ export class CraftManager {
         this._blockToCraft.set(blockId, craftId)
     }
 
-    public activateCraft(craftId: string): HTMLIFrameElement {
-        const craft = this._crafts.find((each) => each.id === craftId)
-        if (!craft) {
-            throw new Error(`Craft with id ${craftId} not found`)
-        }
-
-        return this.createCraftIframe(craftId)
-    }
-
-    public createCraftIframe(craftId: string) {
+    public activateCraft(craftId: CraftId) {
         const craft = this._crafts.find((each) => each.id === craftId)
         if (!craft) {
             throw new Error(`Craft with id ${craftId} not found`)
@@ -84,5 +76,9 @@ export class CraftManager {
     }
 
     private _crafts: CraftManifest[] = []
-    private _blockToCraft: Map<number, string> = new Map()
+    private _blockToCraft: Map<BlockId, CraftId> = new Map()
+    private _craftStates: Map<BlockId, CraftState> = new Map()
+    // TODO: storing each iframe for each craft is expensive,
+    // find a way to reuse the iframe.
+    private _iframes: Map<BlockId, HTMLIFrameElement> = new Map()
 }

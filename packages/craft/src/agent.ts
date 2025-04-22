@@ -25,67 +25,32 @@ import {
     Client as WorkbookClient,
 } from 'logisheets-web'
 import {
-    CraftId,
     CraftSpecific,
     CraftState,
-    GetAllFieldsMethodName,
-    GetAllKeysMethodName,
-    GetCoordinateMethodName,
     GetCraftStateMethodName,
+    BlockId,
 } from './types'
 
 export class CraftAgent implements WorkbookClient, CraftSpecific {
-    constructor(private readonly _craftId: CraftId) {
+    constructor(private readonly _blockId: BlockId) {
         window.addEventListener('message', (e) => {
-            const {m, toCraft} = e.data
-            if (toCraft !== this._craftId) return
+            const {m, result, id} = e.data
             if (m === GetCraftStateMethodName) {
                 const state = this.getCraftState()
                 e.source?.postMessage({
                     m: GetCraftStateMethodName,
-                    state,
+                    id,
+                    result: state,
                 })
-            } else if (m === GetAllKeysMethodName) {
-                const keys = this.getAllKeys()
-                e.source?.postMessage({
-                    m: GetAllKeysMethodName,
-                    keys,
-                })
-            } else if (m === GetAllFieldsMethodName) {
-                const fields = this.getAllFields()
-                e.source?.postMessage({
-                    m: GetAllFieldsMethodName,
-                    fields,
-                })
-            } else if (m === GetCoordinateMethodName) {
-                const {key, value} = e.data
-                const coordinate = this.getCoordinate(key, value)
-                e.source?.postMessage({
-                    m: GetCoordinateMethodName,
-                    coordinate,
-                })
+                return
             }
+
+            const resolver = this._resolvers.get(id)
+            if (resolver) {
+                resolver(result)
+            }
+            this._resolvers.delete(id)
         })
-    }
-    getAllKeys(): string[] {
-        if (!this._getAllKeys) {
-            throw new Error('getAllKeys is not set')
-        }
-        return this._getAllKeys()
-    }
-
-    getAllFields(): string[] {
-        if (!this._getAllFields) {
-            throw new Error('getAllFields is not set')
-        }
-        return this._getAllFields()
-    }
-
-    getCoordinate(key: string, value: string): {row: number; col: number} {
-        if (!this._getCoordinate) {
-            throw new Error('getCoordinate is not set')
-        }
-        return this._getCoordinate(key, value)
     }
 
     getCraftState(): CraftState {
@@ -95,25 +60,8 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
         return this._getCraftState()
     }
 
-    setGetCraftState(getCraftState: () => Promise<CraftState>) {
+    setGetCraftState(getCraftState: () => CraftState) {
         this._getCraftState = getCraftState
-    }
-
-    setGetAllKeys(getAllKeys: () => string[]) {
-        this._getAllKeys = getAllKeys
-    }
-
-    setGetAllFields(getAllFields: () => string[]) {
-        this._getAllFields = getAllFields
-    }
-
-    setGetCoordinate(
-        getCoordinate: (
-            key: string,
-            value: string
-        ) => {row: number; col: number}
-    ) {
-        this._getCoordinate = getCoordinate
     }
 
     isReady(): Promise<void> {
@@ -216,7 +164,7 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             m: method,
             args: params,
             id,
-            fromCraft: this._craftId,
+            fromBlock: this._blockId,
         })
         return new Promise((resolve) => {
             this._resolvers.set(id, resolve)
@@ -227,13 +175,7 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
     private _resolvers: Map<number, (arg: any) => unknown> = new Map()
     private _cellUpdatedCallbacks: Callback[] = []
     private _sheetUpdatedCallbacks: Callback[] = []
-    private _getCraftState?: () => Promise<CraftState>
-    private _getAllKeys?: () => string[]
-    private _getAllFields?: () => string[]
-    private _getCoordinate?: (
-        key: string,
-        value: string
-    ) => {row: number; col: number}
+    private _getCraftState?: () => CraftState
 }
 
 export enum MethodName {
