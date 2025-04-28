@@ -32,14 +32,14 @@ import {
 } from './types'
 
 export class CraftAgent implements WorkbookClient, CraftSpecific {
-    constructor(private readonly _blockId: BlockId) {
+    constructor() {
         window.addEventListener('message', (e) => {
             const {m, result, id} = e.data
             if (m === GetCraftStateMethodName) {
                 const state = this.getCraftState()
                 e.source?.postMessage({
                     m: GetCraftStateMethodName,
-                    id,
+                    id: id,
                     result: state,
                 })
                 return
@@ -58,6 +58,14 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             throw new Error('getCraftState is not set')
         }
         return this._getCraftState()
+    }
+
+    loadCraftState(blockId: BlockId, craftState: CraftState): void {
+        if (!this._loadCraftState) {
+            throw new Error('loadCraftState is not set')
+        }
+        this._blockId = blockId
+        return this._loadCraftState(blockId, craftState)
     }
 
     setGetCraftState(getCraftState: () => CraftState) {
@@ -158,24 +166,31 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
         return this._call(MethodName.GetBlockColId, params) as Resp<ColId>
     }
 
+    private _getMyBlockId(): BlockId {
+        if (this._blockId) return this._blockId
+        throw Error('block id has not been set before being used')
+    }
+
     private _call(method: string, params?: any) {
-        const id = this._id++
+        const id = this._requestId++
         window.parent.postMessage({
             m: method,
             args: params,
             id,
-            fromBlock: this._blockId,
+            fromBlock: this._getMyBlockId(),
         })
         return new Promise((resolve) => {
             this._resolvers.set(id, resolve)
         })
     }
 
-    private _id = 0
+    private _requestId = 0
+    private _blockId!: BlockId
     private _resolvers: Map<number, (arg: any) => unknown> = new Map()
     private _cellUpdatedCallbacks: Callback[] = []
     private _sheetUpdatedCallbacks: Callback[] = []
     private _getCraftState?: () => CraftState
+    private _loadCraftState?: (blockId: BlockId, state: CraftState) => void
 }
 
 export enum MethodName {
