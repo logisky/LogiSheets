@@ -23,6 +23,7 @@ export interface CoordinateBind {
 
 export interface CraftSpecific {
     getCraftState(): CraftState
+    loadCraftState(blockId: BlockId, craftState: CraftState): void
 }
 
 export const GetCraftStateMethodName = 'agent_getCraftState'

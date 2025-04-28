@@ -1,5 +1,12 @@
 import {injectable} from 'inversify'
-import {BlockId, CraftId, CraftState} from 'logisheets-craft'
+import {
+    BlockId,
+    CraftId,
+    CraftState,
+    LoadCraftStateMethodName,
+} from 'logisheets-craft'
+import {WorkbookClient} from '../workbook'
+import {CraftHandler} from './handler'
 
 export interface CraftManifest {
     /**
@@ -24,7 +31,17 @@ export interface CraftManifest {
  */
 @injectable()
 export class CraftManager {
-    public constructor() {}
+    public constructor(private readonly _workbookClient: WorkbookClient) {
+        this._iframe = document.createElement('iframe')
+        const handler = new CraftHandler(
+            this._workbookClient,
+            async (blockId: BlockId) => {
+                await this.openIframeForBlock(blockId)
+                return this._iframe
+            }
+        )
+        this._handler = handler
+    }
 
     public async registerCraftFromUrl(url: string) {
         const manifest = await fetch(url).then((res) => res.json())
@@ -63,6 +80,32 @@ export class CraftManager {
         this._blockToCraft.set(blockId, craftId)
     }
 
+    public openIframeForBlock(blockId: BlockId): Promise<void> {
+        if (!this._blockToCraft.has(blockId))
+            throw Error('block id has not been binded')
+        const craftId = this._blockToCraft.get(blockId)
+
+        const state = this._craftStates.get(blockId)
+        const manifest = this._crafts.find((v) => v.id === craftId)
+        if (!manifest) throw Error('craft has not been registered')
+        this._iframe.src = manifest?.html
+        const message = {
+            m: LoadCraftStateMethodName,
+            toBlock: blockId,
+            state,
+        }
+        return new Promise((resolve) => {
+            const callback = (e: MessageEvent) => {
+                if (e.data.m === LoadCraftStateMethodName) {
+                    resolve()
+                    window.removeEventListener('message', callback)
+                }
+            }
+            window.addEventListener('message', callback)
+            this._iframe.contentWindow?.postMessage(message, '*')
+        })
+    }
+
     public activateCraft(craftId: CraftId) {
         const craft = this._crafts.find((each) => each.id === craftId)
         if (!craft) {
@@ -78,7 +121,6 @@ export class CraftManager {
     private _crafts: CraftManifest[] = []
     private _blockToCraft: Map<BlockId, CraftId> = new Map()
     private _craftStates: Map<BlockId, CraftState> = new Map()
-    // TODO: storing each iframe for each craft is expensive,
-    // find a way to reuse the iframe.
-    private _iframes: Map<BlockId, HTMLIFrameElement> = new Map()
+    private _iframe!: HTMLIFrameElement
+    private _handler: CraftHandler
 }

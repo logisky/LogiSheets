@@ -35,7 +35,7 @@ export class CraftHandler implements CraftHandlerInterface {
         private readonly _workbookClient: WorkbookClient,
         private readonly _getFrameByBlockId: (
             blockId: BlockId
-        ) => HTMLIFrameElement
+        ) => Promise<HTMLIFrameElement>
     ) {
         window.addEventListener('message', (e) => {
             const {m, fromBlock, id, args} = e.data
@@ -64,12 +64,12 @@ export class CraftHandler implements CraftHandlerInterface {
         })
     }
 
-    getCraftState(blockId: BlockId): Promise<CraftState> {
+    async getCraftState(blockId: BlockId): Promise<CraftState> {
         const message = {
             m: GetCraftStateMethodName,
             toBlock: blockId,
         }
-        const iframe = this._getFrameByBlockId(blockId)
+        const iframe = await this._getFrameByBlockId(blockId)
         return new Promise((resolve) => {
             const callback = (e: MessageEvent) => {
                 if (e.data.m === GetCraftStateMethodName) {

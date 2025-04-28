@@ -18,16 +18,9 @@ export async function setup() {
     const pool = new Pool()
     CONTAINER.bind<Pool>(TYPES.Pool).toConstantValue(pool)
     const workbook = new WorkbookClient()
-    if (typeof window !== 'undefined') {
-        // @ts-expect-error export the workbook client to the window
-        window.workbookClient = workbook
-    } else if (typeof global !== 'undefined') {
-        // @ts-expect-error export the workbook client to the global
-        global.workbookClient = workbook
-    }
     CONTAINER.bind<Client>(TYPES.Workbook).toConstantValue(workbook)
     CONTAINER.bind<CraftManager>(TYPES.CraftManager).toConstantValue(
-        new CraftManager()
+        new CraftManager(workbook)
     )
     return workbook.isReady().then((_) => {
         CONTAINER.bind<DataService>(TYPES.Data)
