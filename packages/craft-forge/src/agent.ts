@@ -52,6 +52,12 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             this._resolvers.delete(id)
         })
     }
+    stateChanged(): void {
+        window.parent.postMessage({
+            m: MethodName.StateUpdated,
+            fromBlock: this._blockId,
+        })
+    }
 
     getCraftState(): CraftState {
         if (!this._getCraftState) {
@@ -209,4 +215,7 @@ export enum MethodName {
     CalcCondition = 'agent_calcCondition',
     GetBlockRowId = 'agent_getBlockRowId',
     GetBlockColId = 'agent_getBlockColId',
+
+    StateUpdated = 'agent_stateUpdated',
+    LoadCraftStateMethodName = 'agent_loadCraftState',
 }

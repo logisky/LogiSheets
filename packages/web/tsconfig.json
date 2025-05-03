@@ -6,6 +6,7 @@
         "moduleResolution": "Node",
         "noImplicitAny": true,
         "strict": true,
+        "experimentalDecorators": true,
         "skipLibCheck": true,
         "outDir": "./dist/",
         "target": "ESNext"

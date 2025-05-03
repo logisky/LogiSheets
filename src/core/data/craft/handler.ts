@@ -28,38 +28,102 @@ import {
     GetCraftStateMethodName,
     BlockId,
     MethodName,
-} from 'logisheets-craft'
+} from 'logisheets-craft-forge'
 
 export class CraftHandler implements CraftHandlerInterface {
     public constructor(
         private readonly _workbookClient: WorkbookClient,
         private readonly _getFrameByBlockId: (
             blockId: BlockId
-        ) => Promise<HTMLIFrameElement>
+        ) => Promise<HTMLIFrameElement>,
+        private readonly _stateUpdatedCallback: (blockId: BlockId) => void
     ) {
         window.addEventListener('message', (e) => {
-            const {m, fromBlock, id, args} = e.data
+            const {m, id, args} = e.data
             if (m === MethodName.GetSheetDimension) {
-                const result = this.getSheetDimension(args)
-                e.source?.postMessage({
-                    m: MethodName.GetSheetDimension,
-                    id,
-                    result,
+                this.getSheetDimension(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetSheetDimension,
+                        id,
+                        result,
+                    })
                 })
             } else if (m === MethodName.GetAllSheetInfo) {
-                const result = this.getAllSheetInfo(args)
-                e.source?.postMessage({
-                    m: MethodName.GetAllSheetInfo,
-                    id,
-                    result,
+                this.getAllSheetInfo(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetAllSheetInfo,
+                        id,
+                        result,
+                    })
                 })
             } else if (m === MethodName.GetDisplayWindow) {
-                const result = this.getDisplayWindow(args)
-                e.source?.postMessage({
-                    m: MethodName.GetDisplayWindow,
-                    id,
-                    result,
+                this.getDisplayWindow(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetDisplayWindow,
+                        id,
+                        result,
+                    })
                 })
+            } else if (m === MethodName.GetCell) {
+                this.getCell(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetCell,
+                        id,
+                        result,
+                    })
+                })
+            } else if (m === MethodName.GetCellPosition) {
+                this.getCellPosition(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetCellPosition,
+                        id,
+                        result,
+                    })
+                })
+            } else if (m === MethodName.GetFullyCoveredBlocks) {
+                this.getFullyCoveredBlocks(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetFullyCoveredBlocks,
+                        id,
+                        result,
+                    })
+                })
+            } else if (m === MethodName.GetMergedCells) {
+                this.getMergedCells(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetMergedCells,
+                        id,
+                        result,
+                    })
+                })
+            } else if (m === MethodName.CalcCondition) {
+                this.calcCondition(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.CalcCondition,
+                        id,
+                        result,
+                    })
+                })
+            } else if (m === MethodName.GetBlockRowId) {
+                this.getBlockRowId(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetBlockRowId,
+                        id,
+                        result,
+                    })
+                })
+            } else if (m === MethodName.GetBlockColId) {
+                this.getBlockColId(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetBlockColId,
+                        id,
+                        result,
+                    })
+                })
+            } else if (m === MethodName.StateUpdated) {
+                this._stateUpdatedCallback(args.blockId)
+            } else {
+                throw new Error('Unknown method: ' + m)
             }
         })
     }
