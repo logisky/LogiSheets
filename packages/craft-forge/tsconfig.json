@@ -4,6 +4,7 @@
         "declaration": true,
         "module": "ESNext",
         "moduleResolution": "Node",
+        "experimentalDecorators": true,
         "noImplicitAny": true,
         "strict": true,
         "skipLibCheck": true,

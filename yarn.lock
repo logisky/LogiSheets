@@ -12593,9 +12593,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"logisheets-craft@workspace:packages/craft":
+"logisheets-craft-forge@workspace:packages/craft-forge":
   version: 0.0.0-use.local
-  resolution: "logisheets-craft@workspace:packages/craft"
+  resolution: "logisheets-craft-forge@workspace:packages/craft-forge"
   dependencies:
     logisheets-web: "npm:^0.8.0"
   languageName: unknown

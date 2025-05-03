@@ -1,10 +1,5 @@
 import {injectable} from 'inversify'
-import {
-    BlockId,
-    CraftId,
-    CraftState,
-    LoadCraftStateMethodName,
-} from 'logisheets-craft'
+import {BlockId, CraftId, CraftState, MethodName} from 'logisheets-craft-forge'
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
 
@@ -38,6 +33,12 @@ export class CraftManager {
             async (blockId: BlockId) => {
                 await this.openIframeForBlock(blockId)
                 return this._iframe
+            },
+            (blockId: BlockId) => {
+                if (this._currentCraftId !== blockId) {
+                    throw new Error('unmatched block id')
+                }
+                this._dirty = true
             }
         )
         this._handler = handler
@@ -80,7 +81,15 @@ export class CraftManager {
         this._blockToCraft.set(blockId, craftId)
     }
 
-    public openIframeForBlock(blockId: BlockId): Promise<void> {
+    public async openIframeForBlock(blockId: BlockId): Promise<void> {
+        if (this._currentCraftId && this._dirty) {
+            // The current block id state is dirty. We should update it first.
+            const state = await this._handler.getCraftState(
+                this._currentCraftId
+            )
+            this._craftStates.set(this._currentCraftId, state)
+        }
+
         if (!this._blockToCraft.has(blockId))
             throw Error('block id has not been binded')
         const craftId = this._blockToCraft.get(blockId)
@@ -90,13 +99,13 @@ export class CraftManager {
         if (!manifest) throw Error('craft has not been registered')
         this._iframe.src = manifest?.html
         const message = {
-            m: LoadCraftStateMethodName,
+            m: MethodName.LoadCraftStateMethodName,
             toBlock: blockId,
             state,
         }
         return new Promise((resolve) => {
             const callback = (e: MessageEvent) => {
-                if (e.data.m === LoadCraftStateMethodName) {
+                if (e.data.m === MethodName.LoadCraftStateMethodName) {
                     resolve()
                     window.removeEventListener('message', callback)
                 }
@@ -106,21 +115,12 @@ export class CraftManager {
         })
     }
 
-    public activateCraft(craftId: CraftId) {
-        const craft = this._crafts.find((each) => each.id === craftId)
-        if (!craft) {
-            throw new Error(`Craft with id ${craftId} not found`)
-        }
-        const iframe = document.createElement('iframe')
-        iframe.src = craft.html
-        iframe.style.width = '100%'
-        iframe.style.height = '100%'
-        return iframe
-    }
-
     private _crafts: CraftManifest[] = []
     private _blockToCraft: Map<BlockId, CraftId> = new Map()
     private _craftStates: Map<BlockId, CraftState> = new Map()
     private _iframe!: HTMLIFrameElement
     private _handler: CraftHandler
+
+    private _currentCraftId: BlockId | undefined
+    private _dirty = false
 }
