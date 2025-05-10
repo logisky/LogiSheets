@@ -15,3 +15,5 @@ pub type AuthorId = u8;
 pub type StyleId = u32;
 
 pub type EphemeralId = u32;
+
+pub type DiyCellId = u32;

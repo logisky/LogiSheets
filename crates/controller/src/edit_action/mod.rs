@@ -1,4 +1,4 @@
-use logisheets_base::{async_func::Task, CellId, EphemeralId, SheetId};
+use logisheets_base::{async_func::Task, BlockId, CellId, EphemeralId, SheetId};
 
 pub trait Payload: Into<EditPayload> {}
 
@@ -101,6 +101,9 @@ pub enum EditPayload {
     MoveBlock(MoveBlock),
     RemoveBlock(RemoveBlock),
     CreateBlock(CreateBlock),
+
+    // DiyCell
+    CreateDiyCell(CreateDiyCell),
 
     // Style
     CellStyleUpdate(CellStyleUpdate),
@@ -293,6 +296,17 @@ pub struct CreateBlock {
     pub master_col: usize,
     pub row_cnt: usize,
     pub col_cnt: usize,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "create_diy_cell.ts")
+)]
+pub struct CreateDiyCell {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
 }
 
 #[derive(Debug, Clone)]

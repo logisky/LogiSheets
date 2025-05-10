@@ -12,6 +12,7 @@ pub mod controller;
 mod cube_manager;
 pub mod edit_action;
 mod errors;
+mod exclusive;
 mod ext_book_manager;
 mod ext_ref_manager;
 mod file_loader2;

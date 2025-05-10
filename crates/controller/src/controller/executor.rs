@@ -8,11 +8,13 @@ use crate::{
     cell_attachments::executor::CellAttachmentsExecutor,
     connectors::{
         CalcConnector, CellAttachmentsConnector, ContainerConnector, CubeConnector,
-        FormulaConnector, NavigatorConnector, RangeConnector, SheetPosConnector,
+        ExclusiveConnector, FormulaConnector, NavigatorConnector, RangeConnector,
+        SheetPosConnector,
     },
     container::ContainerExecutor,
     cube_manager::executors::CubeExecutor,
     edit_action::{EditPayload, PayloadsAction, SheetRename},
+    exclusive::executor::ExclusiveManagerExecutor,
     formula_manager::{FormulaExecutor, Vertex},
     navigator::{NavExecutor, Navigator},
     range_manager::RangeExecutor,
@@ -105,6 +107,9 @@ impl<'a> Executor<'a> {
             result.execute_container(payload.clone())?;
         result.status.container = container_executor.container;
 
+        let (exclusive, exclusive_updated) = result.execute_exclusive(payload.clone())?;
+        result.status.exclusive_manager = exclusive.manager;
+
         let (cell_attachments, updated) = result.execute_cell_attachments(payload.clone())?;
         result.status.cell_attachment_manager = cell_attachments.manager;
 
@@ -124,11 +129,12 @@ impl<'a> Executor<'a> {
         let formula_executor =
             result.execute_formula(payload, &old_navigator, dirty_ranges, dirty_cubes)?;
 
-        let cell_updated = if updated || nav_updated || cell_attatchment_updated {
-            true
-        } else {
-            result.updated_cells.len() > 0
-        };
+        let cell_updated =
+            if updated || nav_updated || cell_attatchment_updated || exclusive_updated {
+                true
+            } else {
+                result.updated_cells.len() > 0
+            };
 
         Ok(Executor {
             status: Status {
@@ -147,6 +153,7 @@ impl<'a> Executor<'a> {
                 style_manager: result.status.style_manager,
                 cell_attachment_manager: result.status.cell_attachment_manager,
                 dirty_cells_next_round: result.status.dirty_cells_next_round,
+                exclusive_manager: result.status.exclusive_manager,
             },
             version_manager: result.version_manager,
             async_func_manager: result.async_func_manager,
@@ -262,6 +269,23 @@ impl<'a> Executor<'a> {
             style_manager: &mut self.status.style_manager,
         };
         let executor = ContainerExecutor::new(self.status.container.clone());
+        executor.execute(&mut ctx, payload)
+    }
+
+    fn execute_exclusive(
+        &mut self,
+        payload: EditPayload,
+    ) -> Result<(ExclusiveManagerExecutor, bool), Error> {
+        let mut ctx = ExclusiveConnector {
+            sheet_id_manager: &mut self.status.sheet_id_manager,
+            text_id_manager: &mut self.status.text_id_manager,
+            func_id_manager: &mut self.status.func_id_manager,
+            name_id_manager: &mut self.status.name_id_manager,
+            external_links_manager: &mut self.status.external_links_manager,
+            navigator: &self.status.navigator,
+            sheet_pos_manager: &self.status.sheet_pos_manager,
+        };
+        let executor = ExclusiveManagerExecutor::new(self.status.exclusive_manager.clone());
         executor.execute(&mut ctx, payload)
     }
 

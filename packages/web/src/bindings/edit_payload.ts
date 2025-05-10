@@ -6,6 +6,7 @@ import {CellFormatBrush} from './cell_format_brush'
 import {CellInput} from './cell_input'
 import {CellStyleUpdate} from './cell_style_update'
 import {CreateBlock} from './create_block'
+import {CreateDiyCell} from './create_diy_cell'
 import {CreateSheet} from './create_sheet'
 import {DeleteColsInBlock} from './delete_cols_in_block'
 import {DeleteCols} from './delete_cols'
@@ -36,6 +37,7 @@ export type EditPayload =
     | {moveBlock: MoveBlock}
     | {removeBlock: RemoveBlock}
     | {createBlock: CreateBlock}
+    | {createDiyCell: CreateDiyCell}
     | {cellStyleUpdate: CellStyleUpdate}
     | {ephemeralCellStyleUpdate: EphemeralCellStyleUpdate}
     | {lineStyleUpdate: LineStyleUpdate}
