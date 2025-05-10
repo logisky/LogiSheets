@@ -6,6 +6,7 @@ use logisheets_base::SheetId;
 use crate::cell_attachments::CellAttachmentsManager;
 use crate::container::DataContainer;
 use crate::cube_manager::CubeManager;
+use crate::exclusive::ExclusiveManager;
 use crate::ext_book_manager::ExtBooksManager;
 use crate::ext_ref_manager::ExtRefManager;
 use crate::formula_manager::FormulaManager;
@@ -35,6 +36,7 @@ pub struct Status {
     pub sheet_pos_manager: SheetPosManager,
     pub style_manager: StyleManager,
     pub cell_attachment_manager: CellAttachmentsManager,
+    pub exclusive_manager: ExclusiveManager,
 
     pub dirty_cells_next_round: HashSet<(SheetId, CellId)>,
 }
@@ -58,6 +60,7 @@ impl Default for Status {
             sheet_pos_manager: SheetPosManager::default(),
             style_manager: StyleManager::default(),
             cell_attachment_manager: CellAttachmentsManager::default(),
+            exclusive_manager: ExclusiveManager::default(),
             dirty_cells_next_round: HashSet::new(),
         }
     }

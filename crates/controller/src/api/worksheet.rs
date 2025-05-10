@@ -11,10 +11,11 @@ use crate::{
         display::{get_default_col_width, get_default_row_height},
         style::StyleConverter,
     },
-    Controller,
+    Controller, Error,
 };
 use crate::{CellInfo, ColInfo, Comment, MergeCell, RowInfo, Style, Value};
-use logisheets_base::{BlockId, CellId, ColId, RowId, SheetId};
+use logisheets_base::errors::BasicError;
+use logisheets_base::{BlockId, CellId, ColId, DiyCellId, RowId, SheetId};
 use logisheets_parser::unparse;
 
 use super::workbook::CellPositionerDefault;
@@ -221,6 +222,24 @@ impl<'a> Worksheet<'a> {
         let y = positioner.get_row_start_y(row, &self)?;
         let x = positioner.get_col_start_x(col, &self)?;
         Ok(CellPosition { x, y })
+    }
+
+    pub fn get_diy_cell_id(&self, row: usize, col: usize) -> Result<DiyCellId> {
+        let cell_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_id(&self.sheet_id, row, col)?;
+        match cell_id {
+            CellId::BlockCell(block_cell_id) => self
+                .controller
+                .status
+                .exclusive_manager
+                .diy_cell_manager
+                .get_diy_cell_id(self.sheet_id, block_cell_id)
+                .ok_or(Error::Basic(BasicError::CellIdNotFound(row, col))),
+            _ => Err(Error::Basic(BasicError::CellIdNotFound(row, col))),
+        }
     }
 
     pub fn get_display_window_response(

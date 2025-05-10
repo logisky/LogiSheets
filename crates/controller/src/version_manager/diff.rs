@@ -16,11 +16,7 @@ pub enum Diff {
     CellStyle(CellId),
     RowInfo(RowId),
     ColInfo(ColId),
-    BlockUpdate {
-        id: BlockId,
-        cnt: usize,
-        is_row: bool,
-    },
+    BlockUpdate { sheet_id: SheetId, id: BlockId },
     SheetProperty, // like tab color and hidden
     Unavailable,
 }
@@ -235,5 +231,16 @@ fn convert_diff<C: VersionExecCtx>(
         }
         EditPayload::EphemeralCellStyleUpdate(_) => Ok(None),
         EditPayload::EphemeralCellInput(_) => Ok(None),
+        EditPayload::CreateDiyCell(create_diy_cell) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(create_diy_cell.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let row = create_diy_cell.row;
+            let col = create_diy_cell.col;
+            let cell_id = ctx
+                .fetch_cell_id(&sheet_id, row, col)
+                .map_err(|_| BasicError::CellIdNotFound(row, col))?;
+            Ok(Some((Diff::CellValue(cell_id), sheet_id)))
+        }
     }
 }
