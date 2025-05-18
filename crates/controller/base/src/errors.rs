@@ -64,4 +64,6 @@ pub enum BasicError {
     InvalidFormula(String),
     #[error("bind block size mismatch: {0}, {1}, {2}")]
     BindBlockSizeMismatch(BlockId, usize, usize),
+    #[error("sheet id not found: {0}")]
+    UnavailableSheetId(SheetId),
 }

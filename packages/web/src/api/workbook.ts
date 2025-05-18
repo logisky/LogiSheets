@@ -16,8 +16,10 @@ import {
     get_available_block_id,
     get_block_col_id,
     get_block_row_id,
+    get_block_values,
     get_sheet_count,
     get_sheet_id,
+    get_sheet_idx,
     input_async_result,
     merge_cells,
     move_block,
@@ -52,6 +54,7 @@ import {Worksheet} from './worksheet'
 import {Calculator, CustomFunc} from './calculator'
 import {Result} from './utils'
 import {BlockManager} from './block_manager'
+import {GetBlockValuesParams} from '../client'
 
 export type ReturnCode = number
 
@@ -78,6 +81,22 @@ export class Workbook {
             (sheetIdx: number) => {
                 return get_available_block_id(this._id, sheetIdx)
             }
+        )
+    }
+
+    public getSheetIdx(sheetId: number): Result<number> {
+        return get_sheet_idx(this._id, sheetId)
+    }
+
+    public getBlockValues(
+        params: GetBlockValuesParams
+    ): Result<readonly string[]> {
+        return get_block_values(
+            this._id,
+            params.sheetId,
+            params.blockId,
+            new Uint32Array(params.rowIds),
+            new Uint32Array(params.colIds)
         )
     }
 

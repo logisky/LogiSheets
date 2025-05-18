@@ -11,7 +11,7 @@
 export interface CraftState {
     /**
      * In cases where a craft app is referencing another craft app,
-     * `LogiSheets` will be the role to help calculate the coordinate of the referenced cell
+     * `LogiSheets` will be the role to help calculate the coordinates of the referenced cell
      * and to help provide intellisense.
      */
     coordinateBinds: CoordinateBind[]
@@ -28,7 +28,8 @@ export interface CraftState {
 }
 
 export type CraftId = number
-export type BlockId = number
+export type SheetId = number
+export type BlockId = [SheetId, number]
 export type RowId = number
 export type ColId = number
 

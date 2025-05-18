@@ -28,7 +28,6 @@ export function mutateState(): MethodDecorator {
 
 export abstract class CraftApp {
     public constructor(
-        public readonly sheetId: number,
         public readonly blockId: BlockId,
         public state: CraftState
     ) {
@@ -54,16 +53,16 @@ export abstract class CraftApp {
         let id: number
         if (this._state.horizontal) {
             const result = await this._agent.getBlockRowId({
-                sheetId: this.sheetId,
-                blockId: this.blockId,
+                sheetId: this.blockId[0],
+                blockId: this.blockId[1],
                 rowIdx: idx,
             })
             if (isErrorMessage(result)) throw Error('failed to get row id')
             id = result
         } else {
             const result = await this._agent.getBlockColId({
-                sheetId: this.sheetId,
-                blockId: this.blockId,
+                sheetId: this.blockId[0],
+                blockId: this.blockId[1],
                 colIdx: idx,
             })
             if (isErrorMessage(result)) throw Error('failed to get col id')
@@ -79,7 +78,8 @@ export abstract class CraftApp {
             transaction: new Transaction(
                 [
                     new BlockInputBuilder()
-                        .blockId(this.blockId)
+                        .sheetIdx(this.blockId[0])
+                        .blockId(this.blockId[1])
                         .row(this._state.horizontal ? 0 : idx)
                         .col(this._state.horizontal ? idx : 0)
                         .input(fieldId)
