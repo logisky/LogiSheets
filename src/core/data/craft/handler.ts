@@ -9,10 +9,12 @@ import {
     GetAllSheetInfoParams,
     GetBlockColIdParams,
     GetBlockRowIdParams,
+    GetBlockValuesParams,
     GetCellParams,
     GetDisplayWindowParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
+    GetSheetIdxParams,
     HandleTransactionParams,
     LoadWorkbookParams,
     MergeCell,
@@ -120,12 +122,23 @@ export class CraftHandler implements CraftHandlerInterface {
                         result,
                     })
                 })
+            } else if (m === MethodName.GetSheetIdx) {
+                this.getSheetIdx(args).then((result) => {
+                    e.source?.postMessage({
+                        m: MethodName.GetSheetIdx,
+                        id,
+                        result,
+                    })
+                })
             } else if (m === MethodName.StateUpdated) {
                 this._stateUpdatedCallback(args.blockId)
             } else {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    getBlockValues(params: GetBlockValuesParams): Resp<readonly string[]> {
+        return this._workbookClient.getBlockValues(params)
     }
 
     async getCraftState(blockId: BlockId): Promise<CraftState> {
@@ -148,6 +161,10 @@ export class CraftHandler implements CraftHandlerInterface {
 
     isReady(): Promise<void> {
         return this._workbookClient.isReady()
+    }
+
+    getSheetIdx(params: GetSheetIdxParams): Resp<number> {
+        return this._workbookClient.getSheetIdx(params)
     }
 
     getSheetDimension(sheetIdx: number): Resp<SheetDimension> {

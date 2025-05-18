@@ -14,7 +14,7 @@ use crate::{
 use logisheets_base::{
     async_func::{AsyncCalcResult, Task},
     errors::BasicError,
-    CellId, SheetId,
+    BlockCellId, BlockId, CellId, ColId, RowId, SheetId, TextId,
 };
 
 const CALC_CONDITION_EPHEMERAL_ID: u32 = 402;
@@ -113,6 +113,42 @@ impl Workbook {
         entry.clone()
     }
 
+    pub fn get_block_values(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        row_ids: &[RowId],
+        col_ids: &[ColId],
+    ) -> Result<Vec<String>> {
+        let text_id_fetcher = |id: TextId| {
+            self.controller
+                .status
+                .text_id_manager
+                .get_string(&id)
+                .unwrap()
+        };
+        let values = row_ids
+            .iter()
+            .zip(col_ids.iter())
+            .map(|(row_id, col_id)| {
+                let cell_id = CellId::BlockCell(BlockCellId {
+                    block_id,
+                    row: *row_id,
+                    col: *col_id,
+                });
+                let v = self
+                    .controller
+                    .status
+                    .container
+                    .get_cell(sheet_id, &cell_id)
+                    .map(|c| c.value.to_string(&text_id_fetcher))
+                    .unwrap_or_default();
+                v
+            })
+            .collect::<Vec<String>>();
+        Ok(values)
+    }
+
     pub fn get_sheet_by_name(&self, name: &str) -> Result<Worksheet> {
         let id = self.controller.get_sheet_id_by_name(name);
         if id.is_none() {
@@ -120,6 +156,14 @@ impl Workbook {
         }
         let sheet_id = id.unwrap();
         self.get_sheet_by_id(sheet_id)
+    }
+
+    pub fn get_sheet_idx_by_id(&self, sheet_id: SheetId) -> Result<usize> {
+        self.controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_idx(&sheet_id)
+            .ok_or(BasicError::UnavailableSheetId(sheet_id).into())
     }
 
     pub fn get_sheet_by_id(&self, sheet_id: SheetId) -> Result<Worksheet> {

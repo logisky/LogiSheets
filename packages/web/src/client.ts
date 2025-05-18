@@ -44,6 +44,8 @@ export interface Client {
 
     getBlockRowId(params: GetBlockRowIdParams): Resp<RowId>
     getBlockColId(params: GetBlockColIdParams): Resp<ColId>
+    getSheetIdx(params: GetSheetIdxParams): Resp<number>
+    getBlockValues(params: GetBlockValuesParams): Resp<readonly string[]>
 }
 
 export interface GetAllSheetInfoParams {}
@@ -122,4 +124,15 @@ export interface GetBlockColIdParams {
     sheetId: number
     blockId: number
     colIdx: number
+}
+
+export interface GetSheetIdxParams {
+    sheetId: number
+}
+
+export interface GetBlockValuesParams {
+    sheetId: number
+    blockId: number
+    rowIds: readonly RowId[]
+    colIds: readonly ColId[]
 }

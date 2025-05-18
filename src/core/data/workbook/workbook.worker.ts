@@ -28,6 +28,8 @@ import {
     RowId,
     GetBlockColIdParams,
     ColId,
+    GetBlockValuesParams,
+    GetSheetIdxParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -51,9 +53,23 @@ interface IWorkbookWorker {
     handleTransaction(params: HandleTransactionParams): Result<void>
 
     loadWorkbook(params: LoadWorkbookParams): Result<void>
+
+    getSheetIdx(params: GetSheetIdxParams): Result<number>
+    getBlockValues(params: GetBlockValuesParams): Result<readonly string[]>
 }
 
 class WorkerService implements IWorkbookWorker {
+    public getSheetIdx(params: GetSheetIdxParams): Result<number> {
+        const {sheetId} = params
+        return this.workbook.getSheetIdx(sheetId)
+    }
+
+    public getBlockValues(
+        params: GetBlockValuesParams
+    ): Result<readonly string[]> {
+        throw new Error('Method not implemented.')
+    }
+
     public getSheetDimension(sheetIdx: number): Result<SheetDimension> {
         const ws = this.getSheet(sheetIdx)
         return ws.getSheetDimension()

@@ -25,6 +25,8 @@ import {
     GetBlockColIdParams,
     GetBlockRowIdParams,
     RowId,
+    GetBlockValuesParams,
+    GetSheetIdxParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -67,6 +69,14 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    getSheetIdx(params: GetSheetIdxParams): Resp<number> {
+        return this._call(MethodName.GetSheetIdx, params) as Resp<number>
+    }
+    getBlockValues(params: GetBlockValuesParams): Resp<readonly string[]> {
+        return this._call(MethodName.GetBlockValues, params) as Resp<
+            readonly string[]
+        >
     }
     getBlockRowId(params: GetBlockRowIdParams): Resp<RowId> {
         return this._call(MethodName.GetBlockRowId, params) as Resp<RowId>

@@ -216,6 +216,27 @@ impl Default for CellValue {
 }
 
 impl CellValue {
+    pub fn to_string<F>(&self, text_id_fetcher: &F) -> String
+    where
+        F: Fn(TextId) -> String,
+    {
+        match self {
+            CellValue::Blank => String::new(),
+            CellValue::Boolean(b) => {
+                if *b {
+                    String::from("1")
+                } else {
+                    String::from("0")
+                }
+            }
+            CellValue::Error(e) => e.to_string(),
+            CellValue::String(id) => text_id_fetcher(*id),
+            CellValue::Number(n) => n.to_string(),
+            CellValue::InlineStr(_) => todo!(),
+            CellValue::FormulaStr(s) => s.clone(),
+        }
+    }
+
     pub fn from_string<F>(text: String, text_id_fetcher: &mut F) -> Self
     where
         F: FnMut(&str) -> TextId,

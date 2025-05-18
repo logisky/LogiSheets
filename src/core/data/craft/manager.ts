@@ -2,6 +2,7 @@ import {injectable} from 'inversify'
 import {BlockId, CraftId, CraftState, MethodName} from 'logisheets-craft-forge'
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
+import {isErrorMessage} from 'packages/web'
 
 export interface CraftManifest {
     /**
@@ -16,6 +17,20 @@ export interface CraftManifest {
      * The URL to the craft's HTML file.
      */
     html: string
+}
+
+export enum DiyButtonType {
+    Upload1,
+}
+
+export interface DiyButton {
+    type: DiyButtonType
+    dirCellId: number
+}
+
+export interface CraftConfig {
+    buttons: readonly DiyButton[]
+    url: string
 }
 
 /**
@@ -35,7 +50,7 @@ export class CraftManager {
                 return this._iframe
             },
             (blockId: BlockId) => {
-                if (this._currentCraftId !== blockId) {
+                if (this._currentBlockId !== blockId) {
                     throw new Error('unmatched block id')
                 }
                 this._dirty = true
@@ -82,12 +97,12 @@ export class CraftManager {
     }
 
     public async openIframeForBlock(blockId: BlockId): Promise<void> {
-        if (this._currentCraftId && this._dirty) {
+        if (this._currentBlockId && this._dirty) {
             // The current block id state is dirty. We should update it first.
             const state = await this._handler.getCraftState(
-                this._currentCraftId
+                this._currentBlockId
             )
-            this._craftStates.set(this._currentCraftId, state)
+            this._craftStates.set(this._currentBlockId, state)
         }
 
         if (!this._blockToCraft.has(blockId))
@@ -115,12 +130,91 @@ export class CraftManager {
         })
     }
 
+    // Extract values from the workbook.
+    async extractBlockValues(
+        blockId: BlockId
+    ): Promise<{key: string; field: string; value: string}[]> {
+        const state = this._craftStates.get(blockId)
+        if (!state) throw Error('craft has not been registered')
+
+        const keyMap: Map<string, number> = new Map()
+        const fieldMap: Map<string, number> = new Map()
+        state.coordinateBinds.forEach((bind) => {
+            if (bind.isKey) {
+                keyMap.set(bind.name, bind.value)
+            } else {
+                fieldMap.set(bind.name, bind.value)
+            }
+        })
+
+        const values: Map<[string, string], string> = new Map()
+        for (const [keyName, key] of keyMap) {
+            for (const [fieldName, field] of fieldMap) {
+                const value = await this._workbookClient.getCell({
+                    sheetIdx: blockId[0],
+                    row: key,
+                    col: field,
+                })
+                if (isErrorMessage(value)) throw Error(value.msg)
+                values.set([keyName, fieldName], value.getText())
+            }
+        }
+
+        const result = Array.from(values.entries()).map(([k, v]) => ({
+            key: k[0],
+            field: k[1],
+            value: v,
+        }))
+
+        return result
+    }
+
+    async onDiyCellClick(id: number): Promise<void> {
+        const blockId = this._diyIds.get(id)
+        if (!blockId) {
+            // eslint-disable-next-line no-console
+            console.log(id + ' is not registered')
+            return
+        }
+
+        const config = this._configs.get(blockId)
+        if (!config) {
+            // eslint-disable-next-line no-console
+            console.log(id + ' is not registered')
+            return
+        }
+
+        const button = config.buttons.find((each) => each.dirCellId === id)
+        if (!button) {
+            // eslint-disable-next-line no-console
+            console.log(id + ' is not registered')
+            return
+        }
+        if (button.type === DiyButtonType.Upload1) {
+            const values = await this.extractBlockValues(blockId)
+            const url = config.url
+            await fetch(url, {
+                method: 'POST',
+                body: JSON.stringify(values),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+
+            return
+        }
+        throw Error('unimplemented!')
+    }
+
     private _crafts: CraftManifest[] = []
     private _blockToCraft: Map<BlockId, CraftId> = new Map()
     private _craftStates: Map<BlockId, CraftState> = new Map()
     private _iframe!: HTMLIFrameElement
     private _handler: CraftHandler
 
-    private _currentCraftId: BlockId | undefined
+    private _configs: Map<BlockId, CraftConfig> = new Map()
+    private _diyIds: Map<number, BlockId> = new Map()
+
+    private _currentBlockId: BlockId | undefined
     private _dirty = false
 }

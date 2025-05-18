@@ -11,10 +11,12 @@ import {
     GetAllSheetInfoParams,
     GetBlockColIdParams,
     GetBlockRowIdParams,
+    GetBlockValuesParams,
     GetCellParams,
     GetDisplayWindowParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
+    GetSheetIdxParams,
     HandleTransactionParams,
     LoadWorkbookParams,
     MergeCell,
@@ -172,6 +174,16 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
         return this._call(MethodName.GetBlockColId, params) as Resp<ColId>
     }
 
+    getSheetIdx(params: GetSheetIdxParams): Resp<number> {
+        return this._call(MethodName.GetSheetIdx, params) as Resp<number>
+    }
+
+    getBlockValues(params: GetBlockValuesParams): Resp<readonly string[]> {
+        return this._call(MethodName.GetBlockValues, params) as Resp<
+            readonly string[]
+        >
+    }
+
     private _getMyBlockId(): BlockId {
         if (this._blockId) return this._blockId
         throw Error('block id has not been set before being used')
@@ -215,7 +227,8 @@ export enum MethodName {
     CalcCondition = 'agent_calcCondition',
     GetBlockRowId = 'agent_getBlockRowId',
     GetBlockColId = 'agent_getBlockColId',
-
+    GetSheetIdx = 'agent_getSheetIdx',
+    GetBlockValues = 'agent_getBlockValues',
     StateUpdated = 'agent_stateUpdated',
     LoadCraftStateMethodName = 'agent_loadCraftState',
 }
