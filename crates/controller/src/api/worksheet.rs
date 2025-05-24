@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::controller::display::{
-    BlockInfo, CellPosition, DisplayWindow, DisplayWindowWithStartPoint,
+    BlockDisplayInfo, BlockInfo, CellPosition, DisplayWindow, DisplayWindowWithStartPoint,
 };
 use crate::errors::Result;
 use crate::lock::{locked_write, Locked};
@@ -204,7 +204,7 @@ impl<'a> Worksheet<'a> {
         });
         let blocks = block_ids
             .into_iter()
-            .flat_map(|b| self.get_block_info(b))
+            .flat_map(|b| self.get_display_block_info(b))
             .collect();
 
         Ok(DisplayWindow {
@@ -761,6 +761,21 @@ impl<'a> Worksheet<'a> {
             .unwrap_or(get_default_col_width())
     }
 
+    #[inline]
+    pub fn get_display_block_info(&self, block_id: BlockId) -> Result<BlockDisplayInfo> {
+        let info = self.get_block_info(block_id)?;
+        let start_position = self.get_cell_position(info.row_start, info.col_start)?;
+        // Get the end position of the cell at the bottom-right corner of the block
+        let end_position =
+            self.get_cell_position(info.row_start + info.row_cnt, info.col_start + info.col_cnt)?;
+        Ok(BlockDisplayInfo {
+            info,
+            start_position,
+            end_position,
+        })
+    }
+
+    #[inline]
     pub fn get_block_info(&self, block_id: BlockId) -> Result<BlockInfo> {
         let (row_cnt, col_cnt) = self.get_block_size(block_id)?;
         let (row_start, col_start) = self.get_block_master_cell(block_id)?;

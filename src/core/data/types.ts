@@ -1,5 +1,5 @@
 import {RenderCell} from './render'
-import {Comment, MergeCell} from 'logisheets-web'
+import {BlockDisplayInfo, Comment, MergeCell} from 'logisheets-web'
 
 export class CellView {
     public constructor(public readonly data: CellViewData[]) {}
@@ -105,6 +105,10 @@ export class CellView {
                 return true
             })
     }
+
+    public get blocks(): readonly BlockDisplayInfo[] {
+        return this.data.flatMap((d) => d.blocks)
+    }
 }
 
 export class CellViewData {
@@ -118,7 +122,8 @@ export class CellViewData {
         public cols: readonly RenderCell[],
         public cells: readonly RenderCell[],
         public mergeCells: readonly RenderCell[],
-        public comments: readonly Comment[]
+        public comments: readonly Comment[],
+        public blocks: readonly BlockDisplayInfo[]
     ) {
         if (rows.length == 0) {
             throw Error('rows should not be empty')

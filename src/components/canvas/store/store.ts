@@ -11,6 +11,7 @@ import {RenderCell, DataService, CellView} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
 import {Renderer} from './renderer'
+import {BlockOutliner} from './block-outliner'
 
 export class CanvasStore {
     constructor(public readonly dataSvc: DataService) {
@@ -22,6 +23,7 @@ export class CanvasStore {
         this.dnd = new Dnd(this)
         this.scrollbar = new ScrollBar(this)
         this.textarea = new Textarea(this)
+        this.blockOutliner = new BlockOutliner(this)
     }
     @observable.ref
     startCell?: Cell
@@ -40,6 +42,7 @@ export class CanvasStore {
     dnd: Dnd
     scrollbar: ScrollBar
     textarea: Textarea
+    blockOutliner: BlockOutliner
 
     get currSheetIdx() {
         return this.dataSvc.getCurrentSheetIdx()

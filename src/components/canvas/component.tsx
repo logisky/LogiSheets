@@ -25,6 +25,7 @@ import {SelectorComponent} from '@/components/selector'
 import {ResizerComponent} from '@/components/resize'
 import {ITextareaInstance, TextContainerComponent} from '@/components/textarea'
 import {DndComponent} from '@/components/dnd'
+import {BlockOutlinerComponent} from '@/components/block-outliner'
 import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid} from '@/core'
 import {DialogComponent} from '@/ui/dialog'
@@ -335,6 +336,9 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             {store.selector.selector && (
                 <SelectorComponent selector={store.selector.selector} />
             )}
+            {store.blockOutliner.props.map((props, i) => (
+                <BlockOutlinerComponent blockOutliner={props} key={i} />
+            ))}
             <ScrollbarComponent
                 {...store.scrollbar.xScrollbar}
                 setScrollTop={(e) => setScrollTop(e, 'x')}

@@ -25,7 +25,18 @@ pub struct DisplayWindow {
     pub cols: Vec<ColInfo>,
     pub comments: Vec<Comment>,
     pub merge_cells: Vec<MergeCell>,
-    pub blocks: Vec<BlockInfo>,
+    pub blocks: Vec<BlockDisplayInfo>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "block_display_info.ts")
+)]
+pub struct BlockDisplayInfo {
+    pub info: BlockInfo,
+    pub start_position: CellPosition,
+    pub end_position: CellPosition,
 }
 
 #[derive(Debug, Clone)]

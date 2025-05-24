@@ -1,5 +1,4 @@
 import {pxToPt, pxToWidth, widthToPx} from '../rate'
-import {LeftTop} from '../settings'
 import {RenderCell} from './render'
 import {CellViewData, Rect, CellView} from './types'
 import {
@@ -8,7 +7,7 @@ import {
     StandardColInfo,
     StandardRowInfo,
 } from '@/core/standable'
-import {ptToPx, width2px} from '@/core/rate'
+import {ptToPx} from '@/core/rate'
 import {DisplayWindowWithStartPoint, isErrorMessage, Resp} from 'logisheets-web'
 import {WorkbookClient} from './workbook'
 import {Pool} from '../pool'
@@ -240,7 +239,8 @@ export function parseDisplayWindow(
         cols,
         cells,
         mergeCells,
-        window.window.comments
+        window.window.comments,
+        window.window.blocks
     )
 }
 
