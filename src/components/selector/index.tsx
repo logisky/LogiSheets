@@ -16,8 +16,8 @@ export class SelectorProps {
 }
 export interface ISelectorProps {
     selector: SelectorProps
-    keydown$?: (e: KeyboardEvent) => void
 }
+
 export const SelectorComponent = observer((props: ISelectorProps) => {
     const {selector} = props
     const {
