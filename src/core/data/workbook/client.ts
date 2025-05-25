@@ -27,6 +27,7 @@ import {
     RowId,
     GetBlockValuesParams,
     GetSheetIdxParams,
+    GetAvailableBlockIdParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -93,6 +94,13 @@ export class WorkbookClient implements Client {
         return this._call(MethodName.GetMergedCells, params) as Resp<
             readonly MergeCell[]
         >
+    }
+
+    getAvailableBlockId(params: GetAvailableBlockIdParams): Resp<number> {
+        return this._call(
+            MethodName.GetAvailableBlockId,
+            params
+        ) as Resp<number>
     }
 
     public async isReady(): Promise<void> {

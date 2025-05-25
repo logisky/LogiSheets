@@ -6,6 +6,7 @@ import styles from './top-bar.module.scss'
 import {FileComponent} from './file'
 import {StartComponent} from './content'
 import {ViewComponent} from './view'
+import {BlockComponent} from './block'
 
 export interface TopBarProps {
     readonly selectedData?: SelectedData
@@ -29,6 +30,9 @@ export const TopBar = ({
                 break
             case MainMenuType.FILE:
                 content = <FileComponent />
+                break
+            case MainMenuType.BLOCK:
+                content = <BlockComponent selectedData={selectedData} />
                 break
             case MainMenuType.VIEW:
                 content = (

@@ -1,6 +1,8 @@
+use std::collections::HashSet;
+
 use crate::cell::Cell;
 use im::hashmap::HashMap;
-use logisheets_base::{CellId, CellValue, ColId, NormalCellId, RowId, SheetId};
+use logisheets_base::{BlockCellId, CellId, CellValue, ColId, NormalCellId, RowId, SheetId};
 
 use self::col_info_manager::{ColInfo, ColInfoManager};
 use self::row_info_manager::{RowInfo, RowInfoManager};

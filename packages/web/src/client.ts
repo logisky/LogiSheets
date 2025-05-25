@@ -136,3 +136,7 @@ export interface GetBlockValuesParams {
     rowIds: readonly RowId[]
     colIds: readonly ColId[]
 }
+
+export interface GetAvailableBlockIdParams {
+    sheetIdx: number
+}

@@ -54,7 +54,7 @@ import {Worksheet} from './worksheet'
 import {Calculator, CustomFunc} from './calculator'
 import {Result} from './utils'
 import {BlockManager} from './block_manager'
-import {GetBlockValuesParams} from '../client'
+import {GetAvailableBlockIdParams, GetBlockValuesParams} from '../client'
 
 export type ReturnCode = number
 
@@ -98,6 +98,12 @@ export class Workbook {
             new Uint32Array(params.rowIds),
             new Uint32Array(params.colIds)
         )
+    }
+
+    public getAvailableBlockId(
+        params: GetAvailableBlockIdParams
+    ): Result<number> {
+        return get_available_block_id(this._id, params.sheetIdx)
     }
 
     /**

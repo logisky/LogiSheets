@@ -42,6 +42,7 @@ export class CraftHandler implements CraftHandlerInterface {
     ) {
         window.addEventListener('message', (e) => {
             const {m, id, args} = e.data
+            if (!m) return
             if (m === MethodName.GetSheetDimension) {
                 this.getSheetDimension(args).then((result) => {
                     e.source?.postMessage({

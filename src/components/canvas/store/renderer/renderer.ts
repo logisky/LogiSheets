@@ -145,6 +145,11 @@ export class Renderer implements RendererInterface {
         }
         this.concatImageToCanvas()
         this.store.resizer.init()
+        this.store.selector.updateSelector(
+            this.store.startCell,
+            this.store.endCell
+        )
+        this.store.blockOutliner.updateBlockInfos()
     }
 
     public concatImageToCanvas() {

@@ -14,7 +14,7 @@ pub struct CellPosition {
     pub y: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 #[cfg_attr(
     feature = "gents",
     gents_derives::gents_header(file_name = "display_window.ts")

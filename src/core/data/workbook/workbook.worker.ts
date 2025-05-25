@@ -30,6 +30,7 @@ import {
     ColId,
     GetBlockValuesParams,
     GetSheetIdxParams,
+    GetAvailableBlockIdParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -56,9 +57,17 @@ interface IWorkbookWorker {
 
     getSheetIdx(params: GetSheetIdxParams): Result<number>
     getBlockValues(params: GetBlockValuesParams): Result<readonly string[]>
+
+    getAvailableBlockId(params: GetAvailableBlockIdParams): Result<number>
 }
 
 class WorkerService implements IWorkbookWorker {
+    public getAvailableBlockId(
+        params: GetAvailableBlockIdParams
+    ): Result<number> {
+        return this.workbook.getAvailableBlockId(params)
+    }
+
     public getSheetIdx(params: GetSheetIdxParams): Result<number> {
         const {sheetId} = params
         return this.workbook.getSheetIdx(sheetId)
@@ -67,7 +76,13 @@ class WorkerService implements IWorkbookWorker {
     public getBlockValues(
         params: GetBlockValuesParams
     ): Result<readonly string[]> {
-        throw new Error('Method not implemented.')
+        const {sheetId, blockId, rowIds, colIds} = params
+        return this.workbook.getBlockValues({
+            sheetId,
+            blockId,
+            rowIds: rowIds,
+            colIds: colIds,
+        })
     }
 
     public getSheetDimension(sheetIdx: number): Result<SheetDimension> {
@@ -249,6 +264,12 @@ class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetBlockColId:
                 result = this.getBlockColId(args)
+                break
+            case MethodName.GetBlockValues:
+                result = this.getBlockValues(args)
+                break
+            case MethodName.GetAvailableBlockId:
+                result = this.getAvailableBlockId(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

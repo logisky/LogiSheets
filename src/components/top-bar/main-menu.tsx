@@ -10,6 +10,7 @@ export enum MainMenuType {
     START,
     FILE,
     VIEW,
+    BLOCK,
 }
 export interface MainMenuBtn {
     readonly text: string
@@ -30,6 +31,10 @@ export const MainMenu = ({currType, mainMenuChanged$}: MainMenuProps) => {
         {
             text: 'topBar.mainMenu.view',
             type: MainMenuType.VIEW,
+        },
+        {
+            text: 'topBar.mainMenu.block',
+            type: MainMenuType.BLOCK,
         },
     ]
     const onChangeLocale = (newValue: unknown) => {

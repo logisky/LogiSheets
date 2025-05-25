@@ -4,7 +4,8 @@
         "mainMenu": {
             "file": "file",
             "start": "start",
-            "view": "view"
+            "view": "view",
+            "block": "block"
         }
     },
     "functions": {
