@@ -107,7 +107,20 @@ export class CellView {
     }
 
     public get blocks(): readonly BlockDisplayInfo[] {
-        return this.data.flatMap((d) => d.blocks)
+        const set = new Set()
+        const result: BlockDisplayInfo[] = []
+        this.data.forEach((d) => {
+            if (!d.blocks.length) {
+                return
+            }
+            for (const block of d.blocks) {
+                if (!set.has(block.info.blockId)) {
+                    set.add(block.info.blockId)
+                    result.push(block)
+                }
+            }
+        })
+        return result
     }
 }
 

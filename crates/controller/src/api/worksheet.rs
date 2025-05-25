@@ -219,9 +219,58 @@ impl<'a> Worksheet<'a> {
 
     pub fn get_cell_position(&self, row: usize, col: usize) -> Result<CellPosition> {
         let mut positioner = locked_write(&self.positioner);
-        let y = positioner.get_row_start_y(row, &self)?;
-        let x = positioner.get_col_start_x(col, &self)?;
+        let y = self.get_row_start_y(row, &mut *positioner)?;
+        let x = self.get_col_start_x(col, &mut *positioner)?;
+        drop(positioner);
         Ok(CellPosition { x, y })
+    }
+
+    pub fn get_row_start_y(
+        &self,
+        row: usize,
+        positioner: &mut CellPositionerDefault,
+    ) -> Result<f64> {
+        let (mut curr, mut result) = positioner.find_closest_cache_height(row);
+        if curr == row {
+            return Ok(result);
+        }
+        let reverse = curr > row;
+
+        while curr != row {
+            if self.is_row_hidden(row) {
+                curr = advance(reverse, curr);
+                continue;
+            }
+            let h = self.get_row_height(curr)?;
+            result = if reverse { result - h } else { result + h };
+            curr = advance(reverse, curr);
+            positioner.add_cache(true, curr, result);
+        }
+        Ok(result)
+    }
+
+    pub fn get_col_start_x(
+        &self,
+        col: usize,
+        positioner: &mut CellPositionerDefault,
+    ) -> Result<f64> {
+        let (mut curr, mut result) = positioner.find_closest_cache_width(col);
+        if curr == col {
+            return Ok(result);
+        }
+        let reverse = curr > col;
+
+        while curr != col {
+            if self.is_col_hidden(col) {
+                curr = advance(reverse, curr);
+                continue;
+            }
+            let w = self.get_col_width(curr)?;
+            result = if reverse { result - w } else { result + w };
+            curr = advance(reverse, curr);
+            positioner.add_cache(false, curr, result);
+        }
+        Ok(result)
     }
 
     pub fn get_diy_cell_id(&self, row: usize, col: usize) -> Result<DiyCellId> {
@@ -251,20 +300,77 @@ impl<'a> Worksheet<'a> {
     ) -> Result<DisplayWindowWithStartPoint> {
         let mut positioner = locked_write(&self.positioner);
         let (start_row, start_point_y) =
-            positioner.get_nearest_row_with_given_y(start_y, true, &self)?;
+            self.get_nearest_row_with_given_y(start_y, true, &mut *positioner)?;
         let (start_col, start_point_x) =
-            positioner.get_nearest_col_with_given_x(start_x, true, &self)?;
+            self.get_nearest_col_with_given_x(start_x, true, &mut *positioner)?;
         let (end_row, _) =
-            positioner.get_nearest_row_with_given_y(start_y + height, false, &self)?;
+            self.get_nearest_row_with_given_y(start_y + height, false, &mut *positioner)?;
         let (end_col, _) =
-            positioner.get_nearest_col_with_given_x(start_x + width, false, &self)?;
+            self.get_nearest_col_with_given_x(start_x + width, false, &mut *positioner)?;
 
+        drop(positioner);
         let window = self.get_display_window(start_row, start_col, end_row, end_col)?;
         Ok(DisplayWindowWithStartPoint {
             window,
             start_x: start_point_x,
             start_y: start_point_y,
         })
+    }
+
+    pub fn get_nearest_row_with_given_y(
+        &self,
+        y: f64,
+        before: bool,
+        positioner: &mut CellPositionerDefault,
+    ) -> Result<(usize, f64)> {
+        let (mut curr_idx, mut curr_h) = positioner.find_closest_cache_before_y(y);
+        let mut h = 0.;
+        while curr_h < y {
+            if self.is_row_hidden(curr_idx) {
+                curr_idx += 1;
+                continue;
+            }
+            h = self.get_row_height(curr_idx)?;
+            curr_idx += 1;
+            curr_h += h;
+            positioner.add_cache(true, curr_idx, curr_h);
+        }
+
+        if before {
+            if curr_idx > 1 && curr_h > h {
+                curr_idx -= 1;
+                curr_h -= h;
+            }
+        }
+        return Ok((curr_idx, curr_h));
+    }
+
+    pub fn get_nearest_col_with_given_x(
+        &self,
+        x: f64,
+        before: bool,
+        positioner: &mut CellPositionerDefault,
+    ) -> Result<(usize, f64)> {
+        let (mut curr_idx, mut curr_w) = positioner.find_closest_cache_before_x(x);
+        let mut w = 0.;
+        while curr_w < x {
+            if self.is_col_hidden(curr_idx) {
+                curr_idx += 1;
+                continue;
+            }
+            w = self.get_col_width(curr_idx)?;
+            curr_idx += 1;
+            curr_w += w;
+            positioner.add_cache(false, curr_idx, curr_w);
+        }
+
+        if before {
+            if curr_idx > 1 && curr_w > w {
+                curr_idx -= 1;
+                curr_w -= w;
+            }
+        }
+        return Ok((curr_idx, curr_w));
     }
 
     pub fn get_cell_info_in_window(
@@ -824,5 +930,14 @@ impl<'a> Worksheet<'a> {
             .navigator
             .fetch_block_col_id(&self.sheet_id, &block_id, col_idx)
             .map_err(|e| e.into())
+    }
+}
+
+#[inline]
+fn advance(reverse: bool, curr: usize) -> usize {
+    if reverse {
+        curr - 1
+    } else {
+        curr + 1
     }
 }

@@ -3,6 +3,7 @@ import {ErrorMessage} from '../bindings/error_message'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isErrorMessage(v: any): v is ErrorMessage {
+    if (typeof v !== 'object' || v === null) return false
     return 'msg' in v && 'ty' in v
 }
 

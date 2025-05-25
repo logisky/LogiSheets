@@ -25,4 +25,5 @@ export enum MethodName {
 
     GetSheetIdx = 'getSheetIdx',
     GetBlockValues = 'getBlockValues',
+    GetAvailableBlockId = 'getAvailableBlockId',
 }

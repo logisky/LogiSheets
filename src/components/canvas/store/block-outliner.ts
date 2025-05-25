@@ -3,6 +3,7 @@ import {Range} from '@/core/standable'
 import {CanvasStore} from './store'
 import {BlockDisplayInfo} from 'packages/web/'
 import {BlockOutlinerProps} from '@/components/block-outliner'
+import {ptToPx, widthToPx} from '@/core'
 
 export class BlockOutliner {
     constructor(public readonly store: CanvasStore) {
@@ -17,12 +18,12 @@ export class BlockOutliner {
         this.blockInfos = data.blocks
         this.props = this.blockInfos.map((info) => {
             const props = new BlockOutlinerProps()
-            const range = this.store.convertToCanvasPosition(
+            const range = this.store.convertToMainCanvasPosition(
                 new Range()
-                    .setStartRow(info.startPosition.y)
-                    .setEndRow(info.endPosition.y)
-                    .setStartCol(info.startPosition.x)
-                    .setEndCol(info.endPosition.x),
+                    .setStartRow(ptToPx(info.startPosition.y))
+                    .setEndRow(ptToPx(info.endPosition.y))
+                    .setStartCol(widthToPx(info.startPosition.x))
+                    .setEndCol(widthToPx(info.endPosition.x)),
                 'Cell'
             )
             props.x = range.startCol
