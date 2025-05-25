@@ -1,71 +1,51 @@
 {
-  description = "A Nix-flake-based Nitro development environment";
+  description = "LogiSheets development environment with Rust, Node.js, Yarn, Python, and WASM tools";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
-  inputs.flake-utils.url = "github:numtide/flake-utils";
-  inputs.flake-compat.url = "github:edolstra/flake-compat";
-  inputs.flake-compat.flake = false;
-  inputs.rust-overlay.url = "github:oxalica/rust-overlay";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs";
+    flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay.url = "github:oxalica/rust-overlay";
+  };
 
-  outputs = { flake-utils, nixpkgs, rust-overlay, ... }:
-    let
-      overlays = [
-        (import rust-overlay)
-        (final: prev: rec {
-          # Overlaying nodejs here to ensure nodePackages use the desired
-          # version of nodejs. Offchainlabs suggests nodejs v18 in the docs.
-          nodejs = prev.nodejs_18;
-          yarn = (prev.yarn.override { inherit nodejs; });
-          pnpm = (prev.pnpm.override { inherit nodejs; });
-        })
-      ];
-    in
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
+        overlays = [
+          (import rust-overlay)
+        ];
         pkgs = import nixpkgs {
-          inherit overlays system;
+          inherit system overlays;
         };
-        stableToolchain = pkgs.rust-bin.stable."1.81.0".minimal.override {
+        # Rust toolchains
+        stableToolchain = pkgs.rust-bin.stable."1.85.0".minimal.override {
           extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
-          targets = [ "wasm32-unknown-unknown" "wasm32-wasi" ];
+          targets = [ "wasm32-unknown-unknown" ];
         };
         nightlyToolchain = pkgs.rust-bin.nightly."2024-08-06".minimal.override {
           extensions = [ "rust-src" ];
-          targets = [ "wasm32-unknown-unknown" "wasm32-wasi" ];
+          targets = [ "wasm32-unknown-unknown" ];
         };
-        # A script that calls nightly cargo if invoked with `+nightly`
-        # as the first argument, otherwise it calls stable cargo.
-        cargo-with-nightly = pkgs.writeShellScriptBin "cargo" ''
-          if [[ "$1" == "+nightly" ]]; then
-            shift
-            # Prepend nightly toolchain directory containing cargo, rustc, etc.
-            exec env PATH="${nightlyToolchain}/bin:$PATH" cargo "$@"
-          fi
-          exec ${stableToolchain}/bin/cargo "$@"
-        '';
+        # Node.js & Yarn
+        nodejs = pkgs.nodejs_20;
+        yarn = pkgs.yarn.override { inherit nodejs; };
+        # WASM tools
+        wasmTools = with pkgs; [ rust-cbindgen wabt ];
       in
       {
-        devShells =
-          {
-            # mkShell brings in a `cc` that points to gcc, stdenv.mkDerivation from llvm avoids this.
-            default = let llvmPkgs = pkgs.llvmPackages_16; in llvmPkgs.stdenv.mkDerivation {
-              name = "logisheets-dev-shell";
-              buildInputs = with pkgs; [
-                cargo-with-nightly
-                stableToolchain
-
-                # Node
-                nodejs
-                yarn
-
-                python3
-
-                # wasm
-                rust-cbindgen
-                wabt
-
-              ];
-            };
-          };
-      });
+        devShells.default = pkgs.mkShell {
+          name = "logisheets-dev-shell";
+          buildInputs = [
+            stableToolchain
+            nightlyToolchain
+            nodejs
+            yarn
+            pkgs.python3
+          ] ++ wasmTools;
+          shellHook = ''
+            echo "Welcome to the LogiSheets development shell!"
+            echo "Rust (stable & nightly), Node.js, Yarn, Python 3, and WASM tools are available."
+          '';
+        };
+      }
+    );
 }
