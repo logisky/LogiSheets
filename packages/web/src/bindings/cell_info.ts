@@ -7,4 +7,5 @@ export interface CellInfo {
     formula: string
     style: Style
     blockId?: number
+    diyCellId?: number
 }
