@@ -10,6 +10,7 @@ export enum MethodName {
     GetFullyCoveredBlocks = 'getFullyCoveredBlocks',
     GetAllSheetInfo = 'getAllSheetInfo',
     GetDisplayWindow = 'getDisplayWindow',
+    GetBlockDisplayWindow = 'getBlockDisplayWindow',
     GetCell = 'getCell',
     GetCellPosition = 'getCellPosition',
     Undo = 'undo',

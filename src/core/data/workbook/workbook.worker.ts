@@ -31,6 +31,8 @@ import {
     GetBlockValuesParams,
     GetSheetIdxParams,
     GetAvailableBlockIdParams,
+    DisplayWindow,
+    GetBlockDisplayWindowParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -197,6 +199,14 @@ class WorkerService implements IWorkbookWorker {
         return this.workbook.getWorksheet(idx)
     }
 
+    public getBlockDisplayWindow(
+        params: GetBlockDisplayWindowParams
+    ): Result<DisplayWindow> {
+        const {sheetId, blockId} = params
+        const ws = this.workbook.getWorksheetById(sheetId)
+        return ws.getBlockDisplayWindow(blockId)
+    }
+
     public get workbook(): Workbook {
         if (!this._workbookImpl) throw Error("haven't been initialized")
         return this._workbookImpl
@@ -270,6 +280,9 @@ class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetAvailableBlockId:
                 result = this.getAvailableBlockId(args)
+                break
+            case MethodName.GetBlockDisplayWindow:
+                result = this.getBlockDisplayWindow(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

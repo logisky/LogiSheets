@@ -7,9 +7,11 @@ import {
     CellPosition,
     ColId,
     CustomFunc,
+    DisplayWindow,
     DisplayWindowWithStartPoint,
     GetAllSheetInfoParams,
     GetBlockColIdParams,
+    GetBlockDisplayWindowParams,
     GetBlockRowIdParams,
     GetBlockValuesParams,
     GetCellParams,
@@ -53,6 +55,14 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    getBlockDisplayWindow(
+        params: GetBlockDisplayWindowParams
+    ): Resp<DisplayWindow> {
+        return this._call(
+            MethodName.GetBlockDisplayWindow,
+            params
+        ) as Resp<DisplayWindow>
     }
     stateChanged(): void {
         window.parent.postMessage({
@@ -231,4 +241,6 @@ export enum MethodName {
     GetBlockValues = 'agent_getBlockValues',
     StateUpdated = 'agent_stateUpdated',
     LoadCraftStateMethodName = 'agent_loadCraftState',
+
+    GetBlockDisplayWindow = 'agent_getBlockDisplayWindow',
 }

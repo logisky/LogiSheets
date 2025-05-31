@@ -34,8 +34,8 @@ impl DiyCellManager {
     pub fn get_diy_cell_id(
         &self,
         sheet_id: SheetId,
-        block_cell_id: BlockCellId,
+        block_cell_id: &BlockCellId,
     ) -> Option<DiyCellId> {
-        self.data.get(&(sheet_id, block_cell_id)).cloned()
+        self.data.get(&(sheet_id, *block_cell_id)).cloned()
     }
 }

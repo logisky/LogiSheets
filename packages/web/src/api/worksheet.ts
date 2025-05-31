@@ -14,6 +14,7 @@ import {
     get_all_fully_covered_blocks,
     get_sheet_dimension,
     get_sheet_id,
+    get_display_window_for_block,
 } from '../../wasm'
 import {get_merged_cells} from '../../wasm/logisheets_wasm_server'
 import {
@@ -97,6 +98,10 @@ export class Worksheet {
             height,
             width
         )
+    }
+
+    public getBlockDisplayWindow(blockId: number): Result<DisplayWindow> {
+        return get_display_window_for_block(this._id, this._sheetId, blockId)
     }
 
     public getRowHeight(rowIdx: number): Result<number> {

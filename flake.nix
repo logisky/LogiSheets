@@ -21,31 +21,28 @@
           extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
           targets = [ "wasm32-unknown-unknown" ];
         };
-        nightlyToolchain = pkgs.rust-bin.nightly."2024-08-06".minimal.override {
-          extensions = [ "rust-src" ];
-          targets = [ "wasm32-unknown-unknown" ];
-        };
-        # Node.js & Yarn
-        nodejs = pkgs.nodejs_20;
-        yarn = pkgs.yarn.override { inherit nodejs; };
-        # WASM tools
-        wasmTools = with pkgs; [ rust-cbindgen wabt ];
       in
       {
-        devShells.default = pkgs.mkShell {
-          name = "logisheets-dev-shell";
-          buildInputs = [
-            stableToolchain
-            nightlyToolchain
-            nodejs
-            yarn
-            pkgs.python3
-          ] ++ wasmTools;
-          shellHook = ''
-            echo "Welcome to the LogiSheets development shell!"
-            echo "Rust (stable & nightly), Node.js, Yarn, Python 3, and WASM tools are available."
-          '';
-        };
-      }
-    );
+        devShells =
+          {
+            # mkShell brings in a `cc` that points to gcc, stdenv.mkDerivation from llvm avoids this.
+            default = let llvmPkgs = pkgs.llvmPackages_16; in llvmPkgs.stdenv.mkDerivation {
+              name = "logisheets-dev-shell";
+              buildInputs = with pkgs; [
+                stableToolchain
+
+                # Node
+                nodejs
+                yarn
+
+                python3
+
+                # wasm
+                rust-cbindgen
+                wabt
+
+              ];
+            };
+          };
+      });
 }

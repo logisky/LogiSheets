@@ -1012,3 +1012,15 @@ pub fn get_block_col_id(
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
+
+#[wasm_bindgen]
+pub fn get_display_window_for_block(id: usize, sheet_id: SheetId, block_id: BlockId) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id);
+    handle_result!(ws);
+    let r = ws.get_display_window_for_block(block_id);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}

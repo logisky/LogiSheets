@@ -5,9 +5,11 @@ import {
     CellPosition,
     ColId,
     CustomFunc,
+    DisplayWindow,
     DisplayWindowWithStartPoint,
     GetAllSheetInfoParams,
     GetBlockColIdParams,
+    GetBlockDisplayWindowParams,
     GetBlockRowIdParams,
     GetBlockValuesParams,
     GetCellParams,
@@ -137,6 +139,11 @@ export class CraftHandler implements CraftHandlerInterface {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    getBlockDisplayWindow(
+        params: GetBlockDisplayWindowParams
+    ): Resp<DisplayWindow> {
+        return this._workbookClient.getBlockDisplayWindow(params)
     }
     getBlockValues(params: GetBlockValuesParams): Resp<readonly string[]> {
         return this._workbookClient.getBlockValues(params)

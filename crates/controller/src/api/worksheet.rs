@@ -15,7 +15,7 @@ use crate::{
 };
 use crate::{CellInfo, ColInfo, Comment, MergeCell, RowInfo, Style, Value};
 use logisheets_base::errors::BasicError;
-use logisheets_base::{BlockId, CellId, ColId, DiyCellId, RowId, SheetId};
+use logisheets_base::{BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, SheetId};
 use logisheets_parser::unparse;
 
 use super::workbook::CellPositionerDefault;
@@ -29,7 +29,7 @@ pub struct Worksheet<'a> {
 }
 
 impl<'a> Worksheet<'a> {
-    pub(crate) fn get_value_by_id(&self, cell_id: CellId) -> Result<Value> {
+    pub(crate) fn get_value_by_id(&self, cell_id: &CellId) -> Result<Value> {
         if let Some(cell) = self
             .controller
             .status
@@ -64,16 +64,16 @@ impl<'a> Worksheet<'a> {
             .status
             .navigator
             .fetch_cell_id(&self.sheet_id, row, col)?;
-        self.get_value_by_id(cell_id)
+        self.get_value_by_id(&cell_id)
     }
 
-    pub(crate) fn get_formula_by_id(&self, cell_id: CellId) -> Result<String> {
+    pub(crate) fn get_formula_by_id(&self, cell_id: &CellId) -> Result<String> {
         if let Some(node) = self
             .controller
             .status
             .formula_manager
             .formulas
-            .get(&(self.sheet_id, cell_id))
+            .get(&(self.sheet_id, *cell_id))
         {
             let mut name_fetcher = NameFetcher {
                 func_manager: &self.controller.status.func_id_manager,
@@ -99,20 +99,34 @@ impl<'a> Worksheet<'a> {
             .status
             .navigator
             .fetch_cell_id(&self.sheet_id, row, col)?;
-        self.get_formula_by_id(cell_id)
+        self.get_formula_by_id(&cell_id)
     }
 
-    pub fn get_cell_info(&self, row: usize, col: usize) -> Result<CellInfo> {
-        let cell_id = self
-            .controller
-            .status
-            .navigator
-            .fetch_cell_id(&self.sheet_id, row, col)?;
+    pub fn get_cell_info_by_cell_id(&self, cell_id: &CellId) -> Result<CellInfo> {
         let block_id = if let CellId::BlockCell(b) = cell_id {
             Some(b.block_id)
         } else {
             None
         };
+        let diy_cell_id = match cell_id {
+            CellId::NormalCell(_) => None,
+            CellId::BlockCell(block_cell_id) => self
+                .controller
+                .status
+                .exclusive_manager
+                .diy_cell_manager
+                .get_diy_cell_id(self.sheet_id, block_cell_id),
+            CellId::EphemeralCell(_) => None,
+        };
+        if diy_cell_id.is_some() {
+            return Ok(CellInfo {
+                value: Value::default(),
+                formula: String::from(""),
+                style: self.get_style_by_id(cell_id)?,
+                block_id: None,
+                diy_cell_id,
+            });
+        }
         let formula = self.get_formula_by_id(cell_id)?;
         let value = self.get_value_by_id(cell_id)?;
         let style = self.get_style_by_id(cell_id)?;
@@ -121,7 +135,17 @@ impl<'a> Worksheet<'a> {
             formula,
             style,
             block_id,
+            diy_cell_id,
         })
+    }
+
+    pub fn get_cell_info(&self, row: usize, col: usize) -> Result<CellInfo> {
+        let cell_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_id(&self.sheet_id, row, col)?;
+        self.get_cell_info_by_cell_id(&cell_id)
     }
 
     pub fn get_comment(&self, row: usize, col: usize) -> Option<Comment> {
@@ -285,10 +309,73 @@ impl<'a> Worksheet<'a> {
                 .status
                 .exclusive_manager
                 .diy_cell_manager
-                .get_diy_cell_id(self.sheet_id, block_cell_id)
+                .get_diy_cell_id(self.sheet_id, &block_cell_id)
                 .ok_or(Error::Basic(BasicError::CellIdNotFound(row, col))),
             _ => Err(Error::Basic(BasicError::CellIdNotFound(row, col))),
         }
+    }
+
+    pub fn get_display_window_for_block(&self, block_id: BlockId) -> Result<DisplayWindow> {
+        let info = self.get_block_info(block_id)?;
+        let row_ids = (0..info.row_cnt - 1)
+            .into_iter()
+            .map(|r| self.get_block_row_id(block_id, r).unwrap())
+            .collect::<Vec<RowId>>();
+        let col_ids = (0..info.col_cnt - 1)
+            .into_iter()
+            .map(|c| self.get_block_col_id(block_id, c).unwrap())
+            .collect::<Vec<ColId>>();
+        let mut cell_infos = vec![];
+
+        for r in row_ids.iter() {
+            for c in col_ids.iter() {
+                let cell_id = CellId::BlockCell(BlockCellId {
+                    block_id,
+                    row: *r,
+                    col: *c,
+                });
+                let info = self.get_cell_info_by_cell_id(&cell_id)?;
+                cell_infos.push(info);
+            }
+        }
+
+        let comments = self.get_comments_within_block(&info);
+        let merge_cells = self.get_merge_cells_within_block(&info);
+
+        Ok(DisplayWindow {
+            cells: cell_infos,
+            rows: vec![],
+            cols: vec![],
+            comments,
+            merge_cells,
+            blocks: vec![],
+        })
+    }
+
+    #[inline]
+    fn get_comments_within_block(&self, block_info: &BlockInfo) -> Vec<Comment> {
+        self.get_comments()
+            .into_iter()
+            .filter(|c| {
+                c.row >= block_info.row_start
+                    && c.row <= block_info.row_start + block_info.row_cnt - 1
+                    && c.col >= block_info.col_start
+                    && c.col <= block_info.col_start + block_info.col_cnt - 1
+            })
+            .collect()
+    }
+
+    #[inline]
+    fn get_merge_cells_within_block(&self, block_info: &BlockInfo) -> Vec<MergeCell> {
+        self.get_all_merged_cells()
+            .into_iter()
+            .filter(|m| {
+                m.start_row >= block_info.row_start
+                    && m.end_row <= block_info.row_start + block_info.row_cnt - 1
+                    && m.start_col >= block_info.col_start
+                    && m.end_col <= block_info.col_start + block_info.col_cnt - 1
+            })
+            .collect()
     }
 
     pub fn get_display_window_response(
@@ -309,6 +396,7 @@ impl<'a> Worksheet<'a> {
             self.get_nearest_col_with_given_x(start_x + width, false, &mut *positioner)?;
 
         drop(positioner);
+
         let window = self.get_display_window(start_row, start_col, end_row, end_col)?;
         Ok(DisplayWindowWithStartPoint {
             window,
@@ -390,7 +478,7 @@ impl<'a> Worksheet<'a> {
         Ok(res)
     }
 
-    pub(crate) fn get_style_by_id(&self, cell_id: CellId) -> Result<Style> {
+    pub(crate) fn get_style_by_id(&self, cell_id: &CellId) -> Result<Style> {
         let style_id = if let Some(cell) = self
             .controller
             .status
@@ -439,7 +527,7 @@ impl<'a> Worksheet<'a> {
             .status
             .navigator
             .fetch_cell_id(&self.sheet_id, row, col)?;
-        self.get_style_by_id(cell_id)
+        self.get_style_by_id(&cell_id)
     }
 
     pub fn get_all_merged_cells(&self) -> Vec<MergeCell> {
