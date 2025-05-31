@@ -3,6 +3,30 @@ import {BlockId, CraftId, CraftState, MethodName} from 'logisheets-craft-forge'
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
 import {isErrorMessage} from 'packages/web'
+import {CellPosition} from 'logisheets-web'
+
+/**
+ * `CraftConfig` describes the functionalities and apperances of crafts.
+ */
+export interface CraftConfig {
+    buttons: DiyButton[]
+    uploadUrl?: string
+    uploadPermittedRoles?: string[]
+    // Where the data area starts. If not specified,
+    // the data area will start from (0, 0).
+    dataAreaStart?: CellPosition
+    // Where the data area ends. If not specified,
+    // the data area will end at the last row and column.
+    dataAreaEnd?: CellPosition
+
+    userAllowedInputStart?: CellPosition
+    userAllowedInputEnd?: CellPosition
+}
+
+export interface DiyButton {
+    type: DiyButtonType
+    position: CellPosition
+}
 
 export interface CraftManifest {
     /**
@@ -21,16 +45,12 @@ export interface CraftManifest {
 
 export enum DiyButtonType {
     Upload1,
+    Image1,
 }
 
 export interface DiyButton {
     type: DiyButtonType
     dirCellId: number
-}
-
-export interface CraftConfig {
-    buttons: readonly DiyButton[]
-    url: string
 }
 
 /**
@@ -192,7 +212,10 @@ export class CraftManager {
         }
         if (button.type === DiyButtonType.Upload1) {
             const values = await this.extractBlockValues(blockId)
-            const url = config.url
+            const url = config.uploadUrl
+            if (!url) {
+                return
+            }
             await fetch(url, {
                 method: 'POST',
                 body: JSON.stringify(values),

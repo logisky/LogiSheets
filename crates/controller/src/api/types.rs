@@ -1,4 +1,4 @@
-use logisheets_base::BlockId;
+use logisheets_base::{BlockId, DiyCellId};
 
 use crate::{Style, Value};
 
@@ -21,6 +21,7 @@ pub struct CellInfo {
     pub formula: String,
     pub style: Style,
     pub block_id: Option<BlockId>,
+    pub diy_cell_id: Option<DiyCellId>,
 }
 
 #[cfg_attr(

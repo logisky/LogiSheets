@@ -27,7 +27,7 @@ export interface CraftState {
     role: string
 }
 
-export type CraftId = number
+export type CraftId = string
 export type SheetId = number
 export type BlockId = [SheetId, number]
 export type RowId = number
