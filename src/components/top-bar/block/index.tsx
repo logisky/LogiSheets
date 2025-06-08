@@ -4,6 +4,7 @@ import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {ToggleButton} from '@mui/material'
 import {CreateBlockBuilder, isErrorMessage, Transaction} from 'logisheets-web'
+import {CreateDiyBtnComponent} from './create-diy-btn'
 
 export interface BlockProps {
     readonly selectedData?: SelectedData
@@ -29,7 +30,6 @@ export const BlockComponent = ({selectedData}: BlockProps) => {
             .colCnt(cellRange.endCol - cellRange.startCol + 1)
             .build()
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-        console.log('????create block')
     }
 
     return (
@@ -42,6 +42,7 @@ export const BlockComponent = ({selectedData}: BlockProps) => {
             >
                 Create A Block
             </ToggleButton>
+            <CreateDiyBtnComponent selectedData={selectedData} />
         </div>
     )
 }

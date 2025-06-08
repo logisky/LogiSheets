@@ -104,6 +104,7 @@ pub enum EditPayload {
 
     // DiyCell
     CreateDiyCell(CreateDiyCell),
+    CreateDiyCellById(CreatDiyCellById),
 
     // Style
     CellStyleUpdate(CellStyleUpdate),
@@ -307,6 +308,18 @@ pub struct CreateDiyCell {
     pub sheet_idx: usize,
     pub row: usize,
     pub col: usize,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "create_diy_cell_by_id.ts")
+)]
+pub struct CreatDiyCellById {
+    pub sheet_id: SheetId,
+    pub block_id: BlockId,
+    pub row_idx: usize,
+    pub col_idx: usize,
 }
 
 #[derive(Debug, Clone)]

@@ -5,6 +5,7 @@ export class Cell {
         this._value = CellValue.from(cellInfo.value)
         this._formula = cellInfo.formula
         this._style = cellInfo.style
+        this._blockId = cellInfo.blockId
     }
 
     public getText(): string {
@@ -19,9 +20,14 @@ export class Cell {
         return this._formula
     }
 
+    public getBlockId(): number | undefined {
+        return this._blockId
+    }
+
     private _value: CellValue
     private _style: Style
     private _formula = ''
+    private _blockId?: number
 }
 
 export class CellValue {

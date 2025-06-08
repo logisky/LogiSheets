@@ -49,10 +49,20 @@ export interface Client {
     getBlockRowId(params: GetBlockRowIdParams): Resp<RowId>
     getBlockColId(params: GetBlockColIdParams): Resp<ColId>
     getSheetIdx(params: GetSheetIdxParams): Resp<number>
+    getSheetId(params: GetSheetIdParams): Resp<number>
     getBlockValues(params: GetBlockValuesParams): Resp<readonly string[]>
+
+    getDiyCellIdWithBlockId(params: GetDiyCellIdWithBlockIdParams): Resp<number>
 }
 
 export interface GetAllSheetInfoParams {}
+
+export interface GetDiyCellIdWithBlockIdParams {
+    sheetId: number
+    blockId: number
+    row: number
+    col: number
+}
 
 export interface CalcConditionParams {
     sheetIdx: number
@@ -132,6 +142,10 @@ export interface GetBlockColIdParams {
 
 export interface GetSheetIdxParams {
     sheetId: number
+}
+
+export interface GetSheetIdParams {
+    sheetIdx: number
 }
 
 export interface GetBlockValuesParams {

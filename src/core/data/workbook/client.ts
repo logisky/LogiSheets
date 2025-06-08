@@ -30,6 +30,8 @@ import {
     GetAvailableBlockIdParams,
     DisplayWindow,
     GetBlockDisplayWindowParams,
+    GetDiyCellIdWithBlockIdParams,
+    GetSheetIdParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -72,6 +74,17 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    getSheetId(params: GetSheetIdParams): Resp<number> {
+        return this._call(MethodName.GetSheetId, params) as Resp<number>
+    }
+    getDiyCellIdWithBlockId(
+        params: GetDiyCellIdWithBlockIdParams
+    ): Resp<number> {
+        return this._call(
+            MethodName.GetDiyCellIdWithBlockId,
+            params
+        ) as Resp<number>
     }
     getBlockDisplayWindow(
         params: GetBlockDisplayWindowParams

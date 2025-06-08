@@ -1,3 +1,5 @@
+use logisheets_base::BlockId;
+use logisheets_base::DiyCellId;
 use logisheets_base::SheetId;
 use logisheets_controller::controller::display::CellPosition;
 use logisheets_controller::ColInfo;
@@ -225,4 +227,19 @@ pub fn get_cell_position(id: usize, sheet_id: SheetId, row: usize, col: usize) -
         .get_cell_position(row, col);
     handle_result!(result);
     serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_diy_cell_id_with_block_id(
+    id: usize,
+    sheet_id: SheetId,
+    block_id: BlockId,
+    row: usize,
+    col: usize,
+) -> Option<DiyCellId> {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    ws.get_diy_cell_id_with_block_id(&block_id, row, col)
 }

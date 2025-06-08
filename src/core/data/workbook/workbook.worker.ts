@@ -33,6 +33,8 @@ import {
     GetAvailableBlockIdParams,
     DisplayWindow,
     GetBlockDisplayWindowParams,
+    GetDiyCellIdWithBlockIdParams,
+    GetSheetIdParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -61,9 +63,24 @@ interface IWorkbookWorker {
     getBlockValues(params: GetBlockValuesParams): Result<readonly string[]>
 
     getAvailableBlockId(params: GetAvailableBlockIdParams): Result<number>
+    getDiyCellIdWithBlockId(
+        params: GetDiyCellIdWithBlockIdParams
+    ): Result<number>
+    getSheetId(params: GetSheetIdParams): Result<number>
 }
 
 class WorkerService implements IWorkbookWorker {
+    public getSheetId(params: GetSheetIdParams): Result<number> {
+        const {sheetIdx} = params
+        return this.workbook.getSheetId(sheetIdx)
+    }
+    public getDiyCellIdWithBlockId(
+        params: GetDiyCellIdWithBlockIdParams
+    ): Result<number> {
+        const {sheetId, blockId, row, col} = params
+        const ws = this.workbook.getWorksheetById(sheetId)
+        return ws.getDiyCellIdWithBlockId(blockId, row, col)
+    }
     public getAvailableBlockId(
         params: GetAvailableBlockIdParams
     ): Result<number> {

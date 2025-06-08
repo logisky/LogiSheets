@@ -43,6 +43,14 @@ impl ExclusiveManagerExecutor {
                 };
                 Ok((self, true))
             }
+            EditPayload::CreateDiyCellById(p) => {
+                let cell_id =
+                    ctx.fetch_block_cell_id(&p.sheet_id, &p.block_id, p.row_idx, p.col_idx)?;
+                self.manager
+                    .diy_cell_manager
+                    .create_new_diy_cell(p.sheet_id, cell_id);
+                Ok((self, true))
+            }
             _ => Ok((self, false)),
         }
     }
