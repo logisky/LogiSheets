@@ -176,6 +176,25 @@ impl<'a> Worksheet<'a> {
         })
     }
 
+    pub fn get_diy_cell_id_with_block_id(
+        &self,
+        block_id: &BlockId,
+        row: usize,
+        col: usize,
+    ) -> Option<DiyCellId> {
+        let cell_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_block_cell_id(&self.sheet_id, block_id, row, col)
+            .ok()?;
+        self.controller
+            .status
+            .exclusive_manager
+            .diy_cell_manager
+            .get_diy_cell_id(self.sheet_id, &cell_id)
+    }
+
     pub fn get_display_window(
         &self,
         start_row: usize,

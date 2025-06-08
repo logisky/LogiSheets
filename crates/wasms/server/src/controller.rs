@@ -2,11 +2,11 @@ use logisheets_base::{BlockId, ColId, RowId, SheetId};
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
     Alignment, AsyncFuncResult, BlockInput, CellClear, CellFormatBrush, CellInput, CellStyleUpdate,
-    CreateBlock, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock,
-    DeleteSheet, EditAction, EditPayload, HorizontalAlignment, InsertCols, InsertColsInBlock,
-    InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock,
-    PayloadsAction, SetColWidth, SetRowHeight, SheetRename, SplitMergedCells, StyleUpdateType,
-    VerticalAlignment,
+    CreateBlock, CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows,
+    DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, HorizontalAlignment, InsertCols,
+    InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells,
+    MoveBlock, PayloadsAction, SetColWidth, SetRowHeight, SheetRename, SplitMergedCells,
+    StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
@@ -977,6 +977,18 @@ pub fn get_block_values(
     let r = wb.get_block_values(sheet_id, block_id, &row_ids, &col_ids);
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn create_diy_cell(id: usize, sheet_idx: usize, row: usize, col: usize) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let payload = CreateDiyCell {
+        sheet_idx,
+        row,
+        col,
+    };
+    manager.add_payload(id, EditPayload::CreateDiyCell(payload));
 }
 
 #[wasm_bindgen]

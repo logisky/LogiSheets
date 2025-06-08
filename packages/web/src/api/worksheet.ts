@@ -15,6 +15,7 @@ import {
     get_sheet_dimension,
     get_sheet_id,
     get_display_window_for_block,
+    get_diy_cell_id_with_block_id,
 } from '../../wasm'
 import {get_merged_cells} from '../../wasm/logisheets_wasm_server'
 import {
@@ -164,6 +165,24 @@ export class Worksheet {
 
     public getValue(rowIdx: number, colIdx: number): Result<Value> {
         return get_value(this._id, this._sheetId, rowIdx, colIdx)
+    }
+
+    public getDiyCellIdWithBlockId(
+        blockId: number,
+        row: number,
+        col: number
+    ): Result<number> {
+        const cellId = get_diy_cell_id_with_block_id(
+            this._id,
+            this._sheetId,
+            blockId,
+            row,
+            col
+        )
+        if (cellId === undefined) {
+            return {msg: 'Cell not found', ty: 0}
+        }
+        return cellId
     }
 
     public getFullyCoveredBlocks(

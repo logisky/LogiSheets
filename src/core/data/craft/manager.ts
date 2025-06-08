@@ -1,32 +1,16 @@
 import {injectable} from 'inversify'
-import {BlockId, CraftId, CraftState, MethodName} from 'logisheets-craft-forge'
+import {
+    BlockId,
+    CraftId,
+    CraftState,
+    DiyButtonConfig,
+    DiyCellButtonType,
+    MethodName,
+} from 'logisheets-craft-forge'
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
-import {isErrorMessage} from 'packages/web'
-import {CellPosition} from 'logisheets-web'
-
-/**
- * `CraftConfig` describes the functionalities and apperances of crafts.
- */
-export interface CraftConfig {
-    buttons: DiyButton[]
-    uploadUrl?: string
-    uploadPermittedRoles?: string[]
-    // Where the data area starts. If not specified,
-    // the data area will start from (0, 0).
-    dataAreaStart?: CellPosition
-    // Where the data area ends. If not specified,
-    // the data area will end at the last row and column.
-    dataAreaEnd?: CellPosition
-
-    userAllowedInputStart?: CellPosition
-    userAllowedInputEnd?: CellPosition
-}
-
-export interface DiyButton {
-    type: DiyButtonType
-    position: CellPosition
-}
+import {isErrorMessage} from 'logisheets-web'
+import {DiyButtonManager} from './diy_btn_manager'
 
 export interface CraftManifest {
     /**
@@ -41,16 +25,6 @@ export interface CraftManifest {
      * The URL to the craft's HTML file.
      */
     html: string
-}
-
-export enum DiyButtonType {
-    Upload1,
-    Image1,
-}
-
-export interface DiyButton {
-    type: DiyButtonType
-    dirCellId: number
 }
 
 /**
@@ -92,6 +66,10 @@ export class CraftManager {
             }
         }
         this._crafts.push(craft)
+    }
+
+    public registerDiyButton(diyId: number, config: DiyButtonConfig) {
+        this._diyBtnManager.registerDiyButton(diyId, config)
     }
 
     public getCraftIcons(): readonly HTMLImageElement[] {
@@ -190,43 +168,30 @@ export class CraftManager {
     }
 
     async onDiyCellClick(id: number): Promise<void> {
-        const blockId = this._diyIds.get(id)
-        if (!blockId) {
-            // eslint-disable-next-line no-console
-            console.log(id + ' is not registered')
-            return
-        }
-
-        const config = this._configs.get(blockId)
-        if (!config) {
-            // eslint-disable-next-line no-console
-            console.log(id + ' is not registered')
-            return
-        }
-
-        const button = config.buttons.find((each) => each.dirCellId === id)
-        if (!button) {
-            // eslint-disable-next-line no-console
-            console.log(id + ' is not registered')
-            return
-        }
-        if (button.type === DiyButtonType.Upload1) {
-            const values = await this.extractBlockValues(blockId)
-            const url = config.uploadUrl
-            if (!url) {
-                return
+        const type = this._diyBtnManager.getDiyButtonType(id)
+        if (type === undefined) return
+        switch (type) {
+            case DiyCellButtonType.Upload: {
+                const config = this._diyBtnManager.getUploadButtonConfig(id)
+                if (!config) return
+                const values = await this.extractBlockValues(config.blockId)
+                const url = config.url
+                if (!url) return
+                await fetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(values),
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                break
             }
-            await fetch(url, {
-                method: 'POST',
-                body: JSON.stringify(values),
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            })
-
-            return
+            case DiyCellButtonType.Download:
+            case DiyCellButtonType.Image:
+            default:
+                // Not implemented or no action needed
+                break
         }
-        throw Error('unimplemented!')
     }
 
     private _crafts: CraftManifest[] = []
@@ -235,8 +200,8 @@ export class CraftManager {
     private _iframe!: HTMLIFrameElement
     private _handler: CraftHandler
 
-    private _configs: Map<BlockId, CraftConfig> = new Map()
     private _diyIds: Map<number, BlockId> = new Map()
+    private _diyBtnManager: DiyButtonManager = new DiyButtonManager()
 
     private _currentBlockId: BlockId | undefined
     private _dirty = false

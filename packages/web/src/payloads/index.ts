@@ -30,23 +30,27 @@ import {SetRowHeight} from './set_row_height'
 import {SetRowVisible} from './set_row_visible'
 import {SheetRename} from './sheet_rename'
 import {SplitMergedCells} from './split_merged_cells'
+import {CreateDiyCellById} from './create_diy_cell_by_id'
+import {CreateDiyCell} from './create_diy_cell'
 
 export * from './block_input'
 export * from './cell_clear'
+export * from './cell_format_brush'
 export * from './cell_input'
 export * from './create_block'
+export * from './create_diy_cell'
+export * from './create_diy_cell_by_id'
 export * from './delete_block_cols'
 export * from './delete_block_rows'
 export * from './delete_cols'
 export * from './delete_rows'
 export * from './delete_sheet'
-export * from './cell_format_brush'
-export * from './line_format_brush'
 export * from './insert_block_cols'
 export * from './insert_block_rows'
 export * from './insert_cols'
 export * from './insert_rows'
 export * from './insert_sheet'
+export * from './line_format_brush'
 export * from './merge_cells'
 export * from './move_block'
 export * from './set_cell_alignment'
@@ -67,19 +71,22 @@ export * from './split_merged_cells'
 export type Payload =
     | BlockInput
     | CellClear
+    | CellFormatBrush
     | CellInput
     | CreateBlock
+    | CreateDiyCell
+    | CreateDiyCellById
     | DeleteBlockCols
     | DeleteBlockRows
     | DeleteCols
     | DeleteRows
     | DeleteSheet
-    | CellFormatBrush
     | InsertBlockCols
     | InsertBlockRows
     | InsertCols
     | InsertRows
     | InsertSheet
+    | LineFormatBrush
     | MergeCells
     | MoveBlock
     | SetCellAlignment
@@ -96,4 +103,3 @@ export type Payload =
     | SetRowVisible
     | SheetRename
     | SplitMergedCells
-    | LineFormatBrush

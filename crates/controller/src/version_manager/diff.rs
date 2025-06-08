@@ -242,5 +242,12 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|_| BasicError::CellIdNotFound(row, col))?;
             Ok(Some((Diff::CellValue(cell_id), sheet_id)))
         }
+        EditPayload::CreateDiyCellById(p) => Ok(Some((
+            Diff::BlockUpdate {
+                sheet_id: p.sheet_id,
+                id: p.block_id,
+            },
+            p.sheet_id,
+        ))),
     }
 }

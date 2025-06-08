@@ -70,6 +70,7 @@ export interface DataService {
     getAllSheetInfo(): Resp<readonly SheetInfo[]>
     getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell>
     getAvailableBlockId(sheetIdx: number): Resp<number>
+    getSheetId(sheetIdx: number): Resp<number>
 }
 
 @injectable()
@@ -80,6 +81,9 @@ export class DataServiceImpl implements DataService {
         @inject(TYPES.Pool) private _pool: Pool
     ) {
         this._init()
+    }
+    getSheetId(sheetIdx: number): Resp<number> {
+        return this._workbook.getSheetId({sheetIdx})
     }
 
     getAvailableBlockId(sheetIdx: number): Resp<number> {

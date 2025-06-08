@@ -16,6 +16,7 @@ import {
     GetBlockValuesParams,
     GetCellParams,
     GetDisplayWindowParams,
+    GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
     GetSheetIdxParams,
@@ -55,6 +56,14 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    getDiyCellIdWithBlockId(
+        params: GetDiyCellIdWithBlockIdParams
+    ): Resp<number> {
+        return this._call(
+            MethodName.GetDiyCellIdWithBlockId,
+            params
+        ) as Resp<number>
     }
     getBlockDisplayWindow(
         params: GetBlockDisplayWindowParams
@@ -243,4 +252,5 @@ export enum MethodName {
     LoadCraftStateMethodName = 'agent_loadCraftState',
 
     GetBlockDisplayWindow = 'agent_getBlockDisplayWindow',
+    GetDiyCellIdWithBlockId = 'agent_getDiyCellIdWithBlockId',
 }

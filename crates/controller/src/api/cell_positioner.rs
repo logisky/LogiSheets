@@ -1,8 +1,5 @@
 use itertools::Itertools;
 
-use super::worksheet::Worksheet;
-use crate::errors::Result;
-
 #[derive(Debug, Clone)]
 pub struct CellPositioner<const INTERVAL: usize> {
     cache_height: Vec<(usize, f64)>,
