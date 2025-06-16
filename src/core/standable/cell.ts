@@ -7,6 +7,8 @@ export class StandardCell {
     style?: StandardStyle
     value?: StandardValue
     formula = ''
+    diyCellId?: number
+    blockId?: number
     setStyle(style?: StandardStyle) {
         this.style = style
     }

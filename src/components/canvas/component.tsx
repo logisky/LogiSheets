@@ -30,10 +30,12 @@ import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid} from '@/core'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
-import {DataServiceImpl, MAX_COUNT} from '@/core/data'
+import {CraftManager, DataServiceImpl, MAX_COUNT} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
+import {DiyButtonComponent} from '../diy-button'
+
 const CANVAS_HOST_ID = simpleUuid()
 const canvas = () => {
     return document.getElementById(CANVAS_ID) as HTMLDivElement
@@ -47,7 +49,8 @@ export interface CanvasProps {
 }
 export const CanvasComponent = (props: CanvasProps) => {
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
-    const store = useRef(new CanvasStore(DATA_SERVICE))
+    const craftManager = useInjection<CraftManager>(TYPES.CraftManager)
+    const store = useRef(new CanvasStore(DATA_SERVICE, craftManager))
     return (
         <CanvasStoreContext.Provider value={store.current}>
             <Internal {...props} />
@@ -338,6 +341,9 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             )}
             {store.blockOutliner.props.map((props, i) => (
                 <BlockOutlinerComponent blockOutliner={props} key={i} />
+            ))}
+            {store.diyButton.props.map((props, i) => (
+                <DiyButtonComponent key={i} props={props} />
             ))}
             <ScrollbarComponent
                 {...store.scrollbar.xScrollbar}

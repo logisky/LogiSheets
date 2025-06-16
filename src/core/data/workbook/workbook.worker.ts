@@ -301,6 +301,12 @@ class WorkerService implements IWorkbookWorker {
             case MethodName.GetBlockDisplayWindow:
                 result = this.getBlockDisplayWindow(args)
                 break
+            case MethodName.GetSheetId:
+                result = this.getSheetId(args)
+                break
+            case MethodName.GetSheetIdx:
+                result = this.getSheetIdx(args)
+                break
             default:
                 throw new Error(`Unknown method: ${m}`)
         }

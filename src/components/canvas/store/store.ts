@@ -7,14 +7,18 @@ import {Selector} from './selector'
 import {Dnd} from './dnd'
 import {ScrollBar} from './scrollbar'
 import {Textarea} from './textarea'
-import {RenderCell, DataService, CellView} from '@/core/data'
+import {RenderCell, DataService, CellView, CraftManager} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
 import {Renderer} from './renderer'
 import {BlockOutliner} from './block-outliner'
+import {DiyButton} from './diy-button'
 
 export class CanvasStore {
-    constructor(public readonly dataSvc: DataService) {
+    constructor(
+        public readonly dataSvc: DataService,
+        public readonly craftManager: CraftManager
+    ) {
         makeObservable(this)
         this.renderer = new Renderer(this)
         this.resizer = new Resizer(this)
@@ -24,6 +28,7 @@ export class CanvasStore {
         this.scrollbar = new ScrollBar(this)
         this.textarea = new Textarea(this)
         this.blockOutliner = new BlockOutliner(this)
+        this.diyButton = new DiyButton(this)
     }
     @observable.ref
     startCell?: Cell
@@ -43,6 +48,7 @@ export class CanvasStore {
     scrollbar: ScrollBar
     textarea: Textarea
     blockOutliner: BlockOutliner
+    diyButton: DiyButton
 
     get currSheetIdx() {
         return this.dataSvc.getCurrentSheetIdx()
@@ -190,6 +196,7 @@ export class CanvasStore {
         this.type = 'mousedown'
         this.same = this.startCell && cell.equals(this.startCell)
         this.selector.onMouseDown()
+        if (this.diyButton.mousedown()) return
         this.textarea.mousedown(e.nativeEvent)
     }
 

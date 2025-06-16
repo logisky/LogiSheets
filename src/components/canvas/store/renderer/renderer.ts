@@ -150,6 +150,7 @@ export class Renderer implements RendererInterface {
             this.store.endCell
         )
         this.store.blockOutliner.updateBlockInfos()
+        this.store.diyButton.updateDiyButton()
     }
 
     public concatImageToCanvas() {

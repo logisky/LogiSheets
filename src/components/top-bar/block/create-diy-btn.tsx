@@ -54,6 +54,8 @@ export const CreateDiyBtnComponent = ({selectedData}: CreateDiyBtnProps) => {
             size="small"
             aria-label="create-diy-cell"
             onClick={createDiyCell}
-        />
+        >
+            Create A DiyButton
+        </ToggleButton>
     )
 }
