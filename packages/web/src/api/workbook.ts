@@ -10,6 +10,7 @@ import {
     col_delete,
     col_insert,
     create_block,
+    create_diy_cell,
     create_sheet,
     delete_sheet,
     get_all_sheet_info,
@@ -519,6 +520,8 @@ export class Workbook {
                 p.from,
                 p.to
             )
+        if (p.type === 'createDiyCell')
+            return create_diy_cell(this._id, p.sheetIdx, p.row, p.col)
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }

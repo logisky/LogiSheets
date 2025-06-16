@@ -14,8 +14,10 @@ import {
     GetBlockValuesParams,
     GetCellParams,
     GetDisplayWindowParams,
+    GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
+    GetSheetIdParams,
     GetSheetIdxParams,
     HandleTransactionParams,
     LoadWorkbookParams,
@@ -139,6 +141,14 @@ export class CraftHandler implements CraftHandlerInterface {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    getSheetId(params: GetSheetIdParams): Resp<number> {
+        return this._workbookClient.getSheetId(params)
+    }
+    getDiyCellIdWithBlockId(
+        params: GetDiyCellIdWithBlockIdParams
+    ): Resp<number> {
+        return this._workbookClient.getDiyCellIdWithBlockId(params)
     }
     getBlockDisplayWindow(
         params: GetBlockDisplayWindowParams

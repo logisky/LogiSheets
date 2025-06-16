@@ -19,6 +19,7 @@ import {
     GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
+    GetSheetIdParams,
     GetSheetIdxParams,
     HandleTransactionParams,
     LoadWorkbookParams,
@@ -56,6 +57,9 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    getSheetId(params: GetSheetIdParams): Resp<number> {
+        return this._call(MethodName.GetSheetId, params) as Resp<number>
     }
     getDiyCellIdWithBlockId(
         params: GetDiyCellIdWithBlockIdParams
@@ -247,6 +251,7 @@ export enum MethodName {
     GetBlockRowId = 'agent_getBlockRowId',
     GetBlockColId = 'agent_getBlockColId',
     GetSheetIdx = 'agent_getSheetIdx',
+    GetSheetId = 'agent_getSheetId',
     GetBlockValues = 'agent_getBlockValues',
     StateUpdated = 'agent_stateUpdated',
     LoadCraftStateMethodName = 'agent_loadCraftState',

@@ -29,7 +29,7 @@ export const BlockComponent = ({selectedData}: BlockProps) => {
             .masterCol(cellRange.startCol)
             .colCnt(cellRange.endCol - cellRange.startCol + 1)
             .build()
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+        await DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
     return (

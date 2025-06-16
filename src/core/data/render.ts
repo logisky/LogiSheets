@@ -37,6 +37,8 @@ export class RenderCell {
             c.value = value
         }
         if (info.formula !== undefined) c.formula = info.formula
+        if (info.diyCellId !== undefined) c.diyCellId = info.diyCellId
+        if (info.blockId !== undefined) c.blockId = info.blockId
         this.info = c
         return this
     }
