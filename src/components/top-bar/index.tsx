@@ -31,7 +31,7 @@ export const TopBar = ({
             case MainMenuType.FILE:
                 content = <FileComponent />
                 break
-            case MainMenuType.BLOCK:
+            case MainMenuType.CRAFT:
                 content = <BlockComponent selectedData={selectedData} />
                 break
             case MainMenuType.VIEW:

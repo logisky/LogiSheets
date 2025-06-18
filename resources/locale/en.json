@@ -5,7 +5,7 @@
             "file": "file",
             "start": "start",
             "view": "view",
-            "block": "block"
+            "craft": "craft"
         }
     },
     "functions": {
