@@ -9,6 +9,7 @@ import {
     check_formula,
     col_delete,
     col_insert,
+    create_appendix,
     create_block,
     create_diy_cell,
     create_sheet,
@@ -522,6 +523,17 @@ export class Workbook {
             )
         if (p.type === 'createDiyCell')
             return create_diy_cell(this._id, p.sheetIdx, p.row, p.col)
+        if (p.type === 'createAppendix')
+            return create_appendix(
+                this._id,
+                p.sheetId,
+                p.blockId,
+                p.rowIdx,
+                p.colIdx,
+                p.craftId,
+                p.tag,
+                p.content
+            )
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }

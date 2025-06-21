@@ -32,6 +32,7 @@ import {SheetRename} from './sheet_rename'
 import {SplitMergedCells} from './split_merged_cells'
 import {CreateDiyCellById} from './create_diy_cell_by_id'
 import {CreateDiyCell} from './create_diy_cell'
+import {CreateAppendix} from './create_appendix'
 
 export * from './block_input'
 export * from './cell_clear'
@@ -67,12 +68,14 @@ export * from './set_row_height'
 export * from './set_row_visible'
 export * from './sheet_rename'
 export * from './split_merged_cells'
+export * from './create_appendix'
 
 export type Payload =
     | BlockInput
     | CellClear
     | CellFormatBrush
     | CellInput
+    | CreateAppendix
     | CreateBlock
     | CreateDiyCell
     | CreateDiyCellById

@@ -5,8 +5,9 @@ import {CellClear} from './cell_clear'
 import {CellFormatBrush} from './cell_format_brush'
 import {CellInput} from './cell_input'
 import {CellStyleUpdate} from './cell_style_update'
-import {CreatDiyCellById} from './create_diy_cell_by_id'
+import {CreateAppendix} from './create_appendix'
 import {CreateBlock} from './create_block'
+import {CreateDiyCellById} from './create_diy_cell_by_id'
 import {CreateDiyCell} from './create_diy_cell'
 import {CreateSheet} from './create_sheet'
 import {DeleteColsInBlock} from './delete_cols_in_block'
@@ -24,7 +25,10 @@ import {LineFormatBrush} from './line_format_brush'
 import {LineStyleUpdate} from './line_style_update'
 import {MergeCells} from './merge_cells'
 import {MoveBlock} from './move_block'
+import {RemoveAppendix} from './remove_appendix'
 import {RemoveBlock} from './remove_block'
+import {RemoveDiyCellById} from './remove_diy_cell_by_id'
+import {RemoveDiyCell} from './remove_diy_cell'
 import {SetColWidth} from './set_col_width'
 import {SetRowHeight} from './set_row_height'
 import {SetVisible} from './set_visible'
@@ -39,7 +43,11 @@ export type EditPayload =
     | {removeBlock: RemoveBlock}
     | {createBlock: CreateBlock}
     | {createDiyCell: CreateDiyCell}
-    | {createDiyCellById: CreatDiyCellById}
+    | {createDiyCellById: CreateDiyCellById}
+    | {removeDiyCell: RemoveDiyCell}
+    | {removeDiyCellById: RemoveDiyCellById}
+    | {createAppendix: CreateAppendix}
+    | {removeAppendix: RemoveAppendix}
     | {cellStyleUpdate: CellStyleUpdate}
     | {ephemeralCellStyleUpdate: EphemeralCellStyleUpdate}
     | {lineStyleUpdate: LineStyleUpdate}
