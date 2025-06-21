@@ -104,7 +104,13 @@ pub enum EditPayload {
 
     // DiyCell
     CreateDiyCell(CreateDiyCell),
-    CreateDiyCellById(CreatDiyCellById),
+    CreateDiyCellById(CreateDiyCellById),
+    RemoveDiyCell(RemoveDiyCell),
+    RemoveDiyCellById(RemoveDiyCellById),
+
+    // Appendix
+    CreateAppendix(CreateAppendix),
+    RemoveAppendix(RemoveAppendix),
 
     // Style
     CellStyleUpdate(CellStyleUpdate),
@@ -313,9 +319,59 @@ pub struct CreateDiyCell {
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
+    gents_derives::gents_header(file_name = "remove_diy_cell.ts")
+)]
+pub struct RemoveDiyCell {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
     gents_derives::gents_header(file_name = "create_diy_cell_by_id.ts")
 )]
-pub struct CreatDiyCellById {
+pub struct CreateDiyCellById {
+    pub sheet_id: SheetId,
+    pub block_id: BlockId,
+    pub row_idx: usize,
+    pub col_idx: usize,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "remove_diy_cell_by_id.ts")
+)]
+pub struct RemoveDiyCellById {
+    pub sheet_id: SheetId,
+    pub block_id: BlockId,
+    pub row_idx: usize,
+    pub col_idx: usize,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "create_appendix.ts")
+)]
+pub struct CreateAppendix {
+    pub sheet_id: SheetId,
+    pub block_id: BlockId,
+    pub row_idx: usize,
+    pub col_idx: usize,
+    pub craft_id: String,
+    pub tag: u8,
+    pub content: String,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "remove_appendix.ts")
+)]
+pub struct RemoveAppendix {
     pub sheet_id: SheetId,
     pub block_id: BlockId,
     pub row_idx: usize,

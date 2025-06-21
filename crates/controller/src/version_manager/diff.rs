@@ -249,5 +249,9 @@ fn convert_diff<C: VersionExecCtx>(
             },
             p.sheet_id,
         ))),
+        EditPayload::RemoveDiyCell(_) => todo!(),
+        EditPayload::RemoveDiyCellById(_) => todo!(),
+        EditPayload::CreateAppendix(_) => todo!(),
+        EditPayload::RemoveAppendix(_) => todo!(),
     }
 }

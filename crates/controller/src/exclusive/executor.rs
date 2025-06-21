@@ -3,6 +3,7 @@ use logisheets_base::errors::BasicError;
 use crate::edit_action::EditPayload;
 use crate::Error;
 
+use super::appendix::Appendix;
 use super::ctx::ExclusiveManagerExecCtx;
 use super::ExclusiveManager;
 
@@ -43,6 +44,20 @@ impl ExclusiveManagerExecutor {
                 };
                 Ok((self, true))
             }
+            EditPayload::CreateAppendix(p) => {
+                let cell_id =
+                    ctx.fetch_block_cell_id(&p.sheet_id, &p.block_id, p.row_idx, p.col_idx)?;
+                self.manager.appendix_manager.set(
+                    p.sheet_id,
+                    cell_id,
+                    Appendix {
+                        craft_id: p.craft_id,
+                        tag: p.tag,
+                        content: p.content,
+                    },
+                );
+                Ok((self, true))
+            }
             EditPayload::CreateDiyCellById(p) => {
                 let cell_id =
                     ctx.fetch_block_cell_id(&p.sheet_id, &p.block_id, p.row_idx, p.col_idx)?;
@@ -50,6 +65,9 @@ impl ExclusiveManagerExecutor {
                     .diy_cell_manager
                     .create_new_diy_cell(p.sheet_id, cell_id);
                 Ok((self, true))
+            }
+            EditPayload::RemoveBlock(_) => {
+                todo!()
             }
             _ => Ok((self, false)),
         }

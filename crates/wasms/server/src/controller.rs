@@ -2,11 +2,11 @@ use logisheets_base::{BlockId, ColId, RowId, SheetId};
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
     Alignment, AsyncFuncResult, BlockInput, CellClear, CellFormatBrush, CellInput, CellStyleUpdate,
-    CreateBlock, CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows,
-    DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, HorizontalAlignment, InsertCols,
-    InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells,
-    MoveBlock, PayloadsAction, SetColWidth, SetRowHeight, SheetRename, SplitMergedCells,
-    StyleUpdateType, VerticalAlignment,
+    CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock,
+    DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, HorizontalAlignment,
+    InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate,
+    MergeCells, MoveBlock, PayloadsAction, SetColWidth, SetRowHeight, SheetRename,
+    SplitMergedCells, StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
@@ -989,6 +989,31 @@ pub fn create_diy_cell(id: usize, sheet_idx: usize, row: usize, col: usize) {
         col,
     };
     manager.add_payload(id, EditPayload::CreateDiyCell(payload));
+}
+
+#[wasm_bindgen]
+pub fn create_appendix(
+    id: usize,
+    sheet_id: SheetId,
+    block_id: BlockId,
+    row_idx: usize,
+    col_idx: usize,
+    craft_id: String,
+    tag: u8,
+    content: String,
+) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let payload = CreateAppendix {
+        sheet_id,
+        block_id,
+        row_idx,
+        col_idx,
+        craft_id,
+        tag,
+        content,
+    };
+    manager.add_payload(id, EditPayload::CreateAppendix(payload));
 }
 
 #[wasm_bindgen]
