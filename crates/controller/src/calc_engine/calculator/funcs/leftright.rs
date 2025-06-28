@@ -29,7 +29,7 @@ where
             .take(n as usize)
             .fold(String::from(""), |prev, g| {
                 let mut curr = g.to_string();
-                curr = curr + &prev;
+                curr = curr + prev.as_str();
                 curr
             })
     };
