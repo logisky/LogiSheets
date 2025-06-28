@@ -95,53 +95,89 @@ impl PayloadsAction {
     feature = "gents",
     gents_derives::gents_header(file_name = "edit_payload.ts")
 )]
+#[cfg_attr(feature = "gents", ts(tag = "type"))]
 pub enum EditPayload {
     // Block
+    #[cfg_attr(feature = "gents", ts(tag_value = "blockInput"))]
     BlockInput(BlockInput),
+    #[cfg_attr(feature = "gents", ts(tag_value = "moveBlock"))]
     MoveBlock(MoveBlock),
+    #[cfg_attr(feature = "gents", ts(tag_value = "removeBlock"))]
     RemoveBlock(RemoveBlock),
+    #[cfg_attr(feature = "gents", ts(tag_value = "createBlock"))]
     CreateBlock(CreateBlock),
 
     // DiyCell
+    #[cfg_attr(feature = "gents", ts(tag_value = "createDiyCell"))]
     CreateDiyCell(CreateDiyCell),
+    #[cfg_attr(feature = "gents", ts(tag_value = "createDiyCellById"))]
     CreateDiyCellById(CreateDiyCellById),
+    #[cfg_attr(feature = "gents", ts(tag_value = "removeDiyCell"))]
     RemoveDiyCell(RemoveDiyCell),
+    #[cfg_attr(feature = "gents", ts(tag_value = "removeDiyCellById"))]
     RemoveDiyCellById(RemoveDiyCellById),
 
     // Appendix
+    #[cfg_attr(feature = "gents", ts(tag_value = "createAppendix"))]
     CreateAppendix(CreateAppendix),
+    #[cfg_attr(feature = "gents", ts(tag_value = "removeAppendix"))]
     RemoveAppendix(RemoveAppendix),
 
     // Style
+    #[cfg_attr(feature = "gents", ts(tag_value = "cellStyleUpdate"))]
     CellStyleUpdate(CellStyleUpdate),
+    #[cfg_attr(feature = "gents", ts(tag_value = "ephemeralCellStyleUpdate"))]
     EphemeralCellStyleUpdate(EphemeralCellStyleUpdate),
+    #[cfg_attr(feature = "gents", ts(tag_value = "lineStyleUpdate"))]
     LineStyleUpdate(LineStyleUpdate),
+    #[cfg_attr(feature = "gents", ts(tag_value = "blockStyleUpdate"))]
     BlockStyleUpdate(BlockStyleUpdate),
 
+    #[cfg_attr(feature = "gents", ts(tag_value = "cellFormatBrush"))]
     CellFormatBrush(CellFormatBrush),
+    #[cfg_attr(feature = "gents", ts(tag_value = "lineFormatBrush"))]
     LineFormatBrush(LineFormatBrush),
 
+    #[cfg_attr(feature = "gents", ts(tag_value = "cellInput"))]
     CellInput(CellInput),
+    #[cfg_attr(feature = "gents", ts(tag_value = "ephemeralCellInput"))]
     EphemeralCellInput(EphemeralCellInput),
+    #[cfg_attr(feature = "gents", ts(tag_value = "cellClear"))]
     CellClear(CellClear),
+    #[cfg_attr(feature = "gents", ts(tag_value = "setColWidth"))]
     SetColWidth(SetColWidth),
+    #[cfg_attr(feature = "gents", ts(tag_value = "setRowHeight"))]
     SetRowHeight(SetRowHeight),
+    #[cfg_attr(feature = "gents", ts(tag_value = "setVisible"))]
     SetVisible(SetVisible),
     // Merge cells
+    #[cfg_attr(feature = "gents", ts(tag_value = "mergeCells"))]
     MergeCells(MergeCells),
+    #[cfg_attr(feature = "gents", ts(tag_value = "splitMergedCells"))]
     SplitMergedCells(SplitMergedCells),
     // Sheet
+    #[cfg_attr(feature = "gents", ts(tag_value = "sheetRename"))]
     SheetRename(SheetRename),
+    #[cfg_attr(feature = "gents", ts(tag_value = "createSheet"))]
     CreateSheet(CreateSheet),
+    #[cfg_attr(feature = "gents", ts(tag_value = "deleteSheet"))]
     DeleteSheet(DeleteSheet),
     // Shifting
+    #[cfg_attr(feature = "gents", ts(tag_value = "insertCols"))]
     InsertCols(InsertCols),
+    #[cfg_attr(feature = "gents", ts(tag_value = "deleteCols"))]
     DeleteCols(DeleteCols),
+    #[cfg_attr(feature = "gents", ts(tag_value = "insertRows"))]
     InsertRows(InsertRows),
+    #[cfg_attr(feature = "gents", ts(tag_value = "deleteRows"))]
     DeleteRows(DeleteRows),
+    #[cfg_attr(feature = "gents", ts(tag_value = "insertColsInBlock"))]
     InsertColsInBlock(InsertColsInBlock),
+    #[cfg_attr(feature = "gents", ts(tag_value = "deleteColsInBlock"))]
     DeleteColsInBlock(DeleteColsInBlock),
+    #[cfg_attr(feature = "gents", ts(tag_value = "insertRowsInBlock"))]
     InsertRowsInBlock(InsertRowsInBlock),
+    #[cfg_attr(feature = "gents", ts(tag_value = "deleteRowsInBlock"))]
     DeleteRowsInBlock(DeleteRowsInBlock),
 }
 
@@ -150,6 +186,7 @@ pub enum EditPayload {
     feature = "gents",
     gents_derives::gents_header(file_name = "create_sheet.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CreateSheet {
     pub idx: usize,
     pub new_name: String,
@@ -160,6 +197,7 @@ pub struct CreateSheet {
     feature = "gents",
     gents_derives::gents_header(file_name = "delete_sheet.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct DeleteSheet {
     pub idx: usize,
 }
@@ -170,6 +208,7 @@ pub struct DeleteSheet {
     feature = "gents",
     gents_derives::gents_header(file_name = "sheet_rename.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct SheetRename {
     pub old_name: Option<String>,
     pub idx: Option<usize>,
@@ -181,6 +220,7 @@ pub struct SheetRename {
     feature = "gents",
     gents_derives::gents_header(file_name = "cell_format_brush.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CellFormatBrush {
     pub src_sheet_idx: usize,
     pub src_row: usize,
@@ -197,6 +237,7 @@ pub struct CellFormatBrush {
     feature = "gents",
     gents_derives::gents_header(file_name = "line_format_brush.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct LineFormatBrush {
     pub src_sheet_idx: usize,
     pub src_row: usize,
@@ -212,6 +253,7 @@ pub struct LineFormatBrush {
     feature = "gents",
     gents_derives::gents_header(file_name = "delete_rows.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct DeleteRows {
     pub sheet_idx: usize,
     pub start: usize,
@@ -223,6 +265,7 @@ pub struct DeleteRows {
     feature = "gents",
     gents_derives::gents_header(file_name = "insert_rows.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct InsertRows {
     pub sheet_idx: usize,
     pub start: usize,
@@ -234,6 +277,7 @@ pub struct InsertRows {
     feature = "gents",
     gents_derives::gents_header(file_name = "delete_cols.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct DeleteCols {
     pub sheet_idx: usize,
     pub start: usize,
@@ -245,6 +289,7 @@ pub struct DeleteCols {
     feature = "gents",
     gents_derives::gents_header(file_name = "insert_cols.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct InsertCols {
     pub sheet_idx: usize,
     pub start: usize,
@@ -257,6 +302,7 @@ pub struct InsertCols {
     feature = "gents",
     gents_derives::gents_header(file_name = "cell_input.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CellInput {
     pub sheet_idx: usize,
     pub row: usize,
@@ -269,6 +315,7 @@ pub struct CellInput {
     feature = "gents",
     gents_derives::gents_header(file_name = "ephemeral_cell_input.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct EphemeralCellInput {
     pub sheet_idx: usize,
     pub id: EphemeralId,
@@ -280,6 +327,7 @@ pub struct EphemeralCellInput {
     feature = "gents",
     gents_derives::gents_header(file_name = "cell_clear.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CellClear {
     pub sheet_idx: usize,
     pub row: usize,
@@ -296,6 +344,7 @@ pub struct CellClear {
     feature = "gents",
     gents_derives::gents_header(file_name = "create_block.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CreateBlock {
     pub sheet_idx: usize,
     pub id: usize,
@@ -310,6 +359,7 @@ pub struct CreateBlock {
     feature = "gents",
     gents_derives::gents_header(file_name = "create_diy_cell.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CreateDiyCell {
     pub sheet_idx: usize,
     pub row: usize,
@@ -321,6 +371,7 @@ pub struct CreateDiyCell {
     feature = "gents",
     gents_derives::gents_header(file_name = "remove_diy_cell.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct RemoveDiyCell {
     pub sheet_idx: usize,
     pub row: usize,
@@ -332,6 +383,7 @@ pub struct RemoveDiyCell {
     feature = "gents",
     gents_derives::gents_header(file_name = "create_diy_cell_by_id.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CreateDiyCellById {
     pub sheet_id: SheetId,
     pub block_id: BlockId,
@@ -344,6 +396,7 @@ pub struct CreateDiyCellById {
     feature = "gents",
     gents_derives::gents_header(file_name = "remove_diy_cell_by_id.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct RemoveDiyCellById {
     pub sheet_id: SheetId,
     pub block_id: BlockId,
@@ -356,6 +409,7 @@ pub struct RemoveDiyCellById {
     feature = "gents",
     gents_derives::gents_header(file_name = "create_appendix.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CreateAppendix {
     pub sheet_id: SheetId,
     pub block_id: BlockId,
@@ -371,6 +425,7 @@ pub struct CreateAppendix {
     feature = "gents",
     gents_derives::gents_header(file_name = "remove_appendix.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct RemoveAppendix {
     pub sheet_id: SheetId,
     pub block_id: BlockId,
@@ -383,6 +438,7 @@ pub struct RemoveAppendix {
     feature = "gents",
     gents_derives::gents_header(file_name = "set_row_height.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct SetRowHeight {
     pub sheet_idx: usize,
     pub row: usize,
@@ -394,6 +450,7 @@ pub struct SetRowHeight {
     feature = "gents",
     gents_derives::gents_header(file_name = "set_col_width.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct SetColWidth {
     pub sheet_idx: usize,
     pub col: usize,
@@ -405,6 +462,7 @@ pub struct SetColWidth {
     feature = "gents",
     gents_derives::gents_header(file_name = "move_block.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct MoveBlock {
     pub sheet_idx: usize,
     pub id: usize,
@@ -417,6 +475,7 @@ pub struct MoveBlock {
     feature = "gents",
     gents_derives::gents_header(file_name = "remove_block.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct RemoveBlock {
     pub sheet_idx: usize,
     pub id: usize,
@@ -427,6 +486,7 @@ pub struct RemoveBlock {
     feature = "gents",
     gents_derives::gents_header(file_name = "block_input.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct BlockInput {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -446,6 +506,7 @@ impl From<BlockInput> for EditPayload {
     feature = "gents",
     gents_derives::gents_header(file_name = "delete_rows_in_block.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct DeleteRowsInBlock {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -458,6 +519,7 @@ pub struct DeleteRowsInBlock {
     feature = "gents",
     gents_derives::gents_header(file_name = "insert_rows_in_block.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct InsertRowsInBlock {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -470,6 +532,7 @@ pub struct InsertRowsInBlock {
     feature = "gents",
     gents_derives::gents_header(file_name = "insert_cols_in_block.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct InsertColsInBlock {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -482,6 +545,7 @@ pub struct InsertColsInBlock {
     feature = "gents",
     gents_derives::gents_header(file_name = "delete_cols_in_block.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct DeleteColsInBlock {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -494,6 +558,7 @@ pub struct DeleteColsInBlock {
     feature = "gents",
     gents_derives::gents_header(file_name = "block_style_update.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct BlockStyleUpdate {
     pub sheet_idx: usize,
     pub block_id: usize,
@@ -507,6 +572,7 @@ pub struct BlockStyleUpdate {
     feature = "gents",
     gents_derives::gents_header(file_name = "set_visible.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct SetVisible {
     pub is_row: bool,
     pub sheet_idx: usize,
@@ -606,6 +672,7 @@ use logisheets_workbook::prelude::*;
     feature = "gents",
     gents_derives::gents_header(file_name = "cell_style_update.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct CellStyleUpdate {
     pub sheet_idx: usize,
     pub row: usize,
@@ -618,6 +685,7 @@ pub struct CellStyleUpdate {
     feature = "gents",
     gents_derives::gents_header(file_name = "ephemeral_cell_style_update.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct EphemeralCellStyleUpdate {
     pub sheet_idx: usize,
     pub id: EphemeralId,
@@ -629,6 +697,7 @@ pub struct EphemeralCellStyleUpdate {
     feature = "gents",
     gents_derives::gents_header(file_name = "line_style_update.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct LineStyleUpdate {
     pub sheet_idx: usize,
     pub from: usize,
@@ -683,6 +752,7 @@ pub enum HorizontalAlignment {
     feature = "gents",
     gents_derives::gents_header(file_name = "style_update_type.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct StyleUpdateType {
     pub set_font_bold: Option<bool>,
     pub set_font_italic: Option<bool>,
@@ -714,6 +784,7 @@ pub struct StyleUpdateType {
     feature = "gents",
     gents_derives::gents_header(file_name = "merge_cells.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct MergeCells {
     pub sheet_idx: usize,
     pub start_row: usize,
@@ -726,6 +797,7 @@ pub struct MergeCells {
     feature = "gents",
     gents_derives::gents_header(file_name = "split_merged_cells.ts")
 )]
+#[cfg_attr(feature = "gents", ts(builder))]
 pub struct SplitMergedCells {
     pub sheet_idx: usize,
     pub row: usize,

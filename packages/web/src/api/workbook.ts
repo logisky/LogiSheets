@@ -1,4 +1,3 @@
-import {Payload} from '../payloads'
 import {
     block_input,
     block_line_shift,
@@ -51,6 +50,7 @@ import {
     undo,
 } from '../../wasm/logisheets_wasm_server'
 import {ActionEffect, AsyncFuncResult, SheetInfo} from '../bindings'
+import {Payload} from '../payloads'
 import {ColId, RowId, Transaction} from '../types'
 import {Worksheet} from './worksheet'
 import {Calculator, CustomFunc} from './calculator'
@@ -127,7 +127,7 @@ export class Workbook {
                     {
                         type: 'createBlock',
                         sheetIdx,
-                        blockId: id,
+                        id,
                         masterRow,
                         masterCol,
                         rowCnt: rowCount,
@@ -281,20 +281,20 @@ export class Workbook {
 
     private _addPayload(p: Payload) {
         if (p.type === 'cellInput')
-            return cell_input(this._id, p.sheetIdx, p.row, p.col, p.input)
+            return cell_input(this._id, p.sheetIdx, p.row, p.col, p.content)
         if (p.type === 'insertRows')
-            return row_insert(this._id, p.sheetIdx, p.start, p.cnt)
+            return row_insert(this._id, p.sheetIdx, p.start, p.count)
         if (p.type === 'deleteRows')
-            return row_delete(this._id, p.sheetIdx, p.start, p.cnt)
+            return row_delete(this._id, p.sheetIdx, p.start, p.count)
         if (p.type === 'insertCols')
-            return col_insert(this._id, p.sheetIdx, p.start, p.cnt)
+            return col_insert(this._id, p.sheetIdx, p.start, p.count)
         if (p.type === 'deleteCols')
-            return col_delete(this._id, p.sheetIdx, p.start, p.cnt)
+            return col_delete(this._id, p.sheetIdx, p.start, p.count)
         if (p.type === 'createBlock')
             return create_block(
                 this._id,
                 p.sheetIdx,
-                p.blockId,
+                p.id,
                 p.masterRow,
                 p.masterCol,
                 p.rowCnt,
@@ -305,7 +305,7 @@ export class Workbook {
             return move_block(
                 this._id,
                 p.sheetIdx,
-                p.blockId,
+                p.id,
                 p.newMasterRow,
                 p.newMasterCol
             )
@@ -390,42 +390,42 @@ export class Workbook {
                 p.input
             )
 
-        if (p.type === 'insertBlockCols')
+        if (p.type === 'insertColsInBlock')
             return block_line_shift(
                 this._id,
                 p.sheetIdx,
                 p.blockId,
-                p.colIdx,
+                p.start,
                 p.cnt,
                 false,
                 true
             )
-        if (p.type === 'insertBlockRows')
+        if (p.type === 'insertRowsInBlock')
             return block_line_shift(
                 this._id,
                 p.sheetIdx,
                 p.blockId,
-                p.rowIdx,
+                p.start,
                 p.cnt,
                 true,
                 true
             )
-        if (p.type === 'deleteBlockRows')
+        if (p.type === 'deleteRowsInBlock')
             return block_line_shift(
                 this._id,
                 p.sheetIdx,
                 p.blockId,
-                p.rowIdx,
+                p.start,
                 p.cnt,
                 true,
                 false
             )
-        if (p.type === 'deleteBlockCols')
+        if (p.type === 'deleteColsInBlock')
             return block_line_shift(
                 this._id,
                 p.sheetIdx,
                 p.blockId,
-                p.colIdx,
+                p.start,
                 p.cnt,
                 true,
                 true
@@ -438,9 +438,9 @@ export class Workbook {
                 return sheet_rename_by_idx(this._id, p.idx, p.newName)
             }
         }
-        if (p.type === 'deleteSheet') return delete_sheet(this._id, p.sheetIdx)
-        if (p.type === 'insertSheet')
-            return create_sheet(this._id, p.sheetIdx, p.name)
+        if (p.type === 'deleteSheet') return delete_sheet(this._id, p.idx)
+        if (p.type === 'createSheet')
+            return create_sheet(this._id, p.idx, p.newName)
         if (p.type === 'cellClear')
             return cell_clear(this._id, p.sheetIdx, p.row, p.col)
         if (p.type === 'setColWidth')
