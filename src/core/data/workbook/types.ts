@@ -21,6 +21,8 @@ export enum MethodName {
     GetMergedCells = 'getMergedCells',
     CalcCondition = 'calcCondition',
 
+    LookupAppendixUpward = 'lookupAppendixUpward',
+
     GetBlockRowId = 'getBlockRowId',
     GetBlockColId = 'getBlockColId',
 

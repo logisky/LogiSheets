@@ -66,4 +66,6 @@ pub enum BasicError {
     BindBlockSizeMismatch(BlockId, usize, usize),
     #[error("sheet id not found: {0}")]
     UnavailableSheetId(SheetId),
+    #[error("no appendix is found")]
+    NoAppendix,
 }

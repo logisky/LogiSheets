@@ -16,6 +16,7 @@ import {
     get_sheet_id,
     get_display_window_for_block,
     get_diy_cell_id_with_block_id,
+    lookup_appendix_upward,
 } from '../../wasm'
 import {get_merged_cells} from '../../wasm/logisheets_wasm_server'
 import {
@@ -30,6 +31,7 @@ import {
     CellInfo,
     SheetDimension,
     MergeCell,
+    AppendixWithCell,
 } from '../bindings'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
@@ -183,6 +185,24 @@ export class Worksheet {
             return {msg: 'Cell not found', ty: 0}
         }
         return cellId
+    }
+
+    public lookupAppendixUpward(
+        blockId: number,
+        row: number,
+        col: number,
+        craftId: string,
+        tag: number
+    ): Result<AppendixWithCell> {
+        return lookup_appendix_upward(
+            this._id,
+            this._sheetId,
+            blockId,
+            row,
+            col,
+            craftId,
+            tag
+        )
     }
 
     public getFullyCoveredBlocks(

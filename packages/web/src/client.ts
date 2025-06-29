@@ -7,6 +7,7 @@ import type {
     MergeCell,
     ErrorMessage,
     DisplayWindow,
+    AppendixWithCell,
 } from './bindings'
 import type {Cell, CustomFunc} from './api'
 import type {Transaction, RowId, ColId} from './types'
@@ -53,6 +54,10 @@ export interface Client {
     getBlockValues(params: GetBlockValuesParams): Resp<readonly string[]>
 
     getDiyCellIdWithBlockId(params: GetDiyCellIdWithBlockIdParams): Resp<number>
+
+    lookupAppendixUpward(
+        params: LookupAppendixUpwardParams
+    ): Resp<AppendixWithCell>
 }
 
 export interface GetAllSheetInfoParams {}
@@ -161,4 +166,13 @@ export interface GetAvailableBlockIdParams {
 export interface GetBlockDisplayWindowParams {
     sheetId: number
     blockId: number
+}
+
+export interface LookupAppendixUpwardParams {
+    sheetId: number
+    blockId: number
+    row: number
+    col: number
+    craftId: string
+    tag: number
 }

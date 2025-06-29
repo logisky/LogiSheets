@@ -9,6 +9,7 @@ import {
     Transaction,
 } from 'logisheets-web'
 import {getOffset} from '../defs'
+import {Payload} from 'packages/web/src/payloads'
 
 interface ResizerProps {
     readonly range: Range
@@ -142,9 +143,8 @@ export class Resizer {
                       .row(coodinate.startRow)
                       .height(pxToPt(this.moving.y + height))
                       .build()
-            this.store.dataSvc.handleTransaction(
-                new Transaction([payload], true)
-            )
+            const p = payload as Payload
+            this.store.dataSvc.handleTransaction(new Transaction([p], true))
         }
         this.active = undefined
         this.moving = {x: 0, y: 0}

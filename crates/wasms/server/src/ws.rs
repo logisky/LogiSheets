@@ -1,8 +1,10 @@
+use logisheets_base::errors::BasicError;
 use logisheets_base::BlockId;
 use logisheets_base::DiyCellId;
 use logisheets_base::SheetId;
 use logisheets_controller::controller::display::CellPosition;
 use logisheets_controller::ColInfo;
+use logisheets_controller::Error;
 use wasm_bindgen::prelude::*;
 
 use crate::controller::init;
@@ -242,4 +244,25 @@ pub fn get_diy_cell_id_with_block_id(
     let wb = manager.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_id(sheet_id).unwrap();
     ws.get_diy_cell_id_with_block_id(&block_id, row, col)
+}
+
+#[wasm_bindgen]
+pub fn lookup_appendix_upward(
+    id: usize,
+    sheet_id: SheetId,
+    block_id: BlockId,
+    row_idx: usize,
+    col_idx: usize,
+    craft_id: String,
+    tag: u8,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws
+        .lookup_appendix_upward(block_id, row_idx, col_idx, &craft_id, tag)
+        .ok_or(Error::Basic(BasicError::NoAppendix));
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
 }

@@ -35,6 +35,8 @@ import {
     GetBlockDisplayWindowParams,
     GetDiyCellIdWithBlockIdParams,
     GetSheetIdParams,
+    AppendixWithCell,
+    LookupAppendixUpwardParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -67,9 +69,19 @@ interface IWorkbookWorker {
         params: GetDiyCellIdWithBlockIdParams
     ): Result<number>
     getSheetId(params: GetSheetIdParams): Result<number>
+    lookupAppendixUpward(
+        params: LookupAppendixUpwardParams
+    ): Result<AppendixWithCell>
 }
 
 class WorkerService implements IWorkbookWorker {
+    lookupAppendixUpward(
+        params: LookupAppendixUpwardParams
+    ): Result<AppendixWithCell> {
+        const {sheetId, blockId, row, col, craftId, tag} = params
+        const ws = this.workbook.getWorksheetById(sheetId)
+        return ws.lookupAppendixUpward(blockId, row, col, craftId, tag)
+    }
     public getSheetId(params: GetSheetIdParams): Result<number> {
         const {sheetIdx} = params
         return this.workbook.getSheetId(sheetIdx)
