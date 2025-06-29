@@ -12,7 +12,7 @@ pub mod controller;
 mod cube_manager;
 pub mod edit_action;
 mod errors;
-mod exclusive;
+pub mod exclusive;
 mod ext_book_manager;
 mod ext_ref_manager;
 mod file_loader2;
@@ -36,6 +36,7 @@ pub use controller::{
     style::{Border, BorderPr, Fill, Font, Style},
     Controller,
 };
+pub use exclusive::{Appendix, AppendixWithCell};
 pub use logisheets_workbook::prelude::SerdeErr;
 
 pub use logisheets_base::async_func::AsyncCalcResult;

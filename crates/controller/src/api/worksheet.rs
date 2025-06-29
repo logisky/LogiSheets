@@ -4,6 +4,7 @@ use crate::controller::display::{
     BlockDisplayInfo, BlockInfo, CellPosition, DisplayWindow, DisplayWindowWithStartPoint,
 };
 use crate::errors::Result;
+use crate::exclusive::AppendixWithCell;
 use crate::lock::{locked_write, Locked};
 use crate::{
     connectors::NameFetcher,
@@ -1037,6 +1038,47 @@ impl<'a> Worksheet<'a> {
             .navigator
             .fetch_block_col_id(&self.sheet_id, &block_id, col_idx)
             .map_err(|e| e.into())
+    }
+
+    pub fn lookup_appendix_upward(
+        &self,
+        block_id: BlockId,
+        row_idx: usize,
+        col_idx: usize,
+        craft_id: &str,
+        tag: u8,
+    ) -> Option<AppendixWithCell> {
+        let lookup = |r: usize, c: usize| {
+            let block_cell_id = self
+                .controller
+                .status
+                .navigator
+                .fetch_block_cell_id(&self.sheet_id, &block_id, r, c)
+                .ok()?;
+            self.controller
+                .status
+                .exclusive_manager
+                .appendix_manager
+                .get(self.sheet_id, &block_cell_id)
+                .and_then(|appendices| {
+                    appendices
+                        .iter()
+                        .find(|appendix| appendix.craft_id == craft_id && appendix.tag == tag)
+                        .map(|appendix| AppendixWithCell {
+                            appendix: appendix.clone(),
+                            sheet_id: self.sheet_id,
+                            block_id,
+                            row_idx,
+                            col_idx,
+                        })
+                })
+        };
+        for r in (0..=row_idx).rev() {
+            if let Some(appendix) = lookup(r, col_idx) {
+                return Some(appendix);
+            }
+        }
+        None
     }
 }
 

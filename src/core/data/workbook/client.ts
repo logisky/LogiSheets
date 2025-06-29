@@ -32,6 +32,8 @@ import {
     GetBlockDisplayWindowParams,
     GetDiyCellIdWithBlockIdParams,
     GetSheetIdParams,
+    AppendixWithCell,
+    LookupAppendixUpwardParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -74,6 +76,14 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    lookupAppendixUpward(
+        params: LookupAppendixUpwardParams
+    ): Resp<AppendixWithCell> {
+        return this._call(
+            MethodName.LookupAppendixUpward,
+            params
+        ) as Resp<AppendixWithCell>
     }
     getSheetId(params: GetSheetIdParams): Resp<number> {
         return this._call(MethodName.GetSheetId, params) as Resp<number>
