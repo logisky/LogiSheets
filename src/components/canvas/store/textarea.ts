@@ -5,7 +5,12 @@ import initFc, {
     formula_check,
 } from '../../../../crates/wasms/fc/pkg/logisheets_wasm_fc'
 import {Context} from '@/components/textarea'
-import {CellInputBuilder, isErrorMessage, Transaction} from 'logisheets-web'
+import {
+    CellInputBuilder,
+    isErrorMessage,
+    Payload,
+    Transaction,
+} from 'logisheets-web'
 import {Cell} from '../defs'
 import {StandardKeyboardEvent} from '@/core/events'
 import {shallowCopy} from '@/core'
@@ -33,8 +38,8 @@ export class Textarea {
             .row(this.context.bindingData.coordinate.startRow)
             .col(this.context.bindingData.coordinate.startCol)
             .sheetIdx(this.store.dataSvc.getCurrentSheetIdx())
-            .input(newText)
-            .build()
+            .content(newText)
+            .build() as Payload
         this.store.dataSvc.handleTransaction(new Transaction([payload], true))
         this._setEditing(false)
         return true

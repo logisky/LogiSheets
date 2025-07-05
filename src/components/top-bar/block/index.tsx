@@ -1,48 +1,53 @@
-import {getSelectedCellRange, SelectedData} from '@/components/canvas'
+import {SelectedData} from '@/components/canvas'
 import {DataService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {ToggleButton} from '@mui/material'
-import {CreateBlockBuilder, isErrorMessage, Transaction} from 'logisheets-web'
+import Modal from 'react-modal'
 import {CreateDiyBtnComponent} from './create-diy-btn'
+import {useState} from 'react'
+import {BlockComposerComponent} from '@/components/block-composer'
+import styles from '../content/start.module.scss'
 
 export interface BlockProps {
     readonly selectedData?: SelectedData
 }
 
 export const BlockComponent = ({selectedData}: BlockProps) => {
+    const [composer, setComposer] = useState<boolean>(false)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const createBlock = async () => {
-        if (!selectedData) return
-        const cellRange = getSelectedCellRange(selectedData)
-        if (!cellRange) return
-        const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
-        const availableBlockId = await DATA_SERVICE.getAvailableBlockId(
-            sheetIdx
-        )
-        if (isErrorMessage(availableBlockId)) return
-        const payload = new CreateBlockBuilder()
-            .blockId(availableBlockId)
-            .sheetIdx(sheetIdx)
-            .masterRow(cellRange.startRow)
-            .rowCnt(cellRange.endRow - cellRange.startRow + 1)
-            .masterCol(cellRange.startCol)
-            .colCnt(cellRange.endCol - cellRange.startCol + 1)
-            .build()
-        await DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-    }
 
     return (
         <div>
             <ToggleButton
                 value="create-block"
                 size="small"
-                aria-label="create block"
-                onClick={createBlock}
+                aria-label="create-block"
+                onClick={() => setComposer(true)}
             >
                 Create A Block
             </ToggleButton>
             <CreateDiyBtnComponent selectedData={selectedData} />
+            <Modal
+                isOpen={composer}
+                className={styles['modal-content']}
+                onRequestClose={() => setComposer(false)}
+                shouldCloseOnEsc={true}
+                shouldCloseOnOverlayClick={true}
+                ariaHideApp={false}
+                style={{
+                    content: {
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                    },
+                }}
+            >
+                <BlockComposerComponent
+                    selectedData={selectedData}
+                    close={() => setComposer(false)}
+                />
+            </Modal>
         </div>
     )
 }

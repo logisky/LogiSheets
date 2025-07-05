@@ -411,7 +411,8 @@ pub struct RemoveDiyCellById {
 )]
 #[cfg_attr(feature = "gents", ts(builder))]
 pub struct CreateAppendix {
-    pub sheet_id: SheetId,
+    pub sheet_id: Option<SheetId>,
+    pub sheet_idx: Option<usize>,
     pub block_id: BlockId,
     pub row_idx: usize,
     pub col_idx: usize,
@@ -427,7 +428,8 @@ pub struct CreateAppendix {
 )]
 #[cfg_attr(feature = "gents", ts(builder))]
 pub struct RemoveAppendix {
-    pub sheet_id: SheetId,
+    pub sheet_id: Option<SheetId>,
+    pub sheet_idx: Option<usize>,
     pub block_id: BlockId,
     pub row_idx: usize,
     pub col_idx: usize,

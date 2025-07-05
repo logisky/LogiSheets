@@ -7,7 +7,7 @@ import {
     SelectedLines,
 } from '@/components/canvas'
 import {toA1notation, parseA1notation} from '@/core'
-import {CellInputBuilder, Transaction} from 'logisheets-web'
+import {CellInputBuilder, Payload, Transaction} from 'logisheets-web'
 import {FC, useEffect, useState} from 'react'
 import styles from './edit-bar.module.scss'
 import {useInjection} from '@/core/ioc/provider'
@@ -48,8 +48,8 @@ export const EditBarComponent: FC<EditBarProps> = ({
             .sheetIdx(dataSvc.getCurrentSheetIdx())
             .row(cell.r)
             .col(cell.c)
-            .input(newText)
-            .build()
+            .content(newText)
+            .build() as Payload
         dataSvc.handleTransaction(new Transaction([payload], true))
     }
 

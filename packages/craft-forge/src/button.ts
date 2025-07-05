@@ -1,4 +1,4 @@
-import {BlockId, SheetId} from './types'
+import {BlockId, SheetId} from './app/types'
 
 export enum DiyCellButtonType {
     // Upload all the key-value pairs to the server
@@ -10,7 +10,6 @@ export enum DiyCellButtonType {
 
 export interface DiyButtonConfig {
     type: DiyCellButtonType
-    blockId: BlockId
 }
 
 export interface UploadButtonConfig extends DiyButtonConfig {

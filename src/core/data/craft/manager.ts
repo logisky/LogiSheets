@@ -1,6 +1,7 @@
 import {injectable} from 'inversify'
 import {
     BlockId,
+    CraftDescriptor,
     CraftId,
     CraftState,
     DiyButtonConfig,
@@ -129,43 +130,6 @@ export class CraftManager {
     }
 
     // Extract values from the workbook.
-    async extractBlockValues(
-        blockId: BlockId
-    ): Promise<{key: string; field: string; value: string}[]> {
-        const state = this._craftStates.get(blockId)
-        if (!state) throw Error('craft has not been registered')
-
-        const keyMap: Map<string, number> = new Map()
-        const fieldMap: Map<string, number> = new Map()
-        state.coordinateBinds.forEach((bind) => {
-            if (bind.isKey) {
-                keyMap.set(bind.name, bind.value)
-            } else {
-                fieldMap.set(bind.name, bind.value)
-            }
-        })
-
-        const values: Map<[string, string], string> = new Map()
-        for (const [keyName, key] of keyMap) {
-            for (const [fieldName, field] of fieldMap) {
-                const value = await this._workbookClient.getCell({
-                    sheetIdx: blockId[0],
-                    row: key,
-                    col: field,
-                })
-                if (isErrorMessage(value)) throw Error(value.msg)
-                values.set([keyName, fieldName], value.getText())
-            }
-        }
-
-        const result = Array.from(values.entries()).map(([k, v]) => ({
-            key: k[0],
-            field: k[1],
-            value: v,
-        }))
-
-        return result
-    }
 
     async onDiyCellClick(id: number): Promise<void> {
         const type = this._diyBtnManager.getDiyButtonType(id)
@@ -174,16 +138,16 @@ export class CraftManager {
             case DiyCellButtonType.Upload: {
                 const config = this._diyBtnManager.getUploadButtonConfig(id)
                 if (!config) return
-                const values = await this.extractBlockValues(config.blockId)
-                const url = config.url
-                if (!url) return
-                await fetch(url, {
-                    method: 'POST',
-                    body: JSON.stringify(values),
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                })
+                // const values = await this.extractBlockValues(config.blockId)
+                // const url = config.url
+                // if (!url) return
+                // await fetch(url, {
+                //     method: 'POST',
+                //     body: JSON.stringify(values),
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //     },
+                // })
                 break
             }
             case DiyCellButtonType.Download:
@@ -194,9 +158,15 @@ export class CraftManager {
         }
     }
 
+    addCraftDescriptor(blockId: BlockId, descriptor: CraftDescriptor) {
+        descriptor.wb = undefined
+        this._craftDescriptors.set(blockId, descriptor)
+    }
+
     private _crafts: CraftManifest[] = []
     private _blockToCraft: Map<BlockId, CraftId> = new Map()
     private _craftStates: Map<BlockId, CraftState> = new Map()
+    private _craftDescriptors: Map<BlockId, CraftDescriptor> = new Map()
     private _iframe!: HTMLIFrameElement
     private _handler: CraftHandler
 

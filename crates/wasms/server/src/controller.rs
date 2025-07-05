@@ -994,7 +994,8 @@ pub fn create_diy_cell(id: usize, sheet_idx: usize, row: usize, col: usize) {
 #[wasm_bindgen]
 pub fn create_appendix(
     id: usize,
-    sheet_id: SheetId,
+    sheet_id: Option<SheetId>,
+    sheet_idx: Option<usize>,
     block_id: BlockId,
     row_idx: usize,
     col_idx: usize,
@@ -1006,6 +1007,7 @@ pub fn create_appendix(
     let mut manager = MANAGER.get_mut();
     let payload = CreateAppendix {
         sheet_id,
+        sheet_idx,
         block_id,
         row_idx,
         col_idx,

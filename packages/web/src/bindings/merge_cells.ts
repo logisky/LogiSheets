@@ -41,11 +41,11 @@ export class MergeCellsBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._startRow) throw new Error('missing startRow')
-        if (!this._startCol) throw new Error('missing startCol')
-        if (!this._endRow) throw new Error('missing endRow')
-        if (!this._endCol) throw new Error('missing endCol')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._startRow === undefined) throw new Error('missing startRow')
+        if (this._startCol === undefined) throw new Error('missing startCol')
+        if (this._endRow === undefined) throw new Error('missing endRow')
+        if (this._endCol === undefined) throw new Error('missing endCol')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

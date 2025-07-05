@@ -13,7 +13,7 @@ export class DeleteSheetBuilder {
     }
 
     public build() {
-        if (!this._idx) throw new Error('missing idx')
+        if (this._idx === undefined) throw new Error('missing idx')
         return { type: this._type, idx: this._idx }
     }
 }

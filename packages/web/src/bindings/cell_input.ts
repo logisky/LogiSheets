@@ -35,10 +35,10 @@ export class CellInputBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._row) throw new Error('missing row')
-        if (!this._col) throw new Error('missing col')
-        if (!this._content) throw new Error('missing content')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._row === undefined) throw new Error('missing row')
+        if (this._col === undefined) throw new Error('missing col')
+        if (this._content === undefined) throw new Error('missing content')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

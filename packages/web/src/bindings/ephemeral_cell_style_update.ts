@@ -29,9 +29,9 @@ export class EphemeralCellStyleUpdateBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._id) throw new Error('missing id')
-        if (!this._ty) throw new Error('missing ty')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._id === undefined) throw new Error('missing id')
+        if (this._ty === undefined) throw new Error('missing ty')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

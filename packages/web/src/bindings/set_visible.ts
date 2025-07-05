@@ -34,10 +34,10 @@ export class SetVisibleBuilder {
     }
 
     public build() {
-        if (!this._isRow) throw new Error('missing isRow')
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._start) throw new Error('missing start')
-        if (!this._visible) throw new Error('missing visible')
+        if (this._isRow === undefined) throw new Error('missing isRow')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._start === undefined) throw new Error('missing start')
+        if (this._visible === undefined) throw new Error('missing visible')
         return {
             type: this._type,
             isRow: this._isRow,

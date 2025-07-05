@@ -20,8 +20,8 @@ export class CreateSheetBuilder {
     }
 
     public build() {
-        if (!this._idx) throw new Error('missing idx')
-        if (!this._newName) throw new Error('missing newName')
+        if (this._idx === undefined) throw new Error('missing idx')
+        if (this._newName === undefined) throw new Error('missing newName')
         return { type: this._type, idx: this._idx, newName: this._newName }
     }
 }

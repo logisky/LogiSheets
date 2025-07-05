@@ -527,6 +527,7 @@ export class Workbook {
             return create_appendix(
                 this._id,
                 p.sheetId,
+                p.sheetIdx,
                 p.blockId,
                 p.rowIdx,
                 p.colIdx,

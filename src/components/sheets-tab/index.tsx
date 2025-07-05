@@ -3,8 +3,9 @@ import styles from './sheets-tab.module.scss'
 import {ContextMenuComponent} from './contextmenu'
 import {
     DeleteSheetBuilder,
-    InsertSheetBuilder,
+    CreateSheetBuilder,
     isErrorMessage,
+    Payload,
     Transaction,
 } from 'logisheets-web'
 import {useInjection} from '@/core/ioc/provider'
@@ -58,13 +59,8 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
         activeSheet$(i)
     }
 
-    const add = () => {
-        const payload = new InsertSheetBuilder().sheetIdx(activeSheet).build()
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-    }
-
     const onDelete = (i: number) => {
-        const payload = new DeleteSheetBuilder().sheetIdx(i).build()
+        const payload = new DeleteSheetBuilder().idx(i).build() as Payload
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
     return (
@@ -98,10 +94,10 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                     if (action === 'add') {
                         const newSheetName = findNewSheetName(sheets)
                         const newIdx = sheets.length
-                        const payload = new InsertSheetBuilder()
-                            .name(newSheetName)
-                            .sheetIdx(newIdx)
-                            .build()
+                        const payload = new CreateSheetBuilder()
+                            .newName(newSheetName)
+                            .idx(newIdx)
+                            .build() as Payload
                         DATA_SERVICE.handleTransaction(
                             new Transaction([payload], true)
                         ).then((v) => {

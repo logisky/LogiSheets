@@ -41,11 +41,11 @@ export class BlockInputBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._blockId) throw new Error('missing blockId')
-        if (!this._row) throw new Error('missing row')
-        if (!this._col) throw new Error('missing col')
-        if (!this._input) throw new Error('missing input')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._blockId === undefined) throw new Error('missing blockId')
+        if (this._row === undefined) throw new Error('missing row')
+        if (this._col === undefined) throw new Error('missing col')
+        if (this._input === undefined) throw new Error('missing input')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

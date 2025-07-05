@@ -27,9 +27,9 @@ export class EphemeralCellInputBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._id) throw new Error('missing id')
-        if (!this._content) throw new Error('missing content')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._id === undefined) throw new Error('missing id')
+        if (this._content === undefined) throw new Error('missing content')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,
