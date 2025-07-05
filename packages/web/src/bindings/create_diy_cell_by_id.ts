@@ -34,10 +34,10 @@ export class CreateDiyCellByIdBuilder {
     }
 
     public build() {
-        if (!this._sheetId) throw new Error('missing sheetId')
-        if (!this._blockId) throw new Error('missing blockId')
-        if (!this._rowIdx) throw new Error('missing rowIdx')
-        if (!this._colIdx) throw new Error('missing colIdx')
+        if (this._sheetId === undefined) throw new Error('missing sheetId')
+        if (this._blockId === undefined) throw new Error('missing blockId')
+        if (this._rowIdx === undefined) throw new Error('missing rowIdx')
+        if (this._colIdx === undefined) throw new Error('missing colIdx')
         return {
             type: this._type,
             sheetId: this._sheetId,

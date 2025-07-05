@@ -1,4 +1,5 @@
 import {
+    AppendixWithCell,
     BlockInfo,
     CalcConditionParams,
     Cell,
@@ -21,6 +22,7 @@ import {
     GetSheetIdxParams,
     HandleTransactionParams,
     LoadWorkbookParams,
+    LookupAppendixUpwardParams,
     MergeCell,
     Resp,
     RowId,
@@ -141,6 +143,11 @@ export class CraftHandler implements CraftHandlerInterface {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    lookupAppendixUpward(
+        params: LookupAppendixUpwardParams
+    ): Resp<AppendixWithCell> {
+        return this._workbookClient.lookupAppendixUpward(params)
     }
     getSheetId(params: GetSheetIdParams): Resp<number> {
         return this._workbookClient.getSheetId(params)

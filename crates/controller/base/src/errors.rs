@@ -68,4 +68,6 @@ pub enum BasicError {
     UnavailableSheetId(SheetId),
     #[error("no appendix is found")]
     NoAppendix,
+    #[error("invalid payload")]
+    InvalidPayload,
 }

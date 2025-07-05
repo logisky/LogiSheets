@@ -34,10 +34,10 @@ export class InsertRowsInBlockBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._blockId) throw new Error('missing blockId')
-        if (!this._start) throw new Error('missing start')
-        if (!this._cnt) throw new Error('missing cnt')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._blockId === undefined) throw new Error('missing blockId')
+        if (this._start === undefined) throw new Error('missing start')
+        if (this._cnt === undefined) throw new Error('missing cnt')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

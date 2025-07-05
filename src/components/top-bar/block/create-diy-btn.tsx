@@ -1,7 +1,12 @@
 import {getSelectedCellRange, SelectedData} from '@/components/canvas'
 import {ToggleButton} from '@mui/material'
 import {CraftManager, DataServiceImpl} from '@/core/data'
-import {Transaction, CreateDiyCellBuilder, isErrorMessage} from 'logisheets-web'
+import {
+    Transaction,
+    CreateDiyCellBuilder,
+    isErrorMessage,
+    Payload,
+} from 'logisheets-web'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DiyCellButtonType} from 'logisheets-craft-forge'
@@ -36,7 +41,7 @@ export const CreateDiyBtnComponent = ({selectedData}: CreateDiyBtnProps) => {
             .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
             .row(cellRange.startRow)
             .col(cellRange.startCol)
-            .build()
+            .build() as Payload
         await DATA_SERVICE.handleTransaction(new Transaction([payload], true))
         const sheetId = await DATA_SERVICE.getSheetId(
             DATA_SERVICE.getCurrentSheetIdx()
@@ -44,7 +49,6 @@ export const CreateDiyBtnComponent = ({selectedData}: CreateDiyBtnProps) => {
         if (isErrorMessage(sheetId)) return
         CRAFT_MANAGER.registerDiyButton(blockId, {
             type: DiyCellButtonType.Upload,
-            blockId: [sheetId, blockId],
         })
     }
 

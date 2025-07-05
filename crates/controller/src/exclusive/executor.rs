@@ -45,10 +45,16 @@ impl ExclusiveManagerExecutor {
                 Ok((self, true))
             }
             EditPayload::CreateAppendix(p) => {
+                let sheet_id = if p.sheet_idx.is_some() {
+                    ctx.fetch_sheet_id_by_index(p.sheet_idx.unwrap())
+                        .map_err(|l| Error::Basic(BasicError::SheetIdxExceed(l)))?
+                } else {
+                    p.sheet_id.unwrap()
+                };
                 let cell_id =
-                    ctx.fetch_block_cell_id(&p.sheet_id, &p.block_id, p.row_idx, p.col_idx)?;
+                    ctx.fetch_block_cell_id(&sheet_id, &p.block_id, p.row_idx, p.col_idx)?;
                 self.manager.appendix_manager.push(
-                    p.sheet_id,
+                    sheet_id,
                     cell_id,
                     Appendix {
                         craft_id: p.craft_id,

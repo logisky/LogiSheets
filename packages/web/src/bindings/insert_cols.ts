@@ -27,9 +27,9 @@ export class InsertColsBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._start) throw new Error('missing start')
-        if (!this._count) throw new Error('missing count')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._start === undefined) throw new Error('missing start')
+        if (this._count === undefined) throw new Error('missing count')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

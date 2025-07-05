@@ -27,9 +27,9 @@ export class SetColWidthBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._col) throw new Error('missing col')
-        if (!this._width) throw new Error('missing width')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._col === undefined) throw new Error('missing col')
+        if (this._width === undefined) throw new Error('missing width')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

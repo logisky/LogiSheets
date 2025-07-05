@@ -1,6 +1,16 @@
-import {CraftAgent} from '../agent'
-import {BlockId, CoordinateBind, CraftState} from '../types'
-import {BlockInputBuilder, isErrorMessage, Transaction} from 'logisheets-web'
+export * from './types'
+export * from '../button'
+export * from './agent'
+export * from './handler'
+
+import {CraftAgent} from './agent'
+import {BlockId, CoordinateBind, CraftState} from './types'
+import {
+    Payload,
+    BlockInputBuilder,
+    isErrorMessage,
+    Transaction,
+} from 'logisheets-web'
 
 /**
  * Decorator that indicates a method mutates the state and automatically triggers state change notification
@@ -83,7 +93,7 @@ export abstract class CraftApp {
                         .row(this._state.horizontal ? 0 : idx)
                         .col(this._state.horizontal ? idx : 0)
                         .input(fieldId)
-                        .build(),
+                        .build() as Payload,
                 ],
                 true
             ),

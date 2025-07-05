@@ -251,7 +251,37 @@ fn convert_diff<C: VersionExecCtx>(
         ))),
         EditPayload::RemoveDiyCell(_) => todo!(),
         EditPayload::RemoveDiyCellById(_) => todo!(),
-        EditPayload::CreateAppendix(_) => todo!(),
-        EditPayload::RemoveAppendix(_) => todo!(),
+        EditPayload::CreateAppendix(p) => {
+            let sheet_id = if let Some(id) = p.sheet_id {
+                id
+            } else {
+                let idx = p.sheet_idx.ok_or(BasicError::InvalidPayload)?;
+                ctx.fetch_sheet_id_by_index(idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?
+            };
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: p.block_id,
+                },
+                sheet_id,
+            )))
+        }
+        EditPayload::RemoveAppendix(p) => {
+            let sheet_id = if let Some(id) = p.sheet_id {
+                id
+            } else {
+                let idx = p.sheet_idx.ok_or(BasicError::InvalidPayload)?;
+                ctx.fetch_sheet_id_by_index(idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?
+            };
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: p.block_id,
+                },
+                sheet_id,
+            )))
+        }
     }
 }

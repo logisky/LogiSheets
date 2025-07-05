@@ -53,12 +53,12 @@ export class CreateBlockBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._id) throw new Error('missing id')
-        if (!this._masterRow) throw new Error('missing masterRow')
-        if (!this._masterCol) throw new Error('missing masterCol')
-        if (!this._rowCnt) throw new Error('missing rowCnt')
-        if (!this._colCnt) throw new Error('missing colCnt')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._id === undefined) throw new Error('missing id')
+        if (this._masterRow === undefined) throw new Error('missing masterRow')
+        if (this._masterCol === undefined) throw new Error('missing masterCol')
+        if (this._rowCnt === undefined) throw new Error('missing rowCnt')
+        if (this._colCnt === undefined) throw new Error('missing colCnt')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

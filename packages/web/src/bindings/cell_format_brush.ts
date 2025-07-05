@@ -62,14 +62,22 @@ export class CellFormatBrushBuilder {
     }
 
     public build() {
-        if (!this._srcSheetIdx) throw new Error('missing srcSheetIdx')
-        if (!this._srcRow) throw new Error('missing srcRow')
-        if (!this._srcCol) throw new Error('missing srcCol')
-        if (!this._dstSheetIdx) throw new Error('missing dstSheetIdx')
-        if (!this._dstRowStart) throw new Error('missing dstRowStart')
-        if (!this._dstColStart) throw new Error('missing dstColStart')
-        if (!this._dstRowEnd) throw new Error('missing dstRowEnd')
-        if (!this._dstColEnd) throw new Error('missing dstColEnd')
+        if (this._srcSheetIdx === undefined) {
+            throw new Error('missing srcSheetIdx')
+        }
+        if (this._srcRow === undefined) throw new Error('missing srcRow')
+        if (this._srcCol === undefined) throw new Error('missing srcCol')
+        if (this._dstSheetIdx === undefined) {
+            throw new Error('missing dstSheetIdx')
+        }
+        if (this._dstRowStart === undefined) {
+            throw new Error('missing dstRowStart')
+        }
+        if (this._dstColStart === undefined) {
+            throw new Error('missing dstColStart')
+        }
+        if (this._dstRowEnd === undefined) throw new Error('missing dstRowEnd')
+        if (this._dstColEnd === undefined) throw new Error('missing dstColEnd')
         return {
             type: this._type,
             srcSheetIdx: this._srcSheetIdx,

@@ -43,11 +43,11 @@ export class LineStyleUpdateBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._from) throw new Error('missing from')
-        if (!this._to) throw new Error('missing to')
-        if (!this._ty) throw new Error('missing ty')
-        if (!this._row) throw new Error('missing row')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._from === undefined) throw new Error('missing from')
+        if (this._to === undefined) throw new Error('missing to')
+        if (this._ty === undefined) throw new Error('missing ty')
+        if (this._row === undefined) throw new Error('missing row')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

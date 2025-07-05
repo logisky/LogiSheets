@@ -27,9 +27,9 @@ export class SetRowHeightBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._row) throw new Error('missing row')
-        if (!this._height) throw new Error('missing height')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._row === undefined) throw new Error('missing row')
+        if (this._height === undefined) throw new Error('missing height')
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

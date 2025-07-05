@@ -2,6 +2,7 @@ import {
     SheetRenameBuilder,
     DeleteSheetBuilder,
     Transaction,
+    Payload,
 } from 'logisheets-web'
 import {useState} from 'react'
 import Modal from 'react-modal'
@@ -39,7 +40,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
         const sheetRename = new SheetRenameBuilder()
             .oldName(oldName)
             .newName(newName)
-            .build()
+            .build() as Payload
         DATA_SERVICE.handleTransaction(new Transaction([sheetRename], true))
     }
 
@@ -50,7 +51,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
             )
             return
         }
-        const payload = new DeleteSheetBuilder().sheetIdx(index).build()
+        const payload = new DeleteSheetBuilder().idx(index).build() as Payload
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 

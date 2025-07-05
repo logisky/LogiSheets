@@ -34,10 +34,14 @@ export class MoveBlockBuilder {
     }
 
     public build() {
-        if (!this._sheetIdx) throw new Error('missing sheetIdx')
-        if (!this._id) throw new Error('missing id')
-        if (!this._newMasterRow) throw new Error('missing newMasterRow')
-        if (!this._newMasterCol) throw new Error('missing newMasterCol')
+        if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
+        if (this._id === undefined) throw new Error('missing id')
+        if (this._newMasterRow === undefined) {
+            throw new Error('missing newMasterRow')
+        }
+        if (this._newMasterCol === undefined) {
+            throw new Error('missing newMasterCol')
+        }
         return {
             type: this._type,
             sheetIdx: this._sheetIdx,

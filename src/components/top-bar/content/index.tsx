@@ -98,7 +98,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
                     .dstRowEnd(cellRange.endRow)
                     .dstColEnd(cellRange.endCol)
                     .dstSheetIdx(formatBrushOn.sheetIdx)
-                    .build()
+                    .build() as Payload
                 DATA_SERVICE.handleTransaction(new Transaction([payload], true))
                 setFormatBrushOn(null)
                 return
@@ -114,7 +114,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
                     .to(lineRange.end)
                     .dstSheetIdx(formatBrushOn.sheetIdx)
                     .row(lineRange.type === 'row')
-                    .build()
+                    .build() as Payload
                 DATA_SERVICE.handleTransaction(new Transaction([payload], true))
                 setFormatBrushOn(null)
                 return
@@ -337,7 +337,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
                             .sheetIdx(sheetIdx)
                             .row(cellRange.startRow)
                             .col(cellRange.startCol)
-                            .build(),
+                            .build() as Payload,
                     ],
                     true
                 )
@@ -351,7 +351,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 .sheetIdx(sheetIdx)
                 .row(v.startRow)
                 .col(v.startCol)
-                .build()
+                .build() as Payload
         })
         payloads.push(
             new MergeCellsBuilder()
@@ -360,7 +360,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 .endRow(cellRange.endRow)
                 .startCol(cellRange.startCol)
                 .endCol(cellRange.endCol)
-                .build()
+                .build() as Payload
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {

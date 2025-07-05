@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+    AppendixWithCell,
     BlockInfo,
     CalcConditionParams,
     Callback,
@@ -23,6 +24,7 @@ import {
     GetSheetIdxParams,
     HandleTransactionParams,
     LoadWorkbookParams,
+    LookupAppendixUpwardParams,
     MergeCell,
     Resp,
     RowId,
@@ -57,6 +59,14 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    lookupAppendixUpward(
+        params: LookupAppendixUpwardParams
+    ): Resp<AppendixWithCell> {
+        return this._call(
+            MethodName.LookupAppendixUpward,
+            params
+        ) as Resp<AppendixWithCell>
     }
     getSheetId(params: GetSheetIdParams): Resp<number> {
         return this._call(MethodName.GetSheetId, params) as Resp<number>
@@ -258,4 +268,5 @@ export enum MethodName {
 
     GetBlockDisplayWindow = 'agent_getBlockDisplayWindow',
     GetDiyCellIdWithBlockId = 'agent_getDiyCellIdWithBlockId',
+    LookupAppendixUpward = 'agent_lookupAppendixUpward',
 }

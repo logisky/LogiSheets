@@ -4,19 +4,19 @@ import {useState, ReactElement, MouseEvent} from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {ContextMenuComponent, ContextMenuItem} from '@/ui/contextmenu'
 import {
-    DeleteBlockColsBuilder,
+    DeleteColsInBlockBuilder,
     DeleteColsBuilder,
     InsertColsBuilder,
     Payload,
-    InsertBlockColsBuilder,
-    InsertBlockRowsBuilder,
+    InsertColsInBlockBuilder,
     InsertRowsBuilder,
-    DeleteBlockRowsBuilder,
     DeleteRowsBuilder,
     CreateBlockBuilder,
     Transaction,
     isErrorMessage,
     BlockInfo,
+    InsertRowsInBlockBuilder,
+    DeleteRowsInBlockBuilder,
 } from 'logisheets-web'
 import {TYPES} from '@/core/ioc/types'
 import {DataService} from '@/core/data'
@@ -63,10 +63,10 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
-                    return new InsertBlockColsBuilder()
+                    return new InsertColsInBlockBuilder()
                         .sheetIdx(sheet)
                         .blockId(block.blockId)
-                        .colIdx(start - block.colStart)
+                        .start(start - block.colStart)
                         .cnt(1)
                         .build() as Payload
                 })
@@ -77,8 +77,8 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const payload = new InsertColsBuilder()
             .sheetIdx(sheet)
             .start(start)
-            .cnt(1)
-            .build()
+            .count(1)
+            .build() as Payload
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -91,11 +91,11 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
-                    return new DeleteBlockColsBuilder()
+                    return new DeleteColsInBlockBuilder()
                         .sheetIdx(sheet)
                         .blockId(block.blockId)
+                        .start(start - block.colStart)
                         .cnt(1)
-                        .colIdx(start - block.colStart)
                         .build() as Payload
                 })
             )
@@ -104,9 +104,9 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         }
         const payload = new DeleteColsBuilder()
             .sheetIdx(sheet)
-            .cnt(1)
+            .count(1)
             .start(start)
-            .build()
+            .build() as Payload
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -119,12 +119,12 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
-                    return new InsertBlockRowsBuilder()
+                    return new InsertRowsInBlockBuilder()
                         .sheetIdx(sheet)
-                        .rowIdx(start - block.rowStart)
+                        .start(start - block.rowStart)
                         .blockId(block.blockId)
                         .cnt(1)
-                        .build()
+                        .build() as Payload
                 })
             )
             return
@@ -132,8 +132,8 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const payload = new InsertRowsBuilder()
             .sheetIdx(sheet)
             .start(start)
-            .cnt(1)
-            .build()
+            .count(1)
+            .build() as Payload
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -146,21 +146,21 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
-                    return new DeleteBlockRowsBuilder()
+                    return new DeleteRowsInBlockBuilder()
                         .sheetIdx(sheet)
-                        .cnt(1)
                         .blockId(block.blockId)
-                        .rowIdx(start - block.rowStart)
-                        .build()
+                        .start(start - block.rowStart)
+                        .cnt(1)
+                        .build() as Payload
                 })
             )
             return
         }
         const payload = new DeleteRowsBuilder()
             .sheetIdx(sheet)
-            .cnt(1)
+            .count(1)
             .start(start)
-            .build()
+            .build() as Payload
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -169,13 +169,13 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const start = startCell.coordinate
         const end = endCellTruthy.coordinate
         const payload = new CreateBlockBuilder()
-            .blockId(1)
+            .id(1)
             .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
             .rowCnt(Math.abs(end.endRow - start.startRow) + 1)
             .colCnt(Math.abs(end.endCol - start.startCol) + 1)
             .masterRow(Math.min(start.startRow, end.startRow))
             .masterCol(Math.min(start.startCol, end.startCol))
-            .build()
+            .build() as Payload
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 

@@ -28,7 +28,7 @@ export class SheetRenameBuilder {
     }
 
     public build() {
-        if (!this._newName) throw new Error('missing newName')
+        if (this._newName === undefined) throw new Error('missing newName')
         return {
             type: this._type,
             oldName: this._oldName,

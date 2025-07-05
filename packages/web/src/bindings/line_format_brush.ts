@@ -55,13 +55,17 @@ export class LineFormatBrushBuilder {
     }
 
     public build() {
-        if (!this._srcSheetIdx) throw new Error('missing srcSheetIdx')
-        if (!this._srcRow) throw new Error('missing srcRow')
-        if (!this._srcCol) throw new Error('missing srcCol')
-        if (!this._dstSheetIdx) throw new Error('missing dstSheetIdx')
-        if (!this._row) throw new Error('missing row')
-        if (!this._from) throw new Error('missing from')
-        if (!this._to) throw new Error('missing to')
+        if (this._srcSheetIdx === undefined) {
+            throw new Error('missing srcSheetIdx')
+        }
+        if (this._srcRow === undefined) throw new Error('missing srcRow')
+        if (this._srcCol === undefined) throw new Error('missing srcCol')
+        if (this._dstSheetIdx === undefined) {
+            throw new Error('missing dstSheetIdx')
+        }
+        if (this._row === undefined) throw new Error('missing row')
+        if (this._from === undefined) throw new Error('missing from')
+        if (this._to === undefined) throw new Error('missing to')
         return {
             type: this._type,
             srcSheetIdx: this._srcSheetIdx,
