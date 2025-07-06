@@ -1,5 +1,6 @@
 import {getSelectedCellRange, SelectedData} from '../canvas'
-import {useState} from 'react'
+import React, {useState} from 'react'
+import Collapse from '@mui/material/Collapse'
 import {DeleteOutline} from '@mui/icons-material'
 import {
     Box,
@@ -19,7 +20,7 @@ import {useToast} from '@/ui/notification/useToast'
 import {TYPES} from '@/core/ioc/types'
 import {useInjection} from '@/core/ioc/provider'
 import {CraftManager, DataService} from '@/core/data'
-import {CraftDescriptor, DataArea} from 'logisheets-craft-forge'
+import {CraftDescriptor, DataArea, DataPort} from 'logisheets-craft-forge'
 import {
     Payload,
     CreateBlockBuilder,
@@ -52,6 +53,14 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const [fields, setFields] = useState<FieldSetting[]>([])
     const [start, setDataAreaStartRow] = useState(0)
     const [end, setDataAreaStartCol] = useState(0)
+    const [showDataPortSettings, setShowDataPortSettings] = useState(false)
+    const [dataPort, setDataPort] = useState<{
+        uploadUrl: string
+        downloadUrl: string
+    }>({
+        uploadUrl: '',
+        downloadUrl: '',
+    })
 
     const handleAdd = () => {
         setFields([...fields, {validation: '', name: ''}])
@@ -117,10 +126,16 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             return
         }
 
+        const dp: DataPort = {
+            uploadUrl: dataPort.uploadUrl,
+            downloadUrl: dataPort.downloadUrl,
+        }
+
         const descriptor: CraftDescriptor = {
             dataArea,
             buttons: [],
             buttonConfigs: [],
+            dataPort: dp,
         }
 
         CRAFT_MANAGER.addCraftDescriptor([sheetId, blockId], descriptor)
@@ -218,6 +233,50 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 </ToggleButton>
             </Box>
             <Divider sx={{my: 3}} />
+
+            <Box mb={2}>
+                <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => setShowDataPortSettings((v) => !v)}
+                    sx={{textTransform: 'none'}}
+                >
+                    {showDataPortSettings
+                        ? 'hide data port settings'
+                        : 'show data port settings'}
+                </Button>
+                <Collapse in={showDataPortSettings}>
+                    <Box mt={2} display="flex" flexDirection="column" gap={2}>
+                        <TextField
+                            label="Upload URL"
+                            size="small"
+                            value={dataPort.uploadUrl}
+                            onChange={(e) =>
+                                setDataPort((dp) => ({
+                                    ...dp,
+                                    uploadUrl: e.target.value,
+                                }))
+                            }
+                            placeholder="e.g. https://api.example.com/upload"
+                            fullWidth
+                        />
+                        <TextField
+                            label="Download URL"
+                            size="small"
+                            value={dataPort.downloadUrl}
+                            onChange={(e) =>
+                                setDataPort((dp) => ({
+                                    ...dp,
+                                    downloadUrl: e.target.value,
+                                }))
+                            }
+                            placeholder="e.g. https://api.example.com/download"
+                            fullWidth
+                        />
+                    </Box>
+                </Collapse>
+            </Box>
+
             <Box display="flex" justifyContent="flex-end" mt={4} gap={2}>
                 <Button variant="outlined" color="inherit" onClick={close}>
                     Close

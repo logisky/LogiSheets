@@ -737,6 +737,7 @@ impl<'a> Worksheet<'a> {
                     .fetch_normal_cell_idx(&self.sheet_id, &mc)
                     .unwrap();
                 BlockInfo {
+                    sheet_id: self.sheet_id,
                     block_id: id,
                     row_start: row,
                     row_cnt: block_place.rows.len(),
@@ -994,6 +995,7 @@ impl<'a> Worksheet<'a> {
         let (row_cnt, col_cnt) = self.get_block_size(block_id)?;
         let (row_start, col_start) = self.get_block_master_cell(block_id)?;
         Ok(BlockInfo {
+            sheet_id: self.sheet_id,
             block_id,
             row_start,
             row_cnt,
