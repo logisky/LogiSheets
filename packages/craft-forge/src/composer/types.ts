@@ -12,6 +12,7 @@ export interface CraftDescriptor {
     buttonConfigs: readonly DiyButtonConfig[]
 
     wb?: WorkbookPart
+    dataPort: DataPort
 }
 
 export interface WorkbookPart {
@@ -44,4 +45,9 @@ export interface Button {
     row: number
     col: number
     type: DiyCellButtonType
+}
+
+export interface DataPort {
+    uploadUrl: string
+    downloadUrl: string
 }

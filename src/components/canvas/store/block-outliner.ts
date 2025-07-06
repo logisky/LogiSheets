@@ -30,6 +30,8 @@ export class BlockOutliner {
             props.y = range.startRow
             props.width = range.width
             props.height = range.height
+            props.blockId = info.info.blockId
+            props.sheetId = info.info.sheetId
             return props
         })
     }

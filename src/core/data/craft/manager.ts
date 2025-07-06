@@ -85,30 +85,33 @@ export class CraftManager {
      * Bind a block to a craft.`
      */
     public bindBlock(blockId: BlockId, craftId: CraftId) {
-        if (this._blockToCraft.has(blockId)) {
+        const key = blockIdToString(blockId)
+        if (this._blockToCraft.has(key)) {
             throw new Error(
-                `Block with id ${blockId} already bound to craft ${this._blockToCraft.get(
-                    blockId
+                `Block with id ${key} already bound to craft ${this._blockToCraft.get(
+                    key
                 )}`
             )
         }
-        this._blockToCraft.set(blockId, craftId)
+        this._blockToCraft.set(key, craftId)
     }
 
     public async openIframeForBlock(blockId: BlockId): Promise<void> {
         if (this._currentBlockId && this._dirty) {
+            const currentKey = blockIdToString(this._currentBlockId)
             // The current block id state is dirty. We should update it first.
             const state = await this._handler.getCraftState(
                 this._currentBlockId
             )
-            this._craftStates.set(this._currentBlockId, state)
+            this._craftStates.set(currentKey, state)
         }
 
-        if (!this._blockToCraft.has(blockId))
+        const key = blockIdToString(blockId)
+        if (!this._blockToCraft.has(key))
             throw Error('block id has not been binded')
-        const craftId = this._blockToCraft.get(blockId)
+        const craftId = this._blockToCraft.get(key)
 
-        const state = this._craftStates.get(blockId)
+        const state = this._craftStates.get(key)
         const manifest = this._crafts.find((v) => v.id === craftId)
         if (!manifest) throw Error('craft has not been registered')
         this._iframe.src = manifest?.html
@@ -160,13 +163,19 @@ export class CraftManager {
 
     addCraftDescriptor(blockId: BlockId, descriptor: CraftDescriptor) {
         descriptor.wb = undefined
-        this._craftDescriptors.set(blockId, descriptor)
+        const key = blockIdToString(blockId)
+        this._craftDescriptors.set(key, descriptor)
+    }
+
+    getCraftDescriptor(blockId: BlockId): CraftDescriptor | undefined {
+        const key = blockIdToString(blockId)
+        return this._craftDescriptors.get(key)
     }
 
     private _crafts: CraftManifest[] = []
-    private _blockToCraft: Map<BlockId, CraftId> = new Map()
-    private _craftStates: Map<BlockId, CraftState> = new Map()
-    private _craftDescriptors: Map<BlockId, CraftDescriptor> = new Map()
+    private _blockToCraft: Map<string, CraftId> = new Map()
+    private _craftStates: Map<string, CraftState> = new Map()
+    private _craftDescriptors: Map<string, CraftDescriptor> = new Map()
     private _iframe!: HTMLIFrameElement
     private _handler: CraftHandler
 
@@ -175,4 +184,8 @@ export class CraftManager {
 
     private _currentBlockId: BlockId | undefined
     private _dirty = false
+}
+
+function blockIdToString(blockId: BlockId) {
+    return `${blockId[0]}-${blockId[1]}`
 }

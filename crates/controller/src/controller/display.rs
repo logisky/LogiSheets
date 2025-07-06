@@ -103,6 +103,7 @@ pub struct SheetBlocks {
     gents_derives::gents_header(file_name = "block_info.ts")
 )]
 pub struct BlockInfo {
+    pub sheet_id: SheetId,
     pub block_id: BlockId,
     pub row_start: usize,
     pub row_cnt: usize,
