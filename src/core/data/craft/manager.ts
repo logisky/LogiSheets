@@ -10,7 +10,6 @@ import {
 } from 'logisheets-craft-forge'
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
-import {isErrorMessage} from 'logisheets-web'
 import {DiyButtonManager} from './diy_btn_manager'
 
 export interface CraftManifest {
@@ -162,7 +161,7 @@ export class CraftManager {
     }
 
     addCraftDescriptor(blockId: BlockId, descriptor: CraftDescriptor) {
-        descriptor.wb = undefined
+        descriptor.workbookPart = undefined
         const key = blockIdToString(blockId)
         this._craftDescriptors.set(key, descriptor)
     }
@@ -179,7 +178,6 @@ export class CraftManager {
     private _iframe!: HTMLIFrameElement
     private _handler: CraftHandler
 
-    private _diyIds: Map<number, BlockId> = new Map()
     private _diyBtnManager: DiyButtonManager = new DiyButtonManager()
 
     private _currentBlockId: BlockId | undefined
