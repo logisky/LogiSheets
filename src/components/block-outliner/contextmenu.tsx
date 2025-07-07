@@ -55,28 +55,35 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                 // todo
             },
         },
+        {
+            label: 'Delete',
+            onClick: () => {
+                setIsOpen(false)
+                // todo
+            },
+        },
+        {
+            label: 'Export the descriptor',
+            onClick: () => {
+                setIsOpen(false)
+                // todo
+            },
+        },
+        {
+            label: 'Export the data',
+            onClick: () => {
+                setIsOpen(false)
+                // todo
+            },
+        },
+        {
+            label: 'Import the data',
+            onClick: () => {
+                setIsOpen(false)
+                // todo
+            },
+        },
     ]
-
-    if (descriptor.dataPort) {
-        if (descriptor.dataPort.downloadUrl) {
-            items.push({
-                label: 'Download',
-                onClick: () => {
-                    setIsOpen(false)
-                    // todo
-                },
-            })
-        }
-        if (descriptor.dataPort.uploadUrl) {
-            items.push({
-                label: 'Upload',
-                onClick: () => {
-                    setIsOpen(false)
-                    // todo
-                },
-            })
-        }
-    }
 
     return (
         <Modal

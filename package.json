@@ -49,19 +49,19 @@
     "webpack-dev-server": "^4.7.4"
   },
   "scripts": {
-    "test": "vitest run",
-    "run-scripts": "ts-node scripts/index.ts",
-    "start:react": "react-scripts start",
-    "start:dev": "webpack serve --config=webpack.config.ts --hot --env=dev",
-    "start:wasm": "yarn run run-scripts && yarn run wasm && webpack serve --config=webpack.config.ts --hot --env=dev --env=stand-alone",
-    "wasm": "yarn run wasm:server && yarn run wasm:fc",
-    "wasm:server": "wasm-pack build crates/wasms/server --out-dir ../../../packages/web/wasm --target web",
-    "wasm:fc": "wasm-pack build crates/wasms/fc --out-dir pkg --target web",
-    "start": "yarn run start:wasm",
     "build": "webpack build --config=webpack.config.ts",
-    "protoc": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/proto --ts_proto_opt=esModuleInterop=tru --ts_proto_opt=oneof=unions --proto_path=protocols protocols/message.proto",
+    "gen-bindings": "cargo run --package buildtools --bin generate --all-features",
     "lint": "eslint . -c .eslintrc.json --fix",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "run-scripts": "ts-node scripts/index.ts",
+    "start": "yarn run start:wasm",
+    "start:dev": "webpack serve --config=webpack.config.ts --hot --env=dev",
+    "start:react": "react-scripts start",
+    "start:wasm": "yarn run run-scripts && yarn run wasm && webpack serve --config=webpack.config.ts --hot --env=dev --env=stand-alone",
+    "test": "vitest run",
+    "wasm": "yarn run wasm:server && yarn run wasm:fc",
+    "wasm:fc": "wasm-pack build crates/wasms/fc --out-dir pkg --target web",
+    "wasm:server": "wasm-pack build crates/wasms/server --out-dir ../../../packages/web/wasm --target web"
   },
   "browserslist": {
     "production": [

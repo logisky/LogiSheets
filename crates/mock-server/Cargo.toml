@@ -1,0 +1,14 @@
+[package]
+name = "mock_server"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+axum = "0.7"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { version = "1", features = ["full"] }
+
+logisheets_server_types = { path = "../server-types", features = ["gents"] }

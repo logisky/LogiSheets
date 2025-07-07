@@ -55,11 +55,11 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const [end, setDataAreaStartCol] = useState(0)
     const [showDataPortSettings, setShowDataPortSettings] = useState(false)
     const [dataPort, setDataPort] = useState<{
-        uploadUrl: string
-        downloadUrl: string
+        baseUrl: string
+        identifier: string
     }>({
-        uploadUrl: '',
-        downloadUrl: '',
+        baseUrl: '',
+        identifier: '',
     })
 
     const handleAdd = () => {
@@ -127,14 +127,12 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         }
 
         const dp: DataPort = {
-            uploadUrl: dataPort.uploadUrl,
-            downloadUrl: dataPort.downloadUrl,
+            baseUrl: dataPort.baseUrl,
+            identifier: dataPort.identifier,
         }
 
         const descriptor: CraftDescriptor = {
             dataArea,
-            buttons: [],
-            buttonConfigs: [],
             dataPort: dp,
         }
 
@@ -250,11 +248,11 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                         <TextField
                             label="Upload URL"
                             size="small"
-                            value={dataPort.uploadUrl}
+                            value={dataPort.baseUrl}
                             onChange={(e) =>
                                 setDataPort((dp) => ({
                                     ...dp,
-                                    uploadUrl: e.target.value,
+                                    baseUrl: e.target.value,
                                 }))
                             }
                             placeholder="e.g. https://api.example.com/upload"
@@ -263,11 +261,11 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                         <TextField
                             label="Download URL"
                             size="small"
-                            value={dataPort.downloadUrl}
+                            value={dataPort.identifier}
                             onChange={(e) =>
                                 setDataPort((dp) => ({
                                     ...dp,
-                                    downloadUrl: e.target.value,
+                                    identifier: e.target.value,
                                 }))
                             }
                             placeholder="e.g. https://api.example.com/download"

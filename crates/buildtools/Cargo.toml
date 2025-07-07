@@ -9,6 +9,7 @@ gents = { workspace = true }
 
 logisheets_controller = { path = "../controller", features = ["gents"] }
 logisheets_sequencer = { path = "../sequencer", features = ["gents"] }
+logisheets_server_types = { path = "../server-types", features = ["gents"] }
 
 [[bin]]
 name = "generate"

@@ -30,3 +30,6 @@ tests_output
 /packages/node/src
 
 .direnv
+
+# bindings
+packages/**/*/bindings

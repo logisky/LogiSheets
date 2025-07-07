@@ -4,6 +4,7 @@ use logisheets_controller::controller::display::{
 };
 use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditAction};
 use logisheets_controller::{AppendixWithCell, CellInfo, ErrorMessage, SheetDimension};
+use logisheets_server_types::{CraftData, CraftDescriptor};
 
 fn main() {
     let path = "packages/web/src/bindings";
@@ -25,5 +26,11 @@ fn main() {
     file_group.add::<SequencerMessage>();
     file_group.add::<UserMessage>();
 
+    file_group.gen_files(path, true);
+
+    let path = "packages/craft-forge/src/bindings";
+    let mut file_group = FileGroup::new();
+    file_group.add::<CraftDescriptor>();
+    file_group.add::<CraftData>();
     file_group.gen_files(path, true);
 }
