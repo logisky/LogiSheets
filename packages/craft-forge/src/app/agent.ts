@@ -13,9 +13,12 @@ import {
     GetAllSheetInfoParams,
     GetBlockColIdParams,
     GetBlockDisplayWindowParams,
+    GetBlockInfoParams,
     GetBlockRowIdParams,
     GetBlockValuesParams,
     GetCellParams,
+    GetCellsExceptWindowParams,
+    GetCellsParams,
     GetDisplayWindowParams,
     GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
@@ -59,6 +62,19 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    getCells(params: GetCellsParams): Resp<readonly Cell[]> {
+        return this._call(MethodName.GetCells, params) as Resp<readonly Cell[]>
+    }
+    getCellsExceptWindow(
+        params: GetCellsExceptWindowParams
+    ): Resp<readonly Cell[]> {
+        return this._call(MethodName.GetCellsExceptWindow, params) as Resp<
+            readonly Cell[]
+        >
+    }
+    getBlockInfo(params: GetBlockInfoParams): Resp<BlockInfo> {
+        return this._call(MethodName.GetBlockInfo, params) as Resp<BlockInfo>
     }
     lookupAppendixUpward(
         params: LookupAppendixUpwardParams
@@ -250,6 +266,8 @@ export enum MethodName {
     GetAllSheetInfo = 'agent_getAllSheetInfo',
     GetDisplayWindow = 'agent_getDisplayWindow',
     GetCell = 'agent_getCell',
+    GetCells = 'agent_getCells',
+    GetCellsExceptWindow = 'agent_getCellsExceptWindow',
     GetCellPosition = 'agent_getCellPosition',
     Undo = 'agent_undo',
     Redo = 'agent_redo',
@@ -269,4 +287,5 @@ export enum MethodName {
     GetBlockDisplayWindow = 'agent_getBlockDisplayWindow',
     GetDiyCellIdWithBlockId = 'agent_getDiyCellIdWithBlockId',
     LookupAppendixUpward = 'agent_lookupAppendixUpward',
+    GetBlockInfo = 'agent_getBlockInfo',
 }

@@ -26,6 +26,11 @@ export interface Client {
         params: GetDisplayWindowParams
     ): Resp<DisplayWindowWithStartPoint>
     getCell(params: GetCellParams): Resp<Cell>
+    getCells(params: GetCellsParams): Resp<readonly Cell[]>
+    getCellsExceptWindow(
+        params: GetCellsExceptWindowParams
+    ): Resp<readonly Cell[]>
+    getBlockInfo(params: GetBlockInfoParams): Resp<BlockInfo>
     getCellPosition(params: GetCellParams): Resp<CellPosition>
     getFullyCoveredBlocks(
         params: GetFullyCoveredBlocksParams
@@ -94,6 +99,31 @@ export interface GetCellParams {
     sheetIdx: number
     row: number
     col: number
+}
+
+export interface GetBlockInfoParams {
+    sheetId: number
+    blockId: number
+}
+
+export interface GetCellsParams {
+    sheetIdx: number
+    startRow: number
+    startCol: number
+    endRow: number
+    endCol: number
+}
+
+export interface GetCellsExceptWindowParams {
+    sheetIdx: number
+    startRow: number
+    startCol: number
+    endRow: number
+    endCol: number
+    windowStartRow: number
+    windowStartCol: number
+    windowEndRow: number
+    windowEndCol: number
 }
 
 export interface HandleTransactionParams {

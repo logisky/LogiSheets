@@ -17,6 +17,9 @@ import {
     get_display_window_for_block,
     get_diy_cell_id_with_block_id,
     lookup_appendix_upward,
+    get_cell_infos,
+    get_cell_infos_except_window,
+    get_block_info,
 } from '../../wasm'
 import {get_merged_cells} from '../../wasm/logisheets_wasm_server'
 import {
@@ -131,6 +134,50 @@ export class Worksheet {
             colIdx
         ) as Result<CellInfo>
         return cellInfo
+    }
+
+    public getCellInfos(
+        startRow: number,
+        startCol: number,
+        endRow: number,
+        endCol: number
+    ): Result<readonly CellInfo[]> {
+        return get_cell_infos(
+            this._id,
+            this._sheetId,
+            startRow,
+            startCol,
+            endRow,
+            endCol
+        )
+    }
+
+    public getCellInfosExceptWindow(
+        startRow: number,
+        startCol: number,
+        endRow: number,
+        endCol: number,
+        windowStartRow: number,
+        windowStartCol: number,
+        windowEndRow: number,
+        windowEndCol: number
+    ): Result<readonly CellInfo[]> {
+        return get_cell_infos_except_window(
+            this._id,
+            this._sheetId,
+            startRow,
+            startCol,
+            endRow,
+            endCol,
+            windowStartRow,
+            windowStartCol,
+            windowEndRow,
+            windowEndCol
+        )
+    }
+
+    public getBlockInfo(blockId: number): BlockInfo {
+        return get_block_info(this._id, this._sheetId, blockId)
     }
 
     public getMergedCells(

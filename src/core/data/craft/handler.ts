@@ -11,9 +11,12 @@ import {
     GetAllSheetInfoParams,
     GetBlockColIdParams,
     GetBlockDisplayWindowParams,
+    GetBlockInfoParams,
     GetBlockRowIdParams,
     GetBlockValuesParams,
     GetCellParams,
+    GetCellsExceptWindowParams,
+    GetCellsParams,
     GetDisplayWindowParams,
     GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
@@ -143,6 +146,17 @@ export class CraftHandler implements CraftHandlerInterface {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    getCellsExceptWindow(
+        params: GetCellsExceptWindowParams
+    ): Resp<readonly Cell[]> {
+        return this._workbookClient.getCellsExceptWindow(params)
+    }
+    getCells(params: GetCellsParams): Resp<readonly Cell[]> {
+        return this._workbookClient.getCells(params)
+    }
+    getBlockInfo(params: GetBlockInfoParams): Resp<BlockInfo> {
+        return this._workbookClient.getBlockInfo(params)
     }
     lookupAppendixUpward(
         params: LookupAppendixUpwardParams
