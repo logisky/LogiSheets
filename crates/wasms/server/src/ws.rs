@@ -266,3 +266,63 @@ pub fn lookup_appendix_upward(
     handle_result!(result);
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
+
+#[wasm_bindgen]
+pub fn get_cell_infos(
+    id: usize,
+    sheet_id: SheetId,
+    start_row: usize,
+    start_col: usize,
+    end_row: usize,
+    end_col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_cell_infos(start_row, start_col, end_row, end_col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_cell_infos_except_window(
+    id: usize,
+    sheet_id: SheetId,
+    start_row: usize,
+    start_col: usize,
+    end_row: usize,
+    end_col: usize,
+    window_start_row: usize,
+    window_start_col: usize,
+    window_end_row: usize,
+    window_end_col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_cell_infos_except_window(
+        start_row,
+        start_col,
+        end_row,
+        end_col,
+        window_start_row,
+        window_start_col,
+        window_end_row,
+        window_end_col,
+    );
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_block_info(id: usize, sheet_id: SheetId, block_id: BlockId) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_block_info(block_id);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}

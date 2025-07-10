@@ -34,6 +34,9 @@ import {
     GetSheetIdParams,
     AppendixWithCell,
     LookupAppendixUpwardParams,
+    GetCellsParams,
+    GetCellsExceptWindowParams,
+    GetBlockInfoParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -76,6 +79,19 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    getBlockInfo(params: GetBlockInfoParams): Resp<BlockInfo> {
+        return this._call(MethodName.GetBlockInfo, params) as Resp<BlockInfo>
+    }
+    getCellsExceptWindow(
+        params: GetCellsExceptWindowParams
+    ): Resp<readonly Cell[]> {
+        return this._call(MethodName.GetCellsExceptWindow, params) as Resp<
+            readonly Cell[]
+        >
+    }
+    getCells(params: GetCellsParams): Resp<readonly Cell[]> {
+        return this._call(MethodName.GetCells, params) as Resp<readonly Cell[]>
     }
     lookupAppendixUpward(
         params: LookupAppendixUpwardParams

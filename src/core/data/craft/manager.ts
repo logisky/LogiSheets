@@ -11,6 +11,7 @@ import {
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
+import {isErrorMessage} from 'packages/web'
 
 export interface CraftManifest {
     /**
@@ -169,6 +170,43 @@ export class CraftManager {
     getCraftDescriptor(blockId: BlockId): CraftDescriptor | undefined {
         const key = blockIdToString(blockId)
         return this._craftDescriptors.get(key)
+    }
+
+    /**
+     * Unlike `getCraftDescriptor`, this function will get workbook part
+     */
+    async exportCraftDescriptor(
+        blockId: BlockId
+    ): Promise<CraftDescriptor | undefined> {
+        const descriptor = this.getCraftDescriptor(blockId)
+        if (!descriptor) return undefined
+
+        const sheetIdx = await this._workbookClient.getSheetIdx({
+            sheetId: blockId[0],
+        })
+        if (isErrorMessage(sheetIdx)) return undefined
+        const blockInfo = await this._workbookClient.getBlockInfo({
+            sheetId: blockId[0],
+            blockId: blockId[1],
+        })
+        if (isErrorMessage(blockInfo)) return undefined
+
+        // todo
+        this._workbookClient.getCellsExceptWindow({
+            sheetIdx: sheetIdx,
+            startRow: 0,
+            startCol: 0,
+            endRow: 0,
+            endCol: 0,
+            windowStartRow: descriptor.dataArea.startRow,
+            windowStartCol: descriptor.dataArea.startCol,
+            windowEndRow: descriptor.dataArea.endRow ?? blockInfo.rowCnt - 1,
+            windowEndCol: descriptor.dataArea.endCol ?? blockInfo.colCnt - 1,
+        })
+        return {
+            ...descriptor,
+            workbookPart: undefined,
+        }
     }
 
     private _crafts: CraftManifest[] = []

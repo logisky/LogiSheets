@@ -34,9 +34,12 @@ import {
     DisplayWindow,
     GetBlockDisplayWindowParams,
     GetDiyCellIdWithBlockIdParams,
+    GetCellsExceptWindowParams,
     GetSheetIdParams,
     AppendixWithCell,
     LookupAppendixUpwardParams,
+    GetCellsParams,
+    GetBlockInfoParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -49,6 +52,11 @@ interface IWorkbookWorker {
         params: GetDisplayWindowParams
     ): Result<DisplayWindowWithStartPoint>
     getCell(params: GetCellParams): Result<CellInfo>
+    getCells(params: GetCellsParams): Result<readonly CellInfo[]>
+    getCellsExceptWindow(
+        params: GetCellsExceptWindowParams
+    ): Result<readonly CellInfo[]>
+    getBlockInfo(params: GetBlockInfoParams): Result<BlockInfo>
     getCellPosition(params: GetCellParams): Result<CellPosition>
     getSheetDimension(sheetIdx: number): Result<SheetDimension>
     getFullyCoveredBlocks(
@@ -128,6 +136,34 @@ class WorkerService implements IWorkbookWorker {
     public getCell(params: GetCellParams): Result<CellInfo> {
         const ws = this.getSheet(params.sheetIdx)
         return ws.getCellInfo(params.row, params.col)
+    }
+    public getCells(params: GetCellsParams): Result<readonly CellInfo[]> {
+        const ws = this.getSheet(params.sheetIdx)
+        return ws.getCellInfos(
+            params.startRow,
+            params.startCol,
+            params.endRow,
+            params.endCol
+        )
+    }
+    public getCellsExceptWindow(
+        params: GetCellsExceptWindowParams
+    ): Result<readonly CellInfo[]> {
+        const ws = this.getSheet(params.sheetIdx)
+        return ws.getCellInfosExceptWindow(
+            params.startRow,
+            params.startCol,
+            params.endRow,
+            params.endCol,
+            params.windowStartRow,
+            params.windowStartCol,
+            params.windowEndRow,
+            params.windowEndCol
+        )
+    }
+    getBlockInfo(params: GetBlockInfoParams): Result<BlockInfo> {
+        const ws = this.getSheet(params.sheetId)
+        return ws.getBlockInfo(params.blockId)
     }
     public getCellPosition(params: GetCellParams): Result<CellPosition> {
         const ws = this.getSheet(params.sheetIdx)

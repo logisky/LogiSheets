@@ -149,6 +149,51 @@ impl<'a> Worksheet<'a> {
         self.get_cell_info_by_cell_id(&cell_id)
     }
 
+    pub fn get_cell_infos(
+        &self,
+        start_row: usize,
+        start_col: usize,
+        end_row: usize,
+        end_col: usize,
+    ) -> Result<Vec<CellInfo>> {
+        let mut res = vec![];
+        for i in start_row..=end_row {
+            for j in start_col..=end_col {
+                let cell_info = self.get_cell_info(i, j)?;
+                res.push(cell_info);
+            }
+        }
+        Ok(res)
+    }
+
+    pub fn get_cell_infos_except_window(
+        &self,
+        start_row: usize,
+        start_col: usize,
+        end_row: usize,
+        end_col: usize,
+        window_start_row: usize,
+        window_start_col: usize,
+        window_end_row: usize,
+        window_end_col: usize,
+    ) -> Result<Vec<CellInfo>> {
+        let mut res = vec![];
+        for i in start_row..=end_row {
+            for j in start_col..=end_col {
+                if i >= window_start_row
+                    && i <= window_end_row
+                    && j >= window_start_col
+                    && j <= window_end_col
+                {
+                    continue;
+                }
+                let cell_info = self.get_cell_info(i, j)?;
+                res.push(cell_info);
+            }
+        }
+        Ok(res)
+    }
+
     pub fn get_comment(&self, row: usize, col: usize) -> Option<Comment> {
         let cell_id = self
             .controller

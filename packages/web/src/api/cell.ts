@@ -3,9 +3,7 @@ import {CellInfo, Value, Style} from '../bindings'
 export class Cell {
     public constructor(cellInfo: CellInfo) {
         this._value = CellValue.from(cellInfo.value)
-        this._formula = cellInfo.formula
-        this._style = cellInfo.style
-        this._blockId = cellInfo.blockId
+        this._info = cellInfo
     }
 
     public getText(): string {
@@ -13,21 +11,23 @@ export class Cell {
     }
 
     public getStyle(): Style {
-        return this._style
+        return this._info.style
     }
 
     public getFormula(): string {
-        return this._formula
+        return this._info.formula
     }
 
     public getBlockId(): number | undefined {
-        return this._blockId
+        return this._info.blockId
+    }
+
+    public toCellInfo(): CellInfo {
+        return this._info
     }
 
     private _value: CellValue
-    private _style: Style
-    private _formula = ''
-    private _blockId?: number
+    private _info: CellInfo
 }
 
 export class CellValue {
