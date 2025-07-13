@@ -19,20 +19,25 @@ import {
     GetCellParams,
     GetCellsExceptWindowParams,
     GetCellsParams,
+    GetCellValueParams,
     GetDisplayWindowParams,
     GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
+    GetReproducibleCellParams,
+    GetReproducibleCellsParams,
     GetSheetIdParams,
     GetSheetIdxParams,
     HandleTransactionParams,
     LoadWorkbookParams,
     LookupAppendixUpwardParams,
     MergeCell,
+    ReproducibleCell,
     Resp,
     RowId,
     SheetDimension,
     SheetInfo,
+    Value,
     Client as WorkbookClient,
 } from 'logisheets-web'
 import {
@@ -62,6 +67,24 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    getReproducibleCell(
+        params: GetReproducibleCellParams
+    ): Resp<ReproducibleCell> {
+        return this._call(
+            MethodName.GetReproducibleCell,
+            params
+        ) as Resp<ReproducibleCell>
+    }
+    getReproducibleCells(
+        params: GetReproducibleCellsParams
+    ): Resp<readonly ReproducibleCell[]> {
+        return this._call(MethodName.GetReproducibleCells, params) as Resp<
+            readonly ReproducibleCell[]
+        >
+    }
+    getValue(params: GetCellValueParams): Resp<Value> {
+        return this._call(MethodName.GetCellValue, params) as Resp<Value>
     }
     getCells(params: GetCellsParams): Resp<readonly Cell[]> {
         return this._call(MethodName.GetCells, params) as Resp<readonly Cell[]>
@@ -288,4 +311,7 @@ export enum MethodName {
     GetDiyCellIdWithBlockId = 'agent_getDiyCellIdWithBlockId',
     LookupAppendixUpward = 'agent_lookupAppendixUpward',
     GetBlockInfo = 'agent_getBlockInfo',
+    GetReproducibleCell = 'agent_getReproducibleCell',
+    GetReproducibleCells = 'agent_getReproducibleCells',
+    GetCellValue = 'agent_getCellValue',
 }

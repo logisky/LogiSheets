@@ -20,7 +20,7 @@ use logisheets_base::{BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, She
 use logisheets_parser::unparse;
 
 use super::workbook::CellPositionerDefault;
-use super::SheetDimension;
+use super::{ReproducibleCell, SheetCoordinate, SheetDimension};
 
 // Use a cache to record the coordinate
 pub struct Worksheet<'a> {
@@ -190,6 +190,43 @@ impl<'a> Worksheet<'a> {
                 let cell_info = self.get_cell_info(i, j)?;
                 res.push(cell_info);
             }
+        }
+        Ok(res)
+    }
+
+    pub fn get_reproducible_cell(&self, row: usize, col: usize) -> Result<ReproducibleCell> {
+        let cell_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_id(&self.sheet_id, row, col)?;
+        let cell_info = self.get_cell_info(row, col)?;
+        let appendix = match cell_id {
+            CellId::BlockCell(block_cell_id) => self
+                .controller
+                .status
+                .exclusive_manager
+                .appendix_manager
+                .get(self.sheet_id, &block_cell_id)
+                .unwrap_or(vec![]),
+            _ => vec![],
+        };
+        Ok(ReproducibleCell {
+            coordinate: SheetCoordinate { row, col },
+            formula: cell_info.formula,
+            value: cell_info.value,
+            style: cell_info.style,
+            appendix,
+        })
+    }
+
+    pub fn get_reproducible_cells(
+        &self,
+        coordinates: Vec<SheetCoordinate>,
+    ) -> Result<Vec<ReproducibleCell>> {
+        let mut res = vec![];
+        for coordinate in coordinates {
+            res.push(self.get_reproducible_cell(coordinate.row, coordinate.col)?);
         }
         Ok(res)
     }
@@ -767,6 +804,12 @@ impl<'a> Worksheet<'a> {
         if sheet_nav.is_none() {
             return vec![];
         }
+        let sheet_idx = self
+            .controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_idx(&self.sheet_id)
+            .unwrap();
         let sheet_nav = sheet_nav.unwrap();
         let blocks = sheet_nav
             .data
@@ -782,6 +825,7 @@ impl<'a> Worksheet<'a> {
                     .fetch_normal_cell_idx(&self.sheet_id, &mc)
                     .unwrap();
                 BlockInfo {
+                    sheet_idx,
                     sheet_id: self.sheet_id,
                     block_id: id,
                     row_start: row,
@@ -1046,6 +1090,12 @@ impl<'a> Worksheet<'a> {
             row_cnt,
             col_start,
             col_cnt,
+            sheet_idx: self
+                .controller
+                .status
+                .sheet_pos_manager
+                .get_sheet_idx(&self.sheet_id)
+                .unwrap(),
         })
     }
 

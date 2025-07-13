@@ -1,9 +1,11 @@
 import {injectable} from 'inversify'
 import {
     BlockId,
+    CraftData,
     CraftDescriptor,
     CraftId,
     CraftState,
+    CraftValue,
     DiyButtonConfig,
     DiyCellButtonType,
     MethodName,
@@ -11,7 +13,10 @@ import {
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
-import {isErrorMessage} from 'packages/web'
+import {CellValue, isErrorMessage, Value} from 'logisheets-web'
+
+export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
+export const FIELD_AND_VALIDATION_TAG = 80
 
 export interface CraftManifest {
     /**
@@ -191,21 +196,130 @@ export class CraftManager {
         })
         if (isErrorMessage(blockInfo)) return undefined
 
-        // todo
-        this._workbookClient.getCellsExceptWindow({
+        const coordinates = []
+        const endRow = descriptor.dataArea.endRow ?? blockInfo.rowCnt
+        const endCol = descriptor.dataArea.endCol ?? blockInfo.colCnt
+        for (let i = 0; i < blockInfo.rowCnt; i++) {
+            for (let j = 0; j < blockInfo.colCnt; j++) {
+                if (
+                    i >= descriptor.dataArea.startRow ||
+                    i <= endRow ||
+                    j >= descriptor.dataArea.startCol ||
+                    j <= endCol
+                )
+                    continue
+                coordinates.push({row: i, col: j})
+            }
+        }
+
+        const cells = await this._workbookClient.getReproducibleCells({
             sheetIdx: sheetIdx,
-            startRow: 0,
-            startCol: 0,
-            endRow: 0,
-            endCol: 0,
-            windowStartRow: descriptor.dataArea.startRow,
-            windowStartCol: descriptor.dataArea.startCol,
-            windowEndRow: descriptor.dataArea.endRow ?? blockInfo.rowCnt - 1,
-            windowEndCol: descriptor.dataArea.endCol ?? blockInfo.colCnt - 1,
+            coordinates: coordinates,
         })
+        if (isErrorMessage(cells)) return undefined
         return {
             ...descriptor,
-            workbookPart: undefined,
+            workbookPart: {
+                cells: cells,
+                rowCount: blockInfo.rowCnt,
+                colCount: blockInfo.colCnt,
+            },
+        }
+    }
+
+    async exportDataArea(blockId: BlockId): Promise<CraftData | undefined> {
+        const descriptor = this.getCraftDescriptor(blockId)
+        if (!descriptor) return undefined
+        const blockInfo = await this._workbookClient.getBlockInfo({
+            sheetId: blockId[0],
+            blockId: blockId[1],
+        })
+        if (isErrorMessage(blockInfo)) return undefined
+        const masterRow = blockInfo.rowStart
+        const masterCol = blockInfo.colStart
+        const dataArea = descriptor.dataArea
+        const endCol = dataArea.endCol ?? blockInfo.colCnt - 1
+
+        const fieldMAp = new Map<number, string>()
+        for (let i = dataArea.startCol; i <= endCol; i++) {
+            const appendix = await this._workbookClient.lookupAppendixUpward({
+                sheetId: blockId[0],
+                blockId: blockId[1],
+                row: i,
+                col: dataArea.startCol,
+                craftId: LOGISHEETS_BUILTIN_CRAFT_ID,
+                tag: FIELD_AND_VALIDATION_TAG,
+            })
+            if (isErrorMessage(appendix)) continue
+            const r = masterRow + appendix.rowIdx
+            const c = masterCol + appendix.colIdx
+            const v = await this._workbookClient.getValue({
+                sheetId: blockId[0],
+                row: r,
+                col: c,
+            })
+            if (isErrorMessage(v)) continue
+            const vStr = CellValue.from(v).valueStr
+            fieldMAp.set(appendix.colIdx, vStr)
+        }
+
+        const keyMap = new Map()
+        const endRow = dataArea.endRow ?? blockInfo.rowCnt - 1
+        for (let j = dataArea.startRow; j <= endRow; j++) {
+            let key = ''
+            if (dataArea.startCol === 0) {
+                keyMap.set(j, key)
+                continue
+            }
+
+            const v = await this._workbookClient.getValue({
+                sheetId: blockId[0],
+                row: j + masterRow,
+                col: dataArea.startCol - 1 + masterCol,
+            })
+            if (isErrorMessage(v)) {
+                keyMap.set(j, key)
+                continue
+            }
+            const vStr = CellValue.from(v).valueStr
+            key = vStr
+            keyMap.set(j, key)
+        }
+        const sr = masterRow + dataArea.startRow
+        const sc = masterCol + dataArea.startCol
+        const er = masterRow + endRow
+        const ec = masterCol + endCol
+        const cells = await this._workbookClient.getCells({
+            sheetIdx: blockInfo.sheetIdx,
+            startRow: sr,
+            startCol: sc,
+            endRow: er,
+            endCol: ec,
+        })
+        if (isErrorMessage(cells)) return undefined
+        const rowCount = er - sr + 1
+        const colCount = ec - sc + 1
+        const result: CraftValue[] = []
+        for (let r = 0; r < rowCount; r++) {
+            for (let c = 0; c < colCount; c++) {
+                const i = c + r * rowCount
+                const cell = cells[i]
+                const field = fieldMAp.get(c + masterCol)
+                if (field === undefined) continue
+                let key = keyMap.get(r + masterRow)
+                if (key === undefined) {
+                    key = ''
+                }
+                const v: CraftValue = {
+                    key,
+                    field,
+                    value: cell.toCellInfo().value,
+                }
+                result.push(v)
+            }
+        }
+        return {
+            values: result,
         }
     }
 

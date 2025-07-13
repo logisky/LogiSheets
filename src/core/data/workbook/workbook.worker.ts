@@ -40,6 +40,11 @@ import {
     LookupAppendixUpwardParams,
     GetCellsParams,
     GetBlockInfoParams,
+    ReproducibleCell,
+    GetReproducibleCellsParams,
+    GetReproducibleCellParams,
+    GetCellValueParams as GetValueParams,
+    Value,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -56,6 +61,13 @@ interface IWorkbookWorker {
     getCellsExceptWindow(
         params: GetCellsExceptWindowParams
     ): Result<readonly CellInfo[]>
+    getReproducibleCell(
+        params: GetReproducibleCellParams
+    ): Result<ReproducibleCell>
+    getReproducibleCells(
+        params: GetReproducibleCellsParams
+    ): Result<readonly ReproducibleCell[]>
+    getValue(params: GetValueParams): Result<Value>
     getBlockInfo(params: GetBlockInfoParams): Result<BlockInfo>
     getCellPosition(params: GetCellParams): Result<CellPosition>
     getSheetDimension(sheetIdx: number): Result<SheetDimension>
@@ -83,6 +95,25 @@ interface IWorkbookWorker {
 }
 
 class WorkerService implements IWorkbookWorker {
+    getValue(params: GetValueParams): Result<Value> {
+        const {sheetId, row, col} = params
+        const ws = this._workbookImpl!.getWorksheetById(sheetId)
+        return ws.getValue(row, col)
+    }
+    getReproducibleCell(
+        params: GetReproducibleCellParams
+    ): Result<ReproducibleCell> {
+        const {sheetIdx, row, col} = params
+        const ws = this.getSheet(sheetIdx)
+        return ws.getReproducibleCell(row, col)
+    }
+    getReproducibleCells(
+        params: GetReproducibleCellsParams
+    ): Result<readonly ReproducibleCell[]> {
+        const {sheetIdx, coordinates} = params
+        const ws = this.getSheet(sheetIdx)
+        return ws.getReproducibleCells(coordinates)
+    }
     lookupAppendixUpward(
         params: LookupAppendixUpwardParams
     ): Result<AppendixWithCell> {

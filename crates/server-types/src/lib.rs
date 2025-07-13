@@ -1,4 +1,4 @@
-use logisheets_controller::{Appendix, Style, Value};
+use logisheets_controller::{ReproducibleCell, Value};
 
 /// Represents a comprehensive blueprint for a craft, capturing its structure, visual characteristics,
 /// and operational logic. This descriptor enables others to faithfully reconstruct or reproduce the
@@ -50,24 +50,13 @@ pub struct DataPort {
     pub identifier: String,
 }
 
-#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "cell.ts"))]
-#[derive(Debug, Clone)]
-pub struct Cell {
-    pub row: usize,
-    pub col: usize,
-    pub formula: Option<String>,
-    pub value: Option<Value>,
-    pub style: Option<Style>,
-    pub appendix: Option<Appendix>,
-}
-
 #[cfg_attr(
     feature = "gents",
     gents_derives::gents_header(file_name = "workbook_part.ts")
 )]
 #[derive(Debug, Clone)]
 pub struct WorkbookPart {
-    pub cells: Vec<Cell>,
+    pub cells: Vec<ReproducibleCell>,
     pub row_count: usize,
     pub col_count: usize,
 }
@@ -78,7 +67,16 @@ pub struct WorkbookPart {
 )]
 #[derive(Debug, Clone)]
 pub struct CraftData {
-    pub keys: Vec<String>,
-    pub fields: Vec<String>,
-    pub values: Vec<String>,
+    pub values: Vec<CraftValue>,
+}
+
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "craft_value.ts")
+)]
+#[derive(Debug, Clone)]
+pub struct CraftValue {
+    pub key: String,
+    pub field: String,
+    pub value: Value,
 }

@@ -17,20 +17,25 @@ import {
     GetCellParams,
     GetCellsExceptWindowParams,
     GetCellsParams,
+    GetCellValueParams,
     GetDisplayWindowParams,
     GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
+    GetReproducibleCellParams,
+    GetReproducibleCellsParams,
     GetSheetIdParams,
     GetSheetIdxParams,
     HandleTransactionParams,
     LoadWorkbookParams,
     LookupAppendixUpwardParams,
     MergeCell,
+    ReproducibleCell,
     Resp,
     RowId,
     SheetDimension,
     SheetInfo,
+    Value,
     Client as WorkbookClient,
 } from 'logisheets-web'
 import {
@@ -146,6 +151,19 @@ export class CraftHandler implements CraftHandlerInterface {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    getValue(params: GetCellValueParams): Resp<Value> {
+        return this._workbookClient.getValue(params)
+    }
+    getReproducibleCell(
+        params: GetReproducibleCellParams
+    ): Resp<ReproducibleCell> {
+        return this._workbookClient.getReproducibleCell(params)
+    }
+    getReproducibleCells(
+        params: GetReproducibleCellsParams
+    ): Resp<readonly ReproducibleCell[]> {
+        return this._workbookClient.getReproducibleCells(params)
     }
     getCellsExceptWindow(
         params: GetCellsExceptWindowParams
