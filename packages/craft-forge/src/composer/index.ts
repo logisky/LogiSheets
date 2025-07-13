@@ -7,7 +7,7 @@ import {
     Payload,
     Value,
 } from 'logisheets-web'
-import {CraftDescriptor, Cell} from './types'
+import {Appendix, CraftDescriptor, ReproducibleCell} from './types'
 
 export function generatePayloads(
     sheetIdx: number,
@@ -30,37 +30,37 @@ export function generatePayloads(
         .build() as Payload
     result.push(createBlock)
 
-    craftDescriptor.workbookPart.cells.forEach((cell: Cell) => {
+    craftDescriptor.workbookPart.cells.forEach((cell: ReproducibleCell) => {
         if (cell.formula) {
             const cellInput = new CellInputBuilder()
                 .sheetIdx(sheetIdx)
-                .row(cell.row + masterRow)
-                .col(cell.col + masterCol)
+                .row(cell.coordinate.row + masterRow)
+                .col(cell.coordinate.col + masterCol)
                 .content(cell.formula)
                 .build() as Payload
             result.push(cellInput)
         } else if (cell.value) {
             const cellInput = new CellInputBuilder()
                 .sheetIdx(sheetIdx)
-                .row(cell.row + masterRow)
-                .col(cell.col + masterCol)
+                .row(cell.coordinate.row + masterRow)
+                .col(cell.coordinate.col + masterCol)
                 .content(valueToStr(cell.value))
                 .build() as Payload
             result.push(cellInput)
         }
 
-        if (cell.appendix) {
+        cell.appendix.forEach((appendix: Appendix) => {
             const addAppendix = new CreateAppendixBuilder()
                 .sheetIdx(sheetIdx)
                 .blockId(blockId)
-                .tag(cell.appendix.tag)
-                .content(cell.appendix.content)
-                .rowIdx(cell.row)
-                .colIdx(cell.col)
+                .tag(appendix.tag)
+                .content(appendix.content)
+                .rowIdx(cell.coordinate.row)
+                .colIdx(cell.coordinate.col)
                 .build() as Payload
             result.push(addAppendix)
             // todo: add style payloads
-        }
+        })
     })
     return result
 }

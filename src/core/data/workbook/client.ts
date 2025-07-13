@@ -37,6 +37,11 @@ import {
     GetCellsParams,
     GetCellsExceptWindowParams,
     GetBlockInfoParams,
+    GetReproducibleCellParams,
+    GetReproducibleCellsParams,
+    ReproducibleCell,
+    GetCellValueParams,
+    Value,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -79,6 +84,24 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    getValue(params: GetCellValueParams): Resp<Value> {
+        return this._call(MethodName.GetCellValue, params) as Resp<Value>
+    }
+    getReproducibleCell(
+        params: GetReproducibleCellParams
+    ): Resp<ReproducibleCell> {
+        return this._call(
+            MethodName.GetReproducibleCell,
+            params
+        ) as Resp<ReproducibleCell>
+    }
+    getReproducibleCells(
+        params: GetReproducibleCellsParams
+    ): Resp<readonly ReproducibleCell[]> {
+        return this._call(MethodName.GetReproducibleCells, params) as Resp<
+            readonly ReproducibleCell[]
+        >
     }
     getBlockInfo(params: GetBlockInfoParams): Resp<BlockInfo> {
         return this._call(MethodName.GetBlockInfo, params) as Resp<BlockInfo>

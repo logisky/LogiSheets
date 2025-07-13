@@ -20,6 +20,8 @@ import {
     get_cell_infos,
     get_cell_infos_except_window,
     get_block_info,
+    get_reproducible_cell,
+    get_reproducible_cells,
 } from '../../wasm'
 import {get_merged_cells} from '../../wasm/logisheets_wasm_server'
 import {
@@ -35,6 +37,8 @@ import {
     SheetDimension,
     MergeCell,
     AppendixWithCell,
+    ReproducibleCell,
+    SheetCoordinate,
 } from '../bindings'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
@@ -134,6 +138,19 @@ export class Worksheet {
             colIdx
         ) as Result<CellInfo>
         return cellInfo
+    }
+
+    public getReproducibleCell(
+        rowIdx: number,
+        colIdx: number
+    ): Result<ReproducibleCell> {
+        return get_reproducible_cell(this._id, this._sheetId, rowIdx, colIdx)
+    }
+
+    public getReproducibleCells(
+        coordinates: readonly SheetCoordinate[]
+    ): Result<readonly ReproducibleCell[]> {
+        return get_reproducible_cells(this._id, this._sheetId, coordinates)
     }
 
     public getCellInfos(

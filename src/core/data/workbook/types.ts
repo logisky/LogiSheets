@@ -35,4 +35,8 @@ export enum MethodName {
     GetAvailableBlockId = 'getAvailableBlockId',
 
     GetDiyCellIdWithBlockId = 'getDiyCellIdWithBlockId',
+
+    GetReproducibleCell = 'getReproducibleCell',
+    GetReproducibleCells = 'getReproducibleCells',
+    GetCellValue = 'getCellValue',
 }

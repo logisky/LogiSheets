@@ -53,22 +53,6 @@ pub struct DisplayWindowWithStartPoint {
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "gents",
-    gents_derives::gents_header(file_name = "display_patch.ts")
-)]
-pub enum DisplayPatch {
-    Values(SheetValues),
-    Styles(SheetStyles),
-    RowInfo(SheetRowInfo),
-    ColInfo(SheetColInfo),
-    MergeCells(SheetMergeCells),
-    Comments(SheetComments),
-    Blocks(SheetBlocks),
-    SheetNames(SheetNames),
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
     gents_derives::gents_header(file_name = "sheet_names.ts")
 )]
 pub struct SheetNames {
@@ -103,6 +87,7 @@ pub struct SheetBlocks {
     gents_derives::gents_header(file_name = "block_info.ts")
 )]
 pub struct BlockInfo {
+    pub sheet_idx: usize,
     pub sheet_id: SheetId,
     pub block_id: BlockId,
     pub row_start: usize,

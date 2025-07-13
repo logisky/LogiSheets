@@ -5,6 +5,7 @@ use logisheets_base::SheetId;
 use logisheets_controller::controller::display::CellPosition;
 use logisheets_controller::ColInfo;
 use logisheets_controller::Error;
+use logisheets_controller::SheetCoordinate;
 use wasm_bindgen::prelude::*;
 
 use crate::controller::init;
@@ -323,6 +324,29 @@ pub fn get_block_info(id: usize, sheet_id: SheetId, block_id: BlockId) -> JsValu
     let wb = manager.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_id(sheet_id).unwrap();
     let result = ws.get_block_info(block_id);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_reproducible_cell(id: usize, sheet_id: SheetId, row: usize, col: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_reproducible_cell(row, col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_reproducible_cells(id: usize, sheet_id: SheetId, coordinates: JsValue) -> JsValue {
+    init();
+    let coordinates: Vec<SheetCoordinate> = serde_wasm_bindgen::from_value(coordinates).unwrap();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_reproducible_cells(coordinates);
     handle_result!(result);
     serde_wasm_bindgen::to_value(&result).unwrap()
 }

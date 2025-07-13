@@ -8,6 +8,9 @@ import type {
     ErrorMessage,
     DisplayWindow,
     AppendixWithCell,
+    ReproducibleCell,
+    SheetCoordinate,
+    Value,
 } from './bindings'
 import type {Cell, CustomFunc} from './api'
 import type {Transaction, RowId, ColId} from './types'
@@ -30,6 +33,13 @@ export interface Client {
     getCellsExceptWindow(
         params: GetCellsExceptWindowParams
     ): Resp<readonly Cell[]>
+    getReproducibleCell(
+        params: GetReproducibleCellParams
+    ): Resp<ReproducibleCell>
+    getReproducibleCells(
+        params: GetReproducibleCellsParams
+    ): Resp<readonly ReproducibleCell[]>
+    getValue(params: GetCellValueParams): Resp<Value>
     getBlockInfo(params: GetBlockInfoParams): Resp<BlockInfo>
     getCellPosition(params: GetCellParams): Resp<CellPosition>
     getFullyCoveredBlocks(
@@ -104,6 +114,23 @@ export interface GetCellParams {
 export interface GetBlockInfoParams {
     sheetId: number
     blockId: number
+}
+
+export interface GetCellValueParams {
+    sheetId: number
+    row: number
+    col: number
+}
+
+export interface GetReproducibleCellParams {
+    sheetIdx: number
+    row: number
+    col: number
+}
+
+export interface GetReproducibleCellsParams {
+    sheetIdx: number
+    coordinates: readonly SheetCoordinate[]
 }
 
 export interface GetCellsParams {

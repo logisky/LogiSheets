@@ -1,6 +1,6 @@
 use logisheets_base::{BlockId, DiyCellId};
 
-use crate::{Style, Value};
+use crate::{Appendix, Style, Value};
 
 #[cfg_attr(
     feature = "gents",
@@ -34,4 +34,27 @@ pub struct SheetDimension {
     pub max_col: usize,
     pub height: f64,
     pub width: f64,
+}
+
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "cell_with_coordinate.ts")
+)]
+#[derive(Debug, Clone)]
+pub struct ReproducibleCell {
+    pub coordinate: SheetCoordinate,
+    pub formula: String,
+    pub value: Value,
+    pub style: Style,
+    pub appendix: Vec<Appendix>,
+}
+
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "sheet_coordinate.ts")
+)]
+#[derive(Debug, Clone)]
+pub struct SheetCoordinate {
+    pub row: usize,
+    pub col: usize,
 }
