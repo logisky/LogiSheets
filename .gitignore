@@ -33,3 +33,5 @@ tests_output
 
 # bindings
 packages/**/*/bindings
+
+.yarn/install-state.gz

@@ -13,7 +13,7 @@ import {
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
-import {CellValue, isErrorMessage, Value} from 'logisheets-web'
+import {CellValue, isErrorMessage} from 'logisheets-web'
 
 export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
 export const FIELD_AND_VALIDATION_TAG = 80

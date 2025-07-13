@@ -2,6 +2,7 @@ import {shallowCopy} from '@/core'
 import {BlockInfo} from 'logisheets-web'
 import {Range} from './range'
 export class StandardBlock implements BlockInfo {
+    sheetIdx = 0
     sheetId = 0
     rowCnt = 0
     blockId = 0
