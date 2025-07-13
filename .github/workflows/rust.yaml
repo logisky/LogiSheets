@@ -19,3 +19,15 @@ jobs:
       - name: generate bindings and ensure clean
         run: cargo run --package buildtools --bin generate --all-features
       - uses: numtide/clean-git-action@v1
+
+      - name: Test using Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "22"
+
+      - run: yarn install && cargo install wasm-pack
+      - run: yarn workspace logisheets-web build
+      - run: yarn workspace logisheets-craft-forge build
+      - run: yarn run run-scripts && yarn run wasm
+      - run: yarn build
+      - run: yarn test
