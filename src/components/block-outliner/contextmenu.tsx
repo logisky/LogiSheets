@@ -64,16 +64,16 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
         },
         {
             label: 'Export the descriptor',
-            onClick: () => {
+            onClick: async () => {
+                await CRAFT_MANAGER.exportCraftDescriptor([sheetId, blockId])
                 setIsOpen(false)
-                // todo
             },
         },
         {
             label: 'Export the data',
-            onClick: () => {
+            onClick: async () => {
+                await CRAFT_MANAGER.exportDataArea([sheetId, blockId])
                 setIsOpen(false)
-                // todo
             },
         },
         {

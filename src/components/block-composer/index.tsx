@@ -246,7 +246,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 <Collapse in={showDataPortSettings}>
                     <Box mt={2} display="flex" flexDirection="column" gap={2}>
                         <TextField
-                            label="Upload URL"
+                            label="URL"
                             size="small"
                             value={dataPort.baseUrl}
                             onChange={(e) =>
@@ -255,11 +255,11 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                                     baseUrl: e.target.value,
                                 }))
                             }
-                            placeholder="e.g. https://api.example.com/upload"
+                            placeholder="e.g. https://api.example.com"
                             fullWidth
                         />
                         <TextField
-                            label="Download URL"
+                            label="identifier"
                             size="small"
                             value={dataPort.identifier}
                             onChange={(e) =>
@@ -268,7 +268,6 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                                     identifier: e.target.value,
                                 }))
                             }
-                            placeholder="e.g. https://api.example.com/download"
                             fullWidth
                         />
                     </Box>

@@ -14,9 +14,12 @@ import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
 import {CellValue, isErrorMessage} from 'logisheets-web'
+import {ClientImpl} from './client'
 
 export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
 export const FIELD_AND_VALIDATION_TAG = 80
+
+const DEFAULT_BASE_URL = 'http://localhost:3000'
 
 export interface CraftManifest {
     /**
@@ -227,6 +230,29 @@ export class CraftManager {
         }
     }
 
+    async uploadCraftDescriptor(blockId: BlockId): Promise<void> {
+        const descriptor = await this.exportCraftDescriptor(blockId)
+        if (!descriptor) return
+        const baseUrl = descriptor.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        let id = descriptor.dataPort?.identifier
+        if (id === undefined) {
+            id = await this._client.getId(baseUrl)
+        }
+        return await this._client.uploadDescriptor(baseUrl, id, descriptor)
+    }
+
+    async uploadCraftData(blockId: BlockId): Promise<void> {
+        const data = await this.exportDataArea(blockId)
+        if (!data) return
+        const descriptor = this.getCraftDescriptor(blockId)
+        const baseUrl = descriptor?.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        let id = descriptor?.dataPort?.identifier
+        if (id === undefined) {
+            id = await this._client.getId(baseUrl)
+        }
+        return await this._client.uploadCraftData(baseUrl, id, data)
+    }
+
     async exportDataArea(blockId: BlockId): Promise<CraftData | undefined> {
         const descriptor = this.getCraftDescriptor(blockId)
         if (!descriptor) return undefined
@@ -334,6 +360,7 @@ export class CraftManager {
 
     private _currentBlockId: BlockId | undefined
     private _dirty = false
+    private _client = new ClientImpl()
 }
 
 function blockIdToString(blockId: BlockId) {
