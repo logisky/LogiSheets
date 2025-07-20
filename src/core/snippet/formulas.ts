@@ -19,7 +19,7 @@ export function isFormula(value: string) {
     if (formula.startsWith('=')) return true
     // array formula
     if (formula.startsWith('{') && formula.endsWith('}')) {
-        const f = formula.substr(1)
+        const f = formula.substring(1)
         return f.trim().startsWith('=')
     }
     return false
