@@ -5,7 +5,7 @@ use logisheets_controller::edit_action::{
     CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock,
     DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, HorizontalAlignment,
     InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate,
-    MergeCells, MoveBlock, PayloadsAction, SetColWidth, SetRowHeight, SheetRename,
+    MergeCells, MoveBlock, PayloadsAction, ResizeBlock, SetColWidth, SetRowHeight, SheetRename,
     SplitMergedCells, StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
@@ -761,6 +761,19 @@ pub fn create_block(
     };
     let mut manager = MANAGER.get_mut();
     manager.add_payload(id, EditPayload::CreateBlock(b));
+}
+
+#[wasm_bindgen]
+pub fn resize_block(id: usize, sheet_idx: usize, block_id: usize, row_cnt: usize, col_cnt: usize) {
+    init();
+    let m = ResizeBlock {
+        sheet_idx,
+        id: block_id,
+        new_row_cnt: row_cnt,
+        new_col_cnt: col_cnt,
+    };
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, EditPayload::ResizeBlock(m));
 }
 
 #[wasm_bindgen]

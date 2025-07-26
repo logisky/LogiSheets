@@ -1,4 +1,4 @@
-use logisheets_controller::edit_action::{CreateBlock, MoveBlock, RemoveBlock};
+use logisheets_controller::edit_action::{CreateBlock, MoveBlock, RemoveBlock, ResizeBlock};
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
@@ -145,6 +145,18 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
             let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
             // dummy sheet_idx
             Ok(Operator::RemoveBlock(RemoveBlock { sheet_idx: 1, id }))
+        }
+        Rule::block_resize => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let row_cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let col_cnt = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            Ok(Operator::ResizeBlock(ResizeBlock {
+                sheet_idx: 1, // dummy sheet_idx
+                id,
+                new_row_cnt: row_cnt,
+                new_col_cnt: col_cnt,
+            }))
         }
         Rule::block_insert_row => {
             let mut iter = s.into_inner();

@@ -28,6 +28,7 @@ import {
     read_file,
     redo,
     release,
+    resize_block,
     row_delete,
     row_insert,
     set_cell_alignment,
@@ -299,6 +300,14 @@ export class Workbook {
                 p.masterCol,
                 p.rowCnt,
                 p.colCnt
+            )
+        if (p.type === 'resizeBlock')
+            return resize_block(
+                this._id,
+                p.sheetIdx,
+                p.id,
+                p.newRowCnt,
+                p.newColCnt
             )
 
         if (p.type === 'moveBlock')

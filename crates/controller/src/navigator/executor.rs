@@ -74,6 +74,28 @@ impl NavExecutor {
                 sheet_nav.cache = Default::default();
                 Ok((self, true))
             }
+            EditPayload::ResizeBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id);
+                if !sheet_nav.data.has_block_id(&p.id) {
+                    return Err(BasicError::BlockIdDoesNotExist(p.id).into());
+                }
+                let block_place = sheet_nav
+                    .data
+                    .blocks
+                    .get_mut(&p.id)
+                    .ok_or(BasicError::BlockIdNotFound(sheet_id, p.id))?
+                    .clone();
+                println!("block_place: {block_place:?}");
+                let new_block_place = block_place.resize(p.new_row_cnt, p.new_col_cnt);
+                println!("new_block_place: {new_block_place:?}");
+                sheet_nav.data.blocks.insert(p.id, new_block_place);
+                sheet_nav.cache = Default::default();
+
+                Ok((self, true))
+            }
             EditPayload::CreateSheet(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.idx)

@@ -283,5 +283,17 @@ fn convert_diff<C: VersionExecCtx>(
                 sheet_id,
             )))
         }
+        EditPayload::ResizeBlock(resize_block) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(resize_block.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: resize_block.id,
+                },
+                sheet_id,
+            )))
+        }
     }
 }

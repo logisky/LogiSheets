@@ -106,6 +106,8 @@ pub enum EditPayload {
     RemoveBlock(RemoveBlock),
     #[cfg_attr(feature = "gents", ts(tag_value = "createBlock"))]
     CreateBlock(CreateBlock),
+    #[cfg_attr(feature = "gents", ts(tag_value = "resizeBlock"))]
+    ResizeBlock(ResizeBlock),
 
     // DiyCell
     #[cfg_attr(feature = "gents", ts(tag_value = "createDiyCell"))]
@@ -352,6 +354,19 @@ pub struct CreateBlock {
     pub master_col: usize,
     pub row_cnt: usize,
     pub col_cnt: usize,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "gents",
+    gents_derives::gents_header(file_name = "resize_block.ts")
+)]
+#[cfg_attr(feature = "gents", ts(builder))]
+pub struct ResizeBlock {
+    pub sheet_idx: usize,
+    pub id: usize,
+    pub new_row_cnt: usize,
+    pub new_col_cnt: usize,
 }
 
 #[derive(Debug, Clone)]
