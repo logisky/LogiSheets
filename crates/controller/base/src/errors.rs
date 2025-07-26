@@ -29,6 +29,8 @@ pub enum BasicError {
     BlockColIdNotFound(SheetId, BlockId, usize),
     #[error("Failed to create block because the block id is already existed")]
     BlockIdHasAlreadyExisted(BlockId),
+    #[error("Failed to create block because the block id is not existed")]
+    BlockIdDoesNotExist(BlockId),
     #[error("Failed to fetch sheet by the sheet id: {0}")]
     SheetIdNotFound(SheetId),
     #[error(

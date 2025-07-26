@@ -25,6 +25,7 @@ mod range_manager;
 mod settings;
 mod style_manager;
 mod theme_manager;
+mod utils;
 mod version_manager;
 mod workbook;
 

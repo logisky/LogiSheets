@@ -25,6 +25,38 @@ impl BlockPlace {
         }
     }
 
+    pub fn resize(self, row_cnt: usize, col_cnt: usize) -> Self {
+        let mut result = self;
+
+        let rows = if result.rows.len() >= row_cnt {
+            result.rows.take(row_cnt)
+        } else {
+            let mut new_rows = result.rows;
+            while new_rows.len() < row_cnt {
+                new_rows.push_back(result.next_avail_row);
+                result.next_avail_row += 1;
+            }
+            new_rows
+        };
+        let cols = if result.cols.len() >= col_cnt {
+            result.cols.take(col_cnt)
+        } else {
+            let mut new_cols = result.cols;
+            while new_cols.len() < col_cnt {
+                new_cols.push_back(result.next_avail_col);
+                result.next_avail_col += 1;
+            }
+            new_cols
+        };
+        BlockPlace {
+            master: result.master,
+            rows,
+            cols,
+            next_avail_row: result.next_avail_row,
+            next_avail_col: result.next_avail_col,
+        }
+    }
+
     pub fn add_new_rows(self, idx: usize, cnt: u32) -> Self {
         let new_next_avail_row = self.next_avail_row + cnt;
         let new_row_ids = (self.next_avail_row..new_next_avail_row)

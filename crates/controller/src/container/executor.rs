@@ -6,6 +6,7 @@ use logisheets_base::{
 use crate::{
     cell::Cell,
     edit_action::{CellStyleUpdate, EditPayload},
+    utils::resize_rect_diff,
     Error,
 };
 
@@ -48,6 +49,28 @@ impl ContainerExecutor {
                     .map(|bid| CellId::BlockCell(bid))
                     .collect();
                 let container = self.container.delete_cells(sheet_id, &cells);
+                Ok((Self { container }, true))
+            }
+            EditPayload::ResizeBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, p.id)?;
+                let master_cell = ctx.get_master_cell(sheet_id, p.id)?;
+                let (master_row, master_col) =
+                    ctx.fetch_normal_cell_index(&sheet_id, &master_cell)?;
+                let removing_cells = resize_rect_diff(
+                    master_row,
+                    master_col,
+                    row_cnt,
+                    col_cnt,
+                    p.new_row_cnt,
+                    p.new_col_cnt,
+                )
+                .into_iter()
+                .flat_map(|(r, c)| ctx.fetch_cell_id(&sheet_id, r, c))
+                .collect::<Vec<_>>();
+                let container = self.container.delete_cells(sheet_id, &removing_cells);
                 Ok((Self { container }, true))
             }
             EditPayload::CreateBlock(p) => {

@@ -1,5 +1,5 @@
 use logisheets_controller::{
-    edit_action::{CreateBlock, MoveBlock, RemoveBlock},
+    edit_action::{CreateBlock, MoveBlock, RemoveBlock, ResizeBlock},
     BlockId,
 };
 
@@ -25,6 +25,7 @@ pub enum Operator {
     CreateBlock(CreateBlock), // ignore the sheet_idx
     MoveBlock(MoveBlock),
     RemoveBlock(RemoveBlock),
+    ResizeBlock(ResizeBlock),
     BlockInsertRow(BlockShiftData),
     BlockInsertCol(BlockShiftData),
     BlockDeleteRow(BlockShiftData),

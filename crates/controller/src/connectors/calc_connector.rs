@@ -183,7 +183,7 @@ impl<'a> Connector for CalcConnector<'a> {
                         },
                         Range::Ephemeral(_) => panic!("ephemeral cell is not allowed in reference"),
                     },
-                    None => panic!("can not find the range id"),
+                    None => CalcVertex::from_error(ast::Error::Ref),
                 }
             }
             ast::CellReference::UnMut(cube) => {

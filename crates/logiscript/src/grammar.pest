@@ -35,6 +35,7 @@ delete_row = {"DELETEROW" ~ ws+ ~ row ~ ws+ ~ number}
 delete_col = {"DELETECOL" ~ ws+ ~ col ~ ws+ ~ number}
 
 block_create = {"BLOCKCREATE" ~ ws+ ~ block_id ~ ws+ ~ range}
+block_resize = {"BLOCKRESIZE" ~ ws+ ~ block_id ~ ws+ ~ number ~ ws+ ~ number}
 block_remove = {"BLOCKREMOVE" ~ ws+ ~ block_id}
 block_move = {"BLOCKMOVE" ~ ws+ ~ block_id ~ ws+ ~ position}
 block_insert_row = {"BLOCKINSERTROW" ~ ws+ ~ block_id ~ ws+ ~ idx ~ ws+ ~ number}
@@ -61,4 +62,5 @@ statement = _{
     | block_insert_row
     | block_delete_col
     | block_delete_row
+    | block_resize
 }

@@ -1,7 +1,7 @@
 use logisheets_controller::edit_action::{
     CellInput, CreateBlock, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows,
     DeleteRowsInBlock, EditAction, EditPayload, InsertCols, InsertColsInBlock, InsertRows,
-    InsertRowsInBlock, MoveBlock, PayloadsAction, RemoveBlock,
+    InsertRowsInBlock, MoveBlock, PayloadsAction, RemoveBlock, ResizeBlock,
 };
 use logisheets_controller::{Value, Workbook};
 
@@ -67,6 +67,7 @@ fn execute(statements: Vec<Statement>) -> Option<ExecError> {
             Operator::CreateBlock(p) => exec_create_block(&mut ctx, p, line),
             Operator::MoveBlock(p) => exec_move_block(&mut ctx, p, line),
             Operator::RemoveBlock(p) => exec_remove_block(&mut ctx, p, line),
+            Operator::ResizeBlock(p) => exec_resize_block(&mut ctx, p, line),
             Operator::BlockInsertRow(data) => exec_block(&mut ctx, true, true, data, line),
             Operator::BlockInsertCol(data) => exec_block(&mut ctx, false, true, data, line),
             Operator::BlockDeleteRow(data) => exec_block(&mut ctx, true, false, data, line),
@@ -231,6 +232,29 @@ fn exec_move_block(
     ctx.workbook
         .handle_action(EditAction::Payloads(PayloadsAction {
             payloads: vec![EditPayload::MoveBlock(payload)],
+            undoable: false,
+            init: false,
+        }));
+    None
+}
+
+fn exec_resize_block(
+    ctx: &mut ExecContext,
+    mut payload: ResizeBlock,
+    line: usize,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    payload.sheet_idx = sheet_idx;
+    ctx.workbook
+        .handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::ResizeBlock(payload)],
             undoable: false,
             init: false,
         }));

@@ -5,6 +5,7 @@ mod insert_block_line;
 mod insert_line;
 mod occupy_addr_range;
 mod remove_block;
+mod resize_block;
 mod utils;
 use std::collections::HashSet;
 
@@ -15,6 +16,7 @@ use insert_block_line::insert_block_line;
 use insert_line::insert_line;
 use logisheets_base::{errors::BasicError, BlockRange, NormalRange, Range, RangeId, SheetId};
 use remove_block::remove_block;
+use resize_block::resize_block;
 
 use crate::{
     edit_action::EditPayload, range_manager::executors::occupy_addr_range::occupy_addr_range, Error,
@@ -71,6 +73,13 @@ impl RangeExecutor {
                     let res = occupy_addr_range(self, sheet_id, start, end, ctx);
                     Ok(res)
                 }
+            }
+            EditPayload::ResizeBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let res = resize_block(self, sheet_id, p.id, p.new_row_cnt, p.new_col_cnt, ctx);
+                Ok(res)
             }
             EditPayload::RemoveBlock(p) => {
                 let sheet_id = ctx
@@ -309,7 +318,6 @@ impl RangeExecutor {
                 RangeUpdateType::None => {}
                 RangeUpdateType::Removed => {
                     to_remove.insert(range_id.clone());
-                    dirty_ranges.insert((*sheet_id, *range_id));
                 }
             });
         to_update.into_iter().for_each(|new_range| {
@@ -325,6 +333,12 @@ impl RangeExecutor {
                 manager.normal_range_to_id.remove(data);
                 manager.id_to_normal_range.remove(&range_id);
                 removed_ranges.insert((*sheet_id, range_id));
+            } else {
+                if let Some(data) = manager.id_to_block_range.get(&range_id) {
+                    manager.block_range_to_id.remove(data);
+                    manager.id_to_block_range.remove(&range_id);
+                    removed_ranges.insert((*sheet_id, range_id));
+                }
             }
         });
         RangeExecutor {
