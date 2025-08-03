@@ -25,9 +25,11 @@ impl BlockPlace {
         }
     }
 
-    pub fn resize(self, row_cnt: usize, col_cnt: usize) -> Self {
+    pub fn resize(self, row_cnt: Option<usize>, col_cnt: Option<usize>) -> Self {
         let mut result = self;
 
+        let row_cnt = row_cnt.unwrap_or(result.rows.len());
+        let col_cnt = col_cnt.unwrap_or(result.cols.len());
         let rows = if result.rows.len() >= row_cnt {
             result.rows.take(row_cnt)
         } else {

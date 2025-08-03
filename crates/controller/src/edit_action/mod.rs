@@ -365,8 +365,8 @@ pub struct CreateBlock {
 pub struct ResizeBlock {
     pub sheet_idx: usize,
     pub id: usize,
-    pub new_row_cnt: usize,
-    pub new_col_cnt: usize,
+    pub new_row_cnt: Option<usize>,
+    pub new_col_cnt: Option<usize>,
 }
 
 #[derive(Debug, Clone)]

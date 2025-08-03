@@ -154,8 +154,8 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
             Ok(Operator::ResizeBlock(ResizeBlock {
                 sheet_idx: 1, // dummy sheet_idx
                 id,
-                new_row_cnt: row_cnt,
-                new_col_cnt: col_cnt,
+                new_row_cnt: Some(row_cnt),
+                new_col_cnt: Some(col_cnt),
             }))
         }
         Rule::block_insert_row => {

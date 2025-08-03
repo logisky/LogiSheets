@@ -7,8 +7,8 @@ pub fn resize_block<C>(
     exec_ctx: RangeExecutor,
     sheet_id: SheetId,
     block: BlockId,
-    new_row_cnt: usize,
-    new_col_cnt: usize,
+    new_row_cnt: Option<usize>,
+    new_col_cnt: Option<usize>,
     ctx: &C,
 ) -> RangeExecutor
 where
@@ -16,6 +16,9 @@ where
 {
     let master_cell = ctx.get_master_cell(sheet_id, block).unwrap();
     let (old_row_cnt, old_col_cnt) = ctx.get_block_size(sheet_id, block).unwrap();
+
+    let new_row_cnt = new_row_cnt.unwrap_or(old_row_cnt);
+    let new_col_cnt = new_col_cnt.unwrap_or(old_col_cnt);
 
     let col_min = if new_col_cnt < old_col_cnt {
         new_col_cnt
