@@ -59,13 +59,15 @@ impl ContainerExecutor {
                 let master_cell = ctx.get_master_cell(sheet_id, p.id)?;
                 let (master_row, master_col) =
                     ctx.fetch_normal_cell_index(&sheet_id, &master_cell)?;
+                let new_row_cnt = p.new_row_cnt.unwrap_or(row_cnt);
+                let new_col_cnt = p.new_col_cnt.unwrap_or(col_cnt);
                 let removing_cells = resize_rect_diff(
                     master_row,
                     master_col,
                     row_cnt,
                     col_cnt,
-                    p.new_row_cnt,
-                    p.new_col_cnt,
+                    new_row_cnt,
+                    new_col_cnt,
                 )
                 .into_iter()
                 .flat_map(|(r, c)| ctx.fetch_cell_id(&sheet_id, r, c))

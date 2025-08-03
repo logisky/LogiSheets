@@ -88,9 +88,7 @@ impl NavExecutor {
                     .get_mut(&p.id)
                     .ok_or(BasicError::BlockIdNotFound(sheet_id, p.id))?
                     .clone();
-                println!("block_place: {block_place:?}");
                 let new_block_place = block_place.resize(p.new_row_cnt, p.new_col_cnt);
-                println!("new_block_place: {new_block_place:?}");
                 sheet_nav.data.blocks.insert(p.id, new_block_place);
                 sheet_nav.cache = Default::default();
 

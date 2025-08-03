@@ -6,6 +6,7 @@ import {
     CraftId,
     CraftState,
     CraftValue,
+    DataArea,
     DiyButtonConfig,
     DiyCellButtonType,
     MethodName,
@@ -13,8 +14,17 @@ import {
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
-import {CellValue, isErrorMessage} from 'logisheets-web'
+import {
+    CellClearBuilder,
+    CellInputBuilder,
+    CellValue,
+    isErrorMessage,
+    Payload,
+    ResizeBlockBuilder,
+    Value,
+} from 'logisheets-web'
 import {ClientImpl} from './client'
+import {ErrorOutline} from '@mui/icons-material'
 
 export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
 export const FIELD_AND_VALIDATION_TAG = 80
@@ -253,19 +263,128 @@ export class CraftManager {
         return await this._client.uploadCraftData(baseUrl, id, data)
     }
 
-    async exportDataArea(blockId: BlockId): Promise<CraftData | undefined> {
+    async downloadDescriptor(identifier: string): Promise<readonly Payload[]> {
+        const baseUrl = DEFAULT_BASE_URL
+        const descriptor = await this._client.downloadDescriptor(
+            baseUrl,
+            identifier
+        )
+        return []
+    }
+
+    async downloadCraftData(blockId: BlockId): Promise<readonly Payload[]> {
         const descriptor = this.getCraftDescriptor(blockId)
-        if (!descriptor) return undefined
+        if (!descriptor) throw Error('can not find descriptor')
+        const baseUrl = descriptor?.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        let id = descriptor?.dataPort?.identifier
+        if (id === undefined) {
+            id = await this._client.getId(baseUrl)
+        }
+        const dataArea = descriptor.dataArea
+        const info = await this._workbookClient.getBlockInfo({
+            sheetId: blockId[0],
+            blockId: blockId[1],
+        })
+        if (isErrorMessage(info)) throw Error('can not find block info')
+        const masterRow = info.rowStart
+        const masterCol = info.colStart
+        const descriptorRowSize = dataArea.startRow
+        const data = await this._client.downloadCraftData(baseUrl, id)
+        const sheetIdx = await this._workbookClient.getSheetIdx({
+            sheetId: blockId[0],
+        })
+        if (isErrorMessage(sheetIdx)) throw Error('can not find sheet idx')
+        const newRowCnt = data.values.length + descriptorRowSize
+        const payloads: Payload[] = [
+            new ResizeBlockBuilder()
+                .sheetIdx(sheetIdx)
+                .id(blockId[1])
+                .newRowCnt(newRowCnt)
+                .build() as Payload,
+        ]
+
+        const fieldMap = await this.getFieldMap(blockId, dataArea)
+        const keyArray: string[] = []
+        const fieldKeyValue = new Map<[string, string], Value>()
+        data.values.forEach((v) => {
+            const key = v.key
+            const field = v.field
+            const value = v.value
+            fieldKeyValue.set([key, field], value)
+            if (keyArray.includes(key)) return
+            keyArray.push(key)
+        })
+
+        for (
+            let r = dataArea.startRow;
+            r < (dataArea.endRow ?? newRowCnt - 1);
+            r++
+        ) {
+            const idx = r - dataArea.startRow
+            if (idx >= keyArray.length) break
+            const key = keyArray[idx]
+            const row = masterRow + r
+            for (
+                let c = dataArea.startCol;
+                c < (dataArea.endCol ?? info.colCnt - 1);
+                c++
+            ) {
+                const col = masterCol + c
+                const f = fieldMap.get(c)
+                if (f === undefined) continue
+                const v = fieldKeyValue.get([key, f])
+                if (v === undefined) continue
+                const clearPayload = new CellClearBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(row)
+                    .col(col)
+                    .build() as Payload
+                const payload = new CellInputBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(row)
+                    .col(col)
+                    .content(v.toString())
+                    .build() as Payload
+                payloads.push(clearPayload, payload)
+            }
+        }
+
+        if (dataArea.startCol > 0) {
+            const col = masterCol + dataArea.startCol - 1
+            keyArray.forEach((key, idx) => {
+                const row = masterRow + dataArea.startRow + idx
+                const clearPayload = new CellClearBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(row)
+                    .col(col)
+                    .build() as Payload
+                const payload = new CellInputBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(row)
+                    .col(col)
+                    .content(key)
+                    .build() as Payload
+                payloads.push(clearPayload, payload)
+            })
+        }
+
+        return payloads
+    }
+
+    async getFieldMap(
+        blockId: BlockId,
+        dataArea: DataArea
+    ): Promise<Map<number, string>> {
+        const descriptor = this.getCraftDescriptor(blockId)
+        if (!descriptor) throw Error('')
         const blockInfo = await this._workbookClient.getBlockInfo({
             sheetId: blockId[0],
             blockId: blockId[1],
         })
-        if (isErrorMessage(blockInfo)) return undefined
+        if (isErrorMessage(blockInfo)) throw Error('')
         const masterRow = blockInfo.rowStart
         const masterCol = blockInfo.colStart
-        const dataArea = descriptor.dataArea
         const endCol = dataArea.endCol ?? blockInfo.colCnt - 1
-
         const fieldMAp = new Map<number, string>()
         for (let i = dataArea.startCol; i <= endCol; i++) {
             const appendix = await this._workbookClient.lookupAppendixUpward({
@@ -288,6 +407,23 @@ export class CraftManager {
             const vStr = CellValue.from(v).valueStr
             fieldMAp.set(appendix.colIdx, vStr)
         }
+        return fieldMAp
+    }
+
+    async exportDataArea(blockId: BlockId): Promise<CraftData | undefined> {
+        const descriptor = this.getCraftDescriptor(blockId)
+        if (!descriptor) return undefined
+        const blockInfo = await this._workbookClient.getBlockInfo({
+            sheetId: blockId[0],
+            blockId: blockId[1],
+        })
+        if (isErrorMessage(blockInfo)) return undefined
+        const masterRow = blockInfo.rowStart
+        const masterCol = blockInfo.colStart
+        const dataArea = descriptor.dataArea
+        const endCol = dataArea.endCol ?? blockInfo.colCnt - 1
+
+        const fieldMap = await this.getFieldMap(blockId, dataArea)
 
         const keyMap = new Map()
         const endRow = dataArea.endRow ?? blockInfo.rowCnt - 1
@@ -330,7 +466,7 @@ export class CraftManager {
             for (let c = 0; c < colCount; c++) {
                 const i = c + r * rowCount
                 const cell = cells[i]
-                const field = fieldMAp.get(c + masterCol)
+                const field = fieldMap.get(c + masterCol)
                 if (field === undefined) continue
                 let key = keyMap.get(r + masterRow)
                 if (key === undefined) {

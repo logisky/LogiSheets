@@ -764,7 +764,13 @@ pub fn create_block(
 }
 
 #[wasm_bindgen]
-pub fn resize_block(id: usize, sheet_idx: usize, block_id: usize, row_cnt: usize, col_cnt: usize) {
+pub fn resize_block(
+    id: usize,
+    sheet_idx: usize,
+    block_id: usize,
+    row_cnt: Option<usize>,
+    col_cnt: Option<usize>,
+) {
     init();
     let m = ResizeBlock {
         sheet_idx,
