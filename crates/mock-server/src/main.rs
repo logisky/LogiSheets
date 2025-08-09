@@ -4,7 +4,7 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use logisheets_server_types::{CraftData, CraftDescriptor};
+use logisheets_server_types::{CraftData, CraftDescriptor, Resp};
 use std::{
     collections::HashMap,
     net::SocketAddr,
@@ -29,32 +29,55 @@ async fn main() {
     async fn get_descriptor(
         State(state): State<AppState>,
         Path(id): Path<String>,
-    ) -> Result<Json<CraftDescriptor>, StatusCode> {
+    ) -> Json<Resp<CraftDescriptor>> {
         let map = state.descriptors.lock().unwrap();
         match map.get(&id) {
-            Some(descriptor) => Ok(Json(descriptor.clone())),
-            None => Err(StatusCode::NOT_FOUND),
+            Some(descriptor) => Json(Resp {
+                data: Some(descriptor.clone()),
+                status_code: 200,
+                message: None,
+            }),
+            None => Json(Resp {
+                data: None,
+                status_code: 404,
+                message: Some("Not Found".to_string()),
+            }),
         }
     }
+
     async fn post_descriptor(
         State(state): State<AppState>,
         Path(id): Path<String>,
         Json(payload): Json<CraftDescriptor>,
-    ) -> StatusCode {
+    ) -> Json<Resp<u8>> {
         let mut map = state.descriptors.lock().unwrap();
         map.insert(id, payload);
-        StatusCode::OK
+        Json(Resp {
+            data: None,
+            status_code: 200,
+            message: None,
+        })
     }
+
     async fn get_data(
         State(state): State<AppState>,
         Path(id): Path<String>,
-    ) -> Result<Json<CraftData>, StatusCode> {
+    ) -> Json<Resp<CraftData>> {
         let map = state.data.lock().unwrap();
         match map.get(&id) {
-            Some(data) => Ok(Json(data.clone())),
-            None => Err(StatusCode::NOT_FOUND),
+            Some(data) => Json(Resp {
+                data: Some(data.clone()),
+                status_code: 200,
+                message: None,
+            }),
+            None => Json(Resp {
+                data: None,
+                status_code: 404,
+                message: Some("Not Found".to_string()),
+            }),
         }
     }
+
     async fn post_data(
         State(state): State<AppState>,
         Path(id): Path<String>,
@@ -65,10 +88,14 @@ async fn main() {
         StatusCode::OK
     }
 
-    async fn get_id(State(state): State<AppState>) -> Result<Json<usize>, StatusCode> {
+    async fn get_id(State(state): State<AppState>) -> Json<Resp<String>> {
         let mut id = state.current_id.lock().unwrap();
         *id += 1;
-        Ok(Json(*id))
+        Json(Resp {
+            data: Some(id.to_string()),
+            status_code: 200,
+            message: None,
+        })
     }
 
     let app = Router::new()

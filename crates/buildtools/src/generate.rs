@@ -6,7 +6,7 @@ use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditActi
 use logisheets_controller::{
     AppendixWithCell, CellInfo, ErrorMessage, ReproducibleCell, SheetDimension,
 };
-use logisheets_server_types::{CraftData, CraftDescriptor};
+use logisheets_server_types::{CraftData, CraftDescriptor, Resp};
 
 fn main() {
     let path = "packages/web/src/bindings";
@@ -35,5 +35,6 @@ fn main() {
     let mut file_group = FileGroup::new();
     file_group.add::<CraftDescriptor>();
     file_group.add::<CraftData>();
+    file_group.add::<Resp<u8>>();
     file_group.gen_files(path, true);
 }

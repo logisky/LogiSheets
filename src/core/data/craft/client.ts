@@ -1,52 +1,66 @@
-import {CraftData, CraftDescriptor} from 'logisheets-craft-forge'
+import {CraftData, CraftDescriptor, Resp} from 'logisheets-craft-forge'
+import {Result, ResultAsync, err, ok} from '../../error'
 
 export interface Client {
-    getId(baseUrl: string): Promise<string>
-    downloadDescriptor(baseUrl: string, id: string): Promise<CraftDescriptor>
+    getId(baseUrl: string): ResultAsync<string>
+    downloadDescriptor(
+        baseUrl: string,
+        id: string
+    ): ResultAsync<CraftDescriptor>
 
     uploadDescriptor(
         baseUrl: string,
         id: string,
         descriptor: CraftDescriptor
-    ): Promise<void>
+    ): ResultAsync<void>
 
-    downloadCraftData(baseUrl: string, id: string): Promise<CraftData>
+    downloadCraftData(baseUrl: string, id: string): ResultAsync<CraftData>
 
-    uploadCraftData(baseUrl: string, id: string, data: CraftData): Promise<void>
+    uploadCraftData(
+        baseUrl: string,
+        id: string,
+        data: CraftData
+    ): ResultAsync<void>
 }
 
 export class ClientImpl implements Client {
-    async getId(baseUrl: string): Promise<string> {
+    async getId(baseUrl: string): ResultAsync<string> {
         const url = `${baseUrl.replace(/\/$/, '')}/id/`
         const res = await fetch(url)
         if (!res.ok) {
-            throw new Error(`Failed to fetch id: ${res.statusText}`)
+            return err({
+                message: 'http error',
+                code: res.status,
+            })
         }
-        return res.text()
+        const result = (await res.json()) as Resp<string>
+        return toResult(result)
     }
 
     async downloadDescriptor(
         baseUrl: string,
         id: string
-    ): Promise<CraftDescriptor> {
+    ): ResultAsync<CraftDescriptor> {
         const url = `${baseUrl.replace(
             /\/$/,
             ''
         )}/descriptor/${encodeURIComponent(id)}`
         const res = await fetch(url)
         if (!res.ok) {
-            if (res.status === 404)
-                throw new Error(`Descriptor not found: ${id}`)
-            throw new Error(`Failed to fetch descriptor: ${res.statusText}`)
+            return err({
+                message: 'http error',
+                code: res.status,
+            })
         }
-        return res.json()
+        const result = (await res.json()) as Resp<CraftDescriptor>
+        return toResult(result)
     }
 
     async uploadDescriptor(
         baseUrl: string,
         id: string,
         descriptor: CraftDescriptor
-    ): Promise<void> {
+    ): ResultAsync<void> {
         const url = `${baseUrl.replace(
             /\/$/,
             ''
@@ -57,28 +71,37 @@ export class ClientImpl implements Client {
             body: JSON.stringify(descriptor),
         })
         if (!res.ok) {
-            throw new Error(`Failed to upload descriptor: ${res.statusText}`)
+            return err({
+                message: 'http error',
+                code: res.status,
+            })
         }
+        return ok(undefined)
     }
 
-    async downloadCraftData(baseUrl: string, id: string): Promise<CraftData> {
+    async downloadCraftData(
+        baseUrl: string,
+        id: string
+    ): ResultAsync<CraftData> {
         const url = `${baseUrl.replace(/\/$/, '')}/data/${encodeURIComponent(
             id
         )}`
         const res = await fetch(url)
         if (!res.ok) {
-            if (res.status === 404)
-                throw new Error(`CraftData not found: ${id}`)
-            throw new Error(`Failed to fetch craft data: ${res.statusText}`)
+            return err({
+                message: 'http error',
+                code: res.status,
+            })
         }
-        return res.json()
+        const result = (await res.json()) as Resp<CraftData>
+        return toResult(result)
     }
 
     async uploadCraftData(
         baseUrl: string,
         id: string,
         data: CraftData
-    ): Promise<void> {
+    ): ResultAsync<void> {
         const url = `${baseUrl.replace(/\/$/, '')}/data/${encodeURIComponent(
             id
         )}`
@@ -88,7 +111,21 @@ export class ClientImpl implements Client {
             body: JSON.stringify(data),
         })
         if (!res.ok) {
-            throw new Error(`Failed to upload craft data: ${res.statusText}`)
+            return err({
+                message: 'http error',
+                code: res.status,
+            })
         }
+        return ok(undefined)
     }
+}
+
+function toResult<T>(resp: Resp<T>): Result<T> {
+    if (resp.data === undefined) {
+        return err({
+            message: resp.message ?? 'unknown error',
+            code: resp.statusCode,
+        })
+    }
+    return ok(resp.data)
 }
