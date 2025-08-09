@@ -27,6 +27,7 @@
     "logisheets-web": "workspace:*",
     "mobx": "^6.12.3",
     "mobx-react": "^9.1.1",
+    "neverthrow": "^8.2.0",
     "numfmt": "2.1.0",
     "react": "^19",
     "react-beautiful-dnd": "^13.1.0",

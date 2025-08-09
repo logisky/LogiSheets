@@ -11,6 +11,15 @@ import {
     DiyCellButtonType,
     MethodName,
 } from 'logisheets-craft-forge'
+import {
+    blockInfoNotFound,
+    descriptorNotFound,
+    err,
+    ok,
+    ResultAsync,
+    workbookError,
+    Result,
+} from '../../error'
 import {WorkbookClient} from '../workbook'
 import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
@@ -18,13 +27,13 @@ import {
     CellClearBuilder,
     CellInputBuilder,
     CellValue,
+    CreateAppendixBuilder,
     isErrorMessage,
     Payload,
     ResizeBlockBuilder,
     Value,
 } from 'logisheets-web'
 import {ClientImpl} from './client'
-import {ErrorOutline} from '@mui/icons-material'
 
 export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
 export const FIELD_AND_VALIDATION_TAG = 80
@@ -185,9 +194,12 @@ export class CraftManager {
         this._craftDescriptors.set(key, descriptor)
     }
 
-    getCraftDescriptor(blockId: BlockId): CraftDescriptor | undefined {
+    getCraftDescriptor(blockId: BlockId): Result<CraftDescriptor> {
         const key = blockIdToString(blockId)
-        return this._craftDescriptors.get(key)
+        const descriptor = this._craftDescriptors.get(key)
+        if (descriptor === undefined)
+            return err(descriptorNotFound(blockId[0], blockId[1]))
+        return ok(descriptor)
     }
 
     /**
@@ -195,19 +207,22 @@ export class CraftManager {
      */
     async exportCraftDescriptor(
         blockId: BlockId
-    ): Promise<CraftDescriptor | undefined> {
-        const descriptor = this.getCraftDescriptor(blockId)
-        if (!descriptor) return undefined
+    ): ResultAsync<CraftDescriptor> {
+        const descriptorResult = this.getCraftDescriptor(blockId)
+        if (!descriptorResult)
+            return err(descriptorNotFound(blockId[0], blockId[1]))
+
+        const descriptor = descriptorResult._unsafeUnwrap()
 
         const sheetIdx = await this._workbookClient.getSheetIdx({
             sheetId: blockId[0],
         })
-        if (isErrorMessage(sheetIdx)) return undefined
+        if (isErrorMessage(sheetIdx)) return err(workbookError(sheetIdx.msg))
         const blockInfo = await this._workbookClient.getBlockInfo({
             sheetId: blockId[0],
             blockId: blockId[1],
         })
-        if (isErrorMessage(blockInfo)) return undefined
+        if (isErrorMessage(blockInfo)) return err(workbookError(blockInfo.msg))
 
         const coordinates = []
         const endRow = descriptor.dataArea.endRow ?? blockInfo.rowCnt
@@ -229,71 +244,158 @@ export class CraftManager {
             sheetIdx: sheetIdx,
             coordinates: coordinates,
         })
-        if (isErrorMessage(cells)) return undefined
-        return {
-            ...descriptor,
-            workbookPart: {
-                cells: cells,
-                rowCount: blockInfo.rowCnt,
-                colCount: blockInfo.colCnt,
-            },
+        if (isErrorMessage(cells)) return err(workbookError(cells.msg))
+        const workbookPart = {
+            cells: cells,
+            rowCount: blockInfo.rowCnt,
+            colCount: blockInfo.colCnt,
         }
+        return ok({
+            ...descriptor,
+            workbookPart: workbookPart,
+        })
     }
 
-    async uploadCraftDescriptor(blockId: BlockId): Promise<void> {
-        const descriptor = await this.exportCraftDescriptor(blockId)
-        if (!descriptor) return
+    async uploadCraftDescriptor(blockId: BlockId): ResultAsync<void> {
+        const descriptorResult = await this.exportCraftDescriptor(blockId)
+        if (descriptorResult.isErr())
+            return err(descriptorResult._unsafeUnwrapErr())
+
+        const descriptor = descriptorResult._unsafeUnwrap()
         const baseUrl = descriptor.dataPort?.baseUrl ?? DEFAULT_BASE_URL
         let id = descriptor.dataPort?.identifier
         if (id === undefined) {
-            id = await this._client.getId(baseUrl)
+            const idResult = await this._client.getId(baseUrl)
+            if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
+            id = idResult._unsafeUnwrap()
         }
-        return await this._client.uploadDescriptor(baseUrl, id, descriptor)
+        const result = await this._client.uploadDescriptor(
+            baseUrl,
+            id,
+            descriptor
+        )
+        if (result.isErr()) return err(result._unsafeUnwrapErr())
+        return ok(result._unsafeUnwrap())
     }
 
-    async uploadCraftData(blockId: BlockId): Promise<void> {
+    async uploadCraftData(blockId: BlockId): ResultAsync<void> {
         const data = await this.exportDataArea(blockId)
-        if (!data) return
-        const descriptor = this.getCraftDescriptor(blockId)
-        const baseUrl = descriptor?.dataPort?.baseUrl ?? DEFAULT_BASE_URL
-        let id = descriptor?.dataPort?.identifier
+        if (data.isErr()) return err(data._unsafeUnwrapErr())
+        const descriptorResult = this.getCraftDescriptor(blockId)
+        if (descriptorResult.isErr())
+            return err(descriptorResult._unsafeUnwrapErr())
+        const descriptor = descriptorResult._unsafeUnwrap()
+        const baseUrl = descriptor.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        let id = descriptor.dataPort?.identifier
         if (id === undefined) {
-            id = await this._client.getId(baseUrl)
+            const idResult = await this._client.getId(baseUrl)
+            if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
+            id = idResult._unsafeUnwrap()
         }
-        return await this._client.uploadCraftData(baseUrl, id, data)
+        const result = await this._client.uploadCraftData(
+            baseUrl,
+            id,
+            data._unsafeUnwrap()
+        )
+        if (result.isErr()) return err(result._unsafeUnwrapErr())
+        return ok(undefined)
     }
 
-    async downloadDescriptor(identifier: string): Promise<readonly Payload[]> {
+    async downloadDescriptor(
+        sheetIdx: number,
+        masterRow: number,
+        masterCol: number,
+        identifier: string
+    ): ResultAsync<readonly Payload[]> {
         const baseUrl = DEFAULT_BASE_URL
-        const descriptor = await this._client.downloadDescriptor(
+        const descriptorResult = await this._client.downloadDescriptor(
             baseUrl,
             identifier
         )
-        return []
+        if (descriptorResult.isErr())
+            return err(descriptorResult._unsafeUnwrapErr())
+
+        const descriptor = descriptorResult._unsafeUnwrap()
+        const idResult = await this._workbookClient.getAvailableBlockId({
+            sheetIdx: sheetIdx,
+        })
+        if (isErrorMessage(idResult)) return err(workbookError(idResult.msg))
+        const id = idResult
+        this._craftDescriptors.set(identifier, descriptor)
+        const payloads: Payload[] = []
+        descriptor.workbookPart?.cells.forEach((cell) => {
+            const row = cell.coordinate.row
+            const col = cell.coordinate.col
+            const clearPayload = new CellClearBuilder()
+                .sheetIdx(sheetIdx)
+                .row(masterRow + row)
+                .col(masterCol + col)
+                .build() as Payload
+            payloads.push(clearPayload)
+            cell.appendix.forEach((appendix) => {
+                const clearPayload = new CreateAppendixBuilder()
+                    .sheetIdx(sheetIdx)
+                    .blockId(id)
+                    .rowIdx(row)
+                    .colIdx(col)
+                    .tag(appendix.tag)
+                    .craftId(appendix.craftId)
+                    .content(appendix.content)
+                    .build() as Payload
+                payloads.push(clearPayload)
+            })
+            if (cell.formula) {
+                const formulaPayload = new CellInputBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(masterRow + row)
+                    .col(masterCol + col)
+                    .content(cell.formula)
+                    .build() as Payload
+                payloads.push(formulaPayload)
+            } else if (cell.value) {
+                // const valuePayload = new CellInputBuilder()
+                //     .sheetIdx(sheetIdx)
+                //     .row(masterRow + row)
+                //     .col(masterCol + col)
+                //     .content(cell.value.str)
+                //     .build() as Payload
+                // payloads.push(valuePayload)
+            }
+        })
+        return ok(payloads)
     }
 
-    async downloadCraftData(blockId: BlockId): Promise<readonly Payload[]> {
-        const descriptor = this.getCraftDescriptor(blockId)
-        if (!descriptor) throw Error('can not find descriptor')
+    async downloadCraftData(blockId: BlockId): ResultAsync<readonly Payload[]> {
+        const descriptorResult = this.getCraftDescriptor(blockId)
+        if (descriptorResult.isErr())
+            return err(descriptorResult._unsafeUnwrapErr())
+        const descriptor = descriptorResult._unsafeUnwrap()
         const baseUrl = descriptor?.dataPort?.baseUrl ?? DEFAULT_BASE_URL
         let id = descriptor?.dataPort?.identifier
         if (id === undefined) {
-            id = await this._client.getId(baseUrl)
+            const idResult = await this._client.getId(baseUrl)
+            if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
+            id = idResult._unsafeUnwrap()
         }
         const dataArea = descriptor.dataArea
-        const info = await this._workbookClient.getBlockInfo({
+        const infoResult = await this._workbookClient.getBlockInfo({
             sheetId: blockId[0],
             blockId: blockId[1],
         })
-        if (isErrorMessage(info)) throw Error('can not find block info')
+        if (isErrorMessage(infoResult))
+            return err(workbookError(infoResult.msg))
+        const info = infoResult
         const masterRow = info.rowStart
         const masterCol = info.colStart
         const descriptorRowSize = dataArea.startRow
-        const data = await this._client.downloadCraftData(baseUrl, id)
+        const dataResult = await this._client.downloadCraftData(baseUrl, id)
+        if (dataResult.isErr()) return err(dataResult._unsafeUnwrapErr())
+        const data = dataResult._unsafeUnwrap()
+
         const sheetIdx = await this._workbookClient.getSheetIdx({
             sheetId: blockId[0],
         })
-        if (isErrorMessage(sheetIdx)) throw Error('can not find sheet idx')
+        if (isErrorMessage(sheetIdx)) return err(workbookError(sheetIdx.msg))
         const newRowCnt = data.values.length + descriptorRowSize
         const payloads: Payload[] = [
             new ResizeBlockBuilder()
@@ -368,7 +470,7 @@ export class CraftManager {
             })
         }
 
-        return payloads
+        return ok(payloads)
     }
 
     async getFieldMap(
@@ -410,14 +512,18 @@ export class CraftManager {
         return fieldMAp
     }
 
-    async exportDataArea(blockId: BlockId): Promise<CraftData | undefined> {
-        const descriptor = this.getCraftDescriptor(blockId)
-        if (!descriptor) return undefined
+    async exportDataArea(blockId: BlockId): ResultAsync<CraftData> {
+        const descriptorResult = this.getCraftDescriptor(blockId)
+        if (descriptorResult.isErr())
+            return err(descriptorResult._unsafeUnwrapErr())
+        const descriptor = descriptorResult._unsafeUnwrap()
         const blockInfo = await this._workbookClient.getBlockInfo({
             sheetId: blockId[0],
             blockId: blockId[1],
         })
-        if (isErrorMessage(blockInfo)) return undefined
+        if (isErrorMessage(blockInfo))
+            return err(blockInfoNotFound(blockId[0], blockId[1]))
+
         const masterRow = blockInfo.rowStart
         const masterCol = blockInfo.colStart
         const dataArea = descriptor.dataArea
@@ -458,7 +564,7 @@ export class CraftManager {
             endRow: er,
             endCol: ec,
         })
-        if (isErrorMessage(cells)) return undefined
+        if (isErrorMessage(cells)) return err(workbookError(cells.msg))
         const rowCount = er - sr + 1
         const colCount = ec - sc + 1
         const result: CraftValue[] = []
@@ -480,9 +586,7 @@ export class CraftManager {
                 result.push(v)
             }
         }
-        return {
-            values: result,
-        }
+        return ok({values: result})
     }
 
     private _crafts: CraftManifest[] = []

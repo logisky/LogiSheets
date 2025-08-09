@@ -80,3 +80,12 @@ pub struct CraftValue {
     pub field: String,
     pub value: Value,
 }
+
+#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "resp.ts"))]
+#[derive(Debug, Clone)]
+pub struct Resp<T> {
+    pub data: Option<T>,
+    // Http status code
+    pub status_code: u16,
+    pub message: Option<String>,
+}
