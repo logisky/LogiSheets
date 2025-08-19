@@ -51,7 +51,7 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
     let mut navigator_replication = controller.status.navigator.clone();
     let mut saver = Saver {
         part_count: 0,
-        external_count: 0,
+        _external_count: 0,
         func_manager,
         range_manager,
         cube_manager,
@@ -61,7 +61,7 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
         text_id_manager,
         name_id_manager,
         navigator: &mut navigator_replication,
-        formula_manager,
+        _formula_manager: formula_manager,
         sheet_pos_manager,
     };
 
@@ -88,7 +88,7 @@ pub trait SaverTrait: IndexFetcherTrait + NameFetcherTrait {
 
 pub struct Saver<'a> {
     pub part_count: u32,
-    pub external_count: u32,
+    pub _external_count: u32,
 
     pub func_manager: &'a FuncIdManager,
     pub sheet_id_manager: &'a SheetIdManager,
@@ -96,7 +96,7 @@ pub struct Saver<'a> {
     pub text_id_manager: &'a TextIdManager,
     pub name_id_manager: &'a NameIdManager,
     pub navigator: &'a mut Navigator,
-    pub formula_manager: &'a FormulaManager,
+    pub _formula_manager: &'a FormulaManager,
     pub range_manager: &'a RangeManager,
     pub cube_manager: &'a CubeManager,
     pub ext_ref_manager: &'a ExtRefManager,

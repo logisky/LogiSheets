@@ -89,16 +89,19 @@ export const StartComponent = ({selectedData}: StartProps) => {
         if (formatBrushOn) {
             const cellRange = getSelectedCellRange(selectedData)
             if (cellRange) {
-                const payload = new CellFormatBrushBuilder()
-                    .srcSheetIdx(formatBrushOn.sheetIdx)
-                    .srcRow(formatBrushOn.row)
-                    .srcCol(formatBrushOn.col)
-                    .dstRowStart(cellRange.startRow)
-                    .dstColStart(cellRange.startCol)
-                    .dstRowEnd(cellRange.endRow)
-                    .dstColEnd(cellRange.endCol)
-                    .dstSheetIdx(formatBrushOn.sheetIdx)
-                    .build() as Payload
+                const payload: Payload = {
+                    type: 'cellFormatBrush',
+                    value: new CellFormatBrushBuilder()
+                        .srcSheetIdx(formatBrushOn.sheetIdx)
+                        .srcRow(formatBrushOn.row)
+                        .srcCol(formatBrushOn.col)
+                        .dstRowStart(cellRange.startRow)
+                        .dstColStart(cellRange.startCol)
+                        .dstRowEnd(cellRange.endRow)
+                        .dstColEnd(cellRange.endCol)
+                        .dstSheetIdx(formatBrushOn.sheetIdx)
+                        .build(),
+                }
                 DATA_SERVICE.handleTransaction(new Transaction([payload], true))
                 setFormatBrushOn(null)
                 return
@@ -106,15 +109,18 @@ export const StartComponent = ({selectedData}: StartProps) => {
 
             const lineRange = getSelectedLines(selectedData)
             if (lineRange) {
-                const payload = new LineFormatBrushBuilder()
-                    .srcSheetIdx(formatBrushOn.sheetIdx)
-                    .srcRow(formatBrushOn.row)
-                    .srcCol(formatBrushOn.col)
-                    .from(lineRange.start)
-                    .to(lineRange.end)
-                    .dstSheetIdx(formatBrushOn.sheetIdx)
-                    .row(lineRange.type === 'row')
-                    .build() as Payload
+                const payload: Payload = {
+                    type: 'lineFormatBrush',
+                    value: new LineFormatBrushBuilder()
+                        .srcSheetIdx(formatBrushOn.sheetIdx)
+                        .srcRow(formatBrushOn.row)
+                        .srcCol(formatBrushOn.col)
+                        .from(lineRange.start)
+                        .to(lineRange.end)
+                        .dstSheetIdx(formatBrushOn.sheetIdx)
+                        .row(lineRange.type === 'row')
+                        .build(),
+                }
                 DATA_SERVICE.handleTransaction(new Transaction([payload], true))
                 setFormatBrushOn(null)
                 return
@@ -333,11 +339,14 @@ export const StartComponent = ({selectedData}: StartProps) => {
             return DATA_SERVICE.handleTransaction(
                 new Transaction(
                     [
-                        new SplitMergedCellsBuilder()
-                            .sheetIdx(sheetIdx)
-                            .row(cellRange.startRow)
-                            .col(cellRange.startCol)
-                            .build() as Payload,
+                        {
+                            type: 'splitMergedCells',
+                            value: new SplitMergedCellsBuilder()
+                                .sheetIdx(sheetIdx)
+                                .row(cellRange.startRow)
+                                .col(cellRange.startCol)
+                                .build(),
+                        },
                     ],
                     true
                 )
@@ -347,21 +356,25 @@ export const StartComponent = ({selectedData}: StartProps) => {
         }
 
         const payloads: Payload[] = mergedCells.map((v) => {
-            return new SplitMergedCellsBuilder()
-                .sheetIdx(sheetIdx)
-                .row(v.startRow)
-                .col(v.startCol)
-                .build() as Payload
+            return {
+                type: 'splitMergedCells',
+                value: new SplitMergedCellsBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(v.startRow)
+                    .col(v.startCol)
+                    .build(),
+            }
         })
-        payloads.push(
-            new MergeCellsBuilder()
+        payloads.push({
+            type: 'mergeCells',
+            value: new MergeCellsBuilder()
                 .sheetIdx(sheetIdx)
                 .startRow(cellRange.startRow)
                 .endRow(cellRange.endRow)
                 .startCol(cellRange.startCol)
                 .endCol(cellRange.endCol)
-                .build() as Payload
-        )
+                .build(),
+        })
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             (resp) => {
                 if (!resp) setMergedOn(true)

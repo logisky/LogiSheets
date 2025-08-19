@@ -88,34 +88,43 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             return
         }
 
-        const createBlock = new CreateBlockBuilder()
-            .id(blockId)
-            .sheetIdx(sheetIdx)
-            .masterRow(masterRow)
-            .rowCnt(range.endRow - range.startRow + 1)
-            .masterCol(masterCol)
-            .colCnt(range.endCol - range.startCol + 1)
-            .build() as Payload
+        const createBlock: Payload = {
+            type: 'createBlock',
+            value: new CreateBlockBuilder()
+                .id(blockId)
+                .sheetIdx(sheetIdx)
+                .masterRow(masterRow)
+                .rowCnt(range.endRow - range.startRow + 1)
+                .masterCol(masterCol)
+                .colCnt(range.endCol - range.startCol + 1)
+                .build(),
+        }
 
         payloads.push(createBlock)
 
         fields.forEach((field, idx) => {
-            const createField = new CellInputBuilder()
-                .sheetIdx(sheetIdx)
-                .row(masterRow)
-                .col(masterCol + idx)
-                .content(field.name)
-                .build() as Payload
+            const createField: Payload = {
+                type: 'cellInput',
+                value: new CellInputBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(masterRow)
+                    .col(masterCol + idx)
+                    .content(field.name)
+                    .build(),
+            }
             payloads.push(createField)
-            const createAppendix = new CreateAppendixBuilder()
-                .sheetIdx(sheetIdx)
-                .blockId(blockId)
-                .rowIdx(masterRow)
-                .colIdx(masterCol + idx)
-                .craftId('CRAFT_FIELD')
-                .tag(0)
-                .content(field.validation)
-                .build() as Payload
+            const createAppendix: Payload = {
+                type: 'createAppendix',
+                value: new CreateAppendixBuilder()
+                    .sheetIdx(sheetIdx)
+                    .blockId(blockId)
+                    .rowIdx(masterRow)
+                    .colIdx(masterCol + idx)
+                    .craftId('CRAFT_FIELD')
+                    .tag(0)
+                    .content(field.validation)
+                    .build(),
+            }
             payloads.push(createAppendix)
         })
         const result = await DATA_SERVICE.handleTransaction(

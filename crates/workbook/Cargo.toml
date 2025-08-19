@@ -12,8 +12,8 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 zip = { version = "0.6.0", default-features = false, features = ["deflate"] }
-gents = { workspace = true, optional = true }
-gents_derives = { workspace = true, optional = true }
+gents = { workspace = true }
+gents_derives = { workspace = true }
 xmlserde = { workspace = true }
 xmlserde_derives = { workspace = true }
 
@@ -21,6 +21,3 @@ logisheets_workbook_derives = { workspace = true }
 
 [dev-dependencies]
 xmldiff = { workspace = true }
-
-[features]
-gents = ["dep:gents", "dep:gents_derives"]

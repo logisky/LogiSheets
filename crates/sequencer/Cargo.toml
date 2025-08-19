@@ -16,8 +16,5 @@ tokio = { version = "1.33" }
 
 logisheets_controller = { workspace = true, features = ["sequencer"] }
 
-gents = { workspace = true, optional = true }
-gents_derives = { workspace = true, optional = true }
-
-[features]
-gents = ["dep:gents", "dep:gents_derives", "logisheets_controller/gents"]
+gents = { workspace = true }
+gents_derives = { workspace = true }

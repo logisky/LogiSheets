@@ -26,21 +26,18 @@ unicode-segmentation = "1.10.1"
 wildescape = { workspace = true }
 uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
 
-logisheets_base = { path = "./base", features = ["gents"], version = "0.7.0" }
+logisheets_base = { path = "./base", version = "0.7.0" }
 logisheets_lexer = { path = "./lexer", version = "0.7.0" }
 logisheets_parser = { path = "./parser", version = "0.7.0" }
-logisheets_workbook = { path = "../workbook", features = [
-    "gents",
-], version = "0.7.0" }
+logisheets_workbook = { path = "../workbook", version = "0.7.0" }
 logisheets_astchecker = { path = "./ast_checker", version = "0.7.0" }
 
-gents = { workspace = true, optional = true }
-gents_derives = { workspace = true, optional = true }
+gents = { workspace = true }
+gents_derives = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
 
 [features]
-gents = ["dep:gents", "dep:gents_derives"]
 sequencer = []
 default = []

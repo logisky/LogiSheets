@@ -118,8 +118,8 @@ export class Workbook {
         sheetIdx: number,
         masterRow: number,
         masterCol: number,
-        rowCount: number,
-        colCount: number
+        rowCnt: number,
+        colCnt: number
     ): Result<number> {
         const id = this._blockManager.getAvailableBlockId(sheetIdx)
         const effect = this.execTransaction(
@@ -127,29 +127,26 @@ export class Workbook {
                 [
                     {
                         type: 'createBlock',
-                        sheetIdx,
-                        id,
-                        masterRow,
-                        masterCol,
-                        rowCnt: rowCount,
-                        colCnt: colCount,
+                        value: {
+                            sheetIdx,
+                            id,
+                            masterRow,
+                            masterCol,
+                            rowCnt,
+                            colCnt,
+                        },
                     },
                 ],
                 false
             )
         )
-        if ('err' in effect.status) {
+        if (effect.status.type === 'err') {
             return {
                 msg: 'failed to create block',
-                ty: effect.status.err,
+                ty: effect.status.value,
             }
         }
-        const bind = this._blockManager.bindBlock(
-            sheetIdx,
-            id,
-            rowCount,
-            colCount
-        )
+        const bind = this._blockManager.bindBlock(sheetIdx, id, rowCnt, colCnt)
         if (!bind) {
             return {
                 msg: 'failed to bind block',
@@ -282,267 +279,326 @@ export class Workbook {
 
     private _addPayload(p: Payload) {
         if (p.type === 'cellInput')
-            return cell_input(this._id, p.sheetIdx, p.row, p.col, p.content)
+            return cell_input(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col,
+                p.value.content
+            )
         if (p.type === 'insertRows')
-            return row_insert(this._id, p.sheetIdx, p.start, p.count)
+            return row_insert(
+                this._id,
+                p.value.sheetIdx,
+                p.value.start,
+                p.value.count
+            )
         if (p.type === 'deleteRows')
-            return row_delete(this._id, p.sheetIdx, p.start, p.count)
+            return row_delete(
+                this._id,
+                p.value.sheetIdx,
+                p.value.start,
+                p.value.count
+            )
         if (p.type === 'insertCols')
-            return col_insert(this._id, p.sheetIdx, p.start, p.count)
+            return col_insert(
+                this._id,
+                p.value.sheetIdx,
+                p.value.start,
+                p.value.count
+            )
         if (p.type === 'deleteCols')
-            return col_delete(this._id, p.sheetIdx, p.start, p.count)
+            return col_delete(
+                this._id,
+                p.value.sheetIdx,
+                p.value.start,
+                p.value.count
+            )
         if (p.type === 'createBlock')
             return create_block(
                 this._id,
-                p.sheetIdx,
-                p.id,
-                p.masterRow,
-                p.masterCol,
-                p.rowCnt,
-                p.colCnt
+                p.value.sheetIdx,
+                p.value.id,
+                p.value.masterRow,
+                p.value.masterCol,
+                p.value.rowCnt,
+                p.value.colCnt
             )
         if (p.type === 'resizeBlock')
             return resize_block(
                 this._id,
-                p.sheetIdx,
-                p.id,
-                p.newRowCnt,
-                p.newColCnt
+                p.value.sheetIdx,
+                p.value.id,
+                p.value.newRowCnt,
+                p.value.newColCnt
             )
 
         if (p.type === 'moveBlock')
             return move_block(
                 this._id,
-                p.sheetIdx,
-                p.id,
-                p.newMasterRow,
-                p.newMasterCol
+                p.value.sheetIdx,
+                p.value.id,
+                p.value.newMasterRow,
+                p.value.newMasterCol
             )
         if (p.type === 'setCellBorder')
             return set_cell_border(
                 this._id,
-                p.sheetIdx,
-                p.row,
-                p.col,
-                p.leftColor,
-                p.rightColor,
-                p.topColor,
-                p.bottomColor,
-                p.leftBorderType,
-                p.rightBorderType,
-                p.topBorderType,
-                p.bottomBorderType,
-                p.outline,
-                p.diagonalUp,
-                p.diagonalDown
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col,
+                p.value.leftColor,
+                p.value.rightColor,
+                p.value.topColor,
+                p.value.bottomColor,
+                p.value.leftBorderType,
+                p.value.rightBorderType,
+                p.value.topBorderType,
+                p.value.bottomBorderType,
+                p.value.outline,
+                p.value.diagonalUp,
+                p.value.diagonalDown
             )
         if (p.type === 'setLineBorder')
             return set_line_border(
                 this._id,
-                p.sheetIdx,
-                p.row,
-                p.line,
-                p.leftColor,
-                p.rightColor,
-                p.topColor,
-                p.bottomColor,
-                p.leftBorderType,
-                p.rightBorderType,
-                p.topBorderType,
-                p.bottomBorderType,
-                p.outline,
-                p.diagonalUp,
-                p.diagonalDown
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.line,
+                p.value.leftColor,
+                p.value.rightColor,
+                p.value.topColor,
+                p.value.bottomColor,
+                p.value.leftBorderType,
+                p.value.rightBorderType,
+                p.value.topBorderType,
+                p.value.bottomBorderType,
+                p.value.outline,
+                p.value.diagonalUp,
+                p.value.diagonalDown
             )
         if (p.type === 'setCellFont')
             return set_font(
                 this._id,
-                p.sheetIdx,
-                p.row,
-                p.col,
-                p.bold,
-                p.italic,
-                p.name,
-                p.underline,
-                p.color,
-                p.size,
-                p.outline,
-                p.shadow,
-                p.strike,
-                p.condense
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col,
+                p.value.bold,
+                p.value.italic,
+                p.value.name,
+                p.value.underline,
+                p.value.color,
+                p.value.size,
+                p.value.outline,
+                p.value.shadow,
+                p.value.strike,
+                p.value.condense
             )
         if (p.type === 'setLineFont')
             return set_line_font(
                 this._id,
-                p.sheetIdx,
-                p.from,
-                p.to,
-                p.row,
-                p.bold,
-                p.italic,
-                p.name,
-                p.underline,
-                p.color,
-                p.size,
-                p.outline,
-                p.shadow,
-                p.strike,
-                p.condense
+                p.value.sheetIdx,
+                p.value.from,
+                p.value.to,
+                p.value.row,
+                p.value.bold,
+                p.value.italic,
+                p.value.name,
+                p.value.underline,
+                p.value.color,
+                p.value.size,
+                p.value.outline,
+                p.value.shadow,
+                p.value.strike,
+                p.value.condense
             )
         if (p.type === 'blockInput')
             return block_input(
                 this._id,
-                p.sheetIdx,
-                p.blockId,
-                p.row,
-                p.col,
-                p.input
+                p.value.sheetIdx,
+                p.value.blockId,
+                p.value.row,
+                p.value.col,
+                p.value.input
             )
 
         if (p.type === 'insertColsInBlock')
             return block_line_shift(
                 this._id,
-                p.sheetIdx,
-                p.blockId,
-                p.start,
-                p.cnt,
+                p.value.sheetIdx,
+                p.value.blockId,
+                p.value.start,
+                p.value.cnt,
                 false,
                 true
             )
         if (p.type === 'insertRowsInBlock')
             return block_line_shift(
                 this._id,
-                p.sheetIdx,
-                p.blockId,
-                p.start,
-                p.cnt,
+                p.value.sheetIdx,
+                p.value.blockId,
+                p.value.start,
+                p.value.cnt,
                 true,
                 true
             )
         if (p.type === 'deleteRowsInBlock')
             return block_line_shift(
                 this._id,
-                p.sheetIdx,
-                p.blockId,
-                p.start,
-                p.cnt,
+                p.value.sheetIdx,
+                p.value.blockId,
+                p.value.start,
+                p.value.cnt,
                 true,
                 false
             )
         if (p.type === 'deleteColsInBlock')
             return block_line_shift(
                 this._id,
-                p.sheetIdx,
-                p.blockId,
-                p.start,
-                p.cnt,
+                p.value.sheetIdx,
+                p.value.blockId,
+                p.value.start,
+                p.value.cnt,
                 true,
                 true
             )
         if (p.type === 'sheetRename') {
-            if (p.oldName) {
-                return sheet_rename_by_name(this._id, p.oldName, p.newName)
+            if (p.value.oldName) {
+                return sheet_rename_by_name(
+                    this._id,
+                    p.value.oldName,
+                    p.value.newName
+                )
             }
-            if (p.idx) {
-                return sheet_rename_by_idx(this._id, p.idx, p.newName)
+            if (p.value.idx) {
+                return sheet_rename_by_idx(
+                    this._id,
+                    p.value.idx,
+                    p.value.newName
+                )
             }
         }
-        if (p.type === 'deleteSheet') return delete_sheet(this._id, p.idx)
+        if (p.type === 'deleteSheet') return delete_sheet(this._id, p.value.idx)
         if (p.type === 'createSheet')
-            return create_sheet(this._id, p.idx, p.newName)
+            return create_sheet(this._id, p.value.idx, p.value.newName)
         if (p.type === 'cellClear')
-            return cell_clear(this._id, p.sheetIdx, p.row, p.col)
+            return cell_clear(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col
+            )
         if (p.type === 'setColWidth')
-            return set_col_width(this._id, p.sheetIdx, p.col, p.width)
+            return set_col_width(
+                this._id,
+                p.value.sheetIdx,
+                p.value.col,
+                p.value.width
+            )
         if (p.type === 'setRowHeight')
-            return set_row_height(this._id, p.sheetIdx, p.row, p.height)
+            return set_row_height(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.height
+            )
         if (p.type === 'setLineAlignment')
             return set_line_alignment(
                 this._id,
-                p.sheetIdx,
-                p.row,
-                p.from,
-                p.to,
-                p.alignment.horizontal,
-                p.alignment.vertical
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.from,
+                p.value.to,
+                p.value.alignment.horizontal,
+                p.value.alignment.vertical
             )
         if (p.type === 'setCellAlignment')
             return set_cell_alignment(
                 this._id,
-                p.sheetIdx,
-                p.row,
-                p.col,
-                p.alignment.horizontal,
-                p.alignment.vertical
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col,
+                p.value.alignment.horizontal,
+                p.value.alignment.vertical
             )
         if (p.type === 'setCellPatternFill')
             return set_cell_pattern_fill(
                 this._id,
-                p.sheetIdx,
-                p.row,
-                p.col,
-                p.fgColor,
-                p.bgColor,
-                p.pattern
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col,
+                p.value.fgColor,
+                p.value.bgColor,
+                p.value.pattern
             )
         if (p.type === 'setLinePatternFill')
             return set_line_pattern_fill(
                 this._id,
-                p.sheetIdx,
-                p.row,
-                p.from,
-                p.to,
-                p.fgColor,
-                p.bgColor,
-                p.pattern
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.from,
+                p.value.to,
+                p.value.fgColor,
+                p.value.bgColor,
+                p.value.pattern
             )
         if (p.type === 'mergeCells')
             return merge_cells(
                 this._id,
-                p.sheetIdx,
-                p.startRow,
-                p.startCol,
-                p.endRow,
-                p.endCol
+                p.value.sheetIdx,
+                p.value.startRow,
+                p.value.startCol,
+                p.value.endRow,
+                p.value.endCol
             )
         if (p.type === 'splitMergedCells')
-            return split_merged_cells(this._id, p.sheetIdx, p.row, p.col)
+            return split_merged_cells(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col
+            )
         if (p.type === 'cellFormatBrush')
             return set_cell_format_brush(
                 this._id,
-                p.srcSheetIdx,
-                p.srcRow,
-                p.srcCol,
-                p.dstSheetIdx,
-                p.dstRowStart,
-                p.dstColStart,
-                p.dstRowEnd,
-                p.dstColEnd
+                p.value.srcSheetIdx,
+                p.value.srcRow,
+                p.value.srcCol,
+                p.value.dstSheetIdx,
+                p.value.dstRowStart,
+                p.value.dstColStart,
+                p.value.dstRowEnd,
+                p.value.dstColEnd
             )
         if (p.type === 'lineFormatBrush')
             return set_line_format_brush(
                 this._id,
-                p.srcSheetIdx,
-                p.srcRow,
-                p.srcCol,
-                p.dstSheetIdx,
-                p.row,
-                p.from,
-                p.to
+                p.value.srcSheetIdx,
+                p.value.srcRow,
+                p.value.srcCol,
+                p.value.dstSheetIdx,
+                p.value.row,
+                p.value.from,
+                p.value.to
             )
         if (p.type === 'createDiyCell')
-            return create_diy_cell(this._id, p.sheetIdx, p.row, p.col)
+            return create_diy_cell(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col
+            )
         if (p.type === 'createAppendix')
             return create_appendix(
                 this._id,
-                p.sheetId,
-                p.sheetIdx,
-                p.blockId,
-                p.rowIdx,
-                p.colIdx,
-                p.craftId,
-                p.tag,
-                p.content
+                p.value.sheetId,
+                p.value.sheetIdx,
+                p.value.blockId,
+                p.value.rowIdx,
+                p.value.colIdx,
+                p.value.craftId,
+                p.value.tag,
+                p.value.content
             )
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)

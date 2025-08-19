@@ -721,18 +721,19 @@ dependencies = [
 
 [[package]]
 name = "gents"
-version = "0.10.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7814e85c342b2eefbd489831dc7a5b7413e2be025773e8f010e3d6b0f4f49ee"
+checksum = "9a9588a85d9f768250bacec22bb1e5515342d18bffd95796b64a166fbea482d9"
 dependencies = [
  "dprint-plugin-typescript",
+ "serde",
 ]
 
 [[package]]
 name = "gents_derives"
-version = "0.10.0"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cc8df746ba3954038899fcadc23f7985e9eeb2e0c4f9a072edae282547188fe"
+checksum = "c710ca5dc80d3c916b88601458c8c7e33b56fad79aa3cbc22f9d47717a4b2590"
 dependencies = [
  "paste",
  "proc-macro2",

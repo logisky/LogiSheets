@@ -1,3 +1,4 @@
+use gents_derives::TS;
 use im::HashMap;
 use logisheets_base::{BlockCellId, BlockId, SheetId};
 
@@ -5,22 +6,16 @@ use logisheets_base::{BlockCellId, BlockId, SheetId};
 ///
 /// To utilize the flexibility of cell coordinates, LogiSheets
 /// allows crafts to add custom metadata to cells
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "appendix.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "appendix.ts", rename_all = "camelCase")]
 pub struct Appendix {
     pub craft_id: String,
     pub tag: u8,
     pub content: String,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "appendix_with_cell.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "appendix_with_cell.ts", rename_all = "camelCase")]
 pub struct AppendixWithCell {
     pub appendix: Appendix,
     pub sheet_id: SheetId,

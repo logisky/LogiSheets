@@ -1,7 +1,6 @@
 import {StBorderStyle} from '../bindings'
 
 export interface SetLineBorder {
-    readonly type: 'setLineBorder'
     readonly sheetIdx: number
     readonly line: number
     readonly row: boolean
@@ -98,7 +97,6 @@ export class SetLineBorderBuilder {
         if (this._line === undefined) throw Error('line is undefined')
         if (this._row === undefined) throw Error('row is undefined')
         return {
-            type: 'setLineBorder',
             sheetIdx: this._sheetIdx,
             line: this._line,
             row: this._row,

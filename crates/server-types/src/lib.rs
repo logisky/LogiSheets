@@ -1,13 +1,11 @@
+use gents_derives::TS;
 use logisheets_controller::{ReproducibleCell, Value};
 
 /// Represents a comprehensive blueprint for a craft, capturing its structure, visual characteristics,
 /// and operational logic. This descriptor enables others to faithfully reconstruct or reproduce the
 /// original craft by providing all necessary details about its design and functionality.
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "craft_descriptor.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "craft_descriptor.ts", rename_all = "camelCase")]
 pub struct CraftDescriptor {
     pub data_area: DataArea,
     pub data_port: Option<DataPort>,
@@ -15,11 +13,8 @@ pub struct CraftDescriptor {
     pub workbook_part: Option<WorkbookPart>,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "data_area.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "data_area.ts", rename_all = "camelCase")]
 pub struct DataArea {
     pub direction: Direction,
     pub start_row: usize,
@@ -30,59 +25,44 @@ pub struct DataArea {
     pub end_col: Option<usize>,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "direction.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "direction.ts", rename_all = "camelCase")]
 pub enum Direction {
     Horizontal,
     Vertical,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "data_port.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "data_port.ts", rename_all = "camelCase")]
 pub struct DataPort {
     pub base_url: String,
     pub identifier: String,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "workbook_part.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "workbook_part.ts", rename_all = "camelCase")]
 pub struct WorkbookPart {
     pub cells: Vec<ReproducibleCell>,
     pub row_count: usize,
     pub col_count: usize,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "craft_data.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "craft_data.ts", rename_all = "camelCase")]
 pub struct CraftData {
     pub values: Vec<CraftValue>,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "craft_value.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "craft_value.ts", rename_all = "camelCase")]
 pub struct CraftValue {
     pub key: String,
     pub field: String,
     pub value: Value,
 }
 
-#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "resp.ts"))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "resp.ts", rename_all = "camelCase")]
 pub struct Resp<T> {
     pub data: Option<T>,
     // Http status code

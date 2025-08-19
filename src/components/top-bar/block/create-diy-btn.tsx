@@ -37,11 +37,14 @@ export const CreateDiyBtnComponent = ({selectedData}: CreateDiyBtnProps) => {
         if (isErrorMessage(info)) return
         const blockId = info.getBlockId()
         if (!blockId) return
-        const payload = new CreateDiyCellBuilder()
-            .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
-            .row(cellRange.startRow)
-            .col(cellRange.startCol)
-            .build() as Payload
+        const payload: Payload = {
+            type: 'createDiyCell',
+            value: new CreateDiyCellBuilder()
+                .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
+                .row(cellRange.startRow)
+                .col(cellRange.startCol)
+                .build(),
+        }
         await DATA_SERVICE.handleTransaction(new Transaction([payload], true))
         const sheetId = await DATA_SERVICE.getSheetId(
             DATA_SERVICE.getCurrentSheetIdx()

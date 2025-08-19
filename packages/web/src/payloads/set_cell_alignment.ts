@@ -1,7 +1,6 @@
 import {Alignment} from '../bindings'
 
 export interface SetCellAlignment {
-    readonly type: 'setCellAlignment'
     readonly sheetIdx: number
     readonly row: number
     readonly col: number
@@ -37,7 +36,6 @@ export class SetCellAlignmentBuilder {
         if (this._alignment === undefined)
             throw Error('alignment is undefined!')
         return {
-            type: 'setCellAlignment',
             sheetIdx: this._sheetIdx,
             row: this._row,
             col: this._col,

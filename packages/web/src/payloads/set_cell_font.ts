@@ -1,7 +1,6 @@
 import {StUnderlineValues as UnderlineType} from '../bindings'
 
 export interface SetCellFont {
-    readonly type: 'setCellFont'
     readonly sheetIdx: number
     readonly row: number
     readonly col: number
@@ -88,7 +87,6 @@ export class SetCellFontBuilder {
         if (this._row === undefined) throw Error('row is undefined!')
         if (this._col === undefined) throw Error('col is undefined!')
         return {
-            type: 'setCellFont',
             sheetIdx: this._sheetIdx,
             row: this._row,
             col: this._col,

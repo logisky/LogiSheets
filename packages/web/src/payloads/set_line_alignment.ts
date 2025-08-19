@@ -1,7 +1,6 @@
 import {Alignment} from '../bindings'
 
 export interface SetLineAlignment {
-    readonly type: 'setLineAlignment'
     readonly sheetIdx: number
     readonly row: boolean
     readonly from: number
@@ -45,7 +44,6 @@ export class SetLineAlignmentBuilder {
         if (this._alignment === undefined)
             throw Error('alignment is undefined!')
         return {
-            type: 'setLineAlignment',
             sheetIdx: this._sheetIdx,
             from: this._from,
             to: this._to,

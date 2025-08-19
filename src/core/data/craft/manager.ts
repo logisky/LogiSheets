@@ -326,31 +326,40 @@ export class CraftManager {
         descriptor.workbookPart?.cells.forEach((cell) => {
             const row = cell.coordinate.row
             const col = cell.coordinate.col
-            const clearPayload = new CellClearBuilder()
-                .sheetIdx(sheetIdx)
-                .row(masterRow + row)
-                .col(masterCol + col)
-                .build() as Payload
-            payloads.push(clearPayload)
-            cell.appendix.forEach((appendix) => {
-                const clearPayload = new CreateAppendixBuilder()
-                    .sheetIdx(sheetIdx)
-                    .blockId(id)
-                    .rowIdx(row)
-                    .colIdx(col)
-                    .tag(appendix.tag)
-                    .craftId(appendix.craftId)
-                    .content(appendix.content)
-                    .build() as Payload
-                payloads.push(clearPayload)
-            })
-            if (cell.formula) {
-                const formulaPayload = new CellInputBuilder()
+            const clearPayload: Payload = {
+                type: 'cellClear',
+                value: new CellClearBuilder()
                     .sheetIdx(sheetIdx)
                     .row(masterRow + row)
                     .col(masterCol + col)
-                    .content(cell.formula)
-                    .build() as Payload
+                    .build(),
+            }
+            payloads.push(clearPayload)
+            cell.appendix.forEach((appendix) => {
+                const clearPayload: Payload = {
+                    type: 'createAppendix',
+                    value: new CreateAppendixBuilder()
+                        .sheetIdx(sheetIdx)
+                        .blockId(id)
+                        .rowIdx(row)
+                        .colIdx(col)
+                        .tag(appendix.tag)
+                        .craftId(appendix.craftId)
+                        .content(appendix.content)
+                        .build(),
+                }
+                payloads.push(clearPayload)
+            })
+            if (cell.formula) {
+                const formulaPayload: Payload = {
+                    type: 'cellInput',
+                    value: new CellInputBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(masterRow + row)
+                        .col(masterCol + col)
+                        .content(cell.formula)
+                        .build(),
+                }
                 payloads.push(formulaPayload)
             } else if (cell.value) {
                 // const valuePayload = new CellInputBuilder()
@@ -398,11 +407,14 @@ export class CraftManager {
         if (isErrorMessage(sheetIdx)) return err(workbookError(sheetIdx.msg))
         const newRowCnt = data.values.length + descriptorRowSize
         const payloads: Payload[] = [
-            new ResizeBlockBuilder()
-                .sheetIdx(sheetIdx)
-                .id(blockId[1])
-                .newRowCnt(newRowCnt)
-                .build() as Payload,
+            {
+                type: 'resizeBlock',
+                value: new ResizeBlockBuilder()
+                    .sheetIdx(sheetIdx)
+                    .id(blockId[1])
+                    .newRowCnt(newRowCnt)
+                    .build(),
+            },
         ]
 
         const fieldMap = await this.getFieldMap(blockId, dataArea)
@@ -436,17 +448,23 @@ export class CraftManager {
                 if (f === undefined) continue
                 const v = fieldKeyValue.get([key, f])
                 if (v === undefined) continue
-                const clearPayload = new CellClearBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(row)
-                    .col(col)
-                    .build() as Payload
-                const payload = new CellInputBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(row)
-                    .col(col)
-                    .content(v.toString())
-                    .build() as Payload
+                const clearPayload: Payload = {
+                    type: 'cellClear',
+                    value: new CellClearBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(row)
+                        .col(col)
+                        .build(),
+                }
+                const payload: Payload = {
+                    type: 'cellInput',
+                    value: new CellInputBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(row)
+                        .col(col)
+                        .content(v.toString())
+                        .build(),
+                }
                 payloads.push(clearPayload, payload)
             }
         }
@@ -455,17 +473,23 @@ export class CraftManager {
             const col = masterCol + dataArea.startCol - 1
             keyArray.forEach((key, idx) => {
                 const row = masterRow + dataArea.startRow + idx
-                const clearPayload = new CellClearBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(row)
-                    .col(col)
-                    .build() as Payload
-                const payload = new CellInputBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(row)
-                    .col(col)
-                    .content(key)
-                    .build() as Payload
+                const clearPayload: Payload = {
+                    type: 'cellClear',
+                    value: new CellClearBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(row)
+                        .col(col)
+                        .build(),
+                }
+                const payload: Payload = {
+                    type: 'cellInput',
+                    value: new CellInputBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(row)
+                        .col(col)
+                        .content(key)
+                        .build(),
+                }
                 payloads.push(clearPayload, payload)
             })
         }
