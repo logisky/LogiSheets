@@ -1,11 +1,10 @@
+use gents_derives::TS;
 use logisheets_base::errors::BasicError;
 use logisheets_parser::errors::ParseError;
 use logisheets_workbook::SerdeErr;
 use thiserror::Error;
 
 use crate::{file_saver::SaveError, style_manager::errors::StyleError};
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -27,10 +26,8 @@ pub enum Error {
 
 // A cleaner way for users to know about the error and a more convenient
 // way to use in WASM.
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "error_message.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "error_message.ts", rename_all = "camelCase")]
 pub struct ErrorMessage {
     pub msg: String,
     pub ty: usize,

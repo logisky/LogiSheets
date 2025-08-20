@@ -8,14 +8,12 @@ pub use types::id::*;
 pub use types::matrix_value;
 pub mod errors;
 
+use gents_derives::TS;
 use logisheets_workbook::prelude::*;
 use std::hash::Hash;
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "cell_id.ts")
-)]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]
+#[ts(file_name = "cell_id.ts", tag = "type")]
 pub enum CellId {
     NormalCell(NormalCellId),
     BlockCell(BlockCellId),
@@ -36,11 +34,8 @@ impl CellId {
     }
 }
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "normal_cell_id.ts")
-)]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]
+#[ts(file_name = "normal_cell_id.ts")]
 pub struct NormalCellId {
     pub row: RowId,
     pub col: ColId,
@@ -149,11 +144,8 @@ pub struct ExtRef {
     pub cross: CubeCross,
 }
 
-#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "block_cell_id.ts")
-)]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]
+#[ts(file_name = "block_cell_id.ts")]
 pub struct BlockCellId {
     pub block_id: BlockId,
     // block inner row id

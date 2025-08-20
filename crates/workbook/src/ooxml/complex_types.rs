@@ -1,5 +1,6 @@
 use super::defaults::*;
 use super::simple_types::*;
+use gents_derives::TS;
 use logisheets_workbook_derives::MapObj;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
@@ -71,11 +72,8 @@ pub struct CtRPrElt {
     pub scheme: Option<CtFontScheme>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Default, Debug, Hash, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "font_name.ts")
-)]
+#[derive(XmlSerialize, XmlDeserialize, Default, Debug, Hash, PartialEq, Eq, Clone, TS)]
+#[ts(file_name = "font_name.ts")]
 pub struct CtFontName {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: String,
@@ -340,11 +338,8 @@ impl crate::XmlDeserialize for CtFill {
     }
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, PartialEq, Eq, Clone, Hash, Default)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "cell_alignment.ts")
-)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, PartialEq, Eq, Clone, Hash, Default, TS)]
+#[ts(file_name = "cell_alignment.ts")]
 pub struct CtCellAlignment {
     #[xmlserde(name = b"horizontal", ty = "attr")]
     pub horizontal: Option<StHorizontalAlignment>,
@@ -366,11 +361,8 @@ pub struct CtCellAlignment {
     pub reading_order: Option<u32>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "cell_protection.ts")
-)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone, TS)]
+#[ts(file_name = "cell_protection.ts")]
 pub struct CtCellProtection {
     #[xmlserde(name = b"locked", ty = "attr")]
     pub locked: Option<bool>,
@@ -378,11 +370,8 @@ pub struct CtCellProtection {
     pub hidden: Option<bool>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "font_scheme.ts")
-)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, TS)]
+#[ts(file_name = "font_scheme.ts")]
 pub struct CtFontScheme {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: StFontScheme,
@@ -430,51 +419,36 @@ pub struct CtFont {
     pub scheme: Option<CtFontScheme>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "vertical_align_font_property.ts")
-)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, TS)]
+#[ts(file_name = "vertical_align_font_property.ts")]
 pub struct CtVerticalAlignFontProperty {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: StVerticalAlignRun,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, MapObj, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "font_size.ts")
-)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, MapObj, Clone, TS)]
+#[ts(file_name = "font_size.ts")]
 pub struct CtFontSize {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: f64,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "int_property.ts")
-)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, TS)]
+#[ts(file_name = "int_property.ts")]
 pub struct CtIntProperty {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: i32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "underline_property.ts")
-)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, TS)]
+#[ts(file_name = "underline_property.ts")]
 pub struct CtUnderlineProperty {
     #[xmlserde(name = b"val", ty = "attr", default = "st_underline_values_single")]
     pub val: StUnderlineValues,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "font_family.ts")
-)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, PartialEq, Eq, Clone, TS)]
+#[ts(file_name = "font_family.ts")]
 pub struct CtFontFamily {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: StFontFamily,

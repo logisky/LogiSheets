@@ -44,12 +44,15 @@ export const EditBarComponent: FC<EditBarProps> = ({
 
     const formulaTextChange = (newText: string) => {
         const cell = getFirstCell(selectedData)
-        const payload = new CellInputBuilder()
-            .sheetIdx(dataSvc.getCurrentSheetIdx())
-            .row(cell.r)
-            .col(cell.c)
-            .content(newText)
-            .build() as Payload
+        const payload: Payload = {
+            type: 'cellInput',
+            value: new CellInputBuilder()
+                .sheetIdx(dataSvc.getCurrentSheetIdx())
+                .row(cell.r)
+                .col(cell.c)
+                .content(newText)
+                .build(),
+        }
         dataSvc.handleTransaction(new Transaction([payload], true))
     }
 

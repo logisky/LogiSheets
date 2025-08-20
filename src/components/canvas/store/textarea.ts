@@ -34,12 +34,15 @@ export class Textarea {
         const newText = this.currText.trim()
         const checked = await checkFormula(newText)
         if (!checked || !this.context?.bindingData) return false
-        const payload = new CellInputBuilder()
-            .row(this.context.bindingData.coordinate.startRow)
-            .col(this.context.bindingData.coordinate.startCol)
-            .sheetIdx(this.store.dataSvc.getCurrentSheetIdx())
-            .content(newText)
-            .build() as Payload
+        const payload: Payload = {
+            type: 'cellInput',
+            value: new CellInputBuilder()
+                .row(this.context.bindingData.coordinate.startRow)
+                .col(this.context.bindingData.coordinate.startCol)
+                .sheetIdx(this.store.dataSvc.getCurrentSheetIdx())
+                .content(newText)
+                .build(),
+        }
         this.store.dataSvc.handleTransaction(new Transaction([payload], true))
         this._setEditing(false)
         return true

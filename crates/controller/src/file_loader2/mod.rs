@@ -49,7 +49,7 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
         mut range_manager,
         mut cube_manager,
         mut ext_ref_manager,
-        mut exclusive_manager,
+        exclusive_manager,
         dirty_cells_next_round: dirty_cells,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {

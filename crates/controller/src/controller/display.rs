@@ -1,24 +1,18 @@
 use crate::CellInfo;
 
 use super::style::Style;
+use gents_derives::TS;
 use logisheets_base::{BlockId, SheetId};
-use serde::Serialize;
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "cell_position.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "cell_position.ts", rename_all = "camelCase")]
 pub struct CellPosition {
     pub x: f64,
     pub y: f64,
 }
 
-#[derive(Debug, Clone, Default)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "display_window.ts")
-)]
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "display_window.ts", rename_all = "camelCase")]
 pub struct DisplayWindow {
     pub cells: Vec<CellInfo>,
     pub rows: Vec<RowInfo>,
@@ -28,21 +22,18 @@ pub struct DisplayWindow {
     pub blocks: Vec<BlockDisplayInfo>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "block_display_info.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "block_display_info.ts", rename_all = "camelCase")]
 pub struct BlockDisplayInfo {
     pub info: BlockInfo,
     pub start_position: CellPosition,
     pub end_position: CellPosition,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "display_window_with_start_point.ts")
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "display_window_with_start_point.ts",
+    rename_all = "camelCase"
 )]
 pub struct DisplayWindowWithStartPoint {
     pub window: DisplayWindow,
@@ -50,20 +41,14 @@ pub struct DisplayWindowWithStartPoint {
     pub start_y: f64,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_names.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_names.ts", rename_all = "camelCase")]
 pub struct SheetNames {
     pub names: Vec<String>,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_info.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_info.ts", rename_all = "camelCase")]
 pub struct SheetInfo {
     pub name: String,
     pub id: SheetId,
@@ -71,21 +56,15 @@ pub struct SheetInfo {
     pub tab_color: String,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_blocks.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_blocks.ts", rename_all = "camelCase")]
 pub struct SheetBlocks {
     pub sheet_idx: usize,
     pub blocks: Vec<BlockInfo>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "block_info.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "block_info.ts", rename_all = "camelCase")]
 pub struct BlockInfo {
     pub sheet_idx: usize,
     pub sheet_id: SheetId,
@@ -96,13 +75,8 @@ pub struct BlockInfo {
     pub col_cnt: usize,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[cfg_attr(feature = "gents", derive(gents_derives::TS))]
-#[cfg_attr(
-    feature = "gents",
-    ts(file_name = "display_window_request.ts", rename_all = "camelCase")
-)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "display_window_request.ts", rename_all = "camelCase")]
 pub struct DisplayWindowRequest {
     pub sheet_idx: usize,
     pub height: f64,
@@ -111,31 +85,22 @@ pub struct DisplayWindowRequest {
     pub start_y: f64,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_merge_cells.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_merge_cells.ts", rename_all = "camelCase")]
 pub struct SheetMergeCells {
     pub sheet_idx: usize,
     pub merge_cells: Vec<MergeCell>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_comments.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_comments.ts", rename_all = "camelCase")]
 pub struct SheetComments {
     pub sheet_idx: usize,
     pub comments: Vec<Comment>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "merge_cell.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "merge_cell.ts", rename_all = "camelCase")]
 pub struct MergeCell {
     pub start_row: usize,
     pub start_col: usize,
@@ -143,11 +108,8 @@ pub struct MergeCell {
     pub end_col: usize,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "comment.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "comment.ts", rename_all = "camelCase")]
 pub struct Comment {
     pub row: usize,
     pub col: usize,
@@ -155,22 +117,16 @@ pub struct Comment {
     pub content: String,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_row_info.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_row_info.ts", rename_all = "camelCase")]
 pub struct SheetRowInfo {
     pub sheet_idx: usize,
     pub info: Vec<RowInfo>,
     pub default_height: f64,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "row_info.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "row_info.ts", rename_all = "camelCase")]
 pub struct RowInfo {
     pub idx: usize,
     pub height: f64,
@@ -187,22 +143,16 @@ impl RowInfo {
     }
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_col_info.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_col_info.ts", rename_all = "camelCase")]
 pub struct SheetColInfo {
     pub sheet_idx: usize,
     pub info: Vec<ColInfo>,
     pub default_width: f64,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "col_info.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "col_info.ts", rename_all = "camelCase")]
 pub struct ColInfo {
     pub idx: usize,
     pub width: f64,
@@ -227,8 +177,8 @@ pub fn get_default_col_width() -> f64 {
     8.43
 }
 
-#[derive(Debug, Clone, Default)]
-#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "value.ts"))]
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "value.ts", tag = "type")]
 pub enum Value {
     Str(String),
     Bool(bool),
@@ -238,11 +188,8 @@ pub enum Value {
     Empty,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "cell_formula_value.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "cell_formula_value.ts", rename_all = "camelCase")]
 pub struct CellFormulaValue {
     pub row: usize,
     pub col: usize,
@@ -250,32 +197,23 @@ pub struct CellFormulaValue {
     pub value: Value,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_values.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_values.ts", rename_all = "camelCase")]
 pub struct SheetValues {
     pub sheet_idx: usize,
     pub values: Vec<CellFormulaValue>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "cell_style.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "cell_style.ts", rename_all = "camelCase")]
 pub struct CellStyle {
     pub row: usize,
     pub col: usize,
     pub style: Style,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_styles.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_styles.ts", rename_all = "camelCase")]
 pub struct SheetStyles {
     pub sheet_idx: usize,
     pub styles: Vec<CellStyle>,

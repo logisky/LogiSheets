@@ -1,7 +1,6 @@
 import {StPatternType} from '../bindings'
 
 export interface SetLinePatternFill {
-    readonly type: 'setLinePatternFill'
     readonly sheetIdx: number
     readonly row: boolean
     readonly from: number
@@ -55,7 +54,6 @@ export class SetLinePatternFillBuilder {
         if (this._to === undefined) throw Error('to is undefined!')
         if (this._row === undefined) throw Error('row is undefined!')
         return {
-            type: 'setLinePatternFill',
             sheetIdx: this._sheetIdx,
             from: this._from,
             to: this._to,

@@ -1,21 +1,17 @@
+use gents_derives::TS;
 use logisheets_base::{BlockId, DiyCellId};
 
 use crate::{Appendix, Style, Value};
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "save_file_result.ts")
-)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "save_file_result.ts", rename_all = "camelCase")]
 pub struct SaveFileResult {
     pub data: Vec<u8>,
     pub code: u8,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "cell_info.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "cell_info.ts", rename_all = "camelCase")]
 pub struct CellInfo {
     pub value: Value,
     pub formula: String,
@@ -24,11 +20,8 @@ pub struct CellInfo {
     pub diy_cell_id: Option<DiyCellId>,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_dimension.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_dimension.ts", rename_all = "camelCase")]
 pub struct SheetDimension {
     pub max_row: usize,
     pub max_col: usize,
@@ -36,11 +29,8 @@ pub struct SheetDimension {
     pub width: f64,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "cell_with_coordinate.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "cell_with_coordinate.ts", rename_all = "camelCase")]
 pub struct ReproducibleCell {
     pub coordinate: SheetCoordinate,
     pub formula: String,
@@ -49,11 +39,8 @@ pub struct ReproducibleCell {
     pub appendix: Vec<Appendix>,
 }
 
-#[cfg_attr(
-    feature = "gents",
-    gents_derives::gents_header(file_name = "sheet_coordinate.ts")
-)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_coordinate.ts", rename_all = "camelCase")]
 pub struct SheetCoordinate {
     pub row: usize,
     pub col: usize,

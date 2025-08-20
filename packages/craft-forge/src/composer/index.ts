@@ -20,44 +20,56 @@ export function generatePayloads(
         throw new Error('Craft descriptor must have a workbook part')
     }
     const result: Payload[] = []
-    const createBlock = new CreateBlockBuilder()
-        .sheetIdx(sheetIdx)
-        .id(blockId)
-        .masterRow(masterRow)
-        .masterCol(masterCol)
-        .rowCnt(craftDescriptor.workbookPart.rowCount)
-        .colCnt(craftDescriptor.workbookPart.colCount)
-        .build() as Payload
+    const createBlock: Payload = {
+        type: 'createBlock',
+        value: new CreateBlockBuilder()
+            .sheetIdx(sheetIdx)
+            .id(blockId)
+            .masterRow(masterRow)
+            .masterCol(masterCol)
+            .rowCnt(craftDescriptor.workbookPart.rowCount)
+            .colCnt(craftDescriptor.workbookPart.colCount)
+            .build(),
+    }
     result.push(createBlock)
 
     craftDescriptor.workbookPart.cells.forEach((cell: ReproducibleCell) => {
         if (cell.formula) {
-            const cellInput = new CellInputBuilder()
-                .sheetIdx(sheetIdx)
-                .row(cell.coordinate.row + masterRow)
-                .col(cell.coordinate.col + masterCol)
-                .content(cell.formula)
-                .build() as Payload
+            const cellInput: Payload = {
+                type: 'cellInput',
+                value: new CellInputBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(cell.coordinate.row + masterRow)
+                    .col(cell.coordinate.col + masterCol)
+                    .content(cell.formula)
+                    .build(),
+            }
             result.push(cellInput)
         } else if (cell.value) {
-            const cellInput = new CellInputBuilder()
-                .sheetIdx(sheetIdx)
-                .row(cell.coordinate.row + masterRow)
-                .col(cell.coordinate.col + masterCol)
-                .content(valueToStr(cell.value))
-                .build() as Payload
+            const cellInput: Payload = {
+                type: 'cellInput',
+                value: new CellInputBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(cell.coordinate.row + masterRow)
+                    .col(cell.coordinate.col + masterCol)
+                    .content(valueToStr(cell.value))
+                    .build(),
+            }
             result.push(cellInput)
         }
 
         cell.appendix.forEach((appendix: Appendix) => {
-            const addAppendix = new CreateAppendixBuilder()
-                .sheetIdx(sheetIdx)
-                .blockId(blockId)
-                .tag(appendix.tag)
-                .content(appendix.content)
-                .rowIdx(cell.coordinate.row)
-                .colIdx(cell.coordinate.col)
-                .build() as Payload
+            const addAppendix: Payload = {
+                type: 'createAppendix',
+                value: new CreateAppendixBuilder()
+                    .sheetIdx(sheetIdx)
+                    .blockId(blockId)
+                    .tag(appendix.tag)
+                    .content(appendix.content)
+                    .rowIdx(cell.coordinate.row)
+                    .colIdx(cell.coordinate.col)
+                    .build(),
+            }
             result.push(addAppendix)
             // todo: add style payloads
         })

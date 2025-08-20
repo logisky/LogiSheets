@@ -10,6 +10,6 @@ export function isErrorMessage(v: any): v is ErrorMessage {
 export type Result<V> = V | ErrorMessage
 
 export function getPatternFill(v: Fill): PatternFill | null {
-    if ('patternFill' in v) return v.patternFill
+    if (v.type === 'patternFill') return v.value
     return null
 }

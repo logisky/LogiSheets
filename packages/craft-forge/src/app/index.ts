@@ -87,13 +87,16 @@ export abstract class CraftApp {
         const result = await this._agent.handleTransaction({
             transaction: new Transaction(
                 [
-                    new BlockInputBuilder()
-                        .sheetIdx(this.blockId[0])
-                        .blockId(this.blockId[1])
-                        .row(this._state.horizontal ? 0 : idx)
-                        .col(this._state.horizontal ? idx : 0)
-                        .input(fieldId)
-                        .build() as Payload,
+                    {
+                        type: 'blockInput',
+                        value: new BlockInputBuilder()
+                            .sheetIdx(this.blockId[0])
+                            .blockId(this.blockId[1])
+                            .row(this._state.horizontal ? 0 : idx)
+                            .col(this._state.horizontal ? idx : 0)
+                            .input(fieldId)
+                            .build(),
+                    },
                 ],
                 true
             ),

@@ -1,6 +1,5 @@
 import {StBorderStyle} from '../bindings'
 export interface SetCellBorder {
-    readonly type: 'setCellBorder'
     readonly sheetIdx: number
     readonly row: number
     readonly col: number
@@ -93,7 +92,6 @@ export class SetCellBorderBuilder {
         if (this._row === undefined) throw Error('row is undefined!')
         if (this._col === undefined) throw Error('col is undefined!')
         return {
-            type: 'setCellBorder',
             sheetIdx: this._sheetIdx,
             row: this._row,
             col: this._col,

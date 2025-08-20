@@ -1,7 +1,8 @@
 use crate::{CellId, SheetId};
+use gents_derives::TS;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "gents", gents_derives::gents_header(file_name = "task.ts"))]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, TS)]
+#[ts(file_name = "task.ts", rename_all = "camelCase")]
 pub struct Task {
     pub async_func: String,
     pub args: Vec<String>,

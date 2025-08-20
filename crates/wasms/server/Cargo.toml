@@ -25,7 +25,7 @@ serde-wasm-bindgen = "0.5"
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.6", optional = true }
 
-logisheets_controller = { workspace = true, features = ["gents"] }
+logisheets_controller = { workspace = true }
 logisheets_base = { workspace = true }
 logisheets_workbook = { workspace = true }
 

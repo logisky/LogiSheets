@@ -63,22 +63,28 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
-                    return new InsertColsInBlockBuilder()
-                        .sheetIdx(sheet)
-                        .blockId(block.blockId)
-                        .start(start - block.colStart)
-                        .cnt(1)
-                        .build() as Payload
+                    return {
+                        type: 'insertColsInBlock',
+                        value: new InsertColsInBlockBuilder()
+                            .sheetIdx(sheet)
+                            .blockId(block.blockId)
+                            .start(start - block.colStart)
+                            .cnt(1)
+                            .build(),
+                    }
                 })
             )
             setBlockMenuOpened(true)
             return
         }
-        const payload = new InsertColsBuilder()
-            .sheetIdx(sheet)
-            .start(start)
-            .count(1)
-            .build() as Payload
+        const payload: Payload = {
+            type: 'insertCols',
+            value: new InsertColsBuilder()
+                .sheetIdx(sheet)
+                .start(start)
+                .count(1)
+                .build(),
+        }
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -91,22 +97,28 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
-                    return new DeleteColsInBlockBuilder()
-                        .sheetIdx(sheet)
-                        .blockId(block.blockId)
-                        .start(start - block.colStart)
-                        .cnt(1)
-                        .build() as Payload
+                    return {
+                        type: 'deleteColsInBlock',
+                        value: new DeleteColsInBlockBuilder()
+                            .sheetIdx(sheet)
+                            .blockId(block.blockId)
+                            .start(start - block.colStart)
+                            .cnt(1)
+                            .build(),
+                    }
                 })
             )
             setBlockMenuOpened(true)
             return
         }
-        const payload = new DeleteColsBuilder()
-            .sheetIdx(sheet)
-            .count(1)
-            .start(start)
-            .build() as Payload
+        const payload: Payload = {
+            type: 'deleteCols',
+            value: new DeleteColsBuilder()
+                .sheetIdx(sheet)
+                .count(1)
+                .start(start)
+                .build(),
+        }
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -119,21 +131,27 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
-                    return new InsertRowsInBlockBuilder()
-                        .sheetIdx(sheet)
-                        .start(start - block.rowStart)
-                        .blockId(block.blockId)
-                        .cnt(1)
-                        .build() as Payload
+                    return {
+                        type: 'insertRowsInBlock',
+                        value: new InsertRowsInBlockBuilder()
+                            .sheetIdx(sheet)
+                            .start(start - block.rowStart)
+                            .blockId(block.blockId)
+                            .cnt(1)
+                            .build(),
+                    }
                 })
             )
             return
         }
-        const payload = new InsertRowsBuilder()
-            .sheetIdx(sheet)
-            .start(start)
-            .count(1)
-            .build() as Payload
+        const payload: Payload = {
+            type: 'insertRows',
+            value: new InsertRowsBuilder()
+                .sheetIdx(sheet)
+                .start(start)
+                .count(1)
+                .build(),
+        }
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -146,21 +164,27 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         if (blocks.length !== 0) {
             _blockProcess(blocks, (blks) =>
                 blks.map((block): Payload => {
-                    return new DeleteRowsInBlockBuilder()
-                        .sheetIdx(sheet)
-                        .blockId(block.blockId)
-                        .start(start - block.rowStart)
-                        .cnt(1)
-                        .build() as Payload
+                    return {
+                        type: 'deleteRowsInBlock',
+                        value: new DeleteRowsInBlockBuilder()
+                            .sheetIdx(sheet)
+                            .blockId(block.blockId)
+                            .start(start - block.rowStart)
+                            .cnt(1)
+                            .build(),
+                    }
                 })
             )
             return
         }
-        const payload = new DeleteRowsBuilder()
-            .sheetIdx(sheet)
-            .count(1)
-            .start(start)
-            .build() as Payload
+        const payload: Payload = {
+            type: 'deleteRows',
+            value: new DeleteRowsBuilder()
+                .sheetIdx(sheet)
+                .count(1)
+                .start(start)
+                .build(),
+        }
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 
@@ -168,14 +192,17 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         const endCellTruthy = endCell ?? startCell
         const start = startCell.coordinate
         const end = endCellTruthy.coordinate
-        const payload = new CreateBlockBuilder()
-            .id(1)
-            .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
-            .rowCnt(Math.abs(end.endRow - start.startRow) + 1)
-            .colCnt(Math.abs(end.endCol - start.startCol) + 1)
-            .masterRow(Math.min(start.startRow, end.startRow))
-            .masterCol(Math.min(start.startCol, end.startCol))
-            .build() as Payload
+        const payload: Payload = {
+            type: 'createBlock',
+            value: new CreateBlockBuilder()
+                .id(1)
+                .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
+                .rowCnt(Math.abs(end.endRow - start.startRow) + 1)
+                .colCnt(Math.abs(end.endCol - start.startCol) + 1)
+                .masterRow(Math.min(start.startRow, end.startRow))
+                .masterCol(Math.min(start.startCol, end.startCol))
+                .build(),
+        }
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 

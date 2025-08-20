@@ -1,7 +1,6 @@
 import {StPatternType} from '../bindings'
 
 export interface SetCellPatternFill {
-    readonly type: 'setCellPatternFill'
     readonly sheetIdx: number
     readonly row: number
     readonly col: number
@@ -46,7 +45,6 @@ export class SetCellPatternFillBuilder {
         if (this._row === undefined) throw Error('row is undefined!')
         if (this._col === undefined) throw Error('col is undefined!')
         return {
-            type: 'setCellPatternFill',
             sheetIdx: this._sheetIdx,
             row: this._row,
             col: this._col,

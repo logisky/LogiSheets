@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use logisheets_base::datetime::{get_serial_num_by_date_1900, EasyDate};
 
 pub trait DayCountTools {

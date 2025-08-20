@@ -60,7 +60,10 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     }
 
     const onDelete = (i: number) => {
-        const payload = new DeleteSheetBuilder().idx(i).build() as Payload
+        const payload: Payload = {
+            type: 'deleteSheet',
+            value: new DeleteSheetBuilder().idx(i).build(),
+        }
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
     return (
@@ -94,10 +97,13 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                     if (action === 'add') {
                         const newSheetName = findNewSheetName(sheets)
                         const newIdx = sheets.length
-                        const payload = new CreateSheetBuilder()
-                            .newName(newSheetName)
-                            .idx(newIdx)
-                            .build() as Payload
+                        const payload: Payload = {
+                            type: 'createSheet',
+                            value: new CreateSheetBuilder()
+                                .newName(newSheetName)
+                                .idx(newIdx)
+                                .build(),
+                        }
                         DATA_SERVICE.handleTransaction(
                             new Transaction([payload], true)
                         ).then((v) => {

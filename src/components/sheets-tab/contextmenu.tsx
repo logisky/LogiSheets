@@ -37,10 +37,13 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
     const rename = () => {
         if (!newName) return
         if (newName === oldName) return
-        const sheetRename = new SheetRenameBuilder()
-            .oldName(oldName)
-            .newName(newName)
-            .build() as Payload
+        const sheetRename: Payload = {
+            type: 'sheetRename',
+            value: new SheetRenameBuilder()
+                .oldName(oldName)
+                .newName(newName)
+                .build(),
+        }
         DATA_SERVICE.handleTransaction(new Transaction([sheetRename], true))
     }
 
@@ -51,7 +54,10 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
             )
             return
         }
-        const payload = new DeleteSheetBuilder().idx(index).build() as Payload
+        const payload: Payload = {
+            type: 'deleteSheet',
+            value: new DeleteSheetBuilder().idx(index).build(),
+        }
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
 

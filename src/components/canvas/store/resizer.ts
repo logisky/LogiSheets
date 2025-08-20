@@ -132,19 +132,26 @@ export class Resizer {
                 isRow,
                 cell: {coordinate: coodinate, width, height},
             } = this.active
-            const payload = !isRow
-                ? new SetColWidthBuilder()
-                      .sheetIdx(this.store.currSheetIdx)
-                      .col(coodinate.startCol)
-                      .width(pxToWidth(this.moving.x + width))
-                      .build()
-                : new SetRowHeightBuilder()
-                      .sheetIdx(this.store.currSheetIdx)
-                      .row(coodinate.startRow)
-                      .height(pxToPt(this.moving.y + height))
-                      .build()
-            const p = payload as Payload
-            this.store.dataSvc.handleTransaction(new Transaction([p], true))
+            const payload: Payload = !isRow
+                ? {
+                      type: 'setColWidth',
+                      value: new SetColWidthBuilder()
+                          .sheetIdx(this.store.currSheetIdx)
+                          .col(coodinate.startCol)
+                          .width(pxToWidth(this.moving.x + width))
+                          .build(),
+                  }
+                : {
+                      type: 'setRowHeight',
+                      value: new SetRowHeightBuilder()
+                          .sheetIdx(this.store.currSheetIdx)
+                          .row(coodinate.startRow)
+                          .height(pxToPt(this.moving.y + height))
+                          .build(),
+                  }
+            this.store.dataSvc.handleTransaction(
+                new Transaction([payload], true)
+            )
         }
         this.active = undefined
         this.moving = {x: 0, y: 0}

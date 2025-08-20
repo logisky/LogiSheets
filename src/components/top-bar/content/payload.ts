@@ -46,7 +46,7 @@ export function generateFontPayload(
                 if (update.italic !== undefined) builder.italic(update.italic)
                 if (update.color) builder.color(update.color)
                 const p = builder.build()
-                result.push(p)
+                result.push({type: 'setCellFont', value: p})
             }
         }
         return result
@@ -63,7 +63,7 @@ export function generateFontPayload(
     if (update.italic !== undefined) builder.italic(update.italic)
     if (update.color) builder.color(update.color)
     const p = builder.build()
-    result.push(p)
+    result.push({type: 'setLineFont', value: p})
     return result
 }
 
@@ -85,7 +85,7 @@ export function generateAlgnmentPayload(
                     .col(j)
                     .alignment(alignment)
                     .build()
-                result.push(p)
+                result.push({type: 'setCellAlignment', value: p})
             }
         }
         return result
@@ -98,7 +98,7 @@ export function generateAlgnmentPayload(
         .to(d.end)
         .alignment(alignment)
         .build()
-    result.push(p)
+    result.push({type: 'setLineAlignment', value: p})
 
     return result
 }
@@ -125,7 +125,7 @@ export function generatePatternFillPayload(
                 if (bgColor) builder.bgColor(bgColor)
                 if (pattern) builder.pattern(pattern)
                 const p = builder.build()
-                result.push(p)
+                result.push({type: 'setCellPatternFill', value: p})
             }
         }
         return result
@@ -140,7 +140,7 @@ export function generatePatternFillPayload(
     if (bgColor) builder.bgColor(bgColor)
     if (pattern) builder.pattern(pattern)
     const p = builder.build()
-    result.push(p)
+    result.push({type: 'setLinePatternFill', value: p})
     return result
 }
 
@@ -549,7 +549,7 @@ function generateLineSingleBorderPayload(
             if (update.borderType) builder.rightBorderType(update.borderType)
             break
     }
-    return builder.build()
+    return {type: 'setLineBorder', value: builder.build()}
 }
 
 function generateDoubleBorderPayload(
@@ -609,7 +609,7 @@ function generateSingleBorderPayload(
             if (update.borderType) builder.rightBorderType(update.borderType)
             break
     }
-    return builder.build()
+    return {type: 'setCellBorder', value: builder.build()}
 }
 
 function getClearBorderPayload(
@@ -636,5 +636,5 @@ function getClearBorderPayload(
             builder.rightBorderType('none')
             break
     }
-    return builder.build()
+    return {type: 'setCellBorder', value: builder.build()}
 }

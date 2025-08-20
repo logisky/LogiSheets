@@ -19,11 +19,11 @@ export * from './set_line_pattern_fill'
 
 export type Payload =
     | EditPayload
-    | SetCellAlignment
-    | SetCellBorder
-    | SetCellFont
-    | SetCellPatternFill
-    | SetLineAlignment
-    | SetLineBorder
-    | SetLineFont
-    | SetLinePatternFill
+    | {type: 'setCellAlignment'; value: SetCellAlignment}
+    | {type: 'setCellBorder'; value: SetCellBorder}
+    | {type: 'setCellFont'; value: SetCellFont}
+    | {type: 'setCellPatternFill'; value: SetCellPatternFill}
+    | {type: 'setLineAlignment'; value: SetLineAlignment}
+    | {type: 'setLineBorder'; value: SetLineBorder}
+    | {type: 'setLineFont'; value: SetLineFont}
+    | {type: 'setLinePatternFill'; value: SetLinePatternFill}

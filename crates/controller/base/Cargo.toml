@@ -13,10 +13,7 @@ im = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
-gents = { workspace = true, optional = true }
-gents_derives = { workspace = true, optional = true }
+gents = { workspace = true }
+gents_derives = { workspace = true }
 
 logisheets_workbook = { workspace = true }
-
-[features]
-gents = ["dep:gents", "dep:gents_derives"]
