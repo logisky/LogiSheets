@@ -1,4 +1,4 @@
-use im::hashmap::HashMap;
+use imbl::hashmap::HashMap;
 use logisheets_base::{AuthorId, ExtBookId, FuncId, SheetId, TextId};
 use num::{Num, NumCast};
 use std::ops::AddAssign;

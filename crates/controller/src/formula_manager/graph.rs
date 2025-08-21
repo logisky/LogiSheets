@@ -1,5 +1,5 @@
-use im::hashmap::HashMap;
-use im::hashset::HashSet;
+use imbl::hashmap::HashMap;
+use imbl::hashset::HashSet;
 use std::hash::Hash;
 
 #[derive(Debug, Clone, Default)]

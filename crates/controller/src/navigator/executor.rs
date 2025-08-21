@@ -313,7 +313,7 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
 
 #[cfg(test)]
 mod tests {
-    use im::Vector;
+    use imbl::Vector;
 
     use super::{delete_cols, delete_rows};
     use crate::navigator::sheet_nav::SheetNav;

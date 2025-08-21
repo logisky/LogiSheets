@@ -1,4 +1,4 @@
-use im::HashMap;
+use imbl::HashMap;
 use itertools::Itertools;
 use num::{Num, NumCast};
 use std::{hash::Hash, ops::AddAssign};

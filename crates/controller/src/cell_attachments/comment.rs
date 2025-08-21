@@ -1,4 +1,4 @@
-use im::HashMap;
+use imbl::HashMap;
 use logisheets_base::{AuthorId, CellId, SheetId};
 
 use crate::id_manager::AuthorIdManager;

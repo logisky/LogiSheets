@@ -1,4 +1,4 @@
-use im::{HashSet, Vector};
+use imbl::{HashSet, Vector};
 use itertools::Itertools;
 use logisheets_base::SheetId;
 

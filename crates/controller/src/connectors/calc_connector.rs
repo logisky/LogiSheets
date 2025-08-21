@@ -49,7 +49,7 @@ pub struct CalcConnector<'a> {
     pub active_sheet: SheetId,
     pub curr_addr: Addr,
 
-    pub dirty_cells_in_next_run: &'a mut im::HashSet<(SheetId, CellId)>,
+    pub dirty_cells_in_next_run: &'a mut imbl::HashSet<(SheetId, CellId)>,
     pub calc_cells: &'a mut HashSet<(SheetId, CellId)>,
 }
 

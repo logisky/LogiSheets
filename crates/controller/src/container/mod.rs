@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use im::hashmap::HashMap;
+use imbl::hashmap::HashMap;
 use logisheets_base::{CellId, CellValue, ColId, NormalCellId, RowId, SheetId};
 
 use self::col_info_manager::{ColInfo, ColInfoManager};

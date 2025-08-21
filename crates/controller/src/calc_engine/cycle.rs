@@ -1,4 +1,4 @@
-use im::hashmap::HashMap;
+use imbl::hashmap::HashMap;
 use logisheets_base::{Addr, CellId, NameId, SheetId};
 use logisheets_parser::ast;
 

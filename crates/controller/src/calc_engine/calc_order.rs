@@ -118,7 +118,7 @@ mod tests {
 
     use super::{calc_order, CalcUnit};
     use crate::formula_manager::graph::Graph;
-    use im::OrdSet;
+    use imbl::OrdSet;
     use itertools::Itertools;
 
     #[test]

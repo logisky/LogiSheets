@@ -1,4 +1,4 @@
-use im::HashMap;
+use imbl::HashMap;
 use logisheets_base::{BlockRange, EphemeralId, NormalRange, Range, RangeId, SheetId};
 
 #[derive(Debug, Clone, Default)]

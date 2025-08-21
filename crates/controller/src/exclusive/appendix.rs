@@ -1,5 +1,5 @@
 use gents_derives::TS;
-use im::HashMap;
+use imbl::HashMap;
 use logisheets_base::{BlockCellId, BlockId, SheetId};
 
 /// Appendix is one of the craft extensions.
