@@ -1,4 +1,4 @@
-use im::HashMap;
+use imbl::HashMap;
 
 pub struct MatrixValue<T>
 where

@@ -1,7 +1,7 @@
 use super::utils::parse_cell;
 use crate::calc_engine::calculator::calc_vertex::Value;
 use crate::ext_book_manager::{ExtBook, ExtBooksManager};
-use im::{HashMap, Vector};
+use imbl::{HashMap, Vector};
 use logisheets_base::{id_fetcher::SheetIdFetcherTrait, Addr, ExtBookId, SheetId};
 use logisheets_parser::ast;
 use logisheets_workbook::workbook::ExternalLink;

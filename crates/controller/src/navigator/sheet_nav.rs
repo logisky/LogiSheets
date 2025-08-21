@@ -1,7 +1,7 @@
 use super::block::BlockPlace;
 use super::fetcher::Fetcher;
 use super::id_manager::IdManager;
-use im::{HashMap, Vector};
+use imbl::{HashMap, Vector};
 use logisheets_base::{BlockId, CellId, ColId, RowId, SheetId};
 
 use crate::lock::Locked;

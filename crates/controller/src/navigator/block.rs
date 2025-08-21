@@ -1,4 +1,4 @@
-use im::Vector;
+use imbl::Vector;
 use logisheets_base::{ColId, NormalCellId, RowId};
 
 #[derive(Debug, Clone)]

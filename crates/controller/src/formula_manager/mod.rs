@@ -3,7 +3,7 @@ mod executors;
 pub mod graph;
 
 use graph::Graph;
-use im::HashMap;
+use imbl::HashMap;
 use logisheets_base::{CubeId, ExtRefId, NameId, RangeId, SheetId};
 use logisheets_parser::ast;
 

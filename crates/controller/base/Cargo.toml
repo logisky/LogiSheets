@@ -9,7 +9,7 @@ edition.workspace = true
 [dependencies]
 chrono = { workspace = true }
 futures = { workspace = true }
-im = { workspace = true }
+imbl = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 

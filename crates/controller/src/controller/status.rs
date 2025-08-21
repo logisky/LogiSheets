@@ -1,5 +1,5 @@
-use im::HashMap;
-use im::HashSet;
+use imbl::HashMap;
+use imbl::HashSet;
 use logisheets_base::CellId;
 use logisheets_base::SheetId;
 

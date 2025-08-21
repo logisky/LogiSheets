@@ -1,4 +1,4 @@
-use im::HashMap;
+use imbl::HashMap;
 use logisheets_base::{RowId, StyleId};
 
 #[derive(Debug, Clone, Default)]

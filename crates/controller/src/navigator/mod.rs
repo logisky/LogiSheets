@@ -1,5 +1,5 @@
 use crate::lock::locked_write;
-use im::HashMap;
+use imbl::HashMap;
 use logisheets_base::{
     errors::BasicError, BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId,
 };

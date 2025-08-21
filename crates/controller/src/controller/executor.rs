@@ -168,7 +168,7 @@ impl<'a> Executor<'a> {
     }
 
     pub fn calc(mut self) -> Result<Self, Error> {
-        let mut dirty_cells_in_next_run = im::HashSet::new();
+        let mut dirty_cells_in_next_run = imbl::HashSet::new();
         let mut calc_cells: HashSet<(SheetId, CellId)> = HashSet::new();
         let connector = CalcConnector {
             range_manager: &self.status.range_manager,

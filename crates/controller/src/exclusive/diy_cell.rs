@@ -1,4 +1,4 @@
-use im::HashMap;
+use imbl::HashMap;
 use logisheets_base::{BlockCellId, DiyCellId, SheetId};
 
 /// DiyCell is a unique feature in LogiSheets that allows craft makers to design custom cell types,

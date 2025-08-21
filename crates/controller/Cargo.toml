@@ -11,7 +11,7 @@ thiserror = { workspace = true }
 chrono = { workspace = true }
 futures = "0.3.19"
 colorsys = "0.6.7"
-im = { workspace = true }
+imbl = { workspace = true }
 itertools = "0.10.5"
 lazy_static = { workspace = true }
 num = "0.4.0"
