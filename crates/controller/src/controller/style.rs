@@ -20,7 +20,7 @@ pub struct Style {
 }
 
 #[derive(Debug, Clone, TS)]
-#[ts(file_name = "font.ts")]
+#[ts(file_name = "font.ts", rename_all = "camelCase")]
 pub struct Font {
     pub bold: bool,
     pub italic: bool,
@@ -108,6 +108,7 @@ pub struct StyleConverter<'a> {
     pub theme_manager: &'a ThemeManager,
 }
 
+/// Convert raw style to style, which is more friendly to frontend.
 impl<'a> StyleConverter<'a> {
     pub fn convert_style(&self, raw_style: RawStyle) -> Style {
         Style {

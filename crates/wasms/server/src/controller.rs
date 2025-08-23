@@ -5,8 +5,8 @@ use logisheets_controller::edit_action::{
     CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock,
     DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, HorizontalAlignment,
     InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate,
-    MergeCells, MoveBlock, PayloadsAction, ResizeBlock, SetColWidth, SetRowHeight, SheetRename,
-    SplitMergedCells, StyleUpdateType, VerticalAlignment,
+    MergeCells, MoveBlock, PayloadsAction, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight,
+    SheetRename, SplitMergedCells, StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
@@ -606,6 +606,14 @@ pub fn cell_input(id: usize, sheet_idx: usize, row: usize, col: usize, content: 
             content,
         }),
     );
+}
+
+#[wasm_bindgen]
+pub fn reproduce_cells(id: usize, payload: JsValue) {
+    init();
+    let r: ReproduceCells = serde_wasm_bindgen::from_value(payload).unwrap();
+    let payload = EditPayload::ReproduceCells(r);
+    MANAGER.get_mut().add_payload(id, payload);
 }
 
 #[wasm_bindgen]

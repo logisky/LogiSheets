@@ -42,6 +42,25 @@ impl CubeExecutor {
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 Ok(input(self, sheet_id, cell_input.row, cell_input.col, ctx))
             }
+            EditPayload::ReproduceCells(p) => {
+                let sheet_idx = p.sheet_idx;
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let anchor_x = p.cells[0].coordinate.row;
+                let anchor_y = p.cells[0].coordinate.col;
+                let mut res = self;
+                for cell in p.cells {
+                    res = input(
+                        res,
+                        sheet_id,
+                        cell.coordinate.row - anchor_x + p.start_row,
+                        cell.coordinate.col - anchor_y + p.start_col,
+                        ctx,
+                    );
+                }
+                Ok(res)
+            }
             EditPayload::CellClear(cell_clear) => {
                 let sheet_idx = cell_clear.sheet_idx;
                 let sheet_id = ctx

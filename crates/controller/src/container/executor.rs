@@ -92,6 +92,47 @@ impl ContainerExecutor {
                 let container = self.container.delete_cells(sheet_id, &cells);
                 Ok((Self { container }, true))
             }
+            EditPayload::ReproduceCells(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let mut exec_ctx = self;
+                let anchor_x = p.cells[0].coordinate.row;
+                let anchor_y = p.cells[0].coordinate.col;
+                for cell in p.cells {
+                    let cell_id = ctx.fetch_cell_id(
+                        &sheet_id,
+                        cell.coordinate.row - anchor_x + p.start_row,
+                        cell.coordinate.col - anchor_y + p.start_col,
+                    )?;
+                    let cell_value = match cell.value {
+                        crate::Value::Str(s) => {
+                            CellValue::from_string(s, &mut |t| -> TextId { ctx.fetch_text_id(t) })
+                        }
+                        crate::Value::Bool(b) => CellValue::Boolean(b),
+                        crate::Value::Number(n) => CellValue::Number(n),
+                        crate::Value::Error(e) => {
+                            CellValue::Error(logisheets_base::Error::from_string(e))
+                        }
+                        crate::Value::Empty => CellValue::Blank,
+                    };
+                    let new_id = ctx.insert_style(cell.style.clone())?;
+                    if let Some(c) = exec_ctx.container.get_cell_mut(sheet_id, &cell_id) {
+                        c.style = new_id;
+                        c.value = cell_value;
+                    } else {
+                        exec_ctx.container.add_cell(
+                            sheet_id,
+                            cell_id,
+                            Cell {
+                                value: cell_value,
+                                style: new_id,
+                            },
+                        );
+                    }
+                }
+                Ok((exec_ctx, true))
+            }
             EditPayload::CellInput(p) => {
                 if p.content.starts_with("=") {
                     // Formula

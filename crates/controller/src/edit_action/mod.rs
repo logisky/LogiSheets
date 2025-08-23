@@ -132,6 +132,9 @@ pub enum EditPayload {
     DeleteColsInBlock(DeleteColsInBlock),
     InsertRowsInBlock(InsertRowsInBlock),
     DeleteRowsInBlock(DeleteRowsInBlock),
+
+    // Reproduce
+    ReproduceCells(ReproduceCells),
 }
 
 #[derive(Debug, Clone, TS)]
@@ -395,6 +398,18 @@ pub struct DeleteRowsInBlock {
 }
 
 #[derive(Debug, Clone, TS)]
+#[ts(file_name = "reproduce_cells.ts", builder, rename_all = "camelCase")]
+pub struct ReproduceCells {
+    pub sheet_idx: usize,
+    pub start_row: usize,
+    pub start_col: usize,
+    // We assume that these cells are extracted sequentially,
+    // and we take the first one as the anchor and it will be
+    // placed to the (start_row, start_col).
+    pub cells: Vec<ReproducibleCell>,
+}
+
+#[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "insert_rows_in_block.ts",
     builder,
@@ -528,7 +543,7 @@ impl Default for StatusCode {
     }
 }
 
-use crate::controller::style::PatternFill;
+use crate::{controller::style::PatternFill, ReproducibleCell};
 use logisheets_workbook::prelude::*;
 
 #[derive(Debug, Clone, TS)]

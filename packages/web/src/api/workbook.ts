@@ -49,6 +49,7 @@ import {
     transaction_end,
     transaction_start,
     undo,
+    reproduce_cells,
 } from '../../wasm/logisheets_wasm_server'
 import {ActionEffect, AsyncFuncResult, SheetInfo} from '../bindings'
 import {Payload} from '../payloads'
@@ -600,6 +601,8 @@ export class Workbook {
                 p.value.tag,
                 p.value.content
             )
+        if (p.type === 'reproduceCells')
+            return reproduce_cells(this._id, p.value)
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }

@@ -295,5 +295,11 @@ fn convert_diff<C: VersionExecCtx>(
                 sheet_id,
             )))
         }
+        EditPayload::ReproduceCells(rc) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(rc.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
     }
 }

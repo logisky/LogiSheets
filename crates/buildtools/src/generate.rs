@@ -3,9 +3,7 @@ use logisheets_controller::controller::display::{
     CellPosition, DisplayWindowRequest, DisplayWindowWithStartPoint, SheetInfo,
 };
 use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditAction};
-use logisheets_controller::{
-    AppendixWithCell, CellInfo, ErrorMessage, ReproducibleCell, SheetDimension,
-};
+use logisheets_controller::{AppendixWithCell, CellInfo, ErrorMessage, SheetDimension};
 use logisheets_server_types::{CraftData, CraftDescriptor, Resp};
 
 fn main() {
@@ -23,7 +21,6 @@ fn main() {
 
     file_group.add::<CellInfo>();
     file_group.add::<ErrorMessage>();
-    file_group.add::<ReproducibleCell>();
 
     use logisheets_sequencer::{SequencerMessage, UserMessage};
     file_group.add::<SequencerMessage>();
