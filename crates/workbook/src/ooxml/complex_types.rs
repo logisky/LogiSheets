@@ -129,7 +129,8 @@ pub struct CtMruColors {
     pub color: Vec<CtColor>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, TS)]
+#[ts(file_name = "ct_color.ts", rename_all = "camelCase")]
 pub struct CtColor {
     #[xmlserde(name = b"auto", ty = "attr")]
     pub auto: Option<bool>,
@@ -143,7 +144,8 @@ pub struct CtColor {
     pub tint: f64,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone, TS)]
+#[ts(file_name = "ct_border.ts", rename_all = "camelCase")]
 pub struct CtBorder {
     #[xmlserde(name = b"left", ty = "child")]
     pub left: Option<CtBorderPr>,
@@ -167,7 +169,8 @@ pub struct CtBorder {
     pub outline: bool,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Hash, PartialEq, Eq, Clone, TS)]
+#[ts(file_name = "ct_border_pr.ts", rename_all = "camelCase")]
 pub struct CtBorderPr {
     #[xmlserde(name = b"color", ty = "child")]
     pub color: Option<CtColor>,
@@ -205,7 +208,8 @@ pub struct CtCellStyle {
     pub custom_builtin: Option<bool>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, Hash, PartialEq, Eq, TS)]
+#[ts(file_name = "ct_pattern_fill.ts", rename_all = "camelCase")]
 pub struct CtPatternFill {
     #[xmlserde(name = b"fgColor", ty = "child")]
     pub fg_color: Option<CtColor>,
@@ -215,7 +219,8 @@ pub struct CtPatternFill {
     pub pattern_type: Option<StPatternType>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, TS)]
+#[ts(file_name = "ct_gradient_fill.ts", rename_all = "camelCase")]
 pub struct CtGradientFill {
     #[xmlserde(name = b"stop", ty = "child")]
     pub stops: Vec<CtGradientStop>,
@@ -233,7 +238,8 @@ pub struct CtGradientFill {
     pub bottom: f64,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone, MapObj, TS)]
+#[ts(file_name = "ct_gradient_stop.ts", rename_all = "camelCase")]
 pub struct CtGradientStop {
     #[xmlserde(name = b"color", ty = "child")]
     pub color: CtColor,
@@ -249,7 +255,8 @@ pub struct CtFills {
     pub fills: Vec<CtFill>,
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, TS)]
+#[ts(tag = "type", file_name = "ct_fill.ts", rename_all = "camelCase")]
 pub enum CtFill {
     PatternFill(CtPatternFill),
     GradientFill(CtGradientFill),
@@ -385,7 +392,8 @@ pub struct CtFonts {
     pub fonts: Vec<CtFont>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Hash, Eq, PartialEq, Clone, TS)]
+#[ts(file_name = "ct_font.ts", rename_all = "camelCase")]
 pub struct CtFont {
     #[xmlserde(name = b"b", ty = "sfc")]
     pub bold: bool,

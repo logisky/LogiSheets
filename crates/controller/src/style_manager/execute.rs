@@ -1,4 +1,4 @@
-use super::{errors::StyleError, StyleManager};
+use super::{errors::StyleError, xf_manager::CtrlXf, RawStyle, StyleManager};
 use crate::{
     edit_action::{HorizontalAlignment, StyleUpdateType, VerticalAlignment},
     Error,
@@ -6,7 +6,7 @@ use crate::{
 use logisheets_base::StyleId;
 use logisheets_workbook::prelude::{CtCellAlignment, StHorizontalAlignment, StVerticalAlignment};
 
-pub fn execute_style_payload(
+pub fn execute_style_update(
     sm: &mut StyleManager,
     update_type: StyleUpdateType,
     id: StyleId,
@@ -71,5 +71,33 @@ pub fn execute_style_payload(
         xf.alignment = Some(result);
     }
     let new_id = cell_xfs_manager.get_id(&xf);
+    Ok(new_id)
+}
+
+pub fn insert_style(sm: &mut StyleManager, style: RawStyle) -> Result<StyleId, Error> {
+    let font_manager = &mut sm.font_manager;
+    let border_manager = &mut sm.border_manager;
+    let fill_manager = &mut sm.fill_manager;
+    let num_fmt_manager = &mut sm.num_fmt_manager;
+
+    let font_id = font_manager.get_id(&style.font);
+    let border_id = border_manager.get_id(&style.border);
+    let fill_id = fill_manager.get_id(&style.fill);
+    let num_fmt_id = num_fmt_manager.get_id(&style.formatter);
+    let xf = CtrlXf {
+        font_id: Some(font_id),
+        border_id: Some(border_id),
+        fill_id: Some(fill_id),
+        alignment: style.alignment,
+        protection: style.protection,
+        num_fmt_id: Some(num_fmt_id),
+        apply_number_format: Some(true),
+        apply_font: Some(true),
+        apply_fill: Some(true),
+        apply_border: Some(true),
+        apply_alignment: Some(true),
+        apply_protection: None,
+    };
+    let new_id = sm.cell_xfs_manager.get_id(&xf);
     Ok(new_id)
 }

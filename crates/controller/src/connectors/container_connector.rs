@@ -13,7 +13,7 @@ use crate::{
     ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
-    style_manager::StyleManager,
+    style_manager::{RawStyle, StyleManager},
     workbook::sheet_pos_manager::SheetPosManager,
     Error,
 };
@@ -271,7 +271,10 @@ impl<'a> ContainerExecCtx for ContainerConnector<'a> {
         old_id: StyleId,
         update_type: StyleUpdateType,
     ) -> Result<StyleId, Error> {
-        self.style_manager
-            .execute_style_payload(update_type, old_id)
+        self.style_manager.execute_style_update(update_type, old_id)
+    }
+
+    fn insert_style(&mut self, style: RawStyle) -> Result<StyleId, Error> {
+        self.style_manager.insert_style(style)
     }
 }

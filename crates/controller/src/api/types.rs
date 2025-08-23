@@ -1,7 +1,7 @@
 use gents_derives::TS;
 use logisheets_base::{BlockId, DiyCellId};
 
-use crate::{Appendix, Style, Value};
+use crate::{style_manager::RawStyle, Appendix, Style, Value};
 
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "save_file_result.ts", rename_all = "camelCase")]
@@ -30,12 +30,14 @@ pub struct SheetDimension {
 }
 
 #[derive(Debug, Clone, TS)]
-#[ts(file_name = "cell_with_coordinate.ts", rename_all = "camelCase")]
+#[ts(file_name = "reproducible_cell.ts", rename_all = "camelCase")]
+// It is used to reproduce cells.
+// Note that `value` or `style` is not friendly to the frontend, and reproducing cells
+// don't have formula.
 pub struct ReproducibleCell {
     pub coordinate: SheetCoordinate,
-    pub formula: String,
     pub value: Value,
-    pub style: Style,
+    pub style: RawStyle,
     pub appendix: Vec<Appendix>,
 }
 

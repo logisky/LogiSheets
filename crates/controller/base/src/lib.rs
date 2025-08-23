@@ -188,6 +188,21 @@ impl Error {
         };
         String::from(s)
     }
+
+    pub fn from_string(s: String) -> Self {
+        match s.as_str() {
+            "#DIV/0!" => Error::Div0,
+            "#N/A" => Error::NA,
+            "#NAME?" => Error::Name,
+            "#NULL!" => Error::Null,
+            "#NUM!" => Error::Num,
+            "#REF!" => Error::Ref,
+            "#VALUE!" => Error::Value,
+            "#GETTING_DATA" => Error::GettingData,
+            "#UNKNOWN!" => Error::Unspecified,
+            _ => Error::Unspecified,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

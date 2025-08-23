@@ -10,6 +10,7 @@ import {
     DiyButtonConfig,
     DiyCellButtonType,
     MethodName,
+    generatePayloads,
 } from 'logisheets-craft-forge'
 import {
     blockInfoNotFound,
@@ -322,56 +323,9 @@ export class CraftManager {
         if (isErrorMessage(idResult)) return err(workbookError(idResult.msg))
         const id = idResult
         this._craftDescriptors.set(identifier, descriptor)
-        const payloads: Payload[] = []
-        descriptor.workbookPart?.cells.forEach((cell) => {
-            const row = cell.coordinate.row
-            const col = cell.coordinate.col
-            const clearPayload: Payload = {
-                type: 'cellClear',
-                value: new CellClearBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(masterRow + row)
-                    .col(masterCol + col)
-                    .build(),
-            }
-            payloads.push(clearPayload)
-            cell.appendix.forEach((appendix) => {
-                const clearPayload: Payload = {
-                    type: 'createAppendix',
-                    value: new CreateAppendixBuilder()
-                        .sheetIdx(sheetIdx)
-                        .blockId(id)
-                        .rowIdx(row)
-                        .colIdx(col)
-                        .tag(appendix.tag)
-                        .craftId(appendix.craftId)
-                        .content(appendix.content)
-                        .build(),
-                }
-                payloads.push(clearPayload)
-            })
-            if (cell.formula) {
-                const formulaPayload: Payload = {
-                    type: 'cellInput',
-                    value: new CellInputBuilder()
-                        .sheetIdx(sheetIdx)
-                        .row(masterRow + row)
-                        .col(masterCol + col)
-                        .content(cell.formula)
-                        .build(),
-                }
-                payloads.push(formulaPayload)
-            } else if (cell.value) {
-                // const valuePayload = new CellInputBuilder()
-                //     .sheetIdx(sheetIdx)
-                //     .row(masterRow + row)
-                //     .col(masterCol + col)
-                //     .content(cell.value.str)
-                //     .build() as Payload
-                // payloads.push(valuePayload)
-            }
-        })
-        return ok(payloads)
+        return ok(
+            generatePayloads(sheetIdx, id, masterRow, masterCol, descriptor)
+        )
     }
 
     async downloadCraftData(blockId: BlockId): ResultAsync<readonly Payload[]> {

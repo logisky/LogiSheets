@@ -6,6 +6,7 @@ use crate::controller::display::{
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
 use crate::lock::{locked_write, Locked};
+use crate::style_manager::RawStyle;
 use crate::{
     connectors::NameFetcher,
     controller::{
@@ -200,7 +201,8 @@ impl<'a> Worksheet<'a> {
             .status
             .navigator
             .fetch_cell_id(&self.sheet_id, row, col)?;
-        let cell_info = self.get_cell_info(row, col)?;
+        let value = self.get_value_by_id(&cell_id)?;
+        let style = self.get_raw_style_by_id(&cell_id)?;
         let appendix = match cell_id {
             CellId::BlockCell(block_cell_id) => self
                 .controller
@@ -213,9 +215,8 @@ impl<'a> Worksheet<'a> {
         };
         Ok(ReproducibleCell {
             coordinate: SheetCoordinate { row, col },
-            formula: cell_info.formula,
-            value: cell_info.value,
-            style: cell_info.style,
+            value,
+            style,
             appendix,
         })
     }
@@ -580,7 +581,7 @@ impl<'a> Worksheet<'a> {
         Ok(res)
     }
 
-    pub(crate) fn get_style_by_id(&self, cell_id: &CellId) -> Result<Style> {
+    fn get_raw_style_by_id(&self, cell_id: &CellId) -> Result<RawStyle> {
         let style_id = if let Some(cell) = self
             .controller
             .status
@@ -617,6 +618,11 @@ impl<'a> Worksheet<'a> {
             .status
             .style_manager
             .get_cell_style(style_id);
+        Ok(raw_style)
+    }
+
+    pub(crate) fn get_style_by_id(&self, cell_id: &CellId) -> Result<Style> {
+        let raw_style = self.get_raw_style_by_id(cell_id)?;
         let style_converter = StyleConverter {
             theme_manager: &self.controller.settings.theme,
         };
