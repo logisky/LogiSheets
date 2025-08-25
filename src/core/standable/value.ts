@@ -20,17 +20,21 @@ export class StandardValue {
         return this.value.toString()
     }
     from(value: Value) {
-        if (hasOwnProperty(value, 'str'))
-            this.cellValueOneof = {$case: 'str', str: value.str as string}
-        else if (hasOwnProperty(value, 'bool'))
-            this.cellValueOneof = {$case: 'bool', bool: value.bool as boolean}
-        else if (hasOwnProperty(value, 'number'))
+        if (value === 'empty') {
+            this.cellValueOneof = undefined
+            return this
+        }
+        if (value.type === 'str')
+            this.cellValueOneof = {$case: 'str', str: value.value as string}
+        else if (value.type === 'bool')
+            this.cellValueOneof = {$case: 'bool', bool: value.value as boolean}
+        else if (value.type === 'number')
             this.cellValueOneof = {
                 $case: 'number',
-                number: value.number as number,
+                number: value.value as number,
             }
-        else if (hasOwnProperty(value, 'error'))
-            this.cellValueOneof = {$case: 'error', error: value.error as string}
+        else if (value.type === 'error')
+            this.cellValueOneof = {$case: 'error', error: value.value as string}
         return this
     }
 }
