@@ -12,7 +12,7 @@ export interface Client {
         baseUrl: string,
         id: string,
         descriptor: CraftDescriptor
-    ): ResultAsync<void>
+    ): ResultAsync<string>
 
     downloadCraftData(baseUrl: string, id: string): ResultAsync<CraftData>
 
@@ -60,7 +60,7 @@ export class ClientImpl implements Client {
         baseUrl: string,
         id: string,
         descriptor: CraftDescriptor
-    ): ResultAsync<void> {
+    ): ResultAsync<string> {
         const url = `${baseUrl.replace(
             /\/$/,
             ''
@@ -76,7 +76,7 @@ export class ClientImpl implements Client {
                 code: res.status,
             })
         }
-        return ok(undefined)
+        return ok(url)
     }
 
     async downloadCraftData(

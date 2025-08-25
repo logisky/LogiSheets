@@ -3,7 +3,11 @@ import {observer} from 'mobx-react'
 import Box from '@mui/material/Box'
 import Settings from '@mui/icons-material/Settings'
 import {useState} from 'react'
-import {ContextMenuComponent as BlockOutlinerContextMenu} from './contextmenu' // 菜单组件
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
+
+import {MenuComponent} from './menu'
 
 export class BlockOutlinerProps {
     constructor() {
@@ -24,6 +28,25 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
     const {blockOutliner} = props
     const {x, y, width, height, blockId, sheetId} = blockOutliner
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [descriptorUrl, setDescriptorUrl] = useState<string | undefined>(
+        undefined
+    )
+    const [error, setError] = useState<string | undefined>(undefined)
+    const [copySuccess, setCopySuccess] = useState(false)
+
+    const [clickMousePosition, setClickMousePosition] = useState({
+        x: 0,
+        y: 0,
+    })
+
+    const handleClick = (event: React.MouseEvent) => {
+        event.preventDefault()
+        setClickMousePosition({
+            x: event.clientX,
+            y: event.clientY,
+        })
+        setIsMenuOpen(true)
+    }
 
     return (
         <Box
@@ -33,7 +56,7 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                 height: `${height}px`,
                 left: `${x}px`,
                 top: `${y}px`,
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
             }}
         >
             <Box
@@ -94,20 +117,79 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                     }}
                     onClick={(e) => {
                         e.stopPropagation()
-                        setIsMenuOpen(true)
+                        handleClick(e)
                     }}
                 >
                     <Settings sx={{fontSize: 20}} />
                 </Box>
             </Box>
             {isMenuOpen && (
-                <BlockOutlinerContextMenu
+                <MenuComponent
                     sheetId={sheetId}
                     blockId={blockId}
                     isOpen={isMenuOpen}
                     setIsOpen={setIsMenuOpen}
+                    clickMousePosition={clickMousePosition}
+                    setDescriptorUrl={setDescriptorUrl}
+                    setError={setError}
                 />
             )}
+            {descriptorUrl || error ? (
+                <Snackbar
+                    open={!!descriptorUrl || !!error}
+                    autoHideDuration={6000}
+                    anchorOrigin={{vertical: 'top', horizontal: 'center'}}
+                    onClose={(_, reason) => {
+                        if (reason === 'clickaway') return
+                        setDescriptorUrl(undefined)
+                        setError(undefined)
+                    }}
+                >
+                    <Alert
+                        severity={error ? 'error' : 'success'}
+                        onClose={() => {
+                            setDescriptorUrl(undefined)
+                            setError(undefined)
+                        }}
+                        sx={{width: '100%'}}
+                        action={
+                            descriptorUrl ? (
+                                <Button
+                                    color="inherit"
+                                    size="small"
+                                    onClick={async () => {
+                                        await navigator.clipboard.writeText(
+                                            descriptorUrl!
+                                        )
+                                        setCopySuccess(true)
+                                        setTimeout(
+                                            () => setCopySuccess(false),
+                                            1500
+                                        )
+                                    }}
+                                >
+                                    {copySuccess ? '✅' : 'Copy'}
+                                </Button>
+                            ) : undefined
+                        }
+                    >
+                        {error ? (
+                            <span>{error}</span>
+                        ) : (
+                            <span>
+                                URL:{' '}
+                                <a
+                                    href={descriptorUrl!}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    {descriptorUrl}
+                                </a>
+                            </span>
+                        )}
+                    </Alert>
+                </Snackbar>
+            ) : null}
         </Box>
     )
 })

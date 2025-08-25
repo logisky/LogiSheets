@@ -257,7 +257,7 @@ export class CraftManager {
         })
     }
 
-    async uploadCraftDescriptor(blockId: BlockId): ResultAsync<void> {
+    async uploadCraftDescriptor(blockId: BlockId): ResultAsync<string> {
         const descriptorResult = await this.exportCraftDescriptor(blockId)
         if (descriptorResult.isErr())
             return err(descriptorResult._unsafeUnwrapErr())

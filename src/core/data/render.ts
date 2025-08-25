@@ -1,5 +1,5 @@
 import {Range, StandardCell} from '@/core/standable'
-import {CellInfo, Value} from 'logisheets-web'
+import {CellInfo} from 'logisheets-web'
 import {StandardValue} from '../standable/value'
 import {StandardStyle} from '../standable/style'
 

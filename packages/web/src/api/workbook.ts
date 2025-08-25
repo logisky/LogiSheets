@@ -228,8 +228,8 @@ export class Workbook {
                 this._onCellUpdate()
             })
         }
-        if ('ok' in result.status) {
-            switch (result.status.ok) {
+        if (result.status.type === 'ok') {
+            switch (result.status.value) {
                 case 'cell':
                     this._onCellUpdate()
                     break
