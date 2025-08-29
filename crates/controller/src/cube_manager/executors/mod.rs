@@ -43,6 +43,9 @@ impl CubeExecutor {
                 Ok(input(self, sheet_id, cell_input.row, cell_input.col, ctx))
             }
             EditPayload::ReproduceCells(p) => {
+                if p.cells.is_empty() {
+                    return Ok(self);
+                }
                 let sheet_idx = p.sheet_idx;
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(sheet_idx)

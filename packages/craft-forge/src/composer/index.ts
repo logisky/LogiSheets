@@ -31,6 +31,10 @@ export function generatePayloads(
     }
     result.push(createBlock)
 
+    if (craftDescriptor.workbookPart.cells.length === 0) {
+        return result
+    }
+
     const reproduceCells: Payload = {
         type: 'reproduceCells',
         value: new ReproduceCellsBuilder()

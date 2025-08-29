@@ -25,7 +25,7 @@ export interface Client {
 
 export class ClientImpl implements Client {
     async getId(baseUrl: string): ResultAsync<string> {
-        const url = `${baseUrl.replace(/\/$/, '')}/id/`
+        const url = `${baseUrl.replace(/\/$/, '')}/id`
         const res = await fetch(url)
         if (!res.ok) {
             return err({
@@ -37,14 +37,7 @@ export class ClientImpl implements Client {
         return toResult(result)
     }
 
-    async downloadDescriptor(
-        baseUrl: string,
-        id: string
-    ): ResultAsync<CraftDescriptor> {
-        const url = `${baseUrl.replace(
-            /\/$/,
-            ''
-        )}/descriptor/${encodeURIComponent(id)}`
+    async downloadDescriptor(url: string): ResultAsync<CraftDescriptor> {
         const res = await fetch(url)
         if (!res.ok) {
             return err({
