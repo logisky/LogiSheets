@@ -263,9 +263,12 @@ export class CraftManager {
             return err(descriptorResult._unsafeUnwrapErr())
 
         const descriptor = descriptorResult._unsafeUnwrap()
-        const baseUrl = descriptor.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        let baseUrl = descriptor.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        if (baseUrl === '') {
+            baseUrl = DEFAULT_BASE_URL
+        }
         let id = descriptor.dataPort?.identifier
-        if (id === undefined) {
+        if (id === undefined || id === '') {
             const idResult = await this._client.getId(baseUrl)
             if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
             id = idResult._unsafeUnwrap()
@@ -302,27 +305,28 @@ export class CraftManager {
         return ok(undefined)
     }
 
-    async downloadDescriptor(
+    /**
+     * Download descriptor from url.
+     */
+    async downloadDescriptorFromUrl(
         sheetIdx: number,
         masterRow: number,
         masterCol: number,
-        identifier: string
+        url: string
     ): ResultAsync<readonly Payload[]> {
-        const baseUrl = DEFAULT_BASE_URL
-        const descriptorResult = await this._client.downloadDescriptor(
-            baseUrl,
-            identifier
-        )
+        const identifierReuslt = await this._client.getId(DEFAULT_BASE_URL)
+        if (identifierReuslt.isErr())
+            return err(identifierReuslt._unsafeUnwrapErr())
+        const descriptorResult = await this._client.downloadDescriptor(url)
         if (descriptorResult.isErr())
             return err(descriptorResult._unsafeUnwrapErr())
-
         const descriptor = descriptorResult._unsafeUnwrap()
         const idResult = await this._workbookClient.getAvailableBlockId({
             sheetIdx: sheetIdx,
         })
         if (isErrorMessage(idResult)) return err(workbookError(idResult.msg))
         const id = idResult
-        this._craftDescriptors.set(identifier, descriptor)
+        this._craftDescriptors.set(identifierReuslt._unsafeUnwrap(), descriptor)
         return ok(
             generatePayloads(sheetIdx, id, masterRow, masterCol, descriptor)
         )

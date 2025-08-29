@@ -10,6 +10,7 @@ use std::{
     net::SocketAddr,
     sync::{Arc, Mutex},
 };
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -98,12 +99,21 @@ async fn main() {
         })
     }
 
+    let cors = CorsLayer::new()
+        .allow_origin(["http://localhost:4200".parse().unwrap()])
+        .allow_headers(Any)
+        .allow_methods(Any);
+
     let app = Router::new()
         .route("/", get(|| async { "A mock server for LogiSheets!" }))
         .route("/id", get(get_id))
-        .route("/descriptor/:id", get(get_descriptor).post(post_descriptor))
-        .route("/data/:id", get(get_data).post(post_data))
-        .with_state(state);
+        .route(
+            "/descriptor/{id}",
+            get(get_descriptor).post(post_descriptor),
+        )
+        .route("/data/{id}", get(get_data).post(post_data))
+        .with_state(state)
+        .layer(cors);
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("Listening on http://{}", addr);
 

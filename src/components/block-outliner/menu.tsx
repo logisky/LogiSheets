@@ -1,6 +1,3 @@
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
-import Button from '@mui/material/Button'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import styles from './block-outliner.module.scss'
@@ -8,7 +5,6 @@ import React from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {CraftManager} from '@/core/data'
-import {ok} from '@/core/error'
 
 export interface MenuProps {
     readonly sheetId: number
@@ -50,12 +46,6 @@ export const ClickableList = ({
 
 export const MenuComponent = (props: MenuProps) => {
     const [snackbarOpen, setSnackbarOpen] = React.useState(false)
-    const [snackbarUrl, setSnackbarUrl] = React.useState<string | undefined>(
-        undefined
-    )
-    const [snackbarError, setSnackbarError] = React.useState<
-        string | undefined
-    >(undefined)
     const {sheetId, blockId, isOpen, setIsOpen} = props
     const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
     const descriptor = CRAFT_MANAGER.getCraftDescriptor([sheetId, blockId])
@@ -124,7 +114,8 @@ export const MenuComponent = (props: MenuProps) => {
                 {items.map((item, idx) => (
                     <MenuItem
                         key={idx}
-                        onClick={() => {
+                        onClick={(e) => {
+                            e.stopPropagation()
                             item.onClick()
                             setIsOpen(false)
                         }}
@@ -133,64 +124,6 @@ export const MenuComponent = (props: MenuProps) => {
                     </MenuItem>
                 ))}
             </Menu>
-            <Snackbar
-                open={snackbarOpen}
-                onClose={() => setSnackbarOpen(false)}
-                anchorOrigin={{vertical: 'top', horizontal: 'center'}}
-                sx={{
-                    zIndex: 10,
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    position: 'fixed',
-                    '& .MuiSnackbarContent-root': {
-                        minHeight: 60,
-                        minWidth: 400,
-                        maxWidth: 400,
-                        maxHeight: 100,
-                        boxSizing: 'border-box',
-                        wordBreak: 'break-all',
-                        alignItems: 'center',
-                    },
-                }}
-            >
-                {snackbarError || snackbarUrl ? (
-                    <Alert
-                        severity={snackbarError ? 'error' : 'success'}
-                        onClose={() => setSnackbarOpen(false)}
-                        action={
-                            snackbarUrl ? (
-                                <Button
-                                    color="inherit"
-                                    size="small"
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(
-                                            snackbarUrl!
-                                        )
-                                    }}
-                                >
-                                    Copy
-                                </Button>
-                            ) : undefined
-                        }
-                    >
-                        {snackbarError ? (
-                            <span>{snackbarError}</span>
-                        ) : (
-                            <span>
-                                URL:{' '}
-                                <a
-                                    href={snackbarUrl!}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    {snackbarUrl}
-                                </a>
-                            </span>
-                        )}
-                    </Alert>
-                ) : undefined}
-            </Snackbar>
         </>
     )
 }

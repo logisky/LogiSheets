@@ -61,6 +61,7 @@ export const CreateDiyBtnComponent = ({selectedData}: CreateDiyBtnProps) => {
             size="small"
             aria-label="create-diy-cell"
             onClick={createDiyCell}
+            disabled={!selectedData || selectedData.data === undefined}
         >
             Create A DiyButton
         </ToggleButton>

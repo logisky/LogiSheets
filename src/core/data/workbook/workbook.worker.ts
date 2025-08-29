@@ -386,6 +386,12 @@ class WorkerService implements IWorkbookWorker {
             case MethodName.GetSheetIdx:
                 result = this.getSheetIdx(args)
                 break
+            case MethodName.GetBlockInfo:
+                result = this.getBlockInfo(args)
+                break
+            case MethodName.GetReproducibleCells:
+                result = this.getReproducibleCells(args)
+                break
             default:
                 throw new Error(`Unknown method: ${m}`)
         }

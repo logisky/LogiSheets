@@ -93,6 +93,9 @@ impl ContainerExecutor {
                 Ok((Self { container }, true))
             }
             EditPayload::ReproduceCells(p) => {
+                if p.cells.is_empty() {
+                    return Ok((self, true));
+                }
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
