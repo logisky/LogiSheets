@@ -119,6 +119,9 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                         e.stopPropagation()
                         handleClick(e)
                     }}
+                    onMouseDown={(e) => {
+                        e.stopPropagation()
+                    }}
                 >
                     <Settings sx={{fontSize: 20}} />
                 </Box>
@@ -157,7 +160,8 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                                 <Button
                                     color="inherit"
                                     size="small"
-                                    onClick={async () => {
+                                    onClick={async (e) => {
+                                        e.stopPropagation()
                                         await navigator.clipboard.writeText(
                                             descriptorUrl!
                                         )
@@ -166,6 +170,9 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                                             () => setCopySuccess(false),
                                             1500
                                         )
+                                    }}
+                                    onMouseDown={(e) => {
+                                        e.stopPropagation()
                                     }}
                                 >
                                     {copySuccess ? '✅' : 'Copy'}
