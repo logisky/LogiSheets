@@ -119,6 +119,9 @@ export const MenuComponent = (props: MenuProps) => {
                             item.onClick()
                             setIsOpen(false)
                         }}
+                        onMouseDown={(e) => {
+                            e.stopPropagation()
+                        }}
                     >
                         {item.label}
                     </MenuItem>
