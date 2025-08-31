@@ -228,16 +228,20 @@ export class CraftManager {
         const coordinates = []
         const endRow = descriptor.dataArea.endRow ?? blockInfo.rowCnt
         const endCol = descriptor.dataArea.endCol ?? blockInfo.colCnt
+
+        const masterRow = blockInfo.rowStart
+        const masterCol = blockInfo.colStart
         for (let i = 0; i < blockInfo.rowCnt; i++) {
             for (let j = 0; j < blockInfo.colCnt; j++) {
+                // skip the data area
                 if (
-                    i >= descriptor.dataArea.startRow ||
-                    i <= endRow ||
-                    j >= descriptor.dataArea.startCol ||
+                    i >= descriptor.dataArea.startRow &&
+                    i <= endRow &&
+                    j >= descriptor.dataArea.startCol &&
                     j <= endCol
                 )
                     continue
-                coordinates.push({row: i, col: j})
+                coordinates.push({row: i + masterRow, col: j + masterCol})
             }
         }
 

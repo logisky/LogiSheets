@@ -40,6 +40,7 @@ export const BlockComponent = ({selectedData}: BlockProps) => {
         await DATA_SERVICE.handleTransaction(
             new Transaction(payloads._unsafeUnwrap(), true)
         )
+        setImportFromUrl(false)
     }
 
     return (

@@ -6,7 +6,7 @@ import {useState} from 'react'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
-
+import {ZINDEX_BLOCK_OUTLINER} from '../const'
 import {MenuComponent} from './menu'
 
 export class BlockOutlinerProps {
@@ -57,6 +57,7 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                 left: `${x}px`,
                 top: `${y}px`,
                 pointerEvents: 'auto',
+                zIndex: ZINDEX_BLOCK_OUTLINER,
             }}
         >
             <Box
@@ -66,7 +67,6 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                     inset: '-6px',
                     pointerEvents: 'auto',
                     background: 'transparent',
-                    zIndex: 2,
                     borderRadius: 1,
                     '&:hover .block-outliner-border': {
                         borderColor: 'rgb(30, 144, 255)',
@@ -74,6 +74,7 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                     '&:hover .block-outliner-action': {
                         display: 'flex',
                     },
+                    zIndex: ZINDEX_BLOCK_OUTLINER,
                 }}
             >
                 <Box
@@ -95,7 +96,6 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                         position: 'absolute',
                         top: '-10px',
                         right: '-10px',
-                        zIndex: 10,
                         width: 32,
                         height: 32,
                         alignItems: 'center',

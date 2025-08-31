@@ -160,8 +160,8 @@ export class Painter {
 
     private _fill(box: Box, style?: StandardStyle) {
         const fill = style?.fill
-        if (!fill || !('patternFill' in fill)) return
-        const patternFill = fill.patternFill as PatternFill
+        if (!fill || !(fill.type === 'patternFill')) return
+        const patternFill = fill.value as PatternFill
         if (patternFill.bgColor) {
             const color = StandardColor.fromCtColor(patternFill.bgColor)
             const fillAttr = new CanvasAttr()

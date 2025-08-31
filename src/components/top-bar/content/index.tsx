@@ -49,6 +49,7 @@ import {
 import {SplitMergedCellsBuilder} from 'packages/web'
 import {BorderSettingComponent} from './border-setting'
 import {Tooltip} from '@mui/material'
+import {ZINDEX_MODAL, ZINDEX_UI} from '../../const'
 
 export * from './font-size'
 export * from './start-item'
@@ -534,10 +535,17 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 onRequestClose={() => setColorPicking('')}
                 className={styles['modal-content']}
                 overlayClassName={styles['modal-overlay']}
-                style={{content: {top: '100px', left: '0px'}}}
+                style={{
+                    content: {top: '100px', left: '0px', zIndex: ZINDEX_UI},
+                }}
                 ariaHideApp={false}
             >
                 <SketchPicker
+                    styles={{
+                        default: {
+                            picker: {zIndex: ZINDEX_UI},
+                        },
+                    }}
                     color={
                         colorPicking === 'fill'
                             ? patternFillColor
