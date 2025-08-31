@@ -51,8 +51,8 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         return null
     }
     const [fields, setFields] = useState<FieldSetting[]>([])
-    const [start, setDataAreaStartRow] = useState(0)
-    const [end, setDataAreaStartCol] = useState(0)
+    const [startRow, setDataAreaStartRow] = useState(1)
+    const [startCol, setDataAreaStartCol] = useState(1)
     const [showDataPortSettings, setShowDataPortSettings] = useState(false)
     const [dataPort, setDataPort] = useState<{
         baseUrl: string
@@ -68,8 +68,8 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
 
     const handleSubmit = async () => {
         const dataArea: DataArea = {
-            startRow: start,
-            startCol: end,
+            startRow: startRow,
+            startCol: startCol,
             direction: 'vertical',
         }
         const masterRow = range.startRow
@@ -108,7 +108,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 value: new CellInputBuilder()
                     .sheetIdx(sheetIdx)
                     .row(masterRow)
-                    .col(masterCol + idx)
+                    .col(masterCol + idx + startCol)
                     .content(field.name)
                     .build(),
             }
@@ -197,14 +197,14 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
 
             <Box display="flex" gap={2} alignItems="center" mb={3}>
                 {textNumberInput(
-                    start,
+                    startRow,
                     setDataAreaStartRow,
                     'Start Row (relative)',
                     1,
                     range.endRow - range.startRow + 1
                 )}
                 {textNumberInput(
-                    end,
+                    startCol,
                     setDataAreaStartCol,
                     'Start Column (relative)',
                     1,
