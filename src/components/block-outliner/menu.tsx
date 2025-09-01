@@ -45,7 +45,6 @@ export const ClickableList = ({
 }
 
 export const MenuComponent = (props: MenuProps) => {
-    const [snackbarOpen, setSnackbarOpen] = React.useState(false)
     const {sheetId, blockId, isOpen, setIsOpen} = props
     const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
     const descriptor = CRAFT_MANAGER.getCraftDescriptor([sheetId, blockId])
@@ -88,7 +87,15 @@ export const MenuComponent = (props: MenuProps) => {
         {
             label: 'Export the data',
             onClick: async () => {
-                await CRAFT_MANAGER.exportDataArea([sheetId, blockId])
+                const result = await CRAFT_MANAGER.uploadCraftData([
+                    sheetId,
+                    blockId,
+                ])
+                if (result.isOk()) {
+                    setError(undefined)
+                } else {
+                    setError('Failed to upload data')
+                }
             },
         },
         {

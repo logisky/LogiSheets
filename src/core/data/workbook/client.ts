@@ -108,13 +108,15 @@ export class WorkbookClient implements Client {
     }
     getCellsExceptWindow(
         params: GetCellsExceptWindowParams
-    ): Resp<readonly Cell[]> {
+    ): Resp<readonly CellInfo[]> {
         return this._call(MethodName.GetCellsExceptWindow, params) as Resp<
-            readonly Cell[]
+            readonly CellInfo[]
         >
     }
-    getCells(params: GetCellsParams): Resp<readonly Cell[]> {
-        return this._call(MethodName.GetCells, params) as Resp<readonly Cell[]>
+    getCells(params: GetCellsParams): Resp<readonly CellInfo[]> {
+        return this._call(MethodName.GetCells, params) as Resp<
+            readonly CellInfo[]
+        >
     }
     lookupAppendixUpward(
         params: LookupAppendixUpwardParams
@@ -224,12 +226,8 @@ export class WorkbookClient implements Client {
         ) as Resp<DisplayWindowWithStartPoint>
     }
 
-    async getCell(params: GetCellParams): Resp<Cell> {
-        const result = this._call(MethodName.GetCell, params) as Resp<CellInfo>
-        return result.then((v) => {
-            if (!isErrorMessage(v)) return new Cell(v)
-            return v
-        })
+    async getCell(params: GetCellParams): Resp<CellInfo> {
+        return this._call(MethodName.GetCell, params) as Resp<CellInfo>
     }
 
     async getCellPosition(params: GetCellParams): Resp<CellPosition> {

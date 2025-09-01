@@ -10,6 +10,7 @@ import {
     SheetDimension,
     MergeCell,
     Resp,
+    isErrorMessage,
 } from 'logisheets-web'
 import {CellViewResponse, ViewManager} from './view_manager'
 import {WorkbookClient} from './workbook'
@@ -130,7 +131,10 @@ export class DataServiceImpl implements DataService {
     }
 
     public getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell> {
-        return this._workbook.getCell({sheetIdx, row, col})
+        return this._workbook.getCell({sheetIdx, row, col}).then((v) => {
+            if (!isErrorMessage(v)) return new Cell(v)
+            return v
+        })
     }
 
     public registrySheetUpdatedCallback(f: () => void): void {

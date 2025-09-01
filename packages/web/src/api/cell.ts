@@ -51,21 +51,15 @@ export class CellValue {
     }
     static from(value: Value) {
         const v = new CellValue()
-        if (hasOwnProperty(value, 'str'))
-            v.cellValueOneof = {$case: 'str', str: value.str as string}
-        else if (hasOwnProperty(value, 'bool'))
-            v.cellValueOneof = {$case: 'bool', bool: value.bool as boolean}
-        else if (hasOwnProperty(value, 'number'))
-            v.cellValueOneof = {$case: 'number', number: value.number as number}
-        else if (hasOwnProperty(value, 'error'))
-            v.cellValueOneof = {$case: 'error', error: value.error as string}
+        if (value === 'empty') return v
+        if (value.type === 'str')
+            v.cellValueOneof = {$case: 'str', str: value.value as string}
+        else if (value.type === 'bool')
+            v.cellValueOneof = {$case: 'bool', bool: value.value as boolean}
+        else if (value.type === 'number')
+            v.cellValueOneof = {$case: 'number', number: value.value as number}
+        else if (value.type === 'error')
+            v.cellValueOneof = {$case: 'error', error: value.value as string}
         return v
     }
-}
-
-function hasOwnProperty<T, K extends PropertyKey>(
-    obj: T,
-    prop: K
-): obj is T & Record<K, unknown> {
-    return Object.prototype.hasOwnProperty.call(obj, prop)
 }

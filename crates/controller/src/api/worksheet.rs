@@ -1171,8 +1171,8 @@ impl<'a> Worksheet<'a> {
                             appendix: appendix.clone(),
                             sheet_id: self.sheet_id,
                             block_id,
-                            row_idx,
-                            col_idx,
+                            row_idx: r,
+                            col_idx: c,
                         })
                 })
         };

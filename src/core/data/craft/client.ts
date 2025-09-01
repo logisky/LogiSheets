@@ -2,6 +2,7 @@ import {CraftData, CraftDescriptor, Resp} from 'logisheets-craft-forge'
 import {Result, ResultAsync, err, ok} from '../../error'
 
 export interface Client {
+    getUserId(baseUrl: string): ResultAsync<string>
     getId(baseUrl: string): ResultAsync<string>
     downloadDescriptor(
         baseUrl: string,
@@ -24,6 +25,27 @@ export interface Client {
 }
 
 export class ClientImpl implements Client {
+    private _userId?: string
+
+    async getUserId(baseUrl: string): ResultAsync<string> {
+        if (this._userId) return ok(this._userId)
+
+        const url = `${baseUrl.replace(/\/$/, '')}/user_id`
+        const res = await fetch(url)
+        if (!res.ok) {
+            return err({
+                message: 'http error',
+                code: res.status,
+            })
+        }
+        const result = (await res.json()) as Resp<string>
+        const r = toResult(result)
+        if (r.isOk()) {
+            this._userId = r._unsafeUnwrap()
+        }
+        return r
+    }
+
     async getId(baseUrl: string): ResultAsync<string> {
         const url = `${baseUrl.replace(/\/$/, '')}/id`
         const res = await fetch(url)
@@ -111,6 +133,8 @@ export class ClientImpl implements Client {
         }
         return ok(undefined)
     }
+
+    private _userName?: string
 }
 
 function toResult<T>(resp: Resp<T>): Result<T> {

@@ -293,9 +293,12 @@ export class CraftManager {
         if (descriptorResult.isErr())
             return err(descriptorResult._unsafeUnwrapErr())
         const descriptor = descriptorResult._unsafeUnwrap()
-        const baseUrl = descriptor.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        let baseUrl = descriptor.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        if (baseUrl === '') {
+            baseUrl = DEFAULT_BASE_URL
+        }
         let id = descriptor.dataPort?.identifier
-        if (id === undefined) {
+        if (id === undefined || id === '') {
             const idResult = await this._client.getId(baseUrl)
             if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
             id = idResult._unsafeUnwrap()
@@ -341,9 +344,12 @@ export class CraftManager {
         if (descriptorResult.isErr())
             return err(descriptorResult._unsafeUnwrapErr())
         const descriptor = descriptorResult._unsafeUnwrap()
-        const baseUrl = descriptor?.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        let baseUrl = descriptor?.dataPort?.baseUrl ?? DEFAULT_BASE_URL
+        if (baseUrl === '') {
+            baseUrl = DEFAULT_BASE_URL
+        }
         let id = descriptor?.dataPort?.identifier
-        if (id === undefined) {
+        if (id === undefined || id === '') {
             const idResult = await this._client.getId(baseUrl)
             if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
             id = idResult._unsafeUnwrap()
@@ -478,8 +484,8 @@ export class CraftManager {
             const appendix = await this._workbookClient.lookupAppendixUpward({
                 sheetId: blockId[0],
                 blockId: blockId[1],
-                row: i,
-                col: dataArea.startCol,
+                row: dataArea.startRow,
+                col: i,
                 craftId: LOGISHEETS_BUILTIN_CRAFT_ID,
                 tag: FIELD_AND_VALIDATION_TAG,
             })
@@ -556,18 +562,19 @@ export class CraftManager {
         const result: CraftValue[] = []
         for (let r = 0; r < rowCount; r++) {
             for (let c = 0; c < colCount; c++) {
-                const i = c + r * rowCount
+                const i = c + r * colCount
                 const cell = cells[i]
-                const field = fieldMap.get(c + masterCol)
+                const field = fieldMap.get(c + dataArea.startCol)
                 if (field === undefined) continue
-                let key = keyMap.get(r + masterRow)
+                let key = keyMap.get(r)
                 if (key === undefined) {
                     key = ''
                 }
+                if (cell.value === 'empty' && key === '') continue
                 const v: CraftValue = {
                     key,
                     field,
-                    value: cell.toCellInfo().value,
+                    value: cell.value,
                 }
                 result.push(v)
             }
