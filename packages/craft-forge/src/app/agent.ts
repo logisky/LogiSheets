@@ -4,7 +4,7 @@ import {
     BlockInfo,
     CalcConditionParams,
     Callback,
-    Cell,
+    CellInfo,
     CellPosition,
     ColId,
     CustomFunc,
@@ -86,14 +86,16 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
     getValue(params: GetCellValueParams): Resp<Value> {
         return this._call(MethodName.GetCellValue, params) as Resp<Value>
     }
-    getCells(params: GetCellsParams): Resp<readonly Cell[]> {
-        return this._call(MethodName.GetCells, params) as Resp<readonly Cell[]>
+    getCells(params: GetCellsParams): Resp<readonly CellInfo[]> {
+        return this._call(MethodName.GetCells, params) as Resp<
+            readonly CellInfo[]
+        >
     }
     getCellsExceptWindow(
         params: GetCellsExceptWindowParams
-    ): Resp<readonly Cell[]> {
+    ): Resp<readonly CellInfo[]> {
         return this._call(MethodName.GetCellsExceptWindow, params) as Resp<
-            readonly Cell[]
+            readonly CellInfo[]
         >
     }
     getBlockInfo(params: GetBlockInfoParams): Resp<BlockInfo> {
@@ -178,8 +180,8 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
         ) as Resp<DisplayWindowWithStartPoint>
     }
 
-    getCell(params: GetCellParams): Resp<Cell> {
-        return this._call(MethodName.GetCell, params) as Resp<Cell>
+    getCell(params: GetCellParams): Resp<CellInfo> {
+        return this._call(MethodName.GetCell, params) as Resp<CellInfo>
     }
 
     getCellPosition(params: GetCellParams): Resp<CellPosition> {

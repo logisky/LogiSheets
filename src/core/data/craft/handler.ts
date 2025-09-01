@@ -2,7 +2,7 @@ import {
     AppendixWithCell,
     BlockInfo,
     CalcConditionParams,
-    Cell,
+    CellInfo,
     CellPosition,
     ColId,
     CustomFunc,
@@ -167,10 +167,10 @@ export class CraftHandler implements CraftHandlerInterface {
     }
     getCellsExceptWindow(
         params: GetCellsExceptWindowParams
-    ): Resp<readonly Cell[]> {
+    ): Resp<readonly CellInfo[]> {
         return this._workbookClient.getCellsExceptWindow(params)
     }
-    getCells(params: GetCellsParams): Resp<readonly Cell[]> {
+    getCells(params: GetCellsParams): Resp<readonly CellInfo[]> {
         return this._workbookClient.getCells(params)
     }
     getBlockInfo(params: GetBlockInfoParams): Resp<BlockInfo> {
@@ -238,7 +238,7 @@ export class CraftHandler implements CraftHandlerInterface {
         return this._workbookClient.getDisplayWindow(params)
     }
 
-    getCell(params: GetCellParams): Resp<Cell> {
+    getCell(params: GetCellParams): Resp<CellInfo> {
         return this._workbookClient.getCell(params)
     }
 

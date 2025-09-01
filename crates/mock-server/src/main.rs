@@ -99,6 +99,20 @@ async fn main() {
         })
     }
 
+    async fn get_user_id(State(_state): State<AppState>) -> Json<Resp<String>> {
+        use rand::{distributions::Alphanumeric, Rng};
+        let user_id: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect();
+        Json(Resp {
+            data: Some(user_id),
+            status_code: 200,
+            message: None,
+        })
+    }
+
     let cors = CorsLayer::new()
         .allow_origin(["http://localhost:4200".parse().unwrap()])
         .allow_headers(Any)
@@ -107,6 +121,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async { "A mock server for LogiSheets!" }))
         .route("/id", get(get_id))
+        .route("/user_id", get(get_user_id))
         .route(
             "/descriptor/{id}",
             get(get_descriptor).post(post_descriptor),

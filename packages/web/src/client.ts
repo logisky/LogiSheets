@@ -11,8 +11,9 @@ import type {
     ReproducibleCell,
     SheetCoordinate,
     Value,
+    CellInfo,
 } from './bindings'
-import type {Cell, CustomFunc} from './api'
+import type {CustomFunc} from './api'
 import type {Transaction, RowId, ColId} from './types'
 
 export type Resp<T> = Promise<T | ErrorMessage>
@@ -28,11 +29,11 @@ export interface Client {
     getDisplayWindow(
         params: GetDisplayWindowParams
     ): Resp<DisplayWindowWithStartPoint>
-    getCell(params: GetCellParams): Resp<Cell>
-    getCells(params: GetCellsParams): Resp<readonly Cell[]>
+    getCell(params: GetCellParams): Resp<CellInfo>
+    getCells(params: GetCellsParams): Resp<readonly CellInfo[]>
     getCellsExceptWindow(
         params: GetCellsExceptWindowParams
-    ): Resp<readonly Cell[]>
+    ): Resp<readonly CellInfo[]>
     getReproducibleCell(
         params: GetReproducibleCellParams
     ): Resp<ReproducibleCell>

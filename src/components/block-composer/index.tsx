@@ -1,5 +1,5 @@
 import {getSelectedCellRange, SelectedData} from '../canvas'
-import React, {useState} from 'react'
+import {useState} from 'react'
 import Collapse from '@mui/material/Collapse'
 import {DeleteOutline} from '@mui/icons-material'
 import {
@@ -19,7 +19,12 @@ import AddIcon from '@mui/icons-material/Add'
 import {useToast} from '@/ui/notification/useToast'
 import {TYPES} from '@/core/ioc/types'
 import {useInjection} from '@/core/ioc/provider'
-import {CraftManager, DataService} from '@/core/data'
+import {
+    CraftManager,
+    DataService,
+    LOGISHEETS_BUILTIN_CRAFT_ID,
+    FIELD_AND_VALIDATION_TAG,
+} from '@/core/data'
 import {CraftDescriptor, DataArea, DataPort} from 'logisheets-craft-forge'
 import {
     Payload,
@@ -118,10 +123,10 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 value: new CreateAppendixBuilder()
                     .sheetIdx(sheetIdx)
                     .blockId(blockId)
-                    .rowIdx(masterRow)
-                    .colIdx(masterCol + idx)
-                    .craftId('CRAFT_FIELD')
-                    .tag(0)
+                    .rowIdx(Math.max(startRow - 1, 0))
+                    .colIdx(idx + startCol)
+                    .craftId(LOGISHEETS_BUILTIN_CRAFT_ID)
+                    .tag(FIELD_AND_VALIDATION_TAG)
                     .content(field.validation)
                     .build(),
             }

@@ -392,6 +392,15 @@ class WorkerService implements IWorkbookWorker {
             case MethodName.GetReproducibleCells:
                 result = this.getReproducibleCells(args)
                 break
+            case MethodName.LookupAppendixUpward:
+                result = this.lookupAppendixUpward(args)
+                break
+            case MethodName.GetCellValue:
+                result = this.getValue(args)
+                break
+            case MethodName.GetCells:
+                result = this.getCells(args)
+                break
             default:
                 throw new Error(`Unknown method: ${m}`)
         }
