@@ -1,4 +1,5 @@
 use logisheets_base::errors::BasicError;
+use logisheets_base::CellId;
 
 use crate::edit_action::EditPayload;
 use crate::Error;
@@ -62,6 +63,46 @@ impl ExclusiveManagerExecutor {
                         content: p.content,
                     },
                 );
+                Ok((self, true))
+            }
+            EditPayload::ReproduceCells(p) => {
+                if p.cells.is_empty() {
+                    return Ok((self, true));
+                }
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| Error::Basic(BasicError::SheetIdxExceed(l)))?;
+
+                let anchor_x = p.cells[0].coordinate.row;
+                let anchor_y = p.cells[0].coordinate.col;
+
+                for cell in p.cells {
+                    let cell_id = ctx.fetch_cell_id(
+                        &sheet_id,
+                        cell.coordinate.row - anchor_x + p.start_row,
+                        cell.coordinate.col - anchor_y + p.start_col,
+                    )?;
+                    match cell_id {
+                        CellId::BlockCell(block_cell_id) => {
+                            cell.appendix.iter().for_each(|appendix| {
+                                self.manager.appendix_manager.push(
+                                    sheet_id,
+                                    block_cell_id,
+                                    Appendix {
+                                        craft_id: appendix.craft_id.clone(),
+                                        tag: appendix.tag.clone(),
+                                        content: appendix.content.clone(),
+                                    },
+                                );
+                            })
+                        }
+                        _ => {
+                            return Err(Error::PayloadError(String::from(
+                                "Cannot set diy cell on normal cell",
+                            )))
+                        }
+                    }
+                }
                 Ok((self, true))
             }
             EditPayload::CreateDiyCellById(p) => {

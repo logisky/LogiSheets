@@ -190,7 +190,6 @@ export class CraftManager {
     }
 
     addCraftDescriptor(blockId: BlockId, descriptor: CraftDescriptor) {
-        descriptor.workbookPart = undefined
         const key = blockIdToString(blockId)
         this._craftDescriptors.set(key, descriptor)
     }
@@ -201,6 +200,10 @@ export class CraftManager {
         if (descriptor === undefined)
             return err(descriptorNotFound(blockId[0], blockId[1]))
         return ok(descriptor)
+    }
+
+    getUserId(): ResultAsync<string> {
+        return this._client.getUserId()
     }
 
     /**
@@ -214,6 +217,14 @@ export class CraftManager {
             return err(descriptorNotFound(blockId[0], blockId[1]))
 
         const descriptor = descriptorResult._unsafeUnwrap()
+        if (
+            descriptor.dataPort?.identifier === undefined ||
+            descriptor.dataPort?.identifier === ''
+        ) {
+            const idResult = await this._client.getId()
+            if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
+            descriptor.dataPort!.identifier = idResult._unsafeUnwrap()
+        }
 
         const sheetIdx = await this._workbookClient.getSheetIdx({
             sheetId: blockId[0],
@@ -267,21 +278,18 @@ export class CraftManager {
             return err(descriptorResult._unsafeUnwrapErr())
 
         const descriptor = descriptorResult._unsafeUnwrap()
-        let baseUrl = descriptor.dataPort?.baseUrl ?? DEFAULT_BASE_URL
-        if (baseUrl === '') {
-            baseUrl = DEFAULT_BASE_URL
-        }
         let id = descriptor.dataPort?.identifier
         if (id === undefined || id === '') {
-            const idResult = await this._client.getId(baseUrl)
+            const idResult = await this._client.getId()
             if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
             id = idResult._unsafeUnwrap()
+            descriptor.dataPort = {
+                baseUrl: descriptor.dataPort?.baseUrl ?? '',
+                identifier: id,
+            }
+            this.addCraftDescriptor(blockId, descriptor)
         }
-        const result = await this._client.uploadDescriptor(
-            baseUrl,
-            id,
-            descriptor
-        )
+        const result = await this._client.uploadDescriptor(id, descriptor)
         if (result.isErr()) return err(result._unsafeUnwrapErr())
         return ok(result._unsafeUnwrap())
     }
@@ -299,12 +307,11 @@ export class CraftManager {
         }
         let id = descriptor.dataPort?.identifier
         if (id === undefined || id === '') {
-            const idResult = await this._client.getId(baseUrl)
+            const idResult = await this._client.getId()
             if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
             id = idResult._unsafeUnwrap()
         }
         const result = await this._client.uploadCraftData(
-            baseUrl,
             id,
             data._unsafeUnwrap()
         )
@@ -321,21 +328,43 @@ export class CraftManager {
         masterCol: number,
         url: string
     ): ResultAsync<readonly Payload[]> {
-        const identifierReuslt = await this._client.getId(DEFAULT_BASE_URL)
-        if (identifierReuslt.isErr())
-            return err(identifierReuslt._unsafeUnwrapErr())
         const descriptorResult = await this._client.downloadDescriptor(url)
         if (descriptorResult.isErr())
             return err(descriptorResult._unsafeUnwrapErr())
+
+        const urlObj = new URL(url)
+
+        let id = ''
+        if (!this._client.isSameHost(url)) {
+            const idResult = await this._client.getId()
+            if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
+            id = idResult._unsafeUnwrap()
+        } else {
+            id = urlObj.pathname.split('/').pop()!
+        }
+
         const descriptor = descriptorResult._unsafeUnwrap()
-        const idResult = await this._workbookClient.getAvailableBlockId({
+        descriptor.dataPort!.identifier = id
+        const blockIdResult = await this._workbookClient.getAvailableBlockId({
             sheetIdx: sheetIdx,
         })
-        if (isErrorMessage(idResult)) return err(workbookError(idResult.msg))
-        const id = idResult
-        this._craftDescriptors.set(identifierReuslt._unsafeUnwrap(), descriptor)
+        if (isErrorMessage(blockIdResult))
+            return err(workbookError(blockIdResult.msg))
+        const sheetId = await this._workbookClient.getSheetId({
+            sheetIdx: sheetIdx,
+        })
+        if (isErrorMessage(sheetId)) return err(workbookError(sheetId.msg))
+        const blockId = blockIdResult
+        const key = blockIdToString([sheetId, blockId])
+        this._craftDescriptors.set(key, descriptor)
         return ok(
-            generatePayloads(sheetIdx, id, masterRow, masterCol, descriptor)
+            generatePayloads(
+                sheetIdx,
+                blockId,
+                masterRow,
+                masterCol,
+                descriptor
+            )
         )
     }
 
@@ -344,15 +373,9 @@ export class CraftManager {
         if (descriptorResult.isErr())
             return err(descriptorResult._unsafeUnwrapErr())
         const descriptor = descriptorResult._unsafeUnwrap()
-        let baseUrl = descriptor?.dataPort?.baseUrl ?? DEFAULT_BASE_URL
-        if (baseUrl === '') {
-            baseUrl = DEFAULT_BASE_URL
-        }
-        let id = descriptor?.dataPort?.identifier
+        const id = descriptor?.dataPort?.identifier
         if (id === undefined || id === '') {
-            const idResult = await this._client.getId(baseUrl)
-            if (idResult.isErr()) return err(idResult._unsafeUnwrapErr())
-            id = idResult._unsafeUnwrap()
+            return err(descriptorNotFound(blockId[0], blockId[1]))
         }
         const dataArea = descriptor.dataArea
         const infoResult = await this._workbookClient.getBlockInfo({
@@ -365,7 +388,7 @@ export class CraftManager {
         const masterRow = info.rowStart
         const masterCol = info.colStart
         const descriptorRowSize = dataArea.startRow
-        const dataResult = await this._client.downloadCraftData(baseUrl, id)
+        const dataResult = await this._client.downloadCraftData(id)
         if (dataResult.isErr()) return err(dataResult._unsafeUnwrapErr())
         const data = dataResult._unsafeUnwrap()
 
@@ -373,7 +396,8 @@ export class CraftManager {
             sheetId: blockId[0],
         })
         if (isErrorMessage(sheetIdx)) return err(workbookError(sheetIdx.msg))
-        const newRowCnt = data.values.length + descriptorRowSize
+        const newRowCnt =
+            data.flatMap((v) => v.values).length + descriptorRowSize
         const payloads: Payload[] = [
             {
                 type: 'resizeBlock',
@@ -387,19 +411,21 @@ export class CraftManager {
 
         const fieldMap = await this.getFieldMap(blockId, dataArea)
         const keyArray: string[] = []
-        const fieldKeyValue = new Map<[string, string], Value>()
-        data.values.forEach((v) => {
+        const fieldKeyValue = new Map<string, Value>()
+        const getKey = (key: string, field: string) =>
+            `${key}_?@logisheets#!_${field}`
+        data.flatMap((v) => v.values).forEach((v) => {
             const key = v.key
             const field = v.field
             const value = v.value
-            fieldKeyValue.set([key, field], value)
+            fieldKeyValue.set(getKey(key, field), value)
             if (keyArray.includes(key)) return
             keyArray.push(key)
         })
 
         for (
             let r = dataArea.startRow;
-            r < (dataArea.endRow ?? newRowCnt - 1);
+            r <= (dataArea.endRow ?? newRowCnt - 1);
             r++
         ) {
             const idx = r - dataArea.startRow
@@ -408,13 +434,13 @@ export class CraftManager {
             const row = masterRow + r
             for (
                 let c = dataArea.startCol;
-                c < (dataArea.endCol ?? info.colCnt - 1);
+                c <= (dataArea.endCol ?? info.colCnt - 1);
                 c++
             ) {
                 const col = masterCol + c
                 const f = fieldMap.get(c)
                 if (f === undefined) continue
-                const v = fieldKeyValue.get([key, f])
+                const v = fieldKeyValue.get(getKey(key, f))
                 if (v === undefined) continue
                 const clearPayload: Payload = {
                     type: 'cellClear',
@@ -430,7 +456,7 @@ export class CraftManager {
                         .sheetIdx(sheetIdx)
                         .row(row)
                         .col(col)
-                        .content(v.toString())
+                        .content(CellValue.from(v).valueStr)
                         .build(),
                 }
                 payloads.push(clearPayload, payload)
@@ -566,7 +592,7 @@ export class CraftManager {
                 const cell = cells[i]
                 const field = fieldMap.get(c + dataArea.startCol)
                 if (field === undefined) continue
-                let key = keyMap.get(r)
+                let key = keyMap.get(r + dataArea.startRow)
                 if (key === undefined) {
                     key = ''
                 }
@@ -582,6 +608,10 @@ export class CraftManager {
         return ok({values: result})
     }
 
+    public async getId(): ResultAsync<string> {
+        return this._client.getId()
+    }
+
     private _crafts: CraftManifest[] = []
     private _blockToCraft: Map<string, CraftId> = new Map()
     private _craftStates: Map<string, CraftState> = new Map()
@@ -593,7 +623,7 @@ export class CraftManager {
 
     private _currentBlockId: BlockId | undefined
     private _dirty = false
-    private _client = new ClientImpl()
+    private _client = new ClientImpl(DEFAULT_BASE_URL)
 }
 
 function blockIdToString(blockId: BlockId) {

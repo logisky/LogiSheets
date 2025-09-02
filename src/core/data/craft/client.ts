@@ -2,35 +2,33 @@ import {CraftData, CraftDescriptor, Resp} from 'logisheets-craft-forge'
 import {Result, ResultAsync, err, ok} from '../../error'
 
 export interface Client {
-    getUserId(baseUrl: string): ResultAsync<string>
-    getId(baseUrl: string): ResultAsync<string>
-    downloadDescriptor(
-        baseUrl: string,
-        id: string
-    ): ResultAsync<CraftDescriptor>
+    getUserId(): ResultAsync<string>
+    getId(): ResultAsync<string>
+    downloadDescriptor(id: string): ResultAsync<CraftDescriptor>
 
     uploadDescriptor(
-        baseUrl: string,
         id: string,
         descriptor: CraftDescriptor
     ): ResultAsync<string>
 
-    downloadCraftData(baseUrl: string, id: string): ResultAsync<CraftData>
+    downloadCraftData(id: string): ResultAsync<CraftData[]>
 
-    uploadCraftData(
-        baseUrl: string,
-        id: string,
-        data: CraftData
-    ): ResultAsync<void>
+    uploadCraftData(id: string, data: CraftData): ResultAsync<void>
 }
 
 export class ClientImpl implements Client {
+    public constructor(public baseUrl: string) {}
+
+    public isSameHost(url: string): boolean {
+        return new URL(this.baseUrl).host === new URL(url).host
+    }
+
     private _userId?: string
 
-    async getUserId(baseUrl: string): ResultAsync<string> {
+    async getUserId(): ResultAsync<string> {
         if (this._userId) return ok(this._userId)
 
-        const url = `${baseUrl.replace(/\/$/, '')}/user_id`
+        const url = `${this.baseUrl.replace(/\/$/, '')}/user_id`
         const res = await fetch(url)
         if (!res.ok) {
             return err({
@@ -46,8 +44,8 @@ export class ClientImpl implements Client {
         return r
     }
 
-    async getId(baseUrl: string): ResultAsync<string> {
-        const url = `${baseUrl.replace(/\/$/, '')}/id`
+    async getId(): ResultAsync<string> {
+        const url = `${this.baseUrl.replace(/\/$/, '')}/id`
         const res = await fetch(url)
         if (!res.ok) {
             return err({
@@ -72,11 +70,10 @@ export class ClientImpl implements Client {
     }
 
     async uploadDescriptor(
-        baseUrl: string,
         id: string,
         descriptor: CraftDescriptor
     ): ResultAsync<string> {
-        const url = `${baseUrl.replace(
+        const url = `${this.baseUrl.replace(
             /\/$/,
             ''
         )}/descriptor/${encodeURIComponent(id)}`
@@ -94,13 +91,17 @@ export class ClientImpl implements Client {
         return ok(url)
     }
 
-    async downloadCraftData(
-        baseUrl: string,
-        id: string
-    ): ResultAsync<CraftData> {
-        const url = `${baseUrl.replace(/\/$/, '')}/data/${encodeURIComponent(
-            id
-        )}`
+    async downloadCraftData(id: string): ResultAsync<CraftData[]> {
+        if (!this._userId) {
+            const userIdResult = await this.getUserId()
+            if (userIdResult.isErr())
+                return err(userIdResult._unsafeUnwrapErr())
+            this._userId = userIdResult._unsafeUnwrap()
+        }
+        const url = `${this.baseUrl.replace(
+            /\/$/,
+            ''
+        )}/data/${encodeURIComponent(id)}/${encodeURIComponent(this._userId)}`
         const res = await fetch(url)
         if (!res.ok) {
             return err({
@@ -108,18 +109,21 @@ export class ClientImpl implements Client {
                 code: res.status,
             })
         }
-        const result = (await res.json()) as Resp<CraftData>
+        const result = (await res.json()) as Resp<CraftData[]>
         return toResult(result)
     }
 
-    async uploadCraftData(
-        baseUrl: string,
-        id: string,
-        data: CraftData
-    ): ResultAsync<void> {
-        const url = `${baseUrl.replace(/\/$/, '')}/data/${encodeURIComponent(
-            id
-        )}`
+    async uploadCraftData(id: string, data: CraftData): ResultAsync<void> {
+        if (!this._userId) {
+            const userIdResult = await this.getUserId()
+            if (userIdResult.isErr())
+                return err(userIdResult._unsafeUnwrapErr())
+            this._userId = userIdResult._unsafeUnwrap()
+        }
+        const url = `${this.baseUrl.replace(
+            /\/$/,
+            ''
+        )}/data/${encodeURIComponent(id)}/${encodeURIComponent(this._userId)}`
         const res = await fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -133,8 +137,6 @@ export class ClientImpl implements Client {
         }
         return ok(undefined)
     }
-
-    private _userName?: string
 }
 
 function toResult<T>(resp: Resp<T>): Result<T> {

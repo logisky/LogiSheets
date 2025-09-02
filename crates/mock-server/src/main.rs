@@ -15,7 +15,9 @@ use tower_http::cors::{Any, CorsLayer};
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub descriptors: Arc<Mutex<HashMap<String, CraftDescriptor>>>,
-    pub data: Arc<Mutex<HashMap<String, CraftData>>>,
+    // Key: craft id
+    // Value: Key: user id, Value: craft data
+    pub data: Arc<Mutex<HashMap<String, HashMap<String, CraftData>>>>,
     pub current_id: Arc<Mutex<usize>>,
 }
 
@@ -62,15 +64,28 @@ async fn main() {
 
     async fn get_data(
         State(state): State<AppState>,
-        Path(id): Path<String>,
-    ) -> Json<Resp<CraftData>> {
+        Path((id, user_id)): Path<(String, String)>,
+    ) -> Json<Resp<Vec<CraftData>>> {
         let map = state.data.lock().unwrap();
+        let descriptors = state.descriptors.lock().unwrap();
+        let author = &descriptors.get(&id).unwrap().author_id;
         match map.get(&id) {
-            Some(data) => Json(Resp {
-                data: Some(data.clone()),
-                status_code: 200,
-                message: None,
-            }),
+            Some(data) => {
+                let d = if author == &user_id {
+                    data.values().cloned().collect::<Vec<CraftData>>()
+                } else {
+                    if let Some(data) = data.get(&user_id) {
+                        vec![data.clone()]
+                    } else {
+                        Vec::new()
+                    }
+                };
+                Json(Resp {
+                    data: Some(d.clone()),
+                    status_code: 200,
+                    message: None,
+                })
+            }
             None => Json(Resp {
                 data: None,
                 status_code: 404,
@@ -81,11 +96,13 @@ async fn main() {
 
     async fn post_data(
         State(state): State<AppState>,
-        Path(id): Path<String>,
+        Path((id, user_id)): Path<(String, String)>,
         Json(payload): Json<CraftData>,
     ) -> StatusCode {
         let mut map = state.data.lock().unwrap();
-        map.insert(id, payload);
+        map.entry(id)
+            .or_insert_with(HashMap::new)
+            .insert(user_id, payload);
         StatusCode::OK
     }
 
@@ -126,7 +143,7 @@ async fn main() {
             "/descriptor/{id}",
             get(get_descriptor).post(post_descriptor),
         )
-        .route("/data/{id}", get(get_data).post(post_data))
+        .route("/data/{id}/{user_id}", get(get_data).post(post_data))
         .with_state(state)
         .layer(cors);
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
