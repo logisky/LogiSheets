@@ -7,6 +7,10 @@ use logisheets_controller::{ReproducibleCell, Value};
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "craft_descriptor.ts", rename_all = "camelCase")]
 pub struct CraftDescriptor {
+    /// The user id of the author
+    /// The author has the permission to fetch the data from all users,
+    /// while other users can only fetch their own data.
+    pub author_id: String,
     pub data_area: DataArea,
     pub data_port: Option<DataPort>,
 
@@ -68,4 +72,20 @@ pub struct Resp<T> {
     // Http status code
     pub status_code: u16,
     pub message: Option<String>,
+}
+
+#[test]
+fn serde_test() {
+    let data_area = DataArea {
+        direction: Direction::Horizontal,
+        start_row: 0,
+        start_col: 0,
+        end_row: None,
+        end_col: None,
+    };
+    let json = serde_json::to_string(&data_area).unwrap();
+    assert_eq!(
+        json,
+        r#"{"direction":"horizontal","startRow":0,"startCol":0}"#
+    );
 }

@@ -145,9 +145,16 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             identifier: dataPort.identifier,
         }
 
+        const authorIdResult = await CRAFT_MANAGER.getUserId()
+        if (isErrorMessage(authorIdResult)) {
+            toast('Failed to get author ID', {type: 'error'})
+            return
+        }
+        const authorId = authorIdResult._unsafeUnwrap()
         const descriptor: CraftDescriptor = {
             dataArea,
             dataPort: dp,
+            authorId,
         }
 
         CRAFT_MANAGER.addCraftDescriptor([sheetId, blockId], descriptor)

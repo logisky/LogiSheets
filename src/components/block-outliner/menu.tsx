@@ -4,7 +4,8 @@ import styles from './block-outliner.module.scss'
 import React from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {CraftManager} from '@/core/data'
+import {CraftManager, DataService} from '@/core/data'
+import {isErrorMessage, Transaction} from 'packages/web'
 
 export interface MenuProps {
     readonly sheetId: number
@@ -14,6 +15,7 @@ export interface MenuProps {
     readonly clickMousePosition: {x: number; y: number}
     readonly setDescriptorUrl: (url: string | undefined) => void
     readonly setError: (error: string | undefined) => void
+    readonly setSuccessMessage: (message: string | undefined) => void
 }
 
 export interface ClickableListProps {
@@ -47,10 +49,12 @@ export const ClickableList = ({
 export const MenuComponent = (props: MenuProps) => {
     const {sheetId, blockId, isOpen, setIsOpen} = props
     const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
+    const DATA_MANAGER = useInjection<DataService>(TYPES.Data)
     const descriptor = CRAFT_MANAGER.getCraftDescriptor([sheetId, blockId])
 
     const setDescriptorUrl = props.setDescriptorUrl
     const setError = props.setError
+    const setSuccessMessage = props.setSuccessMessage
 
     if (descriptor.isErr()) {
         throw Error('Failed to get craft descriptor')
@@ -93,15 +97,43 @@ export const MenuComponent = (props: MenuProps) => {
                 ])
                 if (result.isOk()) {
                     setError(undefined)
+                    setDescriptorUrl(undefined)
+                    setSuccessMessage('Data exported successfully')
                 } else {
                     setError('Failed to upload data')
+                    setDescriptorUrl(undefined)
+                    setSuccessMessage(undefined)
                 }
             },
         },
         {
             label: 'Import the data',
-            onClick: () => {
-                // todo
+            onClick: async () => {
+                const dlResult = await CRAFT_MANAGER.downloadCraftData([
+                    sheetId,
+                    blockId,
+                ])
+                if (!dlResult.isOk()) {
+                    setError('Failed to import data')
+                    setDescriptorUrl(undefined)
+                    setSuccessMessage(undefined)
+                    return
+                }
+
+                const payloads = dlResult._unsafeUnwrap()
+                const result = await DATA_MANAGER.handleTransaction(
+                    new Transaction(payloads, true)
+                )
+                if (isErrorMessage(result)) {
+                    setError(result.msg)
+                    setDescriptorUrl(undefined)
+                    setSuccessMessage(undefined)
+                    return
+                }
+
+                setError(undefined)
+                setDescriptorUrl(undefined)
+                setSuccessMessage('Data imported successfully')
             },
         },
     ]

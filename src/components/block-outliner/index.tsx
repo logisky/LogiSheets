@@ -31,6 +31,9 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
     const [descriptorUrl, setDescriptorUrl] = useState<string | undefined>(
         undefined
     )
+    const [successMessage, setSuccessMessage] = useState<string | undefined>(
+        undefined
+    )
     const [error, setError] = useState<string | undefined>(undefined)
     const [copySuccess, setCopySuccess] = useState(false)
 
@@ -135,24 +138,33 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                     clickMousePosition={clickMousePosition}
                     setDescriptorUrl={setDescriptorUrl}
                     setError={setError}
+                    setSuccessMessage={setSuccessMessage}
                 />
             )}
-            {descriptorUrl || error ? (
+            {descriptorUrl || error || successMessage ? (
                 <Snackbar
-                    open={!!descriptorUrl || !!error}
+                    open={!!descriptorUrl || !!error || !!successMessage}
                     autoHideDuration={6000}
                     anchorOrigin={{vertical: 'top', horizontal: 'center'}}
                     onClose={(_, reason) => {
                         if (reason === 'clickaway') return
                         setDescriptorUrl(undefined)
                         setError(undefined)
+                        setSuccessMessage(undefined)
                     }}
                 >
                     <Alert
-                        severity={error ? 'error' : 'success'}
+                        severity={
+                            error
+                                ? 'error'
+                                : successMessage
+                                ? 'success'
+                                : 'info'
+                        }
                         onClose={() => {
                             setDescriptorUrl(undefined)
                             setError(undefined)
+                            setSuccessMessage(undefined)
                         }}
                         sx={{width: '100%'}}
                         action={
@@ -177,23 +189,25 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                                 >
                                     {copySuccess ? '✅' : 'Copy'}
                                 </Button>
-                            ) : undefined
+                            ) : null
                         }
                     >
                         {error ? (
                             <span>{error}</span>
-                        ) : (
+                        ) : successMessage ? (
+                            <span>{successMessage}</span>
+                        ) : descriptorUrl ? (
                             <span>
                                 URL:{' '}
                                 <a
-                                    href={descriptorUrl!}
+                                    href={descriptorUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
                                     {descriptorUrl}
                                 </a>
                             </span>
-                        )}
+                        ) : null}
                     </Alert>
                 </Snackbar>
             ) : null}
