@@ -70,6 +70,12 @@ pub enum BasicError {
     UnavailableSheetId(SheetId),
     #[error("no appendix is found")]
     NoAppendix,
+    #[error("incomplete row col length: {0}, {1}")]
+    IncompleteRowColLength(usize, usize),
+    #[error("referencing ephemeral cell")]
+    ReferencingEphemeralCell,
+    #[error("invalid shadow id: {0}")]
+    InvalidShadowId(u64),
     #[error("invalid payload")]
     InvalidPayload,
 }

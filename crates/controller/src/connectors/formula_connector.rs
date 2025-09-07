@@ -4,6 +4,7 @@ use logisheets_base::block_affect::BlockAffectTrait;
 use logisheets_base::errors::BasicError;
 use logisheets_base::get_book_name::GetBookNameTrait;
 use logisheets_base::id_fetcher::{IdFetcherTrait, SheetIdFetcherByIdxTrait, VertexFetcherTrait};
+use logisheets_base::index_fetcher::IndexFetcherTrait;
 use logisheets_base::matrix_value::cross_product_usize;
 use logisheets_base::{
     BlockCellId, BlockId, CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId,
@@ -17,6 +18,7 @@ use crate::formula_manager::ctx::FormulaExecCtx;
 use crate::id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager};
 use crate::navigator::Navigator;
 use crate::range_manager::RangeManager;
+use crate::sid_assigner::ShadowIdAssigner;
 use crate::workbook::sheet_pos_manager::SheetPosManager;
 
 use super::IdFetcher;
@@ -39,6 +41,8 @@ pub struct FormulaConnector<'a> {
 
     pub dirty_ranges: HashSet<(SheetId, RangeId)>,
     pub dirty_cubes: HashSet<CubeId>,
+
+    pub sid_assigner: &'a ShadowIdAssigner,
 }
 
 impl<'a> FormulaConnector<'a> {
@@ -250,6 +254,56 @@ impl<'a> SheetIdFetcherByIdxTrait for FormulaConnector<'a> {
     }
 }
 
+impl<'a> IndexFetcherTrait for FormulaConnector<'a> {
+    fn fetch_row_index(
+        &self,
+        sheet_id: &SheetId,
+        row_id: &RowId,
+    ) -> std::result::Result<usize, BasicError> {
+        self.idx_navigator.fetch_row_idx(sheet_id, row_id)
+    }
+
+    fn fetch_col_index(
+        &self,
+        sheet_id: &SheetId,
+        col_id: &ColId,
+    ) -> std::result::Result<usize, BasicError> {
+        self.idx_navigator.fetch_col_idx(sheet_id, col_id)
+    }
+
+    fn fetch_cell_index(
+        &self,
+        sheet_id: &SheetId,
+        cell_id: &CellId,
+    ) -> std::result::Result<(usize, usize), BasicError> {
+        self.idx_navigator.fetch_cell_idx(sheet_id, cell_id)
+    }
+
+    fn fetch_sheet_index(&self, sheet_id: &SheetId) -> std::result::Result<usize, BasicError> {
+        self.sheet_pos_manager
+            .get_sheet_idx(sheet_id)
+            .ok_or(BasicError::SheetIdNotFound(*sheet_id))
+    }
+
+    fn fetch_normal_cell_index(
+        &self,
+        sheet_id: &SheetId,
+        normal_cell_id: &NormalCellId,
+    ) -> std::result::Result<(usize, usize), BasicError> {
+        self.idx_navigator
+            .fetch_normal_cell_idx(sheet_id, normal_cell_id)
+    }
+
+    fn fetch_block_cell_index(
+        &self,
+        sheet: &SheetId,
+        block_cell_id: &BlockCellId,
+    ) -> std::result::Result<(usize, usize), BasicError> {
+        self.idx_navigator
+            .fetch_block_cell_idx(sheet, block_cell_id)
+    }
+}
+
 impl<'a> logisheets_parser::context::ContextTrait for FormulaConnector<'a> {}
 
 impl<'a> FormulaExecCtx for FormulaConnector<'a> {
@@ -271,5 +325,9 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
 
     fn get_dirty_cube_ids(&self) -> HashSet<CubeId> {
         self.dirty_cubes.clone()
+    }
+
+    fn get_cell_id_by_shadow_id(&self, shadow_id: &u64) -> Option<(SheetId, CellId)> {
+        self.sid_assigner.get_cell_id(*shadow_id)
     }
 }

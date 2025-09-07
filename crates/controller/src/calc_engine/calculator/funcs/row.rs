@@ -20,6 +20,7 @@ where
                 Reference::Range(s, _) => CalcVertex::from_number(s.row as f64 + 1.),
             },
             CalcVertex::Union(_) => CalcVertex::from_error(ast::Error::Unspecified),
+            CalcVertex::Ephemeral(_) => CalcVertex::from_error(ast::Error::Unspecified),
         },
         None => CalcVertex::from_number(fetcher.get_curr_addr().row as f64 + 1_f64),
     }
@@ -40,6 +41,7 @@ where
             Reference::Range(s, e) => CalcVertex::from_number((e.row - s.row + 1) as f64),
         },
         CalcVertex::Union(_) => CalcVertex::from_error(ast::Error::Unspecified),
+        CalcVertex::Ephemeral(_) => CalcVertex::from_error(ast::Error::Unspecified),
     }
 }
 
@@ -58,6 +60,7 @@ where
                 Reference::Range(s, _) => CalcVertex::from_number(s.col as f64 + 1.),
             },
             CalcVertex::Union(_) => CalcVertex::from_error(ast::Error::Unspecified),
+            CalcVertex::Ephemeral(_) => CalcVertex::from_error(ast::Error::Unspecified),
         },
         None => CalcVertex::from_number(fetcher.get_curr_addr().col as f64 + 1_f64),
     }
@@ -78,5 +81,6 @@ where
             Reference::Range(s, e) => CalcVertex::from_number((e.col - s.col + 1) as f64),
         },
         CalcVertex::Union(_) => CalcVertex::from_error(ast::Error::Unspecified),
+        CalcVertex::Ephemeral(_) => CalcVertex::from_error(ast::Error::Unspecified),
     }
 }

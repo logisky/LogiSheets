@@ -43,7 +43,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     useEffect(() => {
         const subs = new Subscription()
         subs.add(
-            DATA_SERVICE.registrySheetUpdatedCallback(() => {
+            DATA_SERVICE.registerSheetUpdatedCallback(() => {
                 getSheets().then((v) => {
                     if (v) setSheets(v)
                 })

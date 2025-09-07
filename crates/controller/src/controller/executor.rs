@@ -19,6 +19,7 @@ use crate::{
     navigator::{NavExecutor, Navigator},
     range_manager::RangeExecutor,
     settings::CalcConfig,
+    sid_assigner::ShadowIdAssigner,
     version_manager::VersionManager,
     workbook::sheet_pos_manager::SheetPosManager,
     Error,
@@ -28,12 +29,14 @@ use super::status::Status;
 
 pub struct Executor<'a> {
     pub status: Status,
+    pub sid_assigner: &'a ShadowIdAssigner,
     pub version_manager: &'a mut VersionManager,
     pub async_func_manager: &'a mut AsyncFuncManager,
     pub book_name: &'a str,
     pub calc_config: CalcConfig,
     pub async_funcs: &'a HashSet<String>,
     pub updated_cells: HashSet<(SheetId, CellId)>,
+    pub cells_removed: HashSet<(SheetId, CellId)>,
     pub dirty_vertices: HashSet<Vertex>,
 
     pub sheet_updated: bool,
@@ -107,6 +110,10 @@ impl<'a> Executor<'a> {
             result.execute_container(payload.clone())?;
         result.status.container = container_executor.container;
 
+        result
+            .cells_removed
+            .extend(container_executor.cells_removed);
+
         let (exclusive, exclusive_updated) = result.execute_exclusive(payload.clone())?;
         result.status.exclusive_manager = exclusive.manager;
 
@@ -162,8 +169,10 @@ impl<'a> Executor<'a> {
             async_funcs: result.async_funcs,
             dirty_vertices: formula_executor.dirty_vertices,
             updated_cells: result.updated_cells,
+            cells_removed: result.cells_removed,
             sheet_updated,
             cell_updated,
+            sid_assigner: result.sid_assigner,
         })
     }
 
@@ -180,7 +189,7 @@ impl<'a> Executor<'a> {
             func_id_manager: &mut self.status.func_id_manager,
             sheet_id_manager: &self.status.sheet_id_manager,
             names_storage: HashMap::new(),
-            cells_stroage: HashMap::new(),
+            cells_storage: HashMap::new(),
             sheet_pos_manager: &mut self.status.sheet_pos_manager,
             async_func_manager: &mut self.async_func_manager,
             async_funcs: &self.async_funcs,
@@ -198,6 +207,7 @@ impl<'a> Executor<'a> {
 
         engine.start();
 
+        self.updated_cells.extend(calc_cells);
         Ok(self)
     }
 
@@ -332,6 +342,7 @@ impl<'a> Executor<'a> {
             external_links_manager: &mut self.status.external_links_manager,
             dirty_ranges,
             dirty_cubes,
+            sid_assigner: &self.sid_assigner,
         };
         let executor = FormulaExecutor {
             manager: self.status.formula_manager.clone(),

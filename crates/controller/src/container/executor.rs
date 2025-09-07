@@ -14,11 +14,15 @@ use super::{ctx::ContainerExecCtx, DataContainer};
 
 pub struct ContainerExecutor {
     pub container: DataContainer,
+    pub cells_removed: Vec<(SheetId, CellId)>,
 }
 
 impl ContainerExecutor {
     pub fn new(container: DataContainer) -> Self {
-        Self { container }
+        Self {
+            container,
+            cells_removed: vec![],
+        }
     }
 
     pub fn execute<C: ContainerExecCtx>(
@@ -49,7 +53,18 @@ impl ContainerExecutor {
                     .map(|bid| CellId::BlockCell(bid))
                     .collect();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok((Self { container }, true))
+
+                let mut cells_removed = self.cells_removed;
+                cells.into_iter().map(|c| (sheet_id, c)).for_each(|c| {
+                    cells_removed.push(c);
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::ResizeBlock(p) => {
                 let sheet_id = ctx
@@ -73,7 +88,17 @@ impl ContainerExecutor {
                 .flat_map(|(r, c)| ctx.fetch_cell_id(&sheet_id, r, c))
                 .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &removing_cells);
-                Ok((Self { container }, true))
+                let mut cells_removed = self.cells_removed;
+                removing_cells.into_iter().for_each(|c| {
+                    cells_removed.push((sheet_id, c));
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::CreateBlock(p) => {
                 let sheet_id = ctx
@@ -90,7 +115,18 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok((Self { container }, true))
+
+                let mut cells_removed = self.cells_removed;
+                cells.into_iter().for_each(|c| {
+                    cells_removed.push((sheet_id, c));
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::ReproduceCells(p) => {
                 if p.cells.is_empty() {
@@ -230,7 +266,17 @@ impl ContainerExecutor {
                     .for_each(|c| deleted_cells.push(CellId::NormalCell(c)));
 
                 let container = self.container.delete_cells(sheet_id, &deleted_cells);
-                Ok((Self { container }, true))
+                let mut cells_removed = self.cells_removed;
+                deleted_cells.into_iter().for_each(|c| {
+                    cells_removed.push((sheet_id, c));
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::DeleteRows(p) => {
                 let sheet_id = ctx
@@ -263,7 +309,18 @@ impl ContainerExecutor {
                     .for_each(|c| deleted_cells.push(CellId::NormalCell(c)));
 
                 let container = self.container.delete_cells(sheet_id, &deleted_cells);
-                Ok((Self { container }, true))
+
+                let mut cells_removed = self.cells_removed;
+                deleted_cells.into_iter().for_each(|c| {
+                    cells_removed.push((sheet_id, c));
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::InsertColsInBlock(p) => {
                 let sheet_id = ctx
@@ -283,7 +340,17 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok((Self { container }, true))
+                let mut cells_removed = self.cells_removed;
+                cells.into_iter().for_each(|c| {
+                    cells_removed.push((sheet_id, c));
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::DeleteColsInBlock(p) => {
                 let sheet_id = ctx
@@ -303,7 +370,17 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok((Self { container }, true))
+                let mut cells_removed = self.cells_removed;
+                cells.into_iter().for_each(|c| {
+                    cells_removed.push((sheet_id, c));
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::InsertRowsInBlock(p) => {
                 let sheet_id = ctx
@@ -323,7 +400,17 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok((Self { container }, true))
+                let mut cells_removed = self.cells_removed;
+                cells.into_iter().for_each(|c| {
+                    cells_removed.push((sheet_id, c));
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::DeleteRowsInBlock(p) => {
                 let sheet_id = ctx
@@ -343,7 +430,17 @@ impl ContainerExecutor {
                     .map(|c| c.unwrap())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
-                Ok((Self { container }, true))
+                let mut cells_removed = self.cells_removed;
+                cells.into_iter().for_each(|c| {
+                    cells_removed.push((sheet_id, c));
+                });
+                Ok((
+                    Self {
+                        container,
+                        cells_removed,
+                    },
+                    true,
+                ))
             }
             EditPayload::BlockStyleUpdate(payload) => {
                 let sheet_id = ctx

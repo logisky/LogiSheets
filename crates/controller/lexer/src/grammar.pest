@@ -56,10 +56,11 @@ error_constant = {
     | "#REF!"
     | "#VALUE!"
     | "#GETTING_DATA"
+    | "#PLACEHOLDER"
 }
 
 ref_err_with_prefix = {
-    (work_sheet_prefix | "#REF!") ~ "#REF!"
+    work_sheet_prefix ~ "#REF!"
 }
 
 logical_constant = {"TRUE" | "FALSE"}
@@ -188,6 +189,7 @@ cell_reference = {
     | a1_reference_with_prefix
     | r1c1_reference_range_with_prefix
     | r1c1_reference_with_prefix
+    | ref_err_with_prefix
 }
 
 work_sheet_prefix = {

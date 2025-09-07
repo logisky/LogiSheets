@@ -20,9 +20,10 @@ export const MAX_COUNT = 100000000
 export const CANVAS_OFFSET = 100
 
 export interface DataService {
-    registryCustomFunc(f: CustomFunc): Resp<void>
-    registryCellUpdatedCallback(f: () => void): void
-    registrySheetUpdatedCallback(f: () => void): void
+    getWorkbook(): WorkbookClient
+    registerCustomFunc(f: CustomFunc): Resp<void>
+    registerCellUpdatedCallback(f: () => void): void
+    registerSheetUpdatedCallback(f: () => void): void
     handleTransaction(t: Transaction): Resp<void>
     undo(): Resp<void>
     redo(): Resp<void>
@@ -83,6 +84,9 @@ export class DataServiceImpl implements DataService {
     ) {
         this._init()
     }
+    getWorkbook(): WorkbookClient {
+        return this._workbook
+    }
     getSheetId(sheetIdx: number): Resp<number> {
         return this._workbook.getSheetId({sheetIdx})
     }
@@ -137,8 +141,8 @@ export class DataServiceImpl implements DataService {
         })
     }
 
-    public registrySheetUpdatedCallback(f: () => void): void {
-        return this._workbook.registrySheetUpdatedCallback(f)
+    public registerSheetUpdatedCallback(f: () => void): void {
+        return this._workbook.registerSheetUpdatedCallback(f)
     }
 
     public async getAllSheetInfo(): Resp<readonly SheetInfo[]> {
@@ -159,12 +163,12 @@ export class DataServiceImpl implements DataService {
         this._sheetIdx = idx
     }
 
-    public async registryCustomFunc(f: CustomFunc) {
-        return this._workbook.registryCustomFunc(f)
+    public async registerCustomFunc(f: CustomFunc) {
+        return this._workbook.registerCustomFunc(f)
     }
 
-    public registryCellUpdatedCallback(f: () => void): void {
-        return this._workbook.registryCellUpdatedCallback(f)
+    public registerCellUpdatedCallback(f: () => void): void {
+        return this._workbook.registerCellUpdatedCallback(f)
     }
 
     public handleTransaction(transaction: Transaction): Resp<void> {
@@ -220,7 +224,7 @@ export class DataServiceImpl implements DataService {
     }
 
     private _init() {
-        this._workbook.registryCellUpdatedCallback((): void => {
+        this._workbook.registerCellUpdatedCallback((): void => {
             // Clear all the cache
             this._cellViews = new Map()
         })

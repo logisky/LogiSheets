@@ -1,11 +1,12 @@
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import styles from './block-outliner.module.scss'
-import React from 'react'
+import React, {useContext} from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {CraftManager, DataService} from '@/core/data'
 import {isErrorMessage, Transaction} from 'packages/web'
+import {CanvasStoreContext} from '../canvas/store'
 
 export interface MenuProps {
     readonly sheetId: number
@@ -49,8 +50,10 @@ export const ClickableList = ({
 export const MenuComponent = (props: MenuProps) => {
     const {sheetId, blockId, isOpen, setIsOpen} = props
     const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
-    const DATA_MANAGER = useInjection<DataService>(TYPES.Data)
+    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const descriptor = CRAFT_MANAGER.getCraftDescriptor([sheetId, blockId])
+
+    const store = useContext(CanvasStoreContext)
 
     const setDescriptorUrl = props.setDescriptorUrl
     const setError = props.setError
@@ -70,6 +73,58 @@ export const MenuComponent = (props: MenuProps) => {
             label: 'Delete',
             onClick: () => {
                 // todo
+            },
+        },
+        {
+            label: 'Validate',
+            onClick: async () => {
+                const valueChangedCallback = async (shadowId: number) => {
+                    const wb = DATA_SERVICE.getWorkbook()
+                    const shadowInfo = await wb.getShadowInfoById({
+                        shadowId: shadowId,
+                    })
+                    if (isErrorMessage(shadowInfo)) {
+                        setError(shadowInfo.msg)
+                        return
+                    }
+
+                    const value = shadowInfo.value
+                    let result = false
+                    if (value === 'empty') {
+                        result = false
+                    } else if (value.type === 'bool') {
+                        result = value.value
+                    } else if (value.type === 'error') {
+                        result = false
+                    } else {
+                        result = true
+                    }
+
+                    if (!result) {
+                        store.cellValidation.addInvalidCell(
+                            sheetId,
+                            {type: 'ephemeralCell', value: shadowId},
+                            shadowInfo.startPosition,
+                            shadowInfo.endPosition
+                        )
+                    } else {
+                        store.cellValidation.removeInvalidCell(sheetId, {
+                            type: 'ephemeralCell',
+                            value: shadowId,
+                        })
+                    }
+                }
+                const cellRemovedCallback = async (shadowId: number) => {
+                    store.cellValidation.removeInvalidCell(sheetId, {
+                        type: 'ephemeralCell',
+                        value: shadowId,
+                    })
+                }
+                CRAFT_MANAGER.setValidationRules(
+                    [sheetId, blockId],
+                    valueChangedCallback,
+                    cellRemovedCallback
+                )
             },
         },
         {
@@ -121,7 +176,7 @@ export const MenuComponent = (props: MenuProps) => {
                 }
 
                 const payloads = dlResult._unsafeUnwrap()
-                const result = await DATA_MANAGER.handleTransaction(
+                const result = await DATA_SERVICE.handleTransaction(
                     new Transaction(payloads, true)
                 )
                 if (isErrorMessage(result)) {

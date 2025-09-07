@@ -93,6 +93,7 @@ fn _index(cv: CalcVertex, r: usize, c: usize) -> CalcVertex {
         },
         CalcVertex::Reference(_) => todo!(),
         CalcVertex::Union(_) => unreachable!(),
+        CalcVertex::Ephemeral(_) => unreachable!(),
     }
 }
 

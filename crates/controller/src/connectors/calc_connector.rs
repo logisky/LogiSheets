@@ -42,7 +42,7 @@ pub struct CalcConnector<'a> {
     pub func_id_manager: &'a FuncIdManager,
     pub sheet_id_manager: &'a SheetIdManager,
     pub names_storage: HashMap<NameId, CalcValue>,
-    pub cells_stroage: HashMap<(SheetId, CellId), CalcValue>,
+    pub cells_storage: HashMap<(SheetId, CellId), CalcValue>,
     pub sheet_pos_manager: &'a SheetPosManager,
     pub async_func_manager: &'a mut AsyncFuncManager,
     pub async_funcs: &'a HashSet<String>,
@@ -181,7 +181,7 @@ impl<'a> Connector for CalcConnector<'a> {
                                 })
                             }
                         },
-                        Range::Ephemeral(_) => panic!("ephemeral cell is not allowed in reference"),
+                        Range::Ephemeral(id) => CalcVertex::Ephemeral((sheet_id, id)),
                     },
                     None => CalcVertex::from_error(ast::Error::Ref),
                 }
@@ -223,6 +223,7 @@ impl<'a> Connector for CalcConnector<'a> {
             }
             ast::CellReference::Ext(_) => todo!(),
             ast::CellReference::Name(_) => todo!(),
+            ast::CellReference::RefErr => CalcVertex::from_error(ast::Error::Ref),
         }
     }
 
@@ -273,6 +274,19 @@ impl<'a> Connector for CalcConnector<'a> {
                     },
                 }
             }
+            CalcVertex::Ephemeral((sheet_id, id)) => {
+                let cell_id = CellId::EphemeralCell(id);
+                let container = self.container.get_sheet_container_mut(sheet_id);
+                let v = container.cells.get(&cell_id);
+                match v {
+                    Some(v) => {
+                        let cell_value = v.value.clone();
+                        let value = Value::from_cell_value(cell_value, &|_| None);
+                        CalcValue::Scalar(value)
+                    }
+                    None => CalcValue::Scalar(Value::Error(ast::Error::Ref)),
+                }
+            }
         }
     }
 
@@ -310,6 +324,7 @@ impl<'a> Connector for CalcConnector<'a> {
                 let cell_value =
                     value_to_cell_value(v, &mut |t| self.text_id_manager.get_or_register_id(&t));
                 self.set_cell_value(sheet_id, cell_id, cell_value);
+                self.calc_cells.insert(vertex);
             }
             CalcValue::Range(_) => unreachable!(),
             CalcValue::Union(_) => {
@@ -504,6 +519,7 @@ where
             ast::Error::Ref => CellValue::Error(Error::Ref),
             ast::Error::Value => CellValue::Error(Error::Value),
             ast::Error::GettingData => CellValue::Error(Error::GettingData),
+            ast::Error::Placeholder => CellValue::Error(Error::Placeholder),
         },
     }
 }

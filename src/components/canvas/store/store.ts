@@ -13,6 +13,7 @@ import {LeftTop} from '@/core/settings'
 import {Renderer} from './renderer'
 import {BlockOutliner} from './block-outliner'
 import {DiyButton} from './diy-button'
+import {CellValidation} from './cell-validation'
 
 export class CanvasStore {
     constructor(
@@ -29,6 +30,7 @@ export class CanvasStore {
         this.textarea = new Textarea(this)
         this.blockOutliner = new BlockOutliner(this)
         this.diyButton = new DiyButton(this)
+        this.cellValidation = new CellValidation(this)
     }
     @observable.ref
     startCell?: Cell
@@ -49,9 +51,14 @@ export class CanvasStore {
     textarea: Textarea
     blockOutliner: BlockOutliner
     diyButton: DiyButton
+    cellValidation: CellValidation
 
     get currSheetIdx() {
         return this.dataSvc.getCurrentSheetIdx()
+    }
+
+    get currentSheetId() {
+        return this.dataSvc.getSheetId(this.currSheetIdx)
     }
 
     get anchorX() {

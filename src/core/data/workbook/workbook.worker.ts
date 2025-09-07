@@ -45,6 +45,12 @@ import {
     GetReproducibleCellParams,
     GetCellValueParams as GetValueParams,
     Value,
+    GetShadowCellIdsParams,
+    GetShadowCellIdParams,
+    ShadowCellInfo,
+    GetShadowInfoByIdParams,
+    GetCellIdParams,
+    SheetCellId,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -192,7 +198,28 @@ class WorkerService implements IWorkbookWorker {
             params.windowEndCol
         )
     }
-    getBlockInfo(params: GetBlockInfoParams): Result<BlockInfo> {
+
+    public getCellId(params: GetCellIdParams): Result<SheetCellId> {
+        return this.workbook.getCellId(params)
+    }
+
+    public getShadowCellId(params: GetShadowCellIdParams): Result<number> {
+        return this.workbook.getShadowCellId(params)
+    }
+
+    public getShadowCellIds(
+        params: GetShadowCellIdsParams
+    ): Result<readonly number[]> {
+        return this.workbook.getShadowCellIds(params)
+    }
+
+    public getShadowInfoById(
+        params: GetShadowInfoByIdParams
+    ): Result<ShadowCellInfo> {
+        return this.workbook.getShadowInfoById(params.shadowId)
+    }
+
+    public getBlockInfo(params: GetBlockInfoParams): Result<BlockInfo> {
         const ws = this.getSheet(params.sheetId)
         return ws.getBlockInfo(params.blockId)
     }
@@ -238,7 +265,13 @@ class WorkerService implements IWorkbookWorker {
     }
 
     public handleTransaction(params: HandleTransactionParams): void {
-        this.workbook.execTransaction(params.transaction)
+        const result = this.workbook.execTransaction(params.transaction)
+        result.valueChanged.forEach((cellId) => {
+            ctx.postMessage({id: WorkerUpdate.CellValueChanged, result: cellId})
+        })
+        result.cellRemoved.forEach((cellId) => {
+            ctx.postMessage({id: WorkerUpdate.CellRemoved, result: cellId})
+        })
         return
     }
 
@@ -400,6 +433,18 @@ class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetCells:
                 result = this.getCells(args)
+                break
+            case MethodName.GetShadowCellId:
+                result = this.getShadowCellId(args)
+                break
+            case MethodName.GetShadowCellIds:
+                result = this.getShadowCellIds(args)
+                break
+            case MethodName.GetShadowInfoById:
+                result = this.getShadowInfoById(args)
+                break
+            case MethodName.GetCellId:
+                result = this.getCellId(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

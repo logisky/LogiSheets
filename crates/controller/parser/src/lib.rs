@@ -59,6 +59,34 @@ impl Parser {
         Some(self.parse_from_pair(formula, curr_sheet, context, false))
     }
 
+    pub fn parse_with_substitude<T>(
+        &self,
+        f: &str,
+        substitude: &ast::Node,
+        curr_sheet: SheetId,
+        context: &mut T,
+    ) -> Option<ast::Node>
+    where
+        T: ContextTrait,
+    {
+        let formula = self.parse(f, curr_sheet, context)?;
+
+        let visitor = |node: ast::Node| match &node.pure {
+            ast::PureNode::Value(value) => match value {
+                ast::Value::Error(error) => {
+                    if error == &ast::Error::Placeholder {
+                        substitude.clone()
+                    } else {
+                        node
+                    }
+                }
+                _ => node,
+            },
+            _ => node,
+        };
+        Some(formula.accept(&visitor))
+    }
+
     fn parse_from_pair<T>(
         &self,
         formula: Pair<Rule>,
@@ -324,6 +352,7 @@ fn build_error(pair: Pair<Rule>) -> ast::PureNode {
         "#REF!" => ast::Error::Ref,
         "#VALUE!" => ast::Error::Value,
         "#GETTING_DATA" => ast::Error::GettingData,
+        "#PLACEHOLDER" => ast::Error::Placeholder,
         _ => unreachable!(),
     };
     ast::PureNode::Value(ast::Value::Error(error))
@@ -721,5 +750,24 @@ mod tests {
         };
         let f = "NORM.S.DIST(2,TRUE)";
         let _ = parser.parse(f, 1, &mut context).unwrap().pure;
+    }
+
+    #[test]
+    fn parse_with_substitude() {
+        let parser = Parser {};
+        let mut vertext_fetcher = TestVertexFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut context = Context {
+            book_name: "book",
+            id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
+        };
+        let substitude = parser.parse("B1", 1, &mut context).unwrap();
+        let f = "A1 + #PLACEHOLDER > 12";
+        let r = parser
+            .parse_with_substitude(f, &substitude, 1, &mut context)
+            .unwrap()
+            .pure;
+        assert!(matches!(r, ast::PureNode::Func(_)));
     }
 }

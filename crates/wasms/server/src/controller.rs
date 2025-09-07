@@ -3,10 +3,11 @@ use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
     Alignment, AsyncFuncResult, BlockInput, CellClear, CellFormatBrush, CellInput, CellStyleUpdate,
     CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock,
-    DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, HorizontalAlignment,
-    InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate,
-    MergeCells, MoveBlock, PayloadsAction, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight,
-    SheetRename, SplitMergedCells, StyleUpdateType, VerticalAlignment,
+    DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, EphemeralCellInput,
+    HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock,
+    LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction, ReproduceCells,
+    ResizeBlock, SetColWidth, SetRowHeight, SheetCellId, SheetRename, SplitMergedCells,
+    StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
@@ -921,6 +922,18 @@ fn parse_async_value(s: String) -> AsyncCalcResult {
 }
 
 #[wasm_bindgen]
+pub fn ephemeral_cell_input(id: usize, sheet_idx: usize, ephemeral_id: u64, content: String) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let p = EphemeralCellInput {
+        sheet_idx,
+        id: ephemeral_id,
+        content,
+    };
+    manager.add_payload(id, EditPayload::EphemeralCellInput(p));
+}
+
+#[wasm_bindgen]
 pub fn check_formula(id: usize, f: String) -> bool {
     init();
     let mut manager = MANAGER.get_mut();
@@ -1088,5 +1101,58 @@ pub fn get_display_window_for_block(id: usize, sheet_id: SheetId, block_id: Bloc
     handle_result!(ws);
     let r = ws.get_display_window_for_block(block_id);
     handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_shadow_cell_id(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let r = wb.get_shadow_cell_id(sheet_idx, row_idx, col_idx);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_shadow_cell_ids(
+    id: usize,
+    sheet_idx: usize,
+    row_idx: Vec<usize>,
+    col_idx: Vec<usize>,
+) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let r = wb.get_shawdow_cell_ids(sheet_idx, row_idx, col_idx);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_shadow_info_by_id(id: usize, shadow_id: u64) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let r = wb.get_shadow_info_by_id(shadow_id);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_cell_id(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let sheet_id = wb.get_worksheet_id(sheet_idx);
+    handle_result!(sheet_id);
+    let ws = wb.get_sheet_by_id(sheet_id);
+    handle_result!(ws);
+    let r = ws.get_cell_id(row_idx, col_idx);
+    handle_result!(r);
+    let r = SheetCellId {
+        sheet_id,
+        cell_id: r,
+    };
     serde_wasm_bindgen::to_value(&r).unwrap()
 }

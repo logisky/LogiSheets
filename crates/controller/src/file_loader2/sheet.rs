@@ -16,6 +16,7 @@ use crate::{
     navigator::Navigator,
     range_manager::RangeManager,
     settings::Settings,
+    sid_assigner::ShadowIdAssigner,
     workbook::sheet_pos_manager::SheetPosManager,
 };
 
@@ -198,6 +199,7 @@ pub fn load_sheet_data(
                             ext_ref_manager,
                             dirty_ranges: HashSet::new(),
                             dirty_cubes: HashSet::new(),
+                            sid_assigner: &ShadowIdAssigner::new(),
                         };
                         if let Some(f) = &formula.formula {
                             if let Some(reference) = &formula.reference {

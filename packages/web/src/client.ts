@@ -12,6 +12,8 @@ import type {
     SheetCoordinate,
     Value,
     CellInfo,
+    SheetCellId,
+    ShadowCellInfo,
 } from './bindings'
 import type {CustomFunc} from './api'
 import type {Transaction, RowId, ColId} from './types'
@@ -53,9 +55,32 @@ export interface Client {
 
     loadWorkbook(params: LoadWorkbookParams): Resp<void>
 
-    registryCustomFunc(f: CustomFunc): void
-    registryCellUpdatedCallback(f: () => void): void
-    registrySheetUpdatedCallback(f: () => void): void
+    getCellId(params: GetCellIdParams): Resp<SheetCellId>
+
+    registerCustomFunc(f: CustomFunc): void
+    registerCellUpdatedCallback(f: () => void): void
+    registerSheetUpdatedCallback(f: () => void): void
+
+    registerCellValueChangedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<void>
+
+    registerCellRemovedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<void>
+
+    registerShadowCellValueChangedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<number>
 
     getMergedCells(params: GetMergedCellsParams): Resp<readonly MergeCell[]>
     calcCondition(params: CalcConditionParams): Resp<boolean>
@@ -68,6 +93,11 @@ export interface Client {
     getSheetIdx(params: GetSheetIdxParams): Resp<number>
     getSheetId(params: GetSheetIdParams): Resp<number>
     getBlockValues(params: GetBlockValuesParams): Resp<readonly string[]>
+    getShadowCellId(params: GetShadowCellIdParams): Resp<SheetCellId>
+    getShadowCellIds(
+        params: GetShadowCellIdsParams
+    ): Resp<readonly SheetCellId[]>
+    getShadowInfoById(params: GetShadowInfoByIdParams): Resp<ShadowCellInfo>
 
     getDiyCellIdWithBlockId(params: GetDiyCellIdWithBlockIdParams): Resp<number>
 
@@ -233,4 +263,26 @@ export interface LookupAppendixUpwardParams {
     col: number
     craftId: string
     tag: number
+}
+
+export interface GetShadowCellIdParams {
+    sheetIdx: number
+    rowIdx: number
+    colIdx: number
+}
+
+export interface GetShadowCellIdsParams {
+    sheetIdx: number
+    rowIdx: readonly number[]
+    colIdx: readonly number[]
+}
+
+export interface GetShadowInfoByIdParams {
+    shadowId: number
+}
+
+export interface GetCellIdParams {
+    sheetIdx: number
+    rowIdx: number
+    colIdx: number
 }

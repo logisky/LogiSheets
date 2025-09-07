@@ -31,7 +31,7 @@ pub struct Worksheet<'a> {
 }
 
 impl<'a> Worksheet<'a> {
-    pub(crate) fn get_value_by_id(&self, cell_id: &CellId) -> Result<Value> {
+    pub fn get_value_by_id(&self, cell_id: &CellId) -> Result<Value> {
         if let Some(cell) = self
             .controller
             .status
@@ -352,7 +352,7 @@ impl<'a> Worksheet<'a> {
         Ok(CellPosition { x, y })
     }
 
-    pub fn get_row_start_y(
+    pub(crate) fn get_row_start_y(
         &self,
         row: usize,
         positioner: &mut CellPositionerDefault,
@@ -376,7 +376,7 @@ impl<'a> Worksheet<'a> {
         Ok(result)
     }
 
-    pub fn get_col_start_x(
+    pub(crate) fn get_col_start_x(
         &self,
         col: usize,
         positioner: &mut CellPositionerDefault,
@@ -1140,6 +1140,14 @@ impl<'a> Worksheet<'a> {
             .status
             .navigator
             .fetch_block_col_id(&self.sheet_id, &block_id, col_idx)
+            .map_err(|e| e.into())
+    }
+
+    pub fn get_cell_id(&self, row: usize, col: usize) -> Result<CellId> {
+        self.controller
+            .status
+            .navigator
+            .fetch_cell_id(&self.sheet_id, row, col)
             .map_err(|e| e.into())
     }
 

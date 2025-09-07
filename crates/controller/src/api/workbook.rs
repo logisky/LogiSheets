@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
-    controller::display::SheetInfo,
-    edit_action::{ActionEffect, PayloadsAction, StatusCode},
+    controller::display::{CellPosition, ShadowCellInfo, SheetInfo},
+    edit_action::{ActionEffect, PayloadsAction, SheetCellId, StatusCode},
     lock::{locked_write, new_locked, Locked},
     Controller,
 };
@@ -17,16 +17,13 @@ use logisheets_base::{
     BlockCellId, BlockId, CellId, ColId, RowId, SheetId, TextId,
 };
 
-const CALC_CONDITION_EPHEMERAL_ID: u32 = 402;
-const CUSTOM_EPHEMERAL_ID_START: u32 = 1025;
+const CALC_CONDITION_EPHEMERAL_ID: u64 = 225715;
 
 pub(crate) type CellPositionerDefault = CellPositioner<1000>;
 
 pub struct Workbook {
     controller: Controller,
     cell_positioners: Locked<HashMap<SheetId, Locked<CellPositionerDefault>>>,
-
-    ephemeral_id: u32,
 }
 
 impl Default for Workbook {
@@ -34,7 +31,6 @@ impl Default for Workbook {
         Self {
             controller: Default::default(),
             cell_positioners: new_locked(HashMap::new()),
-            ephemeral_id: CUSTOM_EPHEMERAL_ID_START,
         }
     }
 }
@@ -45,7 +41,6 @@ impl Workbook {
         Workbook {
             controller: Default::default(),
             cell_positioners: new_locked(HashMap::new()),
-            ephemeral_id: CUSTOM_EPHEMERAL_ID_START,
         }
     }
 
@@ -63,7 +58,6 @@ impl Workbook {
         Ok(Workbook {
             controller,
             cell_positioners: new_locked(HashMap::new()),
-            ephemeral_id: CUSTOM_EPHEMERAL_ID_START,
         })
     }
 
@@ -93,6 +87,8 @@ impl Workbook {
                 version: 0,
                 async_tasks: vec![],
                 status: StatusCode::Err(1),
+                value_changed: vec![],
+                cell_removed: vec![],
             };
         }
         self.controller.handle_async_calc_results(tasks, results)
@@ -209,7 +205,7 @@ impl Workbook {
         let effect = self.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
             EphemeralCellInput {
                 sheet_idx: 0,
-                id: CALC_CONDITION_EPHEMERAL_ID as u32,
+                id: CALC_CONDITION_EPHEMERAL_ID,
                 content: f.clone(),
             },
         )));
@@ -233,6 +229,110 @@ impl Workbook {
             .navigator
             .get_available_block_id(&sheet_id)?;
         Ok(block_id)
+    }
+
+    pub fn get_shadow_cell_id(
+        &mut self,
+        sheet_idx: usize,
+        row_idx: usize,
+        col_idx: usize,
+    ) -> Result<SheetCellId> {
+        let sheet_id = self
+            .controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_id(sheet_idx)
+            .ok_or(BasicError::SheetIdxExceed(sheet_idx))?;
+        let cell_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_id(&sheet_id, row_idx, col_idx)?;
+        let eid = self
+            .controller
+            .sid_assigner
+            .get_shawdow_id(sheet_id, cell_id);
+        Ok(SheetCellId {
+            sheet_id,
+            cell_id: CellId::EphemeralCell(eid),
+        })
+    }
+
+    pub fn get_shawdow_cell_ids(
+        &mut self,
+        sheet_idx: usize,
+        row_idx: Vec<usize>,
+        col_idx: Vec<usize>,
+    ) -> Result<Vec<SheetCellId>> {
+        if row_idx.len() != col_idx.len() {
+            return Err(BasicError::IncompleteRowColLength(row_idx.len(), col_idx.len()).into());
+        }
+        let sheet_id = self
+            .controller
+            .status
+            .sheet_pos_manager
+            .get_sheet_id(sheet_idx)
+            .ok_or(BasicError::SheetIdxExceed(sheet_idx))?;
+        row_idx
+            .into_iter()
+            .zip(col_idx.into_iter())
+            .map(|(row, col)| {
+                let cell_id = self
+                    .controller
+                    .status
+                    .navigator
+                    .fetch_cell_id(&sheet_id, row, col)?;
+                let eid = self
+                    .controller
+                    .sid_assigner
+                    .get_shawdow_id(sheet_id, cell_id);
+                Ok(SheetCellId {
+                    sheet_id,
+                    cell_id: CellId::EphemeralCell(eid),
+                })
+            })
+            .collect()
+    }
+
+    pub fn get_shadow_info_by_id(&self, shadow_id: u64) -> Result<ShadowCellInfo> {
+        let (sheet_id, cell_id) = self
+            .controller
+            .sid_assigner
+            .get_cell_id(shadow_id)
+            .ok_or(BasicError::InvalidShadowId(shadow_id))?;
+        let (start_position, end_position) = self.get_cell_position_by_id(sheet_id, cell_id)?;
+        let value = self
+            .get_sheet_by_id(sheet_id)?
+            .get_value_by_id(&CellId::EphemeralCell(shadow_id))?;
+        Ok(ShadowCellInfo {
+            start_position,
+            end_position,
+            value,
+        })
+    }
+
+    fn get_cell_position_by_id(
+        &self,
+        sheet_id: SheetId,
+        cell_id: CellId,
+    ) -> Result<(CellPosition, CellPosition)> {
+        if let CellId::EphemeralCell(_) = cell_id {
+            return Err(BasicError::ReferencingEphemeralCell.into());
+        }
+
+        let (row, col) = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_idx(&sheet_id, &cell_id)?;
+        let ws = self.get_sheet_by_id(sheet_id)?;
+        let mut positioner = locked_write(&ws.positioner);
+        let x = ws.get_col_start_x(col, &mut *positioner)?;
+        let y = ws.get_row_start_y(row, &mut *positioner)?;
+        let end_x = ws.get_col_start_x(col + 1, &mut *positioner)?;
+        let end_y = ws.get_row_start_y(row + 1, &mut *positioner)?;
+        drop(positioner);
+        Ok((CellPosition { x, y }, CellPosition { x: end_x, y: end_y }))
     }
 
     pub fn check_bind_block(
@@ -264,7 +364,7 @@ impl Workbook {
         let effect = self.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
             EphemeralCellInput {
                 sheet_idx,
-                id: CALC_CONDITION_EPHEMERAL_ID as u32,
+                id: CALC_CONDITION_EPHEMERAL_ID,
                 content: f.clone(),
             },
         )));
@@ -281,7 +381,7 @@ impl Workbook {
                 .container
                 .get_cell(
                     sheet_id,
-                    &CellId::EphemeralCell(CALC_CONDITION_EPHEMERAL_ID as u32),
+                    &CellId::EphemeralCell(CALC_CONDITION_EPHEMERAL_ID),
                 )
                 .unwrap();
             if cell.value.is_error() {
@@ -292,12 +392,6 @@ impl Workbook {
         } else {
             Err(BasicError::InvalidFormula(f).into())
         }
-    }
-
-    pub fn get_ephemeral_id(&mut self) -> u32 {
-        let id = self.ephemeral_id;
-        self.ephemeral_id += 1;
-        id
     }
 
     /// Get the worksheet id by its index.

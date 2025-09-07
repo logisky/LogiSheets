@@ -1,7 +1,9 @@
 use super::FormulaExecutor;
 use logisheets_base::errors::BasicError;
-use logisheets_base::{BlockRange, CellId, EphemeralId, NormalRange, Range, RangeId, SheetId};
-use logisheets_parser::ast;
+use logisheets_base::{
+    BlockRange, CellId, EphemeralId, NormalRange, Range, RangeId, RefAbs, SheetId,
+};
+use logisheets_parser::ast::{self, RangeDisplay};
 use logisheets_parser::Parser;
 use std::collections::HashSet;
 
@@ -19,7 +21,7 @@ pub fn input_formula<C: FormulaExecCtx>(
         .fetch_sheet_id_by_index(sheet_idx)
         .map_err(|l| BasicError::SheetIdxExceed(l))?;
     let cell_id = ctx.fetch_cell_id(&sheet, row, col)?;
-    input(executor, sheet, cell_id, formula, ctx)
+    input(executor, sheet, cell_id, formula, None, ctx)
 }
 
 pub fn input_ephemeral_formula<C: FormulaExecCtx>(
@@ -32,9 +34,36 @@ pub fn input_ephemeral_formula<C: FormulaExecCtx>(
     let sheet = ctx
         .fetch_sheet_id_by_index(sheet_idx)
         .map_err(|l| BasicError::SheetIdxExceed(l))?;
-
-    let cell_id = CellId::EphemeralCell(id);
-    input(executor, sheet, cell_id, formula, ctx)
+    if let Some((sheet_id, cell_id)) = ctx.get_cell_id_by_shadow_id(&id) {
+        let range = match cell_id {
+            CellId::NormalCell(normal_cell_id) => {
+                Range::Normal(NormalRange::Single(normal_cell_id))
+            }
+            CellId::BlockCell(block_cell_id) => Range::Block(BlockRange::Single(block_cell_id)),
+            CellId::EphemeralCell(_) => unreachable!(),
+        };
+        let range_id = ctx.fetch_range_id(&sheet_id, &range);
+        let reference = ast::CellReference::Mut(RangeDisplay {
+            range_id,
+            ref_abs: RefAbs::default(),
+            sheet_id,
+        });
+        let node = ast::Node {
+            pure: ast::PureNode::Reference(reference),
+            bracket: true,
+        };
+        input(
+            executor,
+            sheet,
+            CellId::EphemeralCell(id),
+            formula,
+            Some(node),
+            ctx,
+        )
+    } else {
+        let cell_id = CellId::EphemeralCell(id);
+        input(executor, sheet, cell_id, formula, None, ctx)
+    }
 }
 
 fn input<C: FormulaExecCtx>(
@@ -42,6 +71,7 @@ fn input<C: FormulaExecCtx>(
     sheet: SheetId,
     cell_id: CellId,
     formula: String,
+    substitute: Option<ast::Node>,
     ctx: &mut C,
 ) -> Result<FormulaExecutor, BasicError> {
     let range = match cell_id {
@@ -53,7 +83,11 @@ fn input<C: FormulaExecCtx>(
     let this_vertex = Vertex::Range(sheet, range_id);
 
     let parser = Parser {};
-    let ast = parser.parse(&formula, sheet, ctx);
+    let ast = if let Some(node) = substitute {
+        parser.parse_with_substitude(&formula, &node, sheet, ctx)
+    } else {
+        parser.parse(&formula, sheet, ctx)
+    };
     if ast.is_none() {
         return Ok(executor);
     }
@@ -86,7 +120,7 @@ fn input<C: FormulaExecCtx>(
         .into_iter()
         .for_each(|new_dep| graph.add_dep(this_vertex.clone(), new_dep));
 
-    formulas.insert((sheet, cell_id), ast);
+    formulas.insert((sheet, cell_id), ast.clone());
 
     Ok(FormulaExecutor {
         manager: FormulaManager {
@@ -146,6 +180,7 @@ fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
                 let vertex = Vertex::Name(*name);
                 vertices.insert(vertex);
             }
+            ast::CellReference::RefErr => {}
         },
     }
 }

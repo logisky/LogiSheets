@@ -23,6 +23,7 @@ mod lock;
 mod navigator;
 mod range_manager;
 mod settings;
+mod sid_assigner;
 mod style_manager;
 mod theme_manager;
 mod utils;

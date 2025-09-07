@@ -26,9 +26,10 @@ import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
 import {
     CellClearBuilder,
+    CellIdCallback,
     CellInputBuilder,
     CellValue,
-    CreateAppendixBuilder,
+    EphemeralCellInputBuilder,
     isErrorMessage,
     Payload,
     ResizeBlockBuilder,
@@ -160,8 +161,6 @@ export class CraftManager {
         })
     }
 
-    // Extract values from the workbook.
-
     async onDiyCellClick(id: number): Promise<void> {
         const type = this._diyBtnManager.getDiyButtonType(id)
         if (type === undefined) return
@@ -270,6 +269,86 @@ export class CraftManager {
             ...descriptor,
             workbookPart: workbookPart,
         })
+    }
+
+    async setValidationRules(
+        blockId: BlockId,
+        valueChangedCallback: (shadowId: number) => void,
+        cellRemovedCallback: (shadowId: number) => void
+    ): ResultAsync<void> {
+        const descriptorResult = this.getCraftDescriptor(blockId)
+        if (descriptorResult.isErr())
+            return err(descriptorResult._unsafeUnwrapErr())
+        const descriptor = descriptorResult._unsafeUnwrap()
+        const fieldMap = await this.getFieldMap(blockId, descriptor.dataArea)
+        const blockInfo = await this._workbookClient.getBlockInfo({
+            sheetId: blockId[0],
+            blockId: blockId[1],
+        })
+        if (isErrorMessage(blockInfo)) return err(workbookError(blockInfo.msg))
+        const dataEndCol = descriptor.dataArea.endCol ?? blockInfo.colCnt - 1
+        const dataEndRow = descriptor.dataArea.endRow ?? blockInfo.rowCnt - 1
+        const sheetIdx = blockInfo.sheetIdx
+        const payloads: Payload[] = []
+
+        for (let j = descriptor.dataArea.startCol; j <= dataEndCol; j++) {
+            const field = fieldMap.get(j)
+            if (field === undefined || field[1] === '') {
+                continue
+            }
+            for (let i = descriptor.dataArea.startRow; i <= dataEndRow; i++) {
+                const r = blockInfo.rowStart + i
+                const c = blockInfo.colStart + j
+                const shadowId =
+                    await this._workbookClient.registerShadowCellValueChangedCallback(
+                        sheetIdx,
+                        r,
+                        c,
+                        (sheetCellId) => {
+                            const cellId = sheetCellId.cellId
+                            if (cellId.type === 'ephemeralCell') {
+                                valueChangedCallback(cellId.value)
+                            }
+                        }
+                    )
+                if (isErrorMessage(shadowId))
+                    return err(workbookError(shadowId.msg))
+                this._workbookClient.registerCellRemovedCallback(
+                    sheetIdx,
+                    r,
+                    c,
+                    (sheetCellId) => {
+                        const cellId = sheetCellId.cellId
+                        if (cellId.type === 'ephemeralCell') {
+                            cellRemovedCallback(cellId.value)
+                        }
+                    }
+                )
+                const payload = new EphemeralCellInputBuilder()
+                    .content(`=${field[1]}`)
+                    .sheetIdx(sheetIdx)
+                    .id(shadowId)
+                    .build()
+                payloads.push({type: 'ephemeralCellInput', value: payload})
+            }
+        }
+
+        if (payloads.length === 0) {
+            return err(workbookError('No payload generated'))
+        }
+
+        const result = await this._workbookClient.handleTransaction({
+            transaction: {
+                payloads: payloads,
+                undoable: false,
+            },
+        })
+
+        if (isErrorMessage(result)) {
+            return err(workbookError(result.msg))
+        }
+
+        return ok(undefined)
     }
 
     async uploadCraftDescriptor(blockId: BlockId): ResultAsync<string> {
@@ -440,7 +519,7 @@ export class CraftManager {
                 const col = masterCol + c
                 const f = fieldMap.get(c)
                 if (f === undefined) continue
-                const v = fieldKeyValue.get(getKey(key, f))
+                const v = fieldKeyValue.get(getKey(key, f[0]))
                 if (v === undefined) continue
                 const clearPayload: Payload = {
                     type: 'cellClear',
@@ -494,7 +573,7 @@ export class CraftManager {
     async getFieldMap(
         blockId: BlockId,
         dataArea: DataArea
-    ): Promise<Map<number, string>> {
+    ): Promise<Map<number, [string, string]>> {
         const descriptor = this.getCraftDescriptor(blockId)
         if (!descriptor) throw Error('')
         const blockInfo = await this._workbookClient.getBlockInfo({
@@ -505,7 +584,7 @@ export class CraftManager {
         const masterRow = blockInfo.rowStart
         const masterCol = blockInfo.colStart
         const endCol = dataArea.endCol ?? blockInfo.colCnt - 1
-        const fieldMAp = new Map<number, string>()
+        const fieldMAp = new Map<number, [string, string]>()
         for (let i = dataArea.startCol; i <= endCol; i++) {
             const appendix = await this._workbookClient.lookupAppendixUpward({
                 sheetId: blockId[0],
@@ -525,7 +604,7 @@ export class CraftManager {
             })
             if (isErrorMessage(v)) continue
             const vStr = CellValue.from(v).valueStr
-            fieldMAp.set(appendix.colIdx, vStr)
+            fieldMAp.set(appendix.colIdx, [vStr, appendix.appendix.content])
         }
         return fieldMAp
     }
@@ -599,7 +678,7 @@ export class CraftManager {
                 if (cell.value === 'empty' && key === '') continue
                 const v: CraftValue = {
                     key,
-                    field,
+                    field: field[0],
                     value: cell.value,
                 }
                 result.push(v)
