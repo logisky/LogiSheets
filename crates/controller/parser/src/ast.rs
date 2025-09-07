@@ -14,6 +14,7 @@ pub enum Error {
     Ref,
     Value,
     GettingData,
+    Placeholder,
 }
 
 impl Error {
@@ -28,6 +29,7 @@ impl Error {
             Error::Ref => "#REF!",
             Error::Value => "#VALUE!",
             Error::GettingData => "#GETTING_DATA",
+            Error::Placeholder => "#PLACEHOLDER",
         }
     }
 
@@ -113,6 +115,32 @@ pub struct Node {
     pub bracket: bool,
 }
 
+impl Node {
+    pub fn accept<F>(self, visitor: &F) -> Node
+    where
+        F: Fn(Node) -> Node,
+    {
+        match self.pure {
+            PureNode::Func(func) => {
+                let args = func
+                    .args
+                    .into_iter()
+                    .map(|arg| arg.accept(visitor))
+                    .collect();
+                Node {
+                    pure: PureNode::Func(Func { op: func.op, args }),
+                    bracket: self.bracket,
+                }
+            }
+            PureNode::Value(v) => visitor(Node {
+                pure: PureNode::Value(v),
+                bracket: self.bracket,
+            }),
+            _ => self,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq)]
 pub struct Address {
     pub cell_id: CellId,
@@ -193,6 +221,7 @@ pub enum CellReference {
     UnMut(CubeDisplay),
     Ext(ExtRefDisplay),
     Name(NameId),
+    RefErr,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

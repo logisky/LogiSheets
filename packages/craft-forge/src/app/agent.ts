@@ -16,6 +16,7 @@ import {
     GetBlockInfoParams,
     GetBlockRowIdParams,
     GetBlockValuesParams,
+    GetCellIdParams,
     GetCellParams,
     GetCellsExceptWindowParams,
     GetCellsParams,
@@ -26,6 +27,9 @@ import {
     GetMergedCellsParams,
     GetReproducibleCellParams,
     GetReproducibleCellsParams,
+    GetShadowCellIdParams,
+    GetShadowCellIdsParams,
+    GetShadowInfoByIdParams,
     GetSheetIdParams,
     GetSheetIdxParams,
     HandleTransactionParams,
@@ -35,6 +39,8 @@ import {
     ReproducibleCell,
     Resp,
     RowId,
+    ShadowCellInfo,
+    SheetCellId,
     SheetDimension,
     SheetInfo,
     Value,
@@ -67,6 +73,61 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    getCellId(params: GetCellIdParams): Resp<SheetCellId> {
+        throw new Error('Method not implemented.')
+    }
+    registerCustomFunc(f: CustomFunc): void {
+        throw new Error('Method not implemented.')
+    }
+    registerCellUpdatedCallback(f: () => void): void {
+        throw new Error('Method not implemented.')
+    }
+    registerSheetUpdatedCallback(f: () => void): void {
+        throw new Error('Method not implemented.')
+    }
+    registerCellValueChangedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<void> {
+        throw new Error('Method not implemented.')
+    }
+    registerCellRemovedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<void> {
+        throw new Error('Method not implemented.')
+    }
+    registerShadowCellValueChangedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<number> {
+        throw new Error('Method not implemented.')
+    }
+    getShadowCellId(params: GetShadowCellIdParams): Resp<SheetCellId> {
+        return this._call(
+            MethodName.GetShadowCellId,
+            params
+        ) as Resp<SheetCellId>
+    }
+    getShadowCellIds(
+        params: GetShadowCellIdsParams
+    ): Resp<readonly SheetCellId[]> {
+        return this._call(MethodName.GetShadowCellIds, params) as Resp<
+            readonly SheetCellId[]
+        >
+    }
+    getShadowInfoById(params: GetShadowInfoByIdParams): Resp<ShadowCellInfo> {
+        return this._call(
+            MethodName.GetShadowInfoById,
+            params
+        ) as Resp<ShadowCellInfo>
     }
     getReproducibleCell(
         params: GetReproducibleCellParams
@@ -316,4 +377,8 @@ export enum MethodName {
     GetReproducibleCell = 'agent_getReproducibleCell',
     GetReproducibleCells = 'agent_getReproducibleCells',
     GetCellValue = 'agent_getCellValue',
+    GetCellId = 'agent_getCellId',
+    GetShadowCellId = 'agent_getShadowCellId',
+    GetShadowCellIds = 'agent_getShadowCellIds',
+    GetShadowInfoById = 'agent_getShadowInfoById',
 }

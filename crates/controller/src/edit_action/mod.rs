@@ -467,12 +467,19 @@ pub struct SetVisible {
     pub visible: bool,
 }
 
-/// `ActionEffect` represents the result of handling `EditAction`.
-/// `version` would be increased if the action is successfully handled.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_cell_id.ts", builder, rename_all = "camelCase")]
+pub struct SheetCellId {
+    pub sheet_id: SheetId,
+    pub cell_id: CellId,
+}
+
+/// `ActionEffect` represents the result of handling an `EditAction`.
+/// The `version` will be incremented if the action is successfully handled.
 ///
-/// What's more, since `LogiSheets` provides developers with the ability
-/// of developing their own functions, in these cases, `engine` will not know
-/// how to compute them and just return it the JS side.
+/// Additionally, since `LogiSheets` allows developers to define their own functions,
+/// the engine may encounter functions it cannot compute directly. In such cases,
+/// the engine will return these tasks to the JavaScript side for further processing.
 #[derive(Default, Debug, Clone, TS)]
 #[ts(file_name = "action_effect.ts", builder, rename_all = "camelCase")]
 pub struct ActionEffect {
@@ -481,6 +488,9 @@ pub struct ActionEffect {
     /// Tasks should be calculated outside this engine(mainly because of network limitations and customer defined)
     pub async_tasks: Vec<Task>,
     pub status: StatusCode,
+
+    pub value_changed: Vec<SheetCellId>,
+    pub cell_removed: Vec<SheetCellId>,
 }
 
 impl ActionEffect {
@@ -496,6 +506,7 @@ impl ActionEffect {
             version,
             async_tasks: tasks,
             status: StatusCode::Ok(ty),
+            ..Default::default()
         }
     }
 }

@@ -14,6 +14,7 @@ import {
     GetBlockInfoParams,
     GetBlockRowIdParams,
     GetBlockValuesParams,
+    GetCellIdParams,
     GetCellParams,
     GetCellsExceptWindowParams,
     GetCellsParams,
@@ -24,6 +25,9 @@ import {
     GetMergedCellsParams,
     GetReproducibleCellParams,
     GetReproducibleCellsParams,
+    GetShadowCellIdParams,
+    GetShadowCellIdsParams,
+    GetShadowInfoByIdParams,
     GetSheetIdParams,
     GetSheetIdxParams,
     HandleTransactionParams,
@@ -33,6 +37,8 @@ import {
     ReproducibleCell,
     Resp,
     RowId,
+    ShadowCellInfo,
+    SheetCellId,
     SheetDimension,
     SheetInfo,
     Value,
@@ -152,6 +158,59 @@ export class CraftHandler implements CraftHandlerInterface {
             }
         })
     }
+    getCellId(params: GetCellIdParams): Resp<SheetCellId> {
+        throw new Error('Method not implemented.')
+    }
+    registerCellValueChangedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<void> {
+        return this._workbookClient.registerCellValueChangedCallback(
+            sheetIdx,
+            rowIdx,
+            colIdx,
+            callback
+        )
+    }
+    registerCellRemovedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<void> {
+        return this._workbookClient.registerCellRemovedCallback(
+            sheetIdx,
+            rowIdx,
+            colIdx,
+            callback
+        )
+    }
+    registerShadowCellValueChangedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: () => void
+    ): Resp<number> {
+        return this._workbookClient.registerShadowCellValueChangedCallback(
+            sheetIdx,
+            rowIdx,
+            colIdx,
+            callback
+        )
+    }
+    getShadowCellId(params: GetShadowCellIdParams): Resp<SheetCellId> {
+        return this._workbookClient.getShadowCellId(params)
+    }
+    getShadowCellIds(
+        params: GetShadowCellIdsParams
+    ): Resp<readonly SheetCellId[]> {
+        return this._workbookClient.getShadowCellIds(params)
+    }
+    getShadowInfoById(params: GetShadowInfoByIdParams): Resp<ShadowCellInfo> {
+        return this._workbookClient.getShadowInfoById(params)
+    }
     getValue(params: GetCellValueParams): Resp<Value> {
         return this._workbookClient.getValue(params)
     }
@@ -268,16 +327,16 @@ export class CraftHandler implements CraftHandlerInterface {
         return this._workbookClient.loadWorkbook(params)
     }
 
-    registryCustomFunc(f: CustomFunc): void {
-        this._workbookClient.registryCustomFunc(f)
+    registerCustomFunc(f: CustomFunc): void {
+        this._workbookClient.registerCustomFunc(f)
     }
 
-    registryCellUpdatedCallback(f: () => void): void {
-        this._workbookClient.registryCellUpdatedCallback(f)
+    registerCellUpdatedCallback(f: () => void): void {
+        this._workbookClient.registerCellUpdatedCallback(f)
     }
 
-    registrySheetUpdatedCallback(f: () => void): void {
-        this._workbookClient.registrySheetUpdatedCallback(f)
+    registerSheetUpdatedCallback(f: () => void): void {
+        this._workbookClient.registerSheetUpdatedCallback(f)
     }
 
     getMergedCells(params: GetMergedCellsParams): Resp<readonly MergeCell[]> {

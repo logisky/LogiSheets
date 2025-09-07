@@ -48,8 +48,8 @@ mod tests {
         println!("{:?}", r3);
         let r = lex("B2:A$3").unwrap();
         println!("{:?}", r);
-        // let r = lex("SUM(Sheet1!#REF!)").unwrap();
-        // println!("{:?}", r);
+        let r = lex("Sheet1!#REF!").unwrap();
+        println!("{:?}", r);
     }
 
     #[test]
@@ -125,6 +125,28 @@ mod tests {
         let r = lex("WEEKDAY(,2)").unwrap();
         println!("{:?}", r);
         let r = lex("WEEKDAY( ,2)").unwrap();
+        println!("{:?}", r);
+    }
+
+    #[test]
+    fn error_constant() {
+        let r = lex("#PLACEHOLDER").unwrap();
+        println!("{:?}", r);
+        let r = lex("#DIV/0!").unwrap();
+        println!("{:?}", r);
+        let r = lex("#N/A").unwrap();
+        println!("{:?}", r);
+        let r = lex("#NAME?").unwrap();
+        println!("{:?}", r);
+        let r = lex("#NULL!").unwrap();
+        println!("{:?}", r);
+        let r = lex("#NUM!").unwrap();
+        println!("{:?}", r);
+        let r = lex("#REF!").unwrap();
+        println!("{:?}", r);
+        let r = lex("#VALUE!").unwrap();
+        println!("{:?}", r);
+        let r = lex("#GETTING_DATA").unwrap();
         println!("{:?}", r);
     }
 }

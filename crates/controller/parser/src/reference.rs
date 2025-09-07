@@ -40,6 +40,7 @@ where
         Rule::a1_reference_range_with_prefix => {
             build_a1_reference_range_with_prefix(p, curr_sheet, id_fetcher)
         }
+        Rule::ref_err_with_prefix => Ok(ast::CellReference::RefErr),
         _ => unreachable!(),
     }?;
     Ok(ast::PureNode::Reference(r))

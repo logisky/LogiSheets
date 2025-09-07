@@ -124,6 +124,7 @@ impl Stringify for CellReference {
             CellReference::UnMut(unmut_ref) => unmut_ref.unparse(fetcher, curr_sheet),
             CellReference::Name(nid) => fetcher.fetch_defined_name(nid).map_err(|e| e.into()),
             CellReference::Ext(ext_ref) => ext_ref.unparse(fetcher, curr_sheet),
+            CellReference::RefErr => Ok("#REF!".to_string()),
         }
     }
 }

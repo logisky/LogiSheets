@@ -22,6 +22,8 @@ pub enum CellId {
     // and it can not be referenced by other cells.
     // It's developers' responsibility to ensure the data is saved on their sides.
     // Developers can use this variant to utilize LogiSheets features in their own ways.
+    // And it is also dangerous to assume the ephemeral id is only used by your current
+    // application, as it is possible that other applications will use the same id.
     EphemeralCell(EphemeralId),
 }
 
@@ -41,7 +43,7 @@ pub struct NormalCellId {
     pub col: ColId,
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default)]
 pub struct RefAbs {
     pub start_row: bool,
     pub start_col: bool,
@@ -105,7 +107,7 @@ pub enum BlockRange {
 pub enum Range {
     Normal(NormalRange),
     Block(BlockRange),
-    Ephemeral(u32),
+    Ephemeral(EphemeralId),
 }
 
 impl From<CellId> for Range {
@@ -145,7 +147,7 @@ pub struct ExtRef {
 }
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]
-#[ts(file_name = "block_cell_id.ts")]
+#[ts(file_name = "block_cell_id.ts", rename_all = "camelCase")]
 pub struct BlockCellId {
     pub block_id: BlockId,
     // block inner row id
@@ -171,6 +173,9 @@ pub enum Error {
     Ref,         // #REF!
     Value,       // #VALUE!
     GettingData, // #GETTING_DATA
+    // A special error that is used to indicate that
+    // the cell is a placeholder
+    Placeholder, // #PLACEHOLDER
 }
 
 impl Error {
@@ -185,6 +190,7 @@ impl Error {
             Error::Value => "#VALUE!",
             Error::GettingData => "#GETTING_DATA",
             Error::Unspecified => "#UNKNOWN!",
+            Error::Placeholder => "#PLACEHOLDER",
         };
         String::from(s)
     }
@@ -200,6 +206,7 @@ impl Error {
             "#VALUE!" => Error::Value,
             "#GETTING_DATA" => Error::GettingData,
             "#UNKNOWN!" => Error::Unspecified,
+            "#PLACEHOLDER" => Error::Placeholder,
             _ => Error::Unspecified,
         }
     }

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {injectable} from 'inversify'
 import {
-    Cell,
     CustomFunc,
     DisplayWindowWithStartPoint,
     SheetInfo,
@@ -42,6 +41,14 @@ import {
     ReproducibleCell,
     GetCellValueParams,
     Value,
+    GetShadowCellIdParams,
+    GetShadowCellIdsParams,
+    GetShadowInfoByIdParams,
+    SheetCellId,
+    GetCellIdParams,
+    CellId,
+    CellIdCallback,
+    ShadowCellInfo,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -76,6 +83,16 @@ export class WorkbookClient implements Client {
                     const r = this._resolvers.get(id)
                     if (r) r(result)
                 }
+            } else if (id == WorkerUpdate.CellValueChanged) {
+                const id = sheetCellIdToString(result)
+                this._cellValueChangedCallbacks.get(id)?.forEach((f) => {
+                    f(result)
+                })
+            } else if (id == WorkerUpdate.CellRemoved) {
+                const id = sheetCellIdToString(result)
+                this._cellRemovedCallbacks.get(id)?.forEach((f) => {
+                    f(result)
+                })
             }
 
             const resolver = this._resolvers.get(id)
@@ -84,6 +101,106 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+
+    getCellId(params: GetCellIdParams): Resp<SheetCellId> {
+        return this._call(MethodName.GetCellId, params) as Resp<SheetCellId>
+    }
+
+    registerCustomFunc(_: CustomFunc): Resp<void> {
+        throw new Error('Method not implemented.')
+    }
+
+    registerCellValueChangedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: CellIdCallback
+    ): Resp<void> {
+        return this.getCellId({sheetIdx, rowIdx, colIdx}).then((cellId) => {
+            if (isErrorMessage(cellId)) {
+                return cellId
+            }
+            const cellIdStr = sheetCellIdToString(cellId)
+            if (!this._cellValueChangedCallbacks.has(cellIdStr)) {
+                this._cellValueChangedCallbacks.set(cellIdStr, [callback])
+            } else {
+                this._cellValueChangedCallbacks.get(cellIdStr)?.push(callback)
+            }
+            return
+        })
+    }
+
+    registerCellRemovedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: CellIdCallback
+    ): Resp<void> {
+        const result = this.getCellId({sheetIdx, rowIdx, colIdx}).then(
+            (cellId) => {
+                if (isErrorMessage(cellId)) {
+                    return cellId
+                }
+
+                const cellIdStr = sheetCellIdToString(cellId)
+                if (!this._cellRemovedCallbacks.has(cellIdStr)) {
+                    this._cellRemovedCallbacks.set(cellIdStr, [callback])
+                } else {
+                    this._cellRemovedCallbacks.get(cellIdStr)?.push(callback)
+                }
+                return
+            }
+        )
+        return result
+    }
+
+    registerShadowCellValueChangedCallback(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: CellIdCallback
+    ): Resp<number> {
+        return this.getShadowCellId({sheetIdx, rowIdx, colIdx}).then(
+            (shadowCellId) => {
+                if (isErrorMessage(shadowCellId)) {
+                    return shadowCellId
+                }
+                const cellIdStr = sheetCellIdToString(shadowCellId)
+                if (!this._cellValueChangedCallbacks.has(cellIdStr)) {
+                    this._cellValueChangedCallbacks.set(cellIdStr, [callback])
+                } else {
+                    this._cellValueChangedCallbacks
+                        .get(cellIdStr)
+                        ?.push(callback)
+                }
+
+                if (shadowCellId.cellId.type !== 'ephemeralCell') {
+                    throw new Error('shadow cell id is not ephemeral')
+                }
+                return shadowCellId.cellId.value
+            }
+        )
+    }
+
+    getShadowInfoById(params: GetShadowInfoByIdParams): Resp<ShadowCellInfo> {
+        return this._call(
+            MethodName.GetShadowInfoById,
+            params
+        ) as Resp<ShadowCellInfo>
+    }
+    getShadowCellId(params: GetShadowCellIdParams): Resp<SheetCellId> {
+        return this._call(
+            MethodName.GetShadowCellId,
+            params
+        ) as Resp<SheetCellId>
+    }
+    getShadowCellIds(
+        params: GetShadowCellIdsParams
+    ): Resp<readonly SheetCellId[]> {
+        return this._call(MethodName.GetShadowCellIds, params) as Resp<
+            readonly SheetCellId[]
+        >
     }
     getValue(params: GetCellValueParams): Resp<Value> {
         return this._call(MethodName.GetCellValue, params) as Resp<Value>
@@ -197,16 +314,11 @@ export class WorkbookClient implements Client {
         >
     }
 
-    registryCustomFunc(f: CustomFunc): void {
-        // TODO
-        return
-    }
-
-    registryCellUpdatedCallback(f: () => void): void {
+    registerCellUpdatedCallback(f: () => void): void {
         this._cellUpdatedCallbacks.push(f)
         return
     }
-    registrySheetUpdatedCallback(f: () => void): void {
+    registerSheetUpdatedCallback(f: () => void): void {
         this._sheetUpdatedCallbacks.push(f)
         return
     }
@@ -269,8 +381,23 @@ export class WorkbookClient implements Client {
     private _cellUpdatedCallbacks: Callback[] = []
     private _sheetUpdatedCallbacks: Callback[] = []
 
+    private _cellValueChangedCallbacks: Map<string, CellIdCallback[]> =
+        new Map()
+    private _cellRemovedCallbacks: Map<string, CellIdCallback[]> = new Map()
+
     private _ready = false
     private _readyPromise: Promise<void> = new Promise((r) => {
         this._resolvers.set(WorkerUpdate.Ready, r)
     })
+}
+
+export function sheetCellIdToString(sheetCellId: SheetCellId): string {
+    const cellId = sheetCellId.cellId
+    if (cellId.type === 'ephemeralCell') {
+        return `e-${cellId.value}-${sheetCellId.sheetId}`
+    }
+    if (cellId.type === 'blockCell') {
+        return `b-${cellId.value.blockId}-${cellId.value.row}-${cellId.value.col}-${sheetCellId.sheetId}`
+    }
+    return `n-${cellId.value.row}-${cellId.value.col}-${sheetCellId.sheetId}`
 }

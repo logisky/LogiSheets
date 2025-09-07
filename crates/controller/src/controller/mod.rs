@@ -9,7 +9,7 @@ mod executor;
 pub mod status;
 pub mod style;
 use crate::edit_action::{
-    ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, StatusCode,
+    ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, SheetCellId, StatusCode,
     WorkbookUpdateType,
 };
 use crate::errors::{Error, Result};
@@ -17,6 +17,7 @@ use crate::file_loader2::load;
 use crate::file_saver::save_file;
 use crate::formula_manager::Vertex;
 use crate::settings::Settings;
+use crate::sid_assigner::ShadowIdAssigner;
 use crate::version_manager::VersionManager;
 use executor::Executor;
 use status::Status;
@@ -30,6 +31,7 @@ pub struct Controller {
     pub curr_book_name: String,
     pub settings: Settings,
     pub version_manager: VersionManager,
+    pub sid_assigner: ShadowIdAssigner,
 }
 
 impl Default for Controller {
@@ -40,6 +42,7 @@ impl Default for Controller {
             settings: Settings::default(),
             version_manager: VersionManager::default(),
             async_func_manager: AsyncFuncManager::default(),
+            sid_assigner: ShadowIdAssigner::new(),
         };
         let add_sheet = PayloadsAction::new()
             .add_payload(CreateSheet {
@@ -67,6 +70,7 @@ impl Controller {
             status,
             version_manager: VersionManager::default(),
             async_func_manager: AsyncFuncManager::default(),
+            sid_assigner: ShadowIdAssigner::new(),
         }
     }
 
@@ -133,6 +137,8 @@ impl Controller {
                     dirty_vertices: HashSet::new(),
                     sheet_updated: false,
                     cell_updated: false,
+                    cells_removed: HashSet::new(),
+                    sid_assigner: &self.sid_assigner,
                 };
 
                 let result = executor.execute_and_calc(payloads_action);
@@ -152,6 +158,13 @@ impl Controller {
                             version: result.version_manager.version(),
                             async_tasks: result.async_func_manager.get_calc_tasks(),
                             status: StatusCode::Ok(c),
+                            value_changed: result
+                                .updated_cells
+                                .into_iter()
+                                .map(|(sheet_id, cell_id)| SheetCellId { sheet_id, cell_id })
+                                .collect(),
+
+                            cell_removed: vec![],
                         }
                     }
                     Err(e) => {
@@ -186,12 +199,27 @@ impl Controller {
                     dirty_vertices,
                     sheet_updated: false,
                     cell_updated: false,
+                    sid_assigner: &self.sid_assigner,
+                    cells_removed: HashSet::new(),
                 };
                 if let Ok(result) = executor.calc() {
                     ActionEffect {
                         version: result.version_manager.version(),
                         async_tasks: vec![],
                         status: StatusCode::Ok(WorkbookUpdateType::Cell),
+                        value_changed: result
+                            .updated_cells
+                            .into_iter()
+                            .map(|(sheet_id, cell_id)| SheetCellId { sheet_id, cell_id })
+                            .collect(),
+                        cell_removed: result
+                            .cells_removed
+                            .into_iter()
+                            .map(|c| SheetCellId {
+                                sheet_id: c.0,
+                                cell_id: c.1,
+                            })
+                            .collect(),
                     }
                 } else {
                     ActionEffect::from_err(1)
@@ -286,6 +314,49 @@ mod tests {
                 panic!()
             }
         }
+    }
+
+    #[test]
+    fn controller_ephemeral_input_and_intput() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+
+        let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
+        let shadow_id = wb.sid_assigner.get_shawdow_id(sheet_id, cell_id);
+
+        let ephemeral_input = PayloadsAction {
+            payloads: vec![EditPayload::EphemeralCellInput(EphemeralCellInput {
+                sheet_idx,
+                id: shadow_id,
+                content: String::from("=#PLACEHOLDER < ABS(100)"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        wb.handle_action(EditAction::Payloads(ephemeral_input));
+
+        let input = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                content: String::from("=ABS(100)"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(input));
+        assert!(result.value_changed.len() == 2);
+
+        let cell = wb.status.container.get_cell(sheet_id, &cell_id).unwrap();
+        assert!(matches!(cell.value, CellValue::Number(100.0)));
+        let ephemeral_cell = wb
+            .status
+            .container
+            .get_cell(sheet_id, &CellId::EphemeralCell(shadow_id))
+            .unwrap();
+        assert!(matches!(ephemeral_cell.value, CellValue::Boolean(false)));
     }
 
     #[test]

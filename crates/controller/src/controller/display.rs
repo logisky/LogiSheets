@@ -11,6 +11,14 @@ pub struct CellPosition {
     pub y: f64,
 }
 
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "shadow_cell_info.ts", rename_all = "camelCase")]
+pub struct ShadowCellInfo {
+    pub start_position: CellPosition,
+    pub end_position: CellPosition,
+    pub value: Value,
+}
+
 #[derive(Debug, Clone, Default, TS)]
 #[ts(file_name = "display_window.ts", rename_all = "camelCase")]
 pub struct DisplayWindow {

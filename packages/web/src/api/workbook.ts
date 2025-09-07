@@ -18,6 +18,10 @@ import {
     get_block_col_id,
     get_block_row_id,
     get_block_values,
+    get_cell_id,
+    get_shadow_info_by_id,
+    get_shadow_cell_id,
+    get_shadow_cell_ids,
     get_sheet_count,
     get_sheet_id,
     get_sheet_idx,
@@ -28,6 +32,7 @@ import {
     read_file,
     redo,
     release,
+    reproduce_cells,
     resize_block,
     row_delete,
     row_insert,
@@ -49,20 +54,33 @@ import {
     transaction_end,
     transaction_start,
     undo,
-    reproduce_cells,
+    ephemeral_cell_input,
 } from '../../wasm/logisheets_wasm_server'
-import {ActionEffect, AsyncFuncResult, SheetInfo} from '../bindings'
+import {
+    ActionEffect,
+    AsyncFuncResult,
+    ShadowCellInfo,
+    SheetCellId,
+    SheetInfo,
+} from '../bindings'
 import {Payload} from '../payloads'
 import {ColId, RowId, Transaction} from '../types'
 import {Worksheet} from './worksheet'
 import {Calculator, CustomFunc} from './calculator'
-import {Result} from './utils'
+import {isErrorMessage, Result} from './utils'
 import {BlockManager} from './block_manager'
-import {GetAvailableBlockIdParams, GetBlockValuesParams} from '../client'
+import {
+    GetAvailableBlockIdParams,
+    GetBlockValuesParams,
+    GetCellIdParams,
+    GetShadowCellIdParams,
+    GetShadowCellIdsParams,
+} from '../client'
 
 export type ReturnCode = number
 
 export type Callback = () => void
+export type CellIdCallback = (cellId: SheetCellId) => void
 
 export class Workbook {
     public constructor() {
@@ -215,6 +233,70 @@ export class Workbook {
         return get_block_col_id(this._id, sheetId, blockId, colIdx)
     }
 
+    public onCellValueChanged(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: Callback
+    ): Result<void> {
+        const cellId = this.getCellId({sheetIdx, rowIdx, colIdx})
+        if (isErrorMessage(cellId)) {
+            return cellId
+        }
+        this._registerCellValueChangedCallback(cellId, callback)
+    }
+
+    public onCellRemoved(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: Callback
+    ): Result<void> {
+        const cellId = this.getCellId({sheetIdx, rowIdx, colIdx})
+        if (isErrorMessage(cellId)) {
+            return cellId
+        }
+        this._registerCellRemovedCallback(cellId, callback)
+    }
+
+    public onShadowCellValueChanged(
+        sheetIdx: number,
+        rowIdx: number,
+        colIdx: number,
+        callback: Callback
+    ): Result<void> {
+        const shadowId = this.getShadowCellId({
+            sheetIdx,
+            rowIdx,
+            colIdx,
+        }) as Result<SheetCellId>
+        if (isErrorMessage(shadowId)) {
+            return shadowId
+        }
+
+        this._registerCellValueChangedCallback(shadowId, callback)
+    }
+
+    private _registerCellRemovedCallback(
+        cellId: SheetCellId,
+        callback: Callback
+    ) {
+        if (!this._cellRemovedCallbacks.has(cellId)) {
+            this._cellRemovedCallbacks.set(cellId, [])
+        }
+        this._cellRemovedCallbacks.get(cellId)?.push(callback)
+    }
+
+    private _registerCellValueChangedCallback(
+        id: SheetCellId,
+        callback: Callback
+    ) {
+        if (!this._cellValueChangedCallbacks.has(id)) {
+            this._cellValueChangedCallbacks.set(id, [])
+        }
+        this._cellValueChangedCallbacks.get(id)?.push(callback)
+    }
+
     public execTransaction(tx: Transaction): ActionEffect {
         transaction_start(this._id)
         tx.payloads.forEach((p: Payload) => {
@@ -248,6 +330,20 @@ export class Workbook {
                     this._onCellUpdate()
                     this._onSheetUpdate()
             }
+            result.valueChanged.forEach((cellId) => {
+                this._cellValueChangedCallbacks
+                    .get(cellId)
+                    ?.forEach((callback) => {
+                        callback()
+                    })
+            })
+            result.cellRemoved.forEach((cellId) => {
+                this._cellRemovedCallbacks.get(cellId)?.forEach((callback) => {
+                    callback()
+                })
+                this._cellRemovedCallbacks.delete(cellId)
+                this._cellValueChangedCallbacks.delete(cellId)
+            })
         }
         return result
     }
@@ -276,6 +372,39 @@ export class Workbook {
 
     public registryCustomFunc(customFunc: CustomFunc) {
         this._calculator.registry(customFunc)
+    }
+
+    public getShadowCellId(params: GetShadowCellIdParams): Result<number> {
+        return get_shadow_cell_id(
+            this._id,
+            params.sheetIdx,
+            params.rowIdx,
+            params.colIdx
+        )
+    }
+
+    public getShadowCellIds(
+        params: GetShadowCellIdsParams
+    ): Result<readonly number[]> {
+        return get_shadow_cell_ids(
+            this._id,
+            params.sheetIdx,
+            new Uint32Array(params.rowIdx),
+            new Uint32Array(params.colIdx)
+        )
+    }
+
+    public getShadowInfoById(shadowId: number): Result<ShadowCellInfo> {
+        return get_shadow_info_by_id(this._id, BigInt(shadowId))
+    }
+
+    public getCellId(params: GetCellIdParams): Result<SheetCellId> {
+        return get_cell_id(
+            this._id,
+            params.sheetIdx,
+            params.rowIdx,
+            params.colIdx
+        )
     }
 
     private _addPayload(p: Payload) {
@@ -601,6 +730,13 @@ export class Workbook {
                 p.value.tag,
                 p.value.content
             )
+        if (p.type === 'ephemeralCellInput')
+            return ephemeral_cell_input(
+                this._id,
+                p.value.sheetIdx,
+                BigInt(p.value.id),
+                p.value.content
+            )
         if (p.type === 'reproduceCells')
             return reproduce_cells(this._id, p.value)
         // eslint-disable-next-line no-console
@@ -625,6 +761,9 @@ export class Workbook {
 
     private _cellUpdatedCallbacks: Callback[] = []
     private _sheetInfoUpdatedCallbacks: Callback[] = []
+
+    private _cellValueChangedCallbacks: Map<SheetCellId, Callback[]> = new Map()
+    private _cellRemovedCallbacks: Map<SheetCellId, Callback[]> = new Map()
     // The book id which is generated by `WASM`
     private _id: number
 

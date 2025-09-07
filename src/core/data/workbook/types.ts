@@ -3,6 +3,9 @@ export const enum WorkerUpdate {
     Sheet = 1,
     CellAndSheet = 2,
     Ready = 3,
+
+    CellValueChanged = 4,
+    CellRemoved = 5,
 }
 
 export enum MethodName {
@@ -39,4 +42,9 @@ export enum MethodName {
     GetReproducibleCell = 'getReproducibleCell',
     GetReproducibleCells = 'getReproducibleCells',
     GetCellValue = 'getCellValue',
+
+    GetShadowCellId = 'getShadowCellId',
+    GetShadowCellIds = 'getShadowCellIds',
+    GetShadowInfoById = 'getShadowInfoById',
+    GetCellId = 'getCellId',
 }

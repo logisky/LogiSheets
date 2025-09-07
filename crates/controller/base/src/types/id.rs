@@ -14,6 +14,6 @@ pub type ExtBookId = u8;
 pub type AuthorId = u8;
 pub type StyleId = u32;
 
-pub type EphemeralId = u32;
+pub type EphemeralId = u64;
 
 pub type DiyCellId = u32;

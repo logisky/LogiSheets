@@ -35,6 +35,7 @@ import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
 import {DiyButtonComponent} from '../diy-button'
+import {ShadowCellComponent} from '../shadow-cell'
 
 const CANVAS_HOST_ID = simpleUuid()
 const canvas = () => {
@@ -75,7 +76,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         setCanvasSize()
         store.renderer.render(true)
         store.scrollbar.init()
-        store.dataSvc.registryCellUpdatedCallback(() => {
+        store.dataSvc.registerCellUpdatedCallback(() => {
             store.renderer.render(true)
         })
     }, [])
@@ -344,6 +345,9 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             ))}
             {store.diyButton.props.map((props, i) => (
                 <DiyButtonComponent key={i} props={props} />
+            ))}
+            {store.cellValidation.invalidCells.map((props, i) => (
+                <ShadowCellComponent key={i} shadowCell={props} />
             ))}
             <ScrollbarComponent
                 {...store.scrollbar.xScrollbar}

@@ -197,6 +197,7 @@ pub mod tests_utils {
                 CalcVertex::Value(v) => v,
                 CalcVertex::Reference(_) => panic!(),
                 CalcVertex::Union(_) => todo!(),
+                CalcVertex::Ephemeral(_) => todo!(),
             }
         }
 
