@@ -64,7 +64,7 @@ export class Highlights {
             const oldCell = find(newCell)
             if (oldCell) newCell.style = oldCell.style
             else {
-                const canvasPosition = this.store.convertToCanvasPosition(
+                const canvasPosition = this.store.convertToMainCanvasPosition(
                     cell.position,
                     'Cell'
                 )

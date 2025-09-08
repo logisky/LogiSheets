@@ -46,7 +46,6 @@ import {
     GetShadowInfoByIdParams,
     SheetCellId,
     GetCellIdParams,
-    CellId,
     CellIdCallback,
     ShadowCellInfo,
 } from 'logisheets-web'
@@ -315,11 +314,11 @@ export class WorkbookClient implements Client {
     }
 
     registerCellUpdatedCallback(f: () => void): void {
-        this._cellUpdatedCallbacks.push(f)
+        this._cellUpdatedCallbacks.add(f)
         return
     }
     registerSheetUpdatedCallback(f: () => void): void {
-        this._sheetUpdatedCallbacks.push(f)
+        this._sheetUpdatedCallbacks.add(f)
         return
     }
 
@@ -378,8 +377,8 @@ export class WorkbookClient implements Client {
     private _id = 10
 
     private _resolvers: Map<number, (arg: any) => unknown> = new Map()
-    private _cellUpdatedCallbacks: Callback[] = []
-    private _sheetUpdatedCallbacks: Callback[] = []
+    private _cellUpdatedCallbacks: Set<Callback> = new Set()
+    private _sheetUpdatedCallbacks: Set<Callback> = new Set()
 
     private _cellValueChangedCallbacks: Map<string, CellIdCallback[]> =
         new Map()

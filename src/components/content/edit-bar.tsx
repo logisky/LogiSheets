@@ -2,9 +2,7 @@ import {
     buildSelectedDataFromCell,
     getFirstCell,
     getSelectedCellRange,
-    getSelectedLines,
     SelectedData,
-    SelectedLines,
 } from '@/components/canvas'
 import {toA1notation, parseA1notation} from '@/core'
 import {CellInputBuilder, Payload, Transaction} from 'logisheets-web'
