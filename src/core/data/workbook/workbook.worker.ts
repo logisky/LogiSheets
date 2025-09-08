@@ -255,6 +255,7 @@ class WorkerService implements IWorkbookWorker {
         await initWasm()
         this._workbookImpl = new Workbook()
         this._workbookImpl.registerCellUpdatedCallback(() => {
+            console.log('worker posting')
             ctx.postMessage({id: WorkerUpdate.Cell})
         })
         this._workbookImpl.registerSheetInfoUpdateCallback(() => {

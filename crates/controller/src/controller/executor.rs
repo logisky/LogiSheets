@@ -140,7 +140,7 @@ impl<'a> Executor<'a> {
             if updated || nav_updated || cell_attatchment_updated || exclusive_updated {
                 true
             } else {
-                result.updated_cells.len() > 0
+                result.updated_cells.len() > 0 || result.cells_removed.len() > 0
             };
 
         Ok(Executor {

@@ -105,14 +105,6 @@ fn input<C: FormulaExecCtx>(
     if let Some(old_formula_deps) = graph.clone().get_deps(&this_vertex) {
         old_formula_deps.iter().for_each(|old_dep| {
             graph.remove_dep(&this_vertex, old_dep);
-            if graph.get_rdeps(old_dep).map_or(0, |r| r.len()) == 0 {
-                match old_dep {
-                    Vertex::Range(sheet_id, range_id) => ctx.remove_range_id(&sheet_id, &range_id),
-                    Vertex::Cube(cube_id) => ctx.remove_cube_id(&cube_id),
-                    Vertex::Ext(ext_ref_id) => ctx.remove_ext_ref_id(&ext_ref_id),
-                    Vertex::Name(_) => {}
-                };
-            }
         })
     };
 

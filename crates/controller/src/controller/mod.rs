@@ -144,9 +144,12 @@ impl Controller {
                 let result = executor.execute_and_calc(payloads_action);
                 match result {
                     Ok(result) => {
-                        let c = if result.cell_updated && result.sheet_updated {
+                        let cell_updated = result.cell_updated
+                            || result.cells_removed.len() > 0
+                            || result.updated_cells.len() > 0;
+                        let c = if cell_updated && result.sheet_updated {
                             WorkbookUpdateType::SheetAndCell
-                        } else if result.cell_updated {
+                        } else if cell_updated {
                             WorkbookUpdateType::Cell
                         } else if result.sheet_updated {
                             WorkbookUpdateType::Sheet
@@ -164,7 +167,14 @@ impl Controller {
                                 .map(|(sheet_id, cell_id)| SheetCellId { sheet_id, cell_id })
                                 .collect(),
 
-                            cell_removed: vec![],
+                            cell_removed: result
+                                .cells_removed
+                                .into_iter()
+                                .map(|c| SheetCellId {
+                                    sheet_id: c.0,
+                                    cell_id: c.1,
+                                })
+                                .collect(),
                         }
                     }
                     Err(e) => {
@@ -357,6 +367,41 @@ mod tests {
             .get_cell(sheet_id, &CellId::EphemeralCell(shadow_id))
             .unwrap();
         assert!(matches!(ephemeral_cell.value, CellValue::Boolean(false)));
+    }
+
+    #[test]
+    fn formula_input() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                content: String::from("=B2"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.value_changed.len() == 1);
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                content: String::from("=B2+1"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.value_changed.len() == 1);
+
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+        let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
+        let cell = wb.status.container.get_cell(sheet_id, &cell_id).unwrap();
+        assert!(matches!(cell.value, CellValue::Number(1.0)));
     }
 
     #[test]

@@ -43,7 +43,9 @@ export class Textarea {
                 .content(newText)
                 .build(),
         }
-        this.store.dataSvc.handleTransaction(new Transaction([payload], true))
+        await this.store.dataSvc.handleTransaction(
+            new Transaction([payload], true)
+        )
         this._setEditing(false)
         return true
     }
@@ -91,8 +93,11 @@ export class Textarea {
         const info = this.store.dataSvc.getCellInfo(sheet, row, col)
         info.then((c) => {
             if (isErrorMessage(c)) return
-            const text =
-                c.getFormula() === '' ? c.getFormula() : c.getText() ?? ''
+
+            let text = c.getText()
+            if (c.getFormula() !== '') {
+                text = `=${c.getFormula()}`
+            }
             const rect = this.store.renderer.canvas.getBoundingClientRect()
             const [clientX, clientY] = [rect.x + x, rect.y + y]
             const context = new Context()
@@ -109,6 +114,7 @@ export class Textarea {
             context.textareaOffsetY =
                 (event as globalThis.MouseEvent).clientY - clientY
             this._setEditing(true, context)
+            this.currText = text
         })
     }
 

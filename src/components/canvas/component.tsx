@@ -16,6 +16,7 @@ import {
     KeyboardEvent,
     useEffect,
     useContext,
+    useCallback,
 } from 'react'
 import {take, takeUntil} from 'rxjs/operators'
 import {ScrollbarComponent} from '@/components/scrollbar'
@@ -59,6 +60,10 @@ export const CanvasComponent = (props: CanvasProps) => {
     )
 }
 
+function render(store: CanvasStore) {
+    store.renderer.render(true)
+}
+
 const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const {selectedData, selectedData$, activeSheet} = props
     const store = useContext(CanvasStoreContext)
@@ -74,12 +79,15 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
     useEffect(() => {
         setCanvasSize()
-        store.renderer.render(true)
+        render(store)
         store.scrollbar.init()
-        store.dataSvc.registerCellUpdatedCallback(() => {
-            store.renderer.render(true)
-        })
     }, [])
+
+    useEffect(() => {
+        store.dataSvc.registerCellUpdatedCallback(() => {
+            render(store)
+        })
+    }, [store])
 
     useEffect(() => {
         if (selectedData.source != 'editbar') return
