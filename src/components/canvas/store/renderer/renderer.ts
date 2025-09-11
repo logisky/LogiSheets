@@ -111,6 +111,9 @@ export class Renderer implements RendererInterface {
             width: r.width,
             height: r.height,
         }
+        // Stale-render guard: if anchor changes during rendering, skip compositing
+        const startAnchorX = this.store.anchorX
+        const startAnchorY = this.store.anchorY
 
         if (clearBeforeRender) {
             this._cellRenderer.clear()
@@ -142,6 +145,13 @@ export class Renderer implements RendererInterface {
                 this._frozenLowerRenderer.fullyRender(target)
             }
             this.rendering = false
+        }
+        // If anchor changed while rendering, do not composite outdated image
+        if (
+            this.store.anchorX !== startAnchorX ||
+            this.store.anchorY !== startAnchorY
+        ) {
+            return
         }
         this.concatImageToCanvas()
         this.store.resizer.init()

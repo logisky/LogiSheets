@@ -9,9 +9,9 @@ import {Rect} from './types'
 import {isErrorMessage} from 'packages/web'
 
 const HorizontalBuffer = 200
-const VerticalBuffer = 800
+const VerticalBuffer = 1200
 const XUnit = 100
-const YUnit = 500
+const YUnit = 400
 const canvasWidth = 1200
 const canvasHeight = 3000
 
