@@ -41,7 +41,8 @@ export class Highlights {
         const find = (cell: HighlightCell) => {
             return this.highlightCells.find((c) => equal(c, cell))
         }
-        ranges.forEach((r) => {
+        const colors = getHighlightColors(ranges.length)
+        ranges.forEach((r, i) => {
             const result = parseA1notation(r)
             if (!result) return
             const {rs: rowStart, re: rowEnd, cs: colStart, ce: colEnd} = result
@@ -68,9 +69,8 @@ export class Highlights {
                     cell.position,
                     'Cell'
                 )
-                const currColors = newCells.map((c) => c.style.bgColor)
                 newCell.style = {
-                    bgColor: StandardColor.randomColor(currColors),
+                    bgColor: colors[i],
                     x: canvasPosition.startCol,
                     y: canvasPosition.startRow,
                     height: canvasPosition.height,
@@ -96,3 +96,24 @@ function equal(cell1: HighlightCell, cell2: HighlightCell) {
         cell1.rowStart === cell2.rowStart
     )
 }
+
+function getHighlightColors(num: number): readonly StandardColor[] {
+    const colors: StandardColor[] = []
+    let i = 0
+    while (i < num) {
+        colors.push(
+            StandardColor.fromArgb(HIGHLIGHT_COLOR[i % HIGHLIGHT_COLOR.length])
+        )
+        i++
+    }
+    return colors
+}
+
+const HIGHLIGHT_COLOR: string[] = [
+    '0070C0',
+    'FF0000',
+    '00B050',
+    '7030A0',
+    '00B0F0',
+    'FFC000',
+]
