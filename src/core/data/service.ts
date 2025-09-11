@@ -22,7 +22,7 @@ export const CANVAS_OFFSET = 100
 export interface DataService {
     getWorkbook(): WorkbookClient
     registerCustomFunc(f: CustomFunc): Resp<void>
-    registerCellUpdatedCallback(f: () => void): void
+    registerCellUpdatedCallback(f: () => void, callbackId?: number): void
     registerSheetUpdatedCallback(f: () => void): void
     handleTransaction(t: Transaction): Resp<void>
     undo(): Resp<void>
@@ -167,8 +167,11 @@ export class DataServiceImpl implements DataService {
         return this._workbook.registerCustomFunc(f)
     }
 
-    public registerCellUpdatedCallback(f: () => void): void {
-        return this._workbook.registerCellUpdatedCallback(f)
+    public registerCellUpdatedCallback(
+        f: () => void,
+        callbackId?: number
+    ): void {
+        return this._workbook.registerCellUpdatedCallback(f, callbackId)
     }
 
     public handleTransaction(transaction: Transaction): Resp<void> {
@@ -220,7 +223,20 @@ export class DataServiceImpl implements DataService {
             this._cellViews.set(sheetIdx, manager)
         }
         const viewManager = this._cellViews.get(sheetIdx) as ViewManager
-        return viewManager.getViewResponse(startX, startY, height, width)
+
+        // In-flight request de-duplication
+        const key = `${sheetIdx}:${startX}:${startY}:${height}:${width}`
+        const inflight = this._inflightCellView.get(key)
+        if (inflight) return inflight
+
+        const p = (async () =>
+            viewManager.getViewResponse(startX, startY, height, width))()
+        // Ensure cleanup regardless of resolve/reject
+        p.finally(() => {
+            this._inflightCellView.delete(key)
+        })
+        this._inflightCellView.set(key, p)
+        return p
     }
 
     private _init() {
@@ -230,6 +246,10 @@ export class DataServiceImpl implements DataService {
         })
     }
     private _cellViews: Map<number, ViewManager> = new Map()
+
+    // De-duplicate concurrent getCellView requests
+    private _inflightCellView: Map<string, Promise<CellViewResponse>> =
+        new Map()
 
     private _sheetIdx = 0
 }

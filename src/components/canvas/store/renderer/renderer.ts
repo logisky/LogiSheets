@@ -57,25 +57,21 @@ export class Renderer implements RendererInterface {
         }
 
         const fetchDataFromCellRenderer = async (rect: Rect) => {
-            const resp = this._cellRenderer.getCurrentData()
+            // For headers, always fetch using current content anchors to avoid transient tile misses
+            // Rows header rect: x=0..LeftTop.width, y=anchorY..; Cols header rect: y=0..LeftTop.height, x=anchorX..
             const x = Math.max(rect.x, 0)
             const y = Math.max(rect.y, 0)
-            const data = resp.find((r) => {
-                return (
-                    r.dataView.request.startX <= x &&
-                    r.dataView.request.width + r.dataView.request.startX >=
-                        x + rect.width &&
-                    r.dataView.request.startY <= y &&
-                    r.dataView.request.height + r.dataView.request.startY >=
-                        y + rect.height
-                )
-            })
-            if (!data) {
-                throw Error(
-                    'can not find data for rect: ' + JSON.stringify(rect)
-                )
+            const direct = await this.store.dataSvc.getCellView(
+                this.store.currSheetIdx,
+                x,
+                y,
+                rect.height,
+                rect.width
+            )
+            if (isErrorMessage(direct)) {
+                throw Error('failed to fetch header data')
             }
-            return data.dataView
+            return direct
         }
         this._rowRenderer = createIncrementalRowsRenderer(
             fetchDataFromCellRenderer,
@@ -111,6 +107,9 @@ export class Renderer implements RendererInterface {
             width: r.width,
             height: r.height,
         }
+        // Capture anchor at start; used to decide whether to schedule a follow-up render
+        const startAnchorX = this.store.anchorX
+        const startAnchorY = this.store.anchorY
 
         if (clearBeforeRender) {
             this._cellRenderer.clear()
@@ -119,31 +118,41 @@ export class Renderer implements RendererInterface {
         }
 
         const {rows, cols} = normalizeForRowsAndCols(target)
+        const tasks: Promise<void>[] = []
 
         if (this._cellRenderer.hasCovered(target)) {
             if (this._frozenUpperRenderer) {
-                await this._frozenUpperRenderer.fullyRender(target)
+                tasks.push(this._frozenUpperRenderer.fullyRender(target))
             }
             if (this._frozenLowerRenderer) {
-                await this._frozenLowerRenderer.fullyRender(target)
+                tasks.push(this._frozenLowerRenderer.fullyRender(target))
             }
-            await this._cellRenderer.fullyRender(target)
-            await this._rowRenderer.fullyRender(rows)
-            await this._colRenderer.fullyRender(cols)
+            tasks.push(this._cellRenderer.fullyRender(target))
+            tasks.push(this._rowRenderer.fullyRender(rows))
+            tasks.push(this._colRenderer.fullyRender(cols))
         } else {
             this.rendering = true
-            await this._cellRenderer.fullyRender(target)
-            await this._rowRenderer.fullyRender(rows)
-            await this._colRenderer.fullyRender(cols)
+            tasks.push(this._cellRenderer.fullyRender(target))
+            tasks.push(this._rowRenderer.fullyRender(rows))
+            tasks.push(this._colRenderer.fullyRender(cols))
             if (this._frozenUpperRenderer) {
-                this._frozenUpperRenderer.fullyRender(target)
+                tasks.push(this._frozenUpperRenderer.fullyRender(target))
             }
             if (this._frozenLowerRenderer) {
-                this._frozenLowerRenderer.fullyRender(target)
+                tasks.push(this._frozenLowerRenderer.fullyRender(target))
             }
             this.rendering = false
         }
+
+        await Promise.all(tasks)
+        // Always composite to avoid blanks; if anchor changed, schedule a follow-up render
+        const anchorChanged =
+            this.store.anchorX !== startAnchorX ||
+            this.store.anchorY !== startAnchorY
         this.concatImageToCanvas()
+        if (anchorChanged) {
+            window.requestAnimationFrame(() => this.render(false))
+        }
         this.store.resizer.init()
         this.store.selector.updateSelector(
             this.store.startCell,

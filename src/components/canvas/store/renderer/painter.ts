@@ -13,6 +13,8 @@ export class Painter {
     public constructor(public readonly store: CanvasStore) {}
 
     public setCanvas(canvas: HTMLCanvasElement) {
+        // Offscreen painter uses device-pixel backing store and draws via npx/npxLine,
+        // so we should NOT additionally scale the context here, otherwise we double-DPR.
         this._painter.setCanvas(canvas)
     }
 

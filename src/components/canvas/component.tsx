@@ -16,7 +16,6 @@ import {
     KeyboardEvent,
     useEffect,
     useContext,
-    useCallback,
 } from 'react'
 import {take, takeUntil} from 'rxjs/operators'
 import {ScrollbarComponent} from '@/components/scrollbar'
@@ -71,6 +70,12 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
     const [contextMenuEl, setContextMenu] = useState<ReactElement>()
     const textEl = useRef<ITextareaInstance>(null)
+    // Accumulate wheel deltas and apply once per animation frame to avoid jitter
+    const wheelAccumRef = useRef(0)
+    const wheelRafIdRef = useRef<number | null>(null)
+    // Coalesce renders: allow at most one in-flight render and queue at most one follow-up
+    const renderInFlightRef = useRef(false)
+    const rerenderScheduledRef = useRef(false)
 
     const setCanvasSize = () => {
         store.renderer.canvas.width = canvas().getBoundingClientRect().width
@@ -79,6 +84,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
     useEffect(() => {
         setCanvasSize()
+        store.dataSvc.setCurrentSheetIdx(activeSheet)
         render(store)
         store.scrollbar.init()
     }, [])
@@ -86,7 +92,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     useEffect(() => {
         store.dataSvc.registerCellUpdatedCallback(() => {
             render(store)
-        })
+        }, 1)
     }, [store])
 
     useEffect(() => {
@@ -125,22 +131,56 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         store.scroll()
     }
 
-    let lastScrollTime = 0
     const onMouseWheel = (e: WheelEvent) => {
-        // only support y scrollbar currently
-        let delta = e.deltaY
-        if (store.anchorY + delta < 0) {
-            delta = -store.anchorY
+        // accumulate deltas; a single rAF will process them
+        wheelAccumRef.current += e.deltaY
+        if (wheelRafIdRef.current !== null) return
+
+        const processFrame = () => {
+            const applyDelta = wheelAccumRef.current
+            wheelAccumRef.current = 0
+            wheelRafIdRef.current = null
+            if (applyDelta !== 0) {
+                const newY = Math.max(0, store.anchorY + applyDelta)
+                if (newY !== store.anchorY) {
+                    store.setAnchor(store.anchorX, newY)
+                    store.scrollbar.update('y')
+                    store.scroll()
+                }
+            } else if (applyDelta < 0 && store.anchorY === 0) {
+                // Scrolling up at the very top: no movement, but ensure we repaint to avoid persistent blanks
+                if (!renderInFlightRef.current) {
+                    renderInFlightRef.current = true
+                    store.renderer.render(false).finally(() => {
+                        renderInFlightRef.current = false
+                    })
+                } else {
+                    rerenderScheduledRef.current = true
+                }
+            }
+
+            // Only start a render if none is in-flight. Otherwise queue one follow-up.
+            if (!renderInFlightRef.current) {
+                renderInFlightRef.current = true
+                store.renderer.render(false).finally(() => {
+                    renderInFlightRef.current = false
+                    if (
+                        wheelAccumRef.current !== 0 ||
+                        rerenderScheduledRef.current
+                    ) {
+                        rerenderScheduledRef.current = false
+                        if (wheelRafIdRef.current === null) {
+                            wheelRafIdRef.current =
+                                window.requestAnimationFrame(processFrame)
+                        }
+                    }
+                })
+            } else {
+                rerenderScheduledRef.current = true
+            }
         }
 
-        const now = Date.now()
-        if (now - lastScrollTime < 150) return
-
-        lastScrollTime = now
-        store.setAnchor(store.anchorX, store.anchorY + delta)
-        store.renderer.render(false)
-        store.scrollbar.update('y')
-        store.scroll()
+        wheelRafIdRef.current = window.requestAnimationFrame(processFrame)
     }
 
     const onMouseDown = async (e: MouseEvent) => {
