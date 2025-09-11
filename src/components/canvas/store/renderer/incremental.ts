@@ -102,18 +102,14 @@ export class IncrementalRenderer<T extends DrawContent, C extends Canvas> {
         let included = false
         for (let i = 0; i < currentUnits.length; i++) {
             if (current.includes(i)) {
-                // this.canvas.moveImage(
-                //     currentUnits[i].x - this._previousAnchorX,
-                //     currentUnits[i].y - this._previousAnchorY,
-                //     currentUnits[i].width,
-                //     currentUnits[i].height,
-                //     currentUnits[i].x - this.getAnchorX(),
-                //     currentUnits[i].y - this.getAnchorY()
-                // )
+                // Keep overlapping tiles; they remain visible during incremental update
                 included = true
                 newData.push(this._currentData[i])
             } else {
-                this.canvas.clearRect(currentUnits[i])
+                // Do not clear immediately to avoid edge blanks.
+                // We'll either keep old pixels (overwritten by new tiles), or
+                // clear the whole canvas later in the zero-overlap case.
+                continue
             }
         }
 
@@ -121,24 +117,41 @@ export class IncrementalRenderer<T extends DrawContent, C extends Canvas> {
         let anchorY = this._currentAnchorY
         let minX = targetUnits[0].x
         let minY = targetUnits[0].y
-        const fetchingPromises: Promise<T>[] = []
+        let rectsToFetch: Rect[] = []
         for (let j = 0; j < targetUnits.length; j++) {
             if (!target.includes(j)) {
-                const promiseData = this.fetchData(targetUnits[j])
-                fetchingPromises.push(promiseData)
-                if (targetUnits[j].x < minX) {
-                    minX = targetUnits[j].x
-                }
-                if (targetUnits[j].y < minY) {
-                    minY = targetUnits[j].y
-                }
+                rectsToFetch.push(targetUnits[j])
+            }
+            if (targetUnits[j].x < minX) {
+                minX = targetUnits[j].x
+            }
+            if (targetUnits[j].y < minY) {
+                minY = targetUnits[j].y
             }
         }
+        // If the new target extends above/left the current anchor, we can't keep previous tiles' positions
+        // without shifting the offscreen bitmap. Treat as zero-overlap re-render to avoid blanks.
+        if (
+            included &&
+            (minX < this._currentAnchorX || minY < this._currentAnchorY)
+        ) {
+            included = false
+            newData.length = 0
+            // We need to refetch all target units, not just the non-overlapping ones
+            rectsToFetch = targetUnits
+        }
+
         if (!included) {
             anchorX = minX
             anchorY = minY
         }
-        const fetchingResults = await Promise.all(fetchingPromises)
+        const fetchingResults = await Promise.all(
+            rectsToFetch.map((r) => this.fetchData(r))
+        )
+        // If no overlap with previous tiles, clear once now to avoid temporary blanks
+        if (!included) {
+            this.canvas.clear()
+        }
         for (let j = 0; j < fetchingResults.length; j++) {
             newData.push(fetchingResults[j])
             this.render(this.canvas, fetchingResults[j], anchorX, anchorY)

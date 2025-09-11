@@ -313,7 +313,12 @@ export class WorkbookClient implements Client {
         >
     }
 
-    registerCellUpdatedCallback(f: () => void): void {
+    registerCellUpdatedCallback(f: () => void, id?: number): void {
+        if (id && this._callbackIdSet.has(id)) {
+            return
+        } else if (id) {
+            this._callbackIdSet.add(id)
+        }
         this._cellUpdatedCallbacks.add(f)
         return
     }
@@ -388,6 +393,8 @@ export class WorkbookClient implements Client {
     private _readyPromise: Promise<void> = new Promise((r) => {
         this._resolvers.set(WorkerUpdate.Ready, r)
     })
+
+    private _callbackIdSet: Set<number> = new Set()
 }
 
 export function sheetCellIdToString(sheetCellId: SheetCellId): string {

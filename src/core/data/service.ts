@@ -22,7 +22,7 @@ export const CANVAS_OFFSET = 100
 export interface DataService {
     getWorkbook(): WorkbookClient
     registerCustomFunc(f: CustomFunc): Resp<void>
-    registerCellUpdatedCallback(f: () => void): void
+    registerCellUpdatedCallback(f: () => void, callbackId?: number): void
     registerSheetUpdatedCallback(f: () => void): void
     handleTransaction(t: Transaction): Resp<void>
     undo(): Resp<void>
@@ -167,8 +167,11 @@ export class DataServiceImpl implements DataService {
         return this._workbook.registerCustomFunc(f)
     }
 
-    public registerCellUpdatedCallback(f: () => void): void {
-        return this._workbook.registerCellUpdatedCallback(f)
+    public registerCellUpdatedCallback(
+        f: () => void,
+        callbackId?: number
+    ): void {
+        return this._workbook.registerCellUpdatedCallback(f, callbackId)
     }
 
     public handleTransaction(transaction: Transaction): Resp<void> {
