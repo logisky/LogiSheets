@@ -43,6 +43,8 @@ export class Painter {
             box.position = pos
             const attr = new TextAttr()
             attr.font = SETTINGS.fixedHeader.font
+            // Center the row label within the header cell
+            attr.alignment = {horizontal: 'center', vertical: 'center'}
             const position = (r.coordinate.startRow + 1).toString()
             this._painter.fillFgColor('solid', '#ffffff', box)
             this._painter.text(position, attr, box)
@@ -75,6 +77,8 @@ export class Painter {
             box.position = pos
             const attr = new TextAttr()
             attr.font = SETTINGS.fixedHeader.font
+            // Center the column label within the header cell
+            attr.alignment = {horizontal: 'center', vertical: 'center'}
             this._painter.fillFgColor('solid', '#ffffff', box)
             this._painter.text(a1Notation, attr, box)
         })

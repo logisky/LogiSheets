@@ -14,6 +14,7 @@ import {Renderer} from './renderer'
 import {BlockOutliner} from './block-outliner'
 import {DiyButton} from './diy-button'
 import {CellValidation} from './cell-validation'
+import {dpr} from '@/core/painter'
 
 export class CanvasStore {
     constructor(

@@ -64,16 +64,40 @@ export class IncrementalRenderer<T extends DrawContent, C extends Canvas> {
     }
 
     public drawTo(ctx: CanvasRenderingContext2D, want: Rect, to: Rect): void {
+        const offscreen = this.getCanvas()
+        const cssSize = this.canvas.getSize()
+        const ratio = cssSize.width > 0 ? offscreen.width / cssSize.width : 1
+
+        // Source rectangle in offscreen backing-store pixels
+        const sx = (-this._currentAnchorX + want.x) * ratio
+        const sy = (-this._currentAnchorY + want.y) * ratio
+        const sWidth = want.width * ratio
+        const sHeight = want.height * ratio
+
+        // Bounds check: ensure source rectangle is within offscreen canvas
+        if (
+            sx < 0 ||
+            sy < 0 ||
+            sx + sWidth > offscreen.width ||
+            sy + sHeight > offscreen.height ||
+            want.width <= 0 ||
+            want.height <= 0 ||
+            to.width <= 0 ||
+            to.height <= 0
+        ) {
+            return // Skip invalid draws that cause white screen
+        }
+
         ctx.drawImage(
-            this.getCanvas(),
-            -this._currentAnchorX + want.x,
-            -this._currentAnchorY + want.y,
-            want.width,
-            want.height,
+            offscreen,
+            sx,
+            sy,
+            sWidth,
+            sHeight,
             to.x,
             to.y,
-            want.width,
-            want.height
+            to.width,
+            to.height
         )
     }
 
@@ -164,6 +188,13 @@ export class IncrementalRenderer<T extends DrawContent, C extends Canvas> {
 
     public getCurrentData(): T[] {
         return this._currentData
+    }
+
+    // Reapply DPR scaling on the underlying canvas by resetting its size
+    // to the current CSS size. This should be called when devicePixelRatio changes.
+    public rescaleForDprChange(): void {
+        const size = this.canvas.getSize()
+        this.canvas.setSize(size.width, size.height)
     }
 
     private _currentData: T[] = []

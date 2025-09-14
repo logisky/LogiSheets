@@ -1,5 +1,5 @@
 import {CanvasAttr} from './canvas_attr'
-import {dpr, npx, npxLine} from './utils'
+import {dpr} from './utils'
 import {useToast} from '@/ui/notification/useToast'
 
 export class CanvasApi {
@@ -83,9 +83,11 @@ export class CanvasApi {
         this._ctx.save()
         const w = position === 'h' ? len : lineWidth
         const h = position === 'h' ? lineWidth : len
-        position === 'h'
-            ? this._ctx.clearRect(npxLine(x), npxLine(y) - lineWidth, w, h + 1)
-            : this._ctx.clearRect(npxLine(x) - lineWidth, npxLine(y), w + 1, h)
+        if (position === 'h') {
+            this._ctx.clearRect(x, y - lineWidth, w, h + 1)
+        } else {
+            this._ctx.clearRect(x - lineWidth, y, w + 1, h)
+        }
         this._ctx.restore()
     }
 
@@ -132,13 +134,15 @@ export class CanvasApi {
     }
 
     protected fillText(text: string, x: number, y: number) {
-        this._ctx.fillText(text, npx(x), npx(y))
+        // Context is DPR-scaled upstream; use CSS pixel coordinates here.
+        this._ctx.fillText(text, x, y)
     }
     private _ctx!: CanvasRenderingContext2D
     private _canvas?: HTMLCanvasElement
     // https://usefulangle.com/post/17/html5-canvas-drawing-1px-crisp-straight-lines
     private _npxLine(px: number) {
+        // With DPR-scaled context, operate in CSS pixels. Keep 0.5 offset for crisp odd line widths.
         const offset = this._ctx.lineWidth % 2 === 0 ? 0 : 0.5
-        return npx(px) + offset
+        return px + offset
     }
 }

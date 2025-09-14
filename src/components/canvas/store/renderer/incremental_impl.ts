@@ -7,6 +7,7 @@ import {
 } from './incremental'
 import {Rect} from './types'
 import {isErrorMessage} from 'packages/web'
+import {dpr} from '@/core/painter/utils'
 
 const HorizontalBuffer = 200
 const VerticalBuffer = 1200
@@ -49,7 +50,11 @@ export class CanvasImpl implements Canvas {
         if (ctx === null) {
             throw new Error('Failed to get 2d context')
         }
+        // Scale context to DPR so all drawing uses CSS pixel coordinates
         this._ctx = ctx
+        const ratio = dpr()
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.scale(ratio, ratio)
     }
 
     get x(): number {
@@ -65,24 +70,31 @@ export class CanvasImpl implements Canvas {
     }
 
     getRect(): Rect {
+        const ratio = dpr()
         return {
             x: 0,
             y: 0,
-            width: this.canvas.width,
-            height: this.canvas.height,
+            width: this.canvas.width / ratio,
+            height: this.canvas.height / ratio,
         }
     }
 
     getSize(): {width: number; height: number} {
+        const ratio = dpr()
         return {
-            width: this.canvas.width,
-            height: this.canvas.height,
+            width: this.canvas.width / ratio,
+            height: this.canvas.height / ratio,
         }
     }
 
     setSize(width: number, height: number): void {
-        this.canvas.width = width
-        this.canvas.height = height
+        const ratio = dpr()
+        // Backing store in device pixels
+        this.canvas.width = Math.max(1, Math.floor(width * ratio))
+        this.canvas.height = Math.max(1, Math.floor(height * ratio))
+        // Reset transform after resize
+        this._ctx.setTransform(1, 0, 0, 1, 0, 0)
+        this._ctx.scale(ratio, ratio)
     }
 
     clear(): void {
@@ -128,9 +140,8 @@ export function createIncrementalCellRenderer(
     ) => void
 ): IncrementalRenderer<DrawContentImpl, CanvasImpl> {
     const canvas = document.createElement('canvas')
-    canvas.width = canvasWidth
-    canvas.height = canvasHeight
     const canvasImpl = new CanvasImpl(canvas)
+    canvasImpl.setSize(canvasWidth, canvasHeight)
     const fetchData = async (rect: Rect) => {
         const data = dataSvc.getCellView(
             dataSvc.getCurrentSheetIdx(),
@@ -172,9 +183,8 @@ export function createIncrementalRowsRenderer(
     ) => void
 ): IncrementalRenderer<DrawContentImpl, CanvasImpl> {
     const canvas = document.createElement('canvas')
-    canvas.width = 100
-    canvas.height = canvasHeight
     const canvasImpl = new CanvasImpl(canvas)
+    canvasImpl.setSize(100, canvasHeight)
     const fetchDataFn = async (rect: Rect) => {
         const data = await fetchData(rect)
         if (isErrorMessage(data)) throw Error('failed to fetch')
@@ -208,9 +218,8 @@ export function createIncrementalColsRenderer(
     ) => void
 ): IncrementalRenderer<DrawContentImpl, CanvasImpl> {
     const canvas = document.createElement('canvas')
-    canvas.width = canvasWidth
-    canvas.height = 100
     const canvasImpl = new CanvasImpl(canvas)
+    canvasImpl.setSize(canvasWidth, 100)
     const fetchDataFn = async (rect: Rect) => {
         const data = await fetchData(rect)
         if (isErrorMessage(data)) throw Error('failed to fetch')
