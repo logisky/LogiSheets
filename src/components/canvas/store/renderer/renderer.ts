@@ -20,7 +20,7 @@ export const CANVAS_ID = simpleUuid()
 
 export interface RendererInterface {
     canvas: HTMLCanvasElement
-    rendering: boolean
+    renderPromise: Promise<void> | null
     render(clearBeforeRender?: boolean): Promise<void>
     concatImageToCanvas(): void
     jumpTo(row: number, col: number): void
@@ -56,7 +56,7 @@ export class Renderer implements RendererInterface {
             this._painter.renderLeftHeader(resp, anchorX, anchorY)
         }
 
-        const fetchDataFromCellRenderer = async (rect: Rect) => {
+        const fetchData = async (rect: Rect) => {
             // For headers, always fetch using current content anchors to avoid transient tile misses
             // Rows header rect: x=0..LeftTop.width, y=anchorY..; Cols header rect: y=0..LeftTop.height, x=anchorX..
             const x = Math.max(rect.x, 0)
@@ -73,10 +73,7 @@ export class Renderer implements RendererInterface {
             }
             return direct
         }
-        this._rowRenderer = createIncrementalRowsRenderer(
-            fetchDataFromCellRenderer,
-            drawRowsFn
-        )
+        this._rowRenderer = createIncrementalRowsRenderer(fetchData, drawRowsFn)
 
         const drawColsFn = (
             canvas: HTMLCanvasElement,
@@ -88,10 +85,23 @@ export class Renderer implements RendererInterface {
             this._painter.renderTopHeader(resp, anchorX, anchorY)
         }
 
-        this._colRenderer = createIncrementalColsRenderer(
-            fetchDataFromCellRenderer,
-            drawColsFn
-        )
+        this._colRenderer = createIncrementalColsRenderer(fetchData, drawColsFn)
+
+        // Track DPR changes and rescale all canvases
+        this._lastDpr = window.devicePixelRatio || 1
+        this._onResize = () => {
+            const curr = window.devicePixelRatio || 1
+            if (Math.abs(curr - this._lastDpr) > 1e-3) {
+                this._lastDpr = curr
+                // Rescale offscreen renderers' canvases to new DPR
+                this._cellRenderer.rescaleForDprChange()
+                this._rowRenderer.rescaleForDprChange()
+                this._colRenderer.rescaleForDprChange()
+                // Repaint
+                this.render(true)
+            }
+        }
+        window.addEventListener('resize', this._onResize, {passive: true})
     }
     getCurrentData(): CellView {
         const data = this._cellRenderer.getCurrentData()
@@ -100,6 +110,11 @@ export class Renderer implements RendererInterface {
     }
 
     public async render(clearBeforeRender = false) {
+        // If there's already a render in progress, wait for it to complete first
+        if (this.renderPromise) {
+            return
+        }
+
         const r = this.canvas.getBoundingClientRect()
         const target: Rect = {
             x: this.store.anchorX,
@@ -111,6 +126,7 @@ export class Renderer implements RendererInterface {
         const startAnchorX = this.store.anchorX
         const startAnchorY = this.store.anchorY
 
+        // Protect clear operations with rendering flag
         if (clearBeforeRender) {
             this._cellRenderer.clear()
             this._rowRenderer.clear()
@@ -120,28 +136,27 @@ export class Renderer implements RendererInterface {
         const {rows, cols} = normalizeForRowsAndCols(target)
         const tasks: Promise<void>[] = []
 
-        if (this._cellRenderer.hasCovered(target)) {
+        // Always force full render if clearBeforeRender is true (initial load or DPR change)
+        if (clearBeforeRender || !this._cellRenderer.hasCovered(target)) {
+            tasks.push(this._cellRenderer.fullyRender(target))
+            tasks.push(this._rowRenderer.fullyRender(rows))
+            tasks.push(this._colRenderer.fullyRender(cols))
             if (this._frozenUpperRenderer) {
                 tasks.push(this._frozenUpperRenderer.fullyRender(target))
             }
             if (this._frozenLowerRenderer) {
                 tasks.push(this._frozenLowerRenderer.fullyRender(target))
             }
-            tasks.push(this._cellRenderer.fullyRender(target))
-            tasks.push(this._rowRenderer.fullyRender(rows))
-            tasks.push(this._colRenderer.fullyRender(cols))
         } else {
-            this.rendering = true
-            tasks.push(this._cellRenderer.fullyRender(target))
-            tasks.push(this._rowRenderer.fullyRender(rows))
-            tasks.push(this._colRenderer.fullyRender(cols))
             if (this._frozenUpperRenderer) {
                 tasks.push(this._frozenUpperRenderer.fullyRender(target))
             }
             if (this._frozenLowerRenderer) {
                 tasks.push(this._frozenLowerRenderer.fullyRender(target))
             }
-            this.rendering = false
+            tasks.push(this._cellRenderer.fullyRender(target))
+            tasks.push(this._rowRenderer.fullyRender(rows))
+            tasks.push(this._colRenderer.fullyRender(cols))
         }
 
         await Promise.all(tasks)
@@ -168,6 +183,16 @@ export class Renderer implements RendererInterface {
         if (ctx === null) {
             throw new Error('Failed to get 2d context')
         }
+        // Ensure visible canvas backing store and transform match current DPR
+        const ratio = window.devicePixelRatio || 1
+        const targetW = Math.max(1, Math.floor(r.width * ratio))
+        const targetH = Math.max(1, Math.floor(r.height * ratio))
+        if (this.canvas.width !== targetW || this.canvas.height !== targetH) {
+            this.canvas.width = targetW
+            this.canvas.height = targetH
+        }
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.scale(ratio, ratio)
         ctx.clearRect(0, 0, r.width, r.height)
         this._cellRenderer.drawTo(
             ctx,
@@ -290,18 +315,16 @@ export class Renderer implements RendererInterface {
         return document.getElementById(CANVAS_ID) as HTMLCanvasElement
     }
 
-    public rendering = false
+    public renderPromise: Promise<void> | null = null
 
     private _painter!: Painter
-
     private _cellRenderer!: IncrRenderer
-
     private _rowRenderer: IncrRenderer
-
     private _colRenderer: IncrRenderer
+    private _lastDpr: number
+    private _onResize: () => void
 
     private _frozenUpperRenderer?: IncrRenderer
-
     private _frozenLowerRenderer?: IncrRenderer
 }
 

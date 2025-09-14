@@ -153,7 +153,12 @@ export class PainterService extends CanvasApi {
             }
             trueTxt = currText
         }
-        this.fillText(trueTxt, tx, ty)
+        // Nudge middle-baseline text slightly upward to visually center within the box
+        let drawY = ty
+        if (textBaseAlign === 'middle') {
+            drawY = ty - Math.max(0, Math.floor(attr.font.size * 0.1))
+        }
+        this.fillText(trueTxt, tx, drawY)
         this._underline(tx, ty, attr, textWidth)
         this.restore()
     }

@@ -59,8 +59,15 @@ export const CanvasComponent = (props: CanvasProps) => {
     )
 }
 
-function render(store: CanvasStore) {
-    store.renderer.render(true)
+function render(store: CanvasStore, clearBeforeRender?: boolean) {
+    // Use a promise to ensure sequential execution and avoid race conditions
+    if (!store.renderer.renderPromise) {
+        store.renderer.renderPromise = store.renderer.render(clearBeforeRender)
+        store.renderer.renderPromise.finally(() => {
+            store.renderer.renderPromise = null
+        })
+    }
+    return store.renderer.renderPromise
 }
 
 const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
@@ -85,13 +92,13 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     useEffect(() => {
         setCanvasSize()
         store.dataSvc.setCurrentSheetIdx(activeSheet)
-        render(store)
+        render(store, true)
         store.scrollbar.init()
     }, [])
 
     useEffect(() => {
         store.dataSvc.registerCellUpdatedCallback(() => {
-            render(store)
+            render(store, true)
         }, 1)
     }, [store])
 
@@ -109,22 +116,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     useEffect(() => {
         store.renderer.canvas.focus()
         store.dataSvc.setCurrentSheetIdx(activeSheet)
-        store.renderer.render(true)
+        render(store, true)
     }, [activeSheet])
-
-    useEffect(() => {
-        let timeout: number | undefined
-        const observer = new ResizeObserver(() => {
-            if (timeout) window.clearTimeout(timeout)
-            timeout = window.setTimeout(() => {
-                store.reset()
-                setCanvasSize()
-                store.renderer.render(false)
-                store.scrollbar.onResize()
-            }, 50)
-        })
-        observer.observe(canvas())
-    }, [])
 
     const setScrollTop = (scrollTop: number, type: 'x' | 'y') => {
         store.scrollbar.setScrollTop(scrollTop, type)
@@ -284,8 +277,11 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             data = buildSelectedDataFromLines(row, row, 'row', 'none')
         } else if (matchCell?.type === 'FixedTopHeader') {
             data = buildSelectedDataFromLines(col, col, 'col', 'none')
-        } else if (matchCell?.type !== 'Cell') return
-        data = buildSelectedDataFromCell(row, col, 'none')
+        } else if (matchCell?.type === 'Cell') {
+            data = buildSelectedDataFromCell(row, col, 'none')
+        } else {
+            return
+        }
         selectedData$(data)
     }
 
