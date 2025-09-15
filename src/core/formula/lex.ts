@@ -165,9 +165,9 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
     let inRange = false
     let inError = false
 
-    const currentChar = () => formula.substr(offset, 1)
-    const doubleChar = () => formula.substr(offset, 2)
-    const nextChar = () => formula.substr(offset + 1, 1)
+    const currentChar = () => formula.slice(offset, offset + 1)
+    const doubleChar = () => formula.slice(offset, offset + 2)
+    const nextChar = () => formula.slice(offset + 1, offset + 2)
     const EOF = () => offset >= formula.length
 
     // trim left whitespaces and '=',if formula is array, trim start '{' and end '}'
@@ -175,17 +175,17 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
         if (formula[0] === ' ') {
             tokens.startItems.push(
                 new Token(
-                    formula.substr(1),
+                    formula.slice(1),
                     TokenType.WHITE_SPACE,
                     SubType.START
                 )
             )
-            formula = formula.substr(1)
+            formula = formula.slice(1)
         } else if (formula[0] === '=') {
             tokens.startItems.push(
                 new Token(formula[0], TokenType.FUNCTION_START_FLAG)
             )
-            formula = formula.substr(1)
+            formula = formula.slice(1)
             break
         } else break
     }
@@ -588,7 +588,7 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
         }
 
         if (token.type === TokenType.OP_IN && token.subtype === undefined) {
-            if ('<>='.indexOf(token.value.substr(0, 1)) !== -1) {
+            if ('<>='.indexOf(token.value.slice(0, 1)) !== -1) {
                 token.subtype = SubType.LOGICAL
             } else if (token.value === '&') {
                 token.subtype = SubType.CONCAT
@@ -613,8 +613,8 @@ export const getTokens = (formula: string, config = DEFAULT_CONFIG) => {
         }
 
         if (token.type === TokenType.FUNCTION) {
-            if (token.value.substr(0, 1) === '@') {
-                token.value = token.value.substr(1)
+            if (token.value.slice(0, 1) === '@') {
+                token.value = token.value.slice(1)
             }
             continue
         }
