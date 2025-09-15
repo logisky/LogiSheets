@@ -113,8 +113,8 @@ export class Textarea {
                 (event as globalThis.MouseEvent).clientX - clientX
             context.textareaOffsetY =
                 (event as globalThis.MouseEvent).clientY - clientY
-            this._setEditing(true, context)
             this.currText = text
+            this._setEditing(true, context)
         })
     }
 
@@ -130,8 +130,13 @@ export class Textarea {
         if (isEditing === this.editing) return
         this.editing = isEditing
         this.context = context
-        if (isEditing && this.currText) {
-            this.store.highlights.update(this.currText)
+        if (isEditing) {
+            if (this.currText !== '') {
+                this.store.highlights.update(this.currText)
+            }
+        } else {
+            this.currText = ''
+            this.store.highlights.reset()
         }
     }
 }

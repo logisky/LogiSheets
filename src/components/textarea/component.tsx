@@ -75,19 +75,35 @@ const InternalComponent = observer(
         }
 
         const onType = (value: string, event: SyntheticEvent) => {
-            if (textareaEl.current) {
-                textareaEl.current.value = ''
-            }
+            // Defer clearing textarea value to prevent flicker
             const newTexts = store.textManager.add(value)
             store.cursor.type(newTexts, [])
+
+            // Clear after processing to avoid visual flicker
+            if (textareaEl.current) {
+                requestAnimationFrame(() => {
+                    if (textareaEl.current) {
+                        textareaEl.current.value = ''
+                    }
+                })
+            }
         }
 
         const onFocus = () => {
-            setTimeout(() => {
-                textareaEl.current?.focus()
-                if (textEl.current) store.textManager.drawText()
-                store.cursor.focus()
-            })
+            textareaEl.current?.focus()
+            // Ensure canvas is available before drawing
+            if (textEl.current && store.textManager) {
+                // Wait for next frame to ensure canvas is properly initialized
+                requestAnimationFrame(() => {
+                    try {
+                        store.textManager.drawText()
+                    } catch (error) {
+                        // Silently handle canvas initialization errors
+                        // This can happen if canvas isn't ready yet
+                    }
+                })
+            }
+            store.cursor.focus()
         }
 
         const handleEvent = async (event: SyntheticEvent) => {
