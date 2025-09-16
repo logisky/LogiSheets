@@ -1,4 +1,4 @@
-import { equal } from "@/core"
+import {equal} from '@/core'
 
 export class BaseInfo {
     x = 0
@@ -6,22 +6,22 @@ export class BaseInfo {
     lineNumber = 0
     column = 0
     setX(x: number) {
-        let _x = Math.max(x, 0)
+        const _x = Math.max(x, 0)
         this.x = _x
         return this
     }
     setY(y: number) {
-        let _y = Math.max(y, 0)
+        const _y = Math.max(y, 0)
         this.y = _y
         return this
     }
     setLineNumber(lineNumber: number) {
-        let _l = Math.max(lineNumber, 0)
+        const _l = Math.max(lineNumber, 0)
         this.lineNumber = _l
         return this
     }
     setColumn(column: number) {
-        let _c = Math.max(column, 0)
+        const _c = Math.max(column, 0)
         this.column = _c
         return this
     }

@@ -14,13 +14,13 @@ export const CursorComponent: FC<CursorProps> = ({
 }) => {
     return (
         <div
-            className={`${styles.host} ${styles['logi-sheets-cursor-smooth']}`}
+            className={`${styles.host} ${styles['logisheets-cursor-smooth']}`}
             style={{
                 height: `${height}px`,
                 left: `${x}px`,
                 top: `${y}px`,
             }}
-        ></div>
+        />
     )
 }
 

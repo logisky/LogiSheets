@@ -5,9 +5,35 @@ export class Text {
     public font = new StandardFont().setSize(14)
     width(): number {
         if (this.isEof) return 0
-        const padding = 2
-        return this.font.measureText(this.char).width + padding
+        return Text.measureText(this.char, this.font.toCssFont()).width
     }
+
+    static measureText(text: string, font: string): TextMetrics {
+        const dpr = window.devicePixelRatio || 1
+        // Use cached canvas context for better performance
+        if (!Text._canvasContext) {
+            const canvas = document.createElement('canvas')
+            Text._canvasContext = canvas.getContext('2d')
+            // Exactly match main canvas setup for consistent measurement
+            canvas.width = 100 * dpr
+            canvas.height = 100 * dpr
+            if (Text._canvasContext) {
+                Text._canvasContext.scale(dpr, dpr)
+            }
+        }
+        if (!Text._canvasContext) return {width: text.length * 8} as TextMetrics
+
+        Text._canvasContext.font = font
+        const metrics = Text._canvasContext.measureText(text)
+
+        // With DPR scaling, measureText returns scaled width, divide by DPR for CSS pixels
+        return {
+            ...metrics,
+            width: metrics.width,
+        }
+    }
+
+    private static _canvasContext: CanvasRenderingContext2D | null = null
 }
 
 export class Texts {

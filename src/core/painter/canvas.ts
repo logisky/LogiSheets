@@ -47,8 +47,15 @@ export class CanvasApi {
         this.clear(canvas)
         const w = width ?? c.getBoundingClientRect().width
         const h = height ?? c.getBoundingClientRect().height
+
+        // Set physical resolution for HiDPI
         c.width = w * dpr()
         c.height = h * dpr()
+
+        // Set CSS size to maintain logical dimensions
+        c.style.width = `${w}px`
+        c.style.height = `${h}px`
+
         const ctx = c.getContext('2d')
         if (!ctx) {
             useToast().toast('Unexpected error, please refresh website!')

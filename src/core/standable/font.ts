@@ -1,6 +1,7 @@
 import {Font, CtFontName, CtUnderlineProperty, Color} from 'logisheets-web'
 import {shallowCopy} from '@/core'
 import {StandardColor} from './color'
+import {Text} from '@/components/textarea/defs'
 const DEFAULT_FONT_SIZE = 10
 /**
  * https://developer.mozilla.org/en-US/docs/Web/CSS/font
@@ -52,13 +53,7 @@ export class StandardFont implements Font {
     }
 
     measureText(text: string): TextMetrics {
-        const canvas = document.createElement('canvas')
-        const context = canvas.getContext('2d')
-        if (!context)
-            // tslint:disable-next-line: no-throw-unless-asserts
-            throw Error('Can not get context from canvas')
-        context.font = this.toCssFont()
-        return context.measureText(text)
+        return Text.measureText(text, this.toCssFont())
     }
 
     toCssFont(): string {
