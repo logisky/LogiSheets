@@ -11,7 +11,7 @@
   @include shared.set-font(14px);
 }
 
-@keyframes logi-sheets-cursor-smooth {
+@keyframes logisheets-cursor-smooth {
   0%,
   20% {
     opacity: 1;
@@ -22,8 +22,8 @@
   }
 }
 
-.logi-sheets-cursor-smooth {
-  animation-name: logi-sheets-cursor-smooth;
+.logisheets-cursor-smooth {
+  animation-name: logisheets-cursor-smooth;
   animation-duration: 0.5s;
   animation-iteration-count: infinite;
   animation-delay: 0ms;

@@ -56,7 +56,8 @@ export class Cursor {
 
     @action
     focus() {
-        this.updatePosition(0)
+        const textLength = this.store.textManager.texts.length
+        this.updatePosition(textLength)
         this.showCursor = true
     }
 
@@ -207,7 +208,7 @@ export class Cursor {
         }
         return result
     }
-    private getCursorInfoByOneLineCoordinate(cursor: number) {
+    private getCursorInfoByOneLineCoordinate(cursor: number): BaseInfo {
         const baseInfo = new BaseInfo()
         const texts = this.store.textManager.texts
         for (let i = 0; i < texts.length; i++) {
