@@ -51,6 +51,7 @@ import {
     GetShadowInfoByIdParams,
     GetCellIdParams,
     SheetCellId,
+    TokenUnit,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -98,9 +99,14 @@ interface IWorkbookWorker {
     lookupAppendixUpward(
         params: LookupAppendixUpwardParams
     ): Result<AppendixWithCell>
+
+    getDisplayUnitsOfFormula(f: string): Result<readonly TokenUnit[]>
 }
 
 class WorkerService implements IWorkbookWorker {
+    getDisplayUnitsOfFormula(f: string): Result<readonly TokenUnit[]> {
+        return this.workbook.getDisplayUnitsOfFormula(f)
+    }
     getValue(params: GetValueParams): Result<Value> {
         const {sheetId, row, col} = params
         const ws = this._workbookImpl!.getWorksheetById(sheetId)
@@ -255,7 +261,6 @@ class WorkerService implements IWorkbookWorker {
         await initWasm()
         this._workbookImpl = new Workbook()
         this._workbookImpl.registerCellUpdatedCallback(() => {
-            console.log('worker posting')
             ctx.postMessage({id: WorkerUpdate.Cell})
         })
         this._workbookImpl.registerSheetInfoUpdateCallback(() => {

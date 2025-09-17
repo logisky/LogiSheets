@@ -43,6 +43,7 @@ import {
     SheetCellId,
     SheetDimension,
     SheetInfo,
+    TokenUnit,
     Value,
     Client as WorkbookClient,
 } from 'logisheets-web'
@@ -73,6 +74,9 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    getDisplayUnitsOfFormula(f: string): Resp<readonly TokenUnit[]> {
+        throw new Error('Method not implemented.')
     }
     getCellId(params: GetCellIdParams): Resp<SheetCellId> {
         throw new Error('Method not implemented.')

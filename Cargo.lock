@@ -1356,8 +1356,11 @@ dependencies = [
 name = "logisheets_lexer"
 version = "0.7.0"
 dependencies = [
+ "gents",
+ "gents_derives",
  "pest",
  "pest_derive",
+ "serde",
  "tracing",
 ]
 

@@ -55,6 +55,7 @@ import {
     transaction_start,
     undo,
     ephemeral_cell_input,
+    get_display_units_of_formula,
 } from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
@@ -62,6 +63,7 @@ import {
     ShadowCellInfo,
     SheetCellId,
     SheetInfo,
+    TokenUnit,
 } from '../bindings'
 import {Payload} from '../payloads'
 import {ColId, RowId, Transaction} from '../types'
@@ -231,6 +233,10 @@ export class Workbook {
         colIdx: number
     ): Result<ColId> {
         return get_block_col_id(this._id, sheetId, blockId, colIdx)
+    }
+
+    public getDisplayUnitsOfFormula(f: string): Result<TokenUnit[]> {
+        return get_display_units_of_formula(f)
     }
 
     public onCellValueChanged(

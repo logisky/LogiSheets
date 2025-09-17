@@ -592,7 +592,7 @@ where
 }
 
 fn build_column(pair: Pair<Rule>) -> Result<(bool, usize)> {
-    parse_column(pair.as_str())
+    parse_column(pair.as_str().to_uppercase().as_str())
 }
 
 fn build_row(pair: Pair<Rule>) -> Result<(bool, usize)> {

@@ -1,3 +1,4 @@
+use logisheets_base::errors::BasicError;
 use logisheets_base::{BlockId, ColId, RowId, SheetId};
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
@@ -9,7 +10,7 @@ use logisheets_controller::edit_action::{
     ResizeBlock, SetColWidth, SetRowHeight, SheetCellId, SheetRename, SplitMergedCells,
     StyleUpdateType, VerticalAlignment,
 };
-use logisheets_controller::{AsyncCalcResult, AsyncErr, RowInfo, SaveFileResult, Workbook};
+use logisheets_controller::{AsyncCalcResult, AsyncErr, Error, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
 use singlyton::{Singleton, SingletonUninit};
 use wasm_bindgen::prelude::*;
@@ -1154,5 +1155,22 @@ pub fn get_cell_id(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) 
         sheet_id,
         cell_id: r,
     };
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn formula_check(f: &str) -> bool {
+    use logisheets_controller::lex_success;
+    let f = f.trim();
+    let f = &f[1..];
+    let r = lex_success(f);
+    r
+}
+
+#[wasm_bindgen]
+pub fn get_display_units_of_formula(f: &str) -> JsValue {
+    use logisheets_controller::lex_and_fmt;
+    let r = lex_and_fmt(f, true).ok_or(Error::from(BasicError::InvalidFormula(f.to_string())));
+    handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
 }

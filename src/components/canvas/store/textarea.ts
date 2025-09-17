@@ -25,7 +25,6 @@ export class Textarea {
     @observable
     editing = false
 
-    @observable
     currText = ''
 
     @action
