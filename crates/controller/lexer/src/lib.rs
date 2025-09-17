@@ -2,6 +2,10 @@ use pest::Parser;
 use pest_derive::Parser;
 use tracing::error;
 
+mod fmt;
+
+pub use fmt::{lex_and_fmt, TokenType, TokenUnit};
+
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 pub struct FormulaParser;
@@ -147,6 +151,12 @@ mod tests {
         let r = lex("#VALUE!").unwrap();
         println!("{:?}", r);
         let r = lex("#GETTING_DATA").unwrap();
+        println!("{:?}", r);
+    }
+
+    #[test]
+    fn lower_case_cell_reference() {
+        let r = lex("a1").unwrap();
         println!("{:?}", r);
     }
 }

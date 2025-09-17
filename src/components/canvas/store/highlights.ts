@@ -38,9 +38,6 @@ export class Highlights {
         const ranges = getRanges(text)
         const newCells: HighlightCell[] = []
         const viewRange = this.store.getCurrentCellView()
-        const find = (cell: HighlightCell) => {
-            return this.highlightCells.find((c) => equal(c, cell))
-        }
         let colorIndex = 0
         ranges.forEach((r, i) => {
             const result = parseA1notation(r)
@@ -64,20 +61,16 @@ export class Highlights {
                 return c.coordinate.cover(range)
             })
             if (!cell) return
-            const oldCell = find(newCell)
-            if (oldCell) newCell.style = oldCell.style
-            else {
-                const canvasPosition = this.store.convertToMainCanvasPosition(
-                    cell.position,
-                    'Cell'
-                )
-                newCell.style = {
-                    bgColor: color,
-                    x: canvasPosition.startCol,
-                    y: canvasPosition.startRow,
-                    height: canvasPosition.height,
-                    width: canvasPosition.width,
-                }
+            const canvasPosition = this.store.convertToMainCanvasPosition(
+                cell.position,
+                'Cell'
+            )
+            newCell.style = {
+                bgColor: color,
+                x: canvasPosition.startCol,
+                y: canvasPosition.startRow,
+                height: canvasPosition.height,
+                width: canvasPosition.width,
             }
             newCells.push(newCell)
         })

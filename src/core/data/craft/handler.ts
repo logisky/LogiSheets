@@ -41,6 +41,7 @@ import {
     SheetCellId,
     SheetDimension,
     SheetInfo,
+    TokenUnit,
     Value,
     Client as WorkbookClient,
 } from 'logisheets-web'
@@ -158,8 +159,11 @@ export class CraftHandler implements CraftHandlerInterface {
             }
         })
     }
+    getDisplayUnitsOfFormula(f: string): Resp<readonly TokenUnit[]> {
+        return this._workbookClient.getDisplayUnitsOfFormula(f)
+    }
     getCellId(params: GetCellIdParams): Resp<SheetCellId> {
-        throw new Error('Method not implemented.')
+        return this._workbookClient.getCellId(params)
     }
     registerCellValueChangedCallback(
         sheetIdx: number,

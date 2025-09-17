@@ -2,6 +2,11 @@ start = _{SOI ~ formula ~ EOI}
 
 formula = {expression}
 
+start_wrong = _{SOI ~ formula_wrong ~ EOI}
+formula_wrong = {expression ~ wrong_suffix}
+
+wrong_suffix = {ANY*}
+
 expression = {
     ("(" ~ expression ~ ")" ~ expr)
     | (function_call ~ expr)

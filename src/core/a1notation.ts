@@ -7,7 +7,8 @@ export function isA1notation(value: unknown) {
     if (!isString(value)) return false
     return a1notationReg.test(upperCase(value))
 }
-// 所有的返回值都是从0开始
+
+// zero-based
 export function parseA1notation(
     value: string
 ): {cs: number; rs: number; ce?: number; re?: number} | undefined {

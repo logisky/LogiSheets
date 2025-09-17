@@ -608,6 +608,21 @@ mod tests {
     }
 
     #[test]
+    fn lower_case_cell_reference() {
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
+        let mut context = Context {
+            book_name: "book",
+            id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
+        };
+        let parser = Parser {};
+        let f = "c1";
+        let r = parser.parse(f, 1, &mut context).unwrap().pure;
+        assert!(matches!(r, ast::PureNode::Reference(_)));
+    }
+
+    #[test]
     fn implicit_whitespace() {
         let mut id_fetcher = TestIdFetcher {};
         let mut vertext_fetcher = TestVertexFetcher {};

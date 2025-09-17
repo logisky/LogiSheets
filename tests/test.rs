@@ -15,6 +15,9 @@ pub fn test_script(path: &str) {
 mod block;
 
 #[cfg(test)]
+mod common;
+
+#[cfg(test)]
 mod funcs {
     use glob::glob;
 

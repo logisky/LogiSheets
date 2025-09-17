@@ -46,6 +46,8 @@ pub use logisheets_base::async_func::AsyncErr;
 pub use logisheets_base::async_func::Task;
 pub use logisheets_base::BlockId;
 
+pub use logisheets_lexer::{TokenType, TokenUnit};
+
 // Has SKIPPED the '='
 pub fn lex_success(f: &str) -> bool {
     let toks = logisheets_lexer::lex(f);
@@ -53,6 +55,10 @@ pub fn lex_success(f: &str) -> bool {
         Some(_) => true,
         None => false,
     }
+}
+
+pub fn lex_and_fmt(s: &str, allow_wrong: bool) -> Option<Vec<TokenUnit>> {
+    logisheets_lexer::lex_and_fmt(s, allow_wrong)
 }
 
 pub use api::*;

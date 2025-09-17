@@ -48,6 +48,7 @@ import {
     GetCellIdParams,
     CellIdCallback,
     ShadowCellInfo,
+    TokenUnit,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -100,6 +101,11 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    getDisplayUnitsOfFormula(f: string): Resp<readonly TokenUnit[]> {
+        return this._call(MethodName.GetDisplayUnitsOfFormula, f) as Resp<
+            readonly TokenUnit[]
+        >
     }
 
     getCellId(params: GetCellIdParams): Resp<SheetCellId> {

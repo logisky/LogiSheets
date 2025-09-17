@@ -47,4 +47,6 @@ export enum MethodName {
     GetShadowCellIds = 'getShadowCellIds',
     GetShadowInfoById = 'getShadowInfoById',
     GetCellId = 'getCellId',
+
+    GetDisplayUnitsOfFormula = 'getDisplayUnitsOfFormula',
 }
