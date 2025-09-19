@@ -36,6 +36,10 @@ import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
 import {DiyButtonComponent} from '../diy-button'
 import {ShadowCellComponent} from '../shadow-cell'
+import {PainterService, Box, TextAttr} from '@/core/painter'
+import {FormulaDisplayInfo, TokenType} from 'logisheets-web'
+import {EOF} from '../const'
+import {Range, StandardColor, StandardFont} from '@/core/standable'
 
 const CANVAS_HOST_ID = simpleUuid()
 const canvas = () => {
@@ -358,9 +362,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         )
         setContextMenuOpen(true)
     }
-    const type = (text: string) => {
-        store.textarea.currText = text
-        store.highlights.update(text)
+    const type = (text: string): Promise<FormulaDisplayInfo | undefined> => {
+        return store.textarea.updateText(text)
     }
 
     return (

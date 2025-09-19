@@ -44,9 +44,9 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
         const subs = new Subscription()
         subs.add(
             DATA_SERVICE.registerSheetUpdatedCallback(() => {
-                getSheets().then((v) => {
-                    if (v) setSheets(v)
-                })
+                setSheets(
+                    DATA_SERVICE.getCacheAllSheetInfo().map((s) => s.name)
+                )
             })
         )
         return () => {

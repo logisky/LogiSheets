@@ -1,7 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class Context<T = any> {
     public text = ''
-    public eof = '\n'
     public cellWidth = 0
     public cellHeight = 0
     public clientX = 0
@@ -16,6 +15,7 @@ export class Context<T = any> {
      * -1 means in the end
      */
     public textareaOffsetY = 0
+    public sheetName = ''
     public bindingData?: T
     lineHeight(): number {
         return this.cellHeight

@@ -14,7 +14,7 @@ import type {
     CellInfo,
     SheetCellId,
     ShadowCellInfo,
-    TokenUnit,
+    FormulaDisplayInfo,
 } from './bindings'
 import type {CustomFunc} from './api'
 import type {Transaction, RowId, ColId} from './types'
@@ -27,7 +27,7 @@ export type Resp<T> = Promise<T | ErrorMessage>
  */
 export interface Client {
     isReady(): Promise<void>
-    getDisplayUnitsOfFormula(f: string): Resp<readonly TokenUnit[]>
+    getDisplayUnitsOfFormula(f: string): Resp<FormulaDisplayInfo>
     getSheetDimension(sheetIdx: number): Resp<SheetDimension>
     getAllSheetInfo(params: GetAllSheetInfoParams): Resp<readonly SheetInfo[]>
     getDisplayWindow(

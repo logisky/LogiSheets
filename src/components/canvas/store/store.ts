@@ -14,7 +14,7 @@ import {Renderer} from './renderer'
 import {BlockOutliner} from './block-outliner'
 import {DiyButton} from './diy-button'
 import {CellValidation} from './cell-validation'
-import {dpr} from '@/core/painter'
+import type {FormulaDisplayInfo} from 'logisheets-web'
 
 export class CanvasStore {
     constructor(
@@ -190,6 +190,12 @@ export class CanvasStore {
             this.anchorX,
             this.anchorY
         )
+    }
+
+    @action
+    handleFormulaDisplayInfo(formula: string, displayInfo: FormulaDisplayInfo) {
+        // indices in token units are relative to formula without `=`
+        this.highlights.updateCellRefs(displayInfo.cellRefs)
     }
 
     @action

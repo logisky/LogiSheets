@@ -3,9 +3,9 @@ start = _{SOI ~ formula ~ EOI}
 formula = {expression}
 
 start_wrong = _{SOI ~ formula_wrong ~ EOI}
-formula_wrong = {expression ~ wrong_suffix}
+formula_wrong = {expression ~ ws* ~ wrong_suffix?}
 
-wrong_suffix = {ANY*}
+wrong_suffix = {ANY+}
 
 expression = {
     ("(" ~ expression ~ ")" ~ expr)
@@ -27,8 +27,8 @@ prefix_expr = _{
 expression_element = _{
     expression_bracket
     | function_call
-    | constant
     | cell_reference
+    | constant
     | name
     | prefix_expr
 }

@@ -4,7 +4,7 @@ use tracing::error;
 
 mod fmt;
 
-pub use fmt::{lex_and_fmt, TokenType, TokenUnit};
+pub use fmt::{lex_and_fmt, CellRef, FormulaDisplayInfo, TokenType, TokenUnit};
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -157,6 +157,20 @@ mod tests {
     #[test]
     fn lower_case_cell_reference() {
         let r = lex("a1").unwrap();
+        println!("{:?}", r);
+    }
+
+    #[test]
+    fn sheet_name_coordinate() {
+        let r = lex("a1!a1").unwrap();
+        println!("{:?}", r);
+    }
+
+    #[test]
+    fn row_range_cell_reference() {
+        let r = lex("1+2:3").unwrap();
+        println!("{:?}", r);
+        let r = lex("1+2-3").unwrap();
         println!("{:?}", r);
     }
 }

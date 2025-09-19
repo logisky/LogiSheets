@@ -326,11 +326,15 @@ impl<'a> Connector for CalcConnector<'a> {
                 self.set_cell_value(sheet_id, cell_id, cell_value);
                 self.calc_cells.insert(vertex);
             }
-            CalcValue::Range(_) => unreachable!(),
+            CalcValue::Range(_) => {
+                self.set_cell_value(sheet_id, cell_id, CellValue::Error(Error::Value));
+            }
             CalcValue::Union(_) => {
                 self.set_cell_value(sheet_id, cell_id, CellValue::Error(Error::Value));
             }
-            CalcValue::Cube(_) => unreachable!(),
+            CalcValue::Cube(_) => {
+                self.set_cell_value(sheet_id, cell_id, CellValue::Error(Error::Value));
+            }
         }
     }
 

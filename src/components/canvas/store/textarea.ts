@@ -7,6 +7,7 @@ import initFc, {
 import {Context} from '@/components/textarea'
 import {
     CellInputBuilder,
+    FormulaDisplayInfo,
     isErrorMessage,
     Payload,
     Transaction,
@@ -25,12 +26,31 @@ export class Textarea {
     @observable
     editing = false
 
-    currText = ''
+    private _currText = ''
+
+    updateText(t: string): Promise<FormulaDisplayInfo | undefined> {
+        this._currText = t
+        if (t.startsWith('=')) {
+            return this.store.dataSvc
+                .getWorkbook()
+                .getDisplayUnitsOfFormula(t.slice(1))
+                .then((displayInfo) => {
+                    if (isErrorMessage(displayInfo)) return
+                    this.store.handleFormulaDisplayInfo(t, displayInfo)
+                    return displayInfo
+                })
+        }
+        return Promise.resolve(undefined)
+    }
+
+    getText() {
+        return this._currText
+    }
 
     @action
     async blur() {
         if (!this.editing) return true
-        const newText = this.currText.trim()
+        const newText = this._currText.trim()
         const checked = await checkFormula(newText)
         if (!checked || !this.context?.bindingData) return false
         const payload: Payload = {
@@ -112,7 +132,8 @@ export class Textarea {
                 (event as globalThis.MouseEvent).clientX - clientX
             context.textareaOffsetY =
                 (event as globalThis.MouseEvent).clientY - clientY
-            this.currText = text
+            context.sheetName = this.store.dataSvc.getCurrentSheetName()
+            this._currText = text
             this._setEditing(true, context)
         })
     }
@@ -130,11 +151,11 @@ export class Textarea {
         this.editing = isEditing
         this.context = context
         if (isEditing) {
-            if (this.currText !== '') {
-                this.store.highlights.update(this.currText)
+            if (this._currText !== '') {
+                this.updateText(this._currText)
             }
         } else {
-            this.currText = ''
+            this._currText = ''
             this.store.highlights.reset()
         }
     }

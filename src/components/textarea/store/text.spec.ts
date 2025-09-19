@@ -23,7 +23,7 @@ describe('text test', () => {
         manager = new TextManager({
             context: {text: '1234', eof: '\n', lineHeight: () => 1},
         })
-        vi.spyOn(manager, 'drawText').mockImplementation(() => {})
+        vi.spyOn(manager, 'paintText').mockImplementation(() => {})
     })
     test('remove one item', () => {
         const removed = manager.remove(2, 2)
