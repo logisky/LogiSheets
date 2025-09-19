@@ -7,7 +7,6 @@ import {CanvasApi} from './canvas'
 import {useToast} from '@/ui/notification/useToast'
 
 import {npx, npxLine, thinLineWidth} from './utils'
-import {Direction} from '@/core'
 import {TextAttr} from './text_attr'
 
 export class PainterService extends CanvasApi {
@@ -25,6 +24,25 @@ export class PainterService extends CanvasApi {
                 break
             default:
         }
+        this.restore()
+    }
+
+    /**
+     * Fill a rounded rectangle inside the given box.
+     * - color: CSS color string to fill
+     * - box: target box
+     * - radius: corner radius in CSS pixels
+     * - inset: optional padding from box edges (applied on all sides)
+     */
+    fillRoundedBg(color: string, box: Box, radius: number, inset = 2) {
+        this.save()
+        const attr = new CanvasAttr()
+        attr.fillStyle = color
+        this.attr(attr)
+        const {startRow: y, startCol: x} = box.position
+        const w = Math.max(0, box.width - inset * 2)
+        const h = Math.max(0, box.height - inset * 2)
+        this.fillRoundedRect(x + inset, y + inset, w, h, radius)
         this.restore()
     }
 

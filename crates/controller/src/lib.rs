@@ -46,7 +46,7 @@ pub use logisheets_base::async_func::AsyncErr;
 pub use logisheets_base::async_func::Task;
 pub use logisheets_base::BlockId;
 
-pub use logisheets_lexer::{TokenType, TokenUnit};
+pub use logisheets_lexer::{CellRef, FormulaDisplayInfo, TokenType, TokenUnit};
 
 // Has SKIPPED the '='
 pub fn lex_success(f: &str) -> bool {
@@ -57,7 +57,7 @@ pub fn lex_success(f: &str) -> bool {
     }
 }
 
-pub fn lex_and_fmt(s: &str, allow_wrong: bool) -> Option<Vec<TokenUnit>> {
+pub fn lex_and_fmt(s: &str, allow_wrong: bool) -> Option<FormulaDisplayInfo> {
     logisheets_lexer::lex_and_fmt(s, allow_wrong)
 }
 

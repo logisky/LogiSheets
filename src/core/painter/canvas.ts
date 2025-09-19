@@ -122,6 +122,28 @@ export class CanvasApi {
         this._ctx.strokeRect(this._npxLine(x), this._npxLine(y), w, h)
     }
 
+    /**
+     * Fill a rounded rectangle using current fillStyle.
+     */
+    fillRoundedRect(
+        x: number,
+        y: number,
+        w: number,
+        h: number,
+        radius: number
+    ) {
+        const r = Math.max(0, Math.min(radius, Math.min(w, h) / 2))
+        const ctx = this._ctx
+        ctx.beginPath()
+        ctx.moveTo(x + r, y)
+        ctx.arcTo(x + w, y, x + w, y + h, r)
+        ctx.arcTo(x + w, y + h, x, y + h, r)
+        ctx.arcTo(x, y + h, x, y, r)
+        ctx.arcTo(x, y, x + w, y, r)
+        ctx.closePath()
+        ctx.fill()
+    }
+
     line(
         [start, ...points]: readonly (readonly [number, number])[],
         close?: boolean

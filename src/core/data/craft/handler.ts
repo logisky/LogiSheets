@@ -8,6 +8,7 @@ import {
     CustomFunc,
     DisplayWindow,
     DisplayWindowWithStartPoint,
+    FormulaDisplayInfo,
     GetAllSheetInfoParams,
     GetBlockColIdParams,
     GetBlockDisplayWindowParams,
@@ -41,7 +42,6 @@ import {
     SheetCellId,
     SheetDimension,
     SheetInfo,
-    TokenUnit,
     Value,
     Client as WorkbookClient,
 } from 'logisheets-web'
@@ -159,7 +159,7 @@ export class CraftHandler implements CraftHandlerInterface {
             }
         })
     }
-    getDisplayUnitsOfFormula(f: string): Resp<readonly TokenUnit[]> {
+    getDisplayUnitsOfFormula(f: string): Resp<FormulaDisplayInfo> {
         return this._workbookClient.getDisplayUnitsOfFormula(f)
     }
     getCellId(params: GetCellIdParams): Resp<SheetCellId> {

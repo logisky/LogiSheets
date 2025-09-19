@@ -13,11 +13,13 @@ import {SyntheticEvent, useContext, useEffect, useRef} from 'react'
 import styles from './textarea.module.scss'
 import {TextareaContext, TextareaStore} from './store'
 import {SuggestComponent} from '../suggest'
+import {EOF} from '../const'
+import {FormulaDisplayInfo} from 'logisheets-web'
 
 export interface TextContainerProps {
     context: Context
     blur: () => void
-    type: (e: string) => void
+    type: (e: string) => Promise<FormulaDisplayInfo | undefined>
 }
 
 export const TextContainerComponent = forwardRef(
@@ -54,12 +56,15 @@ const InternalComponent = observer(
 
         useEffect(() => {
             selection.init(selectionEl.current!)
-            textManager.init(textEl.current!)
+            textManager.init(textEl.current!, type)
         }, [])
 
         useEffect(() => {
             const sub = store.cursor.cursor$.subscribe(() => {
-                type(store.textManager.getPlainText())
+                // type(store.textManager.getPlainText()).then((displayInfo) => {
+                //     if (!displayInfo) return
+                //     store.textManager.drawText(displayInfo)
+                // })
                 store.suggest.onType()
                 store.selection.clear()
             })
@@ -96,7 +101,7 @@ const InternalComponent = observer(
                 // Wait for next frame to ensure canvas is properly initialized
                 requestAnimationFrame(() => {
                     try {
-                        store.textManager.drawText()
+                        store.textManager.paintText()
                     } catch (error) {
                         // Silently handle canvas initialization errors
                         // This can happen if canvas isn't ready yet
@@ -165,7 +170,7 @@ const InternalComponent = observer(
                                 store.suggest.onSuggest()
                                 return
                             } else if (e.isAlt()) {
-                                onType(store.context.eof, event)
+                                onType(EOF, event)
                             } else return onBlur(event)
                             break
                         }

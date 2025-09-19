@@ -38,7 +38,6 @@ export class StandardFont implements Font {
     lineHeight = '100%'
     standardColor = StandardColor.from(0, 0, 0, 1)
     bold = false
-    color!: Color
     sz = 10
     condense = false
     italic = false

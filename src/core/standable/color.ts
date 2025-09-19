@@ -1,19 +1,7 @@
 import {Color} from 'logisheets-web'
-// https://css-tricks.com/snippets/javascript/random-hex-color/
-function getRandomColor() {
-    return Math.floor(Math.random() * 16777215).toString(16)
-}
 const ALPHA = 255
 // https://en.wikipedia.org/wiki/RGBA_color_model
 export class StandardColor {
-    static randomColor(excludes: StandardColor[] = []) {
-        let color = getRandomColor()
-        const exists = (c: string) => {
-            return excludes.find((e) => e.rgb() === c)
-        }
-        while (exists(color)) color = getRandomColor()
-        return StandardColor.fromRgb(color)
-    }
     static fromRgb(rgb: string) {
         const color = new StandardColor()
         if (rgb === '') return color
@@ -88,6 +76,10 @@ export class StandardColor {
         const g = transfer(this.#green ?? 0)
         const b = transfer(this.#blue ?? 0)
         return `${a}${r}${g}${b}`
+    }
+
+    setAlpha(alpha: number) {
+        this.#alpha = alpha
     }
     #red?: number
     #green?: number

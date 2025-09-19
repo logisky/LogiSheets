@@ -10,6 +10,7 @@ import {
     CustomFunc,
     DisplayWindow,
     DisplayWindowWithStartPoint,
+    FormulaDisplayInfo,
     GetAllSheetInfoParams,
     GetBlockColIdParams,
     GetBlockDisplayWindowParams,
@@ -43,7 +44,6 @@ import {
     SheetCellId,
     SheetDimension,
     SheetInfo,
-    TokenUnit,
     Value,
     Client as WorkbookClient,
 } from 'logisheets-web'
@@ -75,7 +75,7 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             this._resolvers.delete(id)
         })
     }
-    getDisplayUnitsOfFormula(f: string): Resp<readonly TokenUnit[]> {
+    getDisplayUnitsOfFormula(f: string): Resp<FormulaDisplayInfo> {
         throw new Error('Method not implemented.')
     }
     getCellId(params: GetCellIdParams): Resp<SheetCellId> {

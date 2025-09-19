@@ -11,6 +11,7 @@ import {
     MergeCell,
     Resp,
     isErrorMessage,
+    Callback,
 } from 'logisheets-web'
 import {CellViewResponse, ViewManager} from './view_manager'
 import {WorkbookClient} from './workbook'
@@ -73,6 +74,9 @@ export interface DataService {
     getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell>
     getAvailableBlockId(sheetIdx: number): Resp<number>
     getSheetId(sheetIdx: number): Resp<number>
+
+    getCurrentSheetName(): string
+    getCacheAllSheetInfo(): readonly SheetInfo[]
 }
 
 @injectable()
@@ -83,6 +87,12 @@ export class DataServiceImpl implements DataService {
         @inject(TYPES.Pool) private _pool: Pool
     ) {
         this._init()
+    }
+    getCacheAllSheetInfo(): readonly SheetInfo[] {
+        return this._sheetInfos
+    }
+    getCurrentSheetName(): string {
+        return this._sheetInfos[this._sheetIdx].name
     }
     getWorkbook(): WorkbookClient {
         return this._workbook
@@ -142,7 +152,7 @@ export class DataServiceImpl implements DataService {
     }
 
     public registerSheetUpdatedCallback(f: () => void): void {
-        return this._workbook.registerSheetUpdatedCallback(f)
+        this._sheetUpdateCallback.push(f)
     }
 
     public async getAllSheetInfo(): Resp<readonly SheetInfo[]> {
@@ -161,6 +171,7 @@ export class DataServiceImpl implements DataService {
 
     public setCurrentSheetIdx(idx: number): void {
         this._sheetIdx = idx
+        this._workbook
     }
 
     public async registerCustomFunc(f: CustomFunc) {
@@ -240,16 +251,27 @@ export class DataServiceImpl implements DataService {
     }
 
     private _init() {
+        this._workbook.getAllSheetInfo().then((v) => {
+            if (!isErrorMessage(v)) this._sheetInfos = v
+        })
         this._workbook.registerCellUpdatedCallback((): void => {
             // Clear all the cache
             this._cellViews = new Map()
         })
+        this._workbook.registerSheetUpdatedCallback(() => {
+            this._workbook.getAllSheetInfo().then((v) => {
+                if (!isErrorMessage(v)) this._sheetInfos = v
+                this._sheetUpdateCallback.forEach((f) => f())
+            })
+        })
     }
     private _cellViews: Map<number, ViewManager> = new Map()
+    private _sheetInfos: readonly SheetInfo[] = []
 
     // De-duplicate concurrent getCellView requests
     private _inflightCellView: Map<string, Promise<CellViewResponse>> =
         new Map()
 
     private _sheetIdx = 0
+    private _sheetUpdateCallback: Callback[] = []
 }

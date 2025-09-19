@@ -1,5 +1,5 @@
 import {RenderCell} from './render'
-import {BlockDisplayInfo, Comment, MergeCell} from 'logisheets-web'
+import {BlockDisplayInfo, Comment} from 'logisheets-web'
 
 export class CellView {
     public constructor(public readonly data: CellViewData[]) {}

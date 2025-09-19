@@ -3,7 +3,9 @@ use logisheets_controller::controller::display::{
     CellPosition, DisplayWindowRequest, DisplayWindowWithStartPoint, ShadowCellInfo, SheetInfo,
 };
 use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditAction};
-use logisheets_controller::{AppendixWithCell, CellInfo, ErrorMessage, SheetDimension, TokenUnit};
+use logisheets_controller::{
+    AppendixWithCell, CellInfo, ErrorMessage, FormulaDisplayInfo, SheetDimension,
+};
 use logisheets_server_types::{CraftData, CraftDescriptor, Resp};
 
 fn main() {
@@ -19,7 +21,7 @@ fn main() {
     file_group.add::<SheetDimension>();
     file_group.add::<AppendixWithCell>();
 
-    file_group.add::<TokenUnit>();
+    file_group.add::<FormulaDisplayInfo>();
 
     file_group.add::<CellInfo>();
     file_group.add::<ErrorMessage>();

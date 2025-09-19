@@ -51,7 +51,7 @@ import {
     GetShadowInfoByIdParams,
     GetCellIdParams,
     SheetCellId,
-    TokenUnit,
+    FormulaDisplayInfo,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from './types'
 
@@ -100,11 +100,11 @@ interface IWorkbookWorker {
         params: LookupAppendixUpwardParams
     ): Result<AppendixWithCell>
 
-    getDisplayUnitsOfFormula(f: string): Result<readonly TokenUnit[]>
+    getDisplayUnitsOfFormula(f: string): Result<FormulaDisplayInfo>
 }
 
 class WorkerService implements IWorkbookWorker {
-    getDisplayUnitsOfFormula(f: string): Result<readonly TokenUnit[]> {
+    getDisplayUnitsOfFormula(f: string): Result<FormulaDisplayInfo> {
         return this.workbook.getDisplayUnitsOfFormula(f)
     }
     getValue(params: GetValueParams): Result<Value> {
@@ -451,6 +451,9 @@ class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetCellId:
                 result = this.getCellId(args)
+                break
+            case MethodName.GetDisplayUnitsOfFormula:
+                result = this.getDisplayUnitsOfFormula(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)
