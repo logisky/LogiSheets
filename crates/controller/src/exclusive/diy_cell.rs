@@ -31,6 +31,10 @@ impl DiyCellManager {
         id
     }
 
+    pub fn remove_diy_cell(&mut self, sheet_id: SheetId, block_cell_id: BlockCellId) {
+        self.data.remove(&(sheet_id, block_cell_id));
+    }
+
     pub fn get_diy_cell_id(
         &self,
         sheet_id: SheetId,

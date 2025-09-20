@@ -5,7 +5,7 @@ import React, {useContext} from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {CraftManager, DataService} from '@/core/data'
-import {isErrorMessage, Transaction} from 'packages/web'
+import {isErrorMessage, RemoveBlockBuilder, Transaction} from 'packages/web'
 import {CanvasStoreContext} from '../canvas/store'
 
 export interface MenuProps {
@@ -72,7 +72,20 @@ export const MenuComponent = (props: MenuProps) => {
         {
             label: 'Delete',
             onClick: () => {
-                // todo
+                DATA_SERVICE.handleTransaction(
+                    new Transaction(
+                        [
+                            {
+                                type: 'removeBlock',
+                                value: new RemoveBlockBuilder()
+                                    .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
+                                    .id(blockId)
+                                    .build(),
+                            },
+                        ],
+                        true
+                    )
+                )
             },
         },
         {

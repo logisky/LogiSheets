@@ -294,6 +294,7 @@ impl<'a> Executor<'a> {
             external_links_manager: &mut self.status.external_links_manager,
             navigator: &self.status.navigator,
             sheet_pos_manager: &self.status.sheet_pos_manager,
+            style_manager: &mut self.status.style_manager,
         };
         let executor = ExclusiveManagerExecutor::new(self.status.exclusive_manager.clone());
         executor.execute(&mut ctx, payload)

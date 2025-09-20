@@ -1,5 +1,5 @@
-use crate::{connectors::CellAttachmentsConnector, exclusive::ctx::ExclusiveManagerExecCtx};
+use crate::{connectors::ContainerConnector, exclusive::ctx::ExclusiveManagerExecCtx};
 
-pub type ExclusiveConnector<'a> = CellAttachmentsConnector<'a>;
+pub type ExclusiveConnector<'a> = ContainerConnector<'a>;
 
 impl<'a> ExclusiveManagerExecCtx for ExclusiveConnector<'a> {}

@@ -113,8 +113,20 @@ impl ExclusiveManagerExecutor {
                     .create_new_diy_cell(p.sheet_id, cell_id);
                 Ok((self, true))
             }
-            EditPayload::RemoveBlock(_) => {
-                todo!()
+            EditPayload::RemoveBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| Error::Basic(BasicError::SheetIdxExceed(l)))?;
+                let block_id = p.id;
+                ctx.get_all_block_cells(sheet_id, block_id)?
+                    .iter()
+                    .for_each(|cell_id| {
+                        self.manager
+                            .diy_cell_manager
+                            .remove_diy_cell(sheet_id, *cell_id);
+                        self.manager.appendix_manager.remove(sheet_id, *cell_id);
+                    });
+                Ok((self, true))
             }
             _ => Ok((self, false)),
         }
