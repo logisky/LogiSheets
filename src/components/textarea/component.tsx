@@ -61,11 +61,12 @@ const InternalComponent = observer(
 
         useEffect(() => {
             const sub = store.cursor.cursor$.subscribe(() => {
-                // type(store.textManager.getPlainText()).then((displayInfo) => {
-                //     if (!displayInfo) return
-                //     store.textManager.drawText(displayInfo)
-                // })
-                store.suggest.onType()
+                const text = store.textManager.getPlainText()
+                type(text).then((displayInfo) => {
+                    if (!displayInfo) return
+                    store.textManager.drawText(displayInfo)
+                    store.suggest.onTrigger(text, displayInfo.tokenUnits)
+                })
                 store.selection.clear()
             })
             return () => {

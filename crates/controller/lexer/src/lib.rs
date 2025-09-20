@@ -169,4 +169,10 @@ mod tests {
         let r = lex("1+2-3").unwrap();
         println!("{:?}", r);
     }
+
+    #[test]
+    fn incomplete() {
+        let r = lex("SUM").unwrap();
+        println!("{:?}", r);
+    }
 }

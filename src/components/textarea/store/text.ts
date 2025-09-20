@@ -177,7 +177,9 @@ export class TextManager {
     }
 
     private _paintFuncName(unit: DisplayUnit) {
-        const width = this._measureText(unit.content)
+        const font = new StandardFont().setSize(TextManager.font.size)
+        font.bold = true
+        const width = this._measureText(unit.content, font)
         const position = new Range()
             .setStartRow(this._y)
             .setEndRow(this._y + this.store.context.lineHeight())
@@ -185,17 +187,16 @@ export class TextManager {
             .setEndCol(this._x + width)
         const box = new Box().setPosition(position)
         const attr = new TextAttr()
-        const font = new StandardFont().setSize(TextManager.font.size)
-        font.bold = true
         attr.setFont(font)
         this._painterSvc.text(unit.content, attr, box)
         this._x += width
     }
 
-    private _measureText(content: string): number {
+    private _measureText(content: string, font?: StandardFont): number {
+        const f = font ?? TextManager.font
         let width = 0
         content.split('').forEach((c) => {
-            width += Text.measureText(c, TextManager.font.toCssFont()).width
+            width += Text.measureText(c, f.toCssFont()).width
         })
         return width
     }

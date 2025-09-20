@@ -8,8 +8,7 @@ import {
     getAllFormulas,
     fullFilterSnippet,
 } from '@/core/snippet'
-import {TokenType, SubType} from '@/core/formula'
-import {TokenManager} from './token'
+import type {TokenUnit} from 'logisheets-web'
 
 export class Suggest {
     constructor(public readonly store: TextareaStore) {
@@ -34,11 +33,6 @@ export class Suggest {
     candidates: Candidate[] = []
 
     @action
-    onType() {
-        this.onTrigger(this.store.textManager.getPlainText())
-    }
-
-    @action
     onSuggest = (active: number = this._activeCandidate) => {
         this.showSuggest = false
         if (!this.replaceRange) return
@@ -54,56 +48,44 @@ export class Suggest {
 
     @observable
     private _activeCandidate = -1
-    private _tokenManager = new TokenManager()
     private replaceRange?: {start: number; count: number}
 
     @action
-    private onTrigger(text: string) {
+    public onTrigger(text: string, tokenUnits: readonly TokenUnit[]) {
         if (!shouldShowSuggest(text)) {
             this.showSuggest = false
             return
         }
         this.replaceRange = undefined
         const cursor = this.store.cursor.cursorPosition
-        const tokenIndex = this._tokenManager.getTokenIndexByCursor(
-            cursor,
-            text
-        )
-        const token = this._tokenManager.getToken(tokenIndex)
-        const newCandidates: Candidate[] = []
-        if (!token) {
+        const triggerContext = getTriggerContext(text, tokenUnits, cursor)
+        if (!triggerContext) {
             this.showSuggest = false
             return
         }
-        // 如果当前光标停在function，则匹配function并提示
-        if (this._tokenManager.isFunctionStart(token)) {
-            const candidates = fuzzyFilterFormula(token.value)
+        const newCandidates: Candidate[] = []
+        if (triggerContext.func === '' && triggerContext.argIndex === -1) {
+            const candidates = fuzzyFilterFormula(triggerContext.text)
             if (candidates.length === 0) {
                 this.showSuggest = false
                 return
             }
-            this.replaceRange = this._tokenManager.getTokenPosition(token)
-            newCandidates.push(...candidates)
-            // 如果光标停在参数位置或分隔符，计算当前属于第几个参数，提示该参数信息
-        } else if (this._tokenManager.isOperandStart(token)) {
-            const {fnIndex, paramCount} = this._tokenManager.getFnInfo(token)
-            if (fnIndex === -1) {
-                this.showSuggest = false
-                return
+            this.replaceRange = {
+                start: triggerContext.start,
+                count: triggerContext.end - triggerContext.start,
             }
-            const fnName = this._tokenManager.getToken(fnIndex)?.value ?? ''
-            const snippet = fullFilterSnippet(fnName)
+            newCandidates.push(...candidates)
+        } else if (triggerContext.argIndex !== -1) {
+            const snippet = fullFilterSnippet(triggerContext.func)
             if (!snippet?.hasParams()) {
                 this.showSuggest = false
                 return
             }
-            let paramIndex = -1
-            if (token.type === TokenType.OPERAND)
-                paramIndex = paramCount === 0 ? 0 : paramCount - 1
-            else if (token.subtype === SubType.START) paramIndex = -1
-            else if (token.subtype === SubType.SEPARATOR)
-                paramIndex = paramCount
-            const candidate = getParamCandidate(text, snippet, paramIndex)
+            const candidate = getParamCandidate(
+                text,
+                snippet,
+                triggerContext.argIndex
+            )
             newCandidates.push(...(candidate ? [candidate] : []))
         }
         if (newCandidates.length === 0) {
@@ -177,4 +159,72 @@ function fuzzyFilterFormula(key: string) {
         result.push(candidate)
     })
     return result
+}
+
+function getTriggerContext(
+    text: string,
+    tokenUnits: readonly TokenUnit[],
+    cursor: number
+): TriggerContext | undefined {
+    if (cursor === 0) return
+    let argIdx = -1
+    let funcName = ''
+    let lastUnitEnd = 0
+    const offset = 1
+    for (const unit of tokenUnits) {
+        const start = unit.start + offset
+        const end = unit.end + offset
+        if (end < lastUnitEnd) continue
+
+        if (unit.tokenType === 'funcName') {
+            funcName = text.slice(start, end)
+            argIdx = -1
+        }
+        if (unit.tokenType === 'funcArg') {
+            // If the current cursor is greater than the end of the argument,
+            // skip to the end
+            if (cursor >= end) {
+                argIdx++
+                lastUnitEnd = end
+            }
+            continue
+        }
+        if (cursor <= start)
+            return {
+                text: text.slice(lastUnitEnd, start),
+                func: funcName,
+                argIndex: argIdx,
+                start: lastUnitEnd,
+                end: start,
+            }
+        if (cursor > end) {
+            lastUnitEnd = end
+            continue
+        }
+
+        if (unit.tokenType === 'funcName') {
+            return {
+                text: funcName,
+                func: '',
+                argIndex: -1,
+                start: start,
+                end: end,
+            }
+        }
+    }
+    return {
+        text: text.slice(lastUnitEnd, text.length),
+        func: funcName,
+        argIndex: argIdx,
+        start: lastUnitEnd,
+        end: text.length,
+    }
+}
+
+interface TriggerContext {
+    text: string
+    func: string
+    argIndex: number
+    start: number
+    end: number
 }
