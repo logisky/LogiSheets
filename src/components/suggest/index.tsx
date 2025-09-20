@@ -1,7 +1,7 @@
-import { Styles } from './styles'
-import { FC, MouseEvent, useState } from 'react'
-import { Candidate } from './item'
-import { SuggestDetailsComponent } from './details'
+import {Styles} from './styles'
+import {FC, MouseEvent, useState} from 'react'
+import {Candidate} from './item'
+import {SuggestDetailsComponent} from './details'
 import styles from './suggest.module.scss'
 export * from './item'
 export * from './styles'
@@ -54,8 +54,9 @@ export const SuggestComponent: FC<SuggestProps> = ({
                             return (
                                 <span
                                     key={j}
-                                    className={`${styles['suggest-span']} ${s.highlight ? styles['highlight'] : ''
-                                        }`}
+                                    className={`${styles['suggest-span']} ${
+                                        s.highlight ? styles['highlight'] : ''
+                                    }`}
                                 >
                                     {s.text}
                                 </span>
@@ -65,9 +66,7 @@ export const SuggestComponent: FC<SuggestProps> = ({
                 )
             })}
             {showDetails ? (
-                <SuggestDetailsComponent
-                    close$={() => setShowDetails(false)}
-                ></SuggestDetailsComponent>
+                <SuggestDetailsComponent close$={() => setShowDetails(false)} />
             ) : null}
         </div>
     )

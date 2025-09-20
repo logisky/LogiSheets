@@ -10,7 +10,3 @@ license.workspace = true
 pest = { workspace = true }
 pest_derive = { workspace = true }
 tracing = "0.1"
-
-gents = { workspace = true }
-gents_derives = { workspace = true }
-serde = { workspace = true }

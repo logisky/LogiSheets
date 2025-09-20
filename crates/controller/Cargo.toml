@@ -28,6 +28,7 @@ uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
 
 logisheets_base = { path = "./base", version = "0.7.0" }
 logisheets_lexer = { path = "./lexer", version = "0.7.0" }
+logisheets_lexer4fmt = { path = "./lexer4fmt", version = "0.7.0" }
 logisheets_parser = { path = "./parser", version = "0.7.0" }
 logisheets_workbook = { path = "../workbook", version = "0.7.0" }
 logisheets_astchecker = { path = "./ast_checker", version = "0.7.0" }

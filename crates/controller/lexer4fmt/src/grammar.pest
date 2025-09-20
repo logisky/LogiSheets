@@ -1,18 +1,20 @@
 start = _{SOI ~ formula ~ EOI}
 
-formula = {expression}
+formula = {expression ~ wrong_suffix?}
+
+wrong_suffix = {ANY+}
 
 expression = {
-    ("(" ~ expression ~ ")" ~ expr)
+    ("(" ~ expression ~ ")"? ~ expr)
     | (function_call ~ expr)
     | (cell_reference ~ expr)
     | (constant ~ expr)
     | (prefix_expr ~ expr)
-    | (name ~ expr)
+    | function_name
 }
 
 expression_bracket = {
-    "(" ~ ws* ~ expression ~ ws* ~ ")"
+    "(" ~ ws* ~ expression ~ ws* ~ ")"?
 }
 
 prefix_expr = _{
@@ -24,8 +26,8 @@ expression_element = _{
     | function_call
     | cell_reference
     | constant
-    | name
     | prefix_expr
+    | function_name
 }
 
 ws = _{" "}
@@ -96,11 +98,11 @@ string_char = _{
     "\"\"" | (!"\"" ~ ANY)
 }
 
-array_constant = {
+array_constant = _{
     "{" ~ constant_list_rows ~ "}"
 }
 
-constant_list_rows = {constant_list_row ~ (semicolon ~ constant_list_row)*}
+constant_list_rows = _{constant_list_row ~ (semicolon ~ constant_list_row)*}
 
 semicolon = _{";"}
 
@@ -157,9 +159,9 @@ infix_op = _{
     | ge_op
 }
 
-comma = {","}
+comma = _{","}
 
-postfix_op = {percent_op}
+postfix_op = _{percent_op}
 prefix_op = {
     minus_op | plus_op
 }
@@ -215,7 +217,7 @@ work_sheet_prefix_special = {
 
 workbook_name = {book_name_character+}
 
-operator_with_comma = {operator | comma}
+operator_with_comma = _{operator | comma}
 
 book_name_character = _{
     !(operator_with_comma | apostrophe | "[" | "]" | "?" | "!") ~ ANY
@@ -259,17 +261,17 @@ sheet_name_end_character_special = _{sheet_name_start_character_special}
 
 double_apostrophe = _{apostrophe~apostrophe}
 
-a1_column_range = {
+a1_column_range = _{
     a1_column ~ ":" ~ a1_column
 }
 
-a1_row_range = {
+a1_row_range = _{
     a1_row ~ ":" ~ a1_row
 }
 
-a1_addr = {a1_column ~ a1_row}
+a1_addr = _{a1_column ~ a1_row}
 
-a1_reference = {
+a1_reference = _{
     a1_column_range
     | a1_row_range
     | a1_addr
@@ -286,17 +288,17 @@ a1_absolute_column = {"$" ~ a1_relative_column}
 
 a1_row = {a1_relative_row | a1_absolute_row}
 
-a1_relative_row = {digit_sequence}
+a1_relative_row = _{digit_sequence}
 
-a1_absolute_row = {"$" ~ a1_relative_row}
+a1_absolute_row = _{"$" ~ a1_relative_row}
 
-r1c1_reference = {
+r1c1_reference = _{
     r1c1_row_only
     | r1c1_column_only
     | (r1c1_row ~ r1c1_column)
 }
 
-r1c1_row_only = {
+r1c1_row_only = _{
     ("R" ~ r1c1_absolute_number)
     | ("R[" ~ r1c1_relative_number ~ "]")
 }
@@ -330,7 +332,7 @@ r1c1_relative_number = {"-"? ~ digit_sequence}
 r1c1_absolute_number = {digit_sequence}
 
 function_call = {
-    function_name ~ "(" ~ ws* ~ argument_list? ~ ws* ~ ")"
+    function_name ~ "(" ~ ws* ~ argument_list? ~ ws* ~ ")"?
 }
 
 function_call_char = _{
@@ -352,15 +354,15 @@ argument_or_empty_with_comma = _{
     argument_or_empty ~ ws* ~ "," ~ ws*
 }
 
-argument = _{
+argument_or_empty = _{
+    argument | empty_arg
+}
+
+argument = {
     comma_node | expression
 }
 
 empty_arg = {""}
-
-argument_or_empty = _{
-    argument | empty_arg
-}
 
 comma_node = {
     "(" ~ ws* ~ argument_or_empty ~ ws* ~ comma ~ comma_node_internal+ ~ ")"
@@ -371,20 +373,6 @@ comma_node_internal = _{
     | (ws* ~ empty_arg ~ ws* ~ comma)
 }
 
-name = {
-    (workbook_name ~ "!")? ~ name_characters
-}
-
-name_characters = {name_start_character ~ name_suffix_characters?}
-
-name_start_character = _{
-    LETTER | underscore | backslash
-}
-
 underscore = {"_"}
 
 backslash = {"\\"}
-
-name_suffix_characters = _{name_character+}
-
-name_character = _{LETTER | ASCII_DIGIT | underscore | full_stop}

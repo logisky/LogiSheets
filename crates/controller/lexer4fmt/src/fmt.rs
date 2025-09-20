@@ -34,34 +34,21 @@ pub struct TokenUnit {
 #[ts(rename_all = "camelCase", file_name = "token_type.ts")]
 pub enum TokenType {
     FuncName,
+    FuncArg,
     CellReference,
     ErrorConstant,
     WrongSuffix,
     Other,
 }
 
-pub fn lex_and_fmt(s: &str, allow_wrong: bool) -> Option<FormulaDisplayInfo> {
-    let pairs = if allow_wrong { lex_wrong(s) } else { lex(s) }?;
+pub fn lex_and_fmt(s: &str) -> Option<FormulaDisplayInfo> {
+    let pairs = lex(s)?;
     let mut result = FormulaDisplayInfo {
         cell_refs: Vec::new(),
         token_units: Vec::new(),
     };
     convert_rule_to_units(pairs, &mut result);
     Some(result)
-}
-
-fn lex_wrong(s: &str) -> Option<pest::iterators::Pair<Rule>> {
-    let result = FormulaParser::parse(Rule::start_wrong, s);
-    match result {
-        Ok(mut r) => {
-            let tokens = r.next().unwrap();
-            Some(tokens)
-        }
-        Err(e) => {
-            error!("parse formula failed: {}\nMeet error: {}", s, e);
-            None
-        }
-    }
 }
 
 fn convert_rule_to_units(pair: Pair<Rule>, result: &mut FormulaDisplayInfo) {
@@ -105,6 +92,18 @@ fn convert_rule_to_units(pair: Pair<Rule>, result: &mut FormulaDisplayInfo) {
                 start: s.start(),
                 end: s.end(),
                 token_type: ty,
+            });
+        }
+        Rule::argument | Rule::empty_arg => {
+            let ty = TokenType::FuncArg;
+            let s = pair.as_span();
+            result.token_units.push(TokenUnit {
+                start: s.start(),
+                end: s.end(),
+                token_type: ty,
+            });
+            pair.into_inner().for_each(|p| {
+                convert_rule_to_units(p, result);
             });
         }
         _ => {
@@ -177,9 +176,42 @@ fn column_label_to_index(label: &str) -> usize {
 }
 
 #[test]
+fn test_lex_wrong_formula() {
+    let s = "SUM(A1+Sheet2!A2";
+    let result = lex_and_fmt(s);
+    assert!(result.is_some());
+    let s = "SUM(";
+    let result = lex_and_fmt(s);
+    assert_eq!(
+        result.unwrap(),
+        FormulaDisplayInfo {
+            cell_refs: Vec::new(),
+            token_units: vec![TokenUnit {
+                start: 0,
+                end: 3,
+                token_type: TokenType::FuncName
+            }]
+        }
+    );
+    let s = "SUM";
+    let result = lex_and_fmt(s);
+    assert_eq!(
+        result.unwrap(),
+        FormulaDisplayInfo {
+            cell_refs: Vec::new(),
+            token_units: vec![TokenUnit {
+                start: 0,
+                end: 3,
+                token_type: TokenType::FuncName
+            }]
+        }
+    );
+}
+
+#[test]
 fn test_lex_and_fmt() {
     let s = "A1";
-    let result = lex_and_fmt(s, false).unwrap();
+    let result = lex_and_fmt(s).unwrap();
     assert_eq!(
         result,
         FormulaDisplayInfo {
@@ -202,9 +234,16 @@ fn test_lex_and_fmt() {
 }
 
 #[test]
+fn test_wrong_suffix() {
+    let s = "(Sheet2!A2+SUM";
+    let result = lex_and_fmt(s);
+    assert!(result.is_some());
+}
+
+#[test]
 fn test_lex_and_fmt_error() {
     let s = "SUM(A1+Sheet2!A2)";
-    let result = lex_and_fmt(s, false).unwrap();
+    let result = lex_and_fmt(s).unwrap();
     assert_eq!(
         result,
         FormulaDisplayInfo {
@@ -236,6 +275,11 @@ fn test_lex_and_fmt_error() {
                 },
                 TokenUnit {
                     start: 4,
+                    end: 16,
+                    token_type: TokenType::FuncArg
+                },
+                TokenUnit {
+                    start: 4,
                     end: 6,
                     token_type: TokenType::CellReference
                 },
@@ -257,7 +301,7 @@ fn test_lex_and_fmt_error() {
 #[test]
 fn test_lex_and_fmt_wrong() {
     let s = "SUM(A1+Sheet2!A2)!111";
-    let result = lex_and_fmt(s, true).unwrap();
+    let result = lex_and_fmt(s).unwrap();
     assert_eq!(
         result,
         FormulaDisplayInfo {
@@ -286,6 +330,11 @@ fn test_lex_and_fmt_wrong() {
                     start: 0,
                     end: 3,
                     token_type: TokenType::FuncName
+                },
+                TokenUnit {
+                    start: 4,
+                    end: 16,
+                    token_type: TokenType::FuncArg
                 },
                 TokenUnit {
                     start: 4,
