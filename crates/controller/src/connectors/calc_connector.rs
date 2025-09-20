@@ -222,7 +222,7 @@ impl<'a> Connector for CalcConnector<'a> {
                 }
             }
             ast::CellReference::Ext(_) => todo!(),
-            ast::CellReference::Name(_) => todo!(),
+            ast::CellReference::Name(_) => CalcVertex::from_error(ast::Error::Name),
             ast::CellReference::RefErr => CalcVertex::from_error(ast::Error::Ref),
         }
     }

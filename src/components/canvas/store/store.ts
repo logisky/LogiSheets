@@ -251,6 +251,7 @@ export class CanvasStore {
         )
         this.same = true
         this.selector.onScroll(newStartCell)
+        this.highlights.render()
     }
 
     private _sheetAnchorData = new Map<
