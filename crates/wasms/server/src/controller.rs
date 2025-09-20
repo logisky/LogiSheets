@@ -6,9 +6,9 @@ use logisheets_controller::edit_action::{
     CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock,
     DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, EphemeralCellInput,
     HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock,
-    LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction, ReproduceCells,
-    ResizeBlock, SetColWidth, SetRowHeight, SheetCellId, SheetRename, SplitMergedCells,
-    StyleUpdateType, VerticalAlignment,
+    LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction, RemoveBlock,
+    ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight, SheetCellId, SheetRename,
+    SplitMergedCells, StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, Error, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
@@ -803,6 +803,17 @@ pub fn move_block(id: usize, sheet_idx: usize, block_id: usize, row: usize, col:
     };
     let mut manager = MANAGER.get_mut();
     manager.add_payload(id, EditPayload::MoveBlock(m));
+}
+
+#[wasm_bindgen]
+pub fn remove_block(id: usize, sheet_idx: usize, block_id: usize) {
+    init();
+    let m = RemoveBlock {
+        sheet_idx,
+        id: block_id,
+    };
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, EditPayload::RemoveBlock(m));
 }
 
 #[wasm_bindgen]

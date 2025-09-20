@@ -56,6 +56,7 @@ import {
     undo,
     ephemeral_cell_input,
     get_display_units_of_formula,
+    remove_block,
 } from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
@@ -745,6 +746,8 @@ export class Workbook {
             )
         if (p.type === 'reproduceCells')
             return reproduce_cells(this._id, p.value)
+        if (p.type === 'removeBlock')
+            return remove_block(this._id, p.value.sheetIdx, p.value.id)
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }

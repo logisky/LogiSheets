@@ -203,7 +203,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             >
                 Block Composer
             </Typography>
-            <Typography variant="body2" color="text.secondary" mb={3}>
+            <Typography variant="body2" color="text.secondary" mb={1.5}>
                 Data Area
             </Typography>
 
@@ -224,20 +224,22 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 )}
             </Box>
 
-            <Typography variant="body2" color="text.secondary" mb={3}>
+            <Typography variant="body2" color="text.secondary" mb={1.5}>
                 Fields
             </Typography>
-            <Grid2 direction="column" spacing={3}>
-                {fields.map((el, idx) => (
-                    <FieldSettingComponent
-                        key={idx}
-                        field={el}
-                        idx={idx}
-                        elements={fields}
-                        setElements={setFields}
-                    />
-                ))}
-            </Grid2>
+            <Box sx={{maxHeight: 360, overflowY: 'auto', pr: 1}}>
+                <Grid2 direction="column" spacing={3}>
+                    {fields.map((el, idx) => (
+                        <FieldSettingComponent
+                            key={idx}
+                            field={el}
+                            idx={idx}
+                            elements={fields}
+                            setElements={setFields}
+                        />
+                    ))}
+                </Grid2>
+            </Box>
             <Box display="flex" justifyContent="center">
                 <ToggleButton
                     value="add"

@@ -46,4 +46,8 @@ impl AppendixManager {
             .or_insert(vec![])
             .push(appendix);
     }
+
+    pub fn remove(&mut self, sheet_id: SheetId, block_cell_id: BlockCellId) {
+        self.data.remove(&(sheet_id, block_cell_id));
+    }
 }
