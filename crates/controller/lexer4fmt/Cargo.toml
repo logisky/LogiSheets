@@ -1,0 +1,16 @@
+[package]
+name = "logisheets_lexer4fmt"
+description = "the lexer for excel formula, used for formula display and suggestions"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+pest = { workspace = true }
+pest_derive = { workspace = true }
+tracing = "0.1"
+
+gents = { workspace = true }
+gents_derives = { workspace = true }
+serde = { workspace = true }

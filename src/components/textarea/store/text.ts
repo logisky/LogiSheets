@@ -49,6 +49,9 @@ export class TextManager {
         let idx = 0
         let colorIdx = 0
         units.forEach((unit) => {
+            if (unit.ty === 'funcArg') {
+                return
+            }
             if (unit.ty === 'cellReference') {
                 colorIdx = this._paintCellRef(
                     unit,

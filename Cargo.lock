@@ -1327,6 +1327,7 @@ dependencies = [
  "logisheets_astchecker",
  "logisheets_base",
  "logisheets_lexer",
+ "logisheets_lexer4fmt",
  "logisheets_parser",
  "logisheets_workbook",
  "num",
@@ -1354,6 +1355,15 @@ dependencies = [
 
 [[package]]
 name = "logisheets_lexer"
+version = "0.7.0"
+dependencies = [
+ "pest",
+ "pest_derive",
+ "tracing",
+]
+
+[[package]]
+name = "logisheets_lexer4fmt"
 version = "0.7.0"
 dependencies = [
  "gents",

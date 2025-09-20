@@ -2,10 +2,6 @@ use pest::Parser;
 use pest_derive::Parser;
 use tracing::error;
 
-mod fmt;
-
-pub use fmt::{lex_and_fmt, CellRef, FormulaDisplayInfo, TokenType, TokenUnit};
-
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 pub struct FormulaParser;

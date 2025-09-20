@@ -1170,7 +1170,7 @@ pub fn formula_check(f: &str) -> bool {
 #[wasm_bindgen]
 pub fn get_display_units_of_formula(f: &str) -> JsValue {
     use logisheets_controller::lex_and_fmt;
-    let r = lex_and_fmt(f, true).ok_or(Error::from(BasicError::InvalidFormula(f.to_string())));
+    let r = lex_and_fmt(f).ok_or(Error::from(BasicError::InvalidFormula(f.to_string())));
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
