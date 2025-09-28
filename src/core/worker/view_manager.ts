@@ -1,18 +1,18 @@
 import {pxToPt, pxToWidth, widthToPx} from '../rate'
 import {RenderCell} from './render'
-import {CellViewData, Rect, CellView} from './types'
+import {CellViewData, Rect, CellView, Result} from './types'
+import {ptToPx} from '@/core/rate'
+import {DisplayWindowWithStartPoint, isErrorMessage, Resp} from 'logisheets-web'
+import {Pool} from '../pool'
+import {StandardValue} from '../standable/value'
+import {StandardStyle} from '../standable/style'
+import {IWorkbookWorker} from './types'
 import {
     Range,
     StandardCell,
     StandardColInfo,
     StandardRowInfo,
 } from '@/core/standable'
-import {ptToPx} from '@/core/rate'
-import {DisplayWindowWithStartPoint, isErrorMessage, Resp} from 'logisheets-web'
-import {WorkbookClient} from './workbook'
-import {Pool} from '../pool'
-import {StandardValue} from '../standable/value'
-import {StandardStyle} from '../standable/style'
 
 /**
  * The `ViewManager` is responsible for efficiently and seamlessly generating `CellViewData`.
@@ -23,18 +23,18 @@ import {StandardStyle} from '../standable/style'
  */
 export class ViewManager {
     constructor(
-        private _workbook: WorkbookClient,
+        private _workbook: IWorkbookWorker,
         private _sheetIdx: number,
         private _pool: Pool
     ) {}
 
-    public async getViewResponseWithCell(
+    public getViewResponseWithCell(
         row: number,
         col: number,
         height: number,
         width: number
-    ): Resp<CellViewResponse> {
-        const result = await this._workbook.getCellPosition({
+    ): Result<CellViewResponse> {
+        const result = this._workbook.getCellPosition({
             sheetIdx: this._sheetIdx,
             row,
             col,
@@ -44,46 +44,39 @@ export class ViewManager {
         return this.getViewResponse(widthToPx(x), ptToPx(y), height, width)
     }
 
-    public async getViewResponse(
+    public getViewResponse(
         startX: number,
         startY: number,
         height: number,
         width: number
-    ): Promise<CellViewResponse> {
+    ): Result<CellViewResponse> {
         const x = Math.max(0, startX)
         const y = Math.max(0, startY)
-        const targets = [new Rect(x, y, width, height)]
+        const target = new Rect(x, y, width, height)
         const newChunks: CellViewData[] = []
         const type = CellViewRespType.New
 
-        const windowsPromise = targets.map((t) => {
-            const window = this._workbook.getDisplayWindow({
-                sheetIdx: this._sheetIdx,
-                startX: pxToWidth(t.startX),
-                startY: pxToPt(t.startY),
-                height: pxToPt(t.height),
-                width: pxToWidth(t.width),
-            })
-            return window
+        const window = this._workbook.getDisplayWindow({
+            sheetIdx: this._sheetIdx,
+            startX: pxToWidth(target.startX),
+            startY: pxToPt(target.startY),
+            height: pxToPt(target.height),
+            width: pxToWidth(target.width),
         })
-        const windows = await Promise.all(windowsPromise)
-        const data = windows
-            .filter((w) => !isErrorMessage(w))
-            .map((w) => {
-                return parseDisplayWindow(
-                    w as DisplayWindowWithStartPoint,
-                    this._pool.getRenderCell.bind(this._pool),
-                    this._pool.getRange.bind(this._pool),
-                    this._pool.getStandardCell.bind(this._pool),
-                    this._pool.getStandardValue.bind(this._pool),
-                    this._pool.getStandardStyle.bind(this._pool)
-                )
-            })
+        if (isErrorMessage(window)) return window
+        const data = parseDisplayWindow(
+            window,
+            this._pool.getRenderCell.bind(this._pool),
+            this._pool.getRange.bind(this._pool),
+            this._pool.getStandardCell.bind(this._pool),
+            this._pool.getStandardValue.bind(this._pool),
+            this._pool.getStandardStyle.bind(this._pool)
+        )
 
         if (type === CellViewRespType.New) {
-            this.dataChunks = data
+            this.dataChunks = [data]
         } else if (type === CellViewRespType.Incremental) {
-            newChunks.push(...data)
+            newChunks.push(data)
             this.dataChunks = newChunks
         } else if (type === CellViewRespType.Existed) {
             this.dataChunks = newChunks
@@ -92,6 +85,19 @@ export class ViewManager {
         this.dataChunks.sort((a, b) => {
             return a.fromRow < b.fromRow || a.fromCol < b.fromCol ? -1 : 1
         })
+
+        let anchorY = data.rows[0].position.startRow
+
+        for (const r of data.rows) {
+            if (anchorY >= startY) break
+            anchorY += r.height
+        }
+
+        let anchorX = data.cols[0].position.startCol
+        for (const c of data.cols) {
+            if (anchorX >= startX) break
+            anchorX += c.width
+        }
 
         return {
             type,
@@ -102,6 +108,8 @@ export class ViewManager {
                 height,
                 width,
             },
+            anchorX,
+            anchorY,
         }
     }
 
@@ -129,6 +137,8 @@ export interface CellViewResponse {
     readonly type: CellViewRespType
     readonly data: CellView
     readonly request: CellViewRequest
+    readonly anchorX: number
+    readonly anchorY: number
 }
 
 export function parseDisplayWindow(

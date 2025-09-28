@@ -4,7 +4,7 @@ import styles from './block-outliner.module.scss'
 import React, {useContext} from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {CraftManager, DataService} from '@/core/data'
+import {CraftManager, DataServiceImpl as DataService} from '@/core/data'
 import {isErrorMessage, RemoveBlockBuilder, Transaction} from 'packages/web'
 import {CanvasStoreContext} from '../canvas/store'
 

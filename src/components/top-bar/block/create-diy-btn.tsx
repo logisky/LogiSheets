@@ -46,9 +46,7 @@ export const CreateDiyBtnComponent = ({selectedData}: CreateDiyBtnProps) => {
                 .build(),
         }
         await DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-        const sheetId = await DATA_SERVICE.getSheetId(
-            DATA_SERVICE.getCurrentSheetIdx()
-        )
+        const sheetId = DATA_SERVICE.getCurrentSheetId()
         if (isErrorMessage(sheetId)) return
         CRAFT_MANAGER.registerDiyButton(blockId, {
             type: DiyCellButtonType.Upload,

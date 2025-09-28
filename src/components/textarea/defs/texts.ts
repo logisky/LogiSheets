@@ -10,13 +10,23 @@ export class Text {
 
     static measureText(text: string, font: string): TextMetrics {
         const dpr = window.devicePixelRatio || 1
+
+        const hasDocument =
+            typeof document !== 'undefined' &&
+            typeof document.createElement === 'function'
         // Use cached canvas context for better performance
         if (!Text._canvasContext) {
-            const canvas = document.createElement('canvas')
-            Text._canvasContext = canvas.getContext('2d')
+            if (hasDocument) {
+                const canvas = document.createElement('canvas')
+                canvas.width = 100 * dpr
+                canvas.height = 100 * dpr
+                Text._canvasContext = canvas.getContext('2d')
+            } else {
+                Text._canvasContext = new OffscreenCanvas(100, 100).getContext(
+                    '2d'
+                )
+            }
             // Exactly match main canvas setup for consistent measurement
-            canvas.width = 100 * dpr
-            canvas.height = 100 * dpr
             if (Text._canvasContext) {
                 Text._canvasContext.scale(dpr, dpr)
             }
@@ -33,7 +43,10 @@ export class Text {
         }
     }
 
-    private static _canvasContext: CanvasRenderingContext2D | null = null
+    private static _canvasContext:
+        | CanvasRenderingContext2D
+        | OffscreenCanvasRenderingContext2D
+        | null = null
 }
 
 export class Texts {

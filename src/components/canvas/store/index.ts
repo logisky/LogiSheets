@@ -1,2 +1,4 @@
+import {simpleUuid} from '@/core/uuid'
+
 export * from './store'
-export {CANVAS_ID} from './renderer'
+export const CANVAS_ID = simpleUuid()

@@ -1,6 +1,5 @@
 import {CanvasAttr} from './canvas_attr'
 import {dpr} from './utils'
-import {useToast} from '@/ui/notification/useToast'
 
 export class CanvasApi {
     canvas() {
@@ -24,44 +23,54 @@ export class CanvasApi {
         if (attr.textBaseAlign) this._ctx.textBaseline = attr.textBaseAlign
     }
 
-    paste(newCanvas: HTMLCanvasElement): void {
+    paste(newCanvas: OffscreenCanvas): void {
         this._ctx.drawImage(newCanvas, 0, 0)
     }
 
-    clear(canvas?: HTMLCanvasElement) {
+    clear(canvas?: OffscreenCanvas | HTMLCanvasElement) {
         const c = canvas ?? this._canvas
         if (!c) throw Error('canvas not found')
         const ctx = c.getContext('2d')
         if (!ctx) throw Error('ctx not found')
-        ctx.clearRect(0, 0, c.width, c.height)
+        if (ctx instanceof CanvasRenderingContext2D) {
+            ctx.clearRect(0, 0, c.width, c.height)
+        }
     }
 
     /**
      * How to draw HiDPI canvas.
      * https://www.html5rocks.com/en/tutorials/canvas/hidpi/
      */
-    setupCanvas(canvas?: HTMLCanvasElement, width?: number, height?: number) {
+    setupCanvas(
+        canvas?: OffscreenCanvas | HTMLCanvasElement,
+        width?: number,
+        height?: number
+    ) {
         const c = canvas ?? this._canvas
         if (!c) throw Error('please set a html canvas element')
         this._canvas = c
         this.clear(canvas)
-        const w = width ?? c.getBoundingClientRect().width
-        const h = height ?? c.getBoundingClientRect().height
 
-        // Set physical resolution for HiDPI
-        c.width = w * dpr()
-        c.height = h * dpr()
+        if (c instanceof HTMLCanvasElement) {
+            const w = width ?? c.getBoundingClientRect().width
+            const h = height ?? c.getBoundingClientRect().height
 
-        // Set CSS size to maintain logical dimensions
-        c.style.width = `${w}px`
-        c.style.height = `${h}px`
+            // Set physical resolution for HiDPI
+            c.width = w * dpr()
+            c.height = h * dpr()
+
+            // Set CSS size to maintain logical dimensions
+            c.style.width = `${w}px`
+            c.style.height = `${h}px`
+        }
 
         const ctx = c.getContext('2d')
         if (!ctx) {
-            useToast().toast('Unexpected error, please refresh website!')
             return
         }
-        ctx.scale(dpr(), dpr())
+        if (ctx instanceof HTMLCanvasElement) {
+            ctx.scale(dpr(), dpr())
+        }
         this._ctx = ctx
     }
 
@@ -70,11 +79,10 @@ export class CanvasApi {
      *
      * The caller should be responsible for the validity of canvas
      */
-    setCanvas(canvas: HTMLCanvasElement) {
+    setCanvas(canvas: OffscreenCanvas | HTMLCanvasElement) {
         this._canvas = canvas
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-            useToast().toast('Unexpected error, please refresh website!')
             return
         }
         this._ctx = ctx
@@ -166,8 +174,8 @@ export class CanvasApi {
         // Context is DPR-scaled upstream; use CSS pixel coordinates here.
         this._ctx.fillText(text, x, y)
     }
-    private _ctx!: CanvasRenderingContext2D
-    private _canvas?: HTMLCanvasElement
+    private _ctx!: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D
+    private _canvas?: OffscreenCanvas | HTMLCanvasElement
     // https://usefulangle.com/post/17/html5-canvas-drawing-1px-crisp-straight-lines
     private _npxLine(px: number) {
         // With DPR-scaled context, operate in CSS pixels. Keep 0.5 offset for crisp odd line widths.

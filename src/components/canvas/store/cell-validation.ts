@@ -6,7 +6,7 @@ import type {SheetId} from 'packages/craft-forge/dist'
 import {isErrorMessage} from 'packages/web'
 import {ShadowCellProps} from '@/components/shadow-cell'
 import {ptToPx, widthToPx} from '@/core'
-import {sheetCellIdToString} from '@/core/data/workbook/client'
+import {sheetCellIdToString} from '@/core/data/clients/workbook'
 
 export class CellValidation {
     constructor(public readonly store: CanvasStore) {
@@ -45,40 +45,33 @@ export class CellValidation {
 
     @action
     _updateCurrentInvalidCells() {
-        this.store.currentSheetId.then((id) => {
-            if (isErrorMessage(id)) {
-                return
+        const id = this.store.currentSheetId
+        if (isErrorMessage(id)) {
+            return
+        }
+        const invalidCells = this._invalidCellMap.get(id)
+        runInAction(() => {
+            if (invalidCells) {
+                this.invalidCells = Array.from(
+                    invalidCells.values().map((cellPosition) => {
+                        const props = new ShadowCellProps()
+                        const range = this.store.convertToMainCanvasPosition(
+                            new Range()
+                                .setStartRow(ptToPx(cellPosition[0].y))
+                                .setEndRow(ptToPx(cellPosition[1].y))
+                                .setStartCol(widthToPx(cellPosition[0].x))
+                                .setEndCol(widthToPx(cellPosition[1].x))
+                        )
+                        props.x = range.startCol
+                        props.y = range.startRow
+                        props.width = range.width
+                        props.height = range.height
+                        return props
+                    })
+                )
+            } else {
+                this.invalidCells = []
             }
-            const invalidCells = this._invalidCellMap.get(id)
-            runInAction(() => {
-                if (invalidCells) {
-                    this.invalidCells = Array.from(
-                        invalidCells.values().map((cellPosition) => {
-                            const props = new ShadowCellProps()
-                            const range =
-                                this.store.convertToMainCanvasPosition(
-                                    new Range()
-                                        .setStartRow(ptToPx(cellPosition[0].y))
-                                        .setEndRow(ptToPx(cellPosition[1].y))
-                                        .setStartCol(
-                                            widthToPx(cellPosition[0].x)
-                                        )
-                                        .setEndCol(
-                                            widthToPx(cellPosition[1].x)
-                                        ),
-                                    'Cell'
-                                )
-                            props.x = range.startCol
-                            props.y = range.startRow
-                            props.width = range.width
-                            props.height = range.height
-                            return props
-                        })
-                    )
-                } else {
-                    this.invalidCells = []
-                }
-            })
         })
     }
 

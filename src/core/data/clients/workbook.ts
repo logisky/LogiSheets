@@ -50,15 +50,11 @@ import {
     ShadowCellInfo,
     FormulaDisplayInfo,
 } from 'logisheets-web'
-import {WorkerUpdate, MethodName} from './types'
+import {WorkerUpdate, MethodName} from '../../worker/types'
 
 @injectable()
 export class WorkbookClient implements Client {
-    constructor() {
-        const worker = new Worker(
-            new URL('./workbook.worker.ts', import.meta.url)
-        )
-        this._worker = worker
+    constructor(private _worker: Worker) {
         this._worker.onmessage = (e) => {
             const data = e.data
             const {result, id} = data
@@ -384,7 +380,6 @@ export class WorkbookClient implements Client {
         })
     }
 
-    private _worker!: Worker
     // Normal id starts with 10
     private _id = 10
 

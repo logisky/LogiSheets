@@ -1,6 +1,7 @@
 import {StandardColor} from '@/core/standable'
 
 export const ZINDEX_UI = 1000
+export const ZINDEX_HEADER = 800
 export const ZINDEX_MODAL = 900
 export const ZINDEX_BLOCK_OUTLINER = 0
 

@@ -21,7 +21,7 @@ import {
     workbookError,
     Result,
 } from '../../error'
-import {WorkbookClient} from '../workbook'
+import {WorkbookClient} from '../clients'
 import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
 import {

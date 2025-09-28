@@ -9,7 +9,7 @@ import {CellInputBuilder, Payload, Transaction} from 'logisheets-web'
 import {FC, useEffect, useState} from 'react'
 import styles from './edit-bar.module.scss'
 import {useInjection} from '@/core/ioc/provider'
-import {DataService} from '@/core/data'
+import {DataServiceImpl as DataService} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {isErrorMessage} from 'packages/web/src/api/utils'
 export interface EditBarProps {

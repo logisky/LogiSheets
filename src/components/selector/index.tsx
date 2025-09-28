@@ -1,9 +1,5 @@
-import {makeAutoObservable} from 'mobx'
 import {observer} from 'mobx-react'
 export class SelectorProps {
-    constructor() {
-        makeAutoObservable(this)
-    }
     editing? = false
     x = 0
     y = 0
@@ -34,6 +30,7 @@ export const SelectorComponent = observer((props: ISelectorProps) => {
     return (
         <div
             style={{
+                pointerEvents: 'none',
                 display: editing ? 'flex' : '',
                 position: 'absolute',
                 width: `${width}px`,
@@ -44,10 +41,12 @@ export const SelectorComponent = observer((props: ISelectorProps) => {
         >
             <div
                 style={{
+                    pointerEvents: 'none',
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    border: 'solid rgba(31, 187, 125, 0.1)',
+                    border: 'solid rgba(31, 187, 125, 1)',
+                    backgroundColor: 'rgba(31, 187, 125, 0.08)',
                     width: '100%',
                     height: '100%',
                     borderRightWidth: `${borderRightWidth}px`,

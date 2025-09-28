@@ -1,98 +1,33 @@
-import {CellView, CellViewResponse, RenderCell} from '@/core/data'
-import {CanvasStore} from '../store'
-import {PainterService} from '@/core/painter/painter.service'
+import {PainterService} from '../painter'
 import {Box, CanvasAttr, TextAttr} from '@/core/painter'
-import {SETTINGS} from '@/core/settings'
-import {Range, StandardColor, StandardCell} from '@/core/standable'
 import {StandardStyle} from '@/core/standable/style'
 import {PatternFill} from 'logisheets-web'
+import {Range, StandardColor, StandardCell} from '@/core/standable'
+import {RenderCell} from './render'
+import {CellView} from './types'
 import {BorderHelper} from './border_helper'
-import {toA1notation} from '@/core'
 
 export class Painter {
-    public constructor(public readonly store: CanvasStore) {}
-
-    public setCanvas(canvas: HTMLCanvasElement) {
-        // Offscreen painter uses device-pixel backing store and draws via npx/npxLine,
-        // so we should NOT additionally scale the context here, otherwise we double-DPR.
+    public setCanvas(canvas: OffscreenCanvas) {
         this._painter.setCanvas(canvas)
     }
 
-    public renderLeftHeader(
-        resp: CellViewResponse,
-        anchorX: number,
-        anchorY: number
-    ) {
-        const data = resp.data
+    public render(resp: CellView, anchorX: number, anchorY: number) {
+        // Offscreen pipeline scales the 2D context by DPR upstream (see offscreen.worker.ts),
+        // so Painter renders in CSS pixel coordinates here. We still wrap in save/restore
+        // to ensure any future DPR-specific transforms remain scoped.
         this._painter.save()
-        data.rows.forEach((r) => {
-            const pos = this.store.convertToCanvasPositionWithAnchor(
-                r.position,
-                'FixedLeftHeader',
-                anchorX,
-                anchorY
-            )
-            if (pos.endRow < 0) return // invisible
-            this._painter.line([
-                [pos.startCol, pos.startRow],
-                [pos.endCol, pos.startRow],
-                [pos.endCol, pos.endRow],
-                [pos.startCol, pos.endRow],
-            ])
-            const box = new Box()
-            box.position = pos
-            const attr = new TextAttr()
-            attr.font = SETTINGS.fixedHeader.font
-            // Center the row label within the header cell
-            attr.alignment = {horizontal: 'center', vertical: 'center'}
-            const position = (r.coordinate.startRow + 1).toString()
-            this._painter.fillFgColor('solid', '#ffffff', box)
-            this._painter.text(position, attr, box)
-        })
+        // If you ever need additional per-DPR transforms, read from window.devicePixelRatio.
+        // const dpr = (self as any).devicePixelRatio || 1
+        this.renderContent(resp, anchorX, anchorY)
+        this.renderMergeCells(resp, anchorX, anchorY)
+        this.renderGrid(resp, anchorX, anchorY)
         this._painter.restore()
     }
 
-    public renderTopHeader(
-        resp: CellViewResponse,
-        anchorX: number,
-        anchorY: number
-    ) {
-        const data = resp.data
-        this._painter.save()
-        data.cols.forEach((c) => {
-            const pos = this.store.convertToCanvasPositionWithAnchor(
-                c.position,
-                'FixedTopHeader',
-                anchorX,
-                anchorY
-            )
-            this._painter.line([
-                [pos.endCol, pos.startRow],
-                [pos.endCol, pos.endRow],
-                [pos.startCol, pos.endRow],
-                [pos.startCol, pos.startRow],
-            ])
-            const a1Notation = toA1notation(c.coordinate.startCol)
-            const box = new Box()
-            box.position = pos
-            const attr = new TextAttr()
-            attr.font = SETTINGS.fixedHeader.font
-            // Center the column label within the header cell
-            attr.alignment = {horizontal: 'center', vertical: 'center'}
-            this._painter.fillFgColor('solid', '#ffffff', box)
-            this._painter.text(a1Notation, attr, box)
-        })
-        this._painter.restore()
-    }
-
-    public renderMergeCells(
-        resp: CellViewResponse,
-        anchorX: number,
-        anchorY: number
-    ) {
-        const data = resp.data
-        data.mergeCells.forEach((c) => {
-            this.renderCell(c, anchorX, anchorY, true)
+    public renderContent(resp: CellView, anchorX: number, anchorY: number) {
+        resp.cells.forEach((cell) => {
+            this.renderCell(cell, anchorX, anchorY)
         })
     }
 
@@ -125,12 +60,10 @@ export class Painter {
         }
     }
 
-    public renderContent(data: CellView, anchorX: number, anchorY: number) {
-        this._painter.save()
-        data.cells.forEach((cell) => {
-            this.renderCell(cell, anchorX, anchorY)
+    public renderMergeCells(resp: CellView, anchorX: number, anchorY: number) {
+        resp.mergeCells.forEach((c) => {
+            this.renderCell(c, anchorX, anchorY, true)
         })
-        this._painter.restore()
     }
 
     public renderGrid(data: CellView, anchorX: number, anchorY: number) {
@@ -196,11 +129,6 @@ export class Painter {
         }
         this._painter.text(t, textAttr, box)
     }
-
-    // private _comment(box: Box, comment: Comment | undefined) {
-    //     if (!comment) return
-    //     this._painter.comment(box)
-    // }
 
     private _painter = new PainterService()
 }
