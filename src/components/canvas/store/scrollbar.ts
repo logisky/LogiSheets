@@ -1,7 +1,6 @@
 import {action, makeObservable, observable} from 'mobx'
 import {CanvasStore} from './store'
 import type {ScrollbarAttr, ScrollbarType} from '@/components/scrollbar'
-import {CANVAS_OFFSET} from '@/core/data'
 import {isErrorMessage} from 'logisheets-web'
 import {ptToPx, widthToPx} from '@/core'
 
@@ -33,17 +32,15 @@ export class ScrollBar {
 
     @action
     _init(dimensionHeight: number, dimensionWidth: number) {
-        const {offsetHeight: height, offsetWidth: width} =
-            this.store.renderer.canvas
-        const h = Math.max(dimensionHeight, height + CANVAS_OFFSET)
-        const w = Math.max(dimensionWidth, width + CANVAS_OFFSET)
+        const {height, width} = this.store.getCanvasSize()
+        const h = Math.max(dimensionHeight, height)
+        const w = Math.max(dimensionWidth, width)
         this.xScrollbar.scrollTop = this.store.anchorX
         this.xScrollbar.scrollHeight = w
         this.xScrollbar.offsetHeight = width
         this.yScrollbar.scrollTop = this.store.anchorY
         this.yScrollbar.scrollHeight = h
         this.yScrollbar.offsetHeight = height
-
         this._appropriateHeight = h
         this._appropriateWidth = w
     }
@@ -58,8 +55,7 @@ export class ScrollBar {
      */
     @action
     update(type: ScrollbarType) {
-        const {offsetHeight: height, offsetWidth: width} =
-            this.store.renderer.canvas
+        const {height, width} = this.store.getCanvasSize()
         if (type === 'x') {
             this.xScrollbar.scrollTop = this.store.anchorX
             const viewLength = this.store.anchorX + width
@@ -72,7 +68,7 @@ export class ScrollBar {
             this.yScrollbar.scrollTop = this.store.anchorY
             const viewLength = this.store.anchorY + height
             if (viewLength > this.yScrollbar.scrollHeight) {
-                this.yScrollbar.scrollHeight = viewLength + CANVAS_OFFSET
+                this.yScrollbar.scrollHeight = viewLength
             } else if (viewLength < this._appropriateHeight) {
                 this.yScrollbar.scrollHeight = this._appropriateHeight
             }
@@ -86,7 +82,7 @@ export class ScrollBar {
         } else if (type === 'y') {
             this.yScrollbar.scrollTop = scrollTop
         }
-        this.store.renderer.render(false)
+        this.store.render()
     }
 
     private _appropriateHeight: number = 0

@@ -22,25 +22,25 @@ export class DiyButton {
 
     @action
     updateDiyButton() {
-        const data = this.store.getCurrentCellView()
-        const cells = data.cells.filter((c) => c.info?.diyCellId !== undefined)
-        this.props = cells.map((c) => {
-            const props = new DiyButtonProps()
-            const range = this.store.convertToMainCanvasPosition(
-                new Range()
-                    .setStartRow(c.position.startRow)
-                    .setEndRow(c.position.endRow)
-                    .setStartCol(c.position.startCol)
-                    .setEndCol(c.position.endCol),
-                'Cell'
-            )
-            props.x = range.startCol
-            props.y = range.startRow
-            props.width = range.width
-            props.height = range.height
-            props.diyCellId = c.info!.diyCellId as number
-            return props
-        })
+        // const data = this.store.getCurrentCellView()
+        // const cells = data.cells.filter((c) => c.info?.diyCellId !== undefined)
+        // this.props = cells.map((c) => {
+        //     const props = new DiyButtonProps()
+        //     const range = this.store.convertToMainCanvasPosition(
+        //         new Range()
+        //             .setStartRow(c.position.startRow)
+        //             .setEndRow(c.position.endRow)
+        //             .setStartCol(c.position.startCol)
+        //             .setEndCol(c.position.endCol),
+        //         'Cell'
+        //     )
+        //     props.x = range.startCol
+        //     props.y = range.startRow
+        //     props.width = range.width
+        //     props.height = range.height
+        //     props.diyCellId = c.info!.diyCellId as number
+        //     return props
+        // })
     }
 
     @observable

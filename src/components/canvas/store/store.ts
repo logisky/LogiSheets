@@ -1,20 +1,19 @@
 import {action, makeObservable, observable} from 'mobx'
 import {createContext, type MouseEvent} from 'react'
-import {Resizer} from './resizer'
-import {Highlights} from './highlights'
-import {Cell, CellType, getOffset, match} from '../defs'
-import {Selector} from './selector'
-import {Dnd} from './dnd'
+import {Cell} from '../defs'
 import {ScrollBar} from './scrollbar'
 import {Textarea} from './textarea'
-import {RenderCell, DataService, CellView, CraftManager} from '@/core/data'
+import {
+    DataServiceImpl as DataService,
+    CellView,
+    CraftManager,
+} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
-import {Renderer} from './renderer'
 import {BlockOutliner} from './block-outliner'
 import {DiyButton} from './diy-button'
 import {CellValidation} from './cell-validation'
-import type {FormulaDisplayInfo} from 'logisheets-web'
+import {isErrorMessage, type FormulaDisplayInfo} from 'logisheets-web'
 
 export class CanvasStore {
     constructor(
@@ -22,11 +21,6 @@ export class CanvasStore {
         public readonly craftManager: CraftManager
     ) {
         makeObservable(this)
-        this.renderer = new Renderer(this)
-        this.resizer = new Resizer(this)
-        this.highlights = new Highlights(this)
-        this.selector = new Selector(this)
-        this.dnd = new Dnd(this)
         this.scrollbar = new ScrollBar(this)
         this.textarea = new Textarea(this)
         this.blockOutliner = new BlockOutliner(this)
@@ -43,11 +37,6 @@ export class CanvasStore {
      */
     same = false
 
-    renderer: Renderer
-    resizer: Resizer
-    highlights: Highlights
-    selector: Selector
-    dnd: Dnd
     scrollbar: ScrollBar
     textarea: Textarea
     blockOutliner: BlockOutliner
@@ -59,7 +48,7 @@ export class CanvasStore {
     }
 
     get currentSheetId() {
-        return this.dataSvc.getSheetId(this.currSheetIdx)
+        return this.dataSvc.getCurrentSheetId()
     }
 
     get anchorX() {
@@ -80,22 +69,29 @@ export class CanvasStore {
         this._sheetAnchorData.set(this.currSheetIdx, data)
     }
 
-    getCurrentCellView(): CellView {
-        return this.renderer.getCurrentData()
+    render() {
+        return this.dataSvc
+            .render(this.currentSheetId, this.anchorX, this.anchorY)
+            .then((g) => {
+                if (isErrorMessage(g)) return
+                this.setAnchor(g.anchorX, g.anchorY)
+            })
+    }
+
+    renderWithAnchor(anchorX: number, anchorY: number) {
+        return this.dataSvc
+            .render(this.currentSheetId, anchorX, anchorY)
+            .then((g) => {
+                if (isErrorMessage(g)) return
+                this.setAnchor(g.anchorX, g.anchorY)
+            })
     }
 
     reset() {
-        this.highlights.reset()
-        this.selector.reset()
-        this.dnd.reset()
         this.textarea.reset()
     }
 
-    match(clientX: number, clientY: number) {
-        const {x, y} = getOffset(clientX, clientY, this.renderer.canvas)
-        const cellView = this.getCurrentCellView()
-        return match(x, y, this.anchorX, this.anchorY, cellView.data)
-    }
+    getCanvasSize!: () => DOMRectReadOnly
 
     /**
      * Due to the change of column width or row height, selector should be
@@ -124,78 +120,14 @@ export class CanvasStore {
         }
         updatePosition(this.startCell)
         if (this.endCell) updatePosition(this.endCell)
-        this.selector.updateSelector(this.startCell, this.endCell)
     }
 
-    convertToMainCanvasPosition(p: Range, ty: CellType): Range {
-        return this.convertToCanvasPositionWithAnchor(
-            p,
-            ty,
-            this.anchorX,
-            this.anchorY,
-            true
-        )
-    }
-
-    convertToCanvasPositionWithAnchor(
-        p: Range,
-        ty: CellType,
-        anchorX: number,
-        anchorY: number,
-        toMain = false
-    ): Range {
-        if (ty === 'LeftTop') return p
-
-        const convertX = (a: number) => {
-            const offset = toMain ? LeftTop.width : 0
-            return a - anchorX + offset
-        }
-
-        const convertY = (a: number) => {
-            const offset = toMain ? LeftTop.height : 0
-            return a - anchorY + offset
-        }
-
-        if (ty === 'FixedLeftHeader') {
-            return new Range()
-                .setStartRow(convertY(p.startRow))
-                .setEndRow(convertY(p.endRow))
-                .setStartCol(0)
-                .setEndCol(LeftTop.width)
-        }
-        if (ty === 'FixedTopHeader')
-            return new Range()
-                .setStartRow(0)
-                .setEndRow(LeftTop.height)
-                .setStartCol(convertX(p.startCol))
-                .setEndCol(convertX(p.endCol))
-
-        const startX = convertX(p.startCol)
-        const endX = convertX(p.endCol)
-
-        const startY = convertY(p.startRow)
-        const endY = convertY(p.endRow)
-
+    convertToMainCanvasPosition(p: Range): Range {
         return new Range()
-            .setEndCol(endX)
-            .setStartCol(startX)
-            .setEndRow(endY)
-            .setStartRow(startY)
-    }
-
-    convertToCanvasPosition(p: Range, ty: CellType): Range {
-        return this.convertToCanvasPositionWithAnchor(
-            p,
-            ty,
-            this.anchorX,
-            this.anchorY
-        )
-    }
-
-    @action
-    handleFormulaDisplayInfo(formula: string, displayInfo: FormulaDisplayInfo) {
-        // indices in token units are relative to formula without `=`
-        this.highlights.updateCellRefs(displayInfo.cellRefs)
+            .setEndCol(p.endCol - this.anchorX + LeftTop.width)
+            .setStartCol(p.startCol - this.anchorX + LeftTop.width)
+            .setEndRow(p.endRow - this.anchorY + LeftTop.height)
+            .setStartRow(p.startRow - this.anchorY + LeftTop.height)
     }
 
     @action
@@ -209,7 +141,6 @@ export class CanvasStore {
         this.endCell = undefined
         this.type = 'mousedown'
         this.same = this.startCell && cell.equals(this.startCell)
-        this.selector.onMouseDown()
         if (this.diyButton.mousedown()) return
         this.textarea.mousedown(e.nativeEvent)
     }
@@ -219,39 +150,6 @@ export class CanvasStore {
         this.startCell = cell
         this.type = 'contextmenu'
         this.same = this.startCell && cell.equals(this.startCell)
-        this.selector.onContextmenu(cell)
-    }
-
-    @action
-    scroll() {
-        const startCell = this.startCell
-        if (!startCell) return
-        if (startCell.type === 'LeftTop' || startCell.type === 'unknown') return
-        let renderCell: RenderCell | undefined
-        const cellView = this.getCurrentCellView()
-        if (startCell.type === 'FixedLeftHeader')
-            renderCell = cellView.rows.find((r) =>
-                r.coordinate.cover(startCell.coordinate)
-            )
-        else if (startCell.type === 'FixedTopHeader')
-            renderCell = cellView.cols.find((c) =>
-                c.coordinate.cover(startCell.coordinate)
-            )
-        else if (startCell.type === 'Cell')
-            renderCell = cellView.cells.find((c) =>
-                c.coordinate.cover(startCell.coordinate)
-            )
-        else return
-        if (!renderCell) {
-            this.reset()
-            return
-        }
-        const newStartCell = new Cell(startCell.type).copyByRenderCell(
-            renderCell
-        )
-        this.same = true
-        this.selector.onScroll(newStartCell)
-        this.highlights.render()
     }
 
     private _sheetAnchorData = new Map<

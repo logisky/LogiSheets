@@ -12,7 +12,7 @@ import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {Tabs} from 'antd'
 import {Subscription} from 'rxjs'
-import {DataService} from '@/core/data'
+import {DataServiceImpl as DataService} from '@/core/data'
 
 export interface SheetTabProps {
     activeSheet: number
@@ -24,20 +24,17 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     activeSheet$,
 }) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const getSheets = () => {
-        const sheetInfo = DATA_SERVICE.getAllSheetInfo().then((info) => {
-            if (!isErrorMessage(info)) return info.map((s) => s.name)
-        })
-        return sheetInfo
-    }
     const [sheets, setSheets] = useState([] as string[])
     const [isOpen, setIsOpen] = useState(false)
     const [modalPosition, setModalPosition] = useState({top: 0, left: 0})
 
     useEffect(() => {
-        getSheets().then((v) => {
-            if (v) setSheets(v)
-        })
+        DATA_SERVICE.getWorkbook()
+            .getAllSheetInfo()
+            .then((v) => {
+                if (isErrorMessage(v)) return
+                setSheets(v.map((s) => s.name))
+            })
     }, [])
 
     useEffect(() => {

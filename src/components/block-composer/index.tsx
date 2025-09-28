@@ -21,7 +21,7 @@ import {TYPES} from '@/core/ioc/types'
 import {useInjection} from '@/core/ioc/provider'
 import {
     CraftManager,
-    DataService,
+    DataServiceImpl as DataService,
     LOGISHEETS_BUILTIN_CRAFT_ID,
     FIELD_AND_VALIDATION_TAG,
 } from '@/core/data'
@@ -82,7 +82,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
 
         const payloads: Payload[] = []
         const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
-        const sheetId = await DATA_SERVICE.getSheetId(sheetIdx)
+        const sheetId = DATA_SERVICE.getCurrentSheetId()
         if (isErrorMessage(sheetId)) {
             toast('Failed to get sheet ID', {type: 'error'})
             return

@@ -1,21 +1,15 @@
-/* eslint-disable no-case-declarations */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-const ctx: Worker = self as any
-
 import {
     BlockInfo,
     CellInfo,
     CellPosition,
     DisplayWindowWithStartPoint,
-    ErrorMessage,
     initWasm,
     MergeCell,
     SheetDimension,
     SheetInfo,
     Workbook,
     Worksheet,
-    GetAllSheetInfoParams,
     GetCellParams,
     GetDisplayWindowParams,
     GetDisplayWindowWithPositionParams,
@@ -53,57 +47,11 @@ import {
     SheetCellId,
     FormulaDisplayInfo,
 } from 'logisheets-web'
-import {WorkerUpdate, MethodName} from './types'
+import {WorkerUpdate, MethodName, Result, IWorkbookWorker} from './types'
 
-type Result<T> = T | ErrorMessage
+export class WorkerService implements IWorkbookWorker {
+    constructor(private _ctx: Worker) {}
 
-interface IWorkbookWorker {
-    isReady(): Result<boolean>
-    getAllSheetInfo(params: GetAllSheetInfoParams): Result<readonly SheetInfo[]>
-    getDisplayWindow(
-        params: GetDisplayWindowParams
-    ): Result<DisplayWindowWithStartPoint>
-    getCell(params: GetCellParams): Result<CellInfo>
-    getCells(params: GetCellsParams): Result<readonly CellInfo[]>
-    getCellsExceptWindow(
-        params: GetCellsExceptWindowParams
-    ): Result<readonly CellInfo[]>
-    getReproducibleCell(
-        params: GetReproducibleCellParams
-    ): Result<ReproducibleCell>
-    getReproducibleCells(
-        params: GetReproducibleCellsParams
-    ): Result<readonly ReproducibleCell[]>
-    getValue(params: GetValueParams): Result<Value>
-    getBlockInfo(params: GetBlockInfoParams): Result<BlockInfo>
-    getCellPosition(params: GetCellParams): Result<CellPosition>
-    getSheetDimension(sheetIdx: number): Result<SheetDimension>
-    getFullyCoveredBlocks(
-        params: GetFullyCoveredBlocksParams
-    ): Result<readonly BlockInfo[]>
-
-    undo(): Result<void>
-    redo(): Result<void>
-    handleTransaction(params: HandleTransactionParams): Result<void>
-
-    loadWorkbook(params: LoadWorkbookParams): Result<void>
-
-    getSheetIdx(params: GetSheetIdxParams): Result<number>
-    getBlockValues(params: GetBlockValuesParams): Result<readonly string[]>
-
-    getAvailableBlockId(params: GetAvailableBlockIdParams): Result<number>
-    getDiyCellIdWithBlockId(
-        params: GetDiyCellIdWithBlockIdParams
-    ): Result<number>
-    getSheetId(params: GetSheetIdParams): Result<number>
-    lookupAppendixUpward(
-        params: LookupAppendixUpwardParams
-    ): Result<AppendixWithCell>
-
-    getDisplayUnitsOfFormula(f: string): Result<FormulaDisplayInfo>
-}
-
-class WorkerService implements IWorkbookWorker {
     getDisplayUnitsOfFormula(f: string): Result<FormulaDisplayInfo> {
         return this.workbook.getDisplayUnitsOfFormula(f)
     }
@@ -261,22 +209,28 @@ class WorkerService implements IWorkbookWorker {
         await initWasm()
         this._workbookImpl = new Workbook()
         this._workbookImpl.registerCellUpdatedCallback(() => {
-            ctx.postMessage({id: WorkerUpdate.Cell})
+            this._ctx.postMessage({id: WorkerUpdate.Cell})
         })
         this._workbookImpl.registerSheetInfoUpdateCallback(() => {
-            ctx.postMessage({id: WorkerUpdate.Sheet})
+            this._ctx.postMessage({id: WorkerUpdate.Sheet})
         })
         // Inform the client that service is ready
-        ctx.postMessage({id: WorkerUpdate.Ready})
+        this._ctx.postMessage({id: WorkerUpdate.Ready})
     }
 
     public handleTransaction(params: HandleTransactionParams): void {
         const result = this.workbook.execTransaction(params.transaction)
         result.valueChanged.forEach((cellId) => {
-            ctx.postMessage({id: WorkerUpdate.CellValueChanged, result: cellId})
+            this._ctx.postMessage({
+                id: WorkerUpdate.CellValueChanged,
+                result: cellId,
+            })
         })
         result.cellRemoved.forEach((cellId) => {
-            ctx.postMessage({id: WorkerUpdate.CellRemoved, result: cellId})
+            this._ctx.postMessage({
+                id: WorkerUpdate.CellRemoved,
+                result: cellId,
+            })
         })
         return
     }
@@ -351,7 +305,10 @@ class WorkerService implements IWorkbookWorker {
         const {m, args, id} = request
 
         if (!this._workbookImpl) {
-            ctx.postMessage({error: 'WorkbookService not initialized', id})
+            this._ctx.postMessage({
+                error: 'WorkbookService not initialized',
+                id,
+            })
             return
         }
 
@@ -459,20 +416,8 @@ class WorkerService implements IWorkbookWorker {
                 throw new Error(`Unknown method: ${m}`)
         }
 
-        ctx.postMessage({result, id})
+        this._ctx.postMessage({result, id})
     }
 
     private _workbookImpl: Workbook | undefined
 }
-
-// Worker thread execution
-const workerService = new WorkerService()
-
-workerService.init().then(() => {
-    ctx.onmessage = (e) => {
-        const request = e.data
-        if (request && request.id) {
-            workerService.handleRequest(request)
-        }
-    }
-})

@@ -36,7 +36,6 @@ export class Textarea {
                 .getDisplayUnitsOfFormula(t.slice(1))
                 .then((displayInfo) => {
                     if (isErrorMessage(displayInfo)) return
-                    this.store.handleFormulaDisplayInfo(t, displayInfo)
                     return displayInfo
                 })
         }
@@ -105,7 +104,7 @@ export class Textarea {
             position,
             type,
         } = startCell
-        const pos = this.store.convertToMainCanvasPosition(position, type)
+        const pos = this.store.convertToMainCanvasPosition(position)
         const x = pos.startCol
         const y = pos.startRow
         const sheet = this.store.dataSvc.getCurrentSheetIdx()
@@ -117,7 +116,13 @@ export class Textarea {
             if (c.getFormula() !== '') {
                 text = `=${c.getFormula()}`
             }
-            const rect = this.store.renderer.canvas.getBoundingClientRect()
+            // const rect = this.store.renderer.canvas.getBoundingClientRect()
+            const rect = {
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+            }
             const [clientX, clientY] = [rect.x + x, rect.y + y]
             const context = new Context()
             context.text = text
@@ -156,7 +161,6 @@ export class Textarea {
             }
         } else {
             this._currText = ''
-            this.store.highlights.reset()
         }
     }
 }

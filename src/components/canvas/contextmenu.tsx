@@ -19,7 +19,7 @@ import {
     DeleteRowsInBlockBuilder,
 } from 'logisheets-web'
 import {TYPES} from '@/core/ioc/types'
-import {DataService} from '@/core/data'
+import {DataServiceImpl as DataService} from '@/core/data'
 
 export interface ContextmenuProps {
     mouseevent: MouseEvent
@@ -247,9 +247,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
         },
     ]
     const items: ContextMenuItem[] = []
-    if (startCell.type === 'FixedLeftHeader') items.push(...rows)
-    else if (startCell.type === 'FixedTopHeader') items.push(...cols)
-    else if (startCell.type === 'Cell') {
+    if (startCell.type === 'Cell') {
         items.push(...rows, ...cols)
         items.push({
             text: '新增block',
