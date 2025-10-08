@@ -85,6 +85,8 @@ export enum MethodName {
     GetCellId = 'getCellId',
 
     GetDisplayUnitsOfFormula = 'getDisplayUnitsOfFormula',
+
+    GetNextVisibleCell = 'getNextVisibleCell',
 }
 
 export enum OffscreenRenderName {

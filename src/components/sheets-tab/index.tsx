@@ -56,6 +56,14 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
         }
     }, [])
 
+    // Clamp active index to available tab range when sheets change
+    useEffect(() => {
+        if (sheets.length === 0) return
+        if (activeSheet >= sheets.length) {
+            activeSheet$(Math.max(0, sheets.length - 1))
+        }
+    }, [sheets, activeSheet, activeSheet$])
+
     const onTabChange = (_: unknown, idx: number) => {
         activeSheet$(idx)
     }
@@ -88,7 +96,11 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     return (
         <div className={styles['host']}>
             <Tabs
-                value={activeSheet}
+                value={
+                    sheets.length
+                        ? Math.min(activeSheet, sheets.length - 1)
+                        : false
+                }
                 onChange={onTabChange}
                 variant="scrollable"
                 scrollButtons="auto"
@@ -96,6 +108,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                 {sheets.map((sheet, i) => (
                     <Tab
                         key={sheet}
+                        sx={{textTransform: 'none'}}
                         label={
                             <Box
                                 sx={{
@@ -115,16 +128,42 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                                 }}
                             >
                                 <span>{sheet}</span>
-                                <IconButton
-                                    size="small"
+                                <Box
+                                    component="span"
+                                    role="button"
                                     aria-label="close sheet"
+                                    tabIndex={0}
+                                    sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: 20,
+                                        height: 20,
+                                        ml: 0.5,
+                                        borderRadius: '50%',
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            backgroundColor: 'action.hover',
+                                        },
+                                        outline: 'none',
+                                    }}
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         onDelete(i)
                                     }}
+                                    onKeyDown={(e) => {
+                                        if (
+                                            e.key === 'Enter' ||
+                                            e.key === ' '
+                                        ) {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            onDelete(i)
+                                        }
+                                    }}
                                 >
                                     <CloseIcon fontSize="inherit" />
-                                </IconButton>
+                                </Box>
                             </Box>
                         }
                     />

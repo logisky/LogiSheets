@@ -2,6 +2,7 @@ import {
     AppendixWithCell,
     BlockInfo,
     CalcConditionParams,
+    CellCoordinate,
     CellInfo,
     CellPosition,
     ColId,
@@ -24,6 +25,7 @@ import {
     GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
+    GetNextVisibleCellParams,
     GetReproducibleCellParams,
     GetReproducibleCellsParams,
     GetShadowCellIdParams,
@@ -158,6 +160,9 @@ export class CraftHandler implements CraftHandlerInterface {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    getNextVisibleCell(params: GetNextVisibleCellParams): Resp<CellCoordinate> {
+        return this._workbookClient.getNextVisibleCell(params)
     }
     getDisplayUnitsOfFormula(f: string): Resp<FormulaDisplayInfo> {
         return this._workbookClient.getDisplayUnitsOfFormula(f)

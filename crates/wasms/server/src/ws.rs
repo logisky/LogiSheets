@@ -350,3 +350,67 @@ pub fn get_reproducible_cells(id: usize, sheet_id: SheetId, coordinates: JsValue
     handle_result!(result);
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
+
+#[wasm_bindgen]
+pub fn get_next_upward_visible_cell(
+    id: usize,
+    sheet_id: SheetId,
+    row: usize,
+    col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_next_upward_visible_cell(row, col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_next_downward_visible_cell(
+    id: usize,
+    sheet_id: SheetId,
+    row: usize,
+    col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_next_downward_visible_cell(row, col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_next_leftward_visible_cell(
+    id: usize,
+    sheet_id: SheetId,
+    row: usize,
+    col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_next_leftward_visible_cell(row, col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_next_rightward_visible_cell(
+    id: usize,
+    sheet_id: SheetId,
+    row: usize,
+    col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_id(sheet_id).unwrap();
+    let result = ws.get_next_rightward_visible_cell(row, col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}

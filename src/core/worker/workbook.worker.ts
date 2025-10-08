@@ -46,6 +46,8 @@ import {
     GetCellIdParams,
     SheetCellId,
     FormulaDisplayInfo,
+    CellCoordinate,
+    GetNextVisibleCellParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName, Result, IWorkbookWorker} from './types'
 
@@ -412,11 +414,27 @@ export class WorkerService implements IWorkbookWorker {
             case MethodName.GetDisplayUnitsOfFormula:
                 result = this.getDisplayUnitsOfFormula(args)
                 break
+            case MethodName.GetNextVisibleCell:
+                result = this.getNextVisibleCell(args)
+                break
             default:
                 throw new Error(`Unknown method: ${m}`)
         }
 
         this._ctx.postMessage({result, id})
+    }
+
+    getNextVisibleCell(args: GetNextVisibleCellParams): Result<CellCoordinate> {
+        const ws = this.workbook.getWorksheet(args.sheetIdx)
+        if (args.direction === 'up') {
+            return ws.getNextUpwardVisibleCell(args.rowIdx, args.colIdx)
+        } else if (args.direction === 'down') {
+            return ws.getNextDownwardVisibleCell(args.rowIdx, args.colIdx)
+        } else if (args.direction === 'left') {
+            return ws.getNextLeftwardVisibleCell(args.rowIdx, args.colIdx)
+        } else {
+            return ws.getNextRightwardVisibleCell(args.rowIdx, args.colIdx)
+        }
     }
 
     private _workbookImpl: Workbook | undefined

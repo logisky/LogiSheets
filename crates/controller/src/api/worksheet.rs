@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use crate::controller::display::{
-    BlockDisplayInfo, BlockInfo, CellPosition, DisplayWindow, DisplayWindowWithStartPoint,
+    BlockDisplayInfo, BlockInfo, CellCoordinate, CellPosition, DisplayWindow,
+    DisplayWindowWithStartPoint,
 };
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
@@ -562,6 +563,64 @@ impl<'a> Worksheet<'a> {
             }
         }
         return Ok((curr_idx, curr_w));
+    }
+
+    pub fn get_next_upward_visible_cell(&self, row: usize, col: usize) -> Result<CellCoordinate> {
+        if row == 0 {
+            return Err(Error::Basic(BasicError::CellIdNotFound(row, col)));
+        }
+        let mut r = row - 1;
+        while r > 0 {
+            if !self.is_row_hidden(r) {
+                break;
+            }
+            r -= 1;
+        }
+
+        Ok(CellCoordinate { x: col, y: r })
+    }
+
+    pub fn get_next_downward_visible_cell(&self, row: usize, col: usize) -> Result<CellCoordinate> {
+        let mut r = row + 1;
+        loop {
+            if !self.is_row_hidden(r) {
+                break;
+            }
+            r += 1;
+        }
+
+        Ok(CellCoordinate { x: col, y: r })
+    }
+
+    pub fn get_next_leftward_visible_cell(&self, row: usize, col: usize) -> Result<CellCoordinate> {
+        if col == 0 {
+            return Err(Error::Basic(BasicError::CellIdNotFound(row, col)));
+        }
+        let mut c = col - 1;
+        while c > 0 {
+            if !self.is_col_hidden(c) {
+                break;
+            }
+            c -= 1;
+        }
+
+        Ok(CellCoordinate { x: c, y: row })
+    }
+
+    pub fn get_next_rightward_visible_cell(
+        &self,
+        row: usize,
+        col: usize,
+    ) -> Result<CellCoordinate> {
+        let mut c = col + 1;
+        loop {
+            if !self.is_col_hidden(c) {
+                break;
+            }
+            c += 1;
+        }
+
+        Ok(CellCoordinate { x: c, y: row })
     }
 
     pub fn get_cell_info_in_window(

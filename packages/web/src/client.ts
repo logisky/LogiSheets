@@ -15,6 +15,7 @@ import type {
     SheetCellId,
     ShadowCellInfo,
     FormulaDisplayInfo,
+    CellCoordinate,
 } from './bindings'
 import type {CustomFunc} from './api'
 import type {Transaction, RowId, ColId} from './types'
@@ -106,6 +107,8 @@ export interface Client {
     lookupAppendixUpward(
         params: LookupAppendixUpwardParams
     ): Resp<AppendixWithCell>
+
+    getNextVisibleCell(params: GetNextVisibleCellParams): Resp<CellCoordinate>
 }
 
 export interface GetAllSheetInfoParams {}
@@ -287,4 +290,11 @@ export interface GetCellIdParams {
     sheetIdx: number
     rowIdx: number
     colIdx: number
+}
+
+export interface GetNextVisibleCellParams {
+    sheetIdx: number
+    rowIdx: number
+    colIdx: number
+    direction: 'up' | 'down' | 'left' | 'right'
 }

@@ -4,6 +4,7 @@ import {
     BlockInfo,
     CalcConditionParams,
     Callback,
+    CellCoordinate,
     CellInfo,
     CellPosition,
     ColId,
@@ -26,6 +27,7 @@ import {
     GetDiyCellIdWithBlockIdParams,
     GetFullyCoveredBlocksParams,
     GetMergedCellsParams,
+    GetNextVisibleCellParams,
     GetReproducibleCellParams,
     GetReproducibleCellsParams,
     GetShadowCellIdParams,
@@ -74,6 +76,9 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    getNextVisibleCell(params: GetNextVisibleCellParams): Resp<CellCoordinate> {
+        throw new Error('Method not implemented.')
     }
     getDisplayUnitsOfFormula(f: string): Resp<FormulaDisplayInfo> {
         throw new Error('Method not implemented.')

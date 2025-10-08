@@ -688,18 +688,32 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     selectedData$(newData)
                     return
                 }
-                const delta = grid.rows[startIdx].height
+                const nextVisibleCell = await store.dataSvc
+                    .getWorkbook()
+                    .getNextVisibleCell({
+                        sheetIdx: store.dataSvc.getCurrentSheetIdx(),
+                        rowIdx: row,
+                        colIdx: col,
+                        direction: 'up',
+                    })
+                if (isErrorMessage(nextVisibleCell)) return
+                const cellPosition = await store.dataSvc
+                    .getWorkbook()
+                    .getCellPosition({
+                        sheetIdx: store.dataSvc.getCurrentSheetIdx(),
+                        row: nextVisibleCell.y,
+                        col: nextVisibleCell.x,
+                    })
+                if (isErrorMessage(cellPosition)) return
                 await renderWithAnchor(
                     store,
                     store.anchorX,
-                    store.anchorY - delta
+                    ptToPx(cellPosition.y)
                 )
-                const newIdx = grid.rows.findIndex((v) => v.idx === row)
-                if (newIdx < 0) return
                 const newData = buildSelectedDataFromCellRange(
-                    grid.rows[newIdx - 1].idx,
+                    nextVisibleCell.y,
                     col,
-                    grid.rows[newIdx - 1].idx,
+                    nextVisibleCell.y,
                     col,
                     'none'
                 )
@@ -724,19 +738,32 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     selectedData$(newData)
                     return
                 }
-
-                const delta = grid.rows[startIdx].height
+                const nextVisibleCell = await store.dataSvc
+                    .getWorkbook()
+                    .getNextVisibleCell({
+                        sheetIdx: store.dataSvc.getCurrentSheetIdx(),
+                        rowIdx: row,
+                        colIdx: col,
+                        direction: 'down',
+                    })
+                if (isErrorMessage(nextVisibleCell)) return
+                const cellPosition = await store.dataSvc
+                    .getWorkbook()
+                    .getCellPosition({
+                        sheetIdx: store.dataSvc.getCurrentSheetIdx(),
+                        row: nextVisibleCell.y,
+                        col: nextVisibleCell.x,
+                    })
+                if (isErrorMessage(cellPosition)) return
                 await renderWithAnchor(
                     store,
                     store.anchorX,
-                    store.anchorY + delta
+                    ptToPx(cellPosition.y) - size.height
                 )
-                const newIdx = grid.rows.findIndex((v) => v.idx === row)
-                if (newIdx < 0) return
                 const newData = buildSelectedDataFromCellRange(
-                    grid.rows[newIdx + 1].idx,
+                    nextVisibleCell.y,
                     col,
-                    grid.rows[newIdx + 1].idx,
+                    nextVisibleCell.y,
                     col,
                     'none'
                 )
@@ -762,19 +789,33 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     selectedData$(newData)
                     return
                 }
-                const delta = grid.columns[startIdx].width
+                const nextVisibleCell = await store.dataSvc
+                    .getWorkbook()
+                    .getNextVisibleCell({
+                        sheetIdx: store.dataSvc.getCurrentSheetIdx(),
+                        rowIdx: row,
+                        colIdx: col,
+                        direction: 'left',
+                    })
+                if (isErrorMessage(nextVisibleCell)) return
+                const cellPosition = await store.dataSvc
+                    .getWorkbook()
+                    .getCellPosition({
+                        sheetIdx: store.dataSvc.getCurrentSheetIdx(),
+                        row: nextVisibleCell.y,
+                        col: nextVisibleCell.x,
+                    })
+                if (isErrorMessage(cellPosition)) return
                 await renderWithAnchor(
                     store,
-                    Math.max(0, store.anchorX - delta),
+                    widthToPx(cellPosition.x),
                     store.anchorY
                 )
-                const newIdx = grid.columns.findIndex((v) => v.idx === col)
-                if (newIdx < 0) return
                 const newData = buildSelectedDataFromCellRange(
                     row,
-                    grid.columns[newIdx - 1].idx,
+                    nextVisibleCell.x,
                     row,
-                    grid.columns[newIdx - 1].idx,
+                    nextVisibleCell.x,
                     'none'
                 )
                 selectedData$(newData)
@@ -798,19 +839,33 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     selectedData$(newData)
                     return
                 }
-                const delta = grid.columns[startIdx].width
+                const nextVisibleCell = await store.dataSvc
+                    .getWorkbook()
+                    .getNextVisibleCell({
+                        sheetIdx: store.dataSvc.getCurrentSheetIdx(),
+                        rowIdx: row,
+                        colIdx: col,
+                        direction: 'right',
+                    })
+                if (isErrorMessage(nextVisibleCell)) return
+                const cellPosition = await store.dataSvc
+                    .getWorkbook()
+                    .getCellPosition({
+                        sheetIdx: store.dataSvc.getCurrentSheetIdx(),
+                        row: nextVisibleCell.y,
+                        col: nextVisibleCell.x,
+                    })
+                if (isErrorMessage(cellPosition)) return
                 await renderWithAnchor(
                     store,
-                    store.anchorX + delta,
+                    widthToPx(cellPosition.x) - size.width,
                     store.anchorY
                 )
-                const newIdx = grid.columns.findIndex((v) => v.idx === col)
-                if (newIdx < 0) return
                 const newData = buildSelectedDataFromCellRange(
                     row,
-                    grid.columns[newIdx + 1].idx,
+                    nextVisibleCell.x,
                     row,
-                    grid.columns[newIdx + 1].idx,
+                    nextVisibleCell.x,
                     'none'
                 )
                 selectedData$(newData)

@@ -49,6 +49,8 @@ import {
     CellIdCallback,
     ShadowCellInfo,
     FormulaDisplayInfo,
+    GetNextVisibleCellParams,
+    CellCoordinate,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from '../../worker/types'
 
@@ -334,6 +336,13 @@ export class WorkbookClient implements Client {
         return this._call(MethodName.GetAllSheetInfo, undefined) as Resp<
             readonly SheetInfo[]
         >
+    }
+
+    getNextVisibleCell(params: GetNextVisibleCellParams): Resp<CellCoordinate> {
+        return this._call(
+            MethodName.GetNextVisibleCell,
+            params
+        ) as Resp<CellCoordinate>
     }
 
     getDisplayWindow(

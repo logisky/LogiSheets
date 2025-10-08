@@ -12,6 +12,13 @@ pub struct CellPosition {
 }
 
 #[derive(Debug, Clone, TS)]
+#[ts(file_name = "cell_coordinate.ts", rename_all = "camelCase")]
+pub struct CellCoordinate {
+    pub x: usize,
+    pub y: usize,
+}
+
+#[derive(Debug, Clone, TS)]
 #[ts(file_name = "shadow_cell_info.ts", rename_all = "camelCase")]
 pub struct ShadowCellInfo {
     pub start_position: CellPosition,
