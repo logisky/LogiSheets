@@ -1,6 +1,7 @@
 use gents::FileGroup;
 use logisheets_controller::controller::display::{
-    CellPosition, DisplayWindowRequest, DisplayWindowWithStartPoint, ShadowCellInfo, SheetInfo,
+    CellCoordinate, CellPosition, DisplayWindowRequest, DisplayWindowWithStartPoint,
+    ShadowCellInfo, SheetInfo,
 };
 use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditAction};
 use logisheets_controller::{
@@ -12,6 +13,7 @@ fn main() {
     let path = "packages/web/src/bindings";
     let mut file_group = FileGroup::new();
     file_group.add::<DisplayWindowRequest>();
+    file_group.add::<CellCoordinate>();
     file_group.add::<CellPosition>();
     file_group.add::<DisplayWindowWithStartPoint>();
     file_group.add::<EditAction>();

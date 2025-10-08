@@ -5,6 +5,8 @@ $x-scrollbar-height: 16px;
   display: block;
   background-color: #f2f4f7;
   position: absolute;
+  // Sit above headers (headers use z-index: 800)
+  z-index: 900;
   .thumb {
     transition: margin-left 0.2s;
   }

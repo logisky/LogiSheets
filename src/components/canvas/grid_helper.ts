@@ -44,7 +44,7 @@ export const findVisibleRowIdxRange = (
     let s = grid.anchorY
     let startIdx = 0
     for (let i = 0; i < grid.rows.length; i += 1) {
-        if (s > anchor) {
+        if (s >= anchor) {
             startIdx = i
             break
         }

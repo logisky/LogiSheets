@@ -22,8 +22,12 @@ import {
     get_block_info,
     get_reproducible_cell,
     get_reproducible_cells,
+    get_next_upward_visible_cell,
+    get_next_downward_visible_cell,
+    get_next_leftward_visible_cell,
+    get_next_rightward_visible_cell,
+    get_merged_cells,
 } from '../../wasm'
-import {get_merged_cells} from '../../wasm/logisheets_wasm_server'
 import {
     BlockInfo,
     CellPosition,
@@ -92,6 +96,27 @@ export class Worksheet {
     public getCellPosition(row: number, col: number): CellPosition {
         const result = get_cell_position(this._id, this._sheetId, row, col)
         return result
+    }
+
+    public getNextUpwardVisibleCell(row: number, col: number): CellPosition {
+        return get_next_upward_visible_cell(this._id, this._sheetId, row, col)
+    }
+
+    public getNextDownwardVisibleCell(row: number, col: number): CellPosition {
+        return get_next_downward_visible_cell(this._id, this._sheetId, row, col)
+    }
+
+    public getNextLeftwardVisibleCell(row: number, col: number): CellPosition {
+        return get_next_leftward_visible_cell(this._id, this._sheetId, row, col)
+    }
+
+    public getNextRightwardVisibleCell(row: number, col: number): CellPosition {
+        return get_next_rightward_visible_cell(
+            this._id,
+            this._sheetId,
+            row,
+            col
+        )
     }
 
     public getDisplayWindowWithCellPosition(
