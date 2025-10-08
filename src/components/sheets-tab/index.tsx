@@ -10,7 +10,12 @@ import {
 } from 'logisheets-web'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {Tabs} from 'antd'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
+import IconButton from '@mui/material/IconButton'
+import AddIcon from '@mui/icons-material/Add'
+import CloseIcon from '@mui/icons-material/Close'
+import Box from '@mui/material/Box'
 import {Subscription} from 'rxjs'
 import {DataServiceImpl as DataService} from '@/core/data'
 
@@ -51,9 +56,8 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
         }
     }, [])
 
-    const onTabChange = (key: string) => {
-        const i = sheets.findIndex((s) => s === key)
-        activeSheet$(i)
+    const onTabChange = (_: unknown, idx: number) => {
+        activeSheet$(idx)
     }
 
     const onDelete = (i: number) => {
@@ -63,58 +67,85 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
         }
         DATA_SERVICE.handleTransaction(new Transaction([payload], true))
     }
+    const addSheet = () => {
+        const newSheetName = findNewSheetName(sheets)
+        const newIdx = sheets.length
+        const payload: Payload = {
+            type: 'createSheet',
+            value: new CreateSheetBuilder()
+                .newName(newSheetName)
+                .idx(newIdx)
+                .build(),
+        }
+        DATA_SERVICE.handleTransaction(new Transaction([payload], true)).then(
+            (v) => {
+                if (v) return
+                activeSheet$(newIdx)
+            }
+        )
+    }
+
     return (
         <div className={styles['host']}>
-            <div className={styles['pre-btns']} />
             <Tabs
-                type="editable-card"
-                tabPosition="bottom"
-                items={sheets.map((sheet, i) => ({
-                    key: sheet,
-                    label: (
-                        <span
-                            onContextMenu={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                activeSheet$(i)
-                                setIsOpen(true)
-                                setModalPosition({
-                                    top: e.clientY,
-                                    left: e.clientX,
-                                })
-                            }}
-                        >
-                            {sheet}
-                        </span>
-                    ),
-                    closable: true,
-                }))}
+                value={activeSheet}
                 onChange={onTabChange}
-                onEdit={(e, action) => {
-                    if (action === 'add') {
-                        const newSheetName = findNewSheetName(sheets)
-                        const newIdx = sheets.length
-                        const payload: Payload = {
-                            type: 'createSheet',
-                            value: new CreateSheetBuilder()
-                                .newName(newSheetName)
-                                .idx(newIdx)
-                                .build(),
+                variant="scrollable"
+                scrollButtons="auto"
+            >
+                {sheets.map((sheet, i) => (
+                    <Tab
+                        key={sheet}
+                        label={
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    activeSheet$(i)
+                                    setIsOpen(true)
+                                    setModalPosition({
+                                        top: e.clientY,
+                                        left: e.clientX,
+                                    })
+                                }}
+                            >
+                                <span>{sheet}</span>
+                                <IconButton
+                                    size="small"
+                                    aria-label="close sheet"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        onDelete(i)
+                                    }}
+                                >
+                                    <CloseIcon fontSize="inherit" />
+                                </IconButton>
+                            </Box>
                         }
-                        DATA_SERVICE.handleTransaction(
-                            new Transaction([payload], true)
-                        ).then((v) => {
-                            if (v) return
-                            activeSheet$(newIdx)
-                        })
-                    } else if (action === 'remove') {
-                        if (typeof e !== 'string') return
-                        const i = sheets.findIndex((s) => s === e)
-                        onDelete(i)
-                    }
+                    />
+                ))}
+            </Tabs>
+            <div
+                className={styles['pre-btns']}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                 }}
-                activeKey={sheets[activeSheet]}
-            />
+            >
+                <IconButton
+                    size="small"
+                    aria-label="add sheet"
+                    onClick={addSheet}
+                >
+                    <AddIcon fontSize="small" />
+                </IconButton>
+            </div>
             <ContextMenuComponent
                 left={modalPosition.left}
                 top={modalPosition.top}
