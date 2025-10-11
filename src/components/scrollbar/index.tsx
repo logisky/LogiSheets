@@ -1,171 +1,184 @@
 import styles from './scrollbar.module.scss'
-import {
-    CSSProperties,
-    MouseEvent,
-    useEffect,
-    useRef,
-    useState,
-    WheelEvent,
-    FC,
+import {CSSProperties, useEffect, useRef, useState, FC} from 'react'
+import type {
+    MouseEvent as ReactMouseEvent,
+    WheelEvent as ReactWheelEvent,
 } from 'react'
-import {EventType, on} from '@/core/events'
-import {Subscription} from 'rxjs'
 
-export * from './scroll_event'
-export type ScrollbarType = 'x' | 'y'
-export interface ScrollbarAttr {
-    offsetHeight?: number
-    scrollHeight: number
-    scrollTop?: number
-    minThumbLength?: number
-    direction: ScrollbarType
-}
-export interface ScrollbarProps extends ScrollbarAttr {
-    setScrollTop: (scrollTop: number) => void
+export interface ScrollbarProps {
+    // document total length
+    totalLength: number
+    // current document position (0..totalLength)
+    position: number
+    // current visible viewport length
+    visibleLength: number
+    // orientation of the scrollbar
+    orientation: 'x' | 'y'
+    onChange: (position: number) => void
+    onBlur: () => void
 }
 
-export const ScrollbarComponent: FC<ScrollbarProps> = ({
-    offsetHeight = 0,
-    scrollTop = 0,
-    setScrollTop,
-    scrollHeight = 0,
-    minThumbLength = 20,
-    direction = 'x',
+export const Scrollbar: FC<ScrollbarProps> = ({
+    totalLength,
+    position,
+    visibleLength,
+    orientation,
+    onChange,
+    onBlur,
 }) => {
-    if (scrollHeight < offsetHeight)
-        throw Error(
-            `scrollHeight[${scrollHeight}] must larger than offsetHeight[${offsetHeight}]`
-        )
-    const _thumbEl = useRef<HTMLSpanElement>(null)
-    const _containerEl = useRef<HTMLDivElement>(null)
-    const _thumbContainerEl = useRef<HTMLDivElement>(null)
+    if (totalLength < visibleLength) {
+        totalLength = visibleLength + 200
+    }
+
+    const containerRef = useRef<HTMLDivElement>(null)
+    const trackRef = useRef<HTMLDivElement>(null)
+    const thumbRef = useRef<HTMLSpanElement>(null)
     const [thumbStyle, setThumbStyle] = useState<CSSProperties>()
+    const [visible, setVisible] = useState(false)
+    const hideTimerRef = useRef<number | null>(null)
 
     useEffect(() => {
-        const _render = () => {
-            const thumbContainer = _thumbContainerEl.current as HTMLDivElement
-            /**
-             * The difference between clientHeight, offsetHeight, scrollHeight, offsetTop, and scrollTop
-             * https://www.programmersought.com/article/76801676023/
-             */
-            const scrollRatio =
-                scrollHeight === 0 ? 0 : scrollTop / scrollHeight
-            const thumbRatio =
-                scrollHeight === 0 ? 0 : offsetHeight / scrollHeight
-            const containerStyle = getComputedStyle(thumbContainer)
-            const newThumbStyle: CSSProperties = {}
-            if (xScrollbar()) {
-                const containerLength = parseFloat(containerStyle.width)
-                const thumbWidth = containerLength * thumbRatio
-                const thumbLength = Math.max(thumbWidth, minThumbLength)
-                newThumbStyle.width =
-                    thumbLength === containerLength ? 0 : toPx(thumbLength)
-                const left = scrollRatio * containerLength
-                if (left + thumbLength > containerLength) {
-                    newThumbStyle.right = 0
-                } else newThumbStyle.left = toPx(left)
-            } else {
-                const containerLength = parseFloat(containerStyle.height)
-                const thumbHeight = thumbContainer.offsetHeight * thumbRatio
-                const thumbLength = Math.max(thumbHeight, minThumbLength)
-                newThumbStyle.height =
-                    thumbLength === containerLength ? 0 : toPx(thumbLength)
-                const top = scrollRatio * containerLength
-                if (top + thumbLength > containerLength) {
-                    newThumbStyle.bottom = 0
-                } else newThumbStyle.top = toPx(top)
-            }
-            setThumbStyle(newThumbStyle)
-        }
-        _render()
-    }, [offsetHeight, scrollTop, scrollHeight, minThumbLength, direction])
+        const ro = new ResizeObserver(() => renderThumb())
+        const el = trackRef.current
+        if (el) ro.observe(el)
+        renderThumb()
+        return () => ro.disconnect()
+    }, [totalLength, visibleLength, position, orientation])
 
-    const xScrollbar = () => {
-        return direction === 'x'
+    // Auto show on new data/position then hide after delay
+    useEffect(() => {
+        // show now
+        setVisible(true)
+        // clear previous timer
+        if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+        // hide later
+        hideTimerRef.current = window.setTimeout(() => {
+            setVisible(false)
+        }, 800)
+        return () => {
+            if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+        }
+    }, [totalLength, visibleLength, position, orientation])
+
+    const renderThumb = () => {
+        const track = trackRef.current
+        if (!track) return
+
+        const ratio = totalLength === 0 ? 0 : visibleLength / totalLength
+        const posRatio = totalLength === 0 ? 0 : position / totalLength
+
+        const style: CSSProperties = {}
+        if (orientation === 'x') {
+            const containerLength = track.clientWidth
+            const thumbLength = Math.max(containerLength * ratio, 20)
+            style.width = thumbLength >= containerLength ? 0 : px(thumbLength)
+            const left = posRatio * containerLength
+            if (left + thumbLength > containerLength) style.right = 0
+            else style.left = px(left)
+        } else {
+            const containerLength = track.clientHeight
+            const thumbLength = Math.max(containerLength * ratio, 20)
+            style.height = thumbLength >= containerLength ? 0 : px(thumbLength)
+            const top = posRatio * containerLength
+            if (top + thumbLength > containerLength) style.bottom = 0
+            else style.top = px(top)
+        }
+        setThumbStyle(style)
     }
-    const thumbMouseDown = (mde: MouseEvent) => {
+
+    const onThumbMouseDown = (mde: ReactMouseEvent<HTMLSpanElement>) => {
         mde.stopPropagation()
         mde.preventDefault()
-        const startPosition = xScrollbar() ? mde.clientX : mde.clientY
-        const startScollDistance = scrollTop
-        const sub = new Subscription()
-        sub.add(
-            on(window, EventType.MOUSE_MOVE).subscribe((mme) => {
-                mme.preventDefault()
-                mme.stopPropagation()
-                const endPosition = xScrollbar() ? mme.clientX : mme.clientY
-                const moved = endPosition - startPosition
-                calcScrollDistance(startScollDistance, moved)
-            })
-        )
-        sub.add(
-            on(window, EventType.MOUSE_UP).subscribe(() => {
-                sub.unsubscribe()
-            })
-        )
-    }
-    const thumbHostMouseWheel = (e: WheelEvent) => {
-        const moved = xScrollbar() ? e.deltaX : e.deltaY
-        calcScrollDistance(scrollTop, moved)
-    }
-    const calcScrollDistance = (
-        containerScrollDistance: number,
-        moved: number
-    ) => {
-        const totalLength = _containerLength()
-        const thumbLength = _thumbLength()
-        const oldScrollRadio = containerScrollDistance / scrollHeight
-        const oldStart = totalLength * oldScrollRadio
-        let newStart = oldStart + moved
-        if (newStart + thumbLength > totalLength)
-            newStart = totalLength - thumbLength
-        if (newStart < 0) newStart = 0
-        const newScrollRadio = newStart / totalLength
-        const newScrollDistance = scrollHeight * newScrollRadio
-        setScrollTop(newScrollDistance)
+        const start = orientation === 'x' ? mde.clientX : mde.clientY
+        const startDocPos = position
+        const move = (mme: MouseEvent) => {
+            mme.preventDefault()
+            mme.stopPropagation()
+            const end = orientation === 'x' ? mme.clientX : mme.clientY
+            const diff = end - start
+            applyDelta(startDocPos, diff)
+        }
+        const up = () => {
+            window.removeEventListener('mousemove', move)
+            window.removeEventListener('mouseup', up)
+            onBlur()
+        }
+        window.addEventListener('mousemove', move)
+        window.addEventListener('mouseup', up)
     }
 
-    const _containerLength = () => {
-        return xScrollbar()
-            ? _thumbContainerEl.current?.offsetWidth ?? 0
-            : _thumbContainerEl.current?.offsetHeight ?? 0
+    const onWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
+        const delta = orientation === 'x' ? e.deltaX : e.deltaY
+        // keep visible during wheel
+        setVisible(true)
+        if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+        hideTimerRef.current = window.setTimeout(() => setVisible(false), 800)
+        applyDelta(position, delta)
     }
 
-    const _thumbLength = () => {
-        return xScrollbar()
-            ? _thumbEl.current?.offsetWidth ?? 0
-            : _thumbEl.current?.offsetHeight ?? 0
+    const applyDelta = (startDocPos: number, deltaPx: number) => {
+        const track = trackRef.current
+        const thumb = thumbRef.current
+        if (!track) return
+        const totalPx =
+            orientation === 'x' ? track.clientWidth : track.clientHeight
+        const thumbPx =
+            orientation === 'x'
+                ? thumb?.offsetWidth ?? 0
+                : thumb?.offsetHeight ?? 0
+        const oldRatio = totalPx === 0 ? 0 : startDocPos / totalLength
+        const oldStartPx = totalPx * oldRatio
+        let newStartPx = oldStartPx + deltaPx
+        if (newStartPx + thumbPx > totalPx) newStartPx = totalPx - thumbPx
+        if (newStartPx < 0) newStartPx = 0
+        const newRatio = totalPx === 0 ? 0 : newStartPx / totalPx
+        const newDocPos = clamp(
+            newRatio * totalLength,
+            0,
+            totalLength - visibleLength
+        )
+        onChange(newDocPos)
     }
+
+    const hostClass = `${styles.host} ${
+        orientation === 'x' ? styles.x : styles.y
+    } ${visible ? styles.visible : ''}`
+
     return (
         <div
-            className={`${styles.host} ${
-                xScrollbar() ? styles['x-scrollbar'] : styles['y-scrollbar']
-            }`}
+            ref={containerRef}
+            className={hostClass}
+            onWheel={onWheel}
+            onMouseEnter={() => {
+                setVisible(true)
+                if (hideTimerRef.current)
+                    window.clearTimeout(hideTimerRef.current)
+            }}
+            onMouseLeave={() => {
+                if (hideTimerRef.current)
+                    window.clearTimeout(hideTimerRef.current)
+                hideTimerRef.current = window.setTimeout(
+                    () => setVisible(false),
+                    300
+                )
+            }}
         >
-            <div
-                className={styles['edit-scrollbar']}
-                ref={_containerEl}
-                style={{
-                    height: '100%',
-                    width: '100%',
-                }}
-            >
-                <div
-                    className={styles['thumb_container']}
-                    ref={_thumbContainerEl}
-                    onWheel={(e) => thumbHostMouseWheel(e)}
-                >
-                    <span
-                        className={styles['thumb']}
-                        ref={_thumbEl}
-                        style={thumbStyle}
-                        onMouseDown={(e) => thumbMouseDown(e)}
-                    />
-                </div>
+            <div ref={trackRef} className={styles.track}>
+                <span
+                    ref={thumbRef}
+                    className={styles.thumb}
+                    style={thumbStyle}
+                    onMouseDown={onThumbMouseDown}
+                />
             </div>
         </div>
     )
 }
-function toPx(num: number): string {
-    return `${num}px`
+
+function px(n: number) {
+    return `${n}px`
+}
+
+function clamp(n: number, min: number, max: number) {
+    return Math.max(min, Math.min(max, n))
 }

@@ -1,7 +1,6 @@
 import {action, makeObservable, observable} from 'mobx'
 import {createContext, type MouseEvent} from 'react'
 import {Cell} from '../defs'
-import {ScrollBar} from './scrollbar'
 import {Textarea} from './textarea'
 import {
     DataServiceImpl as DataService,
@@ -21,7 +20,6 @@ export class CanvasStore {
         public readonly craftManager: CraftManager
     ) {
         makeObservable(this)
-        this.scrollbar = new ScrollBar(this)
         this.textarea = new Textarea(this)
         this.blockOutliner = new BlockOutliner(this)
         this.diyButton = new DiyButton(this)
@@ -37,7 +35,6 @@ export class CanvasStore {
      */
     same = false
 
-    scrollbar: ScrollBar
     textarea: Textarea
     blockOutliner: BlockOutliner
     diyButton: DiyButton

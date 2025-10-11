@@ -25,7 +25,6 @@ import {
     useContext,
 } from 'react'
 import {take, takeUntil} from 'rxjs/operators'
-import {ScrollbarComponent} from '@/components/scrollbar'
 import {EventType, KeyboardEventCode, on} from '@/core/events'
 import {SelectorComponent, SelectorProps} from '@/components/selector'
 import {ITextareaInstance, TextContainerComponent} from '@/components/textarea'
@@ -60,6 +59,7 @@ import {LeftTop} from '@/core/settings'
 import {match} from './defs'
 import ColumnHeaders from './headers/column'
 import RowHeaders from './headers/row'
+import {Scrollbar} from '../scrollbar'
 
 const CANVAS_HOST_ID = simpleUuid()
 const canvas = (): HTMLCanvasElement => {
@@ -128,11 +128,21 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     // Cache the transferred OffscreenCanvas to avoid InvalidStateError in StrictMode/dev.
     const offscreenCanvasRef = useRef<OffscreenCanvas | null>(null)
 
+    const [docPositionX, setDocPositionX] = useState(0)
+    const [docPositionY, setDocPositionY] = useState(0)
+    const [documentHeight, setDocumentHeight] = useState(0)
+    const [documentWidth, setDocumentWidth] = useState(0)
+    const [visibleHeight, setVisibleHeight] = useState(0)
+    const [visibleWidth, setVisibleWidth] = useState(0)
+    const [scrollbarRendering, setScrollbarRendering] = useState(false)
+
     const setCanvasSize = () => {
         const c = canvas()
-        c.width = c.getBoundingClientRect().width * window.devicePixelRatio || 1
-        c.height =
-            c.getBoundingClientRect().height * window.devicePixelRatio || 1
+        const size = c.getBoundingClientRect()
+        c.width = size.width * window.devicePixelRatio || 1
+        c.height = size.height * window.devicePixelRatio || 1
+        setVisibleHeight(size.height)
+        setVisibleWidth(size.width)
     }
 
     useEffect(() => {
@@ -162,7 +172,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     })
             }
         }
-        store.scrollbar.init()
         store.dataSvc.setCurrentSheetIdx(activeSheet)
     }, [])
 
@@ -172,12 +181,33 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             store.setAnchor(g.anchorX, g.anchorY)
             setGrid(g)
         })
+        store.dataSvc.registerCellUpdatedCallback(() => {
+            const currentIdx = store.currSheetIdx
+            store.dataSvc.getSheetDimension(currentIdx).then((v) => {
+                if (!isErrorMessage(v)) {
+                    setDocumentHeight(v.height)
+                    setDocumentWidth(v.width)
+                }
+                const size = canvas().getBoundingClientRect()
+                setVisibleHeight(size.height * window.devicePixelRatio)
+                setVisibleWidth(size.width * window.devicePixelRatio)
+            })
+        })
     }, [store])
 
     useEffect(() => {
         if (!grid) return
         store.blockOutliner.updateBlockInfos(grid)
+        if (!scrollbarRendering) {
+            setDocPositionX(grid.anchorX)
+            setDocPositionY(grid.anchorY)
+        }
     }, [grid])
+
+    useEffect(() => {
+        if (!scrollbarRendering) return
+        renderWithAnchor(store, docPositionX, docPositionY)
+    }, [docPositionX, docPositionY, scrollbarRendering])
 
     // Watch DPR and canvas size changes; call provided handler with latest values
     useEffect(() => {
@@ -194,6 +224,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             height: number
         }) => {
             store.dataSvc.resize(width, height, dpr)
+            setVisibleHeight(height)
+            setVisibleWidth(width)
         }
         let prevDpr = window.devicePixelRatio || 1
 
@@ -525,10 +557,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         render(store)
     }, [activeSheet])
 
-    const setScrollTop = (scrollTop: number, type: 'x' | 'y') => {
-        store.scrollbar.setScrollTop(scrollTop, type)
-    }
-
     const onMouseWheel = (e: WheelEvent) => {
         // Accumulate deltas and process at most once per animation frame
         wheelAccumRef.current += e.deltaY
@@ -554,7 +582,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 renderWithAnchor(store, store.anchorX, newY).finally(() => {
                     renderInFlightRef.current = false
                     // After render, use returned anchor to keep headers and cells aligned
-                    store.scrollbar.update('y')
                     if (
                         wheelAccumRef.current !== 0 ||
                         rerenderScheduledRef.current
@@ -1028,13 +1055,32 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             {store.cellValidation.invalidCells.map((props, i) => (
                 <ShadowCellComponent key={i} shadowCell={props} />
             ))}
-            <ScrollbarComponent
-                {...store.scrollbar.xScrollbar}
-                setScrollTop={(e) => setScrollTop(e, 'x')}
+
+            <Scrollbar
+                totalLength={documentHeight}
+                position={docPositionY}
+                visibleLength={visibleHeight}
+                orientation="y"
+                onChange={(e) => {
+                    setScrollbarRendering(true)
+                    setDocPositionY(e)
+                }}
+                onBlur={() => {
+                    setScrollbarRendering(false)
+                }}
             />
-            <ScrollbarComponent
-                {...store.scrollbar.yScrollbar}
-                setScrollTop={(e) => setScrollTop(e, 'y')}
+            <Scrollbar
+                totalLength={documentWidth}
+                position={docPositionX}
+                visibleLength={visibleWidth}
+                orientation="x"
+                onChange={(e) => {
+                    setScrollbarRendering(true)
+                    setDocPositionX(e)
+                }}
+                onBlur={() => {
+                    setScrollbarRendering(false)
+                }}
             />
             {store.textarea.context && store.textarea.editing && (
                 <TextContainerComponent

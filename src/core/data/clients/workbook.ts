@@ -115,7 +115,7 @@ export class WorkbookClient implements Client {
         throw new Error('Method not implemented.')
     }
 
-    registerCellValueChangedCallback(
+    async registerCellValueChangedCallback(
         sheetIdx: number,
         rowIdx: number,
         colIdx: number,
@@ -159,7 +159,7 @@ export class WorkbookClient implements Client {
         return result
     }
 
-    registerShadowCellValueChangedCallback(
+    async registerShadowCellValueChangedCallback(
         sheetIdx: number,
         rowIdx: number,
         colIdx: number,
