@@ -1,61 +1,56 @@
-$border: 1px solid #e2e6ed;
-$y-scrollbar-width: 16px;
-$x-scrollbar-height: 16px;
 .host {
-  display: block;
-  background-color: #f2f4f7;
   position: absolute;
-  // Sit above headers (headers use z-index: 800)
+  inset: 0;
+  pointer-events: auto;
   z-index: 900;
-  .thumb {
-    transition: margin-left 0.2s;
-  }
-  &.x-scrollbar {
-    border-top: $border;
-    bottom: 0;
-    width: calc(100% - #{$y-scrollbar-width});
-    height: $x-scrollbar-height;
-    .edit-scrollbar {
-      display: flex;
-    }
-    .thumb {
-      transition: margin-top 0.2s;
-      height: 45%;
-    }
-    .thumb_container {
-      align-items: center;
-    }
-  }
-  &.y-scrollbar {
-    border-left: $border;
-    top: 0;
-    right: 0;
-    width: $y-scrollbar-width;
-    height: calc(100% - #{$x-scrollbar-height});
-    .edit-scrollbar {
-      flex-direction: column;
-      display: flex;
-    }
-    .thumb {
-      transition: margin-left 0.2s;
-      width: 45%;
-    }
-    .thumb_container {
-      justify-content: center;
-    }
-  }
+  opacity: 0;
+  transition: opacity 120ms ease-in-out;
 }
-.thumb_container {
-  position: relative;
-  flex: 1;
-  display: flex;
+
+.host.visible,
+.host:hover {
+  opacity: 1;
+}
+.track {
+  position: absolute;
+  inset: 0;
 }
 .thumb {
   position: absolute;
   border-radius: 4px;
-  background-color: #c0c6cf;
-  cursor: default;
-  &:hover {
-    background-color: #9298a2;
-  }
+  background-color: rgba(192, 198, 207, 0.9);
+  transition: background-color 0.15s;
+}
+.thumb:hover {
+  background-color: rgba(146, 152, 162, 0.95);
+}
+
+/* Horizontal scrollbar */
+.x {
+  left: 32px;
+  right: 0px;
+  bottom: 0;
+  height: 10px;
+  top: auto; /* cancel host's top from inset */
+}
+.x .track {
+  height: 100%;
+}
+.x .thumb {
+  height: 100%;
+}
+
+/* Vertical scrollbar */
+.y {
+  top: 24px;
+  bottom: 0px;
+  right: 0;
+  width: 10px;
+  left: auto;
+}
+.y .track {
+  width: 100%;
+}
+.y .thumb {
+  width: 100%;
 }
