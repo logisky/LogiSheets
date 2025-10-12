@@ -11,8 +11,12 @@ import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
 import {BlockOutliner} from './block-outliner'
 import {DiyButton} from './diy-button'
-import {CellValidation} from './cell-validation'
-import {isErrorMessage, type FormulaDisplayInfo} from 'logisheets-web'
+import {
+    ErrorMessage,
+    isErrorMessage,
+    type FormulaDisplayInfo,
+} from 'logisheets-web'
+import {Grid} from '@/core/worker/types'
 
 export class CanvasStore {
     constructor(
@@ -23,7 +27,6 @@ export class CanvasStore {
         this.textarea = new Textarea(this)
         this.blockOutliner = new BlockOutliner(this)
         this.diyButton = new DiyButton(this)
-        this.cellValidation = new CellValidation(this)
     }
     @observable.ref
     startCell?: Cell
@@ -38,7 +41,6 @@ export class CanvasStore {
     textarea: Textarea
     blockOutliner: BlockOutliner
     diyButton: DiyButton
-    cellValidation: CellValidation
 
     get currSheetIdx() {
         return this.dataSvc.getCurrentSheetIdx()
@@ -66,21 +68,26 @@ export class CanvasStore {
         this._sheetAnchorData.set(this.currSheetIdx, data)
     }
 
-    render() {
+    async render(): Promise<Grid | ErrorMessage> {
         return this.dataSvc
             .render(this.currentSheetId, this.anchorX, this.anchorY)
             .then((g) => {
-                if (isErrorMessage(g)) return
+                if (isErrorMessage(g)) return g
                 this.setAnchor(g.anchorX, g.anchorY)
+                return g
             })
     }
 
-    renderWithAnchor(anchorX: number, anchorY: number) {
+    async renderWithAnchor(
+        anchorX: number,
+        anchorY: number
+    ): Promise<Grid | ErrorMessage> {
         return this.dataSvc
             .render(this.currentSheetId, anchorX, anchorY)
             .then((g) => {
-                if (isErrorMessage(g)) return
+                if (isErrorMessage(g)) return g
                 this.setAnchor(g.anchorX, g.anchorY)
+                return g
             })
     }
 

@@ -12,9 +12,13 @@ import {
     Cell,
     MergeCell,
     BlockInfo,
+    CellPosition,
+    CellId,
 } from 'logisheets-web'
+import {sheetCellIdToString} from './clients/workbook'
 
 export const MAX_COUNT = 10000
+type SheetId = number
 
 export class DataServiceImpl {
     constructor(
@@ -24,26 +28,24 @@ export class DataServiceImpl {
         this._init()
     }
 
-    public render(
+    public async render(
         sheetId: number,
         anchorX: number,
         anchorY: number
     ): Resp<Grid> {
         return this._offscreen.render(sheetId, anchorX, anchorY).then((v) => {
             if (isErrorMessage(v)) return v
-            this._grid = v
-            if (!this._render) return v
-            this._render(v)
             return v
         })
     }
 
-    public resize(width: number, height: number, dpr: number): Resp<Grid> {
+    public async resize(
+        width: number,
+        height: number,
+        dpr: number
+    ): Resp<Grid> {
         return this._offscreen.resize(width, height, dpr).then((v) => {
             if (isErrorMessage(v)) return v
-            this._grid = v
-            if (!this._render) return v
-            this._render(v)
             return v
         })
     }
@@ -53,11 +55,8 @@ export class DataServiceImpl {
         this._sheetIdx = 0
         return this._offscreen.render(this._sheetId, 0, 0).then((v) => {
             if (isErrorMessage(v)) return
-            this._grid = v
-            if (!this._render) return
-            this._render(v)
-            this._anchorX = 0
-            this._anchorY = 0
+            0
+            0
         })
     }
 
@@ -83,11 +82,6 @@ export class DataServiceImpl {
         this._sheetId = this._sheetInfos[idx].id
         this._offscreen.render(this._sheetId, 0, 0).then((v) => {
             if (isErrorMessage(v)) return
-            this._grid = v
-            if (!this._render) return
-            this._render(v)
-            this._anchorX = 0
-            this._anchorY = 0
         })
     }
 
@@ -143,33 +137,10 @@ export class DataServiceImpl {
         return this._workbook.redo()
     }
 
-    public getGrid(): Grid | undefined {
-        return this._grid
-    }
-
     public getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell> {
         return this._workbook.getCell({sheetIdx, row, col}).then((v) => {
             if (!isErrorMessage(v)) return new Cell(v)
             return v
-        })
-    }
-
-    public registerRenderCallback(f: (grid: Grid) => void): void {
-        if (this._render) {
-            return
-        }
-        this._render = f
-        this._workbook.registerCellUpdatedCallback(async () => {
-            const grid = await this._offscreen.render(
-                this._sheetId,
-                this._anchorX,
-                this._anchorY
-            )
-            if (isErrorMessage(grid)) return
-            this._grid = grid
-
-            if (!this._render) return
-            this._render(grid)
         })
     }
 
@@ -192,6 +163,40 @@ export class DataServiceImpl {
         return this._workbook.registerCellUpdatedCallback(f, callbackId)
     }
 
+    public addInvalidCell(
+        sheetId: SheetId,
+        cellId: CellId,
+        startPosition: CellPosition,
+        endPosition: CellPosition
+    ) {
+        if (!this._invalidCellMap.has(sheetId)) {
+            this._invalidCellMap.set(sheetId, new Map())
+        }
+        this._invalidCellMap
+            .get(sheetId)
+            ?.set(sheetCellIdToString({sheetId, cellId}), [
+                startPosition,
+                endPosition,
+            ])
+    }
+
+    public removeInvalidCell(sheetId: SheetId, cellId: CellId) {
+        this._invalidCellMap
+            .get(sheetId)
+            ?.delete(sheetCellIdToString({sheetId, cellId}))
+    }
+
+    public getInvalidCells(): readonly [CellPosition, CellPosition][] {
+        return Array.from(
+            this._invalidCellMap
+                .get(this._sheetId)
+                ?.values()
+                .map((v) => {
+                    return v
+                }) ?? []
+        )
+    }
+
     private _init() {
         this._workbook.getAllSheetInfo().then((v) => {
             if (!isErrorMessage(v)) this._sheetInfos = v
@@ -208,10 +213,10 @@ export class DataServiceImpl {
 
     private _sheetIdx = 0
     private _sheetId = 0
-    private _anchorX = 0
-    private _anchorY = 0
     private _sheetUpdateCallback: Callback[] = []
-    private _grid?: Grid
 
-    private _render?: (grid: Grid) => void
+    private _invalidCellMap = new Map<
+        SheetId,
+        Map<string, [CellPosition, CellPosition]>
+    >()
 }

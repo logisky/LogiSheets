@@ -114,21 +114,21 @@ export const MenuComponent = (props: MenuProps) => {
                     }
 
                     if (!result) {
-                        store.cellValidation.addInvalidCell(
+                        store.dataSvc.addInvalidCell(
                             sheetId,
                             {type: 'ephemeralCell', value: shadowId},
                             shadowInfo.startPosition,
                             shadowInfo.endPosition
                         )
                     } else {
-                        store.cellValidation.removeInvalidCell(sheetId, {
+                        store.dataSvc.removeInvalidCell(sheetId, {
                             type: 'ephemeralCell',
                             value: shadowId,
                         })
                     }
                 }
                 const cellRemovedCallback = async (shadowId: number) => {
-                    store.cellValidation.removeInvalidCell(sheetId, {
+                    store.dataSvc.removeInvalidCell(sheetId, {
                         type: 'ephemeralCell',
                         value: shadowId,
                     })
