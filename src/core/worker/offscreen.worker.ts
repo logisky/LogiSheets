@@ -39,8 +39,6 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
             throw new Error('Canvas not initialized')
         }
         this._sheetId = sheetId
-        this._anchorX = anchorX
-        this._anchorY = anchorY
 
         const ctx = this._canvas.getContext('2d')
         if (!ctx) {
@@ -52,7 +50,12 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
 
         ctx.setTransform(1, 0, 0, 1, 0, 0)
         ctx.scale(this._dpr, this._dpr)
-        ctx.clearRect(0, 0, this._canvas.width, this._canvas.height)
+        ctx.clearRect(
+            0,
+            0,
+            this._canvas.width * this._dpr,
+            this._canvas.height * this._dpr
+        )
 
         const viewManager = new ViewManager(this._workbook, sheetIdx, pool)
 
@@ -64,6 +67,8 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
         )
         if (isErrorMessage(viewResponse)) return viewResponse
 
+        this._anchorX = viewResponse.anchorX
+        this._anchorY = viewResponse.anchorY
         this._painter.setCanvas(this._canvas)
         this._painter.render(
             viewResponse.data,
@@ -71,18 +76,22 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
             viewResponse.anchorY
         )
 
-        const rows = viewResponse.data.rows.map((r) => {
-            return {
-                idx: r.coordinate.startRow,
-                height: r.position.height,
-            }
-        })
-        const columns = viewResponse.data.cols.map((c) => {
-            return {
-                idx: c.coordinate.startCol,
-                width: c.position.width,
-            }
-        })
+        const rows = viewResponse.data.rows
+            .filter((r) => r.position.startRow >= viewResponse.anchorY)
+            .map((r) => {
+                return {
+                    idx: r.coordinate.startRow,
+                    height: r.position.height,
+                }
+            })
+        const columns = viewResponse.data.cols
+            .filter((c) => c.position.startCol >= viewResponse.anchorX)
+            .map((c) => {
+                return {
+                    idx: c.coordinate.startCol,
+                    width: c.position.width,
+                }
+            })
 
         const result: Grid = {
             anchorX: viewResponse.anchorX,

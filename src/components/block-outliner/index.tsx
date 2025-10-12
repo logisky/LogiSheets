@@ -2,7 +2,7 @@ import {makeAutoObservable} from 'mobx'
 import {observer} from 'mobx-react'
 import Box from '@mui/material/Box'
 import Settings from '@mui/icons-material/Settings'
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
@@ -41,6 +41,7 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
         x: 0,
         y: 0,
     })
+    const [isHover, setIsHover] = useState(false)
 
     const handleClick = (event: React.MouseEvent) => {
         event.preventDefault()
@@ -51,6 +52,23 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
         setIsMenuOpen(true)
     }
 
+    // Non-intercepting hover detection via global mousemove
+    useEffect(() => {
+        const onMove = (e: MouseEvent) => {
+            const mx = e.clientX
+            const my = e.clientY
+            const left = x - 6
+            const top = y - 6
+            const right = x + width + 6
+            const bottom = y + height + 6
+            const inside =
+                mx >= left && mx <= right && my >= top && my <= bottom
+            setIsHover(inside)
+        }
+        window.addEventListener('mousemove', onMove)
+        return () => window.removeEventListener('mousemove', onMove)
+    }, [x, y, width, height])
+
     return (
         <Box
             sx={{
@@ -59,7 +77,7 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                 height: `${height}px`,
                 left: `${x}px`,
                 top: `${y}px`,
-                pointerEvents: 'auto',
+                pointerEvents: 'none',
                 zIndex: ZINDEX_BLOCK_OUTLINER,
             }}
         >
@@ -68,15 +86,9 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                 sx={{
                     position: 'absolute',
                     inset: '-6px',
-                    pointerEvents: 'auto',
+                    pointerEvents: 'none',
                     background: 'transparent',
                     borderRadius: 1,
-                    '&:hover .block-outliner-border': {
-                        borderColor: 'rgb(30, 144, 255)',
-                    },
-                    '&:hover .block-outliner-action': {
-                        display: 'flex',
-                    },
                     zIndex: ZINDEX_BLOCK_OUTLINER,
                 }}
             >
@@ -85,7 +97,10 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                     sx={{
                         position: 'absolute',
                         inset: '6px',
-                        border: '2px solid rgb(2, 63, 124)',
+                        border: '2px solid',
+                        borderColor: isHover
+                            ? 'rgb(30, 144, 255)'
+                            : 'rgb(2, 63, 124)',
                         background: 'transparent',
                         boxSizing: 'border-box',
                         transition: 'border-color 0.2s',
@@ -95,7 +110,7 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                 <Box
                     className="block-outliner-action"
                     sx={{
-                        display: 'none',
+                        display: isHover ? 'flex' : 'none',
                         position: 'absolute',
                         top: '-10px',
                         right: '-10px',
@@ -117,6 +132,7 @@ export const BlockOutlinerComponent = observer((props: IBlockOutlinerProps) => {
                             color: '#fff',
                         },
                         userSelect: 'none',
+                        pointerEvents: 'auto',
                     }}
                     onClick={(e) => {
                         e.stopPropagation()

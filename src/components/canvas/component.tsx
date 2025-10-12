@@ -83,18 +83,6 @@ export const CanvasComponent = (props: CanvasProps) => {
     )
 }
 
-function render(store: CanvasStore) {
-    return store.render()
-}
-
-function renderWithAnchor(
-    store: CanvasStore,
-    anchorX: number,
-    anchorY: number
-) {
-    return store.renderWithAnchor(anchorX, anchorY)
-}
-
 const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const {selectedData, selectedData$, activeSheet} = props
     const store = useContext(CanvasStoreContext)
@@ -116,6 +104,20 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             }
         }[]
     )
+
+    const render = () => {
+        return store.render().then((g) => {
+            if (isErrorMessage(g)) return
+            setGrid(g)
+        })
+    }
+
+    const renderWithAnchor = (anchorX: number, anchorY: number) => {
+        return store.renderWithAnchor(anchorX, anchorY).then((g) => {
+            if (isErrorMessage(g)) return
+            setGrid(g)
+        })
+    }
     const textEl = useRef<ITextareaInstance>(null)
     const [grid, setGrid] = useState<Grid | undefined>(undefined)
     // Accumulate wheel deltas and apply once per animation frame to avoid jitter
@@ -128,6 +130,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     // Cache the transferred OffscreenCanvas to avoid InvalidStateError in StrictMode/dev.
     const offscreenCanvasRef = useRef<OffscreenCanvas | null>(null)
 
+    // Scrollbar states
     const [docPositionX, setDocPositionX] = useState(0)
     const [docPositionY, setDocPositionY] = useState(0)
     const [documentHeight, setDocumentHeight] = useState(0)
@@ -135,6 +138,10 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const [visibleHeight, setVisibleHeight] = useState(0)
     const [visibleWidth, setVisibleWidth] = useState(0)
     const [scrollbarRendering, setScrollbarRendering] = useState(false)
+
+    const [invalidCells, setInvalidCells] = useState<
+        {x: number; y: number; width: number; height: number}[]
+    >([])
 
     const setCanvasSize = () => {
         const c = canvas()
@@ -168,7 +175,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 store.dataSvc
                     .initOffscreen(offscreenCanvasRef.current)
                     .then(() => {
-                        render(store)
+                        render()
                     })
             }
         }
@@ -177,20 +184,18 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
     // Subscribe to offscreen render results so we can draw HTML headers using Grid metadata
     useEffect(() => {
-        store.dataSvc.registerRenderCallback((g) => {
-            store.setAnchor(g.anchorX, g.anchorY)
-            setGrid(g)
-        })
         store.dataSvc.registerCellUpdatedCallback(() => {
-            const currentIdx = store.currSheetIdx
-            store.dataSvc.getSheetDimension(currentIdx).then((v) => {
-                if (!isErrorMessage(v)) {
-                    setDocumentHeight(v.height)
-                    setDocumentWidth(v.width)
-                }
-                const size = canvas().getBoundingClientRect()
-                setVisibleHeight(size.height * window.devicePixelRatio)
-                setVisibleWidth(size.width * window.devicePixelRatio)
+            render().then(() => {
+                const currentIdx = store.currSheetIdx
+                store.dataSvc.getSheetDimension(currentIdx).then((v) => {
+                    if (!isErrorMessage(v)) {
+                        setDocumentHeight(v.height)
+                        setDocumentWidth(v.width)
+                    }
+                    const size = canvas().getBoundingClientRect()
+                    setVisibleHeight(size.height * window.devicePixelRatio)
+                    setVisibleWidth(size.width * window.devicePixelRatio)
+                })
             })
         })
     }, [store])
@@ -202,11 +207,20 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             setDocPositionX(grid.anchorX)
             setDocPositionY(grid.anchorY)
         }
+        const result = store.dataSvc.getInvalidCells().map((v) => {
+            return {
+                x: widthToPx(v[0].x - grid.anchorX) + LeftTop.width,
+                y: ptToPx(v[0].y - grid.anchorY) + LeftTop.height,
+                width: widthToPx(v[1].x - v[0].x),
+                height: ptToPx(v[1].y - v[0].y),
+            }
+        })
+        setInvalidCells(result)
     }, [grid])
 
     useEffect(() => {
         if (!scrollbarRendering) return
-        renderWithAnchor(store, docPositionX, docPositionY)
+        renderWithAnchor(docPositionX, docPositionY)
     }, [docPositionX, docPositionY, scrollbarRendering])
 
     // Watch DPR and canvas size changes; call provided handler with latest values
@@ -278,7 +292,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 const size = canvas().getBoundingClientRect()
                 const anchorX = Math.max(0, pos.x - size.width / 2)
                 const anchorY = Math.max(0, pos.y - size.height / 2)
-                renderWithAnchor(store, anchorX, anchorY).then(() => {
+                renderWithAnchor(anchorX, anchorY).then(() => {
                     canvas().focus({preventScroll: true})
                     store.textarea.reset()
                 })
@@ -554,7 +568,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     useEffect(() => {
         // store.renderer.canvas.focus()
         store.dataSvc.setCurrentSheetIdx(activeSheet)
-        render(store)
+        render()
     }, [activeSheet])
 
     const onMouseWheel = (e: WheelEvent) => {
@@ -573,13 +587,13 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 return
             }
 
-            const newY = Math.max(0, store.anchorY + applyDelta)
+            const newY = Math.max(0, store.anchorY + pxToPt(applyDelta))
             if (newY === store.anchorY) return
 
             // Coalesce renders: if one is in flight, just mark for another frame
             if (!renderInFlightRef.current) {
                 renderInFlightRef.current = true
-                renderWithAnchor(store, store.anchorX, newY).finally(() => {
+                renderWithAnchor(store.anchorX, newY).finally(() => {
                     renderInFlightRef.current = false
                     // After render, use returned anchor to keep headers and cells aligned
                     if (
@@ -732,11 +746,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                         col: nextVisibleCell.x,
                     })
                 if (isErrorMessage(cellPosition)) return
-                await renderWithAnchor(
-                    store,
-                    store.anchorX,
-                    ptToPx(cellPosition.y)
-                )
+                await renderWithAnchor(store.anchorX, ptToPx(cellPosition.y))
                 const newData = buildSelectedDataFromCellRange(
                     nextVisibleCell.y,
                     col,
@@ -783,7 +793,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     })
                 if (isErrorMessage(cellPosition)) return
                 await renderWithAnchor(
-                    store,
                     store.anchorX,
                     ptToPx(cellPosition.y) - size.height
                 )
@@ -833,11 +842,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                         col: nextVisibleCell.x,
                     })
                 if (isErrorMessage(cellPosition)) return
-                await renderWithAnchor(
-                    store,
-                    widthToPx(cellPosition.x),
-                    store.anchorY
-                )
+                await renderWithAnchor(widthToPx(cellPosition.x), store.anchorY)
                 const newData = buildSelectedDataFromCellRange(
                     row,
                     nextVisibleCell.x,
@@ -884,7 +889,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     })
                 if (isErrorMessage(cellPosition)) return
                 await renderWithAnchor(
-                    store,
                     widthToPx(cellPosition.x) - size.width,
                     store.anchorY
                 )
@@ -1052,7 +1056,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             {store.diyButton.props.map((props, i) => (
                 <DiyButtonComponent key={i} props={props} />
             ))}
-            {store.cellValidation.invalidCells.map((props, i) => (
+            {invalidCells.map((props, i) => (
                 <ShadowCellComponent key={i} shadowCell={props} />
             ))}
 

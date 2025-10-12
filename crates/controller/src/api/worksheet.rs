@@ -499,6 +499,17 @@ impl<'a> Worksheet<'a> {
         let (end_col, _) =
             self.get_nearest_col_with_given_x(start_x + width, false, &mut *positioner)?;
 
+        let start_row = if start_row > 0 {
+            start_row - 1
+        } else {
+            start_row
+        };
+        let start_col = if start_col > 0 {
+            start_col - 1
+        } else {
+            start_col
+        };
+
         drop(positioner);
 
         let window = self.get_display_window(start_row, start_col, end_row, end_col)?;
