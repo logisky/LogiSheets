@@ -15,6 +15,9 @@ import {
 import {Cell} from '../defs'
 import {StandardKeyboardEvent} from '@/core/events'
 import {shallowCopy} from '@/core'
+import type {Grid} from '@/core/worker/types'
+import {xForColStart, yForRowStart} from '../grid_helper'
+import {LeftTop} from '@/core/settings'
 
 export class Textarea {
     constructor(public readonly store: CanvasStore) {
@@ -28,7 +31,7 @@ export class Textarea {
 
     private _currText = ''
 
-    updateText(t: string): Promise<FormulaDisplayInfo | undefined> {
+    async updateText(t: string): Promise<FormulaDisplayInfo | undefined> {
         this._currText = t
         if (t.startsWith('=')) {
             return this.store.dataSvc
@@ -141,6 +144,31 @@ export class Textarea {
             this._currText = text
             this._setEditing(true, context)
         })
+    }
+
+    @action
+    updateGrid(grid: Grid) {
+        if (!this.context) return
+        const context = new Context()
+        shallowCopy(this.context, context)
+        const row = this.context?.bindingData.coordinate.startRow
+        const col = this.context?.bindingData.coordinate.startCol
+
+        if (
+            row < grid.rows[0].idx ||
+            col < grid.columns[0].idx ||
+            row > grid.rows[grid.rows.length - 1].idx ||
+            col > grid.columns[grid.columns.length - 1].idx
+        ) {
+            context.visible = false
+        } else {
+            const startX = xForColStart(col, grid) + LeftTop.width
+            const startY = yForRowStart(row, grid) + LeftTop.height
+            context.visible = true
+            context.canvasOffsetX = startX
+            context.canvasOffsetY = startY
+        }
+        this.context = context
     }
 
     @action
