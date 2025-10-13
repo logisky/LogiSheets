@@ -17,6 +17,7 @@ export class Context<T = any> {
     public textareaOffsetY = 0
     public sheetName = ''
     public bindingData?: T
+    public visible: boolean = true
     lineHeight(): number {
         return this.cellHeight
     }

@@ -216,6 +216,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             }
         })
         setInvalidCells(result)
+        store.textarea.updateGrid(grid)
     }, [grid])
 
     useEffect(() => {
@@ -758,7 +759,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 return
             }
             case KeyboardEventCode.ARROW_DOWN: {
-                const [startIdx, endIdx] = findVisibleRowIdxRange(
+                const [_startIdx, endIdx] = findVisibleRowIdxRange(
                     store.anchorY,
                     size.height - 50,
                     grid

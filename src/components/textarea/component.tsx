@@ -271,7 +271,7 @@ const InternalComponent = observer(
             }
         }
 
-        return (
+        return context.visible ? (
             <div
                 onCompositionStart={handleEvent}
                 onCompositionUpdate={handleEvent}
@@ -296,10 +296,7 @@ const InternalComponent = observer(
             >
                 <canvas className={styles['text-canvas']} ref={textEl} />
                 <canvas
-                    style={{
-                        position: 'absolute',
-                        backgroundColor: 'transparent',
-                    }}
+                    className={styles['selection-canvas']}
                     ref={selectionEl}
                 />
                 <textarea
@@ -330,6 +327,6 @@ const InternalComponent = observer(
                     candidates={store.suggest.candidates}
                 />
             </div>
-        )
+        ) : null
     })
 )
