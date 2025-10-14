@@ -16,7 +16,6 @@
     "@types/react-transition-group": "^4.4.4",
     "@types/webpack-dev-server": "^4.7.2",
     "@wasm-tool/wasm-pack-plugin": "^1.6.0",
-    "ahooks": "^3.7.11",
     "craco-plugin-scoped-css": "^1.1.1",
     "css-loader": "^6.6.0",
     "eslint-plugin-react-hooks": "^4.3.0",
