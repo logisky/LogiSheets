@@ -2,10 +2,12 @@ import {EditPayload} from '../bindings'
 import {SetCellAlignment} from './set_cell_alignment'
 import {SetCellBorder} from './set_cell_border'
 import {SetCellFont} from './set_cell_font'
+import {SetCellNumFmt} from './set_cell_num_fmt'
 import {SetCellPatternFill} from './set_cell_pattern_fill'
 import {SetLineAlignment} from './set_line_alignment'
 import {SetLineBorder} from './set_line_border'
 import {SetLineFont} from './set_line_font'
+import {SetLineNumFmt} from './set_line_num_fmt'
 import {SetLinePatternFill} from './set_line_pattern_fill'
 
 export * from './set_cell_alignment'
@@ -16,6 +18,8 @@ export * from './set_line_alignment'
 export * from './set_line_border'
 export * from './set_line_font'
 export * from './set_line_pattern_fill'
+export * from './set_cell_num_fmt'
+export * from './set_line_num_fmt'
 
 export type Payload =
     | EditPayload
@@ -27,3 +31,5 @@ export type Payload =
     | {type: 'setLineBorder'; value: SetLineBorder}
     | {type: 'setLineFont'; value: SetLineFont}
     | {type: 'setLinePatternFill'; value: SetLinePatternFill}
+    | {type: 'setCellNumFmt'; value: SetCellNumFmt}
+    | {type: 'setLineNumFmt'; value: SetLineNumFmt}

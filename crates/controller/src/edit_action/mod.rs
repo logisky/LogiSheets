@@ -646,6 +646,7 @@ pub struct StyleUpdateType {
     pub set_border_outline: Option<bool>,
     pub set_pattern_fill: Option<PatternFill>,
     pub set_alignment: Option<Alignment>,
+    pub set_num_fmt: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, TS)]

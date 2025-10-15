@@ -15,6 +15,7 @@ pub fn execute_style_update(
     let border_manager = &mut sm.border_manager;
     let fill_manager = &mut sm.fill_manager;
     let cell_xfs_manager = &mut sm.cell_xfs_manager;
+    let num_fmt_manager = &mut sm.num_fmt_manager;
     let mut xf = cell_xfs_manager
         .get_item(id)
         .ok_or(StyleError::StyleIdNotFound(id))?
@@ -30,6 +31,11 @@ pub fn execute_style_update(
     if let Some(new_fill_id) = fill_manager.execute(xf.fill_id.unwrap_or(0), &update_type) {
         xf.fill_id = Some(new_fill_id);
         xf.apply_fill = Some(true)
+    }
+    if let Some(new_num_fmt_id) = num_fmt_manager.execute(xf.num_fmt_id.unwrap_or(0), &update_type)
+    {
+        xf.num_fmt_id = Some(new_num_fmt_id);
+        xf.apply_number_format = Some(true)
     }
     if let Some(alignment) = update_type.set_alignment {
         let mut result = CtCellAlignment::default();
