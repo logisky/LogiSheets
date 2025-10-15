@@ -1,283 +1,94 @@
-import {SelectBlockComponent} from './select-block'
-import {Cell} from './defs'
-import {useState, ReactElement, MouseEvent} from 'react'
+import {SelectedCellRange} from './events'
 import {useInjection} from '@/core/ioc/provider'
-import {ContextMenuComponent, ContextMenuItem} from '@/ui/contextmenu'
-import {
-    DeleteColsInBlockBuilder,
-    DeleteColsBuilder,
-    InsertColsBuilder,
-    Payload,
-    InsertColsInBlockBuilder,
-    InsertRowsBuilder,
-    DeleteRowsBuilder,
-    CreateBlockBuilder,
-    Transaction,
-    isErrorMessage,
-    BlockInfo,
-    InsertRowsInBlockBuilder,
-    DeleteRowsInBlockBuilder,
-} from 'logisheets-web'
 import {TYPES} from '@/core/ioc/types'
-import {DataServiceImpl as DataService} from '@/core/data'
+import {DataServiceImpl} from '@/core/data'
+import {CellClearBuilder, Payload, Transaction} from 'logisheets-web'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import Divider from '@mui/material/Divider'
 
 export interface ContextmenuProps {
-    mouseevent: MouseEvent
-    startCell: Cell
-    endCell?: Cell
+    selectedCellRange: SelectedCellRange
     isOpen: boolean
     setIsOpen: (isOpen: boolean) => void
+    left: number
+    top: number
 }
 
 export const ContextmenuComponent = (props: ContextmenuProps) => {
-    const {mouseevent, startCell, isOpen, setIsOpen, endCell} = props
-    const [blockMenuOpened, setBlockMenuOpened] = useState(false)
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    let selectBlock: ReactElement | undefined
-    const _blockProcess = (
-        blocks: readonly BlockInfo[],
-        cb: (blks: readonly BlockInfo[]) => Payload[]
-    ) => {
-        const close$ = (blks: readonly BlockInfo[]) => {
-            setIsOpen(false)
-            setBlockMenuOpened(false)
-            DATA_SERVICE.handleTransaction(new Transaction(cb(blks), true))
-        }
-        selectBlock = (
-            <div>
-                <SelectBlockComponent
-                    message={getMessage(blocks)}
-                    blocks={blocks}
-                    close$={close$}
-                />
-            </div>
-        )
-        setBlockMenuOpened(true)
-    }
-    const _addCol = async () => {
-        const sheet = DATA_SERVICE.getCurrentSheetIdx()
-        const {
-            coordinate: {startCol: start},
-        } = startCell
-        const blocks = await _checkBlock()
-        if (blocks.length !== 0) {
-            _blockProcess(blocks, (blks) =>
-                blks.map((block): Payload => {
-                    return {
-                        type: 'insertColsInBlock',
-                        value: new InsertColsInBlockBuilder()
-                            .sheetIdx(sheet)
-                            .blockId(block.blockId)
-                            .start(start - block.colStart)
-                            .cnt(1)
-                            .build(),
-                    }
+    const {isOpen, setIsOpen, selectedCellRange, left, top} = props
+
+    const selectedCount =
+        (Math.abs(selectedCellRange.endRow - selectedCellRange.startRow) + 1) *
+        (Math.abs(selectedCellRange.endCol - selectedCellRange.startCol) + 1)
+    const isMultiple = selectedCount > 1
+
+    const dataSvc = useInjection<DataServiceImpl>(TYPES.Data)
+
+    const clearCells = () => {
+        const startRow = selectedCellRange.startRow
+        const startCol = selectedCellRange.startCol
+        const endRow = selectedCellRange.endRow
+        const endCol = selectedCellRange.endCol
+
+        const payloads: Payload[] = []
+        for (let r = startRow; r <= endRow; r++) {
+            for (let c = startCol; c <= endCol; c++) {
+                const p = new CellClearBuilder()
+                    .sheetIdx(dataSvc.getCurrentSheetIdx())
+                    .row(r)
+                    .col(c)
+                    .build()
+                payloads.push({
+                    type: 'cellClear',
+                    value: p,
                 })
-            )
-            setBlockMenuOpened(true)
-            return
+            }
         }
-        const payload: Payload = {
-            type: 'insertCols',
-            value: new InsertColsBuilder()
-                .sheetIdx(sheet)
-                .start(start)
-                .count(1)
-                .build(),
-        }
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+        dataSvc.handleTransaction(new Transaction(payloads, true))
     }
 
-    const _removeCol = async () => {
-        const {
-            coordinate: {startCol: start},
-        } = startCell
-        const sheet = DATA_SERVICE.getCurrentSheetIdx()
-        const blocks = await _checkBlock()
-        if (blocks.length !== 0) {
-            _blockProcess(blocks, (blks) =>
-                blks.map((block): Payload => {
-                    return {
-                        type: 'deleteColsInBlock',
-                        value: new DeleteColsInBlockBuilder()
-                            .sheetIdx(sheet)
-                            .blockId(block.blockId)
-                            .start(start - block.colStart)
-                            .cnt(1)
-                            .build(),
-                    }
-                })
-            )
-            setBlockMenuOpened(true)
-            return
-        }
-        const payload: Payload = {
-            type: 'deleteCols',
-            value: new DeleteColsBuilder()
-                .sheetIdx(sheet)
-                .count(1)
-                .start(start)
-                .build(),
-        }
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-    }
-
-    const _addRow = async () => {
-        const {
-            coordinate: {startRow: start},
-        } = startCell
-        const sheet = DATA_SERVICE.getCurrentSheetIdx()
-        const blocks = await _checkBlock()
-        if (blocks.length !== 0) {
-            _blockProcess(blocks, (blks) =>
-                blks.map((block): Payload => {
-                    return {
-                        type: 'insertRowsInBlock',
-                        value: new InsertRowsInBlockBuilder()
-                            .sheetIdx(sheet)
-                            .start(start - block.rowStart)
-                            .blockId(block.blockId)
-                            .cnt(1)
-                            .build(),
-                    }
-                })
-            )
-            return
-        }
-        const payload: Payload = {
-            type: 'insertRows',
-            value: new InsertRowsBuilder()
-                .sheetIdx(sheet)
-                .start(start)
-                .count(1)
-                .build(),
-        }
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-    }
-
-    const _removeRow = async () => {
-        const {
-            coordinate: {startRow: start},
-        } = startCell
-        const sheet = DATA_SERVICE.getCurrentSheetIdx()
-        const blocks = await _checkBlock()
-        if (blocks.length !== 0) {
-            _blockProcess(blocks, (blks) =>
-                blks.map((block): Payload => {
-                    return {
-                        type: 'deleteRowsInBlock',
-                        value: new DeleteRowsInBlockBuilder()
-                            .sheetIdx(sheet)
-                            .blockId(block.blockId)
-                            .start(start - block.rowStart)
-                            .cnt(1)
-                            .build(),
-                    }
-                })
-            )
-            return
-        }
-        const payload: Payload = {
-            type: 'deleteRows',
-            value: new DeleteRowsBuilder()
-                .sheetIdx(sheet)
-                .count(1)
-                .start(start)
-                .build(),
-        }
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-    }
-
-    const _addBlock = async () => {
-        const endCellTruthy = endCell ?? startCell
-        const start = startCell.coordinate
-        const end = endCellTruthy.coordinate
-        const payload: Payload = {
-            type: 'createBlock',
-            value: new CreateBlockBuilder()
-                .id(1)
-                .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
-                .rowCnt(Math.abs(end.endRow - start.startRow) + 1)
-                .colCnt(Math.abs(end.endCol - start.startCol) + 1)
-                .masterRow(Math.min(start.startRow, end.startRow))
-                .masterCol(Math.min(start.startCol, end.startCol))
-                .build(),
-        }
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-    }
-
-    const _checkBlock = async () => {
-        const {coordinate: start} = startCell
-        const {coordinate: end} = endCell ?? startCell
-        const result = await DATA_SERVICE.getFullyCoveredBlocks(
-            DATA_SERVICE.getCurrentSheetIdx(),
-            start.startRow,
-            start.startCol,
-            end.endRow - start.startRow + 1,
-            end.endCol - start.startCol + 1
-        )
-        if (isErrorMessage(result)) {
-            return []
-        }
-        return result
-    }
-
-    const rows: ContextMenuItem[] = [
-        {
-            text: '增加行',
-            type: 'text',
-            click: _addRow,
-        },
-        {
-            text: '删除行',
-            type: 'text',
-            click: _removeRow,
-        },
-    ]
-    const cols: readonly ContextMenuItem[] = [
-        {
-            text: '增加列',
-            type: 'text',
-            click: _addCol,
-        },
-        {
-            text: '删除列',
-            type: 'text',
-            click: _removeCol,
-        },
-    ]
-    const items: ContextMenuItem[] = []
-    if (startCell.type === 'Cell') {
-        items.push(...rows, ...cols)
-        items.push({
-            text: '新增block',
-            type: 'text',
-            click: _addBlock,
-        })
-    }
     return (
-        <div>
-            <ContextMenuComponent
-                isOpen={isOpen}
-                items={items}
-                close$={() => setIsOpen(false)}
-                mouseevent={mouseevent}
-                ariaHideApp={false}
-                style={{
-                    content: {
-                        height: 'fit-content',
-                        width: '200px',
-                        padding: '8px 0',
-                    },
+        <Menu
+            open={isOpen}
+            onClose={() => setIsOpen(false)}
+            anchorReference="anchorPosition"
+            anchorPosition={{top, left}}
+            transformOrigin={{vertical: 'top', horizontal: 'left'}}
+            disablePortal
+            keepMounted
+            MenuListProps={{autoFocusItem: false}}
+            disableScrollLock={true}
+            container={document.body}
+            slotProps={{
+                paper: {
+                    sx: {minWidth: 200, p: 0.5},
+                },
+                root: {
+                    // Modal props to avoid focus side effects
+                    disableAutoFocus: true,
+                    disableEnforceFocus: true,
+                    disableRestoreFocus: true,
+                },
+            }}
+        >
+            <MenuItem
+                onClick={async () => {
+                    // TODO: open a format dialog or trigger formatting flow
+                    setIsOpen(false)
                 }}
-            />
-            {blockMenuOpened ? selectBlock : null}
-        </div>
+            >
+                {isMultiple ? 'Format Cells' : 'Format Cell'}
+            </MenuItem>
+            <Divider />
+            <MenuItem
+                onClick={async () => {
+                    clearCells()
+                    setIsOpen(false)
+                }}
+            >
+                {isMultiple ? 'Clear Cells' : 'Clear Cell'}
+            </MenuItem>
+        </Menu>
     )
-}
-
-const getMessage = (blocks: readonly BlockInfo[]) => {
-    return blocks.length === 1
-        ? '当前选择范围属于一个block，是否继续？'
-        : '选择一个block'
 }

@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react'
+import React from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl as DataService} from '@/core/data'
@@ -10,6 +10,9 @@ import {
     DeleteColsBuilder,
     type Payload,
 } from 'logisheets-web'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import Divider from '@mui/material/Divider'
 
 export interface HeaderContextMenuProps {
     open: boolean
@@ -17,6 +20,7 @@ export interface HeaderContextMenuProps {
     y: number
     type: 'row' | 'col'
     index: number
+    count: number
     sheetIdx: number
     onClose: () => void
 }
@@ -28,20 +32,10 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
     type,
     index,
     sheetIdx,
+    count,
     onClose,
 }) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-
-    useEffect(() => {
-        if (!open) return
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose()
-        }
-        window.addEventListener('keydown', onKey)
-        return () => window.removeEventListener('keydown', onKey)
-    }, [open, onClose])
-
-    if (!open) return null
 
     const doTxn = (payloads: Payload[]) => {
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true))
@@ -108,7 +102,7 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                     value: new DeleteRowsBuilder()
                         .sheetIdx(sheetIdx)
                         .start(index)
-                        .count(1)
+                        .count(count)
                         .build(),
                 },
             ])
@@ -119,62 +113,42 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                     value: new DeleteColsBuilder()
                         .sheetIdx(sheetIdx)
                         .start(index)
-                        .count(1)
+                        .count(count)
                         .build(),
                 },
             ])
         }
     }
 
-    const menuStyle: React.CSSProperties = {
-        position: 'fixed',
-        left: x,
-        top: y,
-        background: '#fff',
-        border: '1px solid #ddd',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        borderRadius: 4,
-        zIndex: 1001,
-        padding: 4,
-        minWidth: 160,
-    }
-    const backdropStyle: React.CSSProperties = {
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        right: 0,
-        bottom: 0,
-        background: 'transparent',
-        zIndex: 1000,
-    }
-    const itemStyle: React.CSSProperties = {
-        padding: '6px 10px',
-        cursor: 'pointer',
-        userSelect: 'none',
-    }
-
     return (
-        <>
-            <div
-                style={backdropStyle}
-                onClick={onClose}
-                onContextMenu={(e) => e.preventDefault()}
-            />
-            <div style={menuStyle} onContextMenu={(e) => e.preventDefault()}>
-                <div style={itemStyle} onClick={insertBefore}>
-                    {type === 'row' ? '在上方插入行' : '在左侧插入列'}
-                </div>
-                <div style={itemStyle} onClick={insertAfter}>
-                    {type === 'row' ? '在下方插入行' : '在右侧插入列'}
-                </div>
-                <div
-                    style={{...itemStyle, color: '#d32f2f'}}
-                    onClick={removeOne}
-                >
-                    {type === 'row' ? '删除行' : '删除列'}
-                </div>
-            </div>
-        </>
+        <Menu
+            open={open}
+            onClose={onClose}
+            anchorReference="anchorPosition"
+            anchorPosition={{top: y, left: x}}
+            transformOrigin={{vertical: 'top', horizontal: 'left'}}
+            disableScrollLock={true}
+            MenuListProps={{autoFocusItem: false}}
+            slotProps={{
+                paper: {
+                    sx: {
+                        minWidth: 160,
+                        p: 0.5,
+                    },
+                },
+            }}
+        >
+            <MenuItem onClick={insertBefore}>
+                {type === 'row' ? '在上方插入行' : '在左侧插入列'}
+            </MenuItem>
+            <MenuItem onClick={insertAfter}>
+                {type === 'row' ? '在下方插入行' : '在右侧插入列'}
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={removeOne} sx={{color: 'error.main'}}>
+                {type === 'row' ? '删除行' : '删除列'}
+            </MenuItem>
+        </Menu>
     )
 }
 
