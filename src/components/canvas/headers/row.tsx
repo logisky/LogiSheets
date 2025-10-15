@@ -24,6 +24,7 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
     const [menuX, setMenuX] = useState(0)
     const [menuY, setMenuY] = useState(0)
     const [menuIdx, setMenuIdx] = useState<number | null>(null)
+    const [menuCount, setMenuCount] = useState(1)
 
     const findRowIdxAt = (y: number): number | undefined => {
         if (!grid) return undefined
@@ -45,6 +46,8 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
     }
 
     const onMouseDownRow = (downIdx: number) => (e: React.MouseEvent) => {
+        // left-click only
+        if (e.button !== 0) return
         e.preventDefault()
         e.stopPropagation()
         if (!grid) return
@@ -76,6 +79,7 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
                 'row',
                 'none'
             )
+            setMenuCount(end - start + 1)
             setSelectedData(data)
         }
         window.addEventListener('mousemove', onMove)
@@ -156,6 +160,7 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
                         y={menuY}
                         type="row"
                         index={menuIdx}
+                        count={menuCount}
                         sheetIdx={sheetIdx}
                         onClose={() => setMenuOpen(false)}
                     />

@@ -11,6 +11,9 @@ import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {useToast} from '@/ui/notification/useToast'
 import styles from './sheets-tab.module.scss'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import Divider from '@mui/material/Divider'
 
 export interface ContextMenuProps {
     readonly index: number
@@ -63,37 +66,24 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
 
     return (
         <>
-            <Modal
-                isOpen={isOpen}
-                shouldCloseOnEsc={true}
-                shouldCloseOnOverlayClick={true}
-                onRequestClose={() => setIsOpen(false)}
-                ariaHideApp={false}
-                style={{
-                    content: {
-                        width: 'max-content',
-                        height: 'max-content',
-                        left: left,
-                        top: top - 140,
+            <Menu
+                open={isOpen}
+                onClose={() => setIsOpen(false)}
+                anchorReference="anchorPosition"
+                anchorPosition={{top: top - 140, left}}
+                transformOrigin={{vertical: 'top', horizontal: 'left'}}
+                disableScrollLock={true}
+                MenuListProps={{autoFocusItem: false}}
+                slotProps={{
+                    paper: {
+                        sx: {minWidth: 200, p: 0.5},
                     },
                 }}
             >
-                <div className={styles['context-menu']} tabIndex={-1}>
-                    <div
-                        className={styles['context-menu-item']}
-                        onClick={openRename}
-                    >
-                        ✏️ Rename
-                    </div>
-                    <div className={styles['context-menu-divider']} />
-                    <div
-                        className={styles['context-menu-item']}
-                        onClick={deleteSheet}
-                    >
-                        🗑️ Delete
-                    </div>
-                </div>
-            </Modal>
+                <MenuItem onClick={openRename}>✏️ Rename</MenuItem>
+                <Divider />
+                <MenuItem onClick={deleteSheet}>🗑️ Delete</MenuItem>
+            </Menu>
             <Modal
                 isOpen={renameIsOpen}
                 shouldCloseOnEsc={true}

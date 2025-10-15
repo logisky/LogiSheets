@@ -26,6 +26,7 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
     const [menuX, setMenuX] = useState(0)
     const [menuY, setMenuY] = useState(0)
     const [menuIdx, setMenuIdx] = useState<number | null>(null)
+    const [menuCount, setMenuCount] = useState(1)
 
     const findColIdxAt = (x: number): number | undefined => {
         if (!grid) return undefined
@@ -38,6 +39,8 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
     }
 
     const onMouseDownCol = (downIdx: number) => (e: React.MouseEvent) => {
+        // left-click only
+        if (e.button !== 0) return
         e.preventDefault()
         e.stopPropagation()
         if (!grid) return
@@ -69,6 +72,7 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
                 'col',
                 'none'
             )
+            setMenuCount(end - start + 1)
             setSelectedData(data)
         }
         window.addEventListener('mousemove', onMove)
@@ -161,6 +165,7 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
                         type="col"
                         index={menuIdx}
                         sheetIdx={sheetIdx}
+                        count={menuCount}
                         onClose={() => setMenuOpen(false)}
                     />
                 )}

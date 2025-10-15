@@ -60,6 +60,7 @@ import {match} from './defs'
 import ColumnHeaders from './headers/column'
 import RowHeaders from './headers/row'
 import {Scrollbar} from '../scrollbar'
+import {ContextmenuComponent} from './contextmenu'
 
 const CANVAS_HOST_ID = simpleUuid()
 const canvas = (): HTMLCanvasElement => {
@@ -88,7 +89,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const store = useContext(CanvasStoreContext)
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
-    const [contextMenuEl, setContextMenu] = useState<ReactElement>()
+    const [contextMenuLeft, setContextMenuLeft] = useState(0)
+    const [contextMenuTop, setContextMenuTop] = useState(0)
     const [selector, setSelector] = useState<SelectorProps | undefined>(
         undefined
     )
@@ -925,20 +927,9 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const onContextMenu = (e: MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        // const matchCell = store.match(e.clientX, e.clientY)
-        // if (!matchCell) return
-        // store.contextmenu(e, matchCell)
-        // if (!store.selector.startCell) return
-        // setContextMenu(
-        //     <ContextmenuComponent
-        //         isOpen={contextmenuOpen}
-        //         mouseevent={e}
-        //         setIsOpen={setContextMenuOpen}
-        //         startCell={store.selector.startCell}
-        //         endCell={store.selector.endCell}
-        //     />
-        // )
-        // setContextMenuOpen(true)
+        setContextMenuLeft(e.clientX)
+        setContextMenuTop(e.clientY)
+        setContextMenuOpen(true)
     }
     const type = (text: string): Promise<FormulaDisplayInfo | undefined> => {
         return store.textarea.updateText(text).then((v) => {
@@ -1049,7 +1040,17 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     browser.
                 </canvas>
             </div>
-            {contextmenuOpen && contextMenuEl ? contextMenuEl : null}
+            {contextmenuOpen &&
+                selectedData &&
+                selectedData.data?.ty === 'cellRange' && (
+                    <ContextmenuComponent
+                        isOpen={contextmenuOpen}
+                        setIsOpen={setContextMenuOpen}
+                        selectedCellRange={selectedData.data.d}
+                        left={contextMenuLeft}
+                        top={contextMenuTop}
+                    />
+                )}
             {selector && <SelectorComponent selector={selector} />}
             {store.blockOutliner.props.map((props, i) => (
                 <BlockOutlinerComponent blockOutliner={props} key={i} />
