@@ -57,6 +57,8 @@ import {
     ephemeral_cell_input,
     get_display_units_of_formula,
     remove_block,
+    set_line_num_fmt,
+    set_cell_num_fmt,
 } from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
@@ -615,6 +617,23 @@ export class Workbook {
                 )
             }
         }
+        if (p.type === 'setCellNumFmt')
+            return set_cell_num_fmt(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col,
+                p.value.numFmt
+            )
+        if (p.type === 'setLineNumFmt')
+            return set_line_num_fmt(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.from,
+                p.value.to,
+                p.value.numFmt
+            )
         if (p.type === 'deleteSheet') return delete_sheet(this._id, p.value.idx)
         if (p.type === 'createSheet')
             return create_sheet(this._id, p.value.idx, p.value.newName)

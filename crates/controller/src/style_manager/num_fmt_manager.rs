@@ -1,3 +1,5 @@
+use crate::edit_action::StyleUpdateType;
+
 use super::manager::Manager;
 
 pub type NumFmtId = u32;
@@ -38,5 +40,15 @@ impl Default for NumFmtManager {
                 (49, "@".to_string()),
             ],
         )
+    }
+}
+
+impl NumFmtManager {
+    pub fn execute(&mut self, _id: NumFmtId, update_type: &StyleUpdateType) -> Option<NumFmtId> {
+        if let Some(fmt) = &update_type.set_num_fmt {
+            Some(self.get_id(fmt))
+        } else {
+            None
+        }
     }
 }

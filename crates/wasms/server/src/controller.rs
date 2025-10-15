@@ -241,6 +241,7 @@ pub fn set_line_font(
             set_border_outline: None,
             set_pattern_fill: None,
             set_alignment: None,
+            set_num_fmt: None,
         },
     });
     MANAGER.get_mut().add_payload(id, p);
@@ -291,6 +292,7 @@ pub fn set_font(
             set_border_outline: None,
             set_pattern_fill: None,
             set_alignment: None,
+            set_num_fmt: None,
         },
     });
     MANAGER.get_mut().add_payload(id, p);
@@ -415,6 +417,7 @@ pub fn set_line_border(
             set_border_outline: outline,
             set_pattern_fill: None,
             set_alignment: None,
+            set_num_fmt: None,
         },
     });
     MANAGER.get_mut().add_payload(id, p);
@@ -469,6 +472,7 @@ pub fn set_cell_border(
             set_border_outline: outline,
             set_pattern_fill: None,
             set_alignment: None,
+            set_num_fmt: None,
         },
     });
     MANAGER.get_mut().add_payload(id, p);
@@ -495,6 +499,50 @@ pub fn set_cell_format_brush(
         dst_col_start,
         dst_row_end,
         dst_col_end,
+    });
+    MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn set_cell_num_fmt(
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    num_fmt: Option<String>,
+) {
+    init();
+    let p = EditPayload::CellStyleUpdate(CellStyleUpdate {
+        sheet_idx,
+        row,
+        col,
+        ty: StyleUpdateType {
+            set_num_fmt: num_fmt,
+            ..Default::default()
+        },
+    });
+    MANAGER.get_mut().add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn set_line_num_fmt(
+    id: usize,
+    sheet_idx: usize,
+    row: bool,
+    from: usize,
+    to: usize,
+    num_fmt: Option<String>,
+) {
+    init();
+    let p = EditPayload::LineStyleUpdate(LineStyleUpdate {
+        sheet_idx,
+        from,
+        to,
+        row,
+        ty: StyleUpdateType {
+            set_num_fmt: num_fmt,
+            ..Default::default()
+        },
     });
     MANAGER.get_mut().add_payload(id, p);
 }
