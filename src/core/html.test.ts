@@ -1,4 +1,4 @@
-import {Extract} from './html'
+import {extract} from './html'
 
 describe('html test', () => {
     ;[
@@ -8,7 +8,7 @@ describe('html test', () => {
         ],
     ].forEach(([data, expected]) => {
         it('extract test', () => {
-            const result = Extract(data)
+            const result = extract(data)
             expect(result).toBe(expected)
         })
     })

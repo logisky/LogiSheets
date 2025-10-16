@@ -284,7 +284,8 @@ mod tests {
     use logisheets_base::{CellId, CellValue};
 
     use crate::edit_action::{
-        CellInput, EditAction, EditPayload, EphemeralCellInput, PayloadsAction, StatusCode,
+        CellInput, CellStyleUpdate, EditAction, EditPayload, EphemeralCellInput, PayloadsAction,
+        StatusCode, StyleUpdateType,
     };
 
     use super::Controller;
@@ -444,5 +445,39 @@ mod tests {
             .get_cell(sheet_id, &CellId::EphemeralCell(ephemeral_id))
             .unwrap();
         assert!(matches!(cell.value, CellValue::Number(_)));
+    }
+
+    #[test]
+    fn controller_set_num_fmt() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::CellStyleUpdate(CellStyleUpdate {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                ty: StyleUpdateType {
+                    set_num_fmt: Some("0.00".to_string()),
+                    ..Default::default()
+                },
+            })],
+            undoable: true,
+            init: false,
+        };
+        let _ = wb.handle_action(EditAction::Payloads(action));
+
+        let cell_id = wb
+            .status
+            .navigator
+            .fetch_cell_id(&wb.get_sheet_id_by_idx(sheet_idx).unwrap(), 0, 0)
+            .unwrap();
+        let cell = wb
+            .status
+            .container
+            .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id)
+            .unwrap();
+        let style_id = cell.style;
+        let style = wb.status.style_manager.get_cell_style(style_id);
+        assert_eq!(style.formatter, "0.00");
     }
 }

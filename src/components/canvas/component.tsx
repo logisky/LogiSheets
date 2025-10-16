@@ -927,6 +927,9 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const onContextMenu = (e: MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
+        // Prevent aria-hidden focus conflicts by blurring current focus
+        const activeEl = document.activeElement as HTMLElement | null
+        if (activeEl && typeof activeEl.blur === 'function') activeEl.blur()
         setContextMenuLeft(e.clientX)
         setContextMenuTop(e.clientY)
         setContextMenuOpen(true)
@@ -1040,17 +1043,15 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     browser.
                 </canvas>
             </div>
-            {contextmenuOpen &&
-                selectedData &&
-                selectedData.data?.ty === 'cellRange' && (
-                    <ContextmenuComponent
-                        isOpen={contextmenuOpen}
-                        setIsOpen={setContextMenuOpen}
-                        selectedCellRange={selectedData.data.d}
-                        left={contextMenuLeft}
-                        top={contextMenuTop}
-                    />
-                )}
+            {selectedData && selectedData.data?.ty === 'cellRange' && (
+                <ContextmenuComponent
+                    isOpen={contextmenuOpen}
+                    setIsOpen={setContextMenuOpen}
+                    selectedCellRange={selectedData.data.d}
+                    left={contextMenuLeft}
+                    top={contextMenuTop}
+                />
+            )}
             {selector && <SelectorComponent selector={selector} />}
             {store.blockOutliner.props.map((props, i) => (
                 <BlockOutlinerComponent blockOutliner={props} key={i} />

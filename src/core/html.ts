@@ -1,15 +1,15 @@
-export const Escape = (badString: string) =>
+export const escape = (badString: string) =>
     badString
-        .replace('&', '&amp;')
-        .replace('"', '&quot;')
-        .replace("'", '&apos;')
-        .replace('>', '&gt;')
-        .replace('<', '&lt;')
+        .replaceAll('&', '&amp;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&apos;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('<', '&lt;')
 
-export const Extract = (data: string) =>
+export const extract = (data: string) =>
     data
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&gt;/g, '>')
-        .replace(/&lt;/g, '<')
+        .replaceAll(/&amp;/g, '&')
+        .replaceAll(/&quot;/g, '"')
+        .replaceAll(/&apos;/g, "'")
+        .replaceAll(/&gt;/g, '>')
+        .replaceAll(/&lt;/g, '<')

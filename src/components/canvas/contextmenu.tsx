@@ -2,10 +2,18 @@ import {SelectedCellRange} from './events'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl} from '@/core/data'
-import {CellClearBuilder, Payload, Transaction} from 'logisheets-web'
+import {
+    CellClearBuilder,
+    Payload,
+    Transaction,
+    SetCellNumFmtBuilder,
+} from 'logisheets-web'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
+import Dialog from '@mui/material/Dialog'
+import NumFmtPanel from '@/components/num-fmt'
+import {useState} from 'react'
 
 export interface ContextmenuProps {
     selectedCellRange: SelectedCellRange
@@ -24,6 +32,10 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     const isMultiple = selectedCount > 1
 
     const dataSvc = useInjection<DataServiceImpl>(TYPES.Data)
+    const [numFmtOpen, setNumFmtOpen] = useState(false)
+    const [numFmtValue, setNumFmtValue] = useState<string | undefined>(
+        undefined
+    )
 
     const clearCells = () => {
         const startRow = selectedCellRange.startRow
@@ -49,46 +61,91 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
     }
 
     return (
-        <Menu
-            open={isOpen}
-            onClose={() => setIsOpen(false)}
-            anchorReference="anchorPosition"
-            anchorPosition={{top, left}}
-            transformOrigin={{vertical: 'top', horizontal: 'left'}}
-            disablePortal
-            keepMounted
-            MenuListProps={{autoFocusItem: false}}
-            disableScrollLock={true}
-            container={document.body}
-            slotProps={{
-                paper: {
-                    sx: {minWidth: 200, p: 0.5},
-                },
-                root: {
-                    // Modal props to avoid focus side effects
-                    disableAutoFocus: true,
-                    disableEnforceFocus: true,
-                    disableRestoreFocus: true,
-                },
-            }}
-        >
-            <MenuItem
-                onClick={async () => {
-                    // TODO: open a format dialog or trigger formatting flow
-                    setIsOpen(false)
+        <>
+            <Menu
+                open={isOpen}
+                onClose={() => setIsOpen(false)}
+                anchorReference="anchorPosition"
+                anchorPosition={{top, left}}
+                transformOrigin={{vertical: 'top', horizontal: 'left'}}
+                keepMounted
+                MenuListProps={{autoFocusItem: false}}
+                disableScrollLock={true}
+                slotProps={{
+                    paper: {
+                        sx: {minWidth: 200, p: 0.5},
+                    },
+                    root: {
+                        disableAutoFocus: true,
+                        disableEnforceFocus: true,
+                        disableRestoreFocus: true,
+                    },
                 }}
             >
-                {isMultiple ? 'Format Cells' : 'Format Cell'}
-            </MenuItem>
-            <Divider />
-            <MenuItem
-                onClick={async () => {
-                    clearCells()
-                    setIsOpen(false)
+                <MenuItem
+                    onClick={() => {
+                        // Close menu first, then open dialog to avoid focus/aria race
+                        setIsOpen(false)
+                        setTimeout(() => setNumFmtOpen(true), 0)
+                    }}
+                >
+                    {isMultiple ? 'Format Cells' : 'Format Cell'}
+                </MenuItem>
+                <Divider />
+                <MenuItem
+                    onClick={async () => {
+                        clearCells()
+                        setIsOpen(false)
+                    }}
+                >
+                    {isMultiple ? 'Clear Cells' : 'Clear Cell'}
+                </MenuItem>
+            </Menu>
+
+            <Dialog
+                open={numFmtOpen}
+                onClose={() => setNumFmtOpen(false)}
+                maxWidth="md"
+                fullWidth
+                keepMounted
+                disableScrollLock
+                disableAutoFocus
+                disableEnforceFocus
+                disableRestoreFocus
+                container={document.body}
+                PaperProps={{
+                    sx: {zIndex: 2000},
                 }}
             >
-                {isMultiple ? 'Clear Cells' : 'Clear Cell'}
-            </MenuItem>
-        </Menu>
+                <NumFmtPanel
+                    value={numFmtValue}
+                    onChange={(v) => setNumFmtValue(v)}
+                    onCancel={() => setNumFmtOpen(false)}
+                    onConfirm={(fmt) => {
+                        const {startRow, startCol, endRow, endCol} =
+                            selectedCellRange
+                        const payloads: Payload[] = []
+                        const sheetIdx = dataSvc.getCurrentSheetIdx()
+                        for (let r = startRow; r <= endRow; r++) {
+                            for (let c = startCol; c <= endCol; c++) {
+                                payloads.push({
+                                    type: 'setCellNumFmt',
+                                    value: new SetCellNumFmtBuilder()
+                                        .sheetIdx(sheetIdx)
+                                        .row(r)
+                                        .col(c)
+                                        .numFmt(fmt)
+                                        .build(),
+                                })
+                            }
+                        }
+                        dataSvc.handleTransaction(
+                            new Transaction(payloads, true)
+                        )
+                        setNumFmtOpen(false)
+                    }}
+                />
+            </Dialog>
+        </>
     )
 }
