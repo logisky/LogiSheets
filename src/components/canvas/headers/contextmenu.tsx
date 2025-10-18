@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useEffect, useState} from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl as DataService} from '@/core/data'
@@ -13,6 +13,14 @@ import {
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
+import Dialog from '@mui/material/Dialog'
+import FormatDialogContent, {
+    type FormatDialogValue,
+} from '@/components/format-dialog'
+import {
+    buildSelectedDataFromCellRange,
+    buildSelectedDataFromLines,
+} from '@/components/canvas'
 
 export interface HeaderContextMenuProps {
     open: boolean
@@ -36,11 +44,23 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
     onClose,
 }) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const [fmtOpen, setFmtOpen] = useState(false)
+    const [menuOpen, setMenuOpen] = useState(true)
+    const [fmtValue, setFmtValue] = useState<FormatDialogValue>({})
+    const [fmtSelectedData, setFmtSelectedData] = useState<ReturnType<
+        typeof buildSelectedDataFromCellRange
+    > | null>(null)
 
     const doTxn = (payloads: Payload[]) => {
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true))
         onClose()
     }
+
+    useEffect(() => {
+        if (!fmtOpen && !menuOpen) {
+            onClose()
+        }
+    }, [menuOpen, fmtOpen])
 
     const insertBefore = () => {
         if (type === 'row') {
@@ -120,35 +140,72 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
         }
     }
 
+    const openFormatDialog = async () => {
+        const start = index
+        const end = index + count - 1
+        const sd = buildSelectedDataFromLines(start, end, type, 'none')
+        setFmtSelectedData(sd)
+        setFmtOpen(true)
+        setMenuOpen(false)
+    }
+
     return (
-        <Menu
-            open={open}
-            onClose={onClose}
-            anchorReference="anchorPosition"
-            anchorPosition={{top: y, left: x}}
-            transformOrigin={{vertical: 'top', horizontal: 'left'}}
-            disableScrollLock={true}
-            MenuListProps={{autoFocusItem: false}}
-            slotProps={{
-                paper: {
-                    sx: {
-                        minWidth: 160,
-                        p: 0.5,
+        <>
+            <Menu
+                open={menuOpen}
+                onClose={() => setMenuOpen(false)}
+                anchorReference="anchorPosition"
+                anchorPosition={{top: y, left: x}}
+                transformOrigin={{vertical: 'top', horizontal: 'left'}}
+                disableScrollLock={true}
+                MenuListProps={{autoFocusItem: false}}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            minWidth: 180,
+                            p: 0.5,
+                        },
                     },
-                },
-            }}
-        >
-            <MenuItem onClick={insertBefore}>
-                {type === 'row' ? '在上方插入行' : '在左侧插入列'}
-            </MenuItem>
-            <MenuItem onClick={insertAfter}>
-                {type === 'row' ? '在下方插入行' : '在右侧插入列'}
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={removeOne} sx={{color: 'error.main'}}>
-                {type === 'row' ? '删除行' : '删除列'}
-            </MenuItem>
-        </Menu>
+                }}
+            >
+                <MenuItem onClick={insertBefore}>
+                    {type === 'row' ? 'Insert row above' : 'Insert column left'}
+                </MenuItem>
+                <MenuItem onClick={insertAfter}>
+                    {type === 'row'
+                        ? 'Insert row below'
+                        : 'Insert column right'}
+                </MenuItem>
+                <MenuItem onClick={openFormatDialog}>Format cells</MenuItem>
+                <Divider />
+                <MenuItem onClick={removeOne} sx={{color: 'error.main'}}>
+                    {type === 'row' ? 'Delete row(s)' : 'Delete column(s)'}
+                </MenuItem>
+            </Menu>
+
+            <Dialog
+                open={fmtOpen && !!fmtSelectedData}
+                onClose={() => setFmtOpen(false)}
+                maxWidth="md"
+                fullWidth
+                keepMounted
+                disableScrollLock
+                disableAutoFocus
+                disableEnforceFocus
+                disableRestoreFocus
+                container={document.body}
+                PaperProps={{sx: {zIndex: 2000, p: 0}}}
+            >
+                {fmtSelectedData && (
+                    <FormatDialogContent
+                        value={fmtValue}
+                        onChange={(v) => setFmtValue(v)}
+                        onCancel={() => setFmtOpen(false)}
+                        selectedData={fmtSelectedData}
+                    />
+                )}
+            </Dialog>
+        </>
     )
 }
 

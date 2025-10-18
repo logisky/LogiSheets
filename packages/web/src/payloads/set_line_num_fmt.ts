@@ -28,6 +28,10 @@ export class SetLineNumFmtBuilder {
         this._to = to
         return this
     }
+    public numFmt(numFmt: string): this {
+        this._numFmt = numFmt
+        return this
+    }
     public build(): SetLineNumFmt {
         if (this._sheetIdx === undefined) throw Error('sheetIdx is undefined!')
         if (this._row === undefined) throw Error('row is undefined!')

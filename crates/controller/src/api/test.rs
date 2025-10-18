@@ -1,5 +1,6 @@
 use crate::edit_action::{
-    CreateBlock, EditPayload, PayloadsAction, SheetRename, WorkbookUpdateType,
+    CreateBlock, EditPayload, LineStyleUpdate, PayloadsAction, SheetRename, StyleUpdateType,
+    WorkbookUpdateType,
 };
 
 use super::{EditAction, Workbook};
@@ -77,4 +78,26 @@ fn create_block() {
     ws.get_cell_position(3, 3).unwrap();
     let resp = ws.get_display_window_response(0., 0., 100., 100.).unwrap();
     assert_eq!(resp.window.blocks.len(), 1);
+}
+
+#[test]
+fn get_col_style() {
+    let mut wb = Workbook::default();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::LineStyleUpdate(LineStyleUpdate {
+            sheet_idx: 0,
+            from: 0,
+            to: 1,
+            row: true,
+            ty: StyleUpdateType {
+                set_num_fmt: Some("0.00".to_string()),
+                ..Default::default()
+            },
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let style = ws.get_style(0, 0).unwrap();
+    assert_eq!(style.formatter, "0.00");
 }

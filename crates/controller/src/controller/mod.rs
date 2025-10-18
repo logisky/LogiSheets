@@ -284,8 +284,8 @@ mod tests {
     use logisheets_base::{CellId, CellValue};
 
     use crate::edit_action::{
-        CellInput, CellStyleUpdate, EditAction, EditPayload, EphemeralCellInput, PayloadsAction,
-        StatusCode, StyleUpdateType,
+        CellInput, CellStyleUpdate, EditAction, EditPayload, EphemeralCellInput, LineStyleUpdate,
+        PayloadsAction, StatusCode, StyleUpdateType,
     };
 
     use super::Controller;
@@ -448,7 +448,7 @@ mod tests {
     }
 
     #[test]
-    fn controller_set_num_fmt() {
+    fn controller_set_cell_num_fmt() {
         let mut wb = Controller::default();
         let sheet_idx = 0;
         let action = PayloadsAction {
@@ -477,7 +477,35 @@ mod tests {
             .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id)
             .unwrap();
         let style_id = cell.style;
-        let style = wb.status.style_manager.get_cell_style(style_id);
+        let style = wb.status.style_manager.get_style(style_id);
+        assert_eq!(style.formatter, "0.00");
+    }
+
+    #[test]
+    fn controller_set_line_num_fmt() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::LineStyleUpdate(LineStyleUpdate {
+                sheet_idx,
+                from: 0,
+                to: 1,
+                row: true,
+                ty: StyleUpdateType {
+                    set_num_fmt: Some("0.00".to_string()),
+                    ..Default::default()
+                },
+            })],
+            undoable: true,
+            init: false,
+        };
+        let _ = wb.handle_action(EditAction::Payloads(action));
+
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+        let row_id = wb.status.navigator.fetch_row_id(&sheet_id, 0).unwrap();
+        let row_info = wb.status.container.get_row_info(sheet_id, row_id).unwrap();
+        let style_id = row_info.style;
+        let style = wb.status.style_manager.get_style(style_id);
         assert_eq!(style.formatter, "0.00");
     }
 }

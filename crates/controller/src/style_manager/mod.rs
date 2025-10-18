@@ -60,7 +60,7 @@ impl StyleManager {
         insert_style(self, style)
     }
 
-    pub fn get_cell_style(&self, id: StyleId) -> RawStyle {
+    pub fn get_style(&self, id: StyleId) -> RawStyle {
         let xf = self
             .cell_xfs_manager
             .get_item(id)

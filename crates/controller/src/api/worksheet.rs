@@ -18,7 +18,7 @@ use crate::{
 };
 use crate::{CellInfo, ColInfo, Comment, MergeCell, RowInfo, Style, Value};
 use logisheets_base::errors::BasicError;
-use logisheets_base::{BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, SheetId};
+use logisheets_base::{BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, SheetId, StyleId};
 use logisheets_parser::unparse;
 
 use super::workbook::CellPositionerDefault;
@@ -651,7 +651,8 @@ impl<'a> Worksheet<'a> {
         Ok(res)
     }
 
-    fn get_raw_style_by_id(&self, cell_id: &CellId) -> Result<RawStyle> {
+    #[inline]
+    pub(crate) fn get_applicable_raw_style_id(&self, cell_id: &CellId) -> StyleId {
         let style_id = if let Some(cell) = self
             .controller
             .status
@@ -659,7 +660,13 @@ impl<'a> Worksheet<'a> {
             .get_cell(self.sheet_id, &cell_id)
         {
             cell.style
-        } else if let CellId::NormalCell(normal_cell_id) = cell_id {
+        } else {
+            0
+        };
+        if style_id != 0 {
+            return style_id;
+        }
+        if let CellId::NormalCell(normal_cell_id) = cell_id {
             let row_id = normal_cell_id.row;
             if let Some(row_info) = self
                 .controller
@@ -667,27 +674,29 @@ impl<'a> Worksheet<'a> {
                 .container
                 .get_row_info(self.sheet_id, row_id)
             {
-                row_info.style
-            } else {
-                let col_id = normal_cell_id.col;
-                match self
-                    .controller
-                    .status
-                    .container
-                    .get_col_info(self.sheet_id, col_id)
-                {
-                    Some(col_info) => col_info.style,
-                    None => 0,
+                if row_info.style != 0 {
+                    return row_info.style;
                 }
             }
-        } else {
-            0
-        };
-        let raw_style = self
-            .controller
-            .status
-            .style_manager
-            .get_cell_style(style_id);
+            let col_id = normal_cell_id.col;
+
+            if let Some(col_info) = self
+                .controller
+                .status
+                .container
+                .get_col_info(self.sheet_id, col_id)
+            {
+                if col_info.style != 0 {
+                    return col_info.style;
+                }
+            }
+        }
+        0
+    }
+
+    fn get_raw_style_by_id(&self, cell_id: &CellId) -> Result<RawStyle> {
+        let style_id = self.get_applicable_raw_style_id(cell_id);
+        let raw_style = self.controller.status.style_manager.get_style(style_id);
         Ok(raw_style)
     }
 

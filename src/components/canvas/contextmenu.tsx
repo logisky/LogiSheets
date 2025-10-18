@@ -2,17 +2,15 @@ import {SelectedCellRange} from './events'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl} from '@/core/data'
-import {
-    CellClearBuilder,
-    Payload,
-    Transaction,
-    SetCellNumFmtBuilder,
-} from 'logisheets-web'
+import {CellClearBuilder, Payload, Transaction} from 'logisheets-web'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
 import Dialog from '@mui/material/Dialog'
-import NumFmtPanel from '@/components/num-fmt'
+import FormatDialogContent, {
+    type FormatDialogValue,
+} from '@/components/format-dialog'
+import {buildSelectedDataFromCellRange} from '@/components/canvas'
 import {useState} from 'react'
 
 export interface ContextmenuProps {
@@ -33,9 +31,7 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
 
     const dataSvc = useInjection<DataServiceImpl>(TYPES.Data)
     const [numFmtOpen, setNumFmtOpen] = useState(false)
-    const [numFmtValue, setNumFmtValue] = useState<string | undefined>(
-        undefined
-    )
+    const [fmtValue, setFmtValue] = useState<FormatDialogValue>({})
 
     const clearCells = () => {
         const startRow = selectedCellRange.startRow
@@ -114,36 +110,20 @@ export const ContextmenuComponent = (props: ContextmenuProps) => {
                 disableRestoreFocus
                 container={document.body}
                 PaperProps={{
-                    sx: {zIndex: 2000},
+                    sx: {zIndex: 2000, p: 0},
                 }}
             >
-                <NumFmtPanel
-                    value={numFmtValue}
-                    onChange={(v) => setNumFmtValue(v)}
+                <FormatDialogContent
+                    value={fmtValue}
+                    selectedData={buildSelectedDataFromCellRange(
+                        selectedCellRange.startRow,
+                        selectedCellRange.startCol,
+                        selectedCellRange.endRow,
+                        selectedCellRange.endCol,
+                        'none'
+                    )}
+                    onChange={(v) => setFmtValue(v)}
                     onCancel={() => setNumFmtOpen(false)}
-                    onConfirm={(fmt) => {
-                        const {startRow, startCol, endRow, endCol} =
-                            selectedCellRange
-                        const payloads: Payload[] = []
-                        const sheetIdx = dataSvc.getCurrentSheetIdx()
-                        for (let r = startRow; r <= endRow; r++) {
-                            for (let c = startCol; c <= endCol; c++) {
-                                payloads.push({
-                                    type: 'setCellNumFmt',
-                                    value: new SetCellNumFmtBuilder()
-                                        .sheetIdx(sheetIdx)
-                                        .row(r)
-                                        .col(c)
-                                        .numFmt(fmt)
-                                        .build(),
-                                })
-                            }
-                        }
-                        dataSvc.handleTransaction(
-                            new Transaction(payloads, true)
-                        )
-                        setNumFmtOpen(false)
-                    }}
                 />
             </Dialog>
         </>
