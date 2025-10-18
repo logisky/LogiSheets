@@ -140,6 +140,8 @@ export class PainterService extends CanvasApi {
                 [start, to],
             ])
         }
+        // After stroke, the lineDash will be reset
+        this.setLineDash([])
         this.restore()
         return
     }
