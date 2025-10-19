@@ -31,13 +31,19 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9998; // ensure overlay sits above any header/canvas
 }
 
 .modal-content {
-  position: absolute;
+  position: fixed;
   background-color: rgba(255, 255, 255, 0);
   border: none;
   margin: 0;
   padding: 0;
   align-items: center;
+  z-index: 9999; // ensure content sits above overlay and headers
+}
+
+.modal-portal {
+  z-index: 100000;
 }
