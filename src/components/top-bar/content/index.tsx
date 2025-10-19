@@ -535,17 +535,24 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 onRequestClose={() => setColorPicking('')}
                 className={styles['modal-content']}
                 overlayClassName={styles['modal-overlay']}
+                portalClassName={styles['modal-portal']}
                 style={{
-                    content: {top: '100px', left: '0px', zIndex: ZINDEX_MODAL},
+                    overlay: {
+                        zIndex: ZINDEX_MODAL,
+                        backgroundColor: 'rgba(0,0,0,0.3)',
+                        pointerEvents: 'auto',
+                    },
+                    content: {
+                        top: '100px',
+                        left: '0px',
+                        zIndex: ZINDEX_UI,
+                        pointerEvents: 'auto',
+                    },
                 }}
                 ariaHideApp={false}
             >
                 <SketchPicker
-                    styles={{
-                        default: {
-                            picker: {zIndex: ZINDEX_UI},
-                        },
-                    }}
+                    styles={{default: {picker: {zIndex: 100002}}}}
                     color={
                         colorPicking === 'fill'
                             ? patternFillColor
