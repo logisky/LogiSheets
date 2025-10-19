@@ -89,3 +89,23 @@ export function buildSelectedDataFromLines(
         },
     }
 }
+
+export function getSelectedRows(v: SelectedData): number[] {
+    if (v.data?.ty === 'cellRange') {
+        return [v.data.d.startRow, v.data.d.endRow]
+    }
+    if (v.data?.ty === 'line' && v.data.d.type === 'row') {
+        return [v.data.d.start, v.data.d.end]
+    }
+    return []
+}
+
+export function getSelectedColumns(v: SelectedData): number[] {
+    if (v.data?.ty === 'cellRange') {
+        return [v.data.d.startCol, v.data.d.endCol]
+    }
+    if (v.data?.ty === 'line' && v.data.d.type === 'col') {
+        return [v.data.d.start, v.data.d.end]
+    }
+    return []
+}

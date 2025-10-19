@@ -49,7 +49,7 @@ import {
 import {SplitMergedCellsBuilder} from 'packages/web'
 import {BorderSettingComponent} from './border-setting'
 import {Tooltip} from '@mui/material'
-import {ZINDEX_MODAL, ZINDEX_UI} from '../../const'
+import {ZINDEX_HEADER, ZINDEX_MODAL, ZINDEX_UI} from '../../const'
 
 export * from './font-size'
 export * from './start-item'
@@ -536,7 +536,7 @@ export const StartComponent = ({selectedData}: StartProps) => {
                 className={styles['modal-content']}
                 overlayClassName={styles['modal-overlay']}
                 style={{
-                    content: {top: '100px', left: '0px', zIndex: ZINDEX_UI},
+                    content: {top: '100px', left: '0px', zIndex: ZINDEX_MODAL},
                 }}
                 ariaHideApp={false}
             >

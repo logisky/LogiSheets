@@ -2,6 +2,8 @@ import {
     buildSelectedDataFromCell,
     buildSelectedDataFromCellRange,
     getSelectedCellRange,
+    getSelectedColumns,
+    getSelectedRows,
     SelectedData,
 } from './events'
 import styles from './canvas.module.scss'
@@ -141,6 +143,13 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const [visibleWidth, setVisibleWidth] = useState(0)
     const [scrollbarRendering, setScrollbarRendering] = useState(false)
 
+    const [selectedRowRange, setSelectedRowRange] = useState<
+        [number, number] | undefined
+    >(undefined)
+    const [selectedColumnRange, setSelectedColumnRange] = useState<
+        [number, number] | undefined
+    >(undefined)
+
     const [invalidCells, setInvalidCells] = useState<
         {x: number; y: number; width: number; height: number}[]
     >([])
@@ -278,6 +287,25 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     }, [])
 
     useEffect(() => {
+        if (!selectedData) return
+
+        const selectedRows = getSelectedRows(selectedData)
+        if (selectedRows.length > 0) {
+            const start = Math.min(selectedRows[0], selectedRows[1])
+            const end = Math.max(selectedRows[0], selectedRows[1])
+            setSelectedRowRange([start, end])
+        } else {
+            setSelectedRowRange(undefined)
+        }
+        const selectedColumns = getSelectedColumns(selectedData)
+        if (selectedColumns.length > 0) {
+            const start = Math.min(selectedColumns[0], selectedColumns[1])
+            const end = Math.max(selectedColumns[0], selectedColumns[1])
+            setSelectedColumnRange([start, end])
+        } else {
+            setSelectedColumnRange(undefined)
+        }
+
         if (selectedData.source != 'editbar') return
         const selectedCell = getSelectedCellRange(selectedData)
         if (!selectedCell) return
@@ -972,6 +1000,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     grid={grid}
                     setSelectedData={selectedData$}
                     sheetIdx={activeSheet}
+                    selectedColRange={selectedColumnRange}
                     onResizeCol={(colIdx, dx) => {
                         if (!grid) return
                         const col = grid.columns.find((c) => c.idx === colIdx)
@@ -999,6 +1028,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     grid={grid}
                     setSelectedData={selectedData$}
                     sheetIdx={activeSheet}
+                    selectedRowRange={selectedRowRange}
                     onResizeRow={(rowIdx, dy) => {
                         if (!grid) return
                         const row = grid.rows.find((r) => r.idx === rowIdx)
