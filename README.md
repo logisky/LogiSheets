@@ -22,6 +22,10 @@ LogiSheets is currently in its **early development** stages. We welcome your fee
 
 ## Get Started
 
+### Use it as a web application
+
+We are working on it. You can check the progress [here](https://www.logisheets.com).
+
 ### Use it in Rust
 
 Now, LogiSheets provides APIs to read and write a **.xlsx** file. More APIs to manipulate the spreadsheets(like input a formula and calculate or write a file) is on the way.
@@ -58,14 +62,6 @@ You can get the comments of a sheet by:
 
 ```rust
 let comments = ws.get_comments();
-```
-
-### Use it as a web application
-
-We are working on it. You can check the progress by running the cmd
-
-```cmd
-yarn start:wasm
 ```
 
 ## Featured
