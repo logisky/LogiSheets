@@ -36,6 +36,44 @@ export const yForRowEnd = (rowIdx: number, grid: Grid): number => {
     return acc
 }
 
+export const getPosition = (rowIdx: number, colIdx: number, grid: Grid) => {
+    // Compute x0/x1 in a single pass over columns
+    let xAcc = 0
+    let x0 = 0
+    let x1 = 0
+    for (const c of grid.columns) {
+        if (c.idx < colIdx) {
+            xAcc += c.width
+            continue
+        }
+        // first column with idx >= target -> start is current acc, end is acc + width
+        x0 = xAcc
+        x1 = xAcc + c.width
+        break
+    }
+
+    // Compute y0/y1 in a single pass over rows
+    let yAcc = 0
+    let y0 = 0
+    let y1 = 0
+    for (const r of grid.rows) {
+        if (r.idx < rowIdx) {
+            yAcc += r.height
+            continue
+        }
+        y0 = yAcc
+        y1 = yAcc + r.height
+        break
+    }
+
+    return {
+        startX: x0,
+        startY: y0,
+        endX: x1,
+        endY: y1,
+    }
+}
+
 export const findVisibleRowIdxRange = (
     anchor: number,
     height: number,

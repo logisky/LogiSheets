@@ -28,6 +28,7 @@ export class CanvasStore {
         this.blockOutliner = new BlockOutliner(this)
         this.diyButton = new DiyButton(this)
     }
+    // TODO: remove this
     @observable.ref
     startCell?: Cell
     endCell?: Cell
