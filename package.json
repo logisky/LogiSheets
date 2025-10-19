@@ -46,7 +46,7 @@
     "webpack-dev-server": "^4.7.4"
   },
   "scripts": {
-    "build": "webpack build --config=webpack.config.ts",
+    "build": "webpack build --config=webpack.config.ts --mode=production",
     "gen-bindings": "cargo run --package buildtools --bin generate --all-features",
     "lint": "eslint . -c .eslintrc.json --fix",
     "prepare": "husky install",
