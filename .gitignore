@@ -35,3 +35,4 @@ tests_output
 packages/**/*/bindings
 
 .yarn/install-state.gz
+.vercel
