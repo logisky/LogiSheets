@@ -19,14 +19,7 @@ export interface FormatDialogContentProps {
     onCancel?: () => void
 }
 
-const TAB_KEYS = [
-    'number',
-    'alignment',
-    'font',
-    'border',
-    'image',
-    'protection',
-] as const
+const TAB_KEYS = ['number', 'alignment', 'font', 'border', 'image'] as const
 type TabKey = (typeof TAB_KEYS)[number]
 
 export const FormatDialogContent: React.FC<FormatDialogContentProps> = ({

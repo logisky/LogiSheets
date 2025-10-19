@@ -1,6 +1,7 @@
 import {
     buildSelectedDataFromCell,
     buildSelectedDataFromCellRange,
+    getFirstCell,
     getSelectedCellRange,
     getSelectedColumns,
     getSelectedRows,
@@ -14,6 +15,7 @@ import {
     xForColStart,
     yForRowEnd,
     yForRowStart,
+    getPosition,
 } from './grid_helper'
 import {
     MouseEvent,
@@ -58,7 +60,7 @@ import {Range, StandardColor} from '@/core/standable'
 import {pxToPt, pxToWidth, ptToPx, widthToPx} from '@/core'
 import type {Grid} from '@/core/worker/types'
 import {LeftTop} from '@/core/settings'
-import {match} from './defs'
+import {Cell, match} from './defs'
 import ColumnHeaders from './headers/column'
 import RowHeaders from './headers/row'
 import {Scrollbar} from '../scrollbar'
@@ -333,13 +335,37 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     useEffect(() => {
         if (!grid) {
             setSelector(undefined)
+            store.startCell = undefined
+            store.endCell = undefined
             return
         }
         const sel = selectedData.data
         if (!sel) {
             setSelector(undefined)
+            store.startCell = undefined
+            store.endCell = undefined
             return
         }
+
+        const firstCell = getFirstCell(selectedData)
+        if (!firstCell) return
+        const pos = getPosition(firstCell.r, firstCell.c, grid)
+        const startCell = new Cell('Cell')
+            .setPosition(
+                new Range()
+                    .setStartRow(pos.startY)
+                    .setEndRow(pos.endY)
+                    .setStartCol(pos.startX)
+                    .setEndCol(pos.endX)
+            )
+            .setCoordinate(
+                new Range()
+                    .setStartRow(firstCell.r)
+                    .setEndRow(firstCell.r)
+                    .setStartCol(firstCell.c)
+                    .setEndCol(firstCell.c)
+            )
+        store.startCell = startCell
 
         if (selectedData.source === 'editbar') return
 
@@ -432,8 +458,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 return
             }
         }
-
-        setSelector(undefined)
     }, [selectedData, grid])
 
     useEffect(() => {
@@ -936,6 +960,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 return
             }
             default:
+                store.textarea.beginDirectTyping(e.key)
                 return
         }
     }
@@ -947,6 +972,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             return false
         }
         setCellRefs([])
+        // Ensure keyboard events go back to the canvas after exiting edit mode
+        canvas().focus({preventScroll: true})
         return true
     }
     const onCloseInvalidFormulaWarning = () => {

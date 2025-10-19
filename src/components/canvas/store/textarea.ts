@@ -146,6 +146,41 @@ export class Textarea {
         })
     }
 
+    /**
+     * Start editing by direct typing: always overwrite existing content.
+     * Optionally seed with an initial string (e.g. the first typed character).
+     */
+    @action
+    beginDirectTyping(initialText = '') {
+        const startCell = this.store.startCell
+        if (!startCell) return
+        if (startCell.type !== 'Cell') return
+        if (!this.store.same) this._setEditing(false)
+
+        const {height, width, position} = startCell
+        const pos = this.store.convertToMainCanvasPosition(position)
+        const x = pos.startCol
+        const y = pos.startRow
+
+        // const rect = this.store.renderer.canvas.getBoundingClientRect()
+        const rect = {x: 0, y: 0, width: 100, height: 100}
+        const [clientX, clientY] = [rect.x + x, rect.y + y]
+        const context = new Context()
+        context.text = initialText
+        context.canvasOffsetX = x
+        context.canvasOffsetY = y
+        context.clientX = clientX ?? -1
+        context.clientY = clientY ?? -1
+        context.cellHeight = height
+        context.cellWidth = width
+        context.bindingData = startCell
+        context.textareaOffsetX = -1
+        context.textareaOffsetY = -1
+        context.sheetName = this.store.dataSvc.getCurrentSheetName()
+        this._currText = initialText
+        this._setEditing(true, context)
+    }
+
     @action
     updateGrid(grid: Grid) {
         if (!this.context) return
