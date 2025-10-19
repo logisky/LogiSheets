@@ -788,6 +788,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 selectedData$(newData)
                 return
             }
+            case KeyboardEventCode.ENTER:
             case KeyboardEventCode.ARROW_DOWN: {
                 const [_startIdx, endIdx] = findVisibleRowIdxRange(
                     store.anchorY,
@@ -884,6 +885,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 selectedData$(newData)
                 return
             }
+            case KeyboardEventCode.TAB:
             case KeyboardEventCode.ARROW_RIGHT: {
                 const [startIdx, endIdx] = findVisibleColIdxRange(
                     store.anchorX,
