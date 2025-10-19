@@ -10,6 +10,7 @@ import {ZINDEX_HEADER} from '@/components/const'
 export interface RowHeadersProps {
     grid?: Grid
     setSelectedData: (data: SelectedData) => void
+    selectedRowRange?: [number, number]
     onResizeRow?: (rowIdx: number, deltaPx: number) => void
     sheetIdx: number
 }
@@ -18,6 +19,7 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
     setSelectedData,
     onResizeRow,
     sheetIdx,
+    selectedRowRange,
 }) => {
     const hostRef = useRef<HTMLDivElement | null>(null)
     const [menuOpen, setMenuOpen] = useState(false)
@@ -106,6 +108,10 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
                 {
                     grid?.rows?.reduce(
                         (acc: {y: number; nodes: ReactElement[]}, r) => {
+                            const isSelected =
+                                !!selectedRowRange &&
+                                r.idx >= selectedRowRange[0] &&
+                                r.idx <= selectedRowRange[1]
                             const node = (
                                 <div
                                     key={r.idx}
@@ -120,12 +126,18 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: '#333',
+                                        color: isSelected ? '#0d47a1' : '#333',
                                         fontSize: 12,
                                         borderBottom: '1px solid #eee',
                                         boxSizing: 'border-box',
                                         userSelect: 'none',
                                         pointerEvents: 'auto',
+                                        background: isSelected
+                                            ? '#e3f2fd'
+                                            : undefined,
+                                        fontWeight: isSelected
+                                            ? 600
+                                            : undefined,
                                     }}
                                 >
                                     {r.idx + 1}

@@ -128,7 +128,7 @@ export class Cursor {
      */
     getCursorInfoByPosition(offsetX: number, offsetY: number) {
         const baseHeight = this.store.context.lineHeight()
-        const lineNumber = Math.floor(offsetY / baseHeight)
+        const lineNumber = 0
         const baseInfo = new BaseInfo()
             .setLineNumber(lineNumber)
             .setY(lineNumber * baseHeight)

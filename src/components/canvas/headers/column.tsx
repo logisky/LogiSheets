@@ -13,6 +13,7 @@ export interface ColumnHeadersProps {
     setSelectedData: (data: SelectedData) => void
     onResizeCol?: (colIdx: number, deltaPx: number) => void
     sheetIdx: number
+    selectedColRange?: [number, number]
 }
 
 export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
@@ -20,6 +21,7 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
     setSelectedData,
     onResizeCol,
     sheetIdx,
+    selectedColRange,
 }) => {
     const hostRef = useRef<HTMLDivElement | null>(null)
     const [menuOpen, setMenuOpen] = useState(false)
@@ -109,6 +111,10 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
                     grid?.columns?.reduce(
                         (acc: {x: number; nodes: ReactElement[]}, c) => {
                             const label = toA1notation(c.idx)
+                            const isSelected =
+                                !!selectedColRange &&
+                                c.idx >= selectedColRange[0] &&
+                                c.idx <= selectedColRange[1]
                             const node = (
                                 <div
                                     key={c.idx}
@@ -123,12 +129,18 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: '#333',
+                                        color: isSelected ? '#0d47a1' : '#333',
                                         fontSize: 12,
                                         borderRight: '1px solid #eee',
                                         boxSizing: 'border-box',
                                         userSelect: 'none',
                                         pointerEvents: 'auto',
+                                        background: isSelected
+                                            ? '#e3f2fd'
+                                            : undefined,
+                                        fontWeight: isSelected
+                                            ? 600
+                                            : undefined,
                                     }}
                                 >
                                     {label}
