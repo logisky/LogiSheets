@@ -1,5 +1,4 @@
 export * from './render'
 export * from './service2'
 export * from './clients'
-export * from './types'
 export * from './craft'

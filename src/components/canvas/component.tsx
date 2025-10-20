@@ -383,10 +383,46 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 startCol: col1,
                 endCol: col2,
             } = sel.d
-            const startCol = Math.min(col1, col2)
-            const endCol = Math.max(col1, col2)
-            const startRow = Math.min(row1, row2)
-            const endRow = Math.max(row1, row2)
+            let row3 = row1
+            let col3 = col1
+            let row4 = row1
+            let col4 = col1
+            let row5 = row1
+            let col5 = col1
+            let row6 = row1
+            let col6 = col1
+            const mergeCell1 = grid.mergeCells?.find((c) => {
+                return (
+                    c.startRow <= row1 &&
+                    c.startCol <= col1 &&
+                    c.endRow >= row1 &&
+                    c.endCol >= col1
+                )
+            })
+            if (mergeCell1) {
+                row3 = mergeCell1.startRow
+                col3 = mergeCell1.startCol
+                row4 = mergeCell1.endRow
+                col4 = mergeCell1.endCol
+            }
+            const mergeCell2 = grid.mergeCells?.find((c) => {
+                return (
+                    c.startRow <= row2 &&
+                    c.startCol <= col2 &&
+                    c.endRow >= row2 &&
+                    c.endCol >= col2
+                )
+            })
+            if (mergeCell2) {
+                row5 = mergeCell2.startRow
+                col5 = mergeCell2.startCol
+                row6 = mergeCell2.endRow
+                col6 = mergeCell2.endCol
+            }
+            const startCol = Math.min(col1, col2, col3, col4, col5, col6)
+            const endCol = Math.max(col1, col2, col3, col4, col5, col6)
+            const startRow = Math.min(row1, row2, row3, row4, row5, row6)
+            const endRow = Math.max(row1, row2, row3, row4, row5, row6)
             const visStartCol = Math.max(startCol, firstCol)
             const visEndCol = Math.min(endCol, lastCol)
             const visStartRow = Math.max(startRow, firstRow)
@@ -632,7 +668,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         if (wheelRafIdRef.current !== null) return
 
         const processFrame = () => {
-            const MIN_SCROLL_PIXELS = 24 // dead-zone to avoid tiny scrolls causing renders
+            const MIN_SCROLL_PIXELS = 10 // dead-zone to avoid tiny scrolls causing renders
             const applyDelta = wheelAccumRef.current
             wheelAccumRef.current = 0
             wheelRafIdRef.current = null

@@ -60,10 +60,10 @@ export function match(
     if (data.mergeCells && data.mergeCells.length > 0) {
         const mergedCell = data.mergeCells.find(
             (c) =>
-                c.startRow >= rowIdx &&
-                c.endRow <= rowIdx &&
-                c.startCol >= colIdx &&
-                c.endCol <= colIdx
+                c.startRow <= rowIdx &&
+                c.endRow >= rowIdx &&
+                c.startCol <= colIdx &&
+                c.endCol >= colIdx
         )
         if (mergedCell) {
             startRow = mergedCell.startRow
@@ -74,8 +74,10 @@ export function match(
             let eRow = 0
             for (const row of data.rows) {
                 if (row.idx > endRow) break
-                sRow += row.height
                 if (row.idx > startRow) {
+                    eRow += row.height
+                } else {
+                    sRow += row.height
                     eRow += row.height
                 }
             }
@@ -86,8 +88,10 @@ export function match(
             let eCol = 0
             for (const col of data.columns) {
                 if (col.idx > endCol) break
-                sCol += col.width
                 if (col.idx > startCol) {
+                    eCol += col.width
+                } else {
+                    sCol += col.width
                     eCol += col.width
                 }
             }

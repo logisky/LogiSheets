@@ -53,7 +53,6 @@ export class ViewManager {
         const x = Math.max(0, startX)
         const y = Math.max(0, startY)
         const target = new Rect(x, y, width, height)
-        const newChunks: CellViewData[] = []
         const type = CellViewRespType.New
 
         const window = this._workbook.getDisplayWindow({
@@ -73,14 +72,7 @@ export class ViewManager {
             this._pool.getStandardStyle.bind(this._pool)
         )
 
-        if (type === CellViewRespType.New) {
-            this.dataChunks = [data]
-        } else if (type === CellViewRespType.Incremental) {
-            newChunks.push(data)
-            this.dataChunks = newChunks
-        } else if (type === CellViewRespType.Existed) {
-            this.dataChunks = newChunks
-        }
+        this.dataChunks = [data]
         // make sure chunks are sorted. this matters rendering
         this.dataChunks.sort((a, b) => {
             return a.fromRow < b.fromRow || a.fromCol < b.fromCol ? -1 : 1
@@ -220,10 +212,24 @@ export function parseDisplayWindow(
     }
 
     const mergeCells = window.window.mergeCells.map((m) => {
-        const masterIdx = locate(cols.length, m.startRow, m.startCol)
+        const fromRow = rows[0].coordinate.startRow
+        const toRow = rows[rows.length - 1].coordinate.endRow
+        const fromCol = cols[0].coordinate.startCol
+        const toCol = cols[cols.length - 1].coordinate.endCol
+        const startRow = Math.min(Math.max(fromRow, m.startRow), toRow)
+        const startCol = Math.min(Math.max(fromCol, m.startCol), toCol)
+        const masterIdx = locate(
+            fromRow,
+            fromCol,
+            startRow,
+            startCol,
+            cols.length
+        )
         const masterCell = cells[masterIdx]
 
-        const endIdx = locate(cols.length, m.endRow, m.endCol)
+        const endRow = Math.min(Math.max(fromRow, m.endRow), toRow)
+        const endCol = Math.min(Math.max(fromCol, m.endCol), toCol)
+        const endIdx = locate(fromRow, fromCol, endRow, endCol, cols.length)
         const endCell = cells[endIdx]
 
         const coordinate = getRange()
@@ -254,6 +260,13 @@ export function parseDisplayWindow(
     )
 }
 
-function locate(colCnt: number, row: number, col: number): number {
-    return row * colCnt + col
+function locate(
+    fromRow: number,
+    fromCol: number,
+    row: number,
+    col: number,
+    colCnt: number
+): number {
+    const result = (row - fromRow) * colCnt + (col - fromCol)
+    return result
 }

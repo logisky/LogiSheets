@@ -322,13 +322,14 @@ impl<'a> Worksheet<'a> {
             }
         }
         self.get_all_merged_cells().into_iter().for_each(|m| {
-            if m.start_row >= start_row
-                && m.end_row <= end_row
-                && m.start_col >= start_col
-                && m.end_col <= end_col
+            if m.start_row > end_row
+                || m.end_row < start_row
+                || m.start_col > end_col
+                || m.end_col < start_col
             {
-                merge_cells.push(m);
+                return;
             }
+            merge_cells.push(m);
         });
         let blocks = block_ids
             .into_iter()

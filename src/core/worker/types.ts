@@ -256,20 +256,7 @@ export class CellView {
     }
 
     public get mergeCells(): readonly RenderCell[] {
-        let currRow = -1
-        let currCol = -1
-        return this.data
-            .flatMap((d) => d.mergeCells)
-            .filter((c) => {
-                const col = c.position.startCol
-                const row = c.position.startRow
-                if (col <= currCol && row <= currRow) {
-                    return false
-                }
-                currCol = col
-                currRow = row
-                return true
-            })
+        return this.data.flatMap((d) => d.mergeCells)
     }
 
     public get blocks(): readonly BlockDisplayInfo[] {

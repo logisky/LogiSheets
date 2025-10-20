@@ -1,4 +1,4 @@
-import {CellView} from '@/core/data'
+import {CellView} from './types'
 import {SETTINGS} from '@/core/settings'
 import {BorderPr} from 'logisheets-web'
 
@@ -77,6 +77,40 @@ export class BorderHelper {
                 this._setColBorder(i - fromRow, endCol - fromCol + 1, rightSeg)
             }
         })
+
+        this._data.mergeCells.forEach((m) => {
+            const {startRow, endRow, startCol, endCol} = m.coordinate
+            const {
+                startRow: posStartRow,
+                endRow: posEndRow,
+                startCol: posStartCol,
+                endCol: posEndCol,
+            } = m.position
+            for (let i = startRow; i <= endRow; i++) {
+                for (let j = startCol; j <= endCol; j++) {
+                    if (i > startRow) {
+                        this._setRowBorder(i - fromRow, j - fromCol, {
+                            from: posStartRow,
+                            to: posEndRow,
+                            start: posStartCol,
+                            coordinateX: endCol,
+                            coordinateY: endRow,
+                            pr: {style: 'none'},
+                        })
+                    }
+                    if (j > startCol) {
+                        this._setColBorder(i - fromRow, j - fromCol, {
+                            from: posStartCol,
+                            to: posEndCol,
+                            start: posStartRow,
+                            coordinateX: endCol,
+                            coordinateY: endRow,
+                            pr: {style: 'none'},
+                        })
+                    }
+                }
+            }
+        })
     }
 
     public generateRowBorder(r: number): BorderSegment[] {
@@ -132,10 +166,11 @@ export class BorderHelper {
 
     private _setRowBorder(row: number, col: number, border: BorderSegment) {
         const prev = this._rowBorderStore[row][col]
-        if (!prev.pr || prev.pr.style === 'none') {
+        if (!prev.pr) {
             this._rowBorderStore[row][col] = border
             return
-        } else if (!border.pr || border.pr.style === 'none') {
+        }
+        if (border.pr === undefined) {
             return
         }
         if (
@@ -149,10 +184,11 @@ export class BorderHelper {
 
     private _setColBorder(row: number, col: number, border: BorderSegment) {
         const prev = this._colBorderStore[col][row]
-        if (!prev.pr || prev.pr.style === 'none') {
+        if (!prev.pr) {
             this._colBorderStore[col][row] = border
             return
-        } else if (!border.pr || border.pr?.style === 'none') {
+        }
+        if (border.pr === undefined) {
             return
         }
         if (

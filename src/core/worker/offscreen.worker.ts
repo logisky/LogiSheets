@@ -92,12 +92,21 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
                     width: c.position.width,
                 }
             })
+        const mergeCells = viewResponse.data.mergeCells.map((m) => {
+            return {
+                startRow: m.coordinate.startRow,
+                startCol: m.coordinate.startCol,
+                endRow: m.coordinate.endRow,
+                endCol: m.coordinate.endCol,
+            }
+        })
 
         const result: Grid = {
             anchorX: viewResponse.anchorX,
             anchorY: viewResponse.anchorY,
             rows: rows,
             columns: columns,
+            mergeCells: mergeCells,
             blockInfos: viewResponse.data.blocks,
         }
 
