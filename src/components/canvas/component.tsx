@@ -89,7 +89,7 @@ export const CanvasComponent = (props: CanvasProps) => {
 }
 
 const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
-    const {selectedData, selectedData$, activeSheet} = props
+    const {selectedData, selectedData$, activeSheet, activeSheet$} = props
     const store = useContext(CanvasStoreContext)
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
@@ -197,19 +197,25 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
     // Subscribe to offscreen render results so we can draw HTML headers using Grid metadata
     useEffect(() => {
-        store.dataSvc.registerCellUpdatedCallback(() => {
-            render().then(() => {
-                const currentIdx = store.currSheetIdx
-                store.dataSvc.getSheetDimension(currentIdx).then((v) => {
-                    if (!isErrorMessage(v)) {
-                        setDocumentHeight(v.height)
-                        setDocumentWidth(v.width)
-                    }
-                    const size = canvas().getBoundingClientRect()
-                    setVisibleHeight(size.height * window.devicePixelRatio)
-                    setVisibleWidth(size.width * window.devicePixelRatio)
-                })
-            })
+        store.dataSvc.registerCellUpdatedCallback(async () => {
+            const v = await store.dataSvc.getWorkbook().getAllSheetInfo()
+            if (isErrorMessage(v)) {
+                return
+            }
+            if (store.currSheetIdx > v.length - 1) {
+                activeSheet$(v.length - 1)
+                store.dataSvc.setCurrentSheetIdx(v.length - 1)
+            }
+            await render()
+            const currentIdx = store.currSheetIdx
+            const dimension = await store.dataSvc.getSheetDimension(currentIdx)
+            if (!isErrorMessage(dimension)) {
+                setDocumentHeight(dimension.height)
+                setDocumentWidth(dimension.width)
+            }
+            const size = canvas().getBoundingClientRect()
+            setVisibleHeight(size.height * window.devicePixelRatio)
+            setVisibleWidth(size.width * window.devicePixelRatio)
         })
     }, [store])
 

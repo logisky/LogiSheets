@@ -14,7 +14,7 @@ impl NavExecutor {
 
     pub fn execute<C: NavExecCtx>(
         mut self,
-        ctx: &C,
+        ctx: &mut C,
         payload: EditPayload,
     ) -> Result<(Self, bool), Error> {
         match payload {
@@ -95,9 +95,7 @@ impl NavExecutor {
                 Ok((self, true))
             }
             EditPayload::CreateSheet(p) => {
-                let sheet_id = ctx
-                    .fetch_sheet_id_by_index(p.idx)
-                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_id = ctx.get_sheet_id(p.new_name)?;
                 self.nav.create_sheet(sheet_id);
                 Ok((self, true))
             }

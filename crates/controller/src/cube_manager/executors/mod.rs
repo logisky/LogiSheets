@@ -1,10 +1,12 @@
 mod delete_line;
+mod delete_sheet;
 mod input;
 mod insert_line;
 mod utils;
 use std::collections::HashSet;
 
 use delete_line::delete_line;
+use delete_sheet::delete_sheet;
 use input::input;
 use insert_line::insert_line;
 use logisheets_base::{errors::BasicError, Cube, CubeId};
@@ -126,6 +128,13 @@ impl CubeExecutor {
                     delete_rows.count as u32,
                     ctx,
                 ))
+            }
+            EditPayload::DeleteSheet(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let res = delete_sheet(self, sheet_id, ctx);
+                Ok(res)
             }
             _ => Ok(self),
         }

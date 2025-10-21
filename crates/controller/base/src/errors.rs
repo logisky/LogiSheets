@@ -53,7 +53,9 @@ pub enum BasicError {
 
     #[error("sheet name not found: {0}")]
     SheetNameNotFound(String),
-    #[error("sheet idx exceed the maximum: {0}")]
+    #[error("sheet name already exists: {0}")]
+    SheetNameAlreadyExists(String),
+    #[error("sheet idx exceeds the maximum: {0}")]
     SheetIdxExceed(usize),
     #[error("creating block on an existed block: {0}")]
     CreatingBlockOn(BlockId),

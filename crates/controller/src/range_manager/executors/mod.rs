@@ -1,5 +1,6 @@
 mod delete_block_line;
 mod delete_line;
+mod delete_sheet;
 mod input;
 mod insert_block_line;
 mod insert_line;
@@ -11,6 +12,7 @@ use std::collections::HashSet;
 
 use delete_block_line::delete_block_line;
 use delete_line::delete_line;
+use delete_sheet::delete_sheet;
 use input::{input, input_ephemeral};
 use insert_block_line::insert_block_line;
 use insert_line::insert_line;
@@ -147,7 +149,13 @@ impl RangeExecutor {
                 let res = input(self, sheet_id, p.row, p.col, ctx)?;
                 Ok(res)
             }
-            EditPayload::DeleteSheet(_) => todo!(),
+            EditPayload::DeleteSheet(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let res = delete_sheet(self, sheet_id, ctx);
+                Ok(res)
+            }
             EditPayload::InsertCols(insert_cols) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(insert_cols.sheet_idx)
