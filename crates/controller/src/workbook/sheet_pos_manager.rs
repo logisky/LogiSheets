@@ -28,7 +28,8 @@ impl SheetPosManager {
             }
             EditPayload::DeleteSheet(p) => {
                 ctx.has_updated();
-                self.pos.remove(p.idx);
+                let id = self.pos.remove(p.idx);
+                self.hiddens.remove(&id);
                 self
             }
             _ => self,

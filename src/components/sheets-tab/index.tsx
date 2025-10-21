@@ -2,7 +2,6 @@ import {useState, FC, useEffect} from 'react'
 import styles from './sheets-tab.module.scss'
 import {ContextMenuComponent} from './contextmenu'
 import {
-    DeleteSheetBuilder,
     CreateSheetBuilder,
     isErrorMessage,
     Payload,
@@ -14,9 +13,7 @@ import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import IconButton from '@mui/material/IconButton'
 import AddIcon from '@mui/icons-material/Add'
-import CloseIcon from '@mui/icons-material/Close'
 import Box from '@mui/material/Box'
-import {Subscription} from 'rxjs'
 import {DataServiceImpl as DataService} from '@/core/data'
 
 export interface SheetTabProps {
@@ -31,7 +28,14 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const [sheets, setSheets] = useState([] as string[])
     const [isOpen, setIsOpen] = useState(false)
-    const [modalPosition, setModalPosition] = useState({top: 0, left: 0})
+    const [modalPosition, setModalPosition] = useState({
+        top: 0,
+        left: 0,
+        tabTop: 0,
+        tabLeft: 0,
+        tabWidth: 0,
+        tabHeight: 0,
+    })
 
     useEffect(() => {
         DATA_SERVICE.getWorkbook()
@@ -40,20 +44,9 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                 if (isErrorMessage(v)) return
                 setSheets(v.map((s) => s.name))
             })
-    }, [])
-
-    useEffect(() => {
-        const subs = new Subscription()
-        subs.add(
-            DATA_SERVICE.registerSheetUpdatedCallback(() => {
-                setSheets(
-                    DATA_SERVICE.getCacheAllSheetInfo().map((s) => s.name)
-                )
-            })
-        )
-        return () => {
-            subs.unsubscribe()
-        }
+        DATA_SERVICE.registerSheetUpdatedCallback(() => {
+            setSheets(DATA_SERVICE.getCacheAllSheetInfo().map((s) => s.name))
+        })
     }, [])
 
     // Clamp active index to available tab range when sheets change
@@ -68,13 +61,6 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
         activeSheet$(idx)
     }
 
-    const onDelete = (i: number) => {
-        const payload: Payload = {
-            type: 'deleteSheet',
-            value: new DeleteSheetBuilder().idx(i).build(),
-        }
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-    }
     const addSheet = () => {
         const newSheetName = findNewSheetName(sheets)
         const newIdx = sheets.length
@@ -121,49 +107,24 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                                     e.stopPropagation()
                                     activeSheet$(i)
                                     setIsOpen(true)
+                                    const target =
+                                        e.currentTarget as HTMLElement
+                                    const tabEl =
+                                        (target.closest(
+                                            '[role="tab"]'
+                                        ) as HTMLElement | null) ?? target
+                                    const rect = tabEl.getBoundingClientRect()
                                     setModalPosition({
                                         top: e.clientY,
                                         left: e.clientX,
+                                        tabTop: rect.top,
+                                        tabLeft: rect.left,
+                                        tabWidth: rect.width,
+                                        tabHeight: rect.height,
                                     })
                                 }}
                             >
                                 <span>{sheet}</span>
-                                <Box
-                                    component="span"
-                                    role="button"
-                                    aria-label="close sheet"
-                                    tabIndex={0}
-                                    sx={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width: 20,
-                                        height: 20,
-                                        ml: 0.5,
-                                        borderRadius: '50%',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            backgroundColor: 'action.hover',
-                                        },
-                                        outline: 'none',
-                                    }}
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        onDelete(i)
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (
-                                            e.key === 'Enter' ||
-                                            e.key === ' '
-                                        ) {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            onDelete(i)
-                                        }
-                                    }}
-                                >
-                                    <CloseIcon fontSize="inherit" />
-                                </Box>
                             </Box>
                         }
                     />
@@ -188,6 +149,10 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
             <ContextMenuComponent
                 left={modalPosition.left}
                 top={modalPosition.top}
+                tabLeft={modalPosition.tabLeft}
+                tabTop={modalPosition.tabTop}
+                tabWidth={modalPosition.tabWidth}
+                tabHeight={modalPosition.tabHeight}
                 isOpen={isOpen}
                 setIsOpen={setIsOpen}
                 index={activeSheet}

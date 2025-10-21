@@ -97,9 +97,6 @@ impl<'a> Executor<'a> {
             return Ok(result);
         }
 
-        let (sheet_pos_manager, sheet_updated) = result.execute_sheet_pos(&payload)?;
-        result.status.sheet_pos_manager = sheet_pos_manager;
-
         let old_navigator = result.status.navigator.clone();
         let (nav_executor, nav_updated) = result.execute_navigator(payload.clone())?;
 
@@ -134,7 +131,7 @@ impl<'a> Executor<'a> {
         result.status.cube_manager = cube_executor.manager;
 
         let formula_executor =
-            result.execute_formula(payload, &old_navigator, dirty_ranges, dirty_cubes)?;
+            result.execute_formula(payload.clone(), &old_navigator, dirty_ranges, dirty_cubes)?;
 
         let cell_updated =
             if updated || nav_updated || cell_attatchment_updated || exclusive_updated {
@@ -142,6 +139,9 @@ impl<'a> Executor<'a> {
             } else {
                 result.updated_cells.len() > 0 || result.cells_removed.len() > 0
             };
+
+        let (sheet_pos_manager, sheet_updated) = result.execute_sheet_pos(&payload)?;
+        result.status.sheet_pos_manager = sheet_pos_manager;
 
         Ok(Executor {
             status: Status {
@@ -240,11 +240,12 @@ impl<'a> Executor<'a> {
     }
 
     fn execute_navigator(&mut self, payload: EditPayload) -> Result<(NavExecutor, bool), Error> {
-        let ctx = NavigatorConnector {
+        let mut ctx = NavigatorConnector {
             sheet_pos_manager: &self.status.sheet_pos_manager,
+            sheet_id_manager: &mut self.status.sheet_id_manager,
         };
         let executor = NavExecutor::new(self.status.navigator.clone());
-        executor.execute(&ctx, payload)
+        executor.execute(&mut ctx, payload)
     }
 
     fn execute_cell_attachments(

@@ -284,8 +284,8 @@ mod tests {
     use logisheets_base::{CellId, CellValue};
 
     use crate::edit_action::{
-        CellInput, CellStyleUpdate, EditAction, EditPayload, EphemeralCellInput, LineStyleUpdate,
-        PayloadsAction, StatusCode, StyleUpdateType,
+        CellInput, CellStyleUpdate, CreateSheet, DeleteSheet, EditAction, EditPayload,
+        EphemeralCellInput, LineStyleUpdate, PayloadsAction, StatusCode, StyleUpdateType,
     };
 
     use super::Controller;
@@ -507,5 +507,51 @@ mod tests {
         let style_id = row_info.style;
         let style = wb.status.style_manager.get_style(style_id);
         assert_eq!(style.formatter, "0.00");
+    }
+
+    #[test]
+    fn delete_sheet1() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::CreateSheet(CreateSheet {
+                new_name: "11".to_string(),
+                idx: sheet_idx,
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.version > 0);
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::DeleteSheet(DeleteSheet { idx: sheet_idx + 1 })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.version > 0);
+    }
+
+    #[test]
+    fn delete_sheet2() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::CreateSheet(CreateSheet {
+                new_name: "11".to_string(),
+                idx: sheet_idx,
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.version > 0);
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::DeleteSheet(DeleteSheet { idx: sheet_idx })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.version > 0);
     }
 }
