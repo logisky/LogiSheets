@@ -1,20 +1,22 @@
 import {useState, FC, useEffect} from 'react'
-import styles from './sheets-tab.module.scss'
-import {ContextMenuComponent} from './contextmenu'
 import {
     CreateSheetBuilder,
     isErrorMessage,
     Payload,
+    SheetInfo,
     Transaction,
 } from 'logisheets-web'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
+import {StandardColor} from '@/core/standable'
+import {DataServiceImpl as DataService} from '@/core/data'
+import AddIcon from '@mui/icons-material/Add'
+import Box from '@mui/material/Box'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import IconButton from '@mui/material/IconButton'
-import AddIcon from '@mui/icons-material/Add'
-import Box from '@mui/material/Box'
-import {DataServiceImpl as DataService} from '@/core/data'
+import {ContextMenuComponent} from './contextmenu'
+import styles from './sheets-tab.module.scss'
 
 export interface SheetTabProps {
     activeSheet: number
@@ -26,7 +28,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     activeSheet$,
 }) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const [sheets, setSheets] = useState([] as string[])
+    const [sheets, setSheets] = useState([] as readonly SheetInfo[])
     const [isOpen, setIsOpen] = useState(false)
     const [modalPosition, setModalPosition] = useState({
         top: 0,
@@ -42,10 +44,10 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
             .getAllSheetInfo()
             .then((v) => {
                 if (isErrorMessage(v)) return
-                setSheets(v.map((s) => s.name))
+                setSheets(v)
             })
         DATA_SERVICE.registerSheetUpdatedCallback(() => {
-            setSheets(DATA_SERVICE.getCacheAllSheetInfo().map((s) => s.name))
+            setSheets(DATA_SERVICE.getCacheAllSheetInfo())
         })
     }, [])
 
@@ -62,7 +64,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     }
 
     const addSheet = () => {
-        const newSheetName = findNewSheetName(sheets)
+        const newSheetName = findNewSheetName(sheets.map((s) => s.name))
         const newIdx = sheets.length
         const payload: Payload = {
             type: 'createSheet',
@@ -93,8 +95,19 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
             >
                 {sheets.map((sheet, i) => (
                     <Tab
-                        key={sheet}
-                        sx={{textTransform: 'none'}}
+                        key={sheet.name}
+                        sx={{
+                            textTransform: 'none',
+                            ...(sheet.tabColor
+                                ? {
+                                      backgroundColor: StandardColor.fromArgb(
+                                          sheet.tabColor
+                                      ).css(),
+                                      borderRadius: 1,
+                                      mx: 0.5,
+                                  }
+                                : {}),
+                        }}
                         label={
                             <Box
                                 sx={{
@@ -124,7 +137,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                                     })
                                 }}
                             >
-                                <span>{sheet}</span>
+                                <span>{sheet.name}</span>
                             </Box>
                         }
                     />
@@ -156,7 +169,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                 isOpen={isOpen}
                 setIsOpen={setIsOpen}
                 index={activeSheet}
-                sheetnames={sheets}
+                sheetnames={sheets.map((s) => s.name)}
             />
         </div>
     )
