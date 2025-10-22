@@ -43,6 +43,7 @@ impl SheetInfoManager {
                     .get_sheet_id(p.idx)
                     .ok_or(BasicError::SheetIdxExceed(self.pos.len()))?;
                 self.colors.insert(id, p.color.clone());
+                ctx.has_updated();
                 Ok(self)
             }
             EditPayload::SetSheetVisible(p) => {
@@ -50,6 +51,7 @@ impl SheetInfoManager {
                     .get_sheet_id(p.idx)
                     .ok_or(BasicError::SheetIdxExceed(self.pos.len()))?;
                 self.hiddens.insert(id);
+                ctx.has_updated();
                 Ok(self)
             }
             _ => Ok(self),
