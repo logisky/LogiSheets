@@ -17,7 +17,7 @@ use crate::{
     range_manager::RangeManager,
     settings::Settings,
     sid_assigner::ShadowIdAssigner,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
 };
 
 use super::{
@@ -129,7 +129,7 @@ pub fn load_sheet_data(
     sheet_data: &CtSheetData,
     navigator: &mut Navigator,
     sheet_id_manager: &mut SheetIdManager,
-    sheet_pos_manager: &mut SheetPosManager,
+    sheet_pos_manager: &mut SheetInfoManager,
     text_id_manager: &mut TextIdManager,
     func_id_manager: &mut FuncIdManager,
     name_id_manager: &mut NameIdManager,

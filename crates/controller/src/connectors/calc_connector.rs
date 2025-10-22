@@ -26,7 +26,7 @@ use crate::{
     ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, TextIdManager},
     navigator::Navigator,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
 };
 
 use crate::errors::Result;
@@ -43,7 +43,7 @@ pub struct CalcConnector<'a> {
     pub sheet_id_manager: &'a SheetIdManager,
     pub names_storage: HashMap<NameId, CalcValue>,
     pub cells_storage: HashMap<(SheetId, CellId), CalcValue>,
-    pub sheet_pos_manager: &'a SheetPosManager,
+    pub sheet_pos_manager: &'a SheetInfoManager,
     pub async_func_manager: &'a mut AsyncFuncManager,
     pub async_funcs: &'a HashSet<String>,
     pub active_sheet: SheetId,

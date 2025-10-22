@@ -9,7 +9,7 @@ use crate::{
     connectors::{
         CalcConnector, CellAttachmentsConnector, ContainerConnector, CubeConnector,
         ExclusiveConnector, FormulaConnector, NavigatorConnector, RangeConnector,
-        SheetPosConnector,
+        SheetInfoConnector,
     },
     container::ContainerExecutor,
     cube_manager::executors::CubeExecutor,
@@ -21,7 +21,7 @@ use crate::{
     settings::CalcConfig,
     sid_assigner::ShadowIdAssigner,
     version_manager::VersionManager,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
     Error,
 };
 
@@ -140,7 +140,7 @@ impl<'a> Executor<'a> {
                 result.updated_cells.len() > 0 || result.cells_removed.len() > 0
             };
 
-        let (sheet_pos_manager, sheet_updated) = result.execute_sheet_pos(&payload)?;
+        let (sheet_pos_manager, sheet_updated) = result.execute_sheet_info(&payload)?;
         result.status.sheet_pos_manager = sheet_pos_manager;
 
         Ok(Executor {
@@ -301,11 +301,11 @@ impl<'a> Executor<'a> {
         executor.execute(&mut ctx, payload)
     }
 
-    fn execute_sheet_pos(
+    fn execute_sheet_info(
         &mut self,
         payload: &EditPayload,
-    ) -> Result<(SheetPosManager, bool), Error> {
-        let mut ctx = SheetPosConnector {
+    ) -> Result<(SheetInfoManager, bool), Error> {
+        let mut ctx = SheetInfoConnector {
             sheet_id_manager: &mut self.status.sheet_id_manager,
             text_id_manager: &mut self.status.text_id_manager,
             func_id_manager: &mut self.status.func_id_manager,
@@ -318,7 +318,7 @@ impl<'a> Executor<'a> {
             .status
             .sheet_pos_manager
             .clone()
-            .execute(payload, &mut ctx);
+            .execute(payload, &mut ctx)?;
         Ok((new_manager, ctx.updated))
     }
 

@@ -13,7 +13,7 @@ use crate::{
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
     range_manager::RangeManager,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
     Controller,
 };
 
@@ -100,7 +100,7 @@ pub struct Saver<'a> {
     pub range_manager: &'a RangeManager,
     pub cube_manager: &'a CubeManager,
     pub ext_ref_manager: &'a ExtRefManager,
-    pub sheet_pos_manager: &'a SheetPosManager,
+    pub sheet_pos_manager: &'a SheetInfoManager,
 }
 
 impl<'a> IndexFetcherTrait for Saver<'a> {

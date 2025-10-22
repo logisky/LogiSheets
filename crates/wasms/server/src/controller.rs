@@ -7,8 +7,8 @@ use logisheets_controller::edit_action::{
     DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, EphemeralCellInput,
     HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock,
     LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction, RemoveBlock,
-    ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight, SheetCellId, SheetRename,
-    SplitMergedCells, StyleUpdateType, VerticalAlignment,
+    ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight, SetSheetColor, SetSheetVisible,
+    SheetCellId, SheetRename, SplitMergedCells, StyleUpdateType, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, Error, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
@@ -1232,4 +1232,26 @@ pub fn get_display_units_of_formula(f: &str) -> JsValue {
     let r = lex_and_fmt(f).ok_or(Error::from(BasicError::InvalidFormula(f.to_string())));
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn set_sheet_color(id: usize, sheet_idx: usize, color: String) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let p = SetSheetColor {
+        idx: sheet_idx,
+        color,
+    };
+    manager.add_payload(id, EditPayload::SetSheetColor(p));
+}
+
+#[wasm_bindgen]
+pub fn set_sheet_visible(id: usize, sheet_idx: usize, visible: bool) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let p = SetSheetVisible {
+        idx: sheet_idx,
+        visible,
+    };
+    manager.add_payload(id, EditPayload::SetSheetVisible(p));
 }

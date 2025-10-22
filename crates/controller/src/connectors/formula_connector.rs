@@ -19,7 +19,7 @@ use crate::id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdMana
 use crate::navigator::Navigator;
 use crate::range_manager::RangeManager;
 use crate::sid_assigner::ShadowIdAssigner;
-use crate::workbook::sheet_pos_manager::SheetPosManager;
+use crate::workbook::sheet_pos_manager::SheetInfoManager;
 
 use super::IdFetcher;
 
@@ -27,7 +27,7 @@ type Result<T> = std::result::Result<T, BasicError>;
 
 pub struct FormulaConnector<'a> {
     pub book_name: &'a str,
-    pub sheet_pos_manager: &'a mut SheetPosManager,
+    pub sheet_pos_manager: &'a mut SheetInfoManager,
     pub sheet_id_manager: &'a mut SheetIdManager,
     pub text_id_manager: &'a mut TextIdManager,
     pub func_id_manager: &'a mut FuncIdManager,

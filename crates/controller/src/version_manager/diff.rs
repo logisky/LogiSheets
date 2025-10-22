@@ -301,5 +301,7 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             Ok(Some((Diff::Unavailable, sheet_id)))
         }
+        EditPayload::SetSheetColor(_) => Ok(Some((Diff::SheetProperty, 0))),
+        EditPayload::SetSheetVisible(_) => Ok(Some((Diff::SheetProperty, 0))),
     }
 }

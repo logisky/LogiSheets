@@ -120,9 +120,13 @@ pub enum EditPayload {
     // Merge cells
     MergeCells(MergeCells),
     SplitMergedCells(SplitMergedCells),
+
+    // Sheet
     SheetRename(SheetRename),
     CreateSheet(CreateSheet),
     DeleteSheet(DeleteSheet),
+    SetSheetColor(SetSheetColor),
+    SetSheetVisible(SetSheetVisible),
     // Shifting
     InsertCols(InsertCols),
     DeleteCols(DeleteCols),
@@ -148,6 +152,20 @@ pub struct CreateSheet {
 #[ts(file_name = "delete_sheet.ts", builder, rename_all = "camelCase")]
 pub struct DeleteSheet {
     pub idx: usize,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "set_sheet_color.ts", builder, rename_all = "camelCase")]
+pub struct SetSheetColor {
+    pub idx: usize,
+    pub color: String,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "set_sheet_visible.ts", builder, rename_all = "camelCase")]
+pub struct SetSheetVisible {
+    pub idx: usize,
+    pub visible: bool,
 }
 
 /// Find a sheet by its name and rename it. If no sheet is found, do nothing.

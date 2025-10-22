@@ -9,11 +9,11 @@ use crate::{
     ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
 };
 
 pub struct CellAttachmentsConnector<'a> {
-    pub sheet_pos_manager: &'a SheetPosManager,
+    pub sheet_pos_manager: &'a SheetInfoManager,
     pub navigator: &'a Navigator,
     pub sheet_id_manager: &'a mut SheetIdManager,
     pub name_id_manager: &'a mut NameIdManager,

@@ -1,4 +1,4 @@
-use crate::{navigator::Navigator, workbook::sheet_pos_manager::SheetPosManager};
+use crate::{navigator::Navigator, workbook::sheet_pos_manager::SheetInfoManager};
 use logisheets_base::{
     errors::{BasicError, Result},
     index_fetcher::IndexFetcherTrait,
@@ -6,7 +6,7 @@ use logisheets_base::{
 };
 pub struct IndexFetcher<'a> {
     pub navigator: &'a Navigator,
-    pub sheet_pos_manager: &'a SheetPosManager,
+    pub sheet_pos_manager: &'a SheetInfoManager,
 }
 
 impl<'a> IndexFetcherTrait for IndexFetcher<'a> {

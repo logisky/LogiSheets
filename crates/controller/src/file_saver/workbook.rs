@@ -17,7 +17,7 @@ use crate::{
     settings::Settings,
     style_manager::StyleManager,
     theme_manager::ThemeManager,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
 };
 
 use super::{error::SaveError, sst::save_sst, SaverTrait};
@@ -26,7 +26,7 @@ pub fn save_workbook<S: SaverTrait>(
     data_container: &DataContainer,
     formula_manager: &FormulaManager,
     attachment_manager: &CellAttachmentsManager,
-    sheet_pos_manager: &SheetPosManager,
+    sheet_pos_manager: &SheetInfoManager,
     sheet_id_manager: &SheetIdManager,
     style_manager: &StyleManager,
     ext_book_manager: &ExtBooksManager,
