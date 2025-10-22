@@ -93,15 +93,15 @@ impl Controller {
 
     pub fn get_all_sheet_info(&self) -> Vec<SheetInfo> {
         let id_manager = &self.status.sheet_id_manager;
-        let pos_manager = &self.status.sheet_pos_manager;
-        pos_manager
+        let info_manager = &self.status.sheet_pos_manager;
+        info_manager
             .pos
             .iter()
             .map(|id| SheetInfo {
                 name: id_manager.get_string(id).unwrap_or(String::new()),
                 id: *id,
-                hidden: pos_manager.is_hidden(id),
-                tab_color: String::from(""),
+                hidden: info_manager.is_hidden(id),
+                tab_color: info_manager.get_color(id).unwrap_or(String::new()),
             })
             .collect()
     }

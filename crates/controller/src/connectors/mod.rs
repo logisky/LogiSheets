@@ -21,4 +21,4 @@ pub use id_fetcher::IdFetcher;
 pub use name_fetcher::NameFetcher;
 pub use navigator_connector::NavigatorConnector;
 pub use range_connector::RangeConnector;
-pub use sheet_pos_connector::SheetPosConnector;
+pub use sheet_pos_connector::SheetInfoConnector;

@@ -10,7 +10,7 @@ use crate::{
     ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
 };
 
 pub struct CubeConnector<'a> {
@@ -19,7 +19,7 @@ pub struct CubeConnector<'a> {
     pub func_id_manager: &'a mut FuncIdManager,
     pub name_id_manager: &'a mut NameIdManager,
     pub external_links_manager: &'a mut ExtBooksManager,
-    pub sheet_pos_manager: &'a SheetPosManager,
+    pub sheet_pos_manager: &'a SheetInfoManager,
     pub navigator: &'a Navigator,
 }
 

@@ -14,7 +14,7 @@ use crate::{
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
     style_manager::{RawStyle, StyleManager},
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
     Error,
 };
 
@@ -25,7 +25,7 @@ pub struct ContainerConnector<'a> {
     pub func_id_manager: &'a mut FuncIdManager,
     pub name_id_manager: &'a mut NameIdManager,
     pub external_links_manager: &'a mut ExtBooksManager,
-    pub sheet_pos_manager: &'a SheetPosManager,
+    pub sheet_pos_manager: &'a SheetInfoManager,
     pub style_manager: &'a mut StyleManager,
 }
 

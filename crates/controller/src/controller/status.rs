@@ -18,7 +18,7 @@ use crate::navigator::Navigator;
 
 use crate::range_manager::RangeManager;
 use crate::style_manager::StyleManager;
-use crate::workbook::sheet_pos_manager::SheetPosManager;
+use crate::workbook::sheet_pos_manager::SheetInfoManager;
 
 #[derive(Debug, Clone)]
 pub struct Status {
@@ -33,7 +33,7 @@ pub struct Status {
     pub text_id_manager: TextIdManager,
     pub name_id_manager: NameIdManager,
     pub external_links_manager: ExtBooksManager,
-    pub sheet_pos_manager: SheetPosManager,
+    pub sheet_pos_manager: SheetInfoManager,
     pub style_manager: StyleManager,
     pub cell_attachment_manager: CellAttachmentsManager,
     pub exclusive_manager: ExclusiveManager,
@@ -57,7 +57,7 @@ impl Default for Status {
             text_id_manager: TextIdManager::new(0),
             name_id_manager: NameIdManager::new(0),
             external_links_manager: ExtBooksManager::new(),
-            sheet_pos_manager: SheetPosManager::default(),
+            sheet_pos_manager: SheetInfoManager::default(),
             style_manager: StyleManager::default(),
             cell_attachment_manager: CellAttachmentsManager::default(),
             exclusive_manager: ExclusiveManager::default(),

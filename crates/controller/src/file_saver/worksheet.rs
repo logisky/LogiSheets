@@ -19,7 +19,7 @@ use crate::{
     formula_manager::FormulaManager,
     id_manager::SheetIdManager,
     settings::Settings,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
 };
 
 use super::{error::SaveError, SaverTrait};
@@ -29,7 +29,7 @@ pub fn save_sheets<S: SaverTrait>(
     sheet_data_container: &SheetDataContainer,
     formula_manager: &FormulaManager,
     attachment_manager: &CellAttachmentsManager,
-    sheet_pos_manager: &SheetPosManager,
+    sheet_pos_manager: &SheetInfoManager,
     sheet_name_manager: &SheetIdManager,
     settings: &Settings,
     saver: &mut S,

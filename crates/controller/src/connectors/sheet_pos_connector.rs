@@ -7,10 +7,10 @@ use crate::{
     ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
-    workbook::ctx::SheetPosExecCtx,
+    workbook::ctx::SheetInfoExecCtx,
 };
 
-pub struct SheetPosConnector<'a> {
+pub struct SheetInfoConnector<'a> {
     pub text_id_manager: &'a mut TextIdManager,
     pub sheet_id_manager: &'a mut SheetIdManager,
     pub func_id_manager: &'a mut FuncIdManager,
@@ -21,7 +21,7 @@ pub struct SheetPosConnector<'a> {
     pub updated: bool,
 }
 
-impl<'a> IdFetcherTrait for SheetPosConnector<'a> {
+impl<'a> IdFetcherTrait for SheetInfoConnector<'a> {
     fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId, BasicError> {
         self.navigator.fetch_row_id(sheet_id, row_idx)
     }
@@ -85,7 +85,7 @@ impl<'a> IdFetcherTrait for SheetPosConnector<'a> {
     }
 }
 
-impl<'a> SheetPosExecCtx for SheetPosConnector<'a> {
+impl<'a> SheetInfoExecCtx for SheetInfoConnector<'a> {
     fn has_updated(&mut self) {
         self.updated = true
     }

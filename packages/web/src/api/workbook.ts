@@ -59,6 +59,8 @@ import {
     remove_block,
     set_line_num_fmt,
     set_cell_num_fmt,
+    set_sheet_color,
+    set_sheet_visible,
 } from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
@@ -635,6 +637,10 @@ export class Workbook {
                 p.value.numFmt
             )
         if (p.type === 'deleteSheet') return delete_sheet(this._id, p.value.idx)
+        if (p.type === 'setSheetColor')
+            return set_sheet_color(this._id, p.value.idx, p.value.color)
+        if (p.type === 'setSheetVisible')
+            return set_sheet_visible(this._id, p.value.idx, p.value.visible)
         if (p.type === 'createSheet')
             return create_sheet(this._id, p.value.idx, p.value.newName)
         if (p.type === 'cellClear')

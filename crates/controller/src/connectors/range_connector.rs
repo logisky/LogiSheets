@@ -12,7 +12,7 @@ use crate::{
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
     range_manager::ctx::RangeExecCtx,
-    workbook::sheet_pos_manager::SheetPosManager,
+    workbook::sheet_pos_manager::SheetInfoManager,
 };
 
 pub struct RangeConnector<'a> {
@@ -22,7 +22,7 @@ pub struct RangeConnector<'a> {
     pub name_id_manager: &'a mut NameIdManager,
     pub external_links_manager: &'a mut ExtBooksManager,
     pub navigator: &'a Navigator,
-    pub sheet_pos_manager: &'a SheetPosManager,
+    pub sheet_pos_manager: &'a SheetInfoManager,
 }
 
 impl<'a> IdFetcherTrait for RangeConnector<'a> {
