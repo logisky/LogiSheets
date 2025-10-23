@@ -86,7 +86,11 @@ pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
         custom: doc_prop_custom,
         core: doc_prop_core,
     };
-    Ok(Wb { xl, doc_props })
+    Ok(Wb {
+        xl,
+        doc_props,
+        logisheets: None,
+    })
 }
 
 fn de_external_link<R: Read + Seek>(

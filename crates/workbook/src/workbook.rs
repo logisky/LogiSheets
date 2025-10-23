@@ -1,3 +1,4 @@
+use crate::logisheets::LogiSheetsData;
 use crate::ooxml::comments::Comments;
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
 use crate::ooxml::external_links::*;
@@ -16,6 +17,7 @@ pub type Id = String;
 pub struct Wb {
     pub xl: Xl,
     pub doc_props: DocProps,
+    pub logisheets: Option<LogiSheetsData>,
 }
 
 #[derive(Debug)]
