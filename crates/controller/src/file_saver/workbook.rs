@@ -100,6 +100,7 @@ pub fn save_workbook<S: SaverTrait>(
             theme,
         },
         doc_props: DocProps::default(),
+        logisheets: None,
     };
     Ok(workbook)
 }
