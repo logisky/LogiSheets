@@ -19,7 +19,7 @@ use crate::id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdMana
 use crate::navigator::Navigator;
 use crate::range_manager::RangeManager;
 use crate::sid_assigner::ShadowIdAssigner;
-use crate::workbook::sheet_pos_manager::SheetInfoManager;
+use crate::workbook::sheet_info_manager::SheetInfoManager;
 
 use super::IdFetcher;
 

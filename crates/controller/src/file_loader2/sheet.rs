@@ -17,7 +17,7 @@ use crate::{
     range_manager::RangeManager,
     settings::Settings,
     sid_assigner::ShadowIdAssigner,
-    workbook::sheet_pos_manager::SheetInfoManager,
+    workbook::sheet_info_manager::SheetInfoManager,
 };
 
 use super::{

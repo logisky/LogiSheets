@@ -5,9 +5,9 @@ use logisheets_base::SheetId;
 use logisheets_parser::unparse::Stringify;
 use logisheets_workbook::{
     prelude::{
-        Comments, CtAuthors, CtCell, CtCol, CtCols, CtComment, CtCommentList, CtFormula,
-        CtMergeCell, CtMergeCells, CtRow, CtRst, CtSheet, CtSheetData, StCellFormulaType,
-        StSheetState, WorksheetPart,
+        Comments, CtAuthors, CtCell, CtCol, CtColor, CtCols, CtComment, CtCommentList, CtFormula,
+        CtMergeCell, CtMergeCells, CtRow, CtRst, CtSheet, CtSheetData, CtSheetPr,
+        StCellFormulaType, StSheetState, WorksheetPart,
     },
     workbook::Worksheet,
 };
@@ -19,7 +19,7 @@ use crate::{
     formula_manager::FormulaManager,
     id_manager::SheetIdManager,
     settings::Settings,
-    workbook::sheet_pos_manager::SheetInfoManager,
+    workbook::sheet_info_manager::SheetInfoManager,
 };
 
 use super::{error::SaveError, SaverTrait};
@@ -29,12 +29,12 @@ pub fn save_sheets<S: SaverTrait>(
     sheet_data_container: &SheetDataContainer,
     formula_manager: &FormulaManager,
     attachment_manager: &CellAttachmentsManager,
-    sheet_pos_manager: &SheetInfoManager,
+    sheet_info_manager: &SheetInfoManager,
     sheet_name_manager: &SheetIdManager,
     settings: &Settings,
     saver: &mut S,
 ) -> Result<(usize, CtSheet, Worksheet), SaveError> {
-    let pos = sheet_pos_manager
+    let pos = sheet_info_manager
         .get_sheet_idx(&sheet_id)
         .ok_or(SaveError::SheetIdPosError(sheet_id))?;
     let worksheet = save_worksheet(
@@ -43,13 +43,14 @@ pub fn save_sheets<S: SaverTrait>(
         formula_manager,
         attachment_manager,
         settings,
+        sheet_info_manager,
         saver,
     );
     let sheet_name = sheet_name_manager
         .get_string(&sheet_id)
         .ok_or(SaveError::SheetNameError(sheet_id))?;
     let id = saver.fetch_part_id();
-    let is_hidden = sheet_pos_manager.is_hidden(&sheet_id);
+    let is_hidden = sheet_info_manager.is_hidden(&sheet_id);
     let ct_sheet = CtSheet {
         name: sheet_name,
         sheet_id: pos as u32,
@@ -69,6 +70,7 @@ fn save_worksheet<S: SaverTrait>(
     formula_manager: &FormulaManager,
     attachment_manager: &CellAttachmentsManager,
     settings: &Settings,
+    sheet_info_manager: &SheetInfoManager,
     saver: &mut S,
 ) -> Worksheet {
     let worksheet_part = save_worksheet_part(
@@ -77,6 +79,7 @@ fn save_worksheet<S: SaverTrait>(
         formula_manager,
         attachment_manager,
         settings,
+        sheet_info_manager,
         saver,
     );
     let comments = save_comments(sheet_id, attachment_manager, saver);
@@ -92,17 +95,19 @@ fn save_worksheet_part<S: SaverTrait>(
     formula_manager: &FormulaManager,
     attachment_manager: &CellAttachmentsManager,
     settings: &Settings,
+    sheet_info_manager: &SheetInfoManager,
     saver: &mut S,
 ) -> WorksheetPart {
     let cols = save_cols(sheet_id, sheet_data_container, saver);
     let sheet_data = save_sheet_data(sheet_id, sheet_data_container, formula_manager, saver);
     let merge_cells = save_merge_cells(sheet_id, attachment_manager, saver);
+    let sheet_pr = save_sheet_pr(sheet_id, sheet_info_manager, saver);
     let sheet_format_pr = settings.sheet_format_pr.get(&sheet_id).map(|e| e.clone());
     let sheet_views = settings.sheet_views.get(&sheet_id).map(|e| e.clone());
     WorksheetPart {
         cols,
         sheet_data,
-        sheet_pr: None,
+        sheet_pr,
         dimension: None,
         sheet_views,
         sheet_format_pr,
@@ -136,6 +141,34 @@ fn save_worksheet_part<S: SaverTrait>(
         web_publish_items: None,
         table_parts: None,
     }
+}
+
+fn save_sheet_pr<S: SaverTrait>(
+    sheet_id: u16,
+    sheet_info_manager: &SheetInfoManager,
+    _saver: &mut S,
+) -> Option<CtSheetPr> {
+    let color = sheet_info_manager.get_color(&sheet_id)?;
+    Some(CtSheetPr {
+        tab_color: Some(CtColor {
+            auto: None,
+            indexed: None,
+            rgb: Some(color),
+            theme: None,
+            tint: 0.,
+        }),
+        outline_pr: None,
+        page_setup_pr: None,
+        sync_horizontal: false,
+        sync_vertical: false,
+        sync_ref: None,
+        transition_evaluation: false,
+        transition_entry: false,
+        published: true,
+        code_name: None,
+        filter_mode: false,
+        enable_format_conditions_calculation: true,
+    })
 }
 
 fn save_comments<S: SaverTrait>(

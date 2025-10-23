@@ -2,7 +2,7 @@ use logisheets_base::{errors::BasicError, id_fetcher::SheetIdFetcherByIdxTrait, 
 
 use crate::{
     id_manager::SheetIdManager, navigator::ctx::NavExecCtx,
-    workbook::sheet_pos_manager::SheetInfoManager,
+    workbook::sheet_info_manager::SheetInfoManager,
 };
 
 pub struct NavigatorConnector<'a> {

@@ -1,4 +1,4 @@
-use crate::{navigator::Navigator, workbook::sheet_pos_manager::SheetInfoManager};
+use crate::{navigator::Navigator, workbook::sheet_info_manager::SheetInfoManager};
 use logisheets_base::{
     errors::{BasicError, Result},
     index_fetcher::IndexFetcherTrait,

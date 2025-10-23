@@ -18,7 +18,7 @@ use crate::navigator::Navigator;
 
 use crate::range_manager::RangeManager;
 use crate::style_manager::StyleManager;
-use crate::workbook::sheet_pos_manager::SheetInfoManager;
+use crate::workbook::sheet_info_manager::SheetInfoManager;
 
 #[derive(Debug, Clone)]
 pub struct Status {

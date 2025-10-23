@@ -17,7 +17,7 @@ use crate::{
     settings::Settings,
     style_manager::StyleManager,
     theme_manager::ThemeManager,
-    workbook::sheet_pos_manager::SheetInfoManager,
+    workbook::sheet_info_manager::SheetInfoManager,
 };
 
 use super::{error::SaveError, sst::save_sst, SaverTrait};
