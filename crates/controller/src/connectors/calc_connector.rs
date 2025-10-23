@@ -26,7 +26,7 @@ use crate::{
     ext_book_manager::ExtBooksManager,
     id_manager::{FuncIdManager, TextIdManager},
     navigator::Navigator,
-    workbook::sheet_pos_manager::SheetInfoManager,
+    workbook::sheet_info_manager::SheetInfoManager,
 };
 
 use crate::errors::Result;

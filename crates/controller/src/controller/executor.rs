@@ -21,7 +21,7 @@ use crate::{
     settings::CalcConfig,
     sid_assigner::ShadowIdAssigner,
     version_manager::VersionManager,
-    workbook::sheet_pos_manager::SheetInfoManager,
+    workbook::sheet_info_manager::SheetInfoManager,
     Error,
 };
 

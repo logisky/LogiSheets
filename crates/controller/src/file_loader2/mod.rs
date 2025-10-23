@@ -20,6 +20,7 @@ use crate::{
     id_manager::SheetIdManager,
     settings::Settings,
     theme_manager::ThemeManager,
+    utils::turn_indexed_color_to_rgb,
 };
 
 use self::sheet::load_sheet_views;
@@ -42,7 +43,7 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
         mut text_id_manager,
         mut name_id_manager,
         mut external_links_manager,
-        mut sheet_pos_manager,
+        sheet_pos_manager: mut sheet_info_manager,
         mut style_manager,
         mut cell_attachment_manager,
         mut formula_manager,
@@ -80,9 +81,9 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
             let sheet_name = &ct_sheet.name;
             let sheet_id = sheet_id_manager.get_or_register_id(sheet_name);
             navigator.add_sheet_id(&sheet_id);
-            sheet_pos_manager.pos.push_back(sheet_id);
+            sheet_info_manager.pos.push_back(sheet_id);
             if ct_sheet.state != StSheetState::Visible {
-                sheet_pos_manager.hiddens.insert(sheet_id);
+                sheet_info_manager.hiddens.insert(sheet_id);
             }
             let id = &ct_sheet.id;
             if let Some(ws) = wb.xl.worksheets.get(id) {
@@ -117,13 +118,16 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
                 if let Some(sheet_views) = &ws.worksheet_part.sheet_views {
                     load_sheet_views(&mut settings, sheet_id, sheet_views);
                 }
+                if let Some(sheet_pr) = &ws.worksheet_part.sheet_pr {
+                    load_sheet_pr(&mut sheet_info_manager, sheet_id, sheet_pr);
+                }
                 load_sheet_data(
                     sheet_id,
                     &book_name,
                     &ws.worksheet_part.sheet_data,
                     &mut navigator,
                     &mut sheet_id_manager,
-                    &mut sheet_pos_manager,
+                    &mut sheet_info_manager,
                     &mut text_id_manager,
                     &mut func_id_manager,
                     &mut name_id_manager,
@@ -147,7 +151,7 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
         text_id_manager,
         name_id_manager,
         external_links_manager,
-        sheet_pos_manager,
+        sheet_pos_manager: sheet_info_manager,
         style_manager,
         cell_attachment_manager,
         dirty_cells_next_round: dirty_cells,
@@ -160,4 +164,21 @@ pub fn load(wb: Wb, book_name: String) -> Controller {
         settings.theme = ThemeManager::from(theme.1);
     }
     Controller::from(status, book_name, settings)
+}
+
+fn load_sheet_pr(
+    sheet_info_manager: &mut crate::workbook::sheet_info_manager::SheetInfoManager,
+    sheet_id: u16,
+    sheet_pr: &CtSheetPr,
+) {
+    let color = &sheet_pr.tab_color;
+    if let Some(color) = color {
+        if let Some(rgb) = &color.rgb {
+            sheet_info_manager.colors.insert(sheet_id, rgb.clone());
+        }
+        if let Some(index) = color.indexed {
+            let rgb = turn_indexed_color_to_rgb(index);
+            sheet_info_manager.colors.insert(sheet_id, rgb);
+        }
+    }
 }
