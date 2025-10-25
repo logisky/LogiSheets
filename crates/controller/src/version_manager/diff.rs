@@ -303,5 +303,17 @@ fn convert_diff<C: VersionExecCtx>(
         }
         EditPayload::SetSheetColor(_) => Ok(Some((Diff::SheetProperty, 0))),
         EditPayload::SetSheetVisible(_) => Ok(Some((Diff::SheetProperty, 0))),
+        EditPayload::BlockLineStyleUpdate(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: p.block_id,
+                },
+                sheet_id,
+            )))
+        }
     }
 }

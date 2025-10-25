@@ -1,9 +1,11 @@
 use crate::cell::Cell;
+use block_line_info_manager::{BlockLineInfo, BlockLineInfoManager};
 use imbl::hashmap::HashMap;
-use logisheets_base::{CellId, CellValue, ColId, NormalCellId, RowId, SheetId};
+use logisheets_base::{BlockId, CellId, CellValue, ColId, NormalCellId, RowId, SheetId};
 
 use self::col_info_manager::{ColInfo, ColInfoManager};
 use self::row_info_manager::{RowInfo, RowInfoManager};
+pub mod block_line_info_manager;
 pub mod col_info_manager;
 pub mod ctx;
 mod executor;
@@ -42,6 +44,28 @@ impl DataContainer {
         self.get_sheet_container(sheet_id)?
             .row_info
             .get_row_info(row_id)
+    }
+
+    pub fn get_block_row_info(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        row_id: RowId,
+    ) -> Option<&BlockLineInfo> {
+        self.get_sheet_container(sheet_id)?
+            .block_line_info_manager
+            .get_row_info(block_id, row_id)
+    }
+
+    pub fn get_block_col_info(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        col_id: ColId,
+    ) -> Option<&BlockLineInfo> {
+        self.get_sheet_container(sheet_id)?
+            .block_line_info_manager
+            .get_col_info(block_id, col_id)
     }
 
     pub fn get_row_info_mut(&mut self, sheet_id: SheetId, row_id: RowId) -> &mut RowInfo {
@@ -174,4 +198,6 @@ pub struct SheetDataContainer {
     pub cells: HashMap<CellId, Cell>,
     pub row_info: RowInfoManager,
     pub col_info: ColInfoManager,
+
+    pub block_line_info_manager: BlockLineInfoManager,
 }

@@ -10,7 +10,7 @@ use crate::{
     Error,
 };
 
-use super::{ctx::ContainerExecCtx, DataContainer};
+use super::{block_line_info_manager::BlockLineInfo, ctx::ContainerExecCtx, DataContainer};
 
 pub struct ContainerExecutor {
     pub container: DataContainer,
@@ -539,6 +539,62 @@ impl ContainerExecutor {
                             });
                             (exec_ctx, _) = exec_ctx.execute(ctx, p)?;
                         }
+                    }
+                }
+                Ok((exec_ctx, true))
+            }
+            EditPayload::BlockLineStyleUpdate(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let block_id = p.block_id;
+                let from = p.from;
+                let to = p.to;
+                let ty = p.ty;
+                let row = p.row;
+                let mut exec_ctx = self;
+                let block_line_info_manager = &mut exec_ctx
+                    .container
+                    .data
+                    .get_mut(&sheet_id)
+                    .unwrap()
+                    .block_line_info_manager;
+                for i in from..=to {
+                    let id = if row {
+                        ctx.get_block_cell_id(sheet_id, block_id, i, 0)?.row
+                    } else {
+                        ctx.get_block_cell_id(sheet_id, block_id, 0, i)?.col
+                    };
+                    let old_style = if row {
+                        block_line_info_manager
+                            .get_row_info(block_id, id)
+                            .unwrap()
+                            .style
+                    } else {
+                        block_line_info_manager
+                            .get_col_info(block_id, id)
+                            .unwrap()
+                            .style
+                    }
+                    .unwrap_or(0);
+                    let new_style = ctx.get_new_style_id(old_style, ty.clone())?;
+                    let new_style = if new_style == 0 {
+                        None
+                    } else {
+                        Some(new_style)
+                    };
+                    if row {
+                        block_line_info_manager.set_row_info(
+                            block_id,
+                            id,
+                            BlockLineInfo { style: new_style },
+                        );
+                    } else {
+                        block_line_info_manager.set_col_info(
+                            block_id,
+                            id,
+                            BlockLineInfo { style: new_style },
+                        );
                     }
                 }
                 Ok((exec_ctx, true))

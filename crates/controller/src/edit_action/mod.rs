@@ -107,6 +107,7 @@ pub enum EditPayload {
     EphemeralCellStyleUpdate(EphemeralCellStyleUpdate),
     LineStyleUpdate(LineStyleUpdate),
     BlockStyleUpdate(BlockStyleUpdate),
+    BlockLineStyleUpdate(BlockLineStyleUpdate),
 
     CellFormatBrush(CellFormatBrush),
     LineFormatBrush(LineFormatBrush),
@@ -600,6 +601,21 @@ pub struct EphemeralCellStyleUpdate {
 #[ts(file_name = "line_style_update.ts", builder, rename_all = "camelCase")]
 pub struct LineStyleUpdate {
     pub sheet_idx: usize,
+    pub from: usize,
+    pub to: usize,
+    pub ty: StyleUpdateType,
+    pub row: bool,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "block_line_style_update.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct BlockLineStyleUpdate {
+    pub sheet_idx: usize,
+    pub block_id: BlockId,
     pub from: usize,
     pub to: usize,
     pub ty: StyleUpdateType,

@@ -691,6 +691,30 @@ impl<'a> Worksheet<'a> {
                     return col_info.style;
                 }
             }
+        } else if let CellId::BlockCell(block_cell_id) = cell_id {
+            let block_id = block_cell_id.block_id;
+            let row_id = block_cell_id.row;
+            let col_id = block_cell_id.col;
+            if let Some(col_info) =
+                self.controller
+                    .status
+                    .container
+                    .get_block_col_info(self.sheet_id, block_id, col_id)
+            {
+                if col_info.style.is_some() && col_info.style.unwrap() != 0 {
+                    return col_info.style.unwrap();
+                }
+            }
+            if let Some(row_info) =
+                self.controller
+                    .status
+                    .container
+                    .get_block_row_info(self.sheet_id, block_id, row_id)
+            {
+                if row_info.style.is_some() && row_info.style.unwrap() != 0 {
+                    return row_info.style.unwrap();
+                }
+            }
         }
         0
     }
