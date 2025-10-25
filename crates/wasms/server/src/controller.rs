@@ -2,13 +2,14 @@ use logisheets_base::errors::BasicError;
 use logisheets_base::{BlockId, ColId, RowId, SheetId};
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
-    Alignment, AsyncFuncResult, BlockInput, CellClear, CellFormatBrush, CellInput, CellStyleUpdate,
-    CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock,
-    DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload, EphemeralCellInput,
-    HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows, InsertRowsInBlock,
-    LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction, RemoveBlock,
-    ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight, SetSheetColor, SetSheetVisible,
-    SheetCellId, SheetRename, SplitMergedCells, StyleUpdateType, VerticalAlignment,
+    Alignment, AsyncFuncResult, BlockInput, BlockLineStyleUpdate, CellClear, CellFormatBrush,
+    CellInput, CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet,
+    DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction,
+    EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock,
+    InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock,
+    PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight,
+    SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells, StyleUpdateType,
+    VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, Error, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
@@ -925,6 +926,32 @@ pub fn block_line_shift(
             cnt,
         })
     };
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn block_line_num_fmt_update(
+    id: usize,
+    sheet_idx: usize,
+    block_id: usize,
+    from: usize,
+    to: usize,
+    is_row: bool,
+    formatter: String,
+) {
+    init();
+    let p = EditPayload::BlockLineStyleUpdate(BlockLineStyleUpdate {
+        sheet_idx,
+        block_id,
+        from,
+        to,
+        row: is_row,
+        ty: StyleUpdateType {
+            set_num_fmt: Some(formatter),
+            ..Default::default()
+        },
+    });
     let mut manager = MANAGER.get_mut();
     manager.add_payload(id, p);
 }

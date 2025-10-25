@@ -61,6 +61,7 @@ import {
     set_cell_num_fmt,
     set_sheet_color,
     set_sheet_visible,
+    block_line_num_fmt_update,
 } from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
@@ -773,6 +774,16 @@ export class Workbook {
             return reproduce_cells(this._id, p.value)
         if (p.type === 'removeBlock')
             return remove_block(this._id, p.value.sheetIdx, p.value.id)
+        if (p.type === 'setBlockLineNumFmt')
+            return block_line_num_fmt_update(
+                this._id,
+                p.value.sheetIdx,
+                p.value.blockId,
+                p.value.from,
+                p.value.to,
+                p.value.isRow,
+                p.value.numFmt
+            )
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }
