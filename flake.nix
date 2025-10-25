@@ -17,32 +17,29 @@
           inherit system overlays;
         };
         # Rust toolchains
-        stableToolchain = pkgs.rust-bin.stable."1.85.0".minimal.override {
+        stableToolchain = pkgs.rust-bin.stable."1.88.0".minimal.override {
           extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
           targets = [ "wasm32-unknown-unknown" ];
         };
       in
       {
-        devShells =
-          {
-            # mkShell brings in a `cc` that points to gcc, stdenv.mkDerivation from llvm avoids this.
-            default = let llvmPkgs = pkgs.llvmPackages_16; in llvmPkgs.stdenv.mkDerivation {
-              name = "logisheets-dev-shell";
-              buildInputs = with pkgs; [
-                stableToolchain
+        devShells = {
+          default = pkgs.mkShell {
+            name = "logisheets-dev-shell";
+            buildInputs = with pkgs; [
+              stableToolchain
 
-                # Node
-                nodejs
-                yarn
+              # Node
+              nodejs
+              yarn
 
-                python3
+              python3
 
-                # wasm
-                rust-cbindgen
-                wabt
-
-              ];
-            };
+              # wasm
+              rust-cbindgen
+              wabt
+            ];
           };
+        };
       });
 }
