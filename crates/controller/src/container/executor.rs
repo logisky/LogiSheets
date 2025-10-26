@@ -10,7 +10,7 @@ use crate::{
     Error,
 };
 
-use super::{block_line_info_manager::BlockLineInfo, ctx::ContainerExecCtx, DataContainer};
+use super::{ctx::ContainerExecCtx, DataContainer};
 
 pub struct ContainerExecutor {
     pub container: DataContainer,
@@ -584,19 +584,41 @@ impl ContainerExecutor {
                         Some(new_style)
                     };
                     if row {
-                        block_line_info_manager.set_row_info(
-                            block_id,
-                            id,
-                            BlockLineInfo { style: new_style },
-                        );
+                        block_line_info_manager.update_row_info_style(block_id, id, new_style);
                     } else {
-                        block_line_info_manager.set_col_info(
-                            block_id,
-                            id,
-                            BlockLineInfo { style: new_style },
-                        );
+                        block_line_info_manager.update_col_info_style(block_id, id, new_style);
                     }
                 }
+                Ok((exec_ctx, true))
+            }
+            EditPayload::BlockLineNameFieldUpdate(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let block_id = p.block_id;
+                let line = p.line;
+                let mut exec_ctx = self;
+                let block_line_info_manager = &mut exec_ctx
+                    .container
+                    .data
+                    .get_mut(&sheet_id)
+                    .unwrap()
+                    .block_line_info_manager;
+
+                let id = if p.row {
+                    ctx.get_block_cell_id(sheet_id, block_id, line, 0)?.row
+                } else {
+                    ctx.get_block_cell_id(sheet_id, block_id, 0, line)?.col
+                };
+
+                if p.row {
+                    block_line_info_manager.update_row_info_name(block_id, id, p.name);
+                    block_line_info_manager.update_row_info_field_type(block_id, id, p.field_type);
+                } else {
+                    block_line_info_manager.update_col_info_name(block_id, id, p.name);
+                    block_line_info_manager.update_col_info_field_type(block_id, id, p.field_type);
+                }
+
                 Ok((exec_ctx, true))
             }
             EditPayload::CellFormatBrush(p) => {

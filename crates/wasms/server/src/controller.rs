@@ -2,12 +2,12 @@ use logisheets_base::errors::BasicError;
 use logisheets_base::{BlockId, ColId, RowId, SheetId};
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
-    Alignment, AsyncFuncResult, BlockInput, BlockLineStyleUpdate, CellClear, CellFormatBrush,
-    CellInput, CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet,
-    DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction,
-    EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock,
-    InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock,
-    PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight,
+    Alignment, AsyncFuncResult, BlockInput, BlockLineNameFieldUpdate, BlockLineStyleUpdate,
+    CellClear, CellFormatBrush, CellInput, CellStyleUpdate, CreateAppendix, CreateBlock,
+    CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock,
+    DeleteSheet, EditAction, EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols,
+    InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells,
+    MoveBlock, PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight,
     SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells, StyleUpdateType,
     VerticalAlignment,
 };
@@ -951,6 +951,31 @@ pub fn block_line_num_fmt_update(
             set_num_fmt: Some(formatter),
             ..Default::default()
         },
+    });
+    let mut manager = MANAGER.get_mut();
+    manager.add_payload(id, p);
+}
+
+#[wasm_bindgen]
+pub fn block_line_name_field_update(
+    id: usize,
+    sheet_idx: usize,
+    block_id: usize,
+    line: usize,
+    is_row: bool,
+    field_type: JsValue,
+    name: String,
+) {
+    init();
+    let field_type = serde_wasm_bindgen::from_value(field_type).unwrap();
+    let name = if name.is_empty() { None } else { Some(name) };
+    let p = EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
+        sheet_idx,
+        block_id,
+        line,
+        row: is_row,
+        field_type,
+        name,
     });
     let mut manager = MANAGER.get_mut();
     manager.add_payload(id, p);

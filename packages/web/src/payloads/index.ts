@@ -1,4 +1,5 @@
 import {EditPayload} from '../bindings'
+import {SetBlockLineNameField} from './set_block_line_name_field'
 import {SetBlockLineNumFmt} from './set_block_line_num_fmt'
 import {SetCellAlignment} from './set_cell_alignment'
 import {SetCellBorder} from './set_cell_border'
@@ -22,6 +23,7 @@ export * from './set_line_pattern_fill'
 export * from './set_cell_num_fmt'
 export * from './set_line_num_fmt'
 export * from './set_block_line_num_fmt'
+export * from './set_block_line_name_field'
 
 export type Payload =
     | EditPayload
@@ -36,3 +38,4 @@ export type Payload =
     | {type: 'setCellNumFmt'; value: SetCellNumFmt}
     | {type: 'setLineNumFmt'; value: SetLineNumFmt}
     | {type: 'setBlockLineNumFmt'; value: SetBlockLineNumFmt}
+    | {type: 'setBlockLineNameField'; value: SetBlockLineNameField}
