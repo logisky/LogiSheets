@@ -108,6 +108,7 @@ pub enum EditPayload {
     LineStyleUpdate(LineStyleUpdate),
     BlockStyleUpdate(BlockStyleUpdate),
     BlockLineStyleUpdate(BlockLineStyleUpdate),
+    BlockLineNameFieldUpdate(BlockLineNameFieldUpdate),
 
     CellFormatBrush(CellFormatBrush),
     LineFormatBrush(LineFormatBrush),
@@ -573,7 +574,9 @@ impl Default for StatusCode {
     }
 }
 
-use crate::{controller::style::PatternFill, ReproducibleCell};
+use crate::{
+    container::block_line_info_manager::FieldType, controller::style::PatternFill, ReproducibleCell,
+};
 use logisheets_workbook::prelude::*;
 
 #[derive(Debug, Clone, TS)]
@@ -620,6 +623,21 @@ pub struct BlockLineStyleUpdate {
     pub to: usize,
     pub ty: StyleUpdateType,
     pub row: bool,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "block_line_name_field_update.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct BlockLineNameFieldUpdate {
+    pub sheet_idx: usize,
+    pub block_id: BlockId,
+    pub line: usize,
+    pub row: bool,
+    pub name: Option<String>,
+    pub field_type: Option<FieldType>,
 }
 
 pub type Color = String;
