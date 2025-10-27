@@ -7,6 +7,7 @@ use crate::controller::display::{
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
 use crate::lock::{locked_write, Locked};
+use crate::navigator::BlockPlace;
 use crate::style_manager::RawStyle;
 use crate::{
     connectors::NameFetcher,
@@ -934,6 +935,32 @@ impl<'a> Worksheet<'a> {
                     .navigator
                     .fetch_normal_cell_idx(&self.sheet_id, &mc)
                     .unwrap();
+                let mut row_infos = vec![];
+                let mut col_infos = vec![];
+                for r in block_place.rows.clone() {
+                    let info = self
+                        .controller
+                        .status
+                        .container
+                        .get_sheet_container(self.sheet_id)
+                        .map(|c| c.block_line_info_manager.get_row_info(id, r))
+                        .flatten();
+                    if let Some(info) = info {
+                        row_infos.push(info.clone());
+                    }
+                }
+                for j in block_place.cols.clone() {
+                    let info = self
+                        .controller
+                        .status
+                        .container
+                        .get_sheet_container(self.sheet_id)
+                        .map(|c| c.block_line_info_manager.get_col_info(id, j))
+                        .flatten();
+                    if let Some(info) = info {
+                        col_infos.push(info.clone());
+                    }
+                }
                 BlockInfo {
                     sheet_idx,
                     sheet_id: self.sheet_id,
@@ -942,6 +969,8 @@ impl<'a> Worksheet<'a> {
                     row_cnt: block_place.rows.len(),
                     col_start: col,
                     col_cnt: block_place.cols.len(),
+                    row_infos,
+                    col_infos,
                 }
             })
             .collect::<Vec<_>>();
@@ -1191,8 +1220,37 @@ impl<'a> Worksheet<'a> {
 
     #[inline]
     pub fn get_block_info(&self, block_id: BlockId) -> Result<BlockInfo> {
-        let (row_cnt, col_cnt) = self.get_block_size(block_id)?;
+        let block_place = self.get_block_place(block_id)?;
+        let (row_cnt, col_cnt) = block_place.get_block_size();
         let (row_start, col_start) = self.get_block_master_cell(block_id)?;
+        let row_infos = block_place
+            .rows
+            .iter()
+            .map(|r| {
+                self.controller
+                    .status
+                    .container
+                    .get_sheet_container(self.sheet_id)?
+                    .block_line_info_manager
+                    .get_row_info(block_id, *r)
+                    .cloned()
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+        let col_infos = block_place
+            .cols
+            .iter()
+            .map(|c| {
+                self.controller
+                    .status
+                    .container
+                    .get_sheet_container(self.sheet_id)?
+                    .block_line_info_manager
+                    .get_col_info(block_id, *c)
+                    .cloned()
+            })
+            .flatten()
+            .collect::<Vec<_>>();
         Ok(BlockInfo {
             sheet_id: self.sheet_id,
             block_id,
@@ -1206,9 +1264,21 @@ impl<'a> Worksheet<'a> {
                 .sheet_pos_manager
                 .get_sheet_idx(&self.sheet_id)
                 .unwrap(),
+            row_infos,
+            col_infos,
         })
     }
 
+    #[inline]
+    pub fn get_block_place(&self, block_id: BlockId) -> Result<&BlockPlace> {
+        self.controller
+            .status
+            .navigator
+            .get_block_place(&self.sheet_id, &block_id)
+            .map_err(|e| e.into())
+    }
+
+    #[inline]
     pub fn get_block_size(&self, block_id: BlockId) -> Result<(usize, usize)> {
         self.controller
             .status

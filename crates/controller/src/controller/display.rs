@@ -1,4 +1,4 @@
-use crate::CellInfo;
+use crate::{container::block_line_info_manager::BlockLineInfo, CellInfo};
 
 use super::style::Style;
 use gents_derives::TS;
@@ -88,6 +88,8 @@ pub struct BlockInfo {
     pub row_cnt: usize,
     pub col_start: usize,
     pub col_cnt: usize,
+    pub row_infos: Vec<BlockLineInfo>,
+    pub col_infos: Vec<BlockLineInfo>,
 }
 
 #[derive(Debug, Clone, TS)]

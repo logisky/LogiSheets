@@ -3,7 +3,8 @@ use imbl::HashMap;
 use logisheets_base::{BlockId, ColId, RowId, StyleId};
 use std::hash::Hash;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "block_line_info.ts", rename_all = "camelCase")]
 pub struct BlockLineInfo {
     pub style: Option<StyleId>,
     pub name: Option<String>,
@@ -26,6 +27,7 @@ pub enum FieldType {
     // EnumId. EnumId represents the identifier of an enum list.
     // Note that the content of enum lists are kept track of by users(frontend).
     Enum(u8),
+    MultiSelectEnum(u8),
     // HTML Element. This means that the content of this cell is a String that
     // represents an HTML element like <img src="..." />.
     HTMLElement(String),
