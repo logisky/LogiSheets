@@ -4311,6 +4311,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/react-beautiful-dnd@npm:^13.1.8":
+  version: 13.1.8
+  resolution: "@types/react-beautiful-dnd@npm:13.1.8"
+  dependencies:
+    "@types/react": "npm:*"
+  checksum: 10c0/ccdd4b2aa9e35cba4e51f3c673c2caa5bb67b6dee562d4b07ac3d3547cd68fd1ee9f21b95d55972087bdd4bdb340e256cccedb20f7129c273f24214f334708aa
+  languageName: node
+  linkType: hard
+
 "@types/react-color@npm:^3.0.6":
   version: 3.0.13
   resolution: "@types/react-color@npm:3.0.13"
@@ -14623,7 +14632,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-beautiful-dnd@npm:^13.1.0":
+"react-beautiful-dnd@npm:^13.1.1":
   version: 13.1.1
   resolution: "react-beautiful-dnd@npm:13.1.1"
   dependencies:
@@ -15457,6 +15466,7 @@ __metadata:
     "@types/mocha": "npm:^10.0.10"
     "@types/node": "npm:^18"
     "@types/react": "npm:^19"
+    "@types/react-beautiful-dnd": "npm:^13.1.8"
     "@types/react-color": "npm:^3.0.6"
     "@types/react-dom": "npm:^19"
     "@types/react-modal": "npm:^3.16.3"
@@ -15496,7 +15506,7 @@ __metadata:
     numfmt: "npm:2.1.0"
     prettier: "npm:^2.7.1"
     react: "npm:^19"
-    react-beautiful-dnd: "npm:^13.1.0"
+    react-beautiful-dnd: "npm:^13.1.1"
     react-color: "npm:^2.19.3"
     react-dom: "npm:^19"
     react-i18next: "npm:^11.18.3"

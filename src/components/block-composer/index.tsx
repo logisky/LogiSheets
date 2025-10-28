@@ -1,7 +1,5 @@
 import {getSelectedCellRange, SelectedData} from '../canvas'
-import {useState} from 'react'
-import Collapse from '@mui/material/Collapse'
-import {DeleteOutline} from '@mui/icons-material'
+import {useState, useEffect} from 'react'
 import {
     Box,
     Typography,
@@ -9,396 +7,841 @@ import {
     Card,
     CardContent,
     IconButton,
-    Grid2,
     TextField,
-    Divider,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel,
+    Chip,
+    Stack,
+    Dialog,
+    DialogContent,
     Tooltip,
-    ToggleButton,
+    Divider,
+    Checkbox,
+    FormControlLabel,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    TextareaAutosize,
 } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
+import {
+    Add as AddIcon,
+    Delete as DeleteIcon,
+    DragIndicator as DragIndicatorIcon,
+    Circle as CircleIcon,
+} from '@mui/icons-material'
+import {
+    DragDropContext,
+    Droppable,
+    Draggable,
+    DropResult,
+} from 'react-beautiful-dnd'
 import {useToast} from '@/ui/notification/useToast'
 import {TYPES} from '@/core/ioc/types'
 import {useInjection} from '@/core/ioc/provider'
-import {
-    CraftManager,
-    DataServiceImpl as DataService,
-    LOGISHEETS_BUILTIN_CRAFT_ID,
-    FIELD_AND_VALIDATION_TAG,
-} from '@/core/data'
-import {CraftDescriptor, DataArea, DataPort} from 'logisheets-craft-forge'
-import {
-    Payload,
-    CreateBlockBuilder,
-    isErrorMessage,
-    CellInputBuilder,
-    CreateAppendixBuilder,
-    Transaction,
-} from 'logisheets-web'
+import {DataServiceImpl as DataService} from '@/core/data'
+
+// Field Type Definitions
+export type FieldTypeEnum =
+    | 'enum'
+    | 'multiSelect'
+    | 'datetime'
+    | 'boolean'
+    | 'string'
+    | 'number'
+
+export interface EnumValue {
+    id: string
+    label: string
+    description: string
+    color: string
+}
+
+export interface FieldSetting {
+    id: string
+    name: string
+    type: FieldTypeEnum
+    description?: string
+    required: boolean
+    showInSummary: boolean
+    enumValues: EnumValue[]
+    defaultValue?: string
+    format?: string // for datetime
+    validation?: string // for string/number
+}
 
 export interface BlockComposerProps {
     selectedData?: SelectedData
     close: () => void
 }
 
+const COLORS = [
+    '#22c55e',
+    '#f59e0b',
+    '#ef4444',
+    '#3b82f6',
+    '#8b5cf6',
+    '#ec4899',
+]
+
 export const BlockComposerComponent = (props: BlockComposerProps) => {
     const {selectedData, close} = props
     const {toast} = useToast()
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
+
+    const [fields, setFields] = useState<FieldSetting[]>([
+        {
+            id: '1',
+            name: 'Customer Status',
+            type: 'enum',
+            description: 'Current status of the customer',
+            required: true,
+            showInSummary: true,
+            enumValues: [
+                {
+                    id: '1',
+                    label: 'Active',
+                    description: 'Active customers',
+                    color: COLORS[0],
+                },
+                {
+                    id: '2',
+                    label: 'Pending',
+                    description: 'Pending approval',
+                    color: COLORS[1],
+                },
+                {
+                    id: '3',
+                    label: 'Inactive',
+                    description: 'Inactive accounts',
+                    color: COLORS[2],
+                },
+            ],
+            defaultValue: '1',
+        },
+    ])
+    const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
+        fields[0]?.id || null
+    )
+    const [isDragEnabled, setIsDragEnabled] = useState(false)
+
+    // Enable drag after component mounts to avoid timing issues
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsDragEnabled(true)
+        }, 100)
+        return () => clearTimeout(timer)
+    }, [])
 
     if (!selectedData) {
-        toast('Please select a cell range first', {type: 'error'})
         return null
     }
     const range = getSelectedCellRange(selectedData)
     if (!range) {
-        toast('Please select a cell range first', {type: 'error'})
         return null
     }
-    const [fields, setFields] = useState<FieldSetting[]>([])
-    const [startRow, setDataAreaStartRow] = useState(1)
-    const [startCol, setDataAreaStartCol] = useState(1)
-    const [showDataPortSettings, setShowDataPortSettings] = useState(false)
-    const [dataPort, setDataPort] = useState<{
-        baseUrl: string
-        identifier: string
-    }>({
-        baseUrl: '',
-        identifier: '',
-    })
 
-    const handleAdd = () => {
-        setFields([...fields, {validation: '', name: ''}])
+    const selectedField = fields.find((f) => f.id === selectedFieldId)
+
+    const handleAddField = () => {
+        const newField: FieldSetting = {
+            id: Date.now().toString(),
+            name: 'New Field',
+            type: 'string',
+            required: false,
+            showInSummary: false,
+            enumValues: [],
+        }
+        setFields([...fields, newField])
+        setSelectedFieldId(newField.id)
     }
 
-    const handleSubmit = async () => {
-        const dataArea: DataArea = {
-            startRow: startRow,
-            startCol: startCol,
-            direction: 'vertical',
-        }
-        const masterRow = range.startRow
-        const masterCol = range.startCol
+    const handleUpdateField = (field: FieldSetting) => {
+        setFields(fields.map((f) => (f.id === field.id ? field : f)))
+    }
 
-        const payloads: Payload[] = []
-        const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
-        const sheetId = DATA_SERVICE.getCurrentSheetId()
-        if (isErrorMessage(sheetId)) {
-            toast('Failed to get sheet ID', {type: 'error'})
-            return
+    const handleDeleteField = (id: string) => {
+        setFields(fields.filter((f) => f.id !== id))
+        if (selectedFieldId === id) {
+            setSelectedFieldId(fields[0]?.id || null)
         }
-        const blockId = await DATA_SERVICE.getAvailableBlockId(sheetIdx)
-        if (isErrorMessage(blockId)) {
-            toast('Failed to get available block ID', {type: 'error'})
+    }
+
+    const handleDragEnd = (result: DropResult) => {
+        if (!result.destination) {
             return
         }
 
-        const createBlock: Payload = {
-            type: 'createBlock',
-            value: new CreateBlockBuilder()
-                .id(blockId)
-                .sheetIdx(sheetIdx)
-                .masterRow(masterRow)
-                .rowCnt(range.endRow - range.startRow + 1)
-                .masterCol(masterCol)
-                .colCnt(range.endCol - range.startCol + 1)
-                .build(),
-        }
+        const items = Array.from(fields)
+        const [reorderedItem] = items.splice(result.source.index, 1)
+        items.splice(result.destination.index, 0, reorderedItem)
 
-        payloads.push(createBlock)
+        setFields(items)
+    }
 
-        fields.forEach((field, idx) => {
-            const createField: Payload = {
-                type: 'cellInput',
-                value: new CellInputBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(masterRow)
-                    .col(masterCol + idx + startCol)
-                    .content(field.name)
-                    .build(),
-            }
-            payloads.push(createField)
-            const createAppendix: Payload = {
-                type: 'createAppendix',
-                value: new CreateAppendixBuilder()
-                    .sheetIdx(sheetIdx)
-                    .blockId(blockId)
-                    .rowIdx(Math.max(startRow - 1, 0))
-                    .colIdx(idx + startCol)
-                    .craftId(LOGISHEETS_BUILTIN_CRAFT_ID)
-                    .tag(FIELD_AND_VALIDATION_TAG)
-                    .content(field.validation)
-                    .build(),
-            }
-            payloads.push(createAppendix)
-        })
-        const result = await DATA_SERVICE.handleTransaction(
-            new Transaction(payloads, true)
-        )
-        if (isErrorMessage(result)) {
-            toast('Failed to create block', {type: 'error'})
-            return
-        }
-
-        const dp: DataPort = {
-            baseUrl: dataPort.baseUrl,
-            identifier: dataPort.identifier,
-        }
-
-        const authorIdResult = await CRAFT_MANAGER.getUserId()
-        if (isErrorMessage(authorIdResult)) {
-            toast('Failed to get author ID', {type: 'error'})
-            return
-        }
-        const authorId = authorIdResult._unsafeUnwrap()
-        const descriptor: CraftDescriptor = {
-            dataArea,
-            dataPort: dp,
-            authorId,
-        }
-
-        CRAFT_MANAGER.addCraftDescriptor([sheetId, blockId], descriptor)
+    const handleSave = () => {
+        toast('Fields configured successfully!', {type: 'success'})
         close()
     }
 
-    const textNumberInput = (
-        value: number,
-        setValue: (value: number) => void,
-        label: string,
-        min?: number,
-        max?: number
-    ) => (
-        <Box display="flex" alignItems="center" gap={1}>
-            <TextField
-                type="number"
-                size="small"
-                value={value}
-                label={label}
-                slotProps={{
-                    input: {
-                        inputMode: 'numeric',
-                        style: {textAlign: 'center', width: 160},
-                    },
-                }}
-                onChange={(e) => {
-                    let v = Number(e.target.value)
-                    if (min !== undefined && v < min) {
-                        v = min
-                    } else if (max !== undefined && v > max) {
-                        v = max
-                    }
-                    setValue(v)
-                }}
-            />
-        </Box>
-    )
-
     return (
-        <Box p={3} width={380} bgcolor="Menu" borderRadius={3} boxShadow={4}>
-            <Typography
-                variant="h5"
-                mb={2}
-                fontWeight={700}
-                color="primary.main"
+        <DragDropContext onDragEnd={handleDragEnd}>
+            <Dialog
+                open={true}
+                onClose={close}
+                maxWidth="lg"
+                fullWidth
+                PaperProps={{sx: {height: '80vh'}}}
             >
-                Block Composer
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mb={1.5}>
-                Data Area
-            </Typography>
-
-            <Box display="flex" gap={2} alignItems="center" mb={3}>
-                {textNumberInput(
-                    startRow,
-                    setDataAreaStartRow,
-                    'Start Row (relative)',
-                    1,
-                    range.endRow - range.startRow + 1
-                )}
-                {textNumberInput(
-                    startCol,
-                    setDataAreaStartCol,
-                    'Start Column (relative)',
-                    1,
-                    range.endCol - range.startCol + 1
-                )}
-            </Box>
-
-            <Typography variant="body2" color="text.secondary" mb={1.5}>
-                Fields
-            </Typography>
-            <Box sx={{maxHeight: 360, overflowY: 'auto', pr: 1}}>
-                <Grid2 direction="column" spacing={3}>
-                    {fields.map((el, idx) => (
-                        <FieldSettingComponent
-                            key={idx}
-                            field={el}
-                            idx={idx}
-                            elements={fields}
-                            setElements={setFields}
-                        />
-                    ))}
-                </Grid2>
-            </Box>
-            <Box display="flex" justifyContent="center">
-                <ToggleButton
-                    value="add"
-                    size="small"
-                    onClick={handleAdd}
-                    sx={{
-                        border: 'none',
-                        '&.Mui-selected': {border: 'none'},
-                    }}
-                >
-                    <AddIcon />
-                </ToggleButton>
-            </Box>
-            <Divider sx={{my: 3}} />
-
-            <Box mb={2}>
-                <Button
-                    variant="text"
-                    size="small"
-                    onClick={() => setShowDataPortSettings((v) => !v)}
-                    sx={{textTransform: 'none'}}
-                >
-                    {showDataPortSettings
-                        ? 'hide data port settings'
-                        : 'show data port settings'}
-                </Button>
-                <Collapse in={showDataPortSettings}>
-                    <Box mt={2} display="flex" flexDirection="column" gap={2}>
-                        <TextField
-                            label="URL"
-                            size="small"
-                            value={dataPort.baseUrl}
-                            onChange={(e) =>
-                                setDataPort((dp) => ({
-                                    ...dp,
-                                    baseUrl: e.target.value,
-                                }))
-                            }
-                            placeholder="e.g. https://api.example.com"
-                            fullWidth
-                        />
-                        <TextField
-                            label="identifier"
-                            size="small"
-                            value={dataPort.identifier}
-                            onChange={(e) =>
-                                setDataPort((dp) => ({
-                                    ...dp,
-                                    identifier: e.target.value,
-                                }))
-                            }
-                            fullWidth
-                        />
+                <DialogContent sx={{p: 0, display: 'flex', height: '100%'}}>
+                    {/* Left Sidebar - Field List */}
+                    <Box
+                        sx={{
+                            width: 280,
+                            borderRight: '1px solid',
+                            borderColor: 'divider',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            bgcolor: 'grey.50',
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                p: 2,
+                                borderBottom: '1px solid',
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <Button
+                                variant="contained"
+                                startIcon={<AddIcon />}
+                                fullWidth
+                                onClick={handleAddField}
+                                sx={{textTransform: 'none'}}
+                            >
+                                Add New Field
+                            </Button>
+                        </Box>
+                        {isDragEnabled ? (
+                            <Droppable droppableId="fields-list">
+                                {(provided) => (
+                                    <List
+                                        {...provided.droppableProps}
+                                        ref={provided.innerRef}
+                                        sx={{flex: 1, overflow: 'auto', py: 0}}
+                                    >
+                                        {fields.map((field, index) => (
+                                            <Draggable
+                                                key={field.id}
+                                                draggableId={field.id}
+                                                index={index}
+                                            >
+                                                {(provided, snapshot) => (
+                                                    <ListItem
+                                                        ref={provided.innerRef}
+                                                        {...provided.draggableProps}
+                                                        disablePadding
+                                                        sx={{
+                                                            bgcolor:
+                                                                snapshot.isDragging
+                                                                    ? 'action.hover'
+                                                                    : 'transparent',
+                                                        }}
+                                                    >
+                                                        <ListItemButton
+                                                            selected={
+                                                                selectedFieldId ===
+                                                                field.id
+                                                            }
+                                                            onClick={() =>
+                                                                setSelectedFieldId(
+                                                                    field.id
+                                                                )
+                                                            }
+                                                            sx={{
+                                                                py: 1.5,
+                                                                borderLeft:
+                                                                    '3px solid transparent',
+                                                                '&.Mui-selected':
+                                                                    {
+                                                                        borderLeftColor:
+                                                                            'primary.main',
+                                                                        bgcolor:
+                                                                            'primary.50',
+                                                                    },
+                                                            }}
+                                                        >
+                                                            <Box
+                                                                {...provided.dragHandleProps}
+                                                                sx={{
+                                                                    display:
+                                                                        'flex',
+                                                                    alignItems:
+                                                                        'center',
+                                                                    mr: 1,
+                                                                    color: 'text.disabled',
+                                                                }}
+                                                            >
+                                                                <DragIndicatorIcon fontSize="small" />
+                                                            </Box>
+                                                            <ListItemText
+                                                                primary={
+                                                                    field.name
+                                                                }
+                                                                secondary={
+                                                                    field.type
+                                                                        .charAt(
+                                                                            0
+                                                                        )
+                                                                        .toUpperCase() +
+                                                                    field.type.slice(
+                                                                        1
+                                                                    )
+                                                                }
+                                                                slotProps={{
+                                                                    primary: {
+                                                                        style: {
+                                                                            fontWeight: 500,
+                                                                            fontSize:
+                                                                                '0.9rem',
+                                                                        },
+                                                                    },
+                                                                    secondary: {
+                                                                        style: {
+                                                                            fontSize:
+                                                                                '0.75rem',
+                                                                        },
+                                                                    },
+                                                                }}
+                                                            />
+                                                        </ListItemButton>
+                                                    </ListItem>
+                                                )}
+                                            </Draggable>
+                                        ))}
+                                        {provided.placeholder}
+                                    </List>
+                                )}
+                            </Droppable>
+                        ) : (
+                            <List sx={{flex: 1, overflow: 'auto', py: 0}}>
+                                {fields.map((field) => (
+                                    <ListItem key={field.id} disablePadding>
+                                        <ListItemButton
+                                            selected={
+                                                selectedFieldId === field.id
+                                            }
+                                            onClick={() =>
+                                                setSelectedFieldId(field.id)
+                                            }
+                                            sx={{
+                                                py: 1.5,
+                                                borderLeft:
+                                                    '3px solid transparent',
+                                                '&.Mui-selected': {
+                                                    borderLeftColor:
+                                                        'primary.main',
+                                                    bgcolor: 'primary.50',
+                                                },
+                                            }}
+                                        >
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    mr: 1,
+                                                    color: 'text.disabled',
+                                                }}
+                                            >
+                                                <DragIndicatorIcon fontSize="small" />
+                                            </Box>
+                                            <ListItemText
+                                                primary={field.name}
+                                                secondary={
+                                                    field.type
+                                                        .charAt(0)
+                                                        .toUpperCase() +
+                                                    field.type.slice(1)
+                                                }
+                                                slotProps={{
+                                                    primary: {
+                                                        style: {
+                                                            fontWeight: 500,
+                                                            fontSize: '0.9rem',
+                                                        },
+                                                    },
+                                                    secondary: {
+                                                        style: {
+                                                            fontSize: '0.75rem',
+                                                        },
+                                                    },
+                                                }}
+                                            />
+                                        </ListItemButton>
+                                    </ListItem>
+                                ))}
+                            </List>
+                        )}
                     </Box>
-                </Collapse>
-            </Box>
 
-            <Box display="flex" justifyContent="flex-end" mt={4} gap={2}>
-                <Button variant="outlined" color="inherit" onClick={close}>
-                    Close
-                </Button>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSubmit}
-                >
-                    Submit
-                </Button>
-            </Box>
-        </Box>
+                    {/* Right Panel - Field Editor */}
+                    <Box
+                        sx={{flex: 1, display: 'flex', flexDirection: 'column'}}
+                    >
+                        {selectedField ? (
+                            <FieldConfigPanel
+                                field={selectedField}
+                                onUpdate={handleUpdateField}
+                                onDelete={() =>
+                                    handleDeleteField(selectedField.id)
+                                }
+                                onCancel={close}
+                                onSave={handleSave}
+                            />
+                        ) : (
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <Typography color="text.secondary">
+                                    Select a field to configure
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                </DialogContent>
+            </Dialog>
+        </DragDropContext>
     )
 }
 
-export interface FieldSetting {
-    validation: string
-    name: string
+// Field Config Panel Component
+interface FieldConfigPanelProps {
+    field: FieldSetting
+    onUpdate: (field: FieldSetting) => void
+    onDelete: () => void
+    onCancel: () => void
+    onSave: () => void
 }
 
-export const FieldSettingComponent = ({
+const FieldConfigPanel = ({
     field,
-    idx,
-    elements,
-    setElements,
-}: {
-    field: FieldSetting
-    idx: number
-    elements: FieldSetting[]
-    setElements: (elements: FieldSetting[]) => void
-}) => {
-    const handleRemove = (idx: number) => {
-        setElements(elements.filter((_, i) => i !== idx))
+    onUpdate,
+    onDelete,
+    onCancel,
+    onSave,
+}: FieldConfigPanelProps) => {
+    const handleAddEnumValue = () => {
+        const newValue: EnumValue = {
+            id: Date.now().toString(),
+            label: '',
+            description: '',
+            color: COLORS[field.enumValues.length % COLORS.length],
+        }
+        onUpdate({...field, enumValues: [...field.enumValues, newValue]})
     }
 
-    const handleChange = (
-        idx: number,
-        field: 'validation' | 'name',
-        value: string
-    ) => {
-        setElements(
-            elements.map((el, i) => (i === idx ? {...el, [field]: value} : el))
-        )
+    const handleUpdateEnumValue = (id: string, updated: Partial<EnumValue>) => {
+        onUpdate({
+            ...field,
+            enumValues: field.enumValues.map((v) =>
+                v.id === id ? {...v, ...updated} : v
+            ),
+        })
     }
+
+    const handleDeleteEnumValue = (id: string) => {
+        onUpdate({
+            ...field,
+            enumValues: field.enumValues.filter((v) => v.id !== id),
+        })
+    }
+
+    const showEnumSection =
+        field.type === 'enum' || field.type === 'multiSelect'
 
     return (
-        <Grid2 key={idx}>
-            <Card
-                elevation={2}
+        <>
+            {/* Header */}
+            <Box
                 sx={{
-                    borderRadius: 2,
-                    background: '#f9fafb',
-                    position: 'relative',
+                    p: 2.5,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                 }}
             >
-                <CardContent>
-                    <Grid2 direction="row" spacing={2} alignItems="center">
-                        <Grid2 sx={{flexBasis: '41.666%'}}>
-                            <TextField
-                                label="name"
-                                variant="outlined"
-                                size="small"
-                                fullWidth
-                                value={field.name}
-                                onChange={(e) =>
-                                    handleChange(idx, 'name', e.target.value)
-                                }
-                                placeholder="e.g. Username"
-                            />
-                        </Grid2>
-                        <Grid2 sx={{flexBasis: '41.666%'}}>
-                            <TextField
-                                label="validation"
-                                variant="outlined"
-                                size="small"
-                                fullWidth
-                                value={field.validation}
-                                onChange={(e) =>
-                                    handleChange(
-                                        idx,
-                                        'validation',
-                                        e.target.value
-                                    )
-                                }
-                                placeholder="e.g. ${value}<100"
-                            />
-                        </Grid2>
-                        <Grid2 sx={{flexBasis: '16.666%'}}>
-                            <Tooltip title="Remove Element">
-                                <IconButton
-                                    onClick={() => handleRemove(idx)}
-                                    color="error"
+                <Typography variant="h6" fontWeight={600}>
+                    {field.name}
+                </Typography>
+                <Box display="flex" gap={1}>
+                    <Button onClick={onCancel} size="small">
+                        Cancel
+                    </Button>
+                    <Button onClick={onSave} variant="contained" size="small">
+                        Save Changes
+                    </Button>
+                </Box>
+            </Box>
+
+            {/* Content */}
+            <Box sx={{flex: 1, overflow: 'auto', p: 3}}>
+                <Stack spacing={3}>
+                    {/* Basic Settings */}
+                    <Card variant="outlined">
+                        <CardContent>
+                            <Typography
+                                variant="subtitle1"
+                                fontWeight={600}
+                                mb={2}
+                            >
+                                Basic Settings
+                            </Typography>
+                            <Stack spacing={2.5}>
+                                <TextField
+                                    fullWidth
+                                    label="Field Name"
+                                    value={field.name}
+                                    onChange={(e) =>
+                                        onUpdate({
+                                            ...field,
+                                            name: e.target.value,
+                                        })
+                                    }
                                     size="small"
+                                />
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Field Type</InputLabel>
+                                    <Select
+                                        value={field.type}
+                                        label="Field Type"
+                                        onChange={(e) =>
+                                            onUpdate({
+                                                ...field,
+                                                type: e.target
+                                                    .value as FieldTypeEnum,
+                                                enumValues:
+                                                    e.target.value === 'enum' ||
+                                                    e.target.value ===
+                                                        'multiSelect'
+                                                        ? field.enumValues
+                                                        : [],
+                                            })
+                                        }
+                                    >
+                                        <MenuItem value="enum">Enum</MenuItem>
+                                        <MenuItem value="multiSelect">
+                                            Multiple Selection
+                                        </MenuItem>
+                                        <MenuItem value="datetime">
+                                            DateTime
+                                        </MenuItem>
+                                        <MenuItem value="boolean">
+                                            Boolean
+                                        </MenuItem>
+                                        <MenuItem value="string">
+                                            String
+                                        </MenuItem>
+                                        <MenuItem value="number">
+                                            Number
+                                        </MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <TextField
+                                    fullWidth
+                                    label="Description"
+                                    value={field.description || ''}
+                                    onChange={(e) =>
+                                        onUpdate({
+                                            ...field,
+                                            description: e.target.value,
+                                        })
+                                    }
+                                    multiline
+                                    rows={2}
+                                    size="small"
+                                    placeholder="Optional field description"
+                                />
+                                <Box>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={field.required}
+                                                onChange={(e) =>
+                                                    onUpdate({
+                                                        ...field,
+                                                        required:
+                                                            e.target.checked,
+                                                    })
+                                                }
+                                            />
+                                        }
+                                        label="Required field"
+                                    />
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={field.showInSummary}
+                                                onChange={(e) =>
+                                                    onUpdate({
+                                                        ...field,
+                                                        showInSummary:
+                                                            e.target.checked,
+                                                    })
+                                                }
+                                            />
+                                        }
+                                        label="Show in summary"
+                                    />
+                                </Box>
+                            </Stack>
+                        </CardContent>
+                    </Card>
+
+                    {/* Enum Values Section */}
+                    {showEnumSection && (
+                        <Card variant="outlined">
+                            <CardContent>
+                                <Box
+                                    display="flex"
+                                    justifyContent="space-between"
+                                    alignItems="center"
+                                    mb={2}
                                 >
-                                    <DeleteOutline />
-                                </IconButton>
-                            </Tooltip>
-                        </Grid2>
-                    </Grid2>
-                </CardContent>
-            </Card>
-        </Grid2>
+                                    <Typography
+                                        variant="subtitle1"
+                                        fontWeight={600}
+                                    >
+                                        Enum Values
+                                    </Typography>
+                                    <Button
+                                        size="small"
+                                        startIcon={<AddIcon />}
+                                        onClick={handleAddEnumValue}
+                                        sx={{textTransform: 'none'}}
+                                    >
+                                        Add Value
+                                    </Button>
+                                </Box>
+                                <Stack spacing={1.5}>
+                                    {field.enumValues.map((enumValue) => (
+                                        <Box
+                                            key={enumValue.id}
+                                            sx={{
+                                                display: 'flex',
+                                                gap: 1.5,
+                                                alignItems: 'flex-start',
+                                                p: 1.5,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 1,
+                                                bgcolor: 'grey.50',
+                                            }}
+                                        >
+                                            <DragIndicatorIcon
+                                                sx={{
+                                                    color: 'text.disabled',
+                                                    mt: 1,
+                                                    cursor: 'grab',
+                                                }}
+                                            />
+                                            <CircleIcon
+                                                sx={{
+                                                    color: enumValue.color,
+                                                    mt: 1,
+                                                    fontSize: 16,
+                                                }}
+                                            />
+                                            <Box sx={{flex: 1}}>
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    value={enumValue.label}
+                                                    onChange={(e) =>
+                                                        handleUpdateEnumValue(
+                                                            enumValue.id,
+                                                            {
+                                                                label: e.target
+                                                                    .value,
+                                                            }
+                                                        )
+                                                    }
+                                                    placeholder="Label (e.g., Active)"
+                                                    sx={{mb: 1}}
+                                                />
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    value={
+                                                        enumValue.description
+                                                    }
+                                                    onChange={(e) =>
+                                                        handleUpdateEnumValue(
+                                                            enumValue.id,
+                                                            {
+                                                                description:
+                                                                    e.target
+                                                                        .value,
+                                                            }
+                                                        )
+                                                    }
+                                                    placeholder="Description (e.g., Active customers)"
+                                                />
+                                            </Box>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() =>
+                                                    handleDeleteEnumValue(
+                                                        enumValue.id
+                                                    )
+                                                }
+                                                color="error"
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Default Value Section */}
+                    {showEnumSection && field.enumValues.length > 0 && (
+                        <Card variant="outlined">
+                            <CardContent>
+                                <Typography
+                                    variant="subtitle1"
+                                    fontWeight={600}
+                                    mb={1}
+                                >
+                                    Default Value
+                                </Typography>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                    mb={2}
+                                >
+                                    Select which value should be pre-selected
+                                    when creating new records.
+                                </Typography>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Default Value</InputLabel>
+                                    <Select
+                                        value={field.defaultValue || ''}
+                                        label="Default Value"
+                                        onChange={(e) =>
+                                            onUpdate({
+                                                ...field,
+                                                defaultValue: e.target.value,
+                                            })
+                                        }
+                                    >
+                                        <MenuItem value="">None</MenuItem>
+                                        {field.enumValues.map((v) => (
+                                            <MenuItem key={v.id} value={v.id}>
+                                                <Box
+                                                    display="flex"
+                                                    alignItems="center"
+                                                    gap={1}
+                                                >
+                                                    <CircleIcon
+                                                        sx={{
+                                                            color: v.color,
+                                                            fontSize: 12,
+                                                        }}
+                                                    />
+                                                    {v.label}
+                                                </Box>
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* DateTime Format */}
+                    {field.type === 'datetime' && (
+                        <Card variant="outlined">
+                            <CardContent>
+                                <Typography
+                                    variant="subtitle1"
+                                    fontWeight={600}
+                                    mb={2}
+                                >
+                                    Date/Time Format
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="Format"
+                                    value={field.format || 'yyyy-mm-dd'}
+                                    onChange={(e) =>
+                                        onUpdate({
+                                            ...field,
+                                            format: e.target.value,
+                                        })
+                                    }
+                                    placeholder="e.g., yyyy-mm-dd, mm/dd/yyyy hh:mm"
+                                    helperText="Use Excel-style number format"
+                                />
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Validation for String/Number */}
+                    {(field.type === 'string' || field.type === 'number') && (
+                        <Card variant="outlined">
+                            <CardContent>
+                                <Typography
+                                    variant="subtitle1"
+                                    fontWeight={600}
+                                    mb={2}
+                                >
+                                    Validation Rule
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="Validation"
+                                    value={field.validation || ''}
+                                    onChange={(e) =>
+                                        onUpdate({
+                                            ...field,
+                                            validation: e.target.value,
+                                        })
+                                    }
+                                    placeholder="e.g., ${value} > 0 && ${value} < 100"
+                                    helperText="Use ${value} to reference the input value"
+                                />
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Delete Field */}
+                    <Box sx={{pt: 2}}>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            startIcon={<DeleteIcon />}
+                            onClick={onDelete}
+                            sx={{textTransform: 'none'}}
+                        >
+                            Delete this field
+                        </Button>
+                    </Box>
+                </Stack>
+            </Box>
+        </>
     )
 }
