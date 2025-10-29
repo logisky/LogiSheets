@@ -26,7 +26,6 @@ import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
 import {
     CellClearBuilder,
-    CellIdCallback,
     CellInputBuilder,
     CellValue,
     EphemeralCellInputBuilder,
@@ -36,6 +35,7 @@ import {
     Value,
 } from 'logisheets-web'
 import {ClientImpl} from './client'
+import {EnumSetManager} from './enum_set_manager'
 
 export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
 export const FIELD_AND_VALIDATION_TAG = 80
@@ -109,6 +109,8 @@ export class CraftManager {
             return img
         })
     }
+
+    public enumSetManager = new EnumSetManager()
 
     /**
      * Bind a block to a craft.`
