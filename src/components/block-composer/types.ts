@@ -20,7 +20,6 @@ export interface FieldSetting {
     type: FieldTypeEnum
     description?: string
     required: boolean
-    showInSummary: boolean
     enumValues: EnumValue[]
     defaultValue?: string
     format?: string // for datetime
