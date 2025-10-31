@@ -5,6 +5,7 @@ import {useToast} from '@/ui/notification/useToast'
 import {TYPES} from '@/core/ioc/types'
 import {useInjection} from '@/core/ioc/provider'
 import {DataServiceImpl as DataService} from '@/core/data'
+import {CraftManager} from '@/core/data/craft'
 import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
 import {FieldSetting, COLORS} from './types'
@@ -20,6 +21,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const {selectedData, close} = props
     const {toast} = useToast()
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
 
     const [fields, setFields] = useState<FieldSetting[]>([
         {
@@ -28,28 +30,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             type: 'enum',
             description: 'Current status of the customer',
             required: true,
-            showInSummary: true,
-            enumValues: [
-                {
-                    id: '1',
-                    label: 'Active',
-                    description: 'Active customers',
-                    color: COLORS[0],
-                },
-                {
-                    id: '2',
-                    label: 'Pending',
-                    description: 'Pending approval',
-                    color: COLORS[1],
-                },
-                {
-                    id: '3',
-                    label: 'Inactive',
-                    description: 'Inactive accounts',
-                    color: COLORS[2],
-                },
-            ],
-            defaultValue: '1',
+            enumValues: [],
         },
     ])
     const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
@@ -72,7 +53,6 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             name: 'New Field',
             type: 'string',
             required: false,
-            showInSummary: false,
             enumValues: [],
         }
         setFields([...fields, newField])
@@ -128,6 +108,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                             onDelete={() => handleDeleteField(selectedField.id)}
                             onCancel={close}
                             onSave={handleSave}
+                            enumSetManager={CRAFT_MANAGER.enumSetManager}
                         />
                     ) : (
                         <Box
