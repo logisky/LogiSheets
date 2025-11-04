@@ -1,4 +1,5 @@
 import {
+    block_line_name_field_update,
     block_input,
     block_line_shift,
     calc_condition,
@@ -783,6 +784,16 @@ export class Workbook {
                 p.value.to,
                 p.value.isRow,
                 p.value.numFmt
+            )
+        if (p.type === 'setBlockLineNameField')
+            return block_line_name_field_update(
+                this._id,
+                p.value.sheetIdx,
+                p.value.blockId,
+                p.value.line,
+                p.value.isRow,
+                p.value.fieldId,
+                p.value.name
             )
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)

@@ -90,6 +90,7 @@ pub struct BlockInfo {
     pub col_cnt: usize,
     pub row_infos: Vec<BlockLineInfo>,
     pub col_infos: Vec<BlockLineInfo>,
+    pub cell_values: Vec<Value>,
 }
 
 #[derive(Debug, Clone, TS)]

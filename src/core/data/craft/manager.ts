@@ -36,6 +36,7 @@ import {
 } from 'logisheets-web'
 import {ClientImpl} from './client'
 import {EnumSetManager} from './enum_set_manager'
+import {FieldManager} from './field_manager'
 
 export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
 export const FIELD_AND_VALIDATION_TAG = 80
@@ -111,6 +112,7 @@ export class CraftManager {
     }
 
     public enumSetManager = new EnumSetManager()
+    public fieldManager = new FieldManager()
 
     /**
      * Bind a block to a craft.`

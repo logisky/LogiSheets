@@ -8,36 +8,7 @@ use std::hash::Hash;
 pub struct BlockLineInfo {
     pub style: Option<StyleId>,
     pub name: Option<String>,
-    pub field_type: Option<FieldType>,
-}
-
-#[derive(Debug, Clone, TS)]
-#[ts(
-    file_name = "block_line_info_manager.ts",
-    tag = "type",
-    rename_all = "camelCase"
-)]
-pub enum FieldType {
-    Date,
-    Time,
-    DateTime,
-    Boolean,
-    // Number or text. String is a validation formula of a placeholder.
-    VerifiableValue(String),
-    // EnumId. EnumId represents the identifier of an enum list.
-    // Note that the content of enum lists are kept track of by users(frontend).
-    Enum(u8),
-    MultiSelectEnum(u8),
-    // HTML Element. This means that the content of this cell is a String that
-    // represents an HTML element like <img src="..." />.
-    HTMLElement(String),
-    None,
-}
-
-impl Default for FieldType {
-    fn default() -> Self {
-        Self::None
-    }
+    pub field_id: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -112,23 +83,13 @@ impl BlockLineInfoManager {
         info.name = name;
     }
 
-    pub fn update_row_info_field_type(
-        &mut self,
-        block_id: BlockId,
-        row_id: RowId,
-        field_type: Option<FieldType>,
-    ) {
+    pub fn update_row_info_field_id(&mut self, block_id: BlockId, row_id: RowId, field_id: String) {
         let info = self.row_manager.get_mut((block_id, row_id));
-        info.field_type = field_type;
+        info.field_id = field_id;
     }
 
-    pub fn update_col_info_field_type(
-        &mut self,
-        block_id: BlockId,
-        col_id: ColId,
-        field_type: Option<FieldType>,
-    ) {
+    pub fn update_col_info_field_id(&mut self, block_id: BlockId, col_id: ColId, field_id: String) {
         let info = self.col_manager.get_mut((block_id, col_id));
-        info.field_type = field_type;
+        info.field_id = field_id;
     }
 }
