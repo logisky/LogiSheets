@@ -963,18 +963,17 @@ pub fn block_line_name_field_update(
     block_id: usize,
     line: usize,
     is_row: bool,
-    field_type: JsValue,
+    field_id: String,
     name: String,
 ) {
     init();
-    let field_type = serde_wasm_bindgen::from_value(field_type).unwrap();
     let name = if name.is_empty() { None } else { Some(name) };
     let p = EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
         sheet_idx,
         block_id,
         line,
         row: is_row,
-        field_type,
+        field_id,
         name,
     });
     let mut manager = MANAGER.get_mut();

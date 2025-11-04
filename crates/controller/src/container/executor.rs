@@ -600,9 +600,7 @@ impl ContainerExecutor {
                 let mut exec_ctx = self;
                 let block_line_info_manager = &mut exec_ctx
                     .container
-                    .data
-                    .get_mut(&sheet_id)
-                    .unwrap()
+                    .get_sheet_container_mut(sheet_id)
                     .block_line_info_manager;
 
                 let id = if p.row {
@@ -613,10 +611,10 @@ impl ContainerExecutor {
 
                 if p.row {
                     block_line_info_manager.update_row_info_name(block_id, id, p.name);
-                    block_line_info_manager.update_row_info_field_type(block_id, id, p.field_type);
+                    block_line_info_manager.update_row_info_field_id(block_id, id, p.field_id);
                 } else {
                     block_line_info_manager.update_col_info_name(block_id, id, p.name);
-                    block_line_info_manager.update_col_info_field_type(block_id, id, p.field_type);
+                    block_line_info_manager.update_col_info_field_id(block_id, id, p.field_id);
                 }
 
                 Ok((exec_ctx, true))

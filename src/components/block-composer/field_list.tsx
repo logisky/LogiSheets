@@ -89,7 +89,12 @@ export const FieldList = ({
 
                 {/* Field List */}
                 {isDragEnabled ? (
-                    <Droppable droppableId="fields-list">
+                    <Droppable
+                        droppableId="fields-list"
+                        isDropDisabled={false}
+                        isCombineEnabled={false}
+                        ignoreContainerClipping={true}
+                    >
                         {(provided) => (
                             <List
                                 {...provided.droppableProps}

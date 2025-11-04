@@ -961,6 +961,18 @@ impl<'a> Worksheet<'a> {
                         col_infos.push(info.clone());
                     }
                 }
+                let mut cell_values = vec![];
+                for i in block_place.rows.iter() {
+                    for j in block_place.cols.iter() {
+                        let cell_id = CellId::BlockCell(BlockCellId {
+                            block_id: id,
+                            row: *i,
+                            col: *j,
+                        });
+                        let cell_value = self.get_value_by_id(&cell_id).unwrap();
+                        cell_values.push(cell_value);
+                    }
+                }
                 BlockInfo {
                     sheet_idx,
                     sheet_id: self.sheet_id,
@@ -971,6 +983,7 @@ impl<'a> Worksheet<'a> {
                     col_cnt: block_place.cols.len(),
                     row_infos,
                     col_infos,
+                    cell_values,
                 }
             })
             .collect::<Vec<_>>();
@@ -1251,6 +1264,18 @@ impl<'a> Worksheet<'a> {
             })
             .flatten()
             .collect::<Vec<_>>();
+        let mut cell_values = Vec::new();
+        for i in block_place.rows.iter() {
+            for j in block_place.cols.iter() {
+                let cell_id = CellId::BlockCell(BlockCellId {
+                    block_id,
+                    row: *i,
+                    col: *j,
+                });
+                let cell_value = self.get_value_by_id(&cell_id)?;
+                cell_values.push(cell_value);
+            }
+        }
         Ok(BlockInfo {
             sheet_id: self.sheet_id,
             block_id,
@@ -1266,6 +1291,7 @@ impl<'a> Worksheet<'a> {
                 .unwrap(),
             row_infos,
             col_infos,
+            cell_values,
         })
     }
 

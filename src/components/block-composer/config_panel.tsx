@@ -475,15 +475,6 @@ export const FieldConfigPanel = ({
                                 >
                                     Enum Values
                                 </Typography>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    display="block"
-                                    mb={2}
-                                >
-                                    Use the edit button above to modify enum
-                                    values.
-                                </Typography>
                                 <Box
                                     sx={{
                                         display: 'flex',

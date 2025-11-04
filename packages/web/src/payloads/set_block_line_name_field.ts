@@ -1,12 +1,10 @@
-import {FieldType} from '../bindings'
-
 export interface SetBlockLineNameField {
     readonly sheetIdx: number
     readonly blockId: number
     readonly line: number
     readonly isRow: boolean
     readonly name: string
-    readonly type: FieldType
+    readonly fieldId: string
 }
 
 export class SetBlockLineNameFieldBuilder {
@@ -15,7 +13,7 @@ export class SetBlockLineNameFieldBuilder {
     private _line!: number
     private _isRow!: boolean
     private _name!: string
-    private _type!: FieldType
+    private _fieldId!: string
     public sheetIdx(value: number) {
         this._sheetIdx = value
         return this
@@ -41,8 +39,8 @@ export class SetBlockLineNameFieldBuilder {
         return this
     }
 
-    public type(value: FieldType) {
-        this._type = value
+    public fieldId(value: string) {
+        this._fieldId = value
         return this
     }
     public build() {
@@ -51,14 +49,14 @@ export class SetBlockLineNameFieldBuilder {
         if (this._line === undefined) throw new Error('missing line')
         if (this._isRow === undefined) throw new Error('missing isRow')
         if (this._name === undefined) throw new Error('missing name')
-        if (this._type === undefined) throw new Error('missing type')
+        if (this._fieldId === undefined) throw new Error('missing fieldId')
         return {
             sheetIdx: this._sheetIdx,
             blockId: this._blockId,
             line: this._line,
             isRow: this._isRow,
             name: this._name,
-            type: this._type,
+            fieldId: this._fieldId,
         }
     }
 }

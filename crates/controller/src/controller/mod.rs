@@ -284,8 +284,9 @@ mod tests {
     use logisheets_base::{CellId, CellValue};
 
     use crate::edit_action::{
-        CellInput, CellStyleUpdate, CreateSheet, DeleteSheet, EditAction, EditPayload,
-        EphemeralCellInput, LineStyleUpdate, PayloadsAction, StatusCode, StyleUpdateType,
+        BlockLineNameFieldUpdate, CellInput, CellStyleUpdate, CreateBlock, CreateSheet,
+        DeleteSheet, EditAction, EditPayload, EphemeralCellInput, LineStyleUpdate, PayloadsAction,
+        StatusCode, StyleUpdateType,
     };
 
     use super::Controller;
@@ -548,6 +549,36 @@ mod tests {
         assert!(result.version > 0);
         let action = PayloadsAction {
             payloads: vec![EditPayload::DeleteSheet(DeleteSheet { idx: sheet_idx })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.version > 0);
+    }
+
+    #[test]
+    fn set_block_line_name_field() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![
+                EditPayload::CreateBlock(CreateBlock {
+                    sheet_idx,
+                    id: 0,
+                    master_row: 10,
+                    master_col: 4,
+                    row_cnt: 1,
+                    col_cnt: 1,
+                }),
+                EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
+                    sheet_idx,
+                    block_id: 0,
+                    line: 0,
+                    row: true,
+                    field_id: "field_id".to_string(),
+                    name: Some("11".to_string()),
+                }),
+            ],
             undoable: true,
             init: false,
         };

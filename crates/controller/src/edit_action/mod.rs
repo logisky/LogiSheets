@@ -574,9 +574,7 @@ impl Default for StatusCode {
     }
 }
 
-use crate::{
-    container::block_line_info_manager::FieldType, controller::style::PatternFill, ReproducibleCell,
-};
+use crate::{controller::style::PatternFill, ReproducibleCell};
 use logisheets_workbook::prelude::*;
 
 #[derive(Debug, Clone, TS)]
@@ -637,7 +635,7 @@ pub struct BlockLineNameFieldUpdate {
     pub line: usize,
     pub row: bool,
     pub name: Option<String>,
-    pub field_type: Option<FieldType>,
+    pub field_id: String,
 }
 
 pub type Color = String;
