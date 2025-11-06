@@ -965,6 +965,7 @@ pub fn block_line_name_field_update(
     is_row: bool,
     field_id: String,
     name: String,
+    diy_render: Option<bool>,
 ) {
     init();
     let name = if name.is_empty() { None } else { Some(name) };
@@ -975,6 +976,7 @@ pub fn block_line_name_field_update(
         row: is_row,
         field_id,
         name,
+        diy_render,
     });
     let mut manager = MANAGER.get_mut();
     manager.add_payload(id, p);

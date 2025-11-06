@@ -5,6 +5,7 @@ export interface SetBlockLineNameField {
     readonly isRow: boolean
     readonly name: string
     readonly fieldId: string
+    readonly diyRender: boolean
 }
 
 export class SetBlockLineNameFieldBuilder {
@@ -14,6 +15,7 @@ export class SetBlockLineNameFieldBuilder {
     private _isRow!: boolean
     private _name!: string
     private _fieldId!: string
+    private _diyRender!: boolean
     public sheetIdx(value: number) {
         this._sheetIdx = value
         return this
@@ -43,6 +45,11 @@ export class SetBlockLineNameFieldBuilder {
         this._fieldId = value
         return this
     }
+
+    public diyRender(value: boolean) {
+        this._diyRender = value
+        return this
+    }
     public build() {
         if (this._sheetIdx === undefined) throw new Error('missing sheetIdx')
         if (this._blockId === undefined) throw new Error('missing blockId')
@@ -50,6 +57,7 @@ export class SetBlockLineNameFieldBuilder {
         if (this._isRow === undefined) throw new Error('missing isRow')
         if (this._name === undefined) throw new Error('missing name')
         if (this._fieldId === undefined) throw new Error('missing fieldId')
+        if (this._diyRender === undefined) throw new Error('missing diyRender')
         return {
             sheetIdx: this._sheetIdx,
             blockId: this._blockId,
@@ -57,6 +65,7 @@ export class SetBlockLineNameFieldBuilder {
             isRow: this._isRow,
             name: this._name,
             fieldId: this._fieldId,
+            diyRender: this._diyRender,
         }
     }
 }

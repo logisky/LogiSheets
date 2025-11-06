@@ -20,7 +20,7 @@ export interface FieldSetting {
     type: FieldTypeEnum
     description?: string
     required: boolean
-    enumValues: EnumValue[]
+    enumId?: string
     defaultValue?: string
     format?: string // for datetime
     validation?: string // for string/number

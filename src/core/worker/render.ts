@@ -46,6 +46,10 @@ export class RenderCell {
         this.info = info
         return this
     }
+    setSkipRender(skip: boolean): this {
+        this.skipRender = skip
+        return this
+    }
 
     reset() {
         this.hidden = false

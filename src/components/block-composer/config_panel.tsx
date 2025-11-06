@@ -95,17 +95,8 @@ export const FieldConfigPanel = ({
         }
 
         setSelectedEnumSetId(enumSetId)
-        const enumSet = enumSetManager.get(enumSetId)
-        if (enumSet) {
-            // Convert EnumSet variants to field EnumValues
-            const enumValues: EnumValue[] = enumSet.variants.map((v) => ({
-                id: v.id,
-                label: v.value,
-                description: '',
-                color: v.color,
-            }))
-            onUpdate({...field, enumValues})
-        }
+        // Only store the enum ID, not the values
+        onUpdate({...field, enumId: enumSetId})
     }
 
     const handleCreateEnumSet = () => {
@@ -137,7 +128,8 @@ export const FieldConfigPanel = ({
 
             // Select the newly created enum set
             setSelectedEnumSetId(newEnumSetId)
-            onUpdate({...field, enumValues: editingEnumVariants})
+            // Only store the enum ID
+            onUpdate({...field, enumId: newEnumSetId})
 
             // Show success message
             toast(`"${newEnumSetName}" has been created successfully!`, {
@@ -201,9 +193,6 @@ export const FieldConfigPanel = ({
                 newEnumSetDescription || undefined
             )
 
-            // Update field's enum values
-            onUpdate({...field, enumValues: editingEnumVariants})
-
             toast(`"${newEnumSetName}" has been updated successfully!`, {
                 type: 'success',
             })
@@ -230,7 +219,7 @@ export const FieldConfigPanel = ({
     // Handlers for editing variants in dialogs
     const handleAddEditingVariant = () => {
         const newValue: EnumValue = {
-            id: Date.now().toString(),
+            id: 'a' + Date.now().toString(),
             label: '',
             description: '',
             color: COLORS[editingEnumVariants.length % COLORS.length],
@@ -253,11 +242,18 @@ export const FieldConfigPanel = ({
         setEditingEnumVariants(editingEnumVariants.filter((v) => v.id !== id))
     }
 
+    // Sync selectedEnumSetId with field.enumId
+    useEffect(() => {
+        if (field.enumId) {
+            setSelectedEnumSetId(field.enumId)
+        }
+    }, [field.enumId])
+
     // Auto-select first enum set on mount if field has no enum values
     useEffect(() => {
         if (
             showEnumSection &&
-            field.enumValues.length === 0 &&
+            !field.enumId &&
             availableEnumSets.length > 0 &&
             !selectedEnumSetId // Only auto-select if nothing is selected
         ) {
@@ -330,13 +326,13 @@ export const FieldConfigPanel = ({
                                                     ...field,
                                                     type: e.target
                                                         .value as FieldTypeEnum,
-                                                    enumValues:
+                                                    enumId:
                                                         e.target.value ===
                                                             'enum' ||
                                                         e.target.value ===
                                                             'multiSelect'
-                                                            ? field.enumValues
-                                                            : [],
+                                                            ? field.enumId
+                                                            : undefined,
                                                 })
                                             }
                                         >
@@ -465,67 +461,87 @@ export const FieldConfigPanel = ({
                     </Card>
 
                     {/* Enum Values Section - Read Only */}
-                    {showEnumSection && field.enumValues.length > 0 && (
-                        <Card variant="outlined">
-                            <CardContent>
-                                <Typography
-                                    variant="subtitle1"
-                                    fontWeight={600}
-                                    mb={2}
-                                >
-                                    Enum Values
-                                </Typography>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        flexWrap: 'wrap',
-                                        gap: 1.5,
-                                        maxHeight: '200px',
-                                        overflowY: 'auto',
-                                        pr: 1,
-                                    }}
-                                >
-                                    {field.enumValues.map((enumValue) => (
-                                        <Box
-                                            key={enumValue.id}
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 1,
-                                                px: 1.5,
-                                                py: 1,
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                                borderRadius: 1,
-                                                bgcolor: 'grey.50',
-                                            }}
-                                        >
-                                            <Box
-                                                sx={{
-                                                    width: 12,
-                                                    height: 12,
-                                                    borderRadius: '50%',
-                                                    bgcolor: enumValue.color,
-                                                    border: '2px solid',
-                                                    borderColor: 'grey.300',
-                                                    flexShrink: 0,
-                                                }}
-                                            />
-                                            <Typography
-                                                variant="body2"
-                                                sx={{fontSize: '0.875rem'}}
-                                            >
-                                                {enumValue.label}
-                                            </Typography>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    )}
+                    {showEnumSection &&
+                        field.enumId &&
+                        (() => {
+                            const enumSet = enumSetManager.get(field.enumId)
+                            return enumSet && enumSet.variants.length > 0
+                        })() && (
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Typography
+                                        variant="subtitle1"
+                                        fontWeight={600}
+                                        mb={2}
+                                    >
+                                        Enum Values
+                                    </Typography>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 1.5,
+                                            maxHeight: '200px',
+                                            overflowY: 'auto',
+                                            pr: 1,
+                                        }}
+                                    >
+                                        {(() => {
+                                            const enumSet = enumSetManager.get(
+                                                field.enumId!
+                                            )
+                                            return enumSet?.variants.map(
+                                                (variant) => (
+                                                    <Box
+                                                        key={variant.id}
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems:
+                                                                'center',
+                                                            gap: 1,
+                                                            px: 1.5,
+                                                            py: 1,
+                                                            border: '1px solid',
+                                                            borderColor:
+                                                                'divider',
+                                                            borderRadius: 1,
+                                                            bgcolor: 'grey.50',
+                                                        }}
+                                                    >
+                                                        <Box
+                                                            sx={{
+                                                                width: 12,
+                                                                height: 12,
+                                                                borderRadius:
+                                                                    '50%',
+                                                                bgcolor:
+                                                                    variant.color,
+                                                                border: '2px solid',
+                                                                borderColor:
+                                                                    'grey.300',
+                                                                flexShrink: 0,
+                                                            }}
+                                                        />
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                fontSize:
+                                                                    '0.875rem',
+                                                            }}
+                                                        >
+                                                            {variant.value}
+                                                        </Typography>
+                                                    </Box>
+                                                )
+                                            )
+                                        })()}
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        )}
 
                     {/* Default Value Section */}
-                    {showEnumSection && field.enumValues.length > 0 && (
+                    {showEnumSection && field.enumId && (
                         <Card variant="outlined">
                             <CardContent>
                                 <Typography
@@ -557,23 +573,33 @@ export const FieldConfigPanel = ({
                                         }
                                     >
                                         <MenuItem value="">None</MenuItem>
-                                        {field.enumValues.map((v) => (
-                                            <MenuItem key={v.id} value={v.id}>
-                                                <Box
-                                                    display="flex"
-                                                    alignItems="center"
-                                                    gap={1}
-                                                >
-                                                    <CircleIcon
-                                                        sx={{
-                                                            color: v.color,
-                                                            fontSize: 12,
-                                                        }}
-                                                    />
-                                                    {v.label}
-                                                </Box>
-                                            </MenuItem>
-                                        ))}
+                                        {(() => {
+                                            const enumSet = enumSetManager.get(
+                                                field.enumId!
+                                            )
+                                            return enumSet?.variants.map(
+                                                (v) => (
+                                                    <MenuItem
+                                                        key={v.id}
+                                                        value={v.id}
+                                                    >
+                                                        <Box
+                                                            display="flex"
+                                                            alignItems="center"
+                                                            gap={1}
+                                                        >
+                                                            <CircleIcon
+                                                                sx={{
+                                                                    color: v.color,
+                                                                    fontSize: 12,
+                                                                }}
+                                                            />
+                                                            {v.value}
+                                                        </Box>
+                                                    </MenuItem>
+                                                )
+                                            )
+                                        })()}
                                     </Select>
                                 </FormControl>
                             </CardContent>
@@ -677,15 +703,20 @@ export const FieldConfigPanel = ({
                     }}
                 >
                     {COLORS.map((color) => {
-                        // Find in editingEnumVariants if dialog is open, otherwise in field.enumValues
+                        // Find in editingEnumVariants if dialog is open, otherwise from enumSet
                         const currentEnumValue =
                             createDialogOpen || editDialogOpen
                                 ? editingEnumVariants.find(
                                       (v) => v.id === colorAnchorEl?.enumId
                                   )
-                                : field.enumValues.find(
-                                      (v) => v.id === colorAnchorEl?.enumId
-                                  )
+                                : (() => {
+                                      const enumSet = field.enumId
+                                          ? enumSetManager.get(field.enumId)
+                                          : null
+                                      return enumSet?.variants.find(
+                                          (v) => v.id === colorAnchorEl?.enumId
+                                      )
+                                  })()
                         const isSelected = currentEnumValue?.color === color
 
                         return (

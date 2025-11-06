@@ -9,6 +9,7 @@ pub struct BlockLineInfo {
     pub style: Option<StyleId>,
     pub name: Option<String>,
     pub field_id: String,
+    pub diy_render: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -91,5 +92,25 @@ impl BlockLineInfoManager {
     pub fn update_col_info_field_id(&mut self, block_id: BlockId, col_id: ColId, field_id: String) {
         let info = self.col_manager.get_mut((block_id, col_id));
         info.field_id = field_id;
+    }
+
+    pub fn update_row_info_diy_render(
+        &mut self,
+        block_id: BlockId,
+        row_id: RowId,
+        diy_render: Option<bool>,
+    ) {
+        let info = self.row_manager.get_mut((block_id, row_id));
+        info.diy_render = diy_render;
+    }
+
+    pub fn update_col_info_diy_render(
+        &mut self,
+        block_id: BlockId,
+        col_id: ColId,
+        diy_render: Option<bool>,
+    ) {
+        let info = self.col_manager.get_mut((block_id, col_id));
+        info.diy_render = diy_render;
     }
 }

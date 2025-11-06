@@ -10,8 +10,6 @@ import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
 import {FieldSetting, COLORS} from './types'
 import {
-    BlockInputBuilder,
-    CreateBlock,
     CreateBlockBuilder,
     isErrorMessage,
     Payload,
@@ -37,10 +35,9 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         {
             id: '1',
             name: 'Customer Status',
-            type: 'enum',
+            type: 'string',
             description: 'Current status of the customer',
             required: true,
-            enumValues: [],
         },
     ])
     const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
@@ -63,7 +60,6 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             name: 'New Field',
             type: 'string',
             required: false,
-            enumValues: [],
         }
         setFields([...fields, newField])
         setSelectedFieldId(newField.id)
@@ -93,9 +89,9 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
 
         const fs: [string, FieldInfo][] = fields.map((field) => {
             if (field.type === 'enum') {
-                ty = {type: 'enum', id: field.enumValues[0].id}
+                ty = {type: 'enum', id: field.enumId!}
             } else if (field.type === 'multiSelect') {
-                ty = {type: 'multiSelect', id: field.enumValues[0].id}
+                ty = {type: 'multiSelect', id: field.enumId!}
             } else if (field.type === 'datetime') {
                 ty = {type: 'datetime', formatter: field.format ?? ''}
             } else if (field.type === 'boolean') {
@@ -144,24 +140,12 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         payloads.push(createBlockPayload)
 
         fs.forEach(([fieldId, field], i) => {
+            let diyRender = false
             switch (field.type.type) {
                 case 'enum':
-                case 'multiSelect': {
-                    const p = new SetBlockLineNameFieldBuilder()
-                        .sheetIdx(currentSheetIdx)
-                        .blockId(blockId)
-                        .line(i)
-                        .isRow(false)
-                        .fieldId(fieldId)
-                        .name(field.name)
-                        .build()
-                    const payload: Payload = {
-                        type: 'setBlockLineNameField',
-                        value: p,
-                    }
-                    payloads.push(payload)
+                case 'multiSelect':
+                    diyRender = true
                     break
-                }
                 case 'datetime': {
                     const formatter = field.type.formatter
                     const p = new SetBlockLineNumFmtBuilder()
@@ -202,6 +186,21 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 default:
                     break
             }
+
+            const p = new SetBlockLineNameFieldBuilder()
+                .sheetIdx(currentSheetIdx)
+                .blockId(blockId)
+                .line(i)
+                .isRow(false)
+                .fieldId(fieldId)
+                .name(field.name)
+                .diyRender(diyRender)
+                .build()
+            const payload: Payload = {
+                type: 'setBlockLineNameField',
+                value: p,
+            }
+            payloads.push(payload)
         })
 
         const result = await DATA_SERVICE.handleTransaction(

@@ -612,9 +612,11 @@ impl ContainerExecutor {
                 if p.row {
                     block_line_info_manager.update_row_info_name(block_id, id, p.name);
                     block_line_info_manager.update_row_info_field_id(block_id, id, p.field_id);
+                    block_line_info_manager.update_row_info_diy_render(block_id, id, p.diy_render);
                 } else {
                     block_line_info_manager.update_col_info_name(block_id, id, p.name);
                     block_line_info_manager.update_col_info_field_id(block_id, id, p.field_id);
+                    block_line_info_manager.update_col_info_diy_render(block_id, id, p.diy_render);
                 }
 
                 Ok((exec_ctx, true))

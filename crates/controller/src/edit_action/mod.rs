@@ -636,6 +636,9 @@ pub struct BlockLineNameFieldUpdate {
     pub row: bool,
     pub name: Option<String>,
     pub field_id: String,
+    // If this is set to true, the block line will skip the default render function
+    // and it is the app's responsibility to render the block line
+    pub diy_render: Option<bool>,
 }
 
 pub type Color = String;

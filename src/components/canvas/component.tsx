@@ -65,10 +65,11 @@ import ColumnHeaders from './headers/column'
 import RowHeaders from './headers/row'
 import {Scrollbar} from '../scrollbar'
 import {ContextmenuComponent} from './contextmenu'
+import {BlockInterfaceComponent} from '../block-interface'
 
 const CANVAS_HOST_ID = simpleUuid()
-const canvas = (): HTMLCanvasElement => {
-    return document.getElementById(CANVAS_ID) as HTMLCanvasElement
+const canvas = (): HTMLCanvasElement | null => {
+    return document.getElementById(CANVAS_ID) as HTMLCanvasElement | null
 }
 
 export interface CanvasProps {
@@ -158,11 +159,13 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
     const setCanvasSize = () => {
         const c = canvas()
+        if (!c) return null
         const size = c.getBoundingClientRect()
-        c.width = size.width * window.devicePixelRatio || 1
-        c.height = size.height * window.devicePixelRatio || 1
+        c.width = size.width * (window.devicePixelRatio || 1)
+        c.height = size.height * (window.devicePixelRatio || 1)
         setVisibleHeight(size.height)
         setVisibleWidth(size.width)
+        return size
     }
 
     useEffect(() => {
@@ -183,7 +186,20 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 // mark the DOM node so future mounts won't try to transfer again
                 el.dataset.offscreenInitialized = '1'
                 store.getCanvasSize = () => {
-                    return canvas().getBoundingClientRect()
+                    const c = canvas()
+                    if (!c)
+                        return {
+                            width: 0,
+                            height: 0,
+                            left: 0,
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            x: 0,
+                            y: 0,
+                            toJSON: () => ({}),
+                        }
+                    return c.getBoundingClientRect()
                 }
                 store.dataSvc
                     .initOffscreen(offscreenCanvasRef.current)
@@ -213,9 +229,13 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 setDocumentHeight(dimension.height)
                 setDocumentWidth(dimension.width)
             }
-            const size = canvas().getBoundingClientRect()
-            setVisibleHeight(size.height * window.devicePixelRatio)
-            setVisibleWidth(size.width * window.devicePixelRatio)
+
+            const canvasEl = canvas()
+            if (canvasEl) {
+                const size = canvasEl.getBoundingClientRect()
+                setVisibleHeight(size.height * window.devicePixelRatio)
+                setVisibleWidth(size.width * window.devicePixelRatio)
+            }
         })
     }, [store])
 
@@ -328,11 +348,11 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             .then((pos) => {
                 if (!pos || isErrorMessage(pos)) return
 
-                const size = canvas().getBoundingClientRect()
+                const size = canvas()!.getBoundingClientRect()
                 const anchorX = Math.max(0, pos.x - size.width / 2)
                 const anchorY = Math.max(0, pos.y - size.height / 2)
                 renderWithAnchor(anchorX, anchorY).then(() => {
-                    canvas().focus({preventScroll: true})
+                    canvas()!.focus({preventScroll: true})
                     store.textarea.reset()
                 })
             })
@@ -723,14 +743,14 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         if (e.buttons !== Buttons.LEFT) return
         if (!grid) return
 
-        canvas().focus({preventScroll: true})
+        canvas()!.focus({preventScroll: true})
         const mouseMove$ = on(window, EventType.MOUSE_MOVE)
         const mouseUp$ = on(window, EventType.MOUSE_UP)
 
         const sub = mouseMove$.pipe(takeUntil(mouseUp$)).subscribe((mme) => {
             mme.preventDefault()
             if (!grid) return
-            const canvasSize = canvas().getBoundingClientRect()
+            const canvasSize = canvas()!.getBoundingClientRect()
             const cell = match(
                 mme.clientX - canvasSize.left,
                 mme.clientY - canvasSize.top,
@@ -774,7 +794,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             selectedData$(data)
         })
 
-        const canvasSize = canvas().getBoundingClientRect()
+        const canvasSize = canvas()!.getBoundingClientRect()
 
         const matchCell = match(
             e.clientX - canvasSize.left,
@@ -804,7 +824,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
         const row = selectedCells.startRow
         const col = selectedCells.startCol
-        const size = canvas().getBoundingClientRect()
+        const size = canvas()!.getBoundingClientRect()
 
         switch (e.key) {
             case KeyboardEventCode.ARROW_UP: {
@@ -1015,7 +1035,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         }
         setCellRefs([])
         // Ensure keyboard events go back to the canvas after exiting edit mode
-        canvas().focus({preventScroll: true})
+        canvas()!.focus({preventScroll: true})
         return true
     }
     const onCloseInvalidFormulaWarning = () => {
@@ -1154,9 +1174,16 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 />
             )}
             {selector && <SelectorComponent selector={selector} />}
-            {store.blockOutliner.props.map((props, i) => (
+            {/* {store.blockOutliner.props.map((props, i) => (
                 <BlockOutlinerComponent blockOutliner={props} key={i} />
-            ))}
+            ))} */}
+            {grid && grid.blockInfos?.length && (
+                <BlockInterfaceComponent
+                    grid={grid}
+                    canvasStartX={canvas()!.getBoundingClientRect().left}
+                    canvasStartY={canvas()!.getBoundingClientRect().top}
+                />
+            )}
             {store.diyButton.props.map((props, i) => (
                 <DiyButtonComponent key={i} props={props} />
             ))}

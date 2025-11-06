@@ -1,4 +1,4 @@
-import {RenderCell} from '@/core/data'
+import {RenderCell} from '@/core/worker/render'
 import {shallowCopy} from '@/core'
 export type CellType =
     | 'Cell'

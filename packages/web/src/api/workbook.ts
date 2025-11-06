@@ -793,7 +793,8 @@ export class Workbook {
                 p.value.line,
                 p.value.isRow,
                 p.value.fieldId,
-                p.value.name
+                p.value.name,
+                p.value.diyRender
             )
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
