@@ -577,6 +577,7 @@ mod tests {
                     row: true,
                     field_id: "field_id".to_string(),
                     name: Some("11".to_string()),
+                    diy_render: None,
                 }),
             ],
             undoable: true,

@@ -29,6 +29,18 @@ export interface EnumInfo {
  * Ensures uniqueness of variant values within each enum
  */
 export class EnumSetManager {
+    public constructor() {
+        this.enums.set('_logisheets_builtin01', {
+            id: '_logisheets_builtin01',
+            name: 'Gender',
+            description: '',
+            variants: [
+                {id: 'male', value: 'Male', color: '#22c55e'},
+                {id: 'female', value: 'Female', color: '#f59e0b'},
+            ],
+        })
+    }
+
     private enums: Map<string, EnumInfo> = new Map()
 
     /**

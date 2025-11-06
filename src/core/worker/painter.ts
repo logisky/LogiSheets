@@ -27,6 +27,7 @@ export class Painter {
 
     public renderContent(resp: CellView, anchorX: number, anchorY: number) {
         resp.cells.forEach((cell) => {
+            if (cell.skipRender) return
             this.renderCell(cell, anchorX, anchorY)
         })
     }

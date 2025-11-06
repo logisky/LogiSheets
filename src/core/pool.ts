@@ -1,6 +1,6 @@
 import {injectable} from 'inversify'
 import {CellView} from './worker/types'
-import {RenderCell} from './data'
+import {RenderCell} from './worker/render'
 import {Range, StandardCell} from '@/core/standable'
 import {StandardValue} from './standable/value'
 import {StandardStyle} from './standable/style'

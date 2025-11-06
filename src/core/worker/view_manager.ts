@@ -55,16 +55,16 @@ export class ViewManager {
         const target = new Rect(x, y, width, height)
         const type = CellViewRespType.New
 
-        const window = this._workbook.getDisplayWindow({
+        const w = this._workbook.getDisplayWindow({
             sheetIdx: this._sheetIdx,
             startX: pxToWidth(target.startX),
             startY: pxToPt(target.startY),
             height: pxToPt(target.height),
             width: pxToWidth(target.width),
         })
-        if (isErrorMessage(window)) return window
+        if (isErrorMessage(w)) return w
         const data = parseDisplayWindow(
-            window,
+            w,
             this._pool.getRenderCell.bind(this._pool),
             this._pool.getRange.bind(this._pool),
             this._pool.getStandardCell.bind(this._pool),
@@ -180,10 +180,47 @@ export function parseDisplayWindow(
         return renderRow
     })
 
+    const skipRenderCells: Set<string> = new Set()
+    window.window.blocks.forEach((b) => {
+        const rowStart = b.info.rowStart
+        const colStart = b.info.colStart
+        for (let r = rowStart; r < rowStart + b.info.rowCnt; r += 1) {
+            const rowIdx = r - rowStart
+            for (let c = colStart; c < colStart + b.info.colCnt; c += 1) {
+                const colIdx = c - colStart
+                if (b.info.rowInfos.length > rowIdx) {
+                    const rowInfo = b.info.rowInfos[rowIdx]
+                    if (
+                        rowInfo === undefined ||
+                        rowInfo.diyRender === undefined
+                    )
+                        return
+                    if (rowInfo.diyRender) {
+                        skipRenderCells.add(`${r}-${c}`)
+                    }
+                }
+                if (b.info.colInfos.length > colIdx) {
+                    const colInfo = b.info.colInfos[colIdx]
+                    if (
+                        colInfo === undefined ||
+                        colInfo.diyRender === undefined
+                    )
+                        return
+                    if (colInfo.diyRender) {
+                        skipRenderCells.add(`${r}-${c}`)
+                    }
+                }
+            }
+        }
+    })
     const cells: RenderCell[] = []
     let idx = 0
     for (let r = 0; r < rows.length; r += 1) {
         for (let c = 0; c < cols.length; c += 1) {
+            let skip = false
+            if (skipRenderCells.has(`${r}-${c}`)) {
+                skip = true
+            }
             const row = rows[r]
             const col = cols[c]
             const corrdinate = getRange()
@@ -200,6 +237,7 @@ export function parseDisplayWindow(
             const renderCell = getRenderCell()
                 .setPosition(position)
                 .setCoordinate(corrdinate)
+                .setSkipRender(skip)
                 .setInfo(
                     window.window.cells[idx],
                     getStandardCell,
