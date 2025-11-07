@@ -555,9 +555,7 @@ impl ContainerExecutor {
                 let mut exec_ctx = self;
                 let block_line_info_manager = &mut exec_ctx
                     .container
-                    .data
-                    .get_mut(&sheet_id)
-                    .unwrap()
+                    .get_sheet_container_mut(sheet_id)
                     .block_line_info_manager;
                 for i in from..=to {
                     let id = if row {
@@ -568,15 +566,16 @@ impl ContainerExecutor {
                     let old_style = if row {
                         block_line_info_manager
                             .get_row_info(block_id, id)
-                            .unwrap()
-                            .style
+                            .map(|info| info.style)
+                            .flatten()
+                            .unwrap_or(0)
                     } else {
                         block_line_info_manager
                             .get_col_info(block_id, id)
-                            .unwrap()
-                            .style
-                    }
-                    .unwrap_or(0);
+                            .map(|info| info.style)
+                            .flatten()
+                            .unwrap_or(0)
+                    };
                     let new_style = ctx.get_new_style_id(old_style, ty.clone())?;
                     let new_style = if new_style == 0 {
                         None

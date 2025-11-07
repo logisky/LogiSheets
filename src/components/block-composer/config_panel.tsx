@@ -657,8 +657,8 @@ export const FieldConfigPanel = ({
                                             validation: e.target.value,
                                         })
                                     }
-                                    placeholder="e.g., ${value} > 0 && ${value} < 100"
-                                    helperText="Use ${value} to reference the input value"
+                                    placeholder="e.g., #PLACEHOLDER > 0 && #PLACEHOLDER < 100"
+                                    helperText="Use #PLACEHOLDER to reference the input value"
                                 />
                             </CardContent>
                         </Card>
@@ -954,8 +954,10 @@ export const FieldConfigPanel = ({
                                 helperText="ID cannot be changed"
                                 required
                                 disabled
-                                InputProps={{
-                                    readOnly: true,
+                                slotProps={{
+                                    input: {
+                                        readOnly: true,
+                                    },
                                 }}
                                 sx={{flex: 1}}
                             />

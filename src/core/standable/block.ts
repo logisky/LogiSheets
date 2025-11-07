@@ -1,8 +1,8 @@
 import {shallowCopy} from '@/core'
-import {BlockInfo, BlockLineInfo, Value} from 'logisheets-web'
+import {BlockCellInfo, BlockInfo, BlockLineInfo} from 'logisheets-web'
 import {Range} from './range'
 export class StandardBlock implements BlockInfo {
-    cellValues: readonly Value[] = []
+    cells: readonly BlockCellInfo[] = []
     rowInfos: readonly BlockLineInfo[] = []
     colInfos: readonly BlockLineInfo[] = []
     sheetIdx = 0

@@ -18,6 +18,10 @@ impl ShadowIdAssigner {
         }
     }
 
+    pub fn find_shadow_id(&self, sheet_id: SheetId, cell_id: CellId) -> Option<u64> {
+        self.cell_id_to_eid.get(&(sheet_id, cell_id)).cloned()
+    }
+
     pub fn get_shawdow_id(&mut self, sheet_id: SheetId, cell_id: CellId) -> u64 {
         if let Some(id) = self.cell_id_to_eid.get(&(sheet_id, cell_id)) {
             *id

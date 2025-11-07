@@ -32,11 +32,6 @@ import {take, takeUntil} from 'rxjs/operators'
 import {EventType, KeyboardEventCode, on} from '@/core/events'
 import {SelectorComponent, SelectorProps} from '@/components/selector'
 import {ITextareaInstance, TextContainerComponent} from '@/components/textarea'
-import {DndComponent} from '@/components/dnd'
-import {
-    BlockOutlinerComponent,
-    BlockOutlinerProps,
-} from '@/components/block-outliner'
 import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid} from '@/core'
 import {DialogComponent} from '@/ui/dialog'
@@ -241,7 +236,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
     useEffect(() => {
         if (!grid) return
-        store.blockOutliner.updateBlockInfos(grid)
         if (!scrollbarRendering) {
             setDocPositionX(grid.anchorX)
             setDocPositionY(grid.anchorY)
@@ -1022,6 +1016,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 return
             }
             default:
+                if (e.key.length > 1) return
                 store.textarea.beginDirectTyping(e.key)
                 return
         }
@@ -1174,9 +1169,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 />
             )}
             {selector && <SelectorComponent selector={selector} />}
-            {/* {store.blockOutliner.props.map((props, i) => (
-                <BlockOutlinerComponent blockOutliner={props} key={i} />
-            ))} */}
             {grid && grid.blockInfos?.length && (
                 <BlockInterfaceComponent
                     grid={grid}

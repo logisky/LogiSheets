@@ -284,9 +284,9 @@ mod tests {
     use logisheets_base::{CellId, CellValue};
 
     use crate::edit_action::{
-        BlockLineNameFieldUpdate, CellInput, CellStyleUpdate, CreateBlock, CreateSheet,
-        DeleteSheet, EditAction, EditPayload, EphemeralCellInput, LineStyleUpdate, PayloadsAction,
-        StatusCode, StyleUpdateType,
+        BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput, CellStyleUpdate, CreateBlock,
+        CreateSheet, DeleteSheet, EditAction, EditPayload, EphemeralCellInput, LineStyleUpdate,
+        PayloadsAction, StatusCode, StyleUpdateType,
     };
 
     use super::Controller;
@@ -578,6 +578,48 @@ mod tests {
                     field_id: "field_id".to_string(),
                     name: Some("11".to_string()),
                     diy_render: None,
+                }),
+            ],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.version > 0);
+    }
+
+    #[test]
+    fn create_block_with_num_fmt_and_field() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![
+                EditPayload::CreateBlock(CreateBlock {
+                    sheet_idx,
+                    id: 1,
+                    master_row: 6,
+                    master_col: 3,
+                    row_cnt: 1,
+                    col_cnt: 1,
+                }),
+                EditPayload::BlockLineStyleUpdate(BlockLineStyleUpdate {
+                    sheet_idx,
+                    block_id: 1,
+                    from: 0,
+                    to: 0,
+                    row: false,
+                    ty: StyleUpdateType {
+                        set_num_fmt: Some("0.00".to_string()),
+                        ..Default::default()
+                    },
+                }),
+                EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
+                    sheet_idx,
+                    block_id: 1,
+                    line: 0,
+                    row: false,
+                    field_id: "field_1_1762435654448".to_string(),
+                    name: Some("Customer Status".to_string()),
+                    diy_render: Some(false),
                 }),
             ],
             undoable: true,

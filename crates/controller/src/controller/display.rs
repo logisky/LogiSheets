@@ -90,7 +90,15 @@ pub struct BlockInfo {
     pub col_cnt: usize,
     pub row_infos: Vec<BlockLineInfo>,
     pub col_infos: Vec<BlockLineInfo>,
-    pub cell_values: Vec<Value>,
+    pub cells: Vec<BlockCellInfo>,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "block_cell_info.ts", rename_all = "camelCase")]
+pub struct BlockCellInfo {
+    pub value: Value,
+    // None means that no shadow cell has been created
+    pub shadow_value: Option<Value>,
 }
 
 #[derive(Debug, Clone, TS)]
