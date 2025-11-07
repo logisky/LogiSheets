@@ -321,20 +321,40 @@ export const FieldConfigPanel = ({
                                         <Select
                                             value={field.type}
                                             label="Field Type"
-                                            onChange={(e) =>
+                                            onChange={(e) => {
+                                                const newType = e.target
+                                                    .value as FieldTypeEnum
+                                                // Clear format when switching between datetime and number
+                                                const shouldClearFormat =
+                                                    (field.type ===
+                                                        'datetime' &&
+                                                        newType === 'number') ||
+                                                    (field.type === 'number' &&
+                                                        newType === 'datetime')
+
+                                                // Set default format for datetime
+                                                let format = field.format
+                                                if (shouldClearFormat) {
+                                                    format = ''
+                                                } else if (
+                                                    newType === 'datetime' &&
+                                                    !field.format
+                                                ) {
+                                                    format = 'yyyy-mm-dd'
+                                                }
+
                                                 onUpdate({
                                                     ...field,
-                                                    type: e.target
-                                                        .value as FieldTypeEnum,
+                                                    type: newType,
                                                     enumId:
-                                                        e.target.value ===
-                                                            'enum' ||
-                                                        e.target.value ===
+                                                        newType === 'enum' ||
+                                                        newType ===
                                                             'multiSelect'
                                                             ? field.enumId
                                                             : undefined,
+                                                    format,
                                                 })
-                                            }
+                                            }}
                                         >
                                             <MenuItem value="enum">
                                                 Enum
@@ -435,7 +455,7 @@ export const FieldConfigPanel = ({
                                         })
                                     }
                                     multiline
-                                    rows={2}
+                                    rows={1}
                                     size="small"
                                     placeholder="Optional field description"
                                 />
@@ -443,6 +463,7 @@ export const FieldConfigPanel = ({
                                     <FormControlLabel
                                         control={
                                             <Checkbox
+                                                size="small"
                                                 checked={field.required}
                                                 onChange={(e) =>
                                                     onUpdate({
@@ -453,7 +474,11 @@ export const FieldConfigPanel = ({
                                                 }
                                             />
                                         }
-                                        label="Required field"
+                                        label={
+                                            <Typography variant="body2">
+                                                Required field
+                                            </Typography>
+                                        }
                                     />
                                 </Box>
                             </Stack>
@@ -621,16 +646,98 @@ export const FieldConfigPanel = ({
                                     fullWidth
                                     size="small"
                                     label="Format"
-                                    value={field.format || 'yyyy-mm-dd'}
-                                    onChange={(e) =>
+                                    value={field.format || ''}
+                                    onChange={(e) => {
                                         onUpdate({
                                             ...field,
                                             format: e.target.value,
                                         })
-                                    }
-                                    placeholder="e.g., yyyy-mm-dd, mm/dd/yyyy hh:mm"
-                                    helperText="Use Excel-style number format"
+                                    }}
+                                    onBlur={(e) => {
+                                        // Set default if empty
+                                        if (!e.target.value.trim()) {
+                                            onUpdate({
+                                                ...field,
+                                                format: 'yyyy-mm-dd',
+                                            })
+                                        }
+                                    }}
+                                    placeholder="yyyy-mm-dd"
+                                    helperText="Use Excel-style date format. Default: yyyy-mm-dd"
                                 />
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Number Format */}
+                    {field.type === 'number' && (
+                        <Card variant="outlined">
+                            <CardContent>
+                                <Typography
+                                    variant="subtitle1"
+                                    fontWeight={600}
+                                    mb={2}
+                                >
+                                    Number Format
+                                </Typography>
+                                <Stack spacing={2}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Format</InputLabel>
+                                        <Select
+                                            value={field.format || ''}
+                                            label="Format"
+                                            onChange={(e) =>
+                                                onUpdate({
+                                                    ...field,
+                                                    format: e.target.value,
+                                                })
+                                            }
+                                        >
+                                            <MenuItem value="">
+                                                <em>No format</em>
+                                            </MenuItem>
+                                            <MenuItem value="0">
+                                                Integer (0)
+                                            </MenuItem>
+                                            <MenuItem value="0.0">
+                                                1 decimal (0.0)
+                                            </MenuItem>
+                                            <MenuItem value="0.00">
+                                                2 decimals (0.00)
+                                            </MenuItem>
+                                            <MenuItem value="#,##0">
+                                                Thousands (1,000)
+                                            </MenuItem>
+                                            <MenuItem value="#,##0.00">
+                                                Thousands + 2 decimals
+                                                (1,000.00)
+                                            </MenuItem>
+                                            <MenuItem value="0%">
+                                                Percentage (0%)
+                                            </MenuItem>
+                                            <MenuItem value="0.0%">
+                                                Percentage + 1 decimal (0.0%)
+                                            </MenuItem>
+                                            <MenuItem value="0.00%">
+                                                Percentage + 2 decimals (0.00%)
+                                            </MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Custom Format"
+                                        value={field.format || ''}
+                                        onChange={(e) =>
+                                            onUpdate({
+                                                ...field,
+                                                format: e.target.value,
+                                            })
+                                        }
+                                        placeholder="e.g., #,##0.00"
+                                        helperText="Or enter a custom Excel-style format"
+                                    />
+                                </Stack>
                             </CardContent>
                         </Card>
                     )}

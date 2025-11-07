@@ -23,7 +23,9 @@ import {
 import {LeftTop} from '@/core/settings'
 import {BlockCellProps} from './cell'
 import {EnumCell} from './enum-cell'
-import {NumberCell} from './number-cell'
+import {BoolCell} from './bool-cell'
+import {ValidationCell} from './validation-cell'
+import {DatetimeCell} from './datetime-cell'
 
 export interface BlockInterfaceProps {
     grid: Grid
@@ -414,7 +416,25 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                 if (fieldInfo.type.type === 'enum') {
                     return <EnumCell key={idx} {...cellProps} />
                 } else if (fieldInfo.type.type === 'number') {
-                    return <NumberCell key={idx} {...cellProps} />
+                    return (
+                        <ValidationCell
+                            key={idx}
+                            {...cellProps}
+                            fieldType="number"
+                        />
+                    )
+                } else if (fieldInfo.type.type === 'boolean') {
+                    return <BoolCell key={idx} {...cellProps} />
+                } else if (fieldInfo.type.type === 'string') {
+                    return (
+                        <ValidationCell
+                            key={idx}
+                            {...cellProps}
+                            fieldType="string"
+                        />
+                    )
+                } else if (fieldInfo.type.type === 'datetime') {
+                    return <DatetimeCell key={idx} {...cellProps} />
                 }
                 return null
             })}

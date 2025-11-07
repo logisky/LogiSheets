@@ -10,7 +10,11 @@ import {TYPES} from '@/core/ioc/types'
 import {BlockCellProps} from './cell'
 import {useToast} from '@/ui/notification/useToast'
 
-export const NumberCell = (props: BlockCellProps) => {
+interface ValidationCellProps extends BlockCellProps {
+    fieldType: 'string' | 'number'
+}
+
+export const ValidationCell = (props: ValidationCellProps) => {
     const {
         x,
         y,
@@ -22,14 +26,17 @@ export const NumberCell = (props: BlockCellProps) => {
         sheetIdx,
         rowIdx,
         colIdx,
+        fieldType,
     } = props
 
-    if (fieldInfo.type.type !== 'number') {
+    if (fieldInfo.type.type !== fieldType) {
         return null
     }
+
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
     const {toast} = useToast()
     const validation = fieldInfo.type.validation
+
     if (validation !== '' && shadowValue === undefined) {
         // We haven't set a shadow cell for calculating the validation
         DATA_SERVICE.getWorkbook()
