@@ -19,7 +19,6 @@ import {
 } from './grid_helper'
 import {
     MouseEvent,
-    ReactElement,
     useRef,
     useState,
     FC,
@@ -49,6 +48,8 @@ import {
     SetRowHeightBuilder,
     CellRef,
     isErrorMessage,
+    Payload,
+    CellClearBuilder,
 } from 'logisheets-web'
 import {getHighlightColor} from '@/components/const'
 import {Range, StandardColor} from '@/core/standable'
@@ -72,6 +73,7 @@ export interface CanvasProps {
     selectedData$: (e: SelectedData) => void
     activeSheet: number
     activeSheet$: (s: number) => void
+    selectedDataContentChanged$: (e: object) => void
 }
 export const CanvasComponent = (props: CanvasProps) => {
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
@@ -85,7 +87,13 @@ export const CanvasComponent = (props: CanvasProps) => {
 }
 
 const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
-    const {selectedData, selectedData$, activeSheet, activeSheet$} = props
+    const {
+        selectedData,
+        selectedData$,
+        activeSheet,
+        activeSheet$,
+        selectedDataContentChanged$,
+    } = props
     const store = useContext(CanvasStoreContext)
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
     const [invalidFormulaWarning, setInvalidFormulaWarning] = useState(false)
@@ -147,10 +155,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const [selectedColumnRange, setSelectedColumnRange] = useState<
         [number, number] | undefined
     >(undefined)
-
-    const [invalidCells, setInvalidCells] = useState<
-        {x: number; y: number; width: number; height: number}[]
-    >([])
 
     const setCanvasSize = () => {
         const c = canvas()
@@ -233,24 +237,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             }
         })
     }, [store])
-
-    useEffect(() => {
-        if (!grid) return
-        if (!scrollbarRendering) {
-            setDocPositionX(grid.anchorX)
-            setDocPositionY(grid.anchorY)
-        }
-        const result = store.dataSvc.getInvalidCells().map((v) => {
-            return {
-                x: widthToPx(v[0].x - grid.anchorX) + LeftTop.width,
-                y: ptToPx(v[0].y - grid.anchorY) + LeftTop.height,
-                width: widthToPx(v[1].x - v[0].x),
-                height: ptToPx(v[1].y - v[0].y),
-            }
-        })
-        setInvalidCells(result)
-        store.textarea.updateGrid(grid)
-    }, [grid])
 
     useEffect(() => {
         if (!scrollbarRendering) return
@@ -813,6 +799,37 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
         const selectedCells = getSelectedCellRange(selectedData)
         if (!selectedCells) return
+        if (
+            e.key === KeyboardEventCode.BACKSPACE ||
+            e.key === KeyboardEventCode.NUMPAD_BACKSPACE
+        ) {
+            const payloads: Payload[] = []
+            for (
+                let r = selectedCells.startRow;
+                r <= selectedCells.endRow;
+                r += 1
+            ) {
+                for (
+                    let c = selectedCells.startCol;
+                    c <= selectedCells.endCol;
+                    c += 1
+                ) {
+                    const p = new CellClearBuilder()
+                        .sheetIdx(store.dataSvc.getCurrentSheetIdx())
+                        .row(r)
+                        .col(c)
+                        .build()
+                    payloads.push({type: 'cellClear', value: p})
+                }
+            }
+
+            store.dataSvc
+                .handleTransaction(new Transaction(payloads, true))
+                .then(() => {
+                    selectedDataContentChanged$({})
+                })
+            return
+        }
         if (selectedCells.startCol !== selectedCells.endCol) return
         if (selectedCells.startRow !== selectedCells.endRow) return
 
@@ -1029,6 +1046,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             return false
         }
         setCellRefs([])
+        selectedDataContentChanged$({})
         // Ensure keyboard events go back to the canvas after exiting edit mode
         canvas()!.focus({preventScroll: true})
         return true
@@ -1178,9 +1196,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             )}
             {store.diyButton.props.map((props, i) => (
                 <DiyButtonComponent key={i} props={props} />
-            ))}
-            {invalidCells.map((props, i) => (
-                <ShadowCellComponent key={i} shadowCell={props} />
             ))}
 
             <Scrollbar

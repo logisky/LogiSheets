@@ -12,7 +12,6 @@ import {
     BlockCellInfo,
     InsertRowsInBlockBuilder,
     Transaction,
-    Value,
 } from 'logisheets-web'
 import {
     xForColEnd,

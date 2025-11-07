@@ -51,7 +51,6 @@ export const MenuComponent = (props: MenuProps) => {
     const {sheetId, blockId, isOpen, setIsOpen} = props
     const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const descriptor = CRAFT_MANAGER.getCraftDescriptor([sheetId, blockId])
 
     const store = useContext(CanvasStoreContext)
 
@@ -59,9 +58,6 @@ export const MenuComponent = (props: MenuProps) => {
     const setError = props.setError
     const setSuccessMessage = props.setSuccessMessage
 
-    if (descriptor.isErr()) {
-        throw Error('Failed to get craft descriptor')
-    }
     const items = [
         {
             label: 'Modify',
@@ -85,58 +81,6 @@ export const MenuComponent = (props: MenuProps) => {
                         ],
                         true
                     )
-                )
-            },
-        },
-        {
-            label: 'Validate',
-            onClick: async () => {
-                const valueChangedCallback = async (shadowId: number) => {
-                    const wb = DATA_SERVICE.getWorkbook()
-                    const shadowInfo = await wb.getShadowInfoById({
-                        shadowId: shadowId,
-                    })
-                    if (isErrorMessage(shadowInfo)) {
-                        setError(shadowInfo.msg)
-                        return
-                    }
-
-                    const value = shadowInfo.value
-                    let result = false
-                    if (value === 'empty') {
-                        result = false
-                    } else if (value.type === 'bool') {
-                        result = value.value
-                    } else if (value.type === 'error') {
-                        result = false
-                    } else {
-                        result = true
-                    }
-
-                    if (!result) {
-                        store.dataSvc.addInvalidCell(
-                            sheetId,
-                            {type: 'ephemeralCell', value: shadowId},
-                            shadowInfo.startPosition,
-                            shadowInfo.endPosition
-                        )
-                    } else {
-                        store.dataSvc.removeInvalidCell(sheetId, {
-                            type: 'ephemeralCell',
-                            value: shadowId,
-                        })
-                    }
-                }
-                const cellRemovedCallback = async (shadowId: number) => {
-                    store.dataSvc.removeInvalidCell(sheetId, {
-                        type: 'ephemeralCell',
-                        value: shadowId,
-                    })
-                }
-                CRAFT_MANAGER.setValidationRules(
-                    [sheetId, blockId],
-                    valueChangedCallback,
-                    cellRemovedCallback
                 )
             },
         },

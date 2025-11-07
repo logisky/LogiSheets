@@ -167,6 +167,8 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     break
                 }
                 case 'boolean':
+                    diyRender = true
+                    break
                 case 'string':
                     break
                 case 'number': {
