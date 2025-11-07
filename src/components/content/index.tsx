@@ -14,11 +14,14 @@ export const ContentComponent: FC<ContentProps> = ({
     selectedData,
 }) => {
     const [activeSheet, activeSheet$] = useState<number>(0)
+    const [selectedDataContentChanged, setSelectedDataContentChanged] =
+        useState({})
     return (
         <div className={styles.host}>
             <EditBarComponent
                 selectedData={selectedData}
                 selectedData$={selectedData$}
+                selectedDataContentChanged={selectedDataContentChanged}
             />
             <div className={styles.middle}>
                 <div className={styles.canvas}>
@@ -27,6 +30,9 @@ export const ContentComponent: FC<ContentProps> = ({
                         selectedData$={selectedData$}
                         activeSheet={activeSheet}
                         activeSheet$={activeSheet$}
+                        selectedDataContentChanged$={
+                            setSelectedDataContentChanged
+                        }
                     />
                 </div>
             </div>

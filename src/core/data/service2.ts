@@ -163,40 +163,6 @@ export class DataServiceImpl {
         return this._workbook.registerCellUpdatedCallback(f, callbackId)
     }
 
-    public addInvalidCell(
-        sheetId: SheetId,
-        cellId: CellId,
-        startPosition: CellPosition,
-        endPosition: CellPosition
-    ) {
-        if (!this._invalidCellMap.has(sheetId)) {
-            this._invalidCellMap.set(sheetId, new Map())
-        }
-        this._invalidCellMap
-            .get(sheetId)
-            ?.set(sheetCellIdToString({sheetId, cellId}), [
-                startPosition,
-                endPosition,
-            ])
-    }
-
-    public removeInvalidCell(sheetId: SheetId, cellId: CellId) {
-        this._invalidCellMap
-            .get(sheetId)
-            ?.delete(sheetCellIdToString({sheetId, cellId}))
-    }
-
-    public getInvalidCells(): readonly [CellPosition, CellPosition][] {
-        return Array.from(
-            this._invalidCellMap
-                .get(this._sheetId)
-                ?.values()
-                .map((v) => {
-                    return v
-                }) ?? []
-        )
-    }
-
     private _init() {
         this._workbook.getAllSheetInfo().then((v) => {
             if (!isErrorMessage(v)) this._sheetInfos = v
