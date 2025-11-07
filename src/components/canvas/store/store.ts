@@ -5,7 +5,6 @@ import {Textarea} from './textarea'
 import {DataServiceImpl as DataService, CraftManager} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
-import {BlockOutliner} from './block-outliner'
 import {DiyButton} from './diy-button'
 import {ErrorMessage, isErrorMessage} from 'logisheets-web'
 import {Grid} from '@/core/worker/types'
@@ -17,7 +16,6 @@ export class CanvasStore {
     ) {
         makeObservable(this)
         this.textarea = new Textarea(this)
-        this.blockOutliner = new BlockOutliner(this)
         this.diyButton = new DiyButton(this)
     }
     // TODO: remove this
@@ -32,7 +30,6 @@ export class CanvasStore {
     same = false
 
     textarea: Textarea
-    blockOutliner: BlockOutliner
     diyButton: DiyButton
 
     get currSheetIdx() {

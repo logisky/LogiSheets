@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::controller::display::{
-    BlockDisplayInfo, BlockInfo, CellCoordinate, CellPosition, DisplayWindow,
+    BlockCellInfo, BlockDisplayInfo, BlockInfo, CellCoordinate, CellPosition, DisplayWindow,
     DisplayWindowWithStartPoint,
 };
 use crate::errors::Result;
@@ -970,7 +970,23 @@ impl<'a> Worksheet<'a> {
                             col: *j,
                         });
                         let cell_value = self.get_value_by_id(&cell_id).unwrap();
-                        cell_values.push(cell_value);
+                        if let Some(shadow_id) = self
+                            .controller
+                            .sid_assigner
+                            .find_shadow_id(self.sheet_id, cell_id)
+                        {
+                            let shadow_cell_id = CellId::EphemeralCell(shadow_id);
+                            let shadow_cell_value = self.get_value_by_id(&shadow_cell_id).unwrap();
+                            cell_values.push(BlockCellInfo {
+                                value: cell_value,
+                                shadow_value: Some(shadow_cell_value),
+                            });
+                        } else {
+                            cell_values.push(BlockCellInfo {
+                                value: cell_value,
+                                shadow_value: None,
+                            });
+                        }
                     }
                 }
                 BlockInfo {
@@ -983,7 +999,7 @@ impl<'a> Worksheet<'a> {
                     col_cnt: block_place.cols.len(),
                     row_infos,
                     col_infos,
-                    cell_values,
+                    cells: cell_values,
                 }
             })
             .collect::<Vec<_>>();
@@ -1272,8 +1288,21 @@ impl<'a> Worksheet<'a> {
                     row: *i,
                     col: *j,
                 });
+                let mut shadow_value = None;
+                if let Some(shadow_id) = self
+                    .controller
+                    .sid_assigner
+                    .find_shadow_id(self.sheet_id, cell_id)
+                {
+                    let shadow_cell_id = CellId::EphemeralCell(shadow_id);
+                    let shadow_cell_value = self.get_value_by_id(&shadow_cell_id)?;
+                    shadow_value = Some(shadow_cell_value);
+                }
                 let cell_value = self.get_value_by_id(&cell_id)?;
-                cell_values.push(cell_value);
+                cell_values.push(BlockCellInfo {
+                    value: cell_value,
+                    shadow_value,
+                });
             }
         }
         Ok(BlockInfo {
@@ -1291,7 +1320,7 @@ impl<'a> Worksheet<'a> {
                 .unwrap(),
             row_infos,
             col_infos,
-            cell_values,
+            cells: cell_values,
         })
     }
 

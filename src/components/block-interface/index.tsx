@@ -8,7 +8,12 @@ import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl as DataService} from '@/core/data'
 import {CraftManager, FieldInfo} from '@/core/data/craft'
-import {InsertRowsInBlockBuilder, Transaction, Value} from 'logisheets-web'
+import {
+    BlockCellInfo,
+    InsertRowsInBlockBuilder,
+    Transaction,
+    Value,
+} from 'logisheets-web'
 import {
     xForColEnd,
     xForColStart,
@@ -16,7 +21,9 @@ import {
     yForRowStart,
 } from '../canvas/grid_helper'
 import {LeftTop} from '@/core/settings'
-import {BlockCell, BlockCellProps} from './cell'
+import {BlockCellProps} from './cell'
+import {EnumCell} from './enum-cell'
+import {NumberCell} from './number-cell'
 
 export interface BlockInterfaceProps {
     grid: Grid
@@ -77,7 +84,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         craftManager={CRAFT_MANAGER}
                         canvasStartX={canvasStartX}
                         canvasStartY={canvasStartY}
-                        cells={info.cellValues}
+                        cells={info.cells}
                         grid={grid}
                     />
                 )
@@ -102,7 +109,7 @@ interface BlockInterfaceInternalProps {
     craftManager: CraftManager
     canvasStartX: number
     canvasStartY: number
-    cells: readonly Value[]
+    cells: readonly BlockCellInfo[]
     grid: Grid
 }
 
@@ -172,7 +179,8 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                 y,
                 width,
                 height,
-                value: cell,
+                value: cell.value,
+                shadowValue: cell.shadowValue,
                 fieldInfo: f,
                 rowIdx: rowIdx + rowStart,
                 colIdx: colIdx + colStart,
@@ -401,9 +409,15 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
             </Box>
 
             {/* Block cells */}
-            {blockCellProps.map((cellProps, idx) => (
-                <BlockCell key={idx} {...cellProps} />
-            ))}
+            {blockCellProps.map((cellProps, idx) => {
+                const {fieldInfo} = cellProps
+                if (fieldInfo.type.type === 'enum') {
+                    return <EnumCell key={idx} {...cellProps} />
+                } else if (fieldInfo.type.type === 'number') {
+                    return <NumberCell key={idx} {...cellProps} />
+                }
+                return null
+            })}
 
             {/* Menu */}
             {isMenuOpen && (

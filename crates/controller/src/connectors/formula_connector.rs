@@ -307,18 +307,6 @@ impl<'a> IndexFetcherTrait for FormulaConnector<'a> {
 impl<'a> logisheets_parser::context::ContextTrait for FormulaConnector<'a> {}
 
 impl<'a> FormulaExecCtx for FormulaConnector<'a> {
-    fn remove_range_id(&mut self, sheet_id: &SheetId, range_id: &RangeId) {
-        self.range_manager.remove_range_id(sheet_id, range_id)
-    }
-
-    fn remove_cube_id(&mut self, cube_id: &CubeId) {
-        self.cube_manager.remove_cube(cube_id)
-    }
-
-    fn remove_ext_ref_id(&mut self, id: &ExtRefId) {
-        self.ext_ref_manager.remove_ext_ref_id(id)
-    }
-
     fn get_dirty_range_ids(&self) -> HashSet<(SheetId, RangeId)> {
         self.dirty_ranges.clone()
     }

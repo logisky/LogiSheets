@@ -168,6 +168,9 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     break
                 case 'number': {
                     const formatter = field.type.formatter
+                    if (formatter === '') {
+                        break
+                    }
                     const p = new SetBlockLineNumFmtBuilder()
                         .sheetIdx(currentSheetIdx)
                         .blockId(blockId)
