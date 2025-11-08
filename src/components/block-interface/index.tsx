@@ -141,7 +141,7 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
     const [descriptorUrl, setDescriptorUrl] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
     const [successMessage, setSuccessMessage] = useState<string | undefined>()
-    const [blockCellProps, setBlockCellProps] = useState<BlockCellProps[]>([])
+    // const [blockCellProps, setBlockCellProps] = useState<BlockCellProps[]>([])
 
     useEffect(() => {
         const onMove = (e: MouseEvent) => {
@@ -166,43 +166,30 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
         }
     }, [x, y, width, height, canvasStartX, canvasStartY, isHover])
 
-    useEffect(() => {
-        const props: BlockCellProps[] = cells.map((cell, idx) => {
-            const rowIdx = Math.floor(idx / fieldInfo.length)
-            const colIdx = idx % fieldInfo.length
-            const x = xForColStart(colIdx, grid)
-            const y = yForRowStart(rowIdx, grid)
-            const width = grid.columns[colIdx + colStart].width
-            const height = grid.rows[rowIdx + rowStart].height
-            const f = fieldInfo[colIdx]
-            return {
-                x,
-                y,
-                width,
-                height,
-                value: cell.value,
-                shadowValue: cell.shadowValue,
-                fieldInfo: f,
-                rowIdx: rowIdx + rowStart,
-                colIdx: colIdx + colStart,
-                sheetIdx,
-            } as BlockCellProps
-        })
-        setBlockCellProps(props)
-    }, [
-        x,
-        y,
-        width,
-        height,
-        canvasStartX,
-        canvasStartY,
-        fieldInfo,
-        cells,
-        grid.columns,
-        grid.rows,
-        colStart,
-        rowStart,
-    ])
+    const baseX = xForColStart(colStart, grid)
+    const baseY = yForRowStart(rowStart, grid)
+
+    const blockCellProps: BlockCellProps[] = cells.map((cell, idx) => {
+        const rowIdx = Math.floor(idx / fieldInfo.length)
+        const colIdx = idx % fieldInfo.length
+        const x = xForColStart(colStart + colIdx, grid) - baseX
+        const y = yForRowStart(rowStart + rowIdx, grid) - baseY
+        const width = grid.columns[colIdx + colStart].width
+        const height = grid.rows[rowIdx + rowStart].height
+        const f = fieldInfo[colIdx]
+        return {
+            x,
+            y,
+            width,
+            height,
+            value: cell.value,
+            shadowValue: cell.shadowValue,
+            fieldInfo: f,
+            rowIdx: rowIdx + rowStart,
+            colIdx: colIdx + colStart,
+            sheetIdx,
+        } as BlockCellProps
+    })
 
     const handleMenuClick = (event: React.MouseEvent) => {
         event.preventDefault()
