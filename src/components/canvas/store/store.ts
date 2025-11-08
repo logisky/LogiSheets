@@ -5,7 +5,6 @@ import {Textarea} from './textarea'
 import {DataServiceImpl as DataService, CraftManager} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
-import {DiyButton} from './diy-button'
 import {ErrorMessage, isErrorMessage} from 'logisheets-web'
 import {Grid} from '@/core/worker/types'
 
@@ -16,7 +15,6 @@ export class CanvasStore {
     ) {
         makeObservable(this)
         this.textarea = new Textarea(this)
-        this.diyButton = new DiyButton(this)
     }
     // TODO: remove this
     @observable.ref
@@ -30,7 +28,6 @@ export class CanvasStore {
     same = false
 
     textarea: Textarea
-    diyButton: DiyButton
 
     get currSheetIdx() {
         return this.dataSvc.getCurrentSheetIdx()
@@ -106,7 +103,6 @@ export class CanvasStore {
         this.endCell = undefined
         this.type = 'mousedown'
         this.same = this.startCell && cell.equals(this.startCell)
-        if (this.diyButton.mousedown()) return
         this.textarea.mousedown(e.nativeEvent)
     }
 

@@ -13,7 +13,6 @@ import {
     MergeCell,
     BlockInfo,
     CellPosition,
-    CellId,
 } from 'logisheets-web'
 import {sheetCellIdToString} from './clients/workbook'
 

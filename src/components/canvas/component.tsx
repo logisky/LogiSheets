@@ -32,15 +32,13 @@ import {EventType, KeyboardEventCode, on} from '@/core/events'
 import {SelectorComponent, SelectorProps} from '@/components/selector'
 import {ITextareaInstance, TextContainerComponent} from '@/components/textarea'
 import {InvalidFormulaComponent} from './invalid-formula'
-import {Buttons, simpleUuid} from '@/core'
+import {Buttons, simpleUuid, width2px} from '@/core'
 import {DialogComponent} from '@/ui/dialog'
 import {useInjection} from '@/core/ioc/provider'
 import {CraftManager, DataServiceImpl, MAX_COUNT} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
-import {DiyButtonComponent} from '../diy-button'
-import {ShadowCellComponent} from '../shadow-cell'
 import {
     FormulaDisplayInfo,
     Transaction,
@@ -329,8 +327,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 if (!pos || isErrorMessage(pos)) return
 
                 const size = canvas()!.getBoundingClientRect()
-                const anchorX = Math.max(0, pos.x - size.width / 2)
-                const anchorY = Math.max(0, pos.y - size.height / 2)
+                const anchorX = Math.max(0, width2px(pos.x) - size.width / 2)
+                const anchorY = Math.max(0, ptToPx(pos.y) - size.height / 2)
                 renderWithAnchor(anchorX, anchorY).then(() => {
                     canvas()!.focus({preventScroll: true})
                     store.textarea.reset()
@@ -372,8 +370,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     .setEndCol(firstCell.c)
             )
         store.startCell = startCell
-
-        if (selectedData.source === 'editbar') return
 
         const firstCol = grid.columns[0]?.idx ?? 0
         const lastCol = grid.columns[grid.columns.length - 1]?.idx ?? firstCol
@@ -1194,9 +1190,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     canvasStartY={canvas()!.getBoundingClientRect().top}
                 />
             )}
-            {store.diyButton.props.map((props, i) => (
-                <DiyButtonComponent key={i} props={props} />
-            ))}
 
             <Scrollbar
                 totalLength={documentHeight}
