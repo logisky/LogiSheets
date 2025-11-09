@@ -1,7 +1,6 @@
-import {TopBar} from '@/components/top-bar'
+import {Toolbar} from '@/components/toolbar'
 import {useEffect, useState} from 'react'
 import {ContentComponent} from '@/components/content'
-import {BottomBarComponent} from '@/components/bottom-bar'
 import {SelectedData} from '@/components/canvas'
 import {DEBUG} from '@/core'
 import {SETTINGS} from '@/core/settings'
@@ -18,11 +17,7 @@ export const RootContainer = () => {
             <div className={styles.host}>
                 {DEBUG ? <div className="debug-toolbar" /> : null}
                 <div style={{height: SETTINGS.topBar}}>
-                    <TopBar
-                        selectedData={selectedData}
-                        isBlockViewVisible={isBlockViewVisible}
-                        setBlockViewVisible={setBlockViewVisible}
-                    />
+                    <Toolbar selectedData={selectedData} />
                 </div>
                 <div className={styles.content}>
                     <ContentComponent

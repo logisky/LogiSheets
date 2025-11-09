@@ -8,6 +8,7 @@ import {
     SelectedData,
 } from './events'
 import styles from './canvas.module.scss'
+import modalStyles from '../modal.module.scss'
 import {
     findVisibleRowIdxRange,
     findVisibleColIdxRange,
@@ -33,9 +34,9 @@ import {SelectorComponent, SelectorProps} from '@/components/selector'
 import {ITextareaInstance, TextContainerComponent} from '@/components/textarea'
 import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid, width2px} from '@/core'
-import {DialogComponent} from '@/ui/dialog'
+import Modal from 'react-modal'
 import {useInjection} from '@/core/ioc/provider'
-import {CraftManager, DataServiceImpl, MAX_COUNT} from '@/core/data'
+import {CraftManager, DataServiceImpl} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
@@ -1225,11 +1226,17 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     type={type}
                 />
             )}
-            <DialogComponent isOpen={invalidFormulaWarning}>
+            <Modal
+                isOpen={invalidFormulaWarning}
+                ariaHideApp={false}
+                onRequestClose={onCloseInvalidFormulaWarning}
+                className={modalStyles.modalContent}
+                overlayClassName={modalStyles.modalOverlay}
+            >
                 <InvalidFormulaComponent
                     close$={onCloseInvalidFormulaWarning}
                 />
-            </DialogComponent>
+            </Modal>
             {highlightCells.map((cell, i) => {
                 const cellStyle = cell.style
                 return (

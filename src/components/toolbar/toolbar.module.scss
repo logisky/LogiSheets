@@ -1,0 +1,97 @@
+.host {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0px 10px; /* keep container height; smaller inner controls below */
+  background: #ffffff; /* clearer card */
+  border-radius: 10px; /* clearer rounded rect */
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+  border: 2px solid #dfe4ea; /* clearer edge */
+  backdrop-filter: saturate(160%) blur(4px);
+  color: #445066;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.section {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Make controls visually smaller without changing container height */
+.host :global(.MuiButton-root) {
+  padding: 2px 6px;
+  min-width: auto;
+  font-size: 12px;
+  text-transform: none; /* Disable uppercase transformation */
+}
+.host :global(.MuiIconButton-root) {
+  padding: 2px;
+}
+.host :global(.MuiSvgIcon-root) {
+  font-size: 18px;
+}
+
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.divider {
+  margin: 0 4px !important;
+  opacity: 0.5;
+}
+
+.alignIcon {
+  display: inline-flex;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Logo */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #7dd3fc 0%, #60a5fa 100%);
+  color: #0b3757;
+  font-weight: 800;
+  font-size: 16px;
+  margin-right: 6px;
+}
+
+/* Alignment popover grid (3x3) */
+.alignGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 28px);
+  grid-template-rows: repeat(3, 28px);
+  gap: 4px;
+  padding: 8px;
+}
+.alignCell {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e0e3e7;
+  border-radius: 4px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+.alignCell:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

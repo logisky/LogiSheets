@@ -12,7 +12,7 @@ class Settings {
     public showContextMenu = true
     public showToolBar = true
     public showSheetsTab = true
-    public topBar = '102px'
+    public topBar = '46px'
     public bottomBar = '0'
     public defaultSheetName = 'sheet'
     public scrollbarSize = 16
