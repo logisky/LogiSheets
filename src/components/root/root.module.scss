@@ -5,12 +5,14 @@
   width: 100%;
   background-color: #f2f4f7;
   font-size: 12px;
+  gap: 8px;
 }
 .content {
   flex: 1;
   overflow: hidden;
   height: 100%;
   width: 100%;
+  gap: 6px;
 }
 .debug-toolbar {
   position: absolute;
@@ -38,5 +40,4 @@
   flex-direction: row;
   display: flex;
   height: 100%;
-  width: 100%;
 }
