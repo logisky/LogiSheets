@@ -51,6 +51,7 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             new HtmlWebpackPlugin({
                 publicPath: path.join(__dirname, 'dist'),
                 template: path.resolve(__dirname, 'public/index.html'),
+                favicon: path.resolve(__dirname, 'public/logo.png'),
             }),
             // https://rustwasm.github.io/wasm-pack/book/commands/build.html
             // new WasmPackPlugin({
@@ -76,6 +77,13 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
                     options: {
                         loader: 'tsx',
                         target: 'ESNext',
+                    },
+                },
+                {
+                    test: /\.(png|jpe?g|gif|svg)$/i,
+                    type: 'asset/resource',
+                    generator: {
+                        filename: '[name][ext]',
                     },
                 },
                 {

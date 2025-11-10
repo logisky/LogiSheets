@@ -61,17 +61,12 @@
 
 /* Logo */
 .logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   width: 26px;
   height: 26px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #7dd3fc 0%, #60a5fa 100%);
-  color: #0b3757;
-  font-weight: 800;
-  font-size: 16px;
   margin-right: 6px;
+  border-radius: 6px;
+  object-fit: contain;
 }
 
 /* Alignment popover grid (3x3) */

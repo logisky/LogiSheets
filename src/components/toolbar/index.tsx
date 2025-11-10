@@ -487,7 +487,7 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
     return (
         <div className={styles.host}>
             {/* App logo */}
-            <div className={styles.logo}>L</div>
+            <img src="/logo.png" alt="LogiSheets" className={styles.logo} />
             {/* Hidden file input */}
             <input
                 ref={fileInputRef}
