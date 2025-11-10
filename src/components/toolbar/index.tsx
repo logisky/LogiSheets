@@ -26,6 +26,7 @@ import {
     MergeCellsBuilder,
     Payload,
     Transaction,
+    VerticalAlignment,
 } from 'logisheets-web'
 import {SplitMergedCellsBuilder} from 'packages/web'
 import {ColorResult, SketchPicker} from 'react-color'
@@ -152,9 +153,17 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
             if (isErrorMessage(ci)) return
             const style = ci.getStyle()
             const a = style.alignment
-            if (a?.horizontal === 'center') setAlignment('center')
-            else if (a?.horizontal === 'left') setAlignment('left')
-            else if (a?.horizontal === 'right') setAlignment('right')
+            let h = null
+            let v = null
+            if (a?.horizontal === 'center') h = 'center'
+            else if (a?.horizontal === 'left') h = 'left'
+            else if (a?.horizontal === 'right') h = 'right'
+            if (a?.vertical === 'center') v = 'center'
+            else if (a?.vertical === 'top') v = 'top'
+            else if (a?.vertical === 'bottom') v = 'bottom'
+            if (h && v) setAlignment(`${h}-${v}`)
+            else if (h) setAlignment(`${h}-center`)
+            else if (v) setAlignment(`center-${v}`)
             else setAlignment(null)
             const pf = getPatternFill(style.fill)
             if (pf && pf.bgColor) {
@@ -333,12 +342,26 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
     const onAlignClick = (event: React.MouseEvent<HTMLElement>) => {
         setAlignAnchor(event.currentTarget)
     }
-    const onChooseAlign = (v: 'left' | 'center' | 'right') => {
+    const onChooseAlign = (
+        v:
+            | 'left-center'
+            | 'center-center'
+            | 'right-center'
+            | 'left-top'
+            | 'center-top'
+            | 'right-top'
+            | 'left-bottom'
+            | 'center-bottom'
+            | 'right-bottom'
+    ) => {
         if (!selectedData) return
         const payloads = generateAlgnmentPayload(
             DATA_SERVICE.getCurrentSheetIdx(),
             selectedData,
-            {horizontal: v as HorizontalAlignment}
+            {
+                horizontal: v.split('-')[0] as HorizontalAlignment,
+                vertical: v.split('-')[1] as VerticalAlignment,
+            }
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             () => setAlignment(v)
@@ -391,6 +414,75 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
             () => setMergedOn(true)
         )
     }
+
+    // Icon for alignment grid cells
+    /* eslint-disable react/prop-types */
+    const AlignCellIcon: React.FC<{
+        pos:
+            | 'left-center'
+            | 'center-center'
+            | 'right-center'
+            | 'left-top'
+            | 'center-top'
+            | 'right-top'
+            | 'left-bottom'
+            | 'center-bottom'
+            | 'right-bottom'
+    }> = ({pos}) => {
+        const indicator = 4 // size of the indicator square
+        const pad = 3 // padding around the canvas
+        const size = 18 // inner box size
+
+        const [h, v] = pos.split('-') as [
+            'left' | 'center' | 'right',
+            'top' | 'center' | 'bottom'
+        ]
+        const x =
+            h === 'left'
+                ? pad + 2
+                : h === 'center'
+                ? pad + size / 2 - indicator / 2
+                : pad + size - indicator - 2
+        const y =
+            v === 'top'
+                ? pad + 2
+                : v === 'center'
+                ? pad + size / 2 - indicator / 2
+                : pad + size - indicator - 2
+
+        return (
+            <svg
+                width={20}
+                height={20}
+                viewBox="0 0 24 24"
+                aria-hidden
+                focusable={false}
+            >
+                {/* Outer box */}
+                <rect
+                    x={pad}
+                    y={pad}
+                    width={size}
+                    height={size}
+                    rx={2}
+                    ry={2}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeOpacity={0.5}
+                    strokeWidth={1}
+                />
+                {/* Indicator square */}
+                <rect
+                    x={x}
+                    y={y}
+                    width={indicator}
+                    height={indicator}
+                    fill="currentColor"
+                />
+            </svg>
+        )
+    }
+    /* eslint-enable react/prop-types */
 
     return (
         <div className={styles.host}>
@@ -623,43 +715,61 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
             >
                 <div className={styles.alignGrid}>
                     {/* Top row (not wired) */}
-                    <button className={styles.alignCell} disabled>
-                        {' '}
+                    <button
+                        className={styles.alignCell}
+                        onClick={() => onChooseAlign('left-top')}
+                    >
+                        <AlignCellIcon pos="left-top" />
                     </button>
-                    <button className={styles.alignCell} disabled>
-                        {' '}
+                    <button
+                        className={styles.alignCell}
+                        onClick={() => onChooseAlign('center-top')}
+                    >
+                        <AlignCellIcon pos="center-top" />
                     </button>
-                    <button className={styles.alignCell} disabled>
-                        {' '}
+                    <button
+                        className={styles.alignCell}
+                        onClick={() => onChooseAlign('right-top')}
+                    >
+                        <AlignCellIcon pos="right-top" />
                     </button>
                     {/* Middle row */}
                     <button
                         className={styles.alignCell}
-                        onClick={() => onChooseAlign('left')}
+                        onClick={() => onChooseAlign('left-center')}
                     >
-                        L
+                        <AlignCellIcon pos="left-center" />
                     </button>
                     <button
                         className={styles.alignCell}
-                        onClick={() => onChooseAlign('center')}
+                        onClick={() => onChooseAlign('center-center')}
                     >
-                        C
+                        <AlignCellIcon pos="center-center" />
                     </button>
                     <button
                         className={styles.alignCell}
-                        onClick={() => onChooseAlign('right')}
+                        onClick={() => onChooseAlign('right-center')}
                     >
-                        R
+                        <AlignCellIcon pos="right-center" />
                     </button>
                     {/* Bottom row (not wired) */}
-                    <button className={styles.alignCell} disabled>
-                        {' '}
+                    <button
+                        className={styles.alignCell}
+                        onClick={() => onChooseAlign('left-bottom')}
+                    >
+                        <AlignCellIcon pos="left-bottom" />
                     </button>
-                    <button className={styles.alignCell} disabled>
-                        {' '}
+                    <button
+                        className={styles.alignCell}
+                        onClick={() => onChooseAlign('center-bottom')}
+                    >
+                        <AlignCellIcon pos="center-bottom" />
                     </button>
-                    <button className={styles.alignCell} disabled>
-                        {' '}
+                    <button
+                        className={styles.alignCell}
+                        onClick={() => onChooseAlign('right-bottom')}
+                    >
+                        <AlignCellIcon pos="right-bottom" />
                     </button>
                 </div>
             </Popover>
