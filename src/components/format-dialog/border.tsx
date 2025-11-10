@@ -23,12 +23,12 @@ import BorderLeftIcon from '@mui/icons-material/BorderLeft'
 import {
     borderStyleNames,
     PreviewLineComponent,
-} from '@/components/top-bar/content/preview-line'
+} from '@/components/toolbar/preview-line'
 import {StBorderStyle} from 'logisheets-web'
 import {
     BatchUpdateType,
     generateBorderPayloads,
-} from '@/components/top-bar/content/payload'
+} from '@/components/toolbar/payload'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl} from '@/core/data'

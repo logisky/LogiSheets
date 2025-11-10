@@ -11,12 +11,12 @@ import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl as DataService} from '@/core/data'
 import {BlockComposerComponent} from '@/components/block-composer'
-import {BorderSettingComponent} from '@/components/top-bar/content/border-setting'
+import {BorderSettingComponent} from './border-setting'
 import {
     generateAlgnmentPayload,
     generateFontPayload,
     generatePatternFillPayload,
-} from '@/components/top-bar/content/payload'
+} from './payload'
 import {
     CellFormatBrushBuilder,
     HorizontalAlignment,
