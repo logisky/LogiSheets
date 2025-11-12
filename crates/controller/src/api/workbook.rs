@@ -89,6 +89,7 @@ impl Workbook {
                 status: StatusCode::Err(1),
                 value_changed: vec![],
                 cell_removed: vec![],
+                style_changed: vec![],
             };
         }
         self.controller.handle_async_calc_results(tasks, results)

@@ -511,6 +511,7 @@ pub struct ActionEffect {
 
     pub value_changed: Vec<SheetCellId>,
     pub cell_removed: Vec<SheetCellId>,
+    pub style_changed: Vec<SheetCellId>,
 }
 
 impl ActionEffect {
@@ -648,6 +649,7 @@ pub type Color = String;
 pub struct Alignment {
     pub horizontal: Option<HorizontalAlignment>,
     pub vertical: Option<VerticalAlignment>,
+    pub wrap_text: Option<bool>,
 }
 
 #[derive(Debug, Clone, TS)]

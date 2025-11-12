@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {injectable} from 'inversify'
 import {Resp} from 'logisheets-web'
-import {Grid, OffscreenRenderName} from '../../worker/types'
+import {AppropriateHeight, Grid, OffscreenRenderName} from '../../worker/types'
 
 @injectable()
 export class OffscreenClient {
@@ -40,6 +40,18 @@ export class OffscreenClient {
             anchorX,
             anchorY,
         }) as Resp<Grid>
+    }
+
+    getAppropriateHeights(
+        sheetId: number,
+        anchorX: number,
+        anchorY: number
+    ): Resp<readonly AppropriateHeight[]> {
+        return this._call(OffscreenRenderName.GetAppropriateHeights, {
+            sheetId,
+            anchorX,
+            anchorY,
+        }) as Resp<readonly AppropriateHeight[]>
     }
 
     resize(width: number, height: number, dpr: number): Resp<Grid> {

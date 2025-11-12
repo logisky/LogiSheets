@@ -307,6 +307,7 @@ pub fn set_cell_alignment(
     col: usize,
     h_align: Option<String>,
     v_align: Option<String>,
+    wrap_text: Option<bool>,
 ) {
     let v: Option<VerticalAlignment> = if let Some(value) = v_align {
         serde_json::from_str(&format!("\"{}\"", value)).unwrap()
@@ -322,6 +323,7 @@ pub fn set_cell_alignment(
     ty.set_alignment = Some(Alignment {
         vertical: v,
         horizontal: h,
+        wrap_text,
     });
     let p = EditPayload::CellStyleUpdate(CellStyleUpdate {
         sheet_idx,
@@ -342,6 +344,7 @@ pub fn set_line_alignment(
     to: usize,
     h_align: Option<String>,
     v_align: Option<String>,
+    wrap_text: Option<bool>,
 ) {
     let v: Option<VerticalAlignment> = if let Some(v_align) = v_align {
         serde_json::from_str(&v_align).unwrap()
@@ -357,6 +360,7 @@ pub fn set_line_alignment(
     ty.set_alignment = Some(Alignment {
         vertical: v,
         horizontal: h,
+        wrap_text,
     });
     let p = EditPayload::LineStyleUpdate(LineStyleUpdate {
         sheet_idx,

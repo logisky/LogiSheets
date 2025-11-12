@@ -51,6 +51,7 @@ import {
     FormulaDisplayInfo,
     GetNextVisibleCellParams,
     CellCoordinate,
+    ActionEffect,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from '../../worker/types'
 
@@ -375,6 +376,15 @@ export class WorkbookClient implements Client {
 
     async handleTransaction(params: HandleTransactionParams): Resp<void> {
         return this._call(MethodName.HandleTransaction, params) as Resp<void>
+    }
+
+    async handleTransactionWithoutEvents(
+        params: HandleTransactionParams
+    ): Resp<ActionEffect> {
+        return this._call(
+            MethodName.HandleTransactionWithoutEvents,
+            params
+        ) as Resp<ActionEffect>
     }
 
     async loadWorkbook(params: LoadWorkbookParams): Resp<void> {

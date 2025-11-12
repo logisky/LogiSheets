@@ -13,13 +13,25 @@ import {
     MergeCell,
     BlockInfo,
     CellPosition,
+    Payload,
+    SetRowHeightBuilder,
 } from 'logisheets-web'
+import {Grid as SheetGrid} from '../worker/types'
 import {sheetCellIdToString} from './clients/workbook'
+import {pxToPt} from '../rate'
 
 export const MAX_COUNT = 10000
 type SheetId = number
 
 export class DataServiceImpl {
+    // This is used to enable the data service to post render request proactively.
+    private _lastRender = {
+        sheetId: 0,
+        anchorX: 0,
+        anchorY: 0,
+        grid: undefined as unknown as Grid,
+    }
+
     constructor(
         @inject(TYPES.Workbook) private _workbook: WorkbookClient,
         @inject(TYPES.Offscreen) private _offscreen: OffscreenClient
@@ -34,6 +46,12 @@ export class DataServiceImpl {
     ): Resp<Grid> {
         return this._offscreen.render(sheetId, anchorX, anchorY).then((v) => {
             if (isErrorMessage(v)) return v
+            this._lastRender = {
+                sheetId,
+                anchorX,
+                anchorY,
+                grid: v,
+            }
             return v
         })
     }
@@ -104,8 +122,53 @@ export class DataServiceImpl {
         return this._sheetInfos[this._sheetIdx].name
     }
 
-    public handleTransaction(transaction: Transaction): Resp<void> {
+    public async handleTransaction(transaction: Transaction): Resp<void> {
         return this._workbook.handleTransaction({transaction})
+    }
+
+    public async handleTransactionAndAdjustRowHeights(
+        transaction: Transaction,
+        onlyIncrease = false,
+        fromRowIdx?: number,
+        toRowIdx?: number
+    ): Resp<void> {
+        const {sheetId, anchorX, anchorY} = this._lastRender
+        const affectResult =
+            await this._workbook.handleTransactionWithoutEvents({transaction})
+        if (isErrorMessage(affectResult)) {
+            await this._offscreen.render(sheetId, anchorX, anchorY)
+            return
+        }
+        const heights = await this._offscreen.getAppropriateHeights(
+            sheetId,
+            anchorX,
+            anchorY
+        )
+        if (isErrorMessage(heights)) {
+            await this._offscreen.render(sheetId, anchorX, anchorY)
+            return
+        }
+        const payloads = heights
+            .map((h) => {
+                if (h.height === undefined || h.height === 0) return
+                if (fromRowIdx !== undefined && h.row < fromRowIdx) return
+                if (toRowIdx !== undefined && h.row > toRowIdx) return
+                const grid = this._lastRender.grid
+                const rowHeight = grid.rows[h.row - grid.rows[0].idx].height
+                if (onlyIncrease && rowHeight >= h.height) return
+                return {
+                    type: 'setRowHeight',
+                    value: new SetRowHeightBuilder()
+                        .sheetIdx(this._sheetIdx)
+                        .row(h.row)
+                        .height(h.height)
+                        .build(),
+                }
+            })
+            .filter((v) => v !== undefined)
+        return this._workbook.handleTransaction({
+            transaction: new Transaction(payloads as Payload[], false),
+        })
     }
 
     public getSheetDimension(sheetIdx: number): Resp<SheetDimension> {

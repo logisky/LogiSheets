@@ -16,6 +16,7 @@ import {
     generateAlgnmentPayload,
     generateFontPayload,
     generatePatternFillPayload,
+    generateWrapTextPayload,
 } from './payload'
 import {
     CellFormatBrushBuilder,
@@ -54,13 +55,12 @@ import {
     ArrowDropDown as ArrowDropDownIcon,
     TextIncrease,
     TextDecrease,
-    AlignHorizontalCenter,
     AlignHorizontalCenterOutlined,
+    WrapText as WrapTextIcon,
 } from '@mui/icons-material'
 import {isErrorMessage} from 'packages/web/src/api/utils'
 import {StandardColor, StandardFont} from '@/core/standable'
 import {useToast} from '@/ui/notification/useToast'
-import {getU8} from '@/core/file'
 
 export interface ToolbarProps {
     selectedData?: SelectedData
@@ -69,6 +69,8 @@ export interface ToolbarProps {
 export const Toolbar = ({selectedData}: ToolbarProps) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const {toast} = useToast()
+    const hasSelectedData =
+        selectedData !== undefined && selectedData.data !== undefined
 
     // File open
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -76,19 +78,11 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.item(0)
         if (!file) return
-        const readFile = new Promise((resolve, reject) => {
-            getU8(file).subscribe(
-                async (u8) => {
-                    if (!u8) {
-                        reject('read file error')
-                        return
-                    }
-                    DATA_SERVICE.loadWorkbook(u8, file.name)
-                    resolve('')
-                },
-                (err) => reject(err)
+        const readFile = file
+            .arrayBuffer()
+            .then((buf) =>
+                DATA_SERVICE.loadWorkbook(new Uint8Array(buf), file.name)
             )
-        })
         toast.promise(readFile, {
             pending: 'Loading file...',
             error: 'Read file error, retry later',
@@ -120,11 +114,11 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
     const [bold, setBold] = useState(false)
     const [italic, setItalic] = useState(false)
     const [underline, setUnderline] = useState(false)
-    const [fontSize, setFontSize] = useState<number | ''>('')
 
     // Alignment popover
     const [alignAnchor, setAlignAnchor] = useState<HTMLElement | null>(null)
     const [alignment, setAlignment] = useState<string | null>(null)
+    const [wrapText, setWrapText] = useState(false)
 
     // Merge
     const [mergedOn, setMergedOn] = useState<boolean | null>(null)
@@ -166,13 +160,14 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
             else if (v) setAlignment(`center-${v}`)
             else setAlignment(null)
             const pf = getPatternFill(style.fill)
+
+            if (a?.wrapText || false) setWrapText(a.wrapText)
             if (pf && pf.bgColor) {
                 const c = StandardColor.fromCtColor(pf.bgColor)
                 setFillColor(c.css())
             }
             const font = StandardFont.from(style.font)
             setFontColor(font.standardColor.css())
-            setFontSize(font.size)
             setBold(font.bold)
             setItalic(font.italic)
             setUnderline(font.underline ? font.underline.val !== 'none' : false)
@@ -339,6 +334,20 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
         )
     }
 
+    const onToggleWrapText = () => {
+        if (!selectedData) return
+        const v = !wrapText
+        const payloads = generateWrapTextPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            v
+        )
+        DATA_SERVICE.handleTransactionAndAdjustRowHeights(
+            new Transaction(payloads, true),
+            true
+        ).then(() => setWrapText(v))
+    }
+
     const onAlignClick = (event: React.MouseEvent<HTMLElement>) => {
         setAlignAnchor(event.currentTarget)
     }
@@ -367,6 +376,27 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
             () => setAlignment(v)
         )
         setAlignAnchor(null)
+    }
+
+    const onFontSizeChange = async (ty: 'increase' | 'decrease') => {
+        if (!selectedData) return
+        const firstCell = getFirstCell(selectedData)
+        const cellInfo = await DATA_SERVICE.getCellInfo(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            firstCell.r,
+            firstCell.c
+        )
+        if (isErrorMessage(cellInfo)) return
+        const fontSize = cellInfo.getStyle().font.sz ?? 10
+        const payloads = generateFontPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            {size: ty === 'increase' ? fontSize + 1 : fontSize - 1}
+        )
+        console.log(payloads)
+        DATA_SERVICE.handleTransactionAndAdjustRowHeights(
+            new Transaction(payloads, true)
+        )
     }
 
     const onMergeOrSplitClick = () => {
@@ -554,90 +584,136 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
                 {/* Formatting */}
                 <div className={styles.section}>
                     <Tooltip title="Format Painter">
-                        <IconButton
-                            size="small"
-                            onClick={onFormatPainter}
-                            color={formatBrushOn ? 'primary' : 'default'}
-                        >
-                            <FormatPaintIcon fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onFormatPainter}
+                                color={formatBrushOn ? 'primary' : 'default'}
+                                disabled={!hasSelectedData}
+                            >
+                                <FormatPaintIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
 
                     <Tooltip title="Bold">
-                        <IconButton
-                            size="small"
-                            onClick={onToggleBold}
-                            color={bold ? 'primary' : 'default'}
-                        >
-                            <FormatBoldIcon fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onToggleBold}
+                                color={bold ? 'primary' : 'default'}
+                                disabled={!hasSelectedData}
+                            >
+                                <FormatBoldIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                     <Tooltip title="Italic">
-                        <IconButton
-                            size="small"
-                            onClick={onToggleItalic}
-                            color={italic ? 'primary' : 'default'}
-                        >
-                            <FormatItalicIcon fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onToggleItalic}
+                                color={italic ? 'primary' : 'default'}
+                                disabled={!hasSelectedData}
+                            >
+                                <FormatItalicIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                     <Tooltip title="Underline">
-                        <IconButton
-                            size="small"
-                            onClick={onToggleUnderline}
-                            color={underline ? 'primary' : 'default'}
-                        >
-                            <FormatUnderlinedIcon fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onToggleUnderline}
+                                color={underline ? 'primary' : 'default'}
+                                disabled={!hasSelectedData}
+                            >
+                                <FormatUnderlinedIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                     <Tooltip title="Font Color">
-                        <IconButton
-                            size="small"
-                            onClick={() => setColorPicking('font')}
-                            sx={{color: fontColor}}
-                        >
-                            <FormatColorTextIcon fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => setColorPicking('font')}
+                                sx={{color: fontColor}}
+                                disabled={!hasSelectedData}
+                            >
+                                <FormatColorTextIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                     <Tooltip title="Increase font size">
-                        <IconButton size="small">
-                            <TextIncrease fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onFontSizeChange('increase')}
+                            >
+                                <TextIncrease fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                     <Tooltip title="Decrease font size">
-                        <IconButton size="small">
-                            <TextDecrease fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => onFontSizeChange('decrease')}
+                            >
+                                <TextDecrease fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Wrap text">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onToggleWrapText}
+                                color={wrapText ? 'primary' : 'default'}
+                                disabled={!hasSelectedData}
+                            >
+                                <WrapTextIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
 
                     <Tooltip title="Fill Color">
-                        <IconButton
-                            size="small"
-                            onClick={() => setColorPicking('fill')}
-                            sx={{color: fillColor}}
-                        >
-                            <FormatColorFillIcon fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => setColorPicking('fill')}
+                                sx={{color: fillColor}}
+                                disabled={!hasSelectedData}
+                            >
+                                <FormatColorFillIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
 
                     <Tooltip title="Borders">
-                        <IconButton
-                            size="small"
-                            onClick={() => setBorderOpen(true)}
-                        >
-                            <BorderIcon fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={() => setBorderOpen(true)}
+                                disabled={!hasSelectedData}
+                            >
+                                <BorderIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
 
                     <Tooltip title="Alignment">
-                        <IconButton
-                            size="small"
-                            onClick={onAlignClick}
-                            color={alignment ? 'primary' : 'default'}
-                        >
-                            <AlignHorizontalCenterOutlined fontSize="small" />
-                            <ArrowDropDownIcon fontSize="small" />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onAlignClick}
+                                color={alignment ? 'primary' : 'default'}
+                                disabled={!hasSelectedData}
+                            >
+                                <AlignHorizontalCenterOutlined fontSize="small" />
+                                <ArrowDropDownIcon fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
 
                     <Tooltip title="Merge">

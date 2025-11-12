@@ -74,6 +74,9 @@ pub fn execute_style_update(
                 }
             }
         }
+        if let Some(v) = alignment.wrap_text {
+            result.wrap_text = Some(v);
+        }
         xf.alignment = Some(result);
     }
     let new_id = cell_xfs_manager.get_id(&xf);

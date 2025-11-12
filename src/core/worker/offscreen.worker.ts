@@ -1,5 +1,6 @@
 import {Pool} from '@/core/pool'
 import {
+    AppropriateHeight,
     Grid,
     IOffscreenWorker,
     IWorkbookWorker,
@@ -32,6 +33,47 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
         this._canvas = canvas
         this._dpr = dpr
         window.devicePixelRatio = dpr
+    }
+
+    getAppropriateHeights(
+        sheetId: number,
+        anchorX: number,
+        anchorY: number
+    ): Result<AppropriateHeight[]> {
+        if (!this._canvas) {
+            throw new Error('Canvas not initialized')
+        }
+        this._sheetId = sheetId
+
+        const ctx = this._canvas.getContext('2d')
+        if (!ctx) {
+            throw new Error('Failed to get 2D context')
+        }
+
+        const sheetIdx = this._workbook.getSheetIdx({sheetId})
+        if (isErrorMessage(sheetIdx)) return sheetIdx
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.scale(this._dpr, this._dpr)
+
+        const viewManager = new ViewManager(this._workbook, sheetIdx, pool)
+
+        const viewResponse = viewManager.getViewResponse(
+            anchorX,
+            anchorY,
+            this._canvas.height,
+            this._canvas.width
+        )
+        if (isErrorMessage(viewResponse)) return viewResponse
+
+        this._anchorX = viewResponse.anchorX
+        this._anchorY = viewResponse.anchorY
+        this._painter.setCanvas(this._canvas)
+        return this._painter.getAppropriateHeights(
+            viewResponse.data,
+            anchorX,
+            anchorY
+        )
     }
 
     render(sheetId: number, anchorX: number, anchorY: number): Result<Grid> {
@@ -137,6 +179,13 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
                 break
             case OffscreenRenderName.Init:
                 result = this.init(args.canvas, args.dpr)
+                break
+            case OffscreenRenderName.GetAppropriateHeights:
+                result = this.getAppropriateHeights(
+                    args.sheetId,
+                    args.anchorX,
+                    args.anchorY
+                )
                 break
             default:
                 this._ctx.postMessage({

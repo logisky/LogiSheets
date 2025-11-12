@@ -11,6 +11,8 @@ import {SetLineBorder} from './set_line_border'
 import {SetLineFont} from './set_line_font'
 import {SetLineNumFmt} from './set_line_num_fmt'
 import {SetLinePatternFill} from './set_line_pattern_fill'
+import {SetCellWrapText} from './set_cell_wrap_text'
+import {SetLineWrapText} from './set_line_wrap_text'
 
 export * from './set_cell_alignment'
 export * from './set_cell_border'
@@ -24,6 +26,8 @@ export * from './set_cell_num_fmt'
 export * from './set_line_num_fmt'
 export * from './set_block_line_num_fmt'
 export * from './set_block_line_name_field'
+export * from './set_cell_wrap_text'
+export * from './set_line_wrap_text'
 
 export type Payload =
     | EditPayload
@@ -39,3 +43,5 @@ export type Payload =
     | {type: 'setLineNumFmt'; value: SetLineNumFmt}
     | {type: 'setBlockLineNumFmt'; value: SetBlockLineNumFmt}
     | {type: 'setBlockLineNameField'; value: SetBlockLineNameField}
+    | {type: 'setCellWrapText'; value: SetCellWrapText}
+    | {type: 'setLineWrapText'; value: SetLineWrapText}

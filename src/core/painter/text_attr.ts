@@ -11,5 +11,6 @@ export class TextAttr {
     alignment: Alignment | undefined = {
         horizontal: 'center',
         vertical: 'center',
+        wrapText: false,
     }
 }

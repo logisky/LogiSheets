@@ -139,6 +139,7 @@ impl Controller {
                     cell_updated: false,
                     cells_removed: HashSet::new(),
                     sid_assigner: &self.sid_assigner,
+                    style_updated: HashSet::new(),
                 };
 
                 let result = executor.execute_and_calc(payloads_action);
@@ -169,6 +170,14 @@ impl Controller {
 
                             cell_removed: result
                                 .cells_removed
+                                .into_iter()
+                                .map(|c| SheetCellId {
+                                    sheet_id: c.0,
+                                    cell_id: c.1,
+                                })
+                                .collect(),
+                            style_changed: result
+                                .style_updated
                                 .into_iter()
                                 .map(|c| SheetCellId {
                                     sheet_id: c.0,
@@ -211,6 +220,7 @@ impl Controller {
                     cell_updated: false,
                     sid_assigner: &self.sid_assigner,
                     cells_removed: HashSet::new(),
+                    style_updated: HashSet::new(),
                 };
                 if let Ok(result) = executor.calc() {
                     ActionEffect {
@@ -224,6 +234,14 @@ impl Controller {
                             .collect(),
                         cell_removed: result
                             .cells_removed
+                            .into_iter()
+                            .map(|c| SheetCellId {
+                                sheet_id: c.0,
+                                cell_id: c.1,
+                            })
+                            .collect(),
+                        style_changed: result
+                            .style_updated
                             .into_iter()
                             .map(|c| SheetCellId {
                                 sheet_id: c.0,
@@ -284,9 +302,10 @@ mod tests {
     use logisheets_base::{CellId, CellValue};
 
     use crate::edit_action::{
-        BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput, CellStyleUpdate, CreateBlock,
-        CreateSheet, DeleteSheet, EditAction, EditPayload, EphemeralCellInput, LineStyleUpdate,
-        PayloadsAction, StatusCode, StyleUpdateType,
+        Alignment, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput, CellStyleUpdate,
+        CreateBlock, CreateSheet, DeleteSheet, EditAction, EditPayload, EphemeralCellInput,
+        HorizontalAlignment, LineStyleUpdate, PayloadsAction, StatusCode, StyleUpdateType,
+        VerticalAlignment,
     };
 
     use super::Controller;
@@ -313,6 +332,23 @@ mod tests {
         wb.handle_action(EditAction::Payloads(payloads_action));
         let len = wb.status.formula_manager.formulas.len();
         assert_eq!(len, 1);
+    }
+
+    #[test]
+    fn controller_input_value() {
+        let mut wb = Controller::default();
+        let payloads_action = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: String::from("abcdefghijklmnopqrstuvwx"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(payloads_action));
+        assert_eq!(result.value_changed.len(), 1);
     }
 
     #[test]
@@ -627,5 +663,43 @@ mod tests {
         };
         let result = wb.handle_action(EditAction::Payloads(action));
         assert!(result.version > 0);
+    }
+
+    #[test]
+    fn set_wrap_test() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::CellStyleUpdate(CellStyleUpdate {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                ty: StyleUpdateType {
+                    set_alignment: Some(Alignment {
+                        horizontal: Some(HorizontalAlignment::General),
+                        vertical: Some(VerticalAlignment::Top),
+                        wrap_text: Some(true),
+                    }),
+                    ..Default::default()
+                },
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+        assert!(result.version > 0);
+        let cell_id = wb
+            .status
+            .navigator
+            .fetch_cell_id(&wb.get_sheet_id_by_idx(sheet_idx).unwrap(), 0, 0)
+            .unwrap();
+        let cell = wb
+            .status
+            .container
+            .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id)
+            .unwrap();
+        let style_id = cell.style;
+        let style = wb.status.style_manager.get_style(style_id);
+        assert!(style.alignment.unwrap().wrap_text.unwrap());
     }
 }
