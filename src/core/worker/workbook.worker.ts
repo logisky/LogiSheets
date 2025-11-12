@@ -48,6 +48,7 @@ import {
     FormulaDisplayInfo,
     CellCoordinate,
     GetNextVisibleCellParams,
+    ActionEffect,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName, Result, IWorkbookWorker} from './types'
 
@@ -237,6 +238,12 @@ export class WorkerService implements IWorkbookWorker {
         return
     }
 
+    public handleTransactionWithoutEvents(
+        params: HandleTransactionParams
+    ): Result<ActionEffect> {
+        return this.workbook.execTransaction(params.transaction)
+    }
+
     public getAllSheetInfo(): readonly SheetInfo[] {
         return this.workbook.getAllSheetInfo()
     }
@@ -416,6 +423,9 @@ export class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetNextVisibleCell:
                 result = this.getNextVisibleCell(args)
+                break
+            case MethodName.HandleTransactionWithoutEvents:
+                result = this.handleTransactionWithoutEvents(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

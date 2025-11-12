@@ -37,6 +37,7 @@ pub struct Executor<'a> {
     pub async_funcs: &'a HashSet<String>,
     pub updated_cells: HashSet<(SheetId, CellId)>,
     pub cells_removed: HashSet<(SheetId, CellId)>,
+    pub style_updated: HashSet<(SheetId, CellId)>,
     pub dirty_vertices: HashSet<Vertex>,
 
     pub sheet_updated: bool,
@@ -110,6 +111,9 @@ impl<'a> Executor<'a> {
         result
             .cells_removed
             .extend(container_executor.cells_removed);
+        result
+            .updated_cells
+            .extend(container_executor.value_changed);
 
         let (exclusive, exclusive_updated) = result.execute_exclusive(payload.clone())?;
         result.status.exclusive_manager = exclusive.manager;
@@ -173,6 +177,7 @@ impl<'a> Executor<'a> {
             sheet_updated,
             cell_updated,
             sid_assigner: result.sid_assigner,
+            style_updated: result.style_updated,
         })
     }
 

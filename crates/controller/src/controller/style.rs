@@ -196,9 +196,11 @@ impl<'a> StyleConverter<'a> {
         } else {
             None
         };
+        let wrap_text = raw.wrap_text;
         Alignment {
             horizontal,
             vertical,
+            wrap_text,
         }
     }
 

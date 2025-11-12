@@ -16,6 +16,8 @@ import {
     StBorderStyle,
     SetCellBorderBuilder,
     SetLineBorderBuilder,
+    SetCellWrapTextBuilder,
+    SetLineWrapTextBuilder,
 } from 'logisheets-web'
 
 export interface FontStyle {
@@ -23,6 +25,7 @@ export interface FontStyle {
     underline?: boolean
     italic?: boolean
     color?: string
+    size?: number
 }
 export function generateFontPayload(
     sheetIdx: number,
@@ -45,6 +48,7 @@ export function generateFontPayload(
                     builder.underline(update.underline ? 'single' : 'none')
                 if (update.italic !== undefined) builder.italic(update.italic)
                 if (update.color) builder.color(update.color)
+                if (update.size) builder.size(update.size)
                 const p = builder.build()
                 result.push({type: 'setCellFont', value: p})
             }
@@ -99,6 +103,42 @@ export function generateAlgnmentPayload(
         .alignment(alignment)
         .build()
     result.push({type: 'setLineAlignment', value: p})
+
+    return result
+}
+
+export function generateWrapTextPayload(
+    sheetIdx: number,
+    data: SelectedData,
+    wrapText: boolean
+): Payload[] {
+    if (!data.data) return []
+    const result: Payload[] = []
+    const t = data.data.ty
+    if (t === 'cellRange') {
+        const d = data.data.d
+        for (let i = d.startRow; i <= d.endRow; i += 1) {
+            for (let j = d.startCol; j <= d.endCol; j += 1) {
+                const p = new SetCellWrapTextBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(i)
+                    .col(j)
+                    .wrapText(wrapText)
+                    .build()
+                result.push({type: 'setCellWrapText', value: p})
+            }
+        }
+        return result
+    }
+    const d = data.data.d
+    const p = new SetLineWrapTextBuilder()
+        .sheetIdx(sheetIdx)
+        .row(d.type === 'row')
+        .from(d.start)
+        .to(d.end)
+        .wrapText(wrapText)
+        .build()
+    result.push({type: 'setLineWrapText', value: p})
 
     return result
 }

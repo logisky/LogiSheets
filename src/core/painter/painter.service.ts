@@ -146,8 +146,11 @@ export class PainterService extends CanvasApi {
         return
     }
 
-    public text(txt: string, attr: TextAttr, box: Box): void {
-        if (txt === '') return
+    /**
+     * @returns Appropriate height of the text
+     */
+    public text(txt: string, attr: TextAttr, box: Box, render = true): number {
+        if (txt === '') return 0
         this.save()
         const textWidth = attr.font.measureText(txt).width
         const [tx, textAlign] = box.textX(attr.alignment?.horizontal)
@@ -157,30 +160,129 @@ export class PainterService extends CanvasApi {
         textAttr.textBaseAlign = textBaseAlign
         textAttr.font = attr.font
         this.attr(textAttr)
-        /**
-         * TODO(minglong): support multi lines txt
-         */
-        let trueTxt = txt
-        if (textWidth > box.width) {
-            let currText = ''
-            let currWidth = 0
-            for (let i = 0, txts = trueTxt.split(''); i < txts.length; i++) {
-                const t = txts[i]
-                const tWidth = attr.font.measureText(t).width
-                if (currWidth + tWidth > box.width) break
-                currText += t
-                currWidth += tWidth
+        const lineHeight = attr.font.size * 1.3
+
+        const shouldWrap =
+            (textWidth > box.width && attr.alignment?.wrapText) ||
+            /\r?\n/.test(txt) ||
+            /\s/.test(txt)
+        if (shouldWrap) {
+            // TODO: Handle the wrap text with alignments.
+            const paragraphs = txt.split(/\r?\n/)
+            let currY = attr.font.size
+            if (textBaseAlign === 'middle') {
+                currY = currY - Math.max(0, Math.floor(attr.font.size * 0.1))
             }
-            trueTxt = currText
+            // Helper: segment string into grapheme clusters (fallback to code points)
+            const segmentGraphemes = (s: string): string[] => {
+                try {
+                    type SegmentResult = {segment: string}
+                    type SegmenterCtor = new (
+                        locales?: string | string[] | undefined,
+                        options?: {
+                            granularity: 'grapheme' | 'word' | 'sentence'
+                        }
+                    ) => {segment(input: string): Iterable<SegmentResult>}
+                    const maybeIntl = Intl as unknown as {
+                        Segmenter?: SegmenterCtor
+                    }
+                    const Seg = maybeIntl.Segmenter
+                    if (Seg) {
+                        const seg = new Seg(undefined, {
+                            granularity: 'grapheme',
+                        })
+                        const iterable = seg.segment(s)
+                        return Array.from(iterable, (it) => it.segment)
+                    }
+                } catch (_) {
+                    // ignore and use fallback
+                }
+                return Array.from(s)
+            }
+
+            for (let p = 0; p < paragraphs.length; p++) {
+                const paragraph = paragraphs[p]
+                const hasWhitespace = /\s/.test(paragraph)
+                // If whitespace exists, keep it as separate tokens so we can wrap nicely at spaces.
+                // Otherwise, fall back to grapheme clusters so CJK and emoji wrap correctly.
+                const tokens = hasWhitespace
+                    ? paragraph.split(/(\s+)/).filter((t) => t.length > 0)
+                    : segmentGraphemes(paragraph)
+
+                let line = ''
+                for (let i = 0; i < tokens.length; i++) {
+                    const token = tokens[i]
+                    const testLine = line + token
+                    const metrics = attr.font.measureText(testLine)
+                    if (metrics.width > box.width && line !== '') {
+                        // Flush current line
+                        if (render) {
+                            this.fillText(
+                                line,
+                                tx,
+                                currY + box.position.startRow
+                            )
+                        }
+                        const underlineWidth = attr.font.measureText(
+                            line.trimEnd()
+                        ).width
+                        if (underlineWidth > 0 && render) {
+                            this._underline(
+                                tx,
+                                currY + box.position.startRow,
+                                attr,
+                                underlineWidth
+                            )
+                        }
+                        currY += lineHeight
+                        // Start next line with current token (avoid leading whitespace)
+                        line = hasWhitespace ? token.replace(/^\s+/, '') : token
+                    } else {
+                        line = testLine
+                    }
+                }
+                // Draw the last line for this paragraph
+                if (render) {
+                    this.fillText(line, tx, currY + box.position.startRow)
+                }
+                const underlineWidth = attr.font.measureText(
+                    line.trimEnd()
+                ).width
+                if (underlineWidth > 0 && render) {
+                    this._underline(tx, currY, attr, underlineWidth)
+                }
+                currY += lineHeight
+            }
+            return currY
+        } else {
+            let trueTxt = txt
+            if (textWidth > box.width) {
+                let currText = ''
+                let currWidth = 0
+                for (
+                    let i = 0, txts = trueTxt.split('');
+                    i < txts.length;
+                    i++
+                ) {
+                    const t = txts[i]
+                    const tWidth = attr.font.measureText(t).width
+                    if (currWidth + tWidth > box.width) break
+                    currText += t
+                    currWidth += tWidth
+                }
+                trueTxt = currText
+            }
+            let drawY = ty
+            if (textBaseAlign === 'middle') {
+                drawY = ty - Math.max(0, Math.floor(attr.font.size * 0.1))
+            }
+            if (render) {
+                this.fillText(trueTxt, tx, drawY)
+                this._underline(tx, ty, attr, textWidth)
+            }
         }
-        // Nudge middle-baseline text slightly upward to visually center within the box
-        let drawY = ty
-        if (textBaseAlign === 'middle') {
-            drawY = ty - Math.max(0, Math.floor(attr.font.size * 0.1))
-        }
-        this.fillText(trueTxt, tx, drawY)
-        this._underline(tx, ty, attr, textWidth)
         this.restore()
+        return lineHeight
     }
 
     private _underline(

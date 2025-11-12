@@ -674,7 +674,8 @@ export class Workbook {
                 p.value.from,
                 p.value.to,
                 p.value.alignment.horizontal,
-                p.value.alignment.vertical
+                p.value.alignment.vertical,
+                null
             )
         if (p.type === 'setCellAlignment')
             return set_cell_alignment(
@@ -683,7 +684,8 @@ export class Workbook {
                 p.value.row,
                 p.value.col,
                 p.value.alignment.horizontal,
-                p.value.alignment.vertical
+                p.value.alignment.vertical,
+                null
             )
         if (p.type === 'setCellPatternFill')
             return set_cell_pattern_fill(
@@ -795,6 +797,27 @@ export class Workbook {
                 p.value.fieldId,
                 p.value.name,
                 p.value.diyRender
+            )
+        if (p.type === 'setCellWrapText')
+            return set_cell_alignment(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.col,
+                null,
+                null,
+                p.value.wrapText
+            )
+        if (p.type === 'setLineWrapText')
+            return set_line_alignment(
+                this._id,
+                p.value.sheetIdx,
+                p.value.row,
+                p.value.from,
+                p.value.to,
+                null,
+                null,
+                p.value.wrapText
             )
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)

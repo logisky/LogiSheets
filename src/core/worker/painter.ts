@@ -4,7 +4,7 @@ import {StandardStyle} from '@/core/standable/style'
 import {PatternFill} from 'logisheets-web'
 import {Range, StandardColor, StandardCell} from '@/core/standable'
 import {RenderCell} from './render'
-import {CellView} from './types'
+import {AppropriateHeight, CellView} from './types'
 import {BorderHelper} from './border_helper'
 
 export class Painter {
@@ -25,6 +25,28 @@ export class Painter {
         this._painter.restore()
     }
 
+    public getAppropriateHeights(
+        resp: CellView,
+        anchorX: number,
+        anchorY: number
+    ): AppropriateHeight[] {
+        const heights = Array.from({length: resp.rows.length}, () => {
+            return {height: 0, row: 0, col: 0}
+        })
+        resp.cells.forEach((cell) => {
+            if (cell.skipRender) return
+            const height = this.renderCell(cell, anchorX, anchorY, false)
+            const {startRow} = cell.coordinate
+            const row = startRow - resp.rows[0].coordinate.startRow
+            if (heights[row].height < height) {
+                heights[row].height = height
+                heights[row].col = cell.coordinate.startCol
+                heights[row].row = cell.coordinate.startRow
+            }
+        })
+        return heights
+    }
+
     public renderContent(resp: CellView, anchorX: number, anchorY: number) {
         resp.cells.forEach((cell) => {
             if (cell.skipRender) return
@@ -32,12 +54,13 @@ export class Painter {
         })
     }
 
+    // Returns the appropriate height of the cell
     public renderCell(
         renderCell: RenderCell,
         anchorX: number,
         anchorY: number,
-        clearBeforeRender = false
-    ) {
+        render = true
+    ): number {
         const {coordinate: _, position, info} = renderCell
         const style = info?.style
         const box = new Box()
@@ -46,19 +69,17 @@ export class Painter {
             .setStartRow(position.startRow - anchorY)
             .setEndCol(position.endCol - anchorX)
             .setStartCol(position.startCol - anchorX)
-        if (clearBeforeRender) {
-            this._painter.clearRect(
-                box.position.startCol,
-                box.position.startRow,
-                box.position.width,
-                box.position.height
-            )
+        if (render) {
+            this._fill(box, style)
+            if (info) {
+                return this._text(box, info)
+                // this._comment(box, info)
+            }
+        } else {
+            if (!info) return 0
+            return this._text(box, info, false)
         }
-        this._fill(box, style)
-        if (info) {
-            this._text(box, info)
-            // this._comment(box, info)
-        }
+        return 0
     }
 
     public renderMergeCells(resp: CellView, anchorX: number, anchorY: number) {
@@ -120,15 +141,15 @@ export class Painter {
         }
     }
 
-    private _text(box: Box, info: StandardCell) {
+    private _text(box: Box, info: StandardCell, render = true): number {
         const t = info.getFormattedText()
-        if (!t) return
+        if (!t) return 0
         const textAttr = new TextAttr()
         if (info.style) {
             textAttr.alignment = info.style.alignment
             textAttr.setFont(info.style.getFont())
         }
-        this._painter.text(t, textAttr, box)
+        return this._painter.text(t, textAttr, box, render)
     }
 
     private _painter = new PainterService()

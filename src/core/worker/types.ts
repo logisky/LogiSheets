@@ -31,6 +31,7 @@ import {
     BlockDisplayInfo,
     Comment,
     MergeCell,
+    ActionEffect,
 } from 'logisheets-web'
 import {RenderCell} from './render'
 
@@ -58,6 +59,7 @@ export enum MethodName {
     Undo = 'undo',
     Redo = 'redo',
     HandleTransaction = 'handleTransaction',
+    HandleTransactionWithoutEvents = 'handleTransactionWithoutEvents',
     LoadWorkbook = 'loadWorkbook',
     IsReady = 'isReady',
     GetMergedCells = 'getMergedCells',
@@ -93,6 +95,13 @@ export enum OffscreenRenderName {
     Render = 'render',
     Resize = 'resize',
     Init = 'init',
+    GetAppropriateHeights = 'getAppropriateHeights',
+}
+
+export interface AppropriateHeight {
+    height: number
+    row: number
+    col: number
 }
 
 export interface Grid {
@@ -144,6 +153,9 @@ export interface IWorkbookWorker {
     undo(): Result<void>
     redo(): Result<void>
     handleTransaction(params: HandleTransactionParams): Result<void>
+    handleTransactionWithoutEvents(
+        params: HandleTransactionParams
+    ): Result<ActionEffect>
 
     loadWorkbook(params: LoadWorkbookParams): Result<void>
 

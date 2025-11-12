@@ -15,6 +15,7 @@ use super::{ctx::ContainerExecCtx, DataContainer};
 pub struct ContainerExecutor {
     pub container: DataContainer,
     pub cells_removed: Vec<(SheetId, CellId)>,
+    pub value_changed: Vec<(SheetId, CellId)>,
 }
 
 impl ContainerExecutor {
@@ -22,6 +23,7 @@ impl ContainerExecutor {
         Self {
             container,
             cells_removed: vec![],
+            value_changed: vec![],
         }
     }
 
@@ -40,6 +42,8 @@ impl ContainerExecutor {
                 let cell_id = ctx.get_block_cell_id(sheet_id, p.block_id, p.row, p.col)?;
                 self.container
                     .update_value(sheet_id, CellId::BlockCell(cell_id), cell_value);
+                self.value_changed
+                    .push((sheet_id, CellId::BlockCell(cell_id)));
                 Ok((self, true))
             }
             EditPayload::MoveBlock(_) => Ok((self, false)),
@@ -62,6 +66,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
@@ -96,6 +101,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
@@ -124,6 +130,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
@@ -184,6 +191,7 @@ impl ContainerExecutor {
                     CellValue::from_string(p.content, &mut |t| -> TextId { ctx.fetch_text_id(t) });
                 let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
                 self.container.update_value(sheet_id, cell_id, cell_value);
+                self.value_changed.push((sheet_id, cell_id));
                 Ok((self, true))
             }
             EditPayload::EphemeralCellInput(p) => {
@@ -198,6 +206,7 @@ impl ContainerExecutor {
                 let cell_value =
                     CellValue::from_string(p.content, &mut |t| -> TextId { ctx.fetch_text_id(t) });
                 self.container.update_value(sheet_id, cell_id, cell_value);
+                self.value_changed.push((sheet_id, cell_id));
                 Ok((self, true))
             }
             EditPayload::CellClear(p) => {
@@ -206,6 +215,7 @@ impl ContainerExecutor {
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
                 self.container.remove_cell(sheet_id, &cell_id);
+                self.value_changed.push((sheet_id, cell_id));
                 Ok((self, true))
             }
             EditPayload::SetColWidth(p) => {
@@ -274,6 +284,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
@@ -318,6 +329,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
@@ -348,6 +360,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
@@ -378,6 +391,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
@@ -408,6 +422,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
@@ -438,6 +453,7 @@ impl ContainerExecutor {
                     Self {
                         container,
                         cells_removed,
+                        value_changed: self.value_changed,
                     },
                     true,
                 ))
