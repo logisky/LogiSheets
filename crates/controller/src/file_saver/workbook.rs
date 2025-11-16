@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use logisheets_workbook::{
+    logisheets::{AppData, LogiSheetsData, Sheet},
     prelude::{CtExternalReference, CtExternalReferences, CtSheet, CtSheets, WorkbookPart},
     workbook::{DocProps, Wb, Worksheet, Xl},
 };
@@ -14,6 +15,7 @@ use crate::{
     },
     formula_manager::FormulaManager,
     id_manager::{SheetIdManager, TextIdManager},
+    navigator::Navigator,
     settings::Settings,
     style_manager::StyleManager,
     theme_manager::ThemeManager,
@@ -32,11 +34,14 @@ pub fn save_workbook<S: SaverTrait>(
     ext_book_manager: &ExtBooksManager,
     theme_manager: &ThemeManager,
     text_id_manager: &TextIdManager,
+    navigator: &Navigator,
     settings: &Settings,
+    app_data: Vec<AppData>,
     saver: &mut S,
 ) -> Result<Wb, SaveError> {
     let mut worksheets: HashMap<String, Worksheet> = HashMap::new();
     let mut ct_sheets: Vec<CtSheet> = vec![];
+    let mut sheets: Vec<Sheet> = vec![];
 
     sheet_id_manager
         .get_all_ids()
@@ -45,6 +50,10 @@ pub fn save_workbook<S: SaverTrait>(
             let sheet_data_container = data_container
                 .get_sheet_container(id)
                 .ok_or(SaveError::SheetIdPosError(id))?;
+            let sheet_nav = navigator
+                .sheet_navs
+                .get(&id)
+                .ok_or(SaveError::SheetIdPosError(id))?;
             save_sheets(
                 id,
                 sheet_data_container,
@@ -52,14 +61,20 @@ pub fn save_workbook<S: SaverTrait>(
                 attachment_manager,
                 sheet_pos_manager,
                 sheet_id_manager,
+                sheet_nav,
                 settings,
                 saver,
             )
         })
         .sorted_by_key(|a| a.0)
-        .for_each(|(_, ct_sheet, worksheet)| {
+        .for_each(|(_, ct_sheet, worksheet, block_ranges)| {
             worksheets.insert(ct_sheet.id.clone(), worksheet);
             ct_sheets.push(ct_sheet);
+            let sheet = Sheet {
+                block_ranges,
+                cell_appendices: vec![],
+            };
+            sheets.push(sheet);
         });
     let ct_sheets = CtSheets { sheets: ct_sheets };
     let styles = save_sheet_style(style_manager, saver);
@@ -100,7 +115,10 @@ pub fn save_workbook<S: SaverTrait>(
             theme,
         },
         doc_props: DocProps::default(),
-        logisheets: None,
+        logisheets: Some(LogiSheetsData {
+            sheets,
+            apps: app_data,
+        }),
     };
     Ok(workbook)
 }

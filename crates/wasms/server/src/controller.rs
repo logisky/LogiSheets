@@ -12,6 +12,7 @@ use logisheets_controller::edit_action::{
     VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, Error, RowInfo, SaveFileResult, Workbook};
+use logisheets_workbook::logisheets::AppData;
 use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
 use singlyton::{Singleton, SingletonUninit};
 use wasm_bindgen::prelude::*;
@@ -65,13 +66,13 @@ pub fn read_file(id: usize, name: String, buf: &[u8]) -> u8 {
 }
 
 #[wasm_bindgen]
-pub fn save_file(id: usize) -> JsValue {
+pub fn save_file(id: usize, app_data: String) -> JsValue {
     init();
-    let result = save_file_impl(id);
+    let result = save_file_impl(id, app_data);
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
-pub fn save_file_impl(id: usize) -> SaveFileResult {
+pub fn save_file_impl(id: usize, app_data: String) -> SaveFileResult {
     let manager = MANAGER.get();
     let ctrl = manager.get_workbook(&id);
     if ctrl.is_none() {
@@ -81,7 +82,10 @@ pub fn save_file_impl(id: usize) -> SaveFileResult {
         };
     }
     let ctrl = ctrl.unwrap();
-    if let Ok(data) = ctrl.save() {
+    if let Ok(data) = ctrl.save(vec![AppData {
+        name: "logisheets".to_string(),
+        data: app_data,
+    }]) {
         SaveFileResult { data, code: 0 }
     } else {
         SaveFileResult {
@@ -1311,4 +1315,14 @@ pub fn set_sheet_visible(id: usize, sheet_idx: usize, visible: bool) {
         visible,
     };
     manager.add_payload(id, EditPayload::SetSheetVisible(p));
+}
+
+#[wasm_bindgen]
+pub fn get_all_block_fields(id: usize) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let r = wb.get_all_block_fields();
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
 }

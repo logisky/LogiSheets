@@ -52,6 +52,9 @@ import {
     GetNextVisibleCellParams,
     CellCoordinate,
     ActionEffect,
+    BlockField,
+    SaveFileResult,
+    SaveParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from '../../worker/types'
 
@@ -100,6 +103,14 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    save(params: SaveParams): Resp<SaveFileResult> {
+        return this._call(MethodName.Save, params) as Resp<SaveFileResult>
+    }
+    getAllBlockFields(): Resp<readonly BlockField[]> {
+        return this._call(MethodName.GetAllBlockFields) as Resp<
+            readonly BlockField[]
+        >
     }
     getDisplayUnitsOfFormula(f: string): Resp<FormulaDisplayInfo> {
         return this._call(

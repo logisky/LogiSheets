@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
     AppendixWithCell,
+    BlockField,
     BlockInfo,
     CalcConditionParams,
     Callback,
@@ -42,6 +43,8 @@ import {
     ReproducibleCell,
     Resp,
     RowId,
+    SaveFileResult,
+    SaveParams,
     ShadowCellInfo,
     SheetCellId,
     SheetDimension,
@@ -76,6 +79,12 @@ export class CraftAgent implements WorkbookClient, CraftSpecific {
             }
             this._resolvers.delete(id)
         })
+    }
+    save(params: SaveParams): Resp<SaveFileResult> {
+        throw new Error('Method not implemented.')
+    }
+    getAllBlockFields(): Resp<readonly BlockField[]> {
+        throw new Error('Method not implemented.')
     }
     getNextVisibleCell(params: GetNextVisibleCellParams): Resp<CellCoordinate> {
         throw new Error('Method not implemented.')

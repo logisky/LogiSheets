@@ -1,11 +1,12 @@
+use crate::logisheets::LogiSheetsData;
 use crate::ooxml::content_types::{ContentTypes, CtDefault, CtOverride};
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
 use crate::ooxml::relationships::{CtRelationship, Relationships};
 use crate::prelude::StTargetMode;
 use crate::prelude::{Comments, SstPart, StylesheetPart, ThemePart, WorkbookPart, WorksheetPart};
 use crate::rtypes::{
-    RType, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM, EXT_LINK, SST, STYLE, THEME,
-    WORKBOOK, WORKSHEET,
+    RType, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM, EXT_LINK, LOGISHEETS_APP_DATA,
+    SST, STYLE, THEME, WORKBOOK, WORKSHEET,
 };
 use std::io::{Cursor, Write};
 use xmlserde::xml_serialize_with_decl;
@@ -67,7 +68,7 @@ type Writer<'a> = ZipWriter<Cursor<&'a mut Vec<u8>>>;
 pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     let mut buf = Vec::<u8>::with_capacity(65535);
     let mut writer: Writer = ZipWriter::new(Cursor::new(&mut buf));
-    let mut prooves = Vec::<WriteProof>::with_capacity(30);
+    let mut proofs = Vec::<WriteProof>::with_capacity(30);
 
     writer.add_directory("_rels", options())?;
     writer.add_directory("xl", options())?;
@@ -117,12 +118,17 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
         }
         _ => unreachable!(),
     });
-    prooves.extend(ps);
+    proofs.extend(ps);
+
+    if let Some(logisheets) = wb.logisheets {
+        let p = write_logisheets_data(logisheets, &mut writer)?;
+        proofs.push(p);
+    }
 
     let ps = write_xl(wb.xl, &mut writer)?;
-    prooves.extend(ps);
+    proofs.extend(ps);
 
-    write_content_types(prooves, &mut writer)?;
+    write_content_types(proofs, &mut writer)?;
 
     write_relationships(Relationships { relationships }, &mut writer, "_rels/.rels")?;
 
@@ -215,6 +221,19 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
     Ok(result)
 }
 
+fn write_logisheets_data(data: LogiSheetsData, writer: &mut Writer) -> ZipResult<WriteProof> {
+    writer.add_directory("logisheets", options())?;
+    writer
+        .start_file("logisheets/app_data.xml", options())
+        .unwrap();
+    let s = xml_serialize_with_decl(data);
+    writer.write(s.as_bytes())?;
+    Ok(WriteProof {
+        path: FileLocation::from("logisheets/app_data.xml"),
+        rtype: LOGISHEETS_APP_DATA,
+    })
+}
+
 fn write_worksheet<'a>(
     wb: Worksheet,
     writer: &mut Writer,
@@ -304,7 +323,7 @@ fn write_doc_props(doc_props: DocProps, writer: &mut Writer) -> ZipResult<Vec<Wr
     Ok(result)
 }
 
-fn write_content_types(prooves: Vec<WriteProof>, writer: &mut Writer) -> ZipResult<()> {
+fn write_content_types(proofs: Vec<WriteProof>, writer: &mut Writer) -> ZipResult<()> {
     let defaults = vec![
         CtDefault {
             extension: String::from("bin"),
@@ -339,7 +358,7 @@ fn write_content_types(prooves: Vec<WriteProof>, writer: &mut Writer) -> ZipResu
             content_type: String::from("application/xml"),
         },
     ];
-    let overides = prooves
+    let overides = proofs
         .into_iter()
         .fold(Vec::<CtOverride>::new(), |mut prev, p| {
             let c = CtOverride {
@@ -368,7 +387,7 @@ fn get_content_type(rtype: RType) -> &'static str {
         STYLE => "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml",
         EXT_LINK => "application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml",
         THEME => "application/vnd.openxmlformats-officedocument.theme+xml",
-        _ => unreachable!(),
+        _ => "",
     }
 }
 

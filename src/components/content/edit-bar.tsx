@@ -83,6 +83,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
     }
 
     const commitFormula = () => {
+        if (!formula) return
         // commit buffered text when leaving the input or pressing Enter
         formulaTextChange(formula)
         setIsEditing(false)
@@ -133,6 +134,8 @@ export const EditBarComponent: FC<EditBarProps> = ({
         }
     }
 
+    const hasSelectedData = selectedData && selectedData.data !== undefined
+
     return (
         <div className={styles.host}>
             <input
@@ -143,6 +146,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
                     setIsEditing(true)
                 }}
                 onBlur={(e) => locationChange(e.target.value)}
+                disabled={!hasSelectedData}
             />
             <div className={styles.middle} />
             <input
@@ -157,6 +161,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
                     commitFormula()
                 }}
                 value={formula}
+                disabled={!hasSelectedData}
             />
         </div>
     )

@@ -4,6 +4,7 @@ use itertools::Itertools;
 use logisheets_base::SheetId;
 use logisheets_parser::unparse::Stringify;
 use logisheets_workbook::{
+    logisheets::{BlockLineInfo, BlockRange},
     prelude::{
         Comments, CtAuthors, CtCell, CtCol, CtColor, CtCols, CtComment, CtCommentList, CtFormula,
         CtMergeCell, CtMergeCells, CtRow, CtRst, CtSheet, CtSheetData, CtSheetPr,
@@ -18,6 +19,7 @@ use crate::{
     file_saver::utils::{convert_string_to_plain_text_string, unparse_cell, SortedSet},
     formula_manager::FormulaManager,
     id_manager::SheetIdManager,
+    navigator::SheetNav,
     settings::Settings,
     workbook::sheet_info_manager::SheetInfoManager,
 };
@@ -31,9 +33,10 @@ pub fn save_sheets<S: SaverTrait>(
     attachment_manager: &CellAttachmentsManager,
     sheet_info_manager: &SheetInfoManager,
     sheet_name_manager: &SheetIdManager,
+    sheet_nav: &SheetNav,
     settings: &Settings,
     saver: &mut S,
-) -> Result<(usize, CtSheet, Worksheet), SaveError> {
+) -> Result<(usize, CtSheet, Worksheet, Vec<BlockRange>), SaveError> {
     let pos = sheet_info_manager
         .get_sheet_idx(&sheet_id)
         .ok_or(SaveError::SheetIdPosError(sheet_id))?;
@@ -61,7 +64,59 @@ pub fn save_sheets<S: SaverTrait>(
         },
         id,
     };
-    Ok((pos, ct_sheet, worksheet))
+    let block_ranges = sheet_nav
+        .data
+        .blocks
+        .iter()
+        .flat_map(|(block_id, block)| {
+            let master = block.master;
+            let row_infos = block
+                .rows
+                .iter()
+                .flat_map(|row_id| {
+                    sheet_data_container
+                        .block_line_info_manager
+                        .get_row_info(*block_id, *row_id)
+                        .cloned()
+                })
+                .map(|info| BlockLineInfo {
+                    style: info.style,
+                    name: info.name,
+                    field_id: info.field_id,
+                    diy_render: info.diy_render,
+                })
+                .collect::<Vec<_>>();
+            let col_infos = block
+                .cols
+                .iter()
+                .flat_map(|col_id| {
+                    sheet_data_container
+                        .block_line_info_manager
+                        .get_col_info(*block_id, *col_id)
+                        .cloned()
+                })
+                .map(|info| BlockLineInfo {
+                    style: info.style,
+                    name: info.name,
+                    field_id: info.field_id,
+                    diy_render: info.diy_render,
+                })
+                .collect::<Vec<_>>();
+            if let Ok((row_idx, col_idx)) = saver.fetch_normal_cell_index(&sheet_id, &master) {
+                Some(BlockRange {
+                    start_row: row_idx,
+                    start_col: col_idx,
+                    row_cnt: block.rows.len(),
+                    col_cnt: block.cols.len(),
+                    row_infos,
+                    col_infos,
+                })
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    Ok((pos, ct_sheet, worksheet, block_ranges))
 }
 
 fn save_worksheet<S: SaverTrait>(

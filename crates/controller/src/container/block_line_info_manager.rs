@@ -29,12 +29,19 @@ impl<T: Eq + Hash + Copy + Clone> LineInfoManager<T> {
     pub fn set_info(&mut self, block_id: BlockId, id: T, info: BlockLineInfo) {
         self.data.insert((block_id, id), info);
     }
+
+    pub fn get_all_block_fields(&self) -> Vec<(BlockId, String)> {
+        self.data
+            .iter()
+            .map(|(key, info)| (key.0, info.field_id.clone()))
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct BlockLineInfoManager {
-    row_manager: LineInfoManager<RowId>,
-    col_manager: LineInfoManager<ColId>,
+    pub row_manager: LineInfoManager<RowId>,
+    pub col_manager: LineInfoManager<ColId>,
 }
 
 impl BlockLineInfoManager {

@@ -25,6 +25,7 @@ import {WorkbookClient} from '../clients'
 import {CraftHandler} from './handler'
 import {DiyButtonManager} from './diy_btn_manager'
 import {
+    BlockField,
     CellClearBuilder,
     CellInputBuilder,
     CellValue,
@@ -36,7 +37,7 @@ import {
 } from 'logisheets-web'
 import {ClientImpl} from './client'
 import {EnumSetManager} from './enum_set_manager'
-import {FieldManager} from './field_manager'
+import {FieldInfo, FieldManager} from './field_manager'
 
 export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
 export const FIELD_AND_VALIDATION_TAG = 80
@@ -689,6 +690,19 @@ export class CraftManager {
             }
         }
         return ok({values: result})
+    }
+
+    public getPersistentData(blockFields: readonly BlockField[]): string {
+        const fieldInfos: FieldInfo[] = []
+        blockFields.forEach((f) => {
+            const info = this.fieldManager.get(f.sheetId, f.blockId, f.fieldId)
+            if (info === undefined) return
+            fieldInfos.push(info)
+        })
+        const fieldInfosJson = JSON.stringify(fieldInfos)
+        const enumSetJson = this.enumSetManager.toJSON()
+
+        return `{fields: ${fieldInfosJson}, enumSets: ${enumSetJson}}`
     }
 
     public async getId(): ResultAsync<string> {

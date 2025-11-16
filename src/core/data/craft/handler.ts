@@ -1,5 +1,6 @@
 import {
     AppendixWithCell,
+    BlockField,
     BlockInfo,
     CalcConditionParams,
     CellCoordinate,
@@ -40,6 +41,8 @@ import {
     ReproducibleCell,
     Resp,
     RowId,
+    SaveFileResult,
+    SaveParams,
     ShadowCellInfo,
     SheetCellId,
     SheetDimension,
@@ -160,6 +163,12 @@ export class CraftHandler implements CraftHandlerInterface {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    save(params: SaveParams): Resp<SaveFileResult> {
+        throw new Error('Method not implemented.')
+    }
+    getAllBlockFields(): Resp<readonly BlockField[]> {
+        throw new Error('Method not implemented.')
     }
     getNextVisibleCell(params: GetNextVisibleCellParams): Resp<CellCoordinate> {
         return this._workbookClient.getNextVisibleCell(params)

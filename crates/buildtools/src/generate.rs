@@ -1,11 +1,11 @@
 use gents::FileGroup;
 use logisheets_controller::controller::display::{
-    CellCoordinate, CellPosition, DisplayWindowRequest, DisplayWindowWithStartPoint,
+    BlockField, CellCoordinate, CellPosition, DisplayWindowRequest, DisplayWindowWithStartPoint,
     ShadowCellInfo, SheetInfo,
 };
 use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditAction};
 use logisheets_controller::{
-    AppendixWithCell, CellInfo, ErrorMessage, FormulaDisplayInfo, SheetDimension,
+    AppendixWithCell, CellInfo, ErrorMessage, FormulaDisplayInfo, SaveFileResult, SheetDimension,
 };
 use logisheets_server_types::{CraftData, CraftDescriptor, Resp};
 
@@ -22,10 +22,12 @@ fn main() {
     file_group.add::<AsyncFuncResult>();
     file_group.add::<SheetDimension>();
     file_group.add::<AppendixWithCell>();
+    file_group.add::<SaveFileResult>();
 
     file_group.add::<FormulaDisplayInfo>();
 
     file_group.add::<CellInfo>();
+    file_group.add::<BlockField>();
     file_group.add::<ErrorMessage>();
     file_group.add::<ShadowCellInfo>();
 
