@@ -244,3 +244,11 @@ pub struct SheetStyles {
     pub sheet_idx: usize,
     pub styles: Vec<CellStyle>,
 }
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "block_field.ts", rename_all = "camelCase")]
+pub struct BlockField {
+    pub sheet_id: SheetId,
+    pub block_id: BlockId,
+    pub field_id: String,
+}

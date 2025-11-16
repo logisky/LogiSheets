@@ -27,10 +27,26 @@ pub struct BlockRange {
     pub start_row: usize,
     #[xmlserde(name = b"startCol", ty = "attr")]
     pub start_col: usize,
-    #[xmlserde(name = b"endRow", ty = "attr")]
-    pub end_row: usize,
-    #[xmlserde(name = b"endCol", ty = "attr")]
-    pub end_col: usize,
+    #[xmlserde(name = b"rowCnt", ty = "attr")]
+    pub row_cnt: usize,
+    #[xmlserde(name = b"colCnt", ty = "attr")]
+    pub col_cnt: usize,
+    #[xmlserde(name = b"rowInfos", ty = "child")]
+    pub row_infos: Vec<BlockLineInfo>,
+    #[xmlserde(name = b"colInfos", ty = "child")]
+    pub col_infos: Vec<BlockLineInfo>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct BlockLineInfo {
+    #[xmlserde(name = b"style", ty = "attr")]
+    pub style: Option<u32>,
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: Option<String>,
+    #[xmlserde(name = b"fieldId", ty = "attr")]
+    pub field_id: String,
+    #[xmlserde(name = b"diyRender", ty = "attr")]
+    pub diy_render: Option<bool>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]

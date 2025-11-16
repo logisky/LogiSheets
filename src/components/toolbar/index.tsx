@@ -9,7 +9,7 @@ import {
 } from '@/components/canvas'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {DataServiceImpl as DataService} from '@/core/data'
+import {CraftManager, DataServiceImpl as DataService} from '@/core/data'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {BorderSettingComponent} from './border-setting'
 import {
@@ -61,6 +61,7 @@ import {
 import {isErrorMessage} from 'packages/web/src/api/utils'
 import {StandardColor, StandardFont} from '@/core/standable'
 import {useToast} from '@/ui/notification/useToast'
+import {TextField} from '@mui/material'
 
 export interface ToolbarProps {
     selectedData?: SelectedData
@@ -68,6 +69,7 @@ export interface ToolbarProps {
 
 export const Toolbar = ({selectedData}: ToolbarProps) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
     const {toast} = useToast()
     const hasSelectedData =
         selectedData !== undefined && selectedData.data !== undefined
@@ -119,6 +121,7 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
     const [alignAnchor, setAlignAnchor] = useState<HTMLElement | null>(null)
     const [alignment, setAlignment] = useState<string | null>(null)
     const [wrapText, setWrapText] = useState(false)
+    const [bookName, setBookName] = useState('Untitled')
 
     // Merge
     const [mergedOn, setMergedOn] = useState<boolean | null>(null)
@@ -393,7 +396,6 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
             selectedData,
             {size: ty === 'increase' ? fontSize + 1 : fontSize - 1}
         )
-        console.log(payloads)
         DATA_SERVICE.handleTransactionAndAdjustRowHeights(
             new Transaction(payloads, true)
         )
@@ -512,8 +514,29 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
             </svg>
         )
     }
-    /* eslint-enable react/prop-types */
-
+    async function onSave(): Promise<void> {
+        const blockFields = await DATA_SERVICE.getWorkbook().getAllBlockFields()
+        if (isErrorMessage(blockFields)) return
+        const persistentData = CRAFT_MANAGER.getPersistentData(blockFields)
+        const saveResult = await DATA_SERVICE.getWorkbook().save({
+            appData: persistentData,
+        })
+        if (isErrorMessage(saveResult)) return
+        const {code, data} = saveResult
+        if (code !== 0) throw Error('error saving')
+        // data is Vec<u8> from Rust, serialized as a JS array by serde_wasm_bindgen
+        // Convert to Uint8Array before creating the Blob
+        const bytes = Array.isArray(data) ? new Uint8Array(data) : data
+        const blob = new Blob([bytes], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${bookName}.xlsx`
+        a.click()
+        URL.revokeObjectURL(url)
+    }
     return (
         <div className={styles.host}>
             {/* App logo */}
@@ -554,11 +577,40 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
                         />
                         Open
                     </MenuItem>
-                    <MenuItem disabled>
+                    <MenuItem onClick={onSave}>
                         <SaveIcon fontSize="small" style={{marginRight: 8}} />
                         Save
                     </MenuItem>
                 </Menu>
+                <TextField
+                    value={bookName}
+                    onChange={(e) => setBookName(e.target.value)}
+                    variant="standard"
+                    size="small"
+                    placeholder="Untitled"
+                    sx={{
+                        '& .MuiInput-root': {
+                            fontSize: '14px',
+                            fontWeight: 500,
+                        },
+                        '& .MuiInput-root:before': {
+                            borderBottom: 'none',
+                        },
+                        '& .MuiInput-root:hover:not(.Mui-disabled):before': {
+                            borderBottom: '1px solid rgba(0, 0, 0, 0.42)',
+                        },
+                        '& .MuiInput-root:after': {
+                            borderBottom: '2px solid primary.main',
+                        },
+                        '& input': {
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                        },
+                        '& input:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                        },
+                    }}
+                />
             </div>
             {/* Center cluster: all remaining controls */}
             <div className={styles.center}>

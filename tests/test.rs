@@ -95,7 +95,7 @@ mod test_6 {
         let mut buf = fs::read("tests/6.xlsx").unwrap();
         let wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
 
-        let buf = wb.save().unwrap();
+        let buf = wb.save(vec![]).unwrap();
         fs::write("tests/6_save.xlsx", buf).unwrap()
     }
 

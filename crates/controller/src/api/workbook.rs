@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
-    controller::display::{CellPosition, ShadowCellInfo, SheetInfo},
+    controller::display::{BlockField, CellPosition, ShadowCellInfo, SheetInfo},
     edit_action::{ActionEffect, PayloadsAction, SheetCellId, StatusCode},
     lock::{locked_write, new_locked, Locked},
     Controller,
@@ -16,6 +16,7 @@ use logisheets_base::{
     errors::BasicError,
     BlockCellId, BlockId, CellId, ColId, RowId, SheetId, TextId,
 };
+use logisheets_workbook::logisheets::AppData;
 
 const CALC_CONDITION_EPHEMERAL_ID: u64 = 225715;
 
@@ -62,8 +63,8 @@ impl Workbook {
     }
 
     #[inline]
-    pub fn save(&self) -> Result<Vec<u8>> {
-        self.controller.save()
+    pub fn save(&self, app_data: Vec<AppData>) -> Result<Vec<u8>> {
+        self.controller.save(app_data)
     }
 
     #[inline]
@@ -215,6 +216,10 @@ impl Workbook {
         } else {
             Err(BasicError::InvalidFormula(f).into())
         }
+    }
+
+    pub fn get_all_block_fields(&self) -> Result<Vec<BlockField>> {
+        Ok(self.controller.status.container.get_all_block_fields())
     }
 
     pub fn get_available_block_id(&self, sheet_idx: usize) -> Result<usize> {

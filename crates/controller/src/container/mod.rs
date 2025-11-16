@@ -1,4 +1,5 @@
 use crate::cell::Cell;
+use crate::controller::display::BlockField;
 use block_line_info_manager::{BlockLineInfo, BlockLineInfoManager};
 use imbl::hashmap::HashMap;
 use logisheets_base::{BlockId, CellId, CellValue, ColId, NormalCellId, RowId, SheetId};
@@ -189,6 +190,37 @@ impl DataContainer {
                 let cell_id = NormalCellId { row: *row_id, col };
                 res.push(cell_id);
             });
+        res
+    }
+
+    pub fn get_all_block_fields(&self) -> Vec<BlockField> {
+        let mut res = vec![];
+        self.data.iter().for_each(|(sheet_id, sheet_container)| {
+            sheet_container
+                .block_line_info_manager
+                .row_manager
+                .get_all_block_fields()
+                .into_iter()
+                .for_each(|(block_id, field_id)| {
+                    res.push(BlockField {
+                        sheet_id: *sheet_id,
+                        block_id,
+                        field_id,
+                    });
+                });
+            sheet_container
+                .block_line_info_manager
+                .col_manager
+                .get_all_block_fields()
+                .into_iter()
+                .for_each(|(block_id, field_id)| {
+                    res.push(BlockField {
+                        sheet_id: *sheet_id,
+                        block_id,
+                        field_id,
+                    });
+                });
+        });
         res
     }
 }

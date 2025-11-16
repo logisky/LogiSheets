@@ -1,6 +1,8 @@
 import {
-    block_line_name_field_update,
+    save_file,
     block_input,
+    block_line_name_field_update,
+    block_line_num_fmt_update,
     block_line_shift,
     calc_condition,
     cell_clear,
@@ -14,15 +16,18 @@ import {
     create_diy_cell,
     create_sheet,
     delete_sheet,
+    ephemeral_cell_input,
+    get_all_block_fields,
     get_all_sheet_info,
     get_available_block_id,
     get_block_col_id,
     get_block_row_id,
     get_block_values,
     get_cell_id,
-    get_shadow_info_by_id,
+    get_display_units_of_formula,
     get_shadow_cell_id,
     get_shadow_cell_ids,
+    get_shadow_info_by_id,
     get_sheet_count,
     get_sheet_id,
     get_sheet_idx,
@@ -33,6 +38,7 @@ import {
     read_file,
     redo,
     release,
+    remove_block,
     reproduce_cells,
     resize_block,
     row_delete,
@@ -40,6 +46,7 @@ import {
     set_cell_alignment,
     set_cell_border,
     set_cell_format_brush,
+    set_cell_num_fmt,
     set_cell_pattern_fill,
     set_col_width,
     set_font,
@@ -47,30 +54,27 @@ import {
     set_line_border,
     set_line_font,
     set_line_format_brush,
+    set_line_num_fmt,
     set_line_pattern_fill,
     set_row_height,
+    set_sheet_color,
+    set_sheet_visible,
     sheet_rename_by_idx,
     sheet_rename_by_name,
     split_merged_cells,
     transaction_end,
     transaction_start,
     undo,
-    ephemeral_cell_input,
-    get_display_units_of_formula,
-    remove_block,
-    set_line_num_fmt,
-    set_cell_num_fmt,
-    set_sheet_color,
-    set_sheet_visible,
-    block_line_num_fmt_update,
 } from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
     AsyncFuncResult,
+    BlockField,
     FormulaDisplayInfo,
     ShadowCellInfo,
     SheetCellId,
     SheetInfo,
+    SaveFileResult,
 } from '../bindings'
 import {Payload} from '../payloads'
 import {ColId, RowId, Transaction} from '../types'
@@ -365,6 +369,10 @@ export class Workbook {
         return read_file(this._id, bookName, buf)
     }
 
+    public save(data: string): SaveFileResult {
+        return save_file(this._id, data)
+    }
+
     public release() {
         release(this._id)
     }
@@ -418,6 +426,10 @@ export class Workbook {
             params.rowIdx,
             params.colIdx
         )
+    }
+
+    public getAllBlockFields(): Result<readonly BlockField[]> {
+        return get_all_block_fields(this._id)
     }
 
     private _addPayload(p: Payload) {

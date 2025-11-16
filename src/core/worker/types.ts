@@ -32,6 +32,8 @@ import {
     Comment,
     MergeCell,
     ActionEffect,
+    SaveParams,
+    SaveFileResult,
 } from 'logisheets-web'
 import {RenderCell} from './render'
 
@@ -64,6 +66,7 @@ export enum MethodName {
     IsReady = 'isReady',
     GetMergedCells = 'getMergedCells',
     CalcCondition = 'calcCondition',
+    Save = 'save',
 
     LookupAppendixUpward = 'lookupAppendixUpward',
 
@@ -89,6 +92,8 @@ export enum MethodName {
     GetDisplayUnitsOfFormula = 'getDisplayUnitsOfFormula',
 
     GetNextVisibleCell = 'getNextVisibleCell',
+
+    GetAllBlockFields = 'getAllBlockFields',
 }
 
 export enum OffscreenRenderName {
@@ -158,6 +163,7 @@ export interface IWorkbookWorker {
     ): Result<ActionEffect>
 
     loadWorkbook(params: LoadWorkbookParams): Result<void>
+    save(params: SaveParams): Result<SaveFileResult>
 
     getSheetIdx(params: GetSheetIdxParams): Result<number>
     getBlockValues(params: GetBlockValuesParams): Result<readonly string[]>

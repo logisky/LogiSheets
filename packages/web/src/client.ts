@@ -16,6 +16,8 @@ import type {
     ShadowCellInfo,
     FormulaDisplayInfo,
     CellCoordinate,
+    BlockField,
+    SaveFileResult,
 } from './bindings'
 import type {CustomFunc} from './api'
 import type {Transaction, RowId, ColId} from './types'
@@ -57,6 +59,7 @@ export interface Client {
     handleTransaction(params: HandleTransactionParams): Resp<void>
 
     loadWorkbook(params: LoadWorkbookParams): Resp<void>
+    save(params: SaveParams): Resp<SaveFileResult>
 
     getCellId(params: GetCellIdParams): Resp<SheetCellId>
 
@@ -109,6 +112,7 @@ export interface Client {
     ): Resp<AppendixWithCell>
 
     getNextVisibleCell(params: GetNextVisibleCellParams): Resp<CellCoordinate>
+    getAllBlockFields(): Resp<readonly BlockField[]>
 }
 
 export interface GetAllSheetInfoParams {}
@@ -196,6 +200,10 @@ export interface HandleTransactionParams {
 export interface LoadWorkbookParams {
     content: Uint8Array
     name: string
+}
+
+export interface SaveParams {
+    appData: string
 }
 
 export interface MessageResp<T> {

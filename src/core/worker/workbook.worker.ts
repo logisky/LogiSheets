@@ -49,8 +49,11 @@ import {
     CellCoordinate,
     GetNextVisibleCellParams,
     ActionEffect,
+    BlockField,
+    SaveParams,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName, Result, IWorkbookWorker} from './types'
+import {SaveFileResult} from 'packages/web'
 
 export class WorkerService implements IWorkbookWorker {
     constructor(private _ctx: Worker) {}
@@ -288,6 +291,15 @@ export class WorkerService implements IWorkbookWorker {
         return
     }
 
+    public save(params: SaveParams): Result<SaveFileResult> {
+        const {appData} = params
+        return this._workbookImpl!.save(appData)
+    }
+
+    public getAllBlockFields(): Result<readonly BlockField[]> {
+        return this.workbook.getAllBlockFields()
+    }
+
     public calcCondition(params: CalcConditionParams): Result<boolean> {
         const {sheetIdx, condition} = params
         return this.workbook.calcCondition(sheetIdx, condition)
@@ -426,6 +438,12 @@ export class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.HandleTransactionWithoutEvents:
                 result = this.handleTransactionWithoutEvents(args)
+                break
+            case MethodName.Save:
+                result = this.save(args)
+                break
+            case MethodName.GetAllBlockFields:
+                result = this.getAllBlockFields()
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

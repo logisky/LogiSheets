@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use logisheets_base::async_func::{AsyncCalcResult, Task};
 use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId};
 
+use logisheets_workbook::logisheets::AppData;
 use logisheets_workbook::prelude::{read, write};
 pub mod display;
 mod executor;
@@ -58,8 +59,8 @@ impl Default for Controller {
 impl Controller {
     // TODO: Due to the UUID generating, we can't just `assert_eq!(file1, file2)` where
     // `file1` and `file2` are binary got from saving of the same file. Fix it.
-    pub fn save(&self) -> Result<Vec<u8>> {
-        let workbook = save_file(self)?;
+    pub fn save(&self, app_data: Vec<AppData>) -> Result<Vec<u8>> {
+        let workbook = save_file(self, app_data)?;
         write(workbook).map_err(|e| Error::Serde(e.into()))
     }
 
