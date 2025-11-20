@@ -1,0 +1,10 @@
+{
+    "name": "COMPLEX",
+    "description": "functions.complex.description",
+    "argCount": {"ge": 2, "le": 3},
+    "args": [
+        {"argName": "real_num"},
+        {"argName": "i_num"},
+        {"argName": "suffix"}
+    ]
+}

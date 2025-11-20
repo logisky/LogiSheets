@@ -1,0 +1,13 @@
+{
+    "name": "SUMIF",
+    "description": "functions.sumif.description",
+    "argCount": {
+        "ge": 2,
+        "le": 3
+    },
+    "args": [
+        {"argName": "range", "refOnly": true},
+        {"argName": "criteria"},
+        {"argName": "sum_range", "refOnly": true}
+    ]
+}

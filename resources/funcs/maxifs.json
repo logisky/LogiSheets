@@ -1,0 +1,13 @@
+{
+    "name": "MAXIFS",
+    "description": "functions.maxifs.description",
+    "argCount": {
+        "ge": 3,
+        "odd": true
+    },
+    "args": [
+        {"argName": "max_range", "refOnly": true},
+        {"argName": "criteria_range", "refOnly": true, "startRepeated": true},
+        {"argName": "criteria"}
+    ]
+}

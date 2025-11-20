@@ -1,0 +1,6 @@
+{
+    "name": "LOWER",
+    "description": "functions.lower.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "text"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "IMCOSH",
+    "description": "functions.imcosh.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "inumber"}]
+}

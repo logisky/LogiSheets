@@ -1,0 +1,16 @@
+{
+    "name": "COUNTIF",
+    "description": "functions.countif.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [
+        {
+            "argName": "range",
+            "refOnly": true
+        },
+        {
+            "argName": "criteria"
+        }
+    ]
+}

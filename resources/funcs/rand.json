@@ -1,0 +1,8 @@
+{
+    "name": "RAND",
+    "description": "functions.rand.description",
+    "argCount": {
+        "eq": 0
+    },
+    "args": []
+}

@@ -1,0 +1,10 @@
+{
+    "name": "RANK",
+    "description": "functions.rank.description",
+    "argCount": {"ge": 2, "le": 3},
+    "args": [
+        {"argName": "number"},
+        {"argName": "ref", "refOnly": true},
+        {"argName": "order"}
+    ]
+}

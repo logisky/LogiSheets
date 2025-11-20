@@ -1,0 +1,6 @@
+{
+    "name": "CONCATENATE",
+    "description": "functions.concatenate.description",
+    "argCount": {"ge": 1},
+    "args": [{"argName": "text", "startRepeated": true}]
+}

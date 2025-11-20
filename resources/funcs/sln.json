@@ -1,0 +1,6 @@
+{
+    "name": "SLN",
+    "description": "functions.sln.description",
+    "argCount": {"eq": 3},
+    "args": [{"argName": "cost"}, {"argName": "salvage"}, {"argName": "life"}]
+}

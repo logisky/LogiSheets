@@ -1,0 +1,6 @@
+{
+    "name": "IMEXP",
+    "description": "functions.imexp.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

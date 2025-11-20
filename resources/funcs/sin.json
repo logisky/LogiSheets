@@ -1,0 +1,8 @@
+{
+    "name": "SIN",
+    "description": "functions.sin.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

@@ -1,0 +1,6 @@
+{
+    "name": "ACOS",
+    "description": "functions.acos.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

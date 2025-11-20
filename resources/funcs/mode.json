@@ -1,0 +1,8 @@
+{
+    "name": "MODE",
+    "description": "functions.mode.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "value", "startRepeated": true}]
+}

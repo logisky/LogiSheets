@@ -1,0 +1,9 @@
+{
+    "name": "HEX2OCT",
+    "description": "functions.hex2oct.description",
+    "argCount": {
+        "ge": 1,
+        "le": 2
+    },
+    "args": [{"argName": "number"}, {"argName": "places"}]
+}

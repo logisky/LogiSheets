@@ -1,0 +1,8 @@
+{
+    "name": "HEX2DEC",
+    "description": "functions.hex2dec.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

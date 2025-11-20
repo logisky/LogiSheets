@@ -1,0 +1,13 @@
+{
+    "name": "ROW",
+    "description": "functions.row.description",
+    "argCount": {
+        "le": 1
+    },
+    "args": [
+        {
+            "argName": "reference",
+            "description": "Optional. The reference from which to return the row number."
+        }
+    ]
+}

@@ -1,0 +1,6 @@
+{
+    "name": "DEGREES",
+    "description": "functions.degrees.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "radians"}]
+}

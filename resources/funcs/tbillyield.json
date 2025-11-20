@@ -1,0 +1,12 @@
+{
+    "name": "TBILLYIELD",
+    "description": "functions.tbillyield.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [
+        {"argName": "settlement"},
+        {"argName": "maturity"},
+        {"argName": "price_or_discount"}
+    ]
+}

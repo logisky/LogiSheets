@@ -1,0 +1,11 @@
+{
+    "name": "NORM.DIST",
+    "description": "functions.norm.dist.description",
+    "argCount": {"eq": 4},
+    "args": [
+        {"argName": "x"},
+        {"argName": "mean"},
+        {"argName": "standard_dev"},
+        {"argName": "cumulative"}
+    ]
+}

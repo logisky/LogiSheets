@@ -1,0 +1,8 @@
+{
+    "name": "IMABS",
+    "description": "functions.imabs.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "inumber"}]
+}

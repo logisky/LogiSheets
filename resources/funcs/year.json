@@ -1,0 +1,8 @@
+{
+    "name": "YEAR",
+    "description": "functions.year.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "serial_number"}]
+}

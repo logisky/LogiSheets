@@ -1,0 +1,6 @@
+{
+    "name": "LOG10",
+    "description": "functions.log10.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

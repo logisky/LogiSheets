@@ -1,12 +1,12 @@
 {
-    "name": "SUM",
-    "description": "functions.sum.description",
+    "name": "COUNT",
+    "description": "functions.count.description",
     "argCount": {
         "ge": 1
     },
     "args": [
         {
-            "argName": "number",
+            "argName": "value",
             "startRepeated": true
         }
     ]

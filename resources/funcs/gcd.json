@@ -1,0 +1,6 @@
+{
+    "name": "GCD",
+    "description": "functions.gcd.description",
+    "argCount": {"ge": 1},
+    "args": [{"argName": "number", "startRepeated": true}]
+}

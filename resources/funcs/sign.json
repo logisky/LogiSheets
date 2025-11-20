@@ -1,0 +1,6 @@
+{
+    "name": "SIGN",
+    "description": "functions.sign.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

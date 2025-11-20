@@ -1,0 +1,12 @@
+{
+    "name": "AGGREGATE",
+    "description": "functions.aggregate.description",
+    "argCount": {
+        "ge": 2
+    },
+    "args": [
+        {"argName": "function_num"},
+        {"argName": "options"},
+        {"argName": "ref", "refOnly": true, "startRepeated": true}
+    ]
+}

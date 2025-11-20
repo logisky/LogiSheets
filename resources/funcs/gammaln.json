@@ -1,0 +1,8 @@
+{
+    "name": "GAMMALN",
+    "description": "functions.gammaln.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

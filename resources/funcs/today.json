@@ -1,0 +1,8 @@
+{
+    "name": "TODAY",
+    "description": "functions.today.description",
+    "argCount": {
+        "eq": 0
+    },
+    "args": []
+}

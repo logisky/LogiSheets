@@ -1,0 +1,8 @@
+{
+    "name": "NPV",
+    "description": "functions.npv.description",
+    "argCount": {
+        "ge": 2
+    },
+    "args": [{"argName": "rate"}, {"argName": "value", "startRepeated": true}]
+}

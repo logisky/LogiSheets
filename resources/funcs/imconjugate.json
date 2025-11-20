@@ -1,0 +1,6 @@
+{
+    "name": "IMCONJUGATE",
+    "description": "functions.imconjugate.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

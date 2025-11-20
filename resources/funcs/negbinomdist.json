@@ -1,0 +1,12 @@
+{
+    "name": "NEGBINOMDIST",
+    "description": "functions.negbinomdist.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [
+        {"argName": "number_f"},
+        {"argName": "number_s"},
+        {"argName": "probability_s"}
+    ]
+}

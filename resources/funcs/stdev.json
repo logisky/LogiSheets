@@ -1,0 +1,6 @@
+{
+    "name": "STDEV",
+    "description": "functions.stdev.description",
+    "argCount": {"ge": 1},
+    "args": [{"argName": "value", "startRepeated": true}]
+}
