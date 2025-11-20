@@ -1,0 +1,6 @@
+{
+    "name": "FALSE",
+    "description": "functions.false.description",
+    "argCount": {"eq": 0},
+    "args": []
+}

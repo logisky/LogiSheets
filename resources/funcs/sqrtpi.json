@@ -1,0 +1,6 @@
+{
+    "name": "SQRTPI",
+    "description": "functions.sqrtpi.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

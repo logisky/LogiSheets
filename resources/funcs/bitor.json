@@ -1,0 +1,8 @@
+{
+    "name": "BITOR",
+    "description": "functions.bitor.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "number1"}, {"argName": "number2"}]
+}

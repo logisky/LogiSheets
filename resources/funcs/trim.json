@@ -1,0 +1,6 @@
+{
+    "name": "TRIM",
+    "description": "functions.trim.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "text"}]
+}

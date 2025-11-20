@@ -1,0 +1,12 @@
+{
+    "name": "TBILLPRICE",
+    "description": "functions.tbillprice.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [
+        {"argName": "settlement"},
+        {"argName": "maturity"},
+        {"argName": "discount"}
+    ]
+}

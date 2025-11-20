@@ -1,0 +1,6 @@
+{
+    "name": "COS",
+    "description": "functions.cos.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

@@ -1,0 +1,6 @@
+{
+    "name": "HARMEAN",
+    "description": "functions.harmean.description",
+    "argCount": {"ge": 1},
+    "args": [{"argName": "value", "startRepeated": true}]
+}

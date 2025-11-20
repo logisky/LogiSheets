@@ -1,0 +1,16 @@
+{
+    "name": "PPMT",
+    "description": "functions.ppmt.description",
+    "argCount": {
+        "ge": 4,
+        "le": 6
+    },
+    "args": [
+        {"argName": "rate"},
+        {"argName": "per"},
+        {"argName": "nper"},
+        {"argName": "pv"},
+        {"argName": "fv"},
+        {"argName": "type"}
+    ]
+}

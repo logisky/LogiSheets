@@ -1,0 +1,6 @@
+{
+    "name": "EXPONDIST",
+    "description": "functions.expondist.description",
+    "argCount": {"eq": 3},
+    "args": [{"argName": "x"}, {"argName": "lambda"}, {"argName": "cumulative"}]
+}

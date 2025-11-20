@@ -1,0 +1,6 @@
+{
+    "name": "BITXOR",
+    "description": "functions.bitxor.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "number1"}, {"argName": "number2"}]
+}

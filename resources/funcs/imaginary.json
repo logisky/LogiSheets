@@ -1,0 +1,8 @@
+{
+    "name": "IMAGINARY",
+    "description": "functions.imaginary.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "inumber"}]
+}

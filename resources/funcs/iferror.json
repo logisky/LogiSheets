@@ -1,0 +1,8 @@
+{
+    "name": "IFERROR",
+    "description": "functions.iferror.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "value"}, {"argName": "value_if_error"}]
+}

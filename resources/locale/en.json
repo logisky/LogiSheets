@@ -9,11 +9,338 @@
         }
     },
     "functions": {
+        "abs": {
+            "description": "Returns the absolute value of a number. The absolute value of a number is the number without its sign."
+        },
+        "acos": {
+            "description": "Returns the arccosine, or inverse cosine, of a number. The arccosine is the angle whose cosine is number. The returned angle is given in radians in the range 0 (zero) to pi."
+        },
+        "acosh": {
+            "description": "Returns the inverse hyperbolic cosine of a number. The number must be greater than or equal to 1. The inverse hyperbolic cosine is the value whose hyperbolic cosine is number, so ACOSH(COSH(number)) equals number."
+        },
+        "aggregate": {
+            "description": "Returns an aggregate in a list or database. The AGGREGATE function can apply different aggregate functions to a list or database with the option to ignore hidden rows and error values."
+        },
         "pi": {
             "description": "Returns the number 3.14159265358979, the mathematical constant pi, accurate to 15 digits."
         },
         "switch": {
             "description": " evaluates one value (called the expression) against a list of values, and returns the result corresponding to the first matching value. If there is no match, an optional default value may be returned."
+        },
+        "sumsq": {
+            "description": "Returns the sum of the squares of the supplied arguments."
+        },
+        "bitor": {
+            "description": "Performs a bitwise OR operation on two integer values and returns the result."
+        },
+        "gammaln.precise": {
+            "description": "Returns the natural logarithm of the Gamma function, \u0393(number)."
+        },
+        "permut": {
+            "description": "Returns the number of permutations for a given number of objects (ordered arrangements)."
+        },
+        "imcosh": {
+            "description": "Returns the hyperbolic cosine of a complex number provided as text."
+        },
+        "negbinomdist": {
+            "description": "Returns the negative binomial distribution (probability) for a given number of failures before a specified number of successes."
+        },
+        "isna": {
+            "description": "Returns TRUE if the value is the #N/A error; otherwise returns FALSE."
+        },
+        "imcsc": {
+            "description": "Returns the cosecant of a complex number provided as text."
+        },
+        "row": {
+            "description": "Returns the row number of a reference. If omitted, returns the row number of the cell containing the formula."
+        },
+        "average": {
+            "description": "Returns the average (arithmetic mean) of the supplied numbers."
+        },
+        "count": {
+            "description": "Counts how many numbers are in the list of supplied arguments."
+        },
+        "countif": {
+            "description": "Counts the number of cells within a range that meet the given condition."
+        },
+        "left": {
+            "description": "Returns the first character or characters in a text string, based on the number of characters you specify."
+        },
+        "round": {
+            "description": "Rounds a number to a specified number of digits."
+        },
+        "len": {
+            "description": "Returns the number of characters in a text string."
+        },
+        "sumif": {
+            "description": "Adds the cells specified by a given condition or criteria."
+        },
+        "today": {
+            "description": "Returns the current date as a serial number. The value updates when the worksheet is recalculated or opened."
+        },
+        "sumifs": {
+            "description": "Adds the cells in a range that meet multiple criteria."
+        },
+        "averageifs": {
+            "description": "Returns the average of cells that meet multiple criteria."
+        },
+        "maxifs": {
+            "description": "Returns the maximum value among cells specified by a set of conditions."
+        },
+        "hex2bin": {
+            "description": "Converts a hexadecimal number to binary."
+        },
+        "month": {
+            "description": "Returns the month of a date represented by a serial number (1-12)."
+        },
+        "exp": {
+            "description": "Returns e raised to the power of a given number."
+        },
+        "sin": {
+            "description": "Returns the sine of the given angle (in radians)."
+        },
+        "irr": {
+            "description": "Returns the internal rate of return for a series of cash flows."
+        },
+        "second": {
+            "description": "Returns the seconds of a time value, a number from 0 to 59."
+        },
+        "pv": {
+            "description": "Calculates the present value of an investment based on periodic, constant payments and a constant interest rate."
+        },
+        "odd": {
+            "description": "Rounds a number up to the nearest odd integer."
+        },
+        "hex2dec": {
+            "description": "Converts a hexadecimal number to decimal."
+        },
+        "hex2oct": {
+            "description": "Converts a hexadecimal number to octal."
+        },
+        "quotient": {
+            "description": "Returns the integer portion of a division."
+        },
+        "day": {
+            "description": "Returns the day of the month (1–31) from a date."
+        },
+        "imaginary": {
+            "description": "Returns the imaginary coefficient of a complex number given as text."
+        },
+        "oct2hex": {
+            "description": "Converts an octal number to hexadecimal."
+        },
+        "tbilleq": {
+            "description": "Returns the bond-equivalent yield for a Treasury bill."
+        },
+        "tbillyield": {
+            "description": "Returns the yield for a Treasury bill given settlement, maturity and price/discount."
+        },
+        "tbillprice": {
+            "description": "Returns the price per $100 face value for a Treasury bill given settlement, maturity and discount."
+        },
+        "mode": {
+            "description": "Returns the most frequently occurring value in a range or list of arguments."
+        },
+        "ln": {
+            "description": "Returns the natural logarithm of a number."
+        },
+        "year": {
+            "description": "Returns the year corresponding to a date."
+        },
+        "iferror": {
+            "description": "Returns a value you specify if a formula evaluates to an error; otherwise returns the result of the formula."
+        },
+        "imabs": {
+            "description": "Returns the absolute value (modulus) of a complex number given as text."
+        },
+        "true": {
+            "description": "Returns the logical value TRUE."
+        },
+        "ppmt": {
+            "description": "Returns the payment on the principal for a given period for an investment."
+        },
+        "gammaln": {
+            "description": "Returns the natural logarithm of the Gamma function, \u0393(number)."
+        },
+        "bitlshift": {
+            "description": "Shifts bits of a number to the left by a specified number of positions."
+        },
+        "bitrshift": {
+            "description": "Shifts bits of a number to the right by a specified number of positions."
+        },
+        "rand": {
+            "description": "Returns an evenly distributed random real number greater than or equal to 0 and less than 1."
+        },
+        "right": {
+            "description": "Returns the last character or characters in a text string, based on the number of characters you specify."
+        },
+        "lower": {
+            "description": "Converts text to lowercase."
+        },
+        "degrees": {
+            "description": "Converts radians to degrees."
+        },
+        "gcd": {
+            "description": "Returns the greatest common divisor of two or more integers."
+        },
+        "imconjugate": {
+            "description": "Returns the complex conjugate of a complex number given as text."
+        },
+        "expondist": {
+            "description": "Returns the exponential distribution."
+        },
+        "cos": {
+            "description": "Returns the cosine of a given angle (in radians)."
+        },
+        "days": {
+            "description": "Returns the number of days between two dates."
+        },
+        "false": {
+            "description": "Returns the logical value FALSE."
+        },
+        "iserror": {
+            "description": "Returns TRUE if the value is any error value except #N/A."
+        },
+        "stdev": {
+            "description": "Estimates the standard deviation based on a sample."
+        },
+        "trim": {
+            "description": "Removes extra spaces from text, leaving single spaces between words."
+        },
+        "bitxor": {
+            "description": "Performs a bitwise XOR operation on two integer values and returns the result."
+        },
+        "log10": {
+            "description": "Returns the base-10 logarithm of a number."
+        },
+        "tan": {
+            "description": "Returns the tangent of a given angle (in radians)."
+        },
+        "weibull": {
+            "description": "Returns the Weibull distribution."
+        },
+        "gamma.dist": {
+            "description": "Returns the gamma distribution."
+        },
+        "imreal": {
+            "description": "Returns the real coefficient of a complex number given as text."
+        },
+        "rank.eq": {
+            "description": "Returns the rank of a number in a list of numbers; identical to RANK but ties receive the same rank (RANK.EQ)."
+        },
+        "minute": {
+            "description": "Returns the minute component of a time value, a number from 0 to 59."
+        },
+        "imln": {
+            "description": "Returns the natural logarithm of a complex number given as text."
+        },
+        "norm.s.inv": {
+            "description": "Returns the inverse of the standard normal cumulative distribution (z-score) for a given probability."
+        },
+        "accrint": {
+            "description": "Returns the accrued interest for a security that pays periodic interest."
+        },
+        "weekday": {
+            "description": "Returns the day of the week corresponding to a date, typically 1 (Sunday) through 7 (Saturday) depending on return_type."
+        },
+        "imlog2": {
+            "description": "Returns the base-2 logarithm of a complex number given as text."
+        },
+        "na": {
+            "description": "Returns the error value #N/A."
+        },
+        "oct2bin": {
+            "description": "Converts an octal number to binary."
+        },
+        "norm.dist": {
+            "description": "Returns the normal distribution for the specified mean and standard deviation."
+        },
+        "rank": {
+            "description": "Returns the rank of a number in a list of numbers (ties averaged in older Excel versions)."
+        },
+        "sign": {
+            "description": "Returns the sign of a number: 1 (positive), 0 (zero), or -1 (negative)."
+        },
+        "asin": {
+            "description": "Returns the arcsine, or inverse sine, of a number. The result is in radians."
+        },
+        "sln": {
+            "description": "Returns the straight-line depreciation of an asset for one period."
+        },
+        "sqrtpi": {
+            "description": "Returns the square root of pi times a number."
+        },
+        "complex": {
+            "description": "Returns a complex number as text given real and imaginary coefficients and an optional suffix."
+        },
+        "imexp": {
+            "description": "Returns the exponential of a complex number given as text."
+        },
+        "ipmt": {
+            "description": "Returns the interest payment for a given period of an investment."
+        },
+        "fv": {
+            "description": "Returns the future value of an investment based on periodic, constant payments and a constant interest rate."
+        },
+        "npv": {
+            "description": "Calculates the net present value of an investment based on a discount rate and a series of future payments."
+        },
+        "exact": {
+            "description": "Checks whether two text strings are exactly the same (case-sensitive)."
+        },
+        "dec2oct": {
+            "description": "Converts a decimal number to octal."
+        },
+        "concatenate": {
+            "description": "Joins several text items into one text string."
+        },
+        "harmean": {
+            "description": "Returns the harmonic mean of a data set."
+        },
+        "yielddisc": {
+            "description": "Returns the annual yield for a discounted security."
+        },
+        "cot": {
+            "description": "Returns the cotangent of an angle (in radians)."
+        },
+        "bin2dec": {
+            "description": "Converts a binary number to decimal."
+        },
+        "gamma": {
+            "description": "Returns the Gamma function value for a number."
+        },
+        "time": {
+            "description": "Returns the decimal number for a particular time."
+        },
+        "atanh": {
+            "description": "Returns the inverse hyperbolic tangent of a number."
+        },
+        "normsdist": {
+            "description": "Returns the standard normal cumulative distribution for a given z-score (legacy NORMSDIST)."
+        },
+        "cumipmt": {
+            "description": "Returns the cumulative interest paid on a loan between two periods."
+        },
+        "imcos": {
+            "description": "Returns the cosine of a complex number supplied as text."
+        },
+        "pmt": {
+            "description": "Calculates the payment for a loan based on constant payments and a constant interest rate."
+        },
+        "imtanh": {
+            "description": "Returns the hyperbolic tangent of a complex number supplied as text."
+        },
+        "rri": {
+            "description": "Returns the equivalent interest rate for the growth of an investment."
+        },
+        "fact": {
+            "description": "Returns the factorial of a number."
+        },
+        "date": {
+            "description": "Returns the serial number of a particular date."
+        },
+        "nominal": {
+            "description": "Converts an effective annual interest rate to a nominal rate."
         }
     }
 }

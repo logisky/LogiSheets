@@ -1,0 +1,8 @@
+{
+    "name": "QUOTIENT",
+    "description": "functions.quotient.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "numerator"}, {"argName": "denominator"}]
+}

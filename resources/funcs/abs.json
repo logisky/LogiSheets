@@ -1,0 +1,12 @@
+{
+    "name": "ABS",
+    "description": "functions.abs.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [
+        {
+            "argName": "number"
+        }
+    ]
+}

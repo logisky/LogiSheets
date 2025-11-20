@@ -1,0 +1,6 @@
+{
+    "name": "IMREAL",
+    "description": "functions.imreal.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

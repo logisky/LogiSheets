@@ -1,0 +1,6 @@
+{
+    "name": "ACOSH",
+    "description": "functions.acosh.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

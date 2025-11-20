@@ -1,0 +1,8 @@
+{
+    "name": "TRUE",
+    "description": "functions.true.description",
+    "argCount": {
+        "eq": 0
+    },
+    "args": []
+}

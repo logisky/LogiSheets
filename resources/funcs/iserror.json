@@ -1,0 +1,6 @@
+{
+    "name": "ISERROR",
+    "description": "functions.iserror.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "value"}]
+}

@@ -1,0 +1,6 @@
+{
+    "name": "DAYS",
+    "description": "functions.days.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "end_date"}, {"argName": "start_date"}]
+}

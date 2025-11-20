@@ -1,0 +1,8 @@
+{
+    "name": "BITRSHIFT",
+    "description": "functions.bitrshift.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "number"}, {"argName": "shift_amount"}]
+}

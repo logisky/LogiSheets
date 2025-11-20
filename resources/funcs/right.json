@@ -1,0 +1,9 @@
+{
+    "name": "RIGHT",
+    "description": "functions.right.description",
+    "argCount": {
+        "ge": 1,
+        "le": 2
+    },
+    "args": [{"argName": "text"}, {"argName": "num_chars"}]
+}

@@ -1,0 +1,14 @@
+{
+    "name": "ACCRINT",
+    "description": "functions.accrint.description",
+    "argCount": {"ge": 6, "le": 7},
+    "args": [
+        {"argName": "issue"},
+        {"argName": "first_interest"},
+        {"argName": "settlement"},
+        {"argName": "rate"},
+        {"argName": "par"},
+        {"argName": "frequency"},
+        {"argName": "basis"}
+    ]
+}

@@ -1,0 +1,6 @@
+{
+    "name": "EXACT",
+    "description": "functions.exact.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "text1"}, {"argName": "text2"}]
+}

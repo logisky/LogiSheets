@@ -1,0 +1,8 @@
+{
+    "name": "EXP",
+    "description": "functions.exp.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

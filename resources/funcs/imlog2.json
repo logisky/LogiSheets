@@ -1,0 +1,6 @@
+{
+    "name": "IMLOG2",
+    "description": "functions.imlog2.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

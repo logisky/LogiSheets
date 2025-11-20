@@ -1,0 +1,6 @@
+{
+    "name": "WEEKDAY",
+    "description": "functions.weekday.description",
+    "argCount": {"ge": 1, "le": 2},
+    "args": [{"argName": "serial_number"}, {"argName": "return_type"}]
+}

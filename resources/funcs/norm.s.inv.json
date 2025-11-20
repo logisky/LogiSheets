@@ -1,0 +1,6 @@
+{
+    "name": "NORM.S.INV",
+    "description": "functions.norm.s.inv.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "probability"}]
+}

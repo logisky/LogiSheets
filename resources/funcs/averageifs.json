@@ -1,0 +1,13 @@
+{
+    "name": "AVERAGEIFS",
+    "description": "functions.averageifs.description",
+    "argCount": {
+        "ge": 3,
+        "odd": true
+    },
+    "args": [
+        {"argName": "average_range", "refOnly": true},
+        {"argName": "criteria_range", "refOnly": true, "startRepeated": true},
+        {"argName": "criteria"}
+    ]
+}

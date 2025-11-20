@@ -1,0 +1,8 @@
+{
+    "name": "GAMMALN.PRECISE",
+    "description": "functions.gammaln.precise.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

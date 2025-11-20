@@ -1,6 +1,6 @@
 {
-    "name": "SUM",
-    "description": "functions.sum.description",
+    "name": "SUMSQ",
+    "description": "functions.sumsq.description",
     "argCount": {
         "ge": 1
     },

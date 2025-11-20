@@ -1,0 +1,6 @@
+{
+    "name": "IMLN",
+    "description": "functions.imln.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

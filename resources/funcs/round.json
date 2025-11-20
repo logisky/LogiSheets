@@ -1,0 +1,8 @@
+{
+    "name": "ROUND",
+    "description": "functions.round.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "number"}, {"argName": "num_digits"}]
+}

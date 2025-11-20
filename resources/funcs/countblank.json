@@ -1,5 +1,6 @@
 {
     "name":"COUNTBLANK",
+    "description": "functions.countblank.description",
     "argCount": {
         "eq": 1
     },

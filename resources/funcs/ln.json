@@ -1,0 +1,8 @@
+{
+    "name": "LN",
+    "description": "functions.ln.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

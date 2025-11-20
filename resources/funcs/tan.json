@@ -1,0 +1,6 @@
+{
+    "name": "TAN",
+    "description": "functions.tan.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

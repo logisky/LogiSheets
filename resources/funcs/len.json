@@ -1,0 +1,8 @@
+{
+    "name": "LEN",
+    "description": "functions.len.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "text"}]
+}

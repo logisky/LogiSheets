@@ -1,0 +1,8 @@
+{
+    "name": "ODD",
+    "description": "functions.odd.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

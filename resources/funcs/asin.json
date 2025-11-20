@@ -1,0 +1,6 @@
+{
+    "name": "ASIN",
+    "description": "functions.asin.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

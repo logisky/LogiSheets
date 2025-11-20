@@ -1,6 +1,6 @@
 {
-    "name": "SUM",
-    "description": "functions.sum.description",
+    "name": "AVERAGE",
+    "description": "functions.average.description",
     "argCount": {
         "ge": 1
     },

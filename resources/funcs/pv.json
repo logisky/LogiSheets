@@ -1,0 +1,15 @@
+{
+    "name": "PV",
+    "description": "functions.pv.description",
+    "argCount": {
+        "ge": 3,
+        "le": 5
+    },
+    "args": [
+        {"argName": "rate"},
+        {"argName": "nper"},
+        {"argName": "pmt"},
+        {"argName": "fv"},
+        {"argName": "type"}
+    ]
+}

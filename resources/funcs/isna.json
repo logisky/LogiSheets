@@ -1,0 +1,8 @@
+{
+    "name": "ISNA",
+    "description": "functions.isna.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "value"}]
+}

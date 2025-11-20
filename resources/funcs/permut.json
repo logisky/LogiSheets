@@ -1,0 +1,8 @@
+{
+    "name": "PERMUT",
+    "description": "functions.permut.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "number"}, {"argName": "number_chosen"}]
+}

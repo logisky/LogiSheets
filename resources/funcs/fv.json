@@ -1,0 +1,12 @@
+{
+    "name": "FV",
+    "description": "functions.fv.description",
+    "argCount": {"ge": 3, "le": 5},
+    "args": [
+        {"argName": "rate"},
+        {"argName": "nper"},
+        {"argName": "pmt"},
+        {"argName": "pv"},
+        {"argName": "type"}
+    ]
+}
