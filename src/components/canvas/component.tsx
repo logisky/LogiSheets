@@ -812,7 +812,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         e.stopPropagation()
         e.preventDefault()
 
-        if (e.metaKey || e.altKey || e.shiftKey || e.ctrlKey) return
+        if (e.metaKey || e.altKey || e.ctrlKey) return
         if (!grid) return
 
         const selectedCells = getSelectedCellRange(selectedData)
@@ -855,8 +855,48 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         const col = selectedCells.startCol
         const size = canvas()!.getBoundingClientRect()
 
+        let direction: MoveDirection | null = null
         switch (e.key) {
             case KeyboardEventCode.ARROW_UP: {
+                direction = 'up'
+                break
+            }
+            case KeyboardEventCode.ENTER: {
+                if (e.shiftKey) {
+                    direction = 'up'
+                } else {
+                    direction = 'down'
+                }
+                break
+            }
+            case KeyboardEventCode.ARROW_DOWN: {
+                direction = 'down'
+                break
+            }
+            case KeyboardEventCode.ARROW_LEFT: {
+                direction = 'left'
+                break
+            }
+            case KeyboardEventCode.TAB: {
+                if (e.shiftKey) {
+                    direction = 'left'
+                } else {
+                    direction = 'right'
+                }
+                break
+            }
+            case KeyboardEventCode.ARROW_RIGHT: {
+                direction = 'right'
+                break
+            }
+            default:
+                if (e.key.length > 1) return
+                store.textarea.beginDirectTyping(e.key)
+                return
+        }
+
+        switch (direction) {
+            case 'up': {
                 if (row === 0) return
                 const [startIdx, _endIdx] = findVisibleRowIdxRange(
                     store.anchorY,
@@ -903,8 +943,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 selectedData$(newData)
                 return
             }
-            case KeyboardEventCode.ENTER:
-            case KeyboardEventCode.ARROW_DOWN: {
+            case 'down': {
                 const [_startIdx, endIdx] = findVisibleRowIdxRange(
                     store.anchorY,
                     size.height - 50,
@@ -953,7 +992,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 selectedData$(newData)
                 return
             }
-            case KeyboardEventCode.ARROW_LEFT: {
+            case 'left': {
                 if (col === 0) return
                 const [startIdx, endIdx] = findVisibleColIdxRange(
                     store.anchorX,
@@ -1000,9 +1039,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 selectedData$(newData)
                 return
             }
-            case KeyboardEventCode.TAB:
-            case KeyboardEventCode.ARROW_RIGHT: {
-                const [startIdx, endIdx] = findVisibleColIdxRange(
+            case 'right': {
+                const [_startIdx, endIdx] = findVisibleColIdxRange(
                     store.anchorX,
                     size.width,
                     grid
@@ -1050,10 +1088,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 selectedData$(newData)
                 return
             }
-            default:
-                if (e.key.length > 1) return
-                store.textarea.beginDirectTyping(e.key)
-                return
         }
     }
 
@@ -1277,3 +1311,5 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         </div>
     )
 })
+
+type MoveDirection = 'up' | 'down' | 'left' | 'right'
