@@ -26,6 +26,7 @@ export interface FontStyle {
     italic?: boolean
     color?: string
     size?: number
+    strike?: boolean
 }
 export function generateFontPayload(
     sheetIdx: number,
@@ -49,6 +50,7 @@ export function generateFontPayload(
                 if (update.italic !== undefined) builder.italic(update.italic)
                 if (update.color) builder.color(update.color)
                 if (update.size) builder.size(update.size)
+                if (update.strike !== undefined) builder.strike(update.strike)
                 const p = builder.build()
                 result.push({type: 'setCellFont', value: p})
             }

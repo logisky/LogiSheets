@@ -88,24 +88,6 @@ export class CanvasApi {
         this._ctx = ctx
     }
 
-    eraseLine(
-        x: number,
-        y: number,
-        len: number,
-        lineWidth: number,
-        position: 'v' | 'h'
-    ): void {
-        this._ctx.save()
-        const w = position === 'h' ? len : lineWidth
-        const h = position === 'h' ? lineWidth : len
-        if (position === 'h') {
-            this._ctx.clearRect(x, y - lineWidth, w, h + 1)
-        } else {
-            this._ctx.clearRect(x - lineWidth, y, w + 1, h)
-        }
-        this._ctx.restore()
-    }
-
     save() {
         this._ctx.save()
     }

@@ -245,11 +245,22 @@ export class PainterService extends CanvasApi {
                 if (render) {
                     this.fillText(line, tx, currY + box.position.startRow)
                 }
-                const underlineWidth = attr.font.measureText(
-                    line.trimEnd()
-                ).width
-                if (underlineWidth > 0 && render) {
-                    this._underline(tx, currY, attr, underlineWidth)
+                const lineWidth = attr.font.measureText(line.trimEnd()).width
+                if (lineWidth > 0 && render) {
+                    this._underline(
+                        tx,
+                        currY + box.position.startRow,
+                        attr,
+                        lineWidth
+                    )
+                    if (attr.font.strike) {
+                        this._strike(
+                            tx,
+                            currY + box.position.startRow,
+                            attr,
+                            lineWidth
+                        )
+                    }
                 }
                 currY += lineHeight
             }
@@ -279,10 +290,42 @@ export class PainterService extends CanvasApi {
             if (render) {
                 this.fillText(trueTxt, tx, drawY)
                 this._underline(tx, ty, attr, textWidth)
+                if (attr.font.strike) {
+                    this._strike(tx, ty, attr, textWidth)
+                }
             }
         }
         this.restore()
         return lineHeight
+    }
+
+    private _strike(tx: number, ty: number, attr: TextAttr, textWidth: number) {
+        let xOffset = 0
+        const yOffset = 0
+        const lineAttr = new CanvasAttr()
+        lineAttr.strokeStyle = attr.font.standardColor.css()
+        lineAttr.lineWidth = npxLine(1)
+        const horizontal = attr.alignment?.horizontal ?? 'general'
+        switch (horizontal) {
+            case 'general':
+            case 'center':
+                xOffset -= textWidth / 2
+                break
+            case 'right':
+                xOffset -= textWidth
+                break
+            case 'left':
+                break
+            default:
+                useToast().toast.error(
+                    `Not support underline horizontal ${attr.alignment?.horizontal}`
+                )
+        }
+        this.attr(lineAttr)
+        this.line([
+            [npx(tx + xOffset), npx(ty - yOffset)],
+            [npx(tx + textWidth + xOffset), npx(ty - yOffset)],
+        ])
     }
 
     private _underline(
