@@ -34,6 +34,7 @@ import {
     ActionEffect,
     SaveParams,
     SaveFileResult,
+    Workbook,
 } from 'logisheets-web'
 import {RenderCell} from './render'
 
@@ -116,6 +117,10 @@ export interface Grid {
     columns: readonly Column[]
     mergeCells?: readonly MergeCell[]
     blockInfos?: readonly BlockDisplayInfo[]
+    preRowHeight?: number
+    preColWidth?: number
+    nextRowHeight?: number
+    nextColWidth?: number
 }
 
 export interface Row {
@@ -133,6 +138,7 @@ export type Result<T> = T | ErrorMessage
 export interface IWorkbookWorker {
     isReady(): Result<boolean>
     getAllSheetInfo(params: GetAllSheetInfoParams): Result<readonly SheetInfo[]>
+    getWorkbook(): Workbook
     getDisplayWindow(
         params: GetDisplayWindowParams
     ): Result<DisplayWindowWithStartPoint>

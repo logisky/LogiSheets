@@ -73,6 +73,8 @@ export interface CanvasProps {
     activeSheet: number
     activeSheet$: (s: number) => void
     selectedDataContentChanged$: (e: object) => void
+    grid: Grid | null
+    setGrid: (grid: Grid | null) => void
 }
 export const CanvasComponent = (props: CanvasProps) => {
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
@@ -92,6 +94,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         activeSheet,
         activeSheet$,
         selectedDataContentChanged$,
+        grid,
+        setGrid,
     } = props
     const store = useContext(CanvasStoreContext)
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
@@ -114,21 +118,20 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         }[]
     )
 
-    const render = () => {
+    const render = async () => {
         return store.render().then((g) => {
             if (isErrorMessage(g)) return
             setGrid(g)
         })
     }
 
-    const renderWithAnchor = (anchorX: number, anchorY: number) => {
+    const renderWithAnchor = async (anchorX: number, anchorY: number) => {
         return store.renderWithAnchor(anchorX, anchorY).then((g) => {
             if (isErrorMessage(g)) return
             setGrid(g)
         })
     }
     const textEl = useRef<ITextareaInstance>(null)
-    const [grid, setGrid] = useState<Grid | undefined>(undefined)
     // Accumulate wheel deltas and apply once per animation frame to avoid jitter
     const wheelAccumRef = useRef(0)
     const wheelRafIdRef = useRef<number | null>(null)
@@ -671,7 +674,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         if (wheelRafIdRef.current !== null) return
 
         const processFrame = () => {
-            const MIN_SCROLL_PIXELS = 10 // dead-zone to avoid tiny scrolls causing renders
+            const MIN_SCROLL_PIXELS = 5 // dead-zone to avoid tiny scrolls causing renders
             const applyDelta = wheelAccumRef.current
             wheelAccumRef.current = 0
             wheelRafIdRef.current = null
@@ -680,8 +683,26 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 // If we still have a queued RAF later and more deltas arrive, they'll be processed
                 return
             }
+            let delta = applyDelta
+            // TODO: Enhance user experience. Don't ask me why 1.5x works well here.
+            if (delta < 0) {
+                // Scrolling up
+                if (grid?.preRowHeight) {
+                    delta = -Math.max(
+                        -applyDelta,
+                        ptToPx(grid.preRowHeight) * 1.5
+                    )
+                }
+            } else {
+                if (grid?.nextRowHeight) {
+                    delta = Math.max(
+                        applyDelta,
+                        ptToPx(grid.nextRowHeight) * 1.5
+                    )
+                }
+            }
 
-            const newY = Math.max(0, store.anchorY + pxToPt(applyDelta))
+            const newY = Math.max(0, store.anchorY + pxToPt(delta))
             if (newY === store.anchorY) return
 
             // Coalesce renders: if one is in flight, just mark for another frame
@@ -1098,7 +1119,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 />
 
                 <ColumnHeaders
-                    grid={grid}
+                    grid={grid ?? undefined}
                     setSelectedData={selectedData$}
                     sheetIdx={activeSheet}
                     selectedColRange={selectedColumnRange}
@@ -1126,7 +1147,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 />
 
                 <RowHeaders
-                    grid={grid}
+                    grid={grid ?? undefined}
                     setSelectedData={selectedData$}
                     sheetIdx={activeSheet}
                     selectedRowRange={selectedRowRange}

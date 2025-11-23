@@ -62,12 +62,14 @@ import {isErrorMessage} from 'packages/web/src/api/utils'
 import {StandardColor, StandardFont} from '@/core/standable'
 import {useToast} from '@/ui/notification/useToast'
 import {TextField} from '@mui/material'
+import {Grid} from '@/core/worker/types'
 
 export interface ToolbarProps {
+    setGrid: (grid: Grid | null) => void
     selectedData?: SelectedData
 }
 
-export const Toolbar = ({selectedData}: ToolbarProps) => {
+export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
     const {toast} = useToast()
@@ -80,11 +82,18 @@ export const Toolbar = ({selectedData}: ToolbarProps) => {
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.item(0)
         if (!file) return
-        const readFile = file
-            .arrayBuffer()
-            .then((buf) =>
-                DATA_SERVICE.loadWorkbook(new Uint8Array(buf), file.name)
+        const readFile = file.arrayBuffer().then(async (buf) => {
+            const grid = await DATA_SERVICE.loadWorkbook(
+                new Uint8Array(buf),
+                file.name
             )
+            if (isErrorMessage(grid)) {
+                // todo!
+                return
+            }
+            setGrid(grid)
+            setBookName(file.name.replace(/\.[^/.]+$/, ''))
+        })
         toast.promise(readFile, {
             pending: 'Loading file...',
             error: 'Read file error, retry later',

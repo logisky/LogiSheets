@@ -67,13 +67,11 @@ export class DataServiceImpl {
         })
     }
 
-    public async loadWorkbook(buf: Uint8Array, name: string): Resp<void> {
+    public async loadWorkbook(buf: Uint8Array, name: string): Resp<Grid> {
         await this._workbook.loadWorkbook({content: buf, name})
         this._sheetIdx = 0
         return this._offscreen.render(this._sheetId, 0, 0).then((v) => {
-            if (isErrorMessage(v)) return
-            0
-            0
+            return v
         })
     }
 

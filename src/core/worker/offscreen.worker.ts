@@ -143,6 +143,43 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
             }
         })
 
+        const getRowHeight = (rowIdx: number): number | undefined => {
+            const r = this._workbook
+                .getWorkbook()
+                .getWorksheetById(sheetId)
+                .getRowHeight(rowIdx)
+            if (isErrorMessage(r)) {
+                return undefined
+            }
+            return r
+        }
+
+        const getColWidth = (colIdx: number): number | undefined => {
+            const c = this._workbook
+                .getWorkbook()
+                .getWorksheetById(sheetId)
+                .getColWidth(colIdx)
+            if (isErrorMessage(c)) {
+                return undefined
+            }
+            return c
+        }
+
+        const preRow = rows[0].idx > 1 ? rows[0].idx - 1 : undefined
+        let preRowHeight = undefined
+        if (preRow !== undefined) {
+            preRowHeight = getRowHeight(preRow)
+        }
+        const nextRow = rows[rows.length - 1].idx + 1
+        const nextRowHeight = getRowHeight(nextRow)
+        const preCol = columns[0].idx > 1 ? columns[0].idx - 1 : undefined
+        let preColWidth = undefined
+        if (preCol !== undefined) {
+            preColWidth = getColWidth(preCol)
+        }
+        const nextCol = columns[columns.length - 1].idx + 1
+        const nextColWidth = getColWidth(nextCol)
+
         const result: Grid = {
             anchorX: viewResponse.anchorX,
             anchorY: viewResponse.anchorY,
@@ -150,6 +187,10 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
             columns: columns,
             mergeCells: mergeCells,
             blockInfos: viewResponse.data.blocks,
+            preRowHeight,
+            preColWidth,
+            nextRowHeight,
+            nextColWidth,
         }
 
         pool.releaseCellView(viewResponse.data)

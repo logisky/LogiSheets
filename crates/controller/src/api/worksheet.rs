@@ -1075,7 +1075,7 @@ impl<'a> Worksheet<'a> {
             .get_row_info(row_id)?;
 
         let row_height = if row_info.custom_height {
-            row_info.ht.unwrap()
+            row_info.ht.unwrap_or(self.get_default_row_height())
         } else {
             self.get_default_row_height()
         };

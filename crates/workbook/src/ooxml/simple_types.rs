@@ -928,7 +928,7 @@ xml_serde_enum! {
        SecondRowSubheading => "secondRowSubheading",
        ThirdRowSubheading => "thirdRowSubheading",
        PageFieldLabels => "pageFieldLabels",
-       PageFieldVal => "pageFieldVal",
+       PageFieldVal => "pageFieldValues",
     }
 }
 
