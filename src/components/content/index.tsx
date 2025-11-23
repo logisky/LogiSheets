@@ -3,13 +3,18 @@ import {FC, useState} from 'react'
 import styles from './content.module.scss'
 import {EditBarComponent} from './edit-bar'
 import {SheetsTabComponent} from '@/components/sheets-tab'
+import {Grid} from '@/core/worker/types'
 
 export interface ContentProps {
     selectedData$: (cell: SelectedData) => void
     selectedData: SelectedData
+    grid: Grid | null
+    setGrid: (grid: Grid | null) => void
 }
 
 export const ContentComponent: FC<ContentProps> = ({
+    grid,
+    setGrid,
     selectedData$,
     selectedData,
 }) => {
@@ -33,6 +38,8 @@ export const ContentComponent: FC<ContentProps> = ({
                         selectedDataContentChanged$={
                             setSelectedDataContentChanged
                         }
+                        grid={grid}
+                        setGrid={setGrid}
                     />
                 </div>
             </div>

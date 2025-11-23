@@ -109,12 +109,47 @@ pub struct StyleConverter<'a> {
     pub theme_manager: &'a ThemeManager,
 }
 
+fn get_luminance(r: f64, g: f64, b: f64) -> f64 {
+    0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
 /// Convert raw style to style, which is more friendly to frontend.
 impl<'a> StyleConverter<'a> {
     pub fn convert_style(&self, raw_style: RawStyle) -> Style {
+        let fill = self.convert_fill(raw_style.fill);
+        let luminance = match &fill {
+                Fill::PatternFill(pf) => {
+                    if let Some(color) = &pf.fg_color {
+                        if let (Some(r), Some(g), Some(b)) =
+                            (color.red, color.green, color.blue)
+                        {
+                            get_luminance(r, g, b)
+                        } else {
+                            255.
+                        }
+                    } else {
+                        255.
+                    }
+                }
+                Fill::GradientFill(gf) => {
+                    if !gf.stops.is_empty() {
+                        let stop = &gf.stops[0];
+                        let color = &stop.color;
+                        if let (Some(r), Some(g), Some(b)) =
+                            (color.red, color.green, color.blue)
+                        {
+                            get_luminance(r, g, b)
+                        } else {
+                            255.
+                        }
+                    } else {
+                        255.
+                    }
+                }
+            };
         Style {
-            font: self.convert_font(raw_style.font),
-            fill: self.convert_fill(raw_style.fill),
+            font: self.convert_font(raw_style.font, luminance),
+            fill,
             border: self.convert_border(raw_style.border),
             alignment: raw_style.alignment.map(|v| self.convert_alignment(v)),
             protection: raw_style.protection,
@@ -122,12 +157,16 @@ impl<'a> StyleConverter<'a> {
         }
     }
 
-    fn convert_font(&self, font: CtFont) -> Font {
+    fn convert_font(&self, font: CtFont, luminance: f64) -> Font {
+        let color = match font.color {
+            Some(c) => Some(self.convert_font_color(c, luminance)),
+            None => Some(get_auto_color(luminance)),
+        };
         Font {
             bold: font.bold,
             italic: font.italic,
             underline: font.underline.clone(),
-            color: font.color.map_or(None, |c| Some(self.convert_color(c))),
+            color,
             sz: font.sz.as_ref().map_or(None, |s| Some(s.val)),
             name: font.name.clone(),
             charset: font.charset.as_ref().map_or(None, |s| Some(s.val)),
@@ -242,6 +281,13 @@ impl<'a> StyleConverter<'a> {
         }
     }
 
+    fn convert_font_color(&self, color: CtColor, luminance: f64) -> Color {
+        if let Some(true) = color.auto {
+            return get_auto_color(luminance);
+        }
+        self.convert_color(color)
+    }
+
     fn convert_color(&self, color: CtColor) -> Color {
         let tint = color.tint;
         let rgb = {
@@ -322,6 +368,23 @@ pub fn color_to_ct_color(c: Color) -> CtColor {
     }
 }
 
+fn get_auto_color(luminance: f64) -> Color {
+    if luminance < 128. {
+        return Color {
+            red: Some(255.),
+            green: Some(255.),
+            blue: Some(255.),
+            alpha: None,
+        };
+    }
+    return Color {
+        red: Some(0.),
+        green: Some(0.),
+        blue: Some(0.),
+        alpha: None,
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::{color_to_ct_color, from_hex_str, Color};
@@ -349,3 +412,4 @@ mod tests {
         println!("{:?}", result.rgb.unwrap())
     }
 }
+

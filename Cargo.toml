@@ -55,8 +55,8 @@ regex = "1"
 serde = "1"
 serde_json = "1"
 thiserror = "1.0"
-xmlserde = "0.11"
-xmlserde_derives = "0.11"
+xmlserde = "0.12"
+xmlserde_derives = "0.12"
 wildescape = "0.1"
 
 logisheets_lexer = { path = "crates/controller/lexer", version = "0.7.0" }

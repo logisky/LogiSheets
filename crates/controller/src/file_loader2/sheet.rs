@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use logisheets_base::{CellId, CellValue, SheetId};
+use logisheets_base::{CellId, CellValue, SheetId, types::id};
 use logisheets_workbook::prelude::*;
 
 use crate::{
@@ -149,7 +149,8 @@ pub fn load_sheet_data(
     sheet_data.rows.iter().for_each(|row| {
         let style_id = style_loader.load_xf(row.s);
         if let Some(idx) = row.r {
-            base_curr_idx = idx;
+            let r = if idx > 0 { idx - 1 } else { 0 };
+            base_curr_idx = r;
             offset = 0;
         }
 

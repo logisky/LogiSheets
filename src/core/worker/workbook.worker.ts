@@ -317,6 +317,10 @@ export class WorkerService implements IWorkbookWorker {
         return ws.getBlockDisplayWindow(blockId)
     }
 
+    getWorkbook(): Workbook {
+        return this.workbook
+    }
+
     public get workbook(): Workbook {
         if (!this._workbookImpl) throw Error("haven't been initialized")
         return this._workbookImpl
