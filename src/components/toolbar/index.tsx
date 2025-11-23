@@ -57,6 +57,7 @@ import {
     TextDecrease,
     AlignHorizontalCenterOutlined,
     WrapText as WrapTextIcon,
+    StrikethroughS,
 } from '@mui/icons-material'
 import {isErrorMessage} from 'packages/web/src/api/utils'
 import {StandardColor, StandardFont} from '@/core/standable'
@@ -125,6 +126,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
     const [bold, setBold] = useState(false)
     const [italic, setItalic] = useState(false)
     const [underline, setUnderline] = useState(false)
+    const [strike, setStrike] = useState(false)
 
     // Alignment popover
     const [alignAnchor, setAlignAnchor] = useState<HTMLElement | null>(null)
@@ -361,6 +363,19 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
         )
         DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
             () => setUnderline(v)
+        )
+    }
+
+    const onToggleStrike = () => {
+        if (!selectedData) return
+        const v = !underline
+        const payloads = generateFontPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            {strike: v}
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+            () => setStrike(v)
         )
     }
 
@@ -708,6 +723,21 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                                 disabled={!hasSelectedData}
                             >
                                 <FormatUnderlinedIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Strikethrough">
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onToggleStrike}
+                                color={strike ? 'primary' : 'default'}
+                                disabled={!hasSelectedData}
+                            >
+                                <StrikethroughS
+                                    fontSize="small"
+                                    style={{textDecoration: 'line-through'}}
+                                />
                             </IconButton>
                         </span>
                     </Tooltip>

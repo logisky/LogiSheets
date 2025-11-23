@@ -87,7 +87,7 @@ export const FormatDialogContent: React.FC<FormatDialogContentProps> = ({
                 )}
                 {tab !== 'number' && tab !== 'border' && (
                     <Box sx={{p: 3, color: 'text.secondary'}}>
-                        此分类稍后提供设置。
+                        Will be provided later
                     </Box>
                 )}
             </Box>

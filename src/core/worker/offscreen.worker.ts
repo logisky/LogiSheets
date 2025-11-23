@@ -108,6 +108,7 @@ export class OffscreenWorkerImpl implements IOffscreenWorker {
             this._canvas.width
         )
         if (isErrorMessage(viewResponse)) return viewResponse
+        console.log('viewResponse', viewResponse)
 
         this._anchorX = viewResponse.anchorX
         this._anchorY = viewResponse.anchorY
