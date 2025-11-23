@@ -222,47 +222,65 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
         })
     }, [selectedData])
 
-    // Format painter effect (same behavior as top-bar)
+    const formatBrushOnRef = useRef(formatBrushOn)
     useEffect(() => {
-        if (!formatBrushOn) return
-        if (!selectedData) return
-        const cellRange = getSelectedCellRange(selectedData)
-        if (cellRange) {
-            const payload: Payload = {
-                type: 'cellFormatBrush',
-                value: new CellFormatBrushBuilder()
-                    .srcSheetIdx(formatBrushOn.sheetIdx)
-                    .srcRow(formatBrushOn.row)
-                    .srcCol(formatBrushOn.col)
-                    .dstRowStart(cellRange.startRow)
-                    .dstColStart(cellRange.startCol)
-                    .dstRowEnd(cellRange.endRow)
-                    .dstColEnd(cellRange.endCol)
-                    .dstSheetIdx(formatBrushOn.sheetIdx)
-                    .build(),
+        formatBrushOnRef.current = formatBrushOn
+    }, [formatBrushOn])
+
+    const selectedDataRef = useRef<SelectedData | undefined>(selectedData)
+    useEffect(() => {
+        selectedDataRef.current = selectedData
+    }, [selectedData])
+
+    useEffect(() => {
+        const onMouseUp = () => {
+            const fb = formatBrushOnRef.current
+            const sel = selectedDataRef.current
+            if (!fb) return
+            if (!sel) return
+
+            const cellRange = getSelectedCellRange(sel)
+            if (cellRange) {
+                const payload: Payload = {
+                    type: 'cellFormatBrush',
+                    value: new CellFormatBrushBuilder()
+                        .srcSheetIdx(fb.sheetIdx)
+                        .srcRow(fb.row)
+                        .srcCol(fb.col)
+                        .dstRowStart(cellRange.startRow)
+                        .dstColStart(cellRange.startCol)
+                        .dstRowEnd(cellRange.endRow)
+                        .dstColEnd(cellRange.endCol)
+                        .dstSheetIdx(fb.sheetIdx)
+                        .build(),
+                }
+                DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+                setFormatBrushOn(null)
+                return
             }
-            DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-            setFormatBrushOn(null)
-            return
-        }
-        const lineRange = getSelectedLines(selectedData)
-        if (lineRange) {
-            const payload: Payload = {
-                type: 'lineFormatBrush',
-                value: new LineFormatBrushBuilder()
-                    .srcSheetIdx(formatBrushOn.sheetIdx)
-                    .srcRow(formatBrushOn.row)
-                    .srcCol(formatBrushOn.col)
-                    .from(lineRange.start)
-                    .to(lineRange.end)
-                    .dstSheetIdx(formatBrushOn.sheetIdx)
-                    .row(lineRange.type === 'row')
-                    .build(),
+
+            const lineRange = getSelectedLines(sel)
+            if (lineRange) {
+                const payload: Payload = {
+                    type: 'lineFormatBrush',
+                    value: new LineFormatBrushBuilder()
+                        .srcSheetIdx(fb.sheetIdx)
+                        .srcRow(fb.row)
+                        .srcCol(fb.col)
+                        .from(lineRange.start)
+                        .to(lineRange.end)
+                        .dstSheetIdx(fb.sheetIdx)
+                        .row(lineRange.type === 'row')
+                        .build(),
+                }
+                DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+                setFormatBrushOn(null)
             }
-            DATA_SERVICE.handleTransaction(new Transaction([payload], true))
-            setFormatBrushOn(null)
         }
-    }, [formatBrushOn, selectedData])
+
+        window.addEventListener('mouseup', onMouseUp)
+        return () => window.removeEventListener('mouseup', onMouseUp)
+    }, [DATA_SERVICE])
 
     // Handlers
     const onFormatPainter = () => {
