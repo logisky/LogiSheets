@@ -9,6 +9,7 @@ import {
     InsertColsBuilder,
     DeleteColsBuilder,
     type Payload,
+    isErrorMessage,
 } from 'logisheets-web'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
@@ -20,10 +21,10 @@ import FormatDialogContent, {
 import {
     buildSelectedDataFromCellRange,
     buildSelectedDataFromLines,
+    SelectedData,
 } from '@/components/canvas'
 
 export interface HeaderContextMenuProps {
-    open: boolean
     x: number
     y: number
     type: 'row' | 'col'
@@ -31,10 +32,10 @@ export interface HeaderContextMenuProps {
     count: number
     sheetIdx: number
     onClose: () => void
+    setSelectedData: (data: SelectedData) => void
 }
 
 export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
-    open,
     x,
     y,
     type,
@@ -42,6 +43,7 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
     sheetIdx,
     count,
     onClose,
+    setSelectedData,
 }) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
     const [fmtOpen, setFmtOpen] = useState(false)
@@ -51,9 +53,8 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
         typeof buildSelectedDataFromCellRange
     > | null>(null)
 
-    const doTxn = (payloads: Payload[]) => {
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true))
-        onClose()
+    const doTxn = async (payloads: Payload[]) => {
+        return DATA_SERVICE.handleTransaction(new Transaction(payloads, true))
     }
 
     useEffect(() => {
@@ -73,7 +74,17 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                         .count(1)
                         .build(),
                 },
-            ])
+            ]).then((r) => {
+                if (isErrorMessage(r)) return
+                const data = buildSelectedDataFromLines(
+                    index + 1,
+                    index + count,
+                    'row',
+                    'none'
+                )
+                setSelectedData(data)
+                onClose()
+            })
         } else {
             doTxn([
                 {
@@ -84,7 +95,17 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                         .count(1)
                         .build(),
                 },
-            ])
+            ]).then((r) => {
+                if (isErrorMessage(r)) return
+                const data = buildSelectedDataFromLines(
+                    index + 1,
+                    index + count,
+                    'col',
+                    'none'
+                )
+                setSelectedData(data)
+                onClose()
+            })
         }
     }
 
@@ -99,7 +120,10 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                         .count(1)
                         .build(),
                 },
-            ])
+            ]).then((r) => {
+                if (isErrorMessage(r)) return
+                onClose()
+            })
         } else {
             doTxn([
                 {
@@ -110,11 +134,14 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                         .count(1)
                         .build(),
                 },
-            ])
+            ]).then((r) => {
+                if (isErrorMessage(r)) return
+                onClose()
+            })
         }
     }
 
-    const removeOne = () => {
+    const remove = () => {
         if (type === 'row') {
             doTxn([
                 {
@@ -125,7 +152,11 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                         .count(count)
                         .build(),
                 },
-            ])
+            ]).then((r) => {
+                if (isErrorMessage(r)) return
+                setSelectedData({source: 'none'})
+                onClose()
+            })
         } else {
             doTxn([
                 {
@@ -136,7 +167,11 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                         .count(count)
                         .build(),
                 },
-            ])
+            ]).then((r) => {
+                if (isErrorMessage(r)) return
+                setSelectedData({source: 'none'})
+                onClose()
+            })
         }
     }
 
@@ -178,7 +213,7 @@ export const HeaderContextMenu: React.FC<HeaderContextMenuProps> = ({
                 </MenuItem>
                 <MenuItem onClick={openFormatDialog}>Format cells</MenuItem>
                 <Divider />
-                <MenuItem onClick={removeOne} sx={{color: 'error.main'}}>
+                <MenuItem onClick={remove} sx={{color: 'error.main'}}>
                     {type === 'row' ? 'Delete row(s)' : 'Delete column(s)'}
                 </MenuItem>
             </Menu>

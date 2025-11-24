@@ -41,7 +41,7 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
     const onContextMenuRow = (idx: number) => (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        setMenuIdx(idx)
+        setMenuIdx(selectedRowRange ? selectedRowRange[0] : idx)
         setMenuX(e.clientX)
         setMenuY(e.clientY)
         setMenuOpen(true)
@@ -167,7 +167,6 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
                 }
                 {menuOpen && menuIdx !== null && (
                     <HeaderContextMenu
-                        open={menuOpen}
                         x={menuX}
                         y={menuY}
                         type="row"
@@ -175,6 +174,7 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
                         count={menuCount}
                         sheetIdx={sheetIdx}
                         onClose={() => setMenuOpen(false)}
+                        setSelectedData={setSelectedData}
                     />
                 )}
             </div>
