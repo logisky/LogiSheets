@@ -368,7 +368,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
 
     const onToggleStrike = () => {
         if (!selectedData) return
-        const v = !underline
+        const v = !strike
         const payloads = generateFontPayload(
             DATA_SERVICE.getCurrentSheetIdx(),
             selectedData,

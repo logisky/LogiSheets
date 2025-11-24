@@ -13,6 +13,8 @@ import {DataServiceImpl as DataService} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {isErrorMessage} from 'packages/web/src/api/utils'
 import {CANVAS_ID} from '@/components/canvas/store'
+import {TransformOutlined} from '@mui/icons-material'
+import {IconButton, Tooltip} from '@mui/material'
 export interface EditBarProps {
     selectedData: SelectedData
     selectedData$: (e: SelectedData) => void
@@ -28,6 +30,8 @@ export const EditBarComponent: FC<EditBarProps> = ({
     const [coordinate, setCoordinate] = useState('')
     const [formula, setFormula] = useState('')
     const [isEditing, setIsEditing] = useState(false)
+    const [value, setValue] = useState('')
+    const [showFormula, setShowFormula] = useState(true)
     const formulaInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -38,6 +42,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
         cell.then((c) => {
             if (isErrorMessage(c)) return
             setFormula(c.getFormula() || c.getText())
+            setValue(c.getText())
         })
     }, [selectedDataContentChanged])
 
@@ -52,6 +57,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
         cell.then((c) => {
             if (isErrorMessage(c)) return
             setFormula(c.getFormula() || c.getText())
+            setValue(c.getText())
         })
     }, [selectedData, isEditing])
 
@@ -97,6 +103,10 @@ export const EditBarComponent: FC<EditBarProps> = ({
             ) as HTMLCanvasElement | null
             el?.focus({preventScroll: true})
         })
+    }
+
+    const onToggleShowFormularOrValue = () => {
+        setShowFormula(!showFormula)
     }
 
     const onFormulaKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -149,6 +159,16 @@ export const EditBarComponent: FC<EditBarProps> = ({
                 disabled={!hasSelectedData}
             />
             <div className={styles.middle} />
+            <Tooltip title="Show formula or value">
+                <IconButton
+                    size="small"
+                    sx={{p: 0.4}}
+                    color={showFormula ? 'primary' : 'default'}
+                    onClick={onToggleShowFormularOrValue}
+                >
+                    <TransformOutlined fontSize="small" />
+                </IconButton>
+            </Tooltip>
             <input
                 className={styles.formula}
                 ref={formulaInputRef}
@@ -160,8 +180,8 @@ export const EditBarComponent: FC<EditBarProps> = ({
                 onBlur={() => {
                     commitFormula()
                 }}
-                value={formula}
-                disabled={!hasSelectedData}
+                value={showFormula ? (formula ? `=${formula}` : '') : value}
+                disabled={!hasSelectedData && !showFormula}
             />
         </div>
     )
