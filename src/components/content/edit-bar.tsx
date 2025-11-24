@@ -165,6 +165,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
                     sx={{p: 0.4}}
                     color={showFormula ? 'primary' : 'default'}
                     onClick={onToggleShowFormularOrValue}
+                    disabled={!hasSelectedData}
                 >
                     <TransformOutlined fontSize="small" />
                 </IconButton>
@@ -181,7 +182,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
                     commitFormula()
                 }}
                 value={showFormula ? (formula ? `=${formula}` : '') : value}
-                disabled={!hasSelectedData && !showFormula}
+                disabled={!hasSelectedData || !showFormula}
             />
         </div>
     )
