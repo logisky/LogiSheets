@@ -168,6 +168,7 @@ export class PainterService extends CanvasApi {
             /\s/.test(txt)
         if (shouldWrap) {
             // TODO: Handle the wrap text with alignments.
+            const decorations: {x: number; y: number; width: number}[] = []
             const paragraphs = txt.split(/\r?\n/)
             let currY = attr.font.size
             if (textBaseAlign === 'middle') {
@@ -227,12 +228,22 @@ export class PainterService extends CanvasApi {
                             line.trimEnd()
                         ).width
                         if (underlineWidth > 0 && render) {
-                            this._underline(
-                                tx,
-                                currY + box.position.startRow,
-                                attr,
-                                underlineWidth
-                            )
+                            const horizontal =
+                                attr.alignment?.horizontal ?? 'general'
+                            let leftX = tx
+                            if (
+                                horizontal === 'general' ||
+                                horizontal === 'center'
+                            ) {
+                                leftX = tx - underlineWidth / 2
+                            } else if (horizontal === 'right') {
+                                leftX = tx - underlineWidth
+                            }
+                            decorations.push({
+                                x: leftX,
+                                y: currY + box.position.startRow,
+                                width: underlineWidth,
+                            })
                         }
                         currY += lineHeight
                         // Start next line with current token (avoid leading whitespace)
@@ -247,22 +258,30 @@ export class PainterService extends CanvasApi {
                 }
                 const lineWidth = attr.font.measureText(line.trimEnd()).width
                 if (lineWidth > 0 && render) {
-                    this._underline(
-                        tx,
-                        currY + box.position.startRow,
-                        attr,
-                        lineWidth
-                    )
+                    const horizontal = attr.alignment?.horizontal ?? 'general'
+                    let leftX = tx
+                    if (horizontal === 'general' || horizontal === 'center') {
+                        leftX = tx - lineWidth / 2
+                    } else if (horizontal === 'right') {
+                        leftX = tx - lineWidth
+                    }
+                    decorations.push({
+                        x: leftX,
+                        y: currY + box.position.startRow,
+                        width: lineWidth,
+                    })
                     if (attr.font.strike) {
-                        this._strike(
-                            tx,
-                            currY + box.position.startRow,
-                            attr,
-                            lineWidth
-                        )
+                        // strike will be drawn from decorations as well
                     }
                 }
                 currY += lineHeight
+            }
+            // Draw decorations collected for all paragraphs
+            if (render && decorations.length) {
+                for (const m of decorations) {
+                    this._underline(m, attr)
+                    if (attr.font.strike) this._strike(m, attr)
+                }
             }
             return currY
         } else {
@@ -288,106 +307,76 @@ export class PainterService extends CanvasApi {
                 drawY = ty - Math.max(0, Math.floor(attr.font.size * 0.1))
             }
             if (render) {
+                // draw the (possibly truncated) text and then draw decorations
                 this.fillText(trueTxt, tx, drawY)
-                this._underline(tx, ty, attr, textWidth)
-                if (attr.font.strike) {
-                    this._strike(tx, ty, attr, textWidth)
+                const drawnWidth = attr.font.measureText(trueTxt).width
+                let leftX = tx
+                const horizontal = attr.alignment?.horizontal ?? 'general'
+                if (horizontal === 'general' || horizontal === 'center') {
+                    leftX = tx - drawnWidth / 2
+                } else if (horizontal === 'right') {
+                    leftX = tx - drawnWidth
                 }
+                const metric = {x: leftX, y: drawY, width: drawnWidth}
+                this._underline(metric, attr)
+                if (attr.font.strike) this._strike(metric, attr)
             }
         }
         this.restore()
         return lineHeight
     }
 
-    private _strike(tx: number, ty: number, attr: TextAttr, textWidth: number) {
-        let xOffset = 0
-        const yOffset = 0
+    private _strike(
+        metric: {x: number; y: number; width: number},
+        attr: TextAttr
+    ) {
+        // metric.x: left-most x (CSS px) of the text
+        // metric.y: baseline y (CSS px) where text was drawn
+        // metric.width: width of the text in CSS px
         const lineAttr = new CanvasAttr()
         lineAttr.strokeStyle = attr.font.standardColor.css()
-        lineAttr.lineWidth = npxLine(1)
-        const horizontal = attr.alignment?.horizontal ?? 'general'
-        switch (horizontal) {
-            case 'general':
-            case 'center':
-                xOffset -= textWidth / 2
-                break
-            case 'right':
-                xOffset -= textWidth
-                break
-            case 'left':
-                break
-            default:
-                useToast().toast.error(
-                    `Not support underline horizontal ${attr.alignment?.horizontal}`
-                )
-        }
+        lineAttr.lineWidth = npxLine(1.5) * (attr.font.bold ? 1.5 : 1)
         this.attr(lineAttr)
+        const startX = metric.x
+        const endX = metric.x + metric.width
+        const y = metric.y // strike position uses baseline minus any offset
         this.line([
-            [npx(tx + xOffset), npx(ty - yOffset)],
-            [npx(tx + textWidth + xOffset), npx(ty - yOffset)],
+            [npx(startX), npx(y)],
+            [npx(endX), npx(y)],
         ])
     }
 
     private _underline(
-        tx: number,
-        ty: number,
-        attr: TextAttr,
-        textWidth: number
+        metric: {x: number; y: number; width: number},
+        attr: TextAttr
     ) {
-        let xOffset = 1
-        let yOffset = 0
+        // metric.x: left-most x (CSS px) of the text
+        // metric.y: baseline y (CSS px) where text was drawn
+        // metric.width: width of the text in CSS px
+        const underline = attr.font.underline?.val ?? 'none'
+        if (underline === 'none') return
+        if (underline !== 'single' && underline !== 'double') {
+            useToast().toast.error(
+                `Not support underline ${attr.font.underline}`
+            )
+            return
+        }
+
         const lineAttr = new CanvasAttr()
         lineAttr.strokeStyle = attr.font.standardColor.css()
-        const horizontal = attr.alignment?.horizontal ?? 'general'
-        const underline = attr.font.underline?.val ?? 'none'
-        const vertical = attr.alignment?.vertical ?? 'center'
-        switch (underline) {
-            case 'double':
-                break
-            case 'none':
-                return
-            case 'single':
-                lineAttr.lineWidth = npxLine(1)
-                yOffset += attr.font.size / 2
-                switch (vertical) {
-                    case 'bottom':
-                        yOffset += attr.font.size
-                        break
-                    case 'center':
-                        yOffset += attr.font.size / 2
-                        break
-                    case 'top':
-                        break
-                    default:
-                        yOffset += attr.font.size / 2
-                        break
-                }
-                switch (horizontal) {
-                    case 'general':
-                    case 'center':
-                        xOffset -= textWidth / 2
-                        break
-                    case 'right':
-                        xOffset -= textWidth
-                        break
-                    case 'left':
-                        break
-                    default:
-                        useToast().toast.error(
-                            `Not support underline horizontal ${attr.alignment?.horizontal}`
-                        )
-                }
-                this.attr(lineAttr)
-                this.line([
-                    [npx(tx + xOffset), npx(ty + yOffset)],
-                    [npx(tx + textWidth + xOffset), npx(ty + yOffset)],
-                ])
-                break
-            default:
-                useToast().toast.error(
-                    `Not support underline ${attr.font.underline}`
-                )
-                return
-        }
+        lineAttr.lineWidth = npxLine(1.5) * (attr.font.bold ? 1.5 : 1)
+
+        // Position: a simple baseline-offset approach. We place underline slightly
+        // below baseline; for 'single' use a single line. (double could be expanded later)
+        const yOffset = Math.floor(attr.font.size / 2)
+        const y = metric.y + yOffset
+
+        this.attr(lineAttr)
+        const startX = metric.x
+        const endX = metric.x + metric.width
+        this.line([
+            [npx(startX), npx(y + 2)],
+            [npx(endX), npx(y + 2)],
+        ])
     }
 }
