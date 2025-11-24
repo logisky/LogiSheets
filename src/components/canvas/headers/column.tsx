@@ -84,7 +84,7 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
     const onContextMenuCol = (idx: number) => (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        setMenuIdx(idx)
+        setMenuIdx(selectedColRange ? selectedColRange[0] : idx)
         setMenuX(e.clientX)
         setMenuY(e.clientY)
         setMenuOpen(true)
@@ -171,7 +171,6 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
                 }
                 {menuOpen && menuIdx !== null && (
                     <HeaderContextMenu
-                        open={menuOpen}
                         x={menuX}
                         y={menuY}
                         type="col"
@@ -179,6 +178,7 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
                         sheetIdx={sheetIdx}
                         count={menuCount}
                         onClose={() => setMenuOpen(false)}
+                        setSelectedData={setSelectedData}
                     />
                 )}
             </div>
