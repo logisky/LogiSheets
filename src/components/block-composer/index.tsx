@@ -8,7 +8,7 @@ import {DataServiceImpl as DataService} from '@/core/data'
 import {CraftManager, FieldInfo, FieldTypeEnum} from '@/core/data/craft'
 import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
-import {FieldSetting, COLORS} from './types'
+import {FieldSetting} from './types'
 import {
     CreateBlockBuilder,
     isErrorMessage,
@@ -104,6 +104,8 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     validation: field.validation ?? '',
                     formatter: field.format ?? '',
                 }
+            } else if (field.type === 'image') {
+                ty = {type: 'image'}
             }
             const f: FieldInfo = {
                 id: field.id,
@@ -142,6 +144,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         fs.forEach(([fieldId, field], i) => {
             let diyRender = false
             switch (field.type.type) {
+                case 'image':
                 case 'enum':
                 case 'multiSelect':
                     diyRender = true
