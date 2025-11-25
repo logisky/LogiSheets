@@ -25,6 +25,7 @@ import {EnumCell} from './enum-cell'
 import {BoolCell} from './bool-cell'
 import {ValidationCell} from './validation-cell'
 import {DatetimeCell} from './datetime-cell'
+import {ImageCell} from './image'
 
 export interface BlockInterfaceProps {
     grid: Grid
@@ -421,6 +422,8 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                     )
                 } else if (fieldInfo.type.type === 'datetime') {
                     return <DatetimeCell key={idx} {...cellProps} />
+                } else if (fieldInfo.type.type === 'image') {
+                    return <ImageCell key={idx} {...cellProps} />
                 }
                 return null
             })}

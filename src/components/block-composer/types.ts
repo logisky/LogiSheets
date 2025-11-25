@@ -6,6 +6,7 @@ export type FieldTypeEnum =
     | 'boolean'
     | 'string'
     | 'number'
+    | 'image'
 
 export interface EnumValue {
     id: string

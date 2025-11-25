@@ -8,6 +8,7 @@ export type FieldTypeEnum =
     | {type: 'boolean'}
     | {type: 'string'; validation: string}
     | {type: 'number'; validation: string; formatter: string}
+    | {type: 'image'}
 
 /**
  * Represents a complete field definition

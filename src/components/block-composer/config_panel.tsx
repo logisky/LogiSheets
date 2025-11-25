@@ -374,6 +374,9 @@ export const FieldConfigPanel = ({
                                             <MenuItem value="number">
                                                 Number
                                             </MenuItem>
+                                            <MenuItem value="image">
+                                                Image
+                                            </MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Box>
