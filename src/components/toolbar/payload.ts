@@ -18,6 +18,8 @@ import {
     SetLineBorderBuilder,
     SetCellWrapTextBuilder,
     SetLineWrapTextBuilder,
+    SetCellNumFmtBuilder,
+    SetLineNumFmtBuilder,
 } from 'logisheets-web'
 
 export interface FontStyle {
@@ -142,6 +144,41 @@ export function generateWrapTextPayload(
         .build()
     result.push({type: 'setLineWrapText', value: p})
 
+    return result
+}
+
+export function generateNumFmtPayload(
+    sheetIdx: number,
+    data: SelectedData,
+    numFmt: string
+): Payload[] {
+    if (!data.data) return []
+    const result: Payload[] = []
+    const t = data.data.ty
+    if (t === 'cellRange') {
+        const d = data.data.d
+        for (let i = d.startRow; i <= d.endRow; i += 1) {
+            for (let j = d.startCol; j <= d.endCol; j += 1) {
+                const builder = new SetCellNumFmtBuilder()
+                    .sheetIdx(sheetIdx)
+                    .row(i)
+                    .col(j)
+                    .numFmt(numFmt)
+                const p = builder.build()
+                result.push({type: 'setCellNumFmt', value: p})
+            }
+        }
+        return result
+    }
+    const d = data.data.d
+    const builder = new SetLineNumFmtBuilder()
+        .sheetIdx(sheetIdx)
+        .from(d.start)
+        .to(d.end)
+        .row(d.type === 'row')
+        .numFmt(numFmt)
+    const p = builder.build()
+    result.push({type: 'setLineNumFmt', value: p})
     return result
 }
 

@@ -15,6 +15,7 @@ import {BorderSettingComponent} from './border-setting'
 import {
     generateAlgnmentPayload,
     generateFontPayload,
+    generateNumFmtPayload,
     generatePatternFillPayload,
     generateWrapTextPayload,
 } from './payload'
@@ -63,6 +64,7 @@ import {isErrorMessage} from 'packages/web/src/api/utils'
 import {StandardColor, StandardFont} from '@/core/standable'
 import {useToast} from '@/ui/notification/useToast'
 import {TextField} from '@mui/material'
+import Select, {SelectChangeEvent} from '@mui/material/Select'
 import {Grid} from '@/core/worker/types'
 
 export interface ToolbarProps {
@@ -144,6 +146,45 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
     // BlockComposer modal
     const [composerOpen, setComposerOpen] = useState(false)
 
+    // Number format
+    const [numberFormat, setNumberFormat] = useState<string>('general')
+    const onNumberFormatChange = (e: SelectChangeEvent<string>) => {
+        const v = (e.target.value as string) || 'general'
+        if (!selectedData) return
+        setNumberFormat(v)
+        let numFmt = 'general'
+        switch (v) {
+            case 'general':
+                break
+            case 'number':
+                numFmt = '0.00_'
+                break
+            case 'fraction':
+                numFmt = '1/2'
+                break
+            case 'percent':
+                numFmt = '0.00%'
+                break
+            case 'text':
+                numFmt = '@'
+                break
+            case 'date':
+                numFmt = 'yyyy/m/d;@'
+                break
+            case 'time':
+                numFmt = 'h:mm:ss'
+                break
+            default:
+                break
+        }
+        const payloads = generateNumFmtPayload(
+            DATA_SERVICE.getCurrentSheetIdx(),
+            selectedData,
+            numFmt
+        )
+        DATA_SERVICE.handleTransaction(new Transaction(payloads, true))
+    }
+
     // Init style when selection changes
     useEffect(() => {
         if (!selectedData || !selectedData.data) {
@@ -185,6 +226,33 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             setBold(font.bold)
             setItalic(font.italic)
             setUnderline(font.underline ? font.underline.val !== 'none' : false)
+            switch (style.formatter.toLocaleLowerCase()) {
+                case '':
+                case 'general':
+                    setNumberFormat('general')
+                    break
+                case '0.00_':
+                    setNumberFormat('number')
+                    break
+                case '1/2':
+                    setNumberFormat('fraction')
+                    break
+                case '0.00%':
+                    setNumberFormat('percent')
+                    break
+                case '@':
+                    setNumberFormat('text')
+                    break
+                case 'yyyy/m/d':
+                case 'yyyy/m/d;@':
+                    setNumberFormat('date')
+                    break
+                case 'h:mm:ss':
+                    setNumberFormat('time')
+                    break
+                default:
+                    setNumberFormat('Custom')
+            }
         })
         // merged state
         const cr = getSelectedCellRange(selectedData)
@@ -839,6 +907,44 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                     </Tooltip>
                 </div>
 
+                <Divider
+                    orientation="vertical"
+                    flexItem
+                    className={styles.divider}
+                />
+                {/* number formatter */}
+                <div className={styles.section}>
+                    <Select
+                        size="small"
+                        value={numberFormat}
+                        onChange={onNumberFormatChange}
+                        displayEmpty
+                        disabled={!hasSelectedData}
+                        sx={{minWidth: 100, maxHeight: 30, fontSize: 12}}
+                    >
+                        <MenuItem value="general" sx={{fontSize: 12}}>
+                            General
+                        </MenuItem>
+                        <MenuItem value="number" sx={{fontSize: 12}}>
+                            Number
+                        </MenuItem>
+                        <MenuItem value="fraction" sx={{fontSize: 12}}>
+                            Fraction
+                        </MenuItem>
+                        <MenuItem value="percent" sx={{fontSize: 12}}>
+                            Percent
+                        </MenuItem>
+                        <MenuItem value="text" sx={{fontSize: 12}}>
+                            Text
+                        </MenuItem>
+                        <MenuItem value="date" sx={{fontSize: 12}}>
+                            Date
+                        </MenuItem>
+                        <MenuItem value="time" sx={{fontSize: 12}}>
+                            Time
+                        </MenuItem>
+                    </Select>
+                </div>
                 <Divider
                     orientation="vertical"
                     flexItem
