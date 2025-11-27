@@ -6,7 +6,7 @@ import {SelectedData} from '../events'
 import {buildSelectedDataFromLines} from '../events'
 import HeaderResizer from './resizer'
 import HeaderContextMenu from './contextmenu'
-import {ZINDEX_HEADER, ZINDEX_UI} from '@/components/const'
+import {ZINDEX_HEADER} from '@/components/const'
 
 export interface ColumnHeadersProps {
     grid?: Grid
@@ -14,6 +14,8 @@ export interface ColumnHeadersProps {
     onResizeCol?: (colIdx: number, deltaPx: number) => void
     sheetIdx: number
     selectedColRange?: [number, number]
+    isEditing: boolean
+    setReferenceWhenEditing: (data: SelectedData) => void
 }
 
 export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
@@ -22,6 +24,8 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
     onResizeCol,
     sheetIdx,
     selectedColRange,
+    isEditing,
+    setReferenceWhenEditing,
 }) => {
     const hostRef = useRef<HTMLDivElement | null>(null)
     const [menuOpen, setMenuOpen] = useState(false)
@@ -58,7 +62,11 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
                 'col',
                 'none'
             )
-            setSelectedData(data)
+            if (isEditing) {
+                setReferenceWhenEditing(data)
+            } else {
+                setSelectedData(data)
+            }
         }
         const onUp = (ue: MouseEvent) => {
             window.removeEventListener('mousemove', onMove)
@@ -75,7 +83,11 @@ export const ColumnHeaders: React.FC<ColumnHeadersProps> = ({
                 'none'
             )
             setMenuCount(end - start + 1)
-            setSelectedData(data)
+            if (isEditing) {
+                setReferenceWhenEditing(data)
+            } else {
+                setSelectedData(data)
+            }
         }
         window.addEventListener('mousemove', onMove)
         window.addEventListener('mouseup', onUp)

@@ -20,6 +20,8 @@ export interface TextContainerProps {
     context: Context
     blur: () => void
     type: (e: string) => Promise<FormulaDisplayInfo | undefined>
+    // Insert the string at the current cursor position
+    insertion?: string
 }
 
 export const TextContainerComponent = forwardRef(
@@ -40,7 +42,7 @@ export const TextContainerComponent = forwardRef(
 
 const InternalComponent = observer(
     forwardRef((props: TextContainerProps, ref) => {
-        const {context, blur, type} = props
+        const {context, blur, type, insertion} = props
         const {cursor, selection, textManager} = useContext(TextareaContext)
 
         useImperativeHandle(ref, () => {
@@ -53,6 +55,20 @@ const InternalComponent = observer(
         const textEl = useRef<HTMLCanvasElement>(null)
         const selectionEl = useRef<HTMLCanvasElement>(null)
         const store = useContext(TextareaContext)
+
+        if (insertion) {
+            const currPosition = store.cursor.cursorPosition
+            if (store.prevInsertion) {
+                cursor.type(0, store.prevInsertion.length)
+                textManager.remove(
+                    currPosition - store.prevInsertion.length,
+                    currPosition
+                )
+            }
+            textManager.add(insertion)
+            cursor.type(insertion.length, 0)
+            store.prevInsertion = insertion
+        }
 
         useEffect(() => {
             selection.init(selectionEl.current!)
@@ -81,9 +97,10 @@ const InternalComponent = observer(
         }
 
         const onType = (value: string, event: SyntheticEvent) => {
+            store.prevInsertion = undefined
             // Defer clearing textarea value to prevent flicker
             const newTexts = store.textManager.add(value)
-            store.cursor.type(newTexts, [])
+            store.cursor.type(newTexts.length, 0)
 
             // Clear after processing to avoid visual flicker
             if (textareaEl.current) {
@@ -162,7 +179,7 @@ const InternalComponent = observer(
                                     currPosition - 1
                                 )
                             }
-                            store.cursor.type([], removed)
+                            store.cursor.type(0, removed.length)
                             break
                         }
                         case KeyboardEventCode.ENTER: {

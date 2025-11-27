@@ -106,7 +106,6 @@ export const ImageCell = (props: BlockCellProps) => {
         }
         payloads.push(payload)
         const imageWidth = imageDimensions.width * getSizeMultiplier()
-        console.log(imageWidth, getSizeMultiplier())
         if (width < imageWidth) {
             const columnAdjust = new SetColWidthBuilder()
                 .sheetIdx(sheetIdx)

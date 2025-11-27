@@ -105,7 +105,6 @@ export class Textarea {
             width,
             coordinate: {startRow: row, startCol: col},
             position,
-            type,
         } = startCell
         const pos = this.store.convertToMainCanvasPosition(position)
         const x = pos.startCol

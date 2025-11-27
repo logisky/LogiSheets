@@ -13,6 +13,8 @@ export interface RowHeadersProps {
     selectedRowRange?: [number, number]
     onResizeRow?: (rowIdx: number, deltaPx: number) => void
     sheetIdx: number
+    isEditing: boolean
+    setReferenceWhenEditing: (data: SelectedData) => void
 }
 export const RowHeaders: React.FC<RowHeadersProps> = ({
     grid,
@@ -20,6 +22,8 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
     onResizeRow,
     sheetIdx,
     selectedRowRange,
+    isEditing,
+    setReferenceWhenEditing,
 }) => {
     const hostRef = useRef<HTMLDivElement | null>(null)
     const [menuOpen, setMenuOpen] = useState(false)
@@ -65,7 +69,11 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
                 'row',
                 'none'
             )
-            setSelectedData(data)
+            if (isEditing) {
+                setReferenceWhenEditing(data)
+            } else {
+                setSelectedData(data)
+            }
         }
         const onUp = (ue: MouseEvent) => {
             window.removeEventListener('mousemove', onMove)
@@ -82,7 +90,11 @@ export const RowHeaders: React.FC<RowHeadersProps> = ({
                 'none'
             )
             setMenuCount(end - start + 1)
-            setSelectedData(data)
+            if (isEditing) {
+                setReferenceWhenEditing(data)
+            } else {
+                setSelectedData(data)
+            }
         }
         window.addEventListener('mousemove', onMove)
         window.addEventListener('mouseup', onUp)

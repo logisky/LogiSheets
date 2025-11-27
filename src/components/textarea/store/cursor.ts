@@ -67,7 +67,7 @@ export class Cursor {
     }
 
     @action
-    type(added: readonly Text[], removed: readonly Text[]) {
+    type(added: number, removed: number) {
         let currPosition = this.cursorPosition
         if (this.store.selection?.selection) {
             const {startColumn, startLine, startX, startY} =
@@ -80,8 +80,8 @@ export class Cursor {
                     .setY(startY)
             )
             return
-        } else currPosition -= removed.length
-        currPosition += added.length
+        } else currPosition -= removed
+        currPosition += added
         this.updatePosition(currPosition)
     }
 

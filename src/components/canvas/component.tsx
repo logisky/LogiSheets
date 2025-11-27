@@ -2,6 +2,7 @@ import {
     buildSelectedDataFromCell,
     buildSelectedDataFromCellRange,
     getFirstCell,
+    getReferenceString,
     getSelectedCellRange,
     getSelectedColumns,
     getSelectedRows,
@@ -90,7 +91,7 @@ export const CanvasComponent = (props: CanvasProps) => {
 const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
     const {
         selectedData,
-        selectedData$,
+        selectedData$: setSelectedData,
         activeSheet,
         activeSheet$,
         selectedDataContentChanged$,
@@ -117,6 +118,10 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             }
         }[]
     )
+    const [reference, setReference] = useState('')
+    // If the user is selecting a reference for its formula.
+    const [referenceWhenEditing, setReferenceWhenEditing] =
+        useState<SelectedData | null>(null)
 
     const render = async () => {
         return store.render().then((g) => {
@@ -730,16 +735,108 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         wheelRafIdRef.current = window.requestAnimationFrame(processFrame)
     }
 
+    const isEditingFormula = (): boolean => {
+        return (
+            store.textarea.editing &&
+            store.textarea.getText().trim().startsWith('=')
+        )
+    }
+
+    useEffect(() => {
+        if (!referenceWhenEditing) return
+        setReference(getReferenceString(referenceWhenEditing))
+    }, [referenceWhenEditing])
+
     const onMouseDown = async (e: MouseEvent) => {
+        if (isEditingFormula()) {
+            onMouseDownInputingFormula(e)
+            return
+        }
+        onMouseDownNormal(e)
+    }
+
+    const onMouseDownInputingFormula = async (e: MouseEvent) => {
         e.stopPropagation()
         e.preventDefault()
+
+        if (e.buttons !== Buttons.LEFT) return
+        if (!grid) return
+
+        const mouseMove$ = on(window, EventType.MOUSE_MOVE)
+        const mouseUp$ = on(window, EventType.MOUSE_UP)
+        // eslint-disable-next-line prefer-const
+        let startCell: Cell | undefined
+        let endCell: Cell | undefined
+
+        const sub = mouseMove$.pipe(takeUntil(mouseUp$)).subscribe((mme) => {
+            mme.preventDefault()
+            if (!grid) return
+            if (!startCell) return
+            const canvasSize = canvas()!.getBoundingClientRect()
+            const cell = match(
+                mme.clientX - canvasSize.left,
+                mme.clientY - canvasSize.top,
+                store.anchorX,
+                store.anchorY,
+                grid
+            )
+            if (!cell) return
+            endCell = cell
+            const {startRow, startCol} = startCell.coordinate
+            const {endRow, endCol} = endCell?.coordinate ?? startCell.coordinate
+            if (startRow === endRow && startCol === endCol) return
+            const data = buildSelectedDataFromCellRange(
+                startRow,
+                startCol,
+                endRow,
+                endCol,
+                'none'
+            )
+            setReferenceWhenEditing(data)
+        })
+        mouseUp$.pipe(take(1)).subscribe(() => {
+            sub.unsubscribe()
+            if (!startCell) return
+            if (startCell?.type !== endCell?.type && endCell) return
+
+            const {startRow, startCol} = startCell.coordinate
+            const {endRow, endCol} = endCell?.coordinate ?? startCell.coordinate
+            const data = buildSelectedDataFromCellRange(
+                startRow,
+                startCol,
+                endRow,
+                endCol,
+                'none'
+            )
+            setReferenceWhenEditing(data)
+        })
+
+        const canvasSize = canvas()!.getBoundingClientRect()
+
+        const matchCell = match(
+            e.clientX - canvasSize.left,
+            e.clientY - canvasSize.top,
+            store.anchorX,
+            store.anchorY,
+            grid
+        )
+        startCell = matchCell
+        const {startRow: row, startCol: col} = startCell.coordinate
+        const data = buildSelectedDataFromCell(row, col, 'none')
+        setReferenceWhenEditing(data)
+    }
+
+    const onMouseDownNormal = async (e: MouseEvent) => {
+        e.stopPropagation()
+        e.preventDefault()
+
+        if (e.buttons !== Buttons.LEFT) return
+        if (!grid) return
         const isBlur = await onBlur()
         if (!isBlur) {
             textEl.current?.focus()
             return
         }
-        if (e.buttons !== Buttons.LEFT) return
-        if (!grid) return
 
         canvas()!.focus({preventScroll: true})
         const mouseMove$ = on(window, EventType.MOUSE_MOVE)
@@ -770,7 +867,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 endCol,
                 'none'
             )
-            selectedData$(data)
+            setSelectedData(data)
         })
         mouseUp$.pipe(take(1)).subscribe(() => {
             store.type = undefined
@@ -789,7 +886,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 endCol,
                 'none'
             )
-            selectedData$(data)
+            setSelectedData(data)
         })
 
         const canvasSize = canvas()!.getBoundingClientRect()
@@ -805,7 +902,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         store.mousedown(e, matchCell)
         const {startRow: row, startCol: col} = matchCell.coordinate
         const data = buildSelectedDataFromCell(row, col, 'none')
-        selectedData$(data)
+        setSelectedData(data)
     }
 
     const onKeyDown = async (e: KeyboardEvent) => {
@@ -912,7 +1009,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                         col,
                         'none'
                     )
-                    selectedData$(newData)
+                    setSelectedData(newData)
                     return
                 }
                 const nextVisibleCell = await store.dataSvc
@@ -940,7 +1037,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     col,
                     'none'
                 )
-                selectedData$(newData)
+                setSelectedData(newData)
                 return
             }
             case 'down': {
@@ -958,7 +1055,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                         col,
                         'none'
                     )
-                    selectedData$(newData)
+                    setSelectedData(newData)
                     return
                 }
                 const nextVisibleCell = await store.dataSvc
@@ -989,7 +1086,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     col,
                     'none'
                 )
-                selectedData$(newData)
+                setSelectedData(newData)
                 return
             }
             case 'left': {
@@ -1008,7 +1105,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                         grid.columns[idx - 1].idx,
                         'none'
                     )
-                    selectedData$(newData)
+                    setSelectedData(newData)
                     return
                 }
                 const nextVisibleCell = await store.dataSvc
@@ -1036,7 +1133,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     nextVisibleCell.x,
                     'none'
                 )
-                selectedData$(newData)
+                setSelectedData(newData)
                 return
             }
             case 'right': {
@@ -1054,7 +1151,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                         grid.columns[idx + 1].idx,
                         'none'
                     )
-                    selectedData$(newData)
+                    setSelectedData(newData)
                     return
                 }
                 const nextVisibleCell = await store.dataSvc
@@ -1085,7 +1182,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     nextVisibleCell.x,
                     'none'
                 )
-                selectedData$(newData)
+                setSelectedData(newData)
                 return
             }
         }
@@ -1118,7 +1215,10 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         setContextMenuTop(e.clientY)
         setContextMenuOpen(true)
     }
-    const type = (text: string): Promise<FormulaDisplayInfo | undefined> => {
+    const type = async (
+        text: string
+    ): Promise<FormulaDisplayInfo | undefined> => {
+        setReference('')
         return store.textarea.updateText(text).then((v) => {
             if (v) {
                 setCellRefs(v.cellRefs)
@@ -1154,7 +1254,9 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
                 <ColumnHeaders
                     grid={grid ?? undefined}
-                    setSelectedData={selectedData$}
+                    isEditing={isEditingFormula()}
+                    setReferenceWhenEditing={setReferenceWhenEditing}
+                    setSelectedData={setSelectedData}
                     sheetIdx={activeSheet}
                     selectedColRange={selectedColumnRange}
                     onResizeCol={(colIdx, dx) => {
@@ -1182,7 +1284,9 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
                 <RowHeaders
                     grid={grid ?? undefined}
-                    setSelectedData={selectedData$}
+                    isEditing={isEditingFormula()}
+                    setReferenceWhenEditing={setReferenceWhenEditing}
+                    setSelectedData={setSelectedData}
                     sheetIdx={activeSheet}
                     selectedRowRange={selectedRowRange}
                     onResizeRow={(rowIdx, dy) => {
@@ -1279,19 +1383,24 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     context={store.textarea.context}
                     blur={onBlur}
                     type={type}
+                    insertion={reference.length === 0 ? undefined : reference}
                 />
             )}
-            <Modal
-                isOpen={invalidFormulaWarning}
-                ariaHideApp={false}
-                onRequestClose={onCloseInvalidFormulaWarning}
-                className={modalStyles.modalContent}
-                overlayClassName={modalStyles.modalOverlay}
-            >
-                <InvalidFormulaComponent
-                    close$={onCloseInvalidFormulaWarning}
-                />
-            </Modal>
+            {invalidFormulaWarning && (
+                <Modal
+                    isOpen={true}
+                    ariaHideApp={false}
+                    onRequestClose={onCloseInvalidFormulaWarning}
+                    shouldCloseOnEsc={true}
+                    shouldCloseOnOverlayClick={true}
+                    className={modalStyles.modalContent}
+                    overlayClassName={modalStyles.modalOverlay}
+                >
+                    <InvalidFormulaComponent
+                        close$={onCloseInvalidFormulaWarning}
+                    />
+                </Modal>
+            )}
             {highlightCells.map((cell, i) => {
                 const cellStyle = cell.style
                 return (
