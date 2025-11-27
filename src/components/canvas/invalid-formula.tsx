@@ -1,26 +1,38 @@
-import {MouseEvent} from 'react'
+import {Box, Typography, Button, Alert, AlertTitle, Stack} from '@mui/material'
 
 export interface InvalidFormulaProps {
     close$: () => void
 }
 export const InvalidFormulaComponent = ({close$}: InvalidFormulaProps) => {
-    const close = (e: MouseEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        close$()
-    }
     return (
-        <div>
-            <div>您输入的公式存在错误。</div>
-            <div>如果您输入的内容不是公式，请在第一个字符之前输入单引号。</div>
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                }}
-            >
-                <button onMouseDown={close}>确认</button>
-            </div>
-        </div>
+        <Box
+            sx={{
+                p: 2,
+                minWidth: 320,
+                maxWidth: 480,
+            }}
+        >
+            <Stack spacing={2}>
+                <Alert severity="error">
+                    <AlertTitle>Invalid Formula</AlertTitle>
+                    <Typography variant="body2" sx={{mb: 1}}>
+                        The formula you typed contains an error.
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        If you are not typing a formula, please add a single
+                        quote before the first character.
+                    </Typography>
+                </Alert>
+                <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
+                    <Button
+                        variant="contained"
+                        onClick={close$}
+                        sx={{textTransform: 'none'}}
+                    >
+                        OK
+                    </Button>
+                </Box>
+            </Stack>
+        </Box>
     )
 }

@@ -1,3 +1,5 @@
+import {toA1notation} from '@/core'
+
 export interface SelectedData {
     readonly data?:
         | {ty: 'line'; d: SelectedLines}
@@ -108,4 +110,30 @@ export function getSelectedColumns(v: SelectedData): number[] {
         return [v.data.d.start, v.data.d.end]
     }
     return []
+}
+
+export function getReferenceString(v: SelectedData): string {
+    if (v.data === undefined) return ''
+    if (v.data.ty === 'cellRange') {
+        const startRow = v.data.d.startRow
+        const endRow = v.data.d.endRow
+        const startCol = v.data.d.startCol
+        const endCol = v.data.d.endCol
+        if (startRow === endRow && startCol === endCol) {
+            return `${toA1notation(startCol)}${startRow + 1}`
+        }
+        return `${toA1notation(startCol)}${startRow + 1}:${toA1notation(
+            endCol
+        )}${endRow + 1}`
+    }
+
+    if (v.data.ty === 'line') {
+        if (v.data.d.type === 'col') {
+            return `${toA1notation(v.data.d.start)}:${toA1notation(
+                v.data.d.end
+            )}`
+        }
+        return `${v.data.d.start + 1}:${v.data.d.end + 1}`
+    }
+    return ''
 }

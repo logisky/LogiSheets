@@ -86,7 +86,7 @@ describe('cursor test', () => {
         })
         cursor.column = 1
         cursor.x = 1
-        cursor.type([1], [])
+        cursor.type(1, [])
         expect(cursor.column).toBe(2)
         // expect(cursor.x).toBe(6)
     })

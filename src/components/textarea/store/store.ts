@@ -28,6 +28,8 @@ export class TextareaStore {
     cursor: Cursor
     textManager: TextManager
     suggest: Suggest
+
+    prevInsertion?: string
 }
 
 // @ts-expect-error inject data when use context
