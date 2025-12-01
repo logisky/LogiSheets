@@ -1,5 +1,7 @@
 # LogiSheets
 
+![Logo](./docs/logo/logisheets.jpg)
+
 [![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT/Mit-blue.svg)](./LICENSE)
 
 ## What is LogiSheets?
