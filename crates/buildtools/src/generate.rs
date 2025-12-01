@@ -8,6 +8,7 @@ use logisheets_controller::{
     AppendixWithCell, CellInfo, ErrorMessage, FormulaDisplayInfo, SaveFileResult, SheetDimension,
 };
 use logisheets_server_types::{CraftData, CraftDescriptor, Resp};
+use logisheets_workbook::logisheets::AppData;
 
 fn main() {
     let path = "packages/web/src/bindings";
@@ -25,6 +26,7 @@ fn main() {
     file_group.add::<SaveFileResult>();
 
     file_group.add::<FormulaDisplayInfo>();
+    file_group.add::<AppData>();
 
     file_group.add::<CellInfo>();
     file_group.add::<BlockField>();

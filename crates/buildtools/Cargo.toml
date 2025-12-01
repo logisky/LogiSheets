@@ -10,6 +10,7 @@ gents = { workspace = true }
 logisheets_controller = { path = "../controller" }
 logisheets_sequencer = { path = "../sequencer" }
 logisheets_server_types = { path = "../server-types" }
+logisheets_workbook = { path = "../workbook" }
 
 [[bin]]
 name = "generate"

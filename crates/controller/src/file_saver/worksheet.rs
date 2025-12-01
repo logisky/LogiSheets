@@ -104,6 +104,7 @@ pub fn save_sheets<S: SaverTrait>(
                 .collect::<Vec<_>>();
             if let Ok((row_idx, col_idx)) = saver.fetch_normal_cell_index(&sheet_id, &master) {
                 Some(BlockRange {
+                    block_id: *block_id,
                     start_row: row_idx,
                     start_col: col_idx,
                     row_cnt: block.rows.len(),

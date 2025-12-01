@@ -1,5 +1,6 @@
 use super::rtypes::*;
 use super::SerdeErr;
+use crate::logisheets::LogiSheetsData;
 use crate::ooxml::doc_props::DocPropApp;
 use crate::ooxml::doc_props::DocPropCore;
 use crate::ooxml::doc_props::DocPropCustom;
@@ -37,6 +38,7 @@ pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
     let mut doc_prop_core = Option::<DocPropCore>::None;
     let mut doc_prop_custom = Option::<DocPropCustom>::None;
     let mut doc_prop_app = Option::<DocPropApp>::None;
+    let mut logisheets = Option::<LogiSheetsData>::None;
     relationships
         .relationships
         .into_iter()
@@ -78,6 +80,17 @@ pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
                     }
                 }
             }
+            LOGISHEETS_APP_DATA => {
+                let target = &p.target;
+                match de_logisheets_data(target, &mut archive) {
+                    Ok(data) => {
+                        logisheets = Some(data);
+                    }
+                    Err(e) => {
+                        println!("parsing file: {:?} but meet error:{:?}", target, e)
+                    }
+                }
+            }
             _ => {}
         });
     let xl = xl?;
@@ -89,7 +102,7 @@ pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
     Ok(Wb {
         xl,
         doc_props,
-        logisheets: None,
+        logisheets,
     })
 }
 
@@ -294,6 +307,7 @@ define_de_func!(de_theme, ThemePart);
 define_de_func!(de_doc_prop_custom, DocPropCustom);
 define_de_func!(de_doc_prop_app, DocPropApp);
 define_de_func!(de_doc_prop_core, DocPropCore);
+define_de_func!(de_logisheets_data, LogiSheetsData);
 
 /// Given a path `/foo/test.xml`, find its relationships `/foo/_rels/test.xml.rels`
 fn get_rels(path: &str) -> Result<PathBuf, SerdeErr> {

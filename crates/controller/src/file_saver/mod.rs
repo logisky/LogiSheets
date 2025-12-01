@@ -2,7 +2,7 @@ use logisheets_base::{
     errors::BasicError, index_fetcher::IndexFetcherTrait, name_fetcher::NameFetcherTrait, ColId,
     Cube, RowId, SheetId, TextId,
 };
-use logisheets_workbook::{logisheets::AppData, workbook::Wb};
+use logisheets_workbook::workbook::Wb;
 
 use crate::{
     cube_manager::CubeManager,
@@ -28,10 +28,7 @@ mod utils;
 mod workbook;
 mod worksheet;
 
-pub fn save_file(
-    controller: &Controller,
-    app_data: Vec<AppData>,
-) -> std::result::Result<Wb, SaveError> {
+pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> {
     let func_manager = &controller.status.func_id_manager;
     let external_links_manager = &controller.status.external_links_manager;
     let text_id_manager = &controller.status.text_id_manager;
@@ -43,7 +40,7 @@ pub fn save_file(
 
     let data_container = &controller.status.container;
     let attachment_manager = &controller.status.cell_attachment_manager;
-    let sheet_pos_manager = &controller.status.sheet_pos_manager;
+    let sheet_pos_manager = &controller.status.sheet_info_manager;
     let sheet_id_manager = &controller.status.sheet_id_manager;
     let style_manager = &controller.status.style_manager;
     let ext_book_manager = &controller.status.external_links_manager;
@@ -80,7 +77,7 @@ pub fn save_file(
         text_id_manager,
         &controller.status.navigator,
         settings,
-        app_data,
+        controller.app_data.clone(),
         &mut saver,
     )
 }

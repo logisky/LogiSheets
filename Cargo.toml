@@ -23,7 +23,6 @@ members = [
     "crates/controller/lexer",
     "crates/controller/lexer4fmt",
     "crates/controller/parser",
-    "crates/formatter",
     "crates/logiscript",
     "crates/mock-server",
     "crates/sequencer",

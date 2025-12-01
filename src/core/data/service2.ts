@@ -16,9 +16,6 @@ import {
     Payload,
     SetRowHeightBuilder,
 } from 'logisheets-web'
-import {Grid as SheetGrid} from '../worker/types'
-import {sheetCellIdToString} from './clients/workbook'
-import {pxToPt} from '../rate'
 
 export const MAX_COUNT = 10000
 type SheetId = number

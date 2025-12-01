@@ -83,7 +83,7 @@ impl<'a> Executor<'a> {
                 if let Some(idx) = idx {
                     let id = result
                         .status
-                        .sheet_pos_manager
+                        .sheet_info_manager
                         .get_sheet_id(idx)
                         .ok_or(Error::Basic(BasicError::SheetIdxExceed(idx)))?;
                     let old_name = manager
@@ -145,7 +145,7 @@ impl<'a> Executor<'a> {
             };
 
         let (sheet_pos_manager, sheet_updated) = result.execute_sheet_info(&payload)?;
-        result.status.sheet_pos_manager = sheet_pos_manager;
+        result.status.sheet_info_manager = sheet_pos_manager;
 
         Ok(Executor {
             status: Status {
@@ -160,7 +160,7 @@ impl<'a> Executor<'a> {
                 text_id_manager: result.status.text_id_manager,
                 name_id_manager: result.status.name_id_manager,
                 external_links_manager: result.status.external_links_manager,
-                sheet_pos_manager: result.status.sheet_pos_manager,
+                sheet_info_manager: result.status.sheet_info_manager,
                 style_manager: result.status.style_manager,
                 cell_attachment_manager: result.status.cell_attachment_manager,
                 dirty_cells_next_round: result.status.dirty_cells_next_round,
@@ -195,7 +195,7 @@ impl<'a> Executor<'a> {
             sheet_id_manager: &self.status.sheet_id_manager,
             names_storage: HashMap::new(),
             cells_storage: HashMap::new(),
-            sheet_pos_manager: &mut self.status.sheet_pos_manager,
+            sheet_pos_manager: &mut self.status.sheet_info_manager,
             async_func_manager: &mut self.async_func_manager,
             async_funcs: &self.async_funcs,
             active_sheet: 0,
@@ -224,7 +224,7 @@ impl<'a> Executor<'a> {
             name_id_manager: &mut self.status.name_id_manager,
             external_links_manager: &mut self.status.external_links_manager,
             navigator: &self.status.navigator,
-            sheet_pos_manager: &self.status.sheet_pos_manager,
+            sheet_pos_manager: &self.status.sheet_info_manager,
         };
         let executor = RangeExecutor::new(self.status.range_manager.clone());
         executor.execute(&ctx, payload)
@@ -238,7 +238,7 @@ impl<'a> Executor<'a> {
             name_id_manager: &mut self.status.name_id_manager,
             external_links_manager: &mut self.status.external_links_manager,
             navigator: &self.status.navigator,
-            sheet_pos_manager: &self.status.sheet_pos_manager,
+            sheet_pos_manager: &self.status.sheet_info_manager,
         };
         let executor = CubeExecutor::new(self.status.cube_manager.clone());
         executor.execute(&ctx, payload)
@@ -246,7 +246,7 @@ impl<'a> Executor<'a> {
 
     fn execute_navigator(&mut self, payload: EditPayload) -> Result<(NavExecutor, bool), Error> {
         let mut ctx = NavigatorConnector {
-            sheet_pos_manager: &self.status.sheet_pos_manager,
+            sheet_pos_manager: &self.status.sheet_info_manager,
             sheet_id_manager: &mut self.status.sheet_id_manager,
         };
         let executor = NavExecutor::new(self.status.navigator.clone());
@@ -258,7 +258,7 @@ impl<'a> Executor<'a> {
         payload: EditPayload,
     ) -> Result<(CellAttachmentsExecutor, bool), Error> {
         let mut ctx = CellAttachmentsConnector {
-            sheet_pos_manager: &self.status.sheet_pos_manager,
+            sheet_pos_manager: &self.status.sheet_info_manager,
             navigator: &self.status.navigator,
             sheet_id_manager: &mut self.status.sheet_id_manager,
             name_id_manager: &mut self.status.name_id_manager,
@@ -281,7 +281,7 @@ impl<'a> Executor<'a> {
             name_id_manager: &mut self.status.name_id_manager,
             external_links_manager: &mut self.status.external_links_manager,
             navigator: &self.status.navigator,
-            sheet_pos_manager: &self.status.sheet_pos_manager,
+            sheet_pos_manager: &self.status.sheet_info_manager,
             style_manager: &mut self.status.style_manager,
         };
         let executor = ContainerExecutor::new(self.status.container.clone());
@@ -299,7 +299,7 @@ impl<'a> Executor<'a> {
             name_id_manager: &mut self.status.name_id_manager,
             external_links_manager: &mut self.status.external_links_manager,
             navigator: &self.status.navigator,
-            sheet_pos_manager: &self.status.sheet_pos_manager,
+            sheet_pos_manager: &self.status.sheet_info_manager,
             style_manager: &mut self.status.style_manager,
         };
         let executor = ExclusiveManagerExecutor::new(self.status.exclusive_manager.clone());
@@ -321,7 +321,7 @@ impl<'a> Executor<'a> {
         };
         let new_manager = self
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .clone()
             .execute(payload, &mut ctx)?;
         Ok((new_manager, ctx.updated))
@@ -336,7 +336,7 @@ impl<'a> Executor<'a> {
     ) -> Result<FormulaExecutor, Error> {
         let mut ctx = FormulaConnector {
             book_name: self.book_name,
-            sheet_pos_manager: &mut self.status.sheet_pos_manager,
+            sheet_pos_manager: &mut self.status.sheet_info_manager,
             sheet_id_manager: &mut self.status.sheet_id_manager,
             text_id_manager: &mut self.status.text_id_manager,
             func_id_manager: &mut self.status.func_id_manager,

@@ -95,6 +95,7 @@ export enum MethodName {
     GetNextVisibleCell = 'getNextVisibleCell',
 
     GetAllBlockFields = 'getAllBlockFields',
+    GetAppData = 'getAppData',
 }
 
 export enum OffscreenRenderName {

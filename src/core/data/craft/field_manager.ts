@@ -47,38 +47,13 @@ interface FieldKey {
  */
 export class FieldManager {
     private fields: Map<string, FieldInfo> = new Map()
-    private fieldIdCounter: number = 0
-    private usedFieldIds: Set<string> = new Set()
-
-    /**
-     * Generate a composite key for field storage
-     */
-    private getKey(sheetId: number, blockId: number, fieldId: string): string {
-        return `${sheetId}:${blockId}:${fieldId}`
-    }
-
-    /**
-     * Parse a composite key back into components
-     */
-    private parseKey(key: string): FieldKey {
-        const [sheetId, blockId, fieldId] = key.split(':')
-        return {
-            sheetId: parseInt(sheetId, 10),
-            blockId: parseInt(blockId, 10),
-            fieldId,
-        }
-    }
 
     /**
      * Generate a unique field ID
      * @returns A unique field ID that will never be reused
      */
     private generateFieldId(): string {
-        let id: string
-        do {
-            id = `field_${++this.fieldIdCounter}_${Date.now()}`
-        } while (this.usedFieldIds.has(id))
-        this.usedFieldIds.add(id)
+        const id = `field_${Date.now()}`
         return id
     }
 
@@ -103,26 +78,18 @@ export class FieldManager {
             blockId,
         }
 
-        const key = this.getKey(sheetId, blockId, fieldId)
-        this.fields.set(key, fieldInfo)
+        this.fields.set(fieldId, fieldInfo)
 
         return fieldInfo
     }
 
     /**
      * Get a field by its composite key
-     * @param sheetId The sheet ID
-     * @param blockId The block ID
      * @param fieldId The field ID
      * @returns The FieldInfo if found, undefined otherwise
      */
-    get(
-        sheetId: number,
-        blockId: number,
-        fieldId: string
-    ): FieldInfo | undefined {
-        const key = this.getKey(sheetId, blockId, fieldId)
-        return this.fields.get(key)
+    get(fieldId: string): FieldInfo | undefined {
+        return this.fields.get(fieldId)
     }
 
     /**
@@ -160,35 +127,27 @@ export class FieldManager {
 
     /**
      * Check if a field exists
-     * @param sheetId The sheet ID
-     * @param blockId The block ID
      * @param fieldId The field ID
      * @returns true if the field exists, false otherwise
      */
-    has(sheetId: number, blockId: number, fieldId: string): boolean {
-        const key = this.getKey(sheetId, blockId, fieldId)
-        return this.fields.has(key)
+    has(fieldId: string): boolean {
+        return this.fields.has(fieldId)
     }
 
     /**
      * Update a field (ID cannot be changed)
-     * @param sheetId The sheet ID
-     * @param blockId The block ID
      * @param fieldId The field ID
      * @param updates Partial field updates
      * @returns The updated FieldInfo, or undefined if field not found
      * @throws Error if attempting to change the field ID
      */
     update(
-        sheetId: number,
-        blockId: number,
         fieldId: string,
         updates: Partial<
             Omit<FieldInfo, 'id' | 'sheetId' | 'blockId' | 'createdAt'>
         >
     ): FieldInfo | undefined {
-        const key = this.getKey(sheetId, blockId, fieldId)
-        const field = this.fields.get(key)
+        const field = this.fields.get(fieldId)
 
         if (!field) {
             return undefined
@@ -203,22 +162,18 @@ export class FieldManager {
             blockId: field.blockId,
         }
 
-        this.fields.set(key, updatedField)
+        this.fields.set(fieldId, updatedField)
         return updatedField
     }
 
     /**
      * Delete a field
-     * @param sheetId The sheet ID
-     * @param blockId The block ID
      * @param fieldId The field ID
      * @returns true if the field was deleted, false if it didn't exist
      * @note The field ID will never be reused even after deletion
      */
-    delete(sheetId: number, blockId: number, fieldId: string): boolean {
-        const key = this.getKey(sheetId, blockId, fieldId)
-        // Note: fieldId remains in usedFieldIds to prevent reuse
-        return this.fields.delete(key)
+    delete(fieldId: string): boolean {
+        return this.fields.delete(fieldId)
     }
 
     /**
@@ -230,7 +185,7 @@ export class FieldManager {
     deleteBlock(sheetId: number, blockId: number): number {
         const fieldsToDelete = this.getByBlock(sheetId, blockId)
         fieldsToDelete.forEach((field) => {
-            this.delete(sheetId, blockId, field.id)
+            this.delete(field.id)
         })
         return fieldsToDelete.length
     }
@@ -243,7 +198,7 @@ export class FieldManager {
     deleteSheet(sheetId: number): number {
         const fieldsToDelete = this.getBySheet(sheetId)
         fieldsToDelete.forEach((field) => {
-            this.delete(field.sheetId, field.blockId, field.id)
+            this.delete(field.id)
         })
         return fieldsToDelete.length
     }
@@ -278,28 +233,14 @@ export class FieldManager {
     }
 
     /**
-     * Export all fields as JSON
-     * @returns JSON string representation of all fields
-     */
-    toJSON(): string {
-        return JSON.stringify({
-            fields: Array.from(this.fields.entries()),
-            fieldIdCounter: this.fieldIdCounter,
-            usedFieldIds: Array.from(this.usedFieldIds),
-        })
-    }
-
-    /**
      * Import fields from JSON
      * @param json JSON string representation of fields
      * @throws Error if JSON is invalid
      */
     fromJSON(json: string): void {
         try {
-            const data = JSON.parse(json)
-            this.fields = new Map(data.fields)
-            this.fieldIdCounter = data.fieldIdCounter || 0
-            this.usedFieldIds = new Set(data.usedFieldIds || [])
+            const data = JSON.parse(json) as FieldInfo[]
+            this.fields = new Map(data.map((f) => [f.id, f]))
         } catch (error) {
             throw new Error(`Failed to import fields from JSON: ${error}`)
         }

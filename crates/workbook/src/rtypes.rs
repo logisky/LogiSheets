@@ -25,7 +25,7 @@ pub const DOC_PROP_CUSTOM: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties");
 
 pub const LOGISHEETS_APP_DATA: RType =
-    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-data");
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/logisheets");
 
 impl<'a> PartialEq<str> for RType<'a> {
     fn eq(&self, other: &str) -> bool {

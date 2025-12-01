@@ -73,8 +73,8 @@ pub fn save_file(id: usize, app_data: String) -> JsValue {
 }
 
 pub fn save_file_impl(id: usize, app_data: String) -> SaveFileResult {
-    let manager = MANAGER.get();
-    let ctrl = manager.get_workbook(&id);
+    let mut manager = MANAGER.get_mut();
+    let ctrl = manager.get_mut_workbook(&id);
     if ctrl.is_none() {
         return SaveFileResult {
             code: 1,
@@ -82,10 +82,11 @@ pub fn save_file_impl(id: usize, app_data: String) -> SaveFileResult {
         };
     }
     let ctrl = ctrl.unwrap();
-    if let Ok(data) = ctrl.save(vec![AppData {
+    ctrl.set_app_data(vec![AppData {
         name: "logisheets".to_string(),
-        data: app_data,
-    }]) {
+        data: app_data.clone(),
+    }]);
+    if let Ok(data) = ctrl.save() {
         SaveFileResult { data, code: 0 }
     } else {
         SaveFileResult {
@@ -93,6 +94,17 @@ pub fn save_file_impl(id: usize, app_data: String) -> SaveFileResult {
             code: 1,
         }
     }
+}
+
+#[wasm_bindgen]
+pub fn get_app_data(id: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let data = manager
+        .get_workbook(&id)
+        .map(|ctrl| ctrl.get_app_data())
+        .unwrap_or_default();
+    serde_wasm_bindgen::to_value(&data).unwrap()
 }
 
 #[wasm_bindgen]

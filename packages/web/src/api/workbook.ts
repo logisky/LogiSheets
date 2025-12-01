@@ -1,5 +1,4 @@
 import {
-    save_file,
     block_input,
     block_line_name_field_update,
     block_line_num_fmt_update,
@@ -19,6 +18,7 @@ import {
     ephemeral_cell_input,
     get_all_block_fields,
     get_all_sheet_info,
+    get_app_data,
     get_available_block_id,
     get_block_col_id,
     get_block_row_id,
@@ -43,6 +43,7 @@ import {
     resize_block,
     row_delete,
     row_insert,
+    save_file,
     set_cell_alignment,
     set_cell_border,
     set_cell_format_brush,
@@ -75,6 +76,7 @@ import {
     SheetCellId,
     SheetInfo,
     SaveFileResult,
+    AppData,
 } from '../bindings'
 import {Payload} from '../payloads'
 import {ColId, RowId, Transaction} from '../types'
@@ -371,6 +373,10 @@ export class Workbook {
 
     public save(data: string): SaveFileResult {
         return save_file(this._id, data)
+    }
+
+    public getAppData(): readonly AppData[] {
+        return get_app_data(this._id)
     }
 
     public release() {

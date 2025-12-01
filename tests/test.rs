@@ -95,7 +95,7 @@ mod test_6 {
         let mut buf = fs::read("tests/6.xlsx").unwrap();
         let wb = Workbook::from_file(&mut buf, String::from("6")).unwrap();
 
-        let buf = wb.save(vec![]).unwrap();
+        let buf = wb.save().unwrap();
         fs::write("tests/6_save.xlsx", buf).unwrap()
     }
 
@@ -151,6 +151,32 @@ mod test_6 {
                 let _ = ws.get_style(r, c).unwrap();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test_7 {
+
+    #[test]
+    fn test_style() {
+        use logisheets::Workbook;
+        use std::fs;
+        let mut buf = fs::read("tests/7.xlsx").unwrap();
+        let wb = Workbook::from_file(&mut buf, String::from("7")).unwrap();
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        ws.get_display_window_response(0., 0., 100., 100.).unwrap();
+
+        let a1_info = ws.get_cell_info(0, 0).unwrap();
+        let s = a1_info.style;
+        let f_color = s.font.color.unwrap();
+        assert_eq!(f_color.red.unwrap(), 0.);
+        assert_eq!(f_color.green.unwrap(), 0.);
+        assert_eq!(f_color.blue.unwrap(), 0.);
+        let c5_info = ws.get_cell_info(4, 2).unwrap();
+        let _s = c5_info.style;
+        // println!("{:?}", s.font.color);
+        let row1 = ws.get_row_info(0).unwrap();
+        assert!(row1.height > 70.);
     }
 }
 

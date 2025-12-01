@@ -14,7 +14,7 @@ use crate::edit_action::{
     WorkbookUpdateType,
 };
 use crate::errors::{Error, Result};
-use crate::file_loader2::load;
+use crate::file_loader2::load_file;
 use crate::file_saver::save_file;
 use crate::formula_manager::Vertex;
 use crate::settings::Settings;
@@ -33,6 +33,8 @@ pub struct Controller {
     pub settings: Settings,
     pub version_manager: VersionManager,
     pub sid_assigner: ShadowIdAssigner,
+
+    pub app_data: Vec<AppData>,
 }
 
 impl Default for Controller {
@@ -44,6 +46,7 @@ impl Default for Controller {
             version_manager: VersionManager::default(),
             async_func_manager: AsyncFuncManager::default(),
             sid_assigner: ShadowIdAssigner::new(),
+            app_data: vec![],
         };
         let add_sheet = PayloadsAction::new()
             .add_payload(CreateSheet {
@@ -59,12 +62,17 @@ impl Default for Controller {
 impl Controller {
     // TODO: Due to the UUID generating, we can't just `assert_eq!(file1, file2)` where
     // `file1` and `file2` are binary got from saving of the same file. Fix it.
-    pub fn save(&self, app_data: Vec<AppData>) -> Result<Vec<u8>> {
-        let workbook = save_file(self, app_data)?;
+    pub fn save(&self) -> Result<Vec<u8>> {
+        let workbook = save_file(self)?;
         write(workbook).map_err(|e| Error::Serde(e.into()))
     }
 
-    pub fn from(status: Status, book_name: String, settings: Settings) -> Self {
+    pub fn from(
+        status: Status,
+        book_name: String,
+        settings: Settings,
+        app_data: Vec<AppData>,
+    ) -> Self {
         Controller {
             curr_book_name: book_name,
             settings,
@@ -72,6 +80,7 @@ impl Controller {
             version_manager: VersionManager::default(),
             async_func_manager: AsyncFuncManager::default(),
             sid_assigner: ShadowIdAssigner::new(),
+            app_data,
         }
     }
 
@@ -81,11 +90,11 @@ impl Controller {
 
     pub fn from_file(name: String, f: &[u8]) -> Result<Self> {
         let res = read(f)?;
-        Ok(load(res, name))
+        Ok(load_file(res, name))
     }
 
     pub fn get_sheet_id_by_idx(&self, idx: usize) -> Option<SheetId> {
-        self.status.sheet_pos_manager.get_sheet_id(idx)
+        self.status.sheet_info_manager.get_sheet_id(idx)
     }
 
     pub fn get_sheet_id_by_name(&self, name: &str) -> Option<SheetId> {
@@ -94,7 +103,7 @@ impl Controller {
 
     pub fn get_all_sheet_info(&self) -> Vec<SheetInfo> {
         let id_manager = &self.status.sheet_id_manager;
-        let info_manager = &self.status.sheet_pos_manager;
+        let info_manager = &self.status.sheet_info_manager;
         info_manager
             .pos
             .iter()

@@ -94,6 +94,13 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 // todo!
                 return
             }
+            let appData = await DATA_SERVICE.getWorkbook().getAppData()
+            if (isErrorMessage(appData)) appData = []
+            appData.forEach((d) => {
+                if (d.name === 'logisheets') {
+                    CRAFT_MANAGER.parseAppData(d.data)
+                }
+            })
             setGrid(grid)
             setBookName(file.name.replace(/\.[^/.]+$/, ''))
         })
@@ -680,6 +687,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                             closeFileMenu()
                             onOpenClick()
                         }}
+                        sx={{fontSize: 12}}
                     >
                         <FolderOpenIcon
                             fontSize="small"
@@ -687,7 +695,13 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                         />
                         Open
                     </MenuItem>
-                    <MenuItem onClick={onSave}>
+                    <MenuItem
+                        onClick={() => {
+                            closeFileMenu()
+                            onSave()
+                        }}
+                        sx={{fontSize: 12}}
+                    >
                         <SaveIcon fontSize="small" style={{marginRight: 8}} />
                         Save
                     </MenuItem>

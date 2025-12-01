@@ -63,8 +63,18 @@ impl Workbook {
     }
 
     #[inline]
-    pub fn save(&self, app_data: Vec<AppData>) -> Result<Vec<u8>> {
-        self.controller.save(app_data)
+    pub fn get_app_data(&self) -> Vec<AppData> {
+        self.controller.app_data.clone()
+    }
+
+    #[inline]
+    pub fn set_app_data(&mut self, app_data: Vec<AppData>) {
+        self.controller.app_data = app_data;
+    }
+
+    #[inline]
+    pub fn save(&self) -> Result<Vec<u8>> {
+        self.controller.save()
     }
 
     #[inline]
@@ -159,7 +169,7 @@ impl Workbook {
     pub fn get_sheet_idx_by_id(&self, sheet_id: SheetId) -> Result<usize> {
         self.controller
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .get_sheet_idx(&sheet_id)
             .ok_or(BasicError::UnavailableSheetId(sheet_id).into())
     }
@@ -177,7 +187,7 @@ impl Workbook {
     pub fn get_sheet_idx_by_name(&self, name: &str) -> Result<usize> {
         let sheet_id = self.controller.get_sheet_id_by_name(name);
         if let Some(id) = sheet_id {
-            if let Some(idx) = self.controller.status.sheet_pos_manager.get_sheet_idx(&id) {
+            if let Some(idx) = self.controller.status.sheet_info_manager.get_sheet_idx(&id) {
                 Ok(idx)
             } else {
                 Err(BasicError::SheetNameNotFound(name.to_string()).into())
@@ -199,7 +209,7 @@ impl Workbook {
     }
 
     pub fn get_sheet_count(&self) -> usize {
-        self.controller.status.sheet_pos_manager.pos.len()
+        self.controller.status.sheet_info_manager.pos.len()
     }
 
     /// To see if the formula is valid.
@@ -226,7 +236,7 @@ impl Workbook {
         let sheet_id = self
             .controller
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .get_sheet_id(sheet_idx)
             .ok_or(BasicError::SheetIdxExceed(sheet_idx))?;
         let block_id = self
@@ -246,7 +256,7 @@ impl Workbook {
         let sheet_id = self
             .controller
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .get_sheet_id(sheet_idx)
             .ok_or(BasicError::SheetIdxExceed(sheet_idx))?;
         let cell_id = self
@@ -276,7 +286,7 @@ impl Workbook {
         let sheet_id = self
             .controller
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .get_sheet_id(sheet_idx)
             .ok_or(BasicError::SheetIdxExceed(sheet_idx))?;
         row_idx
@@ -351,7 +361,7 @@ impl Workbook {
         let sheet_id = self
             .controller
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .get_sheet_id(sheet_idx)
             .unwrap();
 
@@ -377,7 +387,7 @@ impl Workbook {
         let sheet_id = self
             .controller
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .get_sheet_id(sheet_idx)
             .unwrap();
         if let StatusCode::Ok(_) = effect.status {
@@ -407,7 +417,7 @@ impl Workbook {
     pub fn get_worksheet_id(&self, sheet_idx: usize) -> Result<SheetId> {
         self.controller
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .get_sheet_id(sheet_idx)
             .ok_or(BasicError::SheetIdxExceed(sheet_idx).into())
     }

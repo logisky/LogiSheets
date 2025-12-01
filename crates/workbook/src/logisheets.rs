@@ -1,3 +1,4 @@
+use gents_derives::TS;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 /// Stores the LogiSheets-specific data.
@@ -23,6 +24,8 @@ pub struct LogiSheetsData {
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct BlockRange {
+    #[xmlserde(name = b"blockId", ty = "attr")]
+    pub block_id: usize,
     #[xmlserde(name = b"startRow", ty = "attr")]
     pub start_row: usize,
     #[xmlserde(name = b"startCol", ty = "attr")]
@@ -71,7 +74,8 @@ pub struct Sheet {
     pub cell_appendices: Vec<CellAppendix>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, XmlSerialize, XmlDeserialize, Clone, TS)]
+#[ts(file_name = "app_data.ts")]
 pub struct AppData {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
