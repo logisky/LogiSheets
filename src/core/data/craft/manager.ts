@@ -695,14 +695,20 @@ export class CraftManager {
     public getPersistentData(blockFields: readonly BlockField[]): string {
         const fieldInfos: FieldInfo[] = []
         blockFields.forEach((f) => {
-            const info = this.fieldManager.get(f.sheetId, f.blockId, f.fieldId)
+            const info = this.fieldManager.get(f.fieldId)
             if (info === undefined) return
             fieldInfos.push(info)
         })
         const fieldInfosJson = JSON.stringify(fieldInfos)
         const enumSetJson = this.enumSetManager.toJSON()
 
-        return `{fields: ${fieldInfosJson}, enumSets: ${enumSetJson}}`
+        return JSON.stringify({fields: fieldInfosJson, enumSets: enumSetJson})
+    }
+
+    public parseAppData(data: string) {
+        const {fields, enumSets} = JSON.parse(data)
+        this.enumSetManager.fromJSON(enumSets)
+        this.fieldManager.fromJSON(fields)
     }
 
     public async getId(): ResultAsync<string> {

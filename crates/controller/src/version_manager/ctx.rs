@@ -90,7 +90,7 @@ impl<'a> IdFetcherTrait for VersionExecCtxImpl<'a> {
 
 impl<'a> SheetIdFetcherByIdxTrait for VersionExecCtxImpl<'a> {
     fn fetch_sheet_id_by_index(&self, idx: usize) -> Result<SheetId, usize> {
-        let sheet_pos_manager = &self.status.sheet_pos_manager;
+        let sheet_pos_manager = &self.status.sheet_info_manager;
         sheet_pos_manager
             .get_sheet_id(idx)
             .ok_or(sheet_pos_manager.pos.len())

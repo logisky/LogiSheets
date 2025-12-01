@@ -122,7 +122,15 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
 
     if let Some(logisheets) = wb.logisheets {
         let p = write_logisheets_data(logisheets, &mut writer)?;
+        let relationship = CtRelationship {
+            id: format!("rId{}", i),
+            target_mode: StTargetMode::Internal,
+            target: String::from("logisheets/data.xml"),
+            ty: p.rtype.0.to_string(),
+        };
         proofs.push(p);
+        relationships.push(relationship);
+        // i += 1;
     }
 
     let ps = write_xl(wb.xl, &mut writer)?;
@@ -223,13 +231,11 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
 
 fn write_logisheets_data(data: LogiSheetsData, writer: &mut Writer) -> ZipResult<WriteProof> {
     writer.add_directory("logisheets", options())?;
-    writer
-        .start_file("logisheets/app_data.xml", options())
-        .unwrap();
+    writer.start_file("logisheets/data.xml", options()).unwrap();
     let s = xml_serialize_with_decl(data);
     writer.write(s.as_bytes())?;
     Ok(WriteProof {
-        path: FileLocation::from("logisheets/app_data.xml"),
+        path: FileLocation::from("logisheets/data.xml"),
         rtype: LOGISHEETS_APP_DATA,
     })
 }

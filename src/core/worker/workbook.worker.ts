@@ -51,6 +51,7 @@ import {
     ActionEffect,
     BlockField,
     SaveParams,
+    AppData,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName, Result, IWorkbookWorker} from './types'
 import {SaveFileResult} from 'packages/web'
@@ -296,6 +297,10 @@ export class WorkerService implements IWorkbookWorker {
         return this._workbookImpl!.save(appData)
     }
 
+    public getAppData(): Result<readonly AppData[]> {
+        return this._workbookImpl!.getAppData()
+    }
+
     public getAllBlockFields(): Result<readonly BlockField[]> {
         return this.workbook.getAllBlockFields()
     }
@@ -448,6 +453,9 @@ export class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetAllBlockFields:
                 result = this.getAllBlockFields()
+                break
+            case MethodName.GetAppData:
+                result = this.getAppData()
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

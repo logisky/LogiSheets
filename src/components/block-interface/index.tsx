@@ -52,10 +52,8 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                     xForColEnd(info.colStart + info.colCnt - 1, grid) - x
                 const height =
                     yForRowEnd(info.rowStart + info.rowCnt - 1, grid) - y
-                const fieldInfos = info.colInfos.map((colInfo, idx) => {
+                const fieldInfos = info.colInfos.map((colInfo, _idx) => {
                     const result = CRAFT_MANAGER.fieldManager.get(
-                        info.sheetId,
-                        info.blockId,
                         colInfo.fieldId
                     )
 

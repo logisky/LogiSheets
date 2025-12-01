@@ -55,6 +55,7 @@ import {
     BlockField,
     SaveFileResult,
     SaveParams,
+    AppData,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from '../../worker/types'
 
@@ -220,6 +221,9 @@ export class WorkbookClient implements Client {
     }
     getValue(params: GetCellValueParams): Resp<Value> {
         return this._call(MethodName.GetCellValue, params) as Resp<Value>
+    }
+    getAppData(): Resp<readonly AppData[]> {
+        return this._call(MethodName.GetAppData) as Resp<readonly AppData[]>
     }
     getReproducibleCell(
         params: GetReproducibleCellParams

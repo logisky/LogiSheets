@@ -200,6 +200,7 @@ dependencies = [
  "logisheets_controller",
  "logisheets_sequencer",
  "logisheets_server_types",
+ "logisheets_workbook",
 ]
 
 [[package]]
@@ -1074,14 +1075,6 @@ dependencies = [
  "unicode-segmentation",
  "uuid",
  "wildescape",
-]
-
-[[package]]
-name = "logisheets_formatter"
-version = "0.7.0"
-dependencies = [
- "lazy_static",
- "regex",
 ]
 
 [[package]]

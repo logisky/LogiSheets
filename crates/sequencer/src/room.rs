@@ -28,7 +28,7 @@ impl RoomServer {
                         let resp = SequencerMessage::Join(SequencerInitWorkbook {
                             version: ctrl.version(),
                             file_id: m.file,
-                            data: Some(ctrl.save(vec![]).unwrap()),
+                            data: Some(ctrl.save().unwrap()),
                         });
                         self.sender.send(resp).await.unwrap();
                     }

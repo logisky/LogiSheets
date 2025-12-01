@@ -12,6 +12,17 @@ pub struct BlockLineInfo {
     pub diy_render: Option<bool>,
 }
 
+impl From<logisheets_workbook::logisheets::BlockLineInfo> for BlockLineInfo {
+    fn from(value: logisheets_workbook::logisheets::BlockLineInfo) -> Self {
+        BlockLineInfo {
+            style: value.style,
+            name: value.name,
+            field_id: value.field_id,
+            diy_render: value.diy_render,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct LineInfoManager<T> {
     data: HashMap<(BlockId, T), BlockLineInfo>,

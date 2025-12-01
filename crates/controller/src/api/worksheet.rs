@@ -918,7 +918,7 @@ impl<'a> Worksheet<'a> {
         let sheet_idx = self
             .controller
             .status
-            .sheet_pos_manager
+            .sheet_info_manager
             .get_sheet_idx(&self.sheet_id)
             .unwrap();
         let sheet_nav = sheet_nav.unwrap();
@@ -1315,7 +1315,7 @@ impl<'a> Worksheet<'a> {
             sheet_idx: self
                 .controller
                 .status
-                .sheet_pos_manager
+                .sheet_info_manager
                 .get_sheet_idx(&self.sheet_id)
                 .unwrap(),
             row_infos,

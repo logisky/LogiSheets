@@ -21,6 +21,7 @@ pub mod prelude {
     pub use super::ooxml::worksheet::*;
     pub use super::reader::*;
     pub use super::workbook::Wb;
+    pub use super::workbook::Xl;
     pub use super::writer::*;
     pub use super::SerdeErr;
 }
