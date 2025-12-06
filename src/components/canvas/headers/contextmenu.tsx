@@ -10,6 +10,7 @@ import {
     DeleteColsBuilder,
     type Payload,
     isErrorMessage,
+    SelectedData,
 } from 'logisheets-web'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
@@ -21,7 +22,6 @@ import FormatDialogContent, {
 import {
     buildSelectedDataFromCellRange,
     buildSelectedDataFromLines,
-    SelectedData,
 } from '@/components/canvas'
 
 export interface HeaderContextMenuProps {

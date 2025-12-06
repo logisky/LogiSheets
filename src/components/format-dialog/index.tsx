@@ -1,11 +1,11 @@
-import React, {useMemo, useState} from 'react'
+import React from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import NumFmtPanel, {type NumFmtPanelHandle} from './num-fmt'
 import BorderPanel, {type BorderModel, type BorderPanelHandle} from './border'
-import {SelectedData} from '../canvas'
+import {SelectedData} from 'logisheets-web'
 
 export interface FormatDialogValue {
     numFmt?: string

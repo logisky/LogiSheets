@@ -2,11 +2,11 @@ import React, {ReactElement, useRef, useState} from 'react'
 import type {Grid} from '@/core/worker/types'
 import {LeftTop} from '@/core/settings'
 import {toA1notation} from '@/core'
-import {SelectedData} from '../events'
 import {buildSelectedDataFromLines} from '../events'
 import HeaderResizer from './resizer'
 import HeaderContextMenu from './contextmenu'
 import {ZINDEX_HEADER} from '@/components/const'
+import {SelectedData} from 'logisheets-web'
 
 export interface ColumnHeadersProps {
     grid?: Grid

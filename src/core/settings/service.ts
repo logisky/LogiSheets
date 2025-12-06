@@ -13,6 +13,7 @@ class Settings {
     public showToolBar = true
     public showSheetsTab = true
     public topBar = '46px'
+    public blockViewTop = '6px'
     public bottomBar = '0'
     public defaultSheetName = 'sheet'
     public scrollbarSize = 16

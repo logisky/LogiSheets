@@ -1,6 +1,7 @@
 import {useState} from 'react'
 import {Box, Typography, Dialog, DialogContent} from '@mui/material'
-import {getFirstCell, getSelectedCellRange, SelectedData} from '../canvas'
+import {getSelectedCellRange} from '../canvas'
+import {SelectedData, getFirstCell} from 'logisheets-web'
 import {useToast} from '@/ui/notification/useToast'
 import {TYPES} from '@/core/ioc/types'
 import {useInjection} from '@/core/ioc/provider'
@@ -123,7 +124,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             )
             return [r.id, f]
         })
-        const {r: row, c: col} = getFirstCell(selectedData)
+        const {y: row, x: col} = getFirstCell(selectedData)
         const len = fs.length
         // check if the block range is available
 

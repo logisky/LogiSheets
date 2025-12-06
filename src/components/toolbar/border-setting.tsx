@@ -1,4 +1,4 @@
-import {SelectedData} from '@/components/canvas'
+import {SelectedData} from 'logisheets-web'
 import {DataServiceImpl as DataService} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Markdown Table Extractor Demo</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                padding: 16px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                    Roboto, Helvetica, Arial, sans-serif;
+                background: #f5f5f5;
+            }
+            .container {
+                max-width: 960px;
+                margin: 0 auto;
+                background: #ffffff;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+                padding: 16px 20px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .textarea {
+                width: 100%;
+                min-height: 200px;
+                resize: vertical;
+                padding: 8px 10px;
+                border-radius: 6px;
+                border: 1px solid #d0d7de;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
+                    Consolas, 'Liberation Mono', 'Courier New', monospace;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+            .textarea:focus {
+                outline: none;
+                border-color: #0969da;
+                box-shadow: 0 0 0 1px #0969da33;
+            }
+            .toolbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+                font-size: 13px;
+                color: #57606a;
+            }
+            .button {
+                padding: 4px 10px;
+                border-radius: 6px;
+                border: 1px solid #d0d7de;
+                background: #f6f8fa;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            .button.primary {
+                background: #0969da;
+                color: #ffffff;
+                border-color: #0969da;
+            }
+            .button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .tables-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 13px;
+                color: #24292f;
+            }
+            .tables-list {
+                border: 1px solid #d0d7de;
+                border-radius: 6px;
+                max-height: 260px;
+                overflow: auto;
+                background: #ffffff;
+            }
+            .table-item {
+                padding: 8px 10px;
+                border-bottom: 1px solid #d0d7de;
+                cursor: pointer;
+                font-size: 13px;
+            }
+            .table-item:last-child {
+                border-bottom: none;
+            }
+            .table-item:hover {
+                background: #f6f8fa;
+            }
+            .table-item.selected {
+                background: #e7f3ff;
+                border-left: 3px solid #0969da;
+            }
+            .table-title {
+                font-weight: 500;
+                margin-bottom: 4px;
+            }
+            .table-preview {
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
+                    Consolas, 'Liberation Mono', 'Courier New', monospace;
+                font-size: 12px;
+                color: #57606a;
+                white-space: pre;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .footer {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin-top: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2 style="margin: 0 0 4px; font-size: 16px">Markdown Tables</h2>
+            <div style="font-size: 12px; color: #57606a; margin-bottom: 4px">
+                Paste or type Markdown above to extract GitHub Flavored Markdown tables.
+            </div>
+
+            <textarea
+                id="markdown-input"
+                class="textarea"
+                placeholder="Paste your Markdown with tables here..."
+            ></textarea>
+
+            <div class="toolbar">
+                <div>
+                    <span id="status-text">No tables parsed.</span>
+                </div>
+                <button id="parse-btn" class="button">Parse tables</button>
+            </div>
+
+            <div class="tables-header">
+                <span>Tables</span>
+                <span id="tables-count">0 tables</span>
+            </div>
+
+            <div id="tables-list" class="tables-list"></div>
+
+            <div class="footer">
+                <button id="confirm-btn" class="button primary" disabled>
+                    Confirm selection
+                </button>
+            </div>
+        </div>
+
+        <!-- UMD bundle built by Vite -->
+        <script src="./markdown-table-extractor.js"></script>
+        <script>
+            // Expect global MarkdownTableExtractor with parseMarkdownTables
+            const textarea = document.getElementById('markdown-input')
+            const parseBtn = document.getElementById('parse-btn')
+            const statusText = document.getElementById('status-text')
+            const tablesCount = document.getElementById('tables-count')
+            const listEl = document.getElementById('tables-list')
+            const confirmBtn = document.getElementById('confirm-btn')
+
+            /** @type {ReturnType<MarkdownTableExtractor['parseMarkdownTables']>} */
+            let tables = []
+            let selectedIndex = -1
+
+            function renderTables() {
+                listEl.innerHTML = ''
+                if (!tables || tables.length === 0) {
+                    tablesCount.textContent = '0 tables'
+                    statusText.textContent = 'No tables parsed.'
+                    confirmBtn.disabled = true
+                    return
+                }
+
+                tablesCount.textContent = `${tables.length} table${
+                    tables.length > 1 ? 's' : ''
+                }`
+                statusText.textContent = 'Select a table and confirm.'
+
+                tables.forEach((t, index) => {
+                    const item = document.createElement('div')
+                    item.className =
+                        'table-item' +
+                        (index === selectedIndex ? ' selected' : '')
+
+                    const title = document.createElement('div')
+                    title.className = 'table-title'
+                    const headerPreview = (t.header || []).join(' | ')
+                    title.textContent = `Table #${index + 1} - ${
+                        headerPreview || 'no header'
+                    }`
+
+                    const preview = document.createElement('pre')
+                    preview.className = 'table-preview'
+                    preview.textContent = t.raw || ''
+
+                    item.appendChild(title)
+                    item.appendChild(preview)
+                    item.addEventListener('click', () => {
+                        selectedIndex = index
+                        renderTables()
+                        confirmBtn.disabled = selectedIndex < 0
+                    })
+
+                    listEl.appendChild(item)
+                })
+
+                confirmBtn.disabled = selectedIndex < 0
+            }
+
+            parseBtn.addEventListener('click', () => {
+                const md = textarea.value || ''
+                try {
+                    tables = MarkdownTableExtractor.parseMarkdownTables(md)
+                    selectedIndex = tables.length > 0 ? 0 : -1
+                    renderTables()
+                } catch (e) {
+                    console.error(e)
+                    statusText.textContent = 'Parse error, see console.'
+                    tables = []
+                    selectedIndex = -1
+                    renderTables()
+                }
+            })
+
+            confirmBtn.addEventListener('click', () => {
+                if (selectedIndex < 0 || !tables[selectedIndex]) return
+                const selected = tables[selectedIndex]
+                const header = selected.header || []
+                const rows = selected.rows || []
+
+                const payloads = MarkdownTableExtractor.generatePayloads(
+                    window.selection,
+                    header,
+                    rows
+                )
+                const transaction = MarkdownTableExtractor.buildTransaction(payloads)
+                window.workbook.handleTransaction({transaction})
+            })
+        </script>
+    </body>
+</html>

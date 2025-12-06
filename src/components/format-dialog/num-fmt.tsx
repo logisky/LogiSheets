@@ -1,4 +1,4 @@
-import React, {useMemo, useState, forwardRef, useImperativeHandle} from 'react'
+import {useMemo, useState, forwardRef, useImperativeHandle} from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl} from '@/core/data'
@@ -7,8 +7,8 @@ import {
     Transaction,
     SetCellNumFmtBuilder,
     SetLineNumFmtBuilder,
+    SelectedData,
 } from 'logisheets-web'
-import {SelectedData} from '@/components/canvas'
 import Box from '@mui/material/Box'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -17,7 +17,6 @@ import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import TextField from '@mui/material/TextField'
-import Button from '@mui/material/Button'
 
 export interface NumFmtPanelProps {
     // current format code, e.g., 'General', '0.00', '#,##0', 'mm-dd-yy', etc.

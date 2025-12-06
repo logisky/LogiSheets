@@ -1,12 +1,10 @@
 import {
     buildSelectedDataFromCell,
     buildSelectedDataFromCellRange,
-    getFirstCell,
     getReferenceString,
     getSelectedCellRange,
     getSelectedColumns,
     getSelectedRows,
-    SelectedData,
 } from './events'
 import styles from './canvas.module.scss'
 import modalStyles from '../modal.module.scss'
@@ -45,6 +43,8 @@ import {
     FormulaDisplayInfo,
     Transaction,
     SetColWidthBuilder,
+    getFirstCell,
+    SelectedData,
     SetRowHeightBuilder,
     CellRef,
     isErrorMessage,
@@ -362,7 +362,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
         const firstCell = getFirstCell(selectedData)
         if (!firstCell) return
-        const pos = getPosition(firstCell.r, firstCell.c, grid)
+        const pos = getPosition(firstCell.y, firstCell.x, grid)
         const startCell = new Cell('Cell')
             .setPosition(
                 new Range()
@@ -373,10 +373,10 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             )
             .setCoordinate(
                 new Range()
-                    .setStartRow(firstCell.r)
-                    .setEndRow(firstCell.r)
-                    .setStartCol(firstCell.c)
-                    .setEndCol(firstCell.c)
+                    .setStartRow(firstCell.y)
+                    .setEndRow(firstCell.y)
+                    .setStartCol(firstCell.x)
+                    .setEndCol(firstCell.x)
             )
         store.startCell = startCell
 
