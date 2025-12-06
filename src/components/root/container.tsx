@@ -1,12 +1,13 @@
 import {Toolbar} from '@/components/toolbar'
-import {useEffect, useState} from 'react'
+import {useState} from 'react'
 import {ContentComponent} from '@/components/content'
-import {SelectedData} from '@/components/canvas'
-import {DEBUG} from '@/core'
 import {SETTINGS} from '@/core/settings'
 import styles from './root.module.scss'
 import {BlockView} from '../block-view'
 import {Grid} from '@/core/worker/types'
+import {IconButton} from '@mui/material'
+import {ChevronLeft} from '@mui/icons-material'
+import {SelectedData} from 'logisheets-web'
 export const RootContainer = () => {
     const [selectedData, setSelectedData] = useState<SelectedData>({
         source: 'none',
@@ -17,7 +18,6 @@ export const RootContainer = () => {
     return (
         <div className={styles.container}>
             <div className={styles.host}>
-                {DEBUG ? <div className="debug-toolbar" /> : null}
                 <div style={{height: SETTINGS.topBar}}>
                     <Toolbar selectedData={selectedData} setGrid={setGrid} />
                 </div>
@@ -30,11 +30,32 @@ export const RootContainer = () => {
                     />
                 </div>
             </div>
-            {isBlockViewVisible && (
-                <div className={styles['block-view-container']}>
-                    <BlockView />
+            {!isBlockViewVisible ? (
+                <div
+                    style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: SETTINGS.blockViewTop,
+                        zIndex: 10,
+                    }}
+                >
+                    <IconButton
+                        size="medium"
+                        color="default"
+                        onClick={() => setBlockViewVisible(true)}
+                    >
+                        <ChevronLeft />
+                    </IconButton>
                 </div>
-            )}
+            ) : null}
+            {isBlockViewVisible ? (
+                <div className={styles['block-view-container']}>
+                    <BlockView
+                        selectedData={selectedData}
+                        onClose={() => setBlockViewVisible(false)}
+                    />
+                </div>
+            ) : null}
         </div>
     )
 }

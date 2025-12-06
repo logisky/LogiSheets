@@ -1,4 +1,4 @@
-import React, {forwardRef, useImperativeHandle, useState} from 'react'
+import {forwardRef, useImperativeHandle, useState} from 'react'
 import {
     Box,
     FormControl,
@@ -24,7 +24,7 @@ import {
     borderStyleNames,
     PreviewLineComponent,
 } from '@/components/toolbar/preview-line'
-import {StBorderStyle} from 'logisheets-web'
+import {StBorderStyle, SelectedData} from 'logisheets-web'
 import {
     BatchUpdateType,
     generateBorderPayloads,
@@ -32,7 +32,6 @@ import {
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl} from '@/core/data'
-import {SelectedData} from '@/components/canvas'
 import {Transaction} from 'logisheets-web'
 import {StandardColor} from '@/core/standable'
 

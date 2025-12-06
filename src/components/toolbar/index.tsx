@@ -1,12 +1,7 @@
 import {useEffect, useRef, useState} from 'react'
 import styles from './toolbar.module.scss'
 import modalStyles from '../modal.module.scss'
-import {
-    SelectedData,
-    getFirstCell,
-    getSelectedCellRange,
-    getSelectedLines,
-} from '@/components/canvas'
+import {getSelectedCellRange, getSelectedLines} from '@/components/canvas'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {CraftManager, DataServiceImpl as DataService} from '@/core/data'
@@ -28,9 +23,11 @@ import {
     MergeCellsBuilder,
     Payload,
     Transaction,
+    SelectedData,
     VerticalAlignment,
+    SplitMergedCellsBuilder,
+    getFirstCell,
 } from 'logisheets-web'
-import {SplitMergedCellsBuilder} from 'packages/web'
 import {ColorResult, SketchPicker} from 'react-color'
 import Modal from 'react-modal'
 import Tooltip from '@mui/material/Tooltip'
@@ -203,7 +200,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
         }
         // font/fill/alignment
         const cell = getFirstCell(selectedData)
-        const {r, c} = cell
+        const {y: r, x: c} = cell
         const sheet = DATA_SERVICE.getCurrentSheetIdx()
         DATA_SERVICE.getCellInfo(sheet, r, c).then((ci) => {
             if (isErrorMessage(ci)) return
@@ -366,8 +363,8 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
         const src = getFirstCell(selectedData)
         setFormatBrushOn({
             sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
-            row: src.r,
-            col: src.c,
+            row: src.y,
+            col: src.x,
         })
     }
 
@@ -503,8 +500,8 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
         const firstCell = getFirstCell(selectedData)
         const cellInfo = await DATA_SERVICE.getCellInfo(
             DATA_SERVICE.getCurrentSheetIdx(),
-            firstCell.r,
-            firstCell.c
+            firstCell.y,
+            firstCell.x
         )
         if (isErrorMessage(cellInfo)) return
         const fontSize = cellInfo.getStyle().font.sz ?? 10
@@ -978,7 +975,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                             getSelectedCellRange(selectedData) === undefined
                         }
                     >
-                        CreateCraft
+                        CreateBlock
                     </Button>
                 </div>
             </div>

@@ -1,11 +1,15 @@
 import {
     buildSelectedDataFromCell,
-    getFirstCell,
     getSelectedCellRange,
-    SelectedData,
 } from '@/components/canvas'
 import {toA1notation, parseA1notation} from '@/core'
-import {CellInputBuilder, Payload, Transaction} from 'logisheets-web'
+import {
+    SelectedData,
+    getFirstCell,
+    CellInputBuilder,
+    Payload,
+    Transaction,
+} from 'logisheets-web'
 import {FC, useEffect, useState, useRef, KeyboardEvent} from 'react'
 import styles from './edit-bar.module.scss'
 import {useInjection} from '@/core/ioc/provider'
@@ -67,8 +71,8 @@ export const EditBarComponent: FC<EditBarProps> = ({
             type: 'cellInput',
             value: new CellInputBuilder()
                 .sheetIdx(dataSvc.getCurrentSheetIdx())
-                .row(cell.r)
-                .col(cell.c)
+                .row(cell.y)
+                .col(cell.x)
                 .content(newText)
                 .build(),
         }
@@ -80,7 +84,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
         setIsEditing(false)
         if (!result) {
             const cell = getFirstCell(selectedData)
-            setCoordinate(`${toA1notation(cell.c)}${cell.r + 1}`)
+            setCoordinate(`${toA1notation(cell.x)}${cell.y + 1}`)
             return
         }
         selectedData$(
@@ -95,7 +99,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
         setIsEditing(false)
         // refocus back to the grid by re-emitting the (first) cell selection
         const cell = getFirstCell(selectedData)
-        selectedData$(buildSelectedDataFromCell(cell.r, cell.c, 'editbar'))
+        selectedData$(buildSelectedDataFromCell(cell.y, cell.x, 'editbar'))
         // explicitly focus canvas in next frame to ensure focus returns
         requestAnimationFrame(() => {
             const el = document.getElementById(
@@ -133,7 +137,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
             formulaInputRef.current?.blur()
             const cellPos = getFirstCell(selectedData)
             selectedData$(
-                buildSelectedDataFromCell(cellPos.r, cellPos.c, 'editbar')
+                buildSelectedDataFromCell(cellPos.y, cellPos.x, 'editbar')
             )
             requestAnimationFrame(() => {
                 const el = document.getElementById(

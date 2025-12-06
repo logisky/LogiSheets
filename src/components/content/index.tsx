@@ -1,9 +1,10 @@
-import {SelectedData, CanvasComponent} from '@/components/canvas'
+import {CanvasComponent} from '@/components/canvas'
 import {FC, useState} from 'react'
 import styles from './content.module.scss'
 import {EditBarComponent} from './edit-bar'
 import {SheetsTabComponent} from '@/components/sheets-tab'
 import {Grid} from '@/core/worker/types'
+import {SelectedData} from 'logisheets-web'
 
 export interface ContentProps {
     selectedData$: (cell: SelectedData) => void

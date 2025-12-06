@@ -1,8 +1,12 @@
-import {SelectedCellRange} from './events'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl} from '@/core/data'
-import {CellClearBuilder, Payload, Transaction} from 'logisheets-web'
+import {
+    CellClearBuilder,
+    Payload,
+    Transaction,
+    SelectedCellRange,
+} from 'logisheets-web'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
