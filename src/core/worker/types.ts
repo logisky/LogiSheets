@@ -69,6 +69,13 @@ export enum MethodName {
     CalcCondition = 'calcCondition',
     Save = 'save',
 
+    CleanupTempStatus = 'cleanupTempStatus',
+    ToggleStatus = 'toggleStatus',
+    CommitTempStatus = 'commitTempStatus',
+    BatchGetCellInfoById = 'batchGetCellInfoById',
+    BatchGetCellCoordinateWithSheetById = 'batchGetCellCoordinateWithSheetById',
+    GetSheetNameByIdx = 'getSheetNameByIdx',
+
     LookupAppendixUpward = 'lookupAppendixUpward',
 
     GetBlockRowId = 'getBlockRowId',

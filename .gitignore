@@ -13,7 +13,8 @@ yarn-error.log
 # bundle generate files
 dist
 crafts/**/*/dist
-public/markdown-table-extractor
+# crafts
+public/**/*
 
 # jest files
 coverage/

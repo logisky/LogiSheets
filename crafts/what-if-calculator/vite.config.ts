@@ -5,8 +5,8 @@ export default defineConfig({
     build: {
         lib: {
             entry: path.resolve(__dirname, 'src/index.ts'),
-            name: 'MarkdownTableExtractor',
-            fileName: () => 'markdown-table-extractor.js',
+            name: 'WhatIfCalculator',
+            fileName: () => 'what-if-calculator.js',
             formats: ['umd'],
         },
         target: 'es2018',

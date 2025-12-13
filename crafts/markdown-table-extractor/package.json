@@ -15,7 +15,7 @@
         "remark",
         "gfm"
     ],
-    "author": "",
+    "author": "Jeremy He",
     "license": "MIT",
     "dependencies": {
         "logisheets-web": "workspace:*",

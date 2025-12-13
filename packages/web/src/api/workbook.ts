@@ -1,4 +1,6 @@
 import {
+    batch_get_cell_coordinate_with_sheet_by_id,
+    batch_get_cell_info_by_id,
     block_input,
     block_line_name_field_update,
     block_line_num_fmt_update,
@@ -8,8 +10,10 @@ import {
     cell_input,
     check_bind_block,
     check_formula,
+    clean_temp_status,
     col_delete,
     col_insert,
+    commit_temp_status,
     create_appendix,
     create_block,
     create_diy_cell,
@@ -31,6 +35,7 @@ import {
     get_sheet_count,
     get_sheet_id,
     get_sheet_idx,
+    get_sheet_name_by_idx,
     input_async_result,
     merge_cells,
     move_block,
@@ -63,7 +68,9 @@ import {
     sheet_rename_by_idx,
     sheet_rename_by_name,
     split_merged_cells,
+    toggle_status,
     transaction_end,
+    transaction_end_in_temp_status,
     transaction_start,
     undo,
 } from '../../wasm/logisheets_wasm_server'
@@ -77,6 +84,8 @@ import {
     SheetInfo,
     SaveFileResult,
     AppData,
+    CellInfo,
+    CellCoordinateWithSheet,
 } from '../bindings'
 import {Payload} from '../payloads'
 import {ColId, RowId, Transaction} from '../types'
@@ -216,6 +225,10 @@ export class Workbook {
         this._sheetInfoUpdatedCallbacks.push(callback)
     }
 
+    public getSheetNameByIdx(idx: number): Result<string> {
+        return get_sheet_name_by_idx(this._id, idx)
+    }
+
     public getAllSheetInfo(): Array<SheetInfo> {
         return get_all_sheet_info(this._id)
     }
@@ -316,12 +329,43 @@ export class Workbook {
         this._cellValueChangedCallbacks.get(id)?.push(callback)
     }
 
-    public execTransaction(tx: Transaction): ActionEffect {
+    public commitTempStatus() {
+        commit_temp_status(this._id)
+    }
+
+    public cleanupTempStatus() {
+        clean_temp_status(this._id)
+    }
+
+    public toggleStatus(useTemp: boolean) {
+        toggle_status(this._id, useTemp)
+    }
+
+    public batchGetCellInfoById(
+        ids: readonly SheetCellId[]
+    ): Result<readonly CellInfo[]> {
+        return batch_get_cell_info_by_id(this._id, ids)
+    }
+
+    public batchGetCellCoordinateWithSheetById(
+        ids: readonly SheetCellId[]
+    ): Result<readonly CellCoordinateWithSheet[]> {
+        return batch_get_cell_coordinate_with_sheet_by_id(this._id, ids)
+    }
+
+    public execTransaction(tx: Transaction, temp = false): ActionEffect {
         transaction_start(this._id)
         tx.payloads.forEach((p: Payload) => {
             this._addPayload(p)
         })
-        const result = transaction_end(this._id, tx.undoable) as ActionEffect
+
+        let result: ActionEffect
+        if (temp) {
+            result = transaction_end_in_temp_status(this._id) as ActionEffect
+        } else {
+            result = transaction_end(this._id, tx.undoable) as ActionEffect
+        }
+
         if (result.asyncTasks.length > 0) {
             const asyncResult = this._calculator.calc(result.asyncTasks)
             asyncResult.then((result) => {

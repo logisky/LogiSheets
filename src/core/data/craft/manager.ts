@@ -347,6 +347,7 @@ export class CraftManager {
                 payloads: payloads,
                 undoable: false,
             },
+            temp: false,
         })
 
         if (isErrorMessage(result)) {

@@ -161,6 +161,81 @@ pub fn transaction_end(id: usize, undoable: bool) -> JsValue {
     serde_wasm_bindgen::to_value(&action_effect).unwrap()
 }
 
+#[wasm_bindgen]
+pub fn transaction_end_in_temp_status(id: usize) -> JsValue {
+    init();
+    let payloads = MANAGER.get_mut().get_payloads(&id);
+    let action = PayloadsAction {
+        payloads,
+        undoable: false, // it doesn't matter
+        init: false,
+    };
+
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let action_effect = wb.handle_action_in_temp_status(action);
+    serde_wasm_bindgen::to_value(&action_effect).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn commit_temp_status(id: usize) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let action_effect = wb.commit_temp_status();
+    serde_wasm_bindgen::to_value(&action_effect).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn clean_temp_status(id: usize) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    wb.clean_temp_status();
+}
+
+#[wasm_bindgen]
+pub fn toggle_status(id: usize, use_temp: bool) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    wb.toggle_status(use_temp);
+}
+
+#[wasm_bindgen]
+pub fn batch_get_cell_info_by_id(id: usize, ids: JsValue) -> JsValue {
+    init();
+    let ids: Vec<SheetCellId> = serde_wasm_bindgen::from_value(ids).unwrap();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+
+    let result = wb.batch_get_cell_info_by_id(ids);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn batch_get_cell_coordinate_with_sheet_by_id(id: usize, ids: JsValue) -> JsValue {
+    init();
+    let ids: Vec<SheetCellId> = serde_wasm_bindgen::from_value(ids).unwrap();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+
+    let result = wb.batch_get_cell_coordinate_with_sheet_by_id(ids);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_sheet_name_by_idx(id: usize, idx: usize) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let name = wb.get_sheet_name_by_idx(idx);
+    handle_result!(name);
+    serde_wasm_bindgen::to_value(&name).unwrap()
+}
+
 /// Input: AsyncFuncResult
 /// Output: ActionAffect
 #[wasm_bindgen]

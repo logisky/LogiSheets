@@ -50,6 +50,7 @@ import {
     isErrorMessage,
     Payload,
     CellClearBuilder,
+    CellLayout,
 } from 'logisheets-web'
 import {getHighlightColor} from '@/components/const'
 import {Range, StandardColor} from '@/core/standable'
@@ -76,6 +77,7 @@ export interface CanvasProps {
     selectedDataContentChanged$: (e: object) => void
     grid: Grid | null
     setGrid: (grid: Grid | null) => void
+    cellLayouts: CellLayout[]
 }
 export const CanvasComponent = (props: CanvasProps) => {
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
@@ -97,6 +99,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         selectedDataContentChanged$,
         grid,
         setGrid,
+        cellLayouts,
     } = props
     const store = useContext(CanvasStoreContext)
     const [contextmenuOpen, setContextMenuOpen] = useState(false)
@@ -118,10 +121,49 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             }
         }[]
     )
+    const [layoutCells, setLayoutCells] = useState(
+        [] as {
+            style: {
+                background: string
+                x: number
+                y: number
+                width: number
+                height: number
+            }
+            tooltip?: string
+        }[]
+    )
+    const [tooltip, setTooltip] = useState<{
+        text: string
+        x: number
+        y: number
+    } | null>(null)
+
     const [reference, setReference] = useState('')
     // If the user is selecting a reference for its formula.
     const [referenceWhenEditing, setReferenceWhenEditing] =
         useState<SelectedData | null>(null)
+
+    const forwardMouseEventToCanvas =
+        (type: 'mousedown' | 'mouseup') =>
+        (e: React.MouseEvent<HTMLDivElement>) => {
+            const c = canvas()
+            if (!c) return
+            const init: MouseEventInit = {
+                bubbles: true,
+                cancelable: true,
+                button: e.button,
+                buttons: e.buttons,
+                clientX: e.clientX,
+                clientY: e.clientY,
+                ctrlKey: e.ctrlKey,
+                altKey: e.altKey,
+                shiftKey: e.shiftKey,
+                metaKey: e.metaKey,
+            }
+            const evt = new window.MouseEvent(type, init)
+            c.dispatchEvent(evt)
+        }
 
     const render = async () => {
         return store.render().then((g) => {
@@ -666,6 +708,54 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         }
         setHighlightCells(newCells)
     }, [cellRefs, grid])
+
+    useEffect(() => {
+        if (!grid) {
+            setLayoutCells([])
+            return
+        }
+
+        const newCells: {
+            style: {
+                background: string
+                x: number
+                y: number
+                width: number
+                height: number
+            }
+            tooltip?: string
+        }[] = []
+
+        const firstCol = grid.columns[0]?.idx ?? 0
+        const lastCol = grid.columns[grid.columns.length - 1]?.idx ?? firstCol
+        const firstRow = grid.rows[0]?.idx ?? 0
+        const lastRow = grid.rows[grid.rows.length - 1]?.idx ?? firstRow
+
+        for (const layout of cellLayouts) {
+            if (layout.sheetIdx !== activeSheet) continue
+
+            const r1 = Math.min(Math.max(layout.row, firstRow), lastRow)
+            const c1 = Math.min(Math.max(layout.col, firstCol), lastCol)
+
+            if (r1 !== layout.row || c1 !== layout.col) continue
+
+            const sx = LeftTop.width + xForColStart(c1, grid)
+            const ex = LeftTop.width + xForColEnd(c1, grid)
+            const sy = LeftTop.height + yForRowStart(r1, grid)
+            const ey = LeftTop.height + yForRowEnd(r1, grid)
+            newCells.push({
+                style: {
+                    background: layout.background ?? 'transparent',
+                    x: sx,
+                    y: sy,
+                    width: Math.max(0, ex - sx),
+                    height: Math.max(0, ey - sy),
+                },
+                tooltip: layout.tooltip,
+            })
+        }
+        setLayoutCells(newCells)
+    }, [cellLayouts, grid, activeSheet])
 
     useEffect(() => {
         // store.renderer.canvas.focus()
@@ -1413,8 +1503,68 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                             height: `${cellStyle.height}px`,
                             backgroundColor: cellStyle.bgColor.css(),
                         }}
-                        key={i}
+                        key={`hightlight-${i}`}
                     />
+                )
+            })}
+            {tooltip && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: tooltip.x,
+                        top: tooltip.y,
+                        background: '#111',
+                        color: '#fff',
+                        fontSize: 12,
+                        padding: '4px 6px',
+                        borderRadius: 4,
+                        pointerEvents: 'none',
+                        zIndex: 9999,
+                    }}
+                >
+                    {tooltip.text}
+                </div>
+            )}
+
+            {layoutCells.map((cell, i) => {
+                const cellStyle = cell.style
+                return (
+                    <>
+                        <div
+                            style={{
+                                position: 'absolute',
+                                pointerEvents: 'none',
+                                left: cellStyle.x,
+                                top: cellStyle.y,
+                                width: `${cellStyle.width}px`,
+                                height: `${cellStyle.height}px`,
+                                backgroundColor: cellStyle.background,
+                                opacity: 0.5,
+                            }}
+                        />
+
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: cellStyle.x,
+                                top: cellStyle.y,
+                                width: `${cellStyle.width}px`,
+                                height: `${cellStyle.height}px`,
+                                pointerEvents: 'auto',
+                                background: 'transparent',
+                            }}
+                            onMouseDown={forwardMouseEventToCanvas('mousedown')}
+                            onMouseUp={forwardMouseEventToCanvas('mouseup')}
+                            onMouseEnter={(e) => {
+                                setTooltip({
+                                    text: cell.tooltip || '',
+                                    x: e.clientX + 8,
+                                    y: e.clientY + 8,
+                                })
+                            }}
+                            onMouseLeave={() => setTooltip(null)}
+                        />
+                    </>
                 )
             })}
         </div>

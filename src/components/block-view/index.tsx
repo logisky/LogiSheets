@@ -1,22 +1,50 @@
-import {Box, Drawer, IconButton, Stack} from '@mui/material'
+import {
+    Box,
+    Drawer,
+    IconButton,
+    Stack,
+    FormControl,
+    Select,
+    MenuItem,
+} from '@mui/material'
 import {ChevronRight} from '@mui/icons-material'
-import {Selection, SelectedData} from 'logisheets-web'
-import {useEffect, useRef} from 'react'
+import {Selection, SelectedData, CellLayout} from 'logisheets-web'
+import {useEffect, useRef, useState} from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl} from '@/core/data'
+import {buildSelectedDataFromCell} from '../canvas'
 
 type BlockViewProps = {
     selectedData?: SelectedData
+    setSelectedData: (data: SelectedData) => void
+    setActiveSheet: (index: number) => void
+    setCellLayouts: (data: CellLayout[]) => void
     onClose: () => void
 }
 
-export const BlockView = ({onClose, selectedData}: BlockViewProps) => {
-    const iframeSrc = '/markdown-table-extractor/index.html'
+export const BlockView = ({
+    onClose,
+    selectedData,
+    setSelectedData,
+    setActiveSheet,
+    setCellLayouts,
+}: BlockViewProps) => {
+    const [iframeSrc, setIframeSrc] = useState('/what-if-calculator/index.html')
+    const tools = [
+        {
+            label: 'What-if Calculator',
+            value: '/what-if-calculator/index.html',
+        },
+        {
+            label: 'Markdown Table Extractor',
+            value: '/markdown-table-extractor/index.html',
+        },
+    ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
 
-    useEffect(() => {
+    const inject = () => {
         const iframe = iframeRef.current
         if (!iframe) return
 
@@ -29,7 +57,24 @@ export const BlockView = ({onClose, selectedData}: BlockViewProps) => {
             data: selectedData,
         } as Selection
         win.workbook = DATA_SERVICE.getWorkbook()
-    }, [selectedData, DATA_SERVICE])
+        win.setCellLayouts = setCellLayouts
+        win.setSelection = (sheetIdx: number, row: number, col: number) => {
+            setActiveSheet(sheetIdx)
+            const data = buildSelectedDataFromCell(row, col, 'none')
+            setSelectedData(data)
+        }
+    }
+
+    useEffect(() => {
+        inject()
+    }, [
+        selectedData,
+        DATA_SERVICE,
+        setCellLayouts,
+        setSelectedData,
+        setActiveSheet,
+        iframeSrc,
+    ])
 
     return (
         <Box>
@@ -38,10 +83,17 @@ export const BlockView = ({onClose, selectedData}: BlockViewProps) => {
                 anchor="right"
                 open={true}
                 hideBackdrop
-                disablePortal
                 ModalProps={{
                     keepMounted: true,
                     disableScrollLock: true,
+                    // Allow clicks to pass through the fullscreen modal root to
+                    // underlying content; only the Drawer paper itself should
+                    // intercept pointer events.
+                    slotProps: {
+                        root: {
+                            style: {pointerEvents: 'none'},
+                        },
+                    },
                 }}
                 sx={{
                     width: '360px',
@@ -49,6 +101,7 @@ export const BlockView = ({onClose, selectedData}: BlockViewProps) => {
                     '& .MuiDrawer-paper': {
                         width: '360px',
                         boxSizing: 'border-box',
+                        pointerEvents: 'auto',
                         backgroundColor: '#f2f4f7',
                         display: 'flex',
                         flexDirection: 'column',
@@ -65,16 +118,48 @@ export const BlockView = ({onClose, selectedData}: BlockViewProps) => {
                         <ChevronRight />
                     </IconButton>
                 </Stack>
-                <Box sx={{flex: 1, borderTop: '1px solid #e0e0e0'}}>
-                    <iframe
-                        ref={iframeRef}
-                        src={iframeSrc}
-                        style={{
-                            border: 'none',
-                            width: '100%',
-                            height: '100%',
-                        }}
-                    />
+                <Box
+                    sx={{
+                        flex: 1,
+                        borderTop: '1px solid #e0e0e0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minHeight: 0,
+                    }}
+                >
+                    <Stack direction="row" spacing={1} sx={{px: 1, pb: 1}}>
+                        <FormControl size="small" fullWidth>
+                            <Select
+                                value={iframeSrc}
+                                onChange={(e) =>
+                                    setIframeSrc(e.target.value as string)
+                                }
+                            >
+                                {tools.map((tool) => (
+                                    <MenuItem
+                                        key={tool.value}
+                                        value={tool.value}
+                                        sx={{fontSize: '0.85rem'}}
+                                    >
+                                        {tool.label}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Stack>
+                    <Box sx={{flex: 1, minHeight: 0}}>
+                        <iframe
+                            ref={iframeRef}
+                            src={iframeSrc}
+                            onLoad={inject}
+                            style={{
+                                border: 'none',
+                                width: '100%',
+                                height: '100%',
+                                display: 'block',
+                            }}
+                        />
+                    </Box>
                 </Box>
             </Drawer>
         </Box>

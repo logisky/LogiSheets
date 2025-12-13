@@ -4,13 +4,16 @@ import styles from './content.module.scss'
 import {EditBarComponent} from './edit-bar'
 import {SheetsTabComponent} from '@/components/sheets-tab'
 import {Grid} from '@/core/worker/types'
-import {SelectedData} from 'logisheets-web'
+import {CellLayout, SelectedData} from 'logisheets-web'
 
 export interface ContentProps {
     selectedData$: (cell: SelectedData) => void
     selectedData: SelectedData
     grid: Grid | null
     setGrid: (grid: Grid | null) => void
+    cellLayouts: CellLayout[]
+    activeSheet: number
+    setActiveSheet: (sheet: number) => void
 }
 
 export const ContentComponent: FC<ContentProps> = ({
@@ -18,8 +21,10 @@ export const ContentComponent: FC<ContentProps> = ({
     setGrid,
     selectedData$,
     selectedData,
+    activeSheet,
+    setActiveSheet,
+    cellLayouts,
 }) => {
-    const [activeSheet, activeSheet$] = useState<number>(0)
     const [selectedDataContentChanged, setSelectedDataContentChanged] =
         useState({})
     return (
@@ -35,18 +40,19 @@ export const ContentComponent: FC<ContentProps> = ({
                         selectedData={selectedData}
                         selectedData$={selectedData$}
                         activeSheet={activeSheet}
-                        activeSheet$={activeSheet$}
+                        activeSheet$={setActiveSheet}
                         selectedDataContentChanged$={
                             setSelectedDataContentChanged
                         }
                         grid={grid}
                         setGrid={setGrid}
+                        cellLayouts={cellLayouts}
                     />
                 </div>
             </div>
             <SheetsTabComponent
                 activeSheet={activeSheet}
-                activeSheet$={activeSheet$}
+                activeSheet$={setActiveSheet}
             />
         </div>
     )
