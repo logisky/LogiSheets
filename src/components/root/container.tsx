@@ -7,13 +7,17 @@ import {BlockView} from '../block-view'
 import {Grid} from '@/core/worker/types'
 import {IconButton} from '@mui/material'
 import {ChevronLeft} from '@mui/icons-material'
-import {SelectedData} from 'logisheets-web'
+import {CellLayout, SelectedData} from 'logisheets-web'
 export const RootContainer = () => {
     const [selectedData, setSelectedData] = useState<SelectedData>({
         source: 'none',
     })
     const [grid, setGrid] = useState<Grid | null>(null)
     const [isBlockViewVisible, setBlockViewVisible] = useState(false)
+
+    const [cellLayouts, setCellLayouts] = useState<CellLayout[]>([])
+    const [activeSheet, setActiveSheet] = useState(0)
+    const [canvasKey, setCanvasKey] = useState(0)
 
     return (
         <div className={styles.container}>
@@ -23,10 +27,14 @@ export const RootContainer = () => {
                 </div>
                 <div className={styles.content}>
                     <ContentComponent
+                        key={canvasKey}
                         selectedData$={setSelectedData}
                         selectedData={selectedData}
                         grid={grid}
                         setGrid={setGrid}
+                        cellLayouts={cellLayouts}
+                        activeSheet={activeSheet}
+                        setActiveSheet={setActiveSheet}
                     />
                 </div>
             </div>
@@ -51,8 +59,16 @@ export const RootContainer = () => {
             {isBlockViewVisible ? (
                 <div className={styles['block-view-container']}>
                     <BlockView
+                        setSelectedData={setSelectedData}
                         selectedData={selectedData}
-                        onClose={() => setBlockViewVisible(false)}
+                        onClose={() => {
+                            setBlockViewVisible(false)
+                            // Force remount canvas so all layout-related internal
+                            // states (anchor, scrollbars, etc.) are reset.
+                            setCanvasKey((k) => k + 1)
+                        }}
+                        setCellLayouts={setCellLayouts}
+                        setActiveSheet={setActiveSheet}
                     />
                 </div>
             ) : null}

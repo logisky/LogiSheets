@@ -1,9 +1,11 @@
 import {
+    ActionEffect,
     AppendixWithCell,
     BlockField,
     BlockInfo,
     CalcConditionParams,
     CellCoordinate,
+    CellCoordinateWithSheet,
     CellInfo,
     CellPosition,
     ColId,
@@ -163,6 +165,33 @@ export class CraftHandler implements CraftHandlerInterface {
                 throw new Error('Unknown method: ' + m)
             }
         })
+    }
+    getSheetNameByIdx(idx: number): Resp<string> {
+        throw new Error('Method not implemented.')
+    }
+    handleTransactionWithoutEvents(
+        params: HandleTransactionParams
+    ): Resp<ActionEffect> {
+        throw new Error('Method not implemented.')
+    }
+    cleanupTempStatus(): Resp<void> {
+        throw new Error('Method not implemented.')
+    }
+    toggleStatus(useTemp: boolean): Resp<void> {
+        throw new Error('Method not implemented.')
+    }
+    commitTempStatus(): Resp<void> {
+        throw new Error('Method not implemented.')
+    }
+    batchGetCellInfoById(
+        ids: readonly SheetCellId[]
+    ): Resp<readonly CellInfo[]> {
+        throw new Error('Method not implemented.')
+    }
+    batchGetCellCoordinateWithSheetById(
+        ids: readonly SheetCellId[]
+    ): Resp<readonly CellCoordinateWithSheet[]> {
+        throw new Error('Method not implemented.')
     }
     save(params: SaveParams): Resp<SaveFileResult> {
         throw new Error('Method not implemented.')

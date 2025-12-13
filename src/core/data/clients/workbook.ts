@@ -56,6 +56,7 @@ import {
     SaveFileResult,
     SaveParams,
     AppData,
+    CellCoordinateWithSheet,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName} from '../../worker/types'
 
@@ -104,6 +105,33 @@ export class WorkbookClient implements Client {
             }
             this._resolvers.delete(id)
         }
+    }
+    getSheetNameByIdx(idx: number): Resp<string> {
+        return this._call(MethodName.GetSheetNameByIdx, idx) as Resp<string>
+    }
+    batchGetCellCoordinateWithSheetById(
+        ids: readonly SheetCellId[]
+    ): Resp<readonly CellCoordinateWithSheet[]> {
+        return this._call(
+            MethodName.BatchGetCellCoordinateWithSheetById,
+            ids
+        ) as Resp<readonly CellCoordinateWithSheet[]>
+    }
+    batchGetCellInfoById(
+        ids: readonly SheetCellId[]
+    ): Resp<readonly CellInfo[]> {
+        return this._call(MethodName.BatchGetCellInfoById, ids) as Resp<
+            readonly CellInfo[]
+        >
+    }
+    cleanupTempStatus(): Resp<void> {
+        return this._call(MethodName.CleanupTempStatus) as Resp<void>
+    }
+    toggleStatus(useTemp: boolean): Resp<void> {
+        return this._call(MethodName.ToggleStatus, useTemp) as Resp<void>
+    }
+    commitTempStatus(): Resp<void> {
+        return this._call(MethodName.CommitTempStatus) as Resp<void>
     }
     save(params: SaveParams): Resp<SaveFileResult> {
         return this._call(MethodName.Save, params) as Resp<SaveFileResult>

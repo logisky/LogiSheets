@@ -52,12 +52,38 @@ import {
     BlockField,
     SaveParams,
     AppData,
+    CellCoordinateWithSheet,
 } from 'logisheets-web'
 import {WorkerUpdate, MethodName, Result, IWorkbookWorker} from './types'
 import {SaveFileResult} from 'packages/web'
 
 export class WorkerService implements IWorkbookWorker {
     constructor(private _ctx: Worker) {}
+
+    commitTempStatus(): Result<void> {
+        this.workbook.commitTempStatus()
+        this._ctx.postMessage({id: WorkerUpdate.CellAndSheet})
+    }
+    batchGetCellInfoById(
+        ids: readonly SheetCellId[]
+    ): Result<readonly CellInfo[]> {
+        return this.workbook.batchGetCellInfoById(ids)
+    }
+    batchGetCellCoordinateWithSheetById(
+        ids: readonly SheetCellId[]
+    ): Result<readonly CellCoordinateWithSheet[]> {
+        return this.workbook.batchGetCellCoordinateWithSheetById(ids)
+    }
+    cleanupTempStatus(): Result<void> {
+        this.workbook.cleanupTempStatus()
+        this._ctx.postMessage({id: WorkerUpdate.CellAndSheet})
+    }
+    toggleStatus(useTemp: boolean): Result<void> {
+        return this.workbook.toggleStatus(useTemp)
+    }
+    getSheetNameByIdx(idx: number): Result<string> {
+        return this.workbook.getSheetNameByIdx(idx)
+    }
 
     getDisplayUnitsOfFormula(f: string): Result<FormulaDisplayInfo> {
         return this.workbook.getDisplayUnitsOfFormula(f)
@@ -226,7 +252,10 @@ export class WorkerService implements IWorkbookWorker {
     }
 
     public handleTransaction(params: HandleTransactionParams): void {
-        const result = this.workbook.execTransaction(params.transaction)
+        const result = this.workbook.execTransaction(
+            params.transaction,
+            params.temp
+        )
         result.valueChanged.forEach((cellId) => {
             this._ctx.postMessage({
                 id: WorkerUpdate.CellValueChanged,
@@ -245,7 +274,7 @@ export class WorkerService implements IWorkbookWorker {
     public handleTransactionWithoutEvents(
         params: HandleTransactionParams
     ): Result<ActionEffect> {
-        return this.workbook.execTransaction(params.transaction)
+        return this.workbook.execTransaction(params.transaction, params.temp)
     }
 
     public getAllSheetInfo(): readonly SheetInfo[] {
@@ -456,6 +485,24 @@ export class WorkerService implements IWorkbookWorker {
                 break
             case MethodName.GetAppData:
                 result = this.getAppData()
+                break
+            case MethodName.BatchGetCellInfoById:
+                result = this.batchGetCellInfoById(args)
+                break
+            case MethodName.ToggleStatus:
+                result = this.toggleStatus(args)
+                break
+            case MethodName.CommitTempStatus:
+                result = this.commitTempStatus()
+                break
+            case MethodName.CleanupTempStatus:
+                result = this.cleanupTempStatus()
+                break
+            case MethodName.GetSheetNameByIdx:
+                result = this.getSheetNameByIdx(args)
+                break
+            case MethodName.BatchGetCellCoordinateWithSheetById:
+                result = this.batchGetCellCoordinateWithSheetById(args)
                 break
             default:
                 throw new Error(`Unknown method: ${m}`)

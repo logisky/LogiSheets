@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cases</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background-color: #f5f5f7;
+      color: #111827;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: 20px;
+    }
+
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #4b5563;
+    }
+
+    .card {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+      border: 1px solid #e5e7eb;
+    }
+
+    .case-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    .case-list-container {
+      margin-bottom: 16px;
+    }
+
+    .case-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .case-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background-color: #f9fafb;
+      font-size: 13px;
+    }
+
+    .case-item input[type="radio"] {
+      margin: 0 2px 0 0;
+    }
+
+    .case-item-label-input {
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      min-width: 70px;
+      max-width: 120px;
+    }
+
+    .case-item-label-input:focus {
+      outline: none;
+    }
+
+    .case-remove-btn {
+      border: none;
+      background: transparent;
+      color: #ef4444;
+      cursor: pointer;
+      padding: 0 2px;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .case-remove-btn[disabled] {
+      color: #d1d5db;
+      cursor: default;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      font-size: 13px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background-color: #f9fafb;
+      color: #111827;
+      cursor: pointer;
+      gap: 4px;
+    }
+
+    .btn:hover {
+      background-color: #e5e7eb;
+    }
+
+    .btn-primary {
+      border-color: #2563eb;
+      background-color: #2563eb;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background-color: #1d4ed8;
+    }
+
+    .btn-sm {
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+
+    .case-detail-card {
+      margin-top: 12px;
+    }
+
+    .case-name-display {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .pair-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .pair-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pair-row input[type="text"] {
+      flex: 1;
+      padding: 4px 8px;
+      font-size: 13px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      min-width: 0;
+    }
+
+    .pair-row input[type="text"]:focus {
+      outline: 1px solid #2563eb;
+      border-color: #2563eb;
+    }
+
+    .divider {
+      height: 1px;
+      background-color: #e5e7eb;
+      margin: 16px 0;
+    }
+
+    .confirm-row {
+      margin-bottom: 16px;
+    }
+
+    .columns-container {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .scroll-column {
+      background-color: #ffffff;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+      height: 220px;
+      overflow: auto;
+      font-size: 13px;
+    }
+
+    .scroll-column-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: #4b5563;
+    }
+
+    .result-color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 1px;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+      z-index: 10;
+    }
+
+    .result-up {
+      background-color: #f97373; /* soft red */
+    }
+
+    .result-down {
+      background-color: #4ade80; /* soft green */
+    }
+
+    .result-other {
+      background-color: #d1d5db; /* neutral gray */
+    }
+
+    .trend-btn {
+      position: relative;
+    }
+
+    .trend-btn[data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      transform: translateX(-50%);
+      margin-top: 4px;
+      white-space: nowrap;
+      background: rgba(17, 24, 39, 0.95);
+      color: #f9fafb;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      z-index: 10;
+    }
+
+    .scroll-item {
+      padding: 4px 0;
+      border-bottom: 1px dashed #e5e7eb;
+    }
+
+    .scroll-item:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>What-If Calculator</h1>
+
+  <div class="card case-list-container">
+    <div class="case-list-header">
+      <div class="section-title">Cases</div>
+      <button type="button" class="btn btn-sm" id="add-case-btn">+ Add Case</button>
+    </div>
+    <div id="case-list" class="case-list">
+      <!-- Cases will be rendered here -->
+    </div>
+
+    <div class="card case-detail-card">
+      <div class="case-name-display" id="active-case-name">Original Case</div>
+      <div class="pair-list" id="pair-list">
+        <!-- Pair rows for active case -->
+      </div>
+      <button type="button" class="btn btn-sm" id="add-pair-btn">+ Add Value Change</button>
+    </div>
+  </div>
+
+  <div class="confirm-row">
+    <button type="button" class="btn btn-primary" id="confirm-btn">Confirm</button>
+    <!-- click action intentionally left empty -->
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">Results</div>
+  <div class="columns-container">
+    <div class="scroll-column" id="column-1">
+      <div class="scroll-column-title">
+        <span class="result-color-dot result-up"></span>
+        <span>Value Up</span>
+      </div>
+    </div>
+
+    <div class="scroll-column" id="column-2">
+      <div class="scroll-column-title">
+        <span class="result-color-dot result-down"></span>
+        <span>Value Down</span>
+      </div>
+    </div>
+
+    <div class="scroll-column" id="column-3">
+      <div class="scroll-column-title">
+        <span class="result-color-dot result-other"></span>
+        <span>Other</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="./what-if-calculator.js"></script>
+  <script>
+    let cases = [];
+    let activeCaseId = null;
+    let caseIdCounter = 1;
+    let pairIdCounter = 1;
+
+    function createCase(name, isOriginal = false) {
+      const id = `case-${caseIdCounter++}`;
+      const newCase = {
+        id,
+        name,
+        isOriginal,
+        pairs: []
+      };
+      cases.push(newCase);
+      if (activeCaseId === null) {
+        activeCaseId = id;
+      }
+      renderCases();
+      renderActiveCaseDetail();
+      updateTrends();
+    }
+
+    function setActiveCase(id) {
+      activeCaseId = id;
+      const c = cases.find(c => c.id === activeCaseId);
+      if (c.isOriginal) {
+        WhatIfCalculator.cleanupTempStatus(window.workbook);
+        window.setCellLayouts([]);
+      }
+      renderCases();
+      renderActiveCaseDetail();
+      updateTrends();
+    }
+
+    function confirmCase() {
+      const c = cases.find(c => c.id === activeCaseId);
+      if (!c) return
+      WhatIfCalculator.cleanupTempStatus(window.workbook);
+      const transaction = WhatIfCalculator.generateTransaction(c.pairs);
+      workbook.handleTransaction({
+          transaction: transaction,
+          temp: false,
+      }).then((_) => {
+        setCellLayouts([]);
+        cases = cases.filter(c => c.isOriginal)
+        activeCaseId = cases[0].id
+        renderCases()
+        updateTrends()
+        renderActiveCaseDetail()
+      })
+
+    }
+
+    function removeCase(id) {
+      const index = cases.findIndex(c => c.id === id);
+      if (index === -1) return;
+      if (cases[index].isOriginal) return; // Original Case
+      cases.splice(index, 1);
+      if (activeCaseId === id) {
+        activeCaseId = cases.length ? cases[0].id : null;
+      }
+      renderCases();
+      renderActiveCaseDetail();
+      updateTrends();
+    }
+
+    function addPairToActiveCase() {
+      const c = cases.find(c => c.id === activeCaseId);
+      if (!c) return;
+      if (c.isOriginal) return;
+
+      const change = WhatIfCalculator.generateValueChange(
+          window.selection,
+          undefined
+      );
+
+      if (!change) return;
+
+      const pairId = `pair-${pairIdCounter++}`;
+      c.pairs.push({ ...change, id: pairId });
+      renderActiveCaseDetail();
+      // updateTrends();
+    }
+
+    function removePair(caseId, pairId) {
+      const c = cases.find(c => c.id === caseId);
+      if (!c) return;
+      const idx = c.pairs.findIndex(p => p.id === pairId);
+      if (idx !== -1) {
+        c.pairs.splice(idx, 1);
+        if (caseId === activeCaseId) {
+          renderActiveCaseDetail();
+          updateTrends();
+        }
+      }
+    }
+
+    function updatePairValue(caseId, pairId, field, value) {
+      const c = cases.find(c => c.id === caseId);
+      if (!c) return;
+      const pair = c.pairs.find(p => p.id === pairId);
+      if (!pair) return;
+      // field is 'value' (mapped from 'right' input)
+      if (field === 'right') {
+          pair.value = value;
+      }
+      // 'left' is read-only or not updated here
+      updateTrends();
+    }
+
+    function updateCaseName(caseId, value) {
+      const c = cases.find(c => c.id === caseId);
+      if (!c) return;
+      c.name = value || (c.isOriginal ? "Original Case" : "Case");
+      renderCases();
+      if (caseId === activeCaseId) {
+        renderActiveCaseDetail();
+      }
+    }
+
+    function renderCases() {
+      const container = document.getElementById("case-list");
+      container.innerHTML = "";
+
+      cases.forEach(c => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "case-item";
+
+        const radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = "caseRadio";
+        radio.value = c.id;
+        radio.checked = c.id === activeCaseId;
+        radio.addEventListener("change", () => setActiveCase(c.id));
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "case-item-label-input";
+        input.value = c.name;
+        input.addEventListener("input", (e) => updateCaseName(c.id, e.target.value));
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "case-remove-btn";
+        removeBtn.textContent = "x";
+        if (c.isOriginal) {
+          removeBtn.disabled = true;
+        } else {
+          removeBtn.addEventListener("click", () => removeCase(c.id));
+        }
+
+        wrapper.appendChild(radio);
+        wrapper.appendChild(input);
+        wrapper.appendChild(removeBtn);
+
+        container.appendChild(wrapper);
+      });
+    }
+
+    function renderActiveCaseDetail() {
+      const nameEl = document.getElementById("active-case-name");
+      const listEl = document.getElementById("pair-list");
+      const addBtn = document.getElementById("add-pair-btn");
+      listEl.innerHTML = "";
+
+      const c = cases.find(c => c.id === activeCaseId);
+      if (!c) {
+        nameEl.textContent = "No Case";
+        return;
+      }
+
+      nameEl.textContent = c.name;
+
+      if (c.isOriginal) {
+        addBtn.style.display = 'none';
+        // TODO: Implement Original Case behavior
+        return;
+      }
+      addBtn.style.display = 'inline-flex';
+
+      c.pairs.forEach(pair => {
+        const row = document.createElement("div");
+        row.className = "pair-row";
+
+        const leftInput = document.createElement("input");
+        leftInput.type = "text";
+        leftInput.placeholder = "Left";
+        leftInput.value = `Loading...`;
+        leftInput.disabled = true;
+
+        WhatIfCalculator.getDisplayName(pair.sheetIdx, pair.row, pair.col, window.workbook).then(name => {
+             leftInput.value = name;
+        }).catch(e => {
+             console.error(e);
+             leftInput.value = `R${pair.row}C${pair.col}`;
+        });
+
+        const rightInput = document.createElement("input");
+        rightInput.type = "text";
+        rightInput.placeholder = "New Value";
+        rightInput.value = pair.value || "";
+        rightInput.addEventListener("input", (e) => updatePairValue(c.id, pair.id, "right", e.target.value));
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn btn-sm";
+        removeBtn.textContent = "Remove";
+        removeBtn.addEventListener("click", () => removePair(c.id, pair.id));
+
+        row.appendChild(leftInput);
+        row.appendChild(rightInput);
+        row.appendChild(removeBtn);
+
+        listEl.appendChild(row);
+      });
+    }
+
+    async function updateTrends() {
+        const c = cases.find(c => c.id === activeCaseId);
+        if (!c) return;
+
+        // Reset
+        const col1 = document.getElementById('column-1');
+        const col2 = document.getElementById('column-2');
+        const col3 = document.getElementById('column-3');
+
+        col1.innerHTML =
+      `<div class="scroll-column-title">
+        <span class="result-color-dot result-up"></span>
+        <span>Value Up</span>
+      </div>`;
+        col2.innerHTML =
+      `<div class="scroll-column-title">
+        <span class="result-color-dot result-down"></span>
+        <span>Value Down</span>
+      </div>`;
+        col3.innerHTML =
+      `<div class="scroll-column-title">
+        <span class="result-color-dot result-other"></span>
+        <span>Other</span>
+      </div>`;
+
+        col1.style.display = 'none';
+        col2.style.display = 'none';
+        col3.style.display = 'none';
+
+        if (c.pairs.length === 0) return;
+
+        try {
+            WhatIfCalculator.cleanupTempStatus(window.workbook);
+            const transaction = WhatIfCalculator.generateTransaction(c.pairs);
+            const trends = await WhatIfCalculator.getTrendsThroughTempTransaction(window.workbook, transaction);
+
+            const up = [];
+            const down = [];
+            const other = [];
+
+            trends.forEach(t => {
+                const oldV = t.oldValue;
+                const newV = t.newValue;
+
+                const trend = WhatIfCalculator.compareValues(oldV, newV)
+                if (trend === 'same') return
+                if (trend === 'up') {
+                    up.push(t);
+                } else if (trend === 'down') {
+                    down.push(t);
+                } else {
+                    other.push(t);
+                }
+            });
+
+            const layouts = []
+            const renderItems = (container, items, type) => {
+                if (items.length <= 0) return
+
+                container.style.display = 'block';
+                items.forEach(item => {
+                    const newVal = WhatIfCalculator.getDisplayValue(item.newValue);
+                    const oldVal = WhatIfCalculator.getDisplayValue(item.oldValue);
+                    const tooltip = `${oldVal} -> ${newVal}`
+
+                    const layout = {
+                        sheetIdx: item.sheetIdx,
+                        row: item.row,
+                        col: item.col,
+                        background:
+                            type === 'up'
+                                ? '#f97373'
+                                : type === 'down'
+                                ? '#4ade80'
+                                : '#d1d5db',
+                        tooltip: tooltip,
+                    };
+                    layouts.push(layout);
+
+                    WhatIfCalculator.getDisplayName(
+                        item.sheetIdx,
+                        item.row,
+                        item.col,
+                        window.workbook
+                    ).then((name) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'scroll-item';
+
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'btn btn-sm trend-btn';
+                        btn.onclick = () => {
+                            window.setSelection(item.sheetIdx, item.row, item.col);
+                        };
+
+                        btn.textContent = name;
+                        btn.setAttribute('data-tooltip', tooltip);
+
+                        wrapper.appendChild(btn);
+                        container.appendChild(wrapper);
+                    });
+                });
+            };
+
+            renderItems(col1, up, 'up');
+            renderItems(col2, down, 'down');
+            renderItems(col3, other, 'other');
+            window.setCellLayouts(layouts);
+
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function init() {
+      createCase("Original Case", true);
+
+      document.getElementById("add-case-btn").addEventListener("click", () => {
+        createCase(`Case ${cases.length}`);
+      });
+
+      document.getElementById("add-pair-btn").addEventListener("click", () => {
+        addPairToActiveCase();
+      });
+
+      document.getElementById("confirm-btn").addEventListener("click", () => {
+        confirmCase();
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

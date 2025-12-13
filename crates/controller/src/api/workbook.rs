@@ -2,10 +2,12 @@ use std::collections::HashMap;
 
 use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
-    controller::display::{BlockField, CellPosition, ShadowCellInfo, SheetInfo},
+    controller::display::{
+        BlockField, CellCoordinateWithSheet, CellPosition, ShadowCellInfo, SheetInfo,
+    },
     edit_action::{ActionEffect, PayloadsAction, SheetCellId, StatusCode},
     lock::{locked_write, new_locked, Locked},
-    Controller,
+    CellInfo, Controller,
 };
 use crate::{
     edit_action::{EditAction, EphemeralCellInput},
@@ -48,6 +50,78 @@ impl Workbook {
     /// Execute the `EditAction`
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
         self.controller.handle_action(action)
+    }
+
+    pub fn get_sheet_name_by_idx(&self, idx: usize) -> Result<String> {
+        let sheet_id = self
+            .controller
+            .status
+            .sheet_info_manager
+            .pos
+            .get(idx)
+            .ok_or(BasicError::SheetIdxExceed(idx))?;
+        let name = self
+            .controller
+            .status
+            .sheet_id_manager
+            .get_string(sheet_id)
+            .ok_or(BasicError::SheetIdNotFound(*sheet_id))?;
+        Ok(name)
+    }
+
+    /// Execute the `EditAction`, but the result will be stored as a temporary status.
+    pub fn handle_action_in_temp_status(&mut self, action: PayloadsAction) -> ActionEffect {
+        let result = self.controller.handle_action_in_temp_status(action);
+        self.controller.toggle_temp_status();
+        result
+    }
+
+    pub fn commit_temp_status(&mut self) {
+        self.controller.commit_temp_status();
+    }
+
+    pub fn clean_temp_status(&mut self) {
+        self.controller.clean_temp_status();
+    }
+
+    pub fn toggle_status(&mut self, use_temp: bool) {
+        if self.controller.temp_status.enabled != use_temp {
+            self.controller.toggle_temp_status();
+        }
+    }
+
+    pub fn batch_get_cell_info_by_id(&self, ids: Vec<SheetCellId>) -> Result<Vec<CellInfo>> {
+        let mut result = Vec::new();
+        for id in ids {
+            let sheet_id = id.sheet_id;
+            let worksheet = self.get_sheet_by_id(sheet_id)?;
+            let info = worksheet.get_cell_info_by_cell_id(&id.cell_id)?;
+            result.push(info);
+        }
+        Ok(result)
+    }
+
+    pub fn batch_get_cell_coordinate_with_sheet_by_id(
+        &self,
+        ids: Vec<SheetCellId>,
+    ) -> Result<Vec<CellCoordinateWithSheet>> {
+        let mut result = Vec::new();
+        for id in ids {
+            let sheet_id = id.sheet_id;
+            let worksheet = self.get_sheet_by_id(sheet_id)?;
+            let coordinate = worksheet.get_cell_coordinate_by_id(&id.cell_id)?;
+            result.push(CellCoordinateWithSheet {
+                sheet_idx: self.get_sheet_idx_by_id(sheet_id)?,
+                coordinate,
+            });
+        }
+        Ok(result)
+    }
+
+    pub fn get_cell_info_by_id(&self, id: SheetCellId) -> Result<CellInfo> {
+        let sheet_id = id.sheet_id;
+        let worksheet = self.get_sheet_by_id(sheet_id)?;
+        worksheet.get_cell_info_by_cell_id(&id.cell_id)
     }
 
     /// Create a workbook from a .xlsx file.

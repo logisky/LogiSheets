@@ -44,13 +44,13 @@ impl From<PayloadsAction> for EditAction {
 /// An `EditPayload` represents an atomic update of a workbook and they will be
 /// executed in sequence. That means it is a totally different result between
 /// updating a cell at B4 before inserting and after inserting.
-#[derive(Debug, Clone, TS)]
+#[derive(Debug, Default, Clone, TS)]
 #[ts(file_name = "payloads_action.ts")]
 pub struct PayloadsAction {
     pub payloads: Vec<EditPayload>,
     pub undoable: bool,
     // An action that is used to customize the initial status of a new workbook.
-    // This action is `undoable` but its new status should be recorded to hiistory.
+    // This action is `undoable` but its new status should be recorded to history.
     pub init: bool,
 }
 

@@ -1,0 +1,21 @@
+{
+    "name": "what-if-calculator",
+    "version": "0.1.0",
+    "description": "Show trends in LogiSheets workbooks for analysis",
+    "main": "dist/what-if-calculator.js",
+    "module": "dist/what-if-calculator.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/what-if-calculator&& mkdir -p ../../public/what-if-calculator&& cp index.html ../../public/what-if-calculator/index.html && cp dist/what-if-calculator.js ../../public/what-if-calculator/what-if-calculator.js"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0",
+        "vite": "^5.0.0"
+    }
+}

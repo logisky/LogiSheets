@@ -106,6 +106,18 @@ impl<'a> Worksheet<'a> {
         self.get_formula_by_id(&cell_id)
     }
 
+    pub fn get_cell_coordinate_by_id(&self, cell_id: &CellId) -> Result<CellCoordinate> {
+        let coordinate = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_idx(&self.sheet_id, cell_id)?;
+        Ok(CellCoordinate {
+            x: coordinate.1,
+            y: coordinate.0,
+        })
+    }
+
     pub fn get_cell_info_by_cell_id(&self, cell_id: &CellId) -> Result<CellInfo> {
         let block_id = if let CellId::BlockCell(b) = cell_id {
             Some(b.block_id)

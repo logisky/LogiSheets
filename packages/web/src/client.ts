@@ -18,6 +18,8 @@ import type {
     CellCoordinate,
     BlockField,
     SaveFileResult,
+    ActionEffect,
+    CellCoordinateWithSheet,
 } from './bindings'
 import type {CustomFunc} from './api'
 import type {Transaction, RowId, ColId} from './types'
@@ -57,6 +59,18 @@ export interface Client {
     undo(): Resp<void>
     redo(): Resp<void>
     handleTransaction(params: HandleTransactionParams): Resp<void>
+    handleTransactionWithoutEvents(
+        params: HandleTransactionParams
+    ): Resp<ActionEffect>
+
+    cleanupTempStatus(): Resp<void>
+    toggleStatus(useTemp: boolean): Resp<void>
+    commitTempStatus(): Resp<void>
+    batchGetCellInfoById(ids: readonly SheetCellId[]): Resp<readonly CellInfo[]>
+    batchGetCellCoordinateWithSheetById(
+        ids: readonly SheetCellId[]
+    ): Resp<readonly CellCoordinateWithSheet[]>
+    getSheetNameByIdx(idx: number): Resp<string>
 
     loadWorkbook(params: LoadWorkbookParams): Resp<void>
     save(params: SaveParams): Resp<SaveFileResult>
@@ -195,6 +209,7 @@ export interface GetCellsExceptWindowParams {
 
 export interface HandleTransactionParams {
     transaction: Transaction
+    temp: boolean
 }
 
 export interface LoadWorkbookParams {

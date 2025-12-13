@@ -18998,6 +18998,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"what-if-calculator@workspace:crafts/what-if-calculator":
+  version: 0.0.0-use.local
+  resolution: "what-if-calculator@workspace:crafts/what-if-calculator"
+  dependencies:
+    logisheets-web: "workspace:*"
+    typescript: "npm:^5.5.0"
+    vite: "npm:^5.0.0"
+  languageName: unknown
+  linkType: soft
+
 "whatwg-encoding@npm:^1.0.5":
   version: 1.0.5
   resolution: "whatwg-encoding@npm:1.0.5"

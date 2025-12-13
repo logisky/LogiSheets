@@ -26,8 +26,24 @@ use status::Status;
 use self::display::SheetInfo;
 use crate::async_func_manager::AsyncFuncManager;
 
+#[derive(Default, Debug)]
+pub struct TempStatus {
+    pub status: Option<Status>,
+    pub enabled: bool,
+    pub payloads: PayloadsAction,
+    pub updated_cells: HashSet<(SheetId, CellId)>,
+}
+
+impl TempStatus {
+    pub fn take(&mut self) -> Self {
+        std::mem::take(self)
+    }
+}
+
 pub struct Controller {
+    // TODO: clean this field. Use the VersionManager.current
     pub status: Status,
+    pub temp_status: TempStatus,
     pub async_func_manager: AsyncFuncManager,
     pub curr_book_name: String,
     pub settings: Settings,
@@ -47,6 +63,7 @@ impl Default for Controller {
             async_func_manager: AsyncFuncManager::default(),
             sid_assigner: ShadowIdAssigner::new(),
             app_data: vec![],
+            temp_status: TempStatus::default(),
         };
         let add_sheet = PayloadsAction::new()
             .add_payload(CreateSheet {
@@ -67,6 +84,50 @@ impl Controller {
         write(workbook).map_err(|e| Error::Serde(e.into()))
     }
 
+    #[inline]
+    pub fn is_editable(&self) -> bool {
+        !self.is_reading_temp_status()
+    }
+
+    #[inline]
+    pub fn is_reading_temp_status(&self) -> bool {
+        self.temp_status.enabled
+    }
+
+    pub fn toggle_temp_status(&mut self) {
+        if self.temp_status.status.is_none() {
+            return;
+        }
+
+        self.temp_status.enabled = !self.temp_status.enabled;
+        std::mem::swap(
+            &mut self.status,
+            &mut self.temp_status.status.as_mut().unwrap(),
+        );
+    }
+
+    pub fn clean_temp_status(&mut self) {
+        if self.is_reading_temp_status() {
+            self.toggle_temp_status();
+        }
+
+        self.temp_status.take();
+    }
+
+    pub fn commit_temp_status(&mut self) {
+        if self.is_reading_temp_status() {
+            self.toggle_temp_status();
+        }
+
+        let temp_status = self.temp_status.take();
+        self.status = temp_status.status.unwrap();
+        self.version_manager.record(
+            self.status.clone(),
+            temp_status.payloads,
+            temp_status.updated_cells,
+        );
+    }
+
     pub fn from(
         status: Status,
         book_name: String,
@@ -81,6 +142,7 @@ impl Controller {
             async_func_manager: AsyncFuncManager::default(),
             sid_assigner: ShadowIdAssigner::new(),
             app_data,
+            temp_status: TempStatus::default(),
         }
     }
 
@@ -116,8 +178,87 @@ impl Controller {
             .collect()
     }
 
+    pub fn handle_action_in_temp_status(&mut self, action: PayloadsAction) -> ActionEffect {
+        self.clean_temp_status();
+        let executor = Executor {
+            status: self.status.clone(),
+            version_manager: &mut self.version_manager,
+            async_func_manager: &mut self.async_func_manager,
+            book_name: &self.curr_book_name,
+            calc_config: self.settings.calc_config,
+            async_funcs: &self.settings.async_funcs,
+            updated_cells: HashSet::new(),
+            dirty_vertices: HashSet::new(),
+            sheet_updated: false,
+            cell_updated: false,
+            cells_removed: HashSet::new(),
+            sid_assigner: &self.sid_assigner,
+            style_updated: HashSet::new(),
+        };
+        let result = executor.execute_and_calc(action.clone());
+        match result {
+            Ok(result) => {
+                let cell_updated = result.cell_updated
+                    || result.cells_removed.len() > 0
+                    || result.updated_cells.len() > 0;
+                let c = if cell_updated && result.sheet_updated {
+                    WorkbookUpdateType::SheetAndCell
+                } else if cell_updated {
+                    WorkbookUpdateType::Cell
+                } else if result.sheet_updated {
+                    WorkbookUpdateType::Sheet
+                } else {
+                    WorkbookUpdateType::DoNothing
+                };
+
+                let temp_status = TempStatus {
+                    status: Some(result.status),
+                    enabled: false,
+                    payloads: action,
+                    updated_cells: result.updated_cells.clone(),
+                };
+                self.temp_status = temp_status;
+
+                ActionEffect {
+                    version: result.version_manager.version(),
+                    async_tasks: result.async_func_manager.get_calc_tasks(),
+                    status: StatusCode::Ok(c),
+                    value_changed: result
+                        .updated_cells
+                        .into_iter()
+                        .map(|(sheet_id, cell_id)| SheetCellId { sheet_id, cell_id })
+                        .collect(),
+
+                    cell_removed: result
+                        .cells_removed
+                        .into_iter()
+                        .map(|c| SheetCellId {
+                            sheet_id: c.0,
+                            cell_id: c.1,
+                        })
+                        .collect(),
+                    style_changed: result
+                        .style_updated
+                        .into_iter()
+                        .map(|c| SheetCellId {
+                            sheet_id: c.0,
+                            cell_id: c.1,
+                        })
+                        .collect(),
+                }
+            }
+            Err(e) => {
+                println!("{:?}", e.to_string());
+                ActionEffect::from_err(1) // todo
+            }
+        }
+    }
+
     // Handle an action and get the affected sheet indices.
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
+        if !self.is_editable() && !matches!(action, EditAction::Recalc(_)) {
+            return ActionEffect::from(0, vec![], WorkbookUpdateType::DoNothing);
+        }
         match action {
             EditAction::Undo => {
                 let c = if self.undo() {
@@ -287,6 +428,9 @@ impl Controller {
     }
 
     pub fn undo(&mut self) -> bool {
+        if !self.is_editable() {
+            return false;
+        }
         match self.version_manager.undo() {
             Some(mut last_status) => {
                 std::mem::swap(&mut self.status, &mut last_status);
@@ -297,6 +441,9 @@ impl Controller {
     }
 
     pub fn redo(&mut self) -> bool {
+        if !self.is_editable() {
+            return false;
+        }
         match self.version_manager.redo() {
             Some(mut next_status) => {
                 std::mem::swap(&mut self.status, &mut next_status);
@@ -711,5 +858,69 @@ mod tests {
         let style_id = cell.style;
         let style = wb.status.style_manager.get_style(style_id);
         assert!(style.alignment.unwrap().wrap_text.unwrap());
+    }
+
+    #[test]
+    fn test_temp_status() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                content: String::from("1"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action_in_temp_status(action);
+        assert!(result.value_changed.len() == 1);
+        assert!(!wb.is_reading_temp_status());
+
+        let cell_id = wb
+            .status
+            .navigator
+            .fetch_cell_id(&wb.get_sheet_id_by_idx(sheet_idx).unwrap(), 0, 0)
+            .unwrap();
+        let cell = wb
+            .status
+            .container
+            .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id);
+        assert!(cell.is_none());
+
+        wb.toggle_temp_status();
+
+        assert!(wb.is_reading_temp_status());
+
+        let cell_id = wb
+            .status
+            .navigator
+            .fetch_cell_id(&wb.get_sheet_id_by_idx(sheet_idx).unwrap(), 0, 0)
+            .unwrap();
+        let cell = wb
+            .status
+            .container
+            .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id)
+            .unwrap();
+        assert!(matches!(cell.value, CellValue::Number(1.0)));
+
+        wb.commit_temp_status();
+
+        assert!(wb.temp_status.status.is_none());
+        assert!(!wb.temp_status.enabled);
+        assert_eq!(wb.temp_status.updated_cells.len(), 0);
+
+        let cell_id = wb
+            .status
+            .navigator
+            .fetch_cell_id(&wb.get_sheet_id_by_idx(sheet_idx).unwrap(), 0, 0)
+            .unwrap();
+        let cell = wb
+            .status
+            .container
+            .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id)
+            .unwrap();
+        assert!(matches!(cell.value, CellValue::Number(1.0)));
     }
 }

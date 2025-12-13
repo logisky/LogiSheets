@@ -117,8 +117,11 @@ export class DataServiceImpl {
         return this._sheetInfos[this._sheetIdx].name
     }
 
-    public async handleTransaction(transaction: Transaction): Resp<void> {
-        return this._workbook.handleTransaction({transaction})
+    public async handleTransaction(
+        transaction: Transaction,
+        temp = false
+    ): Resp<void> {
+        return this._workbook.handleTransaction({transaction, temp})
     }
 
     public async handleTransactionAndAdjustRowHeights(
@@ -129,7 +132,10 @@ export class DataServiceImpl {
     ): Resp<void> {
         const {sheetId, anchorX, anchorY} = this._lastRender
         const affectResult =
-            await this._workbook.handleTransactionWithoutEvents({transaction})
+            await this._workbook.handleTransactionWithoutEvents({
+                transaction,
+                temp: false,
+            })
         if (isErrorMessage(affectResult)) {
             await this._offscreen.render(sheetId, anchorX, anchorY)
             return
@@ -163,6 +169,7 @@ export class DataServiceImpl {
             .filter((v) => v !== undefined)
         return this._workbook.handleTransaction({
             transaction: new Transaction(payloads as Payload[], false),
+            temp: false,
         })
     }
 
