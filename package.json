@@ -52,7 +52,7 @@
     },
     "scripts": {
         "build-crafts": "./crafts/build.sh",
-        "build": "yarn build-crafts && webpack build --config=webpack.config.ts --mode=production && mkdir -p dist/markdown-table-extractor && cp -R public/markdown-table-extractor/* dist/markdown-table-extractor/",
+        "build": "yarn build-crafts && webpack build --config=webpack.config.ts --mode=production && ./publish-crafts.sh",
         "gen-bindings": "cargo run --package buildtools --bin generate --all-features",
         "lint": "eslint . -c .eslintrc.json --fix",
         "prepare": "husky install",
