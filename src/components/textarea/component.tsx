@@ -56,17 +56,17 @@ const InternalComponent = observer(
         const selectionEl = useRef<HTMLCanvasElement>(null)
         const store = useContext(TextareaContext)
 
-        if (insertion) {
+        if (insertion && store.prevInsertion !== insertion) {
             const currPosition = store.cursor.cursorPosition
             if (store.prevInsertion) {
-                cursor.type(0, store.prevInsertion.length)
                 textManager.remove(
                     currPosition - store.prevInsertion.length,
-                    currPosition
+                    currPosition - 1
                 )
+                cursor.type(0, store.prevInsertion.length)
             }
-            textManager.add(insertion)
-            cursor.type(insertion.length, 0)
+            const newTexts = textManager.add(insertion)
+            cursor.type(newTexts.length, 0)
             store.prevInsertion = insertion
         }
 
@@ -182,6 +182,7 @@ const InternalComponent = observer(
                             store.cursor.type(0, removed.length)
                             break
                         }
+                        case KeyboardEventCode.NUMPAD_ENTER:
                         case KeyboardEventCode.ENTER: {
                             disableInput()
                             if (store.suggest.showSuggest) {

@@ -170,7 +170,8 @@ fn convert_cell_reference(pair: Pair<Rule>, cell_ref: &mut CellRef) {
 fn column_label_to_index(label: &str) -> usize {
     let mut result: usize = 0;
     for (i, c) in label.chars().rev().enumerate() {
-        result += (c as usize - 64) * 26_usize.pow(i as u32);
+        let u = c.to_ascii_uppercase();
+        result += (u as usize - 'A' as usize + 1) * 26_usize.pow(i as u32);
     }
     result - 1
 }
@@ -211,6 +212,31 @@ fn test_lex_wrong_formula() {
 #[test]
 fn test_lex_and_fmt() {
     let s = "A1";
+    let result = lex_and_fmt(s).unwrap();
+    assert_eq!(
+        result,
+        FormulaDisplayInfo {
+            cell_refs: vec![CellRef {
+                workbook: None,
+                sheet1: None,
+                sheet2: None,
+                row1: Some(0),
+                col1: Some(0),
+                row2: None,
+                col2: None,
+            }],
+            token_units: vec![TokenUnit {
+                start: 0,
+                end: 2,
+                token_type: TokenType::CellReference
+            }]
+        }
+    )
+}
+
+#[test]
+fn test_lex_and_fmt_lower_case() {
+    let s = "a1";
     let result = lex_and_fmt(s).unwrap();
     assert_eq!(
         result,
