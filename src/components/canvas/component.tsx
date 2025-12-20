@@ -834,7 +834,8 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
 
     useEffect(() => {
         if (!referenceWhenEditing) return
-        setReference(getReferenceString(referenceWhenEditing))
+        const newRef = getReferenceString(referenceWhenEditing)
+        if (newRef !== reference) setReference(newRef)
     }, [referenceWhenEditing])
 
     const onMouseDown = async (e: MouseEvent) => {
@@ -858,6 +859,49 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         let startCell: Cell | undefined
         let endCell: Cell | undefined
 
+        const compareAndSetReference = (data: SelectedData | null) => {
+            if (data === null) return setReferenceWhenEditing(null)
+            if (referenceWhenEditing === null)
+                return setReferenceWhenEditing(data)
+
+            if (referenceWhenEditing.source !== data.source)
+                return setReferenceWhenEditing(data)
+            if (referenceWhenEditing.data?.ty !== data.data?.ty)
+                return setReferenceWhenEditing(data)
+
+            if (
+                referenceWhenEditing.data?.ty === 'cellRange' &&
+                data.data?.ty === 'cellRange'
+            ) {
+                if (data.data.d.endCol !== referenceWhenEditing.data.d.endCol)
+                    return setReferenceWhenEditing(data)
+                if (
+                    data.data.d.startCol !==
+                    referenceWhenEditing.data.d.startCol
+                )
+                    return setReferenceWhenEditing(data)
+                if (
+                    data.data.d.startRow !==
+                    referenceWhenEditing.data.d.startRow
+                )
+                    return setReferenceWhenEditing(data)
+                if (data.data.d.endRow !== referenceWhenEditing.data.d.endRow)
+                    return setReferenceWhenEditing(data)
+            }
+
+            if (
+                referenceWhenEditing.data?.ty === 'line' &&
+                data.data?.ty === 'line'
+            ) {
+                if (data.data.d.type !== referenceWhenEditing.data.d.type)
+                    return setReferenceWhenEditing(data)
+                if (data.data.d.start !== referenceWhenEditing.data.d.start)
+                    return setReferenceWhenEditing(data)
+                if (data.data.d.end !== referenceWhenEditing.data.d.end)
+                    return setReferenceWhenEditing(data)
+            }
+        }
+
         const sub = mouseMove$.pipe(takeUntil(mouseUp$)).subscribe((mme) => {
             mme.preventDefault()
             if (!grid) return
@@ -874,7 +918,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             endCell = cell
             const {startRow, startCol} = startCell.coordinate
             const {endRow, endCol} = endCell?.coordinate ?? startCell.coordinate
-            if (startRow === endRow && startCol === endCol) return
             const data = buildSelectedDataFromCellRange(
                 startRow,
                 startCol,
@@ -882,7 +925,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 endCol,
                 'none'
             )
-            setReferenceWhenEditing(data)
+            compareAndSetReference(data)
         })
         mouseUp$.pipe(take(1)).subscribe(() => {
             sub.unsubscribe()
@@ -898,7 +941,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 endCol,
                 'none'
             )
-            setReferenceWhenEditing(data)
+            compareAndSetReference(data)
         })
 
         const canvasSize = canvas()!.getBoundingClientRect()
@@ -913,7 +956,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         startCell = matchCell
         const {startRow: row, startCol: col} = startCell.coordinate
         const data = buildSelectedDataFromCell(row, col, 'none')
-        setReferenceWhenEditing(data)
+        compareAndSetReference(data)
     }
 
     const onMouseDownNormal = async (e: MouseEvent) => {

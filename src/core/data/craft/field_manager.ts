@@ -47,13 +47,14 @@ interface FieldKey {
  */
 export class FieldManager {
     private fields: Map<string, FieldInfo> = new Map()
+    private _counter = 0
 
     /**
      * Generate a unique field ID
      * @returns A unique field ID that will never be reused
      */
     private generateFieldId(): string {
-        const id = `field_${Date.now()}`
+        const id = `field_${Date.now()}_${++this._counter}`
         return id
     }
 
