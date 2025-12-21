@@ -4,14 +4,14 @@ import {CellInputBuilder, Payload, Transaction} from 'logisheets-web'
 import {DataServiceImpl} from '@/core/data'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {CraftManager} from '@/core/data/craft'
+import {BlockManager} from '@/core/data/block'
 import {BlockCellProps, valueToString} from './cell'
 
 export const EnumCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
-    const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
+    const BLOCK_MANAGER = useInjection<BlockManager>(TYPES.BlockManager)
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
     const [isEditing, setIsEditing] = useState(false)
 
@@ -24,7 +24,7 @@ export const EnumCell = (props: BlockCellProps) => {
     const variantId = valueToString(value) // This is the enum variant id
 
     // Get enum info and find the current variant
-    const enumInfo = CRAFT_MANAGER.enumSetManager.get(enumId)
+    const enumInfo = BLOCK_MANAGER.enumSetManager.get(enumId)
     const currentVariant = enumInfo?.variants.find((v) => v.id === variantId)
     const displayValue = currentVariant?.value || ''
 

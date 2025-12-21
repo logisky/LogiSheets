@@ -17,7 +17,6 @@ import {
     SetRowHeightBuilder,
 } from 'logisheets-web'
 
-export const MAX_COUNT = 10000
 type SheetId = number
 
 export class DataServiceImpl {

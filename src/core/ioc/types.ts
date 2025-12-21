@@ -3,5 +3,5 @@ export const TYPES = {
     Workbook: Symbol.for('Workbook'),
     Offscreen: Symbol.for('Offscreen'),
     Pool: Symbol.for('Pool'),
-    CraftManager: Symbol.for('CraftManager'),
+    BlockManager: Symbol.for('BlockManager'),
 }

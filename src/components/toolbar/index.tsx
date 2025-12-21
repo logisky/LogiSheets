@@ -4,7 +4,7 @@ import modalStyles from '../modal.module.scss'
 import {getSelectedCellRange, getSelectedLines} from '@/components/canvas'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {CraftManager, DataServiceImpl as DataService} from '@/core/data'
+import {BlockManager, DataServiceImpl as DataService} from '@/core/data'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {BorderSettingComponent} from './border-setting'
 import {
@@ -71,7 +71,7 @@ export interface ToolbarProps {
 
 export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
+    const BLOCK_MANAGER = useInjection<BlockManager>(TYPES.BlockManager)
     const {toast} = useToast()
     const hasSelectedData =
         selectedData !== undefined && selectedData.data !== undefined
@@ -95,7 +95,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             if (isErrorMessage(appData)) appData = []
             appData.forEach((d) => {
                 if (d.name === 'logisheets') {
-                    CRAFT_MANAGER.parseAppData(d.data)
+                    BLOCK_MANAGER.parseAppData(d.data)
                 }
             })
             setGrid(grid)
@@ -631,7 +631,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
     async function onSave(): Promise<void> {
         const blockFields = await DATA_SERVICE.getWorkbook().getAllBlockFields()
         if (isErrorMessage(blockFields)) return
-        const persistentData = CRAFT_MANAGER.getPersistentData(blockFields)
+        const persistentData = BLOCK_MANAGER.getPersistentData(blockFields)
         const saveResult = await DATA_SERVICE.getWorkbook().save({
             appData: persistentData,
         })

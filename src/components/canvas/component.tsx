@@ -35,7 +35,7 @@ import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid, width2px} from '@/core'
 import Modal from 'react-modal'
 import {useInjection} from '@/core/ioc/provider'
-import {CraftManager, DataServiceImpl} from '@/core/data'
+import {BlockManager, DataServiceImpl} from '@/core/data'
 import {TYPES} from '@/core/ioc/types'
 import {CANVAS_ID, CanvasStore, CanvasStoreContext} from './store'
 import {observer} from 'mobx-react'
@@ -81,8 +81,8 @@ export interface CanvasProps {
 }
 export const CanvasComponent = (props: CanvasProps) => {
     const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
-    const craftManager = useInjection<CraftManager>(TYPES.CraftManager)
-    const store = useRef(new CanvasStore(DATA_SERVICE, craftManager))
+    const blockManager = useInjection<BlockManager>(TYPES.BlockManager)
+    const store = useRef(new CanvasStore(DATA_SERVICE, blockManager))
     return (
         <CanvasStoreContext.Provider value={store.current}>
             <Internal {...props} />

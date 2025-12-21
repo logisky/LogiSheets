@@ -4,8 +4,8 @@ import styles from './block-interface.module.scss'
 import React, {useContext} from 'react'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
-import {CraftManager, DataServiceImpl as DataService} from '@/core/data'
-import {isErrorMessage, RemoveBlockBuilder, Transaction} from 'packages/web'
+import {DataServiceImpl as DataService} from '@/core/data'
+import {RemoveBlockBuilder, Transaction} from 'packages/web'
 import {CanvasStoreContext} from '../canvas/store'
 
 export interface MenuProps {
@@ -49,14 +49,9 @@ export const ClickableList = ({
 
 export const MenuComponent = (props: MenuProps) => {
     const {sheetId, blockId, isOpen, setIsOpen} = props
-    const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
 
     const store = useContext(CanvasStoreContext)
-
-    const setDescriptorUrl = props.setDescriptorUrl
-    const setError = props.setError
-    const setSuccessMessage = props.setSuccessMessage
 
     const items = [
         {
@@ -82,70 +77,6 @@ export const MenuComponent = (props: MenuProps) => {
                         true
                     )
                 )
-            },
-        },
-        {
-            label: 'Export the descriptor',
-            onClick: async () => {
-                const url = await CRAFT_MANAGER.uploadCraftDescriptor([
-                    sheetId,
-                    blockId,
-                ])
-                if (url.isOk()) {
-                    setDescriptorUrl(url._unsafeUnwrap())
-                    setError(undefined)
-                } else {
-                    setDescriptorUrl(undefined)
-                    setError('Failed to generate export URL')
-                }
-            },
-        },
-        {
-            label: 'Export the data',
-            onClick: async () => {
-                const result = await CRAFT_MANAGER.uploadCraftData([
-                    sheetId,
-                    blockId,
-                ])
-                if (result.isOk()) {
-                    setError(undefined)
-                    setDescriptorUrl(undefined)
-                    setSuccessMessage('Data exported successfully')
-                } else {
-                    setError('Failed to upload data')
-                    setDescriptorUrl(undefined)
-                    setSuccessMessage(undefined)
-                }
-            },
-        },
-        {
-            label: 'Import the data',
-            onClick: async () => {
-                const dlResult = await CRAFT_MANAGER.downloadCraftData([
-                    sheetId,
-                    blockId,
-                ])
-                if (!dlResult.isOk()) {
-                    setError('Failed to import data')
-                    setDescriptorUrl(undefined)
-                    setSuccessMessage(undefined)
-                    return
-                }
-
-                const payloads = dlResult._unsafeUnwrap()
-                const result = await DATA_SERVICE.handleTransaction(
-                    new Transaction(payloads, true)
-                )
-                if (isErrorMessage(result)) {
-                    setError(result.msg)
-                    setDescriptorUrl(undefined)
-                    setSuccessMessage(undefined)
-                    return
-                }
-
-                setError(undefined)
-                setDescriptorUrl(undefined)
-                setSuccessMessage('Data imported successfully')
             },
         },
     ]

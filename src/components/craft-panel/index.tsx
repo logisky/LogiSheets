@@ -15,7 +15,7 @@ import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl} from '@/core/data'
 import {buildSelectedDataFromCell} from '../canvas'
 
-type BlockViewProps = {
+type CraftPanelProps = {
     selectedData?: SelectedData
     setSelectedData: (data: SelectedData) => void
     setActiveSheet: (index: number) => void
@@ -23,13 +23,13 @@ type BlockViewProps = {
     onClose: () => void
 }
 
-export const BlockView = ({
+export const CraftPanel = ({
     onClose,
     selectedData,
     setSelectedData,
     setActiveSheet,
     setCellLayouts,
-}: BlockViewProps) => {
+}: CraftPanelProps) => {
     const [iframeSrc, setIframeSrc] = useState('/what-if-calculator/index.html')
     const tools = [
         {

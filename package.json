@@ -26,7 +26,6 @@
         "eslint-plugin-react-hooks": "^4.3.0",
         "html-webpack-plugin": "^5.5.0",
         "lodash": "^4.17.21",
-        "logisheets-craft-forge": "workspace:*",
         "logisheets-web": "workspace:*",
         "mobx": "^6.12.3",
         "mobx-react": "^9.1.1",
