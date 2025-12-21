@@ -14,7 +14,7 @@ use crate::edit_action::{
     WorkbookUpdateType,
 };
 use crate::errors::{Error, Result};
-use crate::file_loader2::load_file;
+use crate::file_loader::load_file;
 use crate::file_saver::save_file;
 use crate::formula_manager::Vertex;
 use crate::settings::Settings;

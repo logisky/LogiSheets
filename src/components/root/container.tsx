@@ -3,7 +3,7 @@ import {useState} from 'react'
 import {ContentComponent} from '@/components/content'
 import {SETTINGS} from '@/core/settings'
 import styles from './root.module.scss'
-import {BlockView} from '../block-view'
+import {CraftPanel} from '../craft-panel'
 import {Grid} from '@/core/worker/types'
 import {IconButton} from '@mui/material'
 import {ChevronLeft} from '@mui/icons-material'
@@ -13,7 +13,7 @@ export const RootContainer = () => {
         source: 'none',
     })
     const [grid, setGrid] = useState<Grid | null>(null)
-    const [isBlockViewVisible, setBlockViewVisible] = useState(false)
+    const [isCraftPanelVisible, setCraftPanelVisible] = useState(false)
 
     const [cellLayouts, setCellLayouts] = useState<CellLayout[]>([])
     const [activeSheet, setActiveSheet] = useState(0)
@@ -38,7 +38,7 @@ export const RootContainer = () => {
                     />
                 </div>
             </div>
-            {!isBlockViewVisible ? (
+            {!isCraftPanelVisible ? (
                 <div
                     style={{
                         position: 'absolute',
@@ -50,19 +50,19 @@ export const RootContainer = () => {
                     <IconButton
                         size="medium"
                         color="default"
-                        onClick={() => setBlockViewVisible(true)}
+                        onClick={() => setCraftPanelVisible(true)}
                     >
                         <ChevronLeft />
                     </IconButton>
                 </div>
             ) : null}
-            {isBlockViewVisible ? (
+            {isCraftPanelVisible ? (
                 <div className={styles['block-view-container']}>
-                    <BlockView
+                    <CraftPanel
                         setSelectedData={setSelectedData}
                         selectedData={selectedData}
                         onClose={() => {
-                            setBlockViewVisible(false)
+                            setCraftPanelVisible(false)
                             // Force remount canvas so all layout-related internal
                             // states (anchor, scrollbars, etc.) are reset.
                             setCanvasKey((k) => k + 1)

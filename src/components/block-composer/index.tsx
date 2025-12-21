@@ -6,7 +6,7 @@ import {useToast} from '@/ui/notification/useToast'
 import {TYPES} from '@/core/ioc/types'
 import {useInjection} from '@/core/ioc/provider'
 import {DataServiceImpl as DataService} from '@/core/data'
-import {CraftManager, FieldInfo, FieldTypeEnum} from '@/core/data/craft'
+import {BlockManager, FieldInfo, FieldTypeEnum} from '@/core/data/block'
 import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
 import {FieldSetting} from './types'
@@ -30,7 +30,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const {selectedData, close} = props
     const {toast} = useToast()
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
+    const BLOCK_MANAGER = useInjection<BlockManager>(TYPES.BlockManager)
 
     const [fields, setFields] = useState<FieldSetting[]>([
         {
@@ -117,7 +117,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 description: field.description,
                 required: field.required,
             }
-            const r = CRAFT_MANAGER.fieldManager.create(
+            const r = BLOCK_MANAGER.fieldManager.create(
                 currentSheetId,
                 blockId,
                 f
@@ -260,7 +260,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                             onDelete={() => handleDeleteField(selectedField.id)}
                             onCancel={close}
                             onSave={handleSave}
-                            enumSetManager={CRAFT_MANAGER.enumSetManager}
+                            enumSetManager={BLOCK_MANAGER.enumSetManager}
                         />
                     ) : (
                         <Box

@@ -2,7 +2,7 @@ import {action, makeObservable, observable} from 'mobx'
 import {createContext, type MouseEvent} from 'react'
 import {Cell} from '../defs'
 import {Textarea} from './textarea'
-import {DataServiceImpl as DataService, CraftManager} from '@/core/data'
+import {DataServiceImpl as DataService, BlockManager} from '@/core/data'
 import {Range} from '@/core/standable'
 import {LeftTop} from '@/core/settings'
 import {ErrorMessage, isErrorMessage} from 'logisheets-web'
@@ -11,7 +11,7 @@ import {Grid} from '@/core/worker/types'
 export class CanvasStore {
     constructor(
         public readonly dataSvc: DataService,
-        public readonly craftManager: CraftManager
+        public readonly blockManager: BlockManager
     ) {
         makeObservable(this)
         this.textarea = new Textarea(this)

@@ -5,7 +5,7 @@ import 'reflect-metadata'
 import {
     DataServiceImpl,
     WorkbookClient,
-    CraftManager,
+    BlockManager,
     OffscreenClient,
 } from '@/core/data'
 import type {Client} from 'logisheets-web'
@@ -20,8 +20,8 @@ export async function setup() {
     const worker = new Worker(new URL('../worker/worker.ts', import.meta.url))
     const workbook = new WorkbookClient(worker)
     CONTAINER.bind<Client>(TYPES.Workbook).toConstantValue(workbook)
-    CONTAINER.bind<CraftManager>(TYPES.CraftManager).toConstantValue(
-        new CraftManager(workbook)
+    CONTAINER.bind<BlockManager>(TYPES.BlockManager).toConstantValue(
+        new BlockManager(workbook)
     )
 
     const offscreen = new OffscreenClient(worker)

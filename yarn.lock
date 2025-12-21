@@ -12452,15 +12452,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"logisheets-craft-forge@workspace:*, logisheets-craft-forge@workspace:packages/craft-forge":
-  version: 0.0.0-use.local
-  resolution: "logisheets-craft-forge@workspace:packages/craft-forge"
-  dependencies:
-    logisheets-web: "npm:^0.8.0"
-  languageName: unknown
-  linkType: soft
-
-"logisheets-web@npm:^0.8.0, logisheets-web@workspace:*, logisheets-web@workspace:packages/web":
+"logisheets-web@workspace:*, logisheets-web@workspace:packages/web":
   version: 0.0.0-use.local
   resolution: "logisheets-web@workspace:packages/web"
   languageName: unknown
@@ -16340,7 +16332,6 @@ __metadata:
     jest-environment-jsdom: "npm:^29.7.0"
     lint-staged: "npm:^13.0.3"
     lodash: "npm:^4.17.21"
-    logisheets-craft-forge: "workspace:*"
     logisheets-web: "workspace:*"
     mobx: "npm:^6.12.3"
     mobx-react: "npm:^9.1.1"

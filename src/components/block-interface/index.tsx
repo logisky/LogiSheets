@@ -7,7 +7,7 @@ import {MenuComponent} from './menu'
 import {useInjection} from '@/core/ioc/provider'
 import {TYPES} from '@/core/ioc/types'
 import {DataServiceImpl as DataService} from '@/core/data'
-import {CraftManager, FieldInfo} from '@/core/data/craft'
+import {BlockManager, FieldInfo} from '@/core/data/block'
 import {
     BlockCellInfo,
     InsertRowsInBlockBuilder,
@@ -36,7 +36,7 @@ export interface BlockInterfaceProps {
 export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
     const {grid, canvasStartX, canvasStartY} = props
     const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const CRAFT_MANAGER = useInjection<CraftManager>(TYPES.CraftManager)
+    const BLOCK_MANAGER = useInjection<BlockManager>(TYPES.BlockManager)
 
     if (!grid.blockInfos || grid.blockInfos.length === 0) {
         return null
@@ -53,7 +53,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                 const height =
                     yForRowEnd(info.rowStart + info.rowCnt - 1, grid) - y
                 const fieldInfos = info.colInfos.map((colInfo, _idx) => {
-                    const result = CRAFT_MANAGER.fieldManager.get(
+                    const result = BLOCK_MANAGER.fieldManager.get(
                         colInfo.fieldId
                     )
 
@@ -81,7 +81,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         colStart={info.colStart}
                         rowStart={info.rowStart}
                         dataService={DATA_SERVICE}
-                        craftManager={CRAFT_MANAGER}
+                        blockManager={BLOCK_MANAGER}
                         canvasStartX={canvasStartX}
                         canvasStartY={canvasStartY}
                         cells={info.cells}
@@ -106,7 +106,7 @@ interface BlockInterfaceInternalProps {
     colStart: number
     rowStart: number
     dataService: DataService
-    craftManager: CraftManager
+    blockManager: BlockManager
     canvasStartX: number
     canvasStartY: number
     cells: readonly BlockCellInfo[]
@@ -127,7 +127,7 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
         colStart,
         rowStart,
         dataService,
-        craftManager,
+        blockManager,
         canvasStartX,
         canvasStartY,
         cells,

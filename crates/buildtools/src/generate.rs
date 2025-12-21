@@ -7,7 +7,6 @@ use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditActi
 use logisheets_controller::{
     AppendixWithCell, CellInfo, ErrorMessage, FormulaDisplayInfo, SaveFileResult, SheetDimension,
 };
-use logisheets_server_types::{CraftData, CraftDescriptor, Resp};
 use logisheets_workbook::logisheets::AppData;
 
 fn main() {
@@ -37,12 +36,5 @@ fn main() {
     file_group.add::<SequencerMessage>();
     file_group.add::<UserMessage>();
 
-    file_group.gen_files(path, true);
-
-    let path = "packages/craft-forge/src/bindings";
-    let mut file_group = FileGroup::new();
-    file_group.add::<CraftDescriptor>();
-    file_group.add::<CraftData>();
-    file_group.add::<Resp<u8>>();
     file_group.gen_files(path, true);
 }
