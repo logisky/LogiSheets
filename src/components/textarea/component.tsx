@@ -19,6 +19,7 @@ import {FormulaDisplayInfo} from 'logisheets-web'
 export interface TextContainerProps {
     context: Context
     blur: () => void
+    cancel: () => void
     type: (e: string) => Promise<FormulaDisplayInfo | undefined>
     // Insert the string at the current cursor position
     insertion?: string
@@ -42,7 +43,7 @@ export const TextContainerComponent = forwardRef(
 
 const InternalComponent = observer(
     forwardRef((props: TextContainerProps, ref) => {
-        const {context, blur, type, insertion} = props
+        const {context, blur, cancel, type, insertion} = props
         const {cursor, selection, textManager} = useContext(TextareaContext)
 
         useImperativeHandle(ref, () => {
@@ -241,6 +242,9 @@ const InternalComponent = observer(
                             )
                             break
                         }
+                        case KeyboardEventCode.ESCAPE:
+                            cancel()
+                            break
                         default:
                     }
                     break

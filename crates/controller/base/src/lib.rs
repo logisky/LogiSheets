@@ -97,10 +97,22 @@ pub enum NormalRange {
     AddrRange(NormalCellId, NormalCellId),
 }
 
+impl NormalRange {
+    pub fn is_single(&self) -> bool {
+        matches!(self, NormalRange::Single(_))
+    }
+}
+
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum BlockRange {
     Single(BlockCellId),
     AddrRange(BlockCellId, BlockCellId),
+}
+
+impl BlockRange {
+    pub fn is_single(&self) -> bool {
+        matches!(self, BlockRange::Single(_))
+    }
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]

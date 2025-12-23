@@ -20,7 +20,7 @@ enum CalcStatus {
 
 pub fn calc_order<V, F>(rdeps_fetcher: &F, dirty_nodes: HashSet<V>) -> VecDeque<CalcUnit<V>>
 where
-    V: Clone + Hash + Eq + fmt::Debug,
+    V: Clone + Hash + Eq + fmt::Debug + Ord,
     F: Fn(&V) -> Vec<V>,
 {
     let mut entrance_time: HashMap<V, u32> = HashMap::new();
@@ -29,7 +29,9 @@ where
     let mut scc_id: u32 = 0;
     let mut scc_map: HashMap<V, u32> = HashMap::new();
     let mut time: u32 = 0;
-    let orders = dirty_nodes.into_iter().map(|v| {
+    let mut dn = dirty_nodes.into_iter().collect::<Vec<_>>();
+    dn.sort();
+    let orders = dn.into_iter().map(|v| {
         let calc_status = node_status.get(&v);
         if calc_status.is_some() {
             return vec![];

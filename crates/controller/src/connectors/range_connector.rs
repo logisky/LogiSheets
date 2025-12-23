@@ -9,6 +9,7 @@ use logisheets_base::{
 
 use crate::{
     ext_book_manager::ExtBooksManager,
+    formula_manager::FormulaManager,
     id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager},
     navigator::Navigator,
     range_manager::ctx::RangeExecCtx,
@@ -23,6 +24,7 @@ pub struct RangeConnector<'a> {
     pub external_links_manager: &'a mut ExtBooksManager,
     pub navigator: &'a Navigator,
     pub sheet_pos_manager: &'a SheetInfoManager,
+    pub formula_manager: &'a FormulaManager,
 }
 
 impl<'a> IdFetcherTrait for RangeConnector<'a> {

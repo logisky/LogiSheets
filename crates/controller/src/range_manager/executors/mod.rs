@@ -30,6 +30,7 @@ pub struct RangeExecutor {
     pub manager: RangeManager,
     pub dirty_ranges: HashSet<(SheetId, RangeId)>,
     pub removed_ranges: HashSet<(SheetId, RangeId)>,
+    pub trigger: Option<(SheetId, RangeId)>,
 }
 
 impl RangeExecutor {
@@ -38,6 +39,7 @@ impl RangeExecutor {
             manager,
             dirty_ranges: HashSet::new(),
             removed_ranges: HashSet::new(),
+            trigger: None,
         }
     }
 
@@ -321,6 +323,7 @@ impl RangeExecutor {
             manager: self.manager,
             removed_ranges,
             dirty_ranges,
+            trigger: self.trigger,
         }
     }
 
@@ -374,6 +377,7 @@ impl RangeExecutor {
             manager: self.manager,
             dirty_ranges,
             removed_ranges,
+            trigger: self.trigger,
         }
     }
 }

@@ -38,6 +38,10 @@ impl RangeManager {
         }
     }
 
+    pub fn get_sheet_manager_assert(&self, sheet_id: &SheetId) -> Option<&SheetRangeManager> {
+        self.data.get(sheet_id)
+    }
+
     pub fn get_sheet_range_manager(&mut self, sheet_id: &SheetId) -> &mut SheetRangeManager {
         if !self.data.contains_key(sheet_id) {
             self.data.insert(*sheet_id, SheetRangeManager::new());
@@ -117,7 +121,11 @@ impl SheetRangeManager {
                 Some(id) => *id,
                 None => {
                     let r = normal_range.clone();
-                    let id = self.next_id;
+                    let id = if r.is_single() {
+                        self.next_id
+                    } else {
+                        self.next_id + u16::MAX as u32
+                    };
                     self.normal_range_to_id.insert(r.clone(), id);
                     self.id_to_normal_range.insert(id, r);
                     self.next_id += 1;
@@ -128,7 +136,11 @@ impl SheetRangeManager {
                 Some(id) => *id,
                 None => {
                     let r = block_range.clone();
-                    let id = self.next_id;
+                    let id = if r.is_single() {
+                        self.next_id
+                    } else {
+                        self.next_id + u16::MAX as u32
+                    };
                     self.block_range_to_id.insert(r.clone(), id);
                     self.id_to_block_range.insert(id, r);
                     self.next_id += 1;

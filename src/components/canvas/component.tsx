@@ -1321,6 +1321,15 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         }
     }
 
+    const cancel = async () => {
+        store.textarea.reset()
+        setCellRefs([])
+        selectedDataContentChanged$({})
+        // Ensure keyboard events go back to the canvas after exiting edit mode
+        canvas()!.focus({preventScroll: true})
+        setReference('')
+    }
+
     const onBlur = async () => {
         const isBlur = await store.textarea.blur()
         if (!isBlur) {
@@ -1331,6 +1340,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         selectedDataContentChanged$({})
         // Ensure keyboard events go back to the canvas after exiting edit mode
         canvas()!.focus({preventScroll: true})
+        setReference('')
         return true
     }
     const onCloseInvalidFormulaWarning = () => {
@@ -1515,6 +1525,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                     ref={textEl}
                     context={store.textarea.context}
                     blur={onBlur}
+                    cancel={cancel}
                     type={type}
                     insertion={reference.length === 0 ? undefined : reference}
                 />
