@@ -66,7 +66,8 @@ where
     let range_id = result
         .manager
         .get_range_id(&sheet, &Range::from(this_cell_id));
-    result.dirty_ranges.insert((sheet, range_id));
+    result.trigger = Some((sheet, range_id));
+    // result.dirty_ranges.insert((sheet, range_id));
     Ok(result)
 }
 
@@ -77,6 +78,7 @@ pub fn input_ephemeral(
 ) -> Result<RangeExecutor, BasicError> {
     let mut result = exec_ctx;
     let range_id = result.manager.get_range_id(&sheet, &Range::Ephemeral(id));
-    result.dirty_ranges.insert((sheet, range_id));
+    result.trigger = Some((sheet, range_id));
+    // result.dirty_ranges.insert((sheet, range_id));
     Ok(result)
 }

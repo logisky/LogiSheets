@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use logisheets_base::{CellId, CellValue, SheetId};
 use logisheets_workbook::prelude::*;
 
@@ -198,8 +196,6 @@ pub fn load_sheet_data(
                             range_manager,
                             cube_manager,
                             ext_ref_manager,
-                            dirty_ranges: HashSet::new(),
-                            dirty_cubes: HashSet::new(),
                             sid_assigner: &ShadowIdAssigner::new(),
                         };
                         if let Some(f) = &formula.formula {

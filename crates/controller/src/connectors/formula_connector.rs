@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use logisheets_base::block_affect::BlockAffectTrait;
 use logisheets_base::errors::BasicError;
 use logisheets_base::get_book_name::GetBookNameTrait;
@@ -7,14 +5,15 @@ use logisheets_base::id_fetcher::{IdFetcherTrait, SheetIdFetcherByIdxTrait, Vert
 use logisheets_base::index_fetcher::IndexFetcherTrait;
 use logisheets_base::matrix_value::cross_product_usize;
 use logisheets_base::{
-    BlockCellId, BlockId, CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId,
-    NormalCellId, Range, RangeId, RowId, SheetId, TextId,
+    BlockCellId, BlockId, BlockRange, CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId,
+    FuncId, NameId, NormalCellId, NormalRange, Range, RangeId, RowId, SheetId, TextId,
 };
 
 use crate::cube_manager::CubeManager;
 use crate::ext_book_manager::ExtBooksManager;
 use crate::ext_ref_manager::ExtRefManager;
 use crate::formula_manager::ctx::FormulaExecCtx;
+use crate::formula_manager::Vertex;
 use crate::id_manager::{FuncIdManager, NameIdManager, SheetIdManager, TextIdManager};
 use crate::navigator::Navigator;
 use crate::range_manager::RangeManager;
@@ -38,9 +37,6 @@ pub struct FormulaConnector<'a> {
     pub id_navigator: &'a Navigator,
     pub idx_navigator: &'a Navigator,
     pub external_links_manager: &'a mut ExtBooksManager,
-
-    pub dirty_ranges: HashSet<(SheetId, RangeId)>,
-    pub dirty_cubes: HashSet<CubeId>,
 
     pub sid_assigner: &'a ShadowIdAssigner,
 }
@@ -307,15 +303,100 @@ impl<'a> IndexFetcherTrait for FormulaConnector<'a> {
 impl<'a> logisheets_parser::context::ContextTrait for FormulaConnector<'a> {}
 
 impl<'a> FormulaExecCtx for FormulaConnector<'a> {
-    fn get_dirty_range_ids(&self) -> HashSet<(SheetId, RangeId)> {
-        self.dirty_ranges.clone()
-    }
-
-    fn get_dirty_cube_ids(&self) -> HashSet<CubeId> {
-        self.dirty_cubes.clone()
-    }
-
     fn get_cell_id_by_shadow_id(&self, shadow_id: &u64) -> Option<(SheetId, CellId)> {
         self.sid_assigner.get_cell_id(*shadow_id)
     }
+
+    fn get_range_deps(&self, vertex: &Vertex) -> Vec<Vertex> {
+        let (sheet_id, range_id) = match vertex {
+            Vertex::Range(s, r) => (s, r),
+            _ => return Vec::new(),
+        };
+
+        let range = match self.range_manager.get_range(sheet_id, range_id) {
+            Some(r) => r,
+            None => return Vec::new(),
+        };
+
+        let sheet_mgr = match self.range_manager.get_sheet_manager_assert(sheet_id) {
+            Some(mgr) => mgr,
+            None => return Vec::new(),
+        };
+
+        match range {
+            Range::Normal(ref normal_range) => sheet_mgr
+                .normal_range_to_id
+                .iter()
+                .filter_map(|(r, id)| match r {
+                    NormalRange::Single(cell) => {
+                        match cell_in_normal_range(self, sheet_id, cell, normal_range) {
+                            Ok(true) => Some(Vertex::Range(*sheet_id, *id)),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                })
+                .collect(),
+            Range::Block(ref block_range) => sheet_mgr
+                .block_range_to_id
+                .iter()
+                .filter_map(|(r, id)| match r {
+                    BlockRange::Single(cell) => {
+                        match cell_in_block_range(self, sheet_id, cell, block_range) {
+                            Ok(true) => Some(Vertex::Range(*sheet_id, *id)),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                })
+                .collect(),
+            Range::Ephemeral(_) => Vec::new(),
+        }
+    }
+}
+
+fn cell_in_normal_range<C: FormulaExecCtx>(
+    ctx: &C,
+    sheet_id: &SheetId,
+    cell: &NormalCellId,
+    range: &NormalRange,
+) -> std::result::Result<bool, BasicError> {
+    let (row, col) = ctx.fetch_normal_cell_index(sheet_id, cell)?;
+
+    Ok(match range {
+        NormalRange::Single(_) => false,
+        NormalRange::RowRange(start, end) => {
+            let s = ctx.fetch_row_index(sheet_id, start)?;
+            let e = ctx.fetch_row_index(sheet_id, end)?;
+            row >= s && row <= e
+        }
+        NormalRange::ColRange(start, end) => {
+            let s = ctx.fetch_col_index(sheet_id, start)?;
+            let e = ctx.fetch_col_index(sheet_id, end)?;
+            col >= s && col <= e
+        }
+        NormalRange::AddrRange(start, end) => {
+            let (sr, sc) = ctx.fetch_normal_cell_index(sheet_id, start)?;
+            let (er, ec) = ctx.fetch_normal_cell_index(sheet_id, end)?;
+            row >= sr && row <= er && col >= sc && col <= ec
+        }
+    })
+}
+
+fn cell_in_block_range<C: FormulaExecCtx>(
+    ctx: &C,
+    sheet_id: &SheetId,
+    cell: &BlockCellId,
+    range: &BlockRange,
+) -> std::result::Result<bool, BasicError> {
+    let (row, col) = ctx.fetch_block_cell_index(sheet_id, cell)?;
+
+    Ok(match range {
+        BlockRange::Single(_) => false,
+        BlockRange::AddrRange(start, end) => {
+            let (sr, sc) = ctx.fetch_block_cell_index(sheet_id, start)?;
+            let (er, ec) = ctx.fetch_block_cell_index(sheet_id, end)?;
+            row >= sr && row <= er && col >= sc && col <= ec
+        }
+    })
 }

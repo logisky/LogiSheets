@@ -134,8 +134,13 @@ impl<'a> Executor<'a> {
         result.status.range_manager = range_executor.manager;
         result.status.cube_manager = cube_executor.manager;
 
-        let formula_executor =
-            result.execute_formula(payload.clone(), &old_navigator, dirty_ranges, dirty_cubes)?;
+        let formula_executor = result.execute_formula(
+            payload.clone(),
+            &old_navigator,
+            dirty_ranges,
+            dirty_cubes,
+            range_executor.trigger,
+        )?;
 
         let cell_updated =
             if updated || nav_updated || cell_attatchment_updated || exclusive_updated {
@@ -181,39 +186,68 @@ impl<'a> Executor<'a> {
         })
     }
 
-    pub fn calc(mut self) -> Result<Self, Error> {
+    pub fn calc(self) -> Result<Self, Error> {
         let mut dirty_cells_in_next_run = imbl::HashSet::new();
         let mut calc_cells: HashSet<(SheetId, CellId)> = HashSet::new();
+        let Executor {
+            mut status,
+            sid_assigner,
+            version_manager,
+            mut async_func_manager,
+            book_name,
+            calc_config,
+            async_funcs,
+            mut updated_cells,
+            cells_removed,
+            style_updated,
+            dirty_vertices,
+            sheet_updated,
+            cell_updated,
+        } = self;
         let connector = CalcConnector {
-            range_manager: &self.status.range_manager,
-            cube_manager: &self.status.cube_manager,
-            navigator: &mut self.status.navigator,
-            container: &mut self.status.container,
-            ext_links: &mut self.status.external_links_manager,
-            text_id_manager: &mut self.status.text_id_manager,
-            func_id_manager: &mut self.status.func_id_manager,
-            sheet_id_manager: &self.status.sheet_id_manager,
+            range_manager: &status.range_manager,
+            cube_manager: &status.cube_manager,
+            navigator: &mut status.navigator,
+            container: &mut status.container,
+            ext_links: &mut status.external_links_manager,
+            text_id_manager: &mut status.text_id_manager,
+            func_id_manager: &mut status.func_id_manager,
+            sheet_id_manager: &status.sheet_id_manager,
             names_storage: HashMap::new(),
             cells_storage: HashMap::new(),
-            sheet_pos_manager: &mut self.status.sheet_info_manager,
-            async_func_manager: &mut self.async_func_manager,
-            async_funcs: &self.async_funcs,
+            sheet_pos_manager: &mut status.sheet_info_manager,
+            async_func_manager: &mut async_func_manager,
+            async_funcs: &async_funcs,
             active_sheet: 0,
             curr_addr: Addr::default(),
             dirty_cells_in_next_run: &mut dirty_cells_in_next_run,
             calc_cells: &mut calc_cells,
         };
         let engine = CalcEngine {
-            formula_manager: &self.status.formula_manager,
-            dirty_vertices: self.dirty_vertices.clone(),
-            config: self.calc_config.clone(),
+            formula_manager: &status.formula_manager,
+            dirty_vertices,
+            config: self.calc_config,
             connector,
         };
 
         engine.start();
 
-        self.updated_cells.extend(calc_cells);
-        Ok(self)
+        updated_cells.extend(calc_cells);
+        Ok(Executor {
+            status,
+            sid_assigner,
+            version_manager,
+            async_func_manager,
+            book_name,
+            calc_config,
+            async_funcs,
+            updated_cells,
+            cells_removed,
+            style_updated,
+            dirty_vertices: HashSet::new(),
+            sheet_updated,
+            cell_updated,
+        })
     }
 
     fn execute_range(&mut self, payload: EditPayload) -> Result<RangeExecutor, Error> {
@@ -225,6 +259,7 @@ impl<'a> Executor<'a> {
             external_links_manager: &mut self.status.external_links_manager,
             navigator: &self.status.navigator,
             sheet_pos_manager: &self.status.sheet_info_manager,
+            formula_manager: &self.status.formula_manager,
         };
         let executor = RangeExecutor::new(self.status.range_manager.clone());
         executor.execute(&ctx, payload)
@@ -333,6 +368,7 @@ impl<'a> Executor<'a> {
         old_navigator: &Navigator,
         dirty_ranges: HashSet<(SheetId, RangeId)>,
         dirty_cubes: HashSet<CubeId>,
+        trigger: Option<(SheetId, RangeId)>,
     ) -> Result<FormulaExecutor, Error> {
         let mut ctx = FormulaConnector {
             book_name: self.book_name,
@@ -347,13 +383,14 @@ impl<'a> Executor<'a> {
             id_navigator: &mut self.status.navigator,
             idx_navigator: old_navigator,
             external_links_manager: &mut self.status.external_links_manager,
-            dirty_ranges,
-            dirty_cubes,
             sid_assigner: &self.sid_assigner,
         };
         let executor = FormulaExecutor {
             manager: self.status.formula_manager.clone(),
             dirty_vertices: HashSet::new(),
+            dirty_ranges,
+            dirty_cubes,
+            trigger,
         };
         executor.execute(payload, &mut ctx)
     }

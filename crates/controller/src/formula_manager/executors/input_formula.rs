@@ -66,6 +66,60 @@ pub fn input_ephemeral_formula<C: FormulaExecCtx>(
     }
 }
 
+pub fn remove_formula<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+    let cell_id = ctx.fetch_cell_id(&sheet, row, col)?;
+    remove(executor, sheet, cell_id, ctx)
+}
+
+fn remove<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet: SheetId,
+    cell_id: CellId,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let range = match cell_id {
+        CellId::NormalCell(normal) => Range::Normal(NormalRange::Single(normal)),
+        CellId::BlockCell(block) => Range::Block(BlockRange::Single(block)),
+        CellId::EphemeralCell(v) => Range::Ephemeral(v),
+    };
+    let range_id = ctx.fetch_range_id(&sheet, &range);
+    let this_vertex = Vertex::Range(sheet, range_id);
+
+    let FormulaManager {
+        mut graph,
+        mut formulas,
+        names,
+    } = executor.manager;
+    if let Some(old_formula_deps) = graph.clone().get_deps(&this_vertex) {
+        old_formula_deps.iter().for_each(|old_dep| {
+            graph.remove_dep(&this_vertex, old_dep);
+        })
+    };
+
+    formulas.remove(&(sheet, cell_id));
+
+    Ok(FormulaExecutor {
+        manager: FormulaManager {
+            graph,
+            formulas,
+            names,
+        },
+        dirty_vertices: executor.dirty_vertices,
+        dirty_ranges: executor.dirty_ranges,
+        dirty_cubes: executor.dirty_cubes,
+        trigger: executor.trigger,
+    })
+}
+
 fn input<C: FormulaExecCtx>(
     executor: FormulaExecutor,
     sheet: SheetId,
@@ -108,9 +162,14 @@ fn input<C: FormulaExecCtx>(
         })
     };
 
-    new_formula_deps
-        .into_iter()
-        .for_each(|new_dep| graph.add_dep(this_vertex.clone(), new_dep));
+    new_formula_deps.into_iter().for_each(|new_dep| {
+        graph.add_dep(this_vertex.clone(), new_dep.clone());
+
+        let range_deps = ctx.get_range_deps(&new_dep);
+        range_deps.into_iter().for_each(|range_dep| {
+            graph.add_dep(new_dep.clone(), range_dep);
+        });
+    });
 
     formulas.insert((sheet, cell_id), ast.clone());
 
@@ -121,6 +180,9 @@ fn input<C: FormulaExecCtx>(
             names,
         },
         dirty_vertices: executor.dirty_vertices,
+        dirty_ranges: executor.dirty_ranges,
+        dirty_cubes: executor.dirty_cubes,
+        trigger: executor.trigger,
     })
 }
 
@@ -174,5 +236,60 @@ fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
             }
             ast::CellReference::RefErr => {}
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_all_vertices_from_ast() {
+        // let f = "=B2*(1+A2)";
+        let sum = ast::Node {
+            pure: ast::PureNode::Func(ast::Func {
+                op: ast::Operator::Infix(ast::InfixOperator::Plus),
+                args: vec![
+                    ast::Node {
+                        pure: ast::PureNode::Value(ast::Value::Number(1.0)),
+                        bracket: false,
+                    },
+                    ast::Node {
+                        pure: ast::PureNode::Reference(ast::CellReference::Mut(
+                            ast::RangeDisplay {
+                                sheet_id: 0,
+                                range_id: 0,
+                                ref_abs: RefAbs::from_addr(false, false),
+                            },
+                        )),
+                        bracket: false,
+                    },
+                ],
+            }),
+            bracket: false,
+        };
+        let ast = ast::Node {
+            pure: ast::PureNode::Func(ast::Func {
+                op: ast::Operator::Infix(ast::InfixOperator::Multiply),
+                args: vec![
+                    sum,
+                    ast::Node {
+                        pure: ast::PureNode::Reference(ast::CellReference::Mut(
+                            ast::RangeDisplay {
+                                sheet_id: 0,
+                                range_id: 1,
+                                ref_abs: RefAbs::from_addr(false, false),
+                            },
+                        )),
+                        bracket: false,
+                    },
+                ],
+            }),
+            bracket: false,
+        };
+
+        let mut vertices = HashSet::<Vertex>::new();
+        get_all_vertices_from_ast(&ast, &mut vertices);
+        assert_eq!(vertices.len(), 2);
     }
 }

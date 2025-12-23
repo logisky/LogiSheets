@@ -3,12 +3,14 @@ pub mod calculator;
 pub mod connector;
 mod cycle;
 
+use std::collections::HashSet;
+
 use logisheets_base::{Addr, BlockRange, NormalRange, Range};
 
 use crate::formula_manager::{FormulaManager, Vertex};
 use crate::settings::CalcConfig;
 use crate::{CellId, SheetId};
-use calc_order::{calc_order, CalcUnit};
+pub use calc_order::{calc_order, CalcUnit};
 
 use self::connector::Connector;
 use calculator::calculator::calc;
@@ -19,7 +21,7 @@ where
     C: Connector,
 {
     pub formula_manager: &'a FormulaManager,
-    pub dirty_vertices: std::collections::HashSet<Vertex>,
+    pub dirty_vertices: HashSet<Vertex>,
     pub config: CalcConfig,
     pub connector: C,
 }
@@ -29,16 +31,28 @@ where
     C: Connector,
 {
     pub fn start(self) {
-        let graph = &self.formula_manager.graph;
-        let rdeps_fetcher = |v: &Vertex| match graph.get_rdeps(v) {
-            Some(rdeps) => rdeps.iter().map(|r| r.clone()).collect(),
-            None => vec![],
+        let Self {
+            formula_manager,
+            dirty_vertices,
+            config,
+            connector,
+        } = self;
+        let graph = &formula_manager.graph;
+        let rdeps_fetcher = |v: &Vertex| {
+            let mut result = vec![];
+            graph
+                .get_rdeps(v)
+                .cloned()
+                .unwrap_or_else(|| imbl::HashSet::new())
+                .into_iter()
+                .for_each(|e| result.push(e));
+            result
         };
-        let order = calc_order(&rdeps_fetcher, self.dirty_vertices);
-        let formulas = &self.formula_manager.formulas;
-        let names = &self.formula_manager.names;
-        let CalcConfig { iter_limit, error } = self.config;
-        let mut connector = self.connector;
+        let order = calc_order(&rdeps_fetcher, dirty_vertices);
+        let formulas = &formula_manager.formulas;
+        let names = &formula_manager.names;
+        let CalcConfig { iter_limit, error } = config;
+        let mut connector = connector;
 
         order.into_iter().for_each(|unit| match unit {
             CalcUnit::Cycle(vertices) => {

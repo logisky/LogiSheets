@@ -2,8 +2,8 @@ mod input_formula;
 
 use std::collections::HashSet;
 
-use input_formula::input_ephemeral_formula;
-pub use input_formula::{add_ast_node, input_formula};
+pub use input_formula::{add_ast_node, input_ephemeral_formula, input_formula, remove_formula};
+use logisheets_base::{CubeId, RangeId, SheetId};
 
 use crate::{edit_action::EditPayload, Error};
 
@@ -12,6 +12,9 @@ use super::{ctx::FormulaExecCtx, FormulaManager, Vertex};
 pub struct FormulaExecutor {
     pub manager: FormulaManager,
     pub dirty_vertices: HashSet<Vertex>,
+    pub dirty_ranges: HashSet<(SheetId, RangeId)>,
+    pub dirty_cubes: HashSet<CubeId>,
+    pub trigger: Option<(SheetId, RangeId)>,
 }
 
 impl FormulaExecutor {
@@ -20,7 +23,7 @@ impl FormulaExecutor {
         payload: EditPayload,
         ctx: &mut C,
     ) -> Result<Self, Error> {
-        let mut executor = match payload {
+        let executor = match payload {
             EditPayload::CellInput(mut cell_input) => {
                 if cell_input.content.starts_with("=") {
                     let formula = cell_input.content.split_off(1);
@@ -46,20 +49,51 @@ impl FormulaExecutor {
                     ctx,
                 )
             }
+            EditPayload::CellClear(p) => remove_formula(self, p.sheet_idx, p.row, p.col, ctx),
             _ => Ok(self),
         }?;
-        ctx.get_dirty_range_ids()
+        let FormulaExecutor {
+            mut manager,
+            mut dirty_vertices,
+            dirty_ranges,
+            dirty_cubes,
+            trigger,
+        } = executor;
+
+        if let Some((sheet, range)) = trigger {
+            let trigger_vertex = Vertex::Range(sheet, range);
+            dirty_vertices.insert(trigger_vertex);
+        }
+
+        dirty_ranges
             .into_iter()
             .map(|(s, r)| Vertex::Range(s, r))
             .for_each(|v| {
-                executor.dirty_vertices.insert(v);
+                if let Some((sheet, range)) = trigger {
+                    let trigger_vertex = Vertex::Range(sheet, range);
+                    manager.graph.add_dep(v, trigger_vertex);
+                } else {
+                    dirty_vertices.insert(v);
+                }
             });
-        ctx.get_dirty_cube_ids()
+        dirty_cubes
             .into_iter()
-            .map(|c| Vertex::Cube(c))
+            .map(|r| Vertex::Cube(r))
             .for_each(|v| {
-                executor.dirty_vertices.insert(v);
+                if let Some((sheet, range)) = trigger {
+                    let trigger_vertex = Vertex::Range(sheet, range);
+                    manager.graph.add_dep(v, trigger_vertex);
+                } else {
+                    dirty_vertices.insert(v);
+                }
             });
-        Ok(executor)
+
+        Ok(FormulaExecutor {
+            manager,
+            dirty_vertices,
+            trigger,
+            dirty_cubes: Default::default(),
+            dirty_ranges: Default::default(),
+        })
     }
 }
