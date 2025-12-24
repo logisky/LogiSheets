@@ -152,6 +152,9 @@ impl<'a> Executor<'a> {
         let (sheet_pos_manager, sheet_updated) = result.execute_sheet_info(&payload)?;
         result.status.sheet_info_manager = sheet_pos_manager;
 
+        let mut dirty_vertices = formula_executor.dirty_vertices;
+        dirty_vertices.extend(result.dirty_vertices);
+
         Ok(Executor {
             status: Status {
                 navigator: result.status.navigator,
@@ -176,7 +179,7 @@ impl<'a> Executor<'a> {
             book_name: result.book_name,
             calc_config: result.calc_config,
             async_funcs: result.async_funcs,
-            dirty_vertices: formula_executor.dirty_vertices,
+            dirty_vertices: dirty_vertices,
             updated_cells: result.updated_cells,
             cells_removed: result.cells_removed,
             sheet_updated,

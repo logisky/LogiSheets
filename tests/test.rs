@@ -1,6 +1,7 @@
 use std::fs;
 
 use logiscript::execute_script;
+use logisheets::Workbook;
 
 pub fn test_script(path: &str) {
     println!("testing script: {:?}", path);
@@ -9,6 +10,11 @@ pub fn test_script(path: &str) {
         Some(error) => panic!("{:?}", error.to_string()),
         None => (),
     }
+}
+
+pub fn load_script(path: &str) -> Workbook {
+    let script = fs::read_to_string(path).unwrap();
+    logiscript::load_from_script(&script).unwrap()
 }
 
 #[cfg(test)]
