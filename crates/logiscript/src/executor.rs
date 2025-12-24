@@ -46,38 +46,50 @@ impl Default for ExecContext {
     }
 }
 
-fn execute(statements: Vec<Statement>) -> Option<ExecError> {
-    let mut ctx = ExecContext::default();
+fn _exec(ctx: &mut ExecContext, statements: Vec<Statement>) -> Option<ExecError> {
+    // let mut ctx = ExecContext::default();
     for s in statements {
         let line = s.line;
         let res = match s.op {
-            Operator::Switch(switch) => exec_switch(&mut ctx, switch, line),
-            Operator::Input(input) => exec_input(&mut ctx, input, line),
-            Operator::CheckNum(check_num) => exec_check_num(&mut ctx, check_num, line),
-            Operator::CheckString(check_str) => exec_check_string(&mut ctx, check_str, line),
-            Operator::CheckError(check_err) => exec_check_error(&mut ctx, check_err, line),
-            Operator::CheckFormula(check_formula) => {
-                exec_check_formula(&mut ctx, check_formula, line)
-            }
-            Operator::CheckEmpty(c) => exec_check_empty(&mut ctx, c, line),
-            Operator::InsertRow(data) => exec_shift_row(&mut ctx, data, line, true),
-            Operator::InsertCol(data) => exec_shift_col(&mut ctx, data, line, true),
-            Operator::DeleteRow(data) => exec_shift_row(&mut ctx, data, line, false),
-            Operator::DeleteCol(data) => exec_shift_col(&mut ctx, data, line, false),
-            Operator::CreateBlock(p) => exec_create_block(&mut ctx, p, line),
-            Operator::MoveBlock(p) => exec_move_block(&mut ctx, p, line),
-            Operator::RemoveBlock(p) => exec_remove_block(&mut ctx, p, line),
-            Operator::ResizeBlock(p) => exec_resize_block(&mut ctx, p, line),
-            Operator::BlockInsertRow(data) => exec_block(&mut ctx, true, true, data, line),
-            Operator::BlockInsertCol(data) => exec_block(&mut ctx, false, true, data, line),
-            Operator::BlockDeleteRow(data) => exec_block(&mut ctx, true, false, data, line),
-            Operator::BlockDeleteCol(data) => exec_block(&mut ctx, false, false, data, line),
+            Operator::Switch(switch) => exec_switch(ctx, switch, line),
+            Operator::Input(input) => exec_input(ctx, input, line),
+            Operator::CheckNum(check_num) => exec_check_num(ctx, check_num, line),
+            Operator::CheckString(check_str) => exec_check_string(ctx, check_str, line),
+            Operator::CheckError(check_err) => exec_check_error(ctx, check_err, line),
+            Operator::CheckFormula(check_formula) => exec_check_formula(ctx, check_formula, line),
+            Operator::CheckEmpty(c) => exec_check_empty(ctx, c, line),
+            Operator::InsertRow(data) => exec_shift_row(ctx, data, line, true),
+            Operator::InsertCol(data) => exec_shift_col(ctx, data, line, true),
+            Operator::DeleteRow(data) => exec_shift_row(ctx, data, line, false),
+            Operator::DeleteCol(data) => exec_shift_col(ctx, data, line, false),
+            Operator::CreateBlock(p) => exec_create_block(ctx, p, line),
+            Operator::MoveBlock(p) => exec_move_block(ctx, p, line),
+            Operator::RemoveBlock(p) => exec_remove_block(ctx, p, line),
+            Operator::ResizeBlock(p) => exec_resize_block(ctx, p, line),
+            Operator::BlockInsertRow(data) => exec_block(ctx, true, true, data, line),
+            Operator::BlockInsertCol(data) => exec_block(ctx, false, true, data, line),
+            Operator::BlockDeleteRow(data) => exec_block(ctx, true, false, data, line),
+            Operator::BlockDeleteCol(data) => exec_block(ctx, false, false, data, line),
         };
-        if res.is_some() {
-            return res;
+        if let Some(err) = res {
+            return Some(err);
         }
     }
     None
+}
+
+fn execute(statements: Vec<Statement>) -> Option<ExecError> {
+    let mut ctx = ExecContext::default();
+    _exec(&mut ctx, statements)
+}
+
+fn load(statements: Vec<Statement>) -> Result<Workbook, ExecError> {
+    let mut ctx = ExecContext::default();
+    let res = _exec(&mut ctx, statements);
+    match res {
+        None => Ok(ctx.workbook),
+        Some(err) => Err(err),
+    }
 }
 
 fn exec_shift_row(
@@ -538,6 +550,15 @@ pub fn execute_script(script: &str) -> Option<Error> {
         return Some(Error::Exec(e));
     }
     None
+}
+
+pub fn load_from_script(script: &str) -> Result<Workbook, Error> {
+    let statements = parse(script);
+    if let Err(e) = statements {
+        return Err(Error::Parse(e));
+    }
+    let statements = statements.unwrap();
+    load(statements).map_err(Error::Exec)
 }
 
 #[cfg(test)]
