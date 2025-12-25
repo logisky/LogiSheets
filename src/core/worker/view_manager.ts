@@ -213,6 +213,15 @@ export function parseDisplayWindow(
             }
         }
     })
+    window.window.mergeCells.forEach((m) => {
+        for (let r = m.startRow; r <= m.endRow; r += 1) {
+            for (let c = m.startCol; c <= m.endCol; c += 1) {
+                if (r === m.startRow && c === m.startCol) {
+                    skipRenderCells.add(`${r}-${c}`)
+                }
+            }
+        }
+    })
     const cells: RenderCell[] = []
     let idx = 0
     for (let r = 0; r < rows.length; r += 1) {

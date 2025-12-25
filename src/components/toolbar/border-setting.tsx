@@ -133,9 +133,10 @@ export const BorderSettingComponent = ({
                                 <PreviewLineComponent style={value} />
                             </Box>
                         )}
+                        MenuProps={{disablePortal: true}}
                     >
                         {borderStyleNames.map((v, i) => (
-                            <MenuItem key={v} value={v}>
+                            <MenuItem key={i} value={v}>
                                 <PreviewLineComponent
                                     style={v as StBorderStyle}
                                 />
