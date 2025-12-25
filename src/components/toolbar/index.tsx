@@ -230,6 +230,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             setBold(font.bold)
             setItalic(font.italic)
             setUnderline(font.underline ? font.underline.val !== 'none' : false)
+            setStrike(font.strike)
             switch (style.formatter.toLocaleLowerCase()) {
                 case '':
                 case 'general':
