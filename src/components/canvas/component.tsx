@@ -626,10 +626,25 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                         )
                     )
                 } else {
+                    let endRow = r1
+                    let endCol = c1
+                    if (grid.mergeCells) {
+                        grid.mergeCells.forEach((cell) => {
+                            if (
+                                cell.startCol <= c1 &&
+                                c1 <= cell.endCol &&
+                                cell.startRow <= r1 &&
+                                r1 <= cell.endRow
+                            ) {
+                                endRow = Math.max(endRow, cell.endRow)
+                                endCol = Math.max(endCol, cell.endCol)
+                            }
+                        })
+                    }
                     const sx = LeftTop.width + xForColStart(c1, grid)
-                    const ex = LeftTop.width + xForColEnd(c1, grid)
+                    const ex = LeftTop.width + xForColEnd(endCol, grid)
                     const sy = LeftTop.height + yForRowStart(r1, grid)
-                    const ey = LeftTop.height + yForRowEnd(r1, grid)
+                    const ey = LeftTop.height + yForRowEnd(endRow, grid)
                     newCells.push(
                         makeCell(
                             sx,
@@ -917,12 +932,13 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             if (!cell) return
             endCell = cell
             const {startRow, startCol} = startCell.coordinate
-            const {endRow, endCol} = endCell?.coordinate ?? startCell.coordinate
+            const {startRow: er, startCol: ec} =
+                endCell?.coordinate ?? startCell.coordinate
             const data = buildSelectedDataFromCellRange(
                 startRow,
                 startCol,
-                endRow,
-                endCol,
+                er,
+                ec,
                 'none'
             )
             compareAndSetReference(data)
@@ -933,12 +949,13 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             if (startCell?.type !== endCell?.type && endCell) return
 
             const {startRow, startCol} = startCell.coordinate
-            const {endRow, endCol} = endCell?.coordinate ?? startCell.coordinate
+            const {startRow: er, startCol: ec} =
+                endCell?.coordinate ?? startCell.coordinate
             const data = buildSelectedDataFromCellRange(
                 startRow,
                 startCol,
-                endRow,
-                endCol,
+                er,
+                ec,
                 'none'
             )
             compareAndSetReference(data)
@@ -1078,8 +1095,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 })
             return
         }
-        if (selectedCells.startCol !== selectedCells.endCol) return
-        if (selectedCells.startRow !== selectedCells.endRow) return
 
         const row = selectedCells.startRow
         const col = selectedCells.startCol
