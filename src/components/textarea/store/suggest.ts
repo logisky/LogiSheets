@@ -65,6 +65,10 @@ export class Suggest {
         }
         const newCandidates: Candidate[] = []
         if (triggerContext.func === '' && triggerContext.argIndex === -1) {
+            if (isAllDigits(triggerContext.text)) {
+                this.showSuggest = false
+                return
+            }
             const candidates = fuzzyFilterFormula(triggerContext.text)
             if (candidates.length === 0) {
                 this.showSuggest = false
@@ -227,4 +231,14 @@ interface TriggerContext {
     argIndex: number
     start: number
     end: number
+}
+
+function isAllDigits(s: string): boolean {
+    if (s.length === 0) return false
+
+    for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i)
+        if (c < 48 || c > 57) return false
+    }
+    return true
 }
