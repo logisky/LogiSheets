@@ -82,6 +82,18 @@ impl SheetRangeManager {
         }
     }
 
+    pub fn convert_normal_range_to_block_range(
+        &mut self,
+        normal_range: NormalRange,
+        block_range: BlockRange,
+    ) {
+        if let Some(id) = self.normal_range_to_id.remove(&normal_range) {
+            self.id_to_normal_range.remove(&id);
+            self.id_to_block_range.insert(id, block_range);
+            self.block_range_to_id.insert(block_range, id);
+        }
+    }
+
     pub fn get_range_id_assert(&self, range: &Range) -> Option<RangeId> {
         match range {
             Range::Normal(normal) => Some(self.normal_range_to_id.get(normal)?.clone()),
