@@ -1,5 +1,5 @@
 use logisheets_controller::edit_action::{
-    CellInput, CreateBlock, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows,
+    CellInput, ConvertBlock, CreateBlock, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows,
     DeleteRowsInBlock, EditAction, EditPayload, InsertCols, InsertColsInBlock, InsertRows,
     InsertRowsInBlock, MoveBlock, PayloadsAction, RemoveBlock, ResizeBlock,
 };
@@ -70,6 +70,7 @@ fn _exec(ctx: &mut ExecContext, statements: Vec<Statement>) -> Option<ExecError>
             Operator::BlockInsertCol(data) => exec_block(ctx, false, true, data, line),
             Operator::BlockDeleteRow(data) => exec_block(ctx, true, false, data, line),
             Operator::BlockDeleteCol(data) => exec_block(ctx, false, false, data, line),
+            Operator::ConvertBlock(convert_block) => exec_convert_block(ctx, convert_block, line),
         };
         if let Some(err) = res {
             return Some(err);
@@ -369,6 +370,25 @@ fn exec_check_num(ctx: &mut ExecContext, check_num: CheckNum, line: usize) -> Op
             msg: format!("Sheet {} is not found", &ctx.sheet_name),
         }),
     }
+}
+
+fn exec_convert_block(
+    ctx: &mut ExecContext,
+    mut convert_block: ConvertBlock,
+    line: usize,
+) -> Option<ExecError> {
+    let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
+    if let Err(_) = sheet {
+        return Some(ExecError {
+            line,
+            msg: format!("Sheet {} is not found", ctx.sheet_name),
+        });
+    }
+    let sheet_idx = sheet.unwrap();
+    convert_block.sheet_idx = sheet_idx;
+    let action = PayloadsAction::new().add_payload(convert_block);
+    ctx.workbook.handle_action(EditAction::Payloads(action));
+    None
 }
 
 fn exec_block(

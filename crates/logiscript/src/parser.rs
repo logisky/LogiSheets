@@ -1,4 +1,6 @@
-use logisheets_controller::edit_action::{CreateBlock, MoveBlock, RemoveBlock, ResizeBlock};
+use logisheets_controller::edit_action::{
+    ConvertBlock, CreateBlock, MoveBlock, RemoveBlock, ResizeBlock,
+};
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
@@ -120,6 +122,24 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
             let end_row = end_row as usize;
             let end_col = end_col as usize;
             Ok(Operator::CreateBlock(CreateBlock {
+                sheet_idx: 1, // dummy sheet_idx
+                id,
+                master_row: start_row,
+                master_col: start_col,
+                row_cnt: end_row - start_row + 1,
+                col_cnt: end_col - start_col + 1,
+            }))
+        }
+        Rule::block_convert => {
+            let mut iter = s.into_inner();
+            let id = iter.next().unwrap().as_str().parse::<usize>().unwrap();
+            let range_pair = iter.next().unwrap();
+            let ((start_row, start_col), (end_row, end_col)) = parse_range(range_pair).unwrap();
+            let start_row = start_row as usize;
+            let start_col = start_col as usize;
+            let end_row = end_row as usize;
+            let end_col = end_col as usize;
+            Ok(Operator::ConvertBlock(ConvertBlock {
                 sheet_idx: 1, // dummy sheet_idx
                 id,
                 master_row: start_row,

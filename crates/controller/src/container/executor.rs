@@ -1,6 +1,6 @@
 use logisheets_base::{
-    errors::BasicError, matrix_value::cross_product_usize, CellId, CellValue, NormalCellId,
-    SheetId, TextId,
+    errors::BasicError, matrix_value::cross_product_usize, BlockCellId, BlockId, CellId, CellValue,
+    NormalCellId, SheetId, TextId,
 };
 
 use crate::{
@@ -70,6 +70,41 @@ impl ContainerExecutor {
                     },
                     true,
                 ))
+            }
+            EditPayload::ConvertBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let coords = cross_product_usize(
+                    p.master_row,
+                    p.master_row + p.row_cnt - 1,
+                    p.master_col,
+                    p.master_col + p.col_cnt - 1,
+                );
+                // This block has not been created literally at this point.
+                // Since this is a new block, we can get the cell id by row and col.
+                let get_block_cell_id = |block_id: &BlockId, row: usize, col: usize| BlockCellId {
+                    block_id: block_id.clone(),
+                    row: row as u32,
+                    col: col as u32,
+                };
+                let result = coords.into_iter().fold(self, |mut prev, (r, c)| {
+                    let ori_cell_id = ctx.fetch_norm_cell_id(&sheet_id, r, c);
+                    let new_cell_id = get_block_cell_id(&p.id, r - p.master_row, c - p.master_col);
+                    match ori_cell_id {
+                        Ok(n) => {
+                            let container = prev.container.convert_cell(
+                                sheet_id,
+                                CellId::NormalCell(n),
+                                CellId::BlockCell(new_cell_id),
+                            );
+                            prev.container = container;
+                            prev
+                        }
+                        _ => prev,
+                    }
+                });
+                Ok((result, true))
             }
             EditPayload::ResizeBlock(p) => {
                 let sheet_id = ctx

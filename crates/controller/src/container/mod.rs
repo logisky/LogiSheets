@@ -31,6 +31,16 @@ impl DataContainer {
         }
     }
 
+    pub fn convert_cell(self, sheet_id: SheetId, original_id: CellId, new_id: CellId) -> Self {
+        let mut res = self.clone();
+        if let Some(container) = res.data.get_mut(&sheet_id) {
+            if let Some(cell_info) = container.cells.remove(&original_id) {
+                container.cells.insert(new_id, cell_info);
+            }
+        }
+        res
+    }
+
     pub fn get_cell(&self, sheet_id: SheetId, cell_id: &CellId) -> Option<&Cell> {
         let container = self.get_sheet_container(sheet_id)?;
         container.cells.get(cell_id)

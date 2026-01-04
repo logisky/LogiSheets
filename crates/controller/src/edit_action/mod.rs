@@ -91,6 +91,7 @@ pub enum EditPayload {
     RemoveBlock(RemoveBlock),
     CreateBlock(CreateBlock),
     ResizeBlock(ResizeBlock),
+    ConvertBlock(ConvertBlock),
 
     // DiyCell
     CreateDiyCell(CreateDiyCell),
@@ -289,6 +290,20 @@ pub struct ResizeBlock {
     pub id: usize,
     pub new_row_cnt: Option<usize>,
     pub new_col_cnt: Option<usize>,
+}
+
+/// Convert a cell range to a block.
+///
+/// It is similar to `create_block`, but it will keep the old cells and formulas.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "convert_block.ts", builder, rename_all = "camelCase")]
+pub struct ConvertBlock {
+    pub sheet_idx: usize,
+    pub id: usize,
+    pub master_row: usize,
+    pub master_col: usize,
+    pub row_cnt: usize,
+    pub col_cnt: usize,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -862,6 +877,11 @@ impl From<EphemeralCellInput> for EditPayload {
         EditPayload::EphemeralCellInput(value)
     }
 }
+impl From<ConvertBlock> for EditPayload {
+    fn from(value: ConvertBlock) -> Self {
+        EditPayload::ConvertBlock(value)
+    }
+}
 
 impl Payload for BlockInput {}
 impl Payload for BlockStyleUpdate {}
@@ -888,6 +908,7 @@ impl Payload for DeleteRowsInBlock {}
 impl Payload for CellFormatBrush {}
 impl Payload for LineFormatBrush {}
 impl Payload for EphemeralCellInput {}
+impl Payload for ConvertBlock {}
 
 #[cfg(test)]
 mod tests {

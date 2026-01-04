@@ -1,3 +1,4 @@
+mod convert_to_block;
 mod delete_block_line;
 mod delete_line;
 mod delete_sheet;
@@ -10,6 +11,7 @@ mod resize_block;
 mod utils;
 use std::collections::HashSet;
 
+use convert_to_block::convert_to_block;
 use delete_block_line::delete_block_line;
 use delete_line::delete_line;
 use delete_sheet::delete_sheet;
@@ -108,6 +110,22 @@ impl RangeExecutor {
                 )?;
                 let result = occupy_addr_range(self, sheet_id, start, end, ctx);
                 Ok(result)
+            }
+            EditPayload::ConvertBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let res = convert_to_block(
+                    self,
+                    sheet_id,
+                    p.id,
+                    p.master_row,
+                    p.master_col,
+                    p.row_cnt,
+                    p.col_cnt,
+                    ctx,
+                );
+                Ok(res)
             }
             EditPayload::CellInput(p) => {
                 let sheet_id = ctx
@@ -287,6 +305,7 @@ impl RangeExecutor {
         let manager = self.manager.get_sheet_range_manager(sheet_id);
         let mut dirty_ranges = self.dirty_ranges;
         let mut removed_ranges = self.removed_ranges;
+        let mut to_convert = HashSet::new();
         manager
             .normal_range_to_id
             .iter()
@@ -303,9 +322,17 @@ impl RangeExecutor {
                     to_remove.insert(range_id.clone());
                     dirty_ranges.insert((*sheet_id, *range_id));
                 }
+                RangeUpdateType::UpdateToBlock(normal_range, block_range) => {
+                    dirty_ranges.insert((*sheet_id, *range_id));
+                    to_convert.insert((normal_range, block_range));
+                }
             });
         to_update.into_iter().for_each(|new_range| {
             if let Range::Normal(range) = new_range.range {
+                let old_range = manager.id_to_normal_range.get(&new_range.id);
+                if old_range.is_some() {
+                    manager.normal_range_to_id.remove(old_range.unwrap());
+                }
                 manager
                     .id_to_normal_range
                     .insert(new_range.id, range.clone());
@@ -318,6 +345,9 @@ impl RangeExecutor {
                 manager.id_to_normal_range.remove(&range_id);
                 removed_ranges.insert((*sheet_id, range_id));
             }
+        });
+        to_convert.into_iter().for_each(|(original, block_range)| {
+            manager.convert_normal_range_to_block_range(original, block_range);
         });
         RangeExecutor {
             manager: self.manager,
@@ -351,6 +381,7 @@ impl RangeExecutor {
                 RangeUpdateType::Removed => {
                     to_remove.insert(range_id.clone());
                 }
+                RangeUpdateType::UpdateToBlock(_, _) => {}
             });
         to_update.into_iter().for_each(|new_range| {
             if let Range::Block(range) = new_range.range {
@@ -391,6 +422,7 @@ pub struct NewRange {
 pub enum RangeUpdateType {
     Dirty,
     UpdateTo(NewRange),
+    UpdateToBlock(NormalRange, BlockRange),
     None,
     Removed,
 }
