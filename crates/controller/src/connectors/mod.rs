@@ -1,3 +1,4 @@
+mod block_schema_connector;
 mod calc_connector;
 mod cell_attachments_connector;
 mod container_connector;
@@ -11,6 +12,7 @@ mod navigator_connector;
 mod range_connector;
 mod sheet_pos_connector;
 
+pub use block_schema_connector::BlockSchemaConnector;
 pub use calc_connector::CalcConnector;
 pub use cell_attachments_connector::CellAttachmentsConnector;
 pub use container_connector::ContainerConnector;

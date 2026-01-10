@@ -16,6 +16,7 @@ use crate::id_manager::SheetIdManager;
 use crate::id_manager::TextIdManager;
 use crate::navigator::Navigator;
 
+use crate::block_schema_manager::SchemaManager;
 use crate::range_manager::RangeManager;
 use crate::style_manager::StyleManager;
 use crate::workbook::sheet_info_manager::SheetInfoManager;
@@ -37,6 +38,7 @@ pub struct Status {
     pub style_manager: StyleManager,
     pub cell_attachment_manager: CellAttachmentsManager,
     pub exclusive_manager: ExclusiveManager,
+    pub block_schema_manager: SchemaManager,
 
     pub dirty_cells_next_round: HashSet<(SheetId, CellId)>,
 }
@@ -62,6 +64,7 @@ impl Default for Status {
             cell_attachment_manager: CellAttachmentsManager::default(),
             exclusive_manager: ExclusiveManager::default(),
             dirty_cells_next_round: HashSet::new(),
+            block_schema_manager: SchemaManager::default(),
         }
     }
 }
