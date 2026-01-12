@@ -1,7 +1,10 @@
-use imbl::hashmap::HashMap;
+use imbl::{hashmap::HashMap, Vector};
 use logisheets_base::{AuthorId, ExtBookId, FuncId, SheetId, TextId};
 use num::{Num, NumCast};
 use std::ops::AddAssign;
+
+pub const BLOCKREF_ID: FuncId = 0;
+pub const BLOCKREFS_ID: FuncId = 1;
 
 pub type SheetIdManager = IdManager<SheetId>;
 pub type BookIdManager = IdManager<ExtBookId>;
@@ -19,6 +22,7 @@ impl SheetIdManager {
         Self {
             next_available: 1,
             ids,
+            reserved_ids: Vector::new(),
         }
     }
 }
@@ -30,6 +34,7 @@ where
 {
     next_available: T,
     ids: HashMap<String, T>,
+    reserved_ids: Vector<T>,
 }
 
 impl<T> IdManager<T>
@@ -40,6 +45,21 @@ where
         IdManager {
             next_available: start,
             ids: HashMap::new(),
+            reserved_ids: Vector::new(),
+        }
+    }
+
+    pub fn new_with_reserved_ids(start: T, reserved: Vec<(T, String)>) -> Self {
+        let mut ids = HashMap::new();
+        let mut reserved_ids = Vector::new();
+        for (id, name) in reserved {
+            ids.insert(name, id);
+            reserved_ids.push_back(id);
+        }
+        IdManager {
+            next_available: start,
+            ids,
+            reserved_ids,
         }
     }
 
@@ -55,6 +75,9 @@ where
         self.ids.insert(name, self.next_available);
         let _1: T = NumCast::from(1usize).unwrap();
         self.next_available += _1;
+        while self.reserved_ids.contains(&self.next_available) {
+            self.next_available += _1;
+        }
         r
     }
 
@@ -96,5 +119,15 @@ impl FuncIdManager {
     pub fn get_func_id(&mut self, name: &str) -> FuncId {
         let s = name.to_uppercase();
         self.get_or_register_id(&s)
+    }
+
+    pub fn init() -> Self {
+        Self::new_with_reserved_ids(
+            2,
+            vec![
+                (BLOCKREF_ID, "BLOCKREF".to_string()),
+                (BLOCKREFS_ID, "BLOCKREFS".to_string()),
+            ],
+        )
     }
 }

@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
+use logisheets_base::block_ref::BlockRefTrait;
 use logisheets_base::errors::BasicError;
 use logisheets_base::get_curr_addr::GetCurrAddrTrait;
 use logisheets_base::set_curr_cell::SetCurrCellTrait;
@@ -8,9 +9,10 @@ use logisheets_base::{
     matrix_value::{cross_product_usize, MatrixValue},
     Addr, CellId, CellValue, Error, FuncId, NameId, SheetId, TextId,
 };
-use logisheets_base::{BlockRange, CubeCross, NormalRange, Range};
+use logisheets_base::{BlockCellId, BlockRange, CubeCross, NormalRange, Range};
 use logisheets_parser::ast;
 
+use crate::block_schema_manager::SchemaManager;
 use crate::cube_manager::CubeManager;
 use crate::id_manager::SheetIdManager;
 use crate::range_manager::RangeManager;
@@ -46,6 +48,7 @@ pub struct CalcConnector<'a> {
     pub sheet_pos_manager: &'a SheetInfoManager,
     pub async_func_manager: &'a mut AsyncFuncManager,
     pub async_funcs: &'a HashSet<String>,
+    pub block_schema_manager: &'a SchemaManager,
     pub active_sheet: SheetId,
     pub curr_addr: Addr,
 
@@ -365,6 +368,22 @@ impl<'a> Connector for CalcConnector<'a> {
     fn get_active_sheet(&self) -> SheetId {
         self.active_sheet
     }
+
+    fn get_block_cell_value(
+        &mut self,
+        sheet_id: SheetId,
+        cell_id: BlockCellId,
+    ) -> Option<CalcValue> {
+        let sheet = self.container.get_sheet_container_mut(sheet_id);
+        if let Some(cell) = sheet.cells.get(&CellId::BlockCell(cell_id)) {
+            let cell_value = cell.value.clone();
+            let value =
+                Value::from_cell_value(cell_value, &|id| self.text_id_manager.get_string(id));
+            Some(CalcValue::Scalar(value))
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a> CalcConnector<'a> {
@@ -525,5 +544,29 @@ where
             ast::Error::GettingData => CellValue::Error(Error::GettingData),
             ast::Error::Placeholder => CellValue::Error(Error::Placeholder),
         },
+    }
+}
+
+impl<'a> BlockRefTrait for CalcConnector<'a> {
+    fn get_all_keys(&self, ref_name: &str) -> Vec<String> {
+        self.block_schema_manager
+            .get_all_keys(ref_name)
+            .unwrap_or_default()
+    }
+
+    fn get_all_fields(&self, ref_name: &str) -> Vec<String> {
+        self.block_schema_manager
+            .get_all_fields(ref_name)
+            .unwrap_or_default()
+    }
+
+    fn resolve(
+        &self,
+        ref_name: &str,
+        key: &String,
+        field: &String,
+    ) -> Option<(SheetId, BlockCellId)> {
+        self.block_schema_manager
+            .resolve_by_ref_name(ref_name, key, field)
     }
 }

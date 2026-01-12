@@ -51,12 +51,30 @@ impl SchemaTrait for Schema {
             Schema::RandomSchema(schema) => schema.get_ref_name(),
         }
     }
+
+    fn get_all_keys(&self) -> Vec<Key> {
+        match self {
+            Schema::RowSchema(schema) => schema.get_all_keys(),
+            Schema::ColSchema(schema) => schema.get_all_keys(),
+            Schema::RandomSchema(schema) => schema.get_all_keys(),
+        }
+    }
+
+    fn get_all_fields(&self) -> Vec<Field> {
+        match self {
+            Schema::RowSchema(schema) => schema.get_all_fields(),
+            Schema::ColSchema(schema) => schema.get_all_fields(),
+            Schema::RandomSchema(schema) => schema.get_all_fields(),
+        }
+    }
 }
 
 pub trait SchemaTrait {
     fn resolve(&self, key: &Key, field: &Field) -> Option<(RowId, ColId)>;
     fn get_render_id(&self, row: RowId, col: ColId) -> Option<RenderId>;
     fn get_ref_name(&self) -> String;
+    fn get_all_keys(&self) -> Vec<Key>;
+    fn get_all_fields(&self) -> Vec<Field>;
 }
 
 impl SchemaTrait for RowSchema {
@@ -83,6 +101,14 @@ impl SchemaTrait for RowSchema {
 
     fn get_ref_name(&self) -> String {
         self.name.clone()
+    }
+
+    fn get_all_keys(&self) -> Vec<Key> {
+        self.keys.iter().map(|(k, _)| k.clone()).collect()
+    }
+
+    fn get_all_fields(&self) -> Vec<Field> {
+        self.fields.iter().map(|(f, _)| f.clone()).collect()
     }
 }
 
@@ -111,6 +137,14 @@ impl SchemaTrait for ColSchema {
     fn get_ref_name(&self) -> String {
         self.name.clone()
     }
+
+    fn get_all_keys(&self) -> Vec<Key> {
+        self.keys.iter().map(|(k, _)| k.clone()).collect()
+    }
+
+    fn get_all_fields(&self) -> Vec<Field> {
+        self.fields.iter().map(|(f, _)| f.clone()).collect()
+    }
 }
 
 impl SchemaTrait for RandomSchema {
@@ -130,5 +164,19 @@ impl SchemaTrait for RandomSchema {
 
     fn get_ref_name(&self) -> String {
         self.name.clone()
+    }
+
+    fn get_all_keys(&self) -> Vec<Key> {
+        self.key_field
+            .iter()
+            .map(|(k, _, _, _, _)| k.clone())
+            .collect()
+    }
+
+    fn get_all_fields(&self) -> Vec<Field> {
+        self.key_field
+            .iter()
+            .map(|(_, f, _, _, _)| f.clone())
+            .collect()
     }
 }

@@ -55,7 +55,7 @@ impl Default for Status {
                 data: HashMap::new(),
             },
             sheet_id_manager: SheetIdManager::new(0),
-            func_id_manager: FuncIdManager::new(0),
+            func_id_manager: FuncIdManager::init(),
             text_id_manager: TextIdManager::new(0),
             name_id_manager: NameIdManager::new(0),
             external_links_manager: ExtBooksManager::new(),
