@@ -8,6 +8,7 @@ use logisheets_parser::Parser;
 use std::collections::HashSet;
 
 use crate::formula_manager::{ctx::FormulaExecCtx, FormulaManager, Vertex};
+use crate::id_manager::{BLOCKREFS_ID, BLOCKREF_ID};
 
 pub fn input_formula<C: FormulaExecCtx>(
     executor: FormulaExecutor,
@@ -116,6 +117,7 @@ fn remove<C: FormulaExecCtx>(
         dirty_vertices: executor.dirty_vertices,
         dirty_ranges: executor.dirty_ranges,
         dirty_cubes: executor.dirty_cubes,
+        dirty_schemas: executor.dirty_schemas,
         trigger: executor.trigger,
     })
 }
@@ -182,6 +184,7 @@ fn input<C: FormulaExecCtx>(
         dirty_vertices: executor.dirty_vertices,
         dirty_ranges: executor.dirty_ranges,
         dirty_cubes: executor.dirty_cubes,
+        dirty_schemas: executor.dirty_schemas,
         trigger: executor.trigger,
     })
 }
@@ -211,6 +214,16 @@ fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
             func.args
                 .iter()
                 .for_each(|n| get_all_vertices_from_ast(n, vertices));
+            if let ast::Operator::Function(id) = func.op {
+                if id == BLOCKREFS_ID || id == BLOCKREF_ID {
+                    if let Some(arg0) = func.args.get(0) {
+                        if let ast::PureNode::Value(ast::Value::Text(text)) = &arg0.pure {
+                            let vertex = Vertex::BlockSchema(text.clone());
+                            vertices.insert(vertex);
+                        }
+                    }
+                }
+            }
         }
         ast::PureNode::Value(_) => {}
         ast::PureNode::Reference(reference) => match reference {

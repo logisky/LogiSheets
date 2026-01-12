@@ -13,6 +13,7 @@ pub struct FormulaExecutor {
     pub manager: FormulaManager,
     pub dirty_vertices: HashSet<Vertex>,
     pub dirty_ranges: HashSet<(SheetId, RangeId)>,
+    pub dirty_schemas: HashSet<String>,
     pub dirty_cubes: HashSet<CubeId>,
     pub trigger: Option<(SheetId, RangeId)>,
 }
@@ -56,6 +57,7 @@ impl FormulaExecutor {
             mut manager,
             mut dirty_vertices,
             dirty_ranges,
+            dirty_schemas,
             dirty_cubes,
             trigger,
         } = executor;
@@ -88,12 +90,20 @@ impl FormulaExecutor {
                 }
             });
 
+        dirty_schemas
+            .into_iter()
+            .map(|r| Vertex::BlockSchema(r))
+            .for_each(|v| {
+                dirty_vertices.insert(v);
+            });
+
         Ok(FormulaExecutor {
             manager,
             dirty_vertices,
             trigger,
             dirty_cubes: Default::default(),
             dirty_ranges: Default::default(),
+            dirty_schemas: Default::default(),
         })
     }
 }

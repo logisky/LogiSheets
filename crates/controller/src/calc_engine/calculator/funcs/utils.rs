@@ -149,6 +149,7 @@ pub fn get_nums_from_value(value: CalcValue) -> Result<Vec<f64>, ast::Error> {
 #[cfg(test)]
 pub mod tests_utils {
     use logisheets_base::async_func::{AsyncCalcResult, AsyncFuncCommitTrait, Task};
+    use logisheets_base::block_ref::BlockRefTrait;
     use logisheets_base::get_curr_addr::GetCurrAddrTrait;
     use logisheets_base::set_curr_cell::SetCurrCellTrait;
     use logisheets_base::SheetId;
@@ -183,6 +184,25 @@ pub mod tests_utils {
             _active_sheet: logisheets_base::SheetId,
             _addr: logisheets_base::Addr,
         ) {
+            unreachable!()
+        }
+    }
+
+    impl BlockRefTrait for TestFetcher {
+        fn get_all_keys(&self, _ref_name: &str) -> Vec<String> {
+            unreachable!()
+        }
+
+        fn get_all_fields(&self, _ref_name: &str) -> Vec<String> {
+            unreachable!()
+        }
+
+        fn resolve(
+            &self,
+            _ref_name: &str,
+            _key: &String,
+            _field: &String,
+        ) -> Option<(SheetId, logisheets_base::BlockCellId)> {
             unreachable!()
         }
     }
@@ -222,6 +242,10 @@ pub mod tests_utils {
             unreachable!()
         }
 
+        fn get_sheet_id_by_name(&self, _name: &str) -> Result<SheetId> {
+            unreachable!()
+        }
+
         fn commit_calc_values(&mut self, _vertex: (SheetId, CellId), _result: CalcValue) {
             unreachable!()
         }
@@ -238,16 +262,20 @@ pub mod tests_utils {
             unreachable!()
         }
 
-        fn get_sheet_id_by_name(&self, _name: &str) -> Result<SheetId> {
-            unreachable!()
+        fn get_active_sheet(&self) -> SheetId {
+            1
         }
 
         fn set_curr_as_dirty(&mut self) -> Result<()> {
             unreachable!()
         }
 
-        fn get_active_sheet(&self) -> SheetId {
-            1
+        fn get_block_cell_value(
+            &mut self,
+            _sheet_id: SheetId,
+            _cell_id: logisheets_base::BlockCellId,
+        ) -> Option<CalcValue> {
+            unreachable!()
         }
     }
 }

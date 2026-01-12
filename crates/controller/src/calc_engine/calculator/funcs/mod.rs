@@ -4,6 +4,7 @@ mod and;
 mod asyncs;
 mod average;
 mod bits;
+mod blocks;
 mod bonds;
 mod boolean;
 mod choose;
@@ -90,13 +91,14 @@ where
         "BIN2HEX" => bits::hob2hob::calc_bin2hex(args, fetcher),
         "BIN2OCT" => bits::hob2hob::calc_bin2oct(args, fetcher),
         "BINOM.DIST" => distribution::binom::calc(args, fetcher),
-        "BINOMDIST" => distribution::binom::calc(args, fetcher),
         "BINOM.INV" => distribution::binom::calc_inv(args, fetcher),
+        "BINOMDIST" => distribution::binom::calc(args, fetcher),
         "BITAND" => bits::bit::calc_bitand(args, fetcher),
         "BITLSHIFT" => bits::bit::calc_bitlshift(args, fetcher),
         "BITOR" => bits::bit::calc_bitor(args, fetcher),
         "BITRSHIFT" => bits::bit::calc_bitrshift(args, fetcher),
         "BITXOR" => bits::bit::calc_bitxor(args, fetcher),
+        "BLOCKREF" => blocks::blockref::calc(args, fetcher),
         "CHISQ.DIST" => distribution::chisqdist::calc_chisqdist(args, fetcher),
         "CHISQ.DIST.RT" => distribution::chisqdist::calc_chisqdist_rt(args, fetcher),
         "CHOOSE" => choose::calc(args, fetcher),

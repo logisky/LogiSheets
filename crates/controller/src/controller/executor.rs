@@ -133,6 +133,7 @@ impl<'a> Executor<'a> {
 
         let (block_schema_executor, _block_schema_updated) =
             result.execute_bind_schema(payload.clone())?;
+        let dirty_schemas = block_schema_executor.dirty_schemas;
         result.status.block_schema_manager = block_schema_executor.manager;
 
         result.status.navigator = nav_executor.nav;
@@ -143,6 +144,7 @@ impl<'a> Executor<'a> {
             payload.clone(),
             &old_navigator,
             dirty_ranges,
+            dirty_schemas,
             dirty_cubes,
             range_executor.trigger,
         )?;
@@ -231,6 +233,7 @@ impl<'a> Executor<'a> {
             curr_addr: Addr::default(),
             dirty_cells_in_next_run: &mut dirty_cells_in_next_run,
             calc_cells: &mut calc_cells,
+            block_schema_manager: &status.block_schema_manager,
         };
         let engine = CalcEngine {
             formula_manager: &status.formula_manager,
@@ -389,6 +392,7 @@ impl<'a> Executor<'a> {
         payload: EditPayload,
         old_navigator: &Navigator,
         dirty_ranges: HashSet<(SheetId, RangeId)>,
+        dirty_schemas: HashSet<String>,
         dirty_cubes: HashSet<CubeId>,
         trigger: Option<(SheetId, RangeId)>,
     ) -> Result<FormulaExecutor, Error> {
@@ -411,6 +415,7 @@ impl<'a> Executor<'a> {
             manager: self.status.formula_manager.clone(),
             dirty_vertices: HashSet::new(),
             dirty_ranges,
+            dirty_schemas,
             dirty_cubes,
             trigger,
         };

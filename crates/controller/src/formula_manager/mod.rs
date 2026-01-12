@@ -47,6 +47,7 @@ pub enum Vertex {
     Cube(CubeId),
     Ext(ExtRefId),
     Name(NameId),
+    BlockSchema(String),
 }
 
 impl Ord for Vertex {
