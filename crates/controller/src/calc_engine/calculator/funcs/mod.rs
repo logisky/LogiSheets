@@ -99,6 +99,7 @@ where
         "BITRSHIFT" => bits::bit::calc_bitrshift(args, fetcher),
         "BITXOR" => bits::bit::calc_bitxor(args, fetcher),
         "BLOCKREF" => blocks::blockref::calc(args, fetcher),
+        "BLOCKREFS" => blocks::blockrefs::calc(args, fetcher),
         "CHISQ.DIST" => distribution::chisqdist::calc_chisqdist(args, fetcher),
         "CHISQ.DIST.RT" => distribution::chisqdist::calc_chisqdist_rt(args, fetcher),
         "CHOOSE" => choose::calc(args, fetcher),
