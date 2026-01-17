@@ -1,8 +1,10 @@
-use crate::{container::block_line_info_manager::BlockLineInfo, CellInfo};
+use crate::{block_manager::field_manager::FieldRenderInfo, CellInfo};
 
 use super::style::Style;
 use gents_derives::TS;
 use logisheets_base::{BlockId, SheetId};
+
+use crate::block_manager::schema_manager::schema::RenderId;
 
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "cell_position.ts", rename_all = "camelCase")]
@@ -95,9 +97,59 @@ pub struct BlockInfo {
     pub row_cnt: usize,
     pub col_start: usize,
     pub col_cnt: usize,
-    pub row_infos: Vec<BlockLineInfo>,
-    pub col_infos: Vec<BlockLineInfo>,
+    pub schema: Option<BlockSchema>,
+    pub field_renders: Vec<FieldRenderEntry>,
     pub cells: Vec<BlockCellInfo>,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "block_schema.ts", rename_all = "camelCase")]
+pub struct BlockSchema {
+    pub name: String,
+    pub schema_type: BlockSchemaType,
+    pub keys: Vec<BlockSchemaKeyEntry>,
+    pub fields: Vec<BlockSchemaFieldEntry>,
+    pub random_entries: Vec<BlockSchemaRandomEntry>,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "block_schema_type.ts", rename_all = "camelCase")]
+pub enum BlockSchemaType {
+    Row,
+    Col,
+    Random,
+}
+
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "block_schema_key_entry.ts", rename_all = "camelCase")]
+pub struct BlockSchemaKeyEntry {
+    pub key: String,
+    pub idx: usize,
+}
+
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "block_schema_field_entry.ts", rename_all = "camelCase")]
+pub struct BlockSchemaFieldEntry {
+    pub field: String,
+    pub idx: usize,
+    pub render_id: RenderId,
+}
+
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "block_schema_random_entry.ts", rename_all = "camelCase")]
+pub struct BlockSchemaRandomEntry {
+    pub key: String,
+    pub field: String,
+    pub row: usize,
+    pub col: usize,
+    pub render_id: RenderId,
+}
+
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "field_render_entry.ts", rename_all = "camelCase")]
+pub struct FieldRenderEntry {
+    pub render_id: RenderId,
+    pub info: FieldRenderInfo,
 }
 
 #[derive(Debug, Clone, TS)]

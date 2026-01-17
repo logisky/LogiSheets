@@ -1,5 +1,10 @@
 use std::collections::HashSet;
 
+use crate::block_manager::schema_manager::schema::Schema;
+use crate::block_manager::schema_manager::schema::SchemaTrait;
+use crate::controller::display::BlockSchema;
+use crate::controller::display::BlockSchemaRandomEntry;
+use crate::controller::display::BlockSchemaType;
 use crate::controller::display::{
     BlockCellInfo, BlockDisplayInfo, BlockInfo, CellCoordinate, CellPosition, DisplayWindow,
     DisplayWindowWithStartPoint,
@@ -947,30 +952,150 @@ impl<'a> Worksheet<'a> {
                     .navigator
                     .fetch_normal_cell_idx(&self.sheet_id, &mc)
                     .unwrap();
-                let mut row_infos = vec![];
-                let mut col_infos = vec![];
-                for r in block_place.rows.clone() {
-                    let info = self
-                        .controller
-                        .status
-                        .container
-                        .get_sheet_container(self.sheet_id)
-                        .map(|c| c.block_line_info_manager.get_row_info(id, r))
-                        .flatten();
-                    if let Some(info) = info {
-                        row_infos.push(info.clone());
-                    }
-                }
-                for j in block_place.cols.clone() {
-                    let info = self
-                        .controller
-                        .status
-                        .container
-                        .get_sheet_container(self.sheet_id)
-                        .map(|c| c.block_line_info_manager.get_col_info(id, j))
-                        .flatten();
-                    if let Some(info) = info {
-                        col_infos.push(info.clone());
+                let schema = self
+                    .controller
+                    .status
+                    .block_schema_manager
+                    .schemas
+                    .get(&(self.sheet_id, id))
+                    .map(|s| {
+                        let (keys, fields, random_entries) = match s {
+                            Schema::RowSchema(schema) => {
+                                let keys = schema
+                                    .keys
+                                    .iter()
+                                    .map(|(k, row_id)| {
+                                        let idx = block_place
+                                            .rows
+                                            .iter()
+                                            .position(|id| id == row_id)
+                                            .unwrap();
+                                        crate::controller::display::BlockSchemaKeyEntry {
+                                            key: k.clone(),
+                                            idx,
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
+                                let fields = schema
+                                    .fields
+                                    .iter()
+                                    .map(|(f, (col_id, render_id))| {
+                                        let idx = block_place
+                                            .cols
+                                            .iter()
+                                            .position(|id| id == col_id)
+                                            .unwrap();
+                                        crate::controller::display::BlockSchemaFieldEntry {
+                                            field: f.clone(),
+                                            idx,
+                                            render_id: render_id.clone(),
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
+                                (keys, fields, vec![])
+                            }
+                            Schema::ColSchema(schema) => {
+                                let keys = schema
+                                    .keys
+                                    .iter()
+                                    .map(|(k, col_id)| {
+                                        let idx = block_place
+                                            .cols
+                                            .iter()
+                                            .position(|id| id == col_id)
+                                            .unwrap();
+                                        crate::controller::display::BlockSchemaKeyEntry {
+                                            key: k.clone(),
+                                            idx,
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
+                                let fields = schema
+                                    .fields
+                                    .iter()
+                                    .map(|(f, (row_id, render_id))| {
+                                        let idx = block_place
+                                            .rows
+                                            .iter()
+                                            .position(|id| id == row_id)
+                                            .unwrap();
+                                        crate::controller::display::BlockSchemaFieldEntry {
+                                            field: f.clone(),
+                                            idx,
+                                            render_id: render_id.clone(),
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
+                                (keys, fields, vec![])
+                            }
+                            Schema::RandomSchema(schema) => {
+                                let random_entries = schema
+                                    .key_field
+                                    .iter()
+                                    .map(|(k, f, row_id, col_id, render_id)| {
+                                        let row = block_place
+                                            .rows
+                                            .iter()
+                                            .position(|id| id == row_id)
+                                            .unwrap();
+                                        let col = block_place
+                                            .cols
+                                            .iter()
+                                            .position(|id| id == col_id)
+                                            .unwrap();
+                                        BlockSchemaRandomEntry {
+                                            key: k.clone(),
+                                            field: f.clone(),
+                                            row,
+                                            col,
+                                            render_id: render_id.clone(),
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
+                                (vec![], vec![], random_entries)
+                            }
+                        };
+
+                        BlockSchema {
+                            name: s.get_ref_name(),
+                            schema_type: match s {
+                                Schema::RowSchema(_) => BlockSchemaType::Row,
+                                Schema::ColSchema(_) => BlockSchemaType::Col,
+                                Schema::RandomSchema(_) => BlockSchemaType::Random,
+                            },
+                            keys,
+                            fields,
+                            random_entries,
+                        }
+                    });
+
+                let mut field_renders = vec![];
+                let mut seen_render_ids = HashSet::new();
+                for i in block_place.rows.iter() {
+                    for j in block_place.cols.iter() {
+                        let cell_id = BlockCellId {
+                            block_id: id,
+                            row: *i,
+                            col: *j,
+                        };
+                        if let Some(render_id) = self
+                            .controller
+                            .status
+                            .block_schema_manager
+                            .get_render_id(&self.sheet_id, &cell_id)
+                        {
+                            if !seen_render_ids.insert(render_id.clone()) {
+                                continue;
+                            }
+                            if let Some(info) =
+                                self.controller.status.field_render_manager.get(&render_id)
+                            {
+                                field_renders.push(crate::controller::display::FieldRenderEntry {
+                                    render_id,
+                                    info: info.clone(),
+                                });
+                            }
+                        }
                     }
                 }
                 let mut cell_values = vec![];
@@ -1009,8 +1134,8 @@ impl<'a> Worksheet<'a> {
                     row_cnt: block_place.rows.len(),
                     col_start: col,
                     col_cnt: block_place.cols.len(),
-                    row_infos,
-                    col_infos,
+                    schema,
+                    field_renders,
                     cells: cell_values,
                 }
             })
@@ -1264,34 +1389,133 @@ impl<'a> Worksheet<'a> {
         let block_place = self.get_block_place(block_id)?;
         let (row_cnt, col_cnt) = block_place.get_block_size();
         let (row_start, col_start) = self.get_block_master_cell(block_id)?;
-        let row_infos = block_place
-            .rows
-            .iter()
-            .map(|r| {
-                self.controller
+        let schema = self
+            .controller
+            .status
+            .block_schema_manager
+            .schemas
+            .get(&(self.sheet_id, block_id))
+            .map(|s| {
+                let (keys, fields, random_entries) = match s {
+                    Schema::RowSchema(schema) => {
+                        let keys = schema
+                            .keys
+                            .iter()
+                            .map(|(k, row_id)| {
+                                let idx =
+                                    block_place.rows.iter().position(|id| id == row_id).unwrap();
+                                crate::controller::display::BlockSchemaKeyEntry {
+                                    key: k.clone(),
+                                    idx,
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        let fields = schema
+                            .fields
+                            .iter()
+                            .map(|(f, (col_id, render_id))| {
+                                let idx =
+                                    block_place.cols.iter().position(|id| id == col_id).unwrap();
+                                crate::controller::display::BlockSchemaFieldEntry {
+                                    field: f.clone(),
+                                    idx,
+                                    render_id: render_id.clone(),
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        (keys, fields, vec![])
+                    }
+                    Schema::ColSchema(schema) => {
+                        let keys = schema
+                            .keys
+                            .iter()
+                            .map(|(k, col_id)| {
+                                let idx =
+                                    block_place.cols.iter().position(|id| id == col_id).unwrap();
+                                crate::controller::display::BlockSchemaKeyEntry {
+                                    key: k.clone(),
+                                    idx,
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        let fields = schema
+                            .fields
+                            .iter()
+                            .map(|(f, (row_id, render_id))| {
+                                let idx =
+                                    block_place.rows.iter().position(|id| id == row_id).unwrap();
+                                crate::controller::display::BlockSchemaFieldEntry {
+                                    field: f.clone(),
+                                    idx,
+                                    render_id: render_id.clone(),
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        (keys, fields, vec![])
+                    }
+                    Schema::RandomSchema(schema) => {
+                        let random_entries = schema
+                            .key_field
+                            .iter()
+                            .map(|(k, f, row_id, col_id, render_id)| {
+                                let row =
+                                    block_place.rows.iter().position(|id| id == row_id).unwrap();
+                                let col =
+                                    block_place.cols.iter().position(|id| id == col_id).unwrap();
+                                BlockSchemaRandomEntry {
+                                    key: k.clone(),
+                                    field: f.clone(),
+                                    row,
+                                    col,
+                                    render_id: render_id.clone(),
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        (vec![], vec![], random_entries)
+                    }
+                };
+
+                BlockSchema {
+                    name: s.get_ref_name(),
+                    schema_type: match s {
+                        Schema::RowSchema(_) => BlockSchemaType::Row,
+                        Schema::ColSchema(_) => BlockSchemaType::Col,
+                        Schema::RandomSchema(_) => BlockSchemaType::Random,
+                    },
+                    keys,
+                    fields,
+                    random_entries,
+                }
+            });
+
+        let mut field_renders = vec![];
+        let mut seen_render_ids = HashSet::new();
+        for i in block_place.rows.iter() {
+            for j in block_place.cols.iter() {
+                let cell_id = BlockCellId {
+                    block_id,
+                    row: *i,
+                    col: *j,
+                };
+                if let Some(render_id) = self
+                    .controller
                     .status
-                    .container
-                    .get_sheet_container(self.sheet_id)?
-                    .block_line_info_manager
-                    .get_row_info(block_id, *r)
-                    .cloned()
-            })
-            .flatten()
-            .collect::<Vec<_>>();
-        let col_infos = block_place
-            .cols
-            .iter()
-            .map(|c| {
-                self.controller
-                    .status
-                    .container
-                    .get_sheet_container(self.sheet_id)?
-                    .block_line_info_manager
-                    .get_col_info(block_id, *c)
-                    .cloned()
-            })
-            .flatten()
-            .collect::<Vec<_>>();
+                    .block_schema_manager
+                    .get_render_id(&self.sheet_id, &cell_id)
+                {
+                    if !seen_render_ids.insert(render_id.clone()) {
+                        continue;
+                    }
+                    if let Some(info) = self.controller.status.field_render_manager.get(&render_id)
+                    {
+                        field_renders.push(crate::controller::display::FieldRenderEntry {
+                            render_id,
+                            info: info.clone(),
+                        });
+                    }
+                }
+            }
+        }
         let mut cell_values = Vec::new();
         for i in block_place.rows.iter() {
             for j in block_place.cols.iter() {
@@ -1330,8 +1554,8 @@ impl<'a> Worksheet<'a> {
                 .sheet_info_manager
                 .get_sheet_idx(&self.sheet_id)
                 .unwrap(),
-            row_infos,
-            col_infos,
+            schema,
+            field_renders,
             cells: cell_values,
         })
     }

@@ -4,6 +4,7 @@ use logisheets_base::{errors::BasicError, Addr, CellId, CubeId, RangeId, SheetId
 
 use crate::{
     async_func_manager::AsyncFuncManager,
+    block_manager::field_manager::executor::FieldRenderExecutor,
     block_manager::schema_manager::executor::BlockSchemaExecutor,
     calc_engine::CalcEngine,
     cell_attachments::executor::CellAttachmentsExecutor,
@@ -135,6 +136,10 @@ impl<'a> Executor<'a> {
             result.execute_bind_schema(payload.clone())?;
         let dirty_schemas = block_schema_executor.dirty_schemas;
         result.status.block_schema_manager = block_schema_executor.manager;
+
+        let (field_render_executor, _field_render_updated) =
+            result.execute_field_render(payload.clone())?;
+        result.status.field_render_manager = field_render_executor.manager;
 
         result.status.navigator = nav_executor.nav;
         result.status.range_manager = range_executor.manager;
@@ -289,6 +294,14 @@ impl<'a> Executor<'a> {
         };
         let executor = BlockSchemaExecutor::new(self.status.block_schema_manager.clone());
         executor.execute(&mut ctx, payload)
+    }
+
+    fn execute_field_render(
+        &mut self,
+        payload: EditPayload,
+    ) -> Result<(FieldRenderExecutor, bool), Error> {
+        let executor = FieldRenderExecutor::new(self.status.field_render_manager.clone());
+        executor.execute(payload)
     }
 
     fn execute_cube(&mut self, payload: EditPayload) -> Result<CubeExecutor, Error> {
