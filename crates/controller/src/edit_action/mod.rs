@@ -94,6 +94,7 @@ pub enum EditPayload {
     ConvertBlock(ConvertBlock),
     BindFormSchema(BindFormSchema),
     BindRandomSchema(BindRandomSchema),
+    BatchUpsertFieldRenderInfo(BatchUpsertFieldRenderInfo),
 
     // DiyCell
     CreateDiyCell(CreateDiyCell),
@@ -144,6 +145,27 @@ pub enum EditPayload {
 
     // Reproduce
     ReproduceCells(ReproduceCells),
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "batch_upsert_field_render_info.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct BatchUpsertFieldRenderInfo {
+    pub units: Vec<FieldRenderInfoUnit>,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "field_render_info_unit.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct FieldRenderInfoUnit {
+    pub render_id: String,
+    pub info: crate::block_manager::field_manager::FieldRenderInfo,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -418,6 +440,12 @@ pub struct BlockInput {
 impl From<BlockInput> for EditPayload {
     fn from(value: BlockInput) -> Self {
         EditPayload::BlockInput(value)
+    }
+}
+
+impl From<BatchUpsertFieldRenderInfo> for EditPayload {
+    fn from(value: BatchUpsertFieldRenderInfo) -> Self {
+        EditPayload::BatchUpsertFieldRenderInfo(value)
     }
 }
 
@@ -949,6 +977,7 @@ impl Payload for CellFormatBrush {}
 impl Payload for LineFormatBrush {}
 impl Payload for EphemeralCellInput {}
 impl Payload for ConvertBlock {}
+impl Payload for BatchUpsertFieldRenderInfo {}
 
 #[cfg(test)]
 mod tests {

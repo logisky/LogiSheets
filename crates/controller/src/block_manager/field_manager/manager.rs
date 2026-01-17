@@ -1,15 +1,8 @@
-use gents_derives::TS;
 use imbl::HashMap;
-use logisheets_base::StyleId;
 
 use crate::block_manager::schema_manager::schema::RenderId;
 
-#[derive(Debug, Clone, Default, TS)]
-#[ts(file_name = "field_render_info.ts", rename_all = "camelCase")]
-pub struct FieldRenderInfo {
-    pub style: Option<StyleId>,
-    pub diy_render: Option<bool>,
-}
+use super::info::FieldRenderInfo;
 
 #[derive(Debug, Clone, Default)]
 pub struct FieldRenderManager {
@@ -31,13 +24,9 @@ impl FieldRenderManager {
         self.data.insert(render_id, info);
     }
 
-    pub fn update_style(&mut self, render_id: RenderId, style: Option<StyleId>) {
-        let info = self.get_mut(render_id);
-        info.style = style;
-    }
-
-    pub fn update_diy_render(&mut self, render_id: RenderId, diy_render: Option<bool>) {
-        let info = self.get_mut(render_id);
-        info.diy_render = diy_render;
+    pub fn batch_set_info(&mut self, items: Vec<(RenderId, FieldRenderInfo)>) {
+        items.into_iter().for_each(|(id, info)| {
+            self.set_info(id, info);
+        });
     }
 }
