@@ -12,7 +12,7 @@ use logisheets_base::{
 use logisheets_base::{BlockCellId, BlockRange, CubeCross, NormalRange, Range};
 use logisheets_parser::ast;
 
-use crate::block_schema_manager::SchemaManager;
+use crate::block_manager::schema_manager::SchemaManager;
 use crate::cube_manager::CubeManager;
 use crate::id_manager::SheetIdManager;
 use crate::range_manager::RangeManager;

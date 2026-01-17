@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use logisheets_base::errors::BasicError;
 
 use crate::{
-    block_schema_manager::{
+    block_manager::schema_manager::{
         ctx::BlockSchemaCtx,
         manager::SchemaManager,
         schema::{ColSchema, RandomSchema, RowSchema, Schema, SchemaTrait},

@@ -4,7 +4,7 @@ use logisheets_base::{errors::BasicError, Addr, CellId, CubeId, RangeId, SheetId
 
 use crate::{
     async_func_manager::AsyncFuncManager,
-    block_schema_manager::executor::BlockSchemaExecutor,
+    block_manager::schema_manager::executor::BlockSchemaExecutor,
     calc_engine::CalcEngine,
     cell_attachments::executor::CellAttachmentsExecutor,
     connectors::{
@@ -181,6 +181,7 @@ impl<'a> Executor<'a> {
                 dirty_cells_next_round: result.status.dirty_cells_next_round,
                 exclusive_manager: result.status.exclusive_manager,
                 block_schema_manager: result.status.block_schema_manager,
+                field_render_manager: result.status.field_render_manager,
             },
             version_manager: result.version_manager,
             async_func_manager: result.async_func_manager,
