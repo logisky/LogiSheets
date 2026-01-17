@@ -6,8 +6,8 @@ use logisheets_base::{
 };
 
 use crate::{
-    block_schema_manager::ctx::BlockSchemaCtx, id_manager::SheetIdManager, navigator::Navigator,
-    workbook::sheet_info_manager::SheetInfoManager,
+    block_manager::schema_manager::ctx::BlockSchemaCtx, id_manager::SheetIdManager,
+    navigator::Navigator, workbook::sheet_info_manager::SheetInfoManager,
 };
 
 pub struct BlockSchemaConnector<'a> {
