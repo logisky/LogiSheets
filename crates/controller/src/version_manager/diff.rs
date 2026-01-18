@@ -71,7 +71,7 @@ fn convert_diff<C: VersionExecCtx>(
     ctx: &C,
 ) -> Result<Option<(Diff, SheetId)>, Error> {
     match payload {
-        EditPayload::BatchUpsertFieldRenderInfo(_) => Ok(None),
+        EditPayload::UpsertFieldRenderInfo(_) => Ok(None),
         EditPayload::BlockInput(bi) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(bi.sheet_idx)

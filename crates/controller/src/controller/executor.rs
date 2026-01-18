@@ -300,8 +300,11 @@ impl<'a> Executor<'a> {
         &mut self,
         payload: EditPayload,
     ) -> Result<(FieldRenderExecutor, bool), Error> {
+        let mut ctx = crate::connectors::FieldRenderConnector {
+            style_manager: &mut self.status.style_manager,
+        };
         let executor = FieldRenderExecutor::new(self.status.field_render_manager.clone());
-        executor.execute(payload)
+        executor.execute(&mut ctx, payload)
     }
 
     fn execute_cube(&mut self, payload: EditPayload) -> Result<CubeExecutor, Error> {

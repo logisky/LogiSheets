@@ -1090,9 +1090,18 @@ impl<'a> Worksheet<'a> {
                             if let Some(info) =
                                 self.controller.status.field_render_manager.get(&render_id)
                             {
+                                let style = info.style.map(|sid| {
+                                    let raw_style =
+                                        self.controller.status.style_manager.get_style(sid);
+                                    let style_converter = StyleConverter {
+                                        theme_manager: &self.controller.settings.theme,
+                                    };
+                                    style_converter.convert_style(raw_style)
+                                });
                                 field_renders.push(crate::controller::display::FieldRenderEntry {
                                     render_id,
-                                    info: info.clone(),
+                                    style,
+                                    diy_render: info.diy_render.unwrap_or(false),
                                 });
                             }
                         }
@@ -1508,9 +1517,17 @@ impl<'a> Worksheet<'a> {
                     }
                     if let Some(info) = self.controller.status.field_render_manager.get(&render_id)
                     {
+                        let style = info.style.map(|sid| {
+                            let raw_style = self.controller.status.style_manager.get_style(sid);
+                            let style_converter = StyleConverter {
+                                theme_manager: &self.controller.settings.theme,
+                            };
+                            style_converter.convert_style(raw_style)
+                        });
                         field_renders.push(crate::controller::display::FieldRenderEntry {
                             render_id,
-                            info: info.clone(),
+                            style,
+                            diy_render: info.diy_render.unwrap_or(false),
                         });
                     }
                 }
