@@ -52,19 +52,28 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                     xForColEnd(info.colStart + info.colCnt - 1, grid) - x
                 const height =
                     yForRowEnd(info.rowStart + info.rowCnt - 1, grid) - y
-                const fieldInfos = info.colInfos.map((colInfo, _idx) => {
-                    const result = BLOCK_MANAGER.fieldManager.get(
-                        colInfo.fieldId
+
+                if (!info.schema) {
+                    throw new Error(
+                        `Schema not found in block ${info.blockId} on sheet ${info.sheetId}`
                     )
+                }
 
-                    if (!result) {
-                        throw new Error(
-                            `Field ${colInfo.fieldId} not found in block ${info.blockId}`
+                const fieldInfos = [...info.schema.fields]
+                    .sort((a, b) => a.idx - b.idx)
+                    .map((fieldEntry, _idx) => {
+                        const result = BLOCK_MANAGER.fieldManager.get(
+                            fieldEntry.field
                         )
-                    }
 
-                    return result
-                })
+                        if (!result) {
+                            throw new Error(
+                                `Field ${fieldEntry.field} not found in block ${info.blockId}`
+                            )
+                        }
+
+                        return result
+                    })
 
                 return (
                     <BlockInterface

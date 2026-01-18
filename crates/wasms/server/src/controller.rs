@@ -2,14 +2,15 @@ use logisheets_base::errors::BasicError;
 use logisheets_base::{BlockId, ColId, RowId, SheetId};
 use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 use logisheets_controller::edit_action::{
-    Alignment, AsyncFuncResult, BlockInput, BlockLineNameFieldUpdate, BlockLineStyleUpdate,
-    CellClear, CellFormatBrush, CellInput, CellStyleUpdate, CreateAppendix, CreateBlock,
-    CreateDiyCell, CreateSheet, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock,
-    DeleteSheet, EditAction, EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols,
-    InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells,
-    MoveBlock, PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight,
-    SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells, StyleUpdateType,
-    VerticalAlignment,
+    Alignment, AsyncFuncResult, BindFormSchema, BindRandomSchema, BlockInput,
+    BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellClear, CellFormatBrush, CellInput,
+    CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols,
+    DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
+    EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
+    InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction,
+    RemoveBlock, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight, SetSheetColor,
+    SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells, StyleUpdateType,
+    UpsertFieldRenderInfo, VerticalAlignment,
 };
 use logisheets_controller::{AsyncCalcResult, AsyncErr, Error, RowInfo, SaveFileResult, Workbook};
 use logisheets_workbook::logisheets::AppData;
@@ -979,6 +980,33 @@ pub fn block_input(
     };
     let mut manager = MANAGER.get_mut();
     manager.add_payload(id, EditPayload::BlockInput(bi));
+}
+
+#[wasm_bindgen]
+pub fn bind_form_schema(id: usize, payload: JsValue) {
+    init();
+    let p: BindFormSchema = serde_wasm_bindgen::from_value(payload).unwrap();
+    MANAGER
+        .get_mut()
+        .add_payload(id, EditPayload::BindFormSchema(p));
+}
+
+#[wasm_bindgen]
+pub fn bind_random_schema(id: usize, payload: JsValue) {
+    init();
+    let p: BindRandomSchema = serde_wasm_bindgen::from_value(payload).unwrap();
+    MANAGER
+        .get_mut()
+        .add_payload(id, EditPayload::BindRandomSchema(p));
+}
+
+#[wasm_bindgen]
+pub fn upsert_field_render_info(id: usize, payload: JsValue) {
+    init();
+    let p: UpsertFieldRenderInfo = serde_wasm_bindgen::from_value(payload).unwrap();
+    MANAGER
+        .get_mut()
+        .add_payload(id, EditPayload::UpsertFieldRenderInfo(p));
 }
 
 #[wasm_bindgen]
