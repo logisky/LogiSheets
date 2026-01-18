@@ -1,10 +1,13 @@
 import {shallowCopy} from '@/core'
-import {BlockCellInfo, BlockInfo, BlockLineInfo} from 'logisheets-web'
+import {
+    BlockCellInfo,
+    BlockInfo,
+    BlockSchema,
+    FieldRenderEntry,
+} from 'logisheets-web'
 import {Range} from './range'
 export class StandardBlock implements BlockInfo {
     cells: readonly BlockCellInfo[] = []
-    rowInfos: readonly BlockLineInfo[] = []
-    colInfos: readonly BlockLineInfo[] = []
     sheetIdx = 0
     sheetId = 0
     rowCnt = 0
@@ -19,6 +22,8 @@ export class StandardBlock implements BlockInfo {
             .setStartCol(this.colStart)
             .setEndCol(this.colStart + this.colCnt - 1)
     }
+    schema?: BlockSchema
+    fieldRenders: readonly FieldRenderEntry[] = []
     static from(block: BlockInfo) {
         const newBlock = new StandardBlock()
         shallowCopy(block, newBlock)

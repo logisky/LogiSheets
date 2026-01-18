@@ -73,6 +73,7 @@ import {
     transaction_end_in_temp_status,
     transaction_start,
     undo,
+    upsert_field_render_info,
 } from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
@@ -691,6 +692,14 @@ export class Workbook {
                 p.value.col,
                 p.value.numFmt
             )
+        if (p.type === 'setFieldNumFmt')
+            return upsert_field_render_info(this._id, {
+                renderId: p.value.renderId,
+                diyRender: p.value.diyRender,
+                styleUpdate: {
+                    setNumFmt: p.value.numFmt,
+                },
+            })
         if (p.type === 'setLineNumFmt')
             return set_line_num_fmt(
                 this._id,

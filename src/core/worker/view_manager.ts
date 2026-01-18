@@ -184,31 +184,24 @@ export function parseDisplayWindow(
     window.window.blocks.forEach((b) => {
         const rowStart = b.info.rowStart
         const colStart = b.info.colStart
+
+        const schema = b.info.schema
+        const schemaType = schema?.schemaType
+        const renderInfoById = new Map(
+            b.info.fieldRenders.map((e) => [e.renderId, e] as const)
+        )
         for (let r = rowStart; r < rowStart + b.info.rowCnt; r += 1) {
-            const rowIdx = r - rowStart
             for (let c = colStart; c < colStart + b.info.colCnt; c += 1) {
                 const colIdx = c - colStart
-                if (b.info.rowInfos.length > rowIdx) {
-                    const rowInfo = b.info.rowInfos[rowIdx]
-                    if (
-                        rowInfo === undefined ||
-                        rowInfo.diyRender === undefined
-                    )
-                        return
-                    if (rowInfo.diyRender) {
-                        skipRenderCells.add(`${r}-${c}`)
-                    }
-                }
-                if (b.info.colInfos.length > colIdx) {
-                    const colInfo = b.info.colInfos[colIdx]
-                    if (
-                        colInfo === undefined ||
-                        colInfo.diyRender === undefined
-                    )
-                        return
-                    if (colInfo.diyRender) {
-                        skipRenderCells.add(`${r}-${c}`)
-                    }
+
+                if (!schema) continue
+                if (schemaType !== 'row') continue
+                const fieldEntry = schema.fields[colIdx]
+                if (!fieldEntry) continue
+                const renderInfo = renderInfoById.get(fieldEntry.renderId)
+                if (!renderInfo) continue
+                if (renderInfo.diyRender) {
+                    skipRenderCells.add(`${r}-${c}`)
                 }
             }
         }

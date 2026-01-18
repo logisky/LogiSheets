@@ -1,4 +1,4 @@
-use crate::{block_manager::field_manager::FieldRenderInfo, CellInfo};
+use crate::CellInfo;
 
 use super::style::Style;
 use gents_derives::TS;
@@ -149,7 +149,8 @@ pub struct BlockSchemaRandomEntry {
 #[ts(file_name = "field_render_entry.ts", rename_all = "camelCase")]
 pub struct FieldRenderEntry {
     pub render_id: RenderId,
-    pub info: FieldRenderInfo,
+    pub style: Option<Style>,
+    pub diy_render: bool,
 }
 
 #[derive(Debug, Clone, TS)]
