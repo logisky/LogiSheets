@@ -94,6 +94,7 @@ pub enum EditPayload {
     ConvertBlock(ConvertBlock),
     BindFormSchema(BindFormSchema),
     BindRandomSchema(BindRandomSchema),
+    UpsertFieldRenderInfo(UpsertFieldRenderInfo),
 
     // DiyCell
     CreateDiyCell(CreateDiyCell),
@@ -144,6 +145,18 @@ pub enum EditPayload {
 
     // Reproduce
     ReproduceCells(ReproduceCells),
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "upsert_field_render_info.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct UpsertFieldRenderInfo {
+    pub render_id: String,
+    pub diy_render: bool,
+    pub style_update: StyleUpdateType,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -418,6 +431,12 @@ pub struct BlockInput {
 impl From<BlockInput> for EditPayload {
     fn from(value: BlockInput) -> Self {
         EditPayload::BlockInput(value)
+    }
+}
+
+impl From<UpsertFieldRenderInfo> for EditPayload {
+    fn from(value: UpsertFieldRenderInfo) -> Self {
+        EditPayload::UpsertFieldRenderInfo(value)
     }
 }
 
@@ -949,6 +968,7 @@ impl Payload for CellFormatBrush {}
 impl Payload for LineFormatBrush {}
 impl Payload for EphemeralCellInput {}
 impl Payload for ConvertBlock {}
+impl Payload for UpsertFieldRenderInfo {}
 
 #[cfg(test)]
 mod tests {

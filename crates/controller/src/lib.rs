@@ -3,7 +3,7 @@ extern crate lazy_static;
 
 pub mod api;
 mod async_func_manager;
-mod block_schema_manager;
+mod block_manager;
 mod calc_engine;
 mod cell;
 mod cell_attachments;

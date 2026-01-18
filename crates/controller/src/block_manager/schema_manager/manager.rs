@@ -1,7 +1,7 @@
 use imbl::HashMap;
 use logisheets_base::{BlockCellId, BlockId, ColId, RowId, SheetId};
 
-use crate::block_schema_manager::schema::{Field, Key, RenderId, Schema, SchemaTrait};
+use super::schema::{Field, Key, RenderId, Schema, SchemaTrait};
 
 #[derive(Debug, Clone, Default)]
 pub struct SchemaManager {

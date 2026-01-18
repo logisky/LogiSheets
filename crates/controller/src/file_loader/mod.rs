@@ -54,6 +54,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         exclusive_manager,
         dirty_cells_next_round: dirty_cells,
         block_schema_manager,
+        field_render_manager,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {
         sheet_id_manager: &mut sheet_id_manager,
@@ -221,6 +222,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         ext_ref_manager,
         exclusive_manager,
         block_schema_manager,
+        field_render_manager,
     };
     if let Some(theme) = xl.theme {
         settings.theme = ThemeManager::from(theme.1);

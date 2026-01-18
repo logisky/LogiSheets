@@ -4,7 +4,8 @@ use logisheets_base::{errors::BasicError, Addr, CellId, CubeId, RangeId, SheetId
 
 use crate::{
     async_func_manager::AsyncFuncManager,
-    block_schema_manager::executor::BlockSchemaExecutor,
+    block_manager::field_manager::executor::FieldRenderExecutor,
+    block_manager::schema_manager::executor::BlockSchemaExecutor,
     calc_engine::CalcEngine,
     cell_attachments::executor::CellAttachmentsExecutor,
     connectors::{
@@ -136,6 +137,10 @@ impl<'a> Executor<'a> {
         let dirty_schemas = block_schema_executor.dirty_schemas;
         result.status.block_schema_manager = block_schema_executor.manager;
 
+        let (field_render_executor, _field_render_updated) =
+            result.execute_field_render(payload.clone())?;
+        result.status.field_render_manager = field_render_executor.manager;
+
         result.status.navigator = nav_executor.nav;
         result.status.range_manager = range_executor.manager;
         result.status.cube_manager = cube_executor.manager;
@@ -181,6 +186,7 @@ impl<'a> Executor<'a> {
                 dirty_cells_next_round: result.status.dirty_cells_next_round,
                 exclusive_manager: result.status.exclusive_manager,
                 block_schema_manager: result.status.block_schema_manager,
+                field_render_manager: result.status.field_render_manager,
             },
             version_manager: result.version_manager,
             async_func_manager: result.async_func_manager,
@@ -287,6 +293,17 @@ impl<'a> Executor<'a> {
             sheet_id_manager: &mut self.status.sheet_id_manager,
         };
         let executor = BlockSchemaExecutor::new(self.status.block_schema_manager.clone());
+        executor.execute(&mut ctx, payload)
+    }
+
+    fn execute_field_render(
+        &mut self,
+        payload: EditPayload,
+    ) -> Result<(FieldRenderExecutor, bool), Error> {
+        let mut ctx = crate::connectors::FieldRenderConnector {
+            style_manager: &mut self.status.style_manager,
+        };
+        let executor = FieldRenderExecutor::new(self.status.field_render_manager.clone());
         executor.execute(&mut ctx, payload)
     }
 
