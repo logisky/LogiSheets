@@ -548,10 +548,20 @@ where
 }
 
 impl<'a> BlockRefTrait for CalcConnector<'a> {
-    fn get_all_keys(&self, ref_name: &str) -> Vec<String> {
-        self.block_schema_manager
-            .get_all_keys(ref_name)
-            .unwrap_or_default()
+    fn get_all_keys(&self, ref_name: &str) -> Vec<(String, SheetId, BlockCellId)> {
+        let (sheet_id, block_ids) = self
+            .block_schema_manager
+            .get_all_key_cell_ids(ref_name)
+            .unwrap_or_default();
+        let text_fetcher = |id: TextId| self.text_id_manager.get_string(&id).unwrap().clone();
+        block_ids
+            .iter()
+            .flat_map(|id| {
+                let cell = self.container.get_cell(sheet_id, &CellId::BlockCell(*id))?;
+                let v = cell.value.to_string(&text_fetcher);
+                Some((v, sheet_id, *id))
+            })
+            .collect()
     }
 
     fn get_all_fields(&self, ref_name: &str) -> Vec<String> {
@@ -566,7 +576,14 @@ impl<'a> BlockRefTrait for CalcConnector<'a> {
         key: &String,
         field: &String,
     ) -> Option<(SheetId, BlockCellId)> {
-        self.block_schema_manager
-            .resolve_by_ref_name(ref_name, key, field)
+        let keys = self.get_all_keys(ref_name);
+        keys.into_iter()
+            .find(|(k, _, _)| k == key)
+            .and_then(|(_, sheet_id, id)| {
+                let cell_id = self
+                    .block_schema_manager
+                    .partially_resolve(ref_name, id, field)?;
+                Some((sheet_id, cell_id))
+            })
     }
 }

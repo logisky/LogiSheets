@@ -2,6 +2,7 @@ import {useState, useEffect} from 'react'
 import {
     Box,
     Button,
+    Chip,
     List,
     ListItem,
     ListItemButton,
@@ -25,6 +26,7 @@ interface FieldListProps {
     onFieldSelect: (id: string) => void
     onFieldsReorder: (fields: FieldSetting[]) => void
     onAddField: () => void
+    embedded?: boolean
 }
 
 export const FieldList = ({
@@ -33,6 +35,7 @@ export const FieldList = ({
     onFieldSelect,
     onFieldsReorder,
     onAddField,
+    embedded = false,
 }: FieldListProps) => {
     const [isDragEnabled, setIsDragEnabled] = useState(false)
 
@@ -59,14 +62,23 @@ export const FieldList = ({
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
             <Box
-                sx={{
-                    width: 280,
-                    borderRight: '1px solid',
-                    borderColor: 'divider',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    bgcolor: 'grey.50',
-                }}
+                sx={
+                    embedded
+                        ? {
+                              flex: 1,
+                              minHeight: 0,
+                              display: 'flex',
+                              flexDirection: 'column',
+                          }
+                        : {
+                              width: 280,
+                              borderRight: '1px solid',
+                              borderColor: 'divider',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              bgcolor: 'grey.50',
+                          }
+                }
             >
                 {/* Header with Add Button */}
                 <Box
@@ -151,7 +163,50 @@ export const FieldList = ({
                                                         <DragIndicatorIcon fontSize="small" />
                                                     </Box>
                                                     <ListItemText
-                                                        primary={field.name}
+                                                        primary={
+                                                            <Box
+                                                                sx={{
+                                                                    display:
+                                                                        'flex',
+                                                                    alignItems:
+                                                                        'center',
+                                                                    gap: 1,
+                                                                }}
+                                                            >
+                                                                <Box
+                                                                    component="span"
+                                                                    sx={{
+                                                                        overflow:
+                                                                            'hidden',
+                                                                        textOverflow:
+                                                                            'ellipsis',
+                                                                        whiteSpace:
+                                                                            'nowrap',
+                                                                        flex: 1,
+                                                                    }}
+                                                                >
+                                                                    {field.name}
+                                                                </Box>
+                                                                {field.primary && (
+                                                                    <Chip
+                                                                        label="Primary"
+                                                                        size="small"
+                                                                        color="primary"
+                                                                        variant="outlined"
+                                                                        sx={{
+                                                                            height: 20,
+                                                                            '& .MuiChip-label':
+                                                                                {
+                                                                                    px: 0.75,
+                                                                                    fontSize:
+                                                                                        '0.7rem',
+                                                                                    lineHeight: 1,
+                                                                                },
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            </Box>
+                                                        }
                                                         secondary={
                                                             field.type
                                                                 .charAt(0)
@@ -210,7 +265,46 @@ export const FieldList = ({
                                         <DragIndicatorIcon fontSize="small" />
                                     </Box>
                                     <ListItemText
-                                        primary={field.name}
+                                        primary={
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                }}
+                                            >
+                                                <Box
+                                                    component="span"
+                                                    sx={{
+                                                        overflow: 'hidden',
+                                                        textOverflow:
+                                                            'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        flex: 1,
+                                                    }}
+                                                >
+                                                    {field.name}
+                                                </Box>
+                                                {field.primary && (
+                                                    <Chip
+                                                        label="Primary"
+                                                        size="small"
+                                                        color="primary"
+                                                        variant="outlined"
+                                                        sx={{
+                                                            height: 20,
+                                                            '& .MuiChip-label':
+                                                                {
+                                                                    px: 0.75,
+                                                                    fontSize:
+                                                                        '0.7rem',
+                                                                    lineHeight: 1,
+                                                                },
+                                                        }}
+                                                    />
+                                                )}
+                                            </Box>
+                                        }
                                         secondary={
                                             field.type.charAt(0).toUpperCase() +
                                             field.type.slice(1)

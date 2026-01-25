@@ -483,6 +483,26 @@ export const FieldConfigPanel = ({
                                             </Typography>
                                         }
                                     />
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                size="small"
+                                                checked={!!field.primary}
+                                                onChange={(e) =>
+                                                    onUpdate({
+                                                        ...field,
+                                                        primary:
+                                                            e.target.checked,
+                                                    })
+                                                }
+                                            />
+                                        }
+                                        label={
+                                            <Typography variant="body2">
+                                                Primary
+                                            </Typography>
+                                        }
+                                    />
                                 </Box>
                             </Stack>
                         </CardContent>

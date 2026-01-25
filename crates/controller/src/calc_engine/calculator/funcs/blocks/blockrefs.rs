@@ -29,7 +29,7 @@ where
     let keys = fetcher
         .get_all_keys(&ref_name)
         .into_iter()
-        .map(|t| Value::Text(t));
+        .map(|(t, _, _)| Value::Text(t));
     let key_values = keys
         .into_iter()
         .filter(|key| match_condition(&key_condigtion, key))

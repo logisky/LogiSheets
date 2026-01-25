@@ -139,7 +139,6 @@ pub struct BlockSchemaFieldEntry {
 #[ts(file_name = "block_schema_random_entry.ts", rename_all = "camelCase")]
 pub struct BlockSchemaRandomEntry {
     pub key: String,
-    pub field: String,
     pub row: usize,
     pub col: usize,
     pub render_id: RenderId,

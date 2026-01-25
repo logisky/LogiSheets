@@ -24,7 +24,9 @@ use crate::{
 };
 use crate::{CellInfo, ColInfo, Comment, MergeCell, RowInfo, Style, Value};
 use logisheets_base::errors::BasicError;
-use logisheets_base::{BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, SheetId, StyleId};
+use logisheets_base::{
+    BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, SheetId, StyleId, TextId,
+};
 use logisheets_parser::unparse;
 
 use super::workbook::CellPositionerDefault;
@@ -959,19 +961,36 @@ impl<'a> Worksheet<'a> {
                     .schemas
                     .get(&(self.sheet_id, id))
                     .map(|s| {
+                        let text_fetcher = |id: TextId| {
+                            self.controller
+                                .status
+                                .text_id_manager
+                                .get_string(&id)
+                                .unwrap_or_default()
+                                .clone()
+                        };
+                        let key_value = |cell_id: BlockCellId| {
+                            self.controller
+                                .status
+                                .container
+                                .get_cell(self.sheet_id, &CellId::BlockCell(cell_id))
+                                .map(|cell| cell.value.to_string(&text_fetcher))
+                                .unwrap_or_default()
+                        };
+
                         let (keys, fields, random_entries) = match s {
                             Schema::RowSchema(schema) => {
                                 let keys = schema
-                                    .keys
-                                    .iter()
-                                    .map(|(k, row_id)| {
+                                    .get_all_key_cell_ids(id)
+                                    .into_iter()
+                                    .map(|cell_id| {
                                         let idx = block_place
-                                            .rows
+                                            .cols
                                             .iter()
-                                            .position(|id| id == row_id)
+                                            .position(|col_id| col_id == &cell_id.col)
                                             .unwrap();
                                         crate::controller::display::BlockSchemaKeyEntry {
-                                            key: k.clone(),
+                                            key: key_value(cell_id),
                                             idx,
                                         }
                                     })
@@ -996,16 +1015,16 @@ impl<'a> Worksheet<'a> {
                             }
                             Schema::ColSchema(schema) => {
                                 let keys = schema
-                                    .keys
-                                    .iter()
-                                    .map(|(k, col_id)| {
+                                    .get_all_key_cell_ids(id)
+                                    .into_iter()
+                                    .map(|cell_id| {
                                         let idx = block_place
-                                            .cols
+                                            .rows
                                             .iter()
-                                            .position(|id| id == col_id)
+                                            .position(|row_id| row_id == &cell_id.row)
                                             .unwrap();
                                         crate::controller::display::BlockSchemaKeyEntry {
-                                            key: k.clone(),
+                                            key: key_value(cell_id),
                                             idx,
                                         }
                                     })
@@ -1032,7 +1051,7 @@ impl<'a> Worksheet<'a> {
                                 let random_entries = schema
                                     .key_field
                                     .iter()
-                                    .map(|(k, f, row_id, col_id, render_id)| {
+                                    .map(|(k, row_id, col_id, render_id)| {
                                         let row = block_place
                                             .rows
                                             .iter()
@@ -1045,7 +1064,6 @@ impl<'a> Worksheet<'a> {
                                             .unwrap();
                                         BlockSchemaRandomEntry {
                                             key: k.clone(),
-                                            field: f.clone(),
                                             row,
                                             col,
                                             render_id: render_id.clone(),
@@ -1405,16 +1423,36 @@ impl<'a> Worksheet<'a> {
             .schemas
             .get(&(self.sheet_id, block_id))
             .map(|s| {
+                let text_fetcher = |id: TextId| {
+                    self.controller
+                        .status
+                        .text_id_manager
+                        .get_string(&id)
+                        .unwrap_or_default()
+                        .clone()
+                };
+                let key_value = |cell_id: BlockCellId| {
+                    self.controller
+                        .status
+                        .container
+                        .get_cell(self.sheet_id, &CellId::BlockCell(cell_id))
+                        .map(|cell| cell.value.to_string(&text_fetcher))
+                        .unwrap_or_default()
+                };
+
                 let (keys, fields, random_entries) = match s {
                     Schema::RowSchema(schema) => {
                         let keys = schema
-                            .keys
-                            .iter()
-                            .map(|(k, row_id)| {
-                                let idx =
-                                    block_place.rows.iter().position(|id| id == row_id).unwrap();
+                            .get_all_key_cell_ids(block_id)
+                            .into_iter()
+                            .map(|cell_id| {
+                                let idx = block_place
+                                    .cols
+                                    .iter()
+                                    .position(|id| id == &cell_id.col)
+                                    .unwrap();
                                 crate::controller::display::BlockSchemaKeyEntry {
-                                    key: k.clone(),
+                                    key: key_value(cell_id),
                                     idx,
                                 }
                             })
@@ -1436,13 +1474,16 @@ impl<'a> Worksheet<'a> {
                     }
                     Schema::ColSchema(schema) => {
                         let keys = schema
-                            .keys
-                            .iter()
-                            .map(|(k, col_id)| {
-                                let idx =
-                                    block_place.cols.iter().position(|id| id == col_id).unwrap();
+                            .get_all_key_cell_ids(block_id)
+                            .into_iter()
+                            .map(|cell_id| {
+                                let idx = block_place
+                                    .rows
+                                    .iter()
+                                    .position(|id| id == &cell_id.row)
+                                    .unwrap();
                                 crate::controller::display::BlockSchemaKeyEntry {
-                                    key: k.clone(),
+                                    key: key_value(cell_id),
                                     idx,
                                 }
                             })
@@ -1466,14 +1507,13 @@ impl<'a> Worksheet<'a> {
                         let random_entries = schema
                             .key_field
                             .iter()
-                            .map(|(k, f, row_id, col_id, render_id)| {
+                            .map(|(k, row_id, col_id, render_id)| {
                                 let row =
                                     block_place.rows.iter().position(|id| id == row_id).unwrap();
                                 let col =
                                     block_place.cols.iter().position(|id| id == col_id).unwrap();
                                 BlockSchemaRandomEntry {
                                     key: k.clone(),
-                                    field: f.clone(),
                                     row,
                                     col,
                                     render_id: render_id.clone(),
