@@ -1,7 +1,12 @@
 import {useState} from 'react'
-import {Box, Typography, Dialog, DialogContent} from '@mui/material'
+import {Box, Typography, Dialog, DialogContent, TextField} from '@mui/material'
 import {getSelectedCellRange} from '../canvas'
-import {SelectedData, getFirstCell} from 'logisheets-web'
+import {
+    BindFormSchemaBuilder,
+    SelectedData,
+    UpsertFieldRenderInfoBuilder,
+    getFirstCell,
+} from 'logisheets-web'
 import {useToast} from '@/ui/notification/useToast'
 import {TYPES} from '@/core/ioc/types'
 import {useInjection} from '@/core/ioc/provider'
@@ -52,6 +57,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     if (!range) {
         return null
     }
+    const [refName, setRefName] = useState('')
 
     const selectedField = fields.find((f) => f.id === selectedFieldId)
 
@@ -61,13 +67,24 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             name: 'New Field',
             type: 'string',
             required: false,
+            primary: false,
         }
         setFields([...fields, newField])
         setSelectedFieldId(newField.id)
     }
 
     const handleUpdateField = (field: FieldSetting) => {
-        setFields(fields.map((f) => (f.id === field.id ? field : f)))
+        setFields(
+            fields.map((f) => {
+                if (f.id === field.id) {
+                    return field
+                }
+                if (field.primary) {
+                    return {...f, primary: false}
+                }
+                return f
+            })
+        )
     }
 
     const handleDeleteField = (id: string) => {
@@ -122,7 +139,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 blockId,
                 f
             )
-            return [r.id, f]
+            return [r.id, r]
         })
         const {y: row, x: col} = getFirstCell(selectedData)
         const len = fs.length
@@ -142,77 +159,47 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         }
         payloads.push(createBlockPayload)
 
+        const bindFormSchemaPayload: Payload = {
+            type: 'bindFormSchema',
+            value: new BindFormSchemaBuilder()
+                .refName(refName)
+                .sheetIdx(currentSheetIdx)
+                .blockId(blockId)
+                .fieldFrom(0)
+                .row(true)
+                .fields(fs.map((f) => f[1].name))
+                .renderIds(fs.map((f) => f[0]))
+                .build(),
+        }
+        payloads.push(bindFormSchemaPayload)
+
         fs.forEach(([fieldId, field], i) => {
             let diyRender = false
+            let formatter = ''
             switch (field.type.type) {
                 case 'image':
                 case 'enum':
                 case 'multiSelect':
-                    diyRender = true
-                    break
-                case 'datetime': {
-                    const formatter = field.type.formatter
-                    if (formatter === '') {
-                        break
-                    }
-                    const p = new SetBlockLineNumFmtBuilder()
-                        .sheetIdx(currentSheetIdx)
-                        .blockId(blockId)
-                        .from(i)
-                        .to(i)
-                        .isRow(false)
-                        .numFmt(formatter)
-                        .build()
-                    const payload: Payload = {
-                        type: 'setBlockLineNumFmt',
-                        value: p,
-                    }
-                    payloads.push(payload)
-                    break
-                }
                 case 'boolean':
                     diyRender = true
                     break
                 case 'string':
                     break
-                case 'number': {
-                    const formatter = field.type.formatter
-                    if (formatter === '') {
-                        break
-                    }
-                    const p = new SetBlockLineNumFmtBuilder()
-                        .sheetIdx(currentSheetIdx)
-                        .blockId(blockId)
-                        .from(i)
-                        .to(i)
-                        .isRow(false)
-                        .numFmt(formatter)
-                        .build()
-                    const payload: Payload = {
-                        type: 'setBlockLineNumFmt',
-                        value: p,
-                    }
-                    payloads.push(payload)
+                case 'datetime':
+                case 'number':
+                    formatter = field.type.formatter
                     break
-                }
                 default:
                     break
             }
-
-            const p = new SetBlockLineNameFieldBuilder()
-                .sheetIdx(currentSheetIdx)
-                .blockId(blockId)
-                .line(i)
-                .isRow(false)
-                .fieldId(fieldId)
-                .name(field.name)
+            const p = new UpsertFieldRenderInfoBuilder()
+                .renderId(fieldId)
                 .diyRender(diyRender)
+                .styleUpdate({
+                    setNumFmt: formatter,
+                })
                 .build()
-            const payload: Payload = {
-                type: 'setBlockLineNameField',
-                value: p,
-            }
-            payloads.push(payload)
+            payloads.push({type: 'upsertFieldRenderInfo', value: p})
         })
 
         const result = await DATA_SERVICE.handleTransaction(
@@ -236,14 +223,50 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             PaperProps={{sx: {height: '80vh'}}}
         >
             <DialogContent sx={{p: 0, display: 'flex', height: '100%'}}>
-                {/* Left Panel - Field List */}
-                <FieldList
-                    fields={fields}
-                    selectedFieldId={selectedFieldId}
-                    onFieldSelect={setSelectedFieldId}
-                    onFieldsReorder={setFields}
-                    onAddField={handleAddField}
-                />
+                <Box
+                    sx={{
+                        width: 280,
+                        borderRight: '1px solid',
+                        borderColor: 'divider',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: 'grey.50',
+                    }}
+                >
+                    {/* Left Panel - Block Ref Name */}
+                    <Box
+                        sx={{
+                            p: 2,
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                        }}
+                    >
+                        <Typography
+                            variant="overline"
+                            color="text.secondary"
+                            sx={{display: 'block', mb: 1, lineHeight: 1.2}}
+                        >
+                            Block Ref Name
+                        </Typography>
+                        <TextField
+                            value={refName}
+                            onChange={(e) => setRefName(e.target.value)}
+                            size="small"
+                            fullWidth
+                            placeholder="e.g. customers"
+                        />
+                    </Box>
+
+                    {/* Left Panel - Field List */}
+                    <FieldList
+                        embedded
+                        fields={fields}
+                        selectedFieldId={selectedFieldId}
+                        onFieldSelect={setSelectedFieldId}
+                        onFieldsReorder={setFields}
+                        onAddField={handleAddField}
+                    />
+                </Box>
 
                 {/* Right Panel - Field Editor */}
                 <Box

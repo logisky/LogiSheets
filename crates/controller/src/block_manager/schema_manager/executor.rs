@@ -53,27 +53,22 @@ impl BlockSchemaExecutor {
                     };
                     fields.push((field, (id, render_id)));
                 }
-                let mut keys = Vec::new();
-
-                for (j, k) in p.keys.into_iter().enumerate() {
-                    let idx = j + p.key_from;
-                    let id = if p.row {
-                        ctx.fetch_block_cell_id(&sheet_id, &block_id, idx, 0)?.row
-                    } else {
-                        ctx.fetch_block_cell_id(&sheet_id, &block_id, 0, idx)?.col
-                    };
-                    keys.push((k, id));
-                }
                 let schema = if p.row {
+                    let key = ctx
+                        .fetch_block_cell_id(&sheet_id, &block_id, p.key_idx, 0)?
+                        .row;
                     Schema::RowSchema(RowSchema {
                         fields,
-                        keys,
+                        key,
                         name: p.ref_name.clone(),
                     })
                 } else {
+                    let key = ctx
+                        .fetch_block_cell_id(&sheet_id, &block_id, 0, p.key_idx)?
+                        .col;
                     Schema::ColSchema(ColSchema {
                         fields,
-                        keys,
+                        key,
                         name: p.ref_name.clone(),
                     })
                 };
@@ -108,13 +103,7 @@ impl BlockSchemaExecutor {
                     let r = unit.row;
                     let c = unit.col;
                     let cell_id = ctx.fetch_block_cell_id(&sheet_id, &block_id, r, c)?;
-                    key_field.push((
-                        unit.key,
-                        unit.field,
-                        cell_id.row,
-                        cell_id.col,
-                        unit.render_id,
-                    ));
+                    key_field.push((unit.key, cell_id.row, cell_id.col, unit.render_id));
                 }
                 let schema = Schema::RandomSchema(RandomSchema {
                     key_field,

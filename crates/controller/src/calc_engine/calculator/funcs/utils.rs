@@ -152,7 +152,7 @@ pub mod tests_utils {
     use logisheets_base::block_ref::BlockRefTrait;
     use logisheets_base::get_curr_addr::GetCurrAddrTrait;
     use logisheets_base::set_curr_cell::SetCurrCellTrait;
-    use logisheets_base::SheetId;
+    use logisheets_base::{BlockCellId, SheetId};
     use logisheets_parser::ast;
 
     use crate::calc_engine::calculator::calc_vertex::{CalcValue, CalcVertex};
@@ -189,7 +189,7 @@ pub mod tests_utils {
     }
 
     impl BlockRefTrait for TestFetcher {
-        fn get_all_keys(&self, _ref_name: &str) -> Vec<String> {
+        fn get_all_keys(&self, _ref_name: &str) -> Vec<(String, SheetId, BlockCellId)> {
             unreachable!()
         }
 

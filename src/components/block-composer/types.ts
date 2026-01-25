@@ -21,6 +21,7 @@ export interface FieldSetting {
     type: FieldTypeEnum
     description?: string
     required: boolean
+    primary?: boolean
     enumId?: string
     defaultValue?: string
     format?: string // for datetime
