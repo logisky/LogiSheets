@@ -1,6 +1,7 @@
 import {
     batch_get_cell_coordinate_with_sheet_by_id,
     batch_get_cell_info_by_id,
+    bind_form_schema,
     block_input,
     block_line_name_field_update,
     block_line_num_fmt_update,
@@ -890,6 +891,12 @@ export class Workbook {
                 null,
                 p.value.wrapText
             )
+        if (p.type === 'bindFormSchema') {
+            return bind_form_schema(this._id, p.value)
+        }
+        if (p.type === 'upsertFieldRenderInfo') {
+            return upsert_field_render_info(this._id, p.value)
+        }
         // eslint-disable-next-line no-console
         console.log(`Unimplemented!: ${p.type}`)
     }

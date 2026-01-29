@@ -63,12 +63,12 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                     .sort((a, b) => a.idx - b.idx)
                     .map((fieldEntry, _idx) => {
                         const result = BLOCK_MANAGER.fieldManager.get(
-                            fieldEntry.field
+                            fieldEntry.renderId
                         )
 
                         if (!result) {
                             throw new Error(
-                                `Field ${fieldEntry.field} not found in block ${info.blockId}`
+                                `Field ${fieldEntry.renderId} not found in block ${info.blockId}`
                             )
                         }
 
