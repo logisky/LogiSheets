@@ -455,7 +455,6 @@ pub struct BindFormSchema {
     // It is used to customize the fields' render behaviors.
     // The length of this vector should be the same as `fields`.
     pub render_ids: Vec<String>,
-    pub keys: Vec<String>,
     pub row: bool,
 }
 

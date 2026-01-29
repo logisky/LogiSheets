@@ -44,6 +44,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             type: 'string',
             description: 'Current status of the customer',
             required: true,
+            primary: false,
         },
     ])
     const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
@@ -158,6 +159,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 .build(),
         }
         payloads.push(createBlockPayload)
+        const keyIdx = fields.findIndex((f) => f.primary)
 
         const bindFormSchemaPayload: Payload = {
             type: 'bindFormSchema',
@@ -167,6 +169,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 .blockId(blockId)
                 .fieldFrom(0)
                 .row(true)
+                .keyIdx(keyIdx < 0 ? 0 : keyIdx)
                 .fields(fs.map((f) => f[1].name))
                 .renderIds(fs.map((f) => f[0]))
                 .build(),
