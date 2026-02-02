@@ -1,0 +1,47 @@
+{
+    "name": "@logisheets/formula-editor",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./styles.css": "./dist/styles.css"
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@codemirror/autocomplete": "^6.18.0",
+        "@codemirror/commands": "^6.6.0",
+        "@codemirror/language": "^6.10.0",
+        "@codemirror/state": "^6.4.0",
+        "@codemirror/view": "^6.30.0",
+        "@lezer/highlight": "^1.2.0"
+    },
+    "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "^18.3.3",
+        "@types/react-dom": "^18.3.0",
+        "@vitejs/plugin-react": "^4.3.1",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "typescript": "^5.5.3",
+        "vite": "^5.4.0",
+        "vite-plugin-dts": "^4.0.0"
+    }
+}
