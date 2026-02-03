@@ -30,7 +30,10 @@ import {
 import {take, takeUntil} from 'rxjs/operators'
 import {EventType, KeyboardEventCode, on} from '@/core/events'
 import {SelectorComponent, SelectorProps} from '@/components/selector'
-import {ITextareaInstance, TextContainerComponent} from '@/components/textarea'
+import {
+    FormulaEditorWrapper,
+    FormulaEditorWrapperRef,
+} from '@/components/formula-editor'
 import {InvalidFormulaComponent} from './invalid-formula'
 import {Buttons, simpleUuid, width2px} from '@/core'
 import Modal from 'react-modal'
@@ -178,7 +181,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
             setGrid(g)
         })
     }
-    const textEl = useRef<ITextareaInstance>(null)
+    const textEl = useRef<FormulaEditorWrapperRef>(null)
     // Accumulate wheel deltas and apply once per animation frame to avoid jitter
     const wheelAccumRef = useRef(0)
     const wheelRafIdRef = useRef<number | null>(null)
@@ -1343,6 +1346,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         // Ensure keyboard events go back to the canvas after exiting edit mode
         canvas()!.focus({preventScroll: true})
         setReference('')
+        setReferenceWhenEditing(null)
     }
 
     const onBlur = async () => {
@@ -1356,6 +1360,7 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         // Ensure keyboard events go back to the canvas after exiting edit mode
         canvas()!.focus({preventScroll: true})
         setReference('')
+        setReferenceWhenEditing(null)
         return true
     }
     const onCloseInvalidFormulaWarning = () => {
@@ -1372,17 +1377,6 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
         setContextMenuLeft(e.clientX)
         setContextMenuTop(e.clientY)
         setContextMenuOpen(true)
-    }
-    const type = async (
-        text: string
-    ): Promise<FormulaDisplayInfo | undefined> => {
-        setReference('')
-        return store.textarea.updateText(text).then((v) => {
-            if (v) {
-                setCellRefs(v.cellRefs)
-            }
-            return v
-        })
     }
 
     return (
@@ -1536,13 +1530,30 @@ const Internal: FC<CanvasProps> = observer((props: CanvasProps) => {
                 }}
             />
             {store.textarea.context && store.textarea.editing && (
-                <TextContainerComponent
+                <FormulaEditorWrapper
                     ref={textEl}
-                    context={store.textarea.context}
-                    blur={onBlur}
-                    cancel={cancel}
-                    type={type}
-                    insertion={reference.length === 0 ? undefined : reference}
+                    initialText={store.textarea.context.text}
+                    sheetName={store.textarea.context.sheetName}
+                    dataService={store.dataSvc}
+                    position={store.textarea.context.position}
+                    initialCursorPosition={
+                        store.textarea.context.cursorPosition
+                    }
+                    referenceInsertion={reference}
+                    onCellRefsChange={setCellRefs}
+                    onBlur={async (value) => {
+                        const success = await store.textarea.blur(value)
+                        if (!success) {
+                            setInvalidFormulaWarning(true)
+                            return
+                        }
+                        setCellRefs([])
+                        setReference('')
+                        setReferenceWhenEditing(null)
+                        selectedDataContentChanged$({})
+                        canvas()?.focus({preventScroll: true})
+                    }}
+                    onCancel={cancel}
                 />
             )}
             {invalidFormulaWarning && (

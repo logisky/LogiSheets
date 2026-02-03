@@ -134,6 +134,8 @@ export interface FormulaEditorConfig {
     readOnly?: boolean
     /** Auto-focus on mount */
     autoFocus?: boolean
+    /** Show border around the editor */
+    showBorder?: boolean
 }
 
 /**
@@ -144,6 +146,8 @@ export interface FormulaEditorProps {
     value?: string
     /** Default value (uncontrolled) */
     defaultValue?: string
+    /** Initial cursor position: 'start' or 'end' (default: 'end') */
+    initialCursorPosition?: 'start' | 'end'
     /** Called when value changes */
     onChange?: (value: string) => void
     /** Called when editor loses focus - use this to commit the value */
@@ -171,14 +175,12 @@ export interface FormulaEditorProps {
  * Returns a different color for each reference index to distinguish them.
  */
 export const CELL_REF_COLORS = [
-    'rgba(66, 133, 244, 0.3)', // Blue
-    'rgba(219, 68, 55, 0.3)', // Red
-    'rgba(244, 180, 0, 0.3)', // Yellow
-    'rgba(15, 157, 88, 0.3)', // Green
-    'rgba(171, 71, 188, 0.3)', // Purple
-    'rgba(255, 112, 67, 0.3)', // Orange
-    'rgba(0, 172, 193, 0.3)', // Cyan
-    'rgba(124, 77, 255, 0.3)', // Indigo
+    'rgba(0, 112, 192, 0.3)', // #0070C0 Blue
+    'rgba(255, 0, 0, 0.3)', // #FF0000 Red
+    'rgba(0, 176, 80, 0.3)', // #00B050 Green
+    'rgba(112, 48, 160, 0.3)', // #7030A0 Purple
+    'rgba(0, 176, 240, 0.3)', // #00B0F0 Cyan
+    'rgba(255, 192, 0, 0.3)', // #FFC000 Orange/Yellow
 ]
 
 export function getCellRefColor(index: number): string {

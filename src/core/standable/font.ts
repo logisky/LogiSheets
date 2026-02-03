@@ -1,7 +1,7 @@
 import {Font, CtFontName, CtUnderlineProperty, Color} from 'logisheets-web'
 import {shallowCopy} from '@/core'
 import {StandardColor} from './color'
-import {Text} from '@/components/textarea/defs'
+import {measureText} from './text-measure'
 const DEFAULT_FONT_SIZE = 10
 /**
  * https://developer.mozilla.org/en-US/docs/Web/CSS/font
@@ -52,7 +52,7 @@ export class StandardFont implements Font {
     }
 
     measureText(text: string): TextMetrics {
-        return Text.measureText(text, this.toCssFont())
+        return measureText(text, this.toCssFont())
     }
 
     toCssFont(): string {

@@ -4,62 +4,71 @@ import {isFormula} from '@/core/snippet'
 import initFc, {
     formula_check,
 } from '../../../../crates/wasms/fc/pkg/logisheets_wasm_fc'
-import {Context} from '@/components/textarea'
 import {
     CellInputBuilder,
-    FormulaDisplayInfo,
     isErrorMessage,
     Payload,
     Transaction,
 } from 'logisheets-web'
 import {Cell} from '../defs'
 import {StandardKeyboardEvent} from '@/core/events'
-import {shallowCopy} from '@/core'
 import type {Grid} from '@/core/worker/types'
 import {xForColStart, yForRowStart} from '../grid_helper'
 import {LeftTop} from '@/core/settings'
+
+/**
+ * Editor context - simplified version for the new FormulaEditor
+ */
+export interface EditorContext {
+    /** Initial text to edit (including leading '=' for formulas) */
+    text: string
+    /** Current sheet name */
+    sheetName: string
+    /** The cell being edited */
+    cell: Cell
+    /** Position on canvas */
+    position: {
+        x: number
+        y: number
+        width: number
+        height: number
+    }
+    /** Initial cursor position: 'start' or 'end' */
+    cursorPosition: 'start' | 'end'
+}
 
 export class Textarea {
     constructor(public readonly store: CanvasStore) {
         makeObservable(this)
     }
+
     @observable.ref
-    context?: Context
+    context?: EditorContext
 
     @observable
     editing = false
 
     private _currText = ''
 
-    async updateText(t: string): Promise<FormulaDisplayInfo | undefined> {
-        this._currText = t
-        if (t.startsWith('=')) {
-            return this.store.dataSvc
-                .getWorkbook()
-                .getDisplayUnitsOfFormula(t.slice(1))
-                .then((displayInfo) => {
-                    if (isErrorMessage(displayInfo)) return
-                    return displayInfo
-                })
-        }
-        return Promise.resolve(undefined)
-    }
-
     getText() {
         return this._currText
     }
 
     @action
-    async blur() {
+    async blur(finalText?: string) {
         if (!this.editing) return true
-        const newText = this._currText.trim()
+        const newText = (finalText ?? this._currText).trim()
         const checked = await checkFormula(newText)
-        if (!checked || !this.context?.bindingData) return false
+        if (!checked || !this.context?.cell) return false
+
+        const cell = this.context.cell
+        if (cell.type !== 'Cell') return false
+
         const payload: Payload = {
             type: 'cellInput',
             value: new CellInputBuilder()
-                .row(this.context.bindingData.coordinate.startRow)
-                .col(this.context.bindingData.coordinate.startCol)
+                .row(cell.coordinate.startRow)
+                .col(cell.coordinate.startCol)
                 .sheetIdx(this.store.dataSvc.getCurrentSheetIdx())
                 .content(newText)
                 .build(),
@@ -72,43 +81,42 @@ export class Textarea {
     }
 
     @action
+    cancel() {
+        this._setEditing(false)
+    }
+
+    @action
     keydown(e: KeyboardEvent, startCell?: Cell) {
         const standardEvent = new StandardKeyboardEvent(e)
         if (standardEvent.isKeyBinding) return
         if (startCell === undefined) return
         if (startCell.type !== 'Cell') return
-        if (this.context === undefined) return
-        const newContext = new Context<Cell>()
-        shallowCopy(this.context, newContext)
-        newContext.textareaOffsetX = -1
-        newContext.textareaOffsetY = -1
-        this._setEditing(true, newContext)
+
+        // Start editing with empty text (overwrite mode)
+        this._startEditing(startCell, '')
     }
 
     @action
     mousedown(event: MouseEvent) {
         const startCell = this.store.startCell
         const now = Date.now()
-        const editing = now - this._lastMousedownTime < 300
+        const isDoubleClick = now - this._lastMousedownTime < 300
         this._lastMousedownTime = now
+
         if (startCell === undefined) return
         if (startCell.type !== 'Cell' || !this.store.same) {
             this._setEditing(false)
             return
         }
-        if (!editing) {
+        if (!isDoubleClick) {
             this._setEditing(false)
             return
         }
+
+        // Double click - start editing with current cell content
         const {
-            height,
-            width,
             coordinate: {startRow: row, startCol: col},
-            position,
         } = startCell
-        const pos = this.store.convertToMainCanvasPosition(position)
-        const x = pos.startCol
-        const y = pos.startRow
         const sheet = this.store.dataSvc.getCurrentSheetIdx()
         const info = this.store.dataSvc.getCellInfo(sheet, row, col)
         info.then((c) => {
@@ -118,30 +126,7 @@ export class Textarea {
             if (c.getFormula() !== '') {
                 text = `=${c.getFormula()}`
             }
-            // const rect = this.store.renderer.canvas.getBoundingClientRect()
-            const rect = {
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-            }
-            const [clientX, clientY] = [rect.x + x, rect.y + y]
-            const context = new Context()
-            context.text = text
-            context.canvasOffsetX = x
-            context.canvasOffsetY = y
-            context.clientX = clientX ?? -1
-            context.clientY = clientY ?? -1
-            context.cellHeight = height
-            context.cellWidth = width
-            context.bindingData = startCell
-            context.textareaOffsetX =
-                (event as globalThis.MouseEvent).clientX - clientX
-            context.textareaOffsetY =
-                (event as globalThis.MouseEvent).clientY - clientY
-            context.sheetName = this.store.dataSvc.getCurrentSheetName()
-            this._currText = text
-            this._setEditing(true, context)
+            this._startEditing(startCell, text)
         })
     }
 
@@ -156,37 +141,17 @@ export class Textarea {
         if (startCell.type !== 'Cell') return
         if (!this.store.same) this._setEditing(false)
 
-        const {height, width, position} = startCell
-        const pos = this.store.convertToMainCanvasPosition(position)
-        const x = pos.startCol
-        const y = pos.startRow
-
-        // const rect = this.store.renderer.canvas.getBoundingClientRect()
-        const rect = {x: 0, y: 0, width: 100, height: 100}
-        const [clientX, clientY] = [rect.x + x, rect.y + y]
-        const context = new Context()
-        context.text = initialText
-        context.canvasOffsetX = x
-        context.canvasOffsetY = y
-        context.clientX = clientX ?? -1
-        context.clientY = clientY ?? -1
-        context.cellHeight = height
-        context.cellWidth = width
-        context.bindingData = startCell
-        context.textareaOffsetX = -1
-        context.textareaOffsetY = -1
-        context.sheetName = this.store.dataSvc.getCurrentSheetName()
-        this._currText = initialText
-        this._setEditing(true, context)
+        this._startEditing(startCell, initialText)
     }
 
     @action
     updateGrid(grid: Grid) {
         if (!this.context) return
-        const context = new Context()
-        shallowCopy(this.context, context)
-        const row = this.context?.bindingData.coordinate.startRow
-        const col = this.context?.bindingData.coordinate.startCol
+        const cell = this.context.cell
+        if (cell.type !== 'Cell') return
+
+        const row = cell.coordinate.startRow
+        const col = cell.coordinate.startCol
 
         if (
             row < grid.rows[0].idx ||
@@ -194,15 +159,27 @@ export class Textarea {
             row > grid.rows[grid.rows.length - 1].idx ||
             col > grid.columns[grid.columns.length - 1].idx
         ) {
-            context.visible = false
+            // Cell is out of visible range - hide editor
+            this.context = {
+                ...this.context,
+                position: {
+                    ...this.context.position,
+                    x: -9999,
+                    y: -9999,
+                },
+            }
         } else {
             const startX = xForColStart(col, grid) + LeftTop.width
             const startY = yForRowStart(row, grid) + LeftTop.height
-            context.visible = true
-            context.canvasOffsetX = startX
-            context.canvasOffsetY = startY
+            this.context = {
+                ...this.context,
+                position: {
+                    ...this.context.position,
+                    x: startX,
+                    y: startY,
+                },
+            }
         }
-        this.context = context
     }
 
     @action
@@ -213,15 +190,39 @@ export class Textarea {
     private _lastMousedownTime = 0
 
     @action
-    private _setEditing(isEditing: boolean, context?: Context) {
-        if (isEditing === this.editing) return
-        this.editing = isEditing
+    private _startEditing(
+        cell: Cell,
+        text: string,
+        cursorPosition: 'start' | 'end' = 'end'
+    ) {
+        if (cell.type !== 'Cell') return
+
+        const {height, width, position} = cell
+        const pos = this.store.convertToMainCanvasPosition(position)
+
+        const context: EditorContext = {
+            text,
+            sheetName: this.store.dataSvc.getCurrentSheetName(),
+            cell,
+            position: {
+                x: pos.startCol,
+                y: pos.startRow,
+                width: Math.max(width, 100), // Minimum width
+                height,
+            },
+            cursorPosition,
+        }
+
+        this._currText = text
         this.context = context
-        if (isEditing) {
-            if (this._currText !== '') {
-                this.updateText(this._currText)
-            }
-        } else {
+        this.editing = true
+    }
+
+    @action
+    private _setEditing(isEditing: boolean) {
+        if (!isEditing) {
+            this.editing = false
+            this.context = undefined
             this._currText = ''
         }
     }
