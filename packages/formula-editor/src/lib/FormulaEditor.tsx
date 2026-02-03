@@ -27,6 +27,8 @@ import {
     ViewUpdate,
     keymap,
     placeholder as placeholderExt,
+    showTooltip,
+    Tooltip,
 } from '@codemirror/view'
 import {
     autocompletion,
@@ -41,6 +43,7 @@ import type {
     FormulaEditorProps,
     FormulaDisplayInfo,
     FormulaEditorConfig,
+    FormulaFunction,
 } from './types'
 import {getCellRefColor} from './types'
 import {isFormula, fuzzyMatch} from './utils'
@@ -55,6 +58,7 @@ const DEFAULT_CONFIG: Required<FormulaEditorConfig> = {
     placeholder: 'Enter a formula...',
     readOnly: false,
     autoFocus: false,
+    showBorder: true,
 }
 
 export interface FormulaEditorRef {
@@ -62,11 +66,38 @@ export interface FormulaEditorRef {
     blur: () => void
     getValue: () => string
     setValue: (value: string) => void
+    /** Insert text at current cursor position */
+    insertText: (text: string) => void
+    /** Replace text in a range, useful for replacing previous insertion */
+    replaceRange: (from: number, to: number, text: string) => void
+    /** Get current cursor position */
+    getCursorPosition: () => number
     getView: () => EditorView | null
 }
 
 // State effect for updating decorations from backend
 const setTokenDecorations = StateEffect.define<DecorationSet>()
+
+// Effect to update stored token units
+const setStoredTokenUnits =
+    StateEffect.define<
+        readonly {tokenType: string; start: number; end: number}[]
+    >()
+
+// StateField to store token units for signature hints
+const storedTokenUnitsField = StateField.define<
+    readonly {tokenType: string; start: number; end: number}[]
+>({
+    create: () => [],
+    update(tokenUnits, tr) {
+        for (const effect of tr.effects) {
+            if (effect.is(setStoredTokenUnits)) {
+                return effect.value
+            }
+        }
+        return tokenUnits
+    },
+})
 
 // State field to hold token decorations
 const tokenDecorationsField = StateField.define<DecorationSet>({
@@ -84,6 +115,161 @@ const tokenDecorationsField = StateField.define<DecorationSet>({
     },
     provide: (field) => EditorView.decorations.from(field),
 })
+
+/**
+ * Get function context from tokenUnits (from backend).
+ * Returns the function name and current argument index if inside a function call.
+ * Uses simple bracket tracking to determine if cursor is inside a function.
+ */
+function getFunctionContextFromTokens(
+    text: string,
+    tokenUnits: readonly {tokenType: string; start: number; end: number}[],
+    cursorPos: number
+): {funcName: string; argIndex: number} | null {
+    if (cursorPos === 0 || tokenUnits.length === 0) return null
+
+    const offset = 1 // Account for leading '='
+
+    // First, build a map of positions to function names from tokenUnits
+    const funcNamePositions: {start: number; end: number; name: string}[] = []
+    for (const unit of tokenUnits) {
+        if (unit.tokenType === 'funcName') {
+            const start = unit.start + offset
+            const end = unit.end + offset
+            funcNamePositions.push({start, end, name: text.slice(start, end)})
+        }
+    }
+
+    // Track nested function calls using a stack
+    const funcStack: {name: string; argIdx: number}[] = []
+    let pendingFuncName = ''
+
+    for (let i = 0; i < text.length && i < cursorPos; i++) {
+        const char = text[i]
+
+        // Check if we're at a function name position
+        for (const fn of funcNamePositions) {
+            if (fn.start === i) {
+                pendingFuncName = fn.name
+                break
+            }
+        }
+
+        if (char === '(') {
+            if (pendingFuncName) {
+                funcStack.push({name: pendingFuncName, argIdx: 0})
+                pendingFuncName = ''
+            } else {
+                // Anonymous parentheses (like grouping), push a placeholder
+                funcStack.push({name: '', argIdx: -1})
+            }
+        } else if (char === ')') {
+            if (funcStack.length > 0) {
+                funcStack.pop()
+            }
+        } else if (char === ',' && funcStack.length > 0) {
+            // Only count comma for actual function calls (not grouping parens)
+            if (funcStack[funcStack.length - 1].argIdx >= 0) {
+                funcStack[funcStack.length - 1].argIdx++
+            }
+        }
+    }
+
+    // Find the innermost actual function (not grouping parens)
+    for (let i = funcStack.length - 1; i >= 0; i--) {
+        if (funcStack[i].name && funcStack[i].argIdx >= 0) {
+            return {
+                funcName: funcStack[i].name.toUpperCase(),
+                argIndex: funcStack[i].argIdx,
+            }
+        }
+    }
+
+    return null
+}
+
+/**
+ * Create function signature tooltip content using Snippet.getSnippetMessage style
+ */
+function createSignatureTooltip(
+    func: FormulaFunction,
+    argIndex: number
+): HTMLElement {
+    const dom = document.createElement('div')
+    dom.className = 'cm-signature-tooltip'
+    dom.style.cssText =
+        'padding: 6px 10px; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 13px; max-width: 400px;'
+
+    // Build the signature message similar to Snippet.getSnippetMessage
+    const paramStrs: string[] = []
+    let targetParamIndex = argIndex < 0 ? 0 : argIndex
+    const minParamCount = 3
+    if (targetParamIndex < minParamCount) targetParamIndex = minParamCount
+
+    let tmp = 0
+    for (let j = 0; j < func.args.length; j++) {
+        const arg = func.args[j]
+        if (tmp > targetParamIndex) break
+        paramStrs.push(arg.argName)
+        tmp++
+        if (!arg.startRepeated) continue
+        let repeatCount = 1
+        while (tmp <= targetParamIndex) {
+            paramStrs.push(`${arg.argName}${repeatCount}`)
+            repeatCount++
+            tmp++
+        }
+        paramStrs.push('...')
+    }
+
+    // Function name and arguments
+    const sigLine = document.createElement('div')
+    sigLine.style.cssText = 'margin-bottom: 4px; font-family: monospace;'
+
+    const funcNameSpan = document.createElement('span')
+    funcNameSpan.style.cssText = 'color: #0066cc; font-weight: bold;'
+    funcNameSpan.textContent = func.name
+    sigLine.appendChild(funcNameSpan)
+
+    const parenOpen = document.createElement('span')
+    parenOpen.textContent = '('
+    sigLine.appendChild(parenOpen)
+
+    const actualArgIndex = argIndex < 0 ? 0 : argIndex
+    paramStrs.forEach((paramStr, i) => {
+        if (i > 0) {
+            const comma = document.createElement('span')
+            comma.textContent = ', '
+            sigLine.appendChild(comma)
+        }
+
+        const argSpan = document.createElement('span')
+        argSpan.textContent = paramStr
+        if (i === actualArgIndex) {
+            argSpan.style.cssText =
+                'background: #e3f2fd; padding: 1px 4px; border-radius: 3px; font-weight: bold;'
+        }
+        sigLine.appendChild(argSpan)
+    })
+
+    const parenClose = document.createElement('span')
+    parenClose.textContent = ')'
+    sigLine.appendChild(parenClose)
+
+    dom.appendChild(sigLine)
+
+    // Current argument description
+    const currentArg = func.args[Math.min(actualArgIndex, func.args.length - 1)]
+    if (currentArg && currentArg.description) {
+        const descLine = document.createElement('div')
+        descLine.style.cssText =
+            'color: #666; font-size: 12px; border-top: 1px solid #eee; padding-top: 4px; margin-top: 4px;'
+        descLine.textContent = `${currentArg.argName}: ${currentArg.description}`
+        dom.appendChild(descLine)
+    }
+
+    return dom
+}
 
 // CSS class decorations for different token types
 const tokenStyles = {
@@ -104,6 +290,7 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
         const {
             value: controlledValue,
             defaultValue = '',
+            initialCursorPosition = 'end',
             onChange,
             onBlur,
             onSubmit,
@@ -164,6 +351,28 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
                         },
                     })
                 }
+            },
+            insertText: (text: string) => {
+                const view = viewRef.current
+                if (view) {
+                    const pos = view.state.selection.main.head
+                    view.dispatch({
+                        changes: {from: pos, insert: text},
+                        selection: {anchor: pos + text.length},
+                    })
+                }
+            },
+            replaceRange: (from: number, to: number, text: string) => {
+                const view = viewRef.current
+                if (view) {
+                    view.dispatch({
+                        changes: {from, to, insert: text},
+                        selection: {anchor: from + text.length},
+                    })
+                }
+            },
+            getCursorPosition: () => {
+                return viewRef.current?.state.selection.main.head ?? 0
             },
             getView: () => viewRef.current,
         }))
@@ -243,7 +452,10 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
                 const text = view.state.doc.toString()
                 if (!isFormula(text)) {
                     view.dispatch({
-                        effects: setTokenDecorations.of(Decoration.none),
+                        effects: [
+                            setTokenDecorations.of(Decoration.none),
+                            setStoredTokenUnits.of([]),
+                        ],
                     })
                     return
                 }
@@ -254,7 +466,10 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
                         await latestPropsRef.current.getDisplayUnits(formula)
                     if (!displayInfo) {
                         view.dispatch({
-                            effects: setTokenDecorations.of(Decoration.none),
+                            effects: [
+                                setTokenDecorations.of(Decoration.none),
+                                setStoredTokenUnits.of([]),
+                            ],
                         })
                         return
                     }
@@ -263,8 +478,12 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
                         displayInfo,
                         latestPropsRef.current.sheetName
                     )
+                    // Store both decorations and tokenUnits
                     view.dispatch({
-                        effects: setTokenDecorations.of(decorations),
+                        effects: [
+                            setTokenDecorations.of(decorations),
+                            setStoredTokenUnits.of(displayInfo.tokenUnits),
+                        ],
                     })
                 } catch (error) {
                     // eslint-disable-next-line no-console
@@ -444,6 +663,25 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
                     fontSize: `${config.fontSize}px`,
                     fontFamily: config.fontFamily,
                 },
+                '.cm-scroller': {
+                    overflow: 'auto',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: 'rgba(0,0,0,0.2) transparent',
+                },
+                '.cm-scroller::-webkit-scrollbar': {
+                    width: '4px',
+                    height: '4px',
+                },
+                '.cm-scroller::-webkit-scrollbar-track': {
+                    background: 'transparent',
+                },
+                '.cm-scroller::-webkit-scrollbar-thumb': {
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '2px',
+                },
+                '.cm-scroller::-webkit-scrollbar-thumb:hover': {
+                    background: 'rgba(0,0,0,0.3)',
+                },
                 '.cm-content': {
                     padding: '4px',
                     lineHeight: String(config.lineHeight),
@@ -498,10 +736,76 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
             const extensions = [
                 history(),
                 tokenDecorationsField,
+                storedTokenUnitsField,
                 autocompletion({
                     override: [formulaCompletion],
                     activateOnTyping: true,
                     maxRenderedOptions: 20,
+                }),
+                // Function signature tooltip using tokenUnits from backend
+                StateField.define<readonly Tooltip[]>({
+                    create: () => [],
+                    update(tooltips, tr) {
+                        // Check if tokenUnits were updated
+                        let tokenUnitsChanged = false
+                        for (const effect of tr.effects) {
+                            if (effect.is(setStoredTokenUnits)) {
+                                tokenUnitsChanged = true
+                                break
+                            }
+                        }
+
+                        // Only skip update if nothing relevant changed
+                        if (
+                            !tr.docChanged &&
+                            !tr.selection &&
+                            !tokenUnitsChanged &&
+                            tooltips.length > 0
+                        ) {
+                            return tooltips
+                        }
+
+                        const text = tr.state.doc.toString()
+                        if (!isFormula(text)) return []
+
+                        const pos = tr.state.selection.main.head
+                        // Get tokenUnits from the stored state field
+                        const tokenUnits = tr.state.field(storedTokenUnitsField)
+
+                        // If no tokenUnits yet, don't show tooltip
+                        if (tokenUnits.length === 0) return []
+
+                        const ctx = getFunctionContextFromTokens(
+                            text,
+                            tokenUnits,
+                            pos
+                        )
+                        if (!ctx) return []
+
+                        const functions =
+                            latestPropsRef.current.formulaFunctions
+                        const func = functions.find(
+                            (f) => f.name.toUpperCase() === ctx.funcName
+                        )
+                        if (!func) return []
+
+                        return [
+                            {
+                                pos,
+                                above: true,
+                                strictSide: true,
+                                arrow: false,
+                                create: () => ({
+                                    dom: createSignatureTooltip(
+                                        func,
+                                        ctx.argIndex
+                                    ),
+                                }),
+                            },
+                        ]
+                    },
+                    provide: (f) =>
+                        showTooltip.computeN([f], (state) => state.field(f)),
                 }),
                 customKeymap,
                 keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -523,6 +827,12 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
             const state = EditorState.create({
                 doc: initialValue,
                 extensions,
+                selection: {
+                    anchor:
+                        initialCursorPosition === 'end'
+                            ? initialValue.length
+                            : 0,
+                },
             })
 
             const view = new EditorView({
@@ -585,8 +895,12 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
                 ref={containerRef}
                 className={`formula-editor ${className || ''}`}
                 style={{
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '4px',
+                    ...(config.showBorder
+                        ? {
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '4px',
+                          }
+                        : {}),
                     minHeight: `${config.fontSize * config.lineHeight + 8}px`,
                     ...style,
                 }}

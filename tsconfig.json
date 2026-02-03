@@ -23,6 +23,7 @@
     "outDir": "./dist/",
     "paths": {
       "@/*": ["src/*"],
+      "@logisheets/formula-editor": ["packages/formula-editor/src/lib/index.ts"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -38,6 +39,8 @@
   "include": [
     "src/**/*.tsx",
     "src/**/*.ts",
-    "packages/web/**/*.ts"
+    "packages/web/**/*.ts",
+    "packages/formula-editor/src/**/*.ts",
+    "packages/formula-editor/src/**/*.tsx"
   ]
 }
