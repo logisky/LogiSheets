@@ -785,4 +785,19 @@ mod tests {
             .pure;
         assert!(matches!(r, ast::PureNode::Func(_)));
     }
+
+    #[test]
+    fn parse_wrong_formula() {
+        let parser = Parser {};
+        let mut vertext_fetcher = TestVertexFetcher {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut context = Context {
+            book_name: "book",
+            id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
+        };
+        let f = "=SUM(1)+";
+        let r = parser.parse(f, 1, &mut context);
+        assert!(r.is_none());
+    }
 }

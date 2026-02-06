@@ -1,10 +1,10 @@
-import {CanvasComponent} from '@/components/canvas'
+import {EngineCanvas} from '@/components/engine-canvas'
 import {FC, useState} from 'react'
 import styles from './content.module.scss'
 import {EditBarComponent} from './edit-bar'
 import {SheetsTabComponent} from '@/components/sheets-tab'
-import {Grid} from '@/core/worker/types'
-import {CellLayout, SelectedData} from 'logisheets-web'
+import {Grid} from 'logisheets-engine'
+import {CellLayout, SelectedData} from 'logisheets-engine'
 
 export interface ContentProps {
     selectedData$: (cell: SelectedData) => void
@@ -36,7 +36,7 @@ export const ContentComponent: FC<ContentProps> = ({
             />
             <div className={styles.middle}>
                 <div className={styles.canvas}>
-                    <CanvasComponent
+                    <EngineCanvas
                         selectedData={selectedData}
                         selectedData$={selectedData$}
                         activeSheet={activeSheet}

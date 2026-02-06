@@ -1,14 +1,12 @@
 import {useMemo, useState, forwardRef, useImperativeHandle} from 'react'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
-import {DataServiceImpl} from '@/core/data'
+import {useEngine} from '@/core/engine/provider'
 import {
     Payload,
     Transaction,
     SetCellNumFmtBuilder,
     SetLineNumFmtBuilder,
     SelectedData,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 import Box from '@mui/material/Box'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -93,7 +91,8 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
 
         const presets = presetCategories[category]
 
-        const dataSvc = useInjection<DataServiceImpl>(TYPES.Data)
+        const engine = useEngine()
+        const dataSvc = engine.getDataService()
 
         useImperativeHandle(
             ref,

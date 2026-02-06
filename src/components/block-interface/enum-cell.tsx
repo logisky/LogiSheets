@@ -1,18 +1,16 @@
 import {useState} from 'react'
 import {Box, Select, MenuItem} from '@mui/material'
-import {CellInputBuilder, Payload, Transaction} from 'logisheets-web'
-import {DataServiceImpl} from '@/core/data'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
-import {BlockManager} from '@/core/data/block'
+import {CellInputBuilder, Payload, Transaction} from 'logisheets-engine'
+import {useEngine} from '@/core/engine/provider'
 import {BlockCellProps, valueToString} from './cell'
 
 export const EnumCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
-    const BLOCK_MANAGER = useInjection<BlockManager>(TYPES.BlockManager)
-    const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
+    const engine = useEngine()
+    const BLOCK_MANAGER = engine.getBlockManager()
+    const DATA_SERVICE = engine.getDataService()
     const [isEditing, setIsEditing] = useState(false)
 
     // Only handle enum type

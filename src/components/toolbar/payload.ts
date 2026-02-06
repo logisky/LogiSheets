@@ -1,4 +1,4 @@
-import {getSelectedCellRange, getSelectedLines} from '@/components/canvas'
+import {getSelectedCellRange, getSelectedLines} from 'logisheets-engine'
 import {
     Alignment,
     Payload,
@@ -17,7 +17,7 @@ import {
     SetCellNumFmtBuilder,
     SetLineNumFmtBuilder,
     SelectedData,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 
 export interface FontStyle {
     bold?: boolean

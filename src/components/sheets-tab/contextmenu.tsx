@@ -5,12 +5,10 @@ import {
     Payload,
     isErrorMessage,
     SetSheetColorBuilder,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 import {useEffect, useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
-import {DataServiceImpl as DataService} from '@/core/data'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
+import {useEngine} from '@/core/engine/provider'
 import {useToast} from '@/ui/notification/useToast'
 import {StandardColor} from '@/core/standable'
 import styles from './sheets-tab.module.scss'
@@ -53,7 +51,8 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
     const bodyTabindexRef = useRef(false)
     const oldName = sheetNames[index] || ''
     const [newName, setNewName] = useState(oldName)
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
     const toast = useToast()
 
     const openRename = () => {

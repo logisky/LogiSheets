@@ -4,10 +4,10 @@ import {ContentComponent} from '@/components/content'
 import {SETTINGS} from '@/core/settings'
 import styles from './root.module.scss'
 import {CraftPanel} from '../craft-panel'
-import {Grid} from '@/core/worker/types'
+import {Grid} from 'logisheets-engine'
 import {IconButton} from '@mui/material'
 import {ChevronLeft} from '@mui/icons-material'
-import {CellLayout, SelectedData} from 'logisheets-web'
+import {CellLayout, SelectedData} from 'logisheets-engine'
 export const RootContainer = () => {
     const [selectedData, setSelectedData] = useState<SelectedData>({
         source: 'none',

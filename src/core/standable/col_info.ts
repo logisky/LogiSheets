@@ -1,4 +1,4 @@
-import {ColInfo} from 'logisheets-web'
+import {ColInfo} from 'logisheets-engine'
 import {findMdwColw, ptToPx, shallowCopy, width2px, widthToPx} from '@/core'
 import {SETTINGS} from '@/core/settings'
 export class StandardColInfo implements ColInfo {

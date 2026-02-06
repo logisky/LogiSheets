@@ -5,11 +5,9 @@ import {
     Payload,
     SheetInfo,
     Transaction,
-} from 'logisheets-web'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
+} from 'logisheets-engine'
+import {useEngine} from '@/core/engine/provider'
 import {StandardColor} from '@/core/standable'
-import {DataServiceImpl as DataService} from '@/core/data'
 import AddIcon from '@mui/icons-material/Add'
 import Box from '@mui/material/Box'
 import Tabs from '@mui/material/Tabs'
@@ -27,7 +25,9 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     activeSheet,
     activeSheet$,
 }) => {
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const engine = useEngine()
+    const workbook = engine.getWorkbook()
+    const dataService = engine.getDataService()
     const [sheets, setSheets] = useState([] as readonly SheetInfo[])
     const [isOpen, setIsOpen] = useState(false)
     const [modalPosition, setModalPosition] = useState({
@@ -40,16 +40,21 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     })
 
     useEffect(() => {
-        DATA_SERVICE.getWorkbook()
-            .getAllSheetInfo()
-            .then((v) => {
-                if (isErrorMessage(v)) return
-                setSheets(v)
-            })
-        DATA_SERVICE.registerSheetUpdatedCallback(() => {
-            setSheets(DATA_SERVICE.getCacheAllSheetInfo())
+        workbook.getAllSheetInfo().then((v) => {
+            if (isErrorMessage(v)) return
+            setSheets(v)
         })
-    }, [])
+
+        // Listen for sheet changes
+        const handleSheetChange = (newSheets: readonly SheetInfo[]) => {
+            setSheets(newSheets)
+        }
+        engine.on('sheetChange', handleSheetChange)
+
+        return () => {
+            engine.off('sheetChange', handleSheetChange)
+        }
+    }, [engine, workbook])
 
     // Clamp active index to available tab range when sheets change
     useEffect(() => {
@@ -73,12 +78,12 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                 .idx(newIdx)
                 .build(),
         }
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true)).then(
-            (v) => {
+        dataService
+            .handleTransaction(new Transaction([payload], true))
+            .then((v) => {
                 if (v) return
                 activeSheet$(newIdx)
-            }
-        )
+            })
     }
 
     return (

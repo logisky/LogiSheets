@@ -24,15 +24,13 @@ import {
     borderStyleNames,
     PreviewLineComponent,
 } from '@/components/toolbar/preview-line'
-import {StBorderStyle, SelectedData} from 'logisheets-web'
+import {StBorderStyle, SelectedData} from 'logisheets-engine'
 import {
     BatchUpdateType,
     generateBorderPayloads,
 } from '@/components/toolbar/payload'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
-import {DataServiceImpl} from '@/core/data'
-import {Transaction} from 'logisheets-web'
+import {useEngine} from '@/core/engine/provider'
+import {Transaction} from 'logisheets-engine'
 import {StandardColor} from '@/core/standable'
 
 export interface BorderModel {
@@ -53,7 +51,8 @@ export interface BorderPanelHandle {
 
 const BorderPanel = forwardRef<BorderPanelHandle, BorderPanelProps>(
     ({value, onChange, selectedData}, ref) => {
-        const dataSvc = useInjection<DataServiceImpl>(TYPES.Data)
+        const engine = useEngine()
+        const dataSvc = engine.getDataService()
         const [color, setColor] = useState<StandardColor>(
             StandardColor.from(0, 0, 0)
         )

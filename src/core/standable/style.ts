@@ -5,7 +5,7 @@ import {
     Style,
     CtCellProtection,
     Alignment,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 import {shallowCopy} from '@/core'
 import {StandardFont} from './font'
 

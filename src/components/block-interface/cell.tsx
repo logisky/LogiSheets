@@ -1,5 +1,5 @@
-import {Value} from 'logisheets-web'
-import {FieldInfo} from '@/core/data'
+import {Value} from 'logisheets-engine'
+import type {FieldInfo} from 'logisheets-engine'
 
 // Common interface for all block cell components
 export interface BlockCellProps {

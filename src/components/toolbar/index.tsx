@@ -1,10 +1,9 @@
 import {useEffect, useRef, useState} from 'react'
 import styles from './toolbar.module.scss'
 import modalStyles from '../modal.module.scss'
-import {getSelectedCellRange, getSelectedLines} from '@/components/canvas'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
-import {BlockManager, DataServiceImpl as DataService} from '@/core/data'
+import {getSelectedCellRange, getSelectedLines, Grid} from 'logisheets-engine'
+import {Cell, ErrorMessage} from 'logisheets-engine'
+import {useEngine} from '@/core/engine/provider'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {BorderSettingComponent} from './border-setting'
 import {
@@ -27,7 +26,7 @@ import {
     VerticalAlignment,
     SplitMergedCellsBuilder,
     getFirstCell,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 import {ColorResult, SketchPicker} from 'react-color'
 import Modal from 'react-modal'
 import Tooltip from '@mui/material/Tooltip'
@@ -62,7 +61,6 @@ import {StandardColor, StandardFont} from '@/core/standable'
 import {useToast} from '@/ui/notification/useToast'
 import {TextField} from '@mui/material'
 import Select, {SelectChangeEvent} from '@mui/material/Select'
-import {Grid} from '@/core/worker/types'
 
 export interface ToolbarProps {
     setGrid: (grid: Grid | null) => void
@@ -70,8 +68,9 @@ export interface ToolbarProps {
 }
 
 export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const BLOCK_MANAGER = useInjection<BlockManager>(TYPES.BlockManager)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
+    const BLOCK_MANAGER = engine.getBlockManager()
     const {toast} = useToast()
     const hasSelectedData =
         selectedData !== undefined && selectedData.data !== undefined
@@ -93,7 +92,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             }
             let appData = await DATA_SERVICE.getWorkbook().getAppData()
             if (isErrorMessage(appData)) appData = []
-            appData.forEach((d) => {
+            appData.forEach((d: {name: string; data: string}) => {
                 if (d.name === 'logisheets') {
                     BLOCK_MANAGER.parseAppData(d.data)
                 }
@@ -202,63 +201,67 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
         const cell = getFirstCell(selectedData)
         const {y: r, x: c} = cell
         const sheet = DATA_SERVICE.getCurrentSheetIdx()
-        DATA_SERVICE.getCellInfo(sheet, r, c).then((ci) => {
-            if (isErrorMessage(ci)) return
-            const style = ci.getStyle()
-            const a = style.alignment
-            let h = null
-            let v = null
-            if (a?.horizontal === 'center') h = 'center'
-            else if (a?.horizontal === 'left') h = 'left'
-            else if (a?.horizontal === 'right') h = 'right'
-            if (a?.vertical === 'center') v = 'center'
-            else if (a?.vertical === 'top') v = 'top'
-            else if (a?.vertical === 'bottom') v = 'bottom'
-            if (h && v) setAlignment(`${h}-${v}`)
-            else if (h) setAlignment(`${h}-center`)
-            else if (v) setAlignment(`center-${v}`)
-            else setAlignment(null)
-            const pf = getPatternFill(style.fill)
+        DATA_SERVICE.getCellInfo(sheet, r, c).then(
+            (ci: Cell | ErrorMessage) => {
+                if (isErrorMessage(ci)) return
+                const style = ci.getStyle()
+                const a = style.alignment
+                let h = null
+                let v = null
+                if (a?.horizontal === 'center') h = 'center'
+                else if (a?.horizontal === 'left') h = 'left'
+                else if (a?.horizontal === 'right') h = 'right'
+                if (a?.vertical === 'center') v = 'center'
+                else if (a?.vertical === 'top') v = 'top'
+                else if (a?.vertical === 'bottom') v = 'bottom'
+                if (h && v) setAlignment(`${h}-${v}`)
+                else if (h) setAlignment(`${h}-center`)
+                else if (v) setAlignment(`center-${v}`)
+                else setAlignment(null)
+                const pf = getPatternFill(style.fill)
 
-            if (a?.wrapText || false) setWrapText(a.wrapText)
-            if (pf && pf.bgColor) {
-                const c = StandardColor.fromCtColor(pf.bgColor)
-                setFillColor(c.css())
+                if (a?.wrapText || false) setWrapText(a.wrapText)
+                if (pf && pf.bgColor) {
+                    const c = StandardColor.fromCtColor(pf.bgColor)
+                    setFillColor(c.css())
+                }
+                const font = StandardFont.from(style.font)
+                setFontColor(font.standardColor.css())
+                setBold(font.bold)
+                setItalic(font.italic)
+                setUnderline(
+                    font.underline ? font.underline.val !== 'none' : false
+                )
+                setStrike(font.strike)
+                switch (style.formatter.toLocaleLowerCase()) {
+                    case '':
+                    case 'general':
+                        setNumberFormat('general')
+                        break
+                    case '0.00_':
+                        setNumberFormat('number')
+                        break
+                    case '1/2':
+                        setNumberFormat('fraction')
+                        break
+                    case '0.00%':
+                        setNumberFormat('percent')
+                        break
+                    case '@':
+                        setNumberFormat('text')
+                        break
+                    case 'yyyy/m/d':
+                    case 'yyyy/m/d;@':
+                        setNumberFormat('date')
+                        break
+                    case 'h:mm:ss':
+                        setNumberFormat('time')
+                        break
+                    default:
+                        setNumberFormat('Custom')
+                }
             }
-            const font = StandardFont.from(style.font)
-            setFontColor(font.standardColor.css())
-            setBold(font.bold)
-            setItalic(font.italic)
-            setUnderline(font.underline ? font.underline.val !== 'none' : false)
-            setStrike(font.strike)
-            switch (style.formatter.toLocaleLowerCase()) {
-                case '':
-                case 'general':
-                    setNumberFormat('general')
-                    break
-                case '0.00_':
-                    setNumberFormat('number')
-                    break
-                case '1/2':
-                    setNumberFormat('fraction')
-                    break
-                case '0.00%':
-                    setNumberFormat('percent')
-                    break
-                case '@':
-                    setNumberFormat('text')
-                    break
-                case 'yyyy/m/d':
-                case 'yyyy/m/d;@':
-                    setNumberFormat('date')
-                    break
-                case 'h:mm:ss':
-                    setNumberFormat('time')
-                    break
-                default:
-                    setNumberFormat('Custom')
-            }
-        })
+        )
         // merged state
         const cr = getSelectedCellRange(selectedData)
         if (!cr) {
@@ -271,7 +274,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             cr.startCol,
             cr.endRow,
             cr.endCol
-        ).then((v) => {
+        ).then((v: readonly MergeCell[] | ErrorMessage) => {
             if (isErrorMessage(v)) {
                 setMergedOn(null)
                 return
@@ -329,7 +332,9 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                         .dstSheetIdx(fb.sheetIdx)
                         .build(),
                 }
-                DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+                DATA_SERVICE.handleTransaction(
+                    new Transaction([payload], true)
+                )
                 setFormatBrushOn(null)
                 return
             }

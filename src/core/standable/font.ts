@@ -1,4 +1,4 @@
-import {Font, CtFontName, CtUnderlineProperty, Color} from 'logisheets-web'
+import {Font, CtFontName, CtUnderlineProperty, Color} from 'logisheets-engine'
 import {shallowCopy} from '@/core'
 import {StandardColor} from './color'
 import {measureText} from './text-measure'

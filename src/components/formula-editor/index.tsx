@@ -21,10 +21,13 @@ import {
     FormulaFunction,
     CellRef,
 } from '@logisheets/formula-editor'
-import {isErrorMessage} from 'logisheets-web'
-import {DataServiceImpl as DataService} from '@/core/data'
+import {isErrorMessage} from 'logisheets-engine'
+import type {DataService} from 'logisheets-engine'
 import {getAllFormulas} from '@/core/snippet'
 import styles from './formula-editor.module.scss'
+
+// Re-export types for convenience
+export type {CellRef} from '@logisheets/formula-editor'
 
 export interface FormulaEditorWrapperProps {
     /** Initial text (including leading '=' for formulas) */
@@ -52,6 +55,8 @@ export interface FormulaEditorWrapperProps {
     referenceInsertion?: string
     /** Called when cell references in formula change - for highlighting cells */
     onCellRefsChange?: (cellRefs: readonly CellRef[]) => void
+    /** Called when the editor text changes */
+    onChange?: (value: string) => void
 }
 
 export interface FormulaEditorWrapperRef {
@@ -111,6 +116,7 @@ const FormulaEditorWrapperInner = forwardRef<
         initialCursorPosition = 'end',
         referenceInsertion,
         onCellRefsChange,
+        onChange,
     } = props
 
     const editorRef = useRef<FormulaEditorRef>(null)
@@ -138,8 +144,10 @@ const FormulaEditorWrapperInner = forwardRef<
                 prevInsertionRef.current = null
             }
             isInsertingRef.current = false
+            // Notify parent of text change
+            onChange?.(value)
         },
-        [position.width]
+        [position.width, onChange]
     )
 
     // Initialize width based on initial text
