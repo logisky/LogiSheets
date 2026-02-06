@@ -19,9 +19,15 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             maxEntrypointSize: 512000,
         },
         devServer: {
-            static: {
-                directory: path.join(__dirname, 'public'),
-            },
+            static: [
+                {
+                    directory: path.join(__dirname, 'public'),
+                },
+                {
+                    directory: path.join(__dirname, 'packages/engine/dist'),
+                    publicPath: '/',
+                },
+            ],
             compress: false,
             hot: true,
             port: 4200,
@@ -29,6 +35,10 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
         experiments: {
             asyncWebAssembly: true,
             syncWebAssembly: true,
+        },
+        // Don't bundle initWasm from logisheets-web - it's handled by logisheets-engine's worker
+        externals: {
+            'logisheets-web/wasm': 'commonjs logisheets-web/wasm',
         },
 
         // Enable sourcemaps for debugging webpack's output.
@@ -45,11 +55,16 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             ],
         },
         plugins: [
+            new DefinePlugin({
+                'process.env.LOGISHEETS_API_KEY': JSON.stringify(
+                    process.env.LOGISHEETS_API_KEY || ''
+                ),
+            }),
             new ForkTsCheckerWebpackPlugin({
                 typescript: {configFile: './tsconfig.json'},
             }),
             new HtmlWebpackPlugin({
-                publicPath: path.join(__dirname, 'dist'),
+                publicPath: '/',
                 template: path.resolve(__dirname, 'public/index.html'),
                 favicon: path.resolve(__dirname, 'public/logo.png'),
             }),

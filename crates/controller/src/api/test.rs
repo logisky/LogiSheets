@@ -101,3 +101,13 @@ fn get_col_style() {
     let style = ws.get_style(0, 0).unwrap();
     assert_eq!(style.formatter, "0.00");
 }
+
+#[test]
+fn test_check_formula() {
+    let wb = Workbook::new();
+    let r = wb.check_formula("=1+1".to_string());
+    assert!(r);
+
+    let r = wb.check_formula("=SUM(1)+".to_string());
+    assert!(!r);
+}

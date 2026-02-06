@@ -4,7 +4,7 @@ import {
     BlockInfo,
     BlockSchema,
     FieldRenderEntry,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 import {Range} from './range'
 export class StandardBlock implements BlockInfo {
     cells: readonly BlockCellInfo[] = []

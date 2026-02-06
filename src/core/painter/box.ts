@@ -1,4 +1,4 @@
-import {VerticalAlignment, HorizontalAlignment} from 'logisheets-web'
+import {VerticalAlignment, HorizontalAlignment} from 'logisheets-engine'
 import {Range} from '@/core/standable'
 export class Box {
     public position = new Range()

@@ -13251,6 +13251,14 @@ __metadata:
   languageName: node
   linkType: hard
 
+"logisheets-engine@workspace:*, logisheets-engine@workspace:packages/engine":
+  version: 0.0.0-use.local
+  resolution: "logisheets-engine@workspace:packages/engine"
+  peerDependencies:
+    logisheets-web: ">=0.8.0"
+  languageName: unknown
+  linkType: soft
+
 "logisheets-web@workspace:*, logisheets-web@workspace:packages/web":
   version: 0.0.0-use.local
   resolution: "logisheets-web@workspace:packages/web"
@@ -17260,6 +17268,7 @@ __metadata:
     jest-environment-jsdom: "npm:^29.7.0"
     lint-staged: "npm:^13.0.3"
     lodash: "npm:^4.17.21"
+    logisheets-engine: "workspace:*"
     logisheets-web: "workspace:*"
     mobx: "npm:^6.12.3"
     mobx-react: "npm:^9.1.1"

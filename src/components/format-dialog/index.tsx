@@ -5,7 +5,7 @@ import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import NumFmtPanel, {type NumFmtPanelHandle} from './num-fmt'
 import BorderPanel, {type BorderModel, type BorderPanelHandle} from './border'
-import {SelectedData} from 'logisheets-web'
+import {SelectedData} from 'logisheets-engine'
 
 export interface FormatDialogValue {
     numFmt?: string

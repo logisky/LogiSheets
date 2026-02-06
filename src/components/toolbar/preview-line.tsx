@@ -1,4 +1,4 @@
-import {StBorderStyle} from 'logisheets-web'
+import {StBorderStyle} from 'logisheets-engine'
 
 export interface PreviewLineProps {
     style: StBorderStyle

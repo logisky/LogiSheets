@@ -24,10 +24,8 @@ import {
     SetColWidthBuilder,
     SetRowHeightBuilder,
     Transaction,
-} from 'logisheets-web'
-import {DataServiceImpl} from '@/core/data'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
+} from 'logisheets-engine'
+import {useEngine} from '@/core/engine/provider'
 import {BlockCellProps, valueToString} from './cell'
 import {pxToPt, pxToWidth} from '@/core'
 
@@ -36,7 +34,8 @@ type ImageSize = '50%' | '100%'
 export const ImageCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, sheetIdx, rowIdx, colIdx} = props
 
-    const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
 
     const [imageSize, setImageSize] = useState<ImageSize>('100%')
     const [contextMenu, setContextMenu] = useState<{

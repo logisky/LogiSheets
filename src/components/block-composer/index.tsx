@@ -1,17 +1,15 @@
 import {useState} from 'react'
 import {Box, Typography, Dialog, DialogContent, TextField} from '@mui/material'
-import {getSelectedCellRange} from '../canvas'
+import {getSelectedCellRange} from 'logisheets-engine'
 import {
     BindFormSchemaBuilder,
     SelectedData,
     UpsertFieldRenderInfoBuilder,
     getFirstCell,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 import {useToast} from '@/ui/notification/useToast'
-import {TYPES} from '@/core/ioc/types'
-import {useInjection} from '@/core/ioc/provider'
-import {DataServiceImpl as DataService} from '@/core/data'
-import {BlockManager, FieldInfo, FieldTypeEnum} from '@/core/data/block'
+import {useEngine} from '@/core/engine/provider'
+import type {FieldInfo, FieldTypeEnum} from 'logisheets-engine'
 import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
 import {FieldSetting} from './types'
@@ -22,7 +20,7 @@ import {
     SetBlockLineNameFieldBuilder,
     SetBlockLineNumFmtBuilder,
     Transaction,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 
 export * from './types'
 
@@ -34,8 +32,9 @@ export interface BlockComposerProps {
 export const BlockComposerComponent = (props: BlockComposerProps) => {
     const {selectedData, close} = props
     const {toast} = useToast()
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const BLOCK_MANAGER = useInjection<BlockManager>(TYPES.BlockManager)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
+    const BLOCK_MANAGER = engine.getBlockManager()
 
     const [fields, setFields] = useState<FieldSetting[]>([
         {

@@ -1,24 +1,25 @@
 import {useEffect, useState} from 'react'
 import {Box, IconButton, Tooltip, Typography} from '@mui/material'
 import {Settings as SettingsIcon, Add as AddIcon} from '@mui/icons-material'
-import {Grid} from '@/core/worker/types'
+import {
+    Grid,
+    DataService,
+    BlockManager,
+    xForColStart,
+    xForColEnd,
+    yForRowStart,
+    yForRowEnd,
+} from 'logisheets-engine'
 import {ZINDEX_BLOCK_OUTLINER} from '../const'
 import {MenuComponent} from './menu'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
-import {DataServiceImpl as DataService} from '@/core/data'
-import {BlockManager, FieldInfo} from '@/core/data/block'
+import {useEngine} from '@/core/engine/provider'
+import type {FieldInfo} from 'logisheets-engine'
 import {
     BlockCellInfo,
     InsertRowsInBlockBuilder,
     Transaction,
-} from 'logisheets-web'
-import {
-    xForColEnd,
-    xForColStart,
-    yForRowEnd,
-    yForRowStart,
-} from '../canvas/grid_helper'
+    BlockDisplayInfo,
+} from 'logisheets-engine'
 import {LeftTop} from '@/core/settings'
 import {BlockCellProps} from './cell'
 import {EnumCell} from './enum-cell'
@@ -35,8 +36,9 @@ export interface BlockInterfaceProps {
 
 export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
     const {grid, canvasStartX, canvasStartY} = props
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-    const BLOCK_MANAGER = useInjection<BlockManager>(TYPES.BlockManager)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
+    const BLOCK_MANAGER = engine.getBlockManager()
 
     if (!grid.blockInfos || grid.blockInfos.length === 0) {
         return null
@@ -44,7 +46,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
 
     return (
         <>
-            {grid.blockInfos.map((blockDisplay) => {
+            {grid.blockInfos.map((blockDisplay: BlockDisplayInfo) => {
                 const {info} = blockDisplay
                 const x = xForColStart(info.colStart, grid)
                 const y = yForRowStart(info.rowStart, grid)

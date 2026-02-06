@@ -1,12 +1,9 @@
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import styles from './block-interface.module.scss'
-import React, {useContext} from 'react'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
-import {DataServiceImpl as DataService} from '@/core/data'
+import React from 'react'
+import {useEngine} from '@/core/engine/provider'
 import {RemoveBlockBuilder, Transaction} from 'packages/web'
-import {CanvasStoreContext} from '../canvas/store'
 
 export interface MenuProps {
     readonly sheetId: number
@@ -49,9 +46,8 @@ export const ClickableList = ({
 
 export const MenuComponent = (props: MenuProps) => {
     const {sheetId, blockId, isOpen, setIsOpen} = props
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
-
-    const store = useContext(CanvasStoreContext)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
 
     const items = [
         {

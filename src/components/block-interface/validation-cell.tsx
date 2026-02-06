@@ -3,10 +3,8 @@ import {
     EphemeralCellInputBuilder,
     isErrorMessage,
     TransactionBuilder,
-} from 'logisheets-web'
-import {DataServiceImpl} from '@/core/data'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
+} from 'logisheets-engine'
+import {useEngine} from '@/core/engine/provider'
 import {BlockCellProps} from './cell'
 import {useToast} from '@/ui/notification/useToast'
 
@@ -33,7 +31,8 @@ export const ValidationCell = (props: ValidationCellProps) => {
         return null
     }
 
-    const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
     const {toast} = useToast()
     const validation = fieldInfo.type.validation
 

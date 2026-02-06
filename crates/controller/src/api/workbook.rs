@@ -18,6 +18,7 @@ use logisheets_base::{
     errors::BasicError,
     BlockCellId, BlockId, CellId, ColId, RowId, SheetId, TextId,
 };
+use logisheets_lexer::lex;
 use logisheets_workbook::logisheets::AppData;
 
 const CALC_CONDITION_EPHEMERAL_ID: u64 = 225715;
@@ -287,19 +288,16 @@ impl Workbook {
     }
 
     /// To see if the formula is valid.
-    pub fn check_formula(&mut self, f: String) -> Result<()> {
-        let effect = self.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
-            EphemeralCellInput {
-                sheet_idx: 0,
-                id: CALC_CONDITION_EPHEMERAL_ID,
-                content: f.clone(),
-            },
-        )));
-        if let StatusCode::Ok(_) = effect.status {
-            Ok(())
-        } else {
-            Err(BasicError::InvalidFormula(f).into())
+    pub fn check_formula(&self, f: String) -> bool {
+        if f.is_empty() {
+            return false;
         }
+        let f = f.trim();
+        if !f.starts_with('=') {
+            return false;
+        }
+        let tokens = lex(&f[1..]);
+        tokens.is_some()
     }
 
     pub fn get_all_block_fields(&self) -> Result<Vec<BlockField>> {

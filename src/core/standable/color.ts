@@ -1,4 +1,4 @@
-import {Color} from 'logisheets-web'
+import {Color} from 'logisheets-engine'
 const ALPHA = 255
 // https://en.wikipedia.org/wiki/RGBA_color_model
 export class StandardColor {

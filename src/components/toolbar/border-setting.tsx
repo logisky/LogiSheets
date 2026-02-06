@@ -1,7 +1,5 @@
-import {SelectedData} from 'logisheets-web'
-import {DataServiceImpl as DataService} from '@/core/data'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
+import {SelectedData} from 'logisheets-engine'
+import {useEngine} from '@/core/engine/provider'
 import {useState} from 'react'
 import {
     Box,
@@ -26,7 +24,7 @@ import BorderVerticalIcon from '@mui/icons-material/BorderVertical'
 import BorderLeftIcon from '@mui/icons-material/BorderLeft'
 import {ColorResult, SketchPicker} from 'react-color'
 import {borderStyleNames, PreviewLineComponent} from './preview-line'
-import {StBorderStyle, Transaction} from 'logisheets-web'
+import {StBorderStyle, Transaction} from 'logisheets-engine'
 import {BatchUpdateType, generateBorderPayloads} from './payload'
 import {StandardColor} from '@/core/standable'
 
@@ -39,7 +37,8 @@ export const BorderSettingComponent = ({
     selectedData,
     close,
 }: BorderSettingProps) => {
-    const DATA_SERVICE = useInjection<DataService>(TYPES.Data)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
 
     const [color, setColor] = useState<StandardColor>(
         StandardColor.from(0, 0, 0)

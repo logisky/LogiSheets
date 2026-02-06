@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import {BorderPr, StPatternType} from 'logisheets-web'
+import {BorderPr, StPatternType} from 'logisheets-engine'
 import {StandardColor} from '@/core/standable'
 import {CanvasAttr} from './canvas_attr'
 import {Box} from './box'

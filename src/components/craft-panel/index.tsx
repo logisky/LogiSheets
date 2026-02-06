@@ -8,12 +8,10 @@ import {
     MenuItem,
 } from '@mui/material'
 import {ChevronRight} from '@mui/icons-material'
-import {Selection, SelectedData, CellLayout} from 'logisheets-web'
+import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useRef, useState} from 'react'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
-import {DataServiceImpl} from '@/core/data'
-import {buildSelectedDataFromCell} from '../canvas'
+import {useEngine} from '@/core/engine/provider'
+import {buildSelectedDataFromCell} from 'logisheets-engine'
 
 type CraftPanelProps = {
     selectedData?: SelectedData
@@ -42,7 +40,8 @@ export const CraftPanel = ({
         },
     ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
-    const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
 
     const inject = () => {
         const iframe = iframeRef.current

@@ -27,7 +27,7 @@ import {
     Edit as EditIcon,
 } from '@mui/icons-material'
 import {FieldSetting, EnumValue, FieldTypeEnum, COLORS} from './types'
-import {EnumSetManager} from '@/core/data/block/enum_set_manager'
+import {EnumSetManager} from 'logisheets-engine'
 import {useToast} from '@/ui/notification/useToast'
 
 interface FieldConfigPanelProps {

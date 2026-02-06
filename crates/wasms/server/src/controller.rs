@@ -1173,12 +1173,8 @@ pub fn ephemeral_cell_input(id: usize, sheet_idx: usize, ephemeral_id: u64, cont
 pub fn check_formula(id: usize, f: String) -> bool {
     init();
     let mut manager = MANAGER.get_mut();
-    let wb = manager.get_mut_workbook(&id).unwrap();
-    let r = wb.check_formula(f);
-    match r {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    let wb = manager.get_workbook(&id).unwrap();
+    wb.check_formula(f)
 }
 
 #[wasm_bindgen]

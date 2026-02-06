@@ -1,0 +1,40 @@
+{
+    "name": "logisheets-engine",
+    "author": "Jeremy He<yiliang.he@qq.com>",
+    "license": "MIT",
+    "version": "0.1.0",
+    "description": "LogiSheets spreadsheet engine - a high-performance spreadsheet rendering and editing library",
+    "type": "module",
+    "main": "./dist/logisheets-engine.umd.js",
+    "module": "./dist/logisheets-engine.es.js",
+    "types": "./dist/types/lib/global.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/types/lib/global.d.ts",
+            "import": "./dist/logisheets-engine.es.js",
+            "require": "./dist/logisheets-engine.umd.js"
+        },
+        "./style.css": "./dist/logisheets-engine.css"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/logisky/LogiSheets.git"
+    },
+    "keywords": [
+        "spreadsheet",
+        "excel",
+        "xlsx",
+        "canvas",
+        "webworker"
+    ],
+    "files": [
+        "dist"
+    ],
+    "peerDependencies": {
+        "logisheets-web": ">=0.8.0"
+    },
+    "bugs": {
+        "url": "https://github.com/logisky/LogiSheets/issues"
+    },
+    "homepage": "https://github.com/logisky/LogiSheets"
+}

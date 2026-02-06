@@ -12,9 +12,10 @@ yarn-error.log
 
 # bundle generate files
 dist
-crafts/**/*/dist
 # crafts
+crafts/**/*/dist
 public/**/*
+!packages/engine/dist
 
 # jest files
 coverage/

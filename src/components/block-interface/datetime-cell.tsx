@@ -4,10 +4,8 @@ import {StaticDatePicker} from '@mui/x-date-pickers/StaticDatePicker'
 import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider'
 import {AdapterDayjs} from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs, {Dayjs} from 'dayjs'
-import {CellInputBuilder, Payload, Transaction} from 'logisheets-web'
-import {DataServiceImpl} from '@/core/data'
-import {useInjection} from '@/core/ioc/provider'
-import {TYPES} from '@/core/ioc/types'
+import {CellInputBuilder, Payload, Transaction} from 'logisheets-engine'
+import {useEngine} from '@/core/engine/provider'
 import {BlockCellProps, valueToNumber} from './cell'
 
 /**
@@ -45,7 +43,8 @@ export const DatetimeCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
-    const DATA_SERVICE = useInjection<DataServiceImpl>(TYPES.Data)
+    const engine = useEngine()
+    const DATA_SERVICE = engine.getDataService()
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
     const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null)
 

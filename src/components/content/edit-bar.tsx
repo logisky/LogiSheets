@@ -1,7 +1,8 @@
 import {
     buildSelectedDataFromCell,
     getSelectedCellRange,
-} from '@/components/canvas'
+} from 'logisheets-engine'
+import {Cell, ErrorMessage} from 'logisheets-engine'
 import {toA1notation, parseA1notation} from '@/core'
 import {
     SelectedData,
@@ -9,16 +10,14 @@ import {
     CellInputBuilder,
     Payload,
     Transaction,
-} from 'logisheets-web'
+} from 'logisheets-engine'
 import {FC, useEffect, useState, useRef, KeyboardEvent} from 'react'
 import styles from './edit-bar.module.scss'
-import {useInjection} from '@/core/ioc/provider'
-import {DataServiceImpl as DataService} from '@/core/data'
-import {TYPES} from '@/core/ioc/types'
-import {isErrorMessage} from 'packages/web/src/api/utils'
-import {CANVAS_ID} from '@/components/canvas/store'
+import {useEngine} from '@/core/engine/provider'
+import {isErrorMessage} from 'logisheets-engine'
 import {TransformOutlined} from '@mui/icons-material'
 import {IconButton, Tooltip} from '@mui/material'
+
 export interface EditBarProps {
     selectedData: SelectedData
     selectedData$: (e: SelectedData) => void
@@ -30,7 +29,8 @@ export const EditBarComponent: FC<EditBarProps> = ({
     selectedData$,
     selectedDataContentChanged,
 }) => {
-    const dataSvc = useInjection<DataService>(TYPES.Data)
+    const engine = useEngine()
+    const dataSvc = engine.getDataService()
     const [coordinate, setCoordinate] = useState('')
     const [formula, setFormula] = useState('')
     const [isEditing, setIsEditing] = useState(false)
@@ -43,7 +43,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
         if (!selectedCell) return
         const {startRow: row, startCol: col} = selectedCell
         const cell = dataSvc.getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
-        cell.then((c) => {
+        cell.then((c: Cell | ErrorMessage) => {
             if (isErrorMessage(c)) return
             setFormula(c.getFormula() || c.getText())
             setValue(c.getText())
@@ -58,7 +58,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
         const notation = toA1notation(col)
         setCoordinate(`${notation}${row + 1}`)
         const cell = dataSvc.getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
-        cell.then((c) => {
+        cell.then((c: Cell | ErrorMessage) => {
             if (isErrorMessage(c)) return
             setFormula(c.getFormula() || c.getText())
             setValue(c.getText())
@@ -102,8 +102,8 @@ export const EditBarComponent: FC<EditBarProps> = ({
         selectedData$(buildSelectedDataFromCell(cell.y, cell.x, 'editbar'))
         // explicitly focus canvas in next frame to ensure focus returns
         requestAnimationFrame(() => {
-            const el = document.getElementById(
-                CANVAS_ID
+            const el = document.querySelector(
+                '.host canvas'
             ) as HTMLCanvasElement | null
             el?.focus({preventScroll: true})
         })
@@ -140,8 +140,8 @@ export const EditBarComponent: FC<EditBarProps> = ({
                 buildSelectedDataFromCell(cellPos.y, cellPos.x, 'editbar')
             )
             requestAnimationFrame(() => {
-                const el = document.getElementById(
-                    CANVAS_ID
+                const el = document.querySelector(
+                    '.host canvas'
                 ) as HTMLCanvasElement | null
                 el?.focus({preventScroll: true})
             })
