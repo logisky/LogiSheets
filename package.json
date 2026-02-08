@@ -62,8 +62,7 @@
         "start:react": "react-scripts start",
         "start:wasm": "yarn run run-scripts && yarn run wasm && webpack serve --config=webpack.config.ts --hot --env=dev --env=stand-alone",
         "test": "vitest run",
-        "wasm": "yarn run wasm:server && yarn run wasm:fc",
-        "wasm:fc": "wasm-pack build crates/wasms/fc --out-dir pkg --target web",
+        "wasm": "yarn run wasm:server",
         "wasm:server": "wasm-pack build crates/wasms/server --out-dir ../../../packages/web/wasm --target web"
     },
     "browserslist": {
