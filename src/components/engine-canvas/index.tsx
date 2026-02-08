@@ -26,6 +26,7 @@ import {
     CellRef,
 } from '@/components/formula-editor'
 import {getHighlightColor} from '@/components/const'
+import {BlockInterfaceComponent} from '@/components/block-interface'
 import styles from './engine-canvas.module.scss'
 
 // LeftTop configuration (matches engine config)
@@ -158,12 +159,10 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             // If it's a formula, check validity first
             if (newText.startsWith('=')) {
                 const isValid = await dataSvc.checkFormula(newText)
-                console.log('isValid:', isValid)
                 if (!isValid) {
                     setInvalidFormulaOpen(true)
                     return
                 }
-                console.log('valid formula:', newText)
             }
 
             const payload: Payload = {
@@ -460,6 +459,26 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
         }
     }, [grid, editing, editorContext?.row, editorContext?.col])
 
+    // Track canvas position for BlockInterfaceComponent
+    const [canvasPos, setCanvasPos] = useState({x: 0, y: 0})
+
+    useEffect(() => {
+        const updateCanvasPos = () => {
+            const canvas = containerRef.current?.querySelector('canvas')
+            if (canvas) {
+                const rect = canvas.getBoundingClientRect()
+                setCanvasPos({x: rect.left, y: rect.top})
+            }
+        }
+        updateCanvasPos()
+        window.addEventListener('resize', updateCanvasPos)
+        window.addEventListener('scroll', updateCanvasPos)
+        return () => {
+            window.removeEventListener('resize', updateCanvasPos)
+            window.removeEventListener('scroll', updateCanvasPos)
+        }
+    }, [grid])
+
     return (
         <>
             <div ref={containerRef} className={styles.host}>
@@ -490,6 +509,14 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                         onCancel={cancelEdit}
                         onCellRefsChange={setCellRefs}
                         onChange={handleEditorChange}
+                    />
+                )}
+                {/* Block interface overlay */}
+                {grid && grid.blockInfos && grid.blockInfos.length > 0 && (
+                    <BlockInterfaceComponent
+                        grid={grid}
+                        canvasStartX={canvasPos.x}
+                        canvasStartY={canvasPos.y}
                     />
                 )}
             </div>
