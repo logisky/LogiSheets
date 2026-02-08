@@ -16,7 +16,6 @@ We are also working on a user interface to enable users to use spreadsheets dire
 
 | Package | Path | Description | License |
 |---------|------|-------------|---------|
-
 | **logisheets-rs** | `crates/api` | Rust API for LogiSheets spreadsheet engine | MIT |
 | **logisheets-web** | `packages/web` | Web SDK for browser-based spreadsheet applications | MIT |
 | **logisheets-node** | `packages/node` | Node.js bindings for server-side spreadsheet operations | MIT |
