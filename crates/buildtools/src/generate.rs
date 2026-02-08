@@ -1,13 +1,9 @@
 use gents::FileGroup;
-use logisheets_controller::controller::display::{
-    BlockField, CellCoordinateWithSheet, CellPosition, DisplayWindowRequest,
-    DisplayWindowWithStartPoint, ShadowCellInfo, SheetInfo,
+use logisheets_rs::{
+    ActionEffect, AppData, AppendixWithCell, AsyncFuncResult, BlockField, CellCoordinateWithSheet,
+    CellInfo, CellPosition, DisplayWindowRequest, DisplayWindowWithStartPoint, EditAction,
+    ErrorMessage, FormulaDisplayInfo, SaveFileResult, ShadowCellInfo, SheetDimension, SheetInfo,
 };
-use logisheets_controller::edit_action::{ActionEffect, AsyncFuncResult, EditAction};
-use logisheets_controller::{
-    AppendixWithCell, CellInfo, ErrorMessage, FormulaDisplayInfo, SaveFileResult, SheetDimension,
-};
-use logisheets_workbook::logisheets::AppData;
 
 fn main() {
     let path = "packages/web/src/bindings";

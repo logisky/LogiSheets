@@ -1,0 +1,12 @@
+[package]
+name = "logisheets-rs"
+version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "The Rust API for LogiSheets spreadsheet engine"
+edition.workspace = true
+
+[dependencies]
+logisheets_controller = { workspace = true }
+logisheets_base = { workspace = true }
+logisheets_workbook = { workspace = true }

@@ -1,11 +1,6 @@
-use logisheets_base::errors::BasicError;
-use logisheets_base::BlockId;
-use logisheets_base::DiyCellId;
-use logisheets_base::SheetId;
-use logisheets_controller::controller::display::CellPosition;
-use logisheets_controller::ColInfo;
-use logisheets_controller::Error;
-use logisheets_controller::SheetCoordinate;
+use logisheets_rs::{
+    BasicError, BlockId, CellPosition, ColInfo, DiyCellId, Error, SheetCoordinate, SheetId,
+};
 use wasm_bindgen::prelude::*;
 
 use crate::controller::init;

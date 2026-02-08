@@ -7,9 +7,8 @@ authors.workspace = true
 [dependencies]
 gents = { workspace = true }
 
-logisheets_controller = { path = "../controller" }
+logisheets-rs = { workspace = true }
 logisheets_sequencer = { path = "../sequencer" }
-logisheets_workbook = { path = "../workbook" }
 
 [[bin]]
 name = "generate"

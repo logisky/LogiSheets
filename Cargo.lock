@@ -143,9 +143,8 @@ name = "buildtools"
 version = "0.7.0"
 dependencies = [
  "gents",
- "logisheets_controller",
+ "logisheets-rs",
  "logisheets_sequencer",
- "logisheets_workbook",
 ]
 
 [[package]]
@@ -883,6 +882,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "logisheets-rs"
+version = "0.7.0"
+dependencies = [
+ "logisheets_base",
+ "logisheets_controller",
+ "logisheets_workbook",
+]
+
+[[package]]
 name = "logisheets_astchecker"
 version = "0.7.0"
 dependencies = [
@@ -988,26 +996,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "logisheets_wasm_fc"
-version = "0.3.0"
-dependencies = [
- "console_error_panic_hook",
- "getrandom",
- "logisheets_controller",
- "wasm-bindgen",
- "wasm-bindgen-test",
- "web-sys",
-]
-
-[[package]]
 name = "logisheets_wasm_server"
 version = "0.7.0"
 dependencies = [
  "console_error_panic_hook",
  "getrandom",
- "logisheets_base",
- "logisheets_controller",
- "logisheets_workbook",
+ "logisheets-rs",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",

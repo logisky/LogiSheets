@@ -1,20 +1,16 @@
-use logisheets_base::errors::BasicError;
-use logisheets_base::{BlockId, ColId, RowId, SheetId};
-use logisheets_controller::controller::style::{from_hex_str, PatternFill};
-use logisheets_controller::edit_action::{
-    Alignment, AsyncFuncResult, BindFormSchema, BindRandomSchema, BlockInput,
+use logisheets_rs::{
+    from_hex_str, lex_and_fmt, lex_success, Alignment, AppData, AsyncCalcResult, AsyncErr,
+    AsyncFuncResult, BasicError, BindFormSchema, BindRandomSchema, BlockId, BlockInput,
     BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellClear, CellFormatBrush, CellInput,
-    CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols,
+    CellStyleUpdate, ColId, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols,
     DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
-    EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
-    InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction,
-    RemoveBlock, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight, SetSheetColor,
-    SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells, StyleUpdateType,
-    UpsertFieldRenderInfo, VerticalAlignment,
+    EphemeralCellInput, Error, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
+    InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PatternFill,
+    PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, RowId, RowInfo, SaveFileResult,
+    SetColWidth, SetRowHeight, SetSheetColor, SetSheetVisible, SheetCellId, SheetId, SheetRename,
+    SplitMergedCells, StBorderStyle, StPatternType, StUnderlineValues, StyleUpdateType,
+    UpsertFieldRenderInfo, VerticalAlignment, Workbook,
 };
-use logisheets_controller::{AsyncCalcResult, AsyncErr, Error, RowInfo, SaveFileResult, Workbook};
-use logisheets_workbook::logisheets::AppData;
-use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
 use singlyton::{Singleton, SingletonUninit};
 use wasm_bindgen::prelude::*;
 use xmlserde::XmlValue;
@@ -28,7 +24,7 @@ pub(crate) static MANAGER: SingletonUninit<Manager> = SingletonUninit::uninit();
 macro_rules! handle_result {
     ($r:ident) => {
         if let Err(e) = $r {
-            let e = logisheets_controller::ErrorMessage::from(e);
+            let e = logisheets_rs::ErrorMessage::from(e);
             return serde_wasm_bindgen::to_value(&e).unwrap();
         }
         let $r = $r.unwrap();
@@ -1391,7 +1387,6 @@ pub fn get_cell_id(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) 
 
 #[wasm_bindgen]
 pub fn formula_check(f: &str) -> bool {
-    use logisheets_controller::lex_success;
     let f = f.trim();
     let f = &f[1..];
     let r = lex_success(f);
@@ -1400,7 +1395,6 @@ pub fn formula_check(f: &str) -> bool {
 
 #[wasm_bindgen]
 pub fn get_display_units_of_formula(f: &str) -> JsValue {
-    use logisheets_controller::lex_and_fmt;
     let r = lex_and_fmt(f).ok_or(Error::from(BasicError::InvalidFormula(f.to_string())));
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()

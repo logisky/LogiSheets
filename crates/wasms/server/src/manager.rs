@@ -1,7 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use logisheets_controller::edit_action::EditPayload;
-use logisheets_controller::Workbook;
+use logisheets_rs::{EditPayload, Workbook};
 
 #[derive(Default)]
 pub struct Manager {
