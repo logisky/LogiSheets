@@ -19,13 +19,10 @@ export function initEngine(config?: Partial<EngineConfig>): Promise<Engine> {
         return Promise.resolve(_engine)
     }
 
-    console.log('[LogiSheets] Creating engine...')
     _engine = new Engine(config)
 
     return new Promise((resolve) => {
-        console.log('[LogiSheets] Waiting for ready event...')
         _engine!.on('ready', () => {
-            console.log('[LogiSheets] Engine ready!')
             resolve(_engine!)
         })
     })
