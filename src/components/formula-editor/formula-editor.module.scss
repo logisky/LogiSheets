@@ -2,4 +2,6 @@
     position: absolute;
     z-index: 1000;
     background: white;
+    box-sizing: border-box;
+    overflow: hidden;
 }

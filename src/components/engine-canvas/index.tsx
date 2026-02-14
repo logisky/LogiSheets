@@ -134,7 +134,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                 position: {
                     x: startX,
                     y: startY,
-                    width: Math.max(width, 100),
+                    width,
                     height,
                 },
                 cursorPosition,

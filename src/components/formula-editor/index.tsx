@@ -258,7 +258,7 @@ const FormulaEditorWrapperInner = forwardRef<
                 left: position.x,
                 top: position.y,
                 width: editorWidth,
-                minHeight: position.height,
+                height: position.height,
             }}
         >
             <FormulaEditor
@@ -273,16 +273,16 @@ const FormulaEditorWrapperInner = forwardRef<
                 onSubmit={handleSubmit}
                 onCancel={handleCancel}
                 config={{
-                    fontSize: 13,
-                    lineHeight: position.height / 13, // Calculate line height from cell height
+                    fontSize: 12,
+                    lineHeight: 1.2,
                     autoFocus: true,
                     placeholder: '',
                     showBorder: false,
                 }}
                 style={{
-                    minHeight: position.height,
-                    border: '2px solid #1a73e8',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                    height: '100%',
+                    border: '1px solid #1a73e8',
+                    boxSizing: 'border-box',
                 }}
             />
         </div>
