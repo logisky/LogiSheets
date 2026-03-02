@@ -54,13 +54,6 @@ export declare class WorkbookClient {
         sheetId: number;
         blockId: number;
     }): Resp<BlockInfo>;
-    getFullyCoveredBlocks(params: {
-        sheetIdx: number;
-        row: number;
-        col: number;
-        height: number;
-        width: number;
-    }): Resp<readonly BlockInfo[]>;
     getAvailableBlockId(params: {
         sheetIdx: number;
     }): Resp<number>;

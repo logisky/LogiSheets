@@ -3,7 +3,8 @@ import MenuItem from '@mui/material/MenuItem'
 import styles from './block-interface.module.scss'
 import React from 'react'
 import {useEngine} from '@/core/engine/provider'
-import {RemoveBlockBuilder, Transaction} from 'packages/web'
+import {RemoveBlockBuilder} from 'packages/web'
+import {tx} from '@/core/transaction'
 
 export interface MenuProps {
     readonly sheetId: number
@@ -60,7 +61,7 @@ export const MenuComponent = (props: MenuProps) => {
             label: 'Delete',
             onClick: () => {
                 DATA_SERVICE.handleTransaction(
-                    new Transaction(
+                    tx(
                         [
                             {
                                 type: 'removeBlock',

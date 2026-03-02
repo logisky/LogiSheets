@@ -10,6 +10,6 @@ export { Range as RangeClass, Cell as CellClass } from "$types/index";
 export { Engine, default as EngineDefault } from "./engine";
 export type { EngineEventType, EngineEventMap, EngineMountOptions, } from "./engine";
 export type { SelectedData, Transaction, Payload, SheetInfo, } from "logisheets-web";
-export { isErrorMessage, Transaction as TransactionClass, SetColWidthBuilder, SetRowHeightBuilder, CellInputBuilder, getFirstCell, } from "logisheets-web";
+export { isErrorMessage, getFirstCell, } from "logisheets-web";
 export { convertCanvasPropsToAdapterProps } from "./adapters";
 export type { SpreadsheetAdapterProps, CanvasAdapterProps, UseSpreadsheetConfig, UseSpreadsheetReturn, } from "./adapters";

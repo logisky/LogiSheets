@@ -17,10 +17,8 @@ import {
     CreateBlockBuilder,
     isErrorMessage,
     Payload,
-    SetBlockLineNameFieldBuilder,
-    SetBlockLineNumFmtBuilder,
-    Transaction,
 } from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 
 export * from './types'
 
@@ -205,7 +203,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         })
 
         const result = await DATA_SERVICE.handleTransaction(
-            new Transaction(payloads, true)
+            tx(payloads, true)
         )
         if (isErrorMessage(result)) {
             toast(result.msg, {type: 'error'})

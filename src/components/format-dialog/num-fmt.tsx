@@ -2,11 +2,12 @@ import {useMemo, useState, forwardRef, useImperativeHandle} from 'react'
 import {useEngine} from '@/core/engine/provider'
 import {
     Payload,
-    Transaction,
-    SetCellNumFmtBuilder,
-    SetLineNumFmtBuilder,
     SelectedData,
+    CellStyleUpdateBuilder,
+    LineStyleUpdateBuilder,
+    StyleUpdateTypeBuilder,
 } from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import Box from '@mui/material/Box'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -108,36 +109,36 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                             for (let r = startRow; r <= endRow; r++) {
                                 for (let c = startCol; c <= endCol; c++) {
                                     payloads.push({
-                                        type: 'setCellNumFmt',
-                                        value: new SetCellNumFmtBuilder()
+                                        type: 'cellStyleUpdate',
+                                        value: new CellStyleUpdateBuilder()
                                             .sheetIdx(sheetIdx)
                                             .row(r)
                                             .col(c)
-                                            .numFmt(fmt)
+                                            .ty(new StyleUpdateTypeBuilder().setNumFmt(fmt).build())
                                             .build(),
                                     })
                                 }
                             }
                             if (payloads.length) {
                                 dataSvc.handleTransaction(
-                                    new Transaction(payloads, true)
+                                    tx(payloads, true)
                                 )
                             }
                         } else if (d && d.ty === 'line') {
                             const {start, end, type} = d.d
                             const sheetIdx = dataSvc.getCurrentSheetIdx()
                             const p: Payload = {
-                                type: 'setLineNumFmt',
-                                value: new SetLineNumFmtBuilder()
+                                type: 'lineStyleUpdate',
+                                value: new LineStyleUpdateBuilder()
                                     .sheetIdx(sheetIdx)
                                     .from(start)
                                     .to(end)
                                     .row(type === 'row')
-                                    .numFmt(fmt)
+                                    .ty(new StyleUpdateTypeBuilder().setNumFmt(fmt).build())
                                     .build(),
                             }
                             dataSvc.handleTransaction(
-                                new Transaction([p], true)
+                                tx([p], true)
                             )
                         }
                     } catch (e) {

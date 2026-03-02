@@ -1,14 +1,15 @@
 import {
     Payload,
     CellInputBuilder,
-    SetCellFontBuilder,
+    CellStyleUpdateBuilder,
+    StyleUpdateTypeBuilder,
     getFirstCell,
     Selection,
     Transaction,
 } from 'logisheets-web'
 
 export function buildTransaction(payloads: Payload[]): Transaction {
-    return new Transaction(payloads, true)
+    return {payloads, undoable: true, temp: false}
 }
 
 export function generatePayloads(
@@ -21,7 +22,7 @@ export function generatePayloads(
     const sheetIdx = selection.sheetIdx
     const payloads: Payload[] = []
     for (let i = 0; i < headers.length; i++) {
-        const input = {
+        const input: Payload = {
             type: 'cellInput',
             value: new CellInputBuilder()
                 .sheetIdx(sheetIdx)
@@ -29,23 +30,23 @@ export function generatePayloads(
                 .col(firstCell.x + i)
                 .content(headers[i])
                 .build(),
-        } as Payload
-        const font = {
-            type: 'setCellFont',
-            value: new SetCellFontBuilder()
+        }
+        const font: Payload = {
+            type: 'cellStyleUpdate',
+            value: new CellStyleUpdateBuilder()
                 .sheetIdx(sheetIdx)
                 .row(firstCell.y)
                 .col(firstCell.x + i)
-                .bold(true)
+                .ty(new StyleUpdateTypeBuilder().setFontBold(true).build())
                 .build(),
-        } as Payload
+        }
         payloads.push(input)
         payloads.push(font)
     }
 
     for (let i = 0; i < rows.length; i++) {
         for (let j = 0; j < rows[i].length; j++) {
-            const input = {
+            const input: Payload = {
                 type: 'cellInput',
                 value: new CellInputBuilder()
                     .sheetIdx(sheetIdx)
@@ -53,7 +54,7 @@ export function generatePayloads(
                     .col(firstCell.x + j)
                     .content(rows[i][j])
                     .build(),
-            } as Payload
+            }
             payloads.push(input)
         }
     }

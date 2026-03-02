@@ -1,7 +1,8 @@
 import {useState} from 'react'
 import {Box, Select, MenuItem} from '@mui/material'
-import {CellInputBuilder, Payload, Transaction} from 'logisheets-engine'
+import {CellInputBuilder, Payload} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
+import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToString} from './cell'
 
 export const EnumCell = (props: BlockCellProps) => {
@@ -42,7 +43,7 @@ export const EnumCell = (props: BlockCellProps) => {
             type: 'cellInput',
             value: p,
         }
-        await DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+        await DATA_SERVICE.handleTransaction(tx([payload], true))
     }
 
     return (

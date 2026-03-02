@@ -14,7 +14,6 @@ export declare const enum WorkerUpdate {
 }
 export declare enum MethodName {
     GetSheetDimension = "getSheetDimension",
-    GetFullyCoveredBlocks = "getFullyCoveredBlocks",
     GetAllSheetInfo = "getAllSheetInfo",
     GetDisplayWindow = "getDisplayWindow",
     GetBlockDisplayWindow = "getBlockDisplayWindow",
@@ -80,7 +79,6 @@ export interface IWorkbookWorker {
     getBlockInfo(params: any): Result<BlockInfo>;
     getCellPosition(params: any): Result<CellPosition>;
     getSheetDimension(sheetIdx: number): Result<SheetDimension>;
-    getFullyCoveredBlocks(params: any): Result<readonly BlockInfo[]>;
     undo(): Result<void>;
     redo(): Result<void>;
     handleTransaction(params: any): Result<void>;

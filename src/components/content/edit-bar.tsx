@@ -9,8 +9,8 @@ import {
     getFirstCell,
     CellInputBuilder,
     Payload,
-    Transaction,
 } from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import {FC, useEffect, useState, useRef, KeyboardEvent} from 'react'
 import styles from './edit-bar.module.scss'
 import {useEngine} from '@/core/engine/provider'
@@ -76,7 +76,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
                 .content(newText)
                 .build(),
         }
-        dataSvc.handleTransaction(new Transaction([payload], true))
+        dataSvc.handleTransaction(tx([payload], true))
     }
 
     const locationChange = (newText: string) => {

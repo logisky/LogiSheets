@@ -30,7 +30,7 @@ import {
     generateBorderPayloads,
 } from '@/components/toolbar/payload'
 import {useEngine} from '@/core/engine/provider'
-import {Transaction} from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import {StandardColor} from '@/core/standable'
 
 export interface BorderModel {
@@ -95,7 +95,7 @@ const BorderPanel = forwardRef<BorderPanelHandle, BorderPanelProps>(
                         })
                         if (payloads.length) {
                             dataSvc.handleTransaction(
-                                new Transaction(payloads, true)
+                                tx(payloads, true)
                             )
                         }
                     } catch (e) {

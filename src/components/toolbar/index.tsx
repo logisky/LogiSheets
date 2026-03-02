@@ -21,12 +21,12 @@ import {
     MergeCell,
     MergeCellsBuilder,
     Payload,
-    Transaction,
     SelectedData,
     VerticalAlignment,
     SplitMergedCellsBuilder,
     getFirstCell,
 } from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import {ColorResult, SketchPicker} from 'react-color'
 import Modal from 'react-modal'
 import Tooltip from '@mui/material/Tooltip'
@@ -185,7 +185,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             numFmt
         )
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true))
+        DATA_SERVICE.handleTransaction(tx(payloads, true))
     }
 
     // Init style when selection changes
@@ -333,7 +333,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                         .build(),
                 }
                 DATA_SERVICE.handleTransaction(
-                    new Transaction([payload], true)
+                    tx([payload], true)
                 )
                 setFormatBrushOn(null)
                 return
@@ -353,7 +353,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                         .row(lineRange.type === 'row')
                         .build(),
                 }
-                DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+                DATA_SERVICE.handleTransaction(tx([payload], true))
                 setFormatBrushOn(null)
             }
         }
@@ -385,7 +385,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 {color: color.argb()}
             )
             DATA_SERVICE.handleTransaction(
-                new Transaction(payloads, true)
+                tx(payloads, true)
             ).then(() => {
                 setFontColor(color.css())
                 setColorPicking('')
@@ -399,7 +399,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 'solid'
             )
             DATA_SERVICE.handleTransaction(
-                new Transaction(payloads, true)
+                tx(payloads, true)
             ).then(() => {
                 setFillColor(color.css())
                 setColorPicking('')
@@ -415,7 +415,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {bold: v}
         )
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
             () => setBold(v)
         )
     }
@@ -427,7 +427,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {italic: v}
         )
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
             () => setItalic(v)
         )
     }
@@ -439,7 +439,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {underline: v}
         )
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
             () => setUnderline(v)
         )
     }
@@ -452,7 +452,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {strike: v}
         )
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
             () => setStrike(v)
         )
     }
@@ -466,7 +466,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             v
         )
         DATA_SERVICE.handleTransactionAndAdjustRowHeights(
-            new Transaction(payloads, true),
+            tx(payloads, true),
             true
         ).then(() => setWrapText(v))
     }
@@ -495,7 +495,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 vertical: v.split('-')[1] as VerticalAlignment,
             }
         )
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
             () => setAlignment(v)
         )
         setAlignAnchor(null)
@@ -517,7 +517,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             {size: ty === 'increase' ? fontSize + 1 : fontSize - 1}
         )
         DATA_SERVICE.handleTransactionAndAdjustRowHeights(
-            new Transaction(payloads, true)
+            tx(payloads, true)
         )
     }
 
@@ -529,7 +529,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
         const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
         if (mergedOn) {
             return DATA_SERVICE.handleTransaction(
-                new Transaction(
+                tx(
                     [
                         {
                             type: 'splitMergedCells',
@@ -562,7 +562,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 .endCol(cr.endCol)
                 .build(),
         })
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
             () => setMergedOn(true)
         )
     }

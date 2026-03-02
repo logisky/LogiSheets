@@ -1,11 +1,11 @@
 import {
     SheetRenameBuilder,
     DeleteSheetBuilder,
-    Transaction,
     Payload,
     isErrorMessage,
     SetSheetColorBuilder,
 } from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import {useEffect, useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
 import {useEngine} from '@/core/engine/provider'
@@ -95,7 +95,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                 .build(),
         }
         DATA_SERVICE.handleTransaction(
-            new Transaction([sheetRename], true)
+            tx([sheetRename], true)
         ).then((v) => {
             if (isErrorMessage(v)) return
             setIsOpen(false)
@@ -113,7 +113,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
             type: 'deleteSheet',
             value: new DeleteSheetBuilder().idx(index).build(),
         }
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true)).then(
+        DATA_SERVICE.handleTransaction(tx([payload], true)).then(
             (v) => {
                 if (isErrorMessage(v)) return
                 setIsOpen(false)
@@ -213,7 +213,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
             }
         }
         closeColorPopover()
-        DATA_SERVICE.handleTransaction(new Transaction([payload], true)).then(
+        DATA_SERVICE.handleTransaction(tx([payload], true)).then(
             (v) => {
                 if (isErrorMessage(v)) return
                 setIsOpen(false)

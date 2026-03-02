@@ -29,6 +29,9 @@ logisheets-rs = { workspace = true }
 
 xmlserde = { workspace = true }
 
+gents = { workspace = true }
+gents_derives = { workspace = true }
+
 [dev-dependencies]
 wasm-bindgen-test = "0.3.30"
 

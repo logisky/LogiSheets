@@ -23,9 +23,9 @@ import {
     Payload,
     SetColWidthBuilder,
     SetRowHeightBuilder,
-    Transaction,
 } from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
+import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToString} from './cell'
 import {pxToPt, pxToWidth} from '@/core'
 
@@ -132,7 +132,7 @@ export const ImageCell = (props: BlockCellProps) => {
         }
 
         await DATA_SERVICE.handleTransaction(
-            new Transaction(payloads, true)
+            tx(payloads, true)
         ).then(() => {
             // Update the display size
             setDialogOpen(false)

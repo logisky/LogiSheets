@@ -2,7 +2,7 @@
  * DataService - main service for interacting with the spreadsheet engine.
  * Combines WorkbookClient and OffscreenClient functionality.
  */
-import type { SheetInfo, SheetDimension, MergeCell, BlockInfo, Transaction, ErrorMessage } from "logisheets-web";
+import type { SheetInfo, SheetDimension, MergeCell, Transaction, ErrorMessage } from "logisheets-web";
 import { Cell } from "logisheets-web";
 import { WorkbookClient } from "./workbook";
 import type { Grid } from "$types/index";
@@ -34,7 +34,6 @@ export declare class DataService {
     getSheetDimension(sheetIdx: number): Resp<SheetDimension>;
     getCellInfo(sheetIdx: number, row: number, col: number): Resp<Cell>;
     getMergedCells(sheetIdx: number, targetStartRow: number, targetStartCol: number, targetEndRow: number, targetEndCol: number): Resp<readonly MergeCell[]>;
-    getFullyCoveredBlocks(sheetIdx: number, row: number, col: number, height: number, width: number): Resp<readonly BlockInfo[]>;
     getAvailableBlockId(sheetIdx: number): Resp<number>;
     checkFormula(formula: string): Promise<boolean>;
     handleTransaction(transaction: Transaction, temp?: boolean): Resp<void>;

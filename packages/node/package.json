@@ -7,7 +7,8 @@
   "scripts": {
     "wasm-build": "wasm-pack build ../../crates/wasms/server --out-dir ../../../packages/node/wasm --target nodejs",
     "link": "rm -rf ./src && cp -r ../web/src ./src",
-    "build": "tsc",
+    "build": "yarn wasm-build && npx tsc && cp -R wasm dist/",
+    "test": "vitest run",
     "prepublishOnly": "yarn run link && yarn wasm-build && yarn build",
     "prepare": "yarn link && yarn wasm-build"
   },

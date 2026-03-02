@@ -9,6 +9,7 @@ gents = { workspace = true }
 
 logisheets-rs = { workspace = true }
 logisheets_sequencer = { path = "../sequencer" }
+logisheets_wasm_server = { path = "../wasms/server" }
 
 [[bin]]
 name = "generate"

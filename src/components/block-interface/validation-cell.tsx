@@ -1,10 +1,7 @@
 import {Box, Tooltip} from '@mui/material'
-import {
-    EphemeralCellInputBuilder,
-    isErrorMessage,
-    TransactionBuilder,
-} from 'logisheets-engine'
+import {EphemeralCellInputBuilder, isErrorMessage} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
+import {tx} from '@/core/transaction'
 import {BlockCellProps} from './cell'
 import {useToast} from '@/ui/notification/useToast'
 
@@ -50,11 +47,9 @@ export const ValidationCell = (props: ValidationCellProps) => {
                     .sheetIdx(sheetIdx)
                     .content(`=${validation}`)
                     .build()
-                const tx = new TransactionBuilder()
-                    .payload({type: 'ephemeralCellInput', value: p})
-                    .undoable(false)
-                    .build()
-                DATA_SERVICE.handleTransaction(tx)
+                DATA_SERVICE.handleTransaction(
+                    tx([{type: 'ephemeralCellInput', value: p}], false)
+                )
             })
         // The last step will trigger re-render. So we can return null here
         return null
