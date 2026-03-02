@@ -32,6 +32,6 @@ jobs:
 
       - name: Build and test logisheets-node
         run: |
-          yarn workspace logisheets link
+          yarn workspace logisheets run link
           yarn workspace logisheets build
           yarn workspace logisheets test
