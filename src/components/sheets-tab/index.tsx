@@ -4,8 +4,8 @@ import {
     isErrorMessage,
     Payload,
     SheetInfo,
-    Transaction,
 } from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import {useEngine} from '@/core/engine/provider'
 import {StandardColor} from '@/core/standable'
 import AddIcon from '@mui/icons-material/Add'
@@ -79,7 +79,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                 .build(),
         }
         dataService
-            .handleTransaction(new Transaction([payload], true))
+            .handleTransaction(tx([payload], true))
             .then((v) => {
                 if (v) return
                 activeSheet$(newIdx)

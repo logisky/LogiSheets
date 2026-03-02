@@ -24,7 +24,8 @@ import BorderVerticalIcon from '@mui/icons-material/BorderVertical'
 import BorderLeftIcon from '@mui/icons-material/BorderLeft'
 import {ColorResult, SketchPicker} from 'react-color'
 import {borderStyleNames, PreviewLineComponent} from './preview-line'
-import {StBorderStyle, Transaction} from 'logisheets-engine'
+import {StBorderStyle} from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import {BatchUpdateType, generateBorderPayloads} from './payload'
 import {StandardColor} from '@/core/standable'
 
@@ -59,7 +60,7 @@ export const BorderSettingComponent = ({
                 borderType: style,
             }
         )
-        DATA_SERVICE.handleTransaction(new Transaction(payloads, true)).then(
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
             (resp) => {
                 if (!resp) close()
             }

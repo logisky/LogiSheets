@@ -1,81 +1,4 @@
-import {
-    batch_get_cell_coordinate_with_sheet_by_id,
-    batch_get_cell_info_by_id,
-    bind_form_schema,
-    block_input,
-    block_line_name_field_update,
-    block_line_num_fmt_update,
-    block_line_shift,
-    calc_condition,
-    cell_clear,
-    cell_input,
-    check_bind_block,
-    check_formula,
-    clean_temp_status,
-    col_delete,
-    col_insert,
-    commit_temp_status,
-    create_appendix,
-    create_block,
-    create_diy_cell,
-    create_sheet,
-    delete_sheet,
-    ephemeral_cell_input,
-    get_all_block_fields,
-    get_all_sheet_info,
-    get_app_data,
-    get_available_block_id,
-    get_block_col_id,
-    get_block_row_id,
-    get_block_values,
-    get_cell_id,
-    get_display_units_of_formula,
-    get_shadow_cell_id,
-    get_shadow_cell_ids,
-    get_shadow_info_by_id,
-    get_sheet_count,
-    get_sheet_id,
-    get_sheet_idx,
-    get_sheet_name_by_idx,
-    input_async_result,
-    merge_cells,
-    move_block,
-    new_workbook,
-    read_file,
-    redo,
-    release,
-    remove_block,
-    reproduce_cells,
-    resize_block,
-    row_delete,
-    row_insert,
-    save_file,
-    set_cell_alignment,
-    set_cell_border,
-    set_cell_format_brush,
-    set_cell_num_fmt,
-    set_cell_pattern_fill,
-    set_col_width,
-    set_font,
-    set_line_alignment,
-    set_line_border,
-    set_line_font,
-    set_line_format_brush,
-    set_line_num_fmt,
-    set_line_pattern_fill,
-    set_row_height,
-    set_sheet_color,
-    set_sheet_visible,
-    sheet_rename_by_idx,
-    sheet_rename_by_name,
-    split_merged_cells,
-    toggle_status,
-    transaction_end,
-    transaction_end_in_temp_status,
-    transaction_start,
-    undo,
-    upsert_field_render_info,
-} from '../../wasm/logisheets_wasm_server'
+import {handle, input_async_result} from '../../wasm/logisheets_wasm_server'
 import {
     ActionEffect,
     AsyncFuncResult,
@@ -88,20 +11,28 @@ import {
     AppData,
     CellInfo,
     CellCoordinateWithSheet,
-} from '../bindings'
-import {Payload} from '../payloads'
-import {ColId, RowId, Transaction} from '../types'
-import {Worksheet} from './worksheet'
-import {Calculator, CustomFunc} from './calculator'
-import {isErrorMessage, Result} from './utils'
-import {BlockManager} from './block_manager'
-import {
-    GetAvailableBlockIdParams,
+    Transaction,
     GetBlockValuesParams,
     GetCellIdParams,
     GetShadowCellIdParams,
     GetShadowCellIdsParams,
-} from '../client'
+    GetAvailableBlockIdParams,
+} from '../bindings'
+import {ColId, RowId} from '../types'
+import {Worksheet} from './worksheet'
+import {Calculator, CustomFunc} from './calculator'
+import {isErrorMessage, Result} from './utils'
+import {BlockManager} from './block_manager'
+
+function rpc(
+    method: string,
+    params?: Record<string, unknown>,
+    bookId?: number
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
+    const msg = params === undefined ? method : {method, value: params}
+    return handle(msg, bookId ?? null)
+}
 
 export type ReturnCode = number
 
@@ -110,7 +41,7 @@ export type CellIdCallback = (cellId: SheetCellId) => void
 
 export class Workbook {
     public constructor() {
-        this._id = new_workbook()
+        this._id = rpc('newWorkbook') as number
         this._blockManager = new BlockManager(
             (
                 sheetIdx: number,
@@ -118,40 +49,44 @@ export class Workbook {
                 rowCount: number,
                 colCount: number
             ) => {
-                return check_bind_block(
-                    this._id,
-                    sheetIdx,
-                    blockId,
-                    rowCount,
-                    colCount
-                )
+                return rpc(
+                    'checkBindBlock',
+                    {sheetIdx, blockId, rowCount, colCount},
+                    this._id
+                ) as boolean
             },
             (sheetIdx: number) => {
-                return get_available_block_id(this._id, sheetIdx)
+                return rpc(
+                    'getAvailableBlockId',
+                    {sheetIdx},
+                    this._id
+                ) as number
             }
         )
     }
 
     public getSheetIdx(sheetId: number): Result<number> {
-        return get_sheet_idx(this._id, sheetId)
+        return rpc('getSheetIdx', {sheetId}, this._id)
     }
 
     public getBlockValues(
         params: GetBlockValuesParams
     ): Result<readonly string[]> {
-        return get_block_values(
-            this._id,
-            params.sheetId,
-            params.blockId,
-            new Uint32Array(params.rowIds),
-            new Uint32Array(params.colIds)
+        return rpc(
+            'getBlockValues',
+            params as unknown as Record<string, unknown>,
+            this._id
         )
     }
 
     public getAvailableBlockId(
         params: GetAvailableBlockIdParams
     ): Result<number> {
-        return get_available_block_id(this._id, params.sheetIdx)
+        return rpc(
+            'getAvailableBlockId',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
     }
 
     /**
@@ -167,24 +102,23 @@ export class Workbook {
         colCnt: number
     ): Result<number> {
         const id = this._blockManager.getAvailableBlockId(sheetIdx)
-        const effect = this.execTransaction(
-            new Transaction(
-                [
-                    {
-                        type: 'createBlock',
-                        value: {
-                            sheetIdx,
-                            id,
-                            masterRow,
-                            masterCol,
-                            rowCnt,
-                            colCnt,
-                        },
+        const effect = this.execTransaction({
+            payloads: [
+                {
+                    type: 'createBlock',
+                    value: {
+                        sheetIdx,
+                        id,
+                        masterRow,
+                        masterCol,
+                        rowCnt,
+                        colCnt,
                     },
-                ],
-                false
-            )
-        )
+                },
+            ],
+            undoable: false,
+            temp: false,
+        })
         if (effect.status.type === 'err') {
             return {
                 msg: 'failed to create block',
@@ -202,7 +136,7 @@ export class Workbook {
     }
 
     public undo(): boolean {
-        const result = undo(this._id)
+        const result = rpc('undo', undefined, this._id) as boolean
         if (result) {
             this._onCellUpdate()
             this._onSheetUpdate()
@@ -211,7 +145,7 @@ export class Workbook {
     }
 
     public redo(): boolean {
-        const result = redo(this._id)
+        const result = rpc('redo', undefined, this._id) as boolean
         if (result) {
             this._onCellUpdate()
             this._onSheetUpdate()
@@ -228,23 +162,23 @@ export class Workbook {
     }
 
     public getSheetNameByIdx(idx: number): Result<string> {
-        return get_sheet_name_by_idx(this._id, idx)
+        return rpc('getSheetNameByIdx', {idx}, this._id)
     }
 
     public getAllSheetInfo(): Array<SheetInfo> {
-        return get_all_sheet_info(this._id)
+        return rpc('getAllSheetInfo', undefined, this._id)
     }
 
     public checkFormula(f: string): boolean {
-        return check_formula(this._id, f)
+        return rpc('checkFormula', {formula: f}, this._id)
     }
 
     public calcCondition(sheetIdx: number, f: string): Result<boolean> {
-        return calc_condition(this._id, sheetIdx, f)
+        return rpc('calcCondition', {sheetIdx, condition: f}, this._id)
     }
 
     public getSheetId(sheetIdx: number): Result<number> {
-        return get_sheet_id(this._id, sheetIdx)
+        return rpc('getSheetId', {sheetIdx}, this._id)
     }
 
     public getBlockRowId(
@@ -252,7 +186,7 @@ export class Workbook {
         blockId: number,
         rowIdx: number
     ): Result<RowId> {
-        return get_block_row_id(this._id, sheetId, blockId, rowIdx)
+        return rpc('getBlockRowId', {sheetId, blockId, rowIdx}, this._id)
     }
 
     public getBlockColId(
@@ -260,11 +194,11 @@ export class Workbook {
         blockId: number,
         colIdx: number
     ): Result<ColId> {
-        return get_block_col_id(this._id, sheetId, blockId, colIdx)
+        return rpc('getBlockColId', {sheetId, blockId, colIdx}, this._id)
     }
 
     public getDisplayUnitsOfFormula(f: string): Result<FormulaDisplayInfo> {
-        return get_display_units_of_formula(f)
+        return rpc('getDisplayUnitsOfFormula', {formula: f}, this._id)
     }
 
     public onCellValueChanged(
@@ -332,41 +266,35 @@ export class Workbook {
     }
 
     public commitTempStatus() {
-        commit_temp_status(this._id)
+        rpc('commitTempStatus', undefined, this._id)
     }
 
     public cleanupTempStatus() {
-        clean_temp_status(this._id)
+        rpc('cleanTempStatus', undefined, this._id)
     }
 
     public toggleStatus(useTemp: boolean) {
-        toggle_status(this._id, useTemp)
+        rpc('toggleStatus', {useTemp}, this._id)
     }
 
     public batchGetCellInfoById(
         ids: readonly SheetCellId[]
     ): Result<readonly CellInfo[]> {
-        return batch_get_cell_info_by_id(this._id, ids)
+        return rpc('batchGetCellInfoById', {ids}, this._id)
     }
 
     public batchGetCellCoordinateWithSheetById(
         ids: readonly SheetCellId[]
     ): Result<readonly CellCoordinateWithSheet[]> {
-        return batch_get_cell_coordinate_with_sheet_by_id(this._id, ids)
+        return rpc('batchGetCellCoordinateWithSheetById', {ids}, this._id)
     }
 
-    public execTransaction(tx: Transaction, temp = false): ActionEffect {
-        transaction_start(this._id)
-        tx.payloads.forEach((p: Payload) => {
-            this._addPayload(p)
-        })
-
-        let result: ActionEffect
-        if (temp) {
-            result = transaction_end_in_temp_status(this._id) as ActionEffect
-        } else {
-            result = transaction_end(this._id, tx.undoable) as ActionEffect
-        }
+    public execTransaction(tx: Transaction): ActionEffect {
+        const result = rpc(
+            'handleTransaction',
+            {transaction: tx},
+            this._id
+        ) as ActionEffect
 
         if (result.asyncTasks.length > 0) {
             const asyncResult = this._calculator.calc(result.asyncTasks)
@@ -414,23 +342,27 @@ export class Workbook {
     }
 
     public load(buf: Uint8Array, bookName: string): ReturnCode {
-        return read_file(this._id, bookName, buf)
+        return rpc(
+            'loadWorkbook',
+            {content: Array.from(buf), name: bookName},
+            this._id
+        ) as ReturnCode
     }
 
     public save(data: string): SaveFileResult {
-        return save_file(this._id, data)
+        return rpc('saveWorkbook', {appData: data}, this._id)
     }
 
     public getAppData(): readonly AppData[] {
-        return get_app_data(this._id)
+        return rpc('getAppData', undefined, this._id)
     }
 
     public release() {
-        release(this._id)
+        rpc('release', undefined, this._id)
     }
 
     public getSheetCount(): number {
-        return get_sheet_count(this._id)
+        return rpc('getSheetCount', undefined, this._id)
     }
 
     public getWorksheet(idx: number): Worksheet {
@@ -448,457 +380,37 @@ export class Workbook {
     }
 
     public getShadowCellId(params: GetShadowCellIdParams): Result<number> {
-        return get_shadow_cell_id(
-            this._id,
-            params.sheetIdx,
-            params.rowIdx,
-            params.colIdx
+        return rpc(
+            'getShadowCellId',
+            params as unknown as Record<string, unknown>,
+            this._id
         )
     }
 
     public getShadowCellIds(
         params: GetShadowCellIdsParams
     ): Result<readonly number[]> {
-        return get_shadow_cell_ids(
-            this._id,
-            params.sheetIdx,
-            new Uint32Array(params.rowIdx),
-            new Uint32Array(params.colIdx)
+        return rpc(
+            'getShadowCellIds',
+            params as unknown as Record<string, unknown>,
+            this._id
         )
     }
 
     public getShadowInfoById(shadowId: number): Result<ShadowCellInfo> {
-        return get_shadow_info_by_id(this._id, BigInt(shadowId))
+        return rpc('getShadowInfoById', {shadowId}, this._id)
     }
 
     public getCellId(params: GetCellIdParams): Result<SheetCellId> {
-        return get_cell_id(
-            this._id,
-            params.sheetIdx,
-            params.rowIdx,
-            params.colIdx
+        return rpc(
+            'getCellId',
+            params as unknown as Record<string, unknown>,
+            this._id
         )
     }
 
     public getAllBlockFields(): Result<readonly BlockField[]> {
-        return get_all_block_fields(this._id)
-    }
-
-    private _addPayload(p: Payload) {
-        if (p.type === 'cellInput')
-            return cell_input(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col,
-                p.value.content
-            )
-        if (p.type === 'insertRows')
-            return row_insert(
-                this._id,
-                p.value.sheetIdx,
-                p.value.start,
-                p.value.count
-            )
-        if (p.type === 'deleteRows')
-            return row_delete(
-                this._id,
-                p.value.sheetIdx,
-                p.value.start,
-                p.value.count
-            )
-        if (p.type === 'insertCols')
-            return col_insert(
-                this._id,
-                p.value.sheetIdx,
-                p.value.start,
-                p.value.count
-            )
-        if (p.type === 'deleteCols')
-            return col_delete(
-                this._id,
-                p.value.sheetIdx,
-                p.value.start,
-                p.value.count
-            )
-        if (p.type === 'createBlock')
-            return create_block(
-                this._id,
-                p.value.sheetIdx,
-                p.value.id,
-                p.value.masterRow,
-                p.value.masterCol,
-                p.value.rowCnt,
-                p.value.colCnt
-            )
-        if (p.type === 'resizeBlock')
-            return resize_block(
-                this._id,
-                p.value.sheetIdx,
-                p.value.id,
-                p.value.newRowCnt,
-                p.value.newColCnt
-            )
-
-        if (p.type === 'moveBlock')
-            return move_block(
-                this._id,
-                p.value.sheetIdx,
-                p.value.id,
-                p.value.newMasterRow,
-                p.value.newMasterCol
-            )
-        if (p.type === 'setCellBorder')
-            return set_cell_border(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col,
-                p.value.leftColor,
-                p.value.rightColor,
-                p.value.topColor,
-                p.value.bottomColor,
-                p.value.leftBorderType,
-                p.value.rightBorderType,
-                p.value.topBorderType,
-                p.value.bottomBorderType,
-                p.value.outline,
-                p.value.diagonalUp,
-                p.value.diagonalDown
-            )
-        if (p.type === 'setLineBorder')
-            return set_line_border(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.line,
-                p.value.leftColor,
-                p.value.rightColor,
-                p.value.topColor,
-                p.value.bottomColor,
-                p.value.leftBorderType,
-                p.value.rightBorderType,
-                p.value.topBorderType,
-                p.value.bottomBorderType,
-                p.value.outline,
-                p.value.diagonalUp,
-                p.value.diagonalDown
-            )
-        if (p.type === 'setCellFont')
-            return set_font(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col,
-                p.value.bold,
-                p.value.italic,
-                p.value.name,
-                p.value.underline,
-                p.value.color,
-                p.value.size,
-                p.value.outline,
-                p.value.shadow,
-                p.value.strike,
-                p.value.condense
-            )
-        if (p.type === 'setLineFont')
-            return set_line_font(
-                this._id,
-                p.value.sheetIdx,
-                p.value.from,
-                p.value.to,
-                p.value.row,
-                p.value.bold,
-                p.value.italic,
-                p.value.name,
-                p.value.underline,
-                p.value.color,
-                p.value.size,
-                p.value.outline,
-                p.value.shadow,
-                p.value.strike,
-                p.value.condense
-            )
-        if (p.type === 'blockInput')
-            return block_input(
-                this._id,
-                p.value.sheetIdx,
-                p.value.blockId,
-                p.value.row,
-                p.value.col,
-                p.value.input
-            )
-
-        if (p.type === 'insertColsInBlock')
-            return block_line_shift(
-                this._id,
-                p.value.sheetIdx,
-                p.value.blockId,
-                p.value.start,
-                p.value.cnt,
-                false,
-                true
-            )
-        if (p.type === 'insertRowsInBlock')
-            return block_line_shift(
-                this._id,
-                p.value.sheetIdx,
-                p.value.blockId,
-                p.value.start,
-                p.value.cnt,
-                true,
-                true
-            )
-        if (p.type === 'deleteRowsInBlock')
-            return block_line_shift(
-                this._id,
-                p.value.sheetIdx,
-                p.value.blockId,
-                p.value.start,
-                p.value.cnt,
-                true,
-                false
-            )
-        if (p.type === 'deleteColsInBlock')
-            return block_line_shift(
-                this._id,
-                p.value.sheetIdx,
-                p.value.blockId,
-                p.value.start,
-                p.value.cnt,
-                true,
-                true
-            )
-        if (p.type === 'sheetRename') {
-            if (p.value.oldName) {
-                return sheet_rename_by_name(
-                    this._id,
-                    p.value.oldName,
-                    p.value.newName
-                )
-            }
-            if (p.value.idx) {
-                return sheet_rename_by_idx(
-                    this._id,
-                    p.value.idx,
-                    p.value.newName
-                )
-            }
-        }
-        if (p.type === 'setCellNumFmt')
-            return set_cell_num_fmt(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col,
-                p.value.numFmt
-            )
-        if (p.type === 'setFieldNumFmt')
-            return upsert_field_render_info(this._id, {
-                renderId: p.value.renderId,
-                diyRender: p.value.diyRender,
-                styleUpdate: {
-                    setNumFmt: p.value.numFmt,
-                },
-            })
-        if (p.type === 'setLineNumFmt')
-            return set_line_num_fmt(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.from,
-                p.value.to,
-                p.value.numFmt
-            )
-        if (p.type === 'deleteSheet') return delete_sheet(this._id, p.value.idx)
-        if (p.type === 'setSheetColor')
-            return set_sheet_color(this._id, p.value.idx, p.value.color)
-        if (p.type === 'setSheetVisible')
-            return set_sheet_visible(this._id, p.value.idx, p.value.visible)
-        if (p.type === 'createSheet')
-            return create_sheet(this._id, p.value.idx, p.value.newName)
-        if (p.type === 'cellClear')
-            return cell_clear(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col
-            )
-        if (p.type === 'setColWidth')
-            return set_col_width(
-                this._id,
-                p.value.sheetIdx,
-                p.value.col,
-                p.value.width
-            )
-        if (p.type === 'setRowHeight')
-            return set_row_height(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.height
-            )
-        if (p.type === 'setLineAlignment')
-            return set_line_alignment(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.from,
-                p.value.to,
-                p.value.alignment.horizontal,
-                p.value.alignment.vertical,
-                null
-            )
-        if (p.type === 'setCellAlignment')
-            return set_cell_alignment(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col,
-                p.value.alignment.horizontal,
-                p.value.alignment.vertical,
-                null
-            )
-        if (p.type === 'setCellPatternFill')
-            return set_cell_pattern_fill(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col,
-                p.value.fgColor,
-                p.value.bgColor,
-                p.value.pattern
-            )
-        if (p.type === 'setLinePatternFill')
-            return set_line_pattern_fill(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.from,
-                p.value.to,
-                p.value.fgColor,
-                p.value.bgColor,
-                p.value.pattern
-            )
-        if (p.type === 'mergeCells')
-            return merge_cells(
-                this._id,
-                p.value.sheetIdx,
-                p.value.startRow,
-                p.value.startCol,
-                p.value.endRow,
-                p.value.endCol
-            )
-        if (p.type === 'splitMergedCells')
-            return split_merged_cells(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col
-            )
-        if (p.type === 'cellFormatBrush')
-            return set_cell_format_brush(
-                this._id,
-                p.value.srcSheetIdx,
-                p.value.srcRow,
-                p.value.srcCol,
-                p.value.dstSheetIdx,
-                p.value.dstRowStart,
-                p.value.dstColStart,
-                p.value.dstRowEnd,
-                p.value.dstColEnd
-            )
-        if (p.type === 'lineFormatBrush')
-            return set_line_format_brush(
-                this._id,
-                p.value.srcSheetIdx,
-                p.value.srcRow,
-                p.value.srcCol,
-                p.value.dstSheetIdx,
-                p.value.row,
-                p.value.from,
-                p.value.to
-            )
-        if (p.type === 'createDiyCell')
-            return create_diy_cell(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col
-            )
-        if (p.type === 'createAppendix')
-            return create_appendix(
-                this._id,
-                p.value.sheetId,
-                p.value.sheetIdx,
-                p.value.blockId,
-                p.value.rowIdx,
-                p.value.colIdx,
-                p.value.craftId,
-                p.value.tag,
-                p.value.content
-            )
-        if (p.type === 'ephemeralCellInput')
-            return ephemeral_cell_input(
-                this._id,
-                p.value.sheetIdx,
-                BigInt(p.value.id),
-                p.value.content
-            )
-        if (p.type === 'reproduceCells')
-            return reproduce_cells(this._id, p.value)
-        if (p.type === 'removeBlock')
-            return remove_block(this._id, p.value.sheetIdx, p.value.id)
-        if (p.type === 'setBlockLineNumFmt')
-            return block_line_num_fmt_update(
-                this._id,
-                p.value.sheetIdx,
-                p.value.blockId,
-                p.value.from,
-                p.value.to,
-                p.value.isRow,
-                p.value.numFmt
-            )
-        if (p.type === 'setBlockLineNameField')
-            return block_line_name_field_update(
-                this._id,
-                p.value.sheetIdx,
-                p.value.blockId,
-                p.value.line,
-                p.value.isRow,
-                p.value.fieldId,
-                p.value.name,
-                p.value.diyRender
-            )
-        if (p.type === 'setCellWrapText')
-            return set_cell_alignment(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.col,
-                null,
-                null,
-                p.value.wrapText
-            )
-        if (p.type === 'setLineWrapText')
-            return set_line_alignment(
-                this._id,
-                p.value.sheetIdx,
-                p.value.row,
-                p.value.from,
-                p.value.to,
-                null,
-                null,
-                p.value.wrapText
-            )
-        if (p.type === 'bindFormSchema') {
-            return bind_form_schema(this._id, p.value)
-        }
-        if (p.type === 'upsertFieldRenderInfo') {
-            return upsert_field_render_info(this._id, p.value)
-        }
-        // eslint-disable-next-line no-console
-        console.log(`Unimplemented!: ${p.type}`)
+        return rpc('getAllBlockFields', undefined, this._id)
     }
 
     private _inputAsyncResult(r: AsyncFuncResult): ActionEffect {

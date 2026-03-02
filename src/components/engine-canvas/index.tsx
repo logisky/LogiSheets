@@ -10,7 +10,6 @@ import {InvalidFormulaDialog} from './InvalidFormulaDialog'
 import {useEngine} from '@/core/engine/provider'
 import type {Grid, MergeCell, SelectedData, CellLayout} from 'logisheets-engine'
 import {
-    Transaction,
     xForColStart,
     yForRowStart,
     xForColEnd,
@@ -20,6 +19,7 @@ import {
     CellInputBuilder,
     Payload,
 } from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import {
     FormulaEditorWrapper,
     FormulaEditorWrapperRef,
@@ -174,7 +174,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                     .content(newText)
                     .build(),
             }
-            await dataSvc.handleTransaction(new Transaction([payload], true))
+            await dataSvc.handleTransaction(tx([payload], true))
 
             // Restore selectedData to the cell that was edited
             const restoredSelection = buildSelectedDataFromCell(

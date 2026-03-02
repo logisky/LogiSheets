@@ -85,13 +85,6 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
         sheetId: number;
         blockId: number;
     }): Result<BlockInfo>;
-    getFullyCoveredBlocks(params: {
-        sheetIdx: number;
-        row: number;
-        col: number;
-        height: number;
-        width: number;
-    }): Result<readonly BlockInfo[]>;
     getBlockValues(params: {
         sheetId: number;
         blockId: number;

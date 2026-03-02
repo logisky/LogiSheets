@@ -2,22 +2,26 @@ import {getSelectedCellRange, getSelectedLines} from 'logisheets-engine'
 import {
     Alignment,
     Payload,
-    SetCellAlignmentBuilder,
-    SetCellFontBuilder,
-    SetCellPatternFillBuilder,
-    SetLineAlignmentBuilder,
-    SetLineFontBuilder,
-    SetLinePatternFillBuilder,
     StPatternType,
     StBorderStyle,
-    SetCellBorderBuilder,
-    SetLineBorderBuilder,
-    SetCellWrapTextBuilder,
-    SetLineWrapTextBuilder,
-    SetCellNumFmtBuilder,
-    SetLineNumFmtBuilder,
     SelectedData,
+    CellStyleUpdateBuilder,
+    LineStyleUpdateBuilder,
+    StyleUpdateTypeBuilder,
+    Color,
+    PatternFill,
 } from 'logisheets-engine'
+
+function hexToColor(hex: string): Color {
+    let h = hex.startsWith('#') ? hex.slice(1) : hex
+    // ARGB format (8 chars): skip the first 2 alpha chars
+    if (h.length === 8) h = h.substring(2)
+    return {
+        red: parseInt(h.substring(0, 2), 16),
+        green: parseInt(h.substring(2, 4), 16),
+        blue: parseInt(h.substring(4, 6), 16),
+    }
+}
 
 export interface FontStyle {
     bold?: boolean
@@ -39,36 +43,44 @@ export function generateFontPayload(
         const d = data.data.d
         for (let i = d.startRow; i <= d.endRow; i += 1) {
             for (let j = d.startCol; j <= d.endCol; j += 1) {
-                const builder = new SetCellFontBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(i)
-                    .col(j)
-                if (update.bold !== undefined) builder.bold(update.bold)
+                const style = new StyleUpdateTypeBuilder()
+                if (update.bold !== undefined) style.setFontBold(update.bold)
                 if (update.underline !== undefined)
-                    builder.underline(update.underline ? 'single' : 'none')
-                if (update.italic !== undefined) builder.italic(update.italic)
-                if (update.color) builder.color(update.color)
-                if (update.size) builder.size(update.size)
-                if (update.strike !== undefined) builder.strike(update.strike)
-                const p = builder.build()
-                result.push({type: 'setCellFont', value: p})
+                    style.setFontUnderline(update.underline ? 'single' : 'none')
+                if (update.italic !== undefined) style.setFontItalic(update.italic)
+                if (update.color) style.setFontColor(update.color)
+                if (update.size) style.setFontSize(update.size)
+                if (update.strike !== undefined) style.setFontStrike(update.strike)
+                result.push({
+                    type: 'cellStyleUpdate',
+                    value: new CellStyleUpdateBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(i)
+                        .col(j)
+                        .ty(style.build())
+                        .build(),
+                })
             }
         }
         return result
     }
     const d = data.data.d
-    const builder = new SetLineFontBuilder()
-        .sheetIdx(sheetIdx)
-        .row(d.type === 'row')
-        .from(d.start)
-        .to(d.end)
-    if (update.bold !== undefined) builder.bold(update.bold)
+    const style = new StyleUpdateTypeBuilder()
+    if (update.bold !== undefined) style.setFontBold(update.bold)
     if (update.underline !== undefined)
-        builder.underline(update.underline ? 'single' : 'none')
-    if (update.italic !== undefined) builder.italic(update.italic)
-    if (update.color) builder.color(update.color)
-    const p = builder.build()
-    result.push({type: 'setLineFont', value: p})
+        style.setFontUnderline(update.underline ? 'single' : 'none')
+    if (update.italic !== undefined) style.setFontItalic(update.italic)
+    if (update.color) style.setFontColor(update.color)
+    result.push({
+        type: 'lineStyleUpdate',
+        value: new LineStyleUpdateBuilder()
+            .sheetIdx(sheetIdx)
+            .row(d.type === 'row')
+            .from(d.start)
+            .to(d.end)
+            .ty(style.build())
+            .build(),
+    })
     return result
 }
 
@@ -84,26 +96,30 @@ export function generateAlgnmentPayload(
         const d = data.data.d
         for (let i = d.startRow; i <= d.endRow; i += 1) {
             for (let j = d.startCol; j <= d.endCol; j += 1) {
-                const p = new SetCellAlignmentBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(i)
-                    .col(j)
-                    .alignment(alignment)
-                    .build()
-                result.push({type: 'setCellAlignment', value: p})
+                result.push({
+                    type: 'cellStyleUpdate',
+                    value: new CellStyleUpdateBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(i)
+                        .col(j)
+                        .ty(new StyleUpdateTypeBuilder().setAlignment(alignment).build())
+                        .build(),
+                })
             }
         }
         return result
     }
     const d = data.data.d
-    const p = new SetLineAlignmentBuilder()
-        .sheetIdx(sheetIdx)
-        .row(d.type === 'row')
-        .from(d.start)
-        .to(d.end)
-        .alignment(alignment)
-        .build()
-    result.push({type: 'setLineAlignment', value: p})
+    result.push({
+        type: 'lineStyleUpdate',
+        value: new LineStyleUpdateBuilder()
+            .sheetIdx(sheetIdx)
+            .row(d.type === 'row')
+            .from(d.start)
+            .to(d.end)
+            .ty(new StyleUpdateTypeBuilder().setAlignment(alignment).build())
+            .build(),
+    })
 
     return result
 }
@@ -120,26 +136,30 @@ export function generateWrapTextPayload(
         const d = data.data.d
         for (let i = d.startRow; i <= d.endRow; i += 1) {
             for (let j = d.startCol; j <= d.endCol; j += 1) {
-                const p = new SetCellWrapTextBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(i)
-                    .col(j)
-                    .wrapText(wrapText)
-                    .build()
-                result.push({type: 'setCellWrapText', value: p})
+                result.push({
+                    type: 'cellStyleUpdate',
+                    value: new CellStyleUpdateBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(i)
+                        .col(j)
+                        .ty(new StyleUpdateTypeBuilder().setAlignment({wrapText}).build())
+                        .build(),
+                })
             }
         }
         return result
     }
     const d = data.data.d
-    const p = new SetLineWrapTextBuilder()
-        .sheetIdx(sheetIdx)
-        .row(d.type === 'row')
-        .from(d.start)
-        .to(d.end)
-        .wrapText(wrapText)
-        .build()
-    result.push({type: 'setLineWrapText', value: p})
+    result.push({
+        type: 'lineStyleUpdate',
+        value: new LineStyleUpdateBuilder()
+            .sheetIdx(sheetIdx)
+            .row(d.type === 'row')
+            .from(d.start)
+            .to(d.end)
+            .ty(new StyleUpdateTypeBuilder().setAlignment({wrapText}).build())
+            .build(),
+    })
 
     return result
 }
@@ -156,26 +176,30 @@ export function generateNumFmtPayload(
         const d = data.data.d
         for (let i = d.startRow; i <= d.endRow; i += 1) {
             for (let j = d.startCol; j <= d.endCol; j += 1) {
-                const builder = new SetCellNumFmtBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(i)
-                    .col(j)
-                    .numFmt(numFmt)
-                const p = builder.build()
-                result.push({type: 'setCellNumFmt', value: p})
+                result.push({
+                    type: 'cellStyleUpdate',
+                    value: new CellStyleUpdateBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(i)
+                        .col(j)
+                        .ty(new StyleUpdateTypeBuilder().setNumFmt(numFmt).build())
+                        .build(),
+                })
             }
         }
         return result
     }
     const d = data.data.d
-    const builder = new SetLineNumFmtBuilder()
-        .sheetIdx(sheetIdx)
-        .from(d.start)
-        .to(d.end)
-        .row(d.type === 'row')
-        .numFmt(numFmt)
-    const p = builder.build()
-    result.push({type: 'setLineNumFmt', value: p})
+    result.push({
+        type: 'lineStyleUpdate',
+        value: new LineStyleUpdateBuilder()
+            .sheetIdx(sheetIdx)
+            .from(d.start)
+            .to(d.end)
+            .row(d.type === 'row')
+            .ty(new StyleUpdateTypeBuilder().setNumFmt(numFmt).build())
+            .build(),
+    })
     return result
 }
 
@@ -188,35 +212,40 @@ export function generatePatternFillPayload(
 ): Payload[] {
     if (!data.data) return []
     const result: Payload[] = []
+    const fill: PatternFill = {}
+    if (fgColor) fill.fgColor = hexToColor(fgColor)
+    if (bgColor) fill.bgColor = hexToColor(bgColor)
+    if (pattern) fill.patternType = pattern
+
     const t = data.data.ty
     if (t === 'cellRange') {
         const d = data.data.d
         for (let i = d.startRow; i <= d.endRow; i += 1) {
             for (let j = d.startCol; j <= d.endCol; j += 1) {
-                const builder = new SetCellPatternFillBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(i)
-                    .col(j)
-                if (fgColor) builder.fgColor(fgColor)
-                if (bgColor) builder.bgColor(bgColor)
-                if (pattern) builder.pattern(pattern)
-                const p = builder.build()
-                result.push({type: 'setCellPatternFill', value: p})
+                result.push({
+                    type: 'cellStyleUpdate',
+                    value: new CellStyleUpdateBuilder()
+                        .sheetIdx(sheetIdx)
+                        .row(i)
+                        .col(j)
+                        .ty(new StyleUpdateTypeBuilder().setPatternFill(fill).build())
+                        .build(),
+                })
             }
         }
         return result
     }
     const d = data.data.d
-    const builder = new SetLinePatternFillBuilder()
-        .sheetIdx(sheetIdx)
-        .from(d.start)
-        .to(d.end)
-        .row(d.type === 'row')
-    if (fgColor) builder.fgColor(fgColor)
-    if (bgColor) builder.bgColor(bgColor)
-    if (pattern) builder.pattern(pattern)
-    const p = builder.build()
-    result.push({type: 'setLinePatternFill', value: p})
+    result.push({
+        type: 'lineStyleUpdate',
+        value: new LineStyleUpdateBuilder()
+            .sheetIdx(sheetIdx)
+            .from(d.start)
+            .to(d.end)
+            .row(d.type === 'row')
+            .ty(new StyleUpdateTypeBuilder().setPatternFill(fill).build())
+            .build(),
+    })
     return result
 }
 
@@ -601,31 +630,37 @@ function generateLineSingleBorderPayload(
     row: boolean,
     update: BorderUpdate
 ): Payload {
-    const builder = new SetLineBorderBuilder()
-        .sheetIdx(sheetIdx)
-        .line(line)
-        .row(row)
+    const style = new StyleUpdateTypeBuilder()
     switch (update.direction) {
         case 'bottom':
             if (!row) break
-            if (update.color) builder.bottomColor(update.color)
-            if (update.borderType) builder.bottomBorderType(update.borderType)
+            if (update.color) style.setBottomBorderColor(update.color)
+            if (update.borderType) style.setBottomBorderStyle(update.borderType)
             break
         case 'top':
-            if (update.color) builder.topColor(update.color)
-            if (update.borderType) builder.topBorderType(update.borderType)
+            if (update.color) style.setTopBorderColor(update.color)
+            if (update.borderType) style.setTopBorderStyle(update.borderType)
             break
         case 'left':
-            if (update.color) builder.leftColor(update.color)
-            if (update.borderType) builder.leftBorderType(update.borderType)
+            if (update.color) style.setLeftBorderColor(update.color)
+            if (update.borderType) style.setLeftBorderStyle(update.borderType)
             break
         case 'right':
             if (row) break
-            if (update.color) builder.rightColor(update.color)
-            if (update.borderType) builder.rightBorderType(update.borderType)
+            if (update.color) style.setRightBorderColor(update.color)
+            if (update.borderType) style.setRightBorderStyle(update.borderType)
             break
     }
-    return {type: 'setLineBorder', value: builder.build()}
+    return {
+        type: 'lineStyleUpdate',
+        value: new LineStyleUpdateBuilder()
+            .sheetIdx(sheetIdx)
+            .from(line)
+            .to(line)
+            .row(row)
+            .ty(style.build())
+            .build(),
+    }
 }
 
 function generateDoubleBorderPayload(
@@ -663,29 +698,34 @@ function generateSingleBorderPayload(
     col: number,
     update: BorderUpdate
 ): Payload {
-    const builder = new SetCellBorderBuilder()
-        .sheetIdx(sheetIdx)
-        .row(row)
-        .col(col)
+    const style = new StyleUpdateTypeBuilder()
     switch (update.direction) {
         case 'bottom':
-            if (update.color) builder.bottomColor(update.color)
-            if (update.borderType) builder.bottomBorderType(update.borderType)
+            if (update.color) style.setBottomBorderColor(update.color)
+            if (update.borderType) style.setBottomBorderStyle(update.borderType)
             break
         case 'top':
-            if (update.color) builder.topColor(update.color)
-            if (update.borderType) builder.topBorderType(update.borderType)
+            if (update.color) style.setTopBorderColor(update.color)
+            if (update.borderType) style.setTopBorderStyle(update.borderType)
             break
         case 'left':
-            if (update.color) builder.leftColor(update.color)
-            if (update.borderType) builder.leftBorderType(update.borderType)
+            if (update.color) style.setLeftBorderColor(update.color)
+            if (update.borderType) style.setLeftBorderStyle(update.borderType)
             break
         case 'right':
-            if (update.color) builder.rightColor(update.color)
-            if (update.borderType) builder.rightBorderType(update.borderType)
+            if (update.color) style.setRightBorderColor(update.color)
+            if (update.borderType) style.setRightBorderStyle(update.borderType)
             break
     }
-    return {type: 'setCellBorder', value: builder.build()}
+    return {
+        type: 'cellStyleUpdate',
+        value: new CellStyleUpdateBuilder()
+            .sheetIdx(sheetIdx)
+            .row(row)
+            .col(col)
+            .ty(style.build())
+            .build(),
+    }
 }
 
 function getClearBorderPayload(
@@ -694,23 +734,28 @@ function getClearBorderPayload(
     col: number,
     direction: Direction
 ): Payload {
-    const builder = new SetCellBorderBuilder()
-        .sheetIdx(sheetIdx)
-        .row(row)
-        .col(col)
+    const style = new StyleUpdateTypeBuilder()
     switch (direction) {
         case 'top':
-            builder.topBorderType('none')
+            style.setTopBorderStyle('none')
             break
         case 'bottom':
-            builder.bottomBorderType('none')
+            style.setBottomBorderStyle('none')
             break
         case 'left':
-            builder.leftBorderType('none')
+            style.setLeftBorderStyle('none')
             break
         case 'right':
-            builder.rightBorderType('none')
+            style.setRightBorderStyle('none')
             break
     }
-    return {type: 'setCellBorder', value: builder.build()}
+    return {
+        type: 'cellStyleUpdate',
+        value: new CellStyleUpdateBuilder()
+            .sheetIdx(sheetIdx)
+            .row(row)
+            .col(col)
+            .ty(style.build())
+            .build(),
+    }
 }

@@ -1,33 +1,4 @@
-import {
-    get_cell_info,
-    get_col_info,
-    get_col_width,
-    get_formula,
-    get_row_height,
-    get_row_info,
-    get_style,
-    get_value,
-    get_display_window,
-    get_display_window_with_start_point,
-    get_display_window_within_cell,
-    get_cell_position,
-    get_all_fully_covered_blocks,
-    get_sheet_dimension,
-    get_sheet_id,
-    get_display_window_for_block,
-    get_diy_cell_id_with_block_id,
-    lookup_appendix_upward,
-    get_cell_infos,
-    get_cell_infos_except_window,
-    get_block_info,
-    get_reproducible_cell,
-    get_reproducible_cells,
-    get_next_upward_visible_cell,
-    get_next_downward_visible_cell,
-    get_next_leftward_visible_cell,
-    get_next_rightward_visible_cell,
-    get_merged_cells,
-} from '../../wasm'
+import {handle} from '../../wasm/logisheets_wasm_server'
 import {
     BlockInfo,
     CellPosition,
@@ -47,18 +18,32 @@ import {
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
 
+function rpc(
+    method: string,
+    params?: Record<string, unknown>,
+    bookId?: number
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
+    const msg = params === undefined ? method : {method, value: params}
+    return handle(msg, bookId ?? null)
+}
+
 export class Worksheet {
     public constructor(id: number, sheetIdxOrId: number, isSheetIdx = true) {
         this._id = id
         if (isSheetIdx) {
-            this._sheetId = get_sheet_id(id, sheetIdxOrId)
+            this._sheetId = rpc(
+                'getSheetId',
+                {sheetIdx: sheetIdxOrId},
+                id
+            ) as number
         } else {
             this._sheetId = sheetIdxOrId
         }
     }
 
     public getSheetDimension(): Result<SheetDimension> {
-        return get_sheet_dimension(this._id, this._sheetId)
+        return rpc('getSheetDimension', {sheetId: this._sheetId}, this._id)
     }
 
     public getDisplayWindow(
@@ -67,13 +52,10 @@ export class Worksheet {
         startCol: number,
         endCol: number
     ): Result<DisplayWindow> {
-        return get_display_window(
-            this._id,
-            this._sheetId,
-            startRow,
-            endRow,
-            startCol,
-            endCol
+        return rpc(
+            'getDisplayWindow',
+            {sheetIdx: this._sheetId, startRow, endRow, startCol, endCol},
+            this._id
         )
     }
 
@@ -83,39 +65,70 @@ export class Worksheet {
         height: number,
         width: number
     ): DisplayWindowWithStartPoint {
-        return get_display_window_with_start_point(
-            this._id,
-            this._sheetId,
-            startX,
-            startY,
-            height,
-            width
+        return rpc(
+            'getDisplayWindowWithStartPoint',
+            {sheetIdx: this._sheetId, startX, startY, height, width},
+            this._id
         )
     }
 
     public getCellPosition(row: number, col: number): CellPosition {
-        const result = get_cell_position(this._id, this._sheetId, row, col)
-        return result
+        return rpc(
+            'getCellPosition',
+            {sheetIdx: this._sheetId, row, col},
+            this._id
+        )
     }
 
     public getNextUpwardVisibleCell(row: number, col: number): CellPosition {
-        return get_next_upward_visible_cell(this._id, this._sheetId, row, col)
+        return rpc(
+            'getNextVisibleCell',
+            {
+                sheetIdx: this._sheetId,
+                rowIdx: row,
+                colIdx: col,
+                direction: 'up',
+            },
+            this._id
+        )
     }
 
     public getNextDownwardVisibleCell(row: number, col: number): CellPosition {
-        return get_next_downward_visible_cell(this._id, this._sheetId, row, col)
+        return rpc(
+            'getNextVisibleCell',
+            {
+                sheetIdx: this._sheetId,
+                rowIdx: row,
+                colIdx: col,
+                direction: 'down',
+            },
+            this._id
+        )
     }
 
     public getNextLeftwardVisibleCell(row: number, col: number): CellPosition {
-        return get_next_leftward_visible_cell(this._id, this._sheetId, row, col)
+        return rpc(
+            'getNextVisibleCell',
+            {
+                sheetIdx: this._sheetId,
+                rowIdx: row,
+                colIdx: col,
+                direction: 'left',
+            },
+            this._id
+        )
     }
 
     public getNextRightwardVisibleCell(row: number, col: number): CellPosition {
-        return get_next_rightward_visible_cell(
-            this._id,
-            this._sheetId,
-            row,
-            col
+        return rpc(
+            'getNextVisibleCell',
+            {
+                sheetIdx: this._sheetId,
+                rowIdx: row,
+                colIdx: col,
+                direction: 'right',
+            },
+            this._id
         )
     }
 
@@ -125,57 +138,72 @@ export class Worksheet {
         height: number,
         width: number
     ): DisplayWindowWithStartPoint {
-        return get_display_window_within_cell(
-            this._id,
-            this._sheetId,
-            row,
-            col,
-            height,
-            width
+        return rpc(
+            'getDisplayWindowWithinCell',
+            {sheetIdx: this._sheetId, row, col, height, width},
+            this._id
         )
     }
 
     public getBlockDisplayWindow(blockId: number): Result<DisplayWindow> {
-        return get_display_window_for_block(this._id, this._sheetId, blockId)
+        return rpc(
+            'getBlockDisplayWindow',
+            {sheetId: this._sheetId, blockId},
+            this._id
+        )
     }
 
     public getRowHeight(rowIdx: number): Result<number> {
-        return get_row_height(this._id, this._sheetId, rowIdx)
+        return rpc('getRowHeight', {sheetId: this._sheetId, rowIdx}, this._id)
     }
 
     public getColWidth(colIdx: number): Result<number> {
-        return get_col_width(this._id, this._sheetId, colIdx)
+        return rpc('getColWidth', {sheetId: this._sheetId, colIdx}, this._id)
     }
 
     public getRowInfo(rowIdx: number): Result<RowInfo> {
-        return get_row_info(this._id, this._sheetId, rowIdx) as Result<RowInfo>
+        return rpc(
+            'getRowInfo',
+            {sheetIdx: this._sheetId, rowIdx},
+            this._id
+        ) as Result<RowInfo>
     }
 
     public getColInfo(colIdx: number): Result<ColInfo> {
-        return get_col_info(this._id, this._sheetId, colIdx) as Result<ColInfo>
+        return rpc(
+            'getColInfo',
+            {sheetIdx: this._sheetId, colIdx},
+            this._id
+        ) as Result<ColInfo>
     }
 
     public getCellInfo(rowIdx: number, colIdx: number): Result<CellInfo> {
-        const cellInfo = get_cell_info(
-            this._id,
-            this._sheetId,
-            rowIdx,
-            colIdx
+        return rpc(
+            'getCell',
+            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            this._id
         ) as Result<CellInfo>
-        return cellInfo
     }
 
     public getReproducibleCell(
         rowIdx: number,
         colIdx: number
     ): Result<ReproducibleCell> {
-        return get_reproducible_cell(this._id, this._sheetId, rowIdx, colIdx)
+        return rpc(
+            'getReproducibleCell',
+            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            this._id
+        )
     }
 
     public getReproducibleCells(
         coordinates: readonly SheetCoordinate[]
     ): Result<readonly ReproducibleCell[]> {
-        return get_reproducible_cells(this._id, this._sheetId, coordinates)
+        return rpc(
+            'getReproducibleCells',
+            {sheetIdx: this._sheetId, coordinates},
+            this._id
+        )
     }
 
     public getCellInfos(
@@ -184,13 +212,10 @@ export class Worksheet {
         endRow: number,
         endCol: number
     ): Result<readonly CellInfo[]> {
-        return get_cell_infos(
-            this._id,
-            this._sheetId,
-            startRow,
-            startCol,
-            endRow,
-            endCol
+        return rpc(
+            'getCellInfos',
+            {sheetIdx: this._sheetId, startRow, startCol, endRow, endCol},
+            this._id
         )
     }
 
@@ -204,22 +229,25 @@ export class Worksheet {
         windowEndRow: number,
         windowEndCol: number
     ): Result<readonly CellInfo[]> {
-        return get_cell_infos_except_window(
-            this._id,
-            this._sheetId,
-            startRow,
-            startCol,
-            endRow,
-            endCol,
-            windowStartRow,
-            windowStartCol,
-            windowEndRow,
-            windowEndCol
+        return rpc(
+            'getCellsExceptWindow',
+            {
+                sheetIdx: this._sheetId,
+                startRow,
+                startCol,
+                endRow,
+                endCol,
+                windowStartRow,
+                windowStartCol,
+                windowEndRow,
+                windowEndCol,
+            },
+            this._id
         )
     }
 
     public getBlockInfo(blockId: number): BlockInfo {
-        return get_block_info(this._id, this._sheetId, blockId)
+        return rpc('getBlockInfo', {sheetId: this._sheetId, blockId}, this._id)
     }
 
     public getMergedCells(
@@ -228,13 +256,10 @@ export class Worksheet {
         endRow: number,
         endCol: number
     ): readonly MergeCell[] {
-        return get_merged_cells(
-            this._id,
-            this._sheetId,
-            startRow,
-            startCol,
-            endRow,
-            endCol
+        return rpc(
+            'getMergedCells',
+            {sheetIdx: this._sheetId, startRow, startCol, endRow, endCol},
+            this._id
         )
     }
 
@@ -247,15 +272,27 @@ export class Worksheet {
     }
 
     public getFormula(rowIdx: number, colIdx: number): Result<string> {
-        return get_formula(this._id, this._sheetId, rowIdx, colIdx)
+        return rpc(
+            'getFormula',
+            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            this._id
+        )
     }
 
     public getStyle(rowIdx: number, colIdx: number): Result<Style> {
-        return get_style(this._id, this._sheetId, rowIdx, colIdx)
+        return rpc(
+            'getStyle',
+            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            this._id
+        )
     }
 
     public getValue(rowIdx: number, colIdx: number): Result<Value> {
-        return get_value(this._id, this._sheetId, rowIdx, colIdx)
+        return rpc(
+            'getValue',
+            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            this._id
+        )
     }
 
     public getDiyCellIdWithBlockId(
@@ -263,12 +300,10 @@ export class Worksheet {
         row: number,
         col: number
     ): Result<number> {
-        const cellId = get_diy_cell_id_with_block_id(
-            this._id,
-            this._sheetId,
-            blockId,
-            row,
-            col
+        const cellId = rpc(
+            'getDiyCellIdWithBlockId',
+            {sheetId: this._sheetId, blockId, row, col},
+            this._id
         )
         if (cellId === undefined) {
             return {msg: 'Cell not found', ty: 0}
@@ -283,14 +318,17 @@ export class Worksheet {
         craftId: string,
         tag: number
     ): Result<AppendixWithCell> {
-        return lookup_appendix_upward(
-            this._id,
-            this._sheetId,
-            blockId,
-            row,
-            col,
-            craftId,
-            tag
+        return rpc(
+            'lookupAppendixUpward',
+            {
+                sheetId: this._sheetId,
+                blockId,
+                row,
+                col,
+                craftId,
+                tag,
+            },
+            this._id
         )
     }
 
@@ -300,13 +338,16 @@ export class Worksheet {
         rowCnt: number,
         colCnt: number
     ): Result<BlockInfo[]> {
-        return get_all_fully_covered_blocks(
-            this._id,
-            this._sheetId,
-            rowIdx,
-            colIdx,
-            rowCnt,
-            colCnt
+        return rpc(
+            'getFullyCoveredBlocks',
+            {
+                sheetId: this._sheetId,
+                row: rowIdx,
+                col: colIdx,
+                rowCnt,
+                colCnt,
+            },
+            this._id
         )
     }
 

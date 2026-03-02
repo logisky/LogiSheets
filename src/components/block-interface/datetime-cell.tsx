@@ -4,8 +4,9 @@ import {StaticDatePicker} from '@mui/x-date-pickers/StaticDatePicker'
 import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider'
 import {AdapterDayjs} from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs, {Dayjs} from 'dayjs'
-import {CellInputBuilder, Payload, Transaction} from 'logisheets-engine'
+import {CellInputBuilder, Payload} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
+import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToNumber} from './cell'
 
 /**
@@ -91,7 +92,7 @@ export const DatetimeCell = (props: BlockCellProps) => {
             type: 'cellInput',
             value: p,
         }
-        await DATA_SERVICE.handleTransaction(new Transaction([payload], true))
+        await DATA_SERVICE.handleTransaction(tx([payload], true))
     }
 
     const open = Boolean(anchorEl)

@@ -17,9 +17,9 @@ import type {FieldInfo} from 'logisheets-engine'
 import {
     BlockCellInfo,
     InsertRowsInBlockBuilder,
-    Transaction,
     BlockDisplayInfo,
 } from 'logisheets-engine'
+import {tx} from '@/core/transaction'
 import {LeftTop} from '@/core/settings'
 import {BlockCellProps} from './cell'
 import {EnumCell} from './enum-cell'
@@ -223,7 +223,7 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
             .build()
 
         await dataService.handleTransaction(
-            new Transaction(
+            tx(
                 [
                     {
                         type: 'insertRowsInBlock',
