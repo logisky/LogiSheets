@@ -1,9 +1,11 @@
 import {
-    Payload,
     CellInputBuilder,
     CellStyleUpdateBuilder,
     StyleUpdateTypeBuilder,
     getFirstCell,
+} from 'logisheets-web'
+import type {
+    Payload,
     Selection,
     Transaction,
 } from 'logisheets-web'

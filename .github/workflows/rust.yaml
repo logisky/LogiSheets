@@ -29,4 +29,9 @@ jobs:
       - run: yarn workspace logisheets-web build
       - run: yarn run run-scripts && yarn run wasm
       - run: yarn build
-      - run: yarn test
+
+      - name: Build and test logisheets-node
+        run: |
+          yarn workspace logisheets link
+          yarn workspace logisheets build
+          yarn workspace logisheets test

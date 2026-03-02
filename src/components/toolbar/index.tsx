@@ -332,9 +332,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                         .dstSheetIdx(fb.sheetIdx)
                         .build(),
                 }
-                DATA_SERVICE.handleTransaction(
-                    tx([payload], true)
-                )
+                DATA_SERVICE.handleTransaction(tx([payload], true))
                 setFormatBrushOn(null)
                 return
             }
@@ -384,9 +382,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 selectedData,
                 {color: color.argb()}
             )
-            DATA_SERVICE.handleTransaction(
-                tx(payloads, true)
-            ).then(() => {
+            DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() => {
                 setFontColor(color.css())
                 setColorPicking('')
             })
@@ -398,9 +394,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 color.argb(),
                 'solid'
             )
-            DATA_SERVICE.handleTransaction(
-                tx(payloads, true)
-            ).then(() => {
+            DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() => {
                 setFillColor(color.css())
                 setColorPicking('')
             })
@@ -415,8 +409,8 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {bold: v}
         )
-        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
-            () => setBold(v)
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
+            setBold(v)
         )
     }
     const onToggleItalic = () => {
@@ -427,8 +421,8 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {italic: v}
         )
-        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
-            () => setItalic(v)
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
+            setItalic(v)
         )
     }
     const onToggleUnderline = () => {
@@ -439,8 +433,8 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {underline: v}
         )
-        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
-            () => setUnderline(v)
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
+            setUnderline(v)
         )
     }
 
@@ -452,8 +446,8 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {strike: v}
         )
-        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
-            () => setStrike(v)
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
+            setStrike(v)
         )
     }
 
@@ -495,8 +489,8 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 vertical: v.split('-')[1] as VerticalAlignment,
             }
         )
-        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
-            () => setAlignment(v)
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
+            setAlignment(v)
         )
         setAlignAnchor(null)
     }
@@ -516,9 +510,7 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             selectedData,
             {size: ty === 'increase' ? fontSize + 1 : fontSize - 1}
         )
-        DATA_SERVICE.handleTransactionAndAdjustRowHeights(
-            tx(payloads, true)
-        )
+        DATA_SERVICE.handleTransactionAndAdjustRowHeights(tx(payloads, true))
     }
 
     const onMergeOrSplitClick = () => {
@@ -562,8 +554,8 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                 .endCol(cr.endCol)
                 .build(),
         })
-        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
-            () => setMergedOn(true)
+        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
+            setMergedOn(true)
         )
     }
 

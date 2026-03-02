@@ -32,6 +32,7 @@ export class Worksheet {
     public constructor(id: number, sheetIdxOrId: number, isSheetIdx = true) {
         this._id = id
         if (isSheetIdx) {
+            this._sheetIdx = sheetIdxOrId
             this._sheetId = rpc(
                 'getSheetId',
                 {sheetIdx: sheetIdxOrId},
@@ -39,6 +40,11 @@ export class Worksheet {
             ) as number
         } else {
             this._sheetId = sheetIdxOrId
+            this._sheetIdx = rpc(
+                'getSheetIdx',
+                {sheetId: sheetIdxOrId},
+                id
+            ) as number
         }
     }
 
@@ -54,7 +60,7 @@ export class Worksheet {
     ): Result<DisplayWindow> {
         return rpc(
             'getDisplayWindow',
-            {sheetIdx: this._sheetId, startRow, endRow, startCol, endCol},
+            {sheetIdx: this._sheetIdx, startRow, endRow, startCol, endCol},
             this._id
         )
     }
@@ -67,7 +73,7 @@ export class Worksheet {
     ): DisplayWindowWithStartPoint {
         return rpc(
             'getDisplayWindowWithStartPoint',
-            {sheetIdx: this._sheetId, startX, startY, height, width},
+            {sheetIdx: this._sheetIdx, startX, startY, height, width},
             this._id
         )
     }
@@ -75,7 +81,7 @@ export class Worksheet {
     public getCellPosition(row: number, col: number): CellPosition {
         return rpc(
             'getCellPosition',
-            {sheetIdx: this._sheetId, row, col},
+            {sheetIdx: this._sheetIdx, row, col},
             this._id
         )
     }
@@ -84,7 +90,7 @@ export class Worksheet {
         return rpc(
             'getNextVisibleCell',
             {
-                sheetIdx: this._sheetId,
+                sheetIdx: this._sheetIdx,
                 rowIdx: row,
                 colIdx: col,
                 direction: 'up',
@@ -97,7 +103,7 @@ export class Worksheet {
         return rpc(
             'getNextVisibleCell',
             {
-                sheetIdx: this._sheetId,
+                sheetIdx: this._sheetIdx,
                 rowIdx: row,
                 colIdx: col,
                 direction: 'down',
@@ -110,7 +116,7 @@ export class Worksheet {
         return rpc(
             'getNextVisibleCell',
             {
-                sheetIdx: this._sheetId,
+                sheetIdx: this._sheetIdx,
                 rowIdx: row,
                 colIdx: col,
                 direction: 'left',
@@ -123,7 +129,7 @@ export class Worksheet {
         return rpc(
             'getNextVisibleCell',
             {
-                sheetIdx: this._sheetId,
+                sheetIdx: this._sheetIdx,
                 rowIdx: row,
                 colIdx: col,
                 direction: 'right',
@@ -140,7 +146,7 @@ export class Worksheet {
     ): DisplayWindowWithStartPoint {
         return rpc(
             'getDisplayWindowWithinCell',
-            {sheetIdx: this._sheetId, row, col, height, width},
+            {sheetIdx: this._sheetIdx, row, col, height, width},
             this._id
         )
     }
@@ -164,7 +170,7 @@ export class Worksheet {
     public getRowInfo(rowIdx: number): Result<RowInfo> {
         return rpc(
             'getRowInfo',
-            {sheetIdx: this._sheetId, rowIdx},
+            {sheetIdx: this._sheetIdx, rowIdx},
             this._id
         ) as Result<RowInfo>
     }
@@ -172,7 +178,7 @@ export class Worksheet {
     public getColInfo(colIdx: number): Result<ColInfo> {
         return rpc(
             'getColInfo',
-            {sheetIdx: this._sheetId, colIdx},
+            {sheetIdx: this._sheetIdx, colIdx},
             this._id
         ) as Result<ColInfo>
     }
@@ -180,7 +186,7 @@ export class Worksheet {
     public getCellInfo(rowIdx: number, colIdx: number): Result<CellInfo> {
         return rpc(
             'getCell',
-            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            {sheetIdx: this._sheetIdx, row: rowIdx, col: colIdx},
             this._id
         ) as Result<CellInfo>
     }
@@ -191,7 +197,7 @@ export class Worksheet {
     ): Result<ReproducibleCell> {
         return rpc(
             'getReproducibleCell',
-            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            {sheetIdx: this._sheetIdx, row: rowIdx, col: colIdx},
             this._id
         )
     }
@@ -201,7 +207,7 @@ export class Worksheet {
     ): Result<readonly ReproducibleCell[]> {
         return rpc(
             'getReproducibleCells',
-            {sheetIdx: this._sheetId, coordinates},
+            {sheetIdx: this._sheetIdx, coordinates},
             this._id
         )
     }
@@ -214,7 +220,7 @@ export class Worksheet {
     ): Result<readonly CellInfo[]> {
         return rpc(
             'getCellInfos',
-            {sheetIdx: this._sheetId, startRow, startCol, endRow, endCol},
+            {sheetIdx: this._sheetIdx, startRow, startCol, endRow, endCol},
             this._id
         )
     }
@@ -232,7 +238,7 @@ export class Worksheet {
         return rpc(
             'getCellsExceptWindow',
             {
-                sheetIdx: this._sheetId,
+                sheetIdx: this._sheetIdx,
                 startRow,
                 startCol,
                 endRow,
@@ -258,7 +264,7 @@ export class Worksheet {
     ): readonly MergeCell[] {
         return rpc(
             'getMergedCells',
-            {sheetIdx: this._sheetId, startRow, startCol, endRow, endCol},
+            {sheetIdx: this._sheetIdx, startRow, startCol, endRow, endCol},
             this._id
         )
     }
@@ -274,7 +280,7 @@ export class Worksheet {
     public getFormula(rowIdx: number, colIdx: number): Result<string> {
         return rpc(
             'getFormula',
-            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            {sheetIdx: this._sheetIdx, row: rowIdx, col: colIdx},
             this._id
         )
     }
@@ -282,7 +288,7 @@ export class Worksheet {
     public getStyle(rowIdx: number, colIdx: number): Result<Style> {
         return rpc(
             'getStyle',
-            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            {sheetIdx: this._sheetIdx, row: rowIdx, col: colIdx},
             this._id
         )
     }
@@ -290,7 +296,7 @@ export class Worksheet {
     public getValue(rowIdx: number, colIdx: number): Result<Value> {
         return rpc(
             'getValue',
-            {sheetIdx: this._sheetId, row: rowIdx, col: colIdx},
+            {sheetIdx: this._sheetIdx, row: rowIdx, col: colIdx},
             this._id
         )
     }
@@ -353,4 +359,5 @@ export class Worksheet {
 
     private _id: number
     private _sheetId: number
+    private _sheetIdx: number
 }
