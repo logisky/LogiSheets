@@ -1,13 +1,15 @@
 import {
-    Transaction,
     getFirstCell,
     CellInputBuilder,
+    isErrorMessage,
+    toA1notation,
+} from 'logisheets-web'
+import type {
+    Transaction,
     Payload,
     Client,
     Value,
-    isErrorMessage,
     Selection,
-    toA1notation,
 } from 'logisheets-web'
 
 export interface ValueChange {
@@ -59,7 +61,7 @@ export function generateTransaction(
                     .build(),
             }
         })
-    return new Transaction(payloads, true)
+    return {payloads, undoable: true, temp: false}
 }
 
 export async function getTrendsThroughTempTransaction(

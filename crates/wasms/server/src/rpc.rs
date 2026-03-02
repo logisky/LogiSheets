@@ -5,7 +5,7 @@ use logisheets_rs::{
     CellInfo, CellPosition, ColId, DisplayWindow, DisplayWindowWithStartPoint,
     EditPayload, ErrorMessage, FormulaDisplayInfo, MergeCell, ReproducibleCell, RowId, RowInfo,
     SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId,
-    SheetInfo, Value,
+    SheetInfo, Style, Value,
 };
 use wasm_bindgen::prelude::*;
 
@@ -528,15 +528,15 @@ pub struct WorkbookMethods {
 
     // Row and column operations
     pub get_row_height:
-        fn(params: GetRowHeightParams, book_id: Option<usize>) -> Result<Value, ErrorMessage>,
+        fn(params: GetRowHeightParams, book_id: Option<usize>) -> Result<f64, ErrorMessage>,
     pub get_col_width:
-        fn(params: GetColWidthParams, book_id: Option<usize>) -> Result<Value, ErrorMessage>,
+        fn(params: GetColWidthParams, book_id: Option<usize>) -> Result<f64, ErrorMessage>,
 
     // Display window operations
     pub get_display_window: fn(
-        params: GetDisplayWindowWithStartPointParams,
+        params: GetDisplayWindowParams,
         book_id: Option<usize>,
-    ) -> Result<DisplayWindowWithStartPoint, ErrorMessage>,
+    ) -> Result<DisplayWindow, ErrorMessage>,
 
     pub get_display_window_within_cell: fn(
         params: GetDisplayWindowWithinCellParams,
@@ -555,8 +555,9 @@ pub struct WorkbookMethods {
     ) -> Result<Vec<CellInfo>, ErrorMessage>,
     pub get_value: fn(params: GetCellParams, book_id: Option<usize>) -> Result<Value, ErrorMessage>,
     pub get_formula:
-        fn(params: GetCellParams, book_id: Option<usize>) -> Result<Value, ErrorMessage>,
-    pub get_style: fn(params: GetCellParams, book_id: Option<usize>) -> Result<Value, ErrorMessage>,
+        fn(params: GetCellParams, book_id: Option<usize>) -> Result<String, ErrorMessage>,
+    pub get_style:
+        fn(params: GetCellParams, book_id: Option<usize>) -> Result<Style, ErrorMessage>,
     pub get_cells_except_window: fn(
         params: GetCellsExceptWindowParams,
         book_id: Option<usize>,
@@ -639,8 +640,8 @@ pub struct WorkbookMethods {
     ) -> Result<ShadowCellInfo, ErrorMessage>,
 
     // Transaction operations
-    pub undo: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
-    pub redo: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
+    pub undo: fn(book_id: Option<usize>) -> Result<bool, ErrorMessage>,
+    pub redo: fn(book_id: Option<usize>) -> Result<bool, ErrorMessage>,
     pub toggle_status:
         fn(params: ToggleStatusParams, book_id: Option<usize>) -> Result<(), ErrorMessage>,
     pub cleanup_temp_status: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
@@ -713,13 +714,17 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.end_row,
             params.end_col,
         ),
-        Message::GetCellsExceptWindow(params) => ws::get_cell_infos(
+        Message::GetCellsExceptWindow(params) => ws::get_cell_infos_except_window(
             id,
             params.sheet_idx,
             params.start_row,
             params.start_col,
             params.end_row,
             params.end_col,
+            params.window_start_row,
+            params.window_start_col,
+            params.window_end_row,
+            params.window_end_col,
         ),
         Message::GetReproducibleCells(params) => {
             ws::get_reproducible_cells(id, params.sheet_idx, params.coordinates)
