@@ -10,8 +10,8 @@ mod executor;
 pub mod status;
 pub mod style;
 use crate::edit_action::{
-    ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, SheetCellId, StatusCode,
-    WorkbookUpdateType,
+    ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, SheetCellId, SheetColId,
+    SheetRowId, StatusCode, WorkbookUpdateType,
 };
 use crate::errors::{Error, Result};
 use crate::file_loader::load_file;
@@ -194,6 +194,10 @@ impl Controller {
             cells_removed: HashSet::new(),
             sid_assigner: &self.sid_assigner,
             style_updated: HashSet::new(),
+            row_inserted: vec![],
+            row_removed: vec![],
+            col_inserted: vec![],
+            col_removed: vec![],
         };
         let result = executor.execute_and_calc(action.clone());
         match result {
@@ -245,6 +249,27 @@ impl Controller {
                             cell_id: c.1,
                         })
                         .collect(),
+                    row_inserted: result
+                        .row_inserted
+                        .into_iter()
+                        .map(|(sheet_id, row_id)| SheetRowId { sheet_id, row_id })
+                        .collect(),
+                    row_removed: result
+                        .row_removed
+                        .into_iter()
+                        .map(|(sheet_id, row_id)| SheetRowId { sheet_id, row_id })
+                        .collect(),
+                    col_inserted: result
+                        .col_inserted
+                        .into_iter()
+                        .map(|(sheet_id, col_id)| SheetColId { sheet_id, col_id })
+                        .collect(),
+                    col_removed: result
+                        .col_removed
+                        .into_iter()
+                        .map(|(sheet_id, col_id)| SheetColId { sheet_id, col_id })
+                        .collect(),
+                    ..Default::default()
                 }
             }
             Err(e) => {
@@ -291,6 +316,10 @@ impl Controller {
                     cells_removed: HashSet::new(),
                     sid_assigner: &self.sid_assigner,
                     style_updated: HashSet::new(),
+                    row_inserted: vec![],
+                    row_removed: vec![],
+                    col_inserted: vec![],
+                    col_removed: vec![],
                 };
 
                 let result = executor.execute_and_calc(payloads_action);
@@ -335,6 +364,27 @@ impl Controller {
                                     cell_id: c.1,
                                 })
                                 .collect(),
+                            row_inserted: result
+                                .row_inserted
+                                .into_iter()
+                                .map(|(sheet_id, row_id)| SheetRowId { sheet_id, row_id })
+                                .collect(),
+                            row_removed: result
+                                .row_removed
+                                .into_iter()
+                                .map(|(sheet_id, row_id)| SheetRowId { sheet_id, row_id })
+                                .collect(),
+                            col_inserted: result
+                                .col_inserted
+                                .into_iter()
+                                .map(|(sheet_id, col_id)| SheetColId { sheet_id, col_id })
+                                .collect(),
+                            col_removed: result
+                                .col_removed
+                                .into_iter()
+                                .map(|(sheet_id, col_id)| SheetColId { sheet_id, col_id })
+                                .collect(),
+                            ..Default::default()
                         }
                     }
                     Err(e) => {
@@ -372,6 +422,10 @@ impl Controller {
                     sid_assigner: &self.sid_assigner,
                     cells_removed: HashSet::new(),
                     style_updated: HashSet::new(),
+                    row_inserted: vec![],
+                    row_removed: vec![],
+                    col_inserted: vec![],
+                    col_removed: vec![],
                 };
                 if let Ok(result) = executor.calc() {
                     ActionEffect {
@@ -399,6 +453,7 @@ impl Controller {
                                 cell_id: c.1,
                             })
                             .collect(),
+                        ..Default::default()
                     }
                 } else {
                     ActionEffect::from_err(1)
@@ -460,9 +515,9 @@ mod tests {
 
     use crate::edit_action::{
         Alignment, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput, CellStyleUpdate,
-        CreateBlock, CreateSheet, DeleteSheet, EditAction, EditPayload, EphemeralCellInput,
-        HorizontalAlignment, LineStyleUpdate, PayloadsAction, StatusCode, StyleUpdateType,
-        VerticalAlignment,
+        CreateBlock, CreateSheet, DeleteCols, DeleteRows, DeleteSheet, EditAction, EditPayload,
+        EphemeralCellInput, HorizontalAlignment, InsertCols, InsertRows, LineStyleUpdate,
+        PayloadsAction, StatusCode, StyleUpdateType, VerticalAlignment,
     };
 
     use super::Controller;
@@ -922,5 +977,134 @@ mod tests {
             .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id)
             .unwrap();
         assert!(matches!(cell.value, CellValue::Number(1.0)));
+    }
+
+    #[test]
+    fn insert_rows_action_effect() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::InsertRows(InsertRows {
+                sheet_idx,
+                start: 2,
+                count: 3,
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+
+        assert_eq!(result.row_inserted.len(), 3);
+        assert!(result.row_inserted.iter().all(|r| r.sheet_id == sheet_id));
+        assert!(result.row_removed.is_empty());
+        assert!(result.col_inserted.is_empty());
+        assert!(result.col_removed.is_empty());
+    }
+
+    #[test]
+    fn delete_rows_action_effect() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::DeleteRows(DeleteRows {
+                sheet_idx,
+                start: 1,
+                count: 2,
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+
+        assert_eq!(result.row_removed.len(), 2);
+        assert!(result.row_removed.iter().all(|r| r.sheet_id == sheet_id));
+        assert!(result.row_inserted.is_empty());
+        assert!(result.col_inserted.is_empty());
+        assert!(result.col_removed.is_empty());
+    }
+
+    #[test]
+    fn insert_cols_action_effect() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::InsertCols(InsertCols {
+                sheet_idx,
+                start: 0,
+                count: 2,
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+
+        assert_eq!(result.col_inserted.len(), 2);
+        assert!(result.col_inserted.iter().all(|c| c.sheet_id == sheet_id));
+        assert!(result.col_removed.is_empty());
+        assert!(result.row_inserted.is_empty());
+        assert!(result.row_removed.is_empty());
+    }
+
+    #[test]
+    fn delete_cols_action_effect() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::DeleteCols(DeleteCols {
+                sheet_idx,
+                start: 0,
+                count: 1,
+            })],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+
+        assert_eq!(result.col_removed.len(), 1);
+        assert!(result.col_removed.iter().all(|c| c.sheet_id == sheet_id));
+        assert!(result.col_inserted.is_empty());
+        assert!(result.row_inserted.is_empty());
+        assert!(result.row_removed.is_empty());
+    }
+
+    #[test]
+    fn mixed_insert_delete_action_effect() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+
+        // Insert 2 rows then delete 1 col in a single action
+        let action = PayloadsAction {
+            payloads: vec![
+                EditPayload::InsertRows(InsertRows {
+                    sheet_idx,
+                    start: 0,
+                    count: 2,
+                }),
+                EditPayload::DeleteCols(DeleteCols {
+                    sheet_idx,
+                    start: 0,
+                    count: 1,
+                }),
+            ],
+            undoable: true,
+            init: false,
+        };
+        let result = wb.handle_action(EditAction::Payloads(action));
+
+        assert_eq!(result.row_inserted.len(), 2);
+        assert_eq!(result.col_removed.len(), 1);
+        assert!(result.row_inserted.iter().all(|r| r.sheet_id == sheet_id));
+        assert!(result.col_removed.iter().all(|c| c.sheet_id == sheet_id));
+        assert!(result.row_removed.is_empty());
+        assert!(result.col_inserted.is_empty());
     }
 }

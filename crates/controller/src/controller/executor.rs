@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use logisheets_base::{errors::BasicError, Addr, CellId, CubeId, RangeId, SheetId};
+use logisheets_base::{errors::BasicError, Addr, CellId, ColId, CubeId, RangeId, RowId, SheetId};
 
 use crate::{
     async_func_manager::AsyncFuncManager,
@@ -41,6 +41,11 @@ pub struct Executor<'a> {
     pub cells_removed: HashSet<(SheetId, CellId)>,
     pub style_updated: HashSet<(SheetId, CellId)>,
     pub dirty_vertices: HashSet<Vertex>,
+
+    pub row_inserted: Vec<(SheetId, RowId)>,
+    pub row_removed: Vec<(SheetId, RowId)>,
+    pub col_inserted: Vec<(SheetId, ColId)>,
+    pub col_removed: Vec<(SheetId, ColId)>,
 
     pub sheet_updated: bool,
     pub cell_updated: bool, // todo: updated celll
@@ -142,6 +147,10 @@ impl<'a> Executor<'a> {
         result.status.field_render_manager = field_render_executor.manager;
 
         result.status.navigator = nav_executor.nav;
+        result.row_inserted.extend(nav_executor.row_inserted);
+        result.row_removed.extend(nav_executor.row_removed);
+        result.col_inserted.extend(nav_executor.col_inserted);
+        result.col_removed.extend(nav_executor.col_removed);
         result.status.range_manager = range_executor.manager;
         result.status.cube_manager = cube_executor.manager;
 
@@ -200,6 +209,10 @@ impl<'a> Executor<'a> {
             cell_updated,
             sid_assigner: result.sid_assigner,
             style_updated: result.style_updated,
+            row_inserted: result.row_inserted,
+            row_removed: result.row_removed,
+            col_inserted: result.col_inserted,
+            col_removed: result.col_removed,
         })
     }
 
@@ -220,6 +233,10 @@ impl<'a> Executor<'a> {
             dirty_vertices,
             sheet_updated,
             cell_updated,
+            row_inserted,
+            row_removed,
+            col_inserted,
+            col_removed,
         } = self;
         let connector = CalcConnector {
             range_manager: &status.range_manager,
@@ -265,6 +282,10 @@ impl<'a> Executor<'a> {
             dirty_vertices: HashSet::new(),
             sheet_updated,
             cell_updated,
+            row_inserted,
+            row_removed,
+            col_inserted,
+            col_removed,
         })
     }
 

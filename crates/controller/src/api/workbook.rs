@@ -176,6 +176,7 @@ impl Workbook {
                 value_changed: vec![],
                 cell_removed: vec![],
                 style_changed: vec![],
+                ..Default::default()
             };
         }
         self.controller.handle_async_calc_results(tasks, results)

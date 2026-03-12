@@ -1,15 +1,25 @@
-use logisheets_base::{errors::BasicError, CellId};
+use logisheets_base::{errors::BasicError, CellId, ColId, RowId, SheetId};
 
 use super::{ctx::NavExecCtx, BlockPlace, Navigator, SheetNav};
 use crate::{edit_action::EditPayload, Error};
 
 pub struct NavExecutor {
     pub nav: Navigator,
+    pub row_inserted: Vec<(SheetId, RowId)>,
+    pub row_removed: Vec<(SheetId, RowId)>,
+    pub col_inserted: Vec<(SheetId, ColId)>,
+    pub col_removed: Vec<(SheetId, ColId)>,
 }
 
 impl NavExecutor {
     pub fn new(nav: Navigator) -> Self {
-        NavExecutor { nav }
+        NavExecutor {
+            nav,
+            row_inserted: vec![],
+            row_removed: vec![],
+            col_inserted: vec![],
+            col_removed: vec![],
+        }
     }
 
     pub fn execute<C: NavExecCtx>(
@@ -132,11 +142,17 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(insert_cols.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
-                let new_sheet_nav =
+                let (new_sheet_nav, inserted) =
                     insert_new_cols(sheet_nav, insert_cols.start, insert_cols.count as u32);
                 let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
+                let mut col_inserted = self.col_inserted;
+                col_inserted.extend(inserted.into_iter().map(|id| (sheet_id, id)));
                 let res = NavExecutor {
                     nav: Navigator { sheet_navs },
+                    row_inserted: self.row_inserted,
+                    row_removed: self.row_removed,
+                    col_inserted,
+                    col_removed: self.col_removed,
                 };
                 Ok((res, true))
             }
@@ -145,10 +161,16 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
-                let new_sheet_nav = delete_cols(sheet_nav, p.start, p.count as u32);
+                let (new_sheet_nav, removed) = delete_cols(sheet_nav, p.start, p.count as u32);
                 let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
+                let mut col_removed = self.col_removed;
+                col_removed.extend(removed.into_iter().map(|id| (sheet_id, id)));
                 let res = NavExecutor {
                     nav: Navigator { sheet_navs },
+                    row_inserted: self.row_inserted,
+                    row_removed: self.row_removed,
+                    col_inserted: self.col_inserted,
+                    col_removed,
                 };
                 Ok((res, true))
             }
@@ -157,11 +179,17 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(insert_rows.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
-                let new_sheet_nav =
+                let (new_sheet_nav, inserted) =
                     insert_new_rows(sheet_nav, insert_rows.start, insert_rows.count as u32);
                 let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
+                let mut row_inserted = self.row_inserted;
+                row_inserted.extend(inserted.into_iter().map(|id| (sheet_id, id)));
                 let res = NavExecutor {
                     nav: Navigator { sheet_navs },
+                    row_inserted,
+                    row_removed: self.row_removed,
+                    col_inserted: self.col_inserted,
+                    col_removed: self.col_removed,
                 };
                 Ok((res, true))
             }
@@ -170,10 +198,16 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
-                let new_sheet_nav = delete_rows(sheet_nav, p.start, p.count as u32);
+                let (new_sheet_nav, removed) = delete_rows(sheet_nav, p.start, p.count as u32);
                 let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
+                let mut row_removed = self.row_removed;
+                row_removed.extend(removed.into_iter().map(|id| (sheet_id, id)));
                 let res = NavExecutor {
                     nav: Navigator { sheet_navs },
+                    row_inserted: self.row_inserted,
+                    row_removed,
+                    col_inserted: self.col_inserted,
+                    col_removed: self.col_removed,
                 };
                 Ok((res, true))
             }
@@ -184,7 +218,13 @@ impl NavExecutor {
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
                 let new_bp = bp.add_new_cols(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
-                let result = NavExecutor { nav };
+                let result = NavExecutor {
+                    nav,
+                    row_inserted: self.row_inserted,
+                    row_removed: self.row_removed,
+                    col_inserted: self.col_inserted,
+                    col_removed: self.col_removed,
+                };
                 Ok((result, true))
             }
             EditPayload::DeleteColsInBlock(p) => {
@@ -194,7 +234,13 @@ impl NavExecutor {
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
                 let new_bp = bp.delete_cols(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
-                let result = NavExecutor { nav };
+                let result = NavExecutor {
+                    nav,
+                    row_inserted: self.row_inserted,
+                    row_removed: self.row_removed,
+                    col_inserted: self.col_inserted,
+                    col_removed: self.col_removed,
+                };
                 Ok((result, true))
             }
             EditPayload::InsertRowsInBlock(p) => {
@@ -204,7 +250,13 @@ impl NavExecutor {
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
                 let new_bp = bp.add_new_rows(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
-                let result = NavExecutor { nav };
+                let result = NavExecutor {
+                    nav,
+                    row_inserted: self.row_inserted,
+                    row_removed: self.row_removed,
+                    col_inserted: self.col_inserted,
+                    col_removed: self.col_removed,
+                };
                 Ok((result, true))
             }
             EditPayload::DeleteRowsInBlock(p) => {
@@ -214,7 +266,13 @@ impl NavExecutor {
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
                 let new_bp = bp.delete_rows(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
-                let result = NavExecutor { nav };
+                let result = NavExecutor {
+                    nav,
+                    row_inserted: self.row_inserted,
+                    row_removed: self.row_removed,
+                    col_inserted: self.col_inserted,
+                    col_removed: self.col_removed,
+                };
                 Ok((result, true))
             }
             _ => Ok((self, false)),
@@ -222,9 +280,10 @@ impl NavExecutor {
     }
 }
 
-fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
+fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> (SheetNav, Vec<RowId>) {
     let mut new_id_manager = sheet_nav.id_manager.clone();
     let new_ids = new_id_manager.get_row_ids(cnt);
+    let inserted: Vec<RowId> = new_ids.iter().cloned().collect();
     let new_rows = {
         let rows = sheet_nav.data.rows.clone();
         let row_max = rows.len();
@@ -234,17 +293,19 @@ fn insert_new_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left.truncate(row_max);
         left
     };
-    SheetNav {
+    let sheet_nav = SheetNav {
         sheet_id: sheet_nav.sheet_id,
         data: sheet_nav.data.update_rows(new_rows),
         cache: Default::default(),
         id_manager: new_id_manager,
-    }
+    };
+    (sheet_nav, inserted)
 }
 
-fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
+fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> (SheetNav, Vec<ColId>) {
     let mut new_id_manager = sheet_nav.id_manager.clone();
     let new_ids = new_id_manager.get_col_ids(cnt);
+    let inserted: Vec<ColId> = new_ids.iter().cloned().collect();
     let new_cols = {
         let cols = sheet_nav.data.cols.clone();
         let col_max = cols.len();
@@ -254,23 +315,26 @@ fn insert_new_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         left.truncate(col_max);
         left
     };
-    SheetNav {
+    let sheet_nav = SheetNav {
         sheet_id: sheet_nav.sheet_id,
         data: sheet_nav.data.update_cols(new_cols),
         cache: Default::default(),
         id_manager: new_id_manager,
-    }
+    };
+    (sheet_nav, inserted)
 }
 
-fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
+fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> (SheetNav, Vec<RowId>) {
     let sheet_id = sheet_nav.sheet_id;
     let result = sheet_nav;
     let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_row_ids(cnt);
+    let removed: Vec<RowId>;
     let new_rows = {
         let rows = result.data.rows.clone();
         let removed_cnt = std::cmp::min(rows.len() - idx, cnt as usize);
         let (mut left, right) = rows.split_at(idx);
+        removed = right.iter().take(removed_cnt).cloned().collect();
         left.append(right.skip(removed_cnt));
         left.append(new_ids.clone());
         left
@@ -288,23 +352,26 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         });
         old_blocks
     };
-    SheetNav {
+    let sheet_nav = SheetNav {
         sheet_id,
         data: result.data.update_rows(new_rows).update_blocks(new_blocks),
         cache: Default::default(),
         id_manager: new_id_manager,
-    }
+    };
+    (sheet_nav, removed)
 }
 
-fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
+fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> (SheetNav, Vec<ColId>) {
     let sheet_id = sheet_nav.sheet_id;
     let result = sheet_nav;
     let mut new_id_manager = result.id_manager.clone();
     let new_ids = new_id_manager.get_col_ids(cnt);
+    let removed: Vec<ColId>;
     let new_cols = {
         let cols = result.data.cols.clone();
         let removed_cnt = std::cmp::min(cols.len() - idx, cnt as usize);
         let (mut left, right) = cols.split_at(idx);
+        removed = right.iter().take(removed_cnt).cloned().collect();
         left.append(right.skip(removed_cnt));
         left.append(new_ids.clone());
         left
@@ -322,12 +389,13 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> SheetNav {
         });
         old_blocks
     };
-    SheetNav {
+    let sheet_nav = SheetNav {
         sheet_id,
         data: result.data.update_cols(new_cols).update_blocks(new_blocks),
         cache: Default::default(),
         id_manager: new_id_manager,
-    }
+    };
+    (sheet_nav, removed)
 }
 
 #[cfg(test)]
@@ -341,7 +409,7 @@ mod tests {
     fn delete_row_test() {
         let sheet_nav = SheetNav::init(5, 5, 0);
         assert_eq!(&sheet_nav.data.rows, &Vector::from(vec![0, 1, 2, 3, 4]));
-        let new_sheet_nav = delete_rows(sheet_nav, 1, 1);
+        let (new_sheet_nav, _) = delete_rows(sheet_nav, 1, 1);
         assert_eq!(&new_sheet_nav.data.rows, &Vector::from(vec![0, 2, 3, 4, 5]));
     }
 
@@ -349,7 +417,7 @@ mod tests {
     fn delete_col_test() {
         let sheet_nav = SheetNav::init(5, 5, 0);
         assert_eq!(&sheet_nav.data.cols, &Vector::from(vec![0, 1, 2, 3, 4]));
-        let new_sheet_nav = delete_cols(sheet_nav, 1, 1);
+        let (new_sheet_nav, _) = delete_cols(sheet_nav, 1, 1);
         assert_eq!(&new_sheet_nav.data.cols, &Vector::from(vec![0, 2, 3, 4, 5]));
     }
 }
