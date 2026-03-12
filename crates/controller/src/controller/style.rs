@@ -118,35 +118,31 @@ impl<'a> StyleConverter<'a> {
     pub fn convert_style(&self, raw_style: RawStyle) -> Style {
         let fill = self.convert_fill(raw_style.fill);
         let luminance = match &fill {
-                Fill::PatternFill(pf) => {
-                    if let Some(color) = &pf.fg_color {
-                        if let (Some(r), Some(g), Some(b)) =
-                            (color.red, color.green, color.blue)
-                        {
-                            get_luminance(r, g, b)
-                        } else {
-                            255.
-                        }
+            Fill::PatternFill(pf) => {
+                if let Some(color) = &pf.fg_color {
+                    if let (Some(r), Some(g), Some(b)) = (color.red, color.green, color.blue) {
+                        get_luminance(r, g, b)
                     } else {
                         255.
                     }
+                } else {
+                    255.
                 }
-                Fill::GradientFill(gf) => {
-                    if !gf.stops.is_empty() {
-                        let stop = &gf.stops[0];
-                        let color = &stop.color;
-                        if let (Some(r), Some(g), Some(b)) =
-                            (color.red, color.green, color.blue)
-                        {
-                            get_luminance(r, g, b)
-                        } else {
-                            255.
-                        }
+            }
+            Fill::GradientFill(gf) => {
+                if !gf.stops.is_empty() {
+                    let stop = &gf.stops[0];
+                    let color = &stop.color;
+                    if let (Some(r), Some(g), Some(b)) = (color.red, color.green, color.blue) {
+                        get_luminance(r, g, b)
                     } else {
                         255.
                     }
+                } else {
+                    255.
                 }
-            };
+            }
+        };
         Style {
             font: self.convert_font(raw_style.font, luminance),
             fill,
@@ -412,4 +408,3 @@ mod tests {
         println!("{:?}", result.rgb.unwrap())
     }
 }
-

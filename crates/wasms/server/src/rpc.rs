@@ -2,10 +2,9 @@ use gents_derives::{Interface, TS};
 use logisheets_rs::BlockId;
 use logisheets_rs::{
     ActionEffect, AppData, AppendixWithCell, BlockField, BlockInfo, CellCoordinateWithSheet,
-    CellInfo, CellPosition, ColId, DisplayWindow, DisplayWindowWithStartPoint,
-    EditPayload, ErrorMessage, FormulaDisplayInfo, MergeCell, ReproducibleCell, RowId, RowInfo,
-    SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId,
-    SheetInfo, Style, Value,
+    CellInfo, CellPosition, ColId, DisplayWindow, DisplayWindowWithStartPoint, EditPayload,
+    ErrorMessage, FormulaDisplayInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
+    ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, Value,
 };
 use wasm_bindgen::prelude::*;
 
@@ -556,8 +555,7 @@ pub struct WorkbookMethods {
     pub get_value: fn(params: GetCellParams, book_id: Option<usize>) -> Result<Value, ErrorMessage>,
     pub get_formula:
         fn(params: GetCellParams, book_id: Option<usize>) -> Result<String, ErrorMessage>,
-    pub get_style:
-        fn(params: GetCellParams, book_id: Option<usize>) -> Result<Style, ErrorMessage>,
+    pub get_style: fn(params: GetCellParams, book_id: Option<usize>) -> Result<Style, ErrorMessage>,
     pub get_cells_except_window: fn(
         params: GetCellsExceptWindowParams,
         book_id: Option<usize>,
@@ -816,9 +814,13 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.craft_id,
             params.tag,
         ),
-        Message::GetNextVisibleCell(params) => {
-            ws::get_next_visible_cell(id, params.sheet_idx, params.row_idx, params.col_idx, params.direction)
-        }
+        Message::GetNextVisibleCell(params) => ws::get_next_visible_cell(
+            id,
+            params.sheet_idx,
+            params.row_idx,
+            params.col_idx,
+            params.direction,
+        ),
         Message::GetDisplayUnitsOfFormula(params) => {
             controller::get_display_units_of_formula(&params.formula)
         }
@@ -877,16 +879,14 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             );
             serde_wasm_bindgen::to_value(&result).unwrap()
         }
-        Message::GetDisplayWindowWithStartPoint(params) => {
-            ws::get_display_window_with_start_point(
-                id,
-                params.sheet_idx,
-                params.start_x,
-                params.start_y,
-                params.height,
-                params.width,
-            )
-        }
+        Message::GetDisplayWindowWithStartPoint(params) => ws::get_display_window_with_start_point(
+            id,
+            params.sheet_idx,
+            params.start_x,
+            params.start_y,
+            params.height,
+            params.width,
+        ),
         Message::GetDisplayWindowWithinCell(params) => ws::get_display_window_within_cell(
             id,
             params.sheet_idx,

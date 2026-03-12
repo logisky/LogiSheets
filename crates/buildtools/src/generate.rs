@@ -1,7 +1,5 @@
 use gents::FileGroup;
-use logisheets_rs::{
-    AsyncFuncResult, DisplayWindowRequest,
-};
+use logisheets_rs::{AsyncFuncResult, DisplayWindowRequest};
 
 fn main() {
     let path = "packages/web/src/bindings";

@@ -169,7 +169,8 @@ pub fn get_display_window_within_cell(
     let CellPosition { x, y } = cell_position;
     let start_x = x - width / 2.5;
     let start_y = y - height / 2.5;
-    let result = get_display_window_with_start_point(id, sheet_idx, start_x, start_y, height, width);
+    let result =
+        get_display_window_with_start_point(id, sheet_idx, start_x, start_y, height, width);
     result
 }
 
@@ -303,7 +304,11 @@ pub fn get_reproducible_cell(id: usize, sheet_idx: usize, row: usize, col: usize
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
-pub fn get_reproducible_cells(id: usize, sheet_idx: usize, coordinates: Vec<SheetCoordinate>) -> JsValue {
+pub fn get_reproducible_cells(
+    id: usize,
+    sheet_idx: usize,
+    coordinates: Vec<SheetCoordinate>,
+) -> JsValue {
     init();
     let manager = MANAGER.get();
     let wb = manager.get_workbook(&id).unwrap();
