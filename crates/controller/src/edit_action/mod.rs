@@ -1,5 +1,5 @@
 use gents_derives::TS;
-use logisheets_base::{async_func::Task, BlockId, CellId, EphemeralId, SheetId};
+use logisheets_base::{async_func::Task, BlockId, CellId, ColId, EphemeralId, RowId, SheetId};
 
 pub trait Payload: Into<EditPayload> {}
 
@@ -566,6 +566,20 @@ pub struct SheetCellId {
     pub cell_id: CellId,
 }
 
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_row_id.ts", builder, rename_all = "camelCase")]
+pub struct SheetRowId {
+    pub sheet_id: SheetId,
+    pub row_id: RowId,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "sheet_col_id.ts", builder, rename_all = "camelCase")]
+pub struct SheetColId {
+    pub sheet_id: SheetId,
+    pub col_id: ColId,
+}
+
 /// `ActionEffect` represents the result of handling an `EditAction`.
 /// The `version` will be incremented if the action is successfully handled.
 ///
@@ -584,6 +598,14 @@ pub struct ActionEffect {
     pub value_changed: Vec<SheetCellId>,
     pub cell_removed: Vec<SheetCellId>,
     pub style_changed: Vec<SheetCellId>,
+
+    pub row_inserted: Vec<SheetRowId>,
+    pub row_removed: Vec<SheetRowId>,
+    pub row_updated: Vec<SheetRowId>,
+
+    pub col_inserted: Vec<SheetColId>,
+    pub col_removed: Vec<SheetColId>,
+    pub col_updated: Vec<SheetColId>,
 }
 
 impl ActionEffect {
