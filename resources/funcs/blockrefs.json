@@ -1,0 +1,10 @@
+{
+    "name": "BLOCKREFS",
+    "description": "functions.blockrefs.description",
+    "argCount": {"eq": 3},
+    "args": [
+        {"argName": "ref"},
+        {"argName": "keyFilter"},
+        {"argName": "fieldFilter"}
+    ]
+}

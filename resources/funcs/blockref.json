@@ -1,0 +1,10 @@
+{
+    "name": "BLOCKREF",
+    "description": "functions.blockref.description",
+    "argCount": {"eq": 3},
+    "args": [
+        {"argName": "ref"},
+        {"argName": "key"},
+        {"argName": "field"}
+    ]
+}

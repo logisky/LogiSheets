@@ -168,6 +168,12 @@
         "bitrshift": {
             "description": "Shifts bits of a number to the right by a specified number of positions."
         },
+        "blockref": {
+            "description": "Fetches a block cell value through its key and field"
+        },
+        "blockrefs": {
+            "description": "Fetches block cell values whose key and field matches conditions"
+        },
         "rand": {
             "description": "Returns an evenly distributed random real number greater than or equal to 0 and less than 1."
         },
