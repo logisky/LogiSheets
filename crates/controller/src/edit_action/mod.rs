@@ -458,6 +458,12 @@ pub struct BindFormSchema {
     pub row: bool,
 }
 
+impl From<BindFormSchema> for EditPayload {
+    fn from(value: BindFormSchema) -> Self {
+        EditPayload::BindFormSchema(value)
+    }
+}
+
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "bind_random_schema.ts", builder, rename_all = "camelCase")]
 pub struct BindRandomSchema {
@@ -465,6 +471,12 @@ pub struct BindRandomSchema {
     pub sheet_idx: usize,
     pub block_id: usize,
     pub units: Vec<RandomSchemaUnit>,
+}
+
+impl From<BindRandomSchema> for EditPayload {
+    fn from(value: BindRandomSchema) -> Self {
+        EditPayload::BindRandomSchema(value)
+    }
 }
 
 #[derive(Debug, Clone, TS)]
@@ -989,6 +1001,8 @@ impl Payload for LineFormatBrush {}
 impl Payload for EphemeralCellInput {}
 impl Payload for ConvertBlock {}
 impl Payload for UpsertFieldRenderInfo {}
+impl Payload for BindFormSchema{}
+impl Payload for BindRandomSchema{}
 
 #[cfg(test)]
 mod tests {

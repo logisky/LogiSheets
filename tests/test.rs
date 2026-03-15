@@ -25,9 +25,12 @@ mod common;
 
 #[cfg(test)]
 mod funcs {
-    use glob::glob;
 
-    use crate::test_script;
+    use glob::glob;
+    use logisheets::EditAction;
+
+    use crate::{load_script, test_script};
+    use logisheets_controller::edit_action::{BindFormSchema, CellInput, PayloadsAction};
 
     #[test]
     fn test_funcs() {
@@ -37,6 +40,46 @@ mod funcs {
             let path = path.to_str().unwrap();
             test_script(path)
         });
+    }
+
+    #[test]
+    fn test_block_ref() {
+        let mut wb = load_script("tests/funcs/block_ref_data.script");
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                .add_payload(BindFormSchema {
+                    ref_name: "test_ref".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1, // check it in the script
+                    field_from: 1,
+                    key_idx: 0,
+                    fields: vec![String::from("field1"), String::from("field2")],
+                    render_ids: vec![String::from("render1"), String::from("render2")],
+                    row: true,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 10,
+                    col: 10,
+                    content: String::from(r#"=BLOCKREF("test_ref", "key2", "field2")"#),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 11,
+                    col: 11,
+                    content: String::from(r#"=SUM(BLOCKREFS("test_ref", "key*", "field2"))"#),
+                }),
+        ));
+        let v = wb.get_sheet_by_idx(0).unwrap().get_value(10, 10).unwrap();
+        match v {
+            logisheets::Value::Number(v) => assert_eq!(v, 8.0),
+            _ => panic!("wrong result in blockref"),
+        }
+        let v = wb.get_sheet_by_idx(0).unwrap().get_value(11, 11).unwrap();
+        match v {
+            logisheets::Value::Number(v) => assert_eq!(v, 24.0),
+            _ => panic!("wrong result in blockrefs"),
+        }
     }
 }
 #[cfg(test)]

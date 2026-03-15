@@ -1,0 +1,20 @@
+BLOCKCREATE 1  A1:C4
+
+#      A    B(field1)   C(field2)
+# 1   key1    4            7
+# 2   key2    5            8
+# 3   key3    6            9
+# 4   kye4    10           11
+
+INPUT A1 key1
+INPUT A2 key2
+INPUT A3 key3
+INPUT A4 kye4
+INPUT B1 4
+INPUT B2 5
+INPUT B3 6
+INPUT B4 10
+INPUT C1 7
+INPUT C2 8
+INPUT C3 9
+INPUT C4 11
