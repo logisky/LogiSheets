@@ -981,7 +981,7 @@ impl<'a> Worksheet<'a> {
                         let (keys, fields, random_entries) = match s {
                             Schema::RowSchema(schema) => {
                                 let keys = schema
-                                    .get_all_key_cell_ids(id)
+                                    .get_all_key_cell_ids(id, &block_place)
                                     .into_iter()
                                     .map(|cell_id| {
                                         let idx = block_place
@@ -1015,7 +1015,7 @@ impl<'a> Worksheet<'a> {
                             }
                             Schema::ColSchema(schema) => {
                                 let keys = schema
-                                    .get_all_key_cell_ids(id)
+                                    .get_all_key_cell_ids(id, &block_place)
                                     .into_iter()
                                     .map(|cell_id| {
                                         let idx = block_place
@@ -1416,6 +1416,7 @@ impl<'a> Worksheet<'a> {
         let block_place = self.get_block_place(block_id)?;
         let (row_cnt, col_cnt) = block_place.get_block_size();
         let (row_start, col_start) = self.get_block_master_cell(block_id)?;
+        let bp = self.controller.status.navigator.get_block_place(&self.sheet_id, &block_id)?;
         let schema = self
             .controller
             .status
@@ -1443,7 +1444,7 @@ impl<'a> Worksheet<'a> {
                 let (keys, fields, random_entries) = match s {
                     Schema::RowSchema(schema) => {
                         let keys = schema
-                            .get_all_key_cell_ids(block_id)
+                            .get_all_key_cell_ids(block_id, bp)
                             .into_iter()
                             .map(|cell_id| {
                                 let idx = block_place
@@ -1474,7 +1475,7 @@ impl<'a> Worksheet<'a> {
                     }
                     Schema::ColSchema(schema) => {
                         let keys = schema
-                            .get_all_key_cell_ids(block_id)
+                            .get_all_key_cell_ids(block_id, bp)
                             .into_iter()
                             .map(|cell_id| {
                                 let idx = block_place

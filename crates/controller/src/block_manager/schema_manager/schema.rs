@@ -1,5 +1,7 @@
 use logisheets_base::{BlockCellId, BlockId, ColId, RowId};
 
+use crate::navigator::BlockPlace;
+
 pub type RowSchema = FormSchema<ColId, RowId, true>;
 pub type ColSchema = FormSchema<RowId, ColId, false>;
 pub type RenderId = String;
@@ -52,11 +54,11 @@ impl SchemaTrait for Schema {
         }
     }
 
-    fn get_all_key_cell_ids(&self, block_id: BlockId) -> Vec<BlockCellId> {
+    fn get_all_key_cell_ids(&self, block_id: BlockId, bp: &BlockPlace) -> Vec<BlockCellId> {
         match self {
-            Schema::RowSchema(form_schema) => form_schema.get_all_key_cell_ids(block_id),
-            Schema::ColSchema(form_schema) => form_schema.get_all_key_cell_ids(block_id),
-            Schema::RandomSchema(random_schema) => random_schema.get_all_key_cell_ids(block_id),
+            Schema::RowSchema(form_schema) => form_schema.get_all_key_cell_ids(block_id, bp),
+            Schema::ColSchema(form_schema) => form_schema.get_all_key_cell_ids(block_id, bp),
+            Schema::RandomSchema(random_schema) => random_schema.get_all_key_cell_ids(block_id, bp),
         }
     }
 
@@ -73,7 +75,7 @@ pub trait SchemaTrait {
     fn get_render_id(&self, row: RowId, col: ColId) -> Option<RenderId>;
     fn get_ref_name(&self) -> String;
     fn get_all_fields(&self) -> Vec<Field>;
-    fn get_all_key_cell_ids(&self, block_id: BlockId) -> Vec<BlockCellId>;
+    fn get_all_key_cell_ids(&self, block_id: BlockId, bp: &BlockPlace) -> Vec<BlockCellId>;
     fn partially_resolve(&self, key: BlockCellId, field: &String) -> Option<BlockCellId>;
 }
 
@@ -93,14 +95,14 @@ impl SchemaTrait for RowSchema {
         self.fields.iter().map(|(f, _)| f.clone()).collect()
     }
 
-    fn get_all_key_cell_ids(&self, block_id: BlockId) -> Vec<BlockCellId> {
+    fn get_all_key_cell_ids(&self, block_id: BlockId, bp: &BlockPlace) -> Vec<BlockCellId> {
         let key = self.key;
-        self.fields
+        bp.rows
             .iter()
-            .map(|(_, (f, _))| BlockCellId {
+            .map(|r| BlockCellId {
                 block_id,
-                row: key,
-                col: *f,
+                row: *r,
+                col: key,
             })
             .collect()
     }
@@ -136,14 +138,14 @@ impl SchemaTrait for ColSchema {
         self.fields.iter().map(|(f, _)| f.clone()).collect()
     }
 
-    fn get_all_key_cell_ids(&self, block_id: BlockId) -> Vec<BlockCellId> {
+    fn get_all_key_cell_ids(&self, block_id: BlockId, bp: &BlockPlace) -> Vec<BlockCellId> {
         let key = self.key;
-        self.fields
+        bp.cols
             .iter()
-            .map(|(_, (f, _))| BlockCellId {
+            .map(|c| BlockCellId {
                 block_id,
-                row: *f,
-                col: key,
+                row: key,
+                col: *c,
             })
             .collect()
     }
@@ -179,7 +181,7 @@ impl SchemaTrait for RandomSchema {
             .collect()
     }
 
-    fn get_all_key_cell_ids(&self, block_id: BlockId) -> Vec<BlockCellId> {
+    fn get_all_key_cell_ids(&self, block_id: BlockId, _bp: &BlockPlace) -> Vec<BlockCellId> {
         self.key_field
             .iter()
             .map(|(_, r, c, _)| BlockCellId {

@@ -9,12 +9,13 @@ use logisheets_base::{
     matrix_value::{cross_product_usize, MatrixValue},
     Addr, CellId, CellValue, Error, FuncId, NameId, SheetId, TextId,
 };
-use logisheets_base::{BlockCellId, BlockRange, CubeCross, NormalRange, Range};
+use logisheets_base::{BlockCellId, BlockId, BlockRange, CubeCross, NormalRange, Range};
 use logisheets_parser::ast;
 
 use crate::block_manager::schema_manager::SchemaManager;
 use crate::cube_manager::CubeManager;
 use crate::id_manager::SheetIdManager;
+use crate::navigator::BlockPlace;
 use crate::range_manager::RangeManager;
 use crate::{
     async_func_manager::AsyncFuncManager,
@@ -549,9 +550,12 @@ where
 
 impl<'a> BlockRefTrait for CalcConnector<'a> {
     fn get_all_keys(&self, ref_name: &str) -> Vec<(String, SheetId, BlockCellId)> {
+        let f = |sheet_id: &SheetId, block_id: &BlockId| -> Option<&BlockPlace> {
+            self.navigator.get_block_place(sheet_id, block_id).ok()
+        };
         let (sheet_id, block_ids) = self
             .block_schema_manager
-            .get_all_key_cell_ids(ref_name)
+            .get_all_key_cell_ids(ref_name, &f)
             .unwrap_or_default();
         let text_fetcher = |id: TextId| self.text_id_manager.get_string(&id).unwrap().clone();
         block_ids

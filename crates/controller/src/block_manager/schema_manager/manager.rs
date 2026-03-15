@@ -1,6 +1,8 @@
 use imbl::HashMap;
 use logisheets_base::{BlockCellId, BlockId, SheetId};
 
+use crate::navigator::BlockPlace;
+
 use super::schema::{Field, RenderId, Schema, SchemaTrait};
 
 #[derive(Debug, Clone, Default)]
@@ -30,10 +32,18 @@ impl SchemaManager {
         schema.partially_resolve(key, field)
     }
 
-    pub fn get_all_key_cell_ids(&self, ref_name: &str) -> Option<(SheetId, Vec<BlockCellId>)> {
+    pub fn get_all_key_cell_ids<'a, F>(
+        &'a self,
+        ref_name: &str,
+        f: &'a F,
+    ) -> Option<(SheetId, Vec<BlockCellId>)>
+    where
+        F: Fn(&'a SheetId, &'a BlockId) -> Option<&'a BlockPlace>,
+    {
         let (sheet_id, block_id) = self.refs.get(ref_name)?;
         let schema = self.schemas.get(&(*sheet_id, *block_id))?;
-        Some((*sheet_id, schema.get_all_key_cell_ids(*block_id)))
+        let bp = f(sheet_id, block_id)?;
+        Some((*sheet_id, schema.get_all_key_cell_ids(*block_id, bp)))
     }
 
     #[inline]
