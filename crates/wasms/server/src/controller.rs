@@ -1,7 +1,7 @@
 use logisheets_rs::{
     lex_and_fmt, lex_success, AppData, AsyncCalcResult, AsyncErr, AsyncFuncResult, BasicError,
-    BlockId, ColId, EditAction, EditPayload, Error, PayloadsAction, RowId, RowInfo, SaveFileResult,
-    SheetCellId, SheetId, Workbook,
+    BlockId, ColId, EditAction, Error, PayloadsAction, RowId, RowInfo, SaveFileResult, SheetCellId,
+    SheetId, Workbook,
 };
 use singlyton::{Singleton, SingletonUninit};
 use wasm_bindgen::prelude::*;
