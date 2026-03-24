@@ -1,0 +1,26 @@
+.diff-overlay {
+    position: absolute;
+    pointer-events: none;
+    z-index: 11;
+    border-width: 2px;
+    border-style: solid;
+    box-sizing: border-box;
+    transition:
+        opacity 0.15s ease-in-out,
+        background-color 0.15s ease-in-out;
+}
+
+.diff-label {
+    position: absolute;
+    bottom: 1px;
+    left: 2px;
+    font-size: 10px;
+    line-height: 1.2;
+    color: rgba(0, 0, 0, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 4px);
+    pointer-events: none;
+    user-select: none;
+}
