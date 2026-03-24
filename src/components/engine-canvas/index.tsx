@@ -27,6 +27,8 @@ import {
 } from '@/components/formula-editor'
 import {getHighlightColor} from '@/components/const'
 import {BlockInterfaceComponent} from '@/components/block-interface'
+import {DiffLayer} from '@/components/diff-layer'
+import type {DiffState} from '@/components/diff-layer'
 import styles from './engine-canvas.module.scss'
 
 // LeftTop configuration (matches engine config)
@@ -55,6 +57,8 @@ export interface EngineCanvasProps {
     grid: Grid | null
     setGrid: (grid: Grid | null) => void
     cellLayouts: CellLayout[]
+    /** Diff state for showing uncommitted temp transaction changes */
+    diffState?: DiffState
 }
 
 export const EngineCanvas: FC<EngineCanvasProps> = ({
@@ -66,6 +70,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
     grid,
     setGrid,
     cellLayouts,
+    diffState,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null)
     const editorRef = useRef<FormulaEditorWrapperRef>(null)
@@ -496,6 +501,8 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                         }}
                     />
                 ))}
+                {/* Diff layer for temp transaction changes */}
+                {diffState && <DiffLayer diffState={diffState} grid={grid} />}
                 {editing && editorContext && (
                     <FormulaEditorWrapper
                         ref={editorRef}

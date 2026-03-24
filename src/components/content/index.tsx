@@ -5,6 +5,8 @@ import {EditBarComponent} from './edit-bar'
 import {SheetsTabComponent} from '@/components/sheets-tab'
 import {Grid} from 'logisheets-engine'
 import {CellLayout, SelectedData} from 'logisheets-engine'
+import {useDiffLayer} from '@/components/diff-layer'
+// import {DiffLayerTestPanel} from '@/components/diff-layer/DiffLayerTestPanel'
 
 export interface ContentProps {
     selectedData$: (cell: SelectedData) => void
@@ -27,6 +29,7 @@ export const ContentComponent: FC<ContentProps> = ({
 }) => {
     const [selectedDataContentChanged, setSelectedDataContentChanged] =
         useState({})
+    const diffLayer = useDiffLayer()
     return (
         <div className={styles.host}>
             <EditBarComponent
@@ -47,6 +50,7 @@ export const ContentComponent: FC<ContentProps> = ({
                         grid={grid}
                         setGrid={setGrid}
                         cellLayouts={cellLayouts}
+                        diffState={diffLayer.diffState}
                     />
                 </div>
             </div>
