@@ -776,20 +776,52 @@ export const FieldConfigPanel = ({
                                 >
                                     Validation Rule
                                 </Typography>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    label="Validation"
-                                    value={field.validation || ''}
-                                    onChange={(e) =>
-                                        onUpdate({
-                                            ...field,
-                                            validation: e.target.value,
-                                        })
-                                    }
-                                    placeholder="e.g., #PLACEHOLDER > 0 && #PLACEHOLDER < 100"
-                                    helperText="Use #PLACEHOLDER to reference the input value"
-                                />
+                                <Stack spacing={2}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                size="small"
+                                                checked={!!field.unique}
+                                                onChange={(e) =>
+                                                    onUpdate({
+                                                        ...field,
+                                                        unique:
+                                                            e.target.checked,
+                                                    })
+                                                }
+                                            />
+                                        }
+                                        label={
+                                            <Box>
+                                                <Typography variant="body2">
+                                                    Unique value
+                                                </Typography>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    Disallow duplicates within
+                                                    this field (e.g. port
+                                                    numbers).
+                                                </Typography>
+                                            </Box>
+                                        }
+                                    />
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Validation"
+                                        value={field.validation || ''}
+                                        onChange={(e) =>
+                                            onUpdate({
+                                                ...field,
+                                                validation: e.target.value,
+                                            })
+                                        }
+                                        placeholder="e.g., #PLACEHOLDER > 0 && #PLACEHOLDER < 100"
+                                        helperText="Use #PLACEHOLDER to reference the input value"
+                                    />
+                                </Stack>
                             </CardContent>
                         </Card>
                     )}

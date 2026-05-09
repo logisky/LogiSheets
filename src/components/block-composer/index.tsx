@@ -99,6 +99,21 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
 
         let ty: FieldTypeEnum
 
+        // Compose the final validation formula for string/number fields by
+        // joining the user-typed rule with a generated uniqueness check.
+        // The unique check uses BLOCKREFSB to read every value in this field
+        // across the whole block, then COUNTIF to ensure the current value
+        // appears exactly once. #PLACEHOLDER expands to the cell's value at
+        // evaluation time.
+        const composeValidation = (field: FieldSetting): string => {
+            const userValidation = (field.validation ?? '').trim()
+            if (!field.unique) return userValidation
+            const escapedName = field.name.replace(/"/g, '""')
+            const uniqueCheck = `COUNTIF(BLOCKREFSB(${currentSheetId}, ${blockId}, "*", "${escapedName}"), #PLACEHOLDER) = 1`
+            if (!userValidation) return uniqueCheck
+            return `AND(${userValidation}, ${uniqueCheck})`
+        }
+
         const fs: [string, FieldInfo][] = fields.map((field) => {
             if (field.type === 'enum') {
                 ty = {type: 'enum', id: field.enumId!}
@@ -109,11 +124,11 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             } else if (field.type === 'boolean') {
                 ty = {type: 'boolean'}
             } else if (field.type === 'string') {
-                ty = {type: 'string', validation: field.validation ?? ''}
+                ty = {type: 'string', validation: composeValidation(field)}
             } else if (field.type === 'number') {
                 ty = {
                     type: 'number',
-                    validation: field.validation ?? '',
+                    validation: composeValidation(field),
                     formatter: field.format ?? '',
                 }
             } else if (field.type === 'image') {
