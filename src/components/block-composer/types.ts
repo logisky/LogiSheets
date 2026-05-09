@@ -26,6 +26,7 @@ export interface FieldSetting {
     defaultValue?: string
     format?: string // for datetime
     validation?: string // for string/number
+    unique?: boolean // for string/number — disallow duplicate values within the field
 }
 
 export const COLORS = [
