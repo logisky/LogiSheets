@@ -27,7 +27,12 @@ export interface DisplayCellSpec extends BlockCellProps {
 
 // Interactive widgets: the user clicks to edit. At most one interactive
 // cell is rendered per data cell, picked from the field's type.
-export type InteractiveCellKind = 'enum' | 'boolean' | 'datetime' | 'image'
+export type InteractiveCellKind =
+    | 'enum'
+    | 'boolean'
+    | 'datetime'
+    | 'image'
+    | 'fieldRef'
 
 export interface InteractiveCellSpec extends BlockCellProps {
     kind: 'interactive'
@@ -52,6 +57,17 @@ export const valueToNumber = (val: Value): number | null => {
     return null
 }
 
+// Coerce any Value to its display string. Used by fieldRef cells where the
+// referenced field may be string or number — and where the cell stores the
+// referenced value verbatim, no id↔label split.
+export const valueToDisplayString = (val: Value): string => {
+    if (val === 'empty') return ''
+    if (val.type === 'str') return val.value
+    if (val.type === 'number') return String(val.value)
+    if (val.type === 'bool') return val.value ? 'TRUE' : 'FALSE'
+    return ''
+}
+
 const isValueEmpty = (v: Value): boolean => {
     if (v === 'empty') return true
     if (v.type === 'str' && v.value === '') return true
@@ -68,16 +84,19 @@ const pickInteractiveKind = (field: FieldInfo): InteractiveCellKind | null => {
             return 'datetime'
         case 'image':
             return 'image'
+        case 'fieldRef':
+            return 'fieldRef'
         default:
             return null
     }
 }
 
 const hasValidation = (field: FieldInfo): boolean => {
-    return (
-        (field.type.type === 'string' || field.type.type === 'number') &&
-        field.type.validation !== ''
-    )
+    const t = field.type
+    if (t.type === 'string' || t.type === 'number' || t.type === 'fieldRef') {
+        return t.validation !== ''
+    }
+    return false
 }
 
 // Map one data cell to the list of overlays + (optional) widget that should

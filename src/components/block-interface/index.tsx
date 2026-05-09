@@ -28,6 +28,7 @@ import {ValidationCell} from './validation-cell'
 import {RequiredCell} from './required-cell'
 import {DatetimeCell} from './datetime-cell'
 import {ImageCell} from './image'
+import {FieldRefCell} from './field-ref-cell'
 
 export interface BlockInterfaceProps {
     grid: Grid
@@ -425,6 +426,8 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                             return <DatetimeCell key={idx} {...spec} />
                         case 'image':
                             return <ImageCell key={idx} {...spec} />
+                        case 'fieldRef':
+                            return <FieldRefCell key={idx} {...spec} />
                     }
                 }
                 switch (spec.displayKind) {

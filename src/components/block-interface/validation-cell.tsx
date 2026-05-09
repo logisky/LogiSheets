@@ -18,17 +18,18 @@ export const ValidationCell = (props: BlockCellProps) => {
         colIdx,
     } = props
 
-    // Only string/number fields carry a validation formula. The dispatcher in
-    // index.tsx already routes display cells correctly, but this guard keeps
-    // the component independently safe to use.
-    if (fieldInfo.type.type !== 'string' && fieldInfo.type.type !== 'number') {
+    // string / number / fieldRef are the field types that carry a validation
+    // formula today. The dispatcher in index.tsx already routes display cells
+    // correctly, but this guard keeps the component independently safe to use.
+    const t = fieldInfo.type
+    if (t.type !== 'string' && t.type !== 'number' && t.type !== 'fieldRef') {
         return null
     }
 
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const {toast} = useToast()
-    const validation = fieldInfo.type.validation
+    const validation = t.validation
 
     if (validation !== '' && shadowValue === undefined) {
         // We haven't set a shadow cell for calculating the validation

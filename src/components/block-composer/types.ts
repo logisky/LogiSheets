@@ -7,6 +7,7 @@ export type FieldTypeEnum =
     | 'string'
     | 'number'
     | 'image'
+    | 'fieldRef'
 
 export interface EnumValue {
     id: string
@@ -27,6 +28,20 @@ export interface FieldSetting {
     format?: string // for datetime
     validation?: string // for string/number
     unique?: boolean // for string/number — disallow duplicate values within the field
+    // For fieldRef: the (sheet, block, field) the cell pulls its dropdown
+    // options from. Eligible target fields are those with `unique: true` on
+    // the engine FieldInfo (which includes primary keys, since we stamp
+    // unique=true on primary at save time).
+    //
+    // When `refSelf` is true the target is the block being composed itself.
+    // Since the new block's id isn't allocated until save, refSheetId and
+    // refBlockId are ignored in that case and resolved at save time. The
+    // engine FieldInfo always stores concrete ids, so this flag never
+    // leaves the composer.
+    refSelf?: boolean
+    refSheetId?: number
+    refBlockId?: number
+    refFieldName?: string
 }
 
 export const COLORS = [
