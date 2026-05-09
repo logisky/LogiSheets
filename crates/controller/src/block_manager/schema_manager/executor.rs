@@ -46,17 +46,25 @@ impl BlockSchemaExecutor {
                     .enumerate()
                 {
                     let idx = i + p.field_from;
+                    // RowSchema (p.row=true) stores ColId per field — fields
+                    // run along columns, records along rows. ColSchema flips
+                    // both. We fetch from the *records* dimension at index 0
+                    // and take the *fields* dimension's id at idx, so the
+                    // bind only needs the block to extend `idx` cells along
+                    // the fields axis. Existing buggy behavior swapped these
+                    // and accidentally worked for square blocks because
+                    // RowId and ColId share the u32 representation.
                     let id = if p.row {
-                        ctx.fetch_block_cell_id(&sheet_id, &block_id, idx, 0)?.row
-                    } else {
                         ctx.fetch_block_cell_id(&sheet_id, &block_id, 0, idx)?.col
+                    } else {
+                        ctx.fetch_block_cell_id(&sheet_id, &block_id, idx, 0)?.row
                     };
                     fields.push((field, (id, render_id)));
                 }
                 let schema = if p.row {
                     let key = ctx
-                        .fetch_block_cell_id(&sheet_id, &block_id, p.key_idx, 0)?
-                        .row;
+                        .fetch_block_cell_id(&sheet_id, &block_id, 0, p.key_idx)?
+                        .col;
                     Schema::RowSchema(RowSchema {
                         fields,
                         key,
@@ -64,8 +72,8 @@ impl BlockSchemaExecutor {
                     })
                 } else {
                     let key = ctx
-                        .fetch_block_cell_id(&sheet_id, &block_id, 0, p.key_idx)?
-                        .col;
+                        .fetch_block_cell_id(&sheet_id, &block_id, p.key_idx, 0)?
+                        .row;
                     Schema::ColSchema(ColSchema {
                         fields,
                         key,

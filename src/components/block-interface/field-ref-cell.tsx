@@ -15,22 +15,19 @@ export const FieldRefCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
+    // Pull target metadata up here so all hooks below see consistent
+    // dependencies. Non-fieldRef types are filtered upstream by the
+    // dispatcher; the nullish fallbacks are just to keep useEffect's deps
+    // well-typed for the impossible case.
+    const t = fieldInfo.type
+    const targetSheetId = t.type === 'fieldRef' ? t.sheetId : -1
+    const targetBlockId = t.type === 'fieldRef' ? t.blockId : -1
+    const targetFieldName = t.type === 'fieldRef' ? t.fieldName : ''
+
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const [isEditing, setIsEditing] = useState(false)
     const [options, setOptions] = useState<string[] | null>(null)
-
-    if (fieldInfo.type.type !== 'fieldRef') {
-        return null
-    }
-
-    const {
-        sheetId: targetSheetId,
-        blockId: targetBlockId,
-        fieldName: targetFieldName,
-    } = fieldInfo.type
-
-    const currentValue = valueToDisplayString(value)
 
     useEffect(() => {
         if (!isEditing) return
@@ -73,6 +70,12 @@ export const FieldRefCell = (props: BlockCellProps) => {
             cancelled = true
         }
     }, [isEditing, targetSheetId, targetBlockId, targetFieldName])
+
+    if (t.type !== 'fieldRef') {
+        return null
+    }
+
+    const currentValue = valueToDisplayString(value)
 
     const handleClick = () => {
         setIsEditing(true)
