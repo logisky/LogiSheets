@@ -49,8 +49,34 @@ impl SchemaManager {
     #[inline]
     pub fn get_all_fields(&self, ref_name: &str) -> Option<Vec<Field>> {
         let (sheet_id, block_id) = self.refs.get(ref_name)?;
-        let schema = self.schemas.get(&(*sheet_id, *block_id))?;
+        self.get_all_fields_by_block(*sheet_id, *block_id)
+    }
+
+    #[inline]
+    pub fn get_all_fields_by_block(&self, sheet_id: SheetId, block_id: BlockId) -> Option<Vec<Field>> {
+        let schema = self.schemas.get(&(sheet_id, block_id))?;
         Some(schema.get_all_fields())
+    }
+
+    pub fn get_all_key_cell_ids_by_block<'a>(
+        &'a self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        bp: &'a BlockPlace,
+    ) -> Option<Vec<BlockCellId>> {
+        let schema = self.schemas.get(&(sheet_id, block_id))?;
+        Some(schema.get_all_key_cell_ids(block_id, bp))
+    }
+
+    pub fn partially_resolve_by_block(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        key: BlockCellId,
+        field: &String,
+    ) -> Option<BlockCellId> {
+        let schema = self.schemas.get(&(sheet_id, block_id))?;
+        schema.partially_resolve(key, field)
     }
 
     #[inline]

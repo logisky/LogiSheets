@@ -1,3 +1,4 @@
+use logisheets_base::{BlockId, SheetId};
 use logisheets_parser::ast;
 
 use crate::calc_engine::{
@@ -17,7 +18,30 @@ where
     assert_text_from_calc_value!(key, key);
     let field = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_text_from_calc_value!(field, field);
-    let result = fetcher.resolve(&ref_name, &key, &field);
+    calc_by_ref_name(fetcher, &ref_name, key, field)
+}
+
+pub(crate) fn calc_by_ref_name<C>(fetcher: &mut C, ref_name: &str, key: String, field: String) -> CalcVertex
+where
+    C: Connector,
+{
+    let result = fetcher.resolve(ref_name, &key, &field);
+    if result.is_none() {
+        return CalcVertex::from_error(ast::Error::Value);
+    }
+    let (sheet_id, cell_id) = result.unwrap();
+    let value = fetcher.get_block_cell_value(sheet_id, cell_id);
+    match value {
+        Some(value) => CalcVertex::Value(value),
+        None => CalcVertex::from_error(ast::Error::Value),
+    }
+}
+
+pub(crate) fn calc_by_block<C>(fetcher: &mut C, sheet_id: SheetId, block_id: BlockId, key: String, field: String) -> CalcVertex
+where
+    C: Connector,
+{
+    let result = fetcher.resolve_by_block(sheet_id, block_id, &key, &field);
     if result.is_none() {
         return CalcVertex::from_error(ast::Error::Value);
     }

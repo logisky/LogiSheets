@@ -205,6 +205,24 @@ pub mod tests_utils {
         ) -> Option<(SheetId, logisheets_base::BlockCellId)> {
             unreachable!()
         }
+
+        fn get_all_keys_by_block(&self, _sheet_id: SheetId, _block_id: logisheets_base::BlockId) -> Vec<(String, SheetId, BlockCellId)> {
+            unreachable!()
+        }
+
+        fn get_all_fields_by_block(&self, _sheet_id: SheetId, _block_id: logisheets_base::BlockId) -> Vec<String> {
+            unreachable!()
+        }
+
+        fn resolve_by_block(
+            &self,
+            _sheet_id: SheetId,
+            _block_id: logisheets_base::BlockId,
+            _key: &String,
+            _field: &String,
+        ) -> Option<(SheetId, logisheets_base::BlockCellId)> {
+            unreachable!()
+        }
     }
 
     impl Connector for TestFetcher {

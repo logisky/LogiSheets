@@ -21,10 +21,11 @@ import {
 } from 'logisheets-engine'
 import {tx} from '@/core/transaction'
 import {LeftTop} from '@/core/settings'
-import {BlockCellProps} from './cell'
+import {BlockCellProps, RenderedCellSpec, buildRenderedCells} from './cell'
 import {EnumCell} from './enum-cell'
 import {BoolCell} from './bool-cell'
 import {ValidationCell} from './validation-cell'
+import {RequiredCell} from './required-cell'
 import {DatetimeCell} from './datetime-cell'
 import {ImageCell} from './image'
 
@@ -179,7 +180,10 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
     const baseX = xForColStart(colStart, grid)
     const baseY = yForRowStart(rowStart, grid)
 
-    const blockCellProps: BlockCellProps[] = cells.map((cell, idx) => {
+    // One BlockCellInfo can yield several rendered cells: at most one
+    // interactive widget plus zero-or-more display overlays (validation,
+    // required, ...). buildRenderedCells encodes that mapping.
+    const renderedCells: RenderedCellSpec[] = cells.flatMap((cell, idx) => {
         const rowIdx = Math.floor(idx / fieldInfo.length)
         const colIdx = idx % fieldInfo.length
         const x = xForColStart(colStart + colIdx, grid) - baseX
@@ -187,7 +191,7 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
         const width = grid.columns[colIdx + colStart].width
         const height = grid.rows[rowIdx + rowStart].height
         const f = fieldInfo[colIdx]
-        return {
+        const base: BlockCellProps = {
             x,
             y,
             width,
@@ -198,7 +202,8 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
             rowIdx: rowIdx + rowStart,
             colIdx: colIdx + colStart,
             sheetIdx,
-        } as BlockCellProps
+        }
+        return buildRenderedCells(base)
     })
 
     const handleMenuClick = (event: React.MouseEvent) => {
@@ -406,35 +411,28 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                 )}
             </Box>
 
-            {/* Block cells */}
-            {blockCellProps.map((cellProps, idx) => {
-                const {fieldInfo} = cellProps
-                if (fieldInfo.type.type === 'enum') {
-                    return <EnumCell key={idx} {...cellProps} />
-                } else if (fieldInfo.type.type === 'number') {
-                    return (
-                        <ValidationCell
-                            key={idx}
-                            {...cellProps}
-                            fieldType="number"
-                        />
-                    )
-                } else if (fieldInfo.type.type === 'boolean') {
-                    return <BoolCell key={idx} {...cellProps} />
-                } else if (fieldInfo.type.type === 'string') {
-                    return (
-                        <ValidationCell
-                            key={idx}
-                            {...cellProps}
-                            fieldType="string"
-                        />
-                    )
-                } else if (fieldInfo.type.type === 'datetime') {
-                    return <DatetimeCell key={idx} {...cellProps} />
-                } else if (fieldInfo.type.type === 'image') {
-                    return <ImageCell key={idx} {...cellProps} />
+            {/* Block cells: interactive widgets and display overlays are
+                dispatched separately on the `kind` discriminator so the two
+                categories never collide. */}
+            {renderedCells.map((spec, idx) => {
+                if (spec.kind === 'interactive') {
+                    switch (spec.interactiveKind) {
+                        case 'enum':
+                            return <EnumCell key={idx} {...spec} />
+                        case 'boolean':
+                            return <BoolCell key={idx} {...spec} />
+                        case 'datetime':
+                            return <DatetimeCell key={idx} {...spec} />
+                        case 'image':
+                            return <ImageCell key={idx} {...spec} />
+                    }
                 }
-                return null
+                switch (spec.displayKind) {
+                    case 'validation':
+                        return <ValidationCell key={idx} {...spec} />
+                    case 'required':
+                        return <RequiredCell key={idx} {...spec} />
+                }
             })}
 
             {/* Menu */}
