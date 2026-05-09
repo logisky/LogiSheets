@@ -13,11 +13,7 @@ import type {FieldInfo, FieldTypeEnum} from 'logisheets-engine'
 import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
 import {FieldSetting} from './types'
-import {
-    CreateBlockBuilder,
-    isErrorMessage,
-    Payload,
-} from 'logisheets-engine'
+import {CreateBlockBuilder, isErrorMessage, Payload} from 'logisheets-engine'
 import {tx} from '@/core/transaction'
 
 export * from './types'
@@ -202,9 +198,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             payloads.push({type: 'upsertFieldRenderInfo', value: p})
         })
 
-        const result = await DATA_SERVICE.handleTransaction(
-            tx(payloads, true)
-        )
+        const result = await DATA_SERVICE.handleTransaction(tx(payloads, true))
         if (isErrorMessage(result)) {
             toast(result.msg, {type: 'error'})
             return

@@ -5,26 +5,23 @@ import {tx} from '@/core/transaction'
 import {BlockCellProps} from './cell'
 import {useToast} from '@/ui/notification/useToast'
 
-interface ValidationCellProps extends BlockCellProps {
-    fieldType: 'string' | 'number'
-}
-
-export const ValidationCell = (props: ValidationCellProps) => {
+export const ValidationCell = (props: BlockCellProps) => {
     const {
         x,
         y,
         width,
         height,
-        value,
         shadowValue,
         fieldInfo,
         sheetIdx,
         rowIdx,
         colIdx,
-        fieldType,
     } = props
 
-    if (fieldInfo.type.type !== fieldType) {
+    // Only string/number fields carry a validation formula. The dispatcher in
+    // index.tsx already routes display cells correctly, but this guard keeps
+    // the component independently safe to use.
+    if (fieldInfo.type.type !== 'string' && fieldInfo.type.type !== 'number') {
         return null
     }
 

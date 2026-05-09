@@ -131,9 +131,7 @@ export const ImageCell = (props: BlockCellProps) => {
             payloads.push(payload)
         }
 
-        await DATA_SERVICE.handleTransaction(
-            tx(payloads, true)
-        ).then(() => {
+        await DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() => {
             // Update the display size
             setDialogOpen(false)
             setImageDimensions(null)
