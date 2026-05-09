@@ -1,4 +1,7 @@
-use logisheets_controller::edit_action::{BindFormSchema, EditPayload, PayloadsAction};
+use logisheets::Workbook;
+use logisheets_controller::edit_action::{
+    BindFormSchema, CreateBlock, EditPayload, PayloadsAction, StatusCode,
+};
 
 use crate::load_script;
 
@@ -53,4 +56,54 @@ fn test_bind_block_schema() {
     let block = &blocks[0];
     println!("{:?}", &block.info.schema);
     assert!(block.info.schema.is_some());
+}
+
+/// Reproduces the LogiSheets composer's exact pattern: a block with rowCnt=1
+/// and colCnt=N, bound row-wise. Before the executor axis fix this would
+/// fail at idx >= 1 with BlockCellIdNotFound, the worker silently swallowed
+/// the error, and JS saw "success" with an empty grid.
+#[test]
+fn test_form_block_rowcnt1_two_fields() {
+    let mut wb = Workbook::default();
+    let result = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 10,
+                master_col: 7,
+                row_cnt: 1,
+                col_cnt: 2,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                sheet_idx: 0,
+                block_id: 1,
+                ref_name: "".to_string(),
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["abcd".to_string(), "111a".to_string()],
+                render_ids: vec!["r0".to_string(), "r1".to_string()],
+                row: true,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(result.status, StatusCode::Ok(_)),
+        "transaction should succeed; got status: {:?}",
+        result.status
+    );
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let window = ws.get_display_window(8, 5, 13, 10).unwrap();
+    assert_eq!(window.blocks.len(), 1, "block should appear in viewport");
+    let block = &window.blocks[0];
+    let schema = block
+        .info
+        .schema
+        .as_ref()
+        .expect("block must have a schema");
+    assert_eq!(schema.fields.len(), 2);
+    assert_eq!(schema.fields[0].field, "abcd");
+    assert_eq!(schema.fields[1].field, "111a");
 }
