@@ -27,7 +27,7 @@ import {
     Edit as EditIcon,
 } from '@mui/icons-material'
 import {FieldSetting, EnumValue, FieldTypeEnum, COLORS} from './types'
-import {EnumSetManager} from 'logisheets-engine'
+import {EnumSetManager, FieldManager} from 'logisheets-engine'
 import {useToast} from '@/ui/notification/useToast'
 
 interface FieldConfigPanelProps {
@@ -37,6 +37,13 @@ interface FieldConfigPanelProps {
     onCancel: () => void
     onSave: () => void
     enumSetManager: EnumSetManager
+    fieldManager: FieldManager
+    /**
+     * The fields belonging to the block currently being composed. The new
+     * block isn't saved yet, so its fields aren't in `fieldManager` and need
+     * to be surfaced separately to support same-block (self) references.
+     */
+    localFields: readonly FieldSetting[]
 }
 
 export const FieldConfigPanel = ({
@@ -46,6 +53,8 @@ export const FieldConfigPanel = ({
     onCancel,
     onSave,
     enumSetManager,
+    fieldManager,
+    localFields,
 }: FieldConfigPanelProps) => {
     const {toast} = useToast()
     const [colorAnchorEl, setColorAnchorEl] = useState<{
@@ -353,6 +362,26 @@ export const FieldConfigPanel = ({
                                                             ? field.enumId
                                                             : undefined,
                                                     format,
+                                                    // Reset ref target when
+                                                    // moving away from
+                                                    // fieldRef so stale
+                                                    // pointers don't leak.
+                                                    refSelf:
+                                                        newType === 'fieldRef'
+                                                            ? field.refSelf
+                                                            : undefined,
+                                                    refSheetId:
+                                                        newType === 'fieldRef'
+                                                            ? field.refSheetId
+                                                            : undefined,
+                                                    refBlockId:
+                                                        newType === 'fieldRef'
+                                                            ? field.refBlockId
+                                                            : undefined,
+                                                    refFieldName:
+                                                        newType === 'fieldRef'
+                                                            ? field.refFieldName
+                                                            : undefined,
                                                 })
                                             }}
                                         >
@@ -376,6 +405,9 @@ export const FieldConfigPanel = ({
                                             </MenuItem>
                                             <MenuItem value="image">
                                                 Image
+                                            </MenuItem>
+                                            <MenuItem value="fieldRef">
+                                                Reference (Field)
                                             </MenuItem>
                                         </Select>
                                     </FormControl>
@@ -765,6 +797,270 @@ export const FieldConfigPanel = ({
                         </Card>
                     )}
 
+                    {/* Reference target for fieldRef: cascading sheet → block
+                        → field pickers. Eligible target fields are those
+                        with `unique: true` on the engine FieldInfo (which
+                        includes primary keys after our save-time stamp).
+                        The Sheet dropdown also offers a "(this block)"
+                        sentinel that points at the block being composed —
+                        the new block's id isn't allocated yet, so we resolve
+                        it at save time. */}
+                    {field.type === 'fieldRef' &&
+                        (() => {
+                            const SELF_SENTINEL = '__self__'
+                            const externalEligible = fieldManager
+                                .getAll()
+                                .filter((f) => f.unique)
+                            const localEligible = localFields.filter(
+                                (f) =>
+                                    (f.unique || f.primary) && f.id !== field.id
+                            )
+
+                            const sheetIds = Array.from(
+                                new Set(externalEligible.map((f) => f.sheetId))
+                            ).sort((a, b) => a - b)
+
+                            const blockIdsForSheet =
+                                !field.refSelf && field.refSheetId !== undefined
+                                    ? Array.from(
+                                          new Set(
+                                              externalEligible
+                                                  .filter(
+                                                      (f) =>
+                                                          f.sheetId ===
+                                                          field.refSheetId
+                                                  )
+                                                  .map((f) => f.blockId)
+                                          )
+                                      ).sort((a, b) => a - b)
+                                    : []
+
+                            const externalFieldsForBlock =
+                                !field.refSelf &&
+                                field.refSheetId !== undefined &&
+                                field.refBlockId !== undefined
+                                    ? externalEligible.filter(
+                                          (f) =>
+                                              f.sheetId === field.refSheetId &&
+                                              f.blockId === field.refBlockId
+                                      )
+                                    : []
+
+                            const fieldOptions: {id: string; name: string}[] =
+                                field.refSelf
+                                    ? localEligible.map((f) => ({
+                                          id: f.id,
+                                          name: f.name,
+                                      }))
+                                    : externalFieldsForBlock.map((f) => ({
+                                          id: f.id,
+                                          name: f.name,
+                                      }))
+
+                            const noTargetsAtAll =
+                                sheetIds.length === 0 &&
+                                localEligible.length === 0
+                            const sheetSelectValue = field.refSelf
+                                ? SELF_SENTINEL
+                                : field.refSheetId ?? ''
+
+                            return (
+                                <Card variant="outlined">
+                                    <CardContent>
+                                        <Typography
+                                            variant="subtitle1"
+                                            fontWeight={600}
+                                            mb={2}
+                                        >
+                                            Reference Target
+                                        </Typography>
+                                        {noTargetsAtAll ? (
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                No referenceable fields exist
+                                                yet. Mark another field in this
+                                                block as Primary or Unique, or
+                                                create another block with one.
+                                            </Typography>
+                                        ) : (
+                                            <Stack spacing={2}>
+                                                <FormControl
+                                                    size="small"
+                                                    fullWidth
+                                                >
+                                                    <InputLabel>
+                                                        Sheet
+                                                    </InputLabel>
+                                                    <Select
+                                                        value={sheetSelectValue}
+                                                        label="Sheet"
+                                                        onChange={(e) => {
+                                                            const v =
+                                                                e.target.value
+                                                            if (
+                                                                v ===
+                                                                SELF_SENTINEL
+                                                            ) {
+                                                                onUpdate({
+                                                                    ...field,
+                                                                    refSelf:
+                                                                        true,
+                                                                    refSheetId:
+                                                                        undefined,
+                                                                    refBlockId:
+                                                                        undefined,
+                                                                    refFieldName:
+                                                                        undefined,
+                                                                })
+                                                                return
+                                                            }
+                                                            onUpdate({
+                                                                ...field,
+                                                                refSelf: false,
+                                                                refSheetId:
+                                                                    Number(v),
+                                                                refBlockId:
+                                                                    undefined,
+                                                                refFieldName:
+                                                                    undefined,
+                                                            })
+                                                        }}
+                                                    >
+                                                        <MenuItem
+                                                            value={
+                                                                SELF_SENTINEL
+                                                            }
+                                                            disabled={
+                                                                localEligible.length ===
+                                                                0
+                                                            }
+                                                        >
+                                                            <em>
+                                                                (this block)
+                                                            </em>
+                                                        </MenuItem>
+                                                        {sheetIds.map((sid) => (
+                                                            <MenuItem
+                                                                key={sid}
+                                                                value={sid}
+                                                            >
+                                                                Sheet {sid}
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                </FormControl>
+                                                {!field.refSelf && (
+                                                    <FormControl
+                                                        size="small"
+                                                        fullWidth
+                                                        disabled={
+                                                            field.refSheetId ===
+                                                            undefined
+                                                        }
+                                                    >
+                                                        <InputLabel>
+                                                            Block
+                                                        </InputLabel>
+                                                        <Select
+                                                            value={
+                                                                field.refBlockId ??
+                                                                ''
+                                                            }
+                                                            label="Block"
+                                                            onChange={(e) =>
+                                                                onUpdate({
+                                                                    ...field,
+                                                                    refBlockId:
+                                                                        Number(
+                                                                            e
+                                                                                .target
+                                                                                .value
+                                                                        ),
+                                                                    refFieldName:
+                                                                        undefined,
+                                                                })
+                                                            }
+                                                        >
+                                                            {blockIdsForSheet.map(
+                                                                (bid) => (
+                                                                    <MenuItem
+                                                                        key={
+                                                                            bid
+                                                                        }
+                                                                        value={
+                                                                            bid
+                                                                        }
+                                                                    >
+                                                                        Block{' '}
+                                                                        {bid}
+                                                                    </MenuItem>
+                                                                )
+                                                            )}
+                                                        </Select>
+                                                    </FormControl>
+                                                )}
+                                                <FormControl
+                                                    size="small"
+                                                    fullWidth
+                                                    disabled={
+                                                        field.refSelf
+                                                            ? localEligible.length ===
+                                                              0
+                                                            : field.refBlockId ===
+                                                              undefined
+                                                    }
+                                                >
+                                                    <InputLabel>
+                                                        Field
+                                                    </InputLabel>
+                                                    <Select
+                                                        value={
+                                                            field.refFieldName ??
+                                                            ''
+                                                        }
+                                                        label="Field"
+                                                        onChange={(e) =>
+                                                            onUpdate({
+                                                                ...field,
+                                                                refFieldName: e
+                                                                    .target
+                                                                    .value as string,
+                                                            })
+                                                        }
+                                                    >
+                                                        {fieldOptions.map(
+                                                            (f) => (
+                                                                <MenuItem
+                                                                    key={f.id}
+                                                                    value={
+                                                                        f.name
+                                                                    }
+                                                                >
+                                                                    {f.name}
+                                                                </MenuItem>
+                                                            )
+                                                        )}
+                                                    </Select>
+                                                </FormControl>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    Only fields marked Unique
+                                                    (and primary keys) can be
+                                                    referenced. Existence is
+                                                    auto-validated — dangling
+                                                    references show a warning.
+                                                </Typography>
+                                            </Stack>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )
+                        })()}
+
                     {/* Validation for String/Number */}
                     {(field.type === 'string' || field.type === 'number') && (
                         <Card variant="outlined">
@@ -785,8 +1081,8 @@ export const FieldConfigPanel = ({
                                                 onChange={(e) =>
                                                     onUpdate({
                                                         ...field,
-                                                        unique:
-                                                            e.target.checked,
+                                                        unique: e.target
+                                                            .checked,
                                                     })
                                                 }
                                             />

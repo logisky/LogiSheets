@@ -114,6 +114,29 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             return `AND(${userValidation}, ${uniqueCheck})`
         }
 
+        // For a fieldRef cell we auto-inject an existence check pointing at
+        // the target block: any value picked from the dropdown should still
+        // be present there. If the source row is later deleted/renamed the
+        // ref becomes dangling and surfaces via the existing validation
+        // warning indicator. For a self-ref target we resolve to the block
+        // being composed (its id was allocated above).
+        const resolveRefTarget = (
+            field: FieldSetting
+        ): {sheetId: number; blockId: number} => {
+            if (field.refSelf) {
+                return {sheetId: currentSheetId, blockId}
+            }
+            return {
+                sheetId: field.refSheetId!,
+                blockId: field.refBlockId!,
+            }
+        }
+        const composeRefValidation = (field: FieldSetting): string => {
+            const {sheetId, blockId: bid} = resolveRefTarget(field)
+            const escapedName = (field.refFieldName ?? '').replace(/"/g, '""')
+            return `COUNTIF(BLOCKREFSB(${sheetId}, ${bid}, "*", "${escapedName}"), #PLACEHOLDER) >= 1`
+        }
+
         const fs: [string, FieldInfo][] = fields.map((field) => {
             if (field.type === 'enum') {
                 ty = {type: 'enum', id: field.enumId!}
@@ -133,7 +156,19 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 }
             } else if (field.type === 'image') {
                 ty = {type: 'image'}
+            } else if (field.type === 'fieldRef') {
+                const {sheetId, blockId: bid} = resolveRefTarget(field)
+                ty = {
+                    type: 'fieldRef',
+                    sheetId,
+                    blockId: bid,
+                    fieldName: field.refFieldName!,
+                    validation: composeRefValidation(field),
+                }
             }
+            // Primary keys are unique by definition; stamp it so cross-block
+            // enumeration doesn't have to special-case them.
+            const isUnique = !!field.unique || !!field.primary
             const f: FieldInfo = {
                 id: field.id,
                 sheetId: currentSheetId,
@@ -142,6 +177,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 type: ty,
                 description: field.description,
                 required: field.required,
+                unique: isUnique,
             }
             const r = BLOCK_MANAGER.fieldManager.create(
                 currentSheetId,
@@ -192,6 +228,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 case 'enum':
                 case 'multiSelect':
                 case 'boolean':
+                case 'fieldRef':
                     diyRender = true
                     break
                 case 'string':
@@ -293,6 +330,8 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                             onCancel={close}
                             onSave={handleSave}
                             enumSetManager={BLOCK_MANAGER.enumSetManager}
+                            fieldManager={BLOCK_MANAGER.fieldManager}
+                            localFields={fields}
                         />
                     ) : (
                         <Box

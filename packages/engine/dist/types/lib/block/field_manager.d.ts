@@ -21,6 +21,19 @@ export type FieldTypeEnum = {
     formatter: string;
 } | {
     type: "image";
+}
+/**
+ * Reference to another block's field. The dropdown options are pulled
+ * dynamically from the target block at render time. The validation
+ * formula carries an existence check so dangling refs surface as a
+ * warning indicator.
+ */
+ | {
+    type: "fieldRef";
+    sheetId: number;
+    blockId: number;
+    fieldName: string;
+    validation: string;
 };
 /**
  * Represents a complete field definition
@@ -40,6 +53,13 @@ export interface FieldInfo {
     description?: string;
     /** Whether this field is required */
     required: boolean;
+    /**
+     * Whether this field's values must be unique within the block.
+     * Used by the composer to enumerate eligible target fields when
+     * configuring a `fieldRef` cell. The actual duplicate check is
+     * enforced by an auto-injected COUNTIF validation formula.
+     */
+    unique: boolean;
     /** Default value */
     defaultValue?: string;
 }
