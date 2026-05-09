@@ -12,9 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        run: cargo build --verbose --workspace
+        run: cargo build --verbose --workspace --locked
       - name: Run tests
-        run: cargo test --verbose --workspace
+        run: cargo test --verbose --workspace --locked
 
       - name: generate bindings and ensure clean
         run: cargo run --package buildtools --bin generate --all-features
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: "22"
 
-      - run: yarn install && cargo install wasm-pack
+      - run: yarn install && cargo install --locked wasm-pack
       - run: yarn workspace logisheets-web build
       - run: yarn run run-scripts && yarn run wasm
       - run: yarn build
