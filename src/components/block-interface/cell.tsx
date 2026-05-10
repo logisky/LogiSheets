@@ -33,6 +33,7 @@ export type InteractiveCellKind =
     | 'datetime'
     | 'image'
     | 'fieldRef'
+    | 'multiSelectRef'
 
 export interface InteractiveCellSpec extends BlockCellProps {
     kind: 'interactive'
@@ -86,6 +87,8 @@ const pickInteractiveKind = (field: FieldInfo): InteractiveCellKind | null => {
             return 'image'
         case 'fieldRef':
             return 'fieldRef'
+        case 'multiSelectRef':
+            return 'multiSelectRef'
         default:
             return null
     }
@@ -93,7 +96,12 @@ const pickInteractiveKind = (field: FieldInfo): InteractiveCellKind | null => {
 
 const hasValidation = (field: FieldInfo): boolean => {
     const t = field.type
-    if (t.type === 'string' || t.type === 'number' || t.type === 'fieldRef') {
+    if (
+        t.type === 'string' ||
+        t.type === 'number' ||
+        t.type === 'fieldRef' ||
+        t.type === 'multiSelectRef'
+    ) {
         return t.validation !== ''
     }
     return false

@@ -96,6 +96,7 @@ impl<'a> Worksheet<'a> {
                 range_manager: &self.controller.status.range_manager,
                 cube_manager: &self.controller.status.cube_manager,
                 ext_ref_manager: &self.controller.status.ext_ref_manager,
+                block_schema_manager: &self.controller.status.block_schema_manager,
             };
             let f = unparse::unparse(node, &mut name_fetcher, self.sheet_id)?;
             Ok(f)
@@ -1416,7 +1417,11 @@ impl<'a> Worksheet<'a> {
         let block_place = self.get_block_place(block_id)?;
         let (row_cnt, col_cnt) = block_place.get_block_size();
         let (row_start, col_start) = self.get_block_master_cell(block_id)?;
-        let bp = self.controller.status.navigator.get_block_place(&self.sheet_id, &block_id)?;
+        let bp = self
+            .controller
+            .status
+            .navigator
+            .get_block_place(&self.sheet_id, &block_id)?;
         let schema = self
             .controller
             .status

@@ -34,6 +34,20 @@ export type FieldTypeEnum = {
     blockId: number;
     fieldName: string;
     validation: string;
+}
+/**
+ * Reference to another block's field, picking multiple values. Storage
+ * is a comma-separated string in the cell. Renderer parses the string
+ * into a list and shows a multi-select dropdown sourced from the same
+ * (sheetId, blockId, fieldName) target as `fieldRef`. v1 does not
+ * auto-inject existence validation — dangling refs are not surfaced.
+ */
+ | {
+    type: "multiSelectRef";
+    sheetId: number;
+    blockId: number;
+    fieldName: string;
+    validation: string;
 };
 /**
  * Represents a complete field definition

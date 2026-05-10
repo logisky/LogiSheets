@@ -18,11 +18,17 @@ export const ValidationCell = (props: BlockCellProps) => {
         colIdx,
     } = props
 
-    // string / number / fieldRef are the field types that carry a validation
-    // formula today. The dispatcher in index.tsx already routes display cells
-    // correctly, but this guard keeps the component independently safe to use.
+    // string / number / fieldRef / multiSelectRef are the field types that
+    // can carry a validation formula. The dispatcher in index.tsx already
+    // routes display cells correctly, but this guard keeps the component
+    // independently safe to use.
     const t = fieldInfo.type
-    if (t.type !== 'string' && t.type !== 'number' && t.type !== 'fieldRef') {
+    if (
+        t.type !== 'string' &&
+        t.type !== 'number' &&
+        t.type !== 'fieldRef' &&
+        t.type !== 'multiSelectRef'
+    ) {
         return null
     }
 

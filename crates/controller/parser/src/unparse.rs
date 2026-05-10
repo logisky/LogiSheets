@@ -4,7 +4,7 @@ use logisheets_base::{
 };
 
 use crate::ast::{
-    CellReference, CubeDisplay, Error, ExtRefDisplay, Func, InfixOperator, Operator,
+    BlockRefNode, CellReference, CubeDisplay, Error, ExtRefDisplay, Func, InfixOperator, Operator,
     PostfixOperator, PrefixOperator, PureNode, RangeDisplay, Value,
 };
 use crate::errors::ParseError;
@@ -47,6 +47,64 @@ impl Stringify for PureNode {
             PureNode::Func(func) => func.unparse(fetcher, curr_sheet),
             PureNode::Value(v) => v.unparse(fetcher, curr_sheet),
             PureNode::Reference(cr) => cr.unparse(fetcher, curr_sheet),
+            PureNode::BlockRef(node) => node.unparse(fetcher, curr_sheet),
+        }
+    }
+}
+
+impl Stringify for BlockRefNode {
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    where
+        T: NameFetcherTrait,
+    {
+        match self {
+            BlockRefNode::Single {
+                sheet_id,
+                block_id,
+                field_id,
+                by_block,
+                key,
+            } => {
+                let key_str = key.unparse(fetcher, curr_sheet)?;
+                let field_name = fetcher
+                    .fetch_block_field_name_by_id(*sheet_id, *block_id, *field_id)
+                    .unwrap_or_else(|| String::from("#REF!"));
+                if *by_block {
+                    Ok(format!(
+                        "BLOCKREFB({}, {}, {}, \"{}\")",
+                        sheet_id, block_id, key_str, field_name
+                    ))
+                } else {
+                    let ref_name = fetcher
+                        .fetch_block_ref_name_by_id(*sheet_id, *block_id)
+                        .unwrap_or_else(|| String::from("#REF!"));
+                    Ok(format!(
+                        "BLOCKREF(\"{}\", {}, \"{}\")",
+                        ref_name, key_str, field_name
+                    ))
+                }
+            }
+            BlockRefNode::Multi {
+                sheet_id,
+                block_id,
+                by_block,
+                key_condition,
+                field_condition,
+            } => {
+                let kc = key_condition.unparse(fetcher, curr_sheet)?;
+                let fc = field_condition.unparse(fetcher, curr_sheet)?;
+                if *by_block {
+                    Ok(format!(
+                        "BLOCKREFSB({}, {}, {}, {})",
+                        sheet_id, block_id, kc, fc
+                    ))
+                } else {
+                    let ref_name = fetcher
+                        .fetch_block_ref_name_by_id(*sheet_id, *block_id)
+                        .unwrap_or_else(|| String::from("#REF!"));
+                    Ok(format!("BLOCKREFS(\"{}\", {}, {})", ref_name, kc, fc))
+                }
+            }
         }
     }
 }

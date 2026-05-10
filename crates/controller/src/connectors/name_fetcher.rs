@@ -1,10 +1,11 @@
 use logisheets_base::{
     errors::{BasicError, Result},
     name_fetcher::NameFetcherTrait,
-    CellId, ExtBookId, ExtRef, NameId, Range, SheetId,
+    BlockFieldId, BlockId, CellId, ExtBookId, ExtRef, NameId, Range, SheetId,
 };
 
 use crate::{
+    block_manager::schema_manager::SchemaManager,
     cube_manager::CubeManager,
     ext_book_manager::ExtBooksManager,
     ext_ref_manager::ExtRefManager,
@@ -23,6 +24,7 @@ pub struct NameFetcher<'a> {
     pub text_id_manager: &'a TextIdManager,
     pub name_id_manager: &'a NameIdManager,
     pub navigator: &'a Navigator,
+    pub block_schema_manager: &'a SchemaManager,
 }
 
 impl<'a> NameFetcherTrait for NameFetcher<'a> {
@@ -85,5 +87,20 @@ impl<'a> NameFetcherTrait for NameFetcher<'a> {
         self.ext_ref_manager
             .get_ext_ref(ext_ref_id)
             .ok_or(BasicError::ExtRefIdNotFound(*ext_ref_id))
+    }
+
+    fn fetch_block_ref_name_by_id(&self, sheet_id: SheetId, block_id: BlockId) -> Option<String> {
+        self.block_schema_manager
+            .fetch_block_ref_name(sheet_id, block_id)
+    }
+
+    fn fetch_block_field_name_by_id(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field_id: BlockFieldId,
+    ) -> Option<String> {
+        self.block_schema_manager
+            .fetch_field_name(sheet_id, block_id, field_id)
     }
 }

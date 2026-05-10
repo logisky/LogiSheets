@@ -364,22 +364,35 @@ export const FieldConfigPanel = ({
                                                     format,
                                                     // Reset ref target when
                                                     // moving away from
-                                                    // fieldRef so stale
-                                                    // pointers don't leak.
+                                                    // fieldRef / multiSelectRef
+                                                    // so stale pointers don't
+                                                    // leak.
                                                     refSelf:
-                                                        newType === 'fieldRef'
+                                                        newType ===
+                                                            'fieldRef' ||
+                                                        newType ===
+                                                            'multiSelectRef'
                                                             ? field.refSelf
                                                             : undefined,
                                                     refSheetId:
-                                                        newType === 'fieldRef'
+                                                        newType ===
+                                                            'fieldRef' ||
+                                                        newType ===
+                                                            'multiSelectRef'
                                                             ? field.refSheetId
                                                             : undefined,
                                                     refBlockId:
-                                                        newType === 'fieldRef'
+                                                        newType ===
+                                                            'fieldRef' ||
+                                                        newType ===
+                                                            'multiSelectRef'
                                                             ? field.refBlockId
                                                             : undefined,
                                                     refFieldName:
-                                                        newType === 'fieldRef'
+                                                        newType ===
+                                                            'fieldRef' ||
+                                                        newType ===
+                                                            'multiSelectRef'
                                                             ? field.refFieldName
                                                             : undefined,
                                                 })
@@ -408,6 +421,9 @@ export const FieldConfigPanel = ({
                                             </MenuItem>
                                             <MenuItem value="fieldRef">
                                                 Reference (Field)
+                                            </MenuItem>
+                                            <MenuItem value="multiSelectRef">
+                                                Reference (Multiple)
                                             </MenuItem>
                                         </Select>
                                     </FormControl>
@@ -797,15 +813,18 @@ export const FieldConfigPanel = ({
                         </Card>
                     )}
 
-                    {/* Reference target for fieldRef: cascading sheet → block
-                        → field pickers. Eligible target fields are those
-                        with `unique: true` on the engine FieldInfo (which
-                        includes primary keys after our save-time stamp).
+                    {/* Reference target for fieldRef / multiSelectRef:
+                        cascading sheet → block → field pickers. Both single
+                        and multi variants share the same target metadata,
+                        so the picker is shared. Eligible target fields are
+                        those with `unique: true` on the engine FieldInfo
+                        (includes primary keys after our save-time stamp).
                         The Sheet dropdown also offers a "(this block)"
                         sentinel that points at the block being composed —
                         the new block's id isn't allocated yet, so we resolve
                         it at save time. */}
-                    {field.type === 'fieldRef' &&
+                    {(field.type === 'fieldRef' ||
+                        field.type === 'multiSelectRef') &&
                         (() => {
                             const SELF_SENTINEL = '__self__'
                             const externalEligible = fieldManager

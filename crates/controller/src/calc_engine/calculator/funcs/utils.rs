@@ -206,11 +206,19 @@ pub mod tests_utils {
             unreachable!()
         }
 
-        fn get_all_keys_by_block(&self, _sheet_id: SheetId, _block_id: logisheets_base::BlockId) -> Vec<(String, SheetId, BlockCellId)> {
+        fn get_all_keys_by_block(
+            &self,
+            _sheet_id: SheetId,
+            _block_id: logisheets_base::BlockId,
+        ) -> Vec<(String, SheetId, BlockCellId)> {
             unreachable!()
         }
 
-        fn get_all_fields_by_block(&self, _sheet_id: SheetId, _block_id: logisheets_base::BlockId) -> Vec<String> {
+        fn get_all_fields_by_block(
+            &self,
+            _sheet_id: SheetId,
+            _block_id: logisheets_base::BlockId,
+        ) -> Vec<String> {
             unreachable!()
         }
 
@@ -221,6 +229,42 @@ pub mod tests_utils {
             _key: &String,
             _field: &String,
         ) -> Option<(SheetId, logisheets_base::BlockCellId)> {
+            unreachable!()
+        }
+
+        fn resolve_by_block_field_id(
+            &self,
+            _sheet_id: SheetId,
+            _block_id: logisheets_base::BlockId,
+            _key: &String,
+            _field_id: logisheets_base::BlockFieldId,
+        ) -> Option<(SheetId, logisheets_base::BlockCellId)> {
+            unreachable!()
+        }
+
+        fn get_all_field_ids_by_block(
+            &self,
+            _sheet_id: SheetId,
+            _block_id: logisheets_base::BlockId,
+        ) -> Vec<(String, logisheets_base::BlockFieldId)> {
+            unreachable!()
+        }
+
+        fn resolve_field_id(
+            &self,
+            _sheet_id: SheetId,
+            _block_id: logisheets_base::BlockId,
+            _field: &str,
+        ) -> Option<logisheets_base::BlockFieldId> {
+            unreachable!()
+        }
+
+        fn fetch_field_name(
+            &self,
+            _sheet_id: SheetId,
+            _block_id: logisheets_base::BlockId,
+            _field_id: logisheets_base::BlockFieldId,
+        ) -> Option<String> {
             unreachable!()
         }
     }

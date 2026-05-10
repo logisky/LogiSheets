@@ -9,34 +9,53 @@ use crate::calc_engine::{
     connector::Connector,
 };
 
-pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+/// Multi-cell block reference. The textual ref-name has already been
+/// resolved to `(sheet_id, block_id)` at parse time, so this just evaluates
+/// the runtime conditions and gathers the matching cells.
+pub fn calc_multi<C>(
+    sheet_id: logisheets_base::SheetId,
+    block_id: logisheets_base::BlockId,
+    key_condition: &ast::Node,
+    field_condition: &ast::Node,
+    fetcher: &mut C,
+) -> CalcVertex
 where
     C: Connector,
 {
-    assert_or_return!(args.len() == 3, ast::Error::Unspecified);
-    let mut args_iter = args.into_iter();
-    let ref_name = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_text_from_calc_value!(ref_name, ref_name);
-
-    let key_condition = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_text_from_calc_value!(key_condition, key_condition);
-    let field_condition = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_text_from_calc_value!(field_condition, field_condition);
+    let key_condition_str = match calc_text_arg(key_condition, fetcher) {
+        Some(s) => s,
+        None => return CalcVertex::from_error(ast::Error::Value),
+    };
+    let field_condition_str = match calc_text_arg(field_condition, fetcher) {
+        Some(s) => s,
+        None => return CalcVertex::from_error(ast::Error::Value),
+    };
 
     let keys = fetcher
-        .get_all_keys(&ref_name)
+        .get_all_keys_by_block(sheet_id, block_id)
         .into_iter()
         .map(|(t, _, _)| Value::Text(t));
-    let fields = fetcher.get_all_fields(&ref_name).into_iter();
+    let fields = fetcher
+        .get_all_fields_by_block(sheet_id, block_id)
+        .into_iter();
 
     calc_matrix(
         fetcher,
         keys,
         fields,
-        key_condition,
-        field_condition,
-        |fetcher, key, field| fetcher.resolve(&ref_name, key, field),
+        key_condition_str,
+        field_condition_str,
+        |fetcher, key, field| fetcher.resolve_by_block(sheet_id, block_id, key, field),
     )
+}
+
+fn calc_text_arg<C: Connector>(node: &ast::Node, fetcher: &mut C) -> Option<String> {
+    let v = crate::calc_engine::calculator::calculator::calc_node(node, fetcher);
+    match fetcher.get_calc_value(v) {
+        CalcValue::Scalar(Value::Text(t)) => Some(t),
+        CalcValue::Scalar(Value::Number(n)) => Some(n.to_string()),
+        _ => None,
+    }
 }
 
 pub(crate) fn calc_matrix<C, IKeys, IFields, F>(

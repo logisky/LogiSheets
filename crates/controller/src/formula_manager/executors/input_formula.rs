@@ -8,7 +8,6 @@ use logisheets_parser::Parser;
 use std::collections::HashSet;
 
 use crate::formula_manager::{ctx::FormulaExecCtx, FormulaManager, Vertex};
-use crate::id_manager::{BLOCKREFS_ID, BLOCKREF_ID};
 
 pub fn input_formula<C: FormulaExecCtx>(
     executor: FormulaExecutor,
@@ -117,7 +116,7 @@ fn remove<C: FormulaExecCtx>(
         dirty_vertices: executor.dirty_vertices,
         dirty_ranges: executor.dirty_ranges,
         dirty_cubes: executor.dirty_cubes,
-        dirty_schemas: executor.dirty_schemas,
+        dirty_blocks: executor.dirty_blocks,
         trigger: executor.trigger,
     })
 }
@@ -184,7 +183,7 @@ fn input<C: FormulaExecCtx>(
         dirty_vertices: executor.dirty_vertices,
         dirty_ranges: executor.dirty_ranges,
         dirty_cubes: executor.dirty_cubes,
-        dirty_schemas: executor.dirty_schemas,
+        dirty_blocks: executor.dirty_blocks,
         trigger: executor.trigger,
     })
 }
@@ -214,16 +213,6 @@ fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
             func.args
                 .iter()
                 .for_each(|n| get_all_vertices_from_ast(n, vertices));
-            if let ast::Operator::Function(id) = func.op {
-                if id == BLOCKREFS_ID || id == BLOCKREF_ID {
-                    if let Some(arg0) = func.args.get(0) {
-                        if let ast::PureNode::Value(ast::Value::Text(text)) = &arg0.pure {
-                            let vertex = Vertex::BlockSchema(text.clone());
-                            vertices.insert(vertex);
-                        }
-                    }
-                }
-            }
         }
         ast::PureNode::Value(_) => {}
         ast::PureNode::Reference(reference) => match reference {
@@ -248,6 +237,40 @@ fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
                 vertices.insert(vertex);
             }
             ast::CellReference::RefErr => {}
+        },
+        ast::PureNode::BlockRef(node) => match node {
+            ast::BlockRefNode::Single {
+                sheet_id,
+                block_id,
+                field_id,
+                key,
+                ..
+            } => {
+                // Single-cell ref reacts to: that field column, the key
+                // column (because the matching row depends on key values),
+                // and any structural change to the block.
+                vertices.insert(Vertex::Block(*sheet_id, *block_id, *field_id));
+                vertices.insert(Vertex::BlockKey(*sheet_id, *block_id));
+                vertices.insert(Vertex::BlockAll(*sheet_id, *block_id));
+                get_all_vertices_from_ast(key, vertices);
+            }
+            ast::BlockRefNode::Multi {
+                sheet_id,
+                block_id,
+                key_condition,
+                field_condition,
+                ..
+            } => {
+                // Multi scans an arbitrary subset of fields under runtime
+                // filters; tracking exactly which fields survive the filter
+                // is a future optimization. For correctness we depend on the
+                // whole block (any field column, any key change, structural
+                // change).
+                vertices.insert(Vertex::BlockAll(*sheet_id, *block_id));
+                vertices.insert(Vertex::BlockKey(*sheet_id, *block_id));
+                get_all_vertices_from_ast(key_condition, vertices);
+                get_all_vertices_from_ast(field_condition, vertices);
+            }
         },
     }
 }

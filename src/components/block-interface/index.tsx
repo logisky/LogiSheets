@@ -29,6 +29,7 @@ import {RequiredCell} from './required-cell'
 import {DatetimeCell} from './datetime-cell'
 import {ImageCell} from './image'
 import {FieldRefCell} from './field-ref-cell'
+import {MultiFieldRefCell} from './multi-field-ref-cell'
 
 export interface BlockInterfaceProps {
     grid: Grid
@@ -428,6 +429,8 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                             return <ImageCell key={idx} {...spec} />
                         case 'fieldRef':
                             return <FieldRefCell key={idx} {...spec} />
+                        case 'multiSelectRef':
+                            return <MultiFieldRefCell key={idx} {...spec} />
                     }
                 }
                 switch (spec.displayKind) {

@@ -1,0 +1,18 @@
+INPUT   A1  =REGEXTEST("docker compose","compose")
+CHECKSTR    A1  TRUE
+INPUT   A2  =REGEXTEST("Docker","docker")
+CHECKSTR    A2  FALSE
+INPUT   A3  =REGEXTEST("Docker","docker",1)
+CHECKSTR    A3  TRUE
+INPUT   A4  =REGEXTEST("port 8080 open","\d+")
+CHECKSTR    A4  TRUE
+INPUT   A5  =REGEXEXTRACT("port 8080 open","\d+")
+CHECKSTR    A5  8080
+INPUT   A6  =REGEXREPLACE("v1.2.3","\d+","X")
+CHECKSTR    A6  vX.X.X
+INPUT   A7  =REGEXREPLACE("v1.2.3","\d+","X",2)
+CHECKSTR    A7  v1.X.3
+INPUT   A8  =REGEXREPLACE("8080:80","^(\d+):(\d+)$","$2:$1")
+CHECKSTR    A8  80:8080
+INPUT   A9  =REGEXTEST("hello","[")
+CHECKERR    A9  #VALUE!

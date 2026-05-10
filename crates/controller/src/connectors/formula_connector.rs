@@ -1,14 +1,17 @@
 use logisheets_base::block_affect::BlockAffectTrait;
+use logisheets_base::block_ref::BlockRefResolverTrait;
 use logisheets_base::errors::BasicError;
 use logisheets_base::get_book_name::GetBookNameTrait;
 use logisheets_base::id_fetcher::{IdFetcherTrait, SheetIdFetcherByIdxTrait, VertexFetcherTrait};
 use logisheets_base::index_fetcher::IndexFetcherTrait;
 use logisheets_base::matrix_value::cross_product_usize;
 use logisheets_base::{
-    BlockCellId, BlockId, BlockRange, CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId,
-    FuncId, NameId, NormalCellId, NormalRange, Range, RangeId, RowId, SheetId, TextId,
+    BlockCellId, BlockFieldId, BlockId, BlockRange, CellId, ColId, Cube, CubeId, ExtBookId, ExtRef,
+    ExtRefId, FuncId, NameId, NormalCellId, NormalRange, Range, RangeId, RowId, SheetId, TextId,
 };
 
+use crate::block_manager::schema_manager::schema::BlockCellRole;
+use crate::block_manager::schema_manager::SchemaManager;
 use crate::cube_manager::CubeManager;
 use crate::ext_book_manager::ExtBooksManager;
 use crate::ext_ref_manager::ExtRefManager;
@@ -37,6 +40,7 @@ pub struct FormulaConnector<'a> {
     pub id_navigator: &'a Navigator,
     pub idx_navigator: &'a Navigator,
     pub external_links_manager: &'a mut ExtBooksManager,
+    pub block_schema_manager: &'a SchemaManager,
 
     pub sid_assigner: &'a ShadowIdAssigner,
 }
@@ -300,11 +304,50 @@ impl<'a> IndexFetcherTrait for FormulaConnector<'a> {
     }
 }
 
+impl<'a> BlockRefResolverTrait for FormulaConnector<'a> {
+    fn resolve_block_ref_name(&self, ref_name: &str) -> Option<(SheetId, BlockId)> {
+        self.block_schema_manager.resolve_block_ref_name(ref_name)
+    }
+
+    fn resolve_block_field(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field: &str,
+    ) -> Option<BlockFieldId> {
+        self.block_schema_manager
+            .resolve_field_id(sheet_id, block_id, field)
+    }
+
+    fn fetch_block_ref_name(&self, sheet_id: SheetId, block_id: BlockId) -> Option<String> {
+        self.block_schema_manager
+            .fetch_block_ref_name(sheet_id, block_id)
+    }
+
+    fn fetch_block_field_name(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field_id: BlockFieldId,
+    ) -> Option<String> {
+        self.block_schema_manager
+            .fetch_field_name(sheet_id, block_id, field_id)
+    }
+}
+
 impl<'a> logisheets_parser::context::ContextTrait for FormulaConnector<'a> {}
 
 impl<'a> FormulaExecCtx for FormulaConnector<'a> {
     fn get_cell_id_by_shadow_id(&self, shadow_id: &u64) -> Option<(SheetId, CellId)> {
         self.sid_assigner.get_cell_id(*shadow_id)
+    }
+
+    fn lookup_range(&self, sheet_id: SheetId, range_id: RangeId) -> Option<Range> {
+        self.range_manager.get_range(&sheet_id, &range_id)
+    }
+
+    fn block_cell_role(&self, sheet_id: SheetId, cell: &BlockCellId) -> BlockCellRole {
+        self.block_schema_manager.cell_role(sheet_id, cell)
     }
 
     fn get_range_deps(&self, vertex: &Vertex) -> Vec<Vertex> {

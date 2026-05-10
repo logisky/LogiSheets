@@ -1,5 +1,6 @@
 use logisheets_base::{
-    CellId, ColId, CubeId, ExtBookId, ExtRefId, FuncId, NameId, RangeId, RefAbs, RowId, SheetId,
+    BlockFieldId, BlockId, CellId, ColId, CubeId, ExtBookId, ExtRefId, FuncId, NameId, RangeId,
+    RefAbs, RowId, SheetId,
 };
 use std::hash::{Hash, Hasher};
 
@@ -107,6 +108,36 @@ pub enum PureNode {
     Func(Func),
     Value(Value),
     Reference(CellReference),
+    BlockRef(BlockRefNode),
+}
+
+/// Stable, id-keyed AST node for `BLOCKREF / BLOCKREFS / BLOCKREFB / BLOCKREFSB`.
+///
+/// The textual `ref_name` and `field` arguments are resolved into stable ids at
+/// parse time, so dependency tracking (and rename safety) does not depend on
+/// the strings the user typed. Both unparse and calc consume these ids
+/// directly. The runtime expressions (`key`, `key_condition`, `field_condition`)
+/// stay as `Node` because they may reference cells.
+#[derive(Debug, Clone)]
+pub enum BlockRefNode {
+    /// Single (BLOCKREF / BLOCKREFB): pick one block-cell by key/field.
+    Single {
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field_id: BlockFieldId,
+        /// Whether the source form was `BLOCKREFB` (sheet/block id literals)
+        /// or `BLOCKREF` (string ref-name). Only affects unparse.
+        by_block: bool,
+        key: Box<Node>,
+    },
+    /// Multi (BLOCKREFS / BLOCKREFSB): scan a block under filters.
+    Multi {
+        sheet_id: SheetId,
+        block_id: BlockId,
+        by_block: bool,
+        key_condition: Box<Node>,
+        field_condition: Box<Node>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -136,6 +167,38 @@ impl Node {
                 pure: PureNode::Value(v),
                 bracket: self.bracket,
             }),
+            PureNode::BlockRef(BlockRefNode::Single {
+                sheet_id,
+                block_id,
+                field_id,
+                by_block,
+                key,
+            }) => Node {
+                pure: PureNode::BlockRef(BlockRefNode::Single {
+                    sheet_id,
+                    block_id,
+                    field_id,
+                    by_block,
+                    key: Box::new((*key).accept(visitor)),
+                }),
+                bracket: self.bracket,
+            },
+            PureNode::BlockRef(BlockRefNode::Multi {
+                sheet_id,
+                block_id,
+                by_block,
+                key_condition,
+                field_condition,
+            }) => Node {
+                pure: PureNode::BlockRef(BlockRefNode::Multi {
+                    sheet_id,
+                    block_id,
+                    by_block,
+                    key_condition: Box::new((*key_condition).accept(visitor)),
+                    field_condition: Box::new((*field_condition).accept(visitor)),
+                }),
+                bracket: self.bracket,
+            },
             _ => self,
         }
     }

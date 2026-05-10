@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use logisheets_base::{errors::BasicError, Addr, CellId, ColId, CubeId, RangeId, RowId, SheetId};
+use logisheets_base::{
+    errors::BasicError, Addr, BlockId, CellId, ColId, CubeId, RangeId, RowId, SheetId,
+};
 
 use crate::{
     async_func_manager::AsyncFuncManager,
@@ -139,7 +141,7 @@ impl<'a> Executor<'a> {
 
         let (block_schema_executor, _block_schema_updated) =
             result.execute_bind_schema(payload.clone())?;
-        let dirty_schemas = block_schema_executor.dirty_schemas;
+        let dirty_blocks = block_schema_executor.dirty_blocks;
         result.status.block_schema_manager = block_schema_executor.manager;
 
         let (field_render_executor, _field_render_updated) =
@@ -158,7 +160,7 @@ impl<'a> Executor<'a> {
             payload.clone(),
             &old_navigator,
             dirty_ranges,
-            dirty_schemas,
+            dirty_blocks,
             dirty_cubes,
             range_executor.trigger,
         )?;
@@ -429,7 +431,7 @@ impl<'a> Executor<'a> {
         payload: EditPayload,
         old_navigator: &Navigator,
         dirty_ranges: HashSet<(SheetId, RangeId)>,
-        dirty_schemas: HashSet<String>,
+        dirty_blocks: HashSet<(SheetId, BlockId)>,
         dirty_cubes: HashSet<CubeId>,
         trigger: Option<(SheetId, RangeId)>,
     ) -> Result<FormulaExecutor, Error> {
@@ -446,13 +448,14 @@ impl<'a> Executor<'a> {
             id_navigator: &mut self.status.navigator,
             idx_navigator: old_navigator,
             external_links_manager: &mut self.status.external_links_manager,
+            block_schema_manager: &self.status.block_schema_manager,
             sid_assigner: &self.sid_assigner,
         };
         let executor = FormulaExecutor {
             manager: self.status.formula_manager.clone(),
             dirty_vertices: HashSet::new(),
             dirty_ranges,
-            dirty_schemas,
+            dirty_blocks,
             dirty_cubes,
             trigger,
         };

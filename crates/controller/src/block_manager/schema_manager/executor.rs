@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use logisheets_base::errors::BasicError;
+use logisheets_base::{errors::BasicError, BlockId, SheetId};
 
 use crate::{
     block_manager::schema_manager::{
@@ -14,14 +14,18 @@ use crate::{
 
 pub struct BlockSchemaExecutor {
     pub manager: SchemaManager,
-    pub dirty_schemas: HashSet<String>,
+    /// Blocks whose schema was (re)bound during this payload. The formula
+    /// executor turns these into `Vertex::BlockAll(sheet, block)` dirty
+    /// entries — id-keyed so that ref-name renames don't break dependency
+    /// tracking the way the old string-keyed `dirty_schemas` did.
+    pub dirty_blocks: HashSet<(SheetId, BlockId)>,
 }
 
 impl BlockSchemaExecutor {
     pub fn new(manager: SchemaManager) -> Self {
         Self {
             manager,
-            dirty_schemas: HashSet::new(),
+            dirty_blocks: HashSet::new(),
         }
     }
 
@@ -32,7 +36,7 @@ impl BlockSchemaExecutor {
     ) -> Result<(Self, bool), Error> {
         match payload {
             EditPayload::BindFormSchema(p) => {
-                let mut dirty_schemas = self.dirty_schemas;
+                let mut dirty_blocks = self.dirty_blocks;
                 let mut manager = self.manager;
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
@@ -84,23 +88,22 @@ impl BlockSchemaExecutor {
                 if old_schema.is_some() {
                     let old_ref = old_schema.unwrap().get_ref_name();
                     manager.refs.remove(&old_ref);
-                    dirty_schemas.insert(old_ref);
                 }
                 manager.schemas.insert((sheet_id, block_id), schema);
                 manager
                     .refs
                     .insert(p.ref_name.clone(), (sheet_id, block_id));
-                dirty_schemas.insert(p.ref_name);
+                dirty_blocks.insert((sheet_id, block_id));
                 Ok((
                     Self {
                         manager,
-                        dirty_schemas,
+                        dirty_blocks,
                     },
                     true,
                 ))
             }
             EditPayload::BindRandomSchema(p) => {
-                let mut dirty_schemas = self.dirty_schemas;
+                let mut dirty_blocks = self.dirty_blocks;
                 let mut manager = self.manager;
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
@@ -121,17 +124,16 @@ impl BlockSchemaExecutor {
                 if old_schema.is_some() {
                     let old_ref = old_schema.unwrap().get_ref_name();
                     manager.refs.remove(&old_ref);
-                    dirty_schemas.insert(old_ref);
                 }
                 manager.schemas.insert((sheet_id, block_id), schema);
                 manager
                     .refs
                     .insert(p.ref_name.clone(), (sheet_id, block_id));
-                dirty_schemas.insert(p.ref_name);
+                dirty_blocks.insert((sheet_id, block_id));
                 Ok((
                     Self {
                         manager,
-                        dirty_schemas,
+                        dirty_blocks,
                     },
                     true,
                 ))

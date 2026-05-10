@@ -1001,8 +1001,8 @@ impl Payload for LineFormatBrush {}
 impl Payload for EphemeralCellInput {}
 impl Payload for ConvertBlock {}
 impl Payload for UpsertFieldRenderInfo {}
-impl Payload for BindFormSchema{}
-impl Payload for BindRandomSchema{}
+impl Payload for BindFormSchema {}
+impl Payload for BindRandomSchema {}
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,4 @@
 pub mod blockref;
-pub mod blockrefb;
 pub mod blockrefs;
-pub mod blockrefsb;
+
+pub use blockref::calc_block_ref;
