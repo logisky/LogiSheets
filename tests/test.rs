@@ -149,6 +149,24 @@ mod funcs {
         }
     }
 
+    #[test]
+    fn test_empty_workbook_save_open_get_cell() {
+        use logisheets::Workbook;
+        let wb = Workbook::default();
+        // Sanity: default workbook has Sheet1 reachable by idx 0.
+        let v0 = wb.get_sheet_by_idx(0).unwrap().get_value(0, 0).unwrap();
+        assert!(matches!(v0, logisheets::Value::Empty));
+        let bytes = wb.save().expect("save empty workbook");
+        let mut bytes = bytes;
+        let reopened = Workbook::from_file(&mut bytes, "test".to_string()).expect("reopen");
+        let v = reopened.get_sheet_by_idx(0).unwrap().get_value(0, 0);
+        // Empty cell → should be Empty, not panic.
+        match v {
+            Ok(logisheets::Value::Empty) => (),
+            other => panic!("unexpected: {:?}", other),
+        }
+    }
+
     /// Mirror the exact payload sequence the block-composer UI emits:
     /// fields list *includes* the primary key, field_from = 0,
     /// key_idx points at the primary in that list. Then mutate a field cell
