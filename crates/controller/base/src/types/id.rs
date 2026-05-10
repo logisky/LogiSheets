@@ -1,6 +1,7 @@
 pub type Id = u32;
 pub type RowId = u32;
 pub type ColId = u32;
+pub type BlockFieldId = u32;
 pub type RangeId = u32;
 pub type CubeId = u32;
 pub type ExtRefId = u32;

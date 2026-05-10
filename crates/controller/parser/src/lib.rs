@@ -253,6 +253,35 @@ impl Parser {
             let arg_node = self.build_arg(arg, curr_sheet, context);
             args.push(arg_node);
         }
+
+        // BLOCKREF / BLOCKREFS / BLOCKREFB / BLOCKREFSB get folded into a
+        // dedicated BlockRef AST node with stable ids. Parse-time substitution
+        // is what makes these formulas survive ref-name and field renames.
+        let upper = func_name.to_uppercase();
+        match upper.as_str() {
+            "BLOCKREF" => {
+                if let Some(node) = build_blockref_by_name(&args, false, context) {
+                    return node;
+                }
+            }
+            "BLOCKREFS" => {
+                if let Some(node) = build_blockrefs_by_name(args.clone(), context) {
+                    return node;
+                }
+            }
+            "BLOCKREFB" => {
+                if let Some(node) = build_blockref_by_id(&args, context) {
+                    return node;
+                }
+            }
+            "BLOCKREFSB" => {
+                if let Some(node) = build_blockrefs_by_id(args.clone(), context) {
+                    return node;
+                }
+            }
+            _ => {}
+        }
+
         let op = ast::Operator::Function(context.fetch_func_id(&func_name));
         let func = ast::Func { op, args };
         ast::PureNode::Func(func)
@@ -361,6 +390,121 @@ fn build_error(pair: Pair<Rule>) -> ast::PureNode {
 fn build_string_constant(pair: Pair<Rule>) -> ast::PureNode {
     let v = pair.as_str().trim_matches('"').to_string();
     ast::PureNode::Value(ast::Value::Text(v))
+}
+
+// Below: BlockRef parse-time helpers. They take the already-parsed argument
+// nodes, peel off the literal `ref_name`/`field` strings (or sheet/block id
+// numbers for the *B variants), call the resolver to get stable ids, and emit
+// a `PureNode::BlockRef` if everything resolves. On failure we return `None`
+// so the caller falls back to the generic function call path — that surfaces
+// as `#NAME?` at calc time, which is the expected UX for a typo or for a
+// formula typed before the schema was bound.
+
+fn extract_string_literal(node: &ast::Node) -> Option<String> {
+    match &node.pure {
+        ast::PureNode::Value(ast::Value::Text(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_number_literal(node: &ast::Node) -> Option<f64> {
+    match &node.pure {
+        ast::PureNode::Value(ast::Value::Number(n)) => Some(*n),
+        _ => None,
+    }
+}
+
+fn build_blockref_by_name<T>(
+    args: &[ast::Node],
+    by_block: bool,
+    context: &T,
+) -> Option<ast::PureNode>
+where
+    T: ContextTrait,
+{
+    if by_block || args.len() != 3 {
+        return None;
+    }
+    let ref_name = extract_string_literal(args.get(0)?)?;
+    let field = extract_string_literal(args.get(2)?)?;
+    let (sheet_id, block_id) = context.resolve_block_ref_name(&ref_name)?;
+    let field_id = context.resolve_block_field(sheet_id, block_id, &field)?;
+    let key = args.get(1)?.clone();
+    Some(ast::PureNode::BlockRef(ast::BlockRefNode::Single {
+        sheet_id,
+        block_id,
+        field_id,
+        by_block: false,
+        key: Box::new(key),
+    }))
+}
+
+fn build_blockref_by_id<T>(args: &[ast::Node], context: &T) -> Option<ast::PureNode>
+where
+    T: ContextTrait,
+{
+    // BLOCKREFB(sheet_id, block_id, key, field) — sheet/block come in as
+    // numeric literals from the formula bar; field still resolves to id.
+    if args.len() != 4 {
+        return None;
+    }
+    let sheet_id = extract_number_literal(args.get(0)?)? as logisheets_base::SheetId;
+    let block_id = extract_number_literal(args.get(1)?)? as logisheets_base::BlockId;
+    let field = extract_string_literal(args.get(3)?)?;
+    let field_id = context.resolve_block_field(sheet_id, block_id, &field)?;
+    let key = args.get(2)?.clone();
+    Some(ast::PureNode::BlockRef(ast::BlockRefNode::Single {
+        sheet_id,
+        block_id,
+        field_id,
+        by_block: true,
+        key: Box::new(key),
+    }))
+}
+
+fn build_blockrefs_by_name<T>(args: Vec<ast::Node>, context: &T) -> Option<ast::PureNode>
+where
+    T: ContextTrait,
+{
+    if args.len() != 3 {
+        return None;
+    }
+    let mut iter = args.into_iter();
+    let ref_node = iter.next()?;
+    let key_condition = iter.next()?;
+    let field_condition = iter.next()?;
+    let ref_name = extract_string_literal(&ref_node)?;
+    let (sheet_id, block_id) = context.resolve_block_ref_name(&ref_name)?;
+    Some(ast::PureNode::BlockRef(ast::BlockRefNode::Multi {
+        sheet_id,
+        block_id,
+        by_block: false,
+        key_condition: Box::new(key_condition),
+        field_condition: Box::new(field_condition),
+    }))
+}
+
+fn build_blockrefs_by_id<T>(args: Vec<ast::Node>, _context: &T) -> Option<ast::PureNode>
+where
+    T: ContextTrait,
+{
+    if args.len() != 4 {
+        return None;
+    }
+    let mut iter = args.into_iter();
+    let sheet_node = iter.next()?;
+    let block_node = iter.next()?;
+    let key_condition = iter.next()?;
+    let field_condition = iter.next()?;
+    let sheet_id = extract_number_literal(&sheet_node)? as logisheets_base::SheetId;
+    let block_id = extract_number_literal(&block_node)? as logisheets_base::BlockId;
+    Some(ast::PureNode::BlockRef(ast::BlockRefNode::Multi {
+        sheet_id,
+        block_id,
+        by_block: true,
+        key_condition: Box::new(key_condition),
+        field_condition: Box::new(field_condition),
+    }))
 }
 
 fn build_numerical_constant(pair: Pair<Rule>) -> ast::PureNode {

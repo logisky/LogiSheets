@@ -8,6 +8,7 @@ export type FieldTypeEnum =
     | 'number'
     | 'image'
     | 'fieldRef'
+    | 'multiSelectRef'
 
 export interface EnumValue {
     id: string

@@ -1,6 +1,6 @@
 use crate::{
-    errors::BasicError, CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId,
-    Range, RangeId, RowId, SheetId, TextId,
+    errors::BasicError, BlockFieldId, BlockId, CellId, ColId, Cube, CubeId, ExtBookId, ExtRef,
+    ExtRefId, FuncId, NameId, Range, RangeId, RowId, SheetId, TextId,
 };
 
 pub trait NameFetcherTrait {
@@ -19,4 +19,22 @@ pub trait NameFetcherTrait {
     fn fetch_range(&self, sheet_id: &SheetId, range_id: &RangeId) -> Result<Range, BasicError>;
     fn fetch_cube(&self, cube_id: &CubeId) -> Result<Cube, BasicError>;
     fn fetch_ext_ref(&mut self, ext_ref_id: &ExtRefId) -> Result<ExtRef, BasicError>;
+
+    /// Reverse-lookup a block ref-name from `(sheet_id, block_id)`, used by
+    /// unparse to render BLOCKREF formulas with the block's *current* name.
+    /// Returns `None` if the block has no schema bound.
+    fn fetch_block_ref_name_by_id(&self, _sheet_id: SheetId, _block_id: BlockId) -> Option<String> {
+        None
+    }
+
+    /// Reverse-lookup a field name. Returns `None` if the schema does not
+    /// know this field id (e.g., field has been removed since parse time).
+    fn fetch_block_field_name_by_id(
+        &self,
+        _sheet_id: SheetId,
+        _block_id: BlockId,
+        _field_id: BlockFieldId,
+    ) -> Option<String> {
+        None
+    }
 }

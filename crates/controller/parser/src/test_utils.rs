@@ -1,9 +1,10 @@
+use logisheets_base::block_ref::BlockRefResolverTrait;
 use logisheets_base::errors::BasicError;
 use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
 use logisheets_base::name_fetcher::NameFetcherTrait;
 use logisheets_base::{
-    CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalCellId, Range,
-    RangeId, RowId, SheetId, TextId,
+    BlockFieldId, BlockId, CellId, ColId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId,
+    NameId, NormalCellId, Range, RangeId, RowId, SheetId, TextId,
 };
 
 type Result<T> = std::result::Result<T, BasicError>;
@@ -63,6 +64,31 @@ impl IdFetcherTrait for TestIdFetcher {
         _col: usize,
     ) -> Result<logisheets_base::BlockCellId> {
         unreachable!()
+    }
+}
+
+impl BlockRefResolverTrait for TestIdFetcher {
+    fn resolve_block_ref_name(&self, _ref_name: &str) -> Option<(SheetId, BlockId)> {
+        None
+    }
+    fn resolve_block_field(
+        &self,
+        _sheet_id: SheetId,
+        _block_id: BlockId,
+        _field: &str,
+    ) -> Option<BlockFieldId> {
+        None
+    }
+    fn fetch_block_ref_name(&self, _sheet_id: SheetId, _block_id: BlockId) -> Option<String> {
+        None
+    }
+    fn fetch_block_field_name(
+        &self,
+        _sheet_id: SheetId,
+        _block_id: BlockId,
+        _field_id: BlockFieldId,
+    ) -> Option<String> {
+        None
     }
 }
 

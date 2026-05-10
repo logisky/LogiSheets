@@ -2,6 +2,7 @@ use logisheets_base::{CellId, CellValue, SheetId};
 use logisheets_workbook::prelude::*;
 
 use crate::{
+    block_manager::schema_manager::SchemaManager,
     cell::Cell,
     cell_attachments::{comment::Comment, CellAttachmentsManager},
     connectors::FormulaConnector,
@@ -137,6 +138,7 @@ pub fn load_sheet_data(
     range_manager: &mut RangeManager,
     cube_manager: &mut CubeManager,
     ext_ref_manager: &mut ExtRefManager,
+    block_schema_manager: &SchemaManager,
     style_loader: &mut StyleLoader,
     xl: &Xl,
 ) {
@@ -196,6 +198,7 @@ pub fn load_sheet_data(
                             range_manager,
                             cube_manager,
                             ext_ref_manager,
+                            block_schema_manager,
                             sid_assigner: &ShadowIdAssigner::new(),
                         };
                         if let Some(f) = &formula.formula {

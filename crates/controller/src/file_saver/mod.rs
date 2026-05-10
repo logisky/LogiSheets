@@ -1,10 +1,11 @@
 use logisheets_base::{
-    errors::BasicError, index_fetcher::IndexFetcherTrait, name_fetcher::NameFetcherTrait, ColId,
-    Cube, RowId, SheetId, TextId,
+    errors::BasicError, index_fetcher::IndexFetcherTrait, name_fetcher::NameFetcherTrait,
+    BlockFieldId, BlockId, ColId, Cube, RowId, SheetId, TextId,
 };
 use logisheets_workbook::workbook::Wb;
 
 use crate::{
+    block_manager::schema_manager::SchemaManager,
     cube_manager::CubeManager,
     ext_book_manager::ExtBooksManager,
     ext_ref_manager::ExtRefManager,
@@ -49,6 +50,7 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
     let settings = &controller.settings;
 
     let mut navigator_replication = controller.status.navigator.clone();
+    let block_schema_manager = &controller.status.block_schema_manager;
     let mut saver = Saver {
         part_count: 0,
         _external_count: 0,
@@ -63,6 +65,7 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
         navigator: &mut navigator_replication,
         _formula_manager: formula_manager,
         sheet_pos_manager,
+        block_schema_manager,
     };
 
     save_workbook(
@@ -103,6 +106,7 @@ pub struct Saver<'a> {
     pub cube_manager: &'a CubeManager,
     pub ext_ref_manager: &'a ExtRefManager,
     pub sheet_pos_manager: &'a SheetInfoManager,
+    pub block_schema_manager: &'a SchemaManager,
 }
 
 impl<'a> IndexFetcherTrait for Saver<'a> {
@@ -217,6 +221,21 @@ impl<'a> NameFetcherTrait for Saver<'a> {
         self.ext_ref_manager
             .get_ext_ref(ext_ref_id)
             .ok_or(BasicError::ExtRefIdNotFound(*ext_ref_id))
+    }
+
+    fn fetch_block_ref_name_by_id(&self, sheet_id: SheetId, block_id: BlockId) -> Option<String> {
+        self.block_schema_manager
+            .fetch_block_ref_name(sheet_id, block_id)
+    }
+
+    fn fetch_block_field_name_by_id(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field_id: BlockFieldId,
+    ) -> Option<String> {
+        self.block_schema_manager
+            .fetch_field_name(sheet_id, block_id, field_id)
     }
 }
 

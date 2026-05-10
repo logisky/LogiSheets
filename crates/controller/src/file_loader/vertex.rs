@@ -119,6 +119,46 @@ fn shift_pure_node<'a, 'b>(
         ast::PureNode::Reference(cell_ref) => {
             shift_cell_reference(cell_ref, sheet_id, row_shift, col_shift, connector);
         }
+        ast::PureNode::BlockRef(node) => {
+            // Shared formulas can hold a BlockRef when the source cell does;
+            // shift the inner runtime expressions (key / conditions) but
+            // leave the resolved sheet/block/field ids alone — those are
+            // intentionally position-independent.
+            match node {
+                ast::BlockRefNode::Single { key, .. } => {
+                    shift_pure_node(
+                        formula_manager,
+                        &mut key.pure,
+                        sheet_id,
+                        row_shift,
+                        col_shift,
+                        connector,
+                    );
+                }
+                ast::BlockRefNode::Multi {
+                    key_condition,
+                    field_condition,
+                    ..
+                } => {
+                    shift_pure_node(
+                        formula_manager,
+                        &mut key_condition.pure,
+                        sheet_id,
+                        row_shift,
+                        col_shift,
+                        connector,
+                    );
+                    shift_pure_node(
+                        formula_manager,
+                        &mut field_condition.pure,
+                        sheet_id,
+                        row_shift,
+                        col_shift,
+                        connector,
+                    );
+                }
+            }
+        }
     }
 }
 

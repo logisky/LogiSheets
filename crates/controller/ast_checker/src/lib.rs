@@ -23,6 +23,10 @@ impl AstChecker {
             },
             ast::PureNode::Value(_) => Ok(()),
             ast::PureNode::Reference(_) => Ok(()),
+            // BlockRef arity is enforced by the parser (it refuses to emit
+            // the variant if args don't match), so it bypasses the
+            // FuncSignature registry.
+            ast::PureNode::BlockRef(_) => Ok(()),
         }
     }
 }

@@ -47,9 +47,10 @@ pub fn save_workbook<S: SaverTrait>(
         .get_all_ids()
         .into_iter()
         .flat_map(|id| {
+            let default_container = crate::container::SheetDataContainer::default();
             let sheet_data_container = data_container
                 .get_sheet_container(id)
-                .ok_or(SaveError::SheetIdPosError(id))?;
+                .unwrap_or(&default_container);
             let sheet_nav = navigator
                 .sheet_navs
                 .get(&id)

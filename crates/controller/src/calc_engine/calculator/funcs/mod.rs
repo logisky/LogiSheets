@@ -4,7 +4,7 @@ mod and;
 mod asyncs;
 mod average;
 mod bits;
-mod blocks;
+pub mod blocks;
 mod bonds;
 mod boolean;
 mod choose;
@@ -48,6 +48,7 @@ mod pmt;
 mod quotient;
 mod rand;
 mod rank;
+mod regex_funcs;
 mod rept;
 mod round;
 mod row;
@@ -98,10 +99,11 @@ where
         "BITOR" => bits::bit::calc_bitor(args, fetcher),
         "BITRSHIFT" => bits::bit::calc_bitrshift(args, fetcher),
         "BITXOR" => bits::bit::calc_bitxor(args, fetcher),
-        "BLOCKREF" => blocks::blockref::calc(args, fetcher),
-        "BLOCKREFB" => blocks::blockrefb::calc(args, fetcher),
-        "BLOCKREFS" => blocks::blockrefs::calc(args, fetcher),
-        "BLOCKREFSB" => blocks::blockrefsb::calc(args, fetcher),
+        // BLOCKREF / BLOCKREFS / BLOCKREFB / BLOCKREFSB are now compiled to
+        // `PureNode::BlockRef` at parse time and dispatched directly from
+        // `calculator::calc_node`. The strings only show up here if a user
+        // managed to register a function literally named one of these — in
+        // which case we fall through to the generic UNRECOGNIZED branch.
         "CHISQ.DIST" => distribution::chisqdist::calc_chisqdist(args, fetcher),
         "CHISQ.DIST.RT" => distribution::chisqdist::calc_chisqdist_rt(args, fetcher),
         "CHOOSE" => choose::calc(args, fetcher),
@@ -245,6 +247,9 @@ where
         "RANK.AVG" => rank::calc_rank_avg(args, fetcher),
         "RANK.EQ" => rank::calc_rank(args, fetcher),
         "RECEIVED" => bonds::received::calc(args, fetcher),
+        "REGEXEXTRACT" => regex_funcs::calc_regexextract(args, fetcher),
+        "REGEXREPLACE" => regex_funcs::calc_regexreplace(args, fetcher),
+        "REGEXTEST" => regex_funcs::calc_regextest(args, fetcher),
         "REPT" => rept::calc(args, fetcher),
         "RIGHT" => leftright::calc_right(args, fetcher),
         "ROUND" => round::calc_round(args, fetcher),

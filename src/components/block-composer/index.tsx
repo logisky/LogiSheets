@@ -165,6 +165,22 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     fieldName: field.refFieldName!,
                     validation: composeRefValidation(field),
                 }
+            } else if (field.type === 'multiSelectRef') {
+                // multiSelectRef stores a comma-separated string of values.
+                // Auto-validation isn't injected for v1 — a CSV value would
+                // require splitting + per-item COUNTIF, which the existing
+                // ValidationCell shadow-cell pipeline doesn't natively
+                // express. The dropdown only offers existing target values,
+                // so well-behaved edits stay valid; renames in the source
+                // block will silently produce dangling refs until v2.
+                const {sheetId, blockId: bid} = resolveRefTarget(field)
+                ty = {
+                    type: 'multiSelectRef',
+                    sheetId,
+                    blockId: bid,
+                    fieldName: field.refFieldName!,
+                    validation: '',
+                }
             }
             // Primary keys are unique by definition; stamp it so cross-block
             // enumeration doesn't have to special-case them.
@@ -229,6 +245,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 case 'multiSelect':
                 case 'boolean':
                 case 'fieldRef':
+                case 'multiSelectRef':
                     diyRender = true
                     break
                 case 'string':

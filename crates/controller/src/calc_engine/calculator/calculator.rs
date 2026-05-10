@@ -4,6 +4,7 @@ use super::calc_vertex::{CalcValue, CalcVertex, Value};
 
 use super::super::connector::Connector;
 use super::funcs;
+use super::funcs::blocks;
 use super::infix;
 
 pub fn calc<C>(ast: &ast::Node, fetcher: &mut C) -> CalcValue
@@ -14,7 +15,7 @@ where
     fetcher.get_calc_value(v)
 }
 
-fn calc_node<C>(node: &ast::Node, fetcher: &mut C) -> CalcVertex
+pub(crate) fn calc_node<C>(node: &ast::Node, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
@@ -22,6 +23,7 @@ where
         ast::PureNode::Value(v) => CalcVertex::Value(CalcValue::Scalar(Value::from_ast_value(v))),
         ast::PureNode::Func(f) => calc_func(f, fetcher),
         ast::PureNode::Reference(r) => fetcher.convert(r),
+        ast::PureNode::BlockRef(node) => blocks::calc_block_ref(node, fetcher),
     }
 }
 

@@ -199,6 +199,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                 &mut range_manager,
                 &mut cube_manager,
                 &mut ext_ref_manager,
+                &block_schema_manager,
                 &mut style_loader,
                 &xl,
             )

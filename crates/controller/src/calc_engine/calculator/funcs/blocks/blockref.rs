@@ -1,4 +1,3 @@
-use logisheets_base::{BlockId, SheetId};
 use logisheets_parser::ast;
 
 use crate::calc_engine::{
@@ -6,48 +5,73 @@ use crate::calc_engine::{
     connector::Connector,
 };
 
-pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+use super::blockrefs;
+
+/// Entry point for `PureNode::BlockRef` evaluation. Both `Single` (BLOCKREF /
+/// BLOCKREFB) and `Multi` (BLOCKREFS / BLOCKREFSB) forms now share one
+/// dispatch — the legacy distinction between `*` and `*B` was just a parsing
+/// convention and disappears once ids are resolved at parse time.
+pub fn calc_block_ref<C>(node: &ast::BlockRefNode, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    assert_or_return!(args.len() == 3, ast::Error::Unspecified);
-    let mut args_iter = args.into_iter();
-    let ref_name = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_text_from_calc_value!(ref_name, ref_name);
-    let key = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_text_from_calc_value!(key, key);
-    let field = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_text_from_calc_value!(field, field);
-    calc_by_ref_name(fetcher, &ref_name, key, field)
+    match node {
+        ast::BlockRefNode::Single {
+            sheet_id,
+            block_id,
+            field_id,
+            key,
+            ..
+        } => calc_single(*sheet_id, *block_id, *field_id, key, fetcher),
+        ast::BlockRefNode::Multi {
+            sheet_id,
+            block_id,
+            key_condition,
+            field_condition,
+            ..
+        } => blockrefs::calc_multi(
+            *sheet_id,
+            *block_id,
+            key_condition,
+            field_condition,
+            fetcher,
+        ),
+    }
 }
 
-pub(crate) fn calc_by_ref_name<C>(fetcher: &mut C, ref_name: &str, key: String, field: String) -> CalcVertex
+fn calc_single<C>(
+    sheet_id: logisheets_base::SheetId,
+    block_id: logisheets_base::BlockId,
+    field_id: logisheets_base::BlockFieldId,
+    key: &ast::Node,
+    fetcher: &mut C,
+) -> CalcVertex
 where
     C: Connector,
 {
-    let result = fetcher.resolve(ref_name, &key, &field);
-    if result.is_none() {
-        return CalcVertex::from_error(ast::Error::Value);
-    }
-    let (sheet_id, cell_id) = result.unwrap();
-    let value = fetcher.get_block_cell_value(sheet_id, cell_id);
-    match value {
-        Some(value) => CalcVertex::Value(value),
-        None => CalcVertex::from_error(ast::Error::Value),
-    }
-}
+    // Evaluate the runtime `key` expression. It might be a literal string or
+    // a cell reference like `A1`; both reduce to a CalcValue::Scalar(Text).
+    let key_vertex = crate::calc_engine::calculator::calculator::calc_node(key, fetcher);
+    let key_value = fetcher.get_calc_value(key_vertex);
+    let key_text = match key_value {
+        CalcValue::Scalar(Value::Text(t)) => t,
+        CalcValue::Scalar(Value::Number(n)) => n.to_string(),
+        CalcValue::Scalar(Value::Boolean(b)) => {
+            if b {
+                "TRUE".to_string()
+            } else {
+                "FALSE".to_string()
+            }
+        }
+        _ => return CalcVertex::from_error(ast::Error::Value),
+    };
 
-pub(crate) fn calc_by_block<C>(fetcher: &mut C, sheet_id: SheetId, block_id: BlockId, key: String, field: String) -> CalcVertex
-where
-    C: Connector,
-{
-    let result = fetcher.resolve_by_block(sheet_id, block_id, &key, &field);
-    if result.is_none() {
-        return CalcVertex::from_error(ast::Error::Value);
-    }
-    let (sheet_id, cell_id) = result.unwrap();
-    let value = fetcher.get_block_cell_value(sheet_id, cell_id);
-    match value {
+    let result = fetcher.resolve_by_block_field_id(sheet_id, block_id, &key_text, field_id);
+    let (resolved_sheet, cell_id) = match result {
+        Some(v) => v,
+        None => return CalcVertex::from_error(ast::Error::Value),
+    };
+    match fetcher.get_block_cell_value(resolved_sheet, cell_id) {
         Some(value) => CalcVertex::Value(value),
         None => CalcVertex::from_error(ast::Error::Value),
     }

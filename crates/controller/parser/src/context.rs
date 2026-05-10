@@ -1,12 +1,16 @@
+use logisheets_base::block_ref::BlockRefResolverTrait;
 use logisheets_base::errors::BasicError;
 use logisheets_base::get_book_name::GetBookNameTrait;
 use logisheets_base::id_fetcher::{IdFetcherTrait, VertexFetcherTrait};
 use logisheets_base::{
-    Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalCellId, Range, RangeId,
-    SheetId, TextId,
+    BlockFieldId, BlockId, Cube, CubeId, ExtBookId, ExtRef, ExtRefId, FuncId, NameId, NormalCellId,
+    Range, RangeId, SheetId, TextId,
 };
 
-pub trait ContextTrait: IdFetcherTrait + GetBookNameTrait + VertexFetcherTrait {}
+pub trait ContextTrait:
+    IdFetcherTrait + GetBookNameTrait + VertexFetcherTrait + BlockRefResolverTrait
+{
+}
 
 pub struct Context<'a, T, F>
 where
@@ -20,9 +24,43 @@ where
 
 impl<'a, T, F> ContextTrait for Context<'a, T, F>
 where
-    T: IdFetcherTrait,
+    T: IdFetcherTrait + BlockRefResolverTrait,
     F: VertexFetcherTrait,
 {
+}
+
+impl<'a, T, F> BlockRefResolverTrait for Context<'a, T, F>
+where
+    T: IdFetcherTrait + BlockRefResolverTrait,
+    F: VertexFetcherTrait,
+{
+    fn resolve_block_ref_name(&self, ref_name: &str) -> Option<(SheetId, BlockId)> {
+        self.id_fetcher.resolve_block_ref_name(ref_name)
+    }
+
+    fn resolve_block_field(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field: &str,
+    ) -> Option<BlockFieldId> {
+        self.id_fetcher
+            .resolve_block_field(sheet_id, block_id, field)
+    }
+
+    fn fetch_block_ref_name(&self, sheet_id: SheetId, block_id: BlockId) -> Option<String> {
+        self.id_fetcher.fetch_block_ref_name(sheet_id, block_id)
+    }
+
+    fn fetch_block_field_name(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field_id: BlockFieldId,
+    ) -> Option<String> {
+        self.id_fetcher
+            .fetch_block_field_name(sheet_id, block_id, field_id)
+    }
 }
 
 impl<'a, T, F> VertexFetcherTrait for Context<'a, T, F>
