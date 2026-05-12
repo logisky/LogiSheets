@@ -1,6 +1,8 @@
 use imbl::Vector;
 use logisheets_base::{ColId, NormalCellId, RowId};
 
+use crate::edit_action::ModifyPolicy;
+
 #[derive(Debug, Clone)]
 pub struct BlockPlace {
     pub master: NormalCellId,
@@ -8,10 +10,18 @@ pub struct BlockPlace {
     pub cols: Vector<ColId>,
     next_avail_row: RowId,
     next_avail_col: ColId,
+    pub owner: String,
+    pub modify_policy: ModifyPolicy,
 }
 
 impl BlockPlace {
-    pub fn new(master: NormalCellId, row_cnt: u32, col_cnt: u32) -> Self {
+    pub fn new(
+        master: NormalCellId,
+        row_cnt: u32,
+        col_cnt: u32,
+        owner: String,
+        modify_policy: ModifyPolicy,
+    ) -> Self {
         let rows = (0..row_cnt).collect::<Vector<RowId>>();
         let cols = (0..col_cnt).collect::<Vector<ColId>>();
         let next_avail_row = row_cnt as RowId;
@@ -22,6 +32,8 @@ impl BlockPlace {
             cols,
             next_avail_row,
             next_avail_col,
+            owner,
+            modify_policy,
         }
     }
 
@@ -56,6 +68,8 @@ impl BlockPlace {
             cols,
             next_avail_row: result.next_avail_row,
             next_avail_col: result.next_avail_col,
+            owner: result.owner,
+            modify_policy: result.modify_policy,
         }
     }
 
@@ -73,6 +87,8 @@ impl BlockPlace {
             cols: self.cols,
             next_avail_row: new_next_avail_row,
             next_avail_col: self.next_avail_col,
+            owner: self.owner,
+            modify_policy: self.modify_policy,
         }
     }
 
@@ -90,6 +106,8 @@ impl BlockPlace {
             cols: left,
             next_avail_row: self.next_avail_row,
             next_avail_col: new_next_avail_col,
+            owner: self.owner,
+            modify_policy: self.modify_policy,
         }
     }
 
@@ -103,6 +121,8 @@ impl BlockPlace {
             cols: self.cols,
             next_avail_row: self.next_avail_row,
             next_avail_col: self.next_avail_col,
+            owner: self.owner,
+            modify_policy: self.modify_policy,
         }
     }
 
@@ -116,6 +136,8 @@ impl BlockPlace {
             cols: left,
             next_avail_row: self.next_avail_row,
             next_avail_col: self.next_avail_col,
+            owner: self.owner,
+            modify_policy: self.modify_policy,
         }
     }
 

@@ -74,6 +74,8 @@ fn test_form_block_rowcnt1_two_fields() {
                 master_col: 7,
                 row_cnt: 1,
                 col_cnt: 2,
+                owner: None,
+                modify_policy: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 sheet_idx: 0,

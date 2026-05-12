@@ -287,6 +287,10 @@ pub struct CellClear {
 /// Note that the block id is assigned by you. You are supposed to
 /// manage all your blocks. If the `block id` is already existed, engines
 /// will remove the old one.
+///
+/// `owner` and `modify_policy` are optional metadata used by the frontend
+/// to gate write access at runtime. They are not enforced by the engine
+/// itself.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "create_block.ts", builder, rename_all = "camelCase")]
 pub struct CreateBlock {
@@ -296,6 +300,58 @@ pub struct CreateBlock {
     pub master_col: usize,
     pub row_cnt: usize,
     pub col_cnt: usize,
+    pub owner: Option<String>,
+    pub modify_policy: Option<ModifyPolicy>,
+}
+
+/// Controls who is allowed to write to a block at the frontend runtime layer.
+/// Reads are always allowed regardless of policy.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "modify_policy.ts", tag = "type")]
+pub enum ModifyPolicy {
+    /// Anyone (any craft or the user) can write.
+    All,
+    /// Only the owner can write.
+    OwnerOnly,
+    /// The owner and the user can write; other crafts cannot.
+    OwnerAndUser,
+}
+
+impl Default for ModifyPolicy {
+    fn default() -> Self {
+        ModifyPolicy::All
+    }
+}
+
+impl ModifyPolicy {
+    /// String form used for .xlsx persistence. Mirrors the camelCase wire
+    /// format produced by the TypeScript binding.
+    pub fn as_wire_str(&self) -> &'static str {
+        match self {
+            ModifyPolicy::All => "all",
+            ModifyPolicy::OwnerOnly => "ownerOnly",
+            ModifyPolicy::OwnerAndUser => "ownerAndUser",
+        }
+    }
+
+    /// Parse the persisted string form. Unknown values fall back to `All`.
+    pub fn from_wire_str(s: &str) -> Self {
+        match s {
+            "ownerOnly" => ModifyPolicy::OwnerOnly,
+            "ownerAndUser" => ModifyPolicy::OwnerAndUser,
+            _ => ModifyPolicy::All,
+        }
+    }
+}
+
+/// Read-only view of a block's frontend-runtime write policy. Returned by
+/// `Workbook::get_block_modify_info` so the JS validate hook can decide
+/// whether a caller is allowed to write to a given block.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "block_modify_info.ts", rename_all = "camelCase")]
+pub struct BlockModifyInfo {
+    pub owner: String,
+    pub modify_policy: ModifyPolicy,
 }
 
 #[derive(Debug, Clone, TS)]

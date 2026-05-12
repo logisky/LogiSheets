@@ -1,6 +1,6 @@
 use crate::edit_action::{
-    CreateBlock, EditPayload, LineStyleUpdate, PayloadsAction, SheetRename, StyleUpdateType,
-    WorkbookUpdateType,
+    CreateBlock, EditPayload, LineStyleUpdate, ModifyPolicy, PayloadsAction, SheetRename,
+    StyleUpdateType, WorkbookUpdateType,
 };
 
 use super::{EditAction, Workbook};
@@ -67,6 +67,8 @@ fn create_block() {
             master_col: 1,
             row_cnt: 3,
             col_cnt: 3,
+            owner: None,
+            modify_policy: None,
         })],
         undoable: false,
         init: false,
@@ -110,4 +112,37 @@ fn test_check_formula() {
 
     let r = wb.check_formula("=SUM(1)+".to_string());
     assert!(!r);
+}
+
+#[test]
+fn create_block_with_owner_and_policy_roundtrip() {
+    // Create a workbook with a block carrying an owner and a non-default policy,
+    // save to .xlsx bytes, reload, and verify the metadata survives the round trip.
+    let mut wb = Workbook::default();
+    let id = wb.get_available_block_id(0).unwrap();
+    let payload_action = PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id,
+            master_row: 1,
+            master_col: 1,
+            row_cnt: 2,
+            col_cnt: 2,
+            owner: Some("what-if-calculator".to_string()),
+            modify_policy: Some(ModifyPolicy::OwnerAndUser),
+        })],
+        undoable: false,
+        init: false,
+    };
+    let _ = wb.handle_action(EditAction::Payloads(payload_action));
+
+    let bytes = wb.save().expect("save");
+    let reloaded =
+        Workbook::from_file(&bytes, "roundtrip.xlsx".to_string()).expect("reload");
+
+    let info = reloaded
+        .get_block_modify_info(0, id)
+        .expect("block missing after reload");
+    assert_eq!(info.owner, "what-if-calculator");
+    assert!(matches!(info.modify_policy, ModifyPolicy::OwnerAndUser));
 }

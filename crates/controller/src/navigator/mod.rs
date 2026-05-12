@@ -150,7 +150,13 @@ impl Navigator {
         col_cnt: usize,
     ) {
         let sheet_nav = self.get_sheet_nav_mut(sheet_id);
-        let block_place = BlockPlace::new(master, row_cnt as u32, col_cnt as u32);
+        let block_place = BlockPlace::new(
+            master,
+            row_cnt as u32,
+            col_cnt as u32,
+            String::new(),
+            Default::default(),
+        );
         let block_id = sheet_nav.id_manager.get_block_id();
         sheet_nav.data.blocks.insert(block_id, block_place);
         sheet_nav.cache = Default::default();
@@ -280,7 +286,7 @@ impl Navigator {
         }
     }
 
-    fn get_sheet_nav(&self, sheet_id: &SheetId) -> Result<&SheetNav, BasicError> {
+    pub(crate) fn get_sheet_nav(&self, sheet_id: &SheetId) -> Result<&SheetNav, BasicError> {
         self.sheet_navs
             .get(sheet_id)
             .ok_or(BasicError::SheetIdNotFound(*sheet_id))

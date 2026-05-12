@@ -34,6 +34,14 @@ pub struct BlockRange {
     pub row_cnt: usize,
     #[xmlserde(name = b"colCnt", ty = "attr")]
     pub col_cnt: usize,
+    /// The craft id that created this block. None means no specific owner.
+    #[xmlserde(name = b"owner", ty = "attr")]
+    pub owner: Option<String>,
+    /// Frontend-runtime write policy. Stored as a string for forward
+    /// compatibility: known values are "all", "ownerOnly", "ownerAndUser".
+    /// Unknown or missing values are treated as "all" by the controller.
+    #[xmlserde(name = b"modifyPolicy", ty = "attr")]
+    pub modify_policy: Option<String>,
     #[xmlserde(name = b"rowInfos", ty = "child")]
     pub row_infos: Vec<BlockLineInfo>,
     #[xmlserde(name = b"colInfos", ty = "child")]

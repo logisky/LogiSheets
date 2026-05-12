@@ -305,6 +305,35 @@ impl Workbook {
         Ok(self.controller.status.container.get_all_block_fields())
     }
 
+    /// Returns the owner and modify policy of a block. Used by the frontend
+    /// validate hook to gate writes.
+    pub fn get_block_modify_info(
+        &self,
+        sheet_idx: usize,
+        block_id: usize,
+    ) -> Result<crate::edit_action::BlockModifyInfo> {
+        let sheet_id = self
+            .controller
+            .status
+            .sheet_info_manager
+            .get_sheet_id(sheet_idx)
+            .ok_or(BasicError::SheetIdxExceed(sheet_idx))?;
+        let sheet_nav = self
+            .controller
+            .status
+            .navigator
+            .get_sheet_nav(&sheet_id)?;
+        let block = sheet_nav
+            .data
+            .blocks
+            .get(&block_id)
+            .ok_or(BasicError::BlockIdNotFound(sheet_id, block_id))?;
+        Ok(crate::edit_action::BlockModifyInfo {
+            owner: block.owner.clone(),
+            modify_policy: block.modify_policy.clone(),
+        })
+    }
+
     pub fn get_available_block_id(&self, sheet_idx: usize) -> Result<usize> {
         let sheet_id = self
             .controller

@@ -12,6 +12,8 @@ import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
 import {buildSelectedDataFromCell} from 'logisheets-engine'
+import {callerRegistry} from '@/core/permissions/caller-registry'
+import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 
 type CraftPanelProps = {
     selectedData?: SelectedData
@@ -51,11 +53,18 @@ export const CraftPanel = ({
         const win = iframe.contentWindow as any
         if (!win) return
 
+        const craftId = iframeSrc
+        const craftUuid = callerRegistry.getCraftUuid(craftId)
+
         win.selection = {
             sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
             data: selectedData,
         } as Selection
-        win.workbook = DATA_SERVICE.getWorkbook()
+        win.workbook = wrapWorkbookForCraft(
+            DATA_SERVICE.getWorkbook(),
+            craftUuid
+        )
+        win.__craftUuid = craftUuid
         win.setCellLayouts = setCellLayouts
         win.setSelection = (sheetIdx: number, row: number, col: number) => {
             setActiveSheet(sheetIdx)
@@ -163,4 +172,35 @@ export const CraftPanel = ({
             </Drawer>
         </Box>
     )
+}
+
+const TX_METHODS = new Set([
+    'handleTransaction',
+    'handleTransactionWithoutEvents',
+])
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function wrapWorkbookForCraft<T extends object>(
+    workbook: T,
+    craftUuid: string
+): T {
+    return new Proxy(workbook, {
+        get(target, prop, receiver) {
+            const original = Reflect.get(target, prop, receiver)
+            if (
+                typeof original === 'function' &&
+                typeof prop === 'string' &&
+                TX_METHODS.has(prop)
+            ) {
+                return (params: Record<string, unknown>) =>
+                    (original as (p: unknown) => unknown).call(target, {
+                        ...params,
+                        [CALLER_UUID_PARAM_KEY]: craftUuid,
+                    })
+            }
+            return typeof original === 'function'
+                ? original.bind(target)
+                : original
+        },
+    })
 }
