@@ -108,10 +108,18 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     let master_cell_id = navigator
                         .fetch_norm_cell_id(&sheet_id, master_row, master_col)
                         .unwrap();
+                    let owner = block_range.owner.clone().unwrap_or_default();
+                    let modify_policy = block_range
+                        .modify_policy
+                        .as_deref()
+                        .map(crate::edit_action::ModifyPolicy::from_wire_str)
+                        .unwrap_or_default();
                     let block_place = BlockPlace::new(
                         master_cell_id,
                         block_range.row_cnt as u32,
                         block_range.col_cnt as u32,
+                        owner,
+                        modify_policy,
                     );
                     let sheet_container = container.get_sheet_container_mut(sheet_id);
                     let row_infos = block_range.row_infos;

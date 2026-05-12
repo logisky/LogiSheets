@@ -184,6 +184,8 @@ mod funcs {
                     master_col: 0,
                     row_cnt: 3,
                     col_cnt: 2,
+                    owner: None,
+                    modify_policy: None,
                 })
                 .add_payload(BindFormSchema {
                     ref_name: "people".to_string(),
@@ -287,6 +289,8 @@ mod funcs {
                     master_col: 0,
                     row_cnt: 4,
                     col_cnt: 3,
+                    owner: None,
+                    modify_policy: None,
                 })
                 // Header rows aren't needed for the schema (RowSchema reads
                 // values, not headers); just stuff numbers + keys.

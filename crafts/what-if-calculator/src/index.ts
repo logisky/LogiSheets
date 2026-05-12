@@ -70,25 +70,24 @@ export async function getTrendsThroughTempTransaction(
 ): Promise<readonly Trend[]> {
     const actionEffect = await workbook.handleTransactionWithoutEvents({
         transaction: tempTransaction,
-        temp: true,
     })
     if (isErrorMessage(actionEffect)) return []
-    await workbook.toggleStatus(true)
-    const tempResults = await workbook.batchGetCellInfoById(
-        actionEffect.valueChanged
-    )
+    await workbook.toggleStatus({useTemp: true})
+    const tempResults = await workbook.batchGetCellInfoById({
+        ids: actionEffect.valueChanged,
+    })
     if (isErrorMessage(tempResults)) return []
-    await workbook.toggleStatus(false)
-    const originalResults = await workbook.batchGetCellInfoById(
-        actionEffect.valueChanged
-    )
+    await workbook.toggleStatus({useTemp: false})
+    const originalResults = await workbook.batchGetCellInfoById({
+        ids: actionEffect.valueChanged,
+    })
     if (isErrorMessage(originalResults)) return []
 
-    const coordinates = await workbook.batchGetCellCoordinateWithSheetById(
-        actionEffect.valueChanged
-    )
+    const coordinates = await workbook.batchGetCellCoordinateWithSheetById({
+        ids: actionEffect.valueChanged,
+    })
     if (isErrorMessage(coordinates)) return []
-    await workbook.toggleStatus(true)
+    await workbook.toggleStatus({useTemp: true})
 
     const results: Trend[] = []
     for (let i = 0; i < coordinates.length; i += 1) {
@@ -109,7 +108,7 @@ export async function getDisplayName(
     col: number,
     workbook: Client
 ): Promise<string> {
-    const sheetName = await workbook.getSheetNameByIdx(sheetIdx)
+    const sheetName = await workbook.getSheetNameByIdx({idx: sheetIdx})
     if (isErrorMessage(sheetName)) throw Error('invalid sheetIdx')
     const colName = toA1notation(col)
     return `${sheetName}:${colName}${row + 1}`

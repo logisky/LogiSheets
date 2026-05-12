@@ -78,6 +78,8 @@ impl NavExecutor {
                     cell_id,
                     create_block.row_cnt as u32,
                     create_block.col_cnt as u32,
+                    create_block.owner.clone().unwrap_or_default(),
+                    create_block.modify_policy.clone().unwrap_or_default(),
                 );
                 let block_id = create_block.id;
                 sheet_nav.data.blocks.insert(block_id, block_place);
@@ -99,7 +101,13 @@ impl NavExecutor {
                 if sheet_nav.data.has_block_id(&p.id) {
                     return Err(BasicError::BlockIdHasAlreadyExisted(p.id).into());
                 }
-                let block_place = BlockPlace::new(cell_id, p.row_cnt as u32, p.col_cnt as u32);
+                let block_place = BlockPlace::new(
+                    cell_id,
+                    p.row_cnt as u32,
+                    p.col_cnt as u32,
+                    String::new(),
+                    Default::default(),
+                );
                 let block_id = p.id;
                 sheet_nav.data.blocks.insert(block_id, block_place);
                 sheet_nav.cache = Default::default();

@@ -817,6 +817,8 @@ mod tests {
                     master_col: 4,
                     row_cnt: 1,
                     col_cnt: 1,
+                    owner: None,
+                    modify_policy: None,
                 }),
                 EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
                     sheet_idx,
@@ -848,6 +850,8 @@ mod tests {
                     master_col: 3,
                     row_cnt: 1,
                     col_cnt: 1,
+                    owner: None,
+                    modify_policy: None,
                 }),
                 EditPayload::BlockLineStyleUpdate(BlockLineStyleUpdate {
                     sheet_idx,

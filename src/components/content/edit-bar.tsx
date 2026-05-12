@@ -234,16 +234,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
                 </IconButton>
             </Tooltip>
             {!hasSelectedData ? (
-                // No selection → degrade to a plain disabled <input>.
-                // FormulaEditor's CodeMirror DOM stays focusable even with
-                // `readOnly: true`, so swapping the slot is the simplest way
-                // to actually block clicks (matches the pre-refactor UX).
-                <input
-                    className={styles.formula}
-                    value=""
-                    disabled
-                    readOnly
-                />
+                <input className={styles.formula} value="" disabled readOnly />
             ) : showFormula ? (
                 <div className={styles.formula}>
                     <FormulaEditor
@@ -253,13 +244,6 @@ export const EditBarComponent: FC<EditBarProps> = ({
                             setIsEditing(true)
                             setFormulaText(v)
                         }}
-                        // Enter just blurs the editor; the blur handler is
-                        // the single commit path. This way Enter on the bar
-                        // = "commit + return to grid", and the *next* Enter
-                        // (now on the canvas) advances the selection down,
-                        // matching the user's expected flow. Wiring commit
-                        // to both onSubmit and onBlur would fire CellInput
-                        // twice on every Enter.
                         onSubmit={() => editorRef.current?.blur()}
                         onBlur={commitFormula}
                         onCancel={cancelEdit}

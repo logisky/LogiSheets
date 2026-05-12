@@ -103,12 +103,23 @@ pub fn save_sheets<S: SaverTrait>(
                 })
                 .collect::<Vec<_>>();
             if let Ok((row_idx, col_idx)) = saver.fetch_normal_cell_index(&sheet_id, &master) {
+                let owner = if block.owner.is_empty() {
+                    None
+                } else {
+                    Some(block.owner.clone())
+                };
+                let modify_policy = match block.modify_policy {
+                    crate::edit_action::ModifyPolicy::All => None,
+                    ref p => Some(p.as_wire_str().to_string()),
+                };
                 Some(BlockRange {
                     block_id: *block_id,
                     start_row: row_idx,
                     start_col: col_idx,
                     row_cnt: block.rows.len(),
                     col_cnt: block.cols.len(),
+                    owner,
+                    modify_policy,
                     row_infos,
                     col_infos,
                 })
