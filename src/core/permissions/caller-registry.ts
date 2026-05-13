@@ -4,6 +4,7 @@ const USER_KEY = '__user__'
 
 class CallerRegistry {
     private _entries = new Map<string, string>()
+    private _blockOwners = new Map<string, string>()
 
     getUserUuid(): string {
         return this._getOrAssign(USER_KEY)
@@ -18,6 +19,18 @@ class CallerRegistry {
 
     isUser(uuid: string | undefined): boolean {
         return uuid === this._entries.get(USER_KEY)
+    }
+
+    registerBlockOwner(
+        sheetIdx: number,
+        blockId: number,
+        callerUuid: string
+    ): void {
+        this._blockOwners.set(`${sheetIdx}-${blockId}`, callerUuid)
+    }
+
+    getBlockOwner(sheetIdx: number, blockId: number): string | undefined {
+        return this._blockOwners.get(`${sheetIdx}-${blockId}`)
     }
 
     private _getOrAssign(key: string): string {

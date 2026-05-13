@@ -18,7 +18,9 @@ import {
     buildSelectedDataFromCell,
     CellInputBuilder,
     Payload,
+    isErrorMessage,
 } from 'logisheets-engine'
+import {callerRegistry} from '@/core/permissions/caller-registry'
 import {tx} from '@/core/transaction'
 import {
     FormulaEditorWrapper,
@@ -397,11 +399,27 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
 
     // Handle startEdit events from engine
     useEffect(() => {
-        const handleStartEdit = (data: {
+        const handleStartEdit = async (data: {
             row: number
             col: number
             initialText: string
         }) => {
+            const sheetIdx = dataSvc.getCurrentSheetIdx()
+            const cellId = await dataSvc.getWorkbook().getCellId({
+                    sheetIdx,
+                rowIdx: data.row,
+                colIdx: data.col,
+            })
+            if (!isErrorMessage(cellId) && cellId.cellId.type === 'blockCell') {
+                const blockId = cellId.cellId.value.blockId
+                const owner = callerRegistry.getBlockOwner(sheetIdx, blockId)
+                if (
+                    owner !== undefined &&
+                    owner !== callerRegistry.getUserUuid()
+                ) {
+                    return
+                }
+            }
             startEditing(data.row, data.col, data.initialText)
         }
 
@@ -410,7 +428,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
         return () => {
             engine.off('startEdit', handleStartEdit)
         }
-    }, [engine, startEditing])
+    }, [engine, startEditing, dataSvc])
 
     // Sync React activeSheet to engine (when changed externally)
     useEffect(() => {
