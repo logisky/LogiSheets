@@ -14,6 +14,7 @@ import {useEngine} from '@/core/engine/provider'
 import {buildSelectedDataFromCell} from 'logisheets-engine'
 import {callerRegistry} from '@/core/permissions/caller-registry'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
+import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 
 type CraftPanelProps = {
     selectedData?: SelectedData
@@ -71,6 +72,7 @@ export const CraftPanel = ({
             const data = buildSelectedDataFromCell(row, col, 'none')
             setSelectedData(data)
         }
+        injectCraftInteractionAPIs(win)
     }
 
     useEffect(() => {
