@@ -5,7 +5,6 @@ import {
     registerRadioBinding,
     unregisterRadioBinding,
     clearRadioBindings,
-    getRadioBindings,
     getRadioSelection,
     type RadioBinding,
     registerMultiSelectBinding,
@@ -46,10 +45,7 @@ export const CraftInteractionComponent = ({
     return (
         <>
             <RadioLayer activeSheet={activeSheet} resolver={resolver} />
-            <MultiSelectLayer
-                activeSheet={activeSheet}
-                resolver={resolver}
-            />
+            <MultiSelectLayer activeSheet={activeSheet} resolver={resolver} />
             <PointAllocatorLayer
                 activeSheet={activeSheet}
                 resolver={resolver}
@@ -91,17 +87,9 @@ export function injectCraftInteractionAPIs(win: Window): void {
             'groupId' | 'blockId' | 'row' | 'col'
         >
     ) => unregisterPointAllocator(binding)
-    w.clearPointAllocators = (groupId?: string) =>
-        clearPointAllocators(groupId)
+    w.clearPointAllocators = (groupId?: string) => clearPointAllocators(groupId)
     w.setPointPool = (groupId: string, total: number) =>
         setPointPool(groupId, total)
     w.getPointPool = (groupId: string) => getPointPool(groupId)
     w.getPointAllocations = (groupId: string) => getPointAllocations(groupId)
 }
-
-export {
-    registerRadioBinding,
-    unregisterRadioBinding,
-    clearRadioBindings,
-    getRadioBindings,
-} from '@/core/craft-interactions'

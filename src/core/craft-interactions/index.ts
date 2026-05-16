@@ -12,7 +12,9 @@ const radioBindings = new Map<string, RadioBinding>()
 const groupSelections = new Map<string, string>()
 const storeListeners = new Set<() => void>()
 
-function bindingKey(b: Pick<RadioBinding, 'groupId' | 'blockId' | 'row' | 'col'>): string {
+function bindingKey(
+    b: Pick<RadioBinding, 'groupId' | 'blockId' | 'row' | 'col'>
+): string {
     return `${b.groupId}-${b.blockId}-${b.row}-${b.col}`
 }
 
