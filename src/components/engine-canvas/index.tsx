@@ -29,6 +29,7 @@ import {
 } from '@/components/formula-editor'
 import {getHighlightColor} from '@/components/const'
 import {BlockInterfaceComponent} from '@/components/block-interface'
+import {CraftInteractionComponent} from '@/components/craft-interaction'
 import {DiffLayer} from '@/components/diff-layer'
 import type {DiffState} from '@/components/diff-layer'
 import styles from './engine-canvas.module.scss'
@@ -542,6 +543,13 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                         grid={grid}
                         canvasStartX={canvasPos.x}
                         canvasStartY={canvasPos.y}
+                    />
+                )}
+                {/* Craft interaction overlay (radios bound to block cells) */}
+                {grid && (
+                    <CraftInteractionComponent
+                        grid={grid}
+                        activeSheet={activeSheet}
                     />
                 )}
             </div>

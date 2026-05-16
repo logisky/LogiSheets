@@ -156,4 +156,81 @@ impl BlockPlace {
     pub fn get_block_size(&self) -> (usize, usize) {
         (self.rows.len(), self.cols.len())
     }
+
+    pub fn move_line(self, from: usize, to: usize, is_row: bool) -> Self {
+        let mut result = self;
+        if is_row {
+            let item = result.rows.remove(from);
+            result.rows.insert(to, item);
+        } else {
+            let item = result.cols.remove(from);
+            result.cols.insert(to, item);
+        }
+        result
+    }
+
+    pub fn reorder_lines(self, new_order: &[usize], is_row: bool) -> Self {
+        let mut result = self;
+        if is_row {
+            let old = result.rows.clone();
+            result.rows = new_order.iter().map(|&i| old[i]).collect();
+        } else {
+            let old = result.cols.clone();
+            result.cols = new_order.iter().map(|&i| old[i]).collect();
+        }
+        result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use imbl::Vector;
+
+    fn dummy_block_place(rows: Vector<RowId>, cols: Vector<ColId>) -> BlockPlace {
+        BlockPlace {
+            master: NormalCellId { row: 0, col: 0 },
+            rows,
+            cols,
+            next_avail_row: 0,
+            next_avail_col: 0,
+            owner: String::new(),
+            modify_policy: ModifyPolicy::All,
+        }
+    }
+
+    #[test]
+    fn test_move_line_row_down() {
+        let bp = dummy_block_place(Vector::from(vec![0, 1, 2, 3]), Vector::new());
+        let bp = bp.move_line(0, 2, true);
+        assert_eq!(bp.rows, Vector::from(vec![1, 2, 0, 3]));
+    }
+
+    #[test]
+    fn test_move_line_row_up() {
+        let bp = dummy_block_place(Vector::from(vec![0, 1, 2, 3]), Vector::new());
+        let bp = bp.move_line(3, 1, true);
+        assert_eq!(bp.rows, Vector::from(vec![0, 3, 1, 2]));
+    }
+
+    #[test]
+    fn test_move_line_col() {
+        let bp = dummy_block_place(Vector::new(), Vector::from(vec![10, 20, 30, 40]));
+        let bp = bp.move_line(1, 3, false);
+        assert_eq!(bp.cols, Vector::from(vec![10, 30, 40, 20]));
+    }
+
+    #[test]
+    fn test_reorder_lines_row() {
+        let bp = dummy_block_place(Vector::from(vec![0, 1, 2, 3]), Vector::new());
+        let bp = bp.reorder_lines(&[3, 0, 2, 1], true);
+        assert_eq!(bp.rows, Vector::from(vec![3, 0, 2, 1]));
+    }
+
+    #[test]
+    fn test_reorder_lines_col() {
+        let bp = dummy_block_place(Vector::new(), Vector::from(vec![10, 20, 30, 40]));
+        let bp = bp.reorder_lines(&[2, 0, 3, 1], false);
+        assert_eq!(bp.cols, Vector::from(vec![30, 10, 40, 20]));
+    }
 }

@@ -17,7 +17,7 @@
           inherit system overlays;
         };
         # Rust toolchains
-        stableToolchain = pkgs.rust-bin.stable."1.88.0".minimal.override {
+        stableToolchain = pkgs.rust-bin.stable."1.95.0".minimal.override {
           extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
           targets = [ "wasm32-unknown-unknown" ];
         };

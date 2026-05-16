@@ -50,6 +50,42 @@ impl NavExecutor {
                 );
                 Ok((self, true))
             }
+            EditPayload::MoveBlockLine(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                let new_bp = bp.move_line(p.from, p.to, p.is_row);
+                let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
+                Ok((
+                    NavExecutor {
+                        nav,
+                        row_inserted: self.row_inserted,
+                        row_removed: self.row_removed,
+                        col_inserted: self.col_inserted,
+                        col_removed: self.col_removed,
+                    },
+                    true,
+                ))
+            }
+            EditPayload::ReorderBlockLines(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                let new_bp = bp.reorder_lines(&p.new_order, p.is_row);
+                let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
+                Ok((
+                    NavExecutor {
+                        nav,
+                        row_inserted: self.row_inserted,
+                        row_removed: self.row_removed,
+                        col_inserted: self.col_inserted,
+                        col_removed: self.col_removed,
+                    },
+                    true,
+                ))
+            }
             EditPayload::RemoveBlock(remove_block) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(remove_block.sheet_idx)

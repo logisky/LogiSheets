@@ -95,6 +95,8 @@ pub enum EditPayload {
     BindFormSchema(BindFormSchema),
     BindRandomSchema(BindRandomSchema),
     UpsertFieldRenderInfo(UpsertFieldRenderInfo),
+    MoveBlockLine(MoveBlockLine),
+    ReorderBlockLines(ReorderBlockLines),
 
     // DiyCell
     CreateDiyCell(CreateDiyCell),
@@ -493,6 +495,37 @@ impl From<BlockInput> for EditPayload {
 impl From<UpsertFieldRenderInfo> for EditPayload {
     fn from(value: UpsertFieldRenderInfo) -> Self {
         EditPayload::UpsertFieldRenderInfo(value)
+    }
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "move_block_line.ts", builder, rename_all = "camelCase")]
+pub struct MoveBlockLine {
+    pub sheet_idx: usize,
+    pub block_id: usize,
+    pub from: usize,
+    pub to: usize,
+    pub is_row: bool,
+}
+
+impl From<MoveBlockLine> for EditPayload {
+    fn from(value: MoveBlockLine) -> Self {
+        EditPayload::MoveBlockLine(value)
+    }
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "reorder_block_lines.ts", rename_all = "camelCase")]
+pub struct ReorderBlockLines {
+    pub sheet_idx: usize,
+    pub block_id: usize,
+    pub is_row: bool,
+    pub new_order: Vec<usize>,
+}
+
+impl From<ReorderBlockLines> for EditPayload {
+    fn from(value: ReorderBlockLines) -> Self {
+        EditPayload::ReorderBlockLines(value)
     }
 }
 
