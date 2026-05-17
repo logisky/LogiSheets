@@ -70,11 +70,10 @@ impl Workbook {
         Ok(name)
     }
 
-    /// Execute the `EditAction`, but the result will be stored as a temporary status.
+    /// Execute the `EditAction` on the temp branch. Subsequent calls accumulate on the same branch
+    /// until `commit_temp_status` or `clean_temp_status` is called.
     pub fn handle_action_in_temp_status(&mut self, action: PayloadsAction) -> ActionEffect {
-        let result = self.controller.handle_action_in_temp_status(action);
-        self.controller.toggle_temp_status();
-        result
+        self.controller.handle_action_in_temp_status(action)
     }
 
     pub fn commit_temp_status(&mut self) {
@@ -85,10 +84,8 @@ impl Workbook {
         self.controller.clean_temp_status();
     }
 
-    pub fn toggle_status(&mut self, use_temp: bool) {
-        if self.controller.temp_status.enabled != use_temp {
-            self.controller.toggle_temp_status();
-        }
+    pub fn toggle_status(&mut self, _use_temp: bool) {
+        // No-op: self.status always reflects the active state (temp or real).
     }
 
     pub fn batch_get_cell_info_by_id(&self, ids: Vec<SheetCellId>) -> Result<Vec<CellInfo>> {

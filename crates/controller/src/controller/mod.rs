@@ -26,24 +26,17 @@ use status::Status;
 use self::display::SheetInfo;
 use crate::async_func_manager::AsyncFuncManager;
 
-#[derive(Default, Debug)]
 pub struct TempStatus {
-    pub status: Option<Status>,
-    pub enabled: bool,
-    pub payloads: PayloadsAction,
-    pub updated_cells: HashSet<(SheetId, CellId)>,
-}
-
-impl TempStatus {
-    pub fn take(&mut self) -> Self {
-        std::mem::take(self)
-    }
+    pub fork_status: Status,
+    pub version_manager: VersionManager,
+    pub accumulated_payloads: Vec<crate::edit_action::EditPayload>,
+    pub accumulated_updated_cells: HashSet<(SheetId, CellId)>,
 }
 
 pub struct Controller {
     // TODO: clean this field. Use the VersionManager.current
     pub status: Status,
-    pub temp_status: TempStatus,
+    pub temp_status: Option<TempStatus>,
     pub async_func_manager: AsyncFuncManager,
     pub curr_book_name: String,
     pub settings: Settings,
@@ -63,7 +56,7 @@ impl Default for Controller {
             async_func_manager: AsyncFuncManager::default(),
             sid_assigner: ShadowIdAssigner::new(),
             app_data: vec![],
-            temp_status: TempStatus::default(),
+            temp_status: None,
         };
         let add_sheet = PayloadsAction::new()
             .add_payload(CreateSheet {
@@ -86,46 +79,36 @@ impl Controller {
 
     #[inline]
     pub fn is_editable(&self) -> bool {
-        !self.is_reading_temp_status()
+        true
     }
 
     #[inline]
-    pub fn is_reading_temp_status(&self) -> bool {
-        self.temp_status.enabled
+    pub fn is_in_temp_mode(&self) -> bool {
+        self.temp_status.is_some()
     }
 
-    pub fn toggle_temp_status(&mut self) {
-        if self.temp_status.status.is_none() {
-            return;
-        }
-
-        self.temp_status.enabled = !self.temp_status.enabled;
-        std::mem::swap(
-            &mut self.status,
-            &mut self.temp_status.status.as_mut().unwrap(),
-        );
-    }
+    #[deprecated = "no-op in new design; temp mode is always active when temp_status is Some"]
+    pub fn toggle_temp_status(&mut self) {}
 
     pub fn clean_temp_status(&mut self) {
-        if self.is_reading_temp_status() {
-            self.toggle_temp_status();
+        if let Some(temp) = self.temp_status.take() {
+            self.status = temp.fork_status;
         }
-
-        self.temp_status.take();
     }
 
     pub fn commit_temp_status(&mut self) {
-        if self.is_reading_temp_status() {
-            self.toggle_temp_status();
+        if let Some(temp) = self.temp_status.take() {
+            let merged_payloads = PayloadsAction {
+                payloads: temp.accumulated_payloads,
+                undoable: true,
+                init: false,
+            };
+            self.version_manager.record(
+                self.status.clone(),
+                merged_payloads,
+                temp.accumulated_updated_cells,
+            );
         }
-
-        let temp_status = self.temp_status.take();
-        self.status = temp_status.status.unwrap();
-        self.version_manager.record(
-            self.status.clone(),
-            temp_status.payloads,
-            temp_status.updated_cells,
-        );
     }
 
     pub fn from(
@@ -142,7 +125,7 @@ impl Controller {
             async_func_manager: AsyncFuncManager::default(),
             sid_assigner: ShadowIdAssigner::new(),
             app_data,
-            temp_status: TempStatus::default(),
+            temp_status: None,
         }
     }
 
@@ -179,7 +162,16 @@ impl Controller {
     }
 
     pub fn handle_action_in_temp_status(&mut self, action: PayloadsAction) -> ActionEffect {
-        self.clean_temp_status();
+        // Initialize temp branch on first temp transaction
+        if self.temp_status.is_none() {
+            self.temp_status = Some(TempStatus {
+                fork_status: self.status.clone(),
+                version_manager: VersionManager::default(),
+                accumulated_payloads: vec![],
+                accumulated_updated_cells: HashSet::new(),
+            });
+        }
+
         let executor = Executor {
             status: self.status.clone(),
             version_manager: &mut self.version_manager,
@@ -215,13 +207,16 @@ impl Controller {
                     WorkbookUpdateType::DoNothing
                 };
 
-                let temp_status = TempStatus {
-                    status: Some(result.status),
-                    enabled: false,
-                    payloads: action,
-                    updated_cells: result.updated_cells.clone(),
-                };
-                self.temp_status = temp_status;
+                let temp = self.temp_status.as_mut().unwrap();
+                temp.accumulated_payloads.extend(action.payloads.clone());
+                temp.accumulated_updated_cells
+                    .extend(result.updated_cells.iter().copied());
+                temp.version_manager.record(
+                    result.status.clone(),
+                    action,
+                    result.updated_cells.clone(),
+                );
+                self.status = result.status;
 
                 ActionEffect {
                     version: result.version_manager.version(),
@@ -232,7 +227,6 @@ impl Controller {
                         .into_iter()
                         .map(|(sheet_id, cell_id)| SheetCellId { sheet_id, cell_id })
                         .collect(),
-
                     cell_removed: result
                         .cells_removed
                         .into_iter()
@@ -281,8 +275,9 @@ impl Controller {
 
     // Handle an action and get the affected sheet indices.
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
-        if !self.is_editable() && !matches!(action, EditAction::Recalc(_)) {
-            return ActionEffect::from(0, vec![], WorkbookUpdateType::DoNothing);
+        // A non-temp transaction discards any active temp branch
+        if self.is_in_temp_mode() && !matches!(action, EditAction::Undo | EditAction::Redo) {
+            self.clean_temp_status();
         }
         match action {
             EditAction::Undo => {
@@ -483,28 +478,43 @@ impl Controller {
     }
 
     pub fn undo(&mut self) -> bool {
-        if !self.is_editable() {
-            return false;
-        }
-        match self.version_manager.undo() {
-            Some(mut last_status) => {
-                std::mem::swap(&mut self.status, &mut last_status);
-                true
+        if let Some(temp) = &mut self.temp_status {
+            // Undo within temp branch; stop at fork point (never crosses into main history)
+            match temp.version_manager.undo() {
+                Some(status) => {
+                    self.status = status;
+                    true
+                }
+                None => false,
             }
-            None => false,
+        } else {
+            match self.version_manager.undo() {
+                Some(status) => {
+                    self.status = status;
+                    true
+                }
+                None => false,
+            }
         }
     }
 
     pub fn redo(&mut self) -> bool {
-        if !self.is_editable() {
-            return false;
-        }
-        match self.version_manager.redo() {
-            Some(mut next_status) => {
-                std::mem::swap(&mut self.status, &mut next_status);
-                true
+        if let Some(temp) = &mut self.temp_status {
+            match temp.version_manager.redo() {
+                Some(status) => {
+                    self.status = status;
+                    true
+                }
+                None => false,
             }
-            None => false,
+        } else {
+            match self.version_manager.redo() {
+                Some(status) => {
+                    self.status = status;
+                    true
+                }
+                None => false,
+            }
         }
     }
 }
@@ -933,54 +943,162 @@ mod tests {
             undoable: true,
             init: false,
         };
+
+        // Before temp action: cell should be empty
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+        let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
+        let cell_before = wb.status.container.get_cell(sheet_id, &cell_id);
+        assert!(cell_before.is_none());
+
         let result = wb.handle_action_in_temp_status(action);
         assert!(result.value_changed.len() == 1);
-        assert!(!wb.is_reading_temp_status());
+        assert!(wb.is_in_temp_mode());
 
-        let cell_id = wb
-            .status
-            .navigator
-            .fetch_cell_id(&wb.get_sheet_id_by_idx(sheet_idx).unwrap(), 0, 0)
-            .unwrap();
+        // After temp action: self.status reflects temp state
+        let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
         let cell = wb
             .status
             .container
-            .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id);
-        assert!(cell.is_none());
-
-        wb.toggle_temp_status();
-
-        assert!(wb.is_reading_temp_status());
-
-        let cell_id = wb
-            .status
-            .navigator
-            .fetch_cell_id(&wb.get_sheet_id_by_idx(sheet_idx).unwrap(), 0, 0)
-            .unwrap();
-        let cell = wb
-            .status
-            .container
-            .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id)
+            .get_cell(sheet_id, &cell_id)
             .unwrap();
         assert!(matches!(cell.value, CellValue::Number(1.0)));
 
+        // Undo within temp branch: back to fork state (cell gone)
+        let did_undo = wb.undo();
+        assert!(did_undo);
+        let cell_after_undo = wb.status.container.get_cell(sheet_id, &cell_id);
+        assert!(cell_after_undo.is_none());
+
+        // Undo again: at fork point, should stop
+        let did_undo_again = wb.undo();
+        assert!(!did_undo_again);
+
+        // Redo: cell back
+        let did_redo = wb.redo();
+        assert!(did_redo);
+        let cell_after_redo = wb
+            .status
+            .container
+            .get_cell(sheet_id, &cell_id)
+            .unwrap();
+        assert!(matches!(cell_after_redo.value, CellValue::Number(1.0)));
+
+        // Commit: temp branch merged into main history
         wb.commit_temp_status();
+        assert!(!wb.is_in_temp_mode());
 
-        assert!(wb.temp_status.status.is_none());
-        assert!(!wb.temp_status.enabled);
-        assert_eq!(wb.temp_status.updated_cells.len(), 0);
-
-        let cell_id = wb
-            .status
-            .navigator
-            .fetch_cell_id(&wb.get_sheet_id_by_idx(sheet_idx).unwrap(), 0, 0)
-            .unwrap();
+        let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
         let cell = wb
             .status
             .container
-            .get_cell(wb.get_sheet_id_by_idx(sheet_idx).unwrap(), &cell_id)
+            .get_cell(sheet_id, &cell_id)
             .unwrap();
         assert!(matches!(cell.value, CellValue::Number(1.0)));
+    }
+
+    #[test]
+    fn test_temp_status_accumulate() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+
+        // First temp action
+        let action1 = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                content: String::from("1"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        wb.handle_action_in_temp_status(action1);
+        assert!(wb.is_in_temp_mode());
+
+        // Second temp action on same branch
+        let action2 = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx,
+                row: 1,
+                col: 0,
+                content: String::from("2"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        wb.handle_action_in_temp_status(action2);
+        assert!(wb.is_in_temp_mode());
+
+        // Both cells should be set
+        let cell_id0 = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
+        let cell_id1 = wb.status.navigator.fetch_cell_id(&sheet_id, 1, 0).unwrap();
+        let cell0 = wb.status.container.get_cell(sheet_id, &cell_id0).unwrap();
+        let cell1 = wb.status.container.get_cell(sheet_id, &cell_id1).unwrap();
+        assert!(matches!(cell0.value, CellValue::Number(1.0)));
+        assert!(matches!(cell1.value, CellValue::Number(2.0)));
+
+        // Undo second action
+        wb.undo();
+        let cell1_gone = wb.status.container.get_cell(sheet_id, &cell_id1);
+        assert!(cell1_gone.is_none());
+        let cell0_still = wb.status.container.get_cell(sheet_id, &cell_id0).unwrap();
+        assert!(matches!(cell0_still.value, CellValue::Number(1.0)));
+
+        // Undo first action
+        wb.undo();
+        let cell0_gone = wb.status.container.get_cell(sheet_id, &cell_id0);
+        assert!(cell0_gone.is_none());
+
+        // At fork point, undo should stop
+        assert!(!wb.undo());
+
+        // Clean: restore fork state
+        wb.redo(); // restore action1 to test clean
+        wb.redo(); // restore action2
+        wb.clean_temp_status();
+        assert!(!wb.is_in_temp_mode());
+        let cell0_cleaned = wb.status.container.get_cell(sheet_id, &cell_id0);
+        assert!(cell0_cleaned.is_none());
+    }
+
+    #[test]
+    fn test_temp_status_non_temp_cleans() {
+        let mut wb = Controller::default();
+        let sheet_idx = 0;
+        let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
+
+        let temp_action = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                content: String::from("temp"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        wb.handle_action_in_temp_status(temp_action);
+        assert!(wb.is_in_temp_mode());
+
+        // Non-temp action discards temp and applies normally
+        let normal_action = PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx,
+                row: 0,
+                col: 0,
+                content: String::from("real"),
+            })],
+            undoable: true,
+            init: false,
+        };
+        wb.handle_action(EditAction::Payloads(normal_action));
+        assert!(!wb.is_in_temp_mode());
+
+        let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
+        let cell = wb.status.container.get_cell(sheet_id, &cell_id).unwrap();
+        // Value should be "real", not "temp"
+        assert!(!matches!(cell.value, CellValue::Blank));
     }
 
     #[test]

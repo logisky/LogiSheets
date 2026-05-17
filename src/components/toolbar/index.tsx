@@ -1,4 +1,6 @@
 import {useEffect, useRef, useState} from 'react'
+import {observer} from 'mobx-react-lite'
+import {globalStore} from '@/store'
 import styles from './toolbar.module.scss'
 import modalStyles from '../modal.module.scss'
 import {getSelectedCellRange, getSelectedLines, Grid} from 'logisheets-engine'
@@ -41,6 +43,7 @@ import {
     Save as SaveIcon,
     Undo as UndoIcon,
     Redo as RedoIcon,
+    Science as ScienceIcon,
     FormatPaint as FormatPaintIcon,
     FormatBold as FormatBoldIcon,
     FormatItalic as FormatItalicIcon,
@@ -67,7 +70,7 @@ export interface ToolbarProps {
     selectedData?: SelectedData
 }
 
-export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
+export const Toolbar = observer(({selectedData, setGrid}: ToolbarProps) => {
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const BLOCK_MANAGER = engine.getBlockManager()
@@ -116,6 +119,16 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
     // Undo/Redo
     const undo = () => DATA_SERVICE.undo()
     const redo = () => DATA_SERVICE.redo()
+
+    // Temp mode toggle
+    const onToggleTempMode = () => {
+        const next = !globalStore.isTempMode
+        if (!next) {
+            // Exiting temp mode: commit accumulated temp work as one undo step
+            DATA_SERVICE.getWorkbook().commitTempStatus()
+        }
+        globalStore.setTempMode(next)
+    }
 
     // Painter / font / fill
     const [formatBrushOn, setFormatBrushOn] = useState<{
@@ -745,6 +758,21 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
                             <RedoIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
+                    <Tooltip
+                        title={
+                            globalStore.isTempMode
+                                ? 'Exit temp mode (commit)'
+                                : 'Enter temp mode'
+                        }
+                    >
+                        <IconButton
+                            size="small"
+                            onClick={onToggleTempMode}
+                            color={globalStore.isTempMode ? 'warning' : 'default'}
+                        >
+                            <ScienceIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                 </div>
                 <Divider
                     orientation="vertical"
@@ -1082,4 +1110,4 @@ export const Toolbar = ({selectedData, setGrid}: ToolbarProps) => {
             )}
         </div>
     )
-}
+})
