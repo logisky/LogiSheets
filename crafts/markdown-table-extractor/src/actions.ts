@@ -4,11 +4,7 @@ import {
     StyleUpdateTypeBuilder,
     getFirstCell,
 } from 'logisheets-web'
-import type {
-    Payload,
-    Selection,
-    Transaction,
-} from 'logisheets-web'
+import type {Payload, Selection, Transaction} from 'logisheets-web'
 
 export function buildTransaction(payloads: Payload[]): Transaction {
     return {payloads, undoable: true, temp: false}

@@ -74,6 +74,8 @@ export declare class WorkbookClient {
     }): Resp<any>;
     undo(): Resp<void>;
     redo(): Resp<void>;
+    commitTempStatus(): Resp<void>;
+    cleanTempStatus(): Resp<void>;
     loadWorkbook(params: {
         content: Uint8Array;
         name: string;
