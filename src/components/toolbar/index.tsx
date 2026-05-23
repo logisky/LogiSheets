@@ -58,6 +58,8 @@ import {
     AlignHorizontalCenterOutlined,
     WrapText as WrapTextIcon,
     StrikethroughS,
+    Visibility as VisibilityIcon,
+    VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material'
 import {isErrorMessage} from 'packages/web/src/api/utils'
 import {StandardColor, StandardFont} from '@/core/standable'
@@ -771,6 +773,33 @@ export const Toolbar = observer(({selectedData, setGrid}: ToolbarProps) => {
                             color={globalStore.isTempMode ? 'warning' : 'default'}
                         >
                             <ScienceIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip
+                        title={
+                            globalStore.alwaysShowBlockInfo
+                                ? 'Block overlays: always visible (click to switch to hover)'
+                                : 'Block overlays: hover only (click to keep always visible)'
+                        }
+                    >
+                        <IconButton
+                            size="small"
+                            onClick={() =>
+                                globalStore.setAlwaysShowBlockInfo(
+                                    !globalStore.alwaysShowBlockInfo
+                                )
+                            }
+                            color={
+                                globalStore.alwaysShowBlockInfo
+                                    ? 'primary'
+                                    : 'default'
+                            }
+                        >
+                            {globalStore.alwaysShowBlockInfo ? (
+                                <VisibilityIcon fontSize="small" />
+                            ) : (
+                                <VisibilityOffIcon fontSize="small" />
+                            )}
                         </IconButton>
                     </Tooltip>
                 </div>

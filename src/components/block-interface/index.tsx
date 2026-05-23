@@ -1,4 +1,6 @@
 import {useEffect, useState} from 'react'
+import {observer} from 'mobx-react-lite'
+import {globalStore} from '@/store'
 import {Box, IconButton, Tooltip, Typography} from '@mui/material'
 import {Settings as SettingsIcon, Add as AddIcon} from '@mui/icons-material'
 import {
@@ -100,6 +102,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         canvasStartY={canvasStartY}
                         cells={info.cells}
                         grid={grid}
+                        title={info.schema.name}
                     />
                 )
             })}
@@ -125,9 +128,10 @@ interface BlockInterfaceInternalProps {
     canvasStartY: number
     cells: readonly BlockCellInfo[]
     grid: Grid
+    title: string
 }
 
-const BlockInterface = (props: BlockInterfaceInternalProps) => {
+const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
     const {
         x,
         y,
@@ -140,6 +144,7 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
         rowCnt,
         colStart,
         rowStart,
+        title,
         dataService,
         blockManager,
         canvasStartX,
@@ -149,6 +154,8 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
     } = props
 
     const [isHover, setIsHover] = useState(false)
+    // Allow a global setting to override hover and keep overlays visible.
+    const showInfo = globalStore.alwaysShowBlockInfo || isHover
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [clickMousePosition, setClickMousePosition] = useState({x: 0, y: 0})
     const [descriptorUrl, setDescriptorUrl] = useState<string | undefined>()
@@ -161,7 +168,11 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
             const mx = e.clientX - canvasStartX + LeftTop.width
             const my = e.clientY - canvasStartY + LeftTop.height
 
-            const expandedTop = isHover ? -50 : -6
+            // expandedTop covers the title bar (28px) + field headers (32px)
+            // + a little breathing room so the mouse can move up into them
+            // without losing hover. Without hover the hit-area hugs the
+            // border closely.
+            const expandedTop = isHover ? -80 : -6
             const expandedBottom = isHover ? 30 : 6
             const expandedRight = isHover ? 30 : 6
 
@@ -185,13 +196,29 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
     // One BlockCellInfo can yield several rendered cells: at most one
     // interactive widget plus zero-or-more display overlays (validation,
     // required, ...). buildRenderedCells encodes that mapping.
+    //
+    // grid.rows / grid.columns hold only the *visible* window — they're
+    // indexed positionally, but each entry's `.idx` is its absolute sheet
+    // row/column. We must look up by `.idx`, not treat the absolute idx
+    // as an array offset, or scrolling explodes with "undefined.height".
+    // Cells outside the visible window are simply skipped here; they'll
+    // re-render when scrolled back into view.
     const renderedCells: RenderedCellSpec[] = cells.flatMap((cell, idx) => {
         const rowIdx = Math.floor(idx / fieldInfo.length)
         const colIdx = idx % fieldInfo.length
-        const x = xForColStart(colStart + colIdx, grid) - baseX
-        const y = yForRowStart(rowStart + rowIdx, grid) - baseY
-        const width = grid.columns[colIdx + colStart].width
-        const height = grid.rows[rowIdx + rowStart].height
+        const absRow = rowStart + rowIdx
+        const absCol = colStart + colIdx
+        const colInfo = grid.columns.find(
+            (c: {idx: number; width: number}) => c.idx === absCol
+        )
+        const rowInfo = grid.rows.find(
+            (r: {idx: number; height: number}) => r.idx === absRow
+        )
+        if (!colInfo || !rowInfo) return []
+        const x = xForColStart(absCol, grid) - baseX
+        const y = yForRowStart(absRow, grid) - baseY
+        const width = colInfo.width
+        const height = rowInfo.height
         const f = fieldInfo[colIdx]
         const base: BlockCellProps = {
             x,
@@ -201,8 +228,8 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
             value: cell.value,
             shadowValue: cell.shadowValue,
             fieldInfo: f,
-            rowIdx: rowIdx + rowStart,
-            colIdx: colIdx + colStart,
+            rowIdx: absRow,
+            colIdx: absCol,
             sheetIdx,
         }
         return buildRenderedCells(base)
@@ -269,7 +296,7 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                         position: 'absolute',
                         inset: '6px',
                         border: '2px solid',
-                        borderColor: isHover
+                        borderColor: showInfo
                             ? 'rgb(103, 58, 183)'
                             : 'rgba(103, 58, 183, 0.5)',
                         boxSizing: 'border-box',
@@ -279,7 +306,9 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                     }}
                 />
 
-                {/* Settings button (top right) */}
+                {/* Settings button (top right) — hover only, even when the
+                    "always show block info" toggle is on. The toggle only
+                    keeps the title and field name headers visible. */}
                 {isHover && (
                     <Box
                         sx={{
@@ -312,8 +341,48 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                     </Box>
                 )}
 
+                {/* Title bar (top, above field headers) */}
+                {showInfo && title && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: '-72px',
+                            left: '6px',
+                            right: '6px',
+                            height: '24px',
+                            background:
+                                'linear-gradient(135deg, rgb(69, 39, 160) 0%, rgb(49, 27, 146) 100%)',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            px: 1,
+                            boxShadow: 2,
+                            pointerEvents: 'auto',
+                            boxSizing: 'border-box',
+                        }}
+                    >
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color: 'white',
+                                fontWeight: 700,
+                                fontSize: '0.78rem',
+                                letterSpacing: '0.02em',
+                                textAlign: 'center',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                width: '100%',
+                            }}
+                        >
+                            {title}
+                        </Typography>
+                    </Box>
+                )}
+
                 {/* Field headers (top) */}
-                {isHover && fieldInfo.length > 0 && (
+                {showInfo && fieldInfo.length > 0 && (
                     <Box
                         sx={{
                             position: 'absolute',
@@ -329,7 +398,16 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                         {fieldInfo.map((f, idx) => {
                             const fieldName = f.name || 'Unnamed'
 
-                            const width = grid.columns[idx + colStart].width
+                            // Look up by absolute column idx — grid.columns
+                            // only carries the visible window, so a column
+                            // scrolled off-screen returns undefined here.
+                            const absCol = idx + colStart
+                            const colInfo = grid.columns.find(
+                                (c: {idx: number; width: number}) =>
+                                    c.idx === absCol
+                            )
+                            if (!colInfo) return null
+                            const width = colInfo.width
 
                             return (
                                 <Tooltip
@@ -375,7 +453,8 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
                     </Box>
                 )}
 
-                {/* Add row button (bottom) */}
+                {/* Add row button (bottom) — hover only, like the settings
+                    button. */}
                 {isHover && (
                     <Box
                         sx={{
@@ -456,4 +535,4 @@ const BlockInterface = (props: BlockInterfaceInternalProps) => {
             )}
         </Box>
     )
-}
+})

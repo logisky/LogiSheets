@@ -51,6 +51,10 @@ pub struct Executor<'a> {
 
     pub sheet_updated: bool,
     pub cell_updated: bool, // todo: updated celll
+    /// Sheets whose row-height or column-width changed. Cell content is
+    /// unchanged, but viewers need to redraw row/column headers and re-layout
+    /// any overlays positioned on top of the canvas.
+    pub header_updated: HashSet<SheetId>,
 }
 
 impl<'a> Executor<'a> {
@@ -175,6 +179,29 @@ impl<'a> Executor<'a> {
         let (sheet_pos_manager, sheet_updated) = result.execute_sheet_info(&payload)?;
         result.status.sheet_info_manager = sheet_pos_manager;
 
+        // Track row/column header changes per sheet. Headers (and any UI
+        // chrome positioned by row height / column width) need to be
+        // re-rendered for these sheets, even though cell content didn't
+        // change. We accumulate across payloads via `result.header_updated`.
+        let mut header_updated = result.header_updated;
+        match &payload {
+            EditPayload::SetColWidth(p) => {
+                if let Some(sheet_id) =
+                    result.status.sheet_info_manager.get_sheet_id(p.sheet_idx)
+                {
+                    header_updated.insert(sheet_id);
+                }
+            }
+            EditPayload::SetRowHeight(p) => {
+                if let Some(sheet_id) =
+                    result.status.sheet_info_manager.get_sheet_id(p.sheet_idx)
+                {
+                    header_updated.insert(sheet_id);
+                }
+            }
+            _ => {}
+        }
+
         let mut dirty_vertices = formula_executor.dirty_vertices;
         dirty_vertices.extend(result.dirty_vertices);
 
@@ -215,6 +242,7 @@ impl<'a> Executor<'a> {
             row_removed: result.row_removed,
             col_inserted: result.col_inserted,
             col_removed: result.col_removed,
+            header_updated,
         })
     }
 
@@ -239,6 +267,7 @@ impl<'a> Executor<'a> {
             row_removed,
             col_inserted,
             col_removed,
+            header_updated,
         } = self;
         let connector = CalcConnector {
             range_manager: &status.range_manager,
@@ -288,6 +317,7 @@ impl<'a> Executor<'a> {
             row_removed,
             col_inserted,
             col_removed,
+            header_updated,
         })
     }
 

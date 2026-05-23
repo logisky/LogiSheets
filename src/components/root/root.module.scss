@@ -21,21 +21,6 @@
   background-color: white;
 }
 
-.block-view-container {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: 0%;
-  transform: translateX(100%);
-  transition: transform 0.3s ease-in-out;
-  z-index: 10000;
-
-  &.visible {
-      transform: translateX(0);
-  }
-}
-
 .container {
   flex-direction: row;
   display: flex;

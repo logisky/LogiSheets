@@ -262,6 +262,59 @@ export function getPointAllocations(groupId: string): PointAllocation[] {
     return out
 }
 
+// ---- Number slider ------------------------------------------------------
+// An overlay widget attached to a block cell. The user can scroll or type to
+// set a numeric value within [min, max]. Each confirmed value is written back
+// to the workbook as a transaction.
+
+export interface NumberSliderBinding {
+    type: 'numberSlider'
+    groupId: string
+    sheetIdx: number
+    blockId: number
+    row: number
+    col: number
+    min: number
+    max: number
+    step?: number       // default 1
+    initialValue?: number
+}
+
+const numberSliderBindings = new Map<string, NumberSliderBinding>()
+
+function numberSliderKey(
+    b: Pick<NumberSliderBinding, 'groupId' | 'blockId' | 'row' | 'col'>
+): string {
+    return `${b.groupId}-${b.blockId}-${b.row}-${b.col}`
+}
+
+export function registerNumberSlider(binding: NumberSliderBinding): void {
+    numberSliderBindings.set(numberSliderKey(binding), binding)
+    notifyStore()
+}
+
+export function unregisterNumberSlider(
+    binding: Pick<NumberSliderBinding, 'groupId' | 'blockId' | 'row' | 'col'>
+): void {
+    numberSliderBindings.delete(numberSliderKey(binding))
+    notifyStore()
+}
+
+export function clearNumberSliders(groupId?: string): void {
+    if (groupId === undefined) {
+        numberSliderBindings.clear()
+    } else {
+        for (const [k, b] of numberSliderBindings) {
+            if (b.groupId === groupId) numberSliderBindings.delete(k)
+        }
+    }
+    notifyStore()
+}
+
+export function getNumberSliderBindings(): readonly NumberSliderBinding[] {
+    return Array.from(numberSliderBindings.values())
+}
+
 export function adjustPointAllocation(
     binding: Pick<PointAllocatorBinding, 'groupId' | 'blockId' | 'row' | 'col'>,
     delta: number

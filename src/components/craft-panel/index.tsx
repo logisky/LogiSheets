@@ -15,8 +15,10 @@ import {buildSelectedDataFromCell} from 'logisheets-engine'
 import {callerRegistry} from '@/core/permissions/caller-registry'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
+import {globalStore} from '@/store'
 
 type CraftPanelProps = {
+    open: boolean
     selectedData?: SelectedData
     setSelectedData: (data: SelectedData) => void
     setActiveSheet: (index: number) => void
@@ -25,6 +27,7 @@ type CraftPanelProps = {
 }
 
 export const CraftPanel = ({
+    open,
     onClose,
     selectedData,
     setSelectedData,
@@ -41,10 +44,15 @@ export const CraftPanel = ({
             label: 'Markdown Table Extractor',
             value: '/markdown-table-extractor/index.html',
         },
+        {
+            label: 'Factory Simulator',
+            value: '/factory-simulator/index.html',
+        },
     ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
+    const BLOCK_MANAGER = engine.getBlockManager()
 
     const inject = () => {
         const iframe = iframeRef.current
@@ -66,11 +74,22 @@ export const CraftPanel = ({
             craftUuid
         )
         win.__craftUuid = craftUuid
+        win.blockManager = BLOCK_MANAGER
         win.setCellLayouts = setCellLayouts
         win.setSelection = (sheetIdx: number, row: number, col: number) => {
             setActiveSheet(sheetIdx)
             const data = buildSelectedDataFromCell(row, col, 'none')
             setSelectedData(data)
+        }
+        // Host UI controls a craft might want to toggle (e.g. switching
+        // into temp mode for a series of speculative edits, or pinning
+        // block overlays open while the craft sets up tables).
+        win.uiSettings = {
+            setTempMode: (v: boolean) => globalStore.setTempMode(v),
+            getTempMode: () => globalStore.isTempMode,
+            setAlwaysShowBlockInfo: (v: boolean) =>
+                globalStore.setAlwaysShowBlockInfo(v),
+            getAlwaysShowBlockInfo: () => globalStore.alwaysShowBlockInfo,
         }
         injectCraftInteractionAPIs(win)
     }
@@ -80,6 +99,7 @@ export const CraftPanel = ({
     }, [
         selectedData,
         DATA_SERVICE,
+        BLOCK_MANAGER,
         setCellLayouts,
         setSelectedData,
         setActiveSheet,
@@ -89,29 +109,15 @@ export const CraftPanel = ({
     return (
         <Box>
             <Drawer
-                variant="temporary"
+                variant="persistent"
                 anchor="right"
-                open={true}
-                hideBackdrop
-                ModalProps={{
-                    keepMounted: true,
-                    disableScrollLock: true,
-                    // Allow clicks to pass through the fullscreen modal root to
-                    // underlying content; only the Drawer paper itself should
-                    // intercept pointer events.
-                    slotProps: {
-                        root: {
-                            style: {pointerEvents: 'none'},
-                        },
-                    },
-                }}
+                open={open}
                 sx={{
-                    width: '360px',
-                    flexShrink: 0,
+                    // Drawer paper is position: fixed, so the docked root
+                    // doesn't need to reserve space in the flex flow.
                     '& .MuiDrawer-paper': {
                         width: '360px',
                         boxSizing: 'border-box',
-                        pointerEvents: 'auto',
                         backgroundColor: '#f2f4f7',
                         display: 'flex',
                         flexDirection: 'column',

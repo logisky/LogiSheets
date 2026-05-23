@@ -76,6 +76,22 @@ export interface FieldInfo {
     unique: boolean;
     /** Default value */
     defaultValue?: string;
+    /**
+     * Field-level write permission for non-owner callers (i.e. "the user"
+     * when the block has been registered to a craft).
+     *
+     *   - `true`  — explicitly allow user writes to cells of this field,
+     *               overriding the block-owner restriction.
+     *   - `false` — explicitly forbid user writes, even if the block has
+     *               no registered owner.
+     *   - `undefined` — fall back to block-owner rules (default behavior):
+     *               only the owner of the block can write; if the block
+     *               has no owner, anyone can write.
+     *
+     * The block owner is unaffected by this flag — owners always retain
+     * write access.
+     */
+    userEditable?: boolean;
 }
 /**
  * Manager for all fields in the application

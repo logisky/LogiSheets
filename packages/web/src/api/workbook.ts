@@ -161,6 +161,17 @@ export class Workbook {
         this._sheetInfoUpdatedCallbacks.push(callback)
     }
 
+    /**
+     * Fires after a transaction with sheet indices whose row/column headers
+     * changed (i.e. SetRowHeight / SetColWidth payloads). Useful for the UI
+     * to know which sheets need their header strip re-rendered.
+     */
+    public registerHeaderUpdatedCallback(
+        callback: (sheetIdxes: readonly number[]) => void
+    ) {
+        this._headerUpdatedCallbacks.push(callback)
+    }
+
     public getSheetNameByIdx(idx: number): Result<string> {
         return rpc('getSheetNameByIdx', {idx}, this._id)
     }
@@ -337,6 +348,11 @@ export class Workbook {
                 this._cellRemovedCallbacks.delete(cellId)
                 this._cellValueChangedCallbacks.delete(cellId)
             })
+            if (result.headerUpdated.length > 0) {
+                this._headerUpdatedCallbacks.forEach((cb) =>
+                    cb(result.headerUpdated)
+                )
+            }
         }
         return result
     }
@@ -431,6 +447,9 @@ export class Workbook {
 
     private _cellUpdatedCallbacks: Callback[] = []
     private _sheetInfoUpdatedCallbacks: Callback[] = []
+    private _headerUpdatedCallbacks: Array<
+        (sheetIdxes: readonly number[]) => void
+    > = []
 
     private _cellValueChangedCallbacks: Map<SheetCellId, Callback[]> = new Map()
     private _cellRemovedCallbacks: Map<SheetCellId, Callback[]> = new Map()

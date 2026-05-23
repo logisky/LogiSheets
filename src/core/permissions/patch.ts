@@ -4,6 +4,8 @@ import {
     Payload,
     isErrorMessage,
 } from 'logisheets-engine'
+import {toast} from 'react-toastify'
+import {getEngine} from '@/core/engine'
 import {callerRegistry} from './caller-registry'
 
 const CALLER_UUID_KEY = '__callerUuid'
@@ -90,12 +92,57 @@ async function validateCellInput(
     if (sheetCellId.cellId.type !== 'blockCell') {
         return true
     }
-    const blockId = sheetCellId.cellId.value.blockId
+    const blockCellId = sheetCellId.cellId.value
+    const blockId = blockCellId.blockId
     const owner = callerRegistry.getBlockOwner(v.sheetIdx, blockId)
+
+    // Field-level override: if this cell's field has an explicit
+    // userEditable flag, that flag wins over the block-owner check.
+    // Otherwise (undefined) we fall back to block-owner rules.
+    const fieldEditable = lookupFieldUserEditable(
+        v.sheetIdx,
+        blockId,
+        blockCellId.row,
+        blockCellId.col
+    )
+    if (fieldEditable === true) {
+        return true
+    }
+    if (fieldEditable === false && owner !== callerUuid) {
+        return false
+    }
+
     if (owner !== undefined && owner !== callerUuid) {
         return false
     }
     return true
+}
+
+/**
+ * Look up the FieldInfo.userEditable flag for a given block cell, or
+ * `undefined` if no field is registered at that position or the field
+ * carries no explicit flag.
+ */
+function lookupFieldUserEditable(
+    sheetIdx: number,
+    blockId: number,
+    blockRow: number,
+    blockCol: number
+): boolean | undefined {
+    const renderId = callerRegistry.getFieldRenderId(
+        sheetIdx,
+        blockId,
+        blockRow,
+        blockCol
+    )
+    if (!renderId) return undefined
+    try {
+        const blockManager = getEngine().getBlockManager()
+        const info = blockManager.fieldManager.get(renderId)
+        return info?.userEditable
+    } catch {
+        return undefined
+    }
 }
 
 function applyPatch() {
@@ -117,7 +164,9 @@ function applyPatch() {
                         payload,
                         callerUuid
                     )
-                    if (!ok) return false
+                    if (!ok) {
+                        return false
+                    }
                     continue
                 }
                 if (
@@ -133,6 +182,9 @@ function applyPatch() {
                     ref.blockId
                 )
                 if (owner !== undefined && owner !== callerUuid) {
+                    toast.error(
+                        `Operation blocked: block ${ref.blockId} on sheet ${ref.sheetIdx} is owned by another caller.`
+                    )
                     return false
                 }
             }
@@ -186,6 +238,31 @@ function applyPatch() {
                             v.id,
                             callerUuid
                         )
+                        continue
+                    }
+                    if (payload.type === 'bindFormSchema') {
+                        const v = payload.value as {
+                            sheetIdx: number
+                            blockId: number
+                            fieldFrom: number
+                            row: boolean
+                            renderIds: readonly string[]
+                        }
+                        // `row: true` → fields are arranged across columns
+                        // (one field per column starting at fieldFrom);
+                        // `row: false` → fields are across rows.
+                        // Remember the mapping so cellInput validation can
+                        // look up the FieldInfo and consult userEditable.
+                        const axis: 'col' | 'row' = v.row ? 'col' : 'row'
+                        v.renderIds.forEach((renderId, i) => {
+                            callerRegistry.registerFieldPosition(
+                                v.sheetIdx,
+                                v.blockId,
+                                axis,
+                                v.fieldFrom + i,
+                                renderId
+                            )
+                        })
                     }
                 }
             }
