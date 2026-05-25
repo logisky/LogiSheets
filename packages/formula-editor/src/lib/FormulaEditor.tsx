@@ -686,11 +686,15 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
                     padding: '4px',
                     lineHeight: String(config.lineHeight),
                     textAlign: config.textAlign,
+                    outline: 'none',
                 },
                 '.cm-line': {
                     padding: '0',
                 },
-                '.cm-focused': {
+                '&.cm-editor.cm-focused': {
+                    outline: 'none',
+                },
+                '&.cm-editor': {
                     outline: 'none',
                 },
                 '.cm-formula-func': {

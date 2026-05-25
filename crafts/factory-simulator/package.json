@@ -1,0 +1,26 @@
+{
+    "name": "factory-simulator",
+    "version": "0.1.0",
+    "description": "Run your factory!",
+    "main": "dist/factory-simulator.js",
+    "module": "dist/factory-simulator.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/factory-simulator && mkdir -p ../../public/factory-simulator && cp index.html ../../public/factory-simulator/index.html && cp dist/factory-simulator.js ../../public/factory-simulator/factory-simulator.js"
+    },
+    "keywords": [
+        "factory",
+        "management",
+        "game"
+    ],
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0",
+        "vite": "^5.0.0"
+    }
+}

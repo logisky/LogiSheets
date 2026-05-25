@@ -707,6 +707,12 @@ pub struct ActionEffect {
     pub col_inserted: Vec<SheetColId>,
     pub col_removed: Vec<SheetColId>,
     pub col_updated: Vec<SheetColId>,
+
+    /// Sheet indices whose row-heights or column-widths changed. Lets the
+    /// frontend re-render row/column headers (and any UI chrome whose
+    /// position depends on row/column metrics) for those sheets without
+    /// invalidating cell content.
+    pub header_updated: Vec<u32>,
 }
 
 impl ActionEffect {

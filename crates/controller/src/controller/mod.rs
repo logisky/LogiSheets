@@ -190,6 +190,7 @@ impl Controller {
             row_removed: vec![],
             col_inserted: vec![],
             col_removed: vec![],
+            header_updated: HashSet::new(),
         };
         let result = executor.execute_and_calc(action.clone());
         match result {
@@ -216,6 +217,14 @@ impl Controller {
                     action,
                     result.updated_cells.clone(),
                 );
+                let header_updated: Vec<u32> = result
+                    .header_updated
+                    .iter()
+                    .filter_map(|id| {
+                        result.status.sheet_info_manager.get_sheet_idx(id)
+                    })
+                    .map(|i| i as u32)
+                    .collect();
                 self.status = result.status;
 
                 ActionEffect {
@@ -263,6 +272,7 @@ impl Controller {
                         .into_iter()
                         .map(|(sheet_id, col_id)| SheetColId { sheet_id, col_id })
                         .collect(),
+                    header_updated,
                     ..Default::default()
                 }
             }
@@ -315,6 +325,7 @@ impl Controller {
                     row_removed: vec![],
                     col_inserted: vec![],
                     col_removed: vec![],
+                    header_updated: HashSet::new(),
                 };
 
                 let result = executor.execute_and_calc(payloads_action);
@@ -332,6 +343,14 @@ impl Controller {
                         } else {
                             WorkbookUpdateType::DoNothing
                         };
+                        let header_updated: Vec<u32> = result
+                            .header_updated
+                            .iter()
+                            .filter_map(|id| {
+                                result.status.sheet_info_manager.get_sheet_idx(id)
+                            })
+                            .map(|i| i as u32)
+                            .collect();
                         self.status = result.status;
                         ActionEffect {
                             version: result.version_manager.version(),
@@ -379,6 +398,7 @@ impl Controller {
                                 .into_iter()
                                 .map(|(sheet_id, col_id)| SheetColId { sheet_id, col_id })
                                 .collect(),
+                            header_updated,
                             ..Default::default()
                         }
                     }
@@ -421,6 +441,7 @@ impl Controller {
                     row_removed: vec![],
                     col_inserted: vec![],
                     col_removed: vec![],
+                    header_updated: HashSet::new(),
                 };
                 if let Ok(result) = executor.calc() {
                     ActionEffect {
@@ -956,11 +977,7 @@ mod tests {
 
         // After temp action: self.status reflects temp state
         let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
-        let cell = wb
-            .status
-            .container
-            .get_cell(sheet_id, &cell_id)
-            .unwrap();
+        let cell = wb.status.container.get_cell(sheet_id, &cell_id).unwrap();
         assert!(matches!(cell.value, CellValue::Number(1.0)));
 
         // Undo within temp branch: back to fork state (cell gone)
@@ -976,11 +993,7 @@ mod tests {
         // Redo: cell back
         let did_redo = wb.redo();
         assert!(did_redo);
-        let cell_after_redo = wb
-            .status
-            .container
-            .get_cell(sheet_id, &cell_id)
-            .unwrap();
+        let cell_after_redo = wb.status.container.get_cell(sheet_id, &cell_id).unwrap();
         assert!(matches!(cell_after_redo.value, CellValue::Number(1.0)));
 
         // Commit: temp branch merged into main history
@@ -988,11 +1001,7 @@ mod tests {
         assert!(!wb.is_in_temp_mode());
 
         let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
-        let cell = wb
-            .status
-            .container
-            .get_cell(sheet_id, &cell_id)
-            .unwrap();
+        let cell = wb.status.container.get_cell(sheet_id, &cell_id).unwrap();
         assert!(matches!(cell.value, CellValue::Number(1.0)));
     }
 

@@ -259,6 +259,12 @@ const FormulaEditorWrapperInner = forwardRef<
                 top: position.y,
                 width: editorWidth,
                 height: position.height,
+                // Center the inner editor vertically inside the cell-sized
+                // wrapper. The editor itself shrinks to its content height,
+                // so a tall row keeps the text vertically centered instead
+                // of glued to the top.
+                display: 'flex',
+                alignItems: 'center',
             }}
         >
             <FormulaEditor
@@ -280,8 +286,7 @@ const FormulaEditorWrapperInner = forwardRef<
                     showBorder: false,
                 }}
                 style={{
-                    height: '100%',
-                    border: '1px solid #1a73e8',
+                    width: '100%',
                     boxSizing: 'border-box',
                 }}
             />

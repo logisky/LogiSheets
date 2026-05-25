@@ -20,11 +20,16 @@ import {
     getPointPool,
     getPointAllocations,
     type PointAllocatorBinding,
+    registerNumberSlider,
+    unregisterNumberSlider,
+    clearNumberSliders,
+    type NumberSliderBinding,
 } from '@/core/craft-interactions'
 import {makeCellResolver} from './cell-rect'
 import {RadioLayer} from './radio'
 import {MultiSelectLayer} from './multi-select'
 import {PointAllocatorLayer} from './point-allocator'
+import {NumberSliderLayer} from './number-slider'
 
 export interface CraftInteractionProps {
     grid: Grid
@@ -49,6 +54,11 @@ export const CraftInteractionComponent = ({
             <PointAllocatorLayer
                 activeSheet={activeSheet}
                 resolver={resolver}
+            />
+            <NumberSliderLayer
+                activeSheet={activeSheet}
+                resolver={resolver}
+                grid={grid}
             />
         </>
     )
@@ -92,4 +102,11 @@ export function injectCraftInteractionAPIs(win: Window): void {
         setPointPool(groupId, total)
     w.getPointPool = (groupId: string) => getPointPool(groupId)
     w.getPointAllocations = (groupId: string) => getPointAllocations(groupId)
+
+    w.registerNumberSlider = (binding: NumberSliderBinding) =>
+        registerNumberSlider(binding)
+    w.unregisterNumberSlider = (
+        binding: Pick<NumberSliderBinding, 'groupId' | 'blockId' | 'row' | 'col'>
+    ) => unregisterNumberSlider(binding)
+    w.clearNumberSliders = (groupId?: string) => clearNumberSliders(groupId)
 }

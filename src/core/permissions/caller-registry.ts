@@ -5,6 +5,11 @@ const USER_KEY = '__user__'
 class CallerRegistry {
     private _entries = new Map<string, string>()
     private _blockOwners = new Map<string, string>()
+    // (sheetIdx, blockId, block-relative col) → field renderId. Populated
+    // when patch.ts observes a bindFormSchema payload. Lets the cellInput
+    // validator look up the FieldInfo for any block cell to enforce
+    // FieldInfo.userEditable.
+    private _fieldPositions = new Map<string, string>()
 
     getUserUuid(): string {
         return this._getOrAssign(USER_KEY)
@@ -31,6 +36,40 @@ class CallerRegistry {
 
     getBlockOwner(sheetIdx: number, blockId: number): string | undefined {
         return this._blockOwners.get(`${sheetIdx}-${blockId}`)
+    }
+
+    /**
+     * Register the field at a specific block-relative position.
+     * `axis = 'col'` — column-oriented form (one field per column);
+     * `axis = 'row'` — row-oriented form (one field per row).
+     */
+    registerFieldPosition(
+        sheetIdx: number,
+        blockId: number,
+        axis: 'col' | 'row',
+        offset: number,
+        renderId: string
+    ): void {
+        this._fieldPositions.set(
+            `${sheetIdx}-${blockId}-${axis}-${offset}`,
+            renderId
+        )
+    }
+
+    getFieldRenderId(
+        sheetIdx: number,
+        blockId: number,
+        blockRow: number,
+        blockCol: number
+    ): string | undefined {
+        // Try column-oriented form first, then row-oriented. A block
+        // shouldn't be bound to both — first hit wins.
+        return (
+            this._fieldPositions.get(
+                `${sheetIdx}-${blockId}-col-${blockCol}`
+            ) ??
+            this._fieldPositions.get(`${sheetIdx}-${blockId}-row-${blockRow}`)
+        )
     }
 
     private _getOrAssign(key: string): string {

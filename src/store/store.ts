@@ -15,6 +15,15 @@ export class GlobalStore {
         this.isTempMode = v
     }
 
+    // When true, block overlays (border, settings button, field headers,
+    // add-row button) are always shown. When false (default), they only
+    // appear while the mouse is over the block.
+    @observable alwaysShowBlockInfo = false
+
+    @action setAlwaysShowBlockInfo(v: boolean) {
+        this.alwaysShowBlockInfo = v
+    }
+
     purge() {
         this.$event.complete()
     }

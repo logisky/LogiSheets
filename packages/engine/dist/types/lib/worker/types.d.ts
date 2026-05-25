@@ -10,7 +10,8 @@ export declare const enum WorkerUpdate {
     CellAndSheet = 2,
     Ready = 3,
     CellValueChanged = 4,
-    CellRemoved = 5
+    CellRemoved = 5,
+    HeaderUpdated = 6
 }
 export declare enum MethodName {
     GetSheetDimension = "getSheetDimension",

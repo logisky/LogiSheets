@@ -10,6 +10,7 @@ export declare class WorkbookClient {
     private _ready;
     private _cellUpdatedCallbacks;
     private _sheetUpdatedCallbacks;
+    private _headerUpdatedCallbacks;
     private _cellValueChangedCallbacks;
     private _cellRemovedCallbacks;
     constructor(worker: Worker);
@@ -96,6 +97,7 @@ export declare class WorkbookClient {
     }): Resp<SheetCellId>;
     registerCellUpdatedCallback(f: Callback, _callbackId?: number): void;
     registerSheetUpdatedCallback(f: Callback): void;
+    registerHeaderUpdatedCallback(f: (sheetIdxes: readonly number[]) => void): void;
     registerCellValueChangedCallback(sheetIdx: number, rowIdx: number, colIdx: number, callback: CellIdCallback): Resp<void>;
     private _call;
 }

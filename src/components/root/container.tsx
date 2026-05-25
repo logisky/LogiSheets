@@ -56,22 +56,19 @@ export const RootContainer = () => {
                     </IconButton>
                 </div>
             ) : null}
-            {isCraftPanelVisible ? (
-                <div className={styles['block-view-container']}>
-                    <CraftPanel
-                        setSelectedData={setSelectedData}
-                        selectedData={selectedData}
-                        onClose={() => {
-                            setCraftPanelVisible(false)
-                            // Force remount canvas so all layout-related internal
-                            // states (anchor, scrollbars, etc.) are reset.
-                            setCanvasKey((k) => k + 1)
-                        }}
-                        setCellLayouts={setCellLayouts}
-                        setActiveSheet={setActiveSheet}
-                    />
-                </div>
-            ) : null}
+            <CraftPanel
+                open={isCraftPanelVisible}
+                setSelectedData={setSelectedData}
+                selectedData={selectedData}
+                onClose={() => {
+                    setCraftPanelVisible(false)
+                    // Force remount canvas so all layout-related internal
+                    // states (anchor, scrollbars, etc.) are reset.
+                    setCanvasKey((k) => k + 1)
+                }}
+                setCellLayouts={setCellLayouts}
+                setActiveSheet={setActiveSheet}
+            />
         </div>
     )
 }

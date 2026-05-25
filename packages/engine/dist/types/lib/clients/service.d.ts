@@ -43,5 +43,6 @@ export declare class DataService {
     getWorkbook(): WorkbookClient;
     registerSheetUpdatedCallback(f: () => void): void;
     registerCellUpdatedCallback(f: () => void, callbackId?: number): void;
+    registerHeaderUpdatedCallback(f: (sheetIdxes: readonly number[]) => void): void;
 }
 export {};
