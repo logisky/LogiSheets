@@ -175,6 +175,30 @@ function applyPatch() {
                 ) {
                     continue
                 }
+                // Field-level override for blockInput: a per-cell
+                // `userEditable: true` flag (set by the craft when it
+                // binds the schema) lets host UI commit into a craft-
+                // owned cell. Mirrors what `validateCellInput` already
+                // does for `cellInput`. Used by widgets like the
+                // PercentAllocator overlay, which writes into supplier-%
+                // cells the factory-simulator marked editable.
+                if (payload.type === 'blockInput') {
+                    const v = payload.value as {
+                        sheetIdx: number
+                        blockId: number
+                        row: number
+                        col: number
+                    }
+                    const fieldEditable = lookupFieldUserEditable(
+                        v.sheetIdx,
+                        v.blockId,
+                        v.row,
+                        v.col
+                    )
+                    if (fieldEditable === true) continue
+                    // fieldEditable === false or undefined → fall through
+                    // to block-owner check below.
+                }
                 const ref = getBlockRefFromPayload(payload)
                 if (!ref) continue
                 const owner = callerRegistry.getBlockOwner(

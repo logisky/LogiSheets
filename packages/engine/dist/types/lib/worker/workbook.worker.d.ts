@@ -2,7 +2,7 @@
  * Workbook worker service - handles all workbook-related operations in a Web Worker.
  */
 import { Workbook } from "logisheets-web";
-import type { BlockInfo, CellInfo, CellPosition, DisplayWindowWithStartPoint, MergeCell, SheetDimension, SheetInfo, CellCoordinate, FormulaDisplayInfo, ActionEffect, Value, ReproducibleCell, AppendixWithCell, SheetCellId, ShadowCellInfo, BlockField, AppData, CellCoordinateWithSheet } from "logisheets-web";
+import type { BlockInfo, CellInfo, CellPosition, DisplayWindowWithStartPoint, MergeCell, SheetDimension, SheetInfo, CellCoordinate, FormulaDisplayInfo, ActionEffect, Value, ReproducibleCell, AppendixWithCell, SheetCellId, ShadowCellInfo, BlockField, AppData, CellCoordinateWithSheet, TempStatusDiff } from "logisheets-web";
 import type { Result, IWorkbookWorker } from "./types";
 export declare class WorkbookWorkerService implements IWorkbookWorker {
     private _ctx;
@@ -59,7 +59,9 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
         sheetIdx: number;
         coordinates: any;
     }): Result<readonly ReproducibleCell[]>;
-    batchGetCellInfoById(ids: readonly SheetCellId[]): Result<readonly CellInfo[]>;
+    batchGetCellInfoById(params: {
+        ids: readonly SheetCellId[];
+    }): Result<readonly CellInfo[]>;
     batchGetCellCoordinateWithSheetById(ids: readonly SheetCellId[]): Result<readonly CellCoordinateWithSheet[]>;
     getNextVisibleCell(args: {
         sheetIdx: number;
@@ -136,6 +138,12 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
         sheetIdx: number;
         condition: any;
     }): Result<boolean>;
+    getCellIdByBlockRef(params: {
+        refName: string;
+        key: string;
+        field: string;
+    }): Result<SheetCellId>;
+    getTempStatusChanges(): Result<TempStatusDiff>;
     checkFormula(params: {
         formula: string;
     }): boolean;

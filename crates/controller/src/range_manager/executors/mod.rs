@@ -162,6 +162,17 @@ impl RangeExecutor {
                 let res = input_ephemeral(self, sheet_id, p.id)?;
                 Ok(res)
             }
+            EditPayload::EphemeralCellRemove(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                // Reuse the same range-registration path as input — the
+                // range entry needs to exist so depgraph updates can find
+                // it; the actual cell removal happens in the container
+                // executor.
+                let res = input_ephemeral(self, sheet_id, p.id)?;
+                Ok(res)
+            }
             EditPayload::CellClear(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)

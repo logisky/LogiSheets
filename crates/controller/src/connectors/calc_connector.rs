@@ -544,6 +544,12 @@ where
             ast::Error::Value => CellValue::Error(Error::Value),
             ast::Error::GettingData => CellValue::Error(Error::GettingData),
             ast::Error::Placeholder => CellValue::Error(Error::Placeholder),
+            // Unsubstituted template placeholders only reach evaluation
+            // if a formula was inputted without the per-row template
+            // context (i.e. somebody wrote `=#KEY` directly into a cell
+            // that isn't a templated block-field). Surface as #NAME?.
+            ast::Error::Key => CellValue::Error(Error::Name),
+            ast::Error::FieldRef(_) => CellValue::Error(Error::Name),
         },
     }
 }

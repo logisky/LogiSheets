@@ -43,11 +43,21 @@ expr = _{
 
 constant = _{
     error_constant
+    | template_placeholder
     | logical_constant
     | numerical_constant
     | string_constant
     | array_constant
 }
+
+template_placeholder = _{
+    field_placeholder
+    | key_placeholder
+}
+
+key_placeholder = {"#KEY"}
+
+field_placeholder = {"#FIELD(" ~ ws* ~ string_constant ~ ws* ~ ")"}
 
 error_constant = {
     "#DIV/0!"

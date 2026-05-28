@@ -24,12 +24,17 @@ import {
     unregisterNumberSlider,
     clearNumberSliders,
     type NumberSliderBinding,
+    registerPercentAllocator,
+    unregisterPercentAllocator,
+    clearPercentAllocators,
+    type PercentAllocatorBinding,
 } from '@/core/craft-interactions'
 import {makeCellResolver} from './cell-rect'
 import {RadioLayer} from './radio'
 import {MultiSelectLayer} from './multi-select'
 import {PointAllocatorLayer} from './point-allocator'
 import {NumberSliderLayer} from './number-slider'
+import {PercentAllocatorLayer} from './percent-allocator'
 
 export interface CraftInteractionProps {
     grid: Grid
@@ -56,6 +61,11 @@ export const CraftInteractionComponent = ({
                 resolver={resolver}
             />
             <NumberSliderLayer
+                activeSheet={activeSheet}
+                resolver={resolver}
+                grid={grid}
+            />
+            <PercentAllocatorLayer
                 activeSheet={activeSheet}
                 resolver={resolver}
                 grid={grid}
@@ -109,4 +119,15 @@ export function injectCraftInteractionAPIs(win: Window): void {
         binding: Pick<NumberSliderBinding, 'groupId' | 'blockId' | 'row' | 'col'>
     ) => unregisterNumberSlider(binding)
     w.clearNumberSliders = (groupId?: string) => clearNumberSliders(groupId)
+
+    w.registerPercentAllocator = (binding: PercentAllocatorBinding) =>
+        registerPercentAllocator(binding)
+    w.unregisterPercentAllocator = (
+        binding: Pick<
+            PercentAllocatorBinding,
+            'groupId' | 'blockId' | 'row' | 'col'
+        >
+    ) => unregisterPercentAllocator(binding)
+    w.clearPercentAllocators = (groupId?: string) =>
+        clearPercentAllocators(groupId)
 }

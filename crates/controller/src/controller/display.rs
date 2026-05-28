@@ -304,6 +304,31 @@ pub struct SheetStyles {
     pub styles: Vec<CellStyle>,
 }
 
+/// One cell that changed inside the active temp branch. `old_value` is
+/// what's in the committed branch (the `fork_status` snapshot taken when
+/// temp mode began); `new_value` is what the cell holds right now in the
+/// live temp branch. Position is the *current* (post-temp) sheet row/col
+/// — block inserts may shift earlier rows downward, so even cells that
+/// didn't have a direct write may surface here with shifted positions.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "temp_cell_change.ts", rename_all = "camelCase")]
+pub struct TempCellChange {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
+    pub old_value: Value,
+    pub new_value: Value,
+}
+
+/// Diff between the active temp branch and the committed branch.
+/// Returned by `Workbook::get_temp_status_changes`; empty when no temp
+/// branch is currently active.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "temp_status_diff.ts", rename_all = "camelCase")]
+pub struct TempStatusDiff {
+    pub cells: Vec<TempCellChange>,
+}
+
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "block_field.ts", rename_all = "camelCase")]
 pub struct BlockField {

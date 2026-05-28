@@ -37,7 +37,7 @@ use logisheets_base::SheetId;
 pub use controller::{
     display::{Comment, MergeCell, Value},
     style::{Border, BorderPr, Fill, Font, Style},
-    Controller,
+    take_last_error, Controller,
 };
 pub use exclusive::{Appendix, AppendixWithCell};
 pub use logisheets_workbook::prelude::SerdeErr;

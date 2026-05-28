@@ -337,3 +337,150 @@ export function adjustPointAllocation(
     else m.set(key, next)
     notifyStore()
 }
+
+
+// ---- Percent allocator --------------------------------------------------
+// Sibling of `PointAllocator`, but tailored to "sum-to-100% across a small
+// set of cells" — the common case being a two-supplier split per material.
+// Differences from PointAllocator:
+//   * No external pool — the constraint is implicit: every binding in a
+//     group must sum to 100% (stored as 0..1 fractions in the cells).
+//   * State of truth is the *cells themselves*. Adjustment reads current
+//     cell values, computes the new allocation, and writes ALL cells in
+//     the group atomically via the host's transaction layer (see the
+//     `PercentAllocatorLayer` component). This module just tracks which
+//     cells participate in which group; it doesn't store percentages.
+
+export interface PercentAllocatorBinding {
+    type: 'percentAllocator'
+    groupId: string
+    sheetIdx: number
+    blockId: number
+    row: number
+    col: number
+}
+
+const percentBindings = new Map<string, PercentAllocatorBinding>()
+
+function percentBindingKey(
+    b: Pick<PercentAllocatorBinding, 'groupId' | 'blockId' | 'row' | 'col'>
+): string {
+    return `${b.groupId}-${b.blockId}-${b.row}-${b.col}`
+}
+
+export function registerPercentAllocator(
+    binding: PercentAllocatorBinding
+): void {
+    percentBindings.set(percentBindingKey(binding), binding)
+    notifyStore()
+}
+
+export function unregisterPercentAllocator(
+    binding: Pick<PercentAllocatorBinding, 'groupId' | 'blockId' | 'row' | 'col'>
+): void {
+    percentBindings.delete(percentBindingKey(binding))
+    notifyStore()
+}
+
+export function clearPercentAllocators(groupId?: string): void {
+    if (groupId === undefined) {
+        percentBindings.clear()
+    } else {
+        for (const [k, b] of percentBindings) {
+            if (b.groupId === groupId) percentBindings.delete(k)
+        }
+    }
+    notifyStore()
+}
+
+export function getPercentAllocatorBindings(): readonly PercentAllocatorBinding[] {
+    return Array.from(percentBindings.values())
+}
+
+/**
+ * Pure helper: apply `deltaPct` percentage points to the `targetIdx`
+ * slot of a group and rebalance the others so the group sum is always
+ * exactly 1 (100%) after the call.
+ *
+ * Semantics:
+ *  - **First-touch (group sum ≈ 0)**: auto-seed an even 1/n split as
+ *    the conceptual starting point, *then* apply the delta. So
+ *    `[0,0] +1 on idx 0` reads as "starting from 50/50, give idx 0
+ *    +1%" → `[0.51, 0.49]`. This is what we want when a craft has
+ *    bound a pair but hasn't written initial values yet — the first
+ *    click both initializes and adjusts in one step.
+ *  - **Any positive delta** (`+k`): bump target by k% (clamped to
+ *    [0,1]), take the same total off the other slots proportionally
+ *    to their pre-click share.
+ *  - **Any negative delta** (`-k`): lower target by k% (clamped),
+ *    give the same total back to the other slots proportionally.
+ *  - **Already-at-bound clicks** (e.g. +1 on a slot at 100%): no-op.
+ *  - **Manually under- or over-allocated input** (sum != 1): every
+ *    click renormalizes the group back to 1.
+ *
+ * Examples (n=2):
+ *
+ *   [0, 0]      +1 on idx 0   → [0.51, 0.49]   (auto-seed + +1)
+ *   [0.5, 0.5]  +1 on idx 0   → [0.51, 0.49]
+ *   [0.5, 0.5]  -1 on idx 0   → [0.49, 0.51]
+ *   [1.0, 0]    +1 on idx 0   → [1.0, 0]        (clamped)
+ *   [1.0, 0]    +1 on idx 1   → [0.99, 0.01]
+ *
+ * Earlier versions had a sticky-after-first-click bug: when the group
+ * was [0.01, 0], adding to idx 0 saw "others total = 0" and either
+ * reverted the bump (preserve-sum branch) or just let it climb
+ * (overflow-only branch) — neither was what the user wanted. Auto-
+ * seeding at sum≈0 makes every subsequent click see a well-formed
+ * group, so the renormalization branch always has weight to work with.
+ */
+export function redistributePercent(
+    current: readonly number[],
+    targetIdx: number,
+    deltaPct: number
+): number[] {
+    const n = current.length
+    if (n === 0) return []
+    if (n === 1) return [Math.max(0, Math.min(1, current[0] + deltaPct / 100))]
+
+    const deltaFrac = deltaPct / 100
+    const preSum = current.reduce((s, v) => s + v, 0)
+
+    // First-touch: an uninitialized group conceptually starts as an
+    // even split. Build that virtual base, then proceed normally.
+    const base =
+        preSum > 1e-9 ? current.slice() : (new Array(n).fill(1 / n) as number[])
+
+    // Apply delta to target (clamped). If nothing actually changed,
+    // bail out — `base` is already at sum=1 (or whatever the user
+    // had); no-op clicks shouldn't trigger renormalization.
+    const targetNew = Math.max(0, Math.min(1, base[targetIdx] + deltaFrac))
+    if (targetNew === base[targetIdx] && preSum > 1e-9) return current.slice()
+
+    const next = base.slice()
+    next[targetIdx] = targetNew
+
+    // Renormalize the others by the same total delta — taking from
+    // them on a positive click, giving back on a negative click. Share
+    // is proportional to each slot's pre-click value; falls back to
+    // an even split when the others are all 0.
+    const targetDelta = targetNew - base[targetIdx]
+    const adjust = -targetDelta // how much the others must absorb in aggregate
+    if (Math.abs(adjust) > 1e-12) {
+        const othersWeight = base.reduce(
+            (s, v, i) => (i === targetIdx ? s : s + v),
+            0
+        )
+        for (let i = 0; i < n; i++) {
+            if (i === targetIdx) continue
+            const share = othersWeight > 0 ? base[i] / othersWeight : 1 / (n - 1)
+            next[i] = Math.max(0, Math.min(1, base[i] + adjust * share))
+        }
+    }
+
+    // Float drift correction so sum lands on exactly 1.
+    const finalTotal = next.reduce((s, v) => s + v, 0)
+    if (finalTotal > 0 && Math.abs(finalTotal - 1) > 1e-9) {
+        for (let i = 0; i < n; i++) next[i] = next[i] / finalTotal
+    }
+    return next
+}

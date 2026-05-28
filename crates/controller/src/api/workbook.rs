@@ -2,8 +2,12 @@ use std::collections::HashMap;
 
 use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
-    controller::display::{
-        BlockField, CellCoordinateWithSheet, CellPosition, ShadowCellInfo, SheetInfo,
+    controller::{
+        display::{
+            BlockField, CellCoordinateWithSheet, CellPosition, ShadowCellInfo, SheetInfo,
+            TempCellChange, TempStatusDiff, Value as DisplayValue,
+        },
+        status::Status,
     },
     edit_action::{ActionEffect, PayloadsAction, SheetCellId, StatusCode},
     lock::{locked_write, new_locked, Locked},
@@ -475,6 +479,125 @@ impl Workbook {
         Ok(sheet_id)
     }
 
+    /// Resolve a (refName, key, field) triple to the concrete cell in a
+    /// block-bound table. Mirrors how the BLOCKREF formula resolves at
+    /// evaluation time:
+    ///   1. refName → (sheetId, blockId) via the schema manager's ref map
+    ///   2. enumerate the block's key cells and find the one whose value
+    ///      matches `key`
+    ///   3. ask the schema to convert (keyCellId, field) → BlockCellId
+    ///
+    /// Returns the BlockCell wrapped in a SheetCellId for direct use with
+    /// e.g. cell-changed subscriptions or batch reads.
+    pub fn get_cell_id_by_block_ref(
+        &self,
+        ref_name: &str,
+        key: &str,
+        field: &str,
+    ) -> Result<SheetCellId> {
+        let status = &self.controller.status;
+        let navigator = &status.navigator;
+        let bp_fetcher = |sid: &SheetId, bid: &BlockId| navigator.get_block_place(sid, bid).ok();
+
+        let (sheet_id, key_cell_ids) = status
+            .block_schema_manager
+            .get_all_key_cell_ids(ref_name, &bp_fetcher)
+            .ok_or_else(|| {
+                BasicError::InvalidFormula(format!("unknown block ref: {}", ref_name))
+            })?;
+
+        // Read each key cell's string value and find the one matching `key`.
+        let text_fetcher =
+            |id: TextId| status.text_id_manager.get_string(&id).unwrap_or_default();
+        let key_string = key.to_string();
+        let matched_key_cell = key_cell_ids
+            .into_iter()
+            .find(|bcid| {
+                status
+                    .container
+                    .get_cell(sheet_id, &CellId::BlockCell(*bcid))
+                    .map(|cell| cell.value.to_string(&text_fetcher) == key_string)
+                    .unwrap_or(false)
+            })
+            .ok_or_else(|| {
+                BasicError::InvalidFormula(format!(
+                    "key '{}' not found in block ref '{}'",
+                    key, ref_name
+                ))
+            })?;
+
+        let field_string = field.to_string();
+        let bcid = status
+            .block_schema_manager
+            .partially_resolve(ref_name, matched_key_cell, &field_string)
+            .ok_or_else(|| {
+                BasicError::InvalidFormula(format!(
+                    "field '{}' not found in block ref '{}'",
+                    field, ref_name
+                ))
+            })?;
+
+        Ok(SheetCellId {
+            sheet_id,
+            cell_id: CellId::BlockCell(bcid),
+        })
+    }
+
+    /// Snapshot of every cell whose value differs between the active
+    /// temp branch and the committed (fork) status. Used by the host's
+    /// diff layer to drive its overlay without needing JS-side
+    /// snapshot/compare logic. Returns an empty diff when no temp
+    /// branch is currently active.
+    ///
+    /// Position (`row`, `col`) reflects the *current* sheet coordinates
+    /// in the temp branch — block inserts may have shifted earlier rows
+    /// since the fork point. Cells whose `CellId` exists in temp but
+    /// not in main (or vice versa) are skipped here; for the moment
+    /// they surface as structural changes which a future revision can
+    /// add to the diff.
+    pub fn get_temp_status_changes(&self) -> Result<TempStatusDiff> {
+        let Some(temp) = &self.controller.temp_status else {
+            return Ok(TempStatusDiff::default());
+        };
+
+        let mut cells: Vec<TempCellChange> = Vec::new();
+        for (sheet_id, cell_id) in &temp.accumulated_updated_cells {
+            // Resolve to (row, col) via the current navigator (post-
+            // temp). If the cell was deleted (no longer addressable),
+            // skip it — that surfaces as a structural diff, future
+            // work.
+            let (row, col) = match self
+                .controller
+                .status
+                .navigator
+                .clone()
+                .fetch_cell_idx(sheet_id, cell_id)
+            {
+                Ok(rc) => rc,
+                Err(_) => continue,
+            };
+            let sheet_idx = match self
+                .controller
+                .status
+                .sheet_info_manager
+                .get_sheet_idx(sheet_id)
+            {
+                Some(i) => i,
+                None => continue,
+            };
+            let new_value = read_display_value(&self.controller.status, *sheet_id, cell_id);
+            let old_value = read_display_value(&temp.fork_status, *sheet_id, cell_id);
+            cells.push(TempCellChange {
+                sheet_idx,
+                row,
+                col,
+                old_value,
+                new_value,
+            });
+        }
+        Ok(TempStatusDiff { cells })
+    }
+
     pub fn calc_condition(&mut self, sheet_idx: usize, f: String) -> Result<bool> {
         let effect = self.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
             EphemeralCellInput {
@@ -519,5 +642,29 @@ impl Workbook {
             .sheet_info_manager
             .get_sheet_id(sheet_idx)
             .ok_or(BasicError::SheetIdxExceed(sheet_idx).into())
+    }
+}
+
+/// Read a single cell's display value from a specific Status. The temp
+/// branch and the fork (main) branch are both `Status` instances — this
+/// helper lets `get_temp_status_changes` resolve old/new values without
+/// going through `Worksheet` (which is tied to the live status only).
+fn read_display_value(status: &Status, sheet_id: SheetId, cell_id: &CellId) -> DisplayValue {
+    let Some(cell) = status.container.get_cell(sheet_id, cell_id) else {
+        return DisplayValue::Empty;
+    };
+    match cell.value {
+        logisheets_base::CellValue::Blank => DisplayValue::Empty,
+        logisheets_base::CellValue::Boolean(b) => DisplayValue::Bool(b),
+        logisheets_base::CellValue::Error(ref e) => DisplayValue::Error(e.to_string()),
+        logisheets_base::CellValue::String(ref s) => {
+            match status.text_id_manager.get_string(s) {
+                Some(r) => DisplayValue::Str(r),
+                None => DisplayValue::Str(String::new()),
+            }
+        }
+        logisheets_base::CellValue::Number(n) => DisplayValue::Number(n),
+        logisheets_base::CellValue::InlineStr(_) => DisplayValue::Empty,
+        logisheets_base::CellValue::FormulaStr(ref s) => DisplayValue::Str(s.clone()),
     }
 }

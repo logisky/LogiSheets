@@ -999,7 +999,7 @@ impl<'a> Worksheet<'a> {
                                 let fields = schema
                                     .fields
                                     .iter()
-                                    .map(|(f, (col_id, render_id))| {
+                                    .map(|(f, (col_id, render_id, _))| {
                                         let idx = block_place
                                             .cols
                                             .iter()
@@ -1033,7 +1033,7 @@ impl<'a> Worksheet<'a> {
                                 let fields = schema
                                     .fields
                                     .iter()
-                                    .map(|(f, (row_id, render_id))| {
+                                    .map(|(f, (row_id, render_id, _))| {
                                         let idx = block_place
                                             .rows
                                             .iter()
@@ -1466,7 +1466,7 @@ impl<'a> Worksheet<'a> {
                         let fields = schema
                             .fields
                             .iter()
-                            .map(|(f, (col_id, render_id))| {
+                            .map(|(f, (col_id, render_id, _))| {
                                 let idx =
                                     block_place.cols.iter().position(|id| id == col_id).unwrap();
                                 crate::controller::display::BlockSchemaFieldEntry {
@@ -1497,7 +1497,7 @@ impl<'a> Worksheet<'a> {
                         let fields = schema
                             .fields
                             .iter()
-                            .map(|(f, (row_id, render_id))| {
+                            .map(|(f, (row_id, render_id, _))| {
                                 let idx =
                                     block_place.rows.iter().position(|id| id == row_id).unwrap();
                                 crate::controller::display::BlockSchemaFieldEntry {

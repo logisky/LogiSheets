@@ -185,6 +185,13 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             // Primary keys are unique by definition; stamp it so cross-block
             // enumeration doesn't have to special-case them.
             const isUnique = !!field.unique || !!field.primary
+            // Empty-string valueFormula is treated as "no template" so
+            // the composer doesn't accidentally mark every untouched
+            // string/number field as constrained.
+            const valueFormula =
+                field.valueFormula && field.valueFormula.trim()
+                    ? field.valueFormula.trim()
+                    : undefined
             const f: FieldInfo = {
                 id: field.id,
                 sheetId: currentSheetId,
@@ -194,6 +201,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 description: field.description,
                 required: field.required,
                 unique: isUnique,
+                valueFormula,
             }
             const r = BLOCK_MANAGER.fieldManager.create(
                 currentSheetId,
@@ -232,6 +240,10 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 .keyIdx(keyIdx < 0 ? 0 : keyIdx)
                 .fields(fs.map((f) => f[1].name))
                 .renderIds(fs.map((f) => f[0]))
+                // Per-field value-formula templates (#FIELD("X") / #KEY).
+                // The composer's FieldSetting carries `valueFormula`;
+                // forward it (empty string for free-form fields).
+                .fieldFormulas(fields.map((f) => f.valueFormula ?? ''))
                 .build(),
         }
         payloads.push(bindFormSchemaPayload)

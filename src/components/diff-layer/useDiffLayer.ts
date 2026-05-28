@@ -1,165 +1,89 @@
 /**
- * useDiffLayer Hook
+ * useDiffLayer Hook — temp-mode-driven diff visualization.
  *
- * Manages the lifecycle of temp transactions and computes the diff state
- * by comparing cell snapshots before and after a temp transaction.
+ * Design: passive observer of `globalStore.isTempMode`. When tempMode
+ * is on, queries the engine's *authoritative* temp-vs-committed diff
+ * (`Workbook::get_temp_status_changes`) on every cell-update event and
+ * renders the result. No JS-side snapshotting; the engine already
+ * tracks `accumulated_updated_cells` in `TempStatus`.
  *
- * Usage:
- *   const { diffState, applyTempTransaction, commit, discard } = useDiffLayer()
- *   // Apply a temp transaction to preview changes
- *   await applyTempTransaction(payloads)
- *   // Commit or discard when done
- *   await commit()
- *   // or
- *   await discard()
+ * Lifecycle:
+ *   1. tempMode on  → re-query engine on every `cellChange`. Each query
+ *                     returns the full set of cells whose value differs
+ *                     from the committed branch.
+ *   2. tempMode off → clear diff state. Callers (or `commit`/`discard`
+ *                     helpers below) should have ended the temp branch
+ *                     via the workbook API first.
  */
 
-import {useState, useCallback, useRef} from 'react'
+import {useState, useEffect, useCallback} from 'react'
+import {autorun} from 'mobx'
 import {useEngine} from '@/core/engine/provider'
+import {globalStore} from '@/store'
 import {tx} from '@/core/transaction'
-import type {Grid, Row, Column} from 'logisheets-engine'
-import type {Payload} from 'logisheets-engine'
-import type {CellInfo, Value} from 'logisheets-web'
+import type {Payload, TempStatusDiff} from 'logisheets-engine'
 import {isErrorMessage} from 'logisheets-engine'
-import {
-    DiffState,
-    CellDiff,
-    RowDiff,
-    ColDiff,
-    EMPTY_DIFF,
-    valueToString,
-} from './types'
-
-/** Snapshot of visible cell values keyed by "row:col" */
-type CellSnapshot = Map<string, {value: Value; formula: string}>
-
-function cellKey(row: number, col: number): string {
-    return `${row}:${col}`
-}
+import {DiffState, CellDiff, EMPTY_DIFF, valueToString} from './types'
 
 /**
- * Read a snapshot of all visible cell values from the workbook.
+ * Convert the engine's `TempStatusDiff` (cells changed in temp vs main)
+ * into the host's `CellDiff[]` shape. Filter out same-sheet rows on
+ * sheets the layer isn't currently viewing — `diffState` carries one
+ * sheet's worth of cells; the active sheet idx is passed in.
+ *
+ * `added` vs `valueChanged` is decided by whether the OLD value
+ * (committed branch) was empty: empty → added, otherwise →
+ * valueChanged. `removed` would require detecting cells that no longer
+ * exist in temp; the engine's accumulated set only includes cells that
+ * *changed value*, so we don't surface removals here (a later revision
+ * can add structural-diff tracking — see the rust API doc).
  */
-async function takeCellSnapshot(
-    workbook: ReturnType<ReturnType<typeof useEngine>['getWorkbook']>,
-    sheetIdx: number,
-    grid: Grid
-): Promise<CellSnapshot> {
-    const snapshot: CellSnapshot = new Map()
-    if (grid.rows.length === 0 || grid.columns.length === 0) return snapshot
-
-    const startRow = grid.rows[0].idx
-    const endRow = grid.rows[grid.rows.length - 1].idx
-    const startCol = grid.columns[0].idx
-    const endCol = grid.columns[grid.columns.length - 1].idx
-
-    const result = await workbook.getCells({
-        sheetIdx,
-        startRow,
-        startCol,
-        endRow,
-        endCol,
-    })
-
-    if (isErrorMessage(result)) return snapshot
-
-    // getCells returns a flat array; we need to map by position
-    // The cells are returned for the rectangular range [startRow..endRow] x [startCol..endCol]
-    const cells = result as readonly CellInfo[]
-    let idx = 0
-    for (let r = startRow; r <= endRow; r++) {
-        for (let c = startCol; c <= endCol; c++) {
-            if (idx < cells.length) {
-                const cell = cells[idx]
-                snapshot.set(cellKey(r, c), {
-                    value: cell.value,
-                    formula: cell.formula,
-                })
-            }
-            idx++
-        }
-    }
-
-    return snapshot
-}
-
-/**
- * Compare two cell snapshots and produce cell diffs.
- */
-function computeCellDiffs(
-    before: CellSnapshot,
-    after: CellSnapshot
+function tempDiffToCellDiffs(
+    diff: TempStatusDiff,
+    activeSheetIdx: number
 ): CellDiff[] {
-    const diffs: CellDiff[] = []
-
-    // Check cells that existed before
-    for (const [key, oldCell] of before) {
-        const [rowStr, colStr] = key.split(':')
-        const row = parseInt(rowStr, 10)
-        const col = parseInt(colStr, 10)
-        const newCell = after.get(key)
-
-        if (!newCell) {
-            // Cell was in view before but not after (could be removed or scrolled out)
-            diffs.push({
-                row,
-                col,
-                type: 'removed',
-                oldValue: valueToString(oldCell.value),
-            })
-        } else {
-            const oldStr = valueToString(oldCell.value)
-            const newStr = valueToString(newCell.value)
-            if (oldStr !== newStr || oldCell.formula !== newCell.formula) {
-                diffs.push({
-                    row,
-                    col,
-                    type: 'valueChanged',
-                    oldValue: oldStr,
-                    newValue: newStr,
-                })
-            }
-        }
+    const out: CellDiff[] = []
+    for (const c of diff.cells) {
+        if (c.sheetIdx !== activeSheetIdx) continue
+        const oldStr = valueToString(c.oldValue)
+        const newStr = valueToString(c.newValue)
+        if (oldStr === newStr) continue
+        out.push({
+            row: c.row,
+            col: c.col,
+            type: oldStr === '' ? 'added' : 'valueChanged',
+            oldValue: oldStr,
+            newValue: newStr,
+        })
     }
-
-    // Check cells that are new (exist after but not before)
-    for (const [key, newCell] of after) {
-        if (!before.has(key)) {
-            const [rowStr, colStr] = key.split(':')
-            const row = parseInt(rowStr, 10)
-            const col = parseInt(colStr, 10)
-            const val = valueToString(newCell.value)
-            if (val !== '') {
-                diffs.push({
-                    row,
-                    col,
-                    type: 'added',
-                    newValue: val,
-                })
-            }
-        }
-    }
-
-    return diffs
+    return out
 }
 
 export interface UseDiffLayerReturn {
-    /** Current diff state to pass to DiffLayer component */
+    /** Current diff state to pass to DiffLayer component. Empty when
+     *  not in temp mode. */
     diffState: DiffState
     /**
-     * Apply a temp transaction and compute the diff.
-     * This will show the diff overlay on the canvas.
+     * Backwards-compat helper: turn temp mode on (if needed) and submit
+     * a temp transaction. New code can drop this entirely and just
+     * write through `tx(payloads, true)` whenever `globalStore.isTempMode`
+     * is on — the diff overlay observes tempMode and shows the change
+     * automatically. Kept for the test panel and any caller that wants
+     * a single-call helper.
      */
     applyTempTransaction: (payloads: readonly Payload[]) => Promise<void>
     /**
-     * Commit the temp transaction (make it permanent) and clear the diff.
+     * Convenience: commit the workbook's temp branch and turn temp
+     * mode off. The diff overlay clears automatically via the
+     * tempMode observer.
      */
     commit: () => Promise<void>
     /**
-     * Discard the temp transaction and clear the diff.
+     * Convenience: discard the workbook's temp branch and turn temp
+     * mode off.
      */
     discard: () => Promise<void>
-    /** Whether a temp transaction is currently active */
+    /** Whether the diff overlay is currently active (= temp mode on). */
     isActive: boolean
 }
 
@@ -169,87 +93,66 @@ export function useDiffLayer(): UseDiffLayerReturn {
     const workbook = engine.getWorkbook()
 
     const [diffState, setDiffState] = useState<DiffState>(EMPTY_DIFF)
-    const snapshotRef = useRef<CellSnapshot>(new Map())
+
+    // Query the engine for the current temp-vs-committed diff and push
+    // it into state. Cheap (engine just walks its accumulated_updated_cells
+    // set; no JS-side snapshot work), so we can call this on every
+    // cellChange event without worrying about cost.
+    const refresh = useCallback(async () => {
+        if (!globalStore.isTempMode) return
+        const diff = await workbook.getTempStatusChanges()
+        if (isErrorMessage(diff)) return
+        const cells = tempDiffToCellDiffs(diff, dataSvc.getCurrentSheetIdx())
+        setDiffState({
+            cells,
+            rows: [],
+            cols: [],
+            active: true,
+        })
+    }, [workbook, dataSvc])
+
+    // Observe globalStore.isTempMode. On entry: clear stale state, do
+    // an initial refresh (in case payloads landed before this hook
+    // mounted). On exit: clear.
+    useEffect(() => {
+        const dispose = autorun(() => {
+            const on = globalStore.isTempMode
+            if (on) {
+                setDiffState({...EMPTY_DIFF, active: true})
+                queueMicrotask(refresh)
+            } else {
+                setDiffState(EMPTY_DIFF)
+            }
+        })
+        return dispose
+    }, [refresh])
+
+    // While tempMode is active, re-query the engine on every cell
+    // update event. ANY temp-tagged transaction (PercentAllocator,
+    // factory-simulator's tick, manual cell edits, future widgets)
+    // surfaces here without per-caller wiring.
+    useEffect(() => {
+        const cb = () => {
+            if (globalStore.isTempMode) queueMicrotask(refresh)
+        }
+        engine.on('cellChange', cb)
+        return () => engine.off('cellChange', cb)
+    }, [engine, refresh])
 
     const applyTempTransaction = useCallback(
         async (payloads: readonly Payload[]) => {
-            const grid = engine.getGrid()
-            if (!grid) return
-
-            const sheetIdx = dataSvc.getCurrentSheetIdx()
-
-            // 1. Take snapshot of current (committed) cell values
-            const beforeSnapshot = await takeCellSnapshot(
-                workbook,
-                sheetIdx,
-                grid
-            )
-            snapshotRef.current = beforeSnapshot
-
-            // 2. Apply the temp transaction (triggers re-render)
-            const transaction = tx(payloads, true, true)
-            await dataSvc.handleTransaction(transaction, true)
-
-            // 3. Wait a tick for the grid to update
-            await new Promise((resolve) => setTimeout(resolve, 50))
-
-            // 4. Take snapshot of new (temp) cell values
-            const newGrid = engine.getGrid()
-            if (!newGrid) return
-
-            const afterSnapshot = await takeCellSnapshot(
-                workbook,
-                sheetIdx,
-                newGrid
-            )
-
-            // 5. Compute diffs
-            const cellDiffs = computeCellDiffs(beforeSnapshot, afterSnapshot)
-
-            // 6. Compute structural diffs (row/col count changes)
-            const rowDiffs: RowDiff[] = []
-            const colDiffs: ColDiff[] = []
-
-            // Detect row changes by comparing grid dimensions
-            const oldRowSet = new Set(grid.rows.map((r: Row) => r.idx))
-            const newRowSet = new Set(newGrid.rows.map((r: Row) => r.idx))
-            for (const r of newGrid.rows) {
-                if (!oldRowSet.has(r.idx)) {
-                    rowDiffs.push({idx: r.idx, type: 'inserted'})
-                }
+            if (!globalStore.isTempMode) {
+                globalStore.setTempMode(true)
+                // Give the autorun a microtask to capture the baseline
+                // before we mutate.
+                await Promise.resolve()
             }
-            for (const r of grid.rows) {
-                if (!newRowSet.has(r.idx)) {
-                    rowDiffs.push({idx: r.idx, type: 'removed'})
-                }
-            }
-
-            const oldColSet = new Set(grid.columns.map((c: Column) => c.idx))
-            const newColSet = new Set(newGrid.columns.map((c: Column) => c.idx))
-            for (const c of newGrid.columns) {
-                if (!oldColSet.has(c.idx)) {
-                    colDiffs.push({idx: c.idx, type: 'inserted'})
-                }
-            }
-            for (const c of grid.columns) {
-                if (!newColSet.has(c.idx)) {
-                    colDiffs.push({idx: c.idx, type: 'removed'})
-                }
-            }
-
-            setDiffState({
-                cells: cellDiffs,
-                rows: rowDiffs,
-                cols: colDiffs,
-                active: true,
-            })
+            await dataSvc.handleTransaction(tx(payloads, true, true), true)
         },
-        [engine, dataSvc, workbook]
+        [dataSvc]
     )
 
     const commit = useCallback(async () => {
-        // Commit via worker (WorkbookClient doesn't directly expose commitTempStatus,
-        // so we use the underlying _call mechanism)
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const wb = workbook as unknown as Record<string, unknown>
@@ -263,12 +166,10 @@ export function useDiffLayer(): UseDiffLayerReturn {
         } catch {
             // commitTempStatus not available on WorkbookClient
         }
-        snapshotRef.current = new Map()
-        setDiffState(EMPTY_DIFF)
+        globalStore.setTempMode(false) // observer clears diff state
     }, [workbook])
 
     const discard = useCallback(async () => {
-        // Cleanup temp status via worker
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const wb = workbook as unknown as Record<string, unknown>
@@ -282,15 +183,12 @@ export function useDiffLayer(): UseDiffLayerReturn {
         } catch {
             // cleanupTempStatus not available on WorkbookClient
         }
-
-        // Re-render to show committed state
+        // Re-render to surface the rolled-back state.
         const grid = engine.getGrid()
         if (grid) {
             await engine.render(grid.anchorX, grid.anchorY)
         }
-
-        snapshotRef.current = new Map()
-        setDiffState(EMPTY_DIFF)
+        globalStore.setTempMode(false)
     }, [workbook, engine])
 
     return {

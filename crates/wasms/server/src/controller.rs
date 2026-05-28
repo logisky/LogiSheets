@@ -26,6 +26,13 @@ pub(crate) fn init() {
     if *INIT.get() {
         return;
     }
+    // Install panic hook so Rust panics surface in the browser console
+    // with a stack trace, instead of corrupting the wasm instance
+    // silently. Without this, a panic in execute_payload looks like
+    // "handle_transaction returned undefined and nothing else happened"
+    // from the JS side — exactly the symptom we're chasing.
+    #[cfg(feature = "console_error_panic_hook")]
+    console_error_panic_hook::set_once();
     MANAGER.init(Manager::default());
     let mut init = INIT.get_mut();
     *init = true;
@@ -245,6 +252,29 @@ pub fn calc_condition(id: usize, sheet_idx: usize, f: String) -> JsValue {
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
 
+pub fn get_cell_id_by_block_ref(
+    id: usize,
+    ref_name: String,
+    key: String,
+    field: String,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let r = wb.get_cell_id_by_block_ref(&ref_name, &key, &field);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
+pub fn get_temp_status_changes(id: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let r = wb.get_temp_status_changes();
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
 pub fn check_bind_block(
     id: usize,
     sheet_idx: usize,
@@ -435,6 +465,17 @@ pub fn handle_transaction(id: usize, transaction: Transaction) -> JsValue {
     } else {
         wb.handle_action(EditAction::Payloads(payloads_action))
     };
+
+    // If the engine rejected the tx, surface the captured error string
+    // to the browser console instead of dropping it into stdout (which
+    // is a no-op in wasm).
+    if let logisheets_rs::StatusCode::Err(_) = action_effect.status {
+        if let Some(msg) = logisheets_rs::take_last_error() {
+            web_sys::console::error_1(
+                &format!("[handle_transaction] engine error: {}", msg).into(),
+            );
+        }
+    }
 
     serde_wasm_bindgen::to_value(&action_effect).unwrap()
 }

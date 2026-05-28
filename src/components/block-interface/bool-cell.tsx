@@ -4,6 +4,7 @@ import {CellInputBuilder, Payload} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToNumber} from './cell'
+import {blockEditBus} from './edit-bus'
 
 export const BoolCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
@@ -39,6 +40,17 @@ export const BoolCell = (props: BlockCellProps) => {
             value: p,
         }
         await DATA_SERVICE.handleTransaction(tx([payload], true))
+        blockEditBus.emit({
+            sheetIdx,
+            rowIdx,
+            colIdx,
+            sheetId: fieldInfo.sheetId,
+            blockId: fieldInfo.blockId,
+            fieldId: fieldInfo.id,
+            fieldName: fieldInfo.name,
+            refName: fieldInfo.refName,
+            newValue,
+        })
     }
 
     return (

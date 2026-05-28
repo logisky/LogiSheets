@@ -199,6 +199,7 @@ pub fn load_sheet_data(
                             cube_manager,
                             ext_ref_manager,
                             block_schema_manager,
+                            container,
                             sid_assigner: &ShadowIdAssigner::new(),
                         };
                         if let Some(f) = &formula.formula {

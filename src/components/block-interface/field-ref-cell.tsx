@@ -4,6 +4,7 @@ import {CellInputBuilder, Payload, isErrorMessage} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToDisplayString} from './cell'
+import {blockEditBus} from './edit-bus'
 
 // Renders a dropdown whose options are pulled at edit time from another
 // block's field. The referenced field is guaranteed unique by the composer
@@ -91,6 +92,17 @@ export const FieldRefCell = (props: BlockCellProps) => {
             .build()
         const payload: Payload = {type: 'cellInput', value: p}
         await DATA_SERVICE.handleTransaction(tx([payload], true))
+        blockEditBus.emit({
+            sheetIdx,
+            rowIdx,
+            colIdx,
+            sheetId: fieldInfo.sheetId,
+            blockId: fieldInfo.blockId,
+            fieldId: fieldInfo.id,
+            fieldName: fieldInfo.name,
+            refName: fieldInfo.refName,
+            newValue,
+        })
     }
 
     return (

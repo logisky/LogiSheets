@@ -63,6 +63,7 @@
   <div class="card">
     <div class="section-title">Game Setup</div>
     <button type="button" class="btn btn-primary" id="new-game-btn">New Game</button>
+    <button type="button" class="btn" id="tick-btn" disabled>部署完毕，进入下一轮</button>
   </div>
 
   <div class="card">
@@ -81,6 +82,23 @@
       el.scrollTop = el.scrollHeight;
     }
 
+    document.getElementById('tick-btn').addEventListener('click', async () => {
+      try {
+        const wb = window.workbook;
+        if (!wb) { log('workbook not available', 'err'); return; }
+        const blockIds = window.__factoryBlockIds;
+        if (!blockIds) { log('start a new game first', 'err'); return; }
+        const {round, orders} = await FactorySimulator.advanceRound(
+          wb, blockIds,
+          (order, accepted) => log('订单 ' + order.orderId + ' → ' + accepted, 'info')
+        );
+        log('进入第 ' + round + ' 轮，生成 ' + orders.length + ' 个订单 ✓', 'ok');
+      } catch (e) {
+        log('Error: ' + e.message, 'err');
+        console.error(e);
+      }
+    });
+
     document.getElementById('new-game-btn').addEventListener('click', async () => {
       try {
         const wb = window.workbook;
@@ -89,6 +107,8 @@
         log('Starting new game…');
         console.log('starting')
         const blockIds = await FactorySimulator.newGame(wb, window.blockManager);
+        window.__factoryBlockIds = blockIds;
+        document.getElementById('tick-btn').disabled = false;
         log('Sheets and blocks created ✓', 'ok');
         log('Assigned block IDs:');
         Object.entries(blockIds).forEach(([k, v]) => log(`  · ${k} → id ${v}`));

@@ -48,6 +48,55 @@ import type {
 import {getCellRefColor} from './types'
 import {isFormula, fuzzyMatch} from './utils'
 
+/**
+ * Build a lookup that translates a UTF-8 byte offset into `text` to the
+ * corresponding UTF-16 code-unit (JS string) offset.
+ *
+ * Backend lexer (pest) emits token spans as byte offsets — fine for
+ * ASCII, broken for any multi-byte content (CJK is 3 bytes, emoji is
+ * 4). CodeMirror positions are UTF-16 code units. Applying byte offsets
+ * directly to a JS string causes `Position N is out of range for
+ * changeset of length M` errors as soon as the formula contains a
+ * non-ASCII character.
+ *
+ * The returned closure accepts any byte index up to `text`'s byte
+ * length and returns the UTF-16 index of the codepoint that *starts*
+ * at or after that byte. Out-of-range queries clamp to `text.length`.
+ */
+function makeByteToCharIdx(text: string): (byteIdx: number) => number {
+    // Sparse table: filled only at codepoint-start byte positions. Any
+    // mid-codepoint byte falls back to the nearest preceding entry via
+    // the loop below.
+    const starts: number[] = []
+    const utf16s: number[] = []
+    let byte = 0
+    for (let i = 0; i < text.length; ) {
+        const code = text.codePointAt(i)!
+        starts.push(byte)
+        utf16s.push(i)
+        const utf16Len = code > 0xffff ? 2 : 1
+        const utf8Len =
+            code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4
+        byte += utf8Len
+        i += utf16Len
+    }
+    // Sentinel: end-of-text byte length maps to text.length UTF-16 units.
+    starts.push(byte)
+    utf16s.push(text.length)
+
+    return (b: number) => {
+        if (b <= 0) return 0
+        if (b >= byte) return text.length
+        // Linear scan is fine for typical formula lengths (< a few hundred
+        // codepoints). Binary search not worth the complexity.
+        for (let k = 0; k < starts.length; k++) {
+            if (starts[k] === b) return utf16s[k]
+            if (starts[k] > b) return utf16s[k - 1]
+        }
+        return text.length
+    }
+}
+
 // Default config values
 const DEFAULT_CONFIG: Required<FormulaEditorConfig> = {
     fontSize: 14,
@@ -377,11 +426,22 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
             getView: () => viewRef.current,
         }))
 
-        // Build CodeMirror decorations from FormulaDisplayInfo
+        // Build CodeMirror decorations from FormulaDisplayInfo.
+        //
+        // CRITICAL: token.start / token.end come from the backend lexer
+        // (pest) as UTF-8 *byte* offsets into the formula body. CodeMirror
+        // / JS strings index by UTF-16 code units. For ASCII-only formulas
+        // these match; for any CJK / emoji / other multi-byte content
+        // they diverge and we end up dispatching changesets with
+        // positions past the document length ("Position N is out of
+        // range for changeset of length M"). Convert byte offsets to
+        // UTF-16 offsets against the original formula text before
+        // handing them to CodeMirror.
         const buildDecorations = useCallback(
             (
                 displayInfo: FormulaDisplayInfo,
-                currentSheet: string
+                currentSheet: string,
+                formulaBody: string
             ): DecorationSet => {
                 const decorations: {
                     from: number
@@ -391,9 +451,11 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
                 const offset = 1 // Account for leading '='
                 let cellRefIndex = 0
 
+                const byteToCharIdx = makeByteToCharIdx(formulaBody)
+
                 for (const token of displayInfo.tokenUnits) {
-                    const from = token.start + offset
-                    const to = token.end + offset
+                    const from = byteToCharIdx(token.start) + offset
+                    const to = byteToCharIdx(token.end) + offset
 
                     switch (token.tokenType) {
                         case 'funcName':
@@ -476,7 +538,8 @@ export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
 
                     const decorations = buildDecorations(
                         displayInfo,
-                        latestPropsRef.current.sheetName
+                        latestPropsRef.current.sheetName,
+                        formula
                     )
                     // Store both decorations and tokenUnits
                     view.dispatch({

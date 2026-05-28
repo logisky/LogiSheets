@@ -2,7 +2,7 @@ use logisheets_base::{
     block_affect::BlockAffectTrait,
     id_fetcher::{IdFetcherTrait, SheetIdFetcherByIdxTrait},
     index_fetcher::IndexFetcherTrait,
-    StyleId,
+    BlockCellId, SheetId, StyleId,
 };
 
 use crate::style_manager::RawStyle;
@@ -20,4 +20,11 @@ pub trait ContainerExecCtx:
     ) -> Result<StyleId, Error>;
 
     fn insert_style(&mut self, style: RawStyle) -> Result<StyleId, Error>;
+
+    /// True if the given block cell sits in a field carrying a
+    /// value-formula template. The container executor uses this to
+    /// skip writing the user's raw `BlockInput.input` content into the
+    /// cell — the formula manager will populate the cell from the
+    /// schema's template instead.
+    fn is_block_cell_templated(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool;
 }

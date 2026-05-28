@@ -412,6 +412,7 @@ impl<'a> Executor<'a> {
             navigator: &self.status.navigator,
             sheet_pos_manager: &self.status.sheet_info_manager,
             style_manager: &mut self.status.style_manager,
+            block_schema_manager: &self.status.block_schema_manager,
         };
         let executor = ContainerExecutor::new(self.status.container.clone());
         executor.execute(&mut ctx, payload)
@@ -430,6 +431,7 @@ impl<'a> Executor<'a> {
             navigator: &self.status.navigator,
             sheet_pos_manager: &self.status.sheet_info_manager,
             style_manager: &mut self.status.style_manager,
+            block_schema_manager: &self.status.block_schema_manager,
         };
         let executor = ExclusiveManagerExecutor::new(self.status.exclusive_manager.clone());
         executor.execute(&mut ctx, payload)
@@ -479,6 +481,7 @@ impl<'a> Executor<'a> {
             idx_navigator: old_navigator,
             external_links_manager: &mut self.status.external_links_manager,
             block_schema_manager: &self.status.block_schema_manager,
+            container: &self.status.container,
             sid_assigner: &self.sid_assigner,
         };
         let executor = FormulaExecutor {
