@@ -57,6 +57,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec![String::from("field1"), String::from("field2")],
                     render_ids: vec![String::from("render1"), String::from("render2")],
+                    field_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -102,6 +103,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec![String::from("field1"), String::from("field2")],
                     render_ids: vec![String::from("render1"), String::from("render2")],
+                    field_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -197,6 +199,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec!["name".into(), "age".into()],
                     render_ids: vec!["r-name".into(), "r-age".into()],
+                    field_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -326,6 +329,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec!["age".into()],
                     render_ids: vec!["r-age".into()],
+                    field_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -376,6 +380,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec![String::from("field1"), String::from("field2")],
                     render_ids: vec![String::from("render1"), String::from("render2")],
+                    field_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -397,6 +402,7 @@ mod funcs {
                 key_idx: 0,
                 fields: vec![String::from("field1"), String::from("field2")],
                 render_ids: vec![String::from("render1"), String::from("render2")],
+                field_formulas: vec![],
                 row: true,
             },
         )));

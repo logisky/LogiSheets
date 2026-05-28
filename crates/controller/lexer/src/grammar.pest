@@ -41,11 +41,27 @@ expr = _{
 
 constant = _{
     error_constant
+    | template_placeholder
     | logical_constant
     | numerical_constant
     | string_constant
     | array_constant
 }
+
+template_placeholder = _{
+    field_placeholder
+    | key_placeholder
+}
+
+// "#KEY" — substituted at parse time with this row's key value as a
+// string literal. Used inside field value-formula templates.
+key_placeholder = {"#KEY"}
+
+// "#FIELD(\"name\")" — substituted with a reference to the same row's
+// cell in the named sibling field. Argument is a normal STRING so the
+// lexer naturally handles "" escapes; the parser captures the inner
+// name from the string_constant.
+field_placeholder = {"#FIELD(" ~ ws* ~ string_constant ~ ws* ~ ")"}
 
 error_constant = {
     "#DIV/0!"

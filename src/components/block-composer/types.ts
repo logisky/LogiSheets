@@ -29,6 +29,17 @@ export interface FieldSetting {
     format?: string // for datetime
     validation?: string // for string/number
     unique?: boolean // for string/number — disallow duplicate values within the field
+    /**
+     * Value-formula template. When non-empty, the cell value in every
+     * row of this column is derived from the formula rather than
+     * user-typed. Placeholders supported:
+     *   `#FIELD("name")` → same-row sibling cell as absolute A1 ref
+     *   `#KEY`            → this row's key value as a quoted string
+     * Setting this implicitly makes the field uneditable (the formula
+     * is the constraint). See `logisheets-engine`'s
+     * {@link expandFieldFormula} for substitution.
+     */
+    valueFormula?: string
     // For fieldRef: the (sheet, block, field) the cell pulls its dropdown
     // options from. Eligible target fields are those with `unique: true` on
     // the engine FieldInfo (which includes primary keys, since we stamp

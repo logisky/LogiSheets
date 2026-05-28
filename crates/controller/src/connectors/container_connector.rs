@@ -27,6 +27,7 @@ pub struct ContainerConnector<'a> {
     pub external_links_manager: &'a mut ExtBooksManager,
     pub sheet_pos_manager: &'a SheetInfoManager,
     pub style_manager: &'a mut StyleManager,
+    pub block_schema_manager: &'a crate::block_manager::schema_manager::SchemaManager,
 }
 
 impl<'a> IdFetcherTrait for ContainerConnector<'a> {
@@ -276,5 +277,15 @@ impl<'a> ContainerExecCtx for ContainerConnector<'a> {
 
     fn insert_style(&mut self, style: RawStyle) -> Result<StyleId, Error> {
         self.style_manager.insert_style(style)
+    }
+
+    fn is_block_cell_templated(
+        &self,
+        sheet_id: SheetId,
+        cell: &logisheets_base::BlockCellId,
+    ) -> bool {
+        self.block_schema_manager
+            .formula_for_block_cell(sheet_id, cell)
+            .is_some()
     }
 }

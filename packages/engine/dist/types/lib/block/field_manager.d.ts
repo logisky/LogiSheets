@@ -59,6 +59,12 @@ export interface FieldInfo {
     sheetId: number;
     /** Block ID this field belongs to */
     blockId: number;
+    /**
+     * Block-schema ref name (the `refName` passed to `bindFormSchema`).
+     * Optional because fields may be created before the schema is bound;
+     * the host fills this in once the bind happens.
+     */
+    refName?: string;
     /** Name of the field */
     name: string;
     /** Type of the field */
@@ -76,6 +82,23 @@ export interface FieldInfo {
     unique: boolean;
     /** Default value */
     defaultValue?: string;
+    /**
+     * Optional value-formula template for this field. When set, every row
+     * of the block carries a derived formula in this column rather than a
+     * free-form user value. Placeholders:
+     *
+     *   `#FIELD("name")` → absolute A1 reference to the same row's cell
+     *                       in the named sibling field.
+     *   `#KEY`            → this row's key value, quoted as a string
+     *                       literal.
+     *
+     * Templated fields are constraints, not defaults — `userEditable` is
+     * forced to `false` by {@link FieldManager.create} when a template is
+     * present (the UI offers no edit affordance). Use
+     * {@link expandFieldFormula} to substitute the placeholders against a
+     * concrete row before writing into a cell.
+     */
+    valueFormula?: string;
     /**
      * Field-level write permission for non-owner callers (i.e. "the user"
      * when the block has been registered to a craft).
@@ -151,6 +174,13 @@ export declare class FieldManager {
      * @throws Error if attempting to change the field ID
      */
     update(fieldId: string, updates: Partial<Omit<FieldInfo, "id" | "sheetId" | "blockId">>): FieldInfo | undefined;
+    /**
+     * Set the schema ref-name on every field of a block. Call this right
+     * after the corresponding `bindFormSchema` payload — the host knows
+     * the refName at bind time, the field manager doesn't, so we stamp it
+     * onto every field belonging to the block.
+     */
+    setBlockRefName(sheetId: number, blockId: number, refName: string): void;
     /**
      * Delete a field
      * @param fieldId The field ID

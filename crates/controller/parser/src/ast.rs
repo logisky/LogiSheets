@@ -16,6 +16,17 @@ pub enum Error {
     Value,
     GettingData,
     Placeholder,
+    /// `#KEY` template placeholder. Substituted at parse time (inside a
+    /// templated block-cell context) with this row's key value as a
+    /// string literal. If this variant reaches evaluation it means the
+    /// formula was inputted without template context — surfaces as
+    /// `#NAME?` to the user.
+    Key,
+    /// `#FIELD("name")` template placeholder. Substituted with a
+    /// reference to the same row's sibling cell at parse time. Carries
+    /// the field name through `unparse`; surfaces as `#NAME?` at eval
+    /// time if unsubstituted (same fallback as `Key`).
+    FieldRef(String),
 }
 
 impl Error {
@@ -31,6 +42,11 @@ impl Error {
             Error::Value => "#VALUE!",
             Error::GettingData => "#GETTING_DATA",
             Error::Placeholder => "#PLACEHOLDER",
+            Error::Key => "#KEY",
+            // The dynamic field-name part is appended in the Stringify
+            // impl (see unparse.rs); this static prefix is only used by
+            // paths that don't go through unparse.
+            Error::FieldRef(_) => "#FIELD",
         }
     }
 

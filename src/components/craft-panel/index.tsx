@@ -15,6 +15,7 @@ import {buildSelectedDataFromCell} from 'logisheets-engine'
 import {callerRegistry} from '@/core/permissions/caller-registry'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
+import {blockEditBus} from '@/components/block-interface/edit-bus'
 import {globalStore} from '@/store'
 
 type CraftPanelProps = {
@@ -91,6 +92,12 @@ export const CraftPanel = ({
                 globalStore.setAlwaysShowBlockInfo(v),
             getAlwaysShowBlockInfo: () => globalStore.alwaysShowBlockInfo,
         }
+        // Subscribe to user-driven edits committed through the
+        // block-interface widgets (bool/enum/datetime/fieldRef/
+        // multiSelectRef). Returns a disposer the craft can call to stop
+        // listening. Crafts may register multiple callbacks.
+        win.onBlockCellEdit = (cb: (e: unknown) => void) =>
+            blockEditBus.on(cb as Parameters<typeof blockEditBus.on>[0])
         injectCraftInteractionAPIs(win)
     }
 

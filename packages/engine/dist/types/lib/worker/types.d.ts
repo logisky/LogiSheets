@@ -31,6 +31,8 @@ export declare enum MethodName {
     IsReady = "isReady",
     GetMergedCells = "getMergedCells",
     CalcCondition = "calcCondition",
+    GetCellIdByBlockRef = "getCellIdByBlockRef",
+    GetTempStatusChanges = "getTempStatusChanges",
     CheckFormula = "checkFormula",
     Save = "save",
     CleanupTempStatus = "cleanupTempStatus",

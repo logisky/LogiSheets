@@ -121,6 +121,7 @@ pub enum EditPayload {
 
     CellInput(CellInput),
     EphemeralCellInput(EphemeralCellInput),
+    EphemeralCellRemove(EphemeralCellRemove),
     CellClear(CellClear),
     SetColWidth(SetColWidth),
     SetRowHeight(SetRowHeight),
@@ -274,6 +275,21 @@ pub struct EphemeralCellInput {
     pub sheet_idx: usize,
     pub id: EphemeralId,
     pub content: String,
+}
+
+/// Remove an ephemeral cell previously written via `EphemeralCellInput`.
+/// Frees the slot in the container and detaches the cell from the
+/// dependency graph so it no longer participates in recompute. Safe to
+/// call on an id that was never written — the operation is a no-op.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "ephemeral_cell_remove.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct EphemeralCellRemove {
+    pub sheet_idx: usize,
+    pub id: EphemeralId,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -545,6 +561,21 @@ pub struct BindFormSchema {
     // The length of this vector should be the same as `fields`.
     pub render_ids: Vec<String>,
     pub row: bool,
+    /// Per-field value-formula templates. Same indexing as `fields` —
+    /// entry `i` is the formula for field `fields[i]`, or `None` for
+    /// free-form fields. `Some("")` is treated as `None` after trim.
+    ///
+    /// Templates use `#FIELD("name")` (substituted with a reference to
+    /// the same row's sibling cell) and `#KEY` (substituted with this
+    /// row's key value as a string literal). When a field has a
+    /// template, the engine derives the cell value from it; user
+    /// `blockInput` payloads targeting that field are ignored (the
+    /// formula is the constraint).
+    ///
+    /// Callers must always send this vec (use `[]` for "no templates").
+    /// The vec length, when non-empty, must equal `fields.len()` — index
+    /// alignment is positional.
+    pub field_formulas: Vec<Option<String>>,
 }
 
 impl From<BindFormSchema> for EditPayload {
@@ -1063,6 +1094,11 @@ impl From<EphemeralCellInput> for EditPayload {
         EditPayload::EphemeralCellInput(value)
     }
 }
+impl From<EphemeralCellRemove> for EditPayload {
+    fn from(value: EphemeralCellRemove) -> Self {
+        EditPayload::EphemeralCellRemove(value)
+    }
+}
 impl From<ConvertBlock> for EditPayload {
     fn from(value: ConvertBlock) -> Self {
         EditPayload::ConvertBlock(value)
@@ -1094,6 +1130,7 @@ impl Payload for DeleteRowsInBlock {}
 impl Payload for CellFormatBrush {}
 impl Payload for LineFormatBrush {}
 impl Payload for EphemeralCellInput {}
+impl Payload for EphemeralCellRemove {}
 impl Payload for ConvertBlock {}
 impl Payload for UpsertFieldRenderInfo {}
 impl Payload for BindFormSchema {}

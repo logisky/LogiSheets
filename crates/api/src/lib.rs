@@ -29,6 +29,7 @@ pub use logisheets_controller::controller::display::{
     BlockCellInfo, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema, BlockSchemaRandomEntry,
     BlockSchemaType, CellCoordinate, CellCoordinateWithSheet, CellPosition, ColInfo, DisplayWindow,
     DisplayWindowRequest, DisplayWindowWithStartPoint, RowInfo, ShadowCellInfo, SheetInfo,
+    TempCellChange, TempStatusDiff,
 };
 
 // Re-export edit actions
@@ -48,7 +49,7 @@ pub use logisheets_controller::edit_action::{
 pub use logisheets_controller::controller::style::{from_hex_str, PatternFill};
 
 // Re-export error types (via api module re-exports)
-pub use logisheets_controller::{Error, ErrorMessage, Result};
+pub use logisheets_controller::{take_last_error, Error, ErrorMessage, Result};
 
 // Re-export value and style types
 pub use logisheets_controller::{Appendix, AppendixWithCell, Comment, MergeCell, Style, Value};

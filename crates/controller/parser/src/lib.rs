@@ -47,6 +47,19 @@ lazy_static! {
     static ref ROW_REGEX: Regex = Regex::new(r#"(\$)?([0-9]+)"#).unwrap();
 }
 
+/// One of the three template-placeholder kinds that
+/// {@link Parser::parse_with_substitutes} can substitute. The resolver
+/// closure receives a borrowed view (so `FieldRef` carries the field
+/// name without re-allocating).
+pub enum PlaceholderKind<'a> {
+    /// Validation-style `#PLACEHOLDER`.
+    Placeholder,
+    /// Template `#KEY` — this row's key value.
+    Key,
+    /// Template `#FIELD("name")` — sibling field.
+    FieldRef(&'a str),
+}
+
 pub struct Parser {}
 
 impl Parser {
@@ -69,16 +82,40 @@ impl Parser {
     where
         T: ContextTrait,
     {
+        let sub = substitude.clone();
+        self.parse_with_substitutes(f, curr_sheet, context, &|kind| match kind {
+            PlaceholderKind::Placeholder => Some(sub.clone()),
+            _ => None,
+        })
+    }
+
+    /// Generalized AST-level substitution. After a normal parse, walks
+    /// the AST and replaces every template-placeholder node (the three
+    /// dedicated `ast::Error` variants — `Placeholder`, `Key`,
+    /// `FieldRef(name)`) with whatever the resolver returns. Resolvers
+    /// can selectively handle a subset; nodes left untouched stay as
+    /// the original Error value (and would surface as `#NAME?` at
+    /// evaluation time).
+    pub fn parse_with_substitutes<T, R>(
+        &self,
+        f: &str,
+        curr_sheet: SheetId,
+        context: &mut T,
+        resolver: &R,
+    ) -> Option<ast::Node>
+    where
+        T: ContextTrait,
+        R: Fn(PlaceholderKind<'_>) -> Option<ast::Node>,
+    {
         let formula = self.parse(f, curr_sheet, context)?;
 
         let visitor = |node: ast::Node| match &node.pure {
-            ast::PureNode::Value(value) => match value {
-                ast::Value::Error(error) => {
-                    if error == &ast::Error::Placeholder {
-                        substitude.clone()
-                    } else {
-                        node
-                    }
+            ast::PureNode::Value(ast::Value::Error(error)) => match error {
+                ast::Error::Placeholder => resolver(PlaceholderKind::Placeholder)
+                    .unwrap_or(node),
+                ast::Error::Key => resolver(PlaceholderKind::Key).unwrap_or(node),
+                ast::Error::FieldRef(name) => {
+                    resolver(PlaceholderKind::FieldRef(name)).unwrap_or(node)
                 }
                 _ => node,
             },
@@ -172,6 +209,32 @@ impl Parser {
                 let pure = build_error(pair);
                 ast::Node {
                     pure,
+                    bracket: false,
+                }
+            }
+            // Template placeholders — produced as Error::Key /
+            // Error::FieldRef(name) nodes. `parse_with_substitutes`
+            // visits the AST and replaces them with concrete nodes
+            // (Reference / Text) when called by template-aware sites
+            // (e.g. block-cell formula input). If left in place they
+            // surface as #NAME? at evaluation time.
+            Rule::key_placeholder => ast::Node {
+                pure: ast::PureNode::Value(ast::Value::Error(ast::Error::Key)),
+                bracket: false,
+            },
+            Rule::field_placeholder => {
+                let inner = pair.into_inner().next().unwrap(); // string_constant
+                let raw = inner.as_str();
+                // Strip the surrounding quotes and unescape `""` → `"`.
+                let name = if raw.len() >= 2 {
+                    raw[1..raw.len() - 1].replace("\"\"", "\"")
+                } else {
+                    String::new()
+                };
+                ast::Node {
+                    pure: ast::PureNode::Value(ast::Value::Error(
+                        ast::Error::FieldRef(name),
+                    )),
                     bracket: false,
                 }
             }

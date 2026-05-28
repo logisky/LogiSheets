@@ -37,9 +37,20 @@ impl ContainerExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = ctx.get_block_cell_id(sheet_id, p.block_id, p.row, p.col)?;
+                // Templated fields are a constraint: drop user-supplied
+                // content here. The formula manager will populate this
+                // cell from the schema's template (substituted with
+                // this row's #FIELD refs and #KEY value), and the
+                // computed value flows back into the container via
+                // normal formula evaluation. Returning `false` skips
+                // the value_changed dirty notification too — the
+                // formula path raises its own.
+                if ctx.is_block_cell_templated(sheet_id, &cell_id) {
+                    return Ok((self, false));
+                }
                 let cell_value =
                     CellValue::from_string(p.input, &mut |t| -> TextId { ctx.fetch_text_id(t) });
-                let cell_id = ctx.get_block_cell_id(sheet_id, p.block_id, p.row, p.col)?;
                 self.container
                     .update_value(sheet_id, CellId::BlockCell(cell_id), cell_value);
                 self.value_changed
@@ -241,6 +252,15 @@ impl ContainerExecutor {
                 let cell_value =
                     CellValue::from_string(p.content, &mut |t| -> TextId { ctx.fetch_text_id(t) });
                 self.container.update_value(sheet_id, cell_id, cell_value);
+                self.value_changed.push((sheet_id, cell_id));
+                Ok((self, true))
+            }
+            EditPayload::EphemeralCellRemove(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = CellId::EphemeralCell(p.id);
+                self.container.remove_cell(sheet_id, &cell_id);
                 self.value_changed.push((sheet_id, cell_id));
                 Ok((self, true))
             }

@@ -4,6 +4,7 @@ import {CellInputBuilder, Payload, isErrorMessage} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToDisplayString} from './cell'
+import {blockEditBus} from './edit-bus'
 
 // Storage convention for multiSelectRef cells: comma-separated values, each
 // trimmed. Empty cell ↔ empty list. Values are not escaped — if a referenced
@@ -93,14 +94,26 @@ export const MultiFieldRefCell = (props: BlockCellProps) => {
     }
 
     const handleChange = async (next: string[]) => {
+        const newContent = serializeList(next)
         const p = new CellInputBuilder()
             .sheetIdx(sheetIdx)
             .row(rowIdx)
             .col(colIdx)
-            .content(serializeList(next))
+            .content(newContent)
             .build()
         const payload: Payload = {type: 'cellInput', value: p}
         await DATA_SERVICE.handleTransaction(tx([payload], true))
+        blockEditBus.emit({
+            sheetIdx,
+            rowIdx,
+            colIdx,
+            sheetId: fieldInfo.sheetId,
+            blockId: fieldInfo.blockId,
+            fieldId: fieldInfo.id,
+            fieldName: fieldInfo.name,
+            refName: fieldInfo.refName,
+            newValue: newContent,
+        })
     }
 
     return (

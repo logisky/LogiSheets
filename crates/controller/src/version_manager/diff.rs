@@ -238,6 +238,7 @@ fn convert_diff<C: VersionExecCtx>(
         }
         EditPayload::EphemeralCellStyleUpdate(_) => Ok(None),
         EditPayload::EphemeralCellInput(_) => Ok(None),
+        EditPayload::EphemeralCellRemove(_) => Ok(None),
         EditPayload::CreateDiyCell(create_diy_cell) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(create_diy_cell.sheet_idx)

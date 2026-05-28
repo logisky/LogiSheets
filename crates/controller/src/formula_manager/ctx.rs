@@ -30,4 +30,27 @@ pub trait FormulaExecCtx:
     /// Classify a block-cell against the schema bound to its block, so the
     /// caller can dirty the right virtual node.
     fn block_cell_role(&self, sheet_id: SheetId, cell: &BlockCellId) -> BlockCellRole;
+
+    /// If this block cell sits in a field with a value-formula template,
+    /// return everything the executor needs to substitute and parse it:
+    ///   1. the raw template (still including `=` if the author wrote one)
+    ///   2. (field name → sibling BlockCellId in this row) — for `#FIELD`
+    ///   3. the key cell's current string value — for `#KEY`
+    /// Returns `None` if the cell isn't templated (or schema doesn't
+    /// support templates, e.g. RandomSchema).
+    fn block_cell_template(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<BlockCellTemplate>;
+}
+
+/// Substitution context returned by
+/// {@link FormulaExecCtx::block_cell_template}. Borrowed strings would
+/// require lifetime gymnastics through the trait; we hand back owned
+/// data since this path is only hit on cell input (not hot).
+pub struct BlockCellTemplate {
+    pub template: String,
+    pub siblings: Vec<(String, BlockCellId)>,
+    pub key_value: String,
 }

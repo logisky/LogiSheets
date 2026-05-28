@@ -416,7 +416,14 @@ impl Stringify for Error {
     where
         T: NameFetcherTrait,
     {
-        Ok(self.get_err_str().to_string())
+        Ok(match self {
+            // `#FIELD("name")` round-trip: escape the inner string per
+            // Excel rules (doubled `"`).
+            Error::FieldRef(name) => {
+                format!("#FIELD(\"{}\")", name.replace('"', "\"\""))
+            }
+            other => other.get_err_str().to_string(),
+        })
     }
 }
 

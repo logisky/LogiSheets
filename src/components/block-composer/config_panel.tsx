@@ -1136,6 +1136,22 @@ export const FieldConfigPanel = ({
                                         placeholder="e.g., #PLACEHOLDER > 0 && #PLACEHOLDER < 100"
                                         helperText="Use #PLACEHOLDER to reference the input value"
                                     />
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Value formula"
+                                        value={field.valueFormula || ''}
+                                        onChange={(e) =>
+                                            onUpdate({
+                                                ...field,
+                                                valueFormula: e.target.value,
+                                            })
+                                        }
+                                        placeholder={`e.g., =#FIELD("amount") * #FIELD("price")`}
+                                        helperText={
+                                            'When set, this column is derived (not editable). Use #FIELD("name") for same-row siblings and #KEY for the row key.'
+                                        }
+                                    />
                                 </Stack>
                             </CardContent>
                         </Card>

@@ -1,4 +1,21 @@
 use std::collections::HashSet;
+use std::sync::Mutex;
+
+// Last error encountered by handle_action / handle_action_in_temp_status.
+// Set whenever the executor returns Err so the caller (wasm bindings,
+// integration tests) can surface the message — otherwise the error is
+// dropped into a stdout-bound println! that goes nowhere in wasm.
+static LAST_ERROR: Mutex<Option<String>> = Mutex::new(None);
+
+pub fn take_last_error() -> Option<String> {
+    LAST_ERROR.lock().ok().and_then(|mut g| g.take())
+}
+
+fn record_last_error(e: &dyn std::fmt::Display) {
+    if let Ok(mut g) = LAST_ERROR.lock() {
+        *g = Some(e.to_string());
+    }
+}
 
 use logisheets_base::async_func::{AsyncCalcResult, Task};
 use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId};
@@ -277,6 +294,7 @@ impl Controller {
                 }
             }
             Err(e) => {
+                record_last_error(&e);
                 println!("{:?}", e.to_string());
                 ActionEffect::from_err(1) // todo
             }

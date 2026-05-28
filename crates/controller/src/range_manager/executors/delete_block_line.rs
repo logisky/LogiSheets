@@ -31,12 +31,25 @@ where
             // This should not be reachable
             return RangeUpdateType::Dirty;
         }
-        let (start_row, start_col) = ctx
-            .fetch_cell_index(&sheet, &CellId::BlockCell(start.clone()))
-            .unwrap();
-        let (end_row, end_col) = ctx
-            .fetch_cell_index(&sheet, &CellId::BlockCell(end.clone()))
-            .unwrap();
+        // Either endpoint's cell may be ORPHANED at this point: a
+        // BlockCellId carries a stable RowId/ColId that the navigator
+        // may have already dropped (e.g. an earlier round deleted those
+        // rows but no one removed the corresponding Range entry from
+        // the range_manager — there's no DeleteRowsInBlock handler in
+        // either range_manager or formula_manager that cleans up). The
+        // surface symptom is that on the *next* DeleteRowsInBlock we
+        // get here, the lookup explodes. Treat unresolvable endpoints
+        // as a signal that the range itself is orphaned: mark it
+        // Removed so the manager garbage-collects it, instead of
+        // panicking and tearing down the whole transaction (silently,
+        // since this fires from the wasm bridge with no console output
+        // before the panic hook).
+        let start_idx = ctx.fetch_cell_index(&sheet, &CellId::BlockCell(start.clone()));
+        let end_idx = ctx.fetch_cell_index(&sheet, &CellId::BlockCell(end.clone()));
+        let ((start_row, start_col), (end_row, end_col)) = match (start_idx, end_idx) {
+            (Ok(s), Ok(e)) => (s, e),
+            _ => return RangeUpdateType::Removed,
+        };
         let (range_start, range_end) = if horizontal {
             (start_row, end_row)
         } else {

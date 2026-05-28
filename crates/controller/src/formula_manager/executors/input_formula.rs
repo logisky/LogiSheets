@@ -1,7 +1,7 @@
 use super::FormulaExecutor;
 use logisheets_base::errors::BasicError;
 use logisheets_base::{
-    BlockRange, CellId, EphemeralId, NormalRange, Range, RangeId, RefAbs, SheetId,
+    BlockId, BlockRange, CellId, EphemeralId, NormalRange, Range, RangeId, RefAbs, SheetId,
 };
 use logisheets_parser::ast::{self, RangeDisplay};
 use logisheets_parser::Parser;
@@ -80,6 +80,18 @@ pub fn remove_formula<C: FormulaExecCtx>(
     remove(executor, sheet, cell_id, ctx)
 }
 
+pub fn remove_ephemeral_formula<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet_idx: usize,
+    id: EphemeralId,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+    remove(executor, sheet, CellId::EphemeralCell(id), ctx)
+}
+
 fn remove<C: FormulaExecCtx>(
     executor: FormulaExecutor,
     sheet: SheetId,
@@ -129,6 +141,26 @@ fn input<C: FormulaExecCtx>(
     substitute: Option<ast::Node>,
     ctx: &mut C,
 ) -> Result<FormulaExecutor, BasicError> {
+    let parser = Parser {};
+    let ast = if let Some(node) = substitute {
+        parser.parse_with_substitude(&formula, &node, sheet, ctx)
+    } else {
+        parser.parse(&formula, sheet, ctx)
+    };
+    let Some(ast) = ast else { return Ok(executor) };
+    register_parsed_ast(executor, sheet, cell_id, ast, ctx)
+}
+
+/// Register a pre-parsed AST as the formula for `cell_id`. Shared
+/// between the user-facing `input` (text-formula path) and the
+/// template-driven block-cell input path.
+fn register_parsed_ast<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet: SheetId,
+    cell_id: CellId,
+    ast: ast::Node,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
     let range = match cell_id {
         CellId::NormalCell(normal) => Range::Normal(NormalRange::Single(normal)),
         CellId::BlockCell(block) => Range::Block(BlockRange::Single(block)),
@@ -136,17 +168,6 @@ fn input<C: FormulaExecCtx>(
     };
     let range_id = ctx.fetch_range_id(&sheet, &range);
     let this_vertex = Vertex::Range(sheet, range_id);
-
-    let parser = Parser {};
-    let ast = if let Some(node) = substitute {
-        parser.parse_with_substitude(&formula, &node, sheet, ctx)
-    } else {
-        parser.parse(&formula, sheet, ctx)
-    };
-    if ast.is_none() {
-        return Ok(executor);
-    }
-    let ast = ast.unwrap();
 
     let mut new_formula_deps = HashSet::<Vertex>::new();
     get_all_vertices_from_ast(&ast, &mut new_formula_deps);
@@ -186,6 +207,71 @@ fn input<C: FormulaExecCtx>(
         dirty_blocks: executor.dirty_blocks,
         trigger: executor.trigger,
     })
+}
+
+/// Materialize a block cell's value-formula template from the schema:
+/// pull the template + the per-row sibling cell ids + the row's key
+/// value, build a parse-time substitution closure for `#FIELD("name")`
+/// and `#KEY`, parse, and register the resulting AST as the cell's
+/// formula. No-op if the target cell isn't templated.
+pub fn input_block_cell_template<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet_idx: usize,
+    block_id: BlockId,
+    block_row: usize,
+    block_col: usize,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    use std::collections::HashMap;
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+    let bcid = ctx.fetch_block_cell_id(&sheet, &block_id, block_row, block_col)?;
+    let Some(tpl) = ctx.block_cell_template(sheet, &bcid) else {
+        return Ok(executor);
+    };
+
+    // Build per-sibling Reference nodes once, indexed by field name, so
+    // the resolver closure stays pure (only reads, no ctx mutation).
+    let mut sib_subs: HashMap<String, ast::Node> = HashMap::new();
+    for (name, sib_cell) in tpl.siblings {
+        let range = Range::Block(BlockRange::Single(sib_cell));
+        let range_id = ctx.fetch_range_id(&sheet, &range);
+        sib_subs.insert(
+            name,
+            ast::Node {
+                pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
+                    range_id,
+                    ref_abs: RefAbs::default(),
+                    sheet_id: sheet,
+                })),
+                bracket: true,
+            },
+        );
+    }
+    let key_node = ast::Node {
+        pure: ast::PureNode::Value(ast::Value::Text(tpl.key_value)),
+        bracket: false,
+    };
+
+    // Strip a leading `=` if the schema author included it. The parser
+    // takes formula bodies, not `=`-prefixed forms.
+    let body = tpl
+        .template
+        .strip_prefix('=')
+        .map(|s| s.to_string())
+        .unwrap_or(tpl.template);
+
+    let parser = Parser {};
+    let ast = parser.parse_with_substitutes(&body, sheet, ctx, &|kind| match kind {
+        logisheets_parser::PlaceholderKind::FieldRef(name) => sib_subs.get(name).cloned(),
+        logisheets_parser::PlaceholderKind::Key => Some(key_node.clone()),
+        // `#PLACEHOLDER` belongs to validation, not field templates;
+        // leaving it untouched is harmless — surfaces as #NAME?.
+        logisheets_parser::PlaceholderKind::Placeholder => None,
+    });
+    let Some(ast) = ast else { return Ok(executor) };
+    register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)
 }
 
 // This method is only used in loading a file (especially for shared formula).

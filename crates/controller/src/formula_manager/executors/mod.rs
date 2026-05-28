@@ -2,8 +2,13 @@ mod input_formula;
 
 use std::collections::HashSet;
 
-pub use input_formula::{add_ast_node, input_ephemeral_formula, input_formula, remove_formula};
-use logisheets_base::{BlockId, BlockRange, CubeId, Range, RangeId, SheetId};
+pub use input_formula::{
+    add_ast_node, input_block_cell_template, input_ephemeral_formula, input_formula,
+    remove_ephemeral_formula, remove_formula,
+};
+use logisheets_base::{
+    errors::BasicError, BlockId, BlockRange, CubeId, Range, RangeId, SheetId,
+};
 
 use crate::block_manager::schema_manager::schema::BlockCellRole;
 use crate::{edit_action::EditPayload, Error};
@@ -52,6 +57,72 @@ impl FormulaExecutor {
                     formula,
                     ctx,
                 )
+            }
+            EditPayload::EphemeralCellRemove(p) => {
+                remove_ephemeral_formula(self, p.sheet_idx, p.id, ctx)
+            }
+            EditPayload::BlockInput(p) => {
+                // If this cell sits in a templated field, the user
+                // content is ignored — we materialize the schema's
+                // template instead. For non-templated cells this is a
+                // no-op (the container path handles them).
+                input_block_cell_template(self, p.sheet_idx, p.block_id, p.row, p.col, ctx)
+            }
+            EditPayload::InsertRowsInBlock(p) => {
+                // Newly inserted rows start blank. For any templated
+                // field in the block, auto-materialize the formula so
+                // the cell carries its derived value without the
+                // caller having to send a follow-up BlockInput per cell.
+                // (Free-form cells stay empty; the no-op branch inside
+                // `input_block_cell_template` covers them.)
+                //
+                // Block size at this point reflects the post-insert
+                // state — navigator runs before formula_manager. So
+                // get_block_size returns the new (row_cnt, col_cnt).
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let (_, col_cnt) = ctx
+                    .get_block_size(sheet_id, p.block_id)
+                    .map_err(|e: BasicError| -> Error { e.into() })?;
+                let mut exec = self;
+                for r in p.start..(p.start + p.cnt as usize) {
+                    for c in 0..col_cnt {
+                        exec = input_block_cell_template(
+                            exec, p.sheet_idx, p.block_id, r, c, ctx,
+                        )?;
+                    }
+                }
+                Ok(exec)
+            }
+            EditPayload::BindFormSchema(p) => {
+                // The bind itself happens in the schema_manager
+                // executor (earlier in the pass order). By the time
+                // we land here the schema is in place AND the block's
+                // rows already exist (from a prior CreateBlock). Walk
+                // every existing row × col and let
+                // `input_block_cell_template` filter — templated cells
+                // get their formula registered for the first time,
+                // free-form cells no-op.
+                //
+                // This is what makes a fresh block-composer save show
+                // formulas in its initial template row without the
+                // user having to add a row first.
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let (row_cnt, col_cnt) = ctx
+                    .get_block_size(sheet_id, p.block_id)
+                    .map_err(|e: BasicError| -> Error { e.into() })?;
+                let mut exec = self;
+                for r in 0..row_cnt {
+                    for c in 0..col_cnt {
+                        exec = input_block_cell_template(
+                            exec, p.sheet_idx, p.block_id, r, c, ctx,
+                        )?;
+                    }
+                }
+                Ok(exec)
             }
             EditPayload::CellClear(p) => remove_formula(self, p.sheet_idx, p.row, p.col, ctx),
             _ => Ok(self),

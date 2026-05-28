@@ -41,6 +41,10 @@ pub struct FormulaConnector<'a> {
     pub idx_navigator: &'a Navigator,
     pub external_links_manager: &'a mut ExtBooksManager,
     pub block_schema_manager: &'a SchemaManager,
+    /// Read-only access to the container so the formula executor can
+    /// fetch the current `#KEY` value when materializing a templated
+    /// block cell's formula.
+    pub container: &'a crate::container::DataContainer,
 
     pub sid_assigner: &'a ShadowIdAssigner,
 }
@@ -348,6 +352,41 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
 
     fn block_cell_role(&self, sheet_id: SheetId, cell: &BlockCellId) -> BlockCellRole {
         self.block_schema_manager.cell_role(sheet_id, cell)
+    }
+
+    fn block_cell_template(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<crate::formula_manager::ctx::BlockCellTemplate> {
+        let template = self.block_schema_manager.formula_for_block_cell(sheet_id, cell)?;
+        let siblings = self
+            .block_schema_manager
+            .siblings_for_block_cell(sheet_id, cell)?;
+        // Resolve the key cell's current string value. May be empty if
+        // the row was just inserted and the caller hasn't written the
+        // key yet — `#KEY` then substitutes to `""`, which is a
+        // semantically correct (if useless) value.
+        let key_value = match self
+            .block_schema_manager
+            .key_cell_for_block_cell(sheet_id, cell)
+        {
+            Some(key_cell) => self
+                .container
+                .get_cell(sheet_id, &CellId::BlockCell(key_cell))
+                .map(|c| {
+                    let tm = &*self.text_id_manager;
+                    let text_fetcher = |id: TextId| tm.get_string(&id).unwrap_or_default();
+                    c.value.to_string(&text_fetcher)
+                })
+                .unwrap_or_default(),
+            None => String::new(),
+        };
+        Some(crate::formula_manager::ctx::BlockCellTemplate {
+            template,
+            siblings,
+            key_value,
+        })
     }
 
     fn get_range_deps(&self, vertex: &Vertex) -> Vec<Vertex> {

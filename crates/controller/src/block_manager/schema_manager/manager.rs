@@ -149,4 +149,88 @@ impl SchemaManager {
             None => BlockCellRole::None,
         }
     }
+
+    /// Look up the value-formula template attached to a cell's field, if
+    /// any. Returns the raw template string (still includes the leading
+    /// `=` if the schema author wrote one). Callers do substitution on
+    /// the body.
+    pub fn formula_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<String> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        match schema {
+            Schema::RowSchema(s) => s.formula_for_field_axis(cell.col).map(String::from),
+            Schema::ColSchema(s) => s.formula_for_field_axis(cell.row).map(String::from),
+            // RandomSchema doesn't carry templates in v1.
+            Schema::RandomSchema(_) => None,
+        }
+    }
+
+    /// For a templated block cell, return the per-field sibling
+    /// `BlockCellId`s in the same row, keyed by field name. Used to
+    /// build the `#FIELD("name") → Reference` substitution map at
+    /// parse time. Returns `None` if the schema isn't a Row/Col schema.
+    pub fn siblings_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<Vec<(String, BlockCellId)>> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        Some(match schema {
+            Schema::RowSchema(s) => s
+                .fields
+                .iter()
+                .map(|(name, (col, _, _))| {
+                    (
+                        name.clone(),
+                        BlockCellId {
+                            block_id: cell.block_id,
+                            row: cell.row,
+                            col: *col,
+                        },
+                    )
+                })
+                .collect(),
+            Schema::ColSchema(s) => s
+                .fields
+                .iter()
+                .map(|(name, (row, _, _))| {
+                    (
+                        name.clone(),
+                        BlockCellId {
+                            block_id: cell.block_id,
+                            row: *row,
+                            col: cell.col,
+                        },
+                    )
+                })
+                .collect(),
+            Schema::RandomSchema(_) => return None,
+        })
+    }
+
+    /// `BlockCellId` of the key cell that shares this cell's row (Row
+    /// schema) or column (Col schema). Used to resolve `#KEY`.
+    pub fn key_cell_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<BlockCellId> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        Some(match schema {
+            Schema::RowSchema(s) => BlockCellId {
+                block_id: cell.block_id,
+                row: cell.row,
+                col: s.key,
+            },
+            Schema::ColSchema(s) => BlockCellId {
+                block_id: cell.block_id,
+                row: s.key,
+                col: cell.col,
+            },
+            Schema::RandomSchema(_) => return None,
+        })
+    }
 }

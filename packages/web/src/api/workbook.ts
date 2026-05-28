@@ -17,6 +17,7 @@ import {
     GetShadowCellIdParams,
     GetShadowCellIdsParams,
     GetAvailableBlockIdParams,
+    TempStatusDiff,
 } from '../bindings'
 import {ColId, RowId} from '../types'
 import {Worksheet} from './worksheet'
@@ -188,6 +189,30 @@ export class Workbook {
         return rpc('calcCondition', {sheetIdx, condition: f}, this._id)
     }
 
+    /**
+     * Resolve a (refName, key, field) triple to a concrete cell, the same
+     * way the BLOCKREF formula resolves at evaluation time. Useful for
+     * subscribing to block cells without threading sheet/block/row/col
+     * coordinates.
+     */
+    public getCellIdByBlockRef(
+        refName: string,
+        key: string,
+        field: string
+    ): Result<SheetCellId> {
+        return rpc('getCellIdByBlockRef', {refName, key, field}, this._id)
+    }
+
+    /**
+     * Snapshot of all cell-value differences between the active temp
+     * branch and the committed (fork) status. Returns an empty diff
+     * when no temp branch is active. Used by the host's diff layer to
+     * drive its overlay without needing JS-side snapshot/compare.
+     */
+    public getTempStatusChanges(): Result<TempStatusDiff> {
+        return rpc('getTempStatusChanges', undefined, this._id)
+    }
+
     public getSheetId(sheetIdx: number): Result<number> {
         return rpc('getSheetId', {sheetIdx}, this._id)
     }
@@ -274,6 +299,13 @@ export class Workbook {
             this._cellValueChangedCallbacks.set(id, [])
         }
         this._cellValueChangedCallbacks.get(id)?.push(callback)
+    }
+
+    public registerCellValueChangedByCellId(
+        cellId: SheetCellId,
+        callback: Callback
+    ): void {
+        this._registerCellValueChangedCallback(cellId, callback)
     }
 
     public commitTempStatus() {

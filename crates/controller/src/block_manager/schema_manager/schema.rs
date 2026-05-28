@@ -22,9 +22,36 @@ pub type RenderId = String;
 
 #[derive(Debug, Clone)]
 pub struct FormSchema<F, K, const IS_ROW: bool> {
-    pub fields: Vec<(Field, (F, RenderId))>,
+    /// Each entry: (field name, (field-axis id, render id, optional
+    /// value-formula template string)). The template string is the raw
+    /// source — parsing and substitution happens lazily at cell input
+    /// time so a template can reference forward fields without ordering
+    /// constraints.
+    pub fields: Vec<(Field, (F, RenderId, Option<String>))>,
     pub name: String,
     pub key: K,
+}
+
+impl<F: Copy + PartialEq, K, const IS_ROW: bool> FormSchema<F, K, IS_ROW> {
+    /// Lookup the formula template for the field whose field-axis id is
+    /// `id`. Returns `None` if the field doesn't exist or has no
+    /// template (free-form column).
+    pub fn formula_for_field_axis(&self, id: F) -> Option<&str> {
+        self.fields
+            .iter()
+            .find(|(_, (f, _, _))| *f == id)
+            .and_then(|(_, (_, _, formula))| formula.as_deref())
+    }
+
+    /// Resolve a `#FIELD("name")` reference back to the field-axis id
+    /// of the referenced sibling field. Returns `None` if the name
+    /// isn't a field in this schema.
+    pub fn field_axis_by_name(&self, name: &str) -> Option<F> {
+        self.fields
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, (id, _, _))| *id)
+    }
 }
 
 pub type Field = String;
@@ -156,8 +183,8 @@ impl SchemaTrait for RowSchema {
     fn get_render_id(&self, _row: RowId, col: ColId) -> Option<RenderId> {
         self.fields
             .iter()
-            .find(|(_, (f, _))| f == &col)
-            .map(|(_, (_, id))| id.clone())
+            .find(|(_, (f, _, _))| f == &col)
+            .map(|(_, (_, id, _))| id.clone())
     }
 
     fn get_ref_name(&self) -> String {
@@ -171,7 +198,7 @@ impl SchemaTrait for RowSchema {
     fn get_all_field_ids(&self) -> Vec<(Field, BlockFieldId)> {
         self.fields
             .iter()
-            .map(|(name, (col, _))| (name.clone(), *col as BlockFieldId))
+            .map(|(name, (col, _, _))| (name.clone(), *col as BlockFieldId))
             .collect()
     }
 
@@ -179,13 +206,13 @@ impl SchemaTrait for RowSchema {
         self.fields
             .iter()
             .find(|(name, _)| name == field)
-            .map(|(_, (col, _))| *col as BlockFieldId)
+            .map(|(_, (col, _, _))| *col as BlockFieldId)
     }
 
     fn fetch_field_name(&self, field_id: BlockFieldId) -> Option<String> {
         self.fields
             .iter()
-            .find(|(_, (col, _))| *col as BlockFieldId == field_id)
+            .find(|(_, (col, _, _))| *col as BlockFieldId == field_id)
             .map(|(name, _)| name.clone())
     }
 
@@ -206,8 +233,8 @@ impl SchemaTrait for RowSchema {
         let col = self
             .fields
             .iter()
-            .find(|(f, (_, _))| f == field)
-            .map(|(_, (f, _))| *f);
+            .find(|(f, (_, _, _))| f == field)
+            .map(|(_, (f, _, _))| *f);
         col.map(|col| BlockCellId {
             row,
             col,
@@ -226,7 +253,7 @@ impl SchemaTrait for RowSchema {
         if self
             .fields
             .iter()
-            .any(|(_, (col, _))| *col as BlockFieldId == field_id)
+            .any(|(_, (col, _, _))| *col as BlockFieldId == field_id)
         {
             Some(BlockCellId {
                 block_id: key.block_id,
@@ -241,7 +268,7 @@ impl SchemaTrait for RowSchema {
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole {
         if cell.col == self.key {
             BlockCellRole::Key
-        } else if self.fields.iter().any(|(_, (col, _))| *col == cell.col) {
+        } else if self.fields.iter().any(|(_, (col, _, _))| *col == cell.col) {
             BlockCellRole::Field(cell.col as BlockFieldId)
         } else {
             BlockCellRole::None
@@ -253,8 +280,8 @@ impl SchemaTrait for ColSchema {
     fn get_render_id(&self, row: RowId, _col: ColId) -> Option<RenderId> {
         self.fields
             .iter()
-            .find(|(_, (f, _))| f == &row)
-            .map(|(_, (_, id))| id.clone())
+            .find(|(_, (f, _, _))| f == &row)
+            .map(|(_, (_, id, _))| id.clone())
     }
 
     fn get_ref_name(&self) -> String {
@@ -268,7 +295,7 @@ impl SchemaTrait for ColSchema {
     fn get_all_field_ids(&self) -> Vec<(Field, BlockFieldId)> {
         self.fields
             .iter()
-            .map(|(name, (row, _))| (name.clone(), *row as BlockFieldId))
+            .map(|(name, (row, _, _))| (name.clone(), *row as BlockFieldId))
             .collect()
     }
 
@@ -276,13 +303,13 @@ impl SchemaTrait for ColSchema {
         self.fields
             .iter()
             .find(|(name, _)| name == field)
-            .map(|(_, (row, _))| *row as BlockFieldId)
+            .map(|(_, (row, _, _))| *row as BlockFieldId)
     }
 
     fn fetch_field_name(&self, field_id: BlockFieldId) -> Option<String> {
         self.fields
             .iter()
-            .find(|(_, (row, _))| *row as BlockFieldId == field_id)
+            .find(|(_, (row, _, _))| *row as BlockFieldId == field_id)
             .map(|(name, _)| name.clone())
     }
 
@@ -301,8 +328,8 @@ impl SchemaTrait for ColSchema {
     fn partially_resolve(&self, key: BlockCellId, field: &String) -> Option<BlockCellId> {
         self.fields
             .iter()
-            .find(|(f, (_, _))| f == field)
-            .map(|(_, (f, _))| BlockCellId {
+            .find(|(f, (_, _, _))| f == field)
+            .map(|(_, (f, _, _))| BlockCellId {
                 block_id: key.block_id,
                 row: *f,
                 col: key.col,
@@ -317,7 +344,7 @@ impl SchemaTrait for ColSchema {
         if self
             .fields
             .iter()
-            .any(|(_, (row, _))| *row as BlockFieldId == field_id)
+            .any(|(_, (row, _, _))| *row as BlockFieldId == field_id)
         {
             Some(BlockCellId {
                 block_id: key.block_id,
@@ -332,7 +359,7 @@ impl SchemaTrait for ColSchema {
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole {
         if cell.row == self.key {
             BlockCellRole::Key
-        } else if self.fields.iter().any(|(_, (row, _))| *row == cell.row) {
+        } else if self.fields.iter().any(|(_, (row, _, _))| *row == cell.row) {
             BlockCellRole::Field(cell.row as BlockFieldId)
         } else {
             BlockCellRole::None
