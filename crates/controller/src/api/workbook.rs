@@ -355,6 +355,7 @@ impl Workbook {
         sheet_idx: usize,
         row_idx: usize,
         col_idx: usize,
+        kind: crate::sid_assigner::ShadowKind,
     ) -> Result<SheetCellId> {
         let sheet_id = self
             .controller
@@ -370,7 +371,7 @@ impl Workbook {
         let eid = self
             .controller
             .sid_assigner
-            .get_shawdow_id(sheet_id, cell_id);
+            .get_shawdow_id(sheet_id, cell_id, kind);
         Ok(SheetCellId {
             sheet_id,
             cell_id: CellId::EphemeralCell(eid),
@@ -382,6 +383,7 @@ impl Workbook {
         sheet_idx: usize,
         row_idx: Vec<usize>,
         col_idx: Vec<usize>,
+        kind: crate::sid_assigner::ShadowKind,
     ) -> Result<Vec<SheetCellId>> {
         if row_idx.len() != col_idx.len() {
             return Err(BasicError::IncompleteRowColLength(row_idx.len(), col_idx.len()).into());
@@ -404,7 +406,7 @@ impl Workbook {
                 let eid = self
                     .controller
                     .sid_assigner
-                    .get_shawdow_id(sheet_id, cell_id);
+                    .get_shawdow_id(sheet_id, cell_id, kind);
                 Ok(SheetCellId {
                     sheet_id,
                     cell_id: CellId::EphemeralCell(eid),

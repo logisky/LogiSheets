@@ -17,8 +17,17 @@ where
         match range {
             NormalRange::Single(_) => RangeUpdateType::None,
             NormalRange::RowRange(start, end) => {
-                let start_idx = ctx.fetch_row_index(&sheet, start).unwrap();
-                let end_idx = ctx.fetch_row_index(&sheet, end).unwrap();
+                // Stale-endpoint defense: deleted row/col ids leave
+                // dangling endpoints in registered ranges that pre-fix
+                // would panic via `.unwrap()`. Mark such ranges
+                // `Removed` so the range_manager GCs them on this pass
+                // instead of carrying the dead entry forward.
+                let Ok(start_idx) = ctx.fetch_row_index(&sheet, start) else {
+                    return RangeUpdateType::Removed;
+                };
+                let Ok(end_idx) = ctx.fetch_row_index(&sheet, end) else {
+                    return RangeUpdateType::Removed;
+                };
                 if start_idx <= row && row <= end_idx {
                     RangeUpdateType::Dirty
                 } else {
@@ -26,8 +35,12 @@ where
                 }
             }
             NormalRange::ColRange(start, end) => {
-                let start_idx = ctx.fetch_col_index(&sheet, start).unwrap();
-                let end_idx = ctx.fetch_col_index(&sheet, end).unwrap();
+                let Ok(start_idx) = ctx.fetch_col_index(&sheet, start) else {
+                    return RangeUpdateType::Removed;
+                };
+                let Ok(end_idx) = ctx.fetch_col_index(&sheet, end) else {
+                    return RangeUpdateType::Removed;
+                };
                 if start_idx <= row && row <= end_idx {
                     RangeUpdateType::Dirty
                 } else {
@@ -35,8 +48,16 @@ where
                 }
             }
             NormalRange::AddrRange(start, end) => {
-                let (start_row, start_col) = ctx.fetch_normal_cell_index(&sheet, start).unwrap();
-                let (end_row, end_col) = ctx.fetch_normal_cell_index(&sheet, end).unwrap();
+                let Ok((start_row, start_col)) =
+                    ctx.fetch_normal_cell_index(&sheet, start)
+                else {
+                    return RangeUpdateType::Removed;
+                };
+                let Ok((end_row, end_col)) =
+                    ctx.fetch_normal_cell_index(&sheet, end)
+                else {
+                    return RangeUpdateType::Removed;
+                };
                 if start_row <= row && row <= end_row && start_col <= col && col <= end_col {
                     RangeUpdateType::Dirty
                 } else {
@@ -51,8 +72,22 @@ where
         match range {
             BlockRange::Single(_) => RangeUpdateType::None,
             BlockRange::AddrRange(start, end) => {
-                let (start_row, start_col) = ctx.fetch_block_cell_index(&sheet, start).unwrap();
-                let (end_row, end_col) = ctx.fetch_block_cell_index(&sheet, end).unwrap();
+                // `DeleteRowsInBlock` (and column siblings) remove the
+                // underlying RowId/ColId but registered AddrRange
+                // entries here still point at the now-dead endpoints.
+                // Resolving them returns `CannotFindIdxInBlock`. Drop
+                // the stale range — it can no longer correspond to a
+                // live cell so no formula can reach it.
+                let Ok((start_row, start_col)) =
+                    ctx.fetch_block_cell_index(&sheet, start)
+                else {
+                    return RangeUpdateType::Removed;
+                };
+                let Ok((end_row, end_col)) =
+                    ctx.fetch_block_cell_index(&sheet, end)
+                else {
+                    return RangeUpdateType::Removed;
+                };
                 if start_row <= row && row <= end_row && start_col <= col && col <= end_col {
                     RangeUpdateType::Dirty
                 } else {

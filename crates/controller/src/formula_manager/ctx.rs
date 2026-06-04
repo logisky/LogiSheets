@@ -43,6 +43,17 @@ pub trait FormulaExecCtx:
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<BlockCellTemplate>;
+
+    /// Like {@link block_cell_template} but without requiring the cell to
+    /// have a value-formula template. Returns the per-row `#FIELD` /
+    /// `#KEY` substitutes whenever the cell lives in a schema-bound
+    /// block — used by validation-formula substitution where the cell
+    /// being validated may itself be a plain (non-templated) field.
+    fn block_cell_row_substitutes(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<BlockCellRowContext>;
 }
 
 /// Substitution context returned by
@@ -51,6 +62,14 @@ pub trait FormulaExecCtx:
 /// data since this path is only hit on cell input (not hot).
 pub struct BlockCellTemplate {
     pub template: String,
+    pub siblings: Vec<(String, BlockCellId)>,
+    pub key_value: String,
+}
+
+/// Per-row substitution context for `#FIELD("name")` / `#KEY` resolution.
+/// Returned by {@link FormulaExecCtx::block_cell_row_substitutes}
+/// regardless of whether the cell itself carries a value-formula template.
+pub struct BlockCellRowContext {
     pub siblings: Vec<(String, BlockCellId)>,
     pub key_value: String,
 }

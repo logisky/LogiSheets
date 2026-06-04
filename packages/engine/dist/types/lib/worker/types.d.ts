@@ -59,7 +59,8 @@ export declare enum MethodName {
     GetDisplayUnitsOfFormula = "getDisplayUnitsOfFormula",
     GetNextVisibleCell = "getNextVisibleCell",
     GetAllBlockFields = "getAllBlockFields",
-    GetAppData = "getAppData"
+    GetAppData = "getAppData",
+    GetFullyCoveredBlocks = "getFullyCoveredBlocks"
 }
 export declare enum OffscreenRenderName {
     Render = "render",

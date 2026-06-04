@@ -360,6 +360,19 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         cell: &BlockCellId,
     ) -> Option<crate::formula_manager::ctx::BlockCellTemplate> {
         let template = self.block_schema_manager.formula_for_block_cell(sheet_id, cell)?;
+        let ctx = self.block_cell_row_substitutes(sheet_id, cell)?;
+        Some(crate::formula_manager::ctx::BlockCellTemplate {
+            template,
+            siblings: ctx.siblings,
+            key_value: ctx.key_value,
+        })
+    }
+
+    fn block_cell_row_substitutes(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<crate::formula_manager::ctx::BlockCellRowContext> {
         let siblings = self
             .block_schema_manager
             .siblings_for_block_cell(sheet_id, cell)?;
@@ -382,8 +395,7 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
                 .unwrap_or_default(),
             None => String::new(),
         };
-        Some(crate::formula_manager::ctx::BlockCellTemplate {
-            template,
+        Some(crate::formula_manager::ctx::BlockCellRowContext {
             siblings,
             key_value,
         })

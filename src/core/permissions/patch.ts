@@ -71,6 +71,56 @@ function getBlockRefFromPayload(
     return undefined
 }
 
+/**
+ * Read the per-cell UserEditable shadow value (if any). The engine
+ * installs the shadow's formula at BindFormSchema / InsertRowsInBlock
+ * time; calling getShadowCellId with kind='userEditable' gets the
+ * ephemeral id, then a single getCell read returns the current bool.
+ *
+ * Returns:
+ *   - `true`  — formula evaluated truthy → allow the edit
+ *   - `false` — formula evaluated falsy / error → reject the edit
+ *   - `undefined` — no userEditable formula on this field → caller
+ *                   should fall back to the static userEditable flag
+ *                   and block-owner rules.
+ */
+async function lookupUserEditableShadow(
+    client: WorkbookClient,
+    sheetIdx: number,
+    row: number,
+    col: number
+): Promise<boolean | undefined> {
+    try {
+        const shadowSheetCellId = await client.getShadowCellId({
+            sheetIdx,
+            rowIdx: row,
+            colIdx: col,
+            kind: 'userEditable',
+        })
+        if (isErrorMessage(shadowSheetCellId)) return undefined
+        if (shadowSheetCellId.cellId.type !== 'ephemeralCell') return undefined
+        const shadowId = shadowSheetCellId.cellId.value as number
+        // No formula installed → engine still allocates an id on demand
+        // (idempotent), but its cell value will be `empty`. Treat empty
+        // as "no rule" so callers fall through. A populated shadow that
+        // evaluates to false is a real reject.
+        const info = await client.getShadowInfoById(shadowId)
+        if (isErrorMessage(info)) return undefined
+        const v = info.value
+        if (v === 'empty') return undefined
+        if (v.type === 'bool') return v.value
+        // Truthy/falsy coercion for non-bool results: number 0 → false,
+        // anything else → true (Excel semantics). Error values → false
+        // (fail-closed).
+        if (v.type === 'number') return v.value !== 0
+        if (v.type === 'str') return v.value !== ''
+        if (v.type === 'error') return false
+        return undefined
+    } catch {
+        return undefined
+    }
+}
+
 async function validateCellInput(
     client: WorkbookClient,
     payload: Payload,
@@ -96,6 +146,37 @@ async function validateCellInput(
     const blockId = blockCellId.blockId
     const owner = callerRegistry.getBlockOwner(v.sheetIdx, blockId)
 
+    // Dynamic editability formula takes precedence over the static
+    // flag — the formula lets the schema author express conditions
+    // like "editable only while 等级<3". Only consult the shadow when
+    // the field actually carries a userEditableFormula (the FieldInfo
+    // hint is set at bindFormSchema time by the craft); otherwise we
+    // skip the extra RPC and avoid allocating a wasteful shadow id.
+    if (
+        lookupFieldUserEditableFormula(
+            v.sheetIdx,
+            blockId,
+            blockCellId.row,
+            blockCellId.col
+        )
+    ) {
+        const dynamicEditable = await lookupUserEditableShadow(
+            client,
+            v.sheetIdx,
+            v.row,
+            v.col
+        )
+        if (dynamicEditable === true) return true
+        if (dynamicEditable === false) return false
+        // Shadow read returned `undefined` (no formula installed
+        // or value still 'empty'). This means the craft declared
+        // a userEditable formula on the FieldInfo but never
+        // installed the corresponding shadow — a bug in the
+        // craft's setup, not a permission decision. Fall through
+        // to the static-flag / owner check below so we don't
+        // silently grant blanket access.
+    }
+
     // Field-level override: if this cell's field has an explicit
     // userEditable flag, that flag wins over the block-owner check.
     // Otherwise (undefined) we fall back to block-owner rules.
@@ -119,16 +200,21 @@ async function validateCellInput(
 }
 
 /**
- * Look up the FieldInfo.userEditable flag for a given block cell, or
- * `undefined` if no field is registered at that position or the field
- * carries no explicit flag.
+ * Returns the field's declared `userEditable` setting. Note: this can
+ * now be `boolean | string | undefined`:
+ *   - `boolean` — static decision (`false` blocks edits permanently).
+ *   - `string`  — a formula. The patch path doesn't evaluate formulas
+ *     synchronously (that would require an async shadow lookup per
+ *     payload); it routes through {@link lookupUserEditableShadow}
+ *     when a string is present.
+ *   - `undefined` — fall back to block-owner rules.
  */
 function lookupFieldUserEditable(
     sheetIdx: number,
     blockId: number,
     blockRow: number,
     blockCol: number
-): boolean | undefined {
+): boolean | string | undefined {
     const renderId = callerRegistry.getFieldRenderId(
         sheetIdx,
         blockId,
@@ -143,6 +229,23 @@ function lookupFieldUserEditable(
     } catch {
         return undefined
     }
+}
+
+/**
+ * "Does this field declare a dynamic userEditable formula?" — used by
+ * validateCellInput to gate whether it bothers asking the engine for
+ * the per-cell shadow value. The flag now lives directly on
+ * `FieldInfo.userEditable` (string → has formula); we just check the
+ * type of that field.
+ */
+function lookupFieldUserEditableFormula(
+    sheetIdx: number,
+    blockId: number,
+    blockRow: number,
+    blockCol: number
+): boolean {
+    const ue = lookupFieldUserEditable(sheetIdx, blockId, blockRow, blockCol)
+    return typeof ue === 'string' && ue.trim() !== ''
 }
 
 function applyPatch() {

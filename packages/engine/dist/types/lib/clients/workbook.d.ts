@@ -1,7 +1,7 @@
 /**
  * Workbook Client - communicates with the worker for workbook operations.
  */
-import type { SheetInfo, CellInfo, CellPosition, SheetDimension, MergeCell, BlockInfo, FormulaDisplayInfo, CellCoordinate, SheetCellId, Callback, CellIdCallback, ErrorMessage, AppData, BlockField, TempStatusDiff } from "logisheets-web";
+import type { SheetInfo, CellInfo, CellPosition, SheetDimension, MergeCell, BlockInfo, FormulaDisplayInfo, CellCoordinate, SheetCellId, Callback, CellIdCallback, ErrorMessage, AppData, BlockField, TempStatusDiff, ShadowCellInfo } from "logisheets-web";
 type Resp<T> = Promise<T | ErrorMessage>;
 export declare class WorkbookClient {
     private _worker;
@@ -61,6 +61,19 @@ export declare class WorkbookClient {
     getAvailableBlockId(params: {
         sheetIdx: number;
     }): Resp<number>;
+    /**
+     * Enumerate blocks fully contained in a row/col range. Use a large
+     * range (e.g. derived from `getSheetDimension`) to enumerate every
+     * block on the sheet — useful for "jump to" lookups that need block
+     * schemas before any rendering has populated them into a Grid.
+     */
+    getFullyCoveredBlocks(params: {
+        sheetIdx: number;
+        rowIdx: number;
+        colIdx: number;
+        rowCnt: number;
+        colCnt: number;
+    }): Resp<readonly BlockInfo[]>;
     /**
      * Resolve a (refName, key, field) triple to a concrete cell id — same
      * lookup the BLOCKREF formula does at evaluation time. Pair with
@@ -127,7 +140,24 @@ export declare class WorkbookClient {
         sheetIdx: number;
         rowIdx: number;
         colIdx: number;
+        /**
+         * Which derived computation this shadow represents. Optional for
+         * backward compatibility — omitting it defaults to the
+         * long-standing Validation kind. Other kinds (e.g. `'userEditable'`)
+         * let widgets request their own per-cell shadow without colliding
+         * with validation's slot.
+         */
+        kind?: "validation" | "userEditable";
     }): Resp<SheetCellId>;
+    /**
+     * Read the current value of a shadow ephemeral cell by its id.
+     * Used by widgets that install a per-cell formula (validation /
+     * userEditable / future kinds) and need to read the computed bool
+     * back. Subscribe to changes via
+     * {@link registerCellValueChangedByCellId} against the shadow's
+     * `SheetCellId`.
+     */
+    getShadowInfoById(shadowId: number): Resp<ShadowCellInfo>;
     registerCellUpdatedCallback(f: Callback, _callbackId?: number): void;
     registerSheetUpdatedCallback(f: Callback): void;
     registerHeaderUpdatedCallback(f: (sheetIdxes: readonly number[]) => void): void;

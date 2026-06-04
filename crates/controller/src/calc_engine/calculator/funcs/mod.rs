@@ -1,6 +1,7 @@
 #[macro_use]
 mod macros;
 mod and;
+mod or;
 mod asyncs;
 mod average;
 mod bits;
@@ -228,6 +229,7 @@ where
         "OCT2DEC" => bits::hob2dec::calc_oct2dec(args, fetcher),
         "OCT2HEX" => bits::hob2hob::calc_oct2hex(args, fetcher),
         "ODD" => scalar_number::calc_odd(args, fetcher),
+        "OR" => or::calc(args, fetcher),
         "PDURATION" => pduration::pduration(args, fetcher),
         "PERMUT" => permutation::calc_permut(args, fetcher),
         "PI" => pi::calc(args),

@@ -30,6 +30,7 @@ import {BlockInterfaceComponent} from '@/components/block-interface'
 import {CraftInteractionComponent} from '@/components/craft-interaction'
 import {DiffLayer} from '@/components/diff-layer'
 import type {DiffState} from '@/components/diff-layer'
+import {isCellUserEditableSync} from '@/core/permissions/field-editable'
 import styles from './engine-canvas.module.scss'
 
 // LeftTop configuration (matches engine config)
@@ -114,6 +115,24 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             cursorPosition: 'start' | 'end' = 'end'
         ) => {
             if (!grid) return
+
+            // Block the cell editor from opening on user-uneditable
+            // field cells (block-interface fields with
+            // `userEditable: false`). Without this guard the engine's
+            // permission patch would still reject the eventual commit,
+            // but the user would already have typed into a phantom
+            // editor with no feedback — confusing UX. Failing fast at
+            // open time is friendlier.
+            if (
+                !isCellUserEditableSync(
+                    dataSvc.getCurrentSheetIdx(),
+                    row,
+                    col,
+                    grid
+                )
+            ) {
+                return
+            }
 
             // Calculate position based on grid
             const startX = xForColStart(col, grid) + LeftTop.width

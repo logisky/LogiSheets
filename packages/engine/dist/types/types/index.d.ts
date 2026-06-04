@@ -14,6 +14,13 @@ export interface Column {
 export interface Grid {
     anchorX: number;
     anchorY: number;
+    /**
+     * Pixels by which the first visible row/column is scrolled past the canvas
+     * top/left. `anchorY - firstVisibleRow.position.startRow`. Overlay helpers
+     * subtract these so positions stay in canvas-pixel space.
+     */
+    subOffsetX: number;
+    subOffsetY: number;
     rows: readonly Row[];
     columns: readonly Column[];
     mergeCells?: readonly MergeCell[];

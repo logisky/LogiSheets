@@ -67,6 +67,14 @@
   </div>
 
   <div class="card">
+    <div class="section-title">跳转</div>
+    <button type="button" class="btn" data-jump="OrderConfiguration">销售部</button>
+    <button type="button" class="btn" data-jump="ProductionLine">工厂</button>
+    <button type="button" class="btn" data-jump="OpticalGlassSupplier">采购部</button>
+    <button type="button" class="btn" data-jump="FinancialStatus">财务部</button>
+  </div>
+
+  <div class="card">
     <div class="section-title">Log</div>
     <div class="log" id="log"></div>
   </div>
@@ -81,6 +89,31 @@
       el.appendChild(line);
       el.scrollTop = el.scrollHeight;
     }
+
+    // Jump-to-block buttons (销售部 / 工厂 / 采购部). The host exposes
+    // window.blockManager (carries refName per field, stamped from the
+    // bindFormSchema payloads at game setup) and window.setSelection
+    // (handles sheet switch + selection — which the engine then auto-
+    // scrolls to). Each button's data-jump attribute is the refName of
+    // the topmost table in that department's block group.
+    document.querySelectorAll('button[data-jump]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const refName = btn.getAttribute('data-jump');
+        const bm = window.blockManager;
+        const wb = window.workbook;
+        if (!bm || !wb || !window.setSelection) {
+          log('host APIs unavailable', 'err');
+          return;
+        }
+        const field = bm.fieldManager.getAll().find((f) => f.refName === refName);
+        if (!field) { log('refName ' + refName + ' not bound yet — start a new game first', 'err'); return; }
+        const info = await wb.getBlockInfo({sheetId: field.sheetId, blockId: field.blockId});
+        if (!info || info.ty !== undefined) { log('getBlockInfo failed for ' + refName, 'err'); return; }
+        // Simulator centralises every refNamed block on MAIN_SHEET.
+        const targetIdx = FactorySimulator.SHEET_IDX[FactorySimulator.MAIN_SHEET];
+        window.setSelection(targetIdx, info.rowStart, info.colStart);
+      });
+    });
 
     document.getElementById('tick-btn').addEventListener('click', async () => {
       try {

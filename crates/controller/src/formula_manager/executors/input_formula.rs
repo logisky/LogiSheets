@@ -24,6 +24,26 @@ pub fn input_formula<C: FormulaExecCtx>(
     input(executor, sheet, cell_id, formula, None, ctx)
 }
 
+/// Register `formula` as the formula for a block cell addressed by
+/// (block_id, block_row, block_col). Mirrors {@link input_formula} but
+/// avoids translating through sheet-absolute coords — callers like the
+/// BlockInput handler already have the block triple.
+pub fn input_block_formula<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet_idx: usize,
+    block_id: BlockId,
+    block_row: usize,
+    block_col: usize,
+    formula: String,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+    let bcid = ctx.fetch_block_cell_id(&sheet, &block_id, block_row, block_col)?;
+    input(executor, sheet, CellId::BlockCell(bcid), formula, None, ctx)
+}
+
 pub fn input_ephemeral_formula<C: FormulaExecCtx>(
     executor: FormulaExecutor,
     sheet_idx: usize,
@@ -43,27 +63,94 @@ pub fn input_ephemeral_formula<C: FormulaExecCtx>(
             CellId::EphemeralCell(_) => unreachable!(),
         };
         let range_id = ctx.fetch_range_id(&sheet_id, &range);
-        let reference = ast::CellReference::Mut(RangeDisplay {
-            range_id,
-            ref_abs: RefAbs::default(),
-            sheet_id,
-        });
-        let node = ast::Node {
-            pure: ast::PureNode::Reference(reference),
+        let placeholder_node = ast::Node {
+            pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
+                range_id,
+                ref_abs: RefAbs::default(),
+                sheet_id,
+            })),
             bracket: true,
         };
+
+        // If the shadow target is a block cell, build per-row `#FIELD`
+        // and `#KEY` substitutes too — so validation formulas can reach
+        // sibling fields (e.g. resolve the row's key column to feed a
+        // BLOCKREF lookup against another block). Non-block targets get
+        // only `#PLACEHOLDER`, matching the prior behavior.
+        if let CellId::BlockCell(block_cell_id) = cell_id {
+            if let Some(row_ctx) = ctx.block_cell_row_substitutes(sheet_id, &block_cell_id) {
+                use std::collections::HashMap;
+                let mut sib_subs: HashMap<String, ast::Node> = HashMap::new();
+                for (name, sib_cell) in row_ctx.siblings {
+                    let sib_range = Range::Block(BlockRange::Single(sib_cell));
+                    let sib_range_id = ctx.fetch_range_id(&sheet_id, &sib_range);
+                    sib_subs.insert(
+                        name,
+                        ast::Node {
+                            pure: ast::PureNode::Reference(ast::CellReference::Mut(
+                                RangeDisplay {
+                                    range_id: sib_range_id,
+                                    ref_abs: RefAbs::default(),
+                                    sheet_id,
+                                },
+                            )),
+                            bracket: true,
+                        },
+                    );
+                }
+                let key_node = ast::Node {
+                    pure: ast::PureNode::Value(ast::Value::Text(row_ctx.key_value)),
+                    bracket: false,
+                };
+                return input_with_resolver(
+                    executor,
+                    sheet,
+                    CellId::EphemeralCell(id),
+                    formula,
+                    placeholder_node,
+                    sib_subs,
+                    key_node,
+                    ctx,
+                );
+            }
+        }
+
         input(
             executor,
             sheet,
             CellId::EphemeralCell(id),
             formula,
-            Some(node),
+            Some(placeholder_node),
             ctx,
         )
     } else {
         let cell_id = CellId::EphemeralCell(id);
         input(executor, sheet, cell_id, formula, None, ctx)
     }
+}
+
+/// Ephemeral input variant that resolves all three placeholder kinds:
+/// `#PLACEHOLDER` → the shadow target cell, `#FIELD("X")` → the
+/// target's same-row sibling cell, `#KEY` → the target's row key.
+/// Used for validation formulas on block cells.
+fn input_with_resolver<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet: SheetId,
+    cell_id: CellId,
+    formula: String,
+    placeholder: ast::Node,
+    sib_subs: std::collections::HashMap<String, ast::Node>,
+    key_node: ast::Node,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let parser = Parser {};
+    let ast = parser.parse_with_substitutes(&formula, sheet, ctx, &|kind| match kind {
+        logisheets_parser::PlaceholderKind::Placeholder => Some(placeholder.clone()),
+        logisheets_parser::PlaceholderKind::FieldRef(name) => sib_subs.get(name).cloned(),
+        logisheets_parser::PlaceholderKind::Key => Some(key_node.clone()),
+    });
+    let Some(ast) = ast else { return Ok(executor) };
+    register_parsed_ast(executor, sheet, cell_id, ast, ctx)
 }
 
 pub fn remove_formula<C: FormulaExecCtx>(
@@ -195,13 +282,24 @@ fn register_parsed_ast<C: FormulaExecCtx>(
 
     formulas.insert((sheet, cell_id), ast.clone());
 
+    // Mark this formula's own vertex dirty so the end-of-tx calc pass
+    // computes it on first registration. Without this, `register_parsed_ast`
+    // only wires up the dep graph — the formula has no signal to
+    // initially evaluate unless something upstream is also dirty in this
+    // tx. That matters for templated block cells materialized by
+    // `InsertRowsInBlock`: a newly-grown row's formulas (e.g. one whose
+    // only deps are in *another* block, like BLOCKREF("Constants",...))
+    // would otherwise register and immediately sit at empty forever.
+    let mut dirty_vertices = executor.dirty_vertices;
+    dirty_vertices.insert(this_vertex);
+
     Ok(FormulaExecutor {
         manager: FormulaManager {
             graph,
             formulas,
             names,
         },
-        dirty_vertices: executor.dirty_vertices,
+        dirty_vertices,
         dirty_ranges: executor.dirty_ranges,
         dirty_cubes: executor.dirty_cubes,
         dirty_blocks: executor.dirty_blocks,

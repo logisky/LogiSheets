@@ -482,7 +482,7 @@ impl<'a> Executor<'a> {
             external_links_manager: &mut self.status.external_links_manager,
             block_schema_manager: &self.status.block_schema_manager,
             container: &self.status.container,
-            sid_assigner: &self.sid_assigner,
+            sid_assigner: self.sid_assigner,
         };
         let executor = FormulaExecutor {
             manager: self.status.formula_manager.clone(),

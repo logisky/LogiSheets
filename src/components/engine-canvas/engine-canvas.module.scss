@@ -8,5 +8,9 @@
     position: absolute;
     pointer-events: none;
     opacity: 0.3;
-    z-index: 10;
+    // Sits at the bottom of the overlay stack. Diff overlays (z-index 1)
+    // paint above it; block-interface affordances paint above both.
+    // Previously this was 10, which combined with diff at 11 placed both
+    // overlays above the block-interface widgets and silently hid them.
+    z-index: 0;
 }

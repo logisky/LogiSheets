@@ -134,6 +134,23 @@ impl RangeExecutor {
                 let res = input(self, sheet_id, p.row, p.col, ctx)?;
                 Ok(res)
             }
+            // BlockInput must dirty the same range_id any block-cell-aware
+            // dependency tracks (Vertex::Block / BlockAll, set in
+            // formula_manager when `trigger` resolves to a BlockRange::Single).
+            // Without this arm, writes into a block cell — including the
+            // round counter in Constants used by BLOCKREF formulas across
+            // the workbook — never propagate to dependents.
+            EditPayload::BlockInput(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let bcid = ctx
+                    .fetch_block_cell_id(&sheet_id, &p.block_id, p.row, p.col)?;
+                let (sheet_row, sheet_col) =
+                    ctx.fetch_block_cell_index(&sheet_id, &bcid)?;
+                let res = input(self, sheet_id, sheet_row, sheet_col, ctx)?;
+                Ok(res)
+            }
             EditPayload::ReproduceCells(p) => {
                 if p.cells.is_empty() {
                     return Ok(self);

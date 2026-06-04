@@ -1,7 +1,19 @@
 .diff-overlay {
     position: absolute;
+    // Pure visual layer — all pointer events pass through to the canvas
+    // beneath. Hover is detected in JS (see DiffLayer.tsx) via a
+    // document-level mousemove + rect hit-test, so we can surface the
+    // prior value without ever capturing input.
     pointer-events: none;
-    z-index: 11;
+    // Tint sits just above the bare canvas but BELOW block-interface
+    // affordances (bool ✅/❌, validation warning marker, enum chips,
+    // etc. — all rendered at z-index 1 or 2 by their respective cells).
+    // Block-interface elements all render later in the DOM than the
+    // diff layer, so a small z-index here lets natural sibling-order
+    // stacking put them on top. Previously this was 11, which sat
+    // above everything and silently covered the warning markers and
+    // any per-cell widget overlay.
+    z-index: 1;
     border-width: 2px;
     border-style: solid;
     box-sizing: border-box;
@@ -10,17 +22,24 @@
         background-color 0.15s ease-in-out;
 }
 
-.diff-label {
+.diff-root {
     position: absolute;
-    bottom: 1px;
-    left: 2px;
-    font-size: 10px;
-    line-height: 1.2;
-    color: rgba(0, 0, 0, 0.7);
+    inset: 0;
+    pointer-events: none;
+}
+
+.diff-tooltip {
+    position: absolute;
+    background: rgba(33, 33, 33, 0.92);
+    color: #fff;
+    font-size: 11px;
+    line-height: 1.3;
+    padding: 2px 6px;
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 12;
     white-space: nowrap;
+    max-width: 320px;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: calc(100% - 4px);
-    pointer-events: none;
-    user-select: none;
 }

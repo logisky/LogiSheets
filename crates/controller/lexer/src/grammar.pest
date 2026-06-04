@@ -148,15 +148,20 @@ operator = _{
     | plus_op
     | minus_op
     | concat_op
-    | eq_op
     | neq_op
-    | lt_op
     | le_op
-    | gt_op
     | ge_op
+    | eq_op
+    | lt_op
+    | gt_op
     | percent_op
 }
 
+// PEST tries alternatives left-to-right and commits to the first
+// match. The two-char comparison operators (<>, <=, >=) MUST come
+// before their single-char prefixes (<, >, =) or the lexer eats the
+// `<` / `>` / `=` half first and leaves the `=` orphaned — e.g.
+// `1>=0` then parses as `1 > = 0`, which is invalid.
 infix_op = _{
     colon_op
     | exp_op
@@ -165,12 +170,12 @@ infix_op = _{
     | plus_op
     | minus_op
     | concat_op
-    | eq_op
     | neq_op
-    | lt_op
     | le_op
-    | gt_op
     | ge_op
+    | eq_op
+    | lt_op
+    | gt_op
 }
 
 comma = {","}

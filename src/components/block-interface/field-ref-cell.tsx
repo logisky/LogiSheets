@@ -5,6 +5,7 @@ import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToDisplayString} from './cell'
 import {blockEditBus} from './edit-bus'
+import {useEditable} from '@/core/permissions/use-editable'
 
 // Renders a dropdown whose options are pulled at edit time from another
 // block's field. The referenced field is guaranteed unique by the composer
@@ -77,8 +78,10 @@ export const FieldRefCell = (props: BlockCellProps) => {
     }
 
     const currentValue = valueToDisplayString(value)
+    const editable = useEditable(fieldInfo, sheetIdx, rowIdx, colIdx)
 
     const handleClick = () => {
+        if (!editable) return
         setIsEditing(true)
     }
 
@@ -117,12 +120,15 @@ export const FieldRefCell = (props: BlockCellProps) => {
                 borderColor: isEditing ? 'primary.main' : 'divider',
                 bgcolor: isEditing ? 'background.paper' : 'transparent',
                 boxSizing: 'border-box',
-                cursor: 'pointer',
+                cursor: editable ? 'pointer' : 'not-allowed',
+                opacity: editable ? 1 : 0.6,
                 transition: 'all 0.2s',
-                '&:hover': {
-                    borderColor: 'primary.light',
-                    bgcolor: 'action.hover',
-                },
+                '&:hover': editable
+                    ? {
+                          borderColor: 'primary.light',
+                          bgcolor: 'action.hover',
+                      }
+                    : {},
                 pointerEvents: 'auto',
                 zIndex: isEditing ? 1000 : 1,
             }}
