@@ -5,6 +5,7 @@ import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToNumber} from './cell'
 import {blockEditBus} from './edit-bus'
+import {useEditable} from '@/core/permissions/use-editable'
 
 export const BoolCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
@@ -23,7 +24,10 @@ export const BoolCell = (props: BlockCellProps) => {
     const displayIcon =
         currentValue === '1' ? '✅' : currentValue === '0' ? '❌' : ''
 
+    const editable = useEditable(fieldInfo, sheetIdx, rowIdx, colIdx)
+
     const handleClick = () => {
+        if (!editable) return
         setIsEditing(true)
     }
 
@@ -65,12 +69,15 @@ export const BoolCell = (props: BlockCellProps) => {
                 borderColor: isEditing ? 'primary.main' : 'divider',
                 bgcolor: isEditing ? 'background.paper' : 'transparent',
                 boxSizing: 'border-box',
-                cursor: 'pointer',
+                cursor: editable ? 'pointer' : 'not-allowed',
+                opacity: editable ? 1 : 0.6,
                 transition: 'all 0.2s',
-                '&:hover': {
-                    borderColor: 'primary.light',
-                    bgcolor: 'action.hover',
-                },
+                '&:hover': editable
+                    ? {
+                          borderColor: 'primary.light',
+                          bgcolor: 'action.hover',
+                      }
+                    : {},
                 pointerEvents: 'auto',
                 zIndex: isEditing ? 1000 : 1,
             }}

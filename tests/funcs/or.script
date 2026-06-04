@@ -1,0 +1,42 @@
+# Bool args
+INPUT A1 =OR(TRUE,FALSE)
+CHECKSTR A1 TRUE
+
+INPUT A2 =OR(FALSE,FALSE)
+CHECKSTR A2 FALSE
+
+INPUT A3 =OR(TRUE,TRUE)
+CHECKSTR A3 TRUE
+
+# Number coercion: non-zero is truthy, zero is falsy.
+INPUT A4 =OR(0,0)
+CHECKSTR A4 FALSE
+
+INPUT A5 =OR(0,7)
+CHECKSTR A5 TRUE
+
+INPUT A6 =OR(21,24)
+CHECKSTR A6 TRUE
+
+# Range with one truthy cell flips the result.
+INPUT B1 FALSE
+INPUT B2 0
+INPUT B3 1
+INPUT A7 =OR(B1:B3)
+CHECKSTR A7 TRUE
+
+# Same range without the truthy cell.
+INPUT C1 FALSE
+INPUT C2 0
+INPUT A8 =OR(C1:C2)
+CHECKSTR A8 FALSE
+
+# Stray text in a range is skipped; remaining logicals all false → false.
+INPUT D1 noise
+INPUT D2 FALSE
+INPUT A9 =OR(D1:D2)
+CHECKSTR A9 FALSE
+
+# Errors propagate, even if a later arg would have been truthy.
+INPUT A10 =OR(FALSE,#DIV/0!,TRUE)
+CHECKERR A10 #DIV/0!

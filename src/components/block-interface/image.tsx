@@ -28,11 +28,13 @@ import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToString} from './cell'
 import {pxToPt, pxToWidth} from '@/core'
+import {useEditable} from '@/core/permissions/use-editable'
 
 type ImageSize = '50%' | '100%'
 
 export const ImageCell = (props: BlockCellProps) => {
-    const {x, y, width, height, value, sheetIdx, rowIdx, colIdx} = props
+    const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
+        props
 
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
@@ -74,7 +76,10 @@ export const ImageCell = (props: BlockCellProps) => {
         handleClose()
     }
 
+    const editable = useEditable(fieldInfo, sheetIdx, rowIdx, colIdx)
+
     const handleClick = () => {
+        if (!editable) return
         setTempUrl(imageUrl)
         setImageDimensions(null)
         setDialogOpen(true)
@@ -162,12 +167,15 @@ export const ImageCell = (props: BlockCellProps) => {
                     borderColor: 'divider',
                     boxSizing: 'border-box',
                     overflow: 'hidden',
-                    cursor: 'pointer',
+                    cursor: editable ? 'pointer' : 'not-allowed',
+                    opacity: editable ? 1 : 0.6,
                     transition: 'all 0.2s',
-                    '&:hover': {
-                        borderColor: 'primary.light',
-                        bgcolor: 'action.hover',
-                    },
+                    '&:hover': editable
+                        ? {
+                              borderColor: 'primary.light',
+                              bgcolor: 'action.hover',
+                          }
+                        : {},
                     pointerEvents: 'auto',
                     zIndex: 1000,
                     display: 'flex',

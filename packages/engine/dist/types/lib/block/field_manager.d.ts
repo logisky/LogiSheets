@@ -100,21 +100,31 @@ export interface FieldInfo {
      */
     valueFormula?: string;
     /**
-     * Field-level write permission for non-owner callers (i.e. "the user"
-     * when the block has been registered to a craft).
+     * Field-level write permission for the player (non-owner caller).
+     * Two shapes:
      *
-     *   - `true`  — explicitly allow user writes to cells of this field,
-     *               overriding the block-owner restriction.
-     *   - `false` — explicitly forbid user writes, even if the block has
-     *               no registered owner.
+     *   - `boolean` — static decision evaluated synchronously by the host
+     *     UI guard. `false` permanently locks the field's cells against
+     *     player edits; `true` always allows.
+     *   - `string` — a formula evaluated per cell. Same placeholders as
+     *     `valueFormula` (`#FIELD("name")`, `#KEY`) plus `#PLACEHOLDER`
+     *     (the cell being checked). At widget mount the host installs
+     *     this formula onto a per-cell `UserEditable` shadow ephemeral
+     *     (via `getShadowCellId({kind: 'userEditable'})` +
+     *     `EphemeralCellInput`) — same machinery validation cells use —
+     *     then subscribes to the shadow value and toggles the widget's
+     *     read-only state accordingly.
      *   - `undefined` — fall back to block-owner rules (default behavior):
-     *               only the owner of the block can write; if the block
-     *               has no owner, anyone can write.
+     *     only the owner of the block can write; if the block has no
+     *     owner, anyone can write.
      *
-     * The block owner is unaffected by this flag — owners always retain
-     * write access.
+     * The engine itself doesn't enforce this flag — boolean is host-UI
+     * only, and the string path piggy-backs on the engine's generic
+     * ephemeral-cell evaluator without any schema-side knowledge of
+     * "user editable" as a concept. The block owner is unaffected by
+     * either form; owners always retain write access.
      */
-    userEditable?: boolean;
+    userEditable?: boolean | string;
 }
 /**
  * Manager for all fields in the application

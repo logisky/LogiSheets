@@ -3,8 +3,8 @@ mod input_formula;
 use std::collections::HashSet;
 
 pub use input_formula::{
-    add_ast_node, input_block_cell_template, input_ephemeral_formula, input_formula,
-    remove_ephemeral_formula, remove_formula,
+    add_ast_node, input_block_cell_template, input_block_formula, input_ephemeral_formula,
+    input_formula, remove_ephemeral_formula, remove_formula,
 };
 use logisheets_base::{
     errors::BasicError, BlockId, BlockRange, CubeId, Range, RangeId, SheetId,
@@ -62,11 +62,40 @@ impl FormulaExecutor {
                 remove_ephemeral_formula(self, p.sheet_idx, p.id, ctx)
             }
             EditPayload::BlockInput(p) => {
-                // If this cell sits in a templated field, the user
-                // content is ignored — we materialize the schema's
-                // template instead. For non-templated cells this is a
-                // no-op (the container path handles them).
-                input_block_cell_template(self, p.sheet_idx, p.block_id, p.row, p.col, ctx)
+                // If the player wrote a literal formula (`=…`) into this
+                // block cell, register it directly. This is the
+                // per-cell escape hatch from field-level value-formula
+                // templates: when only a few rows of a column need a
+                // formula and the rest are plain values, you don't have
+                // to fold every row's logic into a single templated
+                // expression — just blockInput `=…` on the cells that
+                // need it.
+                //
+                // Otherwise (no `=` prefix), fall through to the
+                // templated-field path: if the cell sits in a field
+                // with a schema-level valueFormula, that template is
+                // materialized; non-templated cells are a no-op here
+                // (the container path handles them).
+                if let Some(formula) = p.input.strip_prefix('=') {
+                    input_block_formula(
+                        self,
+                        p.sheet_idx,
+                        p.block_id,
+                        p.row,
+                        p.col,
+                        formula.to_string(),
+                        ctx,
+                    )
+                } else {
+                    input_block_cell_template(
+                        self,
+                        p.sheet_idx,
+                        p.block_id,
+                        p.row,
+                        p.col,
+                        ctx,
+                    )
+                }
             }
             EditPayload::InsertRowsInBlock(p) => {
                 // Newly inserted rows start blank. For any templated
@@ -75,6 +104,11 @@ impl FormulaExecutor {
                 // caller having to send a follow-up BlockInput per cell.
                 // (Free-form cells stay empty; the no-op branch inside
                 // `input_block_cell_template` covers them.)
+                //
+                // Same loop also installs the per-cell user-editable
+                // shadow formula when the field declares one — the
+                // host's permission patch reads that shadow to gate
+                // writes on a row's dynamic state.
                 //
                 // Block size at this point reflects the post-insert
                 // state — navigator runs before formula_manager. So

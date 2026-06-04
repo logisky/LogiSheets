@@ -382,6 +382,11 @@ pub struct GetShadowCellIdParams {
     pub sheet_idx: usize,
     pub row_idx: usize,
     pub col_idx: usize,
+    /// Which derived computation this shadow represents. Optional for
+    /// backward compatibility — omitted requests are treated as the
+    /// long-standing Validation shadow so existing callers (the
+    /// ValidationCell widget chiefly) keep working.
+    pub kind: Option<logisheets_rs::ShadowKind>,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -393,6 +398,7 @@ pub struct GetShadowCellIdsParams {
     pub sheet_idx: usize,
     pub row_idx: Vec<usize>,
     pub col_idx: Vec<usize>,
+    pub kind: Option<logisheets_rs::ShadowKind>,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -813,12 +819,20 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.row_ids,
             params.col_ids,
         ),
-        Message::GetShadowCellId(params) => {
-            controller::get_shadow_cell_id(id, params.sheet_idx, params.row_idx, params.col_idx)
-        }
-        Message::GetShadowCellIds(params) => {
-            controller::get_shadow_cell_ids(id, params.sheet_idx, params.row_idx, params.col_idx)
-        }
+        Message::GetShadowCellId(params) => controller::get_shadow_cell_id(
+            id,
+            params.sheet_idx,
+            params.row_idx,
+            params.col_idx,
+            params.kind.unwrap_or_default(),
+        ),
+        Message::GetShadowCellIds(params) => controller::get_shadow_cell_ids(
+            id,
+            params.sheet_idx,
+            params.row_idx,
+            params.col_idx,
+            params.kind.unwrap_or_default(),
+        ),
         Message::GetShadowInfoById(params) => {
             controller::get_shadow_info_by_id(id, params.shadow_id)
         }

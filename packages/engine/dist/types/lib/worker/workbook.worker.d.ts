@@ -111,6 +111,13 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
         tag: number;
     }): Result<AppendixWithCell>;
     getAllBlockFields(): Result<readonly BlockField[]>;
+    getFullyCoveredBlocks(params: {
+        sheetIdx: number;
+        rowIdx: number;
+        colIdx: number;
+        rowCnt: number;
+        colCnt: number;
+    }): Result<readonly BlockInfo[]>;
     getShadowCellId(params: {
         sheetIdx: number;
         rowIdx: number;

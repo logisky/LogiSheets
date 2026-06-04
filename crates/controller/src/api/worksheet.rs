@@ -1135,10 +1135,19 @@ impl<'a> Worksheet<'a> {
                             col: *j,
                         });
                         let cell_value = self.get_value_by_id(&cell_id).unwrap();
-                        if let Some(shadow_id) = self
-                            .controller
-                            .sid_assigner
-                            .find_shadow_id(self.sheet_id, cell_id)
+                        // BlockCellInfo.shadow_value is the legacy
+                        // single-shadow field; it now specifically
+                        // surfaces the Validation kind's shadow (the
+                        // only one the host's ValidationCell widget
+                        // currently subscribes to). Other kinds — e.g.
+                        // UserEditable — are queried directly via
+                        // get_shadow_cell_id and read separately.
+                        if let Some(shadow_id) =
+                            self.controller.sid_assigner.find_shadow_id(
+                                self.sheet_id,
+                                cell_id,
+                                crate::sid_assigner::ShadowKind::Validation,
+                            )
                         {
                             let shadow_cell_id = CellId::EphemeralCell(shadow_id);
                             let shadow_cell_value = self.get_value_by_id(&shadow_cell_id).unwrap();
@@ -1588,11 +1597,11 @@ impl<'a> Worksheet<'a> {
                     col: *j,
                 });
                 let mut shadow_value = None;
-                if let Some(shadow_id) = self
-                    .controller
-                    .sid_assigner
-                    .find_shadow_id(self.sheet_id, cell_id)
-                {
+                if let Some(shadow_id) = self.controller.sid_assigner.find_shadow_id(
+                    self.sheet_id,
+                    cell_id,
+                    crate::sid_assigner::ShadowKind::Validation,
+                ) {
                     let shadow_cell_id = CellId::EphemeralCell(shadow_id);
                     let shadow_cell_value = self.get_value_by_id(&shadow_cell_id)?;
                     shadow_value = Some(shadow_cell_value);

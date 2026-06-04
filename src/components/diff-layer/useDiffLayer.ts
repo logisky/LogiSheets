@@ -139,6 +139,22 @@ export function useDiffLayer(): UseDiffLayerReturn {
         return () => engine.off('cellChange', cb)
     }, [engine, refresh])
 
+    // Switching sheets must re-filter the diff cells against the new
+    // active sheet — otherwise `diffState` keeps the previous sheet's
+    // cell positions and the overlays paint at those (sheet-relative)
+    // row/col coordinates on whichever sheet is now showing. Without
+    // this, the diff layer "leaks" between sheets. `refresh` already
+    // reads `dataSvc.getCurrentSheetIdx()`, so we just trigger it on
+    // every active-sheet change.
+    useEffect(() => {
+        const cb = () => {
+            if (globalStore.isTempMode) queueMicrotask(refresh)
+            else setDiffState(EMPTY_DIFF)
+        }
+        engine.on('activeSheetChange', cb)
+        return () => engine.off('activeSheetChange', cb)
+    }, [engine, refresh])
+
     const applyTempTransaction = useCallback(
         async (payloads: readonly Payload[]) => {
             if (!globalStore.isTempMode) {

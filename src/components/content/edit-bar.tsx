@@ -15,8 +15,10 @@ import {FC, useEffect, useState, useRef, useCallback, useMemo} from 'react'
 import styles from './edit-bar.module.scss'
 import {useEngine} from '@/core/engine/provider'
 import {isErrorMessage} from 'logisheets-engine'
-import {TransformOutlined} from '@mui/icons-material'
+import {TransformOutlined, RuleOutlined} from '@mui/icons-material'
 import {IconButton, Tooltip} from '@mui/material'
+import {callerRegistry} from '@/core/permissions/caller-registry'
+import {isCellUserEditableSync} from '@/core/permissions/field-editable'
 import {
     FormulaEditor,
     FormulaEditorRef,
@@ -73,6 +75,12 @@ export const EditBarComponent: FC<EditBarProps> = ({
     const [rawValue, setRawValue] = useState('')
     const [isEditing, setIsEditing] = useState(false)
     const [showFormula, setShowFormula] = useState(true)
+    // `showValidation` overrides the value/formula toggle when true: the
+    // input box displays the block field's validation formula (the
+    // ephemeral shadow-cell formula used to drive the warning marker).
+    // Read-only — there's no way to edit a field's validation from here.
+    const [showValidation, setShowValidation] = useState(false)
+    const [validationText, setValidationText] = useState('')
     const [sheetName, setSheetName] = useState('')
     const editorRef = useRef<FormulaEditorRef>(null)
 
@@ -95,6 +103,42 @@ export const EditBarComponent: FC<EditBarProps> = ({
             })
     }, [selectedDataContentChanged, dataSvc])
 
+    // Look up the validation formula on the field bound at (sheetIdx, row, col)
+    // if any. Returns '' when the cell isn't a block cell, isn't bound, or
+    // the field carries no validation.
+    const lookupValidation = useCallback(
+        async (row: number, col: number): Promise<string> => {
+            try {
+                const sheetIdx = dataSvc.getCurrentSheetIdx()
+                const wb = dataSvc.getWorkbook()
+                const cellId = await wb.getCellId({
+                    sheetIdx,
+                    rowIdx: row,
+                    colIdx: col,
+                })
+                if (isErrorMessage(cellId)) return ''
+                if (cellId.cellId.type !== 'blockCell') return ''
+                const bcid = cellId.cellId.value
+                const renderId = callerRegistry.getFieldRenderId(
+                    sheetIdx,
+                    bcid.blockId,
+                    bcid.row,
+                    bcid.col
+                )
+                if (!renderId) return ''
+                const info = engine.getBlockManager().fieldManager.get(renderId)
+                if (!info) return ''
+                // FieldInfo.type is a tagged union; validation only lives on
+                // string / number / fieldRef / multiSelectRef variants.
+                const t = info.type as {validation?: string}
+                return t.validation ?? ''
+            } catch {
+                return ''
+            }
+        },
+        [dataSvc, engine]
+    )
+
     useEffect(() => {
         if (isEditing) return
         const selectedCell = getSelectedCellRange(selectedData)
@@ -109,6 +153,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
                 setFormulaText(cellToDisplayText(c))
                 setRawValue(c.getText())
             })
+        lookupValidation(row, col).then(setValidationText)
         // Look up the current sheet name for the editor's cell-ref colorer
         // (it uses this to decide which references are local vs. cross-sheet).
         dataSvc
@@ -117,7 +162,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
             .then((name) => {
                 if (!isErrorMessage(name)) setSheetName(name)
             })
-    }, [selectedData, isEditing, dataSvc])
+    }, [selectedData, isEditing, dataSvc, lookupValidation])
 
     // Backend tokenization: the editor calls this on every change to get
     // syntax highlighting + cell-ref info.
@@ -167,7 +212,25 @@ export const EditBarComponent: FC<EditBarProps> = ({
         }
         // Mirror the previous behavior: don't fire CellInput if the buffer is
         // empty (e.g., user opened the bar but typed nothing).
-        if (value !== '') sendCellInput(value)
+        if (value !== '') {
+            // Guard: block cells whose field is declared
+            // `userEditable: false` are not writable from the formula
+            // bar either. Engine-side patch would reject anyway; this
+            // failing fast here avoids a confusing silent commit
+            // (and keeps the cell's previous value visible without a
+            // round-trip).
+            const cell = getFirstCell(selectedData)
+            if (
+                isCellUserEditableSync(
+                    dataSvc.getCurrentSheetIdx(),
+                    cell.y,
+                    cell.x,
+                    engine.getGrid()
+                )
+            ) {
+                sendCellInput(value)
+            }
+        }
         setIsEditing(false)
         refocusGrid()
     }
@@ -233,8 +296,37 @@ export const EditBarComponent: FC<EditBarProps> = ({
                     <TransformOutlined fontSize="small" />
                 </IconButton>
             </Tooltip>
+            {/* Toggle: show the bound block field's validation formula
+                (the shadow-cell expression that drives the warning marker).
+                Read-only — purely for debugging. Disabled when no cell is
+                selected OR when the selected cell has no validation. */}
+            <Tooltip
+                title={
+                    validationText
+                        ? 'Show validation formula'
+                        : 'No validation on this cell'
+                }
+            >
+                <span>
+                    <IconButton
+                        size="small"
+                        sx={{p: 0.4}}
+                        color={showValidation ? 'primary' : 'default'}
+                        onClick={() => setShowValidation((v) => !v)}
+                        disabled={!hasSelectedData || !validationText}
+                    >
+                        <RuleOutlined fontSize="small" />
+                    </IconButton>
+                </span>
+            </Tooltip>
             {!hasSelectedData ? (
                 <input className={styles.formula} value="" disabled readOnly />
+            ) : showValidation ? (
+                <input
+                    className={styles.formula}
+                    value={validationText}
+                    readOnly
+                />
             ) : showFormula ? (
                 <div className={styles.formula}>
                     <FormulaEditor

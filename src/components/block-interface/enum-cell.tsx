@@ -1,10 +1,11 @@
 import {useState} from 'react'
 import {Box, Select, MenuItem} from '@mui/material'
-import {CellInputBuilder, Payload} from 'logisheets-engine'
+import {CellInputBuilder, Payload, isErrorMessage} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToString} from './cell'
 import {blockEditBus} from './edit-bus'
+import {useEditable} from '@/core/permissions/use-editable'
 
 export const EnumCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
@@ -28,7 +29,10 @@ export const EnumCell = (props: BlockCellProps) => {
     const currentVariant = enumInfo?.variants.find((v) => v.id === variantId)
     const displayValue = currentVariant?.value || ''
 
+    const editable = useEditable(fieldInfo, sheetIdx, rowIdx, colIdx)
+
     const handleClick = () => {
+        if (!editable) return
         setIsEditing(true)
     }
 
@@ -44,7 +48,10 @@ export const EnumCell = (props: BlockCellProps) => {
             type: 'cellInput',
             value: p,
         }
-        await DATA_SERVICE.handleTransaction(tx([payload], true))
+        const result = await DATA_SERVICE.handleTransaction(tx([payload], true))
+        if (isErrorMessage(result)) {
+            return
+        }
         blockEditBus.emit({
             sheetIdx,
             rowIdx,
@@ -70,12 +77,15 @@ export const EnumCell = (props: BlockCellProps) => {
                 borderColor: isEditing ? 'primary.main' : 'divider',
                 bgcolor: isEditing ? 'background.paper' : 'transparent',
                 boxSizing: 'border-box',
-                cursor: 'pointer',
+                cursor: editable ? 'pointer' : 'not-allowed',
+                opacity: editable ? 1 : 0.6,
                 transition: 'all 0.2s',
-                '&:hover': {
-                    borderColor: 'primary.light',
-                    bgcolor: 'action.hover',
-                },
+                '&:hover': editable
+                    ? {
+                          borderColor: 'primary.light',
+                          bgcolor: 'action.hover',
+                      }
+                    : {},
                 pointerEvents: 'auto',
                 zIndex: isEditing ? 1000 : 1,
             }}

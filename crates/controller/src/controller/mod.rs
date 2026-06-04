@@ -632,7 +632,11 @@ mod tests {
         let sheet_id = wb.get_sheet_id_by_idx(sheet_idx).unwrap();
 
         let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
-        let shadow_id = wb.sid_assigner.get_shawdow_id(sheet_id, cell_id);
+        let shadow_id = wb.sid_assigner.get_shawdow_id(
+            sheet_id,
+            cell_id,
+            crate::sid_assigner::ShadowKind::Validation,
+        );
 
         let ephemeral_input = PayloadsAction {
             payloads: vec![EditPayload::EphemeralCellInput(EphemeralCellInput {

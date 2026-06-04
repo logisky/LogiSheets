@@ -8,6 +8,7 @@ import {CellInputBuilder, Payload} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToNumber} from './cell'
+import {useEditable} from '@/core/permissions/use-editable'
 import {blockEditBus} from './edit-bus'
 
 /**
@@ -54,7 +55,10 @@ export const DatetimeCell = (props: BlockCellProps) => {
         return null
     }
 
+    const editable = useEditable(fieldInfo, sheetIdx, rowIdx, colIdx)
+
     const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+        if (!editable) return
         // Try to parse the current value
         const numValue = valueToNumber(value)
         if (numValue !== null) {
@@ -119,12 +123,11 @@ export const DatetimeCell = (props: BlockCellProps) => {
                     top: `${y}px`,
                     width: `${width}px`,
                     height: `${height}px`,
-                    cursor: 'pointer',
+                    cursor: editable ? 'pointer' : 'not-allowed',
+                    opacity: editable ? 1 : 0.6,
                     pointerEvents: 'auto',
                     zIndex: 1,
-                    '&:hover': {
-                        bgcolor: 'action.hover',
-                    },
+                    '&:hover': editable ? {bgcolor: 'action.hover'} : {},
                 }}
                 onClick={handleClick}
             />

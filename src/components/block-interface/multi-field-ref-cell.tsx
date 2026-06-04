@@ -5,6 +5,7 @@ import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps, valueToDisplayString} from './cell'
 import {blockEditBus} from './edit-bus'
+import {useEditable} from '@/core/permissions/use-editable'
 
 // Storage convention for multiSelectRef cells: comma-separated values, each
 // trimmed. Empty cell ↔ empty list. Values are not escaped — if a referenced
@@ -89,7 +90,10 @@ export const MultiFieldRefCell = (props: BlockCellProps) => {
     const selected = parseList(currentRaw)
     const displayValue = selected.join(', ')
 
+    const editable = useEditable(fieldInfo, sheetIdx, rowIdx, colIdx)
+
     const handleClick = () => {
+        if (!editable) return
         setIsEditing(true)
     }
 
@@ -128,12 +132,15 @@ export const MultiFieldRefCell = (props: BlockCellProps) => {
                 borderColor: isEditing ? 'primary.main' : 'divider',
                 bgcolor: isEditing ? 'background.paper' : 'transparent',
                 boxSizing: 'border-box',
-                cursor: 'pointer',
+                cursor: editable ? 'pointer' : 'not-allowed',
+                opacity: editable ? 1 : 0.6,
                 transition: 'all 0.2s',
-                '&:hover': {
-                    borderColor: 'primary.light',
-                    bgcolor: 'action.hover',
-                },
+                '&:hover': editable
+                    ? {
+                          borderColor: 'primary.light',
+                          bgcolor: 'action.hover',
+                      }
+                    : {},
                 pointerEvents: 'auto',
                 zIndex: isEditing ? 1000 : 1,
             }}

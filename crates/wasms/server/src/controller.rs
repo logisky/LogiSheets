@@ -377,11 +377,17 @@ pub fn get_display_window_for_block(id: usize, sheet_id: SheetId, block_id: Bloc
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
 
-pub fn get_shadow_cell_id(id: usize, sheet_idx: usize, row_idx: usize, col_idx: usize) -> JsValue {
+pub fn get_shadow_cell_id(
+    id: usize,
+    sheet_idx: usize,
+    row_idx: usize,
+    col_idx: usize,
+    kind: logisheets_rs::ShadowKind,
+) -> JsValue {
     init();
     let mut manager = MANAGER.get_mut();
     let wb = manager.get_mut_workbook(&id).unwrap();
-    let r = wb.get_shadow_cell_id(sheet_idx, row_idx, col_idx);
+    let r = wb.get_shadow_cell_id(sheet_idx, row_idx, col_idx, kind);
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
@@ -391,11 +397,12 @@ pub fn get_shadow_cell_ids(
     sheet_idx: usize,
     row_idx: Vec<usize>,
     col_idx: Vec<usize>,
+    kind: logisheets_rs::ShadowKind,
 ) -> JsValue {
     init();
     let mut manager = MANAGER.get_mut();
     let wb = manager.get_mut_workbook(&id).unwrap();
-    let r = wb.get_shawdow_cell_ids(sheet_idx, row_idx, col_idx);
+    let r = wb.get_shawdow_cell_ids(sheet_idx, row_idx, col_idx, kind);
     handle_result!(r);
     serde_wasm_bindgen::to_value(&r).unwrap()
 }

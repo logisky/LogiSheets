@@ -11,7 +11,7 @@
  *   - Red:    cell/row/column removed
  */
 
-import {FC, useMemo} from 'react'
+import {FC, useMemo, useRef, useState, useEffect} from 'react'
 import type {Grid} from 'logisheets-engine'
 import {
     xForColStart,
@@ -74,6 +74,9 @@ function computeCellOverlays(
 
         let bgColor: string
         let borderColor: string
+        // Tooltip-only: the canvas already paints the *new* value. The
+        // overlay shows trend via color and surfaces the *old* value on
+        // hover via the host element's `title` attribute.
         let label: string | undefined
 
         switch (cell.type) {
@@ -81,17 +84,12 @@ function computeCellOverlays(
             case 'styleChanged':
                 bgColor = DIFF_COLORS.changed
                 borderColor = DIFF_COLORS.changedBorder
-                if (
-                    cell.oldValue !== undefined &&
-                    cell.newValue !== undefined
-                ) {
-                    label = `${cell.oldValue} → ${cell.newValue}`
-                }
+                label = cell.oldValue
                 break
             case 'added':
                 bgColor = DIFF_COLORS.inserted
                 borderColor = DIFF_COLORS.insertedBorder
-                label = cell.newValue
+                // No prior value to surface on hover.
                 break
             case 'removed':
                 bgColor = DIFF_COLORS.removed
@@ -198,7 +196,16 @@ function computeColOverlays(
     return rects
 }
 
+interface TooltipState {
+    value: string
+    x: number
+    y: number
+}
+
 export const DiffLayer: FC<DiffLayerProps> = ({diffState, grid}) => {
+    const rootRef = useRef<HTMLDivElement>(null)
+    const [tooltip, setTooltip] = useState<TooltipState | null>(null)
+
     const overlays = useMemo(() => {
         if (!diffState.active || !grid) return []
 
@@ -210,10 +217,51 @@ export const DiffLayer: FC<DiffLayerProps> = ({diffState, grid}) => {
         return [...colOverlays, ...rowOverlays, ...cellOverlays]
     }, [diffState, grid])
 
+    // Hit-test the cursor against overlay rects in pure JS so the layer
+    // itself can stay `pointer-events: none` — every event (click, drag,
+    // wheel) reaches the canvas untouched. Only rects with a `label`
+    // (prior value worth surfacing) produce a tooltip.
+    useEffect(() => {
+        if (!diffState.active || overlays.length === 0) {
+            setTooltip(null)
+            return
+        }
+        const onMove = (e: MouseEvent) => {
+            const root = rootRef.current
+            if (!root) return
+            const r = root.getBoundingClientRect()
+            const cx = e.clientX - r.left
+            const cy = e.clientY - r.top
+            // Iterate front-to-back: cells were appended last, so a later
+            // entry hit-tests over an earlier (row/col) band correctly.
+            let hit: OverlayRect | undefined
+            for (let i = overlays.length - 1; i >= 0; i -= 1) {
+                const o = overlays[i]
+                if (!o.label) continue
+                if (
+                    cx >= o.x &&
+                    cx < o.x + o.width &&
+                    cy >= o.y &&
+                    cy < o.y + o.height
+                ) {
+                    hit = o
+                    break
+                }
+            }
+            if (hit) {
+                setTooltip({value: hit.label!, x: cx, y: cy})
+            } else {
+                setTooltip(null)
+            }
+        }
+        document.addEventListener('mousemove', onMove)
+        return () => document.removeEventListener('mousemove', onMove)
+    }, [overlays, diffState.active])
+
     if (!diffState.active || overlays.length === 0) return null
 
     return (
-        <>
+        <div ref={rootRef} className={styles['diff-root']}>
             {overlays.map((overlay) => (
                 <div
                     key={overlay.key}
@@ -226,16 +274,17 @@ export const DiffLayer: FC<DiffLayerProps> = ({diffState, grid}) => {
                         backgroundColor: overlay.bgColor,
                         borderColor: overlay.borderColor,
                     }}
-                    title={overlay.label}
-                >
-                    {overlay.label && (
-                        <span className={styles['diff-label']}>
-                            {overlay.label}
-                        </span>
-                    )}
-                </div>
+                />
             ))}
-        </>
+            {tooltip && (
+                <div
+                    className={styles['diff-tooltip']}
+                    style={{left: tooltip.x + 12, top: tooltip.y + 16}}
+                >
+                    {tooltip.value}
+                </div>
+            )}
+        </div>
     )
 }
 
