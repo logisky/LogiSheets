@@ -272,18 +272,17 @@ fn test_factory_simulator_round_wipe_loop() {
         tick_value += 1;
         // temp-mode blockInput on (row 0, col 0) — same shape as the craft's
         // round-counter update on the constants table.
-        let tick_effect =
-            wb.handle_action_in_temp_status(PayloadsAction {
-                payloads: vec![EditPayload::BlockInput(BlockInput {
-                    sheet_idx: SHEET_IDX,
-                    block_id: BLOCK_ID,
-                    row: 0,
-                    col: 0,
-                    input: tick_value.to_string(),
-                })],
-                undoable: true,
-                init: false,
-            });
+        let tick_effect = wb.handle_action_in_temp_status(PayloadsAction {
+            payloads: vec![EditPayload::BlockInput(BlockInput {
+                sheet_idx: SHEET_IDX,
+                block_id: BLOCK_ID,
+                row: 0,
+                col: 0,
+                input: tick_value.to_string(),
+            })],
+            undoable: true,
+            init: false,
+        });
         assert!(
             matches!(tick_effect.status, StatusCode::Ok(_)),
             "tick (temp) failed at round {}: {:?}",
@@ -397,7 +396,13 @@ fn test_factory_simulator_single_tx_round() {
         ws.get_block_info(block_id).expect("get_block_info").row_cnt
     }
 
-    fn append_wipe(out: &mut Vec<EditPayload>, sheet_idx: usize, block_id: usize, row_cnt: usize, col_cnt: usize) {
+    fn append_wipe(
+        out: &mut Vec<EditPayload>,
+        sheet_idx: usize,
+        block_id: usize,
+        row_cnt: usize,
+        col_cnt: usize,
+    ) {
         if row_cnt > 1 {
             out.push(EditPayload::DeleteRowsInBlock(DeleteRowsInBlock {
                 sheet_idx,
@@ -417,7 +422,14 @@ fn test_factory_simulator_single_tx_round() {
         }
     }
 
-    fn append_insert_order(out: &mut Vec<EditPayload>, sheet_idx: usize, block_id: usize, target_row: usize, col_cnt: usize, order_label: &str) {
+    fn append_insert_order(
+        out: &mut Vec<EditPayload>,
+        sheet_idx: usize,
+        block_id: usize,
+        target_row: usize,
+        col_cnt: usize,
+        order_label: &str,
+    ) {
         if target_row > 0 {
             out.push(EditPayload::InsertRowsInBlock(InsertRowsInBlock {
                 sheet_idx,
@@ -446,8 +458,20 @@ fn test_factory_simulator_single_tx_round() {
         let mut payloads: Vec<EditPayload> = vec![];
 
         // (1) wipes
-        append_wipe(&mut payloads, MAIN_SHEET, ORDER_STATUS_BLOCK, order_status_rowcnt, ORDER_STATUS_COL);
-        append_wipe(&mut payloads, MAIN_SHEET, ORDER_CONTRIB_BLOCK, order_contrib_rowcnt, ORDER_CONTRIB_COL);
+        append_wipe(
+            &mut payloads,
+            MAIN_SHEET,
+            ORDER_STATUS_BLOCK,
+            order_status_rowcnt,
+            ORDER_STATUS_COL,
+        );
+        append_wipe(
+            &mut payloads,
+            MAIN_SHEET,
+            ORDER_CONTRIB_BLOCK,
+            order_contrib_rowcnt,
+            ORDER_CONTRIB_COL,
+        );
         // (2) bump round counter
         payloads.push(EditPayload::BlockInput(BlockInput {
             sheet_idx: ENGINE_SHEET,
@@ -459,7 +483,14 @@ fn test_factory_simulator_single_tx_round() {
         // (3) insert orders
         for i in 0..ORDERS_PER_ROUND {
             let label = format!("r{}o{}", next_round, i);
-            append_insert_order(&mut payloads, MAIN_SHEET, ORDER_STATUS_BLOCK, i, ORDER_STATUS_COL, &label);
+            append_insert_order(
+                &mut payloads,
+                MAIN_SHEET,
+                ORDER_STATUS_BLOCK,
+                i,
+                ORDER_STATUS_COL,
+                &label,
+            );
         }
 
         let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {

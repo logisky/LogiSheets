@@ -1142,13 +1142,11 @@ impl<'a> Worksheet<'a> {
                         // currently subscribes to). Other kinds — e.g.
                         // UserEditable — are queried directly via
                         // get_shadow_cell_id and read separately.
-                        if let Some(shadow_id) =
-                            self.controller.sid_assigner.find_shadow_id(
-                                self.sheet_id,
-                                cell_id,
-                                crate::sid_assigner::ShadowKind::Validation,
-                            )
-                        {
+                        if let Some(shadow_id) = self.controller.sid_assigner.find_shadow_id(
+                            self.sheet_id,
+                            cell_id,
+                            crate::sid_assigner::ShadowKind::Validation,
+                        ) {
                             let shadow_cell_id = CellId::EphemeralCell(shadow_id);
                             let shadow_cell_value = self.get_value_by_id(&shadow_cell_id).unwrap();
                             cell_values.push(BlockCellInfo {

@@ -105,12 +105,16 @@ where
         }
         calc_order_desc
     });
-    orders.fold(VecDeque::<CalcUnit<V>>::new(), |mut prev, c| {
-        c.into_iter().rev().for_each(|e| {
-            prev.push_back(e);
-        });
-        prev
-    })
+    // Concatenate every DFS root's per-tree post-order, then reverse
+    // the WHOLE thing to get topological order (deps first, dependents
+    // last). Reversing each chunk independently and then concatenating
+    // — what this used to do — produces wrong order whenever the
+    // dirty set spans multiple DFS roots: a node visited late as a
+    // fresh root has its chunk appended LAST, even when its rdeps in
+    // the original graph were already drained by an earlier root.
+    let mut all: Vec<CalcUnit<V>> = orders.flatten().collect();
+    all.reverse();
+    all.into_iter().collect()
 }
 
 #[cfg(test)]
@@ -389,5 +393,82 @@ mod tests {
             |cycle: &Vec<u32>| -> usize { cycles_order.get(cycle).unwrap().clone() };
         assert!(get_nodes_order(4) < get_nodes_order(5));
         assert!(get_nodes_order(4) < get_cycles_order(&vec![2, 3, 1]));
+    }
+
+    /// Regression test for the multi-DFS-root order assembly bug.
+    ///
+    /// Graph (add_dep(X, Y) = X depends on Y, so Y must be computed
+    /// before X; rdeps[Y] ⊇ {X}):
+    ///
+    ///     A         C
+    ///      \       /
+    ///       v     v
+    ///         B
+    ///
+    /// add_dep(A,B), add_dep(C,B) — both A and C depend on B, so the
+    /// correct topo order has B FIRST, then A and C in either order.
+    ///
+    /// Dirty set: {A, B, C} (sorted = [A, B, C]).
+    ///
+    /// Tarjan DFS visits roots in sorted order:
+    ///   - Root A: rdeps[A] = {}, post-order = [A].
+    ///   - Root B: rdeps[B] = {A, C}. A already visited (skip). C
+    ///             unvisited → DFS into C; rdeps[C] = {} → pop C →
+    ///             pop B. Post-order = [C, B].
+    ///   - Root C: already visited, skip.
+    ///
+    /// Concatenated post-order: [A, C, B]. Reversed (= topo) =
+    /// [B, C, A]. ✓
+    ///
+    /// The OLD assembly (reverse-each-chunk-then-concat) produced
+    /// `rev([A]) ++ rev([C,B]) = [A] ++ [B,C] = [A, B, C]` — B
+    /// scheduled BEFORE C, even though C is a dep of B. That's the
+    /// shape that caused the factory-simulator "PL row 二 #VALUE on
+    /// newGame": downstream FIN/PLC consumers were scheduled before
+    /// some PL-row formulas because their respective DFS roots fell
+    /// into different chunks.
+    #[test]
+    fn multi_root_topo_order() {
+        // a, b, c as u32 — choose so sorted order is [a, b, c].
+        const A: u32 = 10;
+        const B: u32 = 20;
+        const C: u32 = 30;
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(A, B);
+        graph.add_dep(C, B);
+        let rdeps_fetcher = |r: &u32| -> Vec<u32> {
+            let set = match graph.get_rdeps(r) {
+                Some(s) => s.clone(),
+                None => HashSet::new().into(),
+            };
+            let mut v = set.into_iter().collect_vec();
+            v.sort();
+            v
+        };
+        let mut dirty = HashSet::<u32>::new();
+        dirty.insert(A);
+        dirty.insert(B);
+        dirty.insert(C);
+        let order = calc_order(&rdeps_fetcher, dirty);
+        let nodes: Vec<u32> = order
+            .into_iter()
+            .map(|c| match c {
+                CalcUnit::Cycle(_) => panic!("unexpected cycle"),
+                CalcUnit::Node(n) => n,
+            })
+            .collect();
+        assert_eq!(nodes.len(), 3);
+        let idx = |n: u32| nodes.iter().position(|&x| x == n).unwrap();
+        // B is a dep of both A and C, so B must come first.
+        assert!(
+            idx(B) < idx(A),
+            "B should come before A; got order {:?}",
+            nodes
+        );
+        assert!(
+            idx(B) < idx(C),
+            "B should come before C; got order {:?}",
+            nodes
+        );
     }
 }

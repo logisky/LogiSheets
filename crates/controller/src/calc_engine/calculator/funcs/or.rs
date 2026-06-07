@@ -68,10 +68,7 @@ mod tests {
 
     #[test]
     fn or_basic_true() {
-        let args = vec![
-            CalcVertex::from_bool(false),
-            CalcVertex::from_bool(true),
-        ];
+        let args = vec![CalcVertex::from_bool(false), CalcVertex::from_bool(true)];
         let mut f = TestFetcher {};
         assert!(matches!(
             calc(args, &mut f),
@@ -81,10 +78,7 @@ mod tests {
 
     #[test]
     fn or_all_false() {
-        let args = vec![
-            CalcVertex::from_bool(false),
-            CalcVertex::from_number(0_f64),
-        ];
+        let args = vec![CalcVertex::from_bool(false), CalcVertex::from_number(0_f64)];
         let mut f = TestFetcher {};
         assert!(matches!(
             calc(args, &mut f),

@@ -144,10 +144,8 @@ impl RangeExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let bcid = ctx
-                    .fetch_block_cell_id(&sheet_id, &p.block_id, p.row, p.col)?;
-                let (sheet_row, sheet_col) =
-                    ctx.fetch_block_cell_index(&sheet_id, &bcid)?;
+                let bcid = ctx.fetch_block_cell_id(&sheet_id, &p.block_id, p.row, p.col)?;
+                let (sheet_row, sheet_col) = ctx.fetch_block_cell_index(&sheet_id, &bcid)?;
                 let res = input(self, sheet_id, sheet_row, sheet_col, ctx)?;
                 Ok(res)
             }

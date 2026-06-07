@@ -6,9 +6,7 @@ pub use input_formula::{
     add_ast_node, input_block_cell_template, input_block_formula, input_ephemeral_formula,
     input_formula, remove_ephemeral_formula, remove_formula,
 };
-use logisheets_base::{
-    errors::BasicError, BlockId, BlockRange, CubeId, Range, RangeId, SheetId,
-};
+use logisheets_base::{errors::BasicError, BlockId, BlockRange, CubeId, Range, RangeId, SheetId};
 
 use crate::block_manager::schema_manager::schema::BlockCellRole;
 use crate::{edit_action::EditPayload, Error};
@@ -87,14 +85,7 @@ impl FormulaExecutor {
                         ctx,
                     )
                 } else {
-                    input_block_cell_template(
-                        self,
-                        p.sheet_idx,
-                        p.block_id,
-                        p.row,
-                        p.col,
-                        ctx,
-                    )
+                    input_block_cell_template(self, p.sheet_idx, p.block_id, p.row, p.col, ctx)
                 }
             }
             EditPayload::InsertRowsInBlock(p) => {
@@ -122,9 +113,7 @@ impl FormulaExecutor {
                 let mut exec = self;
                 for r in p.start..(p.start + p.cnt as usize) {
                     for c in 0..col_cnt {
-                        exec = input_block_cell_template(
-                            exec, p.sheet_idx, p.block_id, r, c, ctx,
-                        )?;
+                        exec = input_block_cell_template(exec, p.sheet_idx, p.block_id, r, c, ctx)?;
                     }
                 }
                 Ok(exec)
@@ -151,9 +140,7 @@ impl FormulaExecutor {
                 let mut exec = self;
                 for r in 0..row_cnt {
                     for c in 0..col_cnt {
-                        exec = input_block_cell_template(
-                            exec, p.sheet_idx, p.block_id, r, c, ctx,
-                        )?;
+                        exec = input_block_cell_template(exec, p.sheet_idx, p.block_id, r, c, ctx)?;
                     }
                 }
                 Ok(exec)

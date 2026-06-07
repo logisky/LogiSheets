@@ -413,7 +413,180 @@ mod funcs {
             other => panic!("formula broke after ref rename: {:?}", other),
         }
     }
+
+    /// Integration test mirroring the factory-simulator
+    /// PL → L1/L2 templated-formula shape:
+    ///   - L1 block: keys "1", "2", "3"; one numeric column "v".
+    ///   - L2 block: same shape, different values.
+    ///   - PL block: keys "一", "二"; LEVEL column (literal "1"),
+    ///     and a templated formula
+    ///       =IF(#KEY="一",
+    ///           BLOCKREF("L1", #FIELD("LEVEL"), "v"),
+    ///           BLOCKREF("L2", #FIELD("LEVEL"), "v"))
+    ///
+    /// Both PL rows must compute. End-to-end coverage of three
+    /// concurrent fixes: the `BlockAll(B) → cell` topo-barrier edge,
+    /// the multi-DFS-root post-order assembly in `calc_order`, and
+    /// the same-block BLOCKREF rejection at registration.
+    #[test]
+    fn test_templated_row_block_ref_cross_block_chain() {
+        use logisheets::Workbook;
+        let mut wb = Workbook::default();
+
+        // L1, L2 — keyed by level string ("1"); one "v" column.
+        // PL — keyed by line ("一" / "二"); LEVEL stored ("1"),
+        // VALUE templated:
+        //   =IF(#KEY="一",
+        //       BLOCKREF("L1", #FIELD("LEVEL"), "v"),
+        //       BLOCKREF("L2", #FIELD("LEVEL"), "v"))
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                // L1 block at A1:B1 (one row, key "1").
+                .add_payload(CreateBlock {
+                    sheet_idx: 0,
+                    id: 1,
+                    master_row: 0,
+                    master_col: 0,
+                    row_cnt: 1,
+                    col_cnt: 2,
+                    owner: None,
+                    modify_policy: None,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 0,
+                    content: "1".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 1,
+                    content: "111".into(),
+                })
+                .add_payload(BindFormSchema {
+                    ref_name: "L1".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec!["key".into(), "v".into()],
+                    render_ids: vec!["L1-key".into(), "L1-v".into()],
+                    field_formulas: vec![],
+                    row: true,
+                })
+                // L2 block at A3:B3 (one row, key "1").
+                .add_payload(CreateBlock {
+                    sheet_idx: 0,
+                    id: 2,
+                    master_row: 2,
+                    master_col: 0,
+                    row_cnt: 1,
+                    col_cnt: 2,
+                    owner: None,
+                    modify_policy: None,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 2,
+                    col: 0,
+                    content: "1".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 2,
+                    col: 1,
+                    content: "222".into(),
+                })
+                .add_payload(BindFormSchema {
+                    ref_name: "L2".to_string(),
+                    sheet_idx: 0,
+                    block_id: 2,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec!["key".into(), "v".into()],
+                    render_ids: vec!["L2-key".into(), "L2-v".into()],
+                    field_formulas: vec![],
+                    row: true,
+                })
+                // PL block at A5:C6 (two rows, keys "一"/"二").
+                // Keys first (so #KEY substitutes at BindFormSchema).
+                .add_payload(CreateBlock {
+                    sheet_idx: 0,
+                    id: 3,
+                    master_row: 4,
+                    master_col: 0,
+                    row_cnt: 2,
+                    col_cnt: 3,
+                    owner: None,
+                    modify_policy: None,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 4,
+                    col: 0,
+                    content: "一".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 5,
+                    col: 0,
+                    content: "二".into(),
+                })
+                .add_payload(BindFormSchema {
+                    ref_name: "PL".to_string(),
+                    sheet_idx: 0,
+                    block_id: 3,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec!["key".into(), "LEVEL".into(), "VALUE".into()],
+                    render_ids: vec![
+                        "PL-key".into(),
+                        "PL-LEVEL".into(),
+                        "PL-VALUE".into(),
+                    ],
+                    field_formulas: vec![
+                        None,
+                        None,
+                        Some(
+                            r#"=IF(#KEY="一",BLOCKREF("L1",#FIELD("LEVEL"),"v"),BLOCKREF("L2",#FIELD("LEVEL"),"v"))"#
+                                .to_string(),
+                        ),
+                    ],
+                    row: true,
+                })
+                // Seed LEVEL = "1" for both PL rows AFTER bind, as the
+                // simulator does for ProductionLine.
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 4,
+                    col: 1,
+                    content: "1".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 5,
+                    col: 1,
+                    content: "1".into(),
+                }),
+        ));
+
+        let sheet = wb.get_sheet_by_idx(0).unwrap();
+        let r0 = sheet.get_value(4, 2);
+        let r1 = sheet.get_value(5, 2);
+        println!("PL row0 (一) VALUE = {:?}", r0);
+        println!("PL row1 (二) VALUE = {:?}", r1);
+        match r0.unwrap() {
+            logisheets::Value::Number(n) => assert_eq!(n, 111.0, "PL row0 (一)"),
+            other => panic!("PL row0 (一) bad: {:?}", other),
+        }
+        match r1.unwrap() {
+            logisheets::Value::Number(n) => assert_eq!(n, 222.0, "PL row1 (二)"),
+            other => panic!("PL row1 (二) bad: {:?}", other),
+        }
+    }
 }
+
 #[cfg(test)]
 mod shift;
 

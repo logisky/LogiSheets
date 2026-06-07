@@ -359,7 +359,9 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<crate::formula_manager::ctx::BlockCellTemplate> {
-        let template = self.block_schema_manager.formula_for_block_cell(sheet_id, cell)?;
+        let template = self
+            .block_schema_manager
+            .formula_for_block_cell(sheet_id, cell)?;
         let ctx = self.block_cell_row_substitutes(sheet_id, cell)?;
         Some(crate::formula_manager::ctx::BlockCellTemplate {
             template,

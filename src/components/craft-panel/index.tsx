@@ -17,6 +17,7 @@ import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
 import {globalStore} from '@/store'
+import {toast} from 'react-toastify'
 
 type CraftPanelProps = {
     open: boolean
@@ -98,6 +99,36 @@ export const CraftPanel = ({
         // listening. Crafts may register multiple callbacks.
         win.onBlockCellEdit = (cb: (e: unknown) => void) =>
             blockEditBus.on(cb as Parameters<typeof blockEditBus.on>[0])
+        // Craft → host message channel. Crafts call this to surface
+        // setup errors, validation hits, or completion notes to the
+        // user via the existing toast system. Levels match react-
+        // toastify's API; unknown levels fall back to `info`.
+        //
+        // Contract:
+        //   notifyCraft(level: 'error'|'warn'|'info'|'success', msg: string)
+        //
+        // Returns void, fire-and-forget. The craft shouldn't depend on
+        // the host being available; calls are wrapped in try/catch on
+        // the craft side (see `notifyHost` in the factory simulator).
+        type NotifyLevel = 'error' | 'warn' | 'info' | 'success'
+        win.notifyCraft = (level: NotifyLevel, message: string) => {
+            const text = String(message ?? '')
+            if (!text) return
+            switch (level) {
+                case 'error':
+                    toast.error(text)
+                    break
+                case 'warn':
+                    toast.warn(text)
+                    break
+                case 'success':
+                    toast.success(text)
+                    break
+                case 'info':
+                default:
+                    toast.info(text)
+            }
+        }
         injectCraftInteractionAPIs(win)
     }
 

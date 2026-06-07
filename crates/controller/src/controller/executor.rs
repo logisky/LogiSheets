@@ -186,16 +186,12 @@ impl<'a> Executor<'a> {
         let mut header_updated = result.header_updated;
         match &payload {
             EditPayload::SetColWidth(p) => {
-                if let Some(sheet_id) =
-                    result.status.sheet_info_manager.get_sheet_id(p.sheet_idx)
-                {
+                if let Some(sheet_id) = result.status.sheet_info_manager.get_sheet_id(p.sheet_idx) {
                     header_updated.insert(sheet_id);
                 }
             }
             EditPayload::SetRowHeight(p) => {
-                if let Some(sheet_id) =
-                    result.status.sheet_info_manager.get_sheet_id(p.sheet_idx)
-                {
+                if let Some(sheet_id) = result.status.sheet_info_manager.get_sheet_id(p.sheet_idx) {
                     header_updated.insert(sheet_id);
                 }
             }

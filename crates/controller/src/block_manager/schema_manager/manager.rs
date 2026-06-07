@@ -154,11 +154,7 @@ impl SchemaManager {
     /// any. Returns the raw template string (still includes the leading
     /// `=` if the schema author wrote one). Callers do substitution on
     /// the body.
-    pub fn formula_for_block_cell(
-        &self,
-        sheet_id: SheetId,
-        cell: &BlockCellId,
-    ) -> Option<String> {
+    pub fn formula_for_block_cell(&self, sheet_id: SheetId, cell: &BlockCellId) -> Option<String> {
         let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
         match schema {
             Schema::RowSchema(s) => s.formula_for_field_axis(cell.col).map(String::from),

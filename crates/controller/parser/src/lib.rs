@@ -111,8 +111,7 @@ impl Parser {
 
         let visitor = |node: ast::Node| match &node.pure {
             ast::PureNode::Value(ast::Value::Error(error)) => match error {
-                ast::Error::Placeholder => resolver(PlaceholderKind::Placeholder)
-                    .unwrap_or(node),
+                ast::Error::Placeholder => resolver(PlaceholderKind::Placeholder).unwrap_or(node),
                 ast::Error::Key => resolver(PlaceholderKind::Key).unwrap_or(node),
                 ast::Error::FieldRef(name) => {
                     resolver(PlaceholderKind::FieldRef(name)).unwrap_or(node)
@@ -232,9 +231,7 @@ impl Parser {
                     String::new()
                 };
                 ast::Node {
-                    pure: ast::PureNode::Value(ast::Value::Error(
-                        ast::Error::FieldRef(name),
-                    )),
+                    pure: ast::PureNode::Value(ast::Value::Error(ast::Error::FieldRef(name))),
                     bracket: false,
                 }
             }
