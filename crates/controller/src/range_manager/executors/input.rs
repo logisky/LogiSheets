@@ -48,14 +48,10 @@ where
                 }
             }
             NormalRange::AddrRange(start, end) => {
-                let Ok((start_row, start_col)) =
-                    ctx.fetch_normal_cell_index(&sheet, start)
-                else {
+                let Ok((start_row, start_col)) = ctx.fetch_normal_cell_index(&sheet, start) else {
                     return RangeUpdateType::Removed;
                 };
-                let Ok((end_row, end_col)) =
-                    ctx.fetch_normal_cell_index(&sheet, end)
-                else {
+                let Ok((end_row, end_col)) = ctx.fetch_normal_cell_index(&sheet, end) else {
                     return RangeUpdateType::Removed;
                 };
                 if start_row <= row && row <= end_row && start_col <= col && col <= end_col {
@@ -78,14 +74,10 @@ where
                 // Resolving them returns `CannotFindIdxInBlock`. Drop
                 // the stale range — it can no longer correspond to a
                 // live cell so no formula can reach it.
-                let Ok((start_row, start_col)) =
-                    ctx.fetch_block_cell_index(&sheet, start)
-                else {
+                let Ok((start_row, start_col)) = ctx.fetch_block_cell_index(&sheet, start) else {
                     return RangeUpdateType::Removed;
                 };
-                let Ok((end_row, end_col)) =
-                    ctx.fetch_block_cell_index(&sheet, end)
-                else {
+                let Ok((end_row, end_col)) = ctx.fetch_block_cell_index(&sheet, end) else {
                     return RangeUpdateType::Removed;
                 };
                 if start_row <= row && row <= end_row && start_col <= col && col <= end_col {

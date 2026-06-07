@@ -319,11 +319,7 @@ impl Workbook {
             .sheet_info_manager
             .get_sheet_id(sheet_idx)
             .ok_or(BasicError::SheetIdxExceed(sheet_idx))?;
-        let sheet_nav = self
-            .controller
-            .status
-            .navigator
-            .get_sheet_nav(&sheet_id)?;
+        let sheet_nav = self.controller.status.navigator.get_sheet_nav(&sheet_id)?;
         let block = sheet_nav
             .data
             .blocks
@@ -509,8 +505,7 @@ impl Workbook {
             })?;
 
         // Read each key cell's string value and find the one matching `key`.
-        let text_fetcher =
-            |id: TextId| status.text_id_manager.get_string(&id).unwrap_or_default();
+        let text_fetcher = |id: TextId| status.text_id_manager.get_string(&id).unwrap_or_default();
         let key_string = key.to_string();
         let matched_key_cell = key_cell_ids
             .into_iter()
@@ -659,12 +654,10 @@ fn read_display_value(status: &Status, sheet_id: SheetId, cell_id: &CellId) -> D
         logisheets_base::CellValue::Blank => DisplayValue::Empty,
         logisheets_base::CellValue::Boolean(b) => DisplayValue::Bool(b),
         logisheets_base::CellValue::Error(ref e) => DisplayValue::Error(e.to_string()),
-        logisheets_base::CellValue::String(ref s) => {
-            match status.text_id_manager.get_string(s) {
-                Some(r) => DisplayValue::Str(r),
-                None => DisplayValue::Str(String::new()),
-            }
-        }
+        logisheets_base::CellValue::String(ref s) => match status.text_id_manager.get_string(s) {
+            Some(r) => DisplayValue::Str(r),
+            None => DisplayValue::Str(String::new()),
+        },
         logisheets_base::CellValue::Number(n) => DisplayValue::Number(n),
         logisheets_base::CellValue::InlineStr(_) => DisplayValue::Empty,
         logisheets_base::CellValue::FormulaStr(ref s) => DisplayValue::Str(s.clone()),

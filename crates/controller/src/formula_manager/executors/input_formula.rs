@@ -87,13 +87,11 @@ pub fn input_ephemeral_formula<C: FormulaExecCtx>(
                     sib_subs.insert(
                         name,
                         ast::Node {
-                            pure: ast::PureNode::Reference(ast::CellReference::Mut(
-                                RangeDisplay {
-                                    range_id: sib_range_id,
-                                    ref_abs: RefAbs::default(),
-                                    sheet_id,
-                                },
-                            )),
+                            pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
+                                range_id: sib_range_id,
+                                ref_abs: RefAbs::default(),
+                                sheet_id,
+                            })),
                             bracket: true,
                         },
                     );
@@ -203,6 +201,9 @@ fn remove<C: FormulaExecCtx>(
             graph.remove_dep(&this_vertex, old_dep);
         })
     };
+    if let CellId::BlockCell(bcid) = cell_id {
+        graph.remove_dep(&Vertex::BlockAll(sheet, bcid.block_id), &this_vertex);
+    }
 
     formulas.remove(&(sheet, cell_id));
 
@@ -256,6 +257,24 @@ fn register_parsed_ast<C: FormulaExecCtx>(
     let range_id = ctx.fetch_range_id(&sheet, &range);
     let this_vertex = Vertex::Range(sheet, range_id);
 
+    // Hard-reject any BLOCKREF / BLOCKREFS whose target block is
+    // this formula cell's own block. Such a self-ref would create a
+    // cycle with the topo-barrier edge `BlockAll(B) → cell`
+    // registered below. Same-row sibling refs inside a templated
+    // formula should use `#FIELD("name")` — it expands at template
+    // instantiation time to a direct cell reference, no virtual
+    // block vertex involved.
+    if let CellId::BlockCell(bcid) = cell_id {
+        if let Some(kind) = find_self_block_ref(&ast, sheet, bcid.block_id) {
+            return Err(BasicError::InvalidFormula(format!(
+                "{} targeting the cell's own block (sheet={}, block={}) \
+                 is not allowed; use `#FIELD(\"...\")` for same-row \
+                 sibling refs.",
+                kind, sheet, bcid.block_id
+            )));
+        }
+    }
+
     let mut new_formula_deps = HashSet::<Vertex>::new();
     get_all_vertices_from_ast(&ast, &mut new_formula_deps);
 
@@ -279,6 +298,23 @@ fn register_parsed_ast<C: FormulaExecCtx>(
             graph.add_dep(new_dep.clone(), range_dep);
         });
     });
+
+    // Topo-barrier edge: every formula cell that lives inside a
+    // block is registered as a dep of `BlockAll(block)`. Aggregators
+    // like `=SUM(BLOCKREFS("X","*","f"))` depend on `BlockAll(X)`,
+    // so this makes Tarjan compute every per-row formula in X BEFORE
+    // the aggregator runs. It is also what bridges cross-block
+    // propagation: after a block cell is recomputed, walking rdeps
+    // reaches BlockAll(B), which reaches every external BLOCKREF
+    // Single user.
+    //
+    // Cycle safety relies on `reject_self_block_ref` rejecting any
+    // BLOCKREF whose target block equals the formula cell's own
+    // block (`#FIELD("...")` is the supported way to express a
+    // same-row sibling ref).
+    if let CellId::BlockCell(bcid) = cell_id {
+        graph.add_dep(Vertex::BlockAll(sheet, bcid.block_id), this_vertex.clone());
+    }
 
     formulas.insert((sheet, cell_id), ast.clone());
 
@@ -391,6 +427,55 @@ pub fn add_ast_node(
         .for_each(|new_dep| manager.graph.add_dep(this_vertex.clone(), new_dep));
 }
 
+/// Walk the AST looking for any `BLOCKREF` / `BLOCKREFS` whose target
+/// `(sheet, block)` matches `(self_sheet, self_block)`. Returns the
+/// human-readable kind ("BLOCKREF" / "BLOCKREFS") of the first match.
+///
+/// Used to enforce the "no self-block ref" invariant inside templated
+/// formulas — see `register_parsed_ast`.
+fn find_self_block_ref(
+    ast: &ast::Node,
+    self_sheet: SheetId,
+    self_block: BlockId,
+) -> Option<&'static str> {
+    match &ast.pure {
+        ast::PureNode::Func(func) => func
+            .args
+            .iter()
+            .find_map(|n| find_self_block_ref(n, self_sheet, self_block)),
+        ast::PureNode::Value(_) => None,
+        ast::PureNode::Reference(_) => None,
+        ast::PureNode::BlockRef(node) => match node {
+            ast::BlockRefNode::Single {
+                sheet_id,
+                block_id,
+                key,
+                ..
+            } => {
+                if *sheet_id == self_sheet && *block_id == self_block {
+                    Some("BLOCKREF")
+                } else {
+                    find_self_block_ref(key, self_sheet, self_block)
+                }
+            }
+            ast::BlockRefNode::Multi {
+                sheet_id,
+                block_id,
+                key_condition,
+                field_condition,
+                ..
+            } => {
+                if *sheet_id == self_sheet && *block_id == self_block {
+                    Some("BLOCKREFS")
+                } else {
+                    find_self_block_ref(key_condition, self_sheet, self_block)
+                        .or_else(|| find_self_block_ref(field_condition, self_sheet, self_block))
+                }
+            }
+        },
+    }
+}
+
 fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
     match &ast.pure {
         ast::PureNode::Func(func) => {
@@ -430,9 +515,18 @@ fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
                 key,
                 ..
             } => {
-                // Single-cell ref reacts to: that field column, the key
-                // column (because the matching row depends on key values),
-                // and any structural change to the block.
+                // Single-cell ref reacts to: that field column, the
+                // key column (because the matching row depends on key
+                // values), and any structural change to the block.
+                //
+                // `BlockAll(B)` is load-bearing for cross-block
+                // propagation: when a cell inside B is recomputed via
+                // cascade, the topo-barrier edge `BlockAll(B) → cell`
+                // (registered in `register_parsed_ast` for every
+                // formula cell inside B) means BlockAll(B) gets walked
+                // in rdeps, which then reaches any external Single
+                // user. The same-block self-ref that would otherwise
+                // cycle is rejected by `reject_self_block_ref` below.
                 vertices.insert(Vertex::Block(*sheet_id, *block_id, *field_id));
                 vertices.insert(Vertex::BlockKey(*sheet_id, *block_id));
                 vertices.insert(Vertex::BlockAll(*sheet_id, *block_id));

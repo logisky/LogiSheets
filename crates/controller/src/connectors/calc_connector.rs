@@ -90,103 +90,120 @@ impl<'a> Connector for CalcConnector<'a> {
                 let range_id = range_display.range_id;
                 let range = self.range_manager.get_range(&sheet_id, &range_id);
                 match range {
-                    Some(range) => match range {
-                        Range::Normal(nomral_range) => match nomral_range {
-                            NormalRange::Single(normal_cell_id) => {
-                                let (row, col) = self
-                                    .navigator
-                                    .fetch_normal_cell_idx(&sheet_id, &normal_cell_id)
-                                    .unwrap();
-                                CalcVertex::Reference(CalcReference {
-                                    from_sheet: None,
-                                    sheet: sheet_id,
-                                    reference: Reference::Addr(Addr { row, col }),
-                                })
-                            }
-                            NormalRange::RowRange(start_id, end_id) => {
-                                let start =
-                                    self.navigator.fetch_row_idx(&sheet_id, &start_id).unwrap();
-                                let end = self.navigator.fetch_row_idx(&sheet_id, &end_id).unwrap();
-                                CalcVertex::Reference(CalcReference {
-                                    from_sheet: None,
-                                    sheet: sheet_id,
-                                    reference: Reference::RowRange(RowRange { start, end }),
-                                })
-                            }
-                            NormalRange::ColRange(start_id, end_id) => {
-                                let start =
-                                    self.navigator.fetch_col_idx(&sheet_id, &start_id).unwrap();
-                                let end = self.navigator.fetch_col_idx(&sheet_id, &end_id).unwrap();
-                                CalcVertex::Reference(CalcReference {
-                                    from_sheet: None,
-                                    sheet: sheet_id,
-                                    reference: Reference::ColumnRange(ColRange { start, end }),
-                                })
-                            }
-                            NormalRange::AddrRange(start, end) => {
-                                let (start_row, start_col) = self
-                                    .navigator
-                                    .fetch_normal_cell_idx(&sheet_id, &start)
-                                    .unwrap();
-                                let (end_row, end_col) = self
-                                    .navigator
-                                    .fetch_normal_cell_idx(&sheet_id, &end)
-                                    .unwrap();
-                                CalcVertex::Reference(CalcReference {
-                                    from_sheet: None,
-                                    sheet: sheet_id,
-                                    reference: Reference::Range(
-                                        Addr {
-                                            row: start_row,
-                                            col: start_col,
-                                        },
-                                        Addr {
-                                            row: end_row,
-                                            col: end_col,
-                                        },
-                                    ),
-                                })
-                            }
-                        },
-                        Range::Block(block_range) => match block_range {
-                            BlockRange::Single(block_cell_id) => {
-                                let (row, col) = self
-                                    .navigator
-                                    .fetch_cell_idx(&sheet_id, &CellId::BlockCell(block_cell_id))
-                                    .unwrap();
-                                CalcVertex::Reference(CalcReference {
-                                    from_sheet: None,
-                                    sheet: sheet_id,
-                                    reference: Reference::Addr(Addr { row, col }),
-                                })
-                            }
-                            BlockRange::AddrRange(start, end) => {
-                                let (start_row, start_col) = self
-                                    .navigator
-                                    .fetch_cell_idx(&sheet_id, &CellId::BlockCell(start))
-                                    .unwrap();
-                                let (end_row, end_col) = self
-                                    .navigator
-                                    .fetch_cell_idx(&sheet_id, &CellId::BlockCell(end))
-                                    .unwrap();
-                                CalcVertex::Reference(CalcReference {
-                                    from_sheet: None,
-                                    sheet: sheet_id,
-                                    reference: Reference::Range(
-                                        Addr {
-                                            row: start_row,
-                                            col: start_col,
-                                        },
-                                        Addr {
-                                            row: end_row,
-                                            col: end_col,
-                                        },
-                                    ),
-                                })
-                            }
-                        },
-                        Range::Ephemeral(id) => CalcVertex::Ephemeral((sheet_id, id)),
-                    },
+                    Some(range) => {
+                        // Endpoints may refer to row/col ids that
+                        // were removed since the range was registered
+                        // (e.g. DeleteRowsInBlock). Fail closed with
+                        // #REF! rather than panicking; the formula
+                        // result becomes an error value, which beats
+                        // a thread panic and matches the `None` arm
+                        // below.
+                        match range {
+                            Range::Normal(nomral_range) => match nomral_range {
+                                NormalRange::Single(normal_cell_id) => {
+                                    let Ok((row, col)) = self
+                                        .navigator
+                                        .fetch_normal_cell_idx(&sheet_id, &normal_cell_id)
+                                    else {
+                                        return CalcVertex::from_error(ast::Error::Ref);
+                                    };
+                                    CalcVertex::Reference(CalcReference {
+                                        from_sheet: None,
+                                        sheet: sheet_id,
+                                        reference: Reference::Addr(Addr { row, col }),
+                                    })
+                                }
+                                NormalRange::RowRange(start_id, end_id) => {
+                                    let (Ok(start), Ok(end)) = (
+                                        self.navigator.fetch_row_idx(&sheet_id, &start_id),
+                                        self.navigator.fetch_row_idx(&sheet_id, &end_id),
+                                    ) else {
+                                        return CalcVertex::from_error(ast::Error::Ref);
+                                    };
+                                    CalcVertex::Reference(CalcReference {
+                                        from_sheet: None,
+                                        sheet: sheet_id,
+                                        reference: Reference::RowRange(RowRange { start, end }),
+                                    })
+                                }
+                                NormalRange::ColRange(start_id, end_id) => {
+                                    let (Ok(start), Ok(end)) = (
+                                        self.navigator.fetch_col_idx(&sheet_id, &start_id),
+                                        self.navigator.fetch_col_idx(&sheet_id, &end_id),
+                                    ) else {
+                                        return CalcVertex::from_error(ast::Error::Ref);
+                                    };
+                                    CalcVertex::Reference(CalcReference {
+                                        from_sheet: None,
+                                        sheet: sheet_id,
+                                        reference: Reference::ColumnRange(ColRange { start, end }),
+                                    })
+                                }
+                                NormalRange::AddrRange(start, end) => {
+                                    let (Ok((start_row, start_col)), Ok((end_row, end_col))) = (
+                                        self.navigator.fetch_normal_cell_idx(&sheet_id, &start),
+                                        self.navigator.fetch_normal_cell_idx(&sheet_id, &end),
+                                    ) else {
+                                        return CalcVertex::from_error(ast::Error::Ref);
+                                    };
+                                    CalcVertex::Reference(CalcReference {
+                                        from_sheet: None,
+                                        sheet: sheet_id,
+                                        reference: Reference::Range(
+                                            Addr {
+                                                row: start_row,
+                                                col: start_col,
+                                            },
+                                            Addr {
+                                                row: end_row,
+                                                col: end_col,
+                                            },
+                                        ),
+                                    })
+                                }
+                            },
+                            Range::Block(block_range) => match block_range {
+                                BlockRange::Single(block_cell_id) => {
+                                    let Ok((row, col)) = self.navigator.fetch_cell_idx(
+                                        &sheet_id,
+                                        &CellId::BlockCell(block_cell_id),
+                                    ) else {
+                                        return CalcVertex::from_error(ast::Error::Ref);
+                                    };
+                                    CalcVertex::Reference(CalcReference {
+                                        from_sheet: None,
+                                        sheet: sheet_id,
+                                        reference: Reference::Addr(Addr { row, col }),
+                                    })
+                                }
+                                BlockRange::AddrRange(start, end) => {
+                                    let (Ok((start_row, start_col)), Ok((end_row, end_col))) = (
+                                        self.navigator
+                                            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(start)),
+                                        self.navigator
+                                            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(end)),
+                                    ) else {
+                                        return CalcVertex::from_error(ast::Error::Ref);
+                                    };
+                                    CalcVertex::Reference(CalcReference {
+                                        from_sheet: None,
+                                        sheet: sheet_id,
+                                        reference: Reference::Range(
+                                            Addr {
+                                                row: start_row,
+                                                col: start_col,
+                                            },
+                                            Addr {
+                                                row: end_row,
+                                                col: end_col,
+                                            },
+                                        ),
+                                    })
+                                }
+                            },
+                            Range::Ephemeral(id) => CalcVertex::Ephemeral((sheet_id, id)),
+                        }
+                    }
                     None => CalcVertex::from_error(ast::Error::Ref),
                 }
             }

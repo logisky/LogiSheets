@@ -137,8 +137,7 @@ fn create_block_with_owner_and_policy_roundtrip() {
     let _ = wb.handle_action(EditAction::Payloads(payload_action));
 
     let bytes = wb.save().expect("save");
-    let reloaded =
-        Workbook::from_file(&bytes, "roundtrip.xlsx".to_string()).expect("reload");
+    let reloaded = Workbook::from_file(&bytes, "roundtrip.xlsx".to_string()).expect("reload");
 
     let info = reloaded
         .get_block_modify_info(0, id)

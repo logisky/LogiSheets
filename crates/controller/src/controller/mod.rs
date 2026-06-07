@@ -237,9 +237,7 @@ impl Controller {
                 let header_updated: Vec<u32> = result
                     .header_updated
                     .iter()
-                    .filter_map(|id| {
-                        result.status.sheet_info_manager.get_sheet_idx(id)
-                    })
+                    .filter_map(|id| result.status.sheet_info_manager.get_sheet_idx(id))
                     .map(|i| i as u32)
                     .collect();
                 self.status = result.status;
@@ -364,9 +362,7 @@ impl Controller {
                         let header_updated: Vec<u32> = result
                             .header_updated
                             .iter()
-                            .filter_map(|id| {
-                                result.status.sheet_info_manager.get_sheet_idx(id)
-                            })
+                            .filter_map(|id| result.status.sheet_info_manager.get_sheet_idx(id))
                             .map(|i| i as u32)
                             .collect();
                         self.status = result.status;

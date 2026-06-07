@@ -683,8 +683,7 @@ pub struct WorkbookMethods {
         params: GetCellIdByBlockRefParams,
         book_id: Option<usize>,
     ) -> Result<SheetCellId, ErrorMessage>,
-    pub get_temp_status_changes:
-        fn(book_id: Option<usize>) -> Result<TempStatusDiff, ErrorMessage>,
+    pub get_temp_status_changes: fn(book_id: Option<usize>) -> Result<TempStatusDiff, ErrorMessage>,
     pub check_formula:
         fn(params: CheckFormulaParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
 
@@ -794,12 +793,9 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         Message::CalcCondition(params) => {
             controller::calc_condition(id, params.sheet_idx, params.condition)
         }
-        Message::GetCellIdByBlockRef(params) => controller::get_cell_id_by_block_ref(
-            id,
-            params.ref_name,
-            params.key,
-            params.field,
-        ),
+        Message::GetCellIdByBlockRef(params) => {
+            controller::get_cell_id_by_block_ref(id, params.ref_name, params.key, params.field)
+        }
         Message::GetTempStatusChanges => controller::get_temp_status_changes(id),
         Message::GetBlockDisplayWindow(params) => {
             controller::get_display_window_for_block(id, params.sheet_id, params.block_id)

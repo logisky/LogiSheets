@@ -1,7 +1,6 @@
 #[macro_use]
 mod macros;
 mod and;
-mod or;
 mod asyncs;
 mod average;
 mod bits;
@@ -42,6 +41,7 @@ mod mode;
 mod na;
 mod norm_s_dist;
 mod npv;
+mod or;
 mod pduration;
 mod permutation;
 mod pi;

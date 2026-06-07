@@ -7,7 +7,8 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "build": "vite build && yarn copy-to-public",
-        "copy-to-public": "rm -rf ../../public/factory-simulator && mkdir -p ../../public/factory-simulator && cp index.html ../../public/factory-simulator/index.html && cp dist/factory-simulator.js ../../public/factory-simulator/factory-simulator.js"
+        "copy-to-public": "rm -rf ../../public/factory-simulator && mkdir -p ../../public/factory-simulator && cp index.html ../../public/factory-simulator/index.html && cp dist/factory-simulator.js ../../public/factory-simulator/factory-simulator.js",
+        "test": "vitest run"
     },
     "keywords": [
         "factory",

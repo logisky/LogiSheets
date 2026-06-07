@@ -59,12 +59,7 @@ impl ShadowIdAssigner {
 
     /// Get-or-create the shadow id for (sheet, cell, kind). Allocates a
     /// fresh id on first request.
-    pub fn get_shawdow_id(
-        &mut self,
-        sheet_id: SheetId,
-        cell_id: CellId,
-        kind: ShadowKind,
-    ) -> u64 {
+    pub fn get_shawdow_id(&mut self, sheet_id: SheetId, cell_id: CellId, kind: ShadowKind) -> u64 {
         if let Some(id) = self.cell_kind_to_eid.get(&(sheet_id, cell_id, kind)) {
             *id
         } else {
@@ -80,9 +75,7 @@ impl ShadowIdAssigner {
     /// formula_manager only needs to know which real cell to dirty when
     /// the shadow's value changes; the kind doesn't affect that.
     pub fn get_cell_id(&self, eid: u64) -> Option<(SheetId, CellId)> {
-        self.eid_to_cell_kind
-            .get(&eid)
-            .map(|(s, c, _k)| (*s, *c))
+        self.eid_to_cell_kind.get(&eid).map(|(s, c, _k)| (*s, *c))
     }
 
     /// Full reverse lookup including the shadow's kind. Used when the
