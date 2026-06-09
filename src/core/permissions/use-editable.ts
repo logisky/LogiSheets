@@ -96,7 +96,7 @@ export function useEditable(
         const cacheKey = `${sheetIdx}:${rowIdx}:${colIdx}:${formula}`
 
         const refresh = (id: number): void => {
-            wb.getShadowInfoById(id).then((info) => {
+            wb.getShadowInfoById({shadowId: id}).then((info) => {
                 if (cancelled) return
                 if (isErrorMessage(info)) return
                 const next = shadowValueIsEditable(info.value)

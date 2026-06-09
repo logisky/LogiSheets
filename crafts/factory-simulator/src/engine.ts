@@ -11,6 +11,7 @@ import {
     InsertRowsInBlockBuilder,
     SetColWidthBuilder,
     SetRowHeightBuilder,
+    UpsertFieldFormulasBuilder,
     UpsertFieldRenderInfoBuilder,
     acquireCraftCalc,
     isErrorMessage,
@@ -533,10 +534,17 @@ export const REPUTATION_GRACE_ROUNDS = 2
 // order. First tier whose conditions are met wins. Scaled for the
 // 10-round campaign: gold ≈ 2.9× baseline net (requires upgrade
 // play), silver ≈ 1.1× baseline.
+//
+// Goodwill thresholds live in the same [0, GOODWILL_MAX=150] range
+// the cap enforces and the status-bar pill displays. Starting at
+// GOODWILL_BASELINE=100, the player earns +1 per on-time-completed
+// order and loses ≈penalty/100 per missed deadline — so reaching
+// gold (130) takes near-perfect delivery, silver (100) is "no net
+// reputation loss."
 export const TIER_GOLD_FUND = 40000
-export const TIER_GOLD_GOODWILL = 100
+export const TIER_GOLD_GOODWILL = 130
 export const TIER_SILVER_FUND = 15000
-export const TIER_SILVER_GOODWILL = 70
+export const TIER_SILVER_GOODWILL = 100
 
 // `GameState` type lives in `./round` (the pure helper module) and is
 // re-exported above; the values written to the `游戏状态` cell match
@@ -810,19 +818,32 @@ export const PRODUCTION_LINE_CONTRIBUTION_TABLE: Table = {
         {...fPercent(METAL_FITTINGS_SUPPLIER_1, true), diyRender: true},
         {...fPercent(METAL_FITTINGS_SUPPLIER_2, true), diyRender: true},
         // How many units we produce this round — an integer count
-        // (was a 0..1 fraction; switched to absolute so it composes
-        // cleanly with 每件产品开销 in the financial preview without
-        // re-multiplying by 最大生产数). Validation: must be strictly
-        // less than the line's current 最大生产数 (which lives in
-        // ProductionLine and is itself a level-derived formula). The
-        // host's block-interface renders the warning marker via the
-        // existing ValidationCell shadow; commit is still permitted
-        // because validation is advisory.
+        // derived as the sum of OrderConfiguration's per-line
+        // allocation column. The player picks per-order allocations
+        // in 销售部 and 本期产能 follows automatically; no need to
+        // retype the sum into PLC.
+        //
+        // Cross-block ref into a block declared LATER in BLOCK_DEFS
+        // works because newGame uses the two-phase bind path
+        // (BindFormSchema then UpsertFieldFormulas) — by the time
+        // this template is parsed, OrderConfiguration's refName +
+        // field set are already registered.
+        //
+        // `BLOCKREFS("OrderConfiguration","*",#KEY)` — `#KEY` is
+        // baked at template-materialization time to the row's key
+        // literal ("一" / "二"), which matches the OrderConfiguration
+        // field name for that line's per-order allocation column.
+        //
+        // Validation kept for visual feedback: 本期产能 ≤
+        // 最大生产数. When the player over-allocates, the
+        // ValidationCell warning marker fires; `advanceRound`
+        // additionally hard-rejects round advance.
         {
             name: CAPACITY,
-            userEditable: true,
+            userEditable: false,
             fieldType: 'number',
             numFmt: '0',
+            valueFormula: `=SUM(BLOCKREFS("OrderConfiguration","*",#KEY))`,
             validation: `#PLACEHOLDER<=BLOCKREF("ProductionLine",#KEY,"${MAX_PRODUCTION}")`,
         },
         fFormulaPercent(EXPECTED_YIELD_RATE, EXPECTED_YIELD_FORMULA),
@@ -1653,8 +1674,8 @@ async function buildUserEditableInstallPayloads(
             colIdx: site.col,
             kind: 'userEditable',
         })
-        if (isErrorMessage(sid)) continue
-        if (sid.cellId.type !== 'ephemeralCell') continue
+        if (!sid || isErrorMessage(sid)) continue
+        if (!sid.cellId || sid.cellId.type !== 'ephemeralCell') continue
         const eid = sid.cellId.value as number
         out.push({
             type: 'ephemeralCellInput',
@@ -1773,8 +1794,12 @@ export async function installValidationShadowsForRows(
             colIdx: site.col,
             kind: 'validation',
         })
-        if (isErrorMessage(sid)) continue
-        if (sid.cellId.type !== 'ephemeralCell') continue
+        // `isErrorMessage(undefined)` is false (only matches {msg,
+        // ty}), so also guard against the RPC returning undefined /
+        // null. Same for `cellId` nested inside — cheaper to skip
+        // one stale shadow install than crash the whole pass.
+        if (!sid || isErrorMessage(sid)) continue
+        if (!sid.cellId || sid.cellId.type !== 'ephemeralCell') continue
         const eid = sid.cellId.value as number
         payloads.push({
             type: 'ephemeralCellInput',
@@ -2076,11 +2101,20 @@ export async function refreshValidationSubscriptions(
                     colIdx: absCol,
                     kind: 'validation',
                 })
-                if (isErrorMessage(sid)) continue
-                if (sid.cellId.type !== 'ephemeralCell') continue
+                // `isErrorMessage(undefined)` is false (only matches
+                // {msg, ty}), so we also have to guard against the
+                // RPC returning undefined / null directly — which
+                // happens for schema/cell combinations the controller
+                // can't resolve at this point. Same for the
+                // `cellId` field nested inside.
+                if (!sid || isErrorMessage(sid)) continue
+                if (!sid.cellId || sid.cellId.type !== 'ephemeralCell')
+                    continue
                 const eid = sid.cellId.value as number
-                const initialInfo = await client.getShadowInfoById(eid)
-                if (!isErrorMessage(initialInfo)) {
+                const initialInfo = await client.getShadowInfoById({
+                    shadowId: eid,
+                })
+                if (initialInfo && !isErrorMessage(initialInfo)) {
                     _validationFailingByCell.set(
                         key,
                         _shadowIndicatesFailure(initialInfo.value)
@@ -2088,8 +2122,10 @@ export async function refreshValidationSubscriptions(
                 }
                 _validationSubscribedKeys.add(key)
                 client.registerCellValueChangedByCellId(sid, async () => {
-                    const next = await client.getShadowInfoById(eid)
-                    if (isErrorMessage(next)) return
+                    const next = await client.getShadowInfoById({
+                        shadowId: eid,
+                    })
+                    if (!next || isErrorMessage(next)) return
                     const prev = _validationFailingByCell.get(key) ?? false
                     const cur = _shadowIndicatesFailure(next.value)
                     if (prev === cur) return
@@ -2263,6 +2299,18 @@ export async function newGame(
     // row gets the uniform BLOCK_ROW_HEIGHT.
     const blockRows: Record<string, Set<number>> = {}
 
+    // Phase-2 UpsertFieldFormulas inputs collected while walking
+    // BLOCK_DEFS. Each entry installs one block's actual field formulas
+    // once every block's phase-1 schema (refName + field set, no
+    // formulas) is in place — by which point the parser can resolve
+    // any cross-block BLOCKREF / BLOCKREFS regardless of declaration
+    // order. See the comment at the in-loop bindFormSchema push.
+    const phase2UpsertPayloads: Array<{
+        sheetIdx: number
+        blockId: number
+        fieldFormulas: string[]
+    }> = []
+
     for (const def of BLOCK_DEFS) {
         const {key, table, sheet} = def
         const sheetIdx = SHEET_IDX[sheet]
@@ -2374,6 +2422,21 @@ export async function newGame(
             })
         })
 
+        // Two-phase BindFormSchema. PHASE 1: register the schema with
+        // empty field_formulas so the refName resolves and the field-
+        // axis ids are assigned, but no templated formula gets parsed
+        // yet. PHASE 2 (emitted after the BLOCK_DEFS loop) rebinds
+        // with the real field_formulas, by which point every
+        // referenced block's refName / field set is registered — so
+        // BLOCKREF / BLOCKREFS lookups resolve regardless of the
+        // declaration order in BLOCK_DEFS. This breaks the cross-block
+        // dependency cycle that single-pass binding can't satisfy
+        // (e.g. PLC.本期产能 sums OrderConfiguration columns AND
+        // OrderConfiguration.本期预计良品率 reads PLC fields).
+        const fieldNames = fields.map((field) => field.name)
+        const fieldFormulas = fields.map(
+            (field) => field.valueFormula ?? ''
+        )
         blockPayloads.push({
             type: 'bindFormSchema',
             value: new BindFormSchemaBuilder()
@@ -2383,14 +2446,21 @@ export async function newGame(
                 .keyIdx(0)
                 .fieldFrom(0)
                 .row(true)
-                .fields(fields.map((field) => field.name))
+                .fields(fieldNames)
                 .renderIds(renderIds)
-                // Per-field value-formula templates: empty string for
-                // free-form fields. Engine validates `#FIELD("X")`
-                // references at bind time.
-                .fieldFormulas(fields.map((field) => field.valueFormula ?? ''))
+                .fieldFormulas(fieldNames.map(() => ''))
                 .build(),
         })
+        // Stash phase-2 inputs so we can install field formulas after
+        // every block has a registered schema. Skip blocks whose
+        // fields are all free-form (no formula → no upsert needed).
+        if (fieldFormulas.some((f) => f.trim() !== '')) {
+            phase2UpsertPayloads.push({
+                sheetIdx,
+                blockId,
+                fieldFormulas,
+            })
+        }
 
         // Collect userEditable-formula install sites. fields[0] is the
         // forced-uneditable key column (see renderIds loop above) — skip
@@ -2809,6 +2879,24 @@ export async function newGame(
                     .build(),
             })
         }
+    }
+
+    // PHASE 2 of the two-phase bind: install per-field formulas now
+    // that every block's refName + field set is registered. Templates
+    // parsed here can BLOCKREF / BLOCKREFS any other block in
+    // BLOCK_DEFS irrespective of declaration order, which is what
+    // makes e.g. cross-block circular refs (PLC.本期产能 →
+    // OrderConfiguration, OrderConfiguration.本期预计良品率 → PLC)
+    // possible to express as pure formulas.
+    for (const item of phase2UpsertPayloads) {
+        blockPayloads.push({
+            type: 'upsertFieldFormulas',
+            value: new UpsertFieldFormulasBuilder()
+                .sheetIdx(item.sheetIdx)
+                .blockId(item.blockId)
+                .fieldFormulas(item.fieldFormulas)
+                .build(),
+        })
     }
 
     // Resize every row occupied by a block on each sheet to the uniform
@@ -4468,16 +4556,99 @@ export async function advanceRound(
     const mainSheetIdx = SHEET_IDX[MAIN_SHEET]
     const engineSheetIdx = SHEET_IDX[ENGINE_SHEET]
 
-    // Commit any active temp branch first. The host runs in temp mode,
-    // so the player's accept-toggles (which fan out to insertOrderConfig
-    // + insertAcceptedOrder, both temp:true) live on the temp branch.
-    // If we ran our non-temp round tx without committing, the engine's
-    // "non-temp tx discards any active temp branch" rule would wipe
-    // every accepted order before advancing. commitTempStatus folds
-    // those edits into canonical state so they survive round advance
-    // — and getBlockInfo below sees the same view our payloads target.
+    // Pre-flight: hard-reject the round if any production line is
+    // over-allocated (本期产能 > 最大生产数) BEFORE we commit the
+    // temp branch. If the check throws here, the player's
+    // accept-toggles + per-order allocations stay live on the temp
+    // branch — they can adjust allocations and click "下一轮" again
+    // without re-accepting every order. Committing first and THEN
+    // checking would lose that "still in editing" state on failure.
+    //
+    // getBlockInfo sees the current visible state (canonical +
+    // active temp overlay), which is exactly what the player sees,
+    // so 本期产能's templated SUM(BLOCKREFS(OrderConfiguration,...))
+    // reflects the in-progress allocations.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const wb = client as any
+    {
+        const sheetIdForCheck = await client.getSheetId({sheetIdx: mainSheetIdx})
+        if (isErrorMessage(sheetIdForCheck))
+            throw new Error(
+                `getSheetId(MAIN) failed: ${JSON.stringify(sheetIdForCheck)}`
+            )
+        const [plInfoPre, plcInfoPre] = await Promise.all([
+            client.getBlockInfo({
+                sheetId: sheetIdForCheck,
+                blockId: blockIds.productionLine,
+            }),
+            client.getBlockInfo({
+                sheetId: sheetIdForCheck,
+                blockId: blockIds.productionLineContribution,
+            }),
+        ])
+        if (isErrorMessage(plInfoPre))
+            throw new Error(
+                `getBlockInfo(productionLine) failed: ${JSON.stringify(plInfoPre)}`
+            )
+        if (isErrorMessage(plcInfoPre))
+            throw new Error(
+                `getBlockInfo(productionLineContribution) failed: ${JSON.stringify(plcInfoPre)}`
+            )
+        const plMaxColIdxPre = PRODUCTION_LINE_TABLE.fields.findIndex(
+            (f) => f.name === MAX_PRODUCTION
+        )
+        const plcCapColIdxPre =
+            PRODUCTION_LINE_CONTRIBUTION_TABLE.fields.findIndex(
+                (f) => f.name === CAPACITY
+            )
+        if (plMaxColIdxPre >= 0 && plcCapColIdxPre >= 0) {
+            const maxByKey = new Map<string, number>()
+            for (let r = 0; r < plInfoPre.rowCnt; r++) {
+                const key = cellValueAsString(
+                    plInfoPre.cells[r * plInfoPre.colCnt + 0]?.value
+                )
+                const max = numericCellValue(
+                    plInfoPre.cells[r * plInfoPre.colCnt + plMaxColIdxPre]
+                        ?.value
+                )
+                if (key) maxByKey.set(key, max)
+            }
+            const overAllocations: string[] = []
+            for (let r = 0; r < plcInfoPre.rowCnt; r++) {
+                const key = cellValueAsString(
+                    plcInfoPre.cells[r * plcInfoPre.colCnt + 0]?.value
+                )
+                const cap = numericCellValue(
+                    plcInfoPre.cells[r * plcInfoPre.colCnt + plcCapColIdxPre]
+                        ?.value
+                )
+                const max = maxByKey.get(key)
+                if (max !== undefined && Number.isFinite(cap) && cap > max) {
+                    overAllocations.push(
+                        `生产线 ${key}: 本期产能 ${cap} > 最大生产数 ${max}`
+                    )
+                }
+            }
+            if (overAllocations.length > 0) {
+                // Throw BEFORE commitTempStatus — temp branch survives.
+                throw new Error(
+                    `产能超限，无法进入下一轮：\n  · ${overAllocations.join(
+                        '\n  · '
+                    )}\n请减少生产线一/生产线二列的订单分配，或升级生产线。`
+                )
+            }
+        }
+    }
+
+    // Pre-check passed. Now commit any active temp branch. The host
+    // runs in temp mode, so the player's accept-toggles (which fan
+    // out to insertOrderConfig + insertAcceptedOrder, both temp:true)
+    // live on the temp branch. If we ran our non-temp round tx
+    // without committing, the engine's "non-temp tx discards any
+    // active temp branch" rule would wipe every accepted order
+    // before advancing. commitTempStatus folds those edits into
+    // canonical state so they survive round advance — and
+    // getBlockInfo below sees the same view our payloads target.
     if (typeof wb.commitTempStatus === 'function') {
         await wb.commitTempStatus()
     }
