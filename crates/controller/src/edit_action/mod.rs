@@ -93,6 +93,7 @@ pub enum EditPayload {
     ResizeBlock(ResizeBlock),
     ConvertBlock(ConvertBlock),
     BindFormSchema(BindFormSchema),
+    UpsertFieldFormulas(UpsertFieldFormulas),
     BindRandomSchema(BindRandomSchema),
     UpsertFieldRenderInfo(UpsertFieldRenderInfo),
     MoveBlockLine(MoveBlockLine),
@@ -581,6 +582,36 @@ pub struct BindFormSchema {
 impl From<BindFormSchema> for EditPayload {
     fn from(value: BindFormSchema) -> Self {
         EditPayload::BindFormSchema(value)
+    }
+}
+
+/// Replace the per-field value-formula templates on a block whose
+/// `BindFormSchema` has already been applied. Lets callers stage
+/// schema registration and templated-formula installation as two
+/// separate payloads in the same transaction — useful when several
+/// blocks BLOCKREF each other and the parser needs every block's
+/// refName + field set to be registered before any formula is parsed.
+///
+/// Index alignment matches the original BindFormSchema: entry `i` is
+/// the formula for the field at index `i` of the bound schema's
+/// `fields` list. `None` / empty string clears the field's formula
+/// (a previously-templated field becomes free-form again). The vec
+/// length must equal the bound schema's field count.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "upsert_field_formulas.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct UpsertFieldFormulas {
+    pub sheet_idx: usize,
+    pub block_id: usize,
+    pub field_formulas: Vec<Option<String>>,
+}
+
+impl From<UpsertFieldFormulas> for EditPayload {
+    fn from(value: UpsertFieldFormulas) -> Self {
+        EditPayload::UpsertFieldFormulas(value)
     }
 }
 
@@ -1134,6 +1165,7 @@ impl Payload for EphemeralCellRemove {}
 impl Payload for ConvertBlock {}
 impl Payload for UpsertFieldRenderInfo {}
 impl Payload for BindFormSchema {}
+impl Payload for UpsertFieldFormulas {}
 impl Payload for BindRandomSchema {}
 
 #[cfg(test)]

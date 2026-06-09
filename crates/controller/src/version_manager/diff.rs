@@ -347,6 +347,18 @@ fn convert_diff<C: VersionExecCtx>(
                 sheet_id,
             )))
         }
+        EditPayload::UpsertFieldFormulas(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: p.block_id,
+                },
+                sheet_id,
+            )))
+        }
         EditPayload::BindRandomSchema(p) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(p.sheet_idx)

@@ -118,6 +118,26 @@ impl FormulaExecutor {
                 }
                 Ok(exec)
             }
+            EditPayload::UpsertFieldFormulas(p) => {
+                // The schema_manager executor has already swapped in
+                // the new per-field formulas. Re-walk every cell so
+                // `input_block_cell_template` re-parses the now-current
+                // formula slot (or no-ops for free-form fields). Same
+                // shape as the BindFormSchema arm below.
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let (row_cnt, col_cnt) = ctx
+                    .get_block_size(sheet_id, p.block_id)
+                    .map_err(|e: BasicError| -> Error { e.into() })?;
+                let mut exec = self;
+                for r in 0..row_cnt {
+                    for c in 0..col_cnt {
+                        exec = input_block_cell_template(exec, p.sheet_idx, p.block_id, r, c, ctx)?;
+                    }
+                }
+                Ok(exec)
+            }
             EditPayload::BindFormSchema(p) => {
                 // The bind itself happens in the schema_manager
                 // executor (earlier in the pass order). By the time

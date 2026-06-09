@@ -104,7 +104,7 @@ async function lookupUserEditableShadow(
         // (idempotent), but its cell value will be `empty`. Treat empty
         // as "no rule" so callers fall through. A populated shadow that
         // evaluates to false is a real reject.
-        const info = await client.getShadowInfoById(shadowId)
+        const info = await client.getShadowInfoById({shadowId})
         if (isErrorMessage(info)) return undefined
         const v = info.value
         if (v === 'empty') return undefined

@@ -36,8 +36,12 @@ export const CraftPanel = ({
     setActiveSheet,
     setCellLayouts,
 }: CraftPanelProps) => {
-    const [iframeSrc, setIframeSrc] = useState('/what-if-calculator/index.html')
+    const [iframeSrc, setIframeSrc] = useState('/factory-simulator/index.html')
     const tools = [
+        {
+            label: 'Factory Simulator',
+            value: '/factory-simulator/index.html',
+        },
         {
             label: 'What-if Calculator',
             value: '/what-if-calculator/index.html',
@@ -45,10 +49,6 @@ export const CraftPanel = ({
         {
             label: 'Markdown Table Extractor',
             value: '/markdown-table-extractor/index.html',
-        },
-        {
-            label: 'Factory Simulator',
-            value: '/factory-simulator/index.html',
         },
     ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)

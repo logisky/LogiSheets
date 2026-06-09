@@ -1,0 +1,11 @@
+# Vercel is only serving the prebuilt `dist/` directory — exclude
+# everything else from the upload to keep deploys fast.
+#
+# Gotcha: `*` excludes the `dist` directory itself; you must
+# re-include both the directory (`!dist`) AND its contents
+# (`!dist/**`), otherwise the negated content rule has no effect
+# because the parent dir stays excluded.
+*
+!dist
+!dist/**
+!vercel.json

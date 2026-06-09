@@ -445,8 +445,14 @@ export class Workbook {
         )
     }
 
-    public getShadowInfoById(shadowId: number): Result<ShadowCellInfo> {
-        return rpc('getShadowInfoById', {shadowId}, this._id)
+    public getShadowInfoById(params: {
+        shadowId: number
+    }): Result<ShadowCellInfo> {
+        return rpc(
+            'getShadowInfoById',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
     }
 
     public getCellId(params: GetCellIdParams): Result<SheetCellId> {

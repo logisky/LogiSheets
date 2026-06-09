@@ -740,6 +740,25 @@
         // failing cells. The handler updates `validationState` and
         // re-renders the badges on every flip.
         await refreshValidationMonitor();
+        // Drop the player into 财务部 to read the round-zero baseline
+        // (资金 / 商誉 / 下期财政影响) before they navigate to 销售部
+        // and start accepting orders. Mirrors the nav-button logic:
+        // look up the FinancialStatus block via blockManager, then
+        // select its top-left cell.
+        try {
+          const bm = window.blockManager;
+          const field = bm?.fieldManager.getAll().find((f) => f.refName === 'FinancialStatus');
+          if (field && window.setSelection) {
+            const info = await wb.getBlockInfo({sheetId: field.sheetId, blockId: field.blockId});
+            if (info && info.ty === undefined) {
+              const targetIdx = FactorySimulator.SHEET_IDX[FactorySimulator.MAIN_SHEET];
+              window.setSelection(targetIdx, info.rowStart, info.colStart);
+            }
+          }
+        } catch (e) {
+          // Non-fatal: jump is a UX nicety, not a correctness step.
+          console.warn('post-newGame jump to 财务部 failed:', e);
+        }
       } catch (e) {
         log('Error: ' + e.message, 'err');
         console.error(e);

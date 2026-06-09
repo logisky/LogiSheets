@@ -31,7 +31,7 @@ mod funcs {
 
     use crate::{load_script, test_script};
     use logisheets_controller::edit_action::{
-        BindFormSchema, CellInput, CreateBlock, PayloadsAction,
+        BindFormSchema, CellInput, CreateBlock, PayloadsAction, UpsertFieldFormulas,
     };
 
     #[test]
@@ -583,6 +583,144 @@ mod funcs {
         match r1.unwrap() {
             logisheets::Value::Number(n) => assert_eq!(n, 222.0, "PL row1 (二)"),
             other => panic!("PL row1 (二) bad: {:?}", other),
+        }
+    }
+
+    /// Two-phase bind: a single transaction that BindFormSchema-s
+    /// every block with empty `field_formulas`, then UpsertFieldFormulas
+    /// each block with its real templates. Lets a block declared
+    /// early in the payload list cross-reference one declared later —
+    /// the parser sees a fully-populated refName / field table by the
+    /// time any template is parsed.
+    ///
+    /// Concretely: block A is declared first and BLOCKREFS-sums a
+    /// column in B (declared second). Single-pass BindFormSchema
+    /// would resolve A's BLOCKREFS-into-B as a generic function
+    /// (B not yet bound at A's parse time) → permanent #NAME?.
+    /// Two-phase makes A's formula resolve correctly.
+    #[test]
+    fn test_upsert_field_formulas_resolves_forward_refs() {
+        use logisheets::Workbook;
+        let mut wb = Workbook::default();
+
+        // A at A1:B2 — two rows, key + value.
+        // B at A4:B5 — two rows, key + value.
+        //
+        // A.value formula  =  SUM(BLOCKREFS("B","*","v"))      → cross-block sum
+        // B.v   formula    =  BLOCKREF("A",#KEY,"value") * 0   → forces a parse-time
+        //                     lookup into A; arithmetic is irrelevant, we just need
+        //                     the parser to resolve A's refName even though B is
+        //                     bound first in declaration order (which it is, below).
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                .add_payload(CreateBlock {
+                    sheet_idx: 0,
+                    id: 1,
+                    master_row: 0,
+                    master_col: 0,
+                    row_cnt: 2,
+                    col_cnt: 2,
+                    owner: None,
+                    modify_policy: None,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 0,
+                    content: "a1".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 1,
+                    col: 0,
+                    content: "a2".into(),
+                })
+                .add_payload(CreateBlock {
+                    sheet_idx: 0,
+                    id: 2,
+                    master_row: 3,
+                    master_col: 0,
+                    row_cnt: 2,
+                    col_cnt: 2,
+                    owner: None,
+                    modify_policy: None,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 3,
+                    col: 0,
+                    content: "a1".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 4,
+                    col: 0,
+                    content: "a2".into(),
+                })
+                // PHASE 1: bind both schemas with NO formulas — just
+                // register refNames + field sets so later parses can
+                // resolve cross-block names regardless of order.
+                .add_payload(BindFormSchema {
+                    ref_name: "A".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec!["key".into(), "value".into()],
+                    render_ids: vec!["A-key".into(), "A-value".into()],
+                    field_formulas: vec![None, None],
+                    row: true,
+                })
+                .add_payload(BindFormSchema {
+                    ref_name: "B".to_string(),
+                    sheet_idx: 0,
+                    block_id: 2,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec!["key".into(), "v".into()],
+                    render_ids: vec!["B-key".into(), "B-v".into()],
+                    field_formulas: vec![None, None],
+                    row: true,
+                })
+                // Seed B's v column with literal numbers so A's SUM
+                // has something to add up.
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 3,
+                    col: 1,
+                    content: "10".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 4,
+                    col: 1,
+                    content: "20".into(),
+                })
+                // PHASE 2: install A's forward-reference template. By
+                // now B's refName + field set are registered, so the
+                // parser resolves BLOCKREFS("B",...) to a real
+                // BlockRefNode instead of falling back to a generic
+                // function call. B has no formulas itself, so it gets
+                // no UpsertFieldFormulas payload.
+                .add_payload(UpsertFieldFormulas {
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_formulas: vec![None, Some(r#"=SUM(BLOCKREFS("B","*","v"))"#.to_string())],
+                }),
+        ));
+
+        let sheet = wb.get_sheet_by_idx(0).unwrap();
+        // A.value = SUM(BLOCKREFS("B","*","v")) = 10 + 20 = 30 on
+        // every row (BLOCKREFS evaluates the same regardless of A's
+        // row position, no #KEY filter).
+        for r in 0..=1 {
+            match sheet.get_value(r, 1).unwrap() {
+                logisheets::Value::Number(n) => assert_eq!(n, 30.0, "A row {} .value", r),
+                other => panic!(
+                    "A row{}.value bad (expected Number(30), got {:?})",
+                    r, other
+                ),
+            }
         }
     }
 }

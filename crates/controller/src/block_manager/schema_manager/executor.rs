@@ -225,6 +225,117 @@ impl BlockSchemaExecutor {
                     true,
                 ))
             }
+            EditPayload::UpsertFieldFormulas(p) => {
+                let mut dirty_blocks = self.dirty_blocks;
+                let mut manager = self.manager;
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let block_id = p.block_id;
+
+                // Must follow a prior BindFormSchema — refuse if no
+                // RowSchema / ColSchema is registered for this block.
+                let Some(existing) = manager.schemas.get(&(sheet_id, block_id)) else {
+                    return Err(BasicError::BlockIdDoesNotExist(block_id).into());
+                };
+                let field_count = match existing {
+                    Schema::RowSchema(s) => s.fields.len(),
+                    Schema::ColSchema(s) => s.fields.len(),
+                    Schema::RandomSchema(_) => {
+                        // RandomSchema doesn't carry templates in v1 —
+                        // reject loudly instead of silently dropping.
+                        return Err(BasicError::InvalidFormula(format!(
+                            "UpsertFieldFormulas: block {} uses RandomSchema, \
+                             which does not support field-formula templates",
+                            block_id
+                        ))
+                        .into());
+                    }
+                };
+                if p.field_formulas.len() != field_count {
+                    return Err(BasicError::InvalidFormula(format!(
+                        "UpsertFieldFormulas: field_formulas length {} does not \
+                         match bound schema's field count {} for block {}",
+                        p.field_formulas.len(),
+                        field_count,
+                        block_id
+                    ))
+                    .into());
+                }
+
+                // Validate every `#FIELD("X")` against the existing
+                // field names (same rule as BindFormSchema).
+                let declared_names: std::collections::HashSet<String> = match existing {
+                    Schema::RowSchema(s) => s.fields.iter().map(|(n, _)| n.clone()).collect(),
+                    Schema::ColSchema(s) => s.fields.iter().map(|(n, _)| n.clone()).collect(),
+                    Schema::RandomSchema(_) => unreachable!(),
+                };
+                for (i, formula_opt) in p.field_formulas.iter().enumerate() {
+                    let Some(formula) = formula_opt else { continue };
+                    let trimmed = formula.trim();
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+                    let names = scan_field_refs(trimmed);
+                    for n in names {
+                        if !declared_names.contains(&n) {
+                            return Err(BasicError::InvalidFormula(format!(
+                                "UpsertFieldFormulas: field_formulas[{}] references \
+                                 unknown field {:?}",
+                                i, n
+                            ))
+                            .into());
+                        }
+                    }
+                }
+
+                // Mutate the schema's per-field formula slots in place.
+                // `Some("")` / `Some("   ")` collapse to `None` to match
+                // BindFormSchema's normalization.
+                let normalized: Vec<Option<String>> = p
+                    .field_formulas
+                    .into_iter()
+                    .map(|f| {
+                        f.and_then(|s| {
+                            let t = s.trim().to_string();
+                            if t.is_empty() {
+                                None
+                            } else {
+                                Some(t)
+                            }
+                        })
+                    })
+                    .collect();
+                let schema_mut = manager.schemas.get(&(sheet_id, block_id)).unwrap().clone();
+                let updated = match schema_mut {
+                    Schema::RowSchema(mut s) => {
+                        for (i, formula) in normalized.into_iter().enumerate() {
+                            s.fields[i].1 .2 = formula;
+                        }
+                        Schema::RowSchema(s)
+                    }
+                    Schema::ColSchema(mut s) => {
+                        for (i, formula) in normalized.into_iter().enumerate() {
+                            s.fields[i].1 .2 = formula;
+                        }
+                        Schema::ColSchema(s)
+                    }
+                    Schema::RandomSchema(_) => unreachable!(),
+                };
+                manager.schemas.insert((sheet_id, block_id), updated);
+                // Mark dirty so the formula_manager re-walks every
+                // cell in the block and re-materializes templates
+                // through input_block_cell_template (which now reads
+                // the updated formula slots).
+                dirty_blocks.insert((sheet_id, block_id));
+                Ok((
+                    Self {
+                        manager,
+                        dirty_blocks,
+                    },
+                    true,
+                ))
+            }
             EditPayload::BindRandomSchema(p) => {
                 let mut dirty_blocks = self.dirty_blocks;
                 let mut manager = self.manager;
