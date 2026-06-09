@@ -43,7 +43,27 @@ impl FormulaExecutor {
                         ctx,
                     )
                 } else {
-                    Ok(self)
+                    // Plain value overwriting whatever was here. If the
+                    // cell previously held a formula, drop it — otherwise
+                    // the next recalc re-evaluates the stale formula and
+                    // overwrites the value the user just typed, making
+                    // numeric/text input over a formula cell appear to
+                    // silently do nothing.
+                    let sheet = ctx
+                        .fetch_sheet_id_by_index(cell_input.sheet_idx)
+                        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                    match ctx.fetch_cell_id(&sheet, cell_input.row, cell_input.col) {
+                        Ok(cell_id) if self.manager.formulas.contains_key(&(sheet, cell_id)) => {
+                            remove_formula(
+                                self,
+                                cell_input.sheet_idx,
+                                cell_input.row,
+                                cell_input.col,
+                                ctx,
+                            )
+                        }
+                        _ => Ok(self),
+                    }
                 }
             }
             EditPayload::EphemeralCellInput(mut ephemeral_cell_input) => {

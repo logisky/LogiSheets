@@ -562,7 +562,8 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                         position={editorContext.position}
                         initialCursorPosition={editorContext.cursorPosition}
                         referenceInsertion={reference}
-                        onBlur={commitEdit}
+                        onBlur={(v) => commitEdit(v, false)}
+                        onSubmit={(v) => commitEdit(v, true)}
                         onCancel={cancelEdit}
                         onCellRefsChange={setCellRefs}
                         onChange={handleEditorChange}

@@ -105,6 +105,50 @@ fn get_col_style() {
 }
 
 #[test]
+fn overwrite_formula_with_plain_value() {
+    use crate::controller::display::Value;
+    use crate::edit_action::CellInput;
+
+    let mut wb = Workbook::default();
+
+    // Write a formula into A1.
+    let r = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: "=1+1".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(r.status, crate::edit_action::StatusCode::Ok(_)));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_formula(0, 0).unwrap(), "1 + 1");
+    assert!(matches!(ws.get_value(0, 0).unwrap(), Value::Number(n) if (n - 2.0).abs() < 1e-9));
+
+    // Overwrite with a plain number. The formula must be cleared,
+    // otherwise the next recalc re-evaluates 1+1 over the typed "5".
+    let r = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: "5".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(r.status, crate::edit_action::StatusCode::Ok(_)));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_formula(0, 0).unwrap(), "");
+    match ws.get_value(0, 0).unwrap() {
+        Value::Number(n) => assert!((n - 5.0).abs() < 1e-9, "got {}", n),
+        v => panic!("expected Number(5), got {:?}", v),
+    }
+}
+
+#[test]
 fn test_check_formula() {
     let wb = Workbook::new();
     let r = wb.check_formula("=1+1".to_string());

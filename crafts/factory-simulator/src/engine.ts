@@ -915,9 +915,16 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
                     `/#FIELD("${CURRENT_DELIVERY}")` +
                     `,0)`
             ),
+            // Skip the warning while the player hasn't allocated any
+            // production yet — 本期交付数=0 forces the weighted-avg
+            // formula's IF guard to 0, which would otherwise fail the
+            // `>=required` check on every freshly-inserted row (the
+            // round-1 auto-accepted orders all start here) and light up
+            // the 销售部 nav badge before the player has done anything.
             validation:
+                `OR(#FIELD("${CURRENT_DELIVERY}")=0,` +
                 `#PLACEHOLDER>=BLOCKREF("OrderStatus",` +
-                `#FIELD("订单"),"${REQUIRED_YIELD_RATE}")`,
+                `#FIELD("订单"),"${REQUIRED_YIELD_RATE}"))`,
         },
         // 剩余交付数 = 数量 − 已交付数量 − 本期交付数. Uses raw
         // allocation: deliver what you say you'll deliver.

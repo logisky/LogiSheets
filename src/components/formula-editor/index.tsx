@@ -45,6 +45,13 @@ export interface FormulaEditorWrapperProps {
     }
     /** Called when the editor loses focus - commit the value */
     onBlur: (value: string) => void
+    /**
+     * Called when the user explicitly submits via Enter. Distinguished
+     * from `onBlur` so the host can keep the selection on the just-edited
+     * cell on Enter while letting click-elsewhere actually move the
+     * selection.
+     */
+    onSubmit?: (value: string) => void
     /** Called when user presses Escape - cancel editing */
     onCancel: () => void
     /** Whether the editor is visible */
@@ -111,6 +118,7 @@ const FormulaEditorWrapperInner = forwardRef<
         dataService,
         position,
         onBlur,
+        onSubmit: onSubmitProp,
         onCancel,
         visible = true,
         initialCursorPosition = 'end',
@@ -237,7 +245,11 @@ const FormulaEditorWrapperInner = forwardRef<
      * Handle submit (Enter key)
      */
     const handleSubmit = (value: string) => {
-        onBlur(value)
+        if (onSubmitProp) {
+            onSubmitProp(value)
+        } else {
+            onBlur(value)
+        }
     }
 
     /**
