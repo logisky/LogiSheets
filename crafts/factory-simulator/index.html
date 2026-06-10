@@ -220,6 +220,9 @@
       line-height: 1;
       cursor: help;
     }
+    .nav-badge.hint {
+      background: #16a34a;
+    }
   </style>
 </head>
 <body>
@@ -600,9 +603,11 @@
       document.querySelectorAll('button[data-jump]').forEach((btn) => {
         const navKey = btn.getAttribute('data-nav-key');
         const entry = validationState[navKey];
-        const existing = btn.querySelector('.nav-badge');
-        if (existing) existing.remove();
-        if (entry && entry.failingCount > 0) {
+        btn.querySelectorAll('.nav-badge').forEach((b) => b.remove());
+        if (!entry) return;
+        // Red failing-validation badge wins visual priority over the
+        // green hint — fix-the-broken-thing before look-at-the-shiny.
+        if (entry.failingCount > 0) {
           const badge = document.createElement('span');
           badge.className = 'nav-badge';
           badge.textContent = '!';
@@ -612,6 +617,17 @@
           badge.title =
             navKey + ' 中有 ' + entry.failingCount + ' 项校验未通过：\n' + lines.join('\n');
           btn.appendChild(badge);
+        }
+        if (entry.availableCount && entry.availableCount > 0) {
+          const hint = document.createElement('span');
+          hint.className = 'nav-badge hint';
+          hint.textContent = String(entry.availableCount);
+          const lines = (entry.availableCells || []).map((c) =>
+            '· ' + c.refName + ' · 第 ' + (c.rowInBlock + 1) + ' 行 · ' + c.fieldName
+          );
+          hint.title =
+            navKey + ' 有 ' + entry.availableCount + ' 项可联合研发：\n' + lines.join('\n');
+          btn.appendChild(hint);
         }
       });
     }
@@ -635,6 +651,16 @@
           window.setSelection(first.sheetIdx, first.row, first.col);
           log(
             '跳转到 ' + navKey + ' 第一个校验失败：'
+              + first.refName + ' · 第 ' + (first.rowInBlock + 1) + ' 行 · ' + first.fieldName,
+            'info'
+          );
+          return;
+        }
+        if (entry && entry.availableCount && entry.availableCount > 0) {
+          const first = entry.availableCells[0];
+          window.setSelection(first.sheetIdx, first.row, first.col);
+          log(
+            '跳转到 ' + navKey + ' 第一个可联合研发：'
               + first.refName + ' · 第 ' + (first.rowInBlock + 1) + ' 行 · ' + first.fieldName,
             'info'
           );

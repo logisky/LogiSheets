@@ -711,7 +711,19 @@ export const PRODUCTION_LINE_TABLE: Table = {
         // widget-mount time (see useEditable hook).
         {
             ...fBool(WILL_UPGRADE),
-            userEditable: `=#FIELD("${LEVEL}")<${PRODUCTION_LINE_LEVEL_KEYS.length}`,
+            // Editable when EITHER the toggle is currently ON (so the
+            // player can un-toggle to revert the in-round upgrade) OR
+            // 等级 hasn't hit the cap yet. The naive `等级<cap` rule was
+            // self-defeating: toggling ON at level N-1 immediately
+            // bumped 等级 to N (via the upgrade bridge), which then
+            // tripped the lock, leaving the player unable to un-toggle
+            // a top-tier upgrade they hadn't committed yet. OR(toggle,
+            // …) keeps the cell editable for the duration of an
+            // in-round upgrade draft; once round-advance clears the
+            // toggle, the level-cap lock kicks back in as before.
+            userEditable:
+                `=OR(#FIELD("${WILL_UPGRADE}"),` +
+                `#FIELD("${LEVEL}")<${PRODUCTION_LINE_LEVEL_KEYS.length})`,
         },
     ],
     refName: 'ProductionLine',
@@ -915,9 +927,16 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
                     `/#FIELD("${CURRENT_DELIVERY}")` +
                     `,0)`
             ),
+            // Skip the warning while the player hasn't allocated any
+            // production yet — 本期交付数=0 forces the weighted-avg
+            // formula's IF guard to 0, which would otherwise fail the
+            // `>=required` check on every freshly-inserted row (the
+            // round-1 auto-accepted orders all start here) and light up
+            // the 销售部 nav badge before the player has done anything.
             validation:
+                `OR(#FIELD("${CURRENT_DELIVERY}")=0,` +
                 `#PLACEHOLDER>=BLOCKREF("OrderStatus",` +
-                `#FIELD("订单"),"${REQUIRED_YIELD_RATE}")`,
+                `#FIELD("订单"),"${REQUIRED_YIELD_RATE}"))`,
         },
         // 剩余交付数 = 数量 − 已交付数量 − 本期交付数. Uses raw
         // allocation: deliver what you say you'll deliver.
@@ -1940,12 +1959,21 @@ export interface ValidationFailingCell {
     rowInBlock: number
 }
 
-/** navKey → { failing count, list of failing cells }. */
+/** navKey → { failing count, list of failing cells, available hints }. */
 export type ValidationState = Record<
     string,
     {
         failingCount: number
         cells: ValidationFailingCell[]
+        /**
+         * Count of opportunities the player MIGHT want to act on but
+         * haven't (e.g. 联合研发 unlocked but not yet picked). Rendered
+         * as a green hint badge — informational, never blocking. Absent
+         * (undefined) means the nav has no hint surface; 0 means it has
+         * one but nothing is currently available.
+         */
+        availableCount?: number
+        availableCells?: ValidationFailingCell[]
     }
 >
 
@@ -1990,6 +2018,13 @@ const _validationFailingByCell = new Map<string, boolean>()
 const _validationCellByKey = new Map<string, ValidationCellRef>()
 const _validationSubscribedKeys = new Set<string>()
 
+// Parallel maps for "hint" cells (green badges). Tracks userEditable
+// shadows that flipped TRUE — currently used by the supplier 联合研发
+// availability hint on 采购部. Same key shape as the failing-cell maps.
+const _hintAvailableByCell = new Map<string, boolean>()
+const _hintCellByKey = new Map<string, ValidationCellRef>()
+const _hintSubscribedKeys = new Set<string>()
+
 const _validationCellKey = (sheetIdx: number, row: number, col: number) =>
     `${sheetIdx}:${row}:${col}`
 
@@ -1997,18 +2032,47 @@ export function clearValidationMonitorState(): void {
     _validationFailingByCell.clear()
     _validationCellByKey.clear()
     _validationSubscribedKeys.clear()
+    _hintAvailableByCell.clear()
+    _hintCellByKey.clear()
+    _hintSubscribedKeys.clear()
 }
 
 function _computeValidationState(): ValidationState {
     const out: ValidationState = {}
+    const ensure = (navKey: string) => {
+        if (!out[navKey]) out[navKey] = {failingCount: 0, cells: []}
+        return out[navKey]
+    }
     for (const cell of _validationCellByKey.values()) {
-        if (!out[cell.navKey]) {
-            out[cell.navKey] = {failingCount: 0, cells: []}
-        }
+        const bucket = ensure(cell.navKey)
         const k = _validationCellKey(cell.sheetIdx, cell.row, cell.col)
         if (_validationFailingByCell.get(k)) {
-            out[cell.navKey].failingCount += 1
-            out[cell.navKey].cells.push({
+            bucket.failingCount += 1
+            bucket.cells.push({
+                navKey: cell.navKey,
+                refName: cell.refName,
+                fieldName: cell.fieldName,
+                sheetIdx: cell.sheetIdx,
+                row: cell.row,
+                col: cell.col,
+                rowInBlock: cell.rowInBlock,
+            })
+        }
+    }
+    // Hints: same shape, separate map. Initialise the nav's hint
+    // surface to (0, []) the first time we see any tracked hint cell
+    // for it so the host can tell "hint surface exists, currently
+    // empty" apart from "no hint surface here at all" (undefined).
+    for (const cell of _hintCellByKey.values()) {
+        const bucket = ensure(cell.navKey)
+        if (bucket.availableCount === undefined) {
+            bucket.availableCount = 0
+            bucket.availableCells = []
+        }
+        const k = _validationCellKey(cell.sheetIdx, cell.row, cell.col)
+        if (_hintAvailableByCell.get(k)) {
+            bucket.availableCount += 1
+            bucket.availableCells!.push({
                 navKey: cell.navKey,
                 refName: cell.refName,
                 fieldName: cell.fieldName,
@@ -2135,7 +2199,103 @@ export async function refreshValidationSubscriptions(
             }
         }
     }
+
+    // Hint pass: subscribe to the userEditable shadow on each supplier
+    // row's 联合研发 cell. When the shadow flips TRUE, that supplier
+    // has a fresh joint-research opportunity unlocked and should
+    // surface a green badge on 采购部.
+    const SUPPLIER_HINT_BLOCKS: ReadonlyArray<{
+        navKey: string
+        refName: string
+        blockKey: BlockKey
+    }> = [
+        {
+            navKey: '采购部',
+            refName: 'OpticalGlassSupplier',
+            blockKey: 'opticalGlassSuppliers',
+        },
+        {
+            navKey: '采购部',
+            refName: 'EquatorialMountSupplier',
+            blockKey: 'equatorialMountSuppliers',
+        },
+        {
+            navKey: '采购部',
+            refName: 'MetalFittingsSupplier',
+            blockKey: 'metalFittingsSuppliers',
+        },
+    ]
+    const jointResearchCol = SUPPLIER_FIELDS.findIndex(
+        (f) => f.name === JOINT_RESEARCH
+    )
+    if (jointResearchCol >= 0) {
+        for (const hint of SUPPLIER_HINT_BLOCKS) {
+            const blockId = blockIds[hint.blockKey]
+            if (blockId === undefined) continue
+            const info = await client.getBlockInfo({
+                sheetId: sheetIdResp,
+                blockId,
+            })
+            if (isErrorMessage(info)) continue
+            for (let r = 0; r < info.rowCnt; r++) {
+                const absRow = info.rowStart + r
+                const absCol = info.colStart + jointResearchCol
+                const key = _validationCellKey(sheetIdx, absRow, absCol)
+                if (_hintSubscribedKeys.has(key)) continue
+                _hintCellByKey.set(key, {
+                    navKey: hint.navKey,
+                    refName: hint.refName,
+                    fieldName: JOINT_RESEARCH,
+                    sheetIdx,
+                    row: absRow,
+                    col: absCol,
+                    rowInBlock: r,
+                })
+                const sid = await client.getShadowCellId({
+                    sheetIdx,
+                    rowIdx: absRow,
+                    colIdx: absCol,
+                    kind: 'userEditable',
+                })
+                if (!sid || isErrorMessage(sid)) continue
+                if (!sid.cellId || sid.cellId.type !== 'ephemeralCell')
+                    continue
+                const eid = sid.cellId.value as number
+                const initialInfo = await client.getShadowInfoById({
+                    shadowId: eid,
+                })
+                if (initialInfo && !isErrorMessage(initialInfo)) {
+                    _hintAvailableByCell.set(
+                        key,
+                        _shadowIndicatesAvailable(initialInfo.value)
+                    )
+                }
+                _hintSubscribedKeys.add(key)
+                client.registerCellValueChangedByCellId(sid, async () => {
+                    const next = await client.getShadowInfoById({
+                        shadowId: eid,
+                    })
+                    if (!next || isErrorMessage(next)) return
+                    const prev = _hintAvailableByCell.get(key) ?? false
+                    const cur = _shadowIndicatesAvailable(next.value)
+                    if (prev === cur) return
+                    _hintAvailableByCell.set(key, cur)
+                    fireUpdate()
+                })
+            }
+        }
+    }
+
     fireUpdate()
+}
+
+function _shadowIndicatesAvailable(
+    v: Value | 'empty' | undefined
+): boolean {
+    if (v === undefined || v === 'empty') return false
+    if (v.type === 'bool') return v.value === true
+    if (v.type === 'number') return v.value !== 0
+    return false // errors / strings: treat as "not available"
 }
 
 /**
@@ -3439,7 +3599,7 @@ export function generateOrder(
     // 5) Required yield: round-based baseline + profile delta,
     //    clamped to [0.5, 0.99]. Tight rounds (low + harsh profile)
     //    can't tank below 50% — keeps the order plausibly winnable.
-    const yieldRate = Math.min(
+    const yieldBase = Math.min(
         0.99,
         Math.max(0.5, orderQualityFromRound(round) + profile.yieldDelta)
     )
@@ -3451,6 +3611,19 @@ export function generateOrder(
             rng() *
                 (profile.penaltyMultMax - profile.penaltyMultMin + 1)
         )
+
+    // 7) Yield jitter — appended at the END so the rolls above keep
+    //    their deterministic positions for replay. Without this every
+    //    same-profile order in the same round prints the IDENTICAL
+    //    required-yield (profiles only span ~0.05); five orders look
+    //    visually duplicated. ±0.05 spread + 2-decimal rounding makes
+    //    each order's bar look distinct while staying in the same
+    //    difficulty band.
+    const yieldJitter = (rng() - 0.5) * 0.1 // [-0.05, +0.05]
+    const yieldRate =
+        Math.round(
+            Math.min(0.99, Math.max(0.5, yieldBase + yieldJitter)) * 100
+        ) / 100
 
     return {
         orderId: `${ORDER_ID_PREFIX}-${round}-${indexInRound}`,
@@ -4491,7 +4664,7 @@ async function wipeBlockRows(
 }
 
 /** How many orders to generate per round. Tweakable. */
-export const ORDERS_PER_ROUND = 3
+export const ORDERS_PER_ROUND = 5
 
 /**
  * One round transition: dispose last round's order subscriptions, clear
