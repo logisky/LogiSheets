@@ -40,3 +40,4 @@ packages/**/*/bindings
 
 .yarn/install-state.gz
 .vercel
+.npmrc
