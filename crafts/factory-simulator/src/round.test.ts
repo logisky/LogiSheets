@@ -274,6 +274,7 @@ describe('evaluateEndgame', () => {
         maxRounds: 20,
         bankruptcyGraceRounds: 3,
         reputationGraceRounds: 2,
+        tierUltimateGoodwill: 148,
         tierGoldFund: 80000,
         tierGoldGoodwill: 100,
         tierSilverFund: 30000,

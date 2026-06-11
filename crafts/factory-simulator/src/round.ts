@@ -218,6 +218,7 @@ export function clampGoodwill(
 
 export type GameState =
     | 'playing'
+    | 'won_ultimate'
     | 'won_gold'
     | 'won_silver'
     | 'won_bronze'
@@ -229,6 +230,13 @@ export interface EndgameParams {
     maxRounds: number
     bankruptcyGraceRounds: number
     reputationGraceRounds: number
+    /**
+     * Reputation ceiling that triggers the "final achievement" tier.
+     * Checked AHEAD of gold/silver/bronze and BEFORE the maxRounds gate
+     * — reaching this goodwill ends the campaign immediately as a top
+     * win regardless of remaining rounds or fund.
+     */
+    tierUltimateGoodwill: number
     tierGoldFund: number
     tierGoldGoodwill: number
     tierSilverFund: number
@@ -284,6 +292,12 @@ export function evaluateEndgame(
         consecutiveNoGoodwillRoundsAfter >= params.reputationGraceRounds
     ) {
         gameState = 'lost_reputation'
+    } else if (input.goodwill >= params.tierUltimateGoodwill) {
+        // Ultimate achievement — reputation ceiling reached. Ends the
+        // campaign early, no fund gate. Checked BEFORE the maxRounds
+        // branch so the player gets the credit on the round they hit
+        // the threshold rather than having to limp through the rest.
+        gameState = 'won_ultimate'
     } else if (input.round >= params.maxRounds) {
         // Survived the campaign — assign tier.
         if (
