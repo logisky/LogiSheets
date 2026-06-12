@@ -36,11 +36,17 @@ export const CraftPanel = ({
     setActiveSheet,
     setCellLayouts,
 }: CraftPanelProps) => {
-    const [iframeSrc, setIframeSrc] = useState('/factory-simulator/index.html')
+    const [iframeSrc, setIframeSrc] = useState(
+        '/factory-simulator-zh/index.html'
+    )
     const tools = [
         {
-            label: 'Factory Simulator',
-            value: '/factory-simulator/index.html',
+            label: 'Factory Simulator (中文)',
+            value: '/factory-simulator-zh/index.html',
+        },
+        {
+            label: 'Factory Simulator (English)',
+            value: '/factory-simulator-en/index.html',
         },
         {
             label: 'What-if Calculator',
@@ -82,6 +88,14 @@ export const CraftPanel = ({
             setActiveSheet(sheetIdx)
             const data = buildSelectedDataFromCell(row, col, 'none')
             setSelectedData(data)
+        }
+        // Manually pin the viewport. Either axis can be omitted to keep
+        // its current value. Useful when a craft wants to jump-to-block
+        // but suppress the auto-scroll's horizontal offset (e.g. keep
+        // anchorX=0 after a setSelection on a deep-down block whose
+        // colStart is already 0).
+        win.setAnchor = (anchorX?: number, anchorY?: number) => {
+            void engine.render(anchorX, anchorY)
         }
         // Host UI controls a craft might want to toggle (e.g. switching
         // into temp mode for a series of speculative edits, or pinning

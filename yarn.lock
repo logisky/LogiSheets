@@ -11614,10 +11614,31 @@ __metadata:
   languageName: node
   linkType: hard
 
-"factory-simulator@workspace:crafts/factory-simulator":
+"factory-simulator-core@workspace:*, factory-simulator-core@workspace:crafts/factory-simulator-core":
   version: 0.0.0-use.local
-  resolution: "factory-simulator@workspace:crafts/factory-simulator"
+  resolution: "factory-simulator-core@workspace:crafts/factory-simulator-core"
   dependencies:
+    logisheets-web: "workspace:*"
+    typescript: "npm:^5.5.0"
+  languageName: unknown
+  linkType: soft
+
+"factory-simulator-en@workspace:crafts/factory-simulator-en":
+  version: 0.0.0-use.local
+  resolution: "factory-simulator-en@workspace:crafts/factory-simulator-en"
+  dependencies:
+    factory-simulator-core: "workspace:*"
+    logisheets-web: "workspace:*"
+    typescript: "npm:^5.5.0"
+    vite: "npm:^5.0.0"
+  languageName: unknown
+  linkType: soft
+
+"factory-simulator-zh@workspace:crafts/factory-simulator-zh":
+  version: 0.0.0-use.local
+  resolution: "factory-simulator-zh@workspace:crafts/factory-simulator-zh"
+  dependencies:
+    factory-simulator-core: "workspace:*"
     logisheets-web: "workspace:*"
     typescript: "npm:^5.5.0"
     vite: "npm:^5.0.0"

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Factory Simulator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background-color: #f5f5f7;
+      color: #111827;
+    }
+    h1 { margin: 0 0 16px; font-size: 20px; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.08);
+      border: 1px solid #e5e7eb;
+      margin-bottom: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 14px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      color: #111827;
+      cursor: pointer;
+    }
+    .btn:hover { background: #e5e7eb; }
+    .btn-primary {
+      border-color: #2563eb;
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .log {
+      font-family: monospace;
+      font-size: 12px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .log-entry { margin: 2px 0; }
+    .log-ok { color: #16a34a; }
+    .log-err { color: #dc2626; }
+    .log-info { color: #2563eb; }
+    .section-title { font-weight: 600; font-size: 13px; color: #4b5563; margin-bottom: 8px; }
+    /* ---------------- Status bar ----------------------------- */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 12px;
+      background: linear-gradient(90deg, #111827 0%, #1f2937 100%);
+      color: #f9fafb;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .status-bar .pill {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 2px 10px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+    }
+    .status-bar .pill .label {
+      color: #9ca3af;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .status-bar .pill .value {
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .status-bar .pill .delta {
+      font-size: 11px;
+      padding: 1px 5px;
+      border-radius: 6px;
+      margin-left: 4px;
+    }
+    .status-bar .delta-up { background: rgba(34,197,94,0.18); color: #4ade80; }
+    .status-bar .delta-down { background: rgba(239,68,68,0.18); color: #f87171; }
+    .status-bar .delta-zero { color: #9ca3af; }
+    .status-bar .empty { color: #9ca3af; }
+    /* ---------------- Round summary modal -------------------- */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 14px 40px rgba(15,23,42,0.25);
+      width: min(420px, 92vw);
+      max-height: 85vh;
+      overflow: auto;
+      padding: 18px 20px 16px;
+    }
+    .modal h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+    .modal .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 4px 0;
+      border-bottom: 1px dashed #e5e7eb;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .modal .row:last-of-type { border-bottom: none; }
+    .modal .row .num.pos { color: #16a34a; }
+    .modal .row .num.neg { color: #dc2626; }
+    .modal .row .num.zero { color: #6b7280; }
+    .modal .section { margin-top: 10px; }
+    .modal .section-h {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6b7280;
+      margin-bottom: 2px;
+    }
+    .modal .totals {
+      margin-top: 14px;
+      padding-top: 8px;
+      border-top: 2px solid #111827;
+    }
+    .modal .totals .row { font-weight: 600; }
+    .modal-close {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    /* ---------------- Onboarding ----------------------------- */
+    .help-btn {
+      margin-left: auto;
+      width: 26px;
+      height: 26px;
+      border-radius: 13px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      color: #4b5563;
+      line-height: 1;
+    }
+    .help-btn:hover { background: #f3f4f6; color: #111827; }
+    .onboarding { width: min(540px, 94vw); }
+    .onboarding h2 { margin-bottom: 6px; }
+    .onboarding .subtitle {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 14px;
+    }
+    .onboarding ol { padding-left: 20px; margin: 6px 0 12px; }
+    .onboarding li { margin: 4px 0; font-size: 13px; line-height: 1.5; }
+    .onboarding .block { margin-top: 12px; }
+    .onboarding .block-h {
+      font-size: 12px;
+      font-weight: 700;
+      color: #111827;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .onboarding p { margin: 4px 0; font-size: 13px; line-height: 1.55; }
+    .onboarding .pill-tag {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #e5e7eb;
+      color: #111827;
+      font-size: 11px;
+      font-family: monospace;
+    }
+    .onboarding label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .nav-btn { position: relative; }
+    .nav-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 9px;
+      background: #dc2626;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: help;
+    }
+    .nav-badge.hint {
+      background: #16a34a;
+    }
+  </style>
+</head>
+<body>
+  <div style="display:flex;align-items:center;margin-bottom:12px;">
+    <h1 style="margin:0;">Factory Simulator</h1>
+    <button type="button" class="help-btn" id="help-btn" title="新手引导">?</button>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    <span class="empty">尚未开局</span>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Game Setup</div>
+    <button type="button" class="btn btn-primary" id="new-game-btn">New Game</button>
+    <button type="button" class="btn" id="tick-btn" disabled>部署完毕，进入下一轮</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">跳转</div>
+    <button type="button" class="btn nav-btn" data-jump="OrderConfiguration" data-nav-key="销售部">销售部</button>
+    <button type="button" class="btn nav-btn" data-jump="ProductionLine" data-nav-key="工厂">工厂</button>
+    <button type="button" class="btn nav-btn" data-jump="OpticalGlassSupplier" data-nav-key="采购部">采购部</button>
+    <button type="button" class="btn nav-btn" data-jump="FinancialStatus" data-nav-key="财务部">财务部</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Log</div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script src="./factory-simulator.js"></script>
+  <script>
+    function log(msg, type = 'info') {
+      const el = document.getElementById('log');
+      const line = document.createElement('div');
+      line.className = `log-entry log-${type}`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    // Jump-to-block buttons (销售部 / 工厂 / 采购部). The host exposes
+    // window.blockManager (carries refName per field, stamped from the
+    // bindFormSchema payloads at game setup) and window.setSelection
+    // (handles sheet switch + selection — which the engine then auto-
+    // scrolls to). Each button's data-jump attribute is the refName of
+    // the topmost table in that department's block group.
+    // ---- Status bar -----------------------------------------------
+    // Last-known status snapshot so we can show the latest-round delta
+    // alongside the new value (e.g. "资金 ¥1,200  +300"). Updated on
+    // every newGame / advanceRound.
+    let lastStatus = null;
+    const fmtCash = (n) =>
+      '¥' + Math.round(n).toLocaleString('en-US');
+    const fmtSignedCash = (n) => {
+      const s = Math.round(n).toLocaleString('en-US');
+      return (n > 0 ? '+¥' : n < 0 ? '−¥' : '¥') + s.replace('-', '');
+    };
+    const fmtSignedNum = (n) => {
+      if (n > 0) return '+' + Math.round(n);
+      if (n < 0) return '−' + Math.round(-n);
+      return '0';
+    };
+    function renderStatusBar(status) {
+      const el = document.getElementById('status-bar');
+      if (!status) {
+        el.innerHTML = '<span class="empty">尚未开局</span>';
+        return;
+      }
+      const fundDelta = lastStatus ? status.fund - lastStatus.fund : 0;
+      const goodwillDelta = lastStatus
+        ? status.goodwill - lastStatus.goodwill
+        : 0;
+      const deltaCls = (d) =>
+        d > 0 ? 'delta-up' : d < 0 ? 'delta-down' : 'delta-zero';
+      el.innerHTML = `
+        <span class="pill">
+          <span class="label">回合</span>
+          <span class="value">${status.round} / ${status.maxRounds}</span>
+        </span>
+        <span class="pill">
+          <span class="label">资金</span>
+          <span class="value">${fmtCash(status.fund)}</span>
+          ${lastStatus
+            ? `<span class="delta ${deltaCls(fundDelta)}">${fmtSignedCash(fundDelta)}</span>`
+            : ''}
+        </span>
+        <span class="pill">
+          <span class="label">商誉</span>
+          <span class="value">${Math.round(status.goodwill)} / 150</span>
+          ${lastStatus
+            ? `<span class="delta ${deltaCls(goodwillDelta)}">${fmtSignedNum(goodwillDelta)}</span>`
+            : ''}
+        </span>
+      `;
+      // Once the campaign has ended, lock out further advances. The
+      // user can still start a new game.
+      if (status.gameState && status.gameState !== 'playing') {
+        document.getElementById('tick-btn').disabled = true;
+      }
+    }
+    async function refreshStatusBar(opts = {}) {
+      const wb = window.workbook;
+      const blockIds = window.__factoryBlockIds;
+      if (!wb || !blockIds || !FactorySimulator.getGameStatus) return;
+      try {
+        const status = await FactorySimulator.getGameStatus(wb, blockIds);
+        if (!status) return;
+        renderStatusBar(status);
+        if (opts.commitAsLast) lastStatus = status;
+      } catch (e) {
+        console.error('status bar refresh failed', e);
+      }
+    }
+
+    // ---- Round summary modal --------------------------------------
+    // Friendlier names for the FinancialImpact keys when shown in the
+    // dialog. Falls back to the raw key if unmapped.
+    const SUMMARY_GROUPS = {
+      revenue: {label: '收入', keys: ['订单收入']},
+      cost: {
+        label: '成本',
+        keys: [
+          '生产线一支出', '生产线二支出',
+          '光学玻璃支出', '赤道仪支出', '金属配件支出',
+          '生产线一升级', '生产线二升级',
+        ],
+      },
+      penalty: {label: '罚款', keys: ['订单罚款', '品质罚款']},
+    };
+    function showRoundSummary(summary) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      const lines = [];
+      lines.push(`<h2>第 ${summary.round - 1} 回合结算</h2>`);
+      for (const [, group] of Object.entries(SUMMARY_GROUPS)) {
+        const entries = group.keys
+          .map((k) => [k, summary.breakdownByKey[k] ?? 0])
+          .filter(([, v]) => Math.abs(v) > 1e-9);
+        if (entries.length === 0) continue;
+        lines.push(`<div class="section"><div class="section-h">${group.label}</div>`);
+        for (const [k, v] of entries) {
+          const cls = v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero';
+          lines.push(
+            `<div class="row"><span>${k}</span><span class="num ${cls}">${fmtSignedCash(v)}</span></div>`
+          );
+        }
+        lines.push('</div>');
+      }
+      // Net + goodwill + before/after.
+      const netCls = summary.netCashDelta > 0 ? 'pos' : summary.netCashDelta < 0 ? 'neg' : 'zero';
+      const gwCls = summary.goodwillDelta > 0 ? 'pos' : summary.goodwillDelta < 0 ? 'neg' : 'zero';
+      lines.push('<div class="totals">');
+      lines.push(
+        `<div class="row"><span>资金净变化</span><span class="num ${netCls}">${fmtSignedCash(summary.netCashDelta)}</span></div>`
+      );
+      lines.push(
+        `<div class="row"><span>资金 ${fmtCash(summary.fundBefore)} →</span><span class="num">${fmtCash(summary.fundAfter)}</span></div>`
+      );
+      lines.push(
+        `<div class="row"><span>商誉变化</span><span class="num ${gwCls}">${fmtSignedNum(summary.goodwillDelta)}</span></div>`
+      );
+      lines.push(
+        `<div class="row"><span>商誉 ${Math.round(summary.goodwillBefore)} →</span><span class="num">${Math.round(summary.goodwillAfter)} / 150</span></div>`
+      );
+      lines.push('</div>');
+      lines.push(
+        '<div class="modal-close"><button type="button" class="btn btn-primary" id="modal-close-btn">知道了</button></div>'
+      );
+      modal.innerHTML = lines.join('');
+      overlay.appendChild(modal);
+      const dismiss = () => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+      };
+      const onKey = (e) => { if (e.key === 'Escape') dismiss(); };
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) dismiss();
+      });
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      modal.querySelector('#modal-close-btn').addEventListener('click', dismiss);
+    }
+
+    // ---- Endgame modal --------------------------------------------
+    // Surfaced once on the tick that flips gameState off 'playing'.
+    // Pulls the same tier vocabulary as engine.ts; if we add more
+    // states there, list them here too.
+    const ENDING_META = {
+      won_ultimate:    {emoji: '🏆', title: '终极成就',    flavor: '商誉触顶 150 — 行业丰碑，无可争议的口碑王者。', tone: 'good'},
+      won_gold:        {emoji: '🥇', title: '工业霸主',    flavor: '资金 ≥ ¥40000 且 商誉 ≥ 130。教科书级运营。', tone: 'good'},
+      won_silver:      {emoji: '🥈', title: '经营有道',    flavor: '资金 ≥ ¥15000 且 商誉 ≥ 100。稳扎稳打。',     tone: 'good'},
+      won_bronze:      {emoji: '🥉', title: '平稳渡过',    flavor: '坚持到最后一回合，工厂仍在运转。',          tone: 'good'},
+      won_alive:       {emoji: '😅', title: '勉强存活',    flavor: '风雨中熬下来了，但账面已经触底。',          tone: 'neutral'},
+      lost_bankruptcy: {emoji: '💸', title: '资金链断裂',  flavor: '连续 2 回合资金为负 — 工厂宣告破产。',      tone: 'bad'},
+      lost_reputation: {emoji: '🪦', title: '口碑崩盘',    flavor: '连续 2 回合商誉归零 — 客户全部跑光。',      tone: 'bad'},
+    };
+    function showEndgameModal(summary, status) {
+      const meta = ENDING_META[summary.gameState];
+      if (!meta) return;
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      const toneColor =
+        meta.tone === 'good' ? '#16a34a' :
+        meta.tone === 'bad'  ? '#dc2626' : '#6b7280';
+      modal.innerHTML = `
+        <h2 style="display:flex;align-items:center;gap:8px;color:${toneColor};">
+          <span style="font-size:24px;">${meta.emoji}</span>
+          <span>${meta.title}</span>
+        </h2>
+        <p style="margin:6px 0 14px;font-size:13px;color:#374151;">${meta.flavor}</p>
+        <div class="row"><span>坚持回合</span><span class="num">${summary.round} / ${status ? status.maxRounds : '?'}</span></div>
+        <div class="row"><span>期末资金</span><span class="num">${fmtCash(summary.fundAfter)}</span></div>
+        <div class="row"><span>期末商誉</span><span class="num">${Math.round(summary.goodwillAfter)} / 150</span></div>
+        <p style="margin-top:14px;font-size:12px;color:#6b7280;">
+          想再试一次？点 <strong>New Game</strong>。同一个 seed 同一局 — 改改策略，看能不能上一个档次。
+        </p>
+        <div class="modal-close">
+          <button type="button" class="btn btn-primary" id="ending-close-btn">查看本局工作簿</button>
+        </div>
+      `;
+      overlay.appendChild(modal);
+      const dismiss = () => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+      };
+      const onKey = (e) => { if (e.key === 'Escape') dismiss(); };
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) dismiss();
+      });
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      modal.querySelector('#ending-close-btn').addEventListener('click', dismiss);
+    }
+
+    // ---- Onboarding -----------------------------------------------
+    // First-launch intro modal. Auto-shows once per origin (gated by
+    // localStorage); the "?" button in the header re-opens it any
+    // time. The "下次不再提示" checkbox is a separate gate from the
+    // first-time auto-show — when checked, future *auto*-shows are
+    // suppressed, but the user can always re-open via the "?".
+    const ONBOARDING_KEY = 'factory-simulator.onboardingDismissed';
+    function buildOnboardingModal() {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      const modal = document.createElement('div');
+      modal.className = 'modal onboarding';
+      modal.innerHTML = `
+        <h2>欢迎来到 Factory Simulator</h2>
+        <div class="subtitle">一个把 LogiSheets 当游戏引擎跑的工厂经营模拟器。</div>
+
+        <div class="block">
+          <div class="block-h">这是什么</div>
+          <p>
+            你经营一座小工厂：接单、生产、交货、收钱。每个回合需要决定
+            <strong>接哪些订单</strong>、<strong>怎么分配两条生产线的产能</strong>、
+            <strong>从哪几家供应商进料</strong>，然后点
+            <span class="pill-tag">部署完毕，进入下一轮</span> 结算这一轮的收入与成本。
+          </p>
+        </div>
+
+        <div class="block">
+          <div class="block-h">游戏目标</div>
+          <p>
+            活下去 + 把<strong>资金</strong>做大、<strong>商誉</strong>做高（满 150）。
+            商誉影响下一轮订单质量：商誉越高，订单越大、单价越高。
+            按时交付 +1 商誉；逾期罚款 = 单位违约金 × 未交付数量，同时商誉扣
+            <span class="pill-tag">罚款 / 100</span>。
+          </p>
+        </div>
+
+        <div class="block">
+          <div class="block-h">一个回合做什么</div>
+          <ol>
+            <li>
+              <strong>销售部</strong>：浏览 <em>NewOrderStatus</em> 里的新订单，勾上
+              <span class="pill-tag">是否接受</span>。订单会自动复制到 <em>OrderStatus</em>
+              和 <em>OrderConfiguration</em>。
+            </li>
+            <li>
+              <strong>工厂</strong>：在 <em>ProductionLineContribution</em> 设每条生产线的
+              <span class="pill-tag">本期产能</span>（整数，≤ 最大产能），用百分比按钮调三种原料的
+              <strong>供应商占比</strong>（默认 50/50）。
+            </li>
+            <li>
+              <strong>销售部 · 调单</strong>：在 <em>OrderConfiguration</em> 给每个接受的订单分
+              <span class="pill-tag">生产线一</span> 和 <span class="pill-tag">生产线二</span> 的交付量。
+              所有订单在同一生产线的交付量之和不能超过该线的本期产能。
+            </li>
+            <li>
+              <strong>采购部（可选）</strong>：累计供应量到达阈值就可点
+              <span class="pill-tag">联合研发</span> 永久提升该供应商的良品率/单价。
+            </li>
+            <li>
+              <strong>财务部</strong>：在 <em>FinancialImpact</em> 看本轮预览（费用为负、收入为正）。
+              没问题 → 点
+              <span class="pill-tag">部署完毕，进入下一轮</span>。结算面板会弹出来告诉你这一轮的进出账。
+            </li>
+          </ol>
+        </div>
+
+        <div class="block">
+          <div class="block-h">小贴士</div>
+          <p>
+            导航按钮上若出现红色 <strong>!</strong> 徽章，说明该区域有校验未通过（比如某条生产线
+            分配量超出本期产能）。<strong>直接点</strong>这个按钮，会跳到第一个问题 cell。
+          </p>
+          <p>
+            顶部状态栏常驻显示当前
+            <span class="pill-tag">回合</span> /
+            <span class="pill-tag">资金</span> /
+            <span class="pill-tag">商誉</span>，每轮结算后会显示 +/- 差值。
+          </p>
+        </div>
+
+        <label>
+          <input type="checkbox" id="onboarding-dismiss" />
+          下次开启不再自动显示（点 ? 仍可查看）
+        </label>
+        <div class="modal-close">
+          <button type="button" class="btn btn-primary" id="onboarding-close-btn">开始游戏</button>
+        </div>
+      `;
+      overlay.appendChild(modal);
+      const dismiss = () => {
+        try {
+          if (modal.querySelector('#onboarding-dismiss').checked) {
+            localStorage.setItem(ONBOARDING_KEY, '1');
+          } else {
+            localStorage.removeItem(ONBOARDING_KEY);
+          }
+        } catch (e) { /* localStorage unavailable — silent */ }
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+      };
+      const onKey = (e) => { if (e.key === 'Escape') dismiss(); };
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) dismiss();
+      });
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      modal.querySelector('#onboarding-close-btn').addEventListener('click', dismiss);
+    }
+
+    function maybeShowOnboardingOnLoad() {
+      try {
+        if (localStorage.getItem(ONBOARDING_KEY)) return;
+      } catch (e) { /* localStorage unavailable — fall through and show */ }
+      buildOnboardingModal();
+    }
+
+    document.getElementById('help-btn').addEventListener('click', () => {
+      buildOnboardingModal();
+      // Pre-check the dismiss box if it was already dismissed before —
+      // re-opens shouldn't make the user re-tick it just to keep
+      // future auto-shows off.
+      try {
+        if (localStorage.getItem(ONBOARDING_KEY)) {
+          const box = document.querySelector('#onboarding-dismiss');
+          if (box) box.checked = true;
+        }
+      } catch (e) { /* noop */ }
+    });
+
+    // Fire on initial paint. Defer one tick so the iframe is fully
+    // settled and the host hasn't injected anything mid-render.
+    setTimeout(maybeShowOnboardingOnLoad, 0);
+
+    // Latest validation state per navKey, updated by the craft monitor.
+    // Shape: { '销售部': { failingCount: number, cells: [{sheetIdx,row,col,fieldName,...}] } }
+    let validationState = {};
+
+    function renderNavBadges() {
+      document.querySelectorAll('button[data-jump]').forEach((btn) => {
+        const navKey = btn.getAttribute('data-nav-key');
+        const entry = validationState[navKey];
+        btn.querySelectorAll('.nav-badge').forEach((b) => b.remove());
+        if (!entry) return;
+        // Red failing-validation badge wins visual priority over the
+        // green hint — fix-the-broken-thing before look-at-the-shiny.
+        if (entry.failingCount > 0) {
+          const badge = document.createElement('span');
+          badge.className = 'nav-badge';
+          badge.textContent = '!';
+          const lines = entry.cells.map((c) =>
+            '· ' + c.refName + ' · 第 ' + (c.rowInBlock + 1) + ' 行 · ' + c.fieldName
+          );
+          badge.title =
+            navKey + ' 中有 ' + entry.failingCount + ' 项校验未通过：\n' + lines.join('\n');
+          btn.appendChild(badge);
+        }
+        if (entry.availableCount && entry.availableCount > 0) {
+          const hint = document.createElement('span');
+          hint.className = 'nav-badge hint';
+          hint.textContent = String(entry.availableCount);
+          const lines = (entry.availableCells || []).map((c) =>
+            '· ' + c.refName + ' · 第 ' + (c.rowInBlock + 1) + ' 行 · ' + c.fieldName
+          );
+          hint.title =
+            navKey + ' 有 ' + entry.availableCount + ' 项可联合研发：\n' + lines.join('\n');
+          btn.appendChild(hint);
+        }
+      });
+    }
+
+    document.querySelectorAll('button[data-jump]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const refName = btn.getAttribute('data-jump');
+        const navKey = btn.getAttribute('data-nav-key');
+        const bm = window.blockManager;
+        const wb = window.workbook;
+        if (!bm || !wb || !window.setSelection) {
+          log('host APIs unavailable', 'err');
+          return;
+        }
+        // If this nav group has a failing validation, jump straight to
+        // the first offending cell instead of the block header. Saves
+        // the user a hunt-and-peck.
+        const entry = validationState[navKey];
+        if (entry && entry.failingCount > 0) {
+          const first = entry.cells[0];
+          window.setSelection(first.sheetIdx, first.row, first.col);
+          log(
+            '跳转到 ' + navKey + ' 第一个校验失败：'
+              + first.refName + ' · 第 ' + (first.rowInBlock + 1) + ' 行 · ' + first.fieldName,
+            'info'
+          );
+          return;
+        }
+        if (entry && entry.availableCount && entry.availableCount > 0) {
+          const first = entry.availableCells[0];
+          window.setSelection(first.sheetIdx, first.row, first.col);
+          log(
+            '跳转到 ' + navKey + ' 第一个可联合研发：'
+              + first.refName + ' · 第 ' + (first.rowInBlock + 1) + ' 行 · ' + first.fieldName,
+            'info'
+          );
+          return;
+        }
+        const field = bm.fieldManager.getAll().find((f) => f.refName === refName);
+        if (!field) { log('refName ' + refName + ' not bound yet — start a new game first', 'err'); return; }
+        const info = await wb.getBlockInfo({sheetId: field.sheetId, blockId: field.blockId});
+        if (!info || info.ty !== undefined) { log('getBlockInfo failed for ' + refName, 'err'); return; }
+        // Simulator centralises every refNamed block on MAIN_SHEET.
+        const targetIdx = FactorySimulator.SHEET_IDX[FactorySimulator.MAIN_SHEET];
+        window.setSelection(targetIdx, info.rowStart, info.colStart);
+      });
+    });
+
+    async function refreshValidationMonitor() {
+      const wb = window.workbook;
+      const blockIds = window.__factoryBlockIds;
+      if (!wb || !blockIds || !FactorySimulator.refreshValidationSubscriptions) return;
+      try {
+        await FactorySimulator.refreshValidationSubscriptions(
+          wb,
+          blockIds,
+          (state) => {
+            validationState = state || {};
+            renderNavBadges();
+          }
+        );
+      } catch (e) {
+        log('validation monitor refresh failed: ' + e.message, 'err');
+        console.error(e);
+      }
+    }
+
+    document.getElementById('tick-btn').addEventListener('click', async () => {
+      try {
+        const wb = window.workbook;
+        if (!wb) { log('workbook not available', 'err'); return; }
+        const blockIds = window.__factoryBlockIds;
+        if (!blockIds) { log('start a new game first', 'err'); return; }
+        const summary = await FactorySimulator.advanceRound(
+          wb, blockIds,
+          (order, accepted) => log('订单 ' + order.orderId + ' → ' + accepted, 'info')
+        );
+        if (summary.gameStateChanged) {
+          log('第 ' + summary.round + ' 轮结算后游戏结束：' + summary.gameState, 'info');
+        } else {
+          log('进入第 ' + summary.round + ' 轮，生成 ' + summary.orders.length + ' 个订单 ✓', 'ok');
+        }
+        // Refresh status + open the round summary dialog before the
+        // validation monitor pass — players see "what just happened"
+        // immediately while the new validation badges populate behind.
+        await refreshStatusBar({commitAsLast: true});
+        showRoundSummary(summary);
+        // If this tick ended the campaign, stack an ending modal on
+        // top of the round summary. Player closes both to reach the
+        // workbook (now frozen at the final round).
+        if (summary.gameStateChanged) {
+          const wb2 = window.workbook;
+          const blockIds2 = window.__factoryBlockIds;
+          const finalStatus = wb2 && blockIds2
+            ? await FactorySimulator.getGameStatus(wb2, blockIds2)
+            : null;
+          showEndgameModal(summary, finalStatus);
+        }
+        // New rows may have appeared (accepted orders, etc.); pick up
+        // their validation shadows.
+        await refreshValidationMonitor();
+      } catch (e) {
+        log('Error: ' + e.message, 'err');
+        console.error(e);
+      }
+    });
+
+    document.getElementById('new-game-btn').addEventListener('click', async () => {
+      try {
+        const wb = window.workbook;
+        if (!wb) { log('workbook not available — open this craft inside LogiSheets', 'err'); return; }
+
+        log('Starting new game…');
+        console.log('starting')
+        const blockIds = await FactorySimulator.newGame(wb, window.blockManager);
+        window.__factoryBlockIds = blockIds;
+        document.getElementById('tick-btn').disabled = false;
+        log('Sheets and blocks created ✓', 'ok');
+        log('Assigned block IDs:');
+        Object.entries(blockIds).forEach(([k, v]) => log(`  · ${k} → id ${v}`));
+        log('SHEET_IDX: ' + JSON.stringify(FactorySimulator.SHEET_IDX));
+
+        // Flip host UI into the right mode for the game loop:
+        //   - temp mode so player edits stack as one undoable round
+        //   - block overlays pinned so titles/field headers stay visible
+        if (window.uiSettings) {
+          window.uiSettings.setTempMode(true);
+          window.uiSettings.setAlwaysShowBlockInfo(true);
+          log('UI: temp mode + always-show block overlays enabled', 'ok');
+        }
+        // Reset status bar to the freshly-seeded values (resets the
+        // delta baseline too so the first round's delta reads cleanly).
+        lastStatus = null;
+        await refreshStatusBar({commitAsLast: true});
+        // Subscribe validation shadows so the nav buttons can flag
+        // failing cells. The handler updates `validationState` and
+        // re-renders the badges on every flip.
+        await refreshValidationMonitor();
+        // Drop the player into 财务部 to read the round-zero baseline
+        // (资金 / 商誉 / 下期财政影响) before they navigate to 销售部
+        // and start accepting orders. Mirrors the nav-button logic:
+        // look up the FinancialStatus block via blockManager, then
+        // select its top-left cell.
+        try {
+          const bm = window.blockManager;
+          const field = bm?.fieldManager.getAll().find((f) => f.refName === 'FinancialStatus');
+          if (field && window.setSelection) {
+            const info = await wb.getBlockInfo({sheetId: field.sheetId, blockId: field.blockId});
+            if (info && info.ty === undefined) {
+              const targetIdx = FactorySimulator.SHEET_IDX[FactorySimulator.MAIN_SHEET];
+              window.setSelection(targetIdx, info.rowStart, info.colStart);
+              // 引擎的 auto-scroll-to-selection 偶尔会让 anchorX 不是 0,
+              // 即使 colStart 是 0。手动复位横向 anchor，纵向保持。
+              if (window.setAnchor) window.setAnchor(0);
+            }
+          }
+        } catch (e) {
+          // Non-fatal: jump is a UX nicety, not a correctness step.
+          console.warn('post-newGame jump to 财务部 failed:', e);
+        }
+      } catch (e) {
+        log('Error: ' + e.message, 'err');
+        console.error(e);
+      }
+    });
+  </script>
+</body>
+</html>
