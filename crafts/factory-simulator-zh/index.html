@@ -780,6 +780,9 @@
             if (info && info.ty === undefined) {
               const targetIdx = FactorySimulator.SHEET_IDX[FactorySimulator.MAIN_SHEET];
               window.setSelection(targetIdx, info.rowStart, info.colStart);
+              // 引擎的 auto-scroll-to-selection 偶尔会让 anchorX 不是 0,
+              // 即使 colStart 是 0。手动复位横向 anchor，纵向保持。
+              if (window.setAnchor) window.setAnchor(0);
             }
           }
         } catch (e) {

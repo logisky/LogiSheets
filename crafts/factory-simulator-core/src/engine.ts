@@ -26,97 +26,105 @@ import {
     type LineContribution,
     type GameState,
 } from './round'
+import type {Locale} from './locale'
 export type {GameState} from './round'
 
+// Engine factory. All previously-top-level state is now scoped inside
+// this function so we can close over a `Locale` and parameterize every
+// user-visible Chinese string. The function returns the public surface
+// — every name that was previously `export const` / `export function`
+// is included on the return object so consumers can re-export them
+// from their own locale-specific entry points.
+export function createEngine(L: Locale) {
 // Sheet
-export const ENGINE_SHEET = 'ENGINE'
+const ENGINE_SHEET = 'ENGINE'
 // All non-engine blocks (sales / plant / procurement tables) stack on this
 // single sheet. The previous per-domain sheets (SALES_DEPARTMENT, PLANT,
 // PROCUREMENT) were merged — keep the constants pointing at MAIN_SHEET so
 // any external callers that reference them by name still resolve.
-export const MAIN_SHEET = 'MAIN'
-export const SALES_DEPARTMENT = MAIN_SHEET
-export const PLANT = MAIN_SHEET
-export const PROCUREMENT = MAIN_SHEET
+const MAIN_SHEET = 'MAIN'
+const SALES_DEPARTMENT = MAIN_SHEET
+const PLANT = MAIN_SHEET
+const PROCUREMENT = MAIN_SHEET
 
-export const OPTICAL_GLASS_SUPPLIER_1 = '晶河光材'
-export const OPTICAL_GLASS_SUPPLIER_2 = '齐辉光学'
+const OPTICAL_GLASS_SUPPLIER_1 = L.suppliers.opticalGlass1
+const OPTICAL_GLASS_SUPPLIER_2 = L.suppliers.opticalGlass2
 
-export const EQUATORIAL_MOUNT_SUPPLIER_1 = '星整天仪'
-export const EQUATORIAL_MOUNT_SUPPLIER_2 = '小林精密'
+const EQUATORIAL_MOUNT_SUPPLIER_1 = L.suppliers.equatorialMount1
+const EQUATORIAL_MOUNT_SUPPLIER_2 = L.suppliers.equatorialMount2
 
-export const METAL_FITTINGS_SUPPLIER_1 = '黑学材料'
-export const METAL_FITTINGS_SUPPLIER_2 = '艾配金属'
+const METAL_FITTINGS_SUPPLIER_1 = L.suppliers.metalFittings1
+const METAL_FITTINGS_SUPPLIER_2 = L.suppliers.metalFittings2
 
-export const EXPECTED_YIELD_RATE = '预计良品率'
-export const REQUIRED_YIELD_RATE = '良品率'
-export const CURRENT_EXPECTED_YIELD_RATE = '本期预计良品率'
-export const DELIVERED_YIELD_RATE = '已交付良品率'
-export const DELIVERY_DEADLINE = '剩余交付期数'
-export const CURRENT_DELIVERY = '本期交付数'
-export const REMAINING_DELIVERY = '剩余交付数'
+const EXPECTED_YIELD_RATE = L.fields.expectedYieldRate
+const REQUIRED_YIELD_RATE = L.fields.requiredYieldRate
+const CURRENT_EXPECTED_YIELD_RATE = L.fields.currentExpectedYieldRate
+const DELIVERED_YIELD_RATE = L.fields.deliveredYieldRate
+const DELIVERY_DEADLINE = L.fields.deliveryDeadline
+const CURRENT_DELIVERY = L.fields.currentDelivery
+const REMAINING_DELIVERY = L.fields.remainingDelivery
 // Per-row helper: this order's contribution to this round's revenue =
 // 本期交付数 × OrderStatus.单价. Computed inline in
 // ORDER_CONTRIBUTION_TABLE so FinancialImpact can sum the column with
 // a single BLOCKREFS lookup instead of folding per-row arithmetic.
-export const CURRENT_REVENUE = '本期收入'
+const CURRENT_REVENUE = L.fields.currentRevenue
 // Per-unit penalty stored on each order — rolled at generation time as
 // UNIT_PRICE × random integer in [1,3]. Replaces the old flat
 // "违约罚金 = 单价 × 数量 × 0.5" formula. Penalty fires per
 // undelivered unit, ONLY on the order's deadline round.
-export const UNIT_PENALTY = '单位违约金'
+const UNIT_PENALTY = L.fields.unitPenalty
 // Per-row helper: this order's penalty exposure for THIS round.
 // Gated by 剩余期数 == 0 so off-deadline orders contribute 0; on the
 // deadline row it's max(0, 剩余交付数) × 单位违约金.
-export const CURRENT_PENALTY = '本期罚款'
+const CURRENT_PENALTY = L.fields.currentPenalty
 // Per-row quality penalty: any round you deliver units below the
 // order's required 良品率, you pay (gap × 10 × 单价) per delivered
 // unit. Gap is in fraction (0.01 = 1 percentage point), so the ×10
 // gives the "1% gap → 10% of unit price" rate the design calls for.
 // Off-rounds (no delivery / on-spec yield) contribute 0.
-export const CURRENT_QUALITY_PENALTY = '本期品质罚款'
+const CURRENT_QUALITY_PENALTY = L.fields.currentQualityPenalty
 // Per-row helper: this order's goodwill impact for THIS round.
 // Same deadline gate as 本期罚款. +1 if fully delivered by deadline,
 // −本期罚款/100 if anything left undelivered, 0 otherwise.
-export const CURRENT_GOODWILL_CHANGE = '本期商誉变化'
+const CURRENT_GOODWILL_CHANGE = L.fields.currentGoodwillChange
 
-export const REQUIRED_AMOUNT = '数量'
+const REQUIRED_AMOUNT = L.fields.requiredAmount
 
-export const UNIT_COST = '单位成本'
-export const UNIT_PRICE = '单价'
+const UNIT_COST = L.fields.unitCost
+const UNIT_PRICE = L.fields.unitPrice
 
-export const PRODUCTION_LINE = '生产线'
-export const PRODUCTION_LINE_1 = '一'
-export const PRODUCTION_LINE_2 = '二'
+const PRODUCTION_LINE = L.fields.productionLine
+const PRODUCTION_LINE_1 = L.fields.productionLine1
+const PRODUCTION_LINE_2 = L.fields.productionLine2
 
 // Production-line parameter fields (live in PRODUCTION_LINE_TABLE).
 // These are now derived: each line's row pulls its attribute values
 // from one of the two per-line level tables (PRODUCTION_LINE_1_LEVELS /
 // PRODUCTION_LINE_2_LEVELS) via BLOCKREF, keyed by the row's 等级 cell.
-export const FIXED_COST = '固定开销'
-export const MAX_PRODUCTION = '最大生产数'
-export const PER_UNIT_COST = '每件产品开销'
+const FIXED_COST = L.fields.fixedCost
+const MAX_PRODUCTION = L.fields.maxProduction
+const PER_UNIT_COST = L.fields.perUnitCost
 // Signed adjustment added to the weighted-supplier yield. Positive
 // values raise effective yield, negative lower it. Stored as a 0..1
 // fraction (e.g. 0.02 = +2%).
-export const YIELD_ADJUSTMENT = '良品率影响'
+const YIELD_ADJUSTMENT = L.fields.yieldAdjustment
 
 // Upgrade fields added in this revision.
-export const LEVEL = '等级'
-export const WILL_UPGRADE = '是否升级'
-export const UPGRADE_COST = '升级费用'
+const LEVEL = L.fields.level
+const WILL_UPGRADE = L.fields.willUpgrade
+const UPGRADE_COST = L.fields.upgradeCost
 
 // Supplier R&D fields added in this revision.
-export const ACCUMULATED_SUPPLY = '累计数量'
-export const RESEARCH_COUNT = '研发次数'
-export const JOINT_RESEARCH = '联合研发'
-export const RESEARCH_THRESHOLD = '阈值'
-export const RESEARCH_TIER = '阶段'
+const ACCUMULATED_SUPPLY = L.fields.accumulatedSupply
+const RESEARCH_COUNT = L.fields.researchCount
+const JOINT_RESEARCH = L.fields.jointResearch
+const RESEARCH_THRESHOLD = L.fields.researchThreshold
+const RESEARCH_TIER = L.fields.researchTier
 // Per-supplier book-keeping for "did this supplier already pick a
 // project this round?" Used to enforce one-R&D-opportunity-per-round
 // counting (re-picks within the same round don't burn an extra
 // opportunity).
-export const LAST_RESEARCH_ROUND = '上次研发回合'
+const LAST_RESEARCH_ROUND = L.fields.lastResearchRound
 // Per-round baselines for 良品率 / 单价. Captured at round-advance
 // time (= the previous round's committed end-state). The bridge
 // always computes new values as `baseline + effect` rather than
@@ -125,21 +133,21 @@ export const LAST_RESEARCH_ROUND = '上次研发回合'
 // pick, and the baseline is the round's starting point. Whenever the
 // player re-picks, the result is just `baseline + new_effect` (no
 // accumulation across in-round picks).
-export const BASELINE_YIELD = '本期基础良品率'
-export const BASELINE_PRICE = '本期基础单价'
+const BASELINE_YIELD = L.fields.baselineYield
+const BASELINE_PRICE = L.fields.baselinePrice
 
 // EnumSet id for the joint-research project options. Shared across
 // all suppliers (every supplier picks from the same menu); the effect
 // of each option is identical regardless of which supplier picks it.
-export const RESEARCH_ENUM_ID = 'joint_research_projects'
-export const RESEARCH_PRECISION_ID = 'precision'
-export const RESEARCH_COST_ID = 'cost'
-export const RESEARCH_BALANCED_ID = 'balanced'
+const RESEARCH_ENUM_ID = 'joint_research_projects'
+const RESEARCH_PRECISION_ID = 'precision'
+const RESEARCH_COST_ID = 'cost'
+const RESEARCH_BALANCED_ID = 'balanced'
 
 // Five-tier ladder thresholds. To kick off the Nth (1-indexed) R&D
 // project for a supplier, that supplier's 累计数量 must reach
 // RESEARCH_TIER_THRESHOLDS[N-1].
-export const RESEARCH_TIER_THRESHOLDS: readonly number[] = [
+const RESEARCH_TIER_THRESHOLDS: readonly number[] = [
     50, 150, 300, 500, 800,
 ] as const
 
@@ -153,7 +161,7 @@ export const RESEARCH_TIER_THRESHOLDS: readonly number[] = [
 //
 // Yield is clamped to [0, 0.99] after the delta; price is floored at
 // 1 to keep arithmetic well-defined.
-export interface ResearchEffect {
+interface ResearchEffect {
     readonly yieldDelta: number
     readonly pricePctDelta: number
 }
@@ -162,17 +170,17 @@ export interface ResearchEffect {
 // against the supplier's previous baseline (the yield clamps at 0.99
 // per apply, so precision on a premium supplier caps fast and players
 // learn to research their CHEAP suppliers where there's room).
-export const RESEARCH_EFFECTS: Record<string, ResearchEffect> = {
+const RESEARCH_EFFECTS: Record<string, ResearchEffect> = {
     [RESEARCH_PRECISION_ID]: {yieldDelta: 0.1, pricePctDelta: 0},
     [RESEARCH_COST_ID]: {yieldDelta: 0, pricePctDelta: -0.2},
     [RESEARCH_BALANCED_ID]: {yieldDelta: 0.05, pricePctDelta: -0.1},
 }
 
 // Contribution-table fields added in this revision.
-export const CAPACITY = '本期产能'
-export const TOTAL_COST = '所有成本'
+const CAPACITY = L.fields.capacity
+const TOTAL_COST = L.fields.totalCost
 
-export const ORDER_ID = '订单编号'
+const ORDER_ID = L.fields.orderId
 
 // Field-level convenience: factory-managed fields. The first field of a
 // table acts as the key column (keyIdx=0 in bindFormSchema) and is forced
@@ -304,10 +312,10 @@ const JOINT_RESEARCH_USER_EDITABLE = (() => {
     )
 })()
 
-export const SUPPLIER_FIELDS: readonly Field[] = [
-    f('供应商'),
-    fPercent('良品率'),
-    fDecimal('单价'),
+const SUPPLIER_FIELDS: readonly Field[] = [
+    f(L.fields.supplier),
+    fPercent(REQUIRED_YIELD_RATE),
+    fDecimal(UNIT_PRICE),
     // 研发次数: number, not user-editable from here — only the
     // joint-research bridge writes it. Counts *opportunities used*, not
     // dropdown clicks: re-picking within a round leaves this unchanged.
@@ -352,33 +360,33 @@ export const SUPPLIER_FIELDS: readonly Field[] = [
     fEnum(JOINT_RESEARCH, RESEARCH_ENUM_ID, JOINT_RESEARCH_USER_EDITABLE),
 ]
 
-export const CASH = '现金'
+const CASH = L.fields.cash
 
 // 财务部 — keys for the financial-impact preview (下期财政影响). Each row
 // is one bucket of next-round cash/goodwill movement; values are filled
 // by the round-advancement logic (TODO) rather than the player.
-export const FIN_PRODUCTION_LINE_1_COST = '生产线一支出'
-export const FIN_PRODUCTION_LINE_2_COST = '生产线二支出'
-export const FIN_OPTICAL_GLASS_COST = '光学玻璃支出'
-export const FIN_EQUATORIAL_MOUNT_COST = '赤道仪支出'
-export const FIN_METAL_FITTINGS_COST = '金属配件支出'
-export const FIN_GOODWILL_DELTA = '商誉变化'
-export const FIN_ORDER_REVENUE = '订单收入'
-export const FIN_ORDER_PENALTY = '订单罚款'
+const FIN_PRODUCTION_LINE_1_COST = L.finance.productionLine1Cost
+const FIN_PRODUCTION_LINE_2_COST = L.finance.productionLine2Cost
+const FIN_OPTICAL_GLASS_COST = L.finance.opticalGlassCost
+const FIN_EQUATORIAL_MOUNT_COST = L.finance.equatorialMountCost
+const FIN_METAL_FITTINGS_COST = L.finance.metalFittingsCost
+const FIN_GOODWILL_DELTA = L.finance.goodwillDelta
+const FIN_ORDER_REVENUE = L.finance.orderRevenue
+const FIN_ORDER_PENALTY = L.finance.orderPenalty
 // Continuous quality-gap penalty (per round you deliver under-yield),
 // separate from FIN_ORDER_PENALTY (which is the discrete deadline
 // failure). Sum of OrderConfiguration's 本期品质罚款 helper.
-export const FIN_QUALITY_PENALTY = '品质罚款'
-export const FIN_PRODUCTION_LINE_1_UPGRADE = '生产线一升级'
-export const FIN_PRODUCTION_LINE_2_UPGRADE = '生产线二升级'
+const FIN_QUALITY_PENALTY = L.finance.qualityPenalty
+const FIN_PRODUCTION_LINE_1_UPGRADE = L.finance.productionLine1Upgrade
+const FIN_PRODUCTION_LINE_2_UPGRADE = L.finance.productionLine2Upgrade
 
 // 财务部 — keys for the overall financial-status table.
-export const FUND = '资金'
-export const GOODWILL = '商誉'
+const FUND = L.finance.fund
+const GOODWILL = L.finance.goodwill
 
-export type FieldKind = 'string' | 'number' | 'boolean' | 'enum'
+type FieldKind = 'string' | 'number' | 'boolean' | 'enum'
 
-export interface Field {
+interface Field {
     name: string
     /**
      * Whether the player can edit this column's cells. Accepts two
@@ -445,7 +453,7 @@ export interface Field {
      * placeholders as `valueFormula` (#FIELD("name"), #KEY) plus
      * #PLACEHOLDER which substitutes to a reference to the cell itself.
      *
-     * Example: `#PLACEHOLDER>=BLOCKREF("OrderStatus",#FIELD("订单"),"良品率")`
+     * Example: `#PLACEHOLDER>=BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"良品率")`
      */
     validation?: string
     /**
@@ -460,7 +468,7 @@ export interface Field {
      *
      *   - Lock 是否升级 once 等级 hits cap: `=#FIELD("等级")<3`
      *   - Only allow 本期预计良品率 when an order is bound:
-     *     `=#FIELD("订单")<>""`
+     *     `=#FIELD("${L.fields.order}")<>""`
      */
     userEditableFormula?: string
     /**
@@ -476,7 +484,7 @@ export interface Field {
     diyRender?: boolean
 }
 
-export interface Table {
+interface Table {
     refName: string
     // keys[i] is written verbatim into row i of the key column (the first
     // field, since keyIdx=0 in bindFormSchema). The key column is always
@@ -492,11 +500,11 @@ export interface Table {
 // in this block (vs a separate one) so the round counter + endgame
 // state stay co-located and BLOCKREF lookups against them remain
 // stable.
-export const CONST_KEY_CONSECUTIVE_LOSS = '连续亏损轮数'
-export const CONST_KEY_CONSECUTIVE_NO_GOODWILL = '连续零商誉轮数'
-export const CONST_KEY_GAME_STATE = '游戏状态'
+const CONST_KEY_CONSECUTIVE_LOSS = L.constKeys.consecutiveLoss
+const CONST_KEY_CONSECUTIVE_NO_GOODWILL = L.constKeys.consecutiveNoGoodwill
+const CONST_KEY_GAME_STATE = L.constKeys.gameState
 
-export const CONSTANTS_TABLE: Table = {
+const CONSTANTS_TABLE: Table = {
     keys: [
         'seed',
         'round',
@@ -521,14 +529,14 @@ export const CONSTANTS_TABLE: Table = {
 // silver, gold needs upgrades + supplier optimisation.
 // ============================================================================
 
-export const MAX_ROUNDS = 10
+const MAX_ROUNDS = 10
 
 // Bankruptcy: lose after N consecutive rounds with negative 资金.
 // 2 rounds in a 10-round game ≈ 20% of campaign — tight enough to
 // punish reckless play, generous enough to recover from one bad round.
-export const BANKRUPTCY_GRACE_ROUNDS = 2
+const BANKRUPTCY_GRACE_ROUNDS = 2
 // Reputation collapse: lose after N consecutive rounds with 商誉 = 0.
-export const REPUTATION_GRACE_ROUNDS = 2
+const REPUTATION_GRACE_ROUNDS = 2
 
 // Tier thresholds checked at the MAX_ROUNDS advance, in priority
 // order. First tier whose conditions are met wins. Scaled for the
@@ -546,29 +554,29 @@ export const REPUTATION_GRACE_ROUNDS = 2
 // the cap itself" — only reachable with flawless delivery across the
 // whole campaign. Fires independently of the round counter; reaching
 // this ends the campaign on the spot.
-export const TIER_ULTIMATE_GOODWILL = 150
-export const TIER_GOLD_FUND = 40000
-export const TIER_GOLD_GOODWILL = 130
-export const TIER_SILVER_FUND = 15000
-export const TIER_SILVER_GOODWILL = 100
+const TIER_ULTIMATE_GOODWILL = 150
+const TIER_GOLD_FUND = 40000
+const TIER_GOLD_GOODWILL = 130
+const TIER_SILVER_FUND = 15000
+const TIER_SILVER_GOODWILL = 100
 
 // `GameState` type lives in `./round` (the pure helper module) and is
 // re-exported above; the values written to the `游戏状态` cell match
 // that union exactly.
 
-export const OPTICAL_GLASS_SUPPLIERS_TABLE: Table = {
+const OPTICAL_GLASS_SUPPLIERS_TABLE: Table = {
     keys: [OPTICAL_GLASS_SUPPLIER_1, OPTICAL_GLASS_SUPPLIER_2],
     fields: SUPPLIER_FIELDS,
     refName: 'OpticalGlassSupplier',
 }
 
-export const EQUATORIAL_MOUNT_SUPPLIERS_TABLE: Table = {
+const EQUATORIAL_MOUNT_SUPPLIERS_TABLE: Table = {
     keys: [EQUATORIAL_MOUNT_SUPPLIER_1, EQUATORIAL_MOUNT_SUPPLIER_2],
     fields: SUPPLIER_FIELDS,
     refName: 'EquatorialMountSupplier',
 }
 
-export const METAL_FITTINGS_SUPPLIERS_TABLE: Table = {
+const METAL_FITTINGS_SUPPLIERS_TABLE: Table = {
     keys: [METAL_FITTINGS_SUPPLIER_1, METAL_FITTINGS_SUPPLIER_2],
     fields: SUPPLIER_FIELDS,
     refName: 'MetalFittingsSupplier',
@@ -601,15 +609,15 @@ const PRODUCTION_LINE_LEVEL_FIELDS: readonly Field[] = [
     fDecimal(UPGRADE_COST),
 ]
 
-export const PRODUCTION_LINE_LEVEL_KEYS = ['1', '2', '3'] as const
+const PRODUCTION_LINE_LEVEL_KEYS = ['1', '2', '3'] as const
 
-export const PRODUCTION_LINE_1_LEVELS_TABLE: Table = {
+const PRODUCTION_LINE_1_LEVELS_TABLE: Table = {
     keys: PRODUCTION_LINE_LEVEL_KEYS,
     fields: PRODUCTION_LINE_LEVEL_FIELDS,
     refName: 'ProductionLine1Levels',
 }
 
-export const PRODUCTION_LINE_2_LEVELS_TABLE: Table = {
+const PRODUCTION_LINE_2_LEVELS_TABLE: Table = {
     keys: PRODUCTION_LINE_LEVEL_KEYS,
     fields: PRODUCTION_LINE_LEVEL_FIELDS,
     refName: 'ProductionLine2Levels',
@@ -674,7 +682,7 @@ const productionLineAttrFormula = (attrName: string): string =>
 // player edits 等级 indirectly through the 是否升级 toggle (consumed
 // by the round-advance flow — TODO: wire up the upgrade execution
 // step that bumps 等级 + deducts 升级费用 + resets 是否升级).
-export const PRODUCTION_LINE_TABLE: Table = {
+const PRODUCTION_LINE_TABLE: Table = {
     keys: [PRODUCTION_LINE_1, PRODUCTION_LINE_2],
     fields: [
         f(PRODUCTION_LINE),
@@ -816,7 +824,7 @@ const TOTAL_COST_FORMULA =
     `+#FIELD("${UNIT_COST}")` +
     `*#FIELD("${CAPACITY}")`
 
-export const PRODUCTION_LINE_CONTRIBUTION_TABLE: Table = {
+const PRODUCTION_LINE_CONTRIBUTION_TABLE: Table = {
     keys: [PRODUCTION_LINE_1, PRODUCTION_LINE_2],
     fields: [
         f(PRODUCTION_LINE),
@@ -871,10 +879,10 @@ export const PRODUCTION_LINE_CONTRIBUTION_TABLE: Table = {
     refName: 'ProductionLineContribution',
 }
 
-export const ORDER_CONTRIBUTION_TABLE: Table = {
+const ORDER_CONTRIBUTION_TABLE: Table = {
     keys: [],
     fields: [
-        f('订单'),
+        f(L.fields.order),
         // Per-line delivery quantity. Validation: the column-sum
         // must stay within the matching ProductionLine row's 本期产能.
         // The validation shadow is re-evaluated after the cell value
@@ -888,7 +896,7 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
             numFmt: '0',
             validation:
                 `SUM(BLOCKREFS("OrderConfiguration","*","${PRODUCTION_LINE_1}"))` +
-                `<=BLOCKREF("ProductionLineContribution","一","${CAPACITY}")`,
+                `<=BLOCKREF("ProductionLineContribution","${PRODUCTION_LINE_1}","${CAPACITY}")`,
         },
         {
             name: PRODUCTION_LINE_2,
@@ -897,7 +905,7 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
             numFmt: '0',
             validation:
                 `SUM(BLOCKREFS("OrderConfiguration","*","${PRODUCTION_LINE_2}"))` +
-                `<=BLOCKREF("ProductionLineContribution","二","${CAPACITY}")`,
+                `<=BLOCKREF("ProductionLineContribution","${PRODUCTION_LINE_2}","${CAPACITY}")`,
         },
         // 本期预计良品率 — player-editable. Validation warns when the
         // value drops below the order's required 良品率 (looked up via
@@ -927,9 +935,9 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
                 CURRENT_EXPECTED_YIELD_RATE,
                 `=IF(#FIELD("${CURRENT_DELIVERY}")>0,` +
                     `(#FIELD("${PRODUCTION_LINE_1}")` +
-                    `*BLOCKREF("ProductionLineContribution","一","${EXPECTED_YIELD_RATE}")` +
+                    `*BLOCKREF("ProductionLineContribution","${PRODUCTION_LINE_1}","${EXPECTED_YIELD_RATE}")` +
                     `+#FIELD("${PRODUCTION_LINE_2}")` +
-                    `*BLOCKREF("ProductionLineContribution","二","${EXPECTED_YIELD_RATE}"))` +
+                    `*BLOCKREF("ProductionLineContribution","${PRODUCTION_LINE_2}","${EXPECTED_YIELD_RATE}"))` +
                     `/#FIELD("${CURRENT_DELIVERY}")` +
                     `,0)`
             ),
@@ -942,14 +950,14 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
             validation:
                 `OR(#FIELD("${CURRENT_DELIVERY}")=0,` +
                 `#PLACEHOLDER>=BLOCKREF("OrderStatus",` +
-                `#FIELD("订单"),"${REQUIRED_YIELD_RATE}"))`,
+                `#FIELD("${L.fields.order}"),"${REQUIRED_YIELD_RATE}"))`,
         },
         // 剩余交付数 = 数量 − 已交付数量 − 本期交付数. Uses raw
         // allocation: deliver what you say you'll deliver.
         fFormulaDecimal(
             REMAINING_DELIVERY,
-            `=BLOCKREF("OrderStatus",#FIELD("订单"),"${REQUIRED_AMOUNT}")` +
-                `-BLOCKREF("OrderStatus",#FIELD("订单"),"已交付数量")` +
+            `=BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${REQUIRED_AMOUNT}")` +
+                `-BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${L.fields.deliveredAmount}")` +
                 `-#FIELD("${CURRENT_DELIVERY}")`
         ),
         // 本期收入 = 本期交付数 × OrderStatus.单价. FIN_ORDER_REVENUE
@@ -957,7 +965,7 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
         fFormulaDecimal(
             CURRENT_REVENUE,
             `=#FIELD("${CURRENT_DELIVERY}")` +
-                `*BLOCKREF("OrderStatus",#FIELD("订单"),"${UNIT_PRICE}")`
+                `*BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${UNIT_PRICE}")`
         ),
         // 本期罚款 — non-zero ONLY on the deadline round
         // (剩余期数 == 0). 剩余交付数 may be negative if the player
@@ -967,10 +975,10 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
         // FinancialImpact sums this column.
         fFormulaDecimal(
             CURRENT_PENALTY,
-            `=IF(BLOCKREF("OrderStatus",#FIELD("订单"),"剩余期数")=0,` +
+            `=IF(BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${L.fields.remainingPeriods}")=0,` +
                 `IF(#FIELD("${REMAINING_DELIVERY}")>0,` +
                 `#FIELD("${REMAINING_DELIVERY}"),0)` +
-                `*BLOCKREF("OrderStatus",#FIELD("订单"),"${UNIT_PENALTY}")` +
+                `*BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${UNIT_PENALTY}")` +
                 `,0)`
         ),
         // 本期商誉变化:
@@ -987,7 +995,7 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
         fFormulaDecimal(
             CURRENT_GOODWILL_CHANGE,
             `=IF(#FIELD("${REMAINING_DELIVERY}")<=0,1,` +
-                `IF(BLOCKREF("OrderStatus",#FIELD("订单"),"剩余期数")=0,` +
+                `IF(BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${L.fields.remainingPeriods}")=0,` +
                 `-#FIELD("${CURRENT_PENALTY}")/100,0))`
         ),
         // 本期品质罚款 — fires EVERY round delivery happens at a yield
@@ -1001,11 +1009,11 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
         fFormulaDecimal(
             CURRENT_QUALITY_PENALTY,
             `=IF(#FIELD("${CURRENT_DELIVERY}")>0,` +
-                `IF(BLOCKREF("OrderStatus",#FIELD("订单"),"${REQUIRED_YIELD_RATE}")` +
+                `IF(BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${REQUIRED_YIELD_RATE}")` +
                 `>#FIELD("${CURRENT_EXPECTED_YIELD_RATE}"),` +
-                `(BLOCKREF("OrderStatus",#FIELD("订单"),"${REQUIRED_YIELD_RATE}")` +
+                `(BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${REQUIRED_YIELD_RATE}")` +
                 `-#FIELD("${CURRENT_EXPECTED_YIELD_RATE}"))` +
-                `*BLOCKREF("OrderStatus",#FIELD("订单"),"${UNIT_PRICE}")` +
+                `*BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${UNIT_PRICE}")` +
                 `*#FIELD("${CURRENT_DELIVERY}")` +
                 `*10` +
                 `,0)` +
@@ -1015,12 +1023,12 @@ export const ORDER_CONTRIBUTION_TABLE: Table = {
     refName: 'OrderConfiguration',
 }
 
-export const NEW_ORDER_STATUS_TABLE: Table = {
+const NEW_ORDER_STATUS_TABLE: Table = {
     keys: [],
     fields: [
         f(ORDER_ID),
         f(REQUIRED_AMOUNT),
-        f('期数'),
+        f(L.fields.periods),
         fPercent(REQUIRED_YIELD_RATE),
         fDecimal(UNIT_PRICE),
         // Per-unit penalty — stored, not formula-derived. Rolled at
@@ -1034,7 +1042,7 @@ export const NEW_ORDER_STATUS_TABLE: Table = {
         // `=#FIELD("订单编号")<>""` evaluates per-row at render time and
         // is gated by the host's useEditable hook via the UserEditable
         // shadow (pre-installed in newGame phase 3).
-        fBool('是否接受', `=#FIELD("${ORDER_ID}")<>""`),
+        fBool(L.fields.isAccepted, `=#FIELD("${ORDER_ID}")<>""`),
     ],
     refName: 'NewOrderStatus',
 }
@@ -1049,19 +1057,19 @@ export const NEW_ORDER_STATUS_TABLE: Table = {
 //             below 0 the cell displays '订单已完成' instead of a
 //             negative number. String-typed because the formula
 //             returns either a number or that literal.
-export const ACCEPTED_ORDER_STATUS_TABLE: Table = {
+const ACCEPTED_ORDER_STATUS_TABLE: Table = {
     keys: [],
     fields: [
         f(ORDER_ID),
         f(REQUIRED_AMOUNT),
-        f('期数'),
+        f(L.fields.periods),
         fPercent(REQUIRED_YIELD_RATE),
         fDecimal(UNIT_PRICE),
         // Per-unit penalty, copied verbatim from NEW_ORDER_STATUS_TABLE
         // by insertAcceptedOrder so a rolled-once-on-generation penalty
         // multiplier sticks for the lifetime of the order.
         fDecimal(UNIT_PENALTY),
-        f('接单回合'),
+        f(L.fields.acceptedRound),
         // 已交付数量 — accumulator. advanceRound adds this row's
         // OrderConfiguration.本期交付数 to this cell at the end of each
         // round. Stored number (not a formula): persisting it lets us
@@ -1069,21 +1077,21 @@ export const ACCEPTED_ORDER_STATUS_TABLE: Table = {
         // Number-typed so OrderConfiguration's 剩余交付数 formula
         // (which subtracts via BLOCKREF) gets clean numeric arithmetic.
         {
-            name: '已交付数量',
+            name: L.fields.deliveredAmount,
             userEditable: false,
             fieldType: 'number',
             numFmt: '0',
         },
         {
-            name: '剩余期数',
+            name: L.fields.remainingPeriods,
             userEditable: false,
             fieldType: 'number',
             numFmt: '0',
             valueFormula:
-                `=IF(#FIELD("期数")+#FIELD("接单回合")` +
+                `=IF(#FIELD("${L.fields.periods}")+#FIELD("${L.fields.acceptedRound}")` +
                 `-BLOCKREF("Constants","round","value")<0,` +
-                `"订单已完成",` +
-                `#FIELD("期数")+#FIELD("接单回合")` +
+                `"${L.status.orderComplete}",` +
+                `#FIELD("${L.fields.periods}")+#FIELD("${L.fields.acceptedRound}")` +
                 `-BLOCKREF("Constants","round","value"))`,
         },
     ],
@@ -1096,7 +1104,7 @@ export const ACCEPTED_ORDER_STATUS_TABLE: Table = {
 // the rows we want formula-driven and leave every other row as a plain
 // editable number that round-advance accumulation can write to later.
 const finImpactUpgradeFormula = (
-    line: '一' | '二',
+    line: string,
     levelsRef: string
 ): string =>
     `=IF(BLOCKREF("ProductionLine","${line}","${WILL_UPGRADE}"),` +
@@ -1138,18 +1146,18 @@ const finImpactMaterialCostFormula = (
     s2: string
 ): string =>
     `=-(` +
-    finImpactSupplierPiece('一', s1, supplierRefName) +
+    finImpactSupplierPiece(PRODUCTION_LINE_1, s1, supplierRefName) +
     `+` +
-    finImpactSupplierPiece('一', s2, supplierRefName) +
+    finImpactSupplierPiece(PRODUCTION_LINE_1, s2, supplierRefName) +
     `+` +
-    finImpactSupplierPiece('二', s1, supplierRefName) +
+    finImpactSupplierPiece(PRODUCTION_LINE_2, s1, supplierRefName) +
     `+` +
-    finImpactSupplierPiece('二', s2, supplierRefName) +
+    finImpactSupplierPiece(PRODUCTION_LINE_2, s2, supplierRefName) +
     `)`
 
 const FIN_IMPACT_PER_ROW_FORMULA: Record<string, string> = {
-    [FIN_PRODUCTION_LINE_1_COST]: finImpactProductionLineCostFormula('一'),
-    [FIN_PRODUCTION_LINE_2_COST]: finImpactProductionLineCostFormula('二'),
+    [FIN_PRODUCTION_LINE_1_COST]: finImpactProductionLineCostFormula(PRODUCTION_LINE_1),
+    [FIN_PRODUCTION_LINE_2_COST]: finImpactProductionLineCostFormula(PRODUCTION_LINE_2),
     [FIN_OPTICAL_GLASS_COST]: finImpactMaterialCostFormula(
         'OpticalGlassSupplier',
         OPTICAL_GLASS_SUPPLIER_1,
@@ -1184,18 +1192,18 @@ const FIN_IMPACT_PER_ROW_FORMULA: Record<string, string> = {
     // delta to 商誉 (clamped to [0,150]).
     [FIN_GOODWILL_DELTA]: `=SUM(BLOCKREFS("OrderConfiguration","*","${CURRENT_GOODWILL_CHANGE}"))`,
     [FIN_PRODUCTION_LINE_1_UPGRADE]: finImpactUpgradeFormula(
-        '一',
+        PRODUCTION_LINE_1,
         'ProductionLine1Levels'
     ),
     [FIN_PRODUCTION_LINE_2_UPGRADE]: finImpactUpgradeFormula(
-        '二',
+        PRODUCTION_LINE_2,
         'ProductionLine2Levels'
     ),
 }
 
 // 下期财政影响 — per-bucket preview of next round's cash / goodwill
 // movement. Two-column name/value shape mirrors CONSTRAINTS.
-export const FINANCIAL_IMPACT_TABLE: Table = {
+const FINANCIAL_IMPACT_TABLE: Table = {
     keys: [
         FIN_PRODUCTION_LINE_1_COST,
         FIN_PRODUCTION_LINE_2_COST,
@@ -1209,18 +1217,18 @@ export const FINANCIAL_IMPACT_TABLE: Table = {
         FIN_PRODUCTION_LINE_1_UPGRADE,
         FIN_PRODUCTION_LINE_2_UPGRADE,
     ],
-    fields: [f('项目'), fDecimal('值')],
+    fields: [f(L.fields.item), fDecimal(L.fields.value)],
     refName: 'FinancialImpact',
 }
 
 // 财务状况 — top-line cash + goodwill snapshot.
-export const FINANCIAL_STATUS_TABLE: Table = {
+const FINANCIAL_STATUS_TABLE: Table = {
     keys: [FUND, GOODWILL],
-    fields: [f('项目'), fDecimal('值')],
+    fields: [f(L.fields.item), fDecimal(L.fields.value)],
     refName: 'FinancialStatus',
 }
 
-export const CONSTRAINTS: Table = {
+const CONSTRAINTS: Table = {
     keys: [
         // amount limit
         OPTICAL_GLASS_SUPPLIER_1,
@@ -1240,7 +1248,7 @@ export const CONSTRAINTS: Table = {
 // Engine-sheet shared list of every supplier name. Used as keys for
 // the SupplierAccumulator block and as the canonical iteration order
 // when advanceRound rolls up per-supplier supply contributions.
-export const ALL_SUPPLIER_NAMES: readonly string[] = [
+const ALL_SUPPLIER_NAMES: readonly string[] = [
     OPTICAL_GLASS_SUPPLIER_1,
     OPTICAL_GLASS_SUPPLIER_2,
     EQUATORIAL_MOUNT_SUPPLIER_1,
@@ -1255,10 +1263,10 @@ export const ALL_SUPPLIER_NAMES: readonly string[] = [
 // and adds the per-round contribution into the matching row.
 // The 联合研发 dropdown on each supplier reads this table via
 // BLOCKREF to decide when to unlock the next research tier.
-export const SUPPLIER_ACCUMULATOR_TABLE: Table = {
+const SUPPLIER_ACCUMULATOR_TABLE: Table = {
     keys: ALL_SUPPLIER_NAMES,
     fields: [
-        f('供应商'),
+        f(L.fields.supplier),
         {
             name: ACCUMULATED_SUPPLY,
             userEditable: false,
@@ -1274,7 +1282,7 @@ export const SUPPLIER_ACCUMULATOR_TABLE: Table = {
 // quantity reach the threshold of the next tier?" via BLOCKREF
 // against this table. Thresholds come from RESEARCH_TIER_THRESHOLDS;
 // seeded in newGame.
-export const RESEARCH_TIERS_TABLE: Table = {
+const RESEARCH_TIERS_TABLE: Table = {
     keys: RESEARCH_TIER_THRESHOLDS.map((_, i) => String(i + 1)),
     fields: [
         f(RESEARCH_TIER),
@@ -1288,7 +1296,7 @@ export const RESEARCH_TIERS_TABLE: Table = {
     refName: 'ResearchTiers',
 }
 
-export function createSheet(name: string, idx: number): EditPayload {
+function createSheet(name: string, idx: number): EditPayload {
     const p = new CreateSheetBuilder().idx(idx).newName(name).build()
     return {
         type: 'createSheet',
@@ -1297,9 +1305,9 @@ export function createSheet(name: string, idx: number): EditPayload {
 }
 
 // Sheets created in this order → indices 0..1
-export const SHEET_ORDER = [ENGINE_SHEET, MAIN_SHEET] as const
+const SHEET_ORDER = [ENGINE_SHEET, MAIN_SHEET] as const
 
-export const SHEET_IDX: Record<string, number> = Object.fromEntries(
+const SHEET_IDX: Record<string, number> = Object.fromEntries(
     SHEET_ORDER.map((name, i) => [name, i])
 )
 
@@ -1425,7 +1433,7 @@ const PRICE_SPREAD = 0.3
 // `Math.random` as the rng parameter explicitly.
 // ============================================================================
 
-export function mulberry32(seed: number): () => number {
+function mulberry32(seed: number): () => number {
     let s = seed >>> 0
     return () => {
         s = (s + 0x6d2b79f5) >>> 0
@@ -1442,7 +1450,7 @@ export function mulberry32(seed: number): () => number {
  * mix between parts so `hashSeed(12, 3)` ≠ `hashSeed(1, 23)`. Output
  * is suitable as a mulberry32 seed.
  */
-export function hashSeed(...parts: Array<number | string>): number {
+function hashSeed(...parts: Array<number | string>): number {
     let h = 0x811c9dc5
     for (const p of parts) {
         const s = String(p)
@@ -1494,7 +1502,7 @@ function rolledSupplierStat(
 }
 
 // Symbolic keys used to look up dynamically-assigned block IDs after newGame resolves
-export type BlockKey =
+type BlockKey =
     | 'constants'
     | 'constraints'
     | 'orderStatus'
@@ -1512,7 +1520,7 @@ export type BlockKey =
     | 'financialStatus'
     | 'financialImpact'
 
-export type BlockIds = Record<BlockKey, number>
+type BlockIds = Record<BlockKey, number>
 
 interface BlockDef {
     key: BlockKey
@@ -1649,15 +1657,19 @@ function colWidthForFieldName(name: string): number | null {
     // Chinese characters render roughly twice as wide as ASCII in the default
     // font, so weight them accordingly.
     const CJK = /[㐀-䶿一-鿿豈-﫿]/
-    let visualUnits = 0
+    let asciiCount = 0
+    let cjkCount = 0
     for (const ch of name) {
-        visualUnits += CJK.test(ch) ? 2 : 1
+        if (CJK.test(ch)) cjkCount++
+        else asciiCount++
     }
-    if (visualUnits <= 5) return null // ≤ 2.5 Chinese chars — default fits
-    // ~1.2 Excel units per "visual char" + 1 unit of padding. Tightened
-    // from the previous 1.8/+2: tables now take noticeably less
-    // horizontal space, headers still fit without ellipsis.
-    return visualUnits * 1.2 + 1
+    // Excel column-width unit ≈ width of the "0" glyph. ASCII glyphs
+    // average ~0.75 of that; CJK glyphs ~2x. Counting them separately
+    // keeps English headers from getting the slack a uniform 1.2x
+    // multiplier gave them.
+    const width = asciiCount * 0.9 + cjkCount * 2
+    if (width <= 7) return null // fits within the ~8.43 default width
+    return width + 1 // small padding for breathing room
 }
 
 /**
@@ -1722,7 +1734,7 @@ async function buildUserEditableInstallPayloads(
  *
  * `absoluteRows` are sheet-absolute (already added to block masterRow).
  */
-export async function installUserEditableShadowsForRows(
+async function installUserEditableShadowsForRows(
     client: Client,
     sheetIdx: number,
     fields: readonly Field[],
@@ -1777,7 +1789,7 @@ export async function installUserEditableShadowsForRows(
  * "fresh row" hook never fires and the lazy ValidationCell install
  * was the only path — but with subtle race conditions.
  */
-export async function installValidationShadowsForRows(
+async function installValidationShadowsForRows(
     client: Client,
     sheetIdx: number,
     fields: readonly Field[],
@@ -1853,7 +1865,7 @@ export async function installValidationShadowsForRows(
 // status). Safe to call repeatedly; doesn't mutate state.
 // ============================================================================
 
-export interface GameStatus {
+interface GameStatus {
     round: number
     maxRounds: number
     fund: number
@@ -1862,7 +1874,7 @@ export interface GameStatus {
     gameState: GameState
 }
 
-export async function getGameStatus(
+async function getGameStatus(
     client: Client,
     blockIds: BlockIds
 ): Promise<GameStatus | null> {
@@ -1902,7 +1914,7 @@ export async function getGameStatus(
     const gameState: GameState =
         (rawGameState as GameState) || 'playing'
     const fundValueCol = FINANCIAL_STATUS_TABLE.fields.findIndex(
-        (fi) => fi.name === '值'
+        (fi) => fi.name === L.fields.value
     )
     const fundRowIdx = FINANCIAL_STATUS_TABLE.keys.indexOf(FUND)
     const goodwillRowIdx = FINANCIAL_STATUS_TABLE.keys.indexOf(GOODWILL)
@@ -1949,7 +1961,7 @@ export async function getGameStatus(
 // grown rows (already-subscribed cells are skipped idempotently).
 // ============================================================================
 
-export interface ValidationFailingCell {
+interface ValidationFailingCell {
     /** Nav-button identity this cell rolls up into (e.g. '销售部'). */
     navKey: string
     sheetIdx: number
@@ -1966,7 +1978,7 @@ export interface ValidationFailingCell {
 }
 
 /** navKey → { failing count, list of failing cells, available hints }. */
-export type ValidationState = Record<
+type ValidationState = Record<
     string,
     {
         failingCount: number
@@ -2004,12 +2016,12 @@ const VALIDATION_NAV_MAP: ReadonlyArray<{
     blockKey: BlockKey
 }> = [
     {
-        navKey: '销售部',
+        navKey: L.nav.sales,
         refName: 'OrderConfiguration',
         blockKey: 'orderContribution',
     },
     {
-        navKey: '工厂',
+        navKey: L.nav.plant,
         refName: 'ProductionLineContribution',
         blockKey: 'productionLineContribution',
     },
@@ -2034,7 +2046,7 @@ const _hintSubscribedKeys = new Set<string>()
 const _validationCellKey = (sheetIdx: number, row: number, col: number) =>
     `${sheetIdx}:${row}:${col}`
 
-export function clearValidationMonitorState(): void {
+function clearValidationMonitorState(): void {
     _validationFailingByCell.clear()
     _validationCellByKey.clear()
     _validationSubscribedKeys.clear()
@@ -2110,7 +2122,7 @@ function _shadowIndicatesFailure(
  * once at the end of the pass with the current rolled-up state, and
  * again whenever any cell's failing state flips.
  */
-export async function refreshValidationSubscriptions(
+async function refreshValidationSubscriptions(
     client: Client,
     blockIds: BlockIds,
     onChange: (state: ValidationState) => void
@@ -2216,17 +2228,17 @@ export async function refreshValidationSubscriptions(
         blockKey: BlockKey
     }> = [
         {
-            navKey: '采购部',
+            navKey: L.nav.procurement,
             refName: 'OpticalGlassSupplier',
             blockKey: 'opticalGlassSuppliers',
         },
         {
-            navKey: '采购部',
+            navKey: L.nav.procurement,
             refName: 'EquatorialMountSupplier',
             blockKey: 'equatorialMountSuppliers',
         },
         {
-            navKey: '采购部',
+            navKey: L.nav.procurement,
             refName: 'MetalFittingsSupplier',
             blockKey: 'metalFittingsSuppliers',
         },
@@ -2312,7 +2324,7 @@ function _shadowIndicatesAvailable(
  * call site reads as a normal function.
  */
 type NotifyLevel = 'error' | 'warn' | 'info' | 'success'
-export function notifyHost(level: NotifyLevel, message: string): void {
+function notifyHost(level: NotifyLevel, message: string): void {
     try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fn = (window as any).notifyCraft as
@@ -2331,7 +2343,7 @@ export function notifyHost(level: NotifyLevel, message: string): void {
  * notification has already been surfaced via `notifyHost`; callers
  * should treat the throw as "abort, the user has been told why".
  */
-export class SheetNameCollisionError extends Error {
+class SheetNameCollisionError extends Error {
     constructor(public readonly conflicts: readonly string[]) {
         super(
             `factory-simulator: sheet name(s) already taken: ${conflicts.join(
@@ -2342,7 +2354,7 @@ export class SheetNameCollisionError extends Error {
     }
 }
 
-export async function newGame(
+async function newGame(
     client: Client,
     blockManager: AnyBlockManager
 ): Promise<BlockIds> {
@@ -2359,25 +2371,25 @@ export async function newGame(
     // new-game retries within one iframe session.
     blockManager.enumSetManager.set(
         RESEARCH_ENUM_ID,
-        '联合研发项目',
+        L.research.menuLabel,
         [
             {
                 id: RESEARCH_PRECISION_ID,
-                value: '精度强化',
+                value: L.research.precision,
                 color: '#22c55e',
             },
             {
                 id: RESEARCH_COST_ID,
-                value: '成本压缩',
+                value: L.research.cost,
                 color: '#f59e0b',
             },
             {
                 id: RESEARCH_BALANCED_ID,
-                value: '均衡研发',
+                value: L.research.balanced,
                 color: '#3b82f6',
             },
         ],
-        "Pick one per R&D tier. Each option permanently shifts the supplier's 良品率 and 单价."
+        L.research.menuHint
     )
 
     // Reset the validation monitor's module state — a new game means
@@ -2403,9 +2415,7 @@ export async function newGame(
     if (conflicts.length > 0) {
         notifyHost(
             'error',
-            `新游戏无法开始：以下工作表名称已存在 — ${conflicts.join(
-                ', '
-            )}。请重命名或删除这些工作表后再试。`
+            L.errors.sheetNameCollision(conflicts.join(', '))
         )
         throw new SheetNameCollisionError(conflicts)
     }
@@ -2502,7 +2512,18 @@ export async function newGame(
         const sheetCols =
             requiredColWidth[sheet] ?? (requiredColWidth[sheet] = new Map())
         fields.forEach((field, fieldIdx) => {
-            const w = colWidthForFieldName(field.name)
+            // Col 0 is the key column — its cell values are the row keys
+            // (supplier names, etc.), which can be wider than the field
+            // header itself. Size by max(field name, longest key).
+            const sizingName =
+                fieldIdx === 0 && table.keys.length > 0
+                    ? table.keys.reduce(
+                          (longest, k) =>
+                              k.length > longest.length ? k : longest,
+                          field.name
+                      )
+                    : field.name
+            const w = colWidthForFieldName(sizingName)
             if (w === null) return
             const col = masterCol + fieldIdx
             const existing = sheetCols.get(col) ?? 0
@@ -2711,8 +2732,8 @@ export async function newGame(
         // price remain as differentiating stats.
         const supplierBase = SUPPLIER_BASE_STATS[table.refName]
         if (supplierBase) {
-            const yieldCol = fields.findIndex((fi) => fi.name === '良品率')
-            const priceCol = fields.findIndex((fi) => fi.name === '单价')
+            const yieldCol = fields.findIndex((fi) => fi.name === REQUIRED_YIELD_RATE)
+            const priceCol = fields.findIndex((fi) => fi.name === UNIT_PRICE)
             // Baselines mirror the seeded yield / price so the
             // joint-research bridge has a real BASELINE to compute
             // `baseline + effect` against on the round-1 first pick.
@@ -2870,7 +2891,7 @@ export async function newGame(
         // reputation scalar (penalties shave -orderPenalty/100,
         // on-time completions add +1).
         if (table === FINANCIAL_STATUS_TABLE) {
-            const valCol = fields.findIndex((fi) => fi.name === '值')
+            const valCol = fields.findIndex((fi) => fi.name === L.fields.value)
             if (valCol >= 0) {
                 keys.forEach((keyName, rowIdx) => {
                     const seed =
@@ -2994,7 +3015,7 @@ export async function newGame(
         // blockInput the formula text directly. Other rows stay plain
         // numeric cells that the round-advance accumulator writes to.
         if (table === FINANCIAL_IMPACT_TABLE) {
-            const valueCol = fields.findIndex((fi) => fi.name === '值')
+            const valueCol = fields.findIndex((fi) => fi.name === L.fields.value)
             if (valueCol >= 0) {
                 keys.forEach((keyName, rowIdx) => {
                     const formula = FIN_IMPACT_PER_ROW_FORMULA[keyName]
@@ -3314,7 +3335,7 @@ function getCalc(client: Client): CraftCalc {
  * via the BLOCKREF formula. Evaluated on the craft's private ephemeral
  * scratch slot — no shadow cell, no sheet/block/row/col plumbing.
  */
-export async function readBlockRef(
+async function readBlockRef(
     client: Client,
     refName: string,
     key: string,
@@ -3336,7 +3357,7 @@ export async function readBlockRef(
  * `round + 1` back through a temp blockInput payload, then commits the
  * temp status so the bump becomes part of the canonical workbook state.
  */
-export async function tick(
+async function tick(
     client: Client,
     blockIds: BlockIds
 ): Promise<number> {
@@ -3396,7 +3417,7 @@ export async function tick(
 // ============================================================================
 
 /** One generated order, ready to be written into NEW_ORDER_STATUS_TABLE. */
-export interface GeneratedOrder {
+interface GeneratedOrder {
     orderId: string
     amount: number
     deadlineRounds: number
@@ -3414,13 +3435,13 @@ export interface GeneratedOrder {
 }
 
 /** Numeric prefix shared by every order id in a game. */
-export const ORDER_ID_PREFIX = 715
+const ORDER_ID_PREFIX = 715
 
 /**
  * Required yield rate scales with round so early game forgives sloppy
  * production and late game punishes it. Tweak the curve here.
  */
-export function orderQualityFromRound(round: number): number {
+function orderQualityFromRound(round: number): number {
     return Math.min(0.99, 0.8 + 0.01 * round)
 }
 
@@ -3434,8 +3455,8 @@ export function orderQualityFromRound(round: number): number {
  * Total demand per round ≈ 58 units, enough to cover both lines'
  * fixed costs even at default 50/50 supplier mix.
  */
-export const SALES_CAPACITY_PLACEHOLDER = 20
-export function orderAmountFromCapacity(capacity: number): number {
+const SALES_CAPACITY_PLACEHOLDER = 20
+function orderAmountFromCapacity(capacity: number): number {
     return capacity
 }
 
@@ -3484,7 +3505,7 @@ interface OrderProfile {
 }
 const ORDER_PROFILES: readonly OrderProfile[] = [
     {
-        label: '小单',
+        label: L.orderProfiles.small,
         amountScale: 0.5,
         periodChoices: [3, 4],
         yieldDelta: -0.02,
@@ -3493,7 +3514,7 @@ const ORDER_PROFILES: readonly OrderProfile[] = [
         penaltyMultMax: 2,
     },
     {
-        label: '常规',
+        label: L.orderProfiles.normal,
         amountScale: 1.0,
         periodChoices: [3],
         yieldDelta: 0.0,
@@ -3502,7 +3523,7 @@ const ORDER_PROFILES: readonly OrderProfile[] = [
         penaltyMultMax: 3,
     },
     {
-        label: '急单',
+        label: L.orderProfiles.rush,
         amountScale: 1.4,
         periodChoices: [2],
         yieldDelta: 0.03,
@@ -3517,9 +3538,9 @@ const ORDER_PROFILES: readonly OrderProfile[] = [
 // goodwill-keyed dimensions). Successful deliveries push it up; failed
 // ones push it down. The cap is enforced when advanceRound writes the
 // new value back to FinancialStatus.
-export const GOODWILL_BASELINE = 100
-export const GOODWILL_MAX = 150
-export const GOODWILL_MIN = 0
+const GOODWILL_BASELINE = 100
+const GOODWILL_MAX = 150
+const GOODWILL_MIN = 0
 
 /**
  * Linear quality multiplier derived from 商誉. Used by generateOrder
@@ -3544,7 +3565,7 @@ function goodwillQualityScale(goodwill: number): number {
  * 1–3× unit price) then scales naturally because it's a multiple of
  * the already-scaled unit price.
  */
-export function generateOrder(
+function generateOrder(
     round: number,
     indexInRound: number,
     salesCapacity: number = SALES_CAPACITY_PLACEHOLDER,
@@ -3667,11 +3688,11 @@ function orderRowValueByField(order: GeneratedOrder): Record<string, string> {
     return {
         [ORDER_ID]: order.orderId,
         [REQUIRED_AMOUNT]: String(order.amount),
-        期数: String(order.deadlineRounds),
+        [L.fields.periods]: String(order.deadlineRounds),
         [REQUIRED_YIELD_RATE]: String(order.yieldRate),
         [UNIT_PRICE]: String(order.unitPrice),
         [UNIT_PENALTY]: String(order.unitPenalty),
-        是否接受: order.accepted,
+        [L.fields.isAccepted]: order.accepted,
     }
 }
 
@@ -3680,7 +3701,7 @@ function orderRowValueByField(order: GeneratedOrder): Record<string, string> {
  * growing the block (and shifting downstream blocks on the sheet) as
  * needed. Returns the row index inside the block where the order landed.
  */
-export async function insertOrder(
+async function insertOrder(
     client: Client,
     blockIds: BlockIds,
     order: GeneratedOrder
@@ -3828,7 +3849,7 @@ function numericCellValue(v: Value | undefined): number {
  *
  * Returns the row index inside the block where the order landed.
  */
-export async function insertOrderConfig(
+async function insertOrderConfig(
     client: Client,
     blockIds: BlockIds,
     orderId: string
@@ -3848,7 +3869,7 @@ export async function insertOrderConfig(
     // future round-recovery path re-emits), so insertOrderConfig must
     // be idempotent.
     const orderColLookup = ORDER_CONTRIBUTION_TABLE.fields.findIndex(
-        (f) => f.name === '订单'
+        (f) => f.name === L.fields.order
     )
     if (orderColLookup >= 0) {
         for (let r = 0; r < info.rowCnt; r++) {
@@ -3875,7 +3896,7 @@ export async function insertOrderConfig(
     // Only the 订单 column is populated — production-line counts and
     // yield/delivery columns stay empty for the player to fill in.
     const orderCol = ORDER_CONTRIBUTION_TABLE.fields.findIndex(
-        (f) => f.name === '订单'
+        (f) => f.name === L.fields.order
     )
     if (orderCol >= 0) {
         payloads.push({
@@ -3933,7 +3954,7 @@ export async function insertOrderConfig(
  *
  * Returns true if a matching row was found and removed.
  */
-export async function removeOrderConfig(
+async function removeOrderConfig(
     client: Client,
     blockIds: BlockIds,
     orderId: string
@@ -3949,7 +3970,7 @@ export async function removeOrderConfig(
         throw new Error(`getBlockInfo failed: ${JSON.stringify(info)}`)
 
     const orderCol = ORDER_CONTRIBUTION_TABLE.fields.findIndex(
-        (f) => f.name === '订单'
+        (f) => f.name === L.fields.order
     )
     if (orderCol < 0) return false
 
@@ -4021,7 +4042,7 @@ export async function removeOrderConfig(
 // Same sheet-then-block dance as insertOrderConfig; templated fields
 // (违约罚金 / 剩余期数) are left blank — the engine materializes them.
 // ============================================================================
-export async function insertAcceptedOrder(
+async function insertAcceptedOrder(
     client: Client,
     blockIds: BlockIds,
     order: GeneratedOrder,
@@ -4070,15 +4091,15 @@ export async function insertAcceptedOrder(
     const valueByName: Record<string, string> = {
         [ORDER_ID]: order.orderId,
         [REQUIRED_AMOUNT]: String(order.amount),
-        期数: String(order.deadlineRounds),
+        [L.fields.periods]: String(order.deadlineRounds),
         [REQUIRED_YIELD_RATE]: String(order.yieldRate),
         [UNIT_PRICE]: String(order.unitPrice),
         [UNIT_PENALTY]: String(order.unitPenalty),
-        接单回合: String(acceptedRound),
+        [L.fields.acceptedRound]: String(acceptedRound),
         // 已交付数量 starts at 0 — advanceRound bumps it each round.
         // Writing the literal "0" (vs. leaving blank) keeps the
         // OrderConfiguration.剩余交付数 BLOCKREF arithmetic clean.
-        已交付数量: '0',
+        [L.fields.deliveredAmount]: '0',
     }
     ACCEPTED_ORDER_STATUS_TABLE.fields.forEach((field, colIdx) => {
         const content = field.valueFormula ? '' : valueByName[field.name] ?? ''
@@ -4106,7 +4127,7 @@ export async function insertAcceptedOrder(
     return targetRow
 }
 
-export async function removeAcceptedOrder(
+async function removeAcceptedOrder(
     client: Client,
     blockIds: BlockIds,
     orderId: string
@@ -4202,7 +4223,7 @@ export async function removeAcceptedOrder(
  * The callback fires with no arguments; re-read via `readBlockRef` (or
  * any other path) when notified.
  */
-export async function watchByBlockRef(
+async function watchByBlockRef(
     client: Client,
     refName: string,
     key: string,
@@ -4226,7 +4247,7 @@ export async function watchByBlockRef(
  * are also flushed automatically by {@link clearAllOrders} so callers
  * don't usually need to track them by hand.
  */
-export function watchOrderAccepted(
+function watchOrderAccepted(
     client: Client,
     orderId: string,
     callback: (accepted: boolean) => void
@@ -4266,7 +4287,7 @@ function ensureOrderAcceptBridge(client: Client): void {
     _orderAcceptBridgeInstalled = true
     onBlockCellEdit(async (e) => {
         if (e.refName !== NEW_ORDER_STATUS_TABLE.refName) return
-        if (e.fieldName !== '是否接受') return
+        if (e.fieldName !== L.fields.isAccepted) return
         // Look up the orderId by reading the row's 订单编号 cell. The
         // block's master col is 0 and 订单编号 is field 0, so sheet col 0.
         const cell = await client.getCell({
@@ -4311,7 +4332,7 @@ interface BlockCellEditEvent {
 // Single bus listener pattern, same shape as ensureOrderAcceptBridge.
 // ============================================================================
 let _productionLineUpgradeBridgeInstalled = false
-export function installProductionLineUpgradeBridge(client: Client): void {
+function installProductionLineUpgradeBridge(client: Client): void {
     if (_productionLineUpgradeBridgeInstalled) return
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onBlockCellEdit = (window as any).onBlockCellEdit as
@@ -4420,7 +4441,7 @@ const SUPPLIER_TABLE_REFNAMES: ReadonlySet<string> = new Set([
 ])
 
 let _jointResearchBridgeInstalled = false
-export function installJointResearchBridge(client: Client): void {
+function installJointResearchBridge(client: Client): void {
     if (_jointResearchBridgeInstalled) return
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onBlockCellEdit = (window as any).onBlockCellEdit as
@@ -4429,8 +4450,8 @@ export function installJointResearchBridge(client: Client): void {
     if (!onBlockCellEdit) return
     _jointResearchBridgeInstalled = true
 
-    const yieldCol = SUPPLIER_FIELDS.findIndex((f) => f.name === '良品率')
-    const priceCol = SUPPLIER_FIELDS.findIndex((f) => f.name === '单价')
+    const yieldCol = SUPPLIER_FIELDS.findIndex((f) => f.name === REQUIRED_YIELD_RATE)
+    const priceCol = SUPPLIER_FIELDS.findIndex((f) => f.name === UNIT_PRICE)
     const researchCountCol = SUPPLIER_FIELDS.findIndex(
         (f) => f.name === RESEARCH_COUNT
     )
@@ -4582,7 +4603,7 @@ export function installJointResearchBridge(client: Client): void {
  *
  * Safe to call when the block is already empty (no orders inserted yet).
  */
-export async function clearAllOrders(
+async function clearAllOrders(
     client: Client,
     blockIds: BlockIds
 ): Promise<void> {
@@ -4670,7 +4691,7 @@ async function wipeBlockRows(
 }
 
 /** How many orders to generate per round. Tweakable. */
-export const ORDERS_PER_ROUND = 5
+const ORDERS_PER_ROUND = 5
 
 /**
  * One round transition: dispose last round's order subscriptions, clear
@@ -4689,7 +4710,7 @@ export const ORDERS_PER_ROUND = 5
  * −penalty/100). `netCashDelta` is the sum that was applied to 资金;
  * `goodwillDelta` is the sum applied to 商誉.
  */
-export interface RoundSummary {
+interface RoundSummary {
     round: number
     orders: readonly GeneratedOrder[]
     /** Map of FinancialImpact key → its '值' for this round. */
@@ -4712,7 +4733,7 @@ export interface RoundSummary {
     gameStateChanged: boolean
 }
 
-export async function advanceRound(
+async function advanceRound(
     client: Client,
     blockIds: BlockIds,
     onOrderAccepted?: (order: GeneratedOrder, accepted: boolean) => void
@@ -4804,16 +4825,14 @@ export async function advanceRound(
                 const max = maxByKey.get(key)
                 if (max !== undefined && Number.isFinite(cap) && cap > max) {
                     overAllocations.push(
-                        `生产线 ${key}: 本期产能 ${cap} > 最大生产数 ${max}`
+                        `${PRODUCTION_LINE} ${key}: ${CAPACITY} ${cap} > ${MAX_PRODUCTION} ${max}`
                     )
                 }
             }
             if (overAllocations.length > 0) {
                 // Throw BEFORE commitTempStatus — temp branch survives.
                 throw new Error(
-                    `产能超限，无法进入下一轮：\n  · ${overAllocations.join(
-                        '\n  · '
-                    )}\n请减少生产线一/生产线二列的订单分配，或升级生产线。`
+                    L.errors.overCapacity(overAllocations.join('\n  · '))
                 )
             }
         }
@@ -5108,7 +5127,7 @@ export async function advanceRound(
     const oc = orderContribInfo
     const acc = acceptedOrderStatusInfo
     const ocOrderCol = ORDER_CONTRIBUTION_TABLE.fields.findIndex(
-        (fi) => fi.name === '订单'
+        (fi) => fi.name === L.fields.order
     )
     // Player's raw allocation = units delivered this round.
     const ocCurDeliveryCol = ORDER_CONTRIBUTION_TABLE.fields.findIndex(
@@ -5118,7 +5137,7 @@ export async function advanceRound(
         (fi) => fi.name === ORDER_ID
     )
     const accDeliveredCol = ACCEPTED_ORDER_STATUS_TABLE.fields.findIndex(
-        (fi) => fi.name === '已交付数量'
+        (fi) => fi.name === L.fields.deliveredAmount
     )
 
     // Build orderId → row index map for the accepted-status block.
@@ -5221,7 +5240,7 @@ export async function advanceRound(
         // accumulator block to find the matching row by current key
         // value — robust to row-reordering.
         const accSupplierCol = SUPPLIER_ACCUMULATOR_TABLE.fields.findIndex(
-            (fi) => fi.name === '供应商'
+            (fi) => fi.name === L.fields.supplier
         )
         if (accSupplierCol >= 0) {
             for (let r = 0; r < supplierAccumulatorInfo.rowCnt; r++) {
@@ -5262,7 +5281,7 @@ export async function advanceRound(
     // override writes. We just read the column, add it up (FUND
     // excludes 商誉变化), and write back.
     const finImpactValueCol = FINANCIAL_IMPACT_TABLE.fields.findIndex(
-        (fi) => fi.name === '值'
+        (fi) => fi.name === L.fields.value
     )
     // Snapshot the column. 订单罚款 + 商誉变化 are formula cells now,
     // so their value reads correctly without any JS override.
@@ -5292,7 +5311,7 @@ export async function advanceRound(
     const goodwillDelta = breakdownByKey[FIN_GOODWILL_DELTA] ?? 0
 
     const fundValueCol = FINANCIAL_STATUS_TABLE.fields.findIndex(
-        (fi) => fi.name === '值'
+        (fi) => fi.name === L.fields.value
     )
     const fundRowIdx = FINANCIAL_STATUS_TABLE.keys.indexOf(FUND)
     let baseFund = 0
@@ -5474,7 +5493,7 @@ export async function advanceRound(
     // would otherwise decrement 等级 on every round-advance and undo
     // the upgrade just applied).
     const ocOrderColForWipe = ORDER_CONTRIBUTION_TABLE.fields.findIndex(
-        (fi) => fi.name === '订单'
+        (fi) => fi.name === L.fields.order
     )
     void ocOrderColForWipe // only used to assert the table shape — not a target
     const ocLine1Col = ORDER_CONTRIBUTION_TABLE.fields.findIndex(
@@ -5529,8 +5548,8 @@ export async function advanceRound(
     // currently-committed 良品率 / 单价 — this snapshots the round's
     // end-state as the next round's baseline, so the bridge's
     // `baseline + effect` formula computes against fresh ground.
-    const supYieldCol = SUPPLIER_FIELDS.findIndex((fi) => fi.name === '良品率')
-    const supPriceCol = SUPPLIER_FIELDS.findIndex((fi) => fi.name === '单价')
+    const supYieldCol = SUPPLIER_FIELDS.findIndex((fi) => fi.name === REQUIRED_YIELD_RATE)
+    const supPriceCol = SUPPLIER_FIELDS.findIndex((fi) => fi.name === UNIT_PRICE)
     const supJointCol = SUPPLIER_FIELDS.findIndex(
         (fi) => fi.name === JOINT_RESEARCH
     )
@@ -5707,14 +5726,14 @@ export async function advanceRound(
                 (fi) => fi.name === REQUIRED_AMOUNT
             )
             const deliveredCol = ACCEPTED_ORDER_STATUS_TABLE.fields.findIndex(
-                (fi) => fi.name === '已交付数量'
+                (fi) => fi.name === L.fields.deliveredAmount
             )
             const periodCol = ACCEPTED_ORDER_STATUS_TABLE.fields.findIndex(
-                (fi) => fi.name === '期数'
+                (fi) => fi.name === L.fields.periods
             )
             const acceptRoundCol =
                 ACCEPTED_ORDER_STATUS_TABLE.fields.findIndex(
-                    (fi) => fi.name === '接单回合'
+                    (fi) => fi.name === L.fields.acceptedRound
                 )
             const toRemove: string[] = []
             if (
@@ -5783,5 +5802,141 @@ export async function advanceRound(
         // `gameStateChanged` stays false — nothing flipped this tick.
         gameState: 'playing',
         gameStateChanged: false,
+    }
+}
+
+    return {
+        ENGINE_SHEET,
+        MAIN_SHEET,
+        SALES_DEPARTMENT,
+        PLANT,
+        PROCUREMENT,
+        OPTICAL_GLASS_SUPPLIER_1,
+        OPTICAL_GLASS_SUPPLIER_2,
+        EQUATORIAL_MOUNT_SUPPLIER_1,
+        EQUATORIAL_MOUNT_SUPPLIER_2,
+        METAL_FITTINGS_SUPPLIER_1,
+        METAL_FITTINGS_SUPPLIER_2,
+        EXPECTED_YIELD_RATE,
+        REQUIRED_YIELD_RATE,
+        CURRENT_EXPECTED_YIELD_RATE,
+        DELIVERED_YIELD_RATE,
+        DELIVERY_DEADLINE,
+        CURRENT_DELIVERY,
+        REMAINING_DELIVERY,
+        CURRENT_REVENUE,
+        UNIT_PENALTY,
+        CURRENT_PENALTY,
+        CURRENT_QUALITY_PENALTY,
+        CURRENT_GOODWILL_CHANGE,
+        REQUIRED_AMOUNT,
+        UNIT_COST,
+        UNIT_PRICE,
+        PRODUCTION_LINE,
+        PRODUCTION_LINE_1,
+        PRODUCTION_LINE_2,
+        FIXED_COST,
+        MAX_PRODUCTION,
+        PER_UNIT_COST,
+        YIELD_ADJUSTMENT,
+        LEVEL,
+        WILL_UPGRADE,
+        UPGRADE_COST,
+        ACCUMULATED_SUPPLY,
+        RESEARCH_COUNT,
+        JOINT_RESEARCH,
+        RESEARCH_THRESHOLD,
+        RESEARCH_TIER,
+        LAST_RESEARCH_ROUND,
+        BASELINE_YIELD,
+        BASELINE_PRICE,
+        RESEARCH_ENUM_ID,
+        RESEARCH_PRECISION_ID,
+        RESEARCH_COST_ID,
+        RESEARCH_BALANCED_ID,
+        RESEARCH_TIER_THRESHOLDS,
+        RESEARCH_EFFECTS,
+        CAPACITY,
+        TOTAL_COST,
+        ORDER_ID,
+        SUPPLIER_FIELDS,
+        CASH,
+        FIN_PRODUCTION_LINE_1_COST,
+        FIN_PRODUCTION_LINE_2_COST,
+        FIN_OPTICAL_GLASS_COST,
+        FIN_EQUATORIAL_MOUNT_COST,
+        FIN_METAL_FITTINGS_COST,
+        FIN_GOODWILL_DELTA,
+        FIN_ORDER_REVENUE,
+        FIN_ORDER_PENALTY,
+        FIN_QUALITY_PENALTY,
+        FIN_PRODUCTION_LINE_1_UPGRADE,
+        FIN_PRODUCTION_LINE_2_UPGRADE,
+        FUND,
+        GOODWILL,
+        CONST_KEY_CONSECUTIVE_LOSS,
+        CONST_KEY_CONSECUTIVE_NO_GOODWILL,
+        CONST_KEY_GAME_STATE,
+        CONSTANTS_TABLE,
+        MAX_ROUNDS,
+        BANKRUPTCY_GRACE_ROUNDS,
+        REPUTATION_GRACE_ROUNDS,
+        TIER_ULTIMATE_GOODWILL,
+        TIER_GOLD_FUND,
+        TIER_GOLD_GOODWILL,
+        TIER_SILVER_FUND,
+        TIER_SILVER_GOODWILL,
+        OPTICAL_GLASS_SUPPLIERS_TABLE,
+        EQUATORIAL_MOUNT_SUPPLIERS_TABLE,
+        METAL_FITTINGS_SUPPLIERS_TABLE,
+        PRODUCTION_LINE_LEVEL_KEYS,
+        PRODUCTION_LINE_1_LEVELS_TABLE,
+        PRODUCTION_LINE_2_LEVELS_TABLE,
+        PRODUCTION_LINE_TABLE,
+        PRODUCTION_LINE_CONTRIBUTION_TABLE,
+        ORDER_CONTRIBUTION_TABLE,
+        NEW_ORDER_STATUS_TABLE,
+        ACCEPTED_ORDER_STATUS_TABLE,
+        FINANCIAL_IMPACT_TABLE,
+        FINANCIAL_STATUS_TABLE,
+        CONSTRAINTS,
+        ALL_SUPPLIER_NAMES,
+        SUPPLIER_ACCUMULATOR_TABLE,
+        RESEARCH_TIERS_TABLE,
+        createSheet,
+        SHEET_ORDER,
+        SHEET_IDX,
+        mulberry32,
+        hashSeed,
+        installUserEditableShadowsForRows,
+        installValidationShadowsForRows,
+        getGameStatus,
+        clearValidationMonitorState,
+        refreshValidationSubscriptions,
+        notifyHost,
+        SheetNameCollisionError,
+        newGame,
+        readBlockRef,
+        tick,
+        ORDER_ID_PREFIX,
+        orderQualityFromRound,
+        SALES_CAPACITY_PLACEHOLDER,
+        orderAmountFromCapacity,
+        GOODWILL_BASELINE,
+        GOODWILL_MAX,
+        GOODWILL_MIN,
+        generateOrder,
+        insertOrder,
+        insertOrderConfig,
+        removeOrderConfig,
+        insertAcceptedOrder,
+        removeAcceptedOrder,
+        watchByBlockRef,
+        watchOrderAccepted,
+        installProductionLineUpgradeBridge,
+        installJointResearchBridge,
+        clearAllOrders,
+        ORDERS_PER_ROUND,
+        advanceRound,
     }
 }
