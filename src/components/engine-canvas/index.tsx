@@ -522,7 +522,11 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             const canvas = containerRef.current?.querySelector('canvas')
             if (canvas) {
                 const rect = canvas.getBoundingClientRect()
-                setCanvasPos({x: rect.left, y: rect.top})
+                setCanvasPos((prev) =>
+                    prev.x === rect.left && prev.y === rect.top
+                        ? prev
+                        : {x: rect.left, y: rect.top}
+                )
             }
         }
         updateCanvasPos()
@@ -532,7 +536,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             window.removeEventListener('resize', updateCanvasPos)
             window.removeEventListener('scroll', updateCanvasPos)
         }
-    }, [grid])
+    }, [])
 
     return (
         <>

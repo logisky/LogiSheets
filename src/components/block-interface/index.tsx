@@ -341,7 +341,11 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     </Box>
                 )}
 
-                {/* Title bar (top, above field headers) */}
+                {/* Title bar (top, above field headers). Clip-path hides
+                    the slice that would extend above the spreadsheet's
+                    column-header row so the schema info never visually
+                    covers it (see field headers overlay below for the
+                    same trick). */}
                 {showInfo && title && (
                     <Box
                         sx={{
@@ -350,6 +354,13 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             left: '6px',
                             right: '6px',
                             height: '24px',
+                            clipPath: `inset(${Math.max(
+                                0,
+                                LeftTop.height - (y - 72)
+                            )}px 0 0 ${Math.max(
+                                0,
+                                LeftTop.width - (x + 6)
+                            )}px)`,
                             background:
                                 'linear-gradient(135deg, rgb(69, 39, 160) 0%, rgb(49, 27, 146) 100%)',
                             borderRadius: '6px',
@@ -390,6 +401,13 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             left: '6px',
                             right: '6px',
                             height: '32px',
+                            clipPath: `inset(${Math.max(
+                                0,
+                                LeftTop.height - (y - 40)
+                            )}px 0 0 ${Math.max(
+                                0,
+                                LeftTop.width - (x + 6)
+                            )}px)`,
                             display: 'flex',
                             gap: '1px',
                             pointerEvents: 'none',

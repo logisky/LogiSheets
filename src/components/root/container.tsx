@@ -17,7 +17,6 @@ export const RootContainer = () => {
 
     const [cellLayouts, setCellLayouts] = useState<CellLayout[]>([])
     const [activeSheet, setActiveSheet] = useState(0)
-    const [canvasKey, setCanvasKey] = useState(0)
 
     return (
         <div className={styles.container}>
@@ -27,7 +26,6 @@ export const RootContainer = () => {
                 </div>
                 <div className={styles.content}>
                     <ContentComponent
-                        key={canvasKey}
                         selectedData$={setSelectedData}
                         selectedData={selectedData}
                         grid={grid}
@@ -62,9 +60,6 @@ export const RootContainer = () => {
                 selectedData={selectedData}
                 onClose={() => {
                     setCraftPanelVisible(false)
-                    // Force remount canvas so all layout-related internal
-                    // states (anchor, scrollbars, etc.) are reset.
-                    setCanvasKey((k) => k + 1)
                 }}
                 setCellLayouts={setCellLayouts}
                 setActiveSheet={setActiveSheet}
