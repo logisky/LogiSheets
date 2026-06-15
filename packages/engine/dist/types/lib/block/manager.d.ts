@@ -20,6 +20,20 @@ export declare class BlockManager {
     constructor(_workbookClient?: WorkbookClient | undefined);
     enumSetManager: EnumSetManager;
     fieldManager: FieldManager;
-    getPersistentData(blockFields: readonly BlockField[]): string;
+    /**
+     * Serialize host-side block metadata (FieldManager + EnumSetManager)
+     * into the opaque JSON blob the embedder hands to `workbook.save` as
+     * `appData`.
+     *
+     * NOTE: The `blockFields` parameter exists only for API back-compat —
+     * earlier versions used it to filter FieldManager entries by what the
+     * worker reported via `getAllBlockFields()`. That filter dropped every
+     * field for crafts that populate FieldManager (via `fieldManager.create`)
+     * but never push the IDs into the worker's `block_line_info_manager`
+     * (e.g. factory-simulator), which is the common case. FieldManager is
+     * the host-side source of truth; we serialize it directly here and
+     * ignore the parameter. Safe to pass `[]`.
+     */
+    getPersistentData(_blockFields?: readonly BlockField[]): string;
     parseAppData(data: string): void;
 }

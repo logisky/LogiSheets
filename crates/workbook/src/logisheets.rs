@@ -20,6 +20,28 @@ pub struct LogiSheetsData {
     /// the application and it is up to the application to parse them.
     #[xmlserde(name = b"app", ty = "child")]
     pub apps: Vec<AppData>,
+    /// Per-render-id formatting / DIY-render flags. Stored at the workbook
+    /// level (not per-sheet) because the worker's `FieldRenderManager` is
+    /// keyed by `RenderId` alone, which is sheet-agnostic.
+    #[xmlserde(name = b"fieldRender", ty = "child")]
+    pub field_renders: Vec<FieldRenderXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct FieldRenderXml {
+    #[xmlserde(name = b"renderId", ty = "attr")]
+    pub render_id: String,
+    /// Number-format string (e.g. `"0.00%"`) — the only style attribute
+    /// crafts currently set via `upsertFieldRenderInfo`. Persisted as
+    /// the raw string rather than a `StyleId` because the workbook's
+    /// xlsx-side style table renumbers entries on load (and may trim
+    /// styles not referenced by any cell), so a saved `StyleId` is not
+    /// stable. On load we re-execute a `SetNumFmt` style update to mint
+    /// a fresh, valid id.
+    #[xmlserde(name = b"numFmt", ty = "attr")]
+    pub num_fmt: Option<String>,
+    #[xmlserde(name = b"diyRender", ty = "attr")]
+    pub diy_render: Option<bool>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -80,6 +102,92 @@ pub struct Sheet {
     pub block_ranges: Vec<BlockRange>,
     #[xmlserde(name = b"cellAppendix", ty = "child")]
     pub cell_appendices: Vec<CellAppendix>,
+    #[xmlserde(name = b"rowSchema", ty = "child")]
+    pub row_schemas: Vec<RowSchemaXml>,
+    #[xmlserde(name = b"colSchema", ty = "child")]
+    pub col_schemas: Vec<ColSchemaXml>,
+    #[xmlserde(name = b"randomSchema", ty = "child")]
+    pub random_schemas: Vec<RandomSchemaXml>,
+}
+
+/// A form schema where data records run along rows. `key` is the column id
+/// holding the record-identifying field; `fields` lists the per-column
+/// field definitions in declared order.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct RowSchemaXml {
+    #[xmlserde(name = b"blockId", ty = "attr")]
+    pub block_id: usize,
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: String,
+    /// Stored as raw `u32` (a `RowId`/`ColId` typedef on the Rust side —
+    /// both alias `u32`, so the serialized value is the same regardless
+    /// of which alias is in the in-memory type).
+    #[xmlserde(name = b"key", ty = "attr")]
+    pub key: u32,
+    #[xmlserde(name = b"field", ty = "child")]
+    pub fields: Vec<SchemaFieldXml>,
+}
+
+/// Mirror of `RowSchemaXml` for column-oriented schemas. Identical wire
+/// shape — distinct element name keeps Rust enum variant ↔ XML element
+/// one-to-one so xmlserde maps cleanly without a discriminator attribute.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct ColSchemaXml {
+    #[xmlserde(name = b"blockId", ty = "attr")]
+    pub block_id: usize,
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: String,
+    #[xmlserde(name = b"key", ty = "attr")]
+    pub key: u32,
+    #[xmlserde(name = b"field", ty = "child")]
+    pub fields: Vec<SchemaFieldXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct SchemaFieldXml {
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: String,
+    /// Per-field axis id. For RowSchema this is a `ColId`; for ColSchema
+    /// a `RowId`. Both are `u32` typedefs.
+    #[xmlserde(name = b"axisId", ty = "attr")]
+    pub axis_id: u32,
+    #[xmlserde(name = b"renderId", ty = "attr")]
+    pub render_id: String,
+    /// Formulas are stored as attributes (rather than child elements) so
+    /// the existing `Option<String>` xmlserde attr support handles them
+    /// uniformly. They may contain `"`, `<`, `>` etc. — xmlserde escapes
+    /// these on save and unescapes on load.
+    #[xmlserde(name = b"valueFormula", ty = "attr")]
+    pub value_formula: Option<String>,
+    #[xmlserde(name = b"validationFormula", ty = "attr")]
+    pub validation_formula: Option<String>,
+    #[xmlserde(name = b"editabilityFormula", ty = "attr")]
+    pub editability_formula: Option<String>,
+}
+
+/// A free-form schema: explicit `(key, row, col, renderId)` tuples with no
+/// axis alignment. `block_id` plus `name` are the identifying attributes
+/// matching `RandomSchema`'s in-memory shape.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct RandomSchemaXml {
+    #[xmlserde(name = b"blockId", ty = "attr")]
+    pub block_id: usize,
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: String,
+    #[xmlserde(name = b"keyField", ty = "child")]
+    pub key_fields: Vec<RandomKeyFieldXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct RandomKeyFieldXml {
+    #[xmlserde(name = b"key", ty = "attr")]
+    pub key: String,
+    #[xmlserde(name = b"row", ty = "attr")]
+    pub row: u32,
+    #[xmlserde(name = b"col", ty = "attr")]
+    pub col: u32,
+    #[xmlserde(name = b"renderId", ty = "attr")]
+    pub render_id: String,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize, Clone, TS)]

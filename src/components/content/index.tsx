@@ -57,6 +57,7 @@ export const ContentComponent: FC<ContentProps> = ({
             <SheetsTabComponent
                 activeSheet={activeSheet}
                 activeSheet$={setActiveSheet}
+                grid={grid}
             />
         </div>
     )

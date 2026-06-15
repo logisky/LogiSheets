@@ -1,6 +1,7 @@
 import {useState, FC, useEffect} from 'react'
 import {
     CreateSheetBuilder,
+    Grid,
     isErrorMessage,
     Payload,
     SheetInfo,
@@ -19,11 +20,18 @@ import styles from './sheets-tab.module.scss'
 export interface SheetTabProps {
     activeSheet: number
     activeSheet$: (s: number) => void
+    /**
+     * Workbook-identity nonce. The engine doesn't emit `sheetChange`
+     * on `loadWorkbook`, so we re-fetch sheet info whenever the host's
+     * grid handle changes (set by load/save/transaction flow).
+     */
+    grid?: Grid | null
 }
 
 export const SheetsTabComponent: FC<SheetTabProps> = ({
     activeSheet,
     activeSheet$,
+    grid,
 }) => {
     const engine = useEngine()
     const workbook = engine.getWorkbook()
@@ -54,7 +62,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
         return () => {
             engine.off('sheetChange', handleSheetChange)
         }
-    }, [engine, workbook])
+    }, [engine, workbook, grid])
 
     // Clamp active index to available tab range when sheets change
     useEffect(() => {

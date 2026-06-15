@@ -6,7 +6,7 @@ use super::info::FieldRenderInfo;
 
 #[derive(Debug, Clone, Default)]
 pub struct FieldRenderManager {
-    data: HashMap<RenderId, FieldRenderInfo>,
+    pub data: HashMap<RenderId, FieldRenderInfo>,
 }
 
 impl FieldRenderManager {

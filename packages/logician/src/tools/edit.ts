@@ -6,8 +6,18 @@
  * edits, leveraging the workbook's temp-transaction machinery.
  */
 
-import {BlockInputBuilder, isErrorMessage} from 'logisheets-web'
-import type {Client, EditPayload, Transaction} from 'logisheets-web'
+import {
+    BlockInputBuilder,
+    DeleteRowsInBlockBuilder,
+    isErrorMessage,
+} from 'logisheets-web'
+import type {
+    BlockInfo,
+    Client,
+    EditPayload,
+    Transaction,
+    Value,
+} from 'logisheets-web'
 import type {JSONSchema, Tool, ToolContext} from '../tool'
 
 /** Narrow ToolContext.workbook to the concrete `Client` from
@@ -75,94 +85,7 @@ const BLOCK_CELL_CHANGE_SCHEMA: JSONSchema = {
 }
 
 // ---------------------------------------------------------------------------
-// 1. set_block_cell  (single value, common case)
-// ---------------------------------------------------------------------------
-
-export const setBlockCell: Tool<BlockCellChange, {ok: true}> = {
-    namespace: 'edit',
-    name: 'set_block_cell',
-    description:
-        "Write a single cell inside a block, identified by (block, row_key, field) rather than (sheet, row, col). Refuses fields that have a value_formula declared on the schema — those are engine-computed. Value can be a literal or a formula prefixed with '='; null clears.",
-    mutates: true,
-    confirmation: 'always',
-    inputSchema: BLOCK_CELL_CHANGE_SCHEMA,
-    handler: async (input, ctx) => {
-        const client = asClient(ctx)
-
-        // 1. Resolve block ref name → (sheetIdx, blockId, schema with
-        //    keys + fields). One getAllBlocks call gives us everything.
-        const all = await client.getAllBlocks({})
-        if (isErrorMessage(all)) {
-            throw new Error(`getAllBlocks failed: ${all.msg}`)
-        }
-        const block = all.find((b) => b.schema?.name === input.block)
-        if (!block) {
-            throw new Error(`No block with ref name "${input.block}"`)
-        }
-        const schema = block.schema
-        if (!schema) {
-            throw new Error(
-                `Block "${input.block}" has no schema — can't locate cells by (key, field)`
-            )
-        }
-
-        // 2. Resolve row_key → block-row index.
-        const rowEntry = schema.keys.find((k) => k.key === input.row_key)
-        if (!rowEntry) {
-            throw new Error(
-                `No row with key "${input.row_key}" in block "${input.block}"`
-            )
-        }
-
-        // 3. Resolve field name → block-col index (also catches the
-        //    value_formula constraint: templated cells reject blockInput
-        //    in the container layer, so we surface a friendlier error
-        //    here instead of letting the engine fail the whole tx).
-        const fieldEntry = schema.fields.find((f) => f.field === input.field)
-        if (!fieldEntry) {
-            throw new Error(
-                `No field named "${input.field}" in block "${input.block}"`
-            )
-        }
-        if (
-            typeof fieldEntry.valueFormula === 'string' &&
-            fieldEntry.valueFormula.trim() !== ''
-        ) {
-            throw new Error(
-                `Field "${input.field}" has a value_formula — its cells are engine-computed and cannot be written directly. To change the rule, call set_field_rule.`
-            )
-        }
-
-        // 4. Issue the BlockInput. The engine handles the rest
-        //    (recompute, validation shadow refresh, etc).
-        const payloads: EditPayload[] = [
-            {
-                type: 'blockInput',
-                value: new BlockInputBuilder()
-                    .sheetIdx(block.sheetIdx)
-                    .blockId(block.blockId)
-                    .row(rowEntry.idx)
-                    .col(fieldEntry.idx)
-                    .input(stringifyForBlockInput(input.value))
-                    .build(),
-            },
-        ]
-
-        await commitTransaction(
-            client,
-            payloads,
-            `set_block_cell("${input.block}", "${input.row_key}", "${input.field}")`
-        )
-
-        return {
-            data: {ok: true},
-            display: `Set ${input.block}[${input.row_key}].${input.field} = ${JSON.stringify(input.value)}`,
-        }
-    },
-}
-
-// ---------------------------------------------------------------------------
-// 2. set_block_cells  (batch)
+// 1. set_block_cells — single tool for both single-cell and batch writes.
 // ---------------------------------------------------------------------------
 
 interface SetBlockCellsInput {
@@ -170,15 +93,26 @@ interface SetBlockCellsInput {
 }
 
 interface SetBlockCellsOutput {
+    /** Number of changes successfully translated into BlockInput
+     *  payloads (== changes.length when the call returns; rejections
+     *  surface as thrown errors before commit). */
     applied: number
-    rejected: Array<{change: BlockCellChange; reason: string}>
 }
 
 export const setBlockCells: Tool<SetBlockCellsInput, SetBlockCellsOutput> = {
     namespace: 'edit',
     name: 'set_block_cells',
-    description:
-        'Apply a batch of block-cell writes as a single transaction. All-or-nothing semantics: if any change is rejected (locked / non-existent / formula-bound), the whole batch is aborted and `rejected` reports why. Prefer this over many set_block_cell calls when filling in a row.',
+    description: [
+        "Write one or more cells inside any block(s) in a single atomic transaction. Each change addresses a cell by (block ref name, row_key, field) — the LLM never deals with raw (sheet, row, col).",
+        '',
+        "Pass `changes` as an array; one-cell writes are just length-1 arrays. Batching is the cheap default — putting N writes in one call is one transaction, one calc pass, one undo entry.",
+        '',
+        'Rejected up-front (whole tx aborts) when any change:',
+        '  - targets a non-existent block / row_key / field, or',
+        "  - targets a field with a `value_formula` on its schema (engine-computed; use set_field_rule to change the rule instead).",
+        '',
+        "Value can be a literal (string / number / boolean) or a formula prefixed with '='. `null` clears the cell.",
+    ].join('\n'),
     mutates: true,
     confirmation: 'always',
     inputSchema: {
@@ -191,8 +125,88 @@ export const setBlockCells: Tool<SetBlockCellsInput, SetBlockCellsOutput> = {
         },
         required: ['changes'],
     },
-    handler: async () => {
-        throw new Error('TODO: set_block_cells')
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+
+        // 1. Resolve every distinct block ref name once. One workbook-
+        //    wide getAllBlocks is cheaper than N getBlockInfo by id.
+        const allRes = await client.getAllBlocks({})
+        if (isErrorMessage(allRes)) {
+            throw new Error(`getAllBlocks failed: ${allRes.msg}`)
+        }
+        const blockByName = new Map<string, (typeof allRes)[number]>()
+        for (const b of allRes) {
+            if (b.schema?.name) blockByName.set(b.schema.name, b)
+        }
+
+        // 2. Translate each change into a BlockInput payload, failing
+        //    fast on any unresolved reference. We collect ALL payloads
+        //    before committing so a single bad change rejects the whole
+        //    batch (matches the description's "all-or-nothing" promise).
+        const payloads: EditPayload[] = []
+        for (let i = 0; i < input.changes.length; i++) {
+            const c = input.changes[i]
+            const block = blockByName.get(c.block)
+            if (!block) {
+                throw new Error(
+                    `changes[${i}]: no block with ref name "${c.block}"`
+                )
+            }
+            const schema = block.schema
+            if (!schema) {
+                throw new Error(
+                    `changes[${i}]: block "${c.block}" has no schema`
+                )
+            }
+            const rowEntry = schema.keys.find((k) => k.key === c.row_key)
+            if (!rowEntry) {
+                throw new Error(
+                    `changes[${i}]: no row with key "${c.row_key}" in block "${c.block}"`
+                )
+            }
+            const fieldEntry = schema.fields.find((f) => f.field === c.field)
+            if (!fieldEntry) {
+                throw new Error(
+                    `changes[${i}]: no field named "${c.field}" in block "${c.block}"`
+                )
+            }
+            // Surface the engine-computed gate up front (the container
+            // layer would silently drop the write otherwise — bad UX for
+            // an LLM that doesn't know why nothing happened).
+            if (
+                typeof fieldEntry.valueFormula === 'string' &&
+                fieldEntry.valueFormula.trim() !== ''
+            ) {
+                throw new Error(
+                    `changes[${i}]: field "${c.field}" on block "${c.block}" has a value_formula — its cells are engine-computed. Use set_field_rule to change the rule.`
+                )
+            }
+            payloads.push({
+                type: 'blockInput',
+                value: new BlockInputBuilder()
+                    .sheetIdx(block.sheetIdx)
+                    .blockId(block.blockId)
+                    .row(rowEntry.idx)
+                    .col(fieldEntry.idx)
+                    .input(stringifyForBlockInput(c.value))
+                    .build(),
+            })
+        }
+
+        // 3. One atomic transaction.
+        await commitTransaction(
+            client,
+            payloads,
+            `set_block_cells (${payloads.length} change${payloads.length === 1 ? '' : 's'})`
+        )
+
+        return {
+            data: {applied: payloads.length},
+            display:
+                payloads.length === 1
+                    ? `Set ${input.changes[0].block}[${input.changes[0].row_key}].${input.changes[0].field} = ${JSON.stringify(input.changes[0].value)}.`
+                    : `Applied ${payloads.length} cell writes in one transaction.`,
+        }
     },
 }
 
@@ -220,8 +234,46 @@ export const clearBlock: Tool<ClearBlockInput, {rows_cleared: number}> = {
         },
         required: ['block'],
     },
-    handler: async () => {
-        throw new Error('TODO: clear_block')
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const allRes = await client.getAllBlocks({})
+        if (isErrorMessage(allRes)) {
+            throw new Error(`getAllBlocks failed: ${allRes.msg}`)
+        }
+        const block = allRes.find((b) => b.schema?.name === input.block)
+        if (!block) {
+            throw new Error(`no block with ref name "${input.block}"`)
+        }
+        if (block.rowCnt === 0) {
+            return {
+                data: {rows_cleared: 0},
+                display: `${input.block} already empty.`,
+            }
+        }
+        if (input.dry_run) {
+            return {
+                data: {rows_cleared: block.rowCnt},
+                display: `dry_run: would clear ${block.rowCnt} rows from ${input.block}.`,
+            }
+        }
+        const payload: EditPayload = {
+            type: 'deleteRowsInBlock',
+            value: new DeleteRowsInBlockBuilder()
+                .sheetIdx(block.sheetIdx)
+                .blockId(block.blockId)
+                .start(0)
+                .cnt(block.rowCnt)
+                .build(),
+        }
+        await commitTransaction(
+            client,
+            [payload],
+            `clear_block(${input.block})`
+        )
+        return {
+            data: {rows_cleared: block.rowCnt},
+            display: `Cleared ${block.rowCnt} row${block.rowCnt === 1 ? '' : 's'} from ${input.block}.`,
+        }
     },
 }
 
@@ -231,46 +283,31 @@ export const clearBlock: Tool<ClearBlockInput, {rows_cleared: number}> = {
 
 interface PreviewChangesInput {
     changes: ReadonlyArray<BlockCellChange>
-    /**
-     * Cells whose post-change values you want reported back. Useful for
-     * "what does total revenue look like if I bump price by 10%". If
-     * omitted, all cells whose computed values differ from baseline are
-     * included.
-     */
-    watch?: ReadonlyArray<{block: string; row_key: string; field: string}>
 }
 
 interface PreviewDiffEntry {
-    block: string
-    row_key: string
-    field: string
+    /** Block ref name if the cell falls inside a block, else null. */
+    block: string | null
+    row_key: string | null
+    field: string | null
+    sheet_idx: number
+    row: number
+    col: number
     before: CellValue
     after: CellValue
 }
 
 interface PreviewChangesOutput {
-    /** Cells whose values change as a result of the proposed edits. */
+    /** Every cell whose value changes — both directly written cells and
+     *  cascaded recalculations (formula deps, value_formula fields). */
     diff: PreviewDiffEntry[]
-    /** Validation violations that would be introduced by the changes. */
-    new_violations: Array<{
-        block: string
-        row_key: string
-        field: string
-        rule: string
-    }>
-    /** Validation violations that the changes would resolve. */
-    resolved_violations: Array<{
-        block: string
-        row_key: string
-        field: string
-    }>
 }
 
 export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
     namespace: 'edit',
     name: 'preview_changes',
     description:
-        'Dry-run a batch of edits using the workbook\'s temp-transaction machinery: returns the resulting cell-value diff plus any validation violations introduced or resolved. Nothing is committed. Use before set_block_cells when the user asks "what would happen if…".',
+        "Dry-run a batch of edits via the workbook's temp-transaction branch: returns every cell whose value would change (direct writes + cascaded formula recalcs). Nothing is committed. Use before set_block_cells when the user asks \"what would happen if…\".",
     mutates: false,
     confirmation: 'never',
     cost: 'normal',
@@ -281,63 +318,169 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                 items: BLOCK_CELL_CHANGE_SCHEMA,
                 minItems: 1,
             },
-            watch: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        block: {type: 'string'},
-                        row_key: {type: 'string'},
-                        field: {type: 'string'},
-                    },
-                    required: ['block', 'row_key', 'field'],
-                },
-            },
         },
         required: ['changes'],
     },
-    handler: async () => {
-        throw new Error('TODO: preview_changes')
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+
+        // Resolve blocks for payload translation + diff annotation.
+        const allRes = await client.getAllBlocks({})
+        if (isErrorMessage(allRes)) {
+            throw new Error(`getAllBlocks failed: ${allRes.msg}`)
+        }
+        const blockByName = new Map<string, BlockInfo>()
+        for (const b of allRes) {
+            if (b.schema?.name) blockByName.set(b.schema.name, b)
+        }
+
+        const payloads: EditPayload[] = []
+        for (let i = 0; i < input.changes.length; i++) {
+            const c = input.changes[i]
+            const block = blockByName.get(c.block)
+            if (!block) {
+                throw new Error(
+                    `changes[${i}]: no block with ref name "${c.block}"`
+                )
+            }
+            const schema = block.schema
+            if (!schema) {
+                throw new Error(
+                    `changes[${i}]: block "${c.block}" has no schema`
+                )
+            }
+            const rowEntry = schema.keys.find((k) => k.key === c.row_key)
+            if (!rowEntry) {
+                throw new Error(
+                    `changes[${i}]: no row with key "${c.row_key}" in block "${c.block}"`
+                )
+            }
+            const fieldEntry = schema.fields.find((f) => f.field === c.field)
+            if (!fieldEntry) {
+                throw new Error(
+                    `changes[${i}]: no field named "${c.field}" in block "${c.block}"`
+                )
+            }
+            payloads.push({
+                type: 'blockInput',
+                value: new BlockInputBuilder()
+                    .sheetIdx(block.sheetIdx)
+                    .blockId(block.blockId)
+                    .row(rowEntry.idx)
+                    .col(fieldEntry.idx)
+                    .input(stringifyForBlockInput(c.value))
+                    .build(),
+            })
+        }
+
+        // Run inside a temp branch — toggle on, apply, snapshot diff,
+        // discard. cleanup runs in finally so a mid-flight failure
+        // doesn't leave the workbook stuck in temp mode.
+        const toggleRes = await client.toggleStatus({useTemp: true})
+        if (isErrorMessage(toggleRes)) {
+            throw new Error(`toggleStatus failed: ${toggleRes.msg}`)
+        }
+        try {
+            const tx: Transaction = {payloads, undoable: false, temp: true}
+            const result = await client.handleTransaction({transaction: tx})
+            if (isErrorMessage(result)) {
+                throw new Error(`preview_changes: ${result.msg}`)
+            }
+            if (result.status.type === 'err') {
+                throw new Error(
+                    `preview_changes: status code ${result.status.value}`
+                )
+            }
+            const diffRes = await client.getTempStatusChanges()
+            if (isErrorMessage(diffRes)) {
+                throw new Error(
+                    `getTempStatusChanges failed: ${diffRes.msg}`
+                )
+            }
+
+            // Annotate diff entries with block context when the cell
+            // falls inside a known block.
+            const diff: PreviewDiffEntry[] = diffRes.cells.map((c) => {
+                const annot = locateInBlock(c.sheetIdx, c.row, c.col, allRes)
+                return {
+                    block: annot?.block ?? null,
+                    row_key: annot?.row_key ?? null,
+                    field: annot?.field ?? null,
+                    sheet_idx: c.sheetIdx,
+                    row: c.row,
+                    col: c.col,
+                    before: flattenValue(c.oldValue),
+                    after: flattenValue(c.newValue),
+                }
+            })
+
+            return {
+                data: {diff},
+                display:
+                    diff.length === 0
+                        ? 'No cells would change.'
+                        : `${diff.length} cell${diff.length === 1 ? '' : 's'} would change.`,
+            }
+        } finally {
+            await client.cleanupTempStatus()
+        }
     },
+}
+
+function flattenValue(v: Value): CellValue {
+    if (v === 'empty') return null
+    switch (v.type) {
+        case 'str':
+            return v.value
+        case 'number':
+            return v.value
+        case 'bool':
+            return v.value
+        case 'error':
+            return `#ERR:${v.value}`
+    }
+}
+
+function locateInBlock(
+    sheetIdx: number,
+    row: number,
+    col: number,
+    blocks: readonly BlockInfo[]
+): {block: string; row_key: string; field: string} | undefined {
+    for (const b of blocks) {
+        if (b.sheetIdx !== sheetIdx) continue
+        if (row < b.rowStart || row >= b.rowStart + b.rowCnt) continue
+        if (col < b.colStart || col >= b.colStart + b.colCnt) continue
+        const schema = b.schema
+        if (!schema) return undefined
+        const key = schema.keys.find((k) => k.idx === row - b.rowStart)
+        const field = schema.fields.find((f) => f.idx === col - b.colStart)
+        if (key && field) {
+            return {block: schema.name, row_key: key.key, field: field.field}
+        }
+        return undefined
+    }
+    return undefined
 }
 
 // ---------------------------------------------------------------------------
-// 5. undo / redo
+// Design note: no `undo_redo` here.
+//
+// Rationale: the engine's undo stack is shared with the human user
+// (it's what Ctrl-Z/Y drives). Letting the AI step it would silently
+// wipe user actions that landed between AI tx's. The AI's rollback
+// primitive is `build__checkpoint` — labelled, isolated, and itself
+// undoable so the user can reverse an AI restore with a single Ctrl-Z.
+// Users still get standard Ctrl-Z/Y on the canvas; that path is
+// untouched.
 // ---------------------------------------------------------------------------
-
-interface UndoRedoInput {
-    op: 'undo' | 'redo'
-    /** How many steps. Default 1. */
-    steps?: number
-}
-
-export const undoRedo: Tool<UndoRedoInput, {applied: number}> = {
-    namespace: 'edit',
-    name: 'undo_redo',
-    description:
-        'Walk the workbook\'s undo stack. op="undo" reverses the most recent commits; op="redo" replays them. For long multi-step rollbacks the builder checkpoint tool is usually clearer than counting steps here.',
-    mutates: true,
-    confirmation: 'never',
-    inputSchema: {
-        properties: {
-            op: {type: 'string', enum: ['undo', 'redo']},
-            steps: {type: 'integer', minimum: 1, default: 1},
-        },
-        required: ['op'],
-    },
-    handler: async () => {
-        throw new Error('TODO: undo_redo')
-    },
-}
 
 // ---------------------------------------------------------------------------
 // Bundle
 // ---------------------------------------------------------------------------
 
 export const EDIT_TOOLS: Tool[] = [
-    setBlockCell,
     setBlockCells,
     clearBlock,
     previewChanges,
-    undoRedo,
 ] as Tool[]

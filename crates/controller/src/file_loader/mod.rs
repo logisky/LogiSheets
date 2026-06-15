@@ -53,8 +53,8 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         mut ext_ref_manager,
         exclusive_manager,
         dirty_cells_next_round: dirty_cells,
-        block_schema_manager,
-        field_render_manager,
+        mut block_schema_manager,
+        mut field_render_manager,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {
         sheet_id_manager: &mut sheet_id_manager,
@@ -93,14 +93,42 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
 
     if let Some(logisheets) = logisheets {
         app_data = logisheets.apps;
+        // Restore the workbook-wide FieldRenderManager (per-renderId
+        // style + diy_render flags) before walking sheets, so cell load
+        // and any downstream display calls see the populated formatters.
+        // `numFmt` strings are replayed through `style_manager` to mint
+        // fresh, valid style ids — the xlsx-side style table renumbers
+        // entries on load, so the originally-saved StyleId wouldn't be
+        // safe to reuse.
+        crate::block_manager::field_manager::persistence::load_field_renders(
+            &mut field_render_manager,
+            &mut style_manager,
+            logisheets.field_renders,
+        );
         logisheets
             .sheets
             .into_iter()
             .enumerate()
             .for_each(|(idx, sheet_data)| {
-                let block_ranges = sheet_data.block_ranges;
+                let logisheets_workbook::logisheets::Sheet {
+                    block_ranges,
+                    cell_appendices: _,
+                    row_schemas,
+                    col_schemas,
+                    random_schemas,
+                } = sheet_data;
                 let sheet_id = sheet_info_manager.get_sheet_id(idx).unwrap();
                 navigator.add_sheet_id(&sheet_id);
+                // Restore schemas first so any downstream cell load that
+                // queries `block_schema_manager` (e.g. for resolving block
+                // ref names) sees the populated state.
+                crate::block_manager::schema_manager::persistence::load_schemas_for_sheet(
+                    &mut block_schema_manager,
+                    sheet_id,
+                    row_schemas,
+                    col_schemas,
+                    random_schemas,
+                );
                 block_ranges.into_iter().for_each(|block_range| {
                     let block_id = block_range.block_id;
                     let master_row = block_range.start_row;

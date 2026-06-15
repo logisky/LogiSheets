@@ -570,10 +570,10 @@ mod tests {
     use logisheets_base::{CellId, CellValue};
 
     use crate::edit_action::{
-        Alignment, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput, CellStyleUpdate,
-        CreateBlock, CreateSheet, DeleteCols, DeleteRows, DeleteSheet, EditAction, EditPayload,
-        EphemeralCellInput, HorizontalAlignment, InsertCols, InsertRows, LineStyleUpdate,
-        PayloadsAction, StatusCode, StyleUpdateType, VerticalAlignment,
+        Alignment, BindFormSchema, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput,
+        CellStyleUpdate, CreateBlock, CreateSheet, DeleteCols, DeleteRows, DeleteSheet, EditAction,
+        EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertRows,
+        LineStyleUpdate, PayloadsAction, StatusCode, StyleUpdateType, VerticalAlignment,
     };
 
     use super::Controller;
@@ -1266,5 +1266,183 @@ mod tests {
         assert!(result.col_removed.iter().all(|c| c.sheet_id == sheet_id));
         assert!(result.row_removed.is_empty());
         assert!(result.col_inserted.is_empty());
+    }
+
+    /// Reproduces the user-reported flow: create a block + bind a schema,
+    /// save to .xlsx bytes, load back, verify both block geometry and
+    /// schema survive the round-trip.
+    #[test]
+    fn save_load_block_and_schema_round_trip() {
+        let mut wb = Controller::default();
+
+        // Create a 3x3 block on sheet 0.
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 3,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            })],
+            undoable: true,
+            init: false,
+        };
+        wb.handle_action(EditAction::Payloads(action));
+
+        // Bind a row schema to the block.
+        let action = PayloadsAction {
+            payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "materials".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec!["qty".to_string(), "name".to_string()],
+                render_ids: vec!["r1".to_string(), "r2".to_string()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            })],
+            undoable: true,
+            init: false,
+        };
+        wb.handle_action(EditAction::Payloads(action));
+
+        // Pre-save snapshot.
+        let sheet_id_before = wb.status.sheet_id_manager.get_id("Sheet1").unwrap();
+        let blocks_before = wb
+            .status
+            .navigator
+            .sheet_navs
+            .get(&sheet_id_before)
+            .expect("sheet nav present before save")
+            .data
+            .blocks
+            .len();
+        let schemas_before = wb.status.block_schema_manager.schemas.len();
+        assert!(blocks_before > 0, "block should be present before save");
+        assert!(schemas_before > 0, "schema should be present before save");
+
+        // Save → bytes.
+        let bytes = wb.save().expect("save should succeed");
+        assert!(!bytes.is_empty(), "saved bytes should be non-empty");
+
+        // Load → new controller.
+        let restored = Controller::from_file("rt".to_string(), &bytes)
+            .expect("load should succeed");
+
+        // Post-load: sheet name preserved? Look up by name.
+        let sheet_id_after = restored
+            .status
+            .sheet_id_manager
+            .get_id("Sheet1")
+            .expect("Sheet1 should be present after load");
+        let blocks_after = restored
+            .status
+            .navigator
+            .sheet_navs
+            .get(&sheet_id_after)
+            .expect("sheet nav present after load")
+            .data
+            .blocks
+            .len();
+        let schemas_after = restored.status.block_schema_manager.schemas.len();
+
+        assert_eq!(
+            blocks_after, blocks_before,
+            "block count should match across save/load"
+        );
+        assert_eq!(
+            schemas_after, schemas_before,
+            "schema count should match across save/load"
+        );
+        assert_eq!(
+            restored
+                .status
+                .block_schema_manager
+                .refs
+                .get("materials")
+                .map(|(_, b)| *b),
+            Some(1),
+            "ref-name index should be rebuilt and point to block 1"
+        );
+    }
+
+    /// Mirrors the frontend's render path AND verifies the block's
+    /// `info.schema` survives — without that field, the host's
+    /// BlockInterfaceComponent silently soft-skips every block (treats
+    /// the missing schema as the transient craft-rebind race) and the
+    /// user sees no block UI even though the geometry persisted.
+    #[test]
+    fn save_load_display_window_includes_block() {
+        let mut wb = Controller::default();
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 7,
+                master_row: 1,
+                master_col: 1,
+                row_cnt: 4,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            })],
+            undoable: true,
+            init: false,
+        }));
+        // Bind a schema so the frontend's BlockInterface would actually render.
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "scenarios".to_string(),
+                sheet_idx: 0,
+                block_id: 7,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec!["amount".to_string()],
+                render_ids: vec!["render-amount".to_string()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            })],
+            undoable: true,
+            init: false,
+        }));
+
+        let bytes = wb.save().expect("save");
+
+        // The host renders via `Workbook::get_sheet_by_idx(...)` →
+        // `get_display_window` (the same path WASM exposes to the worker
+        // RPC). Round-trip through the public Workbook API to mirror that.
+        let workbook =
+            crate::Workbook::from_file(&bytes, "rt".to_string()).expect("load");
+        let ws = workbook.get_sheet_by_idx(0).expect("sheet 0 worksheet");
+        let window = ws
+            .get_display_window(0, 0, 20, 20)
+            .expect("display window");
+        let block_ids: Vec<_> = window.blocks.iter().map(|b| b.info.block_id).collect();
+        assert!(
+            block_ids.contains(&7),
+            "loaded block id=7 should appear in display window, got {:?}",
+            block_ids
+        );
+
+        // The host's BlockInterfaceComponent reads `info.schema`. If this
+        // is None after load, the soft-skip drops the block from the UI
+        // and the user sees nothing where the block should be.
+        let block_with_schema = window
+            .blocks
+            .iter()
+            .find(|b| b.info.block_id == 7)
+            .expect("block 7 should be in display window");
+        assert!(
+            block_with_schema.info.schema.is_some(),
+            "loaded block's info.schema should be populated after load — got None, which would \
+             cause the host's soft-skip to hide the block in the UI"
+        );
     }
 }
