@@ -20,27 +20,94 @@ pub type RowSchema = FormSchema<ColId, RowId, true>;
 pub type ColSchema = FormSchema<RowId, ColId, false>;
 pub type RenderId = String;
 
+/// Per-field schema entry. Stores everything the schema knows about a
+/// single field: its axis id, its render id, and three optional formula
+/// templates that materialize per-row at insert / bind time.
+///
+/// All three templates use the same placeholder substitution rules:
+///   `#FIELD("name")` → reference to the same row's cell at field `name`
+///   `#KEY`           → this row's key column value, quoted as a literal
+///   `#PLACEHOLDER`   → reference to the cell itself (validation /
+///                      editability only — value_formula doesn't use it)
+///
+/// Template wiring:
+///   - `value_formula`        → written as the cell's main formula
+///   - `validation_formula`   → installed as a `ShadowKind::Validation`
+///                              shadow on the cell (advisory red marker)
+///   - `editability_formula`  → installed as a `ShadowKind::UserEditable`
+///                              shadow on the cell (host edit gate)
+#[derive(Debug, Clone)]
+pub struct FieldEntry<F> {
+    pub field_axis_id: F,
+    pub render_id: RenderId,
+    pub value_formula: Option<String>,
+    pub validation_formula: Option<String>,
+    pub editability_formula: Option<String>,
+}
+
+impl<F> FieldEntry<F> {
+    pub fn new(field_axis_id: F, render_id: RenderId) -> Self {
+        Self {
+            field_axis_id,
+            render_id,
+            value_formula: None,
+            validation_formula: None,
+            editability_formula: None,
+        }
+    }
+
+    pub fn with_value_formula(mut self, f: Option<String>) -> Self {
+        self.value_formula = f;
+        self
+    }
+
+    pub fn with_validation_formula(mut self, f: Option<String>) -> Self {
+        self.validation_formula = f;
+        self
+    }
+
+    pub fn with_editability_formula(mut self, f: Option<String>) -> Self {
+        self.editability_formula = f;
+        self
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FormSchema<F, K, const IS_ROW: bool> {
-    /// Each entry: (field name, (field-axis id, render id, optional
-    /// value-formula template string)). The template string is the raw
-    /// source — parsing and substitution happens lazily at cell input
-    /// time so a template can reference forward fields without ordering
-    /// constraints.
-    pub fields: Vec<(Field, (F, RenderId, Option<String>))>,
+    /// Per-field entries; index alignment matches the original
+    /// `BindFormSchema.fields` order.
+    pub fields: Vec<(Field, FieldEntry<F>)>,
     pub name: String,
     pub key: K,
 }
 
 impl<F: Copy + PartialEq, K, const IS_ROW: bool> FormSchema<F, K, IS_ROW> {
-    /// Lookup the formula template for the field whose field-axis id is
-    /// `id`. Returns `None` if the field doesn't exist or has no
+    /// Lookup the value-formula template for the field whose field-axis id
+    /// is `id`. Returns `None` if the field doesn't exist or has no
     /// template (free-form column).
     pub fn formula_for_field_axis(&self, id: F) -> Option<&str> {
         self.fields
             .iter()
-            .find(|(_, (f, _, _))| *f == id)
-            .and_then(|(_, (_, _, formula))| formula.as_deref())
+            .find(|(_, e)| e.field_axis_id == id)
+            .and_then(|(_, e)| e.value_formula.as_deref())
+    }
+
+    /// Lookup the validation-formula template for the field whose
+    /// field-axis id is `id`. Returns `None` for fields with no rule.
+    pub fn validation_for_field_axis(&self, id: F) -> Option<&str> {
+        self.fields
+            .iter()
+            .find(|(_, e)| e.field_axis_id == id)
+            .and_then(|(_, e)| e.validation_formula.as_deref())
+    }
+
+    /// Lookup the editability-formula template for the field whose
+    /// field-axis id is `id`. Returns `None` for fields with no rule.
+    pub fn editability_for_field_axis(&self, id: F) -> Option<&str> {
+        self.fields
+            .iter()
+            .find(|(_, e)| e.field_axis_id == id)
+            .and_then(|(_, e)| e.editability_formula.as_deref())
     }
 
     /// Resolve a `#FIELD("name")` reference back to the field-axis id
@@ -50,7 +117,7 @@ impl<F: Copy + PartialEq, K, const IS_ROW: bool> FormSchema<F, K, IS_ROW> {
         self.fields
             .iter()
             .find(|(n, _)| n == name)
-            .map(|(_, (id, _, _))| *id)
+            .map(|(_, e)| e.field_axis_id)
     }
 }
 
@@ -183,8 +250,8 @@ impl SchemaTrait for RowSchema {
     fn get_render_id(&self, _row: RowId, col: ColId) -> Option<RenderId> {
         self.fields
             .iter()
-            .find(|(_, (f, _, _))| f == &col)
-            .map(|(_, (_, id, _))| id.clone())
+            .find(|(_, e)| e.field_axis_id == col)
+            .map(|(_, e)| e.render_id.clone())
     }
 
     fn get_ref_name(&self) -> String {
@@ -198,7 +265,7 @@ impl SchemaTrait for RowSchema {
     fn get_all_field_ids(&self) -> Vec<(Field, BlockFieldId)> {
         self.fields
             .iter()
-            .map(|(name, (col, _, _))| (name.clone(), *col as BlockFieldId))
+            .map(|(name, e)| (name.clone(), e.field_axis_id as BlockFieldId))
             .collect()
     }
 
@@ -206,13 +273,13 @@ impl SchemaTrait for RowSchema {
         self.fields
             .iter()
             .find(|(name, _)| name == field)
-            .map(|(_, (col, _, _))| *col as BlockFieldId)
+            .map(|(_, e)| e.field_axis_id as BlockFieldId)
     }
 
     fn fetch_field_name(&self, field_id: BlockFieldId) -> Option<String> {
         self.fields
             .iter()
-            .find(|(_, (col, _, _))| *col as BlockFieldId == field_id)
+            .find(|(_, e)| e.field_axis_id as BlockFieldId == field_id)
             .map(|(name, _)| name.clone())
     }
 
@@ -233,8 +300,8 @@ impl SchemaTrait for RowSchema {
         let col = self
             .fields
             .iter()
-            .find(|(f, (_, _, _))| f == field)
-            .map(|(_, (f, _, _))| *f);
+            .find(|(f, _)| f == field)
+            .map(|(_, e)| e.field_axis_id);
         col.map(|col| BlockCellId {
             row,
             col,
@@ -253,7 +320,7 @@ impl SchemaTrait for RowSchema {
         if self
             .fields
             .iter()
-            .any(|(_, (col, _, _))| *col as BlockFieldId == field_id)
+            .any(|(_, e)| e.field_axis_id as BlockFieldId == field_id)
         {
             Some(BlockCellId {
                 block_id: key.block_id,
@@ -268,7 +335,11 @@ impl SchemaTrait for RowSchema {
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole {
         if cell.col == self.key {
             BlockCellRole::Key
-        } else if self.fields.iter().any(|(_, (col, _, _))| *col == cell.col) {
+        } else if self
+            .fields
+            .iter()
+            .any(|(_, e)| e.field_axis_id == cell.col)
+        {
             BlockCellRole::Field(cell.col as BlockFieldId)
         } else {
             BlockCellRole::None
@@ -280,8 +351,8 @@ impl SchemaTrait for ColSchema {
     fn get_render_id(&self, row: RowId, _col: ColId) -> Option<RenderId> {
         self.fields
             .iter()
-            .find(|(_, (f, _, _))| f == &row)
-            .map(|(_, (_, id, _))| id.clone())
+            .find(|(_, e)| e.field_axis_id == row)
+            .map(|(_, e)| e.render_id.clone())
     }
 
     fn get_ref_name(&self) -> String {
@@ -295,7 +366,7 @@ impl SchemaTrait for ColSchema {
     fn get_all_field_ids(&self) -> Vec<(Field, BlockFieldId)> {
         self.fields
             .iter()
-            .map(|(name, (row, _, _))| (name.clone(), *row as BlockFieldId))
+            .map(|(name, e)| (name.clone(), e.field_axis_id as BlockFieldId))
             .collect()
     }
 
@@ -303,13 +374,13 @@ impl SchemaTrait for ColSchema {
         self.fields
             .iter()
             .find(|(name, _)| name == field)
-            .map(|(_, (row, _, _))| *row as BlockFieldId)
+            .map(|(_, e)| e.field_axis_id as BlockFieldId)
     }
 
     fn fetch_field_name(&self, field_id: BlockFieldId) -> Option<String> {
         self.fields
             .iter()
-            .find(|(_, (row, _, _))| *row as BlockFieldId == field_id)
+            .find(|(_, e)| e.field_axis_id as BlockFieldId == field_id)
             .map(|(name, _)| name.clone())
     }
 
@@ -328,10 +399,10 @@ impl SchemaTrait for ColSchema {
     fn partially_resolve(&self, key: BlockCellId, field: &String) -> Option<BlockCellId> {
         self.fields
             .iter()
-            .find(|(f, (_, _, _))| f == field)
-            .map(|(_, (f, _, _))| BlockCellId {
+            .find(|(f, _)| f == field)
+            .map(|(_, e)| BlockCellId {
                 block_id: key.block_id,
-                row: *f,
+                row: e.field_axis_id,
                 col: key.col,
             })
     }
@@ -344,7 +415,7 @@ impl SchemaTrait for ColSchema {
         if self
             .fields
             .iter()
-            .any(|(_, (row, _, _))| *row as BlockFieldId == field_id)
+            .any(|(_, e)| e.field_axis_id as BlockFieldId == field_id)
         {
             Some(BlockCellId {
                 block_id: key.block_id,
@@ -359,7 +430,11 @@ impl SchemaTrait for ColSchema {
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole {
         if cell.row == self.key {
             BlockCellRole::Key
-        } else if self.fields.iter().any(|(_, (row, _, _))| *row == cell.row) {
+        } else if self
+            .fields
+            .iter()
+            .any(|(_, e)| e.field_axis_id == cell.row)
+        {
             BlockCellRole::Field(cell.row as BlockFieldId)
         } else {
             BlockCellRole::None

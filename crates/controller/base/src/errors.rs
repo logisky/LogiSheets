@@ -72,6 +72,8 @@ pub enum BasicError {
     UnavailableSheetId(SheetId),
     #[error("no appendix is found")]
     NoAppendix,
+    #[error("checkpoint not found: {0}")]
+    CheckpointNotFound(String),
     #[error("incomplete row col length: {0}, {1}")]
     IncompleteRowColLength(usize, usize),
     #[error("referencing ephemeral cell")]

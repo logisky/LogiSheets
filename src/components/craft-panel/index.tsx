@@ -56,6 +56,10 @@ export const CraftPanel = ({
             label: 'Markdown Table Extractor',
             value: '/markdown-table-extractor/index.html',
         },
+        {
+            label: 'Watson (AI)',
+            value: '/watson/index.html',
+        },
     ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     const engine = useEngine()

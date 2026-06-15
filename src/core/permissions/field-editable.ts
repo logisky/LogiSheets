@@ -22,10 +22,10 @@
  *     specific caller).
  *
  * Limitations:
- *   - This only handles the *static* `userEditable` flag. The dynamic
- *     `userEditableFormula` path (per-cell shadow formula) is host-
- *     evaluated and asynchronous; callers that need to honour it must
- *     route through the async permission patch instead.
+ *   - This only handles the *static* boolean form of `userEditable`.
+ *     The dynamic string form (per-cell shadow formula) requires
+ *     async shadow lookup; callers that need to honour it must route
+ *     through the async permission patch instead.
  */
 
 import type {FieldInfo, Grid} from 'logisheets-engine'

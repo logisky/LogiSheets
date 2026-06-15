@@ -6,11 +6,86 @@ use crate::{
     block_manager::schema_manager::{
         ctx::BlockSchemaCtx,
         manager::SchemaManager,
-        schema::{ColSchema, RandomSchema, RowSchema, Schema, SchemaTrait},
+        schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema, SchemaTrait},
     },
     edit_action::EditPayload,
     Error,
 };
+
+/// Normalize a `Vec<Option<String>>` of formula templates: trim whitespace,
+/// collapse empty / whitespace-only strings to `None`. Used uniformly for
+/// value / validation / editability formula columns.
+fn normalize_formula_vec(input: Vec<Option<String>>) -> Vec<Option<String>> {
+    input
+        .into_iter()
+        .map(|f| {
+            f.and_then(|s| {
+                let t = s.trim().to_string();
+                if t.is_empty() {
+                    None
+                } else {
+                    Some(t)
+                }
+            })
+        })
+        .collect()
+}
+
+/// Pad a formula vec with `None` to match `target_len`. Used so callers can
+/// omit `validation_formulas` / `editability_formulas` (sending `vec![]`)
+/// and have it interpreted as "all None" instead of a length mismatch.
+fn pad_to_len(input: Vec<Option<String>>, target_len: usize) -> Vec<Option<String>> {
+    if input.is_empty() {
+        return vec![None; target_len];
+    }
+    input
+}
+
+/// Apply a slice of (possibly-updated) rule values to a schema's existing
+/// rule slots. When `incoming.is_empty()`, the existing rule is preserved
+/// untouched — this is how callers say "don't change validation, I'm only
+/// updating value_formulas". Otherwise, the incoming vec replaces all
+/// existing values for that rule kind (per-field).
+fn apply_rule_update(
+    incoming_empty: bool,
+    incoming: Vec<Option<String>>,
+    take_existing: impl Fn(usize) -> Option<String>,
+    field_count: usize,
+) -> Vec<Option<String>> {
+    if incoming_empty {
+        (0..field_count).map(take_existing).collect()
+    } else {
+        incoming
+    }
+}
+
+/// Validate that every `#FIELD("X")` reference in a list of formula
+/// templates points at a declared field. `kind` is used in error
+/// messages ("value_formulas" / "validation_formulas" / ...).
+fn validate_field_refs(
+    formulas: &[Option<String>],
+    declared_names: &std::collections::HashSet<String>,
+    kind: &str,
+) -> Result<(), Error> {
+    for (i, formula_opt) in formulas.iter().enumerate() {
+        let Some(formula) = formula_opt else { continue };
+        let trimmed = formula.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let names = scan_field_refs(trimmed);
+        for n in names {
+            if !declared_names.contains(&n) {
+                return Err(BasicError::InvalidFormula(format!(
+                    "{}[{}] references unknown field {:?}",
+                    kind, i, n
+                ))
+                .into());
+            }
+        }
+    }
+    Ok(())
+}
 
 /// Scan a value-formula template for `#FIELD("name")` occurrences and
 /// return every referenced name. Used at bind time to validate that
@@ -128,38 +203,58 @@ impl BlockSchemaExecutor {
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let block_id = p.block_id;
 
-                // Validate template references *before* committing the
-                // schema: every #FIELD("X") in any field_formula must
-                // refer to a field name actually declared in this bind.
-                // (#KEY is always valid; #PLACEHOLDER isn't expected in
-                // value formulas but is left untouched if present.)
-                //
-                // Index alignment: `field_formulas[i]` corresponds to
-                // `fields[i]`. Missing or empty strings are normalized
-                // to None below.
-                let declared_names: std::collections::HashSet<&str> =
-                    p.fields.iter().map(|s| s.as_str()).collect();
-                for (i, formula_opt) in p.field_formulas.iter().enumerate() {
-                    let Some(formula) = formula_opt else { continue };
-                    let trimmed = formula.trim();
-                    if trimmed.is_empty() {
-                        continue;
-                    }
-                    let names = scan_field_refs(trimmed);
-                    for n in names {
-                        if !declared_names.contains(n.as_str()) {
-                            return Err(BasicError::InvalidFormula(format!(
-                                "field_formulas[{}] (for '{}') references unknown field {:?}",
-                                i,
-                                p.fields.get(i).map(|s| s.as_str()).unwrap_or(""),
-                                n
-                            ))
-                            .into());
-                        }
-                    }
+                // Pad-to-len the optional rule vecs so callers can omit
+                // them (send vec![]) and have it mean "all None".
+                let field_formulas =
+                    pad_to_len(p.field_formulas, p.fields.len());
+                let validation_formulas =
+                    pad_to_len(p.validation_formulas, p.fields.len());
+                let editability_formulas =
+                    pad_to_len(p.editability_formulas, p.fields.len());
+
+                // Length checks after pad — if user sent a non-empty but
+                // wrong-length vec, that's an error.
+                if field_formulas.len() != p.fields.len()
+                    || validation_formulas.len() != p.fields.len()
+                    || editability_formulas.len() != p.fields.len()
+                {
+                    return Err(BasicError::InvalidFormula(format!(
+                        "BindFormSchema: formula vec length mismatch \
+                         (fields={}, value={}, validation={}, editability={})",
+                        p.fields.len(),
+                        field_formulas.len(),
+                        validation_formulas.len(),
+                        editability_formulas.len()
+                    ))
+                    .into());
                 }
 
-                let mut field_formulas_iter = p.field_formulas.into_iter();
+                // Validate template references *before* committing the
+                // schema: every #FIELD("X") in any rule template must
+                // refer to a field name actually declared in this bind.
+                // (#KEY is always valid; #PLACEHOLDER is allowed in
+                // validation/editability but not in value_formula —
+                // leaving it untouched there surfaces as #NAME?.)
+                let declared_names: std::collections::HashSet<String> =
+                    p.fields.iter().cloned().collect();
+                validate_field_refs(&field_formulas, &declared_names, "field_formulas")?;
+                validate_field_refs(
+                    &validation_formulas,
+                    &declared_names,
+                    "validation_formulas",
+                )?;
+                validate_field_refs(
+                    &editability_formulas,
+                    &declared_names,
+                    "editability_formulas",
+                )?;
+
+                let mut value_iter = normalize_formula_vec(field_formulas).into_iter();
+                let mut validation_iter =
+                    normalize_formula_vec(validation_formulas).into_iter();
+                let mut editability_iter =
+                    normalize_formula_vec(editability_formulas).into_iter();
+
                 let mut fields = Vec::new();
                 for (i, (field, render_id)) in p
                     .fields
@@ -181,12 +276,11 @@ impl BlockSchemaExecutor {
                     } else {
                         ctx.fetch_block_cell_id(&sheet_id, &block_id, idx, 0)?.row
                     };
-                    let formula = field_formulas_iter
-                        .next()
-                        .flatten()
-                        .map(|s| s.trim().to_string())
-                        .filter(|s| !s.is_empty());
-                    fields.push((field, (id, render_id, formula)));
+                    let entry = FieldEntry::new(id, render_id)
+                        .with_value_formula(value_iter.next().flatten())
+                        .with_validation_formula(validation_iter.next().flatten())
+                        .with_editability_formula(editability_iter.next().flatten());
+                    fields.push((field, entry));
                 }
                 let schema = if p.row {
                     let key = ctx
@@ -252,12 +346,81 @@ impl BlockSchemaExecutor {
                         .into());
                     }
                 };
-                if p.field_formulas.len() != field_count {
+
+                // `[]` for any rule vec means "leave this rule kind
+                // untouched" — preserve the existing per-field values.
+                // Non-empty vecs replace all per-field values for that
+                // rule kind. This lets callers update one rule kind
+                // (e.g. only validation_formulas) without re-sending
+                // the others.
+                let field_empty = p.field_formulas.is_empty();
+                let validation_empty = p.validation_formulas.is_empty();
+                let editability_empty = p.editability_formulas.is_empty();
+
+                // Snapshot existing per-field rules so apply_rule_update
+                // can preserve them for any kind with an empty incoming
+                // vec.
+                let existing_rules: Vec<(
+                    Option<String>,
+                    Option<String>,
+                    Option<String>,
+                )> = match existing {
+                    Schema::RowSchema(s) => s
+                        .fields
+                        .iter()
+                        .map(|(_, e)| {
+                            (
+                                e.value_formula.clone(),
+                                e.validation_formula.clone(),
+                                e.editability_formula.clone(),
+                            )
+                        })
+                        .collect(),
+                    Schema::ColSchema(s) => s
+                        .fields
+                        .iter()
+                        .map(|(_, e)| {
+                            (
+                                e.value_formula.clone(),
+                                e.validation_formula.clone(),
+                                e.editability_formula.clone(),
+                            )
+                        })
+                        .collect(),
+                    Schema::RandomSchema(_) => unreachable!(),
+                };
+
+                let field_formulas = apply_rule_update(
+                    field_empty,
+                    p.field_formulas,
+                    |i| existing_rules[i].0.clone(),
+                    field_count,
+                );
+                let validation_formulas = apply_rule_update(
+                    validation_empty,
+                    p.validation_formulas,
+                    |i| existing_rules[i].1.clone(),
+                    field_count,
+                );
+                let editability_formulas = apply_rule_update(
+                    editability_empty,
+                    p.editability_formulas,
+                    |i| existing_rules[i].2.clone(),
+                    field_count,
+                );
+
+                if field_formulas.len() != field_count
+                    || validation_formulas.len() != field_count
+                    || editability_formulas.len() != field_count
+                {
                     return Err(BasicError::InvalidFormula(format!(
-                        "UpsertFieldFormulas: field_formulas length {} does not \
-                         match bound schema's field count {} for block {}",
-                        p.field_formulas.len(),
+                        "UpsertFieldFormulas: formula vec length mismatch \
+                         (fields={}, value={}, validation={}, editability={}) \
+                         for block {}",
                         field_count,
+                        field_formulas.len(),
+                        validation_formulas.len(),
+                        editability_formulas.len(),
                         block_id
                     ))
                     .into());
@@ -270,53 +433,39 @@ impl BlockSchemaExecutor {
                     Schema::ColSchema(s) => s.fields.iter().map(|(n, _)| n.clone()).collect(),
                     Schema::RandomSchema(_) => unreachable!(),
                 };
-                for (i, formula_opt) in p.field_formulas.iter().enumerate() {
-                    let Some(formula) = formula_opt else { continue };
-                    let trimmed = formula.trim();
-                    if trimmed.is_empty() {
-                        continue;
-                    }
-                    let names = scan_field_refs(trimmed);
-                    for n in names {
-                        if !declared_names.contains(&n) {
-                            return Err(BasicError::InvalidFormula(format!(
-                                "UpsertFieldFormulas: field_formulas[{}] references \
-                                 unknown field {:?}",
-                                i, n
-                            ))
-                            .into());
-                        }
-                    }
-                }
+                validate_field_refs(&field_formulas, &declared_names, "field_formulas")?;
+                validate_field_refs(
+                    &validation_formulas,
+                    &declared_names,
+                    "validation_formulas",
+                )?;
+                validate_field_refs(
+                    &editability_formulas,
+                    &declared_names,
+                    "editability_formulas",
+                )?;
 
-                // Mutate the schema's per-field formula slots in place.
-                // `Some("")` / `Some("   ")` collapse to `None` to match
-                // BindFormSchema's normalization.
-                let normalized: Vec<Option<String>> = p
-                    .field_formulas
-                    .into_iter()
-                    .map(|f| {
-                        f.and_then(|s| {
-                            let t = s.trim().to_string();
-                            if t.is_empty() {
-                                None
-                            } else {
-                                Some(t)
-                            }
-                        })
-                    })
-                    .collect();
+                // Normalize (trim + empty → None), then mutate the
+                // schema's per-field rule slots in place.
+                let normalized_value = normalize_formula_vec(field_formulas);
+                let normalized_validation = normalize_formula_vec(validation_formulas);
+                let normalized_editability = normalize_formula_vec(editability_formulas);
+
                 let schema_mut = manager.schemas.get(&(sheet_id, block_id)).unwrap().clone();
                 let updated = match schema_mut {
                     Schema::RowSchema(mut s) => {
-                        for (i, formula) in normalized.into_iter().enumerate() {
-                            s.fields[i].1 .2 = formula;
+                        for (i, entry) in s.fields.iter_mut().enumerate() {
+                            entry.1.value_formula = normalized_value[i].clone();
+                            entry.1.validation_formula = normalized_validation[i].clone();
+                            entry.1.editability_formula = normalized_editability[i].clone();
                         }
                         Schema::RowSchema(s)
                     }
                     Schema::ColSchema(mut s) => {
-                        for (i, formula) in normalized.into_iter().enumerate() {
-                            s.fields[i].1 .2 = formula;
+                        for (i, entry) in s.fields.iter_mut().enumerate() {
+                            entry.1.value_formula = normalized_value[i].clone();
+                            entry.1.validation_formula = normalized_validation[i].clone();
+                            entry.1.editability_formula = normalized_editability[i].clone();
                         }
                         Schema::ColSchema(s)
                     }

@@ -3,6 +3,7 @@ import {
     ActionEffect,
     AsyncFuncResult,
     BlockField,
+    BlockInfo,
     FormulaDisplayInfo,
     ShadowCellInfo,
     SheetCellId,
@@ -465,6 +466,67 @@ export class Workbook {
 
     public getAllBlockFields(): Result<readonly BlockField[]> {
         return rpc('getAllBlockFields', undefined, this._id)
+    }
+
+    /**
+     * Enumerate blocks across the workbook.
+     *
+     * Scope:
+     *   - `sheetId` set → only that sheet
+     *   - `sheetIdx` set → resolve to sheetId, then that sheet
+     *   - neither set → every sheet
+     * `sheetId` wins if both are set.
+     */
+    public getAllBlocks(params?: {
+        sheetIdx?: number
+        sheetId?: number
+    }): Result<readonly BlockInfo[]> {
+        return rpc(
+            'getAllBlocks',
+            {
+                sheetIdx: params?.sheetIdx,
+                sheetId: params?.sheetId,
+            } as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    // ---- Named checkpoints --------------------------------------------
+    //
+    // Save / delete / list go through dedicated RPCs (not the
+    // transaction pipeline) — they manage session-only checkpoint
+    // storage and don't touch sheet state. To restore, send a normal
+    // `restoreCheckpoint` payload via handleTransaction; that lands on
+    // the undo stack so users can Ctrl-Z to reverse the restore.
+
+    /** Snapshot the current workbook state under `label`. Overwrites
+     *  any existing checkpoint with the same label. Returns the number
+     *  of checkpoints currently stored after this save. */
+    public saveCheckpoint(
+        label: string,
+        description?: string
+    ): Result<number> {
+        return rpc(
+            'saveCheckpoint',
+            {label, description} as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /** Drop a named checkpoint. Returns `true` if it existed. */
+    public deleteCheckpoint(label: string): Result<boolean> {
+        return rpc(
+            'deleteCheckpoint',
+            {label} as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /** List all checkpoints (newest first). */
+    public listCheckpoints(): Result<
+        ReadonlyArray<{label: string; description?: string}>
+    > {
+        return rpc('listCheckpoints', undefined, this._id)
     }
 
     private _inputAsyncResult(r: AsyncFuncResult): ActionEffect {

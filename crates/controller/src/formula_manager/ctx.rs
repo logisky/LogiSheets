@@ -8,6 +8,7 @@ use logisheets_base::{
 
 use crate::block_manager::schema_manager::schema::BlockCellRole;
 use crate::formula_manager::Vertex;
+use crate::sid_assigner::ShadowKind;
 
 pub trait FormulaExecCtx:
     SheetIdFetcherByIdxTrait
@@ -54,6 +55,37 @@ pub trait FormulaExecCtx:
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<BlockCellRowContext>;
+
+    /// Read the validation- or editability-formula template that the
+    /// schema has registered for this cell's field, if any. Returns the
+    /// raw template string (may or may not include a leading `=`).
+    fn block_cell_shadow_template(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        kind: ShadowKind,
+    ) -> Option<String>;
+
+    /// Get-or-allocate the shadow id used for (sheet, cell, kind). Used
+    /// by the engine-internal shadow auto-install path so it can write
+    /// the rule formula without the caller having to mint ids.
+    fn allocate_block_cell_shadow_id(
+        &mut self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        kind: ShadowKind,
+    ) -> u64;
+
+    /// Look up a previously-allocated shadow id without allocating a
+    /// fresh one. Returns `None` if the (cell, kind) pair has never had
+    /// a shadow. Used by the remove-rule path so we can clear a shadow
+    /// that's no longer wanted.
+    fn find_block_cell_shadow_id(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        kind: ShadowKind,
+    ) -> Option<u64>;
 }
 
 /// Substitution context returned by

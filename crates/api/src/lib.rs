@@ -55,6 +55,12 @@ pub use logisheets_controller::{take_last_error, Error, ErrorMessage, Result};
 // which derived computation each shadow cell represents.
 pub use logisheets_controller::sid_assigner::ShadowKind;
 
+// Re-export checkpoint primitives so the WASM RPC layer can build
+// response DTOs from them.
+pub use logisheets_controller::checkpoint_manager::{
+    CheckpointManager, CheckpointMeta,
+};
+
 // Re-export value and style types
 pub use logisheets_controller::{Appendix, AppendixWithCell, Comment, MergeCell, Style, Value};
 

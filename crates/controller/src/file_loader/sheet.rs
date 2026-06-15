@@ -200,7 +200,7 @@ pub fn load_sheet_data(
                             ext_ref_manager,
                             block_schema_manager,
                             container,
-                            sid_assigner: &ShadowIdAssigner::new(),
+                            sid_assigner: &mut ShadowIdAssigner::new(),
                         };
                         if let Some(f) = &formula.formula {
                             if let Some(reference) = &formula.reference {

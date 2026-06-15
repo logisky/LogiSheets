@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Watson</title>
+  <style>
+    *  { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      color: #111827;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---------------- Header ---------------- */
+    header {
+      padding: 12px 16px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+    header .spacer { flex: 1; }
+    header .btn { padding: 4px 10px; font-size: 12px; }
+    header .badge {
+      font-size: 11px;
+      color: #6b7280;
+      padding: 2px 6px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: #f9fafb;
+    }
+
+    /* ---------------- Transcript ---------------- */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bubble {
+      max-width: 90%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .bubble.user {
+      background: #2563eb;
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 2px;
+    }
+    .bubble.assistant {
+      background: #fff;
+      color: #111827;
+      align-self: flex-start;
+      border: 1px solid #e5e7eb;
+      border-bottom-left-radius: 2px;
+    }
+    .bubble.note {
+      background: #fef3c7;
+      color: #92400e;
+      align-self: center;
+      font-size: 11px;
+      padding: 4px 8px;
+      max-width: 95%;
+    }
+    .bubble.note.summary { background: #e0e7ff; color: #3730a3; }
+
+    /* tool-call card */
+    details.tool {
+      align-self: flex-start;
+      max-width: 95%;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fafafa;
+      font-size: 12px;
+      padding: 0;
+      overflow: hidden;
+    }
+    details.tool summary {
+      cursor: pointer;
+      padding: 6px 10px;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    details.tool summary::-webkit-details-marker { display: none; }
+    details.tool .tool-name { font-weight: 600; }
+    details.tool .tool-status {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      margin-left: auto;
+    }
+    details.tool .tool-status.pending { background: #fef9c3; color: #854d0e; }
+    details.tool .tool-status.ok      { background: #dcfce7; color: #166534; }
+    details.tool .tool-status.error   { background: #fee2e2; color: #991b1b; }
+    details.tool .tool-status.declined{ background: #f3f4f6; color: #6b7280; }
+    details.tool pre {
+      margin: 0;
+      padding: 8px 10px;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+      font-size: 11px;
+      max-height: 240px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ---------------- Composer ---------------- */
+    .composer {
+      padding: 8px 12px;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .composer textarea {
+      flex: 1;
+      resize: none;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      font-family: inherit;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      min-height: 80px;
+      max-height: 240px;
+      outline: none;
+    }
+    .composer textarea:focus { border-color: #2563eb; }
+    .composer button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #2563eb;
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .composer button[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn:hover { background: #e5e7eb; }
+
+    /* ---------------- Modal ---------------- */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      width: min(420px, 92vw);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .modal h2 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+    .modal p { margin: 0 0 12px; font-size: 12px; color: #4b5563; }
+    .modal input[type="password"], .modal input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 13px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .modal .row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .modal pre {
+      max-height: 200px;
+      overflow: auto;
+      background: #f3f4f6;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      margin: 0 0 12px;
+    }
+
+    .empty-state {
+      align-self: center;
+      color: #6b7280;
+      font-size: 12px;
+      margin-top: 40px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Watson</h1>
+    <span class="badge" id="status-badge">idle</span>
+    <div class="spacer"></div>
+    <button class="btn" id="btn-settings">Settings</button>
+    <button class="btn" id="btn-new">New chat</button>
+  </header>
+
+  <main id="transcript">
+    <div class="empty-state" id="empty-state">
+      Ask Watson to build a sheet, explain a violation, or analyse a block.
+    </div>
+  </main>
+
+  <div class="composer">
+    <textarea id="input" rows="3" placeholder="Type a message — Enter to send, Shift+Enter for newline"></textarea>
+    <button id="btn-send">Send</button>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modal-overlay" id="modal-settings">
+    <div class="modal">
+      <h2>Anthropic API key</h2>
+      <p>Key is stored in this browser only (localStorage). It is sent directly
+         to api.anthropic.com on each request — no server in between.</p>
+      <input type="password" id="input-api-key" placeholder="sk-ant-..." autocomplete="off" />
+      <h2>Model</h2>
+      <input type="text" id="input-model" placeholder="claude-opus-4-7" />
+      <div class="row">
+        <button class="btn" id="btn-clear-key">Clear key</button>
+        <button class="btn" id="btn-settings-close">Cancel</button>
+        <button class="btn" id="btn-settings-save" style="background:#2563eb;color:#fff;border-color:#2563eb;">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm modal -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal">
+      <h2 id="confirm-title">Approve tool call?</h2>
+      <p id="confirm-name"></p>
+      <pre id="confirm-input"></pre>
+      <div class="row">
+        <button class="btn" id="btn-confirm-deny">Deny</button>
+        <button class="btn" id="btn-confirm-ok" style="background:#2563eb;color:#fff;border-color:#2563eb;">Approve</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./watson.js"></script>
+  <script>
+    'use strict';
+    const W = window.Watson;
+    const wb = window.workbook;
+    const workbookId = window.workbookId || null;
+
+    // ---------- Settings (localStorage-backed) ----------
+    const KEY_API   = 'watson.apiKey';
+    const KEY_MODEL = 'watson.model';
+    const DEFAULT_MODEL = 'claude-opus-4-7';
+
+    const settings = {
+      getKey:   () => localStorage.getItem(KEY_API),
+      setKey:   v  => v ? localStorage.setItem(KEY_API, v) : localStorage.removeItem(KEY_API),
+      getModel: () => localStorage.getItem(KEY_MODEL) || DEFAULT_MODEL,
+      setModel: v  => localStorage.setItem(KEY_MODEL, v || DEFAULT_MODEL),
+    };
+
+    // ---------- DOM ----------
+    const $ = sel => document.querySelector(sel);
+    const transcript    = $('#transcript');
+    const emptyState    = $('#empty-state');
+    const input         = $('#input');
+    const btnSend       = $('#btn-send');
+    const btnSettings   = $('#btn-settings');
+    const btnNew        = $('#btn-new');
+    const statusBadge   = $('#status-badge');
+
+    // ---------- Modal helpers ----------
+    function openModal(id)  { $('#' + id).classList.add('show'); }
+    function closeModal(id) { $('#' + id).classList.remove('show'); }
+
+    function askConfirm(name, input) {
+      return new Promise(resolve => {
+        $('#confirm-name').textContent = name;
+        $('#confirm-input').textContent = JSON.stringify(input, null, 2);
+        openModal('modal-confirm');
+        const cleanup = approved => {
+          closeModal('modal-confirm');
+          $('#btn-confirm-ok').onclick = null;
+          $('#btn-confirm-deny').onclick = null;
+          resolve({ approved });
+        };
+        $('#btn-confirm-ok').onclick   = () => cleanup(true);
+        $('#btn-confirm-deny').onclick = () => cleanup(false);
+      });
+    }
+
+    btnSettings.onclick = () => {
+      $('#input-api-key').value = settings.getKey() || '';
+      $('#input-model').value   = settings.getModel();
+      openModal('modal-settings');
+    };
+    $('#btn-settings-close').onclick = () => closeModal('modal-settings');
+    $('#btn-settings-save').onclick  = () => {
+      settings.setKey($('#input-api-key').value.trim());
+      settings.setModel($('#input-model').value.trim());
+      closeModal('modal-settings');
+      rebuildAgent();
+    };
+    $('#btn-clear-key').onclick = () => {
+      $('#input-api-key').value = '';
+      settings.setKey('');
+    };
+
+    // ---------- Agent + Store wiring ----------
+    const store = new W.IdbConversationStore();
+    const registry = new W.ToolRegistry();
+    registry.registerMany([...W.BUILDER_TOOLS, ...W.INSPECT_TOOLS, ...W.EDIT_TOOLS]);
+
+    const SYSTEM_PROMPT =
+      'You are Watson, an AI assistant inside LogiSheets. ' +
+      'You help users build, inspect, and edit block-shaped spreadsheets ' +
+      'using the available tools. Prefer formulas (eval_formula) over ' +
+      'reading large data. Confirm before destructive edits. ' +
+      'Keep responses short and direct.';
+
+    let agent = null;
+    let llm   = null;
+    let conversationId = null;
+    let unsubscribe = null;
+    let abortCtrl = null;
+    let running = false;
+
+    function rebuildAgent() {
+      llm = new W.AnthropicBrowserClient({
+        apiKey: () => settings.getKey(),
+        onRequest: info => {
+          if (info.input_tokens != null) {
+            statusBadge.textContent =
+              `${info.input_tokens}→${info.output_tokens} tok` +
+              (info.cache_read_tokens ? ` (cache: ${info.cache_read_tokens})` : '');
+          }
+        },
+      });
+      agent = new W.Agent({
+        store,
+        registry,
+        llm,
+        workbook: wb,
+        model: settings.getModel(),
+        systemPrompt: SYSTEM_PROMPT,
+        confirm: askConfirm,
+        log: msg => console.log('[watson]', msg),
+      });
+    }
+
+    // ---------- Conversation ----------
+    async function loadOrCreateConversation() {
+      const list = await store.listConversations({ workbook_id: workbookId, limit: 1 });
+      if (list.length > 0) {
+        conversationId = list[0].id;
+        return;
+      }
+      const conv = await store.createConversation({
+        title: 'New chat',
+        workbook_id: workbookId || undefined,
+        model: settings.getModel(),
+      });
+      conversationId = conv.id;
+    }
+
+    async function newChat() {
+      if (unsubscribe) unsubscribe();
+      const conv = await store.createConversation({
+        title: 'New chat',
+        workbook_id: workbookId || undefined,
+        model: settings.getModel(),
+      });
+      conversationId = conv.id;
+      subscribe();
+    }
+    btnNew.onclick = newChat;
+
+    function subscribe() {
+      if (unsubscribe) unsubscribe();
+      unsubscribe = store.subscribeEvents(conversationId, render);
+    }
+
+    // ---------- Render ----------
+    function render(events) {
+      const bubbles = W.toUiBubbles(events);
+      if (bubbles.length === 0) {
+        emptyState.style.display = 'block';
+      } else {
+        emptyState.style.display = 'none';
+      }
+      // Naive re-render — fine for now (events array tops out small in
+      // practice; can switch to keyed diff if a long conversation lags).
+      transcript.innerHTML = '';
+      if (bubbles.length === 0) transcript.appendChild(emptyState);
+      for (const b of bubbles) transcript.appendChild(bubbleEl(b));
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    function bubbleEl(b) {
+      if (b.kind === 'user') {
+        const d = document.createElement('div');
+        d.className = 'bubble user';
+        d.textContent = b.text;
+        return d;
+      }
+      if (b.kind === 'assistant_text') {
+        const d = document.createElement('div');
+        d.className = 'bubble assistant';
+        d.textContent = b.text;
+        return d;
+      }
+      if (b.kind === 'note') {
+        const d = document.createElement('div');
+        d.className = 'bubble note ' + b.severity;
+        d.textContent = b.text;
+        return d;
+      }
+      // tool
+      const det = document.createElement('details');
+      det.className = 'tool';
+      const sum = document.createElement('summary');
+      const name = document.createElement('span');
+      name.className = 'tool-name';
+      name.textContent = b.name;
+      sum.appendChild(name);
+
+      const status = document.createElement('span');
+      status.className = 'tool-status ';
+      if (b.user_confirm && !b.user_confirm.approved) {
+        status.classList.add('declined');
+        status.textContent = 'declined';
+      } else if (b.pending) {
+        status.classList.add('pending');
+        status.textContent = '…running';
+      } else if (b.error) {
+        status.classList.add('error');
+        status.textContent = 'error';
+      } else {
+        status.classList.add('ok');
+        status.textContent = (b.duration_ms || 0) + 'ms';
+      }
+      sum.appendChild(status);
+      det.appendChild(sum);
+
+      const pre = document.createElement('pre');
+      const body = {
+        input: b.input,
+        ...(b.output !== undefined ? { output: b.output } : {}),
+        ...(b.error ? { error: b.error } : {}),
+      };
+      pre.textContent = JSON.stringify(body, null, 2);
+      det.appendChild(pre);
+      return det;
+    }
+
+    // ---------- Send ----------
+    async function send() {
+      const text = input.value.trim();
+      if (!text || running) return;
+      if (!settings.getKey()) {
+        btnSettings.click();
+        return;
+      }
+      input.value = '';
+      input.style.height = 'auto';
+      running = true;
+      btnSend.disabled = true;
+      statusBadge.textContent = 'thinking…';
+      abortCtrl = new AbortController();
+      try {
+        await agent.runTurn(conversationId, text, abortCtrl.signal);
+        statusBadge.textContent = 'idle';
+      } catch (err) {
+        console.error('[watson] runTurn error', err);
+        statusBadge.textContent = 'error';
+        if (window.notifyCraft) {
+          window.notifyCraft('error', err && err.message || String(err));
+        }
+      } finally {
+        running = false;
+        btnSend.disabled = false;
+        abortCtrl = null;
+      }
+    }
+    btnSend.onclick = send;
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    });
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 240) + 'px';
+    });
+
+    // ---------- Boot ----------
+    (async function boot() {
+      rebuildAgent();
+      await loadOrCreateConversation();
+      subscribe();
+      if (!settings.getKey()) {
+        // Nudge first-time users to set their key.
+        setTimeout(() => btnSettings.click(), 200);
+      }
+    })().catch(err => {
+      console.error('[watson] boot error', err);
+      statusBadge.textContent = 'boot error';
+    });
+
+    // ---------- Teardown on unload (Watson craft removed / iframe killed) ----------
+    window.addEventListener('beforeunload', () => {
+      if (abortCtrl) abortCtrl.abort();
+      if (unsubscribe) unsubscribe();
+    });
+  </script>
+</body>
+</html>

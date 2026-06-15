@@ -32,6 +32,7 @@ use crate::edit_action::{
 };
 use crate::errors::{Error, Result};
 use crate::file_loader::load_file;
+use crate::checkpoint_manager::{CheckpointManager, CheckpointMeta};
 use crate::file_saver::save_file;
 use crate::formula_manager::Vertex;
 use crate::settings::Settings;
@@ -58,6 +59,11 @@ pub struct Controller {
     pub curr_book_name: String,
     pub settings: Settings,
     pub version_manager: VersionManager,
+    /// Session-scoped named checkpoints. Independent of the linear
+    /// undo/redo stack (see `checkpoint_manager` module docs).
+    /// Populated by AI workflows via `Workbook::save_checkpoint`;
+    /// cleared on file save/load.
+    pub checkpoint_manager: CheckpointManager,
     pub sid_assigner: ShadowIdAssigner,
 
     pub app_data: Vec<AppData>,
@@ -70,6 +76,7 @@ impl Default for Controller {
             curr_book_name: String::from("Book1"),
             settings: Settings::default(),
             version_manager: VersionManager::default(),
+            checkpoint_manager: CheckpointManager::default(),
             async_func_manager: AsyncFuncManager::default(),
             sid_assigner: ShadowIdAssigner::new(),
             app_data: vec![],
@@ -139,6 +146,7 @@ impl Controller {
             settings,
             status,
             version_manager: VersionManager::default(),
+            checkpoint_manager: CheckpointManager::default(),
             async_func_manager: AsyncFuncManager::default(),
             sid_assigner: ShadowIdAssigner::new(),
             app_data,
@@ -201,7 +209,8 @@ impl Controller {
             sheet_updated: false,
             cell_updated: false,
             cells_removed: HashSet::new(),
-            sid_assigner: &self.sid_assigner,
+            sid_assigner: &mut self.sid_assigner,
+            checkpoint_manager: &self.checkpoint_manager,
             style_updated: HashSet::new(),
             row_inserted: vec![],
             row_removed: vec![],
@@ -335,7 +344,8 @@ impl Controller {
                     sheet_updated: false,
                     cell_updated: false,
                     cells_removed: HashSet::new(),
-                    sid_assigner: &self.sid_assigner,
+                    sid_assigner: &mut self.sid_assigner,
+            checkpoint_manager: &self.checkpoint_manager,
                     style_updated: HashSet::new(),
                     row_inserted: vec![],
                     row_removed: vec![],
@@ -448,7 +458,8 @@ impl Controller {
                     dirty_vertices,
                     sheet_updated: false,
                     cell_updated: false,
-                    sid_assigner: &self.sid_assigner,
+                    sid_assigner: &mut self.sid_assigner,
+            checkpoint_manager: &self.checkpoint_manager,
                     cells_removed: HashSet::new(),
                     style_updated: HashSet::new(),
                     row_inserted: vec![],

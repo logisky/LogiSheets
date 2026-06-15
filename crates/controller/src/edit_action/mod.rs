@@ -149,6 +149,13 @@ pub enum EditPayload {
 
     // Reproduce
     ReproduceCells(ReproduceCells),
+
+    // Named in-memory checkpoints. Save / delete are workbook methods
+    // (they don't touch sheet state). Restore is here because it DOES
+    // mutate state — replacing the live status with a previously-saved
+    // snapshot — and must go through the undoable-tx pipeline so the
+    // user can Ctrl-Z to reverse it.
+    RestoreCheckpoint(RestoreCheckpoint),
 }
 
 #[derive(Debug, Clone, TS)]
@@ -161,6 +168,28 @@ pub struct UpsertFieldRenderInfo {
     pub render_id: String,
     pub diy_render: bool,
     pub style_update: StyleUpdateType,
+}
+
+/// Replace the controller's live `Status` with a previously-saved
+/// snapshot from the `CheckpointManager`. The state-swap is recorded
+/// as a normal undoable transaction so the user can Ctrl-Z to reverse
+/// it (which restores whatever the live status was right before the
+/// restore — not the snapshot).
+///
+/// Fails loud (`CheckpointNotFound`) if no checkpoint exists for the
+/// given label. The redo stack is cleared per standard tx semantics.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "restore_checkpoint.ts", builder, rename_all = "camelCase")]
+pub struct RestoreCheckpoint {
+    /// Label passed to `Workbook::save_checkpoint` earlier in this
+    /// session.
+    pub label: String,
+}
+
+impl From<RestoreCheckpoint> for EditPayload {
+    fn from(value: RestoreCheckpoint) -> Self {
+        EditPayload::RestoreCheckpoint(value)
+    }
 }
 
 #[derive(Debug, Clone, TS)]
@@ -577,6 +606,19 @@ pub struct BindFormSchema {
     /// The vec length, when non-empty, must equal `fields.len()` — index
     /// alignment is positional.
     pub field_formulas: Vec<Option<String>>,
+    /// Per-field validation-formula templates. Same indexing as `fields`.
+    /// Each template is evaluated per row as a boolean: FALSE surfaces
+    /// a `ShadowKind::Validation` warning on the cell (advisory; the
+    /// cell value still commits). Empty vec = all None. Supports the
+    /// same placeholders as `field_formulas`, plus `#PLACEHOLDER` which
+    /// expands to a reference to the cell itself.
+    pub validation_formulas: Vec<Option<String>>,
+    /// Per-field editability-formula templates. Same indexing as `fields`.
+    /// Each template is evaluated per row as a boolean: FALSE installs
+    /// a `ShadowKind::UserEditable` lock so the host permission patch
+    /// refuses writes to that cell. Empty vec = all None. Same
+    /// placeholder support as `validation_formulas`.
+    pub editability_formulas: Vec<Option<String>>,
 }
 
 impl From<BindFormSchema> for EditPayload {
@@ -585,7 +627,7 @@ impl From<BindFormSchema> for EditPayload {
     }
 }
 
-/// Replace the per-field value-formula templates on a block whose
+/// Replace the per-field rule templates on a block whose
 /// `BindFormSchema` has already been applied. Lets callers stage
 /// schema registration and templated-formula installation as two
 /// separate payloads in the same transaction — useful when several
@@ -597,6 +639,12 @@ impl From<BindFormSchema> for EditPayload {
 /// `fields` list. `None` / empty string clears the field's formula
 /// (a previously-templated field becomes free-form again). The vec
 /// length must equal the bound schema's field count.
+///
+/// Any of the three rule vecs (`field_formulas`, `validation_formulas`,
+/// `editability_formulas`) may be sent as `[]` to mean "leave this rule
+/// kind untouched" — the engine preserves the existing per-field values.
+/// To explicitly clear all rules of a kind, send `vec![None; N]`. Any
+/// non-empty vec replaces every per-field value for that kind.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "upsert_field_formulas.ts",
@@ -607,6 +655,8 @@ pub struct UpsertFieldFormulas {
     pub sheet_idx: usize,
     pub block_id: usize,
     pub field_formulas: Vec<Option<String>>,
+    pub validation_formulas: Vec<Option<String>>,
+    pub editability_formulas: Vec<Option<String>>,
 }
 
 impl From<UpsertFieldFormulas> for EditPayload {
@@ -1167,6 +1217,7 @@ impl Payload for UpsertFieldRenderInfo {}
 impl Payload for BindFormSchema {}
 impl Payload for UpsertFieldFormulas {}
 impl Payload for BindRandomSchema {}
+impl Payload for RestoreCheckpoint {}
 
 #[cfg(test)]
 mod tests {

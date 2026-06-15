@@ -298,9 +298,23 @@ impl Navigator {
         match sheet_nav {
             Some(sn) => {
                 sn.data.blocks.insert(block_id, bp);
-                let mut cache = locked_write(&sn.cache);
-                cache.clean_cell();
-                drop(cache);
+                // Replace the cache field with a fresh `Locked<Cache>`
+                // rather than mutating the existing one. Under the
+                // `sequencer` feature `Locked<T> = Arc<RwLock<T>>`, so
+                // the cache is structurally shared with any prior
+                // `SheetNav::clone` (including `old_navigator` used by
+                // the formula executor's idx-navigator path within the
+                // same payload). Mutating the shared `Cache` would let
+                // a Fetcher operating against the OLD SheetNav (whose
+                // `data.blocks` still has the pre-insert layout) write
+                // a stale `(row, col) → NormalCell` mapping into the
+                // cache that's also visible to the new SheetNav — the
+                // observed failure mode for InsertRowsInBlock followed
+                // by BlockInput on the freshly-grown row. Re-assigning
+                // gives the new SheetNav an independent Arc, so writes
+                // from old-Fetcher Arc{A} don't leak into new-Fetcher
+                // Arc{B}.
+                sn.cache = Default::default();
                 res
             }
             None => res,

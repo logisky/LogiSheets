@@ -58,6 +58,8 @@ mod funcs {
                     fields: vec![String::from("field1"), String::from("field2")],
                     render_ids: vec![String::from("render1"), String::from("render2")],
                     field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -104,6 +106,8 @@ mod funcs {
                     fields: vec![String::from("field1"), String::from("field2")],
                     render_ids: vec![String::from("render1"), String::from("render2")],
                     field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -200,6 +204,8 @@ mod funcs {
                     fields: vec!["name".into(), "age".into()],
                     render_ids: vec!["r-name".into(), "r-age".into()],
                     field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -330,6 +336,8 @@ mod funcs {
                     fields: vec!["age".into()],
                     render_ids: vec!["r-age".into()],
                     field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -381,6 +389,8 @@ mod funcs {
                     fields: vec![String::from("field1"), String::from("field2")],
                     render_ids: vec![String::from("render1"), String::from("render2")],
                     field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -403,6 +413,8 @@ mod funcs {
                 fields: vec![String::from("field1"), String::from("field2")],
                 render_ids: vec![String::from("render1"), String::from("render2")],
                 field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
                 row: true,
             },
         )));
@@ -473,6 +485,8 @@ mod funcs {
                     fields: vec!["key".into(), "v".into()],
                     render_ids: vec!["L1-key".into(), "L1-v".into()],
                     field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 // L2 block at A3:B3 (one row, key "1").
@@ -507,6 +521,8 @@ mod funcs {
                     fields: vec!["key".into(), "v".into()],
                     render_ids: vec!["L2-key".into(), "L2-v".into()],
                     field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 // PL block at A5:C6 (two rows, keys "一"/"二").
@@ -553,6 +569,8 @@ mod funcs {
                                 .to_string(),
                         ),
                     ],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 // Seed LEVEL = "1" for both PL rows AFTER bind, as the
@@ -669,6 +687,8 @@ mod funcs {
                     fields: vec!["key".into(), "value".into()],
                     render_ids: vec!["A-key".into(), "A-value".into()],
                     field_formulas: vec![None, None],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 .add_payload(BindFormSchema {
@@ -680,6 +700,8 @@ mod funcs {
                     fields: vec!["key".into(), "v".into()],
                     render_ids: vec!["B-key".into(), "B-v".into()],
                     field_formulas: vec![None, None],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                     row: true,
                 })
                 // Seed B's v column with literal numbers so A's SUM
@@ -706,6 +728,8 @@ mod funcs {
                     sheet_idx: 0,
                     block_id: 1,
                     field_formulas: vec![None, Some(r#"=SUM(BLOCKREFS("B","*","v"))"#.to_string())],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
                 }),
         ));
 

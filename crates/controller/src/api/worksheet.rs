@@ -999,16 +999,19 @@ impl<'a> Worksheet<'a> {
                                 let fields = schema
                                     .fields
                                     .iter()
-                                    .map(|(f, (col_id, render_id, _))| {
+                                    .map(|(f, e)| {
                                         let idx = block_place
                                             .cols
                                             .iter()
-                                            .position(|id| id == col_id)
+                                            .position(|id| id == &e.field_axis_id)
                                             .unwrap();
                                         crate::controller::display::BlockSchemaFieldEntry {
                                             field: f.clone(),
                                             idx,
-                                            render_id: render_id.clone(),
+                                            render_id: e.render_id.clone(),
+                                            value_formula: e.value_formula.clone(),
+                                            validation_formula: e.validation_formula.clone(),
+                                            editability_formula: e.editability_formula.clone(),
                                         }
                                     })
                                     .collect::<Vec<_>>();
@@ -1033,16 +1036,19 @@ impl<'a> Worksheet<'a> {
                                 let fields = schema
                                     .fields
                                     .iter()
-                                    .map(|(f, (row_id, render_id, _))| {
+                                    .map(|(f, e)| {
                                         let idx = block_place
                                             .rows
                                             .iter()
-                                            .position(|id| id == row_id)
+                                            .position(|id| id == &e.field_axis_id)
                                             .unwrap();
                                         crate::controller::display::BlockSchemaFieldEntry {
                                             field: f.clone(),
                                             idx,
-                                            render_id: render_id.clone(),
+                                            render_id: e.render_id.clone(),
+                                            value_formula: e.value_formula.clone(),
+                                            validation_formula: e.validation_formula.clone(),
+                                            editability_formula: e.editability_formula.clone(),
                                         }
                                     })
                                     .collect::<Vec<_>>();
@@ -1473,13 +1479,19 @@ impl<'a> Worksheet<'a> {
                         let fields = schema
                             .fields
                             .iter()
-                            .map(|(f, (col_id, render_id, _))| {
-                                let idx =
-                                    block_place.cols.iter().position(|id| id == col_id).unwrap();
+                            .map(|(f, e)| {
+                                let idx = block_place
+                                    .cols
+                                    .iter()
+                                    .position(|id| id == &e.field_axis_id)
+                                    .unwrap();
                                 crate::controller::display::BlockSchemaFieldEntry {
                                     field: f.clone(),
                                     idx,
-                                    render_id: render_id.clone(),
+                                    render_id: e.render_id.clone(),
+                                    value_formula: e.value_formula.clone(),
+                                    validation_formula: e.validation_formula.clone(),
+                                    editability_formula: e.editability_formula.clone(),
                                 }
                             })
                             .collect::<Vec<_>>();
@@ -1504,13 +1516,19 @@ impl<'a> Worksheet<'a> {
                         let fields = schema
                             .fields
                             .iter()
-                            .map(|(f, (row_id, render_id, _))| {
-                                let idx =
-                                    block_place.rows.iter().position(|id| id == row_id).unwrap();
+                            .map(|(f, e)| {
+                                let idx = block_place
+                                    .rows
+                                    .iter()
+                                    .position(|id| id == &e.field_axis_id)
+                                    .unwrap();
                                 crate::controller::display::BlockSchemaFieldEntry {
                                     field: f.clone(),
                                     idx,
-                                    render_id: render_id.clone(),
+                                    render_id: e.render_id.clone(),
+                                    value_formula: e.value_formula.clone(),
+                                    validation_formula: e.validation_formula.clone(),
+                                    editability_formula: e.editability_formula.clone(),
                                 }
                             })
                             .collect::<Vec<_>>();

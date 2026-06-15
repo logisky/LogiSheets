@@ -1,0 +1,23 @@
+{
+    "name": "watson",
+    "version": "0.1.0",
+    "description": "Watson — the AI chat craft for LogiSheets. Thin UI shell over the `logician` agent package.",
+    "main": "dist/watson.js",
+    "module": "dist/watson.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/watson && mkdir -p ../../public/watson && cp index.html ../../public/watson/index.html && cp dist/watson.js ../../public/watson/watson.js"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "dexie": "^4.0.0",
+        "logician": "workspace:*",
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0",
+        "vite": "^5.0.0"
+    }
+}

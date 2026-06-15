@@ -408,6 +408,116 @@ pub fn input_block_cell_template<C: FormulaExecCtx>(
     register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)
 }
 
+/// Materialize a block cell's validation- or editability-formula
+/// template from the schema onto a shadow cell of the matching kind.
+///
+/// Steps:
+///   1. Read the field's rule template via `ctx.block_cell_shadow_template`.
+///   2. Get-or-allocate the shadow id for `(sheet, cell, kind)`.
+///   3. If the template is `Some`, parse with `#PLACEHOLDER` /
+///      `#FIELD("name")` / `#KEY` substitutes and register the formula
+///      on the ephemeral. If the template is `None` and a shadow already
+///      exists, remove the formula so the rule effectively clears.
+///
+/// No-op when the cell isn't in a schema-bound block.
+pub fn input_block_cell_shadow_template<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet_idx: usize,
+    block_id: BlockId,
+    block_row: usize,
+    block_col: usize,
+    kind: crate::sid_assigner::ShadowKind,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    use std::collections::HashMap;
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+    let bcid = ctx.fetch_block_cell_id(&sheet, &block_id, block_row, block_col)?;
+
+    let template = ctx.block_cell_shadow_template(sheet, &bcid, kind);
+    let row_ctx = ctx.block_cell_row_substitutes(sheet, &bcid);
+
+    // Resolve the shadow id. When the template is absent we only need
+    // to know if one exists (so we can clear it); when it's present we
+    // allocate-or-reuse.
+    let shadow_eid = match &template {
+        Some(_) => Some(ctx.allocate_block_cell_shadow_id(sheet, &bcid, kind)),
+        None => ctx.find_block_cell_shadow_id(sheet, &bcid, kind),
+    };
+
+    // No template + no existing shadow ⇒ nothing to do.
+    let Some(eid) = shadow_eid else {
+        return Ok(executor);
+    };
+    let shadow_cell = CellId::EphemeralCell(eid);
+
+    let Some(template_str) = template else {
+        // Template was cleared — strip any existing formula off the
+        // shadow. Leaves the shadow id allocated (cheap) but no longer
+        // computed. Host widgets reading the shadow's value will see
+        // the last-computed value until something dirties it; in
+        // practice ValidationCell treats "no formula" as "no warning".
+        return remove(executor, sheet, shadow_cell, ctx);
+    };
+
+    // Build the per-row substitutes (siblings + key) the same way
+    // input_block_cell_template does for value templates.
+    let Some(row_ctx) = row_ctx else {
+        return Ok(executor);
+    };
+    let mut sib_subs: HashMap<String, ast::Node> = HashMap::new();
+    for (name, sib_cell) in row_ctx.siblings {
+        let range = Range::Block(BlockRange::Single(sib_cell));
+        let range_id = ctx.fetch_range_id(&sheet, &range);
+        sib_subs.insert(
+            name,
+            ast::Node {
+                pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
+                    range_id,
+                    ref_abs: RefAbs::default(),
+                    sheet_id: sheet,
+                })),
+                bracket: true,
+            },
+        );
+    }
+    let key_node = ast::Node {
+        pure: ast::PureNode::Value(ast::Value::Text(row_ctx.key_value)),
+        bracket: false,
+    };
+
+    // `#PLACEHOLDER` resolves to the target cell of the shadow — i.e.
+    // the block cell itself. Build the reference once.
+    let placeholder_range = Range::Block(BlockRange::Single(bcid));
+    let placeholder_range_id = ctx.fetch_range_id(&sheet, &placeholder_range);
+    let placeholder_node = ast::Node {
+        pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
+            range_id: placeholder_range_id,
+            ref_abs: RefAbs::default(),
+            sheet_id: sheet,
+        })),
+        bracket: true,
+    };
+
+    // Strip a leading `=` if the schema author included one.
+    let body = template_str
+        .strip_prefix('=')
+        .map(|s| s.to_string())
+        .unwrap_or(template_str);
+
+    input_with_resolver(
+        executor,
+        sheet,
+        shadow_cell,
+        body,
+        placeholder_node,
+        sib_subs,
+        key_node,
+        ctx,
+    )
+}
+
 // This method is only used in loading a file (especially for shared formula).
 // So there are somethings different from inputting a formula.
 pub fn add_ast_node(

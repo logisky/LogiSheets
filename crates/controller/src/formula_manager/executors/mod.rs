@@ -3,7 +3,8 @@ mod input_formula;
 use std::collections::HashSet;
 
 pub use input_formula::{
-    add_ast_node, input_block_cell_template, input_block_formula, input_ephemeral_formula,
+    add_ast_node, input_block_cell_shadow_template, input_block_cell_template, input_block_formula,
+    input_ephemeral_formula,
     input_formula, remove_ephemeral_formula, remove_formula,
 };
 use logisheets_base::{errors::BasicError, BlockId, BlockRange, CubeId, Range, RangeId, SheetId};
@@ -109,21 +110,22 @@ impl FormulaExecutor {
                 }
             }
             EditPayload::InsertRowsInBlock(p) => {
-                // Newly inserted rows start blank. For any templated
-                // field in the block, auto-materialize the formula so
-                // the cell carries its derived value without the
-                // caller having to send a follow-up BlockInput per cell.
-                // (Free-form cells stay empty; the no-op branch inside
-                // `input_block_cell_template` covers them.)
+                // Newly inserted rows start blank. For each (new row × field)
+                // we materialize three engine-managed templates:
+                //   1. value_formula        → written as the cell's main
+                //                              formula
+                //   2. validation_formula   → installed on the cell's
+                //                              ShadowKind::Validation shadow
+                //                              (drives the red-marker UX)
+                //   3. editability_formula  → installed on the cell's
+                //                              ShadowKind::UserEditable
+                //                              shadow (drives the host
+                //                              permission gate)
                 //
-                // Same loop also installs the per-cell user-editable
-                // shadow formula when the field declares one — the
-                // host's permission patch reads that shadow to gate
-                // writes on a row's dynamic state.
-                //
-                // Block size at this point reflects the post-insert
-                // state — navigator runs before formula_manager. So
-                // get_block_size returns the new (row_cnt, col_cnt).
+                // Free-form cells (no template) are no-ops inside each
+                // helper so the loop stays simple. Block size at this
+                // point reflects the post-insert state — navigator runs
+                // before formula_manager.
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
@@ -134,16 +136,35 @@ impl FormulaExecutor {
                 for r in p.start..(p.start + p.cnt as usize) {
                     for c in 0..col_cnt {
                         exec = input_block_cell_template(exec, p.sheet_idx, p.block_id, r, c, ctx)?;
+                        exec = input_block_cell_shadow_template(
+                            exec,
+                            p.sheet_idx,
+                            p.block_id,
+                            r,
+                            c,
+                            crate::sid_assigner::ShadowKind::Validation,
+                            ctx,
+                        )?;
+                        exec = input_block_cell_shadow_template(
+                            exec,
+                            p.sheet_idx,
+                            p.block_id,
+                            r,
+                            c,
+                            crate::sid_assigner::ShadowKind::UserEditable,
+                            ctx,
+                        )?;
                     }
                 }
                 Ok(exec)
             }
             EditPayload::UpsertFieldFormulas(p) => {
-                // The schema_manager executor has already swapped in
-                // the new per-field formulas. Re-walk every cell so
-                // `input_block_cell_template` re-parses the now-current
-                // formula slot (or no-ops for free-form fields). Same
-                // shape as the BindFormSchema arm below.
+                // The schema_manager executor has already swapped in the
+                // new per-field rules. Re-walk every (row × col) and
+                // re-materialize all three template kinds — that way a
+                // template change (or clear) propagates uniformly to
+                // every existing row. Free-form / template-absent paths
+                // no-op inside the helpers.
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
@@ -154,23 +175,36 @@ impl FormulaExecutor {
                 for r in 0..row_cnt {
                     for c in 0..col_cnt {
                         exec = input_block_cell_template(exec, p.sheet_idx, p.block_id, r, c, ctx)?;
+                        exec = input_block_cell_shadow_template(
+                            exec,
+                            p.sheet_idx,
+                            p.block_id,
+                            r,
+                            c,
+                            crate::sid_assigner::ShadowKind::Validation,
+                            ctx,
+                        )?;
+                        exec = input_block_cell_shadow_template(
+                            exec,
+                            p.sheet_idx,
+                            p.block_id,
+                            r,
+                            c,
+                            crate::sid_assigner::ShadowKind::UserEditable,
+                            ctx,
+                        )?;
                     }
                 }
                 Ok(exec)
             }
             EditPayload::BindFormSchema(p) => {
                 // The bind itself happens in the schema_manager
-                // executor (earlier in the pass order). By the time
-                // we land here the schema is in place AND the block's
-                // rows already exist (from a prior CreateBlock). Walk
-                // every existing row × col and let
-                // `input_block_cell_template` filter — templated cells
-                // get their formula registered for the first time,
-                // free-form cells no-op.
-                //
-                // This is what makes a fresh block-composer save show
-                // formulas in its initial template row without the
-                // user having to add a row first.
+                // executor (earlier in the pass order). By the time we
+                // land here the schema is in place AND the block's rows
+                // already exist (from a prior CreateBlock). For each
+                // (row × col) install value / validation / editability
+                // templates declared on the schema; absent templates
+                // no-op.
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
@@ -181,6 +215,24 @@ impl FormulaExecutor {
                 for r in 0..row_cnt {
                     for c in 0..col_cnt {
                         exec = input_block_cell_template(exec, p.sheet_idx, p.block_id, r, c, ctx)?;
+                        exec = input_block_cell_shadow_template(
+                            exec,
+                            p.sheet_idx,
+                            p.block_id,
+                            r,
+                            c,
+                            crate::sid_assigner::ShadowKind::Validation,
+                            ctx,
+                        )?;
+                        exec = input_block_cell_shadow_template(
+                            exec,
+                            p.sheet_idx,
+                            p.block_id,
+                            r,
+                            c,
+                            crate::sid_assigner::ShadowKind::UserEditable,
+                            ctx,
+                        )?;
                     }
                 }
                 Ok(exec)
