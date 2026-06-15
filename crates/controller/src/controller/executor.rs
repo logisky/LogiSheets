@@ -15,6 +15,7 @@ use crate::{
         CubeConnector, ExclusiveConnector, FormulaConnector, NavigatorConnector, RangeConnector,
         SheetInfoConnector,
     },
+    checkpoint_manager::CheckpointManager,
     container::ContainerExecutor,
     cube_manager::executors::CubeExecutor,
     edit_action::{EditPayload, PayloadsAction, SheetRename},
@@ -33,8 +34,13 @@ use super::status::Status;
 
 pub struct Executor<'a> {
     pub status: Status,
-    pub sid_assigner: &'a ShadowIdAssigner,
+    pub sid_assigner: &'a mut ShadowIdAssigner,
     pub version_manager: &'a mut VersionManager,
+    /// Read-only — the executor only loads snapshots from here. Saves
+    /// happen via `Workbook::save_checkpoint` (not a payload), and
+    /// deletes via `Workbook::delete_checkpoint` (also not a payload),
+    /// so the executor never needs to mutate.
+    pub checkpoint_manager: &'a CheckpointManager,
     pub async_func_manager: &'a mut AsyncFuncManager,
     pub book_name: &'a str,
     pub calc_config: CalcConfig,
@@ -82,6 +88,27 @@ impl<'a> Executor<'a> {
 
     fn execute_payload(self, payload: EditPayload) -> Result<Self, Error> {
         let mut result = self;
+
+        // RestoreCheckpoint replaces the entire Status with a previously-
+        // saved snapshot. Bypasses the per-manager pipeline because
+        // there's nothing to incrementally update — the snapshot was
+        // already a fully-calc'd state. Standard tx flow records the
+        // (now-old) live status onto VersionManager's undo stack, so
+        // user Ctrl-Z reverses the restore.
+        if let EditPayload::RestoreCheckpoint(ref rc) = payload {
+            let snapshot = result
+                .checkpoint_manager
+                .get(&rc.label)
+                .map_err(|e| Error::Basic(e))?;
+            result.status = snapshot.clone();
+            // Treat every cell as having potentially changed — the swap
+            // is opaque to the per-vertex dirty machinery. Marking the
+            // tx itself as cell_updated + sheet_updated forces the host
+            // to refresh canvases and re-render widgets.
+            result.cell_updated = true;
+            result.sheet_updated = true;
+            return Ok(result);
+        }
 
         if let EditPayload::SheetRename(rename) = payload {
             let manager = &mut result.status.sheet_id_manager;
@@ -233,6 +260,7 @@ impl<'a> Executor<'a> {
             sheet_updated,
             cell_updated,
             sid_assigner: result.sid_assigner,
+            checkpoint_manager: result.checkpoint_manager,
             style_updated: result.style_updated,
             row_inserted: result.row_inserted,
             row_removed: result.row_removed,
@@ -248,6 +276,7 @@ impl<'a> Executor<'a> {
         let Executor {
             mut status,
             sid_assigner,
+            checkpoint_manager,
             version_manager,
             mut async_func_manager,
             book_name,
@@ -298,6 +327,7 @@ impl<'a> Executor<'a> {
         Ok(Executor {
             status,
             sid_assigner,
+            checkpoint_manager,
             version_manager,
             async_func_manager,
             book_name,
@@ -478,7 +508,7 @@ impl<'a> Executor<'a> {
             external_links_manager: &mut self.status.external_links_manager,
             block_schema_manager: &self.status.block_schema_manager,
             container: &self.status.container,
-            sid_assigner: self.sid_assigner,
+            sid_assigner: &mut *self.sid_assigner,
         };
         let executor = FormulaExecutor {
             manager: self.status.formula_manager.clone(),

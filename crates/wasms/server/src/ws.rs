@@ -294,6 +294,49 @@ pub fn get_block_info(id: usize, sheet_id: SheetId, block_id: BlockId) -> JsValu
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
+pub fn get_all_blocks(
+    id: usize,
+    sheet_idx: Option<usize>,
+    sheet_id: Option<SheetId>,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let result = wb.get_all_blocks(sheet_idx, sheet_id);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+pub fn save_checkpoint(id: usize, label: String, description: Option<String>) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let count = wb.save_checkpoint(label, description);
+    serde_wasm_bindgen::to_value(&count).unwrap()
+}
+
+pub fn delete_checkpoint(id: usize, label: String) -> JsValue {
+    init();
+    let mut manager = MANAGER.get_mut();
+    let wb = manager.get_mut_workbook(&id).unwrap();
+    let existed = wb.delete_checkpoint(&label);
+    serde_wasm_bindgen::to_value(&existed).unwrap()
+}
+
+pub fn list_checkpoints(id: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    // Convert CheckpointMeta to the RPC DTO (drops the Status payload —
+    // the manager's `list()` already only returns label + description).
+    let metas: Vec<crate::rpc::CheckpointMetaDto> = wb
+        .list_checkpoints()
+        .into_iter()
+        .map(Into::into)
+        .collect();
+    serde_wasm_bindgen::to_value(&metas).unwrap()
+}
+
 pub fn get_reproducible_cell(id: usize, sheet_idx: usize, row: usize, col: usize) -> JsValue {
     init();
     let manager = MANAGER.get();

@@ -83,48 +83,26 @@ export interface FieldInfo {
     /** Default value */
     defaultValue?: string;
     /**
-     * Optional value-formula template for this field. When set, every row
-     * of the block carries a derived formula in this column rather than a
-     * free-form user value. Placeholders:
+     * Static field-level write permission flag for the player (non-owner
+     * caller). Read by the host permission patch:
      *
-     *   `#FIELD("name")` → absolute A1 reference to the same row's cell
-     *                       in the named sibling field.
-     *   `#KEY`            → this row's key value, quoted as a string
-     *                       literal.
+     *   - `false`     — permanently locks the field's cells against
+     *                   player edits; the owner is still allowed.
+     *   - `true`      — always allows player edits (overrides
+     *                   block-owner restrictions).
+     *   - `undefined` — fall back to block-owner rules (default): only
+     *                   the owner can write; if there's no owner, anyone
+     *                   can.
      *
-     * Templated fields are constraints, not defaults — `userEditable` is
-     * forced to `false` by {@link FieldManager.create} when a template is
-     * present (the UI offers no edit affordance). Use
-     * {@link expandFieldFormula} to substitute the placeholders against a
-     * concrete row before writing into a cell.
+     * For dynamic, formula-based editability rules, declare a
+     * `editabilityFormula` (string) on the schema field at
+     * `BindFormSchema` time — the Rust engine auto-installs a
+     * `ShadowKind::UserEditable` shadow per row, and the host permission
+     * patch reads the schema (via `BlockInfo.schema.fields[i]`) to
+     * decide when to consult the shadow. FieldInfo no longer carries the
+     * formula itself.
      */
-    valueFormula?: string;
-    /**
-     * Field-level write permission for the player (non-owner caller).
-     * Two shapes:
-     *
-     *   - `boolean` — static decision evaluated synchronously by the host
-     *     UI guard. `false` permanently locks the field's cells against
-     *     player edits; `true` always allows.
-     *   - `string` — a formula evaluated per cell. Same placeholders as
-     *     `valueFormula` (`#FIELD("name")`, `#KEY`) plus `#PLACEHOLDER`
-     *     (the cell being checked). At widget mount the host installs
-     *     this formula onto a per-cell `UserEditable` shadow ephemeral
-     *     (via `getShadowCellId({kind: 'userEditable'})` +
-     *     `EphemeralCellInput`) — same machinery validation cells use —
-     *     then subscribes to the shadow value and toggles the widget's
-     *     read-only state accordingly.
-     *   - `undefined` — fall back to block-owner rules (default behavior):
-     *     only the owner of the block can write; if the block has no
-     *     owner, anyone can write.
-     *
-     * The engine itself doesn't enforce this flag — boolean is host-UI
-     * only, and the string path piggy-backs on the engine's generic
-     * ephemeral-cell evaluator without any schema-side knowledge of
-     * "user editable" as a concept. The block owner is unaffected by
-     * either form; owners always retain write access.
-     */
-    userEditable?: boolean | string;
+    userEditable?: boolean;
 }
 /**
  * Manager for all fields in the application

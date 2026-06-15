@@ -1,0 +1,22 @@
+{
+    "name": "logician",
+    "version": "0.1.0",
+    "description": "AI agent core for LogiSheets — platform-agnostic LLM tools, prompts, and skills for operating workbooks. Used by Watson (browser craft), and reusable in Node CLI / MCP server / other hosts.",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "author": "Jeremy He",
+    "license": "MIT",
+    "private": true,
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0"
+    },
+    "files": [
+        "dist"
+    ]
+}

@@ -185,13 +185,11 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             // Primary keys are unique by definition; stamp it so cross-block
             // enumeration doesn't have to special-case them.
             const isUnique = !!field.unique || !!field.primary
-            // Empty-string valueFormula is treated as "no template" so
-            // the composer doesn't accidentally mark every untouched
-            // string/number field as constrained.
-            const valueFormula =
-                field.valueFormula && field.valueFormula.trim()
-                    ? field.valueFormula.trim()
-                    : undefined
+            // valueFormula was previously stored on FieldInfo for the
+            // composer's edit-time use; post-Phase-1+2 the template is
+            // engine-managed and reachable via `BlockInfo.schema.fields[i]
+            // .valueFormula`. FieldSetting still carries it for the
+            // composer form, but we no longer mirror it onto FieldInfo.
             const f: FieldInfo = {
                 id: field.id,
                 sheetId: currentSheetId,
@@ -201,7 +199,6 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 description: field.description,
                 required: field.required,
                 unique: isUnique,
-                valueFormula,
             }
             const r = BLOCK_MANAGER.fieldManager.create(
                 currentSheetId,

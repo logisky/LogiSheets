@@ -79,6 +79,12 @@ pub enum Message {
     GetDisplayWindowWithinCell(GetDisplayWindowWithinCellParams),
     GetColInfo(GetColInfoParams),
     GetFullyCoveredBlocks(GetFullyCoveredBlocksParams),
+
+    GetAllBlocks(GetAllBlocksParams),
+
+    SaveCheckpoint(SaveCheckpointParams),
+    DeleteCheckpoint(DeleteCheckpointParams),
+    ListCheckpoints,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -505,6 +511,48 @@ pub struct GetColInfoParams {
 }
 
 #[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_all_blocks_params.ts", rename_all = "camelCase")]
+pub struct GetAllBlocksParams {
+    /// If neither `sheet_idx` nor `sheet_id` is set, returns blocks
+    /// across every sheet in the workbook.
+    pub sheet_idx: Option<usize>,
+    pub sheet_id: Option<SheetId>,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_save_checkpoint_params.ts", rename_all = "camelCase")]
+pub struct SaveCheckpointParams {
+    /// Label to store the snapshot under. Overwrites an existing
+    /// checkpoint with the same label.
+    pub label: String,
+    /// Optional human-readable description, echoed back by
+    /// `ListCheckpoints` for the UI/agent.
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_delete_checkpoint_params.ts", rename_all = "camelCase")]
+pub struct DeleteCheckpointParams {
+    pub label: String,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "checkpoint_meta.ts", rename_all = "camelCase")]
+pub struct CheckpointMetaDto {
+    pub label: String,
+    pub description: Option<String>,
+}
+
+impl From<logisheets_rs::CheckpointMeta> for CheckpointMetaDto {
+    fn from(m: logisheets_rs::CheckpointMeta) -> Self {
+        Self {
+            label: m.label,
+            description: m.description,
+        }
+    }
+}
+
+#[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_fully_covered_blocks_params.ts",
     rename_all = "camelCase"
@@ -628,6 +676,16 @@ pub struct WorkbookMethods {
     pub get_available_block_id:
         fn(params: GetAvailableBlockIdParams, book_id: Option<usize>) -> Result<u32, ErrorMessage>,
     pub get_all_block_fields: fn(book_id: Option<usize>) -> Result<Vec<BlockField>, ErrorMessage>,
+    pub get_all_blocks: fn(
+        params: GetAllBlocksParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<BlockInfo>, ErrorMessage>,
+    pub save_checkpoint:
+        fn(params: SaveCheckpointParams, book_id: Option<usize>) -> Result<usize, ErrorMessage>,
+    pub delete_checkpoint:
+        fn(params: DeleteCheckpointParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
+    pub list_checkpoints:
+        fn(book_id: Option<usize>) -> Result<Vec<CheckpointMetaDto>, ErrorMessage>,
     pub get_diy_cell_id_with_block_id: fn(
         params: GetDiyCellIdWithBlockIdParams,
         book_id: Option<usize>,
@@ -690,6 +748,9 @@ pub struct WorkbookMethods {
     // Row info
     pub get_row_info:
         fn(params: GetRowInfoParams, book_id: Option<usize>) -> Result<RowInfo, ErrorMessage>,
+
+    // Helpers
+    pub get_all_block_ref_names: fn() -> Vec<String>,
 
     pub handle_transaction: fn(
         params: HandleTransactionParams,
@@ -941,5 +1002,13 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.row_cnt,
             params.col_cnt,
         ),
+        Message::GetAllBlocks(params) => {
+            ws::get_all_blocks(id, params.sheet_idx, params.sheet_id)
+        }
+        Message::SaveCheckpoint(params) => {
+            ws::save_checkpoint(id, params.label, params.description)
+        }
+        Message::DeleteCheckpoint(params) => ws::delete_checkpoint(id, params.label),
+        Message::ListCheckpoints => ws::list_checkpoints(id),
     }
 }

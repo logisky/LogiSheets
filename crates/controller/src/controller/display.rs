@@ -133,6 +133,18 @@ pub struct BlockSchemaFieldEntry {
     pub field: String,
     pub idx: usize,
     pub render_id: RenderId,
+    /// Raw value-formula template (e.g. `=#FIELD("qty")*#FIELD("price")`)
+    /// or `None` for free-form fields. Engine-managed: writing a value
+    /// to a templated cell is rejected.
+    pub value_formula: Option<String>,
+    /// Raw validation-formula template. Engine installs a
+    /// `ShadowKind::Validation` shadow per row at bind / insert time;
+    /// host UI reads the shadow to render warning markers.
+    pub validation_formula: Option<String>,
+    /// Raw editability-formula template. Engine installs a
+    /// `ShadowKind::UserEditable` shadow per row at bind / insert time;
+    /// host permission layer reads the shadow to gate writes.
+    pub editability_formula: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, TS)]

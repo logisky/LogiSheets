@@ -878,6 +878,7 @@ version = "1.0.0"
 dependencies = [
  "glob",
  "logiscript",
+ "logisheets_base",
  "logisheets_controller",
  "logisheets_workbook",
 ]

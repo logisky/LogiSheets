@@ -149,14 +149,14 @@ async function validateCellInput(
     // Dynamic editability formula takes precedence over the static
     // flag — the formula lets the schema author express conditions
     // like "editable only while 等级<3". Only consult the shadow when
-    // the field actually carries a userEditableFormula (the FieldInfo
-    // hint is set at bindFormSchema time by the craft); otherwise we
-    // skip the extra RPC and avoid allocating a wasteful shadow id.
+    // the schema actually declares an editability formula for this
+    // field (post-Phase-1+2 authoritative source); otherwise we skip
+    // the extra RPC and avoid allocating a wasteful shadow id.
     if (
-        lookupFieldUserEditableFormula(
+        await lookupFieldEditabilityFormula(
+            client,
             v.sheetIdx,
             blockId,
-            blockCellId.row,
             blockCellId.col
         )
     ) {
@@ -232,20 +232,36 @@ function lookupFieldUserEditable(
 }
 
 /**
- * "Does this field declare a dynamic userEditable formula?" — used by
- * validateCellInput to gate whether it bothers asking the engine for
- * the per-cell shadow value. The flag now lives directly on
- * `FieldInfo.userEditable` (string → has formula); we just check the
- * type of that field.
+ * "Does this field declare a dynamic editability formula?" — used by
+ * validateCellInput to gate whether to look up the per-cell shadow.
+ * Reads `BlockInfo.schema.fields[i].editabilityFormula` directly from
+ * the Rust schema (the authoritative source since Phase 1+2). One
+ * extra getBlockInfo RPC per validate; cheap because schema fetch
+ * doesn't trigger calc.
+ *
+ * `blockCol` is the col index relative to the block's master cell
+ * (the same form callers pass elsewhere); schema entries store `idx`
+ * with the same convention for RowSchemas.
  */
-function lookupFieldUserEditableFormula(
+async function lookupFieldEditabilityFormula(
+    client: WorkbookClient,
     sheetIdx: number,
     blockId: number,
-    blockRow: number,
     blockCol: number
-): boolean {
-    const ue = lookupFieldUserEditable(sheetIdx, blockId, blockRow, blockCol)
-    return typeof ue === 'string' && ue.trim() !== ''
+): Promise<boolean> {
+    try {
+        const sheetId = await client.getSheetId({sheetIdx})
+        if (isErrorMessage(sheetId)) return false
+        const info = await client.getBlockInfo({sheetId, blockId})
+        if (isErrorMessage(info)) return false
+        const schema = info.schema
+        if (!schema) return false
+        const entry = schema.fields.find((f) => f.idx === blockCol)
+        const t = entry?.editabilityFormula
+        return typeof t === 'string' && t.trim() !== ''
+    } catch {
+        return false
+    }
 }
 
 function applyPatch() {

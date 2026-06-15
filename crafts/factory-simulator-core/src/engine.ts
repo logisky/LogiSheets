@@ -407,15 +407,14 @@ interface Field {
      *     other cells (e.g. lock 是否升级 once 等级 hits the max
      *     level: `'=#FIELD("等级")<3'`).
      *
-     * Implementation note: the engine doesn't know about
-     * `userEditable` at all. Boolean is enforced by host UI guards
-     * synchronously. The string path is implemented entirely in the
-     * host: at widget mount, the formula is installed onto a per-cell
-     * `ShadowKind::UserEditable` ephemeral via the existing
-     * `getShadowCellId` + `EphemeralCellInput` API (same machinery as
-     * validation cells); the widget subscribes to that shadow's value
-     * and renders disabled when it returns false. Engine just provides
-     * the shadow-id namespace and runs the formula.
+     * Implementation note: the boolean path is enforced by host UI
+     * guards synchronously. The string path is handled by the Rust
+     * engine — at `BindFormSchema` time the engine auto-installs the
+     * formula on a per-cell `ShadowKind::UserEditable` shadow for
+     * every row (and on every freshly-inserted row from
+     * `InsertRowsInBlock`); the host permission patch reads that
+     * shadow's value to gate writes. Engine owns the lifecycle; the
+     * craft only declares the template.
      */
     userEditable: boolean | string
     // Logical type of this column. Defaults to 'string'.
@@ -456,21 +455,6 @@ interface Field {
      * Example: `#PLACEHOLDER>=BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"良品率")`
      */
     validation?: string
-    /**
-     * Optional "is this cell editable?" formula. When set, the engine
-     * installs the expression onto a `ShadowKind::UserEditable` shadow
-     * ephemeral per (cell, row); the host's permission patch reads
-     * that shadow's value to decide whether to accept a cellInput /
-     * blockInput. Truthy → allow; falsy / error → reject.
-     *
-     * Supports the same placeholders as `validation`
-     * (#FIELD("name"), #KEY, #PLACEHOLDER). Use cases:
-     *
-     *   - Lock 是否升级 once 等级 hits cap: `=#FIELD("等级")<3`
-     *   - Only allow 本期预计良品率 when an order is bound:
-     *     `=#FIELD("${L.fields.order}")<>""`
-     */
-    userEditableFormula?: string
     /**
      * Explicit per-field `diyRender` override forwarded to
      * `upsertFieldRenderInfo`. When `true`, the engine skips painting
@@ -2455,17 +2439,13 @@ async function newGame(
     const blockPayloads: EditPayload[] = []
     const nextRow: Record<string, number> = {}
     const nextBlockId: Record<string, number> = {}
-    // Sites that need a userEditable shadow installed in phase 3,
-    // after blockTx commits and the navigator can resolve their
-    // cell coordinates. One entry per (block-row × formula-field).
-    // We can't preallocate ids here because `getShadowCellId` only
-    // works once the cell physically exists in the navigator.
-    const userEditableSites: Array<{
-        sheetIdx: number
-        row: number
-        col: number
-        formula: string
-    }> = []
+    // userEditable / validation shadow installation is now engine-
+    // managed: declared as `editabilityFormulas` / `validationFormulas`
+    // on the BindFormSchema payload below, then auto-installed by the
+    // engine at bind time (and at every InsertRowsInBlock). The old
+    // phase-3 collection sites are gone — leaving just a note here so
+    // future readers don't reinvent the helper. See engine's
+    // input_block_cell_shadow_template.
     // Per-sheet, per-column maximum width required by any block on that
     // sheet. Filled while we walk BLOCK_DEFS; emitted as setColWidth
     // payloads after the loop so each column ends up wide enough for every
@@ -2557,22 +2537,27 @@ async function newGame(
                     ? {type: 'enum', id: field.enumId ?? ''}
                     : {type: 'string', validation}
 
+            // FieldInfo carries only host-UI metadata now (post-Phase-1+2):
+            //   - valueFormula moved to Rust schema (BindFormSchema below)
+            //   - userEditable as a string formula moved to Rust schema
+            //     (editabilityFormulas in BindFormSchema below); the engine
+            //     auto-installs the shadow and the host permission patch
+            //     reads schema metadata to decide whether to consult it.
+            // What stays on FieldInfo: the static boolean userEditable
+            // flag (key column false; otherwise permissive — formula, if
+            // any, dynamically tightens via shadow).
+            const staticUserEditable: boolean =
+                fieldIdx === 0
+                    ? false
+                    : typeof field.userEditable === 'string'
+                    ? true
+                    : field.userEditable
             const info = blockManager.fieldManager.create(sheetId, blockId, {
                 name: field.name,
                 type: fieldTypeSpec,
                 required: false,
                 unique: false,
-                // Key column is forced uneditable here; templated fields
-                // are forced uneditable by FieldManager.create itself
-                // when `valueFormula` is set.
-                userEditable: fieldIdx === 0 ? false : field.userEditable,
-                valueFormula: field.valueFormula,
-                // Hint copy of the userEditable formula — the engine
-                // owns the authoritative evaluation via the per-cell
-                // shadow installed at BindFormSchema time. We carry it
-                // here so the host permission patch can shortcut when
-                // the field has no dynamic rule.
-                userEditableFormula: field.userEditableFormula,
+                userEditable: staticUserEditable,
             })
             return info.id as string
         })
@@ -2624,6 +2609,26 @@ async function newGame(
         const fieldFormulas = fields.map(
             (field) => field.valueFormula ?? ''
         )
+        // Per-field validation / editability templates. Engine takes
+        // ownership: it auto-installs `ShadowKind::Validation` /
+        // `ShadowKind::UserEditable` shadows on every existing row at
+        // BindFormSchema time, and on every newly-inserted row at
+        // InsertRowsInBlock time. So we just declare them on the schema
+        // and forget — no more per-row install helpers.
+        //
+        // editability comes from `userEditable` when it's a string (the
+        // boolean form is a static UI flag, not a per-cell formula).
+        // fields[0] is the key column — forced uneditable as always; we
+        // skip its declared `userEditable` here just like we did for
+        // fieldManager.create.
+        const validationFormulas = fields.map(
+            (field) => field.validation ?? ''
+        )
+        const editabilityFormulas = fields.map((field, fieldIdx) => {
+            if (fieldIdx === 0) return ''
+            const ue = field.userEditable
+            return typeof ue === 'string' ? ue : ''
+        })
         blockPayloads.push({
             type: 'bindFormSchema',
             value: new BindFormSchemaBuilder()
@@ -2636,6 +2641,8 @@ async function newGame(
                 .fields(fieldNames)
                 .renderIds(renderIds)
                 .fieldFormulas(fieldNames.map(() => ''))
+                .validationFormulas(validationFormulas)
+                .editabilityFormulas(editabilityFormulas)
                 .build(),
         })
         // Stash phase-2 inputs so we can install field formulas after
@@ -2648,26 +2655,6 @@ async function newGame(
                 fieldFormulas,
             })
         }
-
-        // Collect userEditable-formula install sites. fields[0] is the
-        // forced-uneditable key column (see renderIds loop above) — skip
-        // it even if the table literal accidentally declares a formula
-        // there. We install in phase 3 after blockTx commits.
-        fields.forEach((field, fieldIdx) => {
-            if (fieldIdx === 0) return
-            const ue = field.userEditable
-            if (typeof ue !== 'string') return
-            const formula = ue.trim()
-            if (!formula) return
-            for (let r = 0; r < rowCnt; r++) {
-                userEditableSites.push({
-                    sheetIdx,
-                    row: masterRow + r,
-                    col: masterCol + fieldIdx,
-                    formula: formula.startsWith('=') ? formula : `=${formula}`,
-                })
-            }
-        })
 
         renderIds.forEach((renderId, fieldIdx) => {
             // Forward the field's number format to the cell render style
@@ -3082,6 +3069,13 @@ async function newGame(
                 .sheetIdx(item.sheetIdx)
                 .blockId(item.blockId)
                 .fieldFormulas(item.fieldFormulas)
+                // Empty vec = "leave validation / editability templates
+                // untouched". The engine learned about them at
+                // BindFormSchema time (declared on each Field) and
+                // already auto-installed the per-row shadows. Phase 2's
+                // UpsertFieldFormulas is only updating value templates.
+                .validationFormulas([])
+                .editabilityFormulas([])
                 .build(),
         })
     }
@@ -3110,69 +3104,12 @@ async function newGame(
             `createBlock transaction failed: ${JSON.stringify(blockTxResult)}`
         )
 
-    // Phase 3 — pre-install every userEditable shadow formula in one tx.
-    // useEditable on the widget side is read-only: it subscribes to the
-    // shadow and reads the cached value. If we don't install here, the
-    // first widget mount races (state defaults to pessimistic-false
-    // before refresh resolves) and the permission patch reads an `empty`
-    // shadow → falls through to the owner check → rejects the cellInput.
-    // Installing here guarantees the shadow has a real bool by the time
-    // any widget mounts.
-    if (userEditableSites.length > 0) {
-        const installPayloads = await buildUserEditableInstallPayloads(
-            client,
-            userEditableSites
-        )
-        if (installPayloads.length > 0) {
-            const installTxResult = await client.handleTransaction({
-                transaction: {
-                    payloads: installPayloads,
-                    undoable: false,
-                    temp: false,
-                },
-            })
-            if (isErrorMessage(installTxResult))
-                throw new Error(
-                    `userEditable shadow install failed: ${JSON.stringify(
-                        installTxResult
-                    )}`
-                )
-        }
-    }
-
-    // Phase 3b — pre-install validation shadows for every (row, field-
-    // with-validation) so ValidationCell never has to fire its lazy
-    // temp:false install path (which would clobber the player's
-    // in-flight temp branch when they're mid-edit). Mirrors phase 3
-    // but for `kind: 'validation'`.
-    for (const def of BLOCK_DEFS) {
-        const table = def.table
-        const blockId = blockIds[def.key] as number
-        if (blockId === undefined) continue
-        const sheetIdx = SHEET_IDX[def.sheet]
-        const hasAny = table.fields.some(
-            (f) => typeof f.validation === 'string' && f.validation.trim()
-        )
-        if (!hasAny) continue
-        // Resolve the block's current sheet-absolute master row by
-        // reading getBlockInfo — by this point in newGame the blocks
-        // are all created and the navigator knows where they live.
-        const sheetIdResp = await client.getSheetId({sheetIdx})
-        if (isErrorMessage(sheetIdResp)) continue
-        const info = await client.getBlockInfo({
-            sheetId: sheetIdResp,
-            blockId,
-        })
-        if (isErrorMessage(info)) continue
-        const rows: number[] = []
-        for (let r = 0; r < info.rowCnt; r++) rows.push(info.rowStart + r)
-        await installValidationShadowsForRows(
-            client,
-            sheetIdx,
-            table.fields,
-            rows
-        )
-    }
+    // Engine note: validation + userEditable shadows used to be
+    // installed here (phases 3 and 3b) by walking BLOCK_DEFS and firing
+    // installValidationShadowsForRows / installUserEditableShadowsForRows.
+    // The engine now auto-installs both shadow kinds at BindFormSchema
+    // time from the schema-level validation/editability templates we
+    // pushed above, so the explicit phases are gone.
 
     // Bind the percent-allocator overlay onto each production-line row's
     // supplier-% pairs. The host renders a +/- badge over each cell that
@@ -3761,24 +3698,11 @@ async function insertOrder(
     if (isErrorMessage(tx))
         throw new Error(`insertOrder transaction failed: ${JSON.stringify(tx)}`)
 
-    // Install the freshly-grown row's UserEditable shadows (e.g. the
-    // 是否接受 checkbox's `=#FIELD("订单编号")<>""` gate) so the widget
-    // can see "editable" the instant it mounts. The shadow needs the
-    // cell to exist in the navigator, hence: after the row-insert tx
-    // commits.
-    const absoluteRow = info.rowStart + (row0Empty ? 0 : info.rowCnt)
-    await installUserEditableShadowsForRows(
-        client,
-        sheetIdx,
-        NEW_ORDER_STATUS_TABLE.fields,
-        [absoluteRow]
-    )
-    await installValidationShadowsForRows(
-        client,
-        sheetIdx,
-        NEW_ORDER_STATUS_TABLE.fields,
-        [absoluteRow]
-    )
+    // No explicit shadow install — the engine's InsertRowsInBlock arm
+    // auto-installs validation + userEditable shadows for the freshly-
+    // grown row from the schema-level templates declared at
+    // BindFormSchema time. Was: installUserEditableShadowsForRows +
+    // installValidationShadowsForRows for [absoluteRow].
     return targetRow
 }
 
@@ -3923,25 +3847,10 @@ async function insertOrderConfig(
         throw new Error(
             `insertOrderConfig transaction failed: ${JSON.stringify(tx)}`
         )
-    // Pre-install validation shadows for the freshly-populated row.
-    // ORDER_CONTRIBUTION_TABLE.生产线一/生产线二 carry column-sum ≤
-    // 本期产能 validation; without this proactive install the
-    // ValidationCell widget would fall back to a lazy temp:false
-    // ephemeralCellInput which (in temp-mode games) wipes the
-    // accept-toggle's temp branch. Especially matters for row 0
-    // since insertOrderConfig reuses the sentinel.
-    //
-    // temp:true matches the parent tx (which committed the row write
-    // on the temp branch above) so the install rides the same
-    // branch instead of fighting it.
-    const absoluteRow = info.rowStart + (row0Empty ? 0 : info.rowCnt)
-    await installValidationShadowsForRows(
-        client,
-        sheetIdx,
-        ORDER_CONTRIBUTION_TABLE.fields,
-        [absoluteRow],
-        true
-    )
+    // Validation shadows for the freshly-grown row are auto-installed
+    // by the engine's InsertRowsInBlock arm — no explicit follow-up
+    // tx needed. Was: installValidationShadowsForRows([absoluteRow],
+    // temp:true).
     return targetRow
 }
 

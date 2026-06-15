@@ -5,7 +5,17 @@ ORIGINAL_DIR="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
 
-crafts=("factory-simulator" "markdown-table-extractor" "what-if-calculator")
+# Keep this list in sync with the `tools` array in
+# src/components/craft-panel/index.tsx. Mismatches mean production 404s
+# (publish-time silence: webpack doesn't know about craft routes, so a
+# missing entry just doesn't get copied to dist/).
+crafts=(
+    "factory-simulator-en"
+    "factory-simulator-zh"
+    "markdown-table-extractor"
+    "watson"
+    "what-if-calculator"
+)
 
 for craft in "${crafts[@]}"; do
     mkdir -p "dist/$craft"

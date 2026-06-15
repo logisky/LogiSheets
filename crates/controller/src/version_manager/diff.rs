@@ -395,5 +395,11 @@ fn convert_diff<C: VersionExecCtx>(
                 sheet_id,
             )))
         }
+        // RestoreCheckpoint wholesale-replaces Status. No per-sheet
+        // diff is meaningful — the host's redraw path is signalled
+        // via cell_updated + sheet_updated flags on the Executor
+        // (set in executor.rs's special-case branch). Surface here
+        // as "no diff to record", which is the conservative answer.
+        EditPayload::RestoreCheckpoint(_) => Ok(None),
     }
 }

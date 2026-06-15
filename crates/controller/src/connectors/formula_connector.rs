@@ -46,7 +46,7 @@ pub struct FormulaConnector<'a> {
     /// block cell's formula.
     pub container: &'a crate::container::DataContainer,
 
-    pub sid_assigner: &'a ShadowIdAssigner,
+    pub sid_assigner: &'a mut ShadowIdAssigner,
 }
 
 impl<'a> FormulaConnector<'a> {
@@ -368,6 +368,42 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
             siblings: ctx.siblings,
             key_value: ctx.key_value,
         })
+    }
+
+    fn block_cell_shadow_template(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        kind: crate::sid_assigner::ShadowKind,
+    ) -> Option<String> {
+        match kind {
+            crate::sid_assigner::ShadowKind::Validation => self
+                .block_schema_manager
+                .validation_for_block_cell(sheet_id, cell),
+            crate::sid_assigner::ShadowKind::UserEditable => self
+                .block_schema_manager
+                .editability_for_block_cell(sheet_id, cell),
+        }
+    }
+
+    fn allocate_block_cell_shadow_id(
+        &mut self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        kind: crate::sid_assigner::ShadowKind,
+    ) -> u64 {
+        self.sid_assigner
+            .get_shawdow_id(sheet_id, CellId::BlockCell(*cell), kind)
+    }
+
+    fn find_block_cell_shadow_id(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        kind: crate::sid_assigner::ShadowKind,
+    ) -> Option<u64> {
+        self.sid_assigner
+            .find_shadow_id(sheet_id, CellId::BlockCell(*cell), kind)
     }
 
     fn block_cell_row_substitutes(

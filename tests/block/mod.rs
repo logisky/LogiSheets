@@ -8,6 +8,8 @@ use crate::load_script;
 
 use super::test_script;
 
+mod rules;
+
 #[test]
 fn test_create_block() {
     test_script("tests/block/create_block.script");
@@ -45,6 +47,8 @@ fn test_bind_block_schema() {
                 "test3".to_string(),
             ],
             field_formulas: vec![],
+            validation_formulas: vec![],
+            editability_formulas: vec![],
             row: true,
         })],
         undoable: true,
@@ -88,6 +92,8 @@ fn test_form_block_rowcnt1_two_fields() {
                 fields: vec!["abcd".to_string(), "111a".to_string()],
                 render_ids: vec!["r0".to_string(), "r1".to_string()],
                 field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
                 row: true,
             }),
         ],

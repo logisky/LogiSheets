@@ -2,7 +2,7 @@ export { Spreadsheet, ColumnHeaders, RowHeaders, Selector, SheetTabs, Scrollbar,
 export type { ContextMenuItem, ContextMenuContext, } from "./components/contextMenuTypes";
 export { DataService, WorkbookClient, OffscreenClient } from "./clients";
 export { WorkbookWorkerService, OffscreenWorkerService } from "./worker";
-export { BlockManager, EnumSetManager, FieldManager, LOGISHEETS_BUILTIN_CRAFT_ID, FIELD_AND_VALIDATION_TAG, expandFieldFormula, colIdxToLetters, } from "./block";
+export { BlockManager, EnumSetManager, FieldManager, LOGISHEETS_BUILTIN_CRAFT_ID, FIELD_AND_VALIDATION_TAG, } from "./block";
 export type { EnumInfo, EnumVariant, FieldInfo, FieldTypeEnum } from "./block";
 export type { Grid, Row, Column, Range, Cell, SelectorStyle, CellLayout, CanvasProps, EngineConfig, } from "$types/index";
 export { DEFAULT_ENGINE_CONFIG } from "$types/index";

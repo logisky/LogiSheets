@@ -4,8 +4,8 @@ use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
     controller::{
         display::{
-            BlockField, CellCoordinateWithSheet, CellPosition, ShadowCellInfo, SheetInfo,
-            TempCellChange, TempStatusDiff, Value as DisplayValue,
+            BlockField, BlockInfo, CellCoordinateWithSheet, CellPosition, ShadowCellInfo,
+            SheetInfo, TempCellChange, TempStatusDiff, Value as DisplayValue,
         },
         status::Status,
     },
@@ -163,6 +163,44 @@ impl Workbook {
         self.controller.redo()
     }
 
+    // ----- Named checkpoints -------------------------------------------
+    //
+    // Save / delete / list are workbook methods (not payloads) because
+    // they don't touch sheet state — they manage the CheckpointManager.
+    // Restore goes through the standard payload pipeline as
+    // `RestoreCheckpoint` so it lands on the undo stack (user Ctrl-Z
+    // reverses an AI restore).
+
+    /// Snapshot the current workbook state under `label`. Overwrites
+    /// any existing checkpoint with the same label. Returns the number
+    /// of checkpoints currently stored after the save.
+    pub fn save_checkpoint(
+        &mut self,
+        label: String,
+        description: Option<String>,
+    ) -> usize {
+        self.controller.checkpoint_manager.save(
+            label,
+            description,
+            self.controller.status.clone(),
+        );
+        self.controller.checkpoint_manager.len()
+    }
+
+    /// Drop a named checkpoint. Returns `true` if it existed.
+    pub fn delete_checkpoint(&mut self, label: &str) -> bool {
+        self.controller.checkpoint_manager.delete(label)
+    }
+
+    /// Enumerate all checkpoints, newest first. Returns just labels
+    /// and descriptions — the bulky `Status` snapshot stays inside the
+    /// manager.
+    pub fn list_checkpoints(
+        &self,
+    ) -> Vec<crate::checkpoint_manager::CheckpointMeta> {
+        self.controller.checkpoint_manager.list()
+    }
+
     #[inline]
     pub fn handle_async_calc_results(
         &mut self,
@@ -304,6 +342,64 @@ impl Workbook {
 
     pub fn get_all_block_fields(&self) -> Result<Vec<BlockField>> {
         Ok(self.controller.status.container.get_all_block_fields())
+    }
+
+    /// Enumerate blocks across the workbook.
+    ///
+    /// Scope selection:
+    ///   - `sheet_id == Some(id)`     → only that sheet
+    ///   - `sheet_idx == Some(idx)`   → resolve to sheet_id, then that sheet
+    ///   - both `None`                → every sheet
+    ///
+    /// If both are set, `sheet_id` wins (more specific).
+    pub fn get_all_blocks(
+        &self,
+        sheet_idx: Option<usize>,
+        sheet_id: Option<SheetId>,
+    ) -> Result<Vec<BlockInfo>> {
+        // Resolve to a list of sheet ids to iterate.
+        let sheet_ids: Vec<SheetId> = if let Some(id) = sheet_id {
+            vec![id]
+        } else if let Some(idx) = sheet_idx {
+            match self.controller.get_sheet_id_by_idx(idx) {
+                Some(id) => vec![id],
+                None => return Err(Error::UnavailableSheetIdx(idx)),
+            }
+        } else {
+            self.controller
+                .status
+                .navigator
+                .sheet_navs
+                .keys()
+                .copied()
+                .collect()
+        };
+
+        let mut out: Vec<BlockInfo> = Vec::new();
+        for sid in sheet_ids {
+            // Snapshot block ids to avoid borrowing the navigator across
+            // the get_block_info call (which itself reads the navigator).
+            let block_ids: Vec<BlockId> = match self
+                .controller
+                .status
+                .navigator
+                .sheet_navs
+                .get(&sid)
+            {
+                Some(nav) => nav.data.blocks.keys().copied().collect(),
+                None => continue,
+            };
+            let ws = self.get_sheet_by_id(sid)?;
+            for bid in block_ids {
+                // Skip blocks whose lookup fails (defensive — shouldn't
+                // happen with a consistent snapshot, but a missing block
+                // shouldn't sink the whole call).
+                if let Ok(info) = ws.get_block_info(bid) {
+                    out.push(info);
+                }
+            }
+        }
+        Ok(out)
     }
 
     /// Returns the owner and modify policy of a block. Used by the frontend

@@ -93,7 +93,7 @@ impl<const INTERVAL: usize> CellPositioner<INTERVAL> {
         }
 
         let last = cache.last().unwrap();
-        if k - last.0 >= INTERVAL {
+        if k.saturating_sub(last.0) >= INTERVAL {
             cache.push((k, v));
             return true;
         }

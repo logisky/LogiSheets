@@ -164,6 +164,36 @@ impl SchemaManager {
         }
     }
 
+    /// Look up the validation-formula template attached to a cell's field,
+    /// if any.
+    pub fn validation_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<String> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        match schema {
+            Schema::RowSchema(s) => s.validation_for_field_axis(cell.col).map(String::from),
+            Schema::ColSchema(s) => s.validation_for_field_axis(cell.row).map(String::from),
+            Schema::RandomSchema(_) => None,
+        }
+    }
+
+    /// Look up the editability-formula template attached to a cell's field,
+    /// if any.
+    pub fn editability_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<String> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        match schema {
+            Schema::RowSchema(s) => s.editability_for_field_axis(cell.col).map(String::from),
+            Schema::ColSchema(s) => s.editability_for_field_axis(cell.row).map(String::from),
+            Schema::RandomSchema(_) => None,
+        }
+    }
+
     /// For a templated block cell, return the per-field sibling
     /// `BlockCellId`s in the same row, keyed by field name. Used to
     /// build the `#FIELD("name") → Reference` substitution map at
@@ -178,13 +208,13 @@ impl SchemaManager {
             Schema::RowSchema(s) => s
                 .fields
                 .iter()
-                .map(|(name, (col, _, _))| {
+                .map(|(name, entry)| {
                     (
                         name.clone(),
                         BlockCellId {
                             block_id: cell.block_id,
                             row: cell.row,
-                            col: *col,
+                            col: entry.field_axis_id,
                         },
                     )
                 })
@@ -192,12 +222,12 @@ impl SchemaManager {
             Schema::ColSchema(s) => s
                 .fields
                 .iter()
-                .map(|(name, (row, _, _))| {
+                .map(|(name, entry)| {
                     (
                         name.clone(),
                         BlockCellId {
                             block_id: cell.block_id,
-                            row: *row,
+                            row: entry.field_axis_id,
                             col: cell.col,
                         },
                     )

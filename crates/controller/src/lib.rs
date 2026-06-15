@@ -5,6 +5,7 @@ pub mod api;
 mod async_func_manager;
 mod block_manager;
 mod calc_engine;
+pub mod checkpoint_manager;
 mod cell;
 mod cell_attachments;
 mod connectors;
