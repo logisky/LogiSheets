@@ -165,7 +165,15 @@ export declare class Engine {
     getBlockManager(): BlockManager;
     /**
      * Load a workbook from a file buffer.
-     * Convenience wrapper for getWorkbook().loadWorkbook()
+     *
+     * When the UI is mounted, delegate to the Spreadsheet component's own
+     * `loadWorkbook` so it can call `updateDocumentDimensions` and refresh
+     * its internal Svelte state. Going through `dataService.loadWorkbook`
+     * directly paints the worker side but leaves the Svelte component with
+     * stale dimensions/anchors from the previous workbook — visible as
+     * blank canvases when switching sheets after a file load. Mirrors the
+     * delegation pattern already used by `setCurrentSheetIndex` /
+     * `setSelection`.
      */
     loadFile(buffer: Uint8Array, filename: string): Promise<Grid | null>;
     /**

@@ -60,27 +60,26 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                 const height =
                     yForRowEnd(info.rowStart + info.rowCnt - 1, grid) - y
 
-                if (!info.schema) {
-                    throw new Error(
-                        `Schema not found in block ${info.blockId} on sheet ${info.sheetId}`
-                    )
-                }
+                // Schema is set by the craft via `bindFormSchema`. On
+                // file load the worker's schema bindings reset, and the
+                // craft re-binds asynchronously — there's a window where
+                // blockInfos exist but `info.schema` is undefined. Skip
+                // rendering this block until the schema lands; the next
+                // grid update will retry. Same applies to a field that
+                // hasn't been restored into FieldManager yet (the appData
+                // parse runs before the craft re-registers fields).
+                if (!info.schema) return null
 
-                const fieldInfos = [...info.schema.fields]
-                    .sort((a, b) => a.idx - b.idx)
-                    .map((fieldEntry, _idx) => {
-                        const result = BLOCK_MANAGER.fieldManager.get(
-                            fieldEntry.renderId
-                        )
-
-                        if (!result) {
-                            throw new Error(
-                                `Field ${fieldEntry.renderId} not found in block ${info.blockId}`
-                            )
-                        }
-
-                        return result
-                    })
+                const sortedFields = [...info.schema.fields].sort(
+                    (a, b) => a.idx - b.idx
+                )
+                const fieldInfos = sortedFields.map((f) =>
+                    BLOCK_MANAGER.fieldManager.get(f.renderId)
+                )
+                if (fieldInfos.some((f) => !f)) return null
+                const safeFieldInfos = fieldInfos as NonNullable<
+                    (typeof fieldInfos)[number]
+                >[]
 
                 return (
                     <BlockInterface
@@ -92,7 +91,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         sheetId={info.sheetId}
                         blockId={info.blockId}
                         sheetIdx={info.sheetIdx}
-                        fieldInfo={fieldInfos}
+                        fieldInfo={safeFieldInfos}
                         rowCnt={info.rowCnt}
                         colStart={info.colStart}
                         rowStart={info.rowStart}

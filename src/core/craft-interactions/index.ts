@@ -484,3 +484,164 @@ export function redistributePercent(
     }
     return next
 }
+
+// ---- Persistence --------------------------------------------------------
+// Saves both the bindings (what the craft registered) AND the user-mutated
+// state (what the user has selected/allocated). Crafts that gate their init
+// on "is this a fresh workbook?" (e.g. factory-simulator's sheet-collision
+// guard) won't re-run register*/setPointPool/setMultiSelectMax after a file
+// load, so persisting only user state would leave the renderer with no
+// bindings to draw — selections survive in memory but nothing references
+// them on screen. Number slider values and percent allocations still live
+// in the cells themselves; we persist their bindings (so the renderer
+// knows where to draw overlays) but not their values.
+
+interface PersistedShape {
+    radioBindings: RadioBinding[]
+    radioSelections: Record<string, string>
+    multiSelectBindings: MultiSelectBinding[]
+    multiSelectMax: Record<string, number>
+    multiSelectSelections: Record<string, string[]>
+    pointBindings: PointAllocatorBinding[]
+    pointPoolTotals: Record<string, number>
+    pointAllocations: Record<string, PointAllocation[]>
+    numberSliderBindings: NumberSliderBinding[]
+    percentBindings: PercentAllocatorBinding[]
+}
+
+export function getPersistentInteractions(): PersistedShape {
+    const out: PersistedShape = {
+        radioBindings: Array.from(radioBindings.values()),
+        radioSelections: {},
+        multiSelectBindings: Array.from(multiSelectBindings.values()),
+        multiSelectMax: {},
+        multiSelectSelections: {},
+        pointBindings: Array.from(pointBindings.values()),
+        pointPoolTotals: {},
+        pointAllocations: {},
+        numberSliderBindings: Array.from(numberSliderBindings.values()),
+        percentBindings: Array.from(percentBindings.values()),
+    }
+    for (const [groupId, value] of groupSelections) {
+        out.radioSelections[groupId] = value
+    }
+    for (const [groupId, max] of multiSelectMax) {
+        out.multiSelectMax[groupId] = max
+    }
+    for (const [groupId, set] of multiSelectSelections) {
+        if (set.size > 0) out.multiSelectSelections[groupId] = Array.from(set)
+    }
+    for (const [groupId, total] of pointPoolTotals) {
+        out.pointPoolTotals[groupId] = total
+    }
+    for (const groupId of pointAllocations.keys()) {
+        const list = getPointAllocations(groupId)
+        if (list.length > 0) out.pointAllocations[groupId] = list
+    }
+    return out
+}
+
+export function loadPersistentInteractions(data: unknown): void {
+    if (!data || typeof data !== 'object') return
+    const d = data as Partial<PersistedShape>
+
+    // Radio
+    radioBindings.clear()
+    if (Array.isArray(d.radioBindings)) {
+        for (const b of d.radioBindings) {
+            if (b && typeof b === 'object') {
+                radioBindings.set(bindingKey(b), b as RadioBinding)
+            }
+        }
+    }
+    groupSelections.clear()
+    if (d.radioSelections) {
+        for (const [groupId, value] of Object.entries(d.radioSelections)) {
+            if (typeof value === 'string') groupSelections.set(groupId, value)
+        }
+    }
+
+    // Multi-select
+    multiSelectBindings.clear()
+    if (Array.isArray(d.multiSelectBindings)) {
+        for (const b of d.multiSelectBindings) {
+            if (b && typeof b === 'object') {
+                multiSelectBindings.set(multiSelectKey(b), b as MultiSelectBinding)
+            }
+        }
+    }
+    multiSelectMax.clear()
+    if (d.multiSelectMax) {
+        for (const [groupId, max] of Object.entries(d.multiSelectMax)) {
+            if (typeof max === 'number') multiSelectMax.set(groupId, max)
+        }
+    }
+    multiSelectSelections.clear()
+    if (d.multiSelectSelections) {
+        for (const [groupId, values] of Object.entries(d.multiSelectSelections)) {
+            if (Array.isArray(values)) {
+                multiSelectSelections.set(
+                    groupId,
+                    new Set(values.filter((v) => typeof v === 'string'))
+                )
+            }
+        }
+    }
+
+    // Point allocator
+    pointBindings.clear()
+    if (Array.isArray(d.pointBindings)) {
+        for (const b of d.pointBindings) {
+            if (b && typeof b === 'object') {
+                pointBindings.set(pointBindingKey(b), b as PointAllocatorBinding)
+            }
+        }
+    }
+    pointPoolTotals.clear()
+    if (d.pointPoolTotals) {
+        for (const [groupId, total] of Object.entries(d.pointPoolTotals)) {
+            if (typeof total === 'number') pointPoolTotals.set(groupId, total)
+        }
+    }
+    pointAllocations.clear()
+    if (d.pointAllocations) {
+        for (const [groupId, list] of Object.entries(d.pointAllocations)) {
+            if (!Array.isArray(list)) continue
+            const m = new Map<string, number>()
+            for (const a of list as PointAllocation[]) {
+                if (
+                    typeof a?.blockId === 'number' &&
+                    typeof a?.row === 'number' &&
+                    typeof a?.col === 'number' &&
+                    typeof a?.points === 'number' &&
+                    a.points > 0
+                ) {
+                    m.set(cellKey(a.blockId, a.row, a.col), a.points)
+                }
+            }
+            if (m.size > 0) pointAllocations.set(groupId, m)
+        }
+    }
+
+    // Number slider (bindings only — values live in cells)
+    numberSliderBindings.clear()
+    if (Array.isArray(d.numberSliderBindings)) {
+        for (const b of d.numberSliderBindings) {
+            if (b && typeof b === 'object') {
+                numberSliderBindings.set(numberSliderKey(b), b as NumberSliderBinding)
+            }
+        }
+    }
+
+    // Percent allocator (bindings only — values live in cells)
+    percentBindings.clear()
+    if (Array.isArray(d.percentBindings)) {
+        for (const b of d.percentBindings) {
+            if (b && typeof b === 'object') {
+                percentBindings.set(percentBindingKey(b), b as PercentAllocatorBinding)
+            }
+        }
+    }
+
+    notifyStore()
+}

@@ -7,6 +7,10 @@ use logisheets_workbook::{
 use std::collections::HashMap;
 
 use crate::{
+    block_manager::{
+        field_manager::{persistence::field_renders_to_xml, FieldRenderManager},
+        schema_manager::{persistence::schemas_to_xml, SchemaManager},
+    },
     cell_attachments::CellAttachmentsManager,
     container::DataContainer,
     ext_book_manager::ExtBooksManager,
@@ -37,6 +41,8 @@ pub fn save_workbook<S: SaverTrait>(
     navigator: &Navigator,
     settings: &Settings,
     app_data: Vec<AppData>,
+    block_schema_manager: &SchemaManager,
+    field_render_manager: &FieldRenderManager,
     saver: &mut S,
 ) -> Result<Wb, SaveError> {
     let mut worksheets: HashMap<String, Worksheet> = HashMap::new();
@@ -68,12 +74,25 @@ pub fn save_workbook<S: SaverTrait>(
             )
         })
         .sorted_by_key(|a| a.0)
-        .for_each(|(_, ct_sheet, worksheet, block_ranges)| {
+        .for_each(|(sheet_pos, ct_sheet, worksheet, block_ranges)| {
             worksheets.insert(ct_sheet.id.clone(), worksheet);
             ct_sheets.push(ct_sheet);
+            // The tuple's first element is the sheet *position* (usize),
+            // not the `SheetId`. Resolve the id from the position manager
+            // so `schemas_to_xml` can filter by stable id.
+            let sheet_id = sheet_pos_manager
+                .get_sheet_id(sheet_pos)
+                .expect("sheet position has a registered sheet id");
+            let (row_schemas, col_schemas, random_schemas) =
+                schemas_to_xml(block_schema_manager, sheet_id);
+            // field_renders_to_xml is invoked once at the end, below —
+            // it's workbook-global, not per sheet.
             let sheet = Sheet {
                 block_ranges,
                 cell_appendices: vec![],
+                row_schemas,
+                col_schemas,
+                random_schemas,
             };
             sheets.push(sheet);
         });
@@ -119,6 +138,7 @@ pub fn save_workbook<S: SaverTrait>(
         logisheets: Some(LogiSheetsData {
             sheets,
             apps: app_data,
+            field_renders: field_renders_to_xml(field_render_manager, style_manager),
         }),
     };
     Ok(workbook)

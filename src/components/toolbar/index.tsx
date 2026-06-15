@@ -29,6 +29,10 @@ import {
     getFirstCell,
 } from 'logisheets-engine'
 import {tx} from '@/core/transaction'
+import {
+    getPersistentInteractions,
+    loadPersistentInteractions,
+} from '@/core/craft-interactions'
 import {ColorResult, SketchPicker} from 'react-color'
 import Modal from 'react-modal'
 import Tooltip from '@mui/material/Tooltip'
@@ -69,10 +73,11 @@ import Select, {SelectChangeEvent} from '@mui/material/Select'
 
 export interface ToolbarProps {
     setGrid: (grid: Grid | null) => void
+    setActiveSheet: (idx: number) => void
     selectedData?: SelectedData
 }
 
-export const Toolbar = observer(({selectedData, setGrid}: ToolbarProps) => {
+export const Toolbar = observer(({selectedData, setGrid, setActiveSheet}: ToolbarProps) => {
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const BLOCK_MANAGER = engine.getBlockManager()
@@ -87,22 +92,69 @@ export const Toolbar = observer(({selectedData, setGrid}: ToolbarProps) => {
         const file = e.target.files?.item(0)
         if (!file) return
         const readFile = file.arrayBuffer().then(async (buf) => {
-            const grid = await DATA_SERVICE.loadWorkbook(
-                new Uint8Array(buf),
-                file.name
-            )
-            if (isErrorMessage(grid)) {
+            // Use engine.loadFile, NOT DATA_SERVICE.loadWorkbook. The
+            // engine path delegates to the mounted Spreadsheet's own
+            // `loadWorkbook` (engine.ts:loadFile -> mounted.loadWorkbook),
+            // which calls its internal render() + updateDocumentDimensions
+            // and pushes the fresh grid through onGridChange — populating
+            // grid.blockInfos for React. Calling the data service directly
+            // refreshes the worker only; the Svelte side stays on stale
+            // dimensions/blocks and the host never sees blockInfos for the
+            // newly loaded workbook.
+            const grid = await engine.loadFile(new Uint8Array(buf), file.name)
+            if (!grid) {
                 // todo!
                 return
             }
             let appData = await DATA_SERVICE.getWorkbook().getAppData()
             if (isErrorMessage(appData)) appData = []
             appData.forEach((d: {name: string; data: string}) => {
-                if (d.name === 'logisheets') {
+                if (d.name !== 'logisheets') return
+                // Envelope format (current): a JSON object with `version`,
+                // `blockManager` (the BlockManager's own payload), and
+                // `craftInteractions` (host-held interaction state).
+                // Legacy format: the raw BlockManager string. Detect by
+                // attempting to parse and checking for the envelope shape.
+                let envelope: {
+                    version?: number
+                    blockManager?: string
+                    craftInteractions?: unknown
+                } | null = null
+                try {
+                    const parsed = JSON.parse(d.data)
+                    if (
+                        parsed &&
+                        typeof parsed === 'object' &&
+                        typeof parsed.version === 'number'
+                    ) {
+                        envelope = parsed
+                    }
+                } catch {
+                    // not JSON — falls through to legacy path
+                }
+                if (envelope) {
+                    if (typeof envelope.blockManager === 'string') {
+                        BLOCK_MANAGER.parseAppData(envelope.blockManager)
+                    }
+                    loadPersistentInteractions(envelope.craftInteractions)
+                } else {
                     BLOCK_MANAGER.parseAppData(d.data)
                 }
             })
-            setGrid(grid)
+            // Force a new grid reference so BlockInterfaceComponent
+            // re-renders. During `engine.loadFile` the gridChange listener
+            // already called setGrid(grid) — but that fired BEFORE
+            // parseAppData populated FieldManager, so the first render
+            // saw blocks with no matching fields and soft-skipped them
+            // all. Passing the same object reference here would be a
+            // React no-op (Object.is bails out); spread forces a fresh
+            // identity so React re-renders BlockInterface with the
+            // now-populated FieldManager.
+            setGrid({...grid})
+            // Reset to first sheet — host's previous active idx may not
+            // exist in the new workbook (engine.loadFile already rendered
+            // sheet 0 via the mounted component).
+            setActiveSheet(0)
             setBookName(file.name.replace(/\.[^/.]+$/, ''))
         })
         toast.promise(readFile, {
@@ -642,11 +694,14 @@ export const Toolbar = observer(({selectedData, setGrid}: ToolbarProps) => {
         )
     }
     async function onSave(): Promise<void> {
-        const blockFields = await DATA_SERVICE.getWorkbook().getAllBlockFields()
-        if (isErrorMessage(blockFields)) return
-        const persistentData = BLOCK_MANAGER.getPersistentData(blockFields)
+        const persistentData = BLOCK_MANAGER.getPersistentData([])
+        const envelope = JSON.stringify({
+            version: 1,
+            blockManager: persistentData,
+            craftInteractions: getPersistentInteractions(),
+        })
         const saveResult = await DATA_SERVICE.getWorkbook().save({
-            appData: persistentData,
+            appData: envelope,
         })
         if (isErrorMessage(saveResult)) return
         const {code, data} = saveResult

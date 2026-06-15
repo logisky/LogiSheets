@@ -51,6 +51,7 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
 
     let mut navigator_replication = controller.status.navigator.clone();
     let block_schema_manager = &controller.status.block_schema_manager;
+    let field_render_manager = &controller.status.field_render_manager;
     let mut saver = Saver {
         part_count: 0,
         _external_count: 0,
@@ -81,6 +82,8 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
         &controller.status.navigator,
         settings,
         controller.app_data.clone(),
+        block_schema_manager,
+        field_render_manager,
         &mut saver,
     )
 }

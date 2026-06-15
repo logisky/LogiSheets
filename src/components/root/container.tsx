@@ -22,7 +22,11 @@ export const RootContainer = () => {
         <div className={styles.container}>
             <div className={styles.host}>
                 <div style={{height: SETTINGS.topBar}}>
-                    <Toolbar selectedData={selectedData} setGrid={setGrid} />
+                    <Toolbar
+                        selectedData={selectedData}
+                        setGrid={setGrid}
+                        setActiveSheet={setActiveSheet}
+                    />
                 </div>
                 <div className={styles.content}>
                     <ContentComponent
