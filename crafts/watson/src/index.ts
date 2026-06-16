@@ -6,10 +6,13 @@ export {
     BUILDER_TOOLS,
     INSPECT_TOOLS,
     EDIT_TOOLS,
+    CRAFT_INTERACTION_TOOLS,
     ToolRegistry,
     toUiBubbles,
     toLlmMessages,
 } from 'logician'
+
+export type {CraftInteractionsApi} from 'logician'
 
 export type {
     AgentOptions,
@@ -24,5 +27,6 @@ export type {
 export {IdbConversationStore} from './storage-idb'
 export {AnthropicBrowserClient, LlmError} from './llm-anthropic'
 export type {LlmErrorCode, RequestInfo} from './llm-anthropic'
+export {makeCraftInteractionsApi} from './craft-interactions-adapter'
 
 export const name = 'watson'
