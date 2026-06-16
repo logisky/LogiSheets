@@ -14,6 +14,7 @@
  */
 
 import type {Client} from 'logisheets-web'
+import type {CraftInteractionsApi} from './craft-interactions-api'
 
 /**
  * Workbook client surface used by tool handlers. We re-export the `Client`
@@ -69,6 +70,14 @@ export interface ToolContext {
     confirm: (message: string, detail?: unknown) => Promise<boolean>
     /** Emit a progress / log line into the chat transcript. */
     log: (msg: string) => void
+    /**
+     * Craft-defined cell-overlay widgets (radio / multi-select / point /
+     * percent / slider). Optional: present only when the host has craft
+     * interactions (browser app). Absent in headless hosts — craft-
+     * interaction tools detect this and return a "not available" result
+     * rather than throwing.
+     */
+    craftInteractions?: CraftInteractionsApi
 }
 
 /** Structured result returned by a handler. */

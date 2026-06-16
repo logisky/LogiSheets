@@ -34,6 +34,7 @@ import {
 import type {ConversationStore} from '../storage'
 import {toLlmTool, ToolRegistry} from '../tool'
 import type {Tool, ToolContext, WorkbookClient} from '../tool'
+import type {CraftInteractionsApi} from '../craft-interactions-api'
 
 // ---------------------------------------------------------------------------
 // LlmClient — minimal surface the loop needs
@@ -96,6 +97,10 @@ export interface AgentOptions {
     ) => Promise<{approved: boolean; reason?: string}>
     /** Hook for surfacing in-flight notes to the host UI (toast / log line). */
     log?: (msg: string) => void
+    /** Optional craft-interaction capability surface; passed to every
+     *  ToolContext so craft-interaction tools can reach the host's
+     *  overlay-widget state. Omit on headless hosts. */
+    craftInteractions?: CraftInteractionsApi
 }
 
 export class Agent {
@@ -109,6 +114,7 @@ export class Agent {
     private maxToolIters: number
     private confirm: NonNullable<AgentOptions['confirm']>
     private log: NonNullable<AgentOptions['log']>
+    private craftInteractions?: CraftInteractionsApi
 
     constructor(opts: AgentOptions) {
         this.store = opts.store
@@ -124,6 +130,7 @@ export class Agent {
         this.confirm =
             opts.confirm ?? (async () => ({approved: true}))
         this.log = opts.log ?? (() => {})
+        this.craftInteractions = opts.craftInteractions
     }
 
     /**
@@ -314,6 +321,7 @@ export class Agent {
                 return d.approved
             },
             log: (msg) => this.log(`[${call.name}] ${msg}`),
+            craftInteractions: this.craftInteractions,
         }
         try {
             const result = await tool.handler(call.input, ctx)
