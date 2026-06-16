@@ -37,7 +37,7 @@ export const CraftPanel = ({
     setCellLayouts,
 }: CraftPanelProps) => {
     const [iframeSrc, setIframeSrc] = useState(
-        '/factory-simulator-zh/index.html'
+        '/factory-simulator-en/index.html'
     )
     const tools = [
         {
@@ -57,7 +57,7 @@ export const CraftPanel = ({
             value: '/markdown-table-extractor/index.html',
         },
         {
-            label: 'Watson (AI)',
+            label: 'Watson',
             value: '/watson/index.html',
         },
     ] as const

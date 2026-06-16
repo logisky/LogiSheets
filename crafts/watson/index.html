@@ -338,14 +338,41 @@
     // ---------- Agent + Store wiring ----------
     const store = new W.IdbConversationStore();
     const registry = new W.ToolRegistry();
-    registry.registerMany([...W.BUILDER_TOOLS, ...W.INSPECT_TOOLS, ...W.EDIT_TOOLS]);
+    registry.registerMany([
+      ...W.BUILDER_TOOLS,
+      ...W.INSPECT_TOOLS,
+      ...W.EDIT_TOOLS,
+      ...W.CRAFT_INTERACTION_TOOLS,
+    ]);
+
+    // Bridge logician's CraftInteractionsApi to the craft-interaction
+    // functions the host injects onto this iframe's window. undefined when
+    // the host predates the API — the craft tools then report themselves
+    // unavailable instead of crashing.
+    const craftInteractions = W.makeCraftInteractionsApi(window);
 
     const SYSTEM_PROMPT =
       'You are Watson, an AI assistant inside LogiSheets. ' +
       'You help users build, inspect, and edit block-shaped spreadsheets ' +
       'using the available tools. Prefer formulas (eval_formula) over ' +
       'reading large data. Confirm before destructive edits. ' +
-      'Keep responses short and direct.';
+      'Keep responses short and direct.\n\n' +
+      'You can build interactive apps (like the factory simulator): blocks ' +
+      'with schemas, formulas, and on-cell widgets. Typical build order: ' +
+      'define_enum_set (if needed) → create_block (declares fields, ' +
+      'num_fmt formatters, initial rows) → set_field_rule (value / ' +
+      'validation / editability formulas) → set_block_cells (data) → ' +
+      'craft register_* (overlay widgets). ' +
+      'Overlay widgets are operated by the END USER (they click a radio, ' +
+      'drag a slider, split a percentage) — you cannot set their values ' +
+      'programmatically, only register them and read results with ' +
+      'craft read_selection. Use register_percent_allocator for ' +
+      '"split that sums to 100%" (e.g. a two-supplier split), ' +
+      'register_point_allocator for "distribute N points across cells", ' +
+      'register_radio_group / register_multi_select_group for choices, ' +
+      'register_number_slider for a bounded numeric input. Address widget ' +
+      'cells by block ref name + field name + row key, just like ' +
+      'set_block_cells.';
 
     let agent = null;
     let llm   = null;
@@ -370,6 +397,7 @@
         registry,
         llm,
         workbook: wb,
+        craftInteractions,
         model: settings.getModel(),
         systemPrompt: SYSTEM_PROMPT,
         confirm: askConfirm,
