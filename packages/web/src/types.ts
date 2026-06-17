@@ -32,9 +32,9 @@ export interface SelectedLines {
 export function getFirstCell(v: SelectedData): CellCoordinate {
     const r = getSelectedCellRange(v)
     if (r) return {y: r.startRow, x: r.startCol}
-    const l = getSelectedLines(v) as SelectedLines
-    if (l.type === 'row') return {y: l.start, x: 0}
-    if (l.type === 'col') return {y: 0, x: l.start}
+    const l = getSelectedLines(v)
+    if (l?.type === 'row') return {y: l.start, x: 0}
+    if (l?.type === 'col') return {y: 0, x: l.start}
     throw Error('should not happend')
 }
 

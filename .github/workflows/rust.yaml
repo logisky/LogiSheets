@@ -27,6 +27,7 @@ jobs:
 
       - run: yarn install && cargo install --locked wasm-pack
       - run: yarn workspace logisheets-web build
+      - run: yarn workspace logisheets-web test
       - run: yarn run run-scripts && yarn run wasm
       - run: yarn build
 

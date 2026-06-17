@@ -3,7 +3,7 @@
         "allowJs": true,
         "declaration": true,
         "module": "ESNext",
-        "moduleResolution": "Node",
+        "moduleResolution": "Bundler",
         "noImplicitAny": true,
         "strict": true,
         "experimentalDecorators": true,
@@ -12,10 +12,10 @@
         "target": "ESNext"
     },
     "files": [
-        "index.ts",
+        "index.ts"
     ],
     "include": [
         "src/**/*.ts",
-        "wasm/**/*",
+        "wasm/**/*"
     ]
 }

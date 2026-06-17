@@ -3,7 +3,7 @@ import MenuItem from '@mui/material/MenuItem'
 import styles from './block-interface.module.scss'
 import React from 'react'
 import {useEngine} from '@/core/engine/provider'
-import {RemoveBlockBuilder} from 'packages/web'
+import {RemoveBlockBuilder} from 'logisheets-web'
 import {tx} from '@/core/transaction'
 
 export interface MenuProps {
