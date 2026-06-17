@@ -103,13 +103,13 @@ export const setBlockCells: Tool<SetBlockCellsInput, SetBlockCellsOutput> = {
     namespace: 'edit',
     name: 'set_block_cells',
     description: [
-        "Write one or more cells inside any block(s) in a single atomic transaction. Each change addresses a cell by (block ref name, row_key, field) — the LLM never deals with raw (sheet, row, col).",
+        'Write one or more cells inside any block(s) in a single atomic transaction. Each change addresses a cell by (block ref name, row_key, field) — the LLM never deals with raw (sheet, row, col).',
         '',
-        "Pass `changes` as an array; one-cell writes are just length-1 arrays. Batching is the cheap default — putting N writes in one call is one transaction, one calc pass, one undo entry.",
+        'Pass `changes` as an array; one-cell writes are just length-1 arrays. Batching is the cheap default — putting N writes in one call is one transaction, one calc pass, one undo entry.',
         '',
         'Rejected up-front (whole tx aborts) when any change:',
         '  - targets a non-existent block / row_key / field, or',
-        "  - targets a field with a `value_formula` on its schema (engine-computed; use set_field_rule to change the rule instead).",
+        '  - targets a field with a `value_formula` on its schema (engine-computed; use set_field_rule to change the rule instead).',
         '',
         "Value can be a literal (string / number / boolean) or a formula prefixed with '='. `null` clears the cell.",
     ].join('\n'),
@@ -197,14 +197,20 @@ export const setBlockCells: Tool<SetBlockCellsInput, SetBlockCellsOutput> = {
         await commitTransaction(
             client,
             payloads,
-            `set_block_cells (${payloads.length} change${payloads.length === 1 ? '' : 's'})`
+            `set_block_cells (${payloads.length} change${
+                payloads.length === 1 ? '' : 's'
+            })`
         )
 
         return {
             data: {applied: payloads.length},
             display:
                 payloads.length === 1
-                    ? `Set ${input.changes[0].block}[${input.changes[0].row_key}].${input.changes[0].field} = ${JSON.stringify(input.changes[0].value)}.`
+                    ? `Set ${input.changes[0].block}[${
+                          input.changes[0].row_key
+                      }].${input.changes[0].field} = ${JSON.stringify(
+                          input.changes[0].value
+                      )}.`
                     : `Applied ${payloads.length} cell writes in one transaction.`,
         }
     },
@@ -272,7 +278,9 @@ export const clearBlock: Tool<ClearBlockInput, {rows_cleared: number}> = {
         )
         return {
             data: {rows_cleared: block.rowCnt},
-            display: `Cleared ${block.rowCnt} row${block.rowCnt === 1 ? '' : 's'} from ${input.block}.`,
+            display: `Cleared ${block.rowCnt} row${
+                block.rowCnt === 1 ? '' : 's'
+            } from ${input.block}.`,
         }
     },
 }
@@ -307,7 +315,7 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
     namespace: 'edit',
     name: 'preview_changes',
     description:
-        "Dry-run a batch of edits via the workbook's temp-transaction branch: returns every cell whose value would change (direct writes + cascaded formula recalcs). Nothing is committed. Use before set_block_cells when the user asks \"what would happen if…\".",
+        'Dry-run a batch of edits via the workbook\'s temp-transaction branch: returns every cell whose value would change (direct writes + cascaded formula recalcs). Nothing is committed. Use before set_block_cells when the user asks "what would happen if…".',
     mutates: false,
     confirmation: 'never',
     cost: 'normal',
@@ -393,9 +401,7 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
             }
             const diffRes = await client.getTempStatusChanges()
             if (isErrorMessage(diffRes)) {
-                throw new Error(
-                    `getTempStatusChanges failed: ${diffRes.msg}`
-                )
+                throw new Error(`getTempStatusChanges failed: ${diffRes.msg}`)
             }
 
             // Annotate diff entries with block context when the cell
@@ -419,7 +425,9 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                 display:
                     diff.length === 0
                         ? 'No cells would change.'
-                        : `${diff.length} cell${diff.length === 1 ? '' : 's'} would change.`,
+                        : `${diff.length} cell${
+                              diff.length === 1 ? '' : 's'
+                          } would change.`,
             }
         } finally {
             await client.cleanupTempStatus()

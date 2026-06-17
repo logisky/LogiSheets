@@ -3,17 +3,18 @@
         "allowJs": true,
         "declaration": true,
         "module": "ESNext",
-        "moduleResolution": "Node",
+        "moduleResolution": "Bundler",
         "noImplicitAny": true,
         "strict": true,
         "skipLibCheck": true,
+        "rootDir": ".",
         "outDir": "./dist/",
         "target": "ESNext"
     },
     "files": [
-        "index.ts",
+        "index.ts"
     ],
     "include": [
-        "src/**/*.ts",
+        "src/**/*.ts"
     ]
 }

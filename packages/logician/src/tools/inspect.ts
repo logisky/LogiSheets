@@ -25,9 +25,7 @@ function asClient(ctx: ToolContext): Client {
 
 /** Flatten an engine `Value` for LLM consumption. Errors get a
  *  "#ERR:..." prefix so they're distinguishable from real strings. */
-function flattenCellValue(
-    v: Value
-): string | number | boolean | null {
+function flattenCellValue(v: Value): string | number | boolean | null {
     if (v === 'empty') return null
     switch (v.type) {
         case 'str':
@@ -147,22 +145,16 @@ export const listViolations: Tool<
         // 2. Filter to blocks in scope.
         let blocks: readonly BlockInfo[] = blocksRes
         if (input.sheet !== undefined) {
-            const targetIdx = sheetsRes.findIndex(
-                (s) => s.name === input.sheet
-            )
+            const targetIdx = sheetsRes.findIndex((s) => s.name === input.sheet)
             if (targetIdx < 0) {
                 throw new Error(`No sheet named "${input.sheet}"`)
             }
             blocks = blocks.filter((b) => b.sheetIdx === targetIdx)
         }
         if (input.block !== undefined) {
-            blocks = blocks.filter(
-                (b) => b.schema?.name === input.block
-            )
+            blocks = blocks.filter((b) => b.schema?.name === input.block)
             if (blocks.length === 0) {
-                throw new Error(
-                    `No block with ref name "${input.block}"`
-                )
+                throw new Error(`No block with ref name "${input.block}"`)
             }
         }
 
@@ -201,8 +193,7 @@ export const listViolations: Tool<
                 for (const f of ruled) {
                     const sheetRow = block.rowStart + r
                     const sheetCol = block.colStart + f.idx
-                    const list =
-                        probesBySheet.get(block.sheetIdx) ?? []
+                    const list = probesBySheet.get(block.sheetIdx) ?? []
                     list.push({
                         block,
                         fieldName: f.field,
@@ -304,7 +295,9 @@ export const listViolations: Tool<
             display:
                 violations.length === 0
                     ? 'No validation violations.'
-                    : `${violations.length} violation${violations.length === 1 ? '' : 's'}${truncated ? ` (truncated at limit=${limit})` : ''}.`,
+                    : `${violations.length} violation${
+                          violations.length === 1 ? '' : 's'
+                      }${truncated ? ` (truncated at limit=${limit})` : ''}.`,
         }
     },
 }
@@ -377,7 +370,7 @@ export const whyLocked: Tool<WhyLockedInput, WhyLockedOutput> = {
         'Explain whether a specific cell is editable right now, and why. Three gates compose (any one says "no" → not editable):',
         '',
         '  1. **value_formula** on the schema → cell is engine-computed; writes always rejected by the container layer.',
-        "  2. **editability_formula** on the schema → per-row UserEditable shadow evaluates true/false. False means the host permission layer rejects writes.",
+        '  2. **editability_formula** on the schema → per-row UserEditable shadow evaluates true/false. False means the host permission layer rejects writes.',
         '  3. **Key column** — fields[0] is always read-only by system convention.',
         '',
         '(If the host exposes its FieldManager, the static `userEditable` flag on FieldInfo is also reported, but it overlaps with #3 + #2 in practice.)',
@@ -404,17 +397,13 @@ export const whyLocked: Tool<WhyLockedInput, WhyLockedOutput> = {
         if (isErrorMessage(blocksRes)) {
             throw new Error(`getAllBlocks failed: ${blocksRes.msg}`)
         }
-        const block = blocksRes.find(
-            (b) => b.schema?.name === input.block
-        )
+        const block = blocksRes.find((b) => b.schema?.name === input.block)
         if (!block) {
             throw new Error(`No block with ref name "${input.block}"`)
         }
         const schema = block.schema!
 
-        const fieldEntry = schema.fields.find(
-            (f) => f.field === input.field
-        )
+        const fieldEntry = schema.fields.find((f) => f.field === input.field)
         if (!fieldEntry) {
             throw new Error(
                 `No field named "${input.field}" in block "${input.block}"`
@@ -482,8 +471,7 @@ export const whyLocked: Tool<WhyLockedInput, WhyLockedOutput> = {
                         editabilityRulePasses = b
                     } else if (v.type === 'str') {
                         const b =
-                            v.value !== '' &&
-                            v.value.toUpperCase() !== 'FALSE'
+                            v.value !== '' && v.value.toUpperCase() !== 'FALSE'
                         editabilityRuleValue = b ? 'true' : 'false'
                         editabilityRulePasses = b
                     } else if (v.type === 'error') {
@@ -525,7 +513,9 @@ export const whyLocked: Tool<WhyLockedInput, WhyLockedOutput> = {
             const bits: string[] = []
             if (editabilityFormula) {
                 bits.push(
-                    `editability_formula evaluates to ${editabilityRuleValue ?? 'true'}`
+                    `editability_formula evaluates to ${
+                        editabilityRuleValue ?? 'true'
+                    }`
                 )
             }
             if (staticUserEditable === true)

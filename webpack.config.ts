@@ -1,6 +1,5 @@
 import * as path from 'path'
 import {Configuration, DefinePlugin, ProvidePlugin} from 'webpack'
-import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin'
 import 'webpack-dev-server'
@@ -47,12 +46,13 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
         resolve: {
             // Add '.ts' and '.tsx' as resolvable extensions.
             extensions: ['.ts', '.tsx', '.js', '.json', '.d.ts'],
-            plugins: [
-                new TsconfigPathsPlugin({
-                    configFile: './tsconfig.json',
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                }) as any,
-            ],
+            alias: {
+                '@': path.resolve(__dirname, 'src'),
+                '@logisheets/formula-editor': path.resolve(
+                    __dirname,
+                    'packages/formula-editor/src/lib/index.ts'
+                ),
+            },
         },
         plugins: [
             new DefinePlugin({

@@ -1,11 +1,8 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "esModuleInterop": true,
     "types": ["reflect-metadata", "vitest/globals", "node"],
-    "forceConsistentCasingInFileNames": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "isolatedModules": true,
@@ -16,14 +13,13 @@
       "ESNext"
     ],
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noEmit": false,
     "noFallthroughCasesInSwitch": true,
-    "noImplicitAny": true,
     "outDir": "./dist/",
     "paths": {
-      "@/*": ["src/*"],
-      "@logisheets/formula-editor": ["packages/formula-editor/src/lib/index.ts"]
+      "@/*": ["./src/*"],
+      "@logisheets/formula-editor": ["./packages/formula-editor/src/lib/index.ts"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -33,7 +29,8 @@
   },
   "ts-node": {
     "compilerOptions": {
-      "module": "CommonJS"
+      "module": "CommonJS",
+      "moduleResolution": "node16"
     }
   },
   "include": [

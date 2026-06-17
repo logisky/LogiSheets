@@ -330,14 +330,16 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
         for (let i = 0; i < input.fields.length; i++) {
             const f = input.fields[i]
             if (bm) {
-                const typeSpec = buildFieldTypeSpec(f, enumVariantsByField.get(i))
+                const typeSpec = buildFieldTypeSpec(
+                    f,
+                    enumVariantsByField.get(i)
+                )
                 const fi = bm.fieldManager.create(sheetId, blockId, {
                     name: f.name,
                     type: typeSpec,
                     required: false,
                     unique: false,
-                    userEditable:
-                        i === 0 ? false : f.user_editable ?? true,
+                    userEditable: i === 0 ? false : f.user_editable ?? true,
                 })
                 renderIds.push(fi.id)
             } else {
@@ -789,7 +791,9 @@ export const deleteBlockRows: Tool<DeleteBlockRowsInput, {removed: number}> = {
         return {
             data: {removed: targetRows.length},
             display: willEmpty
-                ? `Cleared "${input.block}" — removed ${targetRows.length - 1} row(s) and blanked the remaining sentinel row.`
+                ? `Cleared "${input.block}" — removed ${
+                      targetRows.length - 1
+                  } row(s) and blanked the remaining sentinel row.`
                 : `Deleted ${uniqueSortedDesc.length} row(s) from "${input.block}".`,
         }
     },
@@ -819,7 +823,7 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
         '  #PLACEHOLDER   — reference to the cell itself (validation/editability only)',
         '',
         'Engine behaviour after this call:',
-        '  - value_formula  → cells in the field become engine-computed (no direct writes). Every row\'s formula is re-materialized.',
+        "  - value_formula  → cells in the field become engine-computed (no direct writes). Every row's formula is re-materialized.",
         '  - validation     → a `ShadowKind::Validation` shadow is auto-installed on every row; warning markers refresh.',
         '  - editability    → a `ShadowKind::UserEditable` shadow is auto-installed on every row; the host permission patch reads it to gate writes.',
         '',
@@ -882,9 +886,7 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
                 `Block "${input.block}" has no schema — bind it first via create_block`
             )
         }
-        const fieldPos = schema.fields.findIndex(
-            (f) => f.field === input.field
-        )
+        const fieldPos = schema.fields.findIndex((f) => f.field === input.field)
         if (fieldPos < 0) {
             throw new Error(
                 `No field named "${input.field}" in block "${input.block}"`
@@ -945,7 +947,9 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
 
         return {
             data: {applied: touched},
-            display: `Updated ${touched.join(' + ')} on ${input.block}.${input.field}.`,
+            display: `Updated ${touched.join(' + ')} on ${input.block}.${
+                input.field
+            }.`,
         }
     },
 }
@@ -953,10 +957,7 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
 /** Guard for the checkpoint ops that need a label; surface a clear
  *  error to the LLM rather than letting the RPC fail with a less
  *  contextual message. */
-function requireLabel(
-    input: {label?: string},
-    op: string
-): string {
+function requireLabel(input: {label?: string}, op: string): string {
     const label = input.label?.trim()
     if (!label) {
         throw new Error(`checkpoint: op="${op}" requires \`label\``)
@@ -1105,7 +1106,7 @@ export const defineEnumSet: Tool<DefineEnumSetInput, DefineEnumSetOutput> = {
             name: {
                 type: 'string',
                 description:
-                    "Human-readable name shown in the composer / dropdown header. Defaults to the id.",
+                    'Human-readable name shown in the composer / dropdown header. Defaults to the id.',
             },
             description: {
                 type: 'string',
@@ -1120,7 +1121,7 @@ export const defineEnumSet: Tool<DefineEnumSetInput, DefineEnumSetOutput> = {
                         id: {
                             type: 'string',
                             description:
-                                "Variant id stored in cells. Must be unique within the set.",
+                                'Variant id stored in cells. Must be unique within the set.',
                         },
                         label: {
                             type: 'string',
@@ -1170,7 +1171,12 @@ export const defineEnumSet: Tool<DefineEnumSetInput, DefineEnumSetOutput> = {
         const bm = tryGetBlockManager()
         let bound = false
         if (bm) {
-            bm.enumSetManager.set(input.id, setName, variants, input.description)
+            bm.enumSetManager.set(
+                input.id,
+                setName,
+                variants,
+                input.description
+            )
             bound = true
         }
 
@@ -1264,9 +1270,7 @@ export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
         // Resolve scope: a specific sheet, or every sheet in the workbook.
         let scope: number[]
         if (input.sheet !== undefined) {
-            const matched = sheetInfos.findIndex(
-                (s) => s.name === input.sheet
-            )
+            const matched = sheetInfos.findIndex((s) => s.name === input.sheet)
             if (matched < 0) {
                 throw new Error(`No sheet named "${input.sheet}"`)
             }
@@ -1361,7 +1365,10 @@ interface DescribeBlockOutput {
     /** Only when `include_rows=true`. Each entry maps every field name
      *  to that cell's current value (string / number / boolean) or
      *  null when empty. Formula errors surface as `"#ERR:..."` strings. */
-    rows?: Array<{key: string; values: Record<string, string | number | boolean | null>}>
+    rows?: Array<{
+        key: string
+        values: Record<string, string | number | boolean | null>
+    }>
 }
 
 export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
@@ -1370,7 +1377,7 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
     description: [
         "Return a block's full structure for the LLM: identity (name, sheet, position), per-field schema (name, position, value_formula, validation, editability rules — all from the Rust schema, the engine's authoritative source), and row keys in order.",
         '',
-        "Pass `include_rows: true` to additionally include current cell values as `rows[].values[fieldName]`. Off by default to save tokens — use it when the agent actually needs to inspect data, not when it only needs the shape.",
+        'Pass `include_rows: true` to additionally include current cell values as `rows[].values[fieldName]`. Off by default to save tokens — use it when the agent actually needs to inspect data, not when it only needs the shape.',
     ].join('\n'),
     mutates: false,
     confirmation: 'never',
@@ -1460,15 +1467,15 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
 
             const rows: NonNullable<DescribeBlockOutput['rows']> = []
             for (let r = 0; r < block.rowCnt; r++) {
-                const values: Record<
-                    string,
-                    string | number | boolean | null
-                > = {}
+                const values: Record<string, string | number | boolean | null> =
+                    {}
                 for (let c = 0; c < block.colCnt; c++) {
                     const fieldName = fieldByCol.get(c)
                     if (!fieldName) continue
                     const cell = block.cells[r * block.colCnt + c]
-                    values[fieldName] = cell ? flattenCellValue(cell.value) : null
+                    values[fieldName] = cell
+                        ? flattenCellValue(cell.value)
+                        : null
                 }
                 rows.push({
                     key: keyByRow.get(r) ?? '',
@@ -1622,7 +1629,7 @@ export const checkpoint: Tool<CheckpointInput, CheckpointOutput> = {
     namespace: 'build',
     name: 'checkpoint',
     description: [
-        "Snapshot the workbook so a multi-step build can roll back without chaining N undos. Engine-managed (Rust CheckpointManager) — each label points at a full Status snapshot. Cheap to create thanks to imbl persistent data structures.",
+        'Snapshot the workbook so a multi-step build can roll back without chaining N undos. Engine-managed (Rust CheckpointManager) — each label points at a full Status snapshot. Cheap to create thanks to imbl persistent data structures.',
         '',
         'Operations:',
         '  save    — Take a snapshot under `label`. Overwrites if label exists. Does not touch the undo stack (the snapshot is a sidecar; the AI/user can keep working).',
@@ -1699,9 +1706,7 @@ export const checkpoint: Tool<CheckpointInput, CheckpointOutput> = {
                     label,
                 } as unknown as Parameters<typeof client.deleteCheckpoint>[0])
                 if (isErrorMessage(existed)) {
-                    throw new Error(
-                        `delete checkpoint failed: ${existed.msg}`
-                    )
+                    throw new Error(`delete checkpoint failed: ${existed.msg}`)
                 }
                 return {
                     data: {op: 'delete', result: existed},
@@ -1720,7 +1725,9 @@ export const checkpoint: Tool<CheckpointInput, CheckpointOutput> = {
                     display:
                         list.length === 0
                             ? 'No checkpoints saved.'
-                            : `${list.length} checkpoint(s): ${list.map((c) => c.label).join(', ')}.`,
+                            : `${list.length} checkpoint(s): ${list
+                                  .map((c) => c.label)
+                                  .join(', ')}.`,
                 }
             }
         }
