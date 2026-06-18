@@ -8,12 +8,16 @@ import {Grid} from 'logisheets-engine'
 import {IconButton} from '@mui/material'
 import {ChevronLeft} from '@mui/icons-material'
 import {CellLayout, SelectedData} from 'logisheets-engine'
+import {parseCraftDeepLink} from '@/core/craft-deeplink'
 export const RootContainer = () => {
+    const [craftDeepLink] = useState(() => parseCraftDeepLink())
     const [selectedData, setSelectedData] = useState<SelectedData>({
         source: 'none',
     })
     const [grid, setGrid] = useState<Grid | null>(null)
-    const [isCraftPanelVisible, setCraftPanelVisible] = useState(false)
+    const [isCraftPanelVisible, setCraftPanelVisible] = useState(
+        !!craftDeepLink
+    )
 
     const [cellLayouts, setCellLayouts] = useState<CellLayout[]>([])
     const [activeSheet, setActiveSheet] = useState(0)
@@ -60,6 +64,7 @@ export const RootContainer = () => {
             ) : null}
             <CraftPanel
                 open={isCraftPanelVisible}
+                initialCraftSrc={craftDeepLink?.iframeSrc}
                 setSelectedData={setSelectedData}
                 selectedData={selectedData}
                 onClose={() => {
