@@ -26,6 +26,8 @@ type CraftPanelProps = {
     setActiveSheet: (index: number) => void
     setCellLayouts: (data: CellLayout[]) => void
     onClose: () => void
+    // Deep-link entry: craft to show initially (see core/craft-deeplink.ts).
+    initialCraftSrc?: string
 }
 
 export const CraftPanel = ({
@@ -35,9 +37,10 @@ export const CraftPanel = ({
     setSelectedData,
     setActiveSheet,
     setCellLayouts,
+    initialCraftSrc,
 }: CraftPanelProps) => {
     const [iframeSrc, setIframeSrc] = useState(
-        '/factory-simulator-en/index.html'
+        initialCraftSrc ?? '/factory-simulator-en/index.html'
     )
     const tools = [
         {
