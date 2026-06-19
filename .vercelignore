@@ -5,7 +5,13 @@
 # re-include both the directory (`!dist`) AND its contents
 # (`!dist/**`), otherwise the negated content rule has no effect
 # because the parent dir stays excluded.
+#
+# `docs/` is re-included because the docs.logisheets.com Vercel project
+# uses this same repo with Root Directory=docs and needs its source
+# uploaded. The main project ignores the extra files (buildCommand: null).
 *
 !dist
 !dist/**
 !vercel.json
+!docs
+!docs/**

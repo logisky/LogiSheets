@@ -41,3 +41,8 @@ packages/**/*/bindings
 .yarn/install-state.gz
 .vercel
 .npmrc
+
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache
+docs/node_modules
