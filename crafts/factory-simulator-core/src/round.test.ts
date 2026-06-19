@@ -145,8 +145,18 @@ describe('computeRoundPenaltyAndGoodwill', () => {
                 order({orderId: '', amount: NaN}),
                 order({orderId: 'B', period: NaN}),
                 order({orderId: 'C', acceptedRound: NaN}),
-                order({orderId: 'D', delivered: NaN, period: 3, acceptedRound: 1}),
-                order({orderId: 'E', unitPenalty: NaN, period: 3, acceptedRound: 1}),
+                order({
+                    orderId: 'D',
+                    delivered: NaN,
+                    period: 3,
+                    acceptedRound: 1,
+                }),
+                order({
+                    orderId: 'E',
+                    unitPenalty: NaN,
+                    period: 3,
+                    acceptedRound: 1,
+                }),
             ],
             [],
             4
@@ -168,9 +178,8 @@ describe('computeRoundPenaltyAndGoodwill', () => {
 })
 
 describe('computeFinancialRollup', () => {
-    const rows = (
-        ...entries: Array<[string, number]>
-    ): FinancialImpactRow[] => entries.map(([key, value]) => ({key, value}))
+    const rows = (...entries: Array<[string, number]>): FinancialImpactRow[] =>
+        entries.map(([key, value]) => ({key, value}))
 
     it('sums all rows when no overrides / no exclusions', () => {
         const result = computeFinancialRollup(
@@ -275,6 +284,7 @@ describe('evaluateEndgame', () => {
         bankruptcyGraceRounds: 3,
         reputationGraceRounds: 2,
         tierUltimateGoodwill: 148,
+        tierUltimateFund: 300000,
         tierGoldFund: 80000,
         tierGoldGoodwill: 100,
         tierSilverFund: 30000,

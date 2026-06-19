@@ -533,12 +533,13 @@ const REPUTATION_GRACE_ROUNDS = 2
 // order and loses ≈penalty/100 per missed deadline — so reaching
 // gold (130) takes near-perfect delivery, silver (100) is "no net
 // reputation loss."
-// Reputation ceiling that triggers an immediate top-tier win. The
-// goodwill cap is GOODWILL_MAX=150, so 150 means "perfect reputation,
-// the cap itself" — only reachable with flawless delivery across the
-// whole campaign. Fires independently of the round counter; reaching
-// this ends the campaign on the spot.
-const TIER_ULTIMATE_GOODWILL = 150
+// Reputation + cash gate that triggers an immediate top-tier win.
+// Goodwill cap is GOODWILL_MAX=150, so 147 means "near-perfect
+// reputation" and TIER_ULTIMATE_FUND requires a strong cash position
+// on top — both must hold. Fires independently of the round counter;
+// reaching both ends the campaign on the spot.
+const TIER_ULTIMATE_GOODWILL = 147
+const TIER_ULTIMATE_FUND = 300000
 const TIER_GOLD_FUND = 40000
 const TIER_GOLD_GOODWILL = 130
 const TIER_SILVER_FUND = 15000
@@ -5298,6 +5299,7 @@ async function advanceRound(
             bankruptcyGraceRounds: BANKRUPTCY_GRACE_ROUNDS,
             reputationGraceRounds: REPUTATION_GRACE_ROUNDS,
             tierUltimateGoodwill: TIER_ULTIMATE_GOODWILL,
+            tierUltimateFund: TIER_ULTIMATE_FUND,
             tierGoldFund: TIER_GOLD_FUND,
             tierGoldGoodwill: TIER_GOLD_GOODWILL,
             tierSilverFund: TIER_SILVER_FUND,

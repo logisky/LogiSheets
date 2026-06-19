@@ -237,6 +237,12 @@ export interface EndgameParams {
      * win regardless of remaining rounds or fund.
      */
     tierUltimateGoodwill: number
+    /**
+     * Cash floor that must be met alongside `tierUltimateGoodwill` for
+     * the ultimate tier to fire. Reputation alone is not enough — the
+     * campaign must also be financially strong.
+     */
+    tierUltimateFund: number
     tierGoldFund: number
     tierGoldGoodwill: number
     tierSilverFund: number
@@ -292,11 +298,14 @@ export function evaluateEndgame(
         consecutiveNoGoodwillRoundsAfter >= params.reputationGraceRounds
     ) {
         gameState = 'lost_reputation'
-    } else if (input.goodwill >= params.tierUltimateGoodwill) {
-        // Ultimate achievement — reputation ceiling reached. Ends the
-        // campaign early, no fund gate. Checked BEFORE the maxRounds
-        // branch so the player gets the credit on the round they hit
-        // the threshold rather than having to limp through the rest.
+    } else if (
+        input.goodwill >= params.tierUltimateGoodwill &&
+        input.fund >= params.tierUltimateFund
+    ) {
+        // Ultimate achievement — high reputation AND a strong cash
+        // position both reached. Checked BEFORE the maxRounds branch so
+        // the player gets the credit on the round they hit the threshold
+        // rather than having to limp through the rest.
         gameState = 'won_ultimate'
     } else if (input.round >= params.maxRounds) {
         // Survived the campaign — assign tier.
