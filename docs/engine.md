@@ -1,0 +1,390 @@
+# Embed the spreadsheet UI (`logisheets-engine`)
+
+`logisheets-engine` is a ready-made, interactive spreadsheet UI. Where the
+[core SDK](/usage) gives you a headless `Workbook` to script, the engine gives
+you a rendered grid your users can click, scroll, select and edit.
+
+It is built on top of `logisheets-web` and runs the WASM engine plus all
+rendering inside a **Web Worker** (via `OffscreenCanvas`), so heavy work never
+blocks the UI thread. The grid components are Svelte 5, but you never touch them
+directly — you drive everything through a single `Engine` object, which makes it
+usable from any framework.
+
+```bash
+npm install logisheets-engine logisheets-web
+```
+
+```ts
+import {Engine} from 'logisheets-engine'
+import 'logisheets-engine/style.css' // required — ships the grid styles
+```
+
+::: tip Reference app
+Every pattern below is taken from the main LogiSheets app. The fullest live
+example is `src/core/engine/` and `src/components/engine-canvas/` in the
+[LogiSheets repo](https://github.com/logisky/LogiSheets/tree/main/src).
+:::
+
+## Lifecycle
+
+You construct an `Engine` once, wait for `ready`, mount it into a DOM element,
+and destroy it on teardown.
+
+```ts
+const engine = new Engine(/* config? */)
+engine.on('ready', () => {
+    engine.mount(document.getElementById('spreadsheet')!)
+})
+```
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| constructor | `new Engine(config?: Partial<EngineConfig>)` | Creates the engine and **its own Web Worker** (you never create a worker yourself). Worker + WASM init asynchronously — wait for the `ready` event before use. |
+| `mount` | `mount(container: HTMLElement, options?: EngineMountOptions): void` | Mounts the grid UI into `container`. See [mount options](#mount-options). |
+| `unmount` | `unmount(): void` | Detaches the grid UI but keeps the engine/worker alive (you can re-mount). |
+| `isMounted` | `isMounted(): boolean` | Whether the UI is currently mounted. |
+| `getMountContainer` | `getMountContainer(): HTMLElement \| null` | The element the grid is mounted into, if any. |
+| `initOffscreen` | `initOffscreen(canvas: HTMLCanvasElement): Promise<void>` | Headless rendering into your own canvas, without mounting the interactive UI. Advanced; only needed for custom render pipelines. |
+| `destroy` | `destroy(): void` | Tears down the worker and all components. Call when you're done with the engine. |
+| `isReady` | `isReady(): boolean` | Whether the worker + WASM finished initializing. |
+
+### Constructor config — `EngineConfig`
+
+All fields are optional (pass a `Partial<EngineConfig>`); defaults come from
+`DEFAULT_ENGINE_CONFIG`.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `leftTopWidth` | `number` | Width of the left (row-number) header panel, in pixels. |
+| `leftTopHeight` | `number` | Height of the top (column-letter) header panel, in pixels. |
+| `showHorizontalGridLines` | `boolean` | Draw horizontal grid lines. |
+| `showVerticalGridLines` | `boolean` | Draw vertical grid lines. |
+| `defaultCellWidth` | `number` | Default column width, in points (pt). |
+| `defaultCellHeight` | `number` | Default row height, in points (pt). |
+| `scrollbarSize` | `number` | Scrollbar thickness, in pixels. |
+
+## Mount options
+
+Passed as the second argument to `mount()`. All optional.
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `showSheetTabs` | `boolean` | Render the sheet-tab bar at the bottom. Set `false` if you provide your own tabs. |
+| `showScrollbars` | `boolean` | Render scrollbars. |
+| `contextMenuItems` | `ContextMenuItem[]` | Items for the right-click context menu. See [ContextMenuItem](#contextmenuitem). |
+| `cellLayouts` | `CellLayout[]` | Per-cell visual overrides (background, tooltip). See [CellLayout](#celllayout). |
+| `getIsEditingFormula` | `() => boolean` | Return `true` while the user is editing a formula in your own input, so the canvas doesn't steal focus. |
+| `onInvalidFormula` | `() => void` | Called when the user commits an invalid formula. |
+
+```ts
+engine.mount(container, {
+    showSheetTabs: false, // app renders its own tabs
+    showScrollbars: true,
+    cellLayouts,
+    getIsEditingFormula: () => isEditingFormulaRef.current(),
+})
+```
+
+## Events
+
+Subscribe with `on(type, cb)` and unsubscribe with `off(type, cb)`. The payload
+type is determined by the event:
+
+| Event | Payload | Fires when |
+| --- | --- | --- |
+| `ready` | `void` | Worker + WASM finished initializing. Subscribe before doing anything else. |
+| `gridChange` | `Grid \| null` | The visible grid changed (scroll, edit, sheet switch, load) and should be re-rendered. |
+| `selectionChange` | `SelectedData` | The user changed the selection (cell, range, row/col). |
+| `activeSheetChange` | `number` | The active sheet index changed. |
+| `sheetChange` | `readonly SheetInfo[]` | The list of sheets changed (add/remove/rename). |
+| `startEdit` | `{row: number; col: number; initialText: string}` | The user began editing a cell — open your editor at `(row, col)` seeded with `initialText`. |
+| `cellChange` | `void` | A cell value changed. |
+| `invalidFormula` | `void` | An invalid formula was entered. |
+| `error` | `Error` | An internal error occurred. |
+
+```ts
+engine.on('selectionChange', (data) => setSelection(data))
+engine.on('gridChange', (grid) => setGrid(grid))
+engine.on('startEdit', ({row, col, initialText}) => openEditor(row, col, initialText))
+```
+
+## Reading and pushing state
+
+The engine caches the current grid/selection/sheet so you can read them
+synchronously, and lets you push state back in imperatively.
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `getGrid` | `getGrid(): Grid \| null` | The currently rendered grid. |
+| `getSelection` | `getSelection(): SelectedData` | Current selection. |
+| `setSelection` | `setSelection(selection: SelectedData): void` | Move the selection programmatically. |
+| `getCurrentSheetIndex` | `getCurrentSheetIndex(): number` | Active sheet index. |
+| `setCurrentSheetIndex` | `setCurrentSheetIndex(index: number): void` | Switch the active sheet (refreshes the grid). |
+| `getSheets` | `getSheets(): readonly SheetInfo[]` | Cached sheet info. |
+| `getConfig` | `getConfig(): EngineConfig` | The resolved configuration. |
+
+## Loading, saving and rendering
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `loadFile` | `loadFile(buffer: Uint8Array, filename: string): Promise<Grid \| null>` | Load `.xlsx` bytes **and** refresh the mounted grid. Prefer this over `DataService.loadWorkbook` when the UI is mounted — it also updates the Svelte component's dimensions/anchors. |
+| `render` | `render(anchorX?: number, anchorY?: number): Promise<Grid \| null>` | Force a render at a scroll anchor. Usually automatic while mounted. |
+| `resize` | `resize(width: number, height: number): Promise<Grid \| null>` | Resize the canvas. Usually automatic while mounted. |
+
+```ts
+const buf = await fetch('workbook.xlsx').then((r) => r.arrayBuffer())
+const grid = await engine.loadFile(new Uint8Array(buf), 'workbook.xlsx')
+
+// save
+const result = await engine.getWorkbook().save({}) // result.data: Uint8Array
+```
+
+## License / watermark
+
+The community build renders a watermark. Validation happens **inside the
+worker** and cannot be bypassed.
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `setLicense` | `setLicense(apiKey: string): Promise<{valid: boolean; reason?: string}>` | Activate a license key; removes the watermark if valid. |
+| `clearLicense` | `clearLicense(): void` | Drop the license and show the watermark again. |
+
+```ts
+const status = await engine.setLicense(apiKey)
+if (!status.valid) console.warn('License invalid:', status.reason)
+```
+
+## Editing data — `DataService`
+
+`engine.getDataService()` is the high-level service for edits and rendering. It
+speaks the same [transaction / payload](/usage#editing-transactions-and-payloads)
+model as the core SDK, but every call is async (the work runs in the worker).
+Most methods return `Promise<T | ErrorMessage>` — check with `isErrorMessage()`.
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `handleTransaction` | `handleTransaction(tx: Transaction, temp?: boolean): Promise<void \| ErrorMessage>` | Apply a transaction of payloads. `temp: true` previews without committing to history. |
+| `handleTransactionAndAdjustRowHeights` | `(tx, onlyIncrease?, fromRowIdx?, toRowIdx?): Promise<void \| ErrorMessage>` | Apply a transaction and auto-fit row heights in the given range. |
+| `checkFormula` | `checkFormula(formula: string): Promise<boolean>` | Validate a formula's syntax. |
+| `undo` / `redo` | `(): Promise<void \| ErrorMessage>` | Undo / redo the last undoable transaction. |
+| `render` | `render(sheetId: number, anchorX: number, anchorY: number): Promise<Grid \| ErrorMessage>` | Render a sheet at a scroll anchor. |
+| `resize` | `resize(width: number, height: number, dpr: number): Promise<Grid \| ErrorMessage>` | Resize and re-render. `dpr` is the device pixel ratio. |
+| `loadWorkbook` | `loadWorkbook(buf: Uint8Array, name: string): Promise<Grid \| ErrorMessage>` | Load `.xlsx` (worker side only — prefer `engine.loadFile` while mounted). |
+| `initOffscreen` | `initOffscreen(canvas: OffscreenCanvas): Promise<void \| ErrorMessage>` | Bind an offscreen canvas for rendering. |
+| `setLicense` / `clearLicense` | — | Same as on the engine. |
+| `getCurrentSheetIdx` | `(): number` | Active sheet index. |
+| `setCurrentSheetIdx` | `(idx: number): void` | Set the active sheet. |
+| `getCurrentSheetId` | `(): number` | Stable id of the active sheet. |
+| `getCurrentSheetName` | `(): string` | Name of the active sheet. |
+| `getCacheAllSheetInfo` | `(): readonly SheetInfo[]` | Cached sheet info (sync). |
+| `getSheetDimension` | `(sheetIdx: number): Promise<SheetDimension \| ErrorMessage>` | Max row/col and total height/width. |
+| `getCellInfo` | `(sheetIdx, row, col): Promise<Cell \| ErrorMessage>` | Full cell (value + style + formula). |
+| `getMergedCells` | `(sheetIdx, startRow, startCol, endRow, endCol): Promise<readonly MergeCell[] \| ErrorMessage>` | Merged ranges intersecting the region. |
+| `getAvailableBlockId` | `(sheetIdx: number): Promise<number \| ErrorMessage>` | Allocate a fresh block id (for crafts). |
+| `getWorkbook` | `(): WorkbookClient` | The full workbook client (below). |
+| `registerCellUpdatedCallback` | `(f: () => void, callbackId?: number): void` | Fire on any cell update. |
+| `registerSheetUpdatedCallback` | `(f: () => void): void` | Fire when sheets change. |
+| `registerHeaderUpdatedCallback` | `(f: (sheetIdxes: readonly number[]) => void): void` | Fire when headers of the given sheets change. |
+
+```ts
+import {CellInputBuilder, tx, type Payload} from 'logisheets-engine'
+
+const dataSvc = engine.getDataService()
+
+const payload: Payload = {
+    type: 'cellInput',
+    value: new CellInputBuilder()
+        .sheetIdx(dataSvc.getCurrentSheetIdx())
+        .row(row)
+        .col(col)
+        .content(newText)
+        .build(),
+}
+
+await dataSvc.handleTransaction(tx([payload], /* undoable */ true))
+await dataSvc.checkFormula('=SUM(A1:A10)')
+```
+
+::: tip
+`logisheets-engine` re-exports everything from `logisheets-web`, so payload
+types, builders and bindings are imported from the same place.
+:::
+
+## Full workbook API — `WorkbookClient`
+
+`engine.getWorkbook()` exposes the complete [workbook API](/usage) — the same
+surface as `logisheets-web`, but Promise-based and running in the worker. Use it
+when `DataService` doesn't have what you need. Selected methods:
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `loadWorkbook` | `({content: Uint8Array; name: string}): Promise<void>` | Load `.xlsx`. |
+| `save` | `({appData?: string}): Promise<{data: Uint8Array; ...}>` | Export to `.xlsx`; `appData` persists custom JSON. |
+| `getAllSheetInfo` | `(): Promise<readonly SheetInfo[]>` | All sheets. |
+| `getSheetDimension` | `(sheetIdx: number): Promise<SheetDimension>` | Sheet bounds. |
+| `getSheetIdx` / `getSheetId` | `({sheetId})` / `({sheetIdx})` | Convert between sheet idx and stable id. |
+| `getSheetNameByIdx` | `(idx: number): Promise<string>` | Sheet name. |
+| `getCell` | `({sheetIdx, row, col}): Promise<CellInfo>` | One cell. |
+| `getCells` | `({sheetIdx, ...range}): Promise<...>` | A cell range. |
+| `getCellPosition` | `({sheetIdx, row, col}): Promise<...>` | Pixel position of a cell. |
+| `getCellId` | `({sheetIdx, row, col}): Promise<SheetCellId>` | Stable id for a cell. |
+| `batchGetCellInfoById` | `(...)` | Resolve many cells by id at once. |
+| `getNextVisibleCell` | `(...)` | Skip hidden rows/cols when navigating. |
+| `getMergedCells` | `({sheetIdx, ...range}): Promise<readonly MergeCell[]>` | Merged ranges. |
+| `getBlockInfo` | `({sheetId, blockId}): Promise<BlockInfo>` | Block metadata. |
+| `getFullyCoveredBlocks` | `(...)` | Blocks fully inside a region. |
+| `getAvailableBlockId` | `({sheetIdx}): Promise<number>` | New block id. |
+| `getCellIdByBlockRef` | `(...)` | Resolve a cell from a block + key + field. |
+| `getAllBlockFields` | `(): Promise<readonly BlockField[]>` | All block fields. |
+| `handleTransaction` | `({transaction, temp}): Promise<void>` | Apply edits. |
+| `handleTransactionWithoutEvents` | `(...)` | Apply edits without firing update callbacks. |
+| `undo` / `redo` | `(): Promise<void>` | History. |
+| `commitTempStatus` / `cleanTempStatus` | `(): Promise<void>` | Commit or discard a temp (preview) transaction. |
+| `getTempStatusChanges` | `(): Promise<TempStatusDiff>` | Pending temp changes. |
+| `checkFormula` | `({formula}): Promise<boolean>` | Validate a formula. |
+| `getDisplayUnitsOfFormula` | `(f: string): Promise<FormulaDisplayInfo>` | Tokenized formula for display/highlighting. |
+| `getAppData` | `(): Promise<readonly AppData[]>` | Custom workbook metadata. |
+| `getShadowCellId` / `getShadowInfoById` | `(...)` | Shadow (off-grid) cells. |
+| `registerCellUpdatedCallback` | `(f, callbackId?): void` | Fire on cell updates. |
+| `registerSheetUpdatedCallback` | `(f): void` | Fire on sheet changes. |
+| `registerHeaderUpdatedCallback` | `(f): void` | Fire on header changes. |
+| `registerCellValueChangedCallback` | `(...)` | Watch a specific cell. |
+| `registerCellValueChangedByCellId` | `(...)` | Watch a specific cell by stable id. |
+
+## Blocks & crafts — `BlockManager`
+
+`engine.getBlockManager()` is the entry point for craft/structured-data state.
+It holds two sub-managers:
+
+- **`fieldManager`** (`FieldManager`) — create/query/update/delete the named
+  *fields* of a block: `create`, `get`, `getByBlock`, `getBySheet`, `getAll`,
+  `update`, `setBlockRefName`, `delete`, `deleteBlock`, `deleteSheet`,
+  `search`, `count`.
+- **`enumSetManager`** (`EnumSetManager`) — manage reusable enum value sets:
+  `set`, `get`, `getAll`, `update`, `addVariant`, `removeVariant`, `delete`,
+  `search`, `count`.
+
+It also serializes craft state alongside the workbook:
+
+- `getPersistentData(): string` — serialize fields/enums to embed via `save`.
+- `parseAppData(data: string): void` — restore them after `loadFile`.
+
+This is an advanced area tied to the [craft system](/craft/craft); reach for it
+only when building structured data regions.
+
+## Supporting types
+
+### `Grid`
+
+What a render returns and what `gridChange` carries — the visible viewport:
+
+```ts
+interface Grid {
+    anchorX: number
+    anchorY: number
+    subOffsetX: number // pixels the first visible col is scrolled past the canvas left
+    subOffsetY: number // pixels the first visible row is scrolled past the canvas top
+    rows: readonly {idx: number; height: number}[]
+    columns: readonly {idx: number; width: number}[]
+    mergeCells?: readonly MergeCell[]
+    blockInfos?: readonly BlockDisplayInfo[]
+    preRowHeight?: number
+    preColWidth?: number
+    nextRowHeight?: number
+    nextColWidth?: number
+}
+```
+
+### `SelectedData`
+
+```ts
+interface SelectedData {
+    data?:
+        | {ty: 'line'; d: {start: number; end: number; type: 'row' | 'col'}}
+        | {ty: 'cellRange'; d: {startRow; endRow; startCol; endCol}}
+    source: 'editbar' | 'none'
+}
+```
+
+Helpers are exported to build/read it: `buildSelectedDataFromCell`,
+`buildSelectedDataFromCellRange`, `getSelectedCellRange`, `getSelectedLines`,
+`getSelectedRows`, `getSelectedColumns`.
+
+### `CellLayout`
+
+Per-cell visual override passed via the `cellLayouts` mount option:
+
+```ts
+interface CellLayout {
+    sheetIdx: number
+    row: number
+    col: number
+    background?: string // CSS color
+    tooltip?: string
+}
+```
+
+### `ContextMenuItem`
+
+```ts
+interface ContextMenuItem {
+    id: string
+    label: string
+    icon?: string          // emoji or text
+    disabled?: boolean
+    separator?: boolean     // show a divider after this item
+    shortcut?: string       // display-only hint
+    children?: ContextMenuItem[]
+}
+```
+
+The click handler receives a `ContextMenuContext`: `{selectedData, target:
+'cell' | 'row' | 'column', row?, col?, event: MouseEvent}`.
+
+## Putting it together (React)
+
+The main app constructs the engine at startup, shares it through React context,
+and mounts it inside a component.
+
+```tsx
+// startup (src/index.tsx)
+import {EngineProvider} from '@/core/engine/provider'
+import {initEngine} from '@/core/engine' // wraps `new Engine()` + waits for 'ready'
+import 'logisheets-engine/style.css'
+
+initEngine().then((engine) => {
+    createRoot(document.getElementById('root')!).render(
+        <EngineProvider engine={engine}>
+            <App />
+        </EngineProvider>,
+    )
+})
+```
+
+```tsx
+// a canvas component (simplified from src/components/engine-canvas)
+function EngineCanvas() {
+    const engine = useEngine() // from context
+    const ref = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        engine.mount(ref.current!, {showSheetTabs: true, showScrollbars: true})
+        const onGrid = (g: Grid | null) => setGrid(g)
+        engine.on('gridChange', onGrid)
+        return () => {
+            engine.off('gridChange', onGrid)
+            engine.unmount()
+        }
+    }, [engine])
+
+    return <div ref={ref} style={{width: '100%', height: '100%'}} />
+}
+```
+
+The same shape works in any framework: construct the engine, wait for `ready`,
+`mount` into a node, subscribe to events, and drive edits through
+`getDataService()` / `getWorkbook()`.
+
+The package also ships a thin **React adapter** (`SpreadsheetAdapterProps`) and
+exports the raw Svelte components (`Spreadsheet`, `ColumnHeaders`, `RowHeaders`,
+`Selector`, `SheetTabs`, `Scrollbar`, `ContextMenu`) for fully custom layouts.
