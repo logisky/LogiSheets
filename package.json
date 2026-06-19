@@ -62,7 +62,10 @@
         "start:wasm": "yarn run run-scripts && yarn run wasm && webpack serve --config=webpack.config.ts --hot --env=dev --env=stand-alone",
         "test": "vitest run",
         "wasm": "yarn run wasm:server",
-        "wasm:server": "wasm-pack build crates/wasms/server --out-dir ../../../packages/web/wasm --target web"
+        "wasm:server": "wasm-pack build crates/wasms/server --out-dir ../../../packages/web/wasm --target web",
+        "docs:dev": "vitepress dev docs",
+        "docs:build": "vitepress build docs",
+        "docs:preview": "vitepress preview docs"
     },
     "browserslist": {
         "production": [
@@ -110,6 +113,7 @@
         "ts-node": "^10.9.1",
         "typescript": "^5.7.2",
         "vercel": "^54.14.0",
+        "vitepress": "^1.6.4",
         "vitest": "^1.6.1",
         "webpack": "^5.97.1",
         "webpack-cli": "^4.9.2",
