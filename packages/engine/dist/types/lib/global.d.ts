@@ -21,6 +21,8 @@
  */
 export { Engine, default } from "./engine";
 export type { EngineEventType, EngineEventMap } from "./engine";
+export { Session } from "./session";
+export type { SessionEventType, SessionEventMap, SessionMountOptions, } from "./session";
 export type { License, LicenseStatus } from "./license";
 export { DataService, WorkbookClient, OffscreenClient } from "./clients";
 export { WorkbookWorkerService, OffscreenWorkerService } from "./worker";

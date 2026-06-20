@@ -11,7 +11,9 @@ import {
     Payload,
 } from 'logisheets-engine'
 import {tx} from '@/core/transaction'
-import {FC, useEffect, useState, useRef, useCallback, useMemo} from 'react'
+import {useEffect, useState, useRef, useCallback, useMemo} from 'react'
+import {observer} from 'mobx-react-lite'
+import {globalStore} from '@/store'
 import styles from './edit-bar.module.scss'
 import {useEngine} from '@/core/engine/provider'
 import {isErrorMessage} from 'logisheets-engine'
@@ -60,13 +62,20 @@ function cellToDisplayText(c: Cell): string {
     return f ? `=${f}` : c.getText()
 }
 
-export const EditBarComponent: FC<EditBarProps> = ({
-    selectedData,
-    selectedData$,
+export const EditBarComponent = observer(function EditBarComponent({
+    selectedData: propSelectedData,
+    selectedData$: propSelectedData$,
     selectedDataContentChanged,
-}) => {
+}: EditBarProps) {
     const engine = useEngine()
     const dataSvc = engine.getDataService()
+    // Target the active view: the edit bar reads/writes the view the user
+    // last focused (highlighted), not always the main one. Falls back to the
+    // props (main view) before any view has published a context.
+    const av = globalStore.activeViewContext
+    const selectedData = av?.selectedData ?? propSelectedData
+    const sheetIdx = av?.sheetIdx ?? dataSvc.getCurrentSheetIdx()
+    const selectedData$ = av?.setSelection ?? propSelectedData$
     const [coordinate, setCoordinate] = useState('')
     // `formulaText` is the editor's source-of-truth string and includes the
     // leading '=' for formulas. `rawValue` is the cell's display text used
@@ -95,13 +104,13 @@ export const EditBarComponent: FC<EditBarProps> = ({
         if (!selectedCell) return
         const {startRow: row, startCol: col} = selectedCell
         dataSvc
-            .getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
+            .getCellInfo(sheetIdx, row, col)
             .then((c: Cell | ErrorMessage) => {
                 if (isErrorMessage(c)) return
                 setFormulaText(cellToDisplayText(c))
                 setRawValue(c.getText())
             })
-    }, [selectedDataContentChanged, dataSvc])
+    }, [selectedDataContentChanged, dataSvc, sheetIdx, selectedData])
 
     // Look up the validation formula on the field bound at (sheetIdx, row, col)
     // if any. Returns '' when the cell isn't a block cell, isn't bound, or
@@ -109,7 +118,6 @@ export const EditBarComponent: FC<EditBarProps> = ({
     const lookupValidation = useCallback(
         async (row: number, col: number): Promise<string> => {
             try {
-                const sheetIdx = dataSvc.getCurrentSheetIdx()
                 const wb = dataSvc.getWorkbook()
                 const cellId = await wb.getCellId({
                     sheetIdx,
@@ -136,7 +144,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
                 return ''
             }
         },
-        [dataSvc, engine]
+        [dataSvc, engine, sheetIdx]
     )
 
     useEffect(() => {
@@ -147,7 +155,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
         const notation = toA1notation(col)
         setCoordinate(`${notation}${row + 1}`)
         dataSvc
-            .getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
+            .getCellInfo(sheetIdx, row, col)
             .then((c: Cell | ErrorMessage) => {
                 if (isErrorMessage(c)) return
                 setFormulaText(cellToDisplayText(c))
@@ -158,11 +166,11 @@ export const EditBarComponent: FC<EditBarProps> = ({
         // (it uses this to decide which references are local vs. cross-sheet).
         dataSvc
             .getWorkbook()
-            .getSheetNameByIdx(dataSvc.getCurrentSheetIdx())
+            .getSheetNameByIdx(sheetIdx)
             .then((name) => {
                 if (!isErrorMessage(name)) setSheetName(name)
             })
-    }, [selectedData, isEditing, dataSvc, lookupValidation])
+    }, [selectedData, isEditing, dataSvc, lookupValidation, sheetIdx])
 
     // Backend tokenization: the editor calls this on every change to get
     // syntax highlighting + cell-ref info.
@@ -183,7 +191,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
             const payload: Payload = {
                 type: 'cellInput',
                 value: new CellInputBuilder()
-                    .sheetIdx(dataSvc.getCurrentSheetIdx())
+                    .sheetIdx(sheetIdx)
                     .row(cell.y)
                     .col(cell.x)
                     .content(newText)
@@ -222,7 +230,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
             const cell = getFirstCell(selectedData)
             if (
                 isCellUserEditableSync(
-                    dataSvc.getCurrentSheetIdx(),
+                    sheetIdx,
                     cell.y,
                     cell.x,
                     engine.getGrid()
@@ -245,7 +253,7 @@ export const EditBarComponent: FC<EditBarProps> = ({
         }
         const {startRow: row, startCol: col} = selectedCell
         dataSvc
-            .getCellInfo(dataSvc.getCurrentSheetIdx(), row, col)
+            .getCellInfo(sheetIdx, row, col)
             .then((c) => {
                 if (isErrorMessage(c)) return
                 setFormulaText(cellToDisplayText(c))
@@ -364,4 +372,4 @@ export const EditBarComponent: FC<EditBarProps> = ({
             )}
         </div>
     )
-}
+})

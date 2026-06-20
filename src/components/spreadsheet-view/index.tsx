@@ -1,0 +1,153 @@
+import {useEffect, useRef, useState} from 'react'
+import {observer} from 'mobx-react-lite'
+import {useEngine} from '@/core/engine/provider'
+import type {Session, Grid, SelectedData} from 'logisheets-engine'
+import {SheetsTabComponent} from '@/components/sheets-tab'
+import {globalStore} from '@/store'
+import {ViewOverlayLayer} from './view-overlay-layer'
+import {InlineCellEditor} from './inline-cell-editor'
+import {ActiveViewBadge} from './active-view-badge'
+
+/**
+ * A self-contained, independent view of the shared workbook.
+ *
+ * Rendering one `<SpreadsheetView />` creates a new `engine.createSession()`,
+ * mounts its canvas, and layers the app's block overlays + sheet-tab bar on
+ * top — all scoped to THIS session's own grid, viewport and active sheet.
+ * Destroyed on unmount (callbacks unregistered, worker canvas released).
+ *
+ * This is the reusable view unit: a second, third, … view is just another
+ * instance. Block overlays live in {@link BlockOverlayLayer}, which clips to
+ * this view, so nothing bleeds across views.
+ *
+ * (The main view still uses the richer EngineCanvas — it shares the same
+ * BlockOverlayLayer for consistency and containment.)
+ */
+export const SpreadsheetView = observer(function SpreadsheetView({
+    viewId,
+}: {
+    viewId: string
+}) {
+    const engine = useEngine()
+    const dataSvc = engine.getDataService()
+    const containerRef = useRef<HTMLDivElement | null>(null)
+    const sessionRef = useRef<Session | null>(null)
+    const editingRef = useRef<() => boolean>(() => false)
+    const [session, setSession] = useState<Session | null>(null)
+    const [activeSheet, setActiveSheet] = useState(0)
+    const [grid, setGrid] = useState<Grid | null>(null)
+    const [canvasPos, setCanvasPos] = useState({x: 0, y: 0})
+    const [selectedData, setSelectedData] = useState<SelectedData>({
+        source: 'none',
+    })
+
+    useEffect(() => {
+        if (!containerRef.current) return
+        const s = engine.createSession()
+        sessionRef.current = s
+        setSession(s)
+        const onActiveSheet = (idx: number) => setActiveSheet(idx)
+        const onGrid = (g: Grid | null) => setGrid(g)
+        s.on('activeSheetChange', onActiveSheet)
+        s.on('gridChange', onGrid)
+        s.mount(containerRef.current, {
+            showSheetTabs: false,
+            showScrollbars: true,
+            getIsEditingFormula: () => editingRef.current(),
+        })
+        return () => {
+            s.off('activeSheetChange', onActiveSheet)
+            s.off('gridChange', onGrid)
+            s.destroy()
+            sessionRef.current = null
+            setSession(null)
+            // Hand focus back to the main view if this view was active.
+            if (globalStore.activeViewId === viewId) {
+                globalStore.setActiveViewId('main')
+            }
+        }
+    }, [engine, viewId])
+
+    // While this view is the active one, publish its selection context so the
+    // top edit bar reads/writes here instead of the main view.
+    useEffect(() => {
+        if (globalStore.activeViewId !== viewId) return
+        globalStore.setActiveViewContext({
+            selectedData,
+            sheetIdx: activeSheet,
+            setSelection: (d) => sessionRef.current?.setSelection(d),
+        })
+    }, [viewId, selectedData, activeSheet, globalStore.activeViewId])
+
+    // Track this view's canvas position (viewport coords) for the block
+    // overlay's hover math. Re-measure on layout shifts and grid changes.
+    useEffect(() => {
+        const update = () => {
+            const canvas = containerRef.current?.querySelector('canvas')
+            if (!canvas) return
+            const rect = canvas.getBoundingClientRect()
+            setCanvasPos((prev) =>
+                prev.x === rect.left && prev.y === rect.top
+                    ? prev
+                    : {x: rect.left, y: rect.top}
+            )
+        }
+        update()
+        window.addEventListener('resize', update)
+        window.addEventListener('scroll', update, true)
+        return () => {
+            window.removeEventListener('resize', update)
+            window.removeEventListener('scroll', update, true)
+        }
+    }, [grid])
+
+    const isActive = globalStore.activeViewId === viewId
+    return (
+        <div
+            onPointerDownCapture={() => globalStore.setActiveViewId(viewId)}
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                flex: 1,
+                minWidth: 0,
+                height: '100%',
+                borderLeft: '1px solid #ddd',
+                paddingLeft: 8,
+            }}
+        >
+            <div
+                ref={containerRef}
+                style={{flex: 1, minHeight: 0, position: 'relative'}}
+            >
+                {session && (
+                    <InlineCellEditor
+                        eventSource={session}
+                        grid={grid}
+                        sheetIdx={activeSheet}
+                        sheetName={dataSvc.getSheetNameByIdx(activeSheet)}
+                        dataSvc={dataSvc}
+                        containerRef={containerRef}
+                        editingRef={editingRef}
+                        onSelectionChange={setSelectedData}
+                    />
+                )}
+                <ViewOverlayLayer
+                    grid={grid}
+                    activeSheet={activeSheet}
+                    canvasStartX={canvasPos.x}
+                    canvasStartY={canvasPos.y}
+                />
+                <ActiveViewBadge active={isActive} />
+            </div>
+            <SheetsTabComponent
+                activeSheet={activeSheet}
+                activeSheet$={(idx) => {
+                    setActiveSheet(idx)
+                    sessionRef.current?.setCurrentSheetIndex(idx)
+                }}
+                grid={grid}
+            />
+        </div>
+    )
+})

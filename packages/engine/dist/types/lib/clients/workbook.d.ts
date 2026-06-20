@@ -168,9 +168,14 @@ export declare class WorkbookClient {
     getShadowInfoById(params: {
         shadowId: number;
     }): Resp<ShadowCellInfo>;
-    registerCellUpdatedCallback(f: Callback, _callbackId?: number): void;
-    registerSheetUpdatedCallback(f: Callback): void;
-    registerHeaderUpdatedCallback(f: (sheetIdxes: readonly number[]) => void): void;
+    /**
+     * Register a cell-updated callback. Returns a disposer that unregisters
+     * it — call it on unmount so a torn-down view stops being notified (and
+     * the callback can be garbage-collected). Multiple views may subscribe.
+     */
+    registerCellUpdatedCallback(f: Callback, _callbackId?: number): () => void;
+    registerSheetUpdatedCallback(f: Callback): () => void;
+    registerHeaderUpdatedCallback(f: (sheetIdxes: readonly number[]) => void): () => void;
     registerCellValueChangedCallback(sheetIdx: number, rowIdx: number, colIdx: number, callback: CellIdCallback): Resp<void>;
     /**
      * Like {@link registerCellValueChangedCallback} but takes a pre-resolved

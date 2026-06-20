@@ -9,15 +9,16 @@ export declare class OffscreenClient {
     private _resolvers;
     private _rid;
     constructor(worker: Worker);
-    init(canvas: OffscreenCanvas, dpr: number): Resp<void>;
-    render(sheetId: number, anchorX: number, anchorY: number): Resp<Grid>;
-    getAppropriateHeights(sheetId: number, anchorX: number, anchorY: number): Resp<readonly AppropriateHeight[]>;
-    resize(width: number, height: number, dpr: number): Resp<Grid>;
+    init(canvasId: number, canvas: OffscreenCanvas, dpr: number): Resp<void>;
+    render(canvasId: number, sheetId: number, anchorX: number, anchorY: number): Resp<Grid>;
+    getAppropriateHeights(canvasId: number, sheetId: number, anchorX: number, anchorY: number): Resp<readonly AppropriateHeight[]>;
+    resize(canvasId: number, width: number, height: number, dpr: number): Resp<Grid>;
     setLicense(apiKey: string, domain: string): Resp<{
         valid: boolean;
         reason?: string;
     }>;
     clearLicense(): void;
+    dispose(canvasId: number): void;
     private _call;
 }
 export {};

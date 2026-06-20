@@ -541,6 +541,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
             {isMenuOpen && (
                 <MenuComponent
                     sheetId={sheetId}
+                    sheetIdx={sheetIdx}
                     blockId={blockId}
                     isOpen={isMenuOpen}
                     setIsOpen={setIsMenuOpen}
