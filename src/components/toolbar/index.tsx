@@ -42,6 +42,10 @@ import IconButton from '@mui/material/IconButton'
 import Popover from '@mui/material/Popover'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
 import {
     FolderOpen as FolderOpenIcon,
     Save as SaveIcon,
@@ -62,8 +66,6 @@ import {
     AlignHorizontalCenterOutlined,
     WrapText as WrapTextIcon,
     StrikethroughS,
-    Visibility as VisibilityIcon,
-    VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material'
 import {isErrorMessage} from 'logisheets-web'
 import {StandardColor, StandardFont} from '@/core/standable'
@@ -170,6 +172,8 @@ export const Toolbar = observer(
 
         // File menu (dropdown)
         const [fileAnchor, setFileAnchor] = useState<HTMLElement | null>(null)
+        // Which toolbar ribbon tab is active.
+        const [activeTab, setActiveTab] = useState<'home' | 'view'>('home')
         const openFileMenu = (e: React.MouseEvent<HTMLElement>) =>
             setFileAnchor(e.currentTarget)
         const closeFileMenu = () => setFileAnchor(null)
@@ -814,8 +818,82 @@ export const Toolbar = observer(
                         }}
                     />
                 </div>
+                {/* Ribbon tab switcher */}
+                <Tabs
+                    value={activeTab}
+                    onChange={(_, v) => setActiveTab(v)}
+                    sx={{
+                        minHeight: 0,
+                        '& .MuiTab-root': {
+                            minHeight: 0,
+                            minWidth: 0,
+                            padding: '4px 10px',
+                            fontSize: 12,
+                            textTransform: 'none',
+                        },
+                    }}
+                >
+                    <Tab value="home" label="Home" />
+                    <Tab value="view" label="View" />
+                </Tabs>
+                <Divider
+                    orientation="vertical"
+                    flexItem
+                    className={styles.divider}
+                />
                 {/* Center cluster: all remaining controls */}
                 <div className={styles.center}>
+                    {activeTab === 'view' ? (
+                        <div className={styles.section}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        size="small"
+                                        checked={globalStore.splitView}
+                                        onChange={(e) =>
+                                            globalStore.setSplitView(
+                                                e.target.checked
+                                            )
+                                        }
+                                    />
+                                }
+                                label="Split view (2nd view)"
+                                sx={{'& .MuiFormControlLabel-label': {fontSize: 12}}}
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        size="small"
+                                        checked={globalStore.diffLayerEnabled}
+                                        onChange={(e) =>
+                                            globalStore.setDiffLayerEnabled(
+                                                e.target.checked
+                                            )
+                                        }
+                                    />
+                                }
+                                label="Diff layer"
+                                sx={{'& .MuiFormControlLabel-label': {fontSize: 12}}}
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        size="small"
+                                        checked={globalStore.alwaysShowBlockInfo}
+                                        onChange={(e) =>
+                                            globalStore.setAlwaysShowBlockInfo(
+                                                e.target.checked
+                                            )
+                                        }
+                                    />
+                                }
+                                label="Block overlays always visible"
+                                sx={{'& .MuiFormControlLabel-label': {fontSize: 12}}}
+                            />
+                        </div>
+                    ) : null}
+                    {activeTab === 'home' ? (
+                      <>
                     {/* History */}
                     <div className={styles.section}>
                         <Tooltip title="Undo">
@@ -845,33 +923,6 @@ export const Toolbar = observer(
                                 }
                             >
                                 <ScienceIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip
-                            title={
-                                globalStore.alwaysShowBlockInfo
-                                    ? 'Block overlays: always visible (click to switch to hover)'
-                                    : 'Block overlays: hover only (click to keep always visible)'
-                            }
-                        >
-                            <IconButton
-                                size="small"
-                                onClick={() =>
-                                    globalStore.setAlwaysShowBlockInfo(
-                                        !globalStore.alwaysShowBlockInfo
-                                    )
-                                }
-                                color={
-                                    globalStore.alwaysShowBlockInfo
-                                        ? 'primary'
-                                        : 'default'
-                                }
-                            >
-                                {globalStore.alwaysShowBlockInfo ? (
-                                    <VisibilityIcon fontSize="small" />
-                                ) : (
-                                    <VisibilityOffIcon fontSize="small" />
-                                )}
                             </IconButton>
                         </Tooltip>
                     </div>
@@ -1107,6 +1158,8 @@ export const Toolbar = observer(
                             CreateBlock
                         </Button>
                     </div>
+                      </>
+                    ) : null}
                 </div>
 
                 {/* Color pickers */}

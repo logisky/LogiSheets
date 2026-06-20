@@ -8,6 +8,9 @@ import {tx} from '@/core/transaction'
 
 export interface MenuProps {
     readonly sheetId: number
+    /** The block's own sheet index — use this, not the active-view pointer,
+     *  so block actions target the right sheet in any view. */
+    readonly sheetIdx: number
     readonly blockId: number
     readonly isOpen: boolean
     readonly setIsOpen: (isOpen: boolean) => void
@@ -46,7 +49,7 @@ export const ClickableList = ({
 }
 
 export const MenuComponent = (props: MenuProps) => {
-    const {sheetId, blockId, isOpen, setIsOpen} = props
+    const {sheetIdx, blockId, isOpen, setIsOpen} = props
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
 
@@ -66,7 +69,7 @@ export const MenuComponent = (props: MenuProps) => {
                             {
                                 type: 'removeBlock',
                                 value: new RemoveBlockBuilder()
-                                    .sheetIdx(DATA_SERVICE.getCurrentSheetIdx())
+                                    .sheetIdx(sheetIdx)
                                     .id(blockId)
                                     .build(),
                             },

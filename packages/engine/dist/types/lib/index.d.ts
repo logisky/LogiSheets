@@ -9,6 +9,8 @@ export { DEFAULT_ENGINE_CONFIG } from "$types/index";
 export { Range as RangeClass, Cell as CellClass } from "$types/index";
 export { Engine, default as EngineDefault } from "./engine";
 export type { EngineEventType, EngineEventMap, EngineMountOptions, } from "./engine";
+export { Session, default as SessionDefault } from "./session";
+export type { SessionEventType, SessionEventMap, SessionMountOptions, SessionHost, } from "./session";
 export type { SelectedData, Transaction, Payload, SheetInfo, } from "logisheets-web";
 export { isErrorMessage, getFirstCell, } from "logisheets-web";
 export { convertCanvasPropsToAdapterProps } from "./adapters";

@@ -8,13 +8,12 @@ export declare class OffscreenWorkerService {
     private readonly _workbook;
     private readonly _ctx;
     constructor(_workbook: IWorkbookWorker, _ctx: Worker);
-    private _canvas;
-    private _dpr;
+    private _canvases;
     private _painter;
-    private _sheetId;
-    private _anchorX;
-    private _anchorY;
-    init(canvas: OffscreenCanvas, dpr: number): void;
+    private _getCanvas;
+    init(canvasId: number, canvas: OffscreenCanvas, dpr: number): void;
+    /** Release a canvas when its view unmounts. No-op if already gone. */
+    dispose(canvasId: number): void;
     /**
      * Set license - validates the license inside the worker
      * This is the ONLY way to hide the watermark - no bypass possible
@@ -24,9 +23,9 @@ export declare class OffscreenWorkerService {
      * Clear license and show watermark again
      */
     clearLicense(): void;
-    resize(width: number, height: number, dpr: number): Result<Grid>;
-    render(sheetId: number, anchorX: number, anchorY: number): Result<Grid>;
-    getAppropriateHeights(sheetId: number, anchorX: number, anchorY: number): Result<AppropriateHeight[]>;
+    resize(canvasId: number, width: number, height: number, dpr: number): Result<Grid>;
+    render(canvasId: number, sheetId: number, anchorX: number, anchorY: number): Result<Grid>;
+    getAppropriateHeights(canvasId: number, sheetId: number, anchorX: number, anchorY: number): Result<AppropriateHeight[]>;
     handleRequest(request: {
         m: string;
         args: any;

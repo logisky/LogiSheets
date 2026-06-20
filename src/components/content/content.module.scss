@@ -9,11 +9,28 @@
   position: relative;
   flex: 1;
   overflow: hidden;
-  .canvas {
-    width: 100%;
-    height: 100%;
-  }
+  display: flex;
+  gap: 8px;
 }
 .canvas {
   position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+// A self-contained view pane: canvas area on top, sheet-tab bar at the
+// bottom. Both the main and second view use this when split, so their tab
+// bars line up exactly.
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+.paneCanvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
 }

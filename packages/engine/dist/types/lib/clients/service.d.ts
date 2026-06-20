@@ -11,21 +11,23 @@ export declare class DataService {
     private _workbook;
     private _offscreen;
     private _sheetInfos;
-    private _sheetIdx;
-    private _sheetId;
     private _sheetUpdateCallback;
+    private _activeSheetIdx;
+    private _activeSheetId;
     private _lastRender;
     constructor(worker: Worker);
     private _init;
-    render(sheetId: number, anchorX: number, anchorY: number): Resp<Grid>;
-    resize(width: number, height: number, dpr: number): Resp<Grid>;
-    initOffscreen(canvas: OffscreenCanvas): Resp<void>;
+    render(sheetId: number, anchorX: number, anchorY: number, canvasId?: number): Resp<Grid>;
+    resize(width: number, height: number, dpr: number, canvasId?: number): Resp<Grid>;
+    initOffscreen(canvas: OffscreenCanvas, canvasId?: number): Resp<void>;
     setLicense(apiKey: string): Resp<{
         valid: boolean;
         reason?: string;
     }>;
     clearLicense(): void;
-    loadWorkbook(buf: Uint8Array, name: string): Resp<Grid>;
+    loadWorkbook(buf: Uint8Array, name: string, canvasId?: number): Resp<Grid>;
+    getSheetIdByIdx(idx: number): number;
+    getSheetNameByIdx(idx: number): string;
     setCurrentSheetIdx(idx: number): void;
     getCurrentSheetIdx(): number;
     getCurrentSheetId(): number;
@@ -41,8 +43,13 @@ export declare class DataService {
     undo(): Resp<void>;
     redo(): Resp<void>;
     getWorkbook(): WorkbookClient;
-    registerSheetUpdatedCallback(f: () => void): void;
-    registerCellUpdatedCallback(f: () => void, callbackId?: number): void;
-    registerHeaderUpdatedCallback(f: (sheetIdxes: readonly number[]) => void): void;
+    registerSheetUpdatedCallback(f: () => void): () => void;
+    registerCellUpdatedCallback(f: () => void, callbackId?: number): () => void;
+    registerHeaderUpdatedCallback(f: (sheetIdxes: readonly number[]) => void): () => void;
+    /**
+     * Release a view's OffscreenCanvas in the worker. Call when a view
+     * unmounts so the worker's canvas map doesn't leak.
+     */
+    disposeOffscreen(canvasId: number): void;
 }
 export {};

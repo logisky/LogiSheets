@@ -66,6 +66,7 @@ export declare enum OffscreenRenderName {
     Render = "render",
     Resize = "resize",
     Init = "init",
+    Dispose = "dispose",
     GetAppropriateHeights = "getAppropriateHeights",
     SetLicense = "setLicense",
     ClearLicense = "clearLicense"
@@ -95,10 +96,10 @@ export interface IWorkbookWorker {
     getWorkbook(): any;
 }
 export interface IOffscreenWorker {
-    render(sheetId: number, anchorX: number, anchorY: number): Result<Grid>;
-    resize(width: number, height: number, dpr: number): Result<Grid>;
-    init(canvas: OffscreenCanvas, dpr: number): void;
-    getAppropriateHeights(sheetId: number, anchorX: number, anchorY: number): Result<AppropriateHeight[]>;
+    render(canvasId: number, sheetId: number, anchorX: number, anchorY: number): Result<Grid>;
+    resize(canvasId: number, width: number, height: number, dpr: number): Result<Grid>;
+    init(canvasId: number, canvas: OffscreenCanvas, dpr: number): void;
+    getAppropriateHeights(canvasId: number, sheetId: number, anchorX: number, anchorY: number): Result<AppropriateHeight[]>;
 }
 export interface WorkerRequest {
     id: number;
