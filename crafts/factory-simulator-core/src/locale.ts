@@ -84,6 +84,7 @@ export interface Locale {
         productionLine2Upgrade: string
         fund: string
         goodwill: string
+        expectedProfit: string
     }
     // Engine-side Constants block bookkeeping keys.
     constKeys: {
@@ -195,6 +196,7 @@ export const zhLocale: Locale = {
         productionLine2Upgrade: '生产线二升级',
         fund: '资金',
         goodwill: '商誉',
+        expectedProfit: '本轮预计收益',
     },
     constKeys: {
         consecutiveLoss: '连续亏损轮数',
@@ -301,6 +303,7 @@ export const enLocale: Locale = {
         productionLine2Upgrade: 'Line 2 Upgrade',
         fund: 'Cash',
         goodwill: 'Goodwill',
+        expectedProfit: 'Est. Profit',
     },
     constKeys: {
         consecutiveLoss: 'Loss Streak',
