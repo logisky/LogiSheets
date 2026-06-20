@@ -383,6 +383,10 @@ const FIN_PRODUCTION_LINE_2_UPGRADE = L.finance.productionLine2Upgrade
 // 财务部 — keys for the overall financial-status table.
 const FUND = L.finance.fund
 const GOODWILL = L.finance.goodwill
+// Live preview: this round's expected cash profit = sum of FinancialImpact's
+// 值 column, excluding 商誉变化 (goodwill points, not cash) — mirrors the
+// cash total advanceRound applies to 资金.
+const FIN_EXPECTED_PROFIT = L.finance.expectedProfit
 
 type FieldKind = 'string' | 'number' | 'boolean' | 'enum'
 
@@ -1206,12 +1210,20 @@ const FINANCIAL_IMPACT_TABLE: Table = {
     refName: 'FinancialImpact',
 }
 
-// 财务状况 — top-line cash + goodwill snapshot.
+// 财务状况 — top-line cash + goodwill snapshot, plus a live
+// expected-profit preview computed from FinancialImpact.
 const FINANCIAL_STATUS_TABLE: Table = {
-    keys: [FUND, GOODWILL],
+    keys: [FUND, GOODWILL, FIN_EXPECTED_PROFIT],
     fields: [f(L.fields.item), fDecimal(L.fields.value)],
     refName: 'FinancialStatus',
 }
+
+// 本轮预计收益 cell formula: sum every FinancialImpact 值, minus 商誉变化
+// (goodwill is reputation points, not cash) — matches the cash total
+// advanceRound applies to 资金.
+const FIN_EXPECTED_PROFIT_FORMULA =
+    `=SUM(BLOCKREFS("FinancialImpact","*","${L.fields.value}"))` +
+    `-BLOCKREF("FinancialImpact","${FIN_GOODWILL_DELTA}","${L.fields.value}")`
 
 const CONSTRAINTS: Table = {
     keys: [
@@ -2775,25 +2787,47 @@ async function newGame(
             })
         }
 
-        // Production-line parameter table: seed 等级 = 1 and leave
-        // 是否升级 blank. The four stat columns are templated formulas
-        // that BLOCKREF the level table, so the engine fills them in
-        // automatically — no need to write fixed/max/perUnit/yieldAdj
-        // here anymore.
+        // Production-line parameter table: seed 等级 = 1 and 是否升级 =
+        // false (0). The four stat columns are templated formulas that
+        // BLOCKREF the level table, so the engine fills them in
+        // automatically — no need to write fixed/max/perUnit/yieldAdj here.
+        //
+        // 是否升级 MUST start as an explicit false rather than blank: the
+        // upgrade bridge does 等级+1 on true / 等级-1 on false, so a
+        // blank→false first click would wrongly decrement a never-upgraded
+        // line. Seeding false (and resetting to false each round, see
+        // advanceRound) means the only false transition is a genuine
+        // true→false revert.
         if (table === PRODUCTION_LINE_TABLE) {
             const levelCol = fields.findIndex((fi) => fi.name === LEVEL)
+            const willUpgradeCol = fields.findIndex(
+                (fi) => fi.name === WILL_UPGRADE
+            )
             keys.forEach((_keyName, rowIdx) => {
-                if (levelCol < 0) return
-                blockPayloads.push({
-                    type: 'blockInput',
-                    value: new BlockInputBuilder()
-                        .sheetIdx(sheetIdx)
-                        .blockId(blockId)
-                        .row(rowIdx)
-                        .col(levelCol)
-                        .input('1')
-                        .build(),
-                })
+                if (levelCol >= 0) {
+                    blockPayloads.push({
+                        type: 'blockInput',
+                        value: new BlockInputBuilder()
+                            .sheetIdx(sheetIdx)
+                            .blockId(blockId)
+                            .row(rowIdx)
+                            .col(levelCol)
+                            .input('1')
+                            .build(),
+                    })
+                }
+                if (willUpgradeCol >= 0) {
+                    blockPayloads.push({
+                        type: 'blockInput',
+                        value: new BlockInputBuilder()
+                            .sheetIdx(sheetIdx)
+                            .blockId(blockId)
+                            .row(rowIdx)
+                            .col(willUpgradeCol)
+                            .input('0')
+                            .build(),
+                    })
+                }
             })
         }
 
@@ -2882,11 +2916,15 @@ async function newGame(
             const valCol = fields.findIndex((fi) => fi.name === L.fields.value)
             if (valCol >= 0) {
                 keys.forEach((keyName, rowIdx) => {
+                    // 资金/商誉 seed as literals (advanceRound overwrites them
+                    // each round); 本轮预计收益 is a live formula cell.
                     const seed =
                         keyName === GOODWILL
                             ? '100'
                             : keyName === FUND
                             ? '5000'
+                            : keyName === FIN_EXPECTED_PROFIT
+                            ? FIN_EXPECTED_PROFIT_FORMULA
                             : undefined
                     if (seed === undefined) return
                     blockPayloads.push({
@@ -3867,7 +3905,14 @@ async function insertOrderConfig(
 async function removeOrderConfig(
     client: Client,
     blockIds: BlockIds,
-    orderId: string
+    orderId: string,
+    // temp:true rides the bool-cell's temp branch (accept-toggle path).
+    // advanceRound's completion cleanup runs in canonical state (after
+    // commitTempStatus + the temp:false settlement tx) and must pass
+    // temp:false so the removal is durable — otherwise it lands on a stray
+    // temp branch that gets discarded, the completed order resurfaces, and
+    // the sentinel row is left non-empty for the next round.
+    temp = true
 ): Promise<boolean> {
     const sheetIdx = SHEET_IDX[MAIN_SHEET]
     const blockId = blockIds.orderContribution
@@ -3931,10 +3976,9 @@ async function removeOrderConfig(
         })
     }
 
-    // temp:true — same rationale as insertOrderConfig: stay on the
-    // bool-cell's temp branch so its commit isn't discarded.
+    // temp follows the caller (see the `temp` param doc above).
     const tx = await client.handleTransaction({
-        transaction: {payloads, undoable: true, temp: true},
+        transaction: {payloads, undoable: true, temp},
     })
     if (isErrorMessage(tx))
         throw new Error(
@@ -4040,7 +4084,10 @@ async function insertAcceptedOrder(
 async function removeAcceptedOrder(
     client: Client,
     blockIds: BlockIds,
-    orderId: string
+    orderId: string,
+    // See removeOrderConfig's `temp` doc: toggle path = true (ride the
+    // bool-cell branch); advanceRound completion cleanup = false (durable).
+    temp = true
 ): Promise<boolean> {
     const sheetIdx = SHEET_IDX[MAIN_SHEET]
     const blockId = blockIds.acceptedOrderStatus
@@ -4104,7 +4151,7 @@ async function removeAcceptedOrder(
     }
 
     const tx = await client.handleTransaction({
-        transaction: {payloads, undoable: true, temp: true},
+        transaction: {payloads, undoable: true, temp},
     })
     if (isErrorMessage(tx))
         throw new Error(
@@ -5391,8 +5438,9 @@ async function advanceRound(
     //   - ProductionLine: 是否升级 toggle. The round-advance tx is the
     //     "apply" point — we've already accumulated 等级 via the
     //     bridge when the user toggled, so we reset the toggle back to
-    //     empty (the next round's "do I want to upgrade?" decision is
-    //     made fresh).
+    //     false (the next round's "do I want to upgrade?" decision is
+    //     made fresh). Reset to false, not blank, so the bridge never
+    //     sees a spurious blank→false (which would wrongly decrement 等级).
     //
     // IMPORTANT: callback bridges (`watchOrderAccepted` for 是否接受,
     // `installProductionLineUpgradeBridge` for 是否升级) listen on
@@ -5445,7 +5493,11 @@ async function advanceRound(
                     .blockId(blockIds.productionLine)
                     .row(r)
                     .col(plWillUpgradeCol)
-                    .input('')
+                    // Reset to explicit false, NOT blank — a blank cell would
+                    // make next round's first "set false" click decrement 等级
+                    // on a line that was never upgraded (the bridge can't tell
+                    // blank→false from a true→false revert). See newGame seed.
+                    .input('0')
                     .build(),
             })
         }
@@ -5685,8 +5737,13 @@ async function advanceRound(
             }
             for (const orderId of toRemove) {
                 try {
-                    await removeOrderConfig(client, blockIds, orderId)
-                    await removeAcceptedOrder(client, blockIds, orderId)
+                    // Durable (temp:false): this is canonical settlement
+                    // cleanup, not a player toggle. temp:true here would put
+                    // the removal on a stray branch that gets discarded — the
+                    // completed order would resurface and leave the sentinel
+                    // row non-empty, breaking next round's settlement.
+                    await removeOrderConfig(client, blockIds, orderId, false)
+                    await removeAcceptedOrder(client, blockIds, orderId, false)
                 } catch (e) {
                     console.warn(
                         `advance cleanup failed for ${orderId}:`,
