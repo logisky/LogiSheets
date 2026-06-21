@@ -1,7 +1,7 @@
 /**
  * Worker types and constants used for communication between main thread and workers.
  */
-import type { BlockInfo, CellInfo, CellPosition, DisplayWindowWithStartPoint, ErrorMessage, SheetDimension, SheetInfo, ReproducibleCell, Value, FormulaDisplayInfo } from "logisheets-web";
+import type { BlockInfo, CellInfo, CellPosition, DisplayWindowWithStartPoint, ErrorMessage, SheetDimension, SheetInfo, ReproducibleCell, Value, FormulaDisplayInfo, ActionEffect } from "logisheets-web";
 import type { Grid, AppropriateHeight } from "$types/index";
 export type { AppropriateHeight } from "$types/index";
 export declare const enum WorkerUpdate {
@@ -60,7 +60,11 @@ export declare enum MethodName {
     GetNextVisibleCell = "getNextVisibleCell",
     GetAllBlockFields = "getAllBlockFields",
     GetAppData = "getAppData",
-    GetFullyCoveredBlocks = "getFullyCoveredBlocks"
+    GetFullyCoveredBlocks = "getFullyCoveredBlocks",
+    GetAllBlocks = "getAllBlocks",
+    SaveCheckpoint = "saveCheckpoint",
+    DeleteCheckpoint = "deleteCheckpoint",
+    ListCheckpoints = "listCheckpoints"
 }
 export declare enum OffscreenRenderName {
     Render = "render",
@@ -84,9 +88,9 @@ export interface IWorkbookWorker {
     getBlockInfo(params: any): Result<BlockInfo>;
     getCellPosition(params: any): Result<CellPosition>;
     getSheetDimension(sheetIdx: number): Result<SheetDimension>;
-    undo(): Result<void>;
-    redo(): Result<void>;
-    handleTransaction(params: any): Result<void>;
+    undo(): Result<boolean>;
+    redo(): Result<boolean>;
+    handleTransaction(params: any): Result<ActionEffect>;
     loadWorkbook(params: any): Result<void>;
     getSheetIdx(params: any): Result<number>;
     getBlockValues(params: any): Result<readonly string[]>;

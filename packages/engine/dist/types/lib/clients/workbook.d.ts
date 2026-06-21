@@ -1,9 +1,9 @@
 /**
  * Workbook Client - communicates with the worker for workbook operations.
  */
-import type { SheetInfo, CellInfo, CellPosition, SheetDimension, MergeCell, BlockInfo, FormulaDisplayInfo, CellCoordinate, SheetCellId, Callback, CellIdCallback, ErrorMessage, AppData, BlockField, TempStatusDiff, ShadowCellInfo } from "logisheets-web";
+import type { SheetInfo, CellInfo, CellPosition, SheetDimension, MergeCell, BlockInfo, FormulaDisplayInfo, CellCoordinate, SheetCellId, Callback, CellIdCallback, ErrorMessage, AppData, BlockField, TempStatusDiff, ShadowCellInfo, Client, ActionEffect } from "logisheets-web";
 type Resp<T> = Promise<T | ErrorMessage>;
-export declare class WorkbookClient {
+export declare class WorkbookClient implements Client {
     private _worker;
     private _resolvers;
     private _id;
@@ -15,14 +15,14 @@ export declare class WorkbookClient {
     private _cellRemovedCallbacks;
     constructor(worker: Worker);
     getAllSheetInfo(): Resp<readonly SheetInfo[]>;
-    getSheetDimension(sheetIdx: number): Resp<SheetDimension>;
+    getSheetDimension(params: Parameters<Client["getSheetDimension"]>[0] | number): Resp<SheetDimension>;
     getSheetIdx(params: {
         sheetId: number;
     }): Resp<number>;
     getSheetId(params: {
         sheetIdx: number;
     }): Resp<number>;
-    getSheetNameByIdx(idx: number): Resp<string>;
+    getSheetNameByIdx(params: Parameters<Client["getSheetNameByIdx"]>[0] | number): Resp<string>;
     getCell(params: {
         sheetIdx: number;
         row: number;
@@ -114,15 +114,15 @@ export declare class WorkbookClient {
     handleTransaction(params: {
         transaction: any;
         temp: boolean;
-    }): Resp<void>;
+    }): Resp<ActionEffect>;
     handleTransactionWithoutEvents(params: {
         transaction: any;
         temp: boolean;
     }): Resp<any>;
-    undo(): Resp<void>;
-    redo(): Resp<void>;
-    commitTempStatus(): Resp<void>;
-    cleanTempStatus(): Resp<void>;
+    undo(): Resp<boolean>;
+    redo(): Resp<boolean>;
+    commitTempStatus(): Resp<ActionEffect>;
+    cleanupTempStatus(): Resp<void>;
     loadWorkbook(params: {
         content: Uint8Array;
         name: string;
@@ -130,7 +130,7 @@ export declare class WorkbookClient {
     save(params: {
         appData?: string;
     }): Resp<any>;
-    getDisplayUnitsOfFormula(f: string): Resp<FormulaDisplayInfo>;
+    getDisplayUnitsOfFormula(params: Parameters<Client["getDisplayUnitsOfFormula"]>[0] | string): Resp<FormulaDisplayInfo>;
     checkFormula(params: {
         formula: string;
     }): Resp<boolean>;
@@ -184,6 +184,38 @@ export declare class WorkbookClient {
      * skips the redundant (sheet,row,col) → id round-trip.
      */
     registerCellValueChangedByCellId(cellId: SheetCellId, callback: CellIdCallback): void;
+    getDisplayWindow: Client["getDisplayWindow"];
+    getValue: Client["getValue"];
+    getReproducibleCell: Client["getReproducibleCell"];
+    getReproducibleCells: Client["getReproducibleCells"];
+    batchGetCellCoordinateWithSheetById: Client["batchGetCellCoordinateWithSheetById"];
+    getBlockValues: Client["getBlockValues"];
+    getDiyCellIdWithBlockId: Client["getDiyCellIdWithBlockId"];
+    lookupAppendixUpward: Client["lookupAppendixUpward"];
+    getShadowCellIds: Client["getShadowCellIds"];
+    toggleStatus: Client["toggleStatus"];
+    calcCondition: Client["calcCondition"];
+    isReady: Client["isReady"];
+    getAllBlocks: Client["getAllBlocks"];
+    getBlockRowId: Client["getBlockRowId"];
+    getBlockColId: Client["getBlockColId"];
+    saveCheckpoint: Client["saveCheckpoint"];
+    deleteCheckpoint: Client["deleteCheckpoint"];
+    listCheckpoints: Client["listCheckpoints"];
+    registerCellRemovedCallback: Client["registerCellRemovedCallback"];
+    private _notImplemented;
+    getRowHeight: Client["getRowHeight"];
+    getColWidth: Client["getColWidth"];
+    getDisplayWindowWithinCell: Client["getDisplayWindowWithinCell"];
+    getCellInfos: Client["getCellInfos"];
+    getFormula: Client["getFormula"];
+    getStyle: Client["getStyle"];
+    getCellsExceptWindow: Client["getCellsExceptWindow"];
+    getBlockDisplayWindow: Client["getBlockDisplayWindow"];
+    getRowInfo: Client["getRowInfo"];
+    getAllBlockRefNames: Client["getAllBlockRefNames"];
+    registerCustomFunc: Client["registerCustomFunc"];
+    registerShadowCellValueChangedCallback: Client["registerShadowCellValueChangedCallback"];
     private _call;
 }
 export {};

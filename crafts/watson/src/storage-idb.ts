@@ -105,11 +105,12 @@ export class IdbConversationStore implements ConversationStore {
         workbook_id?: string
         limit?: number
     }): Promise<ConversationSummary[]> {
-        let query = filter?.workbook_id !== undefined
-            ? this.db.conversations
-                  .where('workbook_id')
-                  .equals(filter.workbook_id)
-            : this.db.conversations.toCollection()
+        const query =
+            filter?.workbook_id != null
+                ? this.db.conversations
+                      .where('workbook_id')
+                      .equals(filter.workbook_id)
+                : this.db.conversations.toCollection()
 
         const rows = await query.reverse().sortBy('updated_at')
         const sliced = filter?.limit ? rows.slice(0, filter.limit) : rows
@@ -192,7 +193,10 @@ export class IdbConversationStore implements ConversationStore {
             conversation_id,
             opts?.since_ts ?? Number.NEGATIVE_INFINITY,
         ]
-        const upper: [string, number] = [conversation_id, Number.POSITIVE_INFINITY]
+        const upper: [string, number] = [
+            conversation_id,
+            Number.POSITIVE_INFINITY,
+        ]
         let coll = this.db.events
             .where('[conversation_id+ts]')
             .between(lower, upper, true, true)
@@ -203,8 +207,8 @@ export class IdbConversationStore implements ConversationStore {
     // ----- Blobs -----
 
     async putBlob(value: string | Uint8Array): Promise<string> {
-        const ref = `blob_${Date.now().toString(36)}_${(this.blobCounter++)
-            .toString(36)}_${shortRand()}`
+        const ref = `blob_${Date.now().toString(36)}_${(this
+            .blobCounter++).toString(36)}_${shortRand()}`
         await this.db.blobs.add({ref, value})
         return ref
     }

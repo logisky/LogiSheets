@@ -77,13 +77,25 @@ async function commitTransaction(
 // Shared schema fragments
 // ---------------------------------------------------------------------------
 
-const FIELD_TYPE_ENUM = ['string', 'number', 'boolean', 'enum'] as const
+const FIELD_TYPE_ENUM = [
+    'string',
+    'number',
+    'boolean',
+    'enum',
+    'date',
+    'datetime',
+] as const
 
 const FIELD_SCHEMA: JSONSchema = {
     type: 'object',
     properties: {
         name: {type: 'string', description: 'Field (column) name.'},
-        field_type: {type: 'string', enum: [...FIELD_TYPE_ENUM]},
+        field_type: {
+            type: 'string',
+            enum: [...FIELD_TYPE_ENUM],
+            description:
+                "Optional. Set it explicitly when the field's MEANING implies a type — e.g. a column called deadline / due date / birthday / created_at is 'date' (or 'datetime' if it carries a time). 'date'/'datetime' render with a calendar-style format (override via num_fmt). If omitted, the type is inferred from initial_rows values: booleans → boolean, numerics → number, date-like strings → date, low-cardinality categorical strings → an auto-created enum set, otherwise string.",
+        },
         num_fmt: {
             type: 'string',
             description:
@@ -101,7 +113,7 @@ const FIELD_SCHEMA: JSONSchema = {
             default: false,
         },
     },
-    required: ['name', 'field_type'],
+    required: ['name'],
 }
 
 const ROW_SCHEMA: JSONSchema = {
@@ -115,10 +127,116 @@ const ROW_SCHEMA: JSONSchema = {
         values: {
             type: 'object',
             description:
-                'Optional initial values keyed by field name. Fields with a value_formula should be omitted.',
+                'Optional initial values keyed by field name. Fields with a value_formula should be omitted. For date/datetime fields, supply ISO strings ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM") — Watson converts them to the numeric form cells store.',
         },
     },
     required: ['key'],
+}
+
+// ---------------------------------------------------------------------------
+// Field-type inference
+//
+// When create_block declares a field without an explicit `field_type`, we
+// infer it from the field's initial-row values. This keeps blocks honest
+// about their data shape (number formatting, boolean checkboxes, enum
+// dropdowns, date formats) without the LLM having to classify every column
+// by hand. Explicitly-typed fields are always respected as-is.
+// ---------------------------------------------------------------------------
+
+function isBoolLike(v: unknown): boolean {
+    if (typeof v === 'boolean') return true
+    if (typeof v !== 'string') return false
+    const s = v.trim().toLowerCase()
+    return s === 'true' || s === 'false'
+}
+
+function isNumberLike(v: unknown): boolean {
+    if (typeof v === 'number') return Number.isFinite(v)
+    if (typeof v !== 'string') return false
+    const s = v.trim()
+    if (s === '') return false
+    // Tolerate thousands separators / a single percent or currency sign.
+    const cleaned = s.replace(/[,$%]/g, '')
+    return cleaned !== '' && Number.isFinite(Number(cleaned))
+}
+
+/** Detect a uniform date format across the column. Returns the matching
+ *  Excel number-format string, or null when the values aren't all dates.
+ *  Dates are stored as `number` fields (the engine has no distinct date
+ *  type) carrying a date formatter. */
+function detectDateFormat(values: readonly unknown[]): string | null {
+    const patterns: Array<{re: RegExp; fmt: string}> = [
+        {re: /^\d{4}-\d{1,2}-\d{1,2}$/, fmt: 'yyyy-mm-dd'},
+        {re: /^\d{4}\/\d{1,2}\/\d{1,2}$/, fmt: 'yyyy/mm/dd'},
+        {re: /^\d{1,2}\/\d{1,2}\/\d{4}$/, fmt: 'mm/dd/yyyy'},
+        {re: /^\d{4}-\d{1,2}-\d{1,2}[ T]\d{1,2}:\d{2}/, fmt: 'yyyy-mm-dd hh:mm'},
+    ]
+    for (const {re, fmt} of patterns) {
+        if (
+            values.every((v) => typeof v === 'string' && re.test(v.trim()))
+        ) {
+            return fmt
+        }
+    }
+    return null
+}
+
+/** Heuristic: a low-cardinality categorical string column reads as an enum.
+ *  Needs enough rows to be confident, few distinct values, and meaningful
+ *  repetition (distinct ≤ half the rows). */
+function looksLikeEnum(distinct: readonly string[], total: number): boolean {
+    return (
+        total >= 4 &&
+        distinct.length >= 2 &&
+        distinct.length <= 8 &&
+        distinct.length <= total / 2
+    )
+}
+
+/** Convert an ISO-ish date/datetime string to an Excel serial number (the
+ *  numeric form block cells store for dates). Returns null when the value
+ *  can't be parsed, so the caller can fall back to writing it verbatim.
+ *
+ *  Excel's 1900 date system: serial 1 = 1900-01-01; 25569 is the day count
+ *  from the serial epoch (1899-12-30) to the Unix epoch (1970-01-01).
+ *  Components are read as UTC so the serial is timezone-independent. */
+function toExcelSerial(value: unknown, withTime: boolean): number | null {
+    if (typeof value === 'number') return value // already numeric
+    if (typeof value !== 'string') return null
+    const s = value.trim()
+    const m = s.match(
+        /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+    )
+    let y: number, mo: number, d: number, hh = 0, mm = 0, ss = 0
+    if (m) {
+        y = +m[1]
+        mo = +m[2]
+        d = +m[3]
+        hh = m[4] ? +m[4] : 0
+        mm = m[5] ? +m[5] : 0
+        ss = m[6] ? +m[6] : 0
+    } else {
+        // US-style M/D/Y as a fallback.
+        const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+        if (!us) return null
+        mo = +us[1]
+        d = +us[2]
+        y = +us[3]
+    }
+    const ms = Date.UTC(y, mo - 1, d, hh, mm, ss)
+    if (Number.isNaN(ms)) return null
+    const serial = ms / 86400000 + 25569
+    return withTime ? serial : Math.floor(serial)
+}
+
+function autoEnumId(blockName: string, fieldName: string): string {
+    const slug = (s: string) =>
+        s
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+    return `${slug(blockName)}_${slug(fieldName)}_auto`
 }
 
 // ---------------------------------------------------------------------------
@@ -188,7 +306,7 @@ interface CreateBlockInput {
     position: {row: number; col: number}
     fields: ReadonlyArray<{
         name: string
-        field_type: (typeof FIELD_TYPE_ENUM)[number]
+        field_type?: (typeof FIELD_TYPE_ENUM)[number]
         num_fmt?: string
         enum_id?: string
         user_editable?: boolean
@@ -197,6 +315,15 @@ interface CreateBlockInput {
         key: string
         values?: Record<string, unknown>
     }>
+}
+
+/** A field with its `field_type` resolved (either explicit or inferred). */
+interface ResolvedField {
+    name: string
+    field_type: (typeof FIELD_TYPE_ENUM)[number]
+    num_fmt?: string
+    enum_id?: string
+    user_editable?: boolean
 }
 
 export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
@@ -249,13 +376,49 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
     handler: async (input, ctx) => {
         const client = asClient(ctx)
 
+        // Resolve each field's type: explicit wins; otherwise infer from the
+        // column's initial-row values. Inferred enums auto-create a backing
+        // set (registered with the host blockManager when present, always
+        // cached locally) so the existing enum gate below picks them up.
+        const colValues = (fieldName: string): unknown[] =>
+            (input.initial_rows ?? [])
+                .map((r) => r.values?.[fieldName])
+                .filter((v) => v !== undefined && v !== null && v !== '')
+
+        const resolvedFields: ResolvedField[] = input.fields.map((f, i) => {
+            if (f.field_type) return {...f, field_type: f.field_type}
+            // The key column (fields[0]) is a row identifier, not data.
+            if (i === 0) return {...f, field_type: 'string'}
+            const vals = colValues(f.name)
+            if (vals.length === 0) return {...f, field_type: 'string'}
+            if (vals.every(isBoolLike)) return {...f, field_type: 'boolean'}
+            if (vals.every(isNumberLike))
+                return {...f, field_type: 'number', num_fmt: f.num_fmt}
+            const dateFmt = detectDateFormat(vals)
+            if (dateFmt) return {...f, field_type: 'date', num_fmt: dateFmt}
+            const distinct = [...new Set(vals.map((v) => String(v)))]
+            if (looksLikeEnum(distinct, vals.length)) {
+                const enumId = autoEnumId(input.name, f.name)
+                const variants = distinct.map((v, vi) => ({
+                    id: v,
+                    value: v,
+                    color: _ENUM_PALETTE[vi % _ENUM_PALETTE.length],
+                }))
+                const bm = tryGetBlockManager()
+                if (bm) bm.enumSetManager.set(enumId, enumId, variants)
+                _enumSetCache.set(enumId, {id: enumId, name: enumId, variants})
+                return {...f, field_type: 'enum', enum_id: enumId}
+            }
+            return {...f, field_type: 'string'}
+        })
+
         // Resolve enum_id → variant ids per enum field. Pull from
-        // _enumSetCache (filled by define_enum_set). Out-of-cache
-        // enum_ids fail fast — the LLM should have defined the set
-        // first.
+        // _enumSetCache (filled by define_enum_set, or by inference above).
+        // Out-of-cache enum_ids fail fast — the LLM should have defined the
+        // set first.
         const enumVariantsByField: Map<number, readonly string[]> = new Map()
-        for (let i = 0; i < input.fields.length; i++) {
-            const f = input.fields[i]
+        for (let i = 0; i < resolvedFields.length; i++) {
+            const f = resolvedFields[i]
             if (f.field_type !== 'enum') continue
             if (!f.enum_id) {
                 throw new Error(
@@ -327,8 +490,8 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
         const sheetId = sheetIdRes
 
         const renderIds: string[] = []
-        for (let i = 0; i < input.fields.length; i++) {
-            const f = input.fields[i]
+        for (let i = 0; i < resolvedFields.length; i++) {
+            const f = resolvedFields[i]
             if (bm) {
                 const typeSpec = buildFieldTypeSpec(
                     f,
@@ -359,10 +522,10 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
         //      BlockInput(non-key values)   ← AFTER BindFormSchema; templated
         //                                     cells reject these by design,
         //                                     non-templated commit normally
-        const fieldNames = input.fields.map((f) => f.name)
+        const fieldNames = resolvedFields.map((f) => f.name)
         const initialRows = input.initial_rows ?? []
         const rowCnt = Math.max(1, initialRows.length) // engine requires ≥1 row
-        const colCnt = input.fields.length
+        const colCnt = resolvedFields.length
 
         const payloads: EditPayload[] = []
 
@@ -396,7 +559,7 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
         // BindFormSchema.validationFormulas means the shadow is
         // installed on every row automatically (and on every new row
         // from InsertRowsInBlock).
-        const validationFormulas = input.fields.map((_, i) => {
+        const validationFormulas = resolvedFields.map((_, i) => {
             const variants = enumVariantsByField.get(i)
             if (!variants) return ''
             return enumWhitelistFormula(variants)
@@ -433,6 +596,20 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                     )
                 }
                 if (colIdx === 0) continue // key already written above
+                // Date/datetime fields store an Excel serial number, not the
+                // raw string — convert here so the formatter renders a real
+                // date instead of leaving an unparsed string in the cell.
+                const ft = resolvedFields[colIdx]?.field_type
+                let inputStr: string
+                if (ft === 'date' || ft === 'datetime') {
+                    const serial = toExcelSerial(value, ft === 'datetime')
+                    inputStr =
+                        serial !== null
+                            ? String(serial)
+                            : stringifyForBlockInput(value)
+                } else {
+                    inputStr = stringifyForBlockInput(value)
+                }
                 payloads.push({
                     type: 'blockInput',
                     value: new BlockInputBuilder()
@@ -440,7 +617,7 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                         .blockId(blockId)
                         .row(i)
                         .col(colIdx)
-                        .input(stringifyForBlockInput(value))
+                        .input(inputStr)
                         .build(),
                 })
             }
@@ -476,7 +653,7 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
 function buildFieldTypeSpec(
     f: {
         name: string
-        field_type: 'string' | 'number' | 'boolean' | 'enum'
+        field_type: (typeof FIELD_TYPE_ENUM)[number]
         num_fmt?: string
         enum_id?: string
     },
@@ -490,6 +667,20 @@ function buildFieldTypeSpec(
                 type: 'number',
                 validation: '',
                 formatter: f.num_fmt ?? '',
+            }
+        // The engine has no distinct date type — dates are numbers carrying
+        // a date formatter. Honor an explicit num_fmt, else a sensible default.
+        case 'date':
+            return {
+                type: 'number',
+                validation: '',
+                formatter: f.num_fmt ?? 'yyyy-mm-dd',
+            }
+        case 'datetime':
+            return {
+                type: 'number',
+                validation: '',
+                formatter: f.num_fmt ?? 'yyyy-mm-dd hh:mm',
             }
         case 'boolean':
             return {type: 'boolean'}
