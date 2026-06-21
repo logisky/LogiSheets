@@ -40,7 +40,9 @@ engine.on('ready', () => {
 | Method | Signature | Description |
 | --- | --- | --- |
 | constructor | `new Engine(config?: Partial<EngineConfig>)` | Creates the engine and **its own Web Worker** (you never create a worker yourself). Worker + WASM init asynchronously — wait for the `ready` event before use. |
-| `mount` | `mount(container: HTMLElement, options?: EngineMountOptions): void` | Mounts the grid UI into `container`. See [mount options](#mount-options). |
+| `createSession` | `createSession(): Session` | Create an additional **view** of the same workbook. See [Multiple views](#multiple-views-sessions). |
+| `getDefaultSession` | `getDefaultSession(): Session` | The primary `Session` that backs the legacy per-view methods below. Created lazily. |
+| `mount` | `mount(container: HTMLElement, options?: EngineMountOptions): void` | Mounts the grid UI into `container` (on the default session). See [mount options](#mount-options). |
 | `unmount` | `unmount(): void` | Detaches the grid UI but keeps the engine/worker alive (you can re-mount). |
 | `isMounted` | `isMounted(): boolean` | Whether the UI is currently mounted. |
 | `getMountContainer` | `getMountContainer(): HTMLElement \| null` | The element the grid is mounted into, if any. |
@@ -122,6 +124,75 @@ synchronously, and lets you push state back in imperatively.
 | `setCurrentSheetIndex` | `setCurrentSheetIndex(index: number): void` | Switch the active sheet (refreshes the grid). |
 | `getSheets` | `getSheets(): readonly SheetInfo[]` | Cached sheet info. |
 | `getConfig` | `getConfig(): EngineConfig` | The resolved configuration. |
+
+## Multiple views (Sessions)
+
+By default you have one view, and the legacy `mount` / `setSelection` /
+`render` / `setCurrentSheetIndex` methods on `Engine` operate on it. Under the
+hood that view is a **`Session`** — and you can create more of them to show the
+**same workbook in several windows at once** (a split pane, a "second view", a
+pop-out). All sessions share the engine's single worker and workbook, so an edit
+in one is reflected in every other immediately.
+
+The split of responsibility:
+
+- **`Engine`** — everything *shared*: the worker, the workbook, the sheet-info
+  cache, and the workbook-level events (`ready`, `sheetChange`, `cellChange`).
+  One engine per workbook.
+- **`Session`** — everything *per view*: its mounted UI, active sheet,
+  selection, rendered grid and viewport. Each session renders to its own
+  `OffscreenCanvas` in the shared worker, so views scroll independently and can
+  even display different sheets.
+
+```ts
+const engine = new Engine()
+engine.on('ready', async () => {
+    await engine.loadFile(bytes, 'book.xlsx') // load once, on the engine
+
+    // First view.
+    const main = engine.createSession()
+    main.mount(document.getElementById('view-main')!)
+
+    // Second view of the SAME workbook — edits sync both ways.
+    const second = engine.createSession()
+    second.mount(document.getElementById('view-second')!)
+    second.setCurrentSheetIndex(1) // independent active sheet
+
+    second.on('selectionChange', (sel) => console.log('view 2', sel))
+
+    // When the second window closes:
+    second.destroy() // unmounts and frees its canvas in the worker
+})
+```
+
+::: tip Backwards compatible
+You don't need sessions for a single view. `new Engine()` + `engine.mount(...)`
+keeps working exactly as before — those calls delegate to a lazily-created
+default (primary) session. Reach for `createSession()` only when you want more
+than one view.
+:::
+
+### `Session` methods
+
+A `Session` carries the same per-view surface the legacy `Engine` methods
+delegate to:
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `mount` / `unmount` | `(container, options?)` / `()` | Render / remove this view's UI. Same [mount options](#mount-options) as the engine. |
+| `isMounted` / `getMountContainer` | `(): boolean` / `(): HTMLElement \| null` | Mount state. |
+| `initOffscreen` | `(canvas: HTMLCanvasElement): Promise<void>` | Headless rendering without a mounted UI. |
+| `render` / `resize` | `(…) => Promise<Grid \| null>` | Manual render / canvas resize (usually automatic while mounted). |
+| `getGrid` | `(): Grid \| null` | This view's last rendered grid. |
+| `getSelection` / `setSelection` | `(…)` | Read / set this view's selection. |
+| `getCurrentSheetIndex` / `setCurrentSheetIndex` | `(…)` | Read / switch **this view's** active sheet. |
+| `getSheets` | `(): readonly SheetInfo[]` | Shared sheet list. |
+| `getConfig` | `(): EngineConfig` | Resolved configuration. |
+| `on` / `off` | `(type, cb)` | Per-view events: `selectionChange`, `gridChange`, `activeSheetChange`, `startEdit`, `invalidFormula`, `error`. |
+| `destroy` | `(): void` | Unmount and release this session from the engine. |
+
+Workbook-level events (`ready`, `sheetChange`, `cellChange`) stay on the
+`Engine` — subscribe to those once, no matter how many views you open.
 
 ## Loading, saving and rendering
 

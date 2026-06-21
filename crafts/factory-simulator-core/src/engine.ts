@@ -987,11 +987,20 @@ export function createEngine(L: Locale) {
             //   else (still time to deliver, not yet done)
             //     → 0
             // FIN_GOODWILL_DELTA sums across orders.
+            //
+            // OUTER GUARD: empty rows (the permanent rowCnt=1 sentinel that
+            // survives once every order is removed — see blockRowCnt) have a
+            // blank 订单, which makes 剩余交付数 resolve to 0 and would trip
+            // the `<=0 → +1` branch, handing out free goodwill every round
+            // the player holds no active orders. Gate on a non-empty 订单 so
+            // the sentinel contributes 0. The penalty/revenue/quality
+            // formulas already self-gate on 本期交付数/剩余交付数 > 0.
             fFormulaDecimal(
                 CURRENT_GOODWILL_CHANGE,
-                `=IF(#FIELD("${REMAINING_DELIVERY}")<=0,1,` +
+                `=IF(#FIELD("${L.fields.order}")="",0,` +
+                    `IF(#FIELD("${REMAINING_DELIVERY}")<=0,1,` +
                     `IF(BLOCKREF("OrderStatus",#FIELD("${L.fields.order}"),"${L.fields.remainingPeriods}")=0,` +
-                    `-#FIELD("${CURRENT_PENALTY}")/100,0))`
+                    `-#FIELD("${CURRENT_PENALTY}")/100,0)))`
             ),
             // 本期品质罚款 — fires EVERY round delivery happens at a yield
             // below the order's required 良品率. Per-unit rate:
@@ -3807,15 +3816,24 @@ export function createEngine(L: Locale) {
         v === undefined || v === 'empty' || (v.type === 'str' && v.value === '')
 
     /**
-     * "Is the block's sentinel row 0 still empty (no real data)?" — i.e., is
-     * it safe to overwrite row 0 instead of growing the block?
+     * "Is the block's single row the recyclable sentinel?" — i.e., is it safe
+     * to overwrite row 0 instead of growing the block?
      *
-     * Naively `info.cells.every(isCellEmpty)` is wrong: templated fields
-     * (违约罚金 / 当前回合 / 剩余期数) carry COMPUTED VALUES even on the
-     * sentinel row — auto-materialized at BindFormSchema time — so they
-     * report as non-empty even when no order has landed. We deliberately
-     * skip those columns: only the user-data fields tell us whether a real
-     * row has been written.
+     * The ONLY signal that matters is the KEY column (订单 / 订单编号, field 0):
+     * there is no real order without an id, so a blank key means this is the
+     * empty sentinel regardless of what any other column holds. We must NOT
+     * also require the player-input columns (生产线一 / 生产线二) to be empty:
+     * a wipe can leave stale allocations behind (a clear that landed on a
+     * discarded temp branch, a literal override on a formula cell that the
+     * '' no-op write can't clear, …). If we treated that leftover as "a real
+     * row" we'd grow the block and strand the stale sentinel as row 0 forever
+     * — the order then lands in row 1 and the empty sentinel never gets
+     * recycled. All three insert paths (insertOrder / insertOrderConfig /
+     * insertAcceptedOrder) full-overwrite the target row, so reusing a
+     * key-empty row always produces a clean row no matter what was left in it.
+     *
+     * (Templated columns — 违约罚金 / 剩余期数 / … — carry computed values even
+     * on the sentinel; they were never a valid emptiness signal either.)
      */
     function isSentinelRowEmpty(
         info: {
@@ -3826,12 +3844,10 @@ export function createEngine(L: Locale) {
         table: Table
     ): boolean {
         if (info.rowCnt !== 1) return false
-        for (let colIdx = 0; colIdx < table.fields.length; colIdx++) {
-            if (table.fields[colIdx]?.valueFormula) continue // skip templated
-            const cell = info.cells[colIdx]
-            if (!isCellEmpty(cell?.value)) return false
-        }
-        return true
+        // Key column is field 0 for every variable table (ORDER_ID / 订单).
+        const keyColIdx = 0
+        void table // kept for signature symmetry / future per-table keys
+        return isCellEmpty(info.cells[keyColIdx]?.value)
     }
 
     function cellValueAsString(v: Value | undefined): string {
@@ -3905,23 +3921,31 @@ export function createEngine(L: Locale) {
             )
         }
 
-        // Only the 订单 column is populated — production-line counts and
-        // yield/delivery columns stay empty for the player to fill in.
-        const orderCol = ORDER_CONTRIBUTION_TABLE.fields.findIndex(
-            (f) => f.name === L.fields.order
-        )
-        if (orderCol >= 0) {
+        // Write EVERY column of the target row — 订单 gets the new id, all
+        // other columns get blanked. This mirrors insertAcceptedOrder's
+        // full-row overwrite and is essential when targetRow is a reused
+        // row: the production-line allocations (生产线一/生产线二) the
+        // player entered for the PREVIOUS order that occupied this row must
+        // not bleed into the new order. Relying on the removal path to have
+        // pre-cleared them is fragile — isSentinelRowEmpty skips every
+        // valueFormula column, so a stale literal override on a formula cell
+        // (本期预计良品率) would otherwise survive into the freshly accepted
+        // order. Templated columns treat the '' write as a no-op and re-
+        // materialize their formula, so blanking them here is safe.
+        const orderColName = L.fields.order
+        ORDER_CONTRIBUTION_TABLE.fields.forEach((field, colIdx) => {
+            const content = field.name === orderColName ? orderId : ''
             payloads.push({
                 type: 'blockInput',
                 value: new BlockInputBuilder()
                     .sheetIdx(sheetIdx)
                     .blockId(blockId)
                     .row(targetRow)
-                    .col(orderCol)
-                    .input(orderId)
+                    .col(colIdx)
+                    .input(content)
                     .build(),
             })
-        }
+        })
 
         // temp:true — this fires in response to a player toggling ✅/❌
         // (the bool-cell commit is itself temp via the host's global temp

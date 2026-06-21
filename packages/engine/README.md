@@ -10,6 +10,7 @@ A high-performance spreadsheet rendering and editing library built with Svelte 5
 - 🎨 Customizable cell layouts and styling
 - 📱 Responsive scrollbars and touch support
 - 🔌 Works with logisheets-web WASM engine
+- 🪟 Multiple synchronized views of one workbook via Sessions (split / second view)
 
 ## Installation
 
@@ -58,6 +59,39 @@ await dataService.loadWorkbook(new Uint8Array(fileBuffer), 'workbook.xlsx');
 const grid = await dataService.render(sheetId, anchorX, anchorY);
 ```
 
+### Multiple Views (Engine + Sessions)
+
+An `Engine` owns one workbook (one worker). It hands out `Session` objects — one
+per on-screen view — that all share that workbook, so an edit in any view shows
+up in the others instantly. Use this for split panes or a "second view".
+
+```typescript
+import { Engine } from 'logisheets-engine';
+import 'logisheets-engine/style.css';
+
+const engine = new Engine();
+engine.on('ready', async () => {
+  await engine.loadFile(bytes, 'book.xlsx'); // load once, on the engine
+
+  const main = engine.createSession();
+  main.mount(document.getElementById('view-main'));
+
+  // Second view of the SAME workbook — edits sync both ways.
+  const second = engine.createSession();
+  second.mount(document.getElementById('view-second'));
+  second.setCurrentSheetIndex(1); // independent active sheet
+
+  second.on('selectionChange', (sel) => console.log('view 2', sel));
+  // second.destroy() when its window closes
+});
+```
+
+`new Engine()` + `engine.mount(...)` still works for a single view — it
+delegates to a lazily-created default session. Workbook-level events
+(`ready`, `sheetChange`, `cellChange`) live on the `Engine`; per-view events
+(`selectionChange`, `gridChange`, `activeSheetChange`, `startEdit`,
+`invalidFormula`, `error`) live on each `Session`.
+
 ## API
 
 ### Components
@@ -69,6 +103,11 @@ const grid = await dataService.render(sheetId, anchorX, anchorY);
 - `SheetTabs` - Sheet tab bar
 - `Scrollbar` - Custom scrollbar
 - `ContextMenu` - Right-click context menu
+
+### Engine & Sessions
+
+- `Engine` - Shared workbook layer (one worker / one workbook) and factory for views
+- `Session` - A single view: its own mounted UI, active sheet, selection and viewport
 
 ### Services
 
