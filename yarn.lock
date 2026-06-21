@@ -7213,12 +7213,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vercel/python@npm:6.45.0":
-  version: 6.45.0
-  resolution: "@vercel/python@npm:6.45.0"
+"@vercel/python@npm:6.45.1":
+  version: 6.45.1
+  resolution: "@vercel/python@npm:6.45.1"
   dependencies:
     "@vercel/python-analysis": "npm:0.11.1"
-  checksum: 10c0/4be0792516abd9ec59aeaabd83b91de158bd975bc1421fb9a2116d47311a9e5c86e326eaaca2abed649327505f9999efaaee43a278996e843b04fb78fe27a774
+  checksum: 10c0/d96671a652356f95fbf454daacabfbe7bee4f068e5fc88ab17bc06401cd9b66222aa9bde84e15eff5d81db71b07ec5063a1fa661678c4333d972b4c9c7efa0de
   languageName: node
   linkType: hard
 
@@ -20684,7 +20684,7 @@ __metadata:
     ts-loader: "npm:^9.5.1"
     ts-node: "npm:^10.9.1"
     typescript: "npm:^5.7.2"
-    vercel: "npm:^54.14.0"
+    vercel: "npm:^54.14.2"
     vitepress: "npm:^1.6.4"
     vitest: "npm:^1.6.1"
     web-vitals: "npm:^2.1.4"
@@ -23158,9 +23158,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vercel@npm:^54.14.0":
-  version: 54.14.0
-  resolution: "vercel@npm:54.14.0"
+"vercel@npm:^54.14.2":
+  version: 54.14.2
+  resolution: "vercel@npm:54.14.2"
   dependencies:
     "@vercel/backends": "npm:0.8.14"
     "@vercel/blob": "npm:2.4.0"
@@ -23181,7 +23181,7 @@ __metadata:
     "@vercel/next": "npm:4.19.0"
     "@vercel/node": "npm:5.8.17"
     "@vercel/prepare-flags-definitions": "npm:0.3.0"
-    "@vercel/python": "npm:6.45.0"
+    "@vercel/python": "npm:6.45.1"
     "@vercel/redwood": "npm:2.5.0"
     "@vercel/remix-builder": "npm:5.9.1"
     "@vercel/ruby": "npm:2.4.0"
@@ -23199,7 +23199,7 @@ __metadata:
   bin:
     vc: dist/vc.js
     vercel: dist/vc.js
-  checksum: 10c0/e49795d05a0a98a7882217590aad5bd791ac910de36ebc9a4c43012e0bfa0c18aa4989df3dd42c4f53b196268610739f32c826da991e534585bdc6d42c0d1b58
+  checksum: 10c0/165ba77e6a977e320fa5de1810e19fe97bf2e2ea50f55a2592f5af1ad56fb6489a5148e2f3d0d5ed5dd67a7ed8c5d26f3522e106d7014e71dfe1397bdabde7a3
   languageName: node
   linkType: hard
 

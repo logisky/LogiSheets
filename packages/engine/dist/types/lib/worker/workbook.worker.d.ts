@@ -130,13 +130,13 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
     handleTransaction(params: {
         transaction: any;
         temp: boolean;
-    }): Result<void>;
+    }): Result<ActionEffect>;
     handleTransactionWithoutEvents(params: {
         transaction: any;
         temp: boolean;
     }): Result<ActionEffect>;
-    undo(): Result<void>;
-    redo(): Result<void>;
+    undo(): Result<boolean>;
+    redo(): Result<boolean>;
     commitTempStatus(): Result<void>;
     cleanupTempStatus(): Result<void>;
     toggleStatus(useTemp: boolean): Result<void>;
@@ -155,6 +155,31 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
         formula: string;
     }): boolean;
     getAppData(): Result<readonly AppData[]>;
+    getAllBlocks(params: {
+        sheetIdx?: number;
+        sheetId?: number;
+    }): Result<readonly BlockInfo[]>;
+    getBlockRowId(params: {
+        sheetId: number;
+        blockId: number;
+        rowIdx: number;
+    }): Result<number>;
+    getBlockColId(params: {
+        sheetId: number;
+        blockId: number;
+        colIdx: number;
+    }): Result<number>;
+    saveCheckpoint(params: {
+        label: string;
+        description?: string;
+    }): Result<number>;
+    deleteCheckpoint(params: {
+        label: string;
+    }): Result<boolean>;
+    listCheckpoints(): Result<ReadonlyArray<{
+        label: string;
+        description?: string;
+    }>>;
     handleRequest(request: {
         m: string;
         args: any;

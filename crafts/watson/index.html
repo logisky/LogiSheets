@@ -273,7 +273,23 @@
   <script>
     'use strict';
     const W = window.Watson;
-    const wb = window.workbook;
+    // The host injects `window.workbook` (and the craft-interaction fns)
+    // onto this iframe AFTER our script runs — it does it on the iframe's
+    // `onLoad`. Capturing `window.workbook` now would freeze `undefined`
+    // forever, so we forward through a Proxy that resolves the live host
+    // object at *call* time (every tool call re-reads window.workbook).
+    const wb = new Proxy({}, {
+      get(_t, prop) {
+        const w = window.workbook;
+        if (!w) {
+          throw new Error(
+            'Workbook is not ready yet. Open a workbook in LogiSheets, then try again.'
+          );
+        }
+        const v = w[prop];
+        return typeof v === 'function' ? v.bind(w) : v;
+      },
+    });
     const workbookId = window.workbookId || null;
 
     // ---------- Settings (localStorage-backed) ----------
@@ -349,7 +365,18 @@
     // functions the host injects onto this iframe's window. undefined when
     // the host predates the API — the craft tools then report themselves
     // unavailable instead of crashing.
-    const craftInteractions = W.makeCraftInteractionsApi(window);
+    // Same late-injection problem as `wb`: the craft-interaction fns land
+    // after this script runs, so build the API lazily on each call.
+    const craftInteractions = new Proxy({}, {
+      get(_t, prop) {
+        return (...args) => {
+          const api = W.makeCraftInteractionsApi(window);
+          if (!api) return undefined; // host predates craft-interaction API
+          const fn = api[prop];
+          return typeof fn === 'function' ? fn(...args) : fn;
+        };
+      },
+    });
 
     const SYSTEM_PROMPT =
       'You are Watson, an AI assistant inside LogiSheets. ' +
