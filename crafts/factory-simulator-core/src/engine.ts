@@ -549,8 +549,8 @@ export function createEngine(L: Locale) {
     // on top — both must hold. Fires independently of the round counter;
     // reaching both ends the campaign on the spot.
     const TIER_ULTIMATE_GOODWILL = 147
-    const TIER_ULTIMATE_FUND = 300000
-    const TIER_GOLD_FUND = 40000
+    const TIER_ULTIMATE_FUND = 270000
+    const TIER_GOLD_FUND = 150000
     const TIER_GOLD_GOODWILL = 130
     const TIER_SILVER_FUND = 15000
     const TIER_SILVER_GOODWILL = 100
@@ -2504,6 +2504,13 @@ export function createEngine(L: Locale) {
             fieldFormulas: string[]
         }> = []
 
+        let deferredProfitSeed: {
+            sheetIdx: number
+            blockId: number
+            rowIdx: number
+            colIdx: number
+        } | null = null
+
         for (const def of BLOCK_DEFS) {
             const {key, table, sheet} = def
             const sheetIdx = SHEET_IDX[sheet]
@@ -2960,15 +2967,20 @@ export function createEngine(L: Locale) {
                 )
                 if (valCol >= 0) {
                     keys.forEach((keyName, rowIdx) => {
-                        // 资金/商誉 seed as literals (advanceRound overwrites them
-                        // each round); 本轮预计收益 is a live formula cell.
+                        if (keyName === FIN_EXPECTED_PROFIT) {
+                            deferredProfitSeed = {
+                                sheetIdx,
+                                blockId,
+                                rowIdx,
+                                colIdx: valCol,
+                            }
+                            return
+                        }
                         const seed =
                             keyName === GOODWILL
                                 ? '100'
                                 : keyName === FUND
                                 ? '5000'
-                                : keyName === FIN_EXPECTED_PROFIT
-                                ? FIN_EXPECTED_PROFIT_FORMULA
                                 : undefined
                         if (seed === undefined) return
                         blockPayloads.push({
@@ -3160,6 +3172,25 @@ export function createEngine(L: Locale) {
                     // UpsertFieldFormulas is only updating value templates.
                     .validationFormulas([])
                     .editabilityFormulas([])
+                    .build(),
+            })
+        }
+
+        const s = deferredProfitSeed as {
+            sheetIdx: number
+            blockId: number
+            rowIdx: number
+            colIdx: number
+        } | null
+        if (s) {
+            blockPayloads.push({
+                type: 'blockInput',
+                value: new BlockInputBuilder()
+                    .sheetIdx(s.sheetIdx)
+                    .blockId(s.blockId)
+                    .row(s.rowIdx)
+                    .col(s.colIdx)
+                    .input(FIN_EXPECTED_PROFIT_FORMULA)
                     .build(),
             })
         }
