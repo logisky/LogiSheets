@@ -20834,6 +20834,7 @@ __metadata:
     jest-environment-jsdom: "npm:^29.7.0"
     lint-staged: "npm:^13.0.3"
     lodash: "npm:^4.17.21"
+    logisheets-core: "workspace:*"
     logisheets-engine: "workspace:*"
     logisheets-web: "workspace:*"
     mobx: "npm:^6.12.3"
