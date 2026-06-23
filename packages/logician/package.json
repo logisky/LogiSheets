@@ -4,16 +4,27 @@
     "description": "AI agent core for LogiSheets — platform-agnostic LLM tools, prompts, and skills for operating workbooks. Used by Watson (browser craft), and reusable in Node CLI / MCP server / other hosts.",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "node": "./dist/index.node.js",
+            "default": "./dist/index.js"
+        }
+    },
     "author": "Jeremy He",
     "license": "MIT",
     "private": true,
     "scripts": {
-        "build": "tsc"
+        "build": "tsc && yarn build:node",
+        "build:node": "esbuild src/index.ts --bundle --format=esm --platform=node --external:logisheets-core --external:logisheets --outfile=dist/index.node.js"
     },
     "dependencies": {
+        "logisheets-core": "workspace:*",
         "logisheets-web": "workspace:*"
     },
     "devDependencies": {
+        "esbuild": "^0.21.0",
         "typescript": "^5.5.0"
     },
     "files": [

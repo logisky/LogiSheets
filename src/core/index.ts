@@ -1,12 +1,5 @@
-export * from './a1notation'
-export * from './clone'
-export * from './const'
-export * from './debug_mode'
-export * from './direction'
-export * from './equal'
-export * from './mouse'
+// Pure utilities live in logisheets-core — import them directly from there.
+// This barrel only carries the still-App-local helpers (DOM / event / framework
+// coupling).
 export * from './rate'
 export * from './file'
-export * from './type-guard'
-export * from './key'
-export * from './uuid'

@@ -9,15 +9,15 @@
  * (which owns shadow-cell state for validation / editability formulas).
  */
 
-import {getFirstCell, isErrorMessage} from 'logisheets-web'
+import {getFirstCell, isErrorMessage} from 'logisheets-web/pure'
 import type {
     BlockInfo,
     Client,
     Selection,
     SheetCellId,
     Value,
-} from 'logisheets-web'
-import type {JSONSchema, Tool, ToolContext} from '../tool'
+} from 'logisheets-web/pure'
+import type {JSONSchema, Tool, ToolContext} from '../tool.js'
 
 function asClient(ctx: ToolContext): Client {
     return ctx.workbook as Client

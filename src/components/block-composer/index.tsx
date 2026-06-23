@@ -12,7 +12,7 @@ import {useEngine} from '@/core/engine/provider'
 import type {FieldInfo, FieldTypeEnum} from 'logisheets-engine'
 import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
-import {FieldSetting} from './types'
+import type {FieldSetting} from 'logisheets-core'
 import {CreateBlockBuilder, isErrorMessage, Payload} from 'logisheets-engine'
 import {tx} from '@/core/transaction'
 

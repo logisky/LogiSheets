@@ -28,30 +28,9 @@
  *     through the async permission patch instead.
  */
 
-import type {FieldInfo, Grid} from 'logisheets-engine'
+import type {Grid} from 'logisheets-engine'
 import {getEngine} from '@/core/engine'
-import {callerRegistry} from './caller-registry'
-
-/**
- * Whether a known FieldInfo permits user edits *based on its static
- * declaration alone* — i.e. ignoring any dynamic formula. Useful for
- * the sync UI guards (edit-bar / engine-canvas) that can't easily
- * await a shadow-value subscription.
- *
- * Decision table:
- *   - `userEditable === false`                → NOT editable
- *   - `userEditable === true` / `undefined`   → editable
- *   - `userEditable` is a `string` (formula)  → permissively returns
- *     `true` here; the widget that owns the cell is responsible for
- *     installing the formula on a UserEditable shadow ephemeral and
- *     gating itself on the shadow value via {@link useEditable}. The
- *     edit-bar / canvas startEdit paths therefore allow opening the
- *     editor for formula-gated cells; the widget downstream still
- *     rejects the actual write.
- */
-export function isFieldUserEditable(fi: FieldInfo | undefined): boolean {
-    return fi?.userEditable !== false
-}
+import {callerRegistry, isFieldUserEditable} from 'logisheets-core'
 
 /**
  * Resolve editability for a sheet-absolute (row, col) coordinate.

@@ -1,5 +1,6 @@
 import {Box, Tooltip} from '@mui/material'
 import {EphemeralCellInputBuilder, isErrorMessage} from 'logisheets-engine'
+import {interpretValidation} from 'logisheets-core'
 import {useEngine} from '@/core/engine/provider'
 import {tx} from '@/core/transaction'
 import {BlockCellProps} from './cell'
@@ -59,35 +60,22 @@ export const ValidationCell = (props: BlockCellProps) => {
         return null
     }
 
-    // Determine validation status
-    let showWarning = false
-    let warningMessage = ''
-    let isFormulaError = false
+    // Determine validation status — interpretation lives in logisheets-core
+    // so the browser and a Node runtime classify results identically.
+    const violation =
+        shadowValue === undefined
+            ? null
+            : interpretValidation(
+                  {sheetIdx, row: rowIdx, col: colIdx, formula: validation},
+                  shadowValue as never
+              )
 
-    if (shadowValue !== undefined) {
-        if (shadowValue === 'empty') {
-            // No warning for empty
-        } else if (shadowValue.type === 'bool') {
-            if (shadowValue.value === false) {
-                showWarning = true
-                warningMessage = 'Value does not meet validation criteria'
-            }
-            // If true, no warning
-        } else if (shadowValue.type === 'error') {
-            showWarning = true
-            isFormulaError = true
-            warningMessage = 'Validation formula error: ' + shadowValue.value
-        } else {
-            // Other types are treated as formula errors
-            showWarning = true
-            isFormulaError = true
-            warningMessage = 'Unexpected validation result'
-        }
-    }
-
-    if (!showWarning) {
+    if (!violation) {
         return null
     }
+
+    const isFormulaError = violation.kind === 'error'
+    const warningMessage = violation.message
 
     // Build tooltip message
     const tooltipMessage = isFormulaError

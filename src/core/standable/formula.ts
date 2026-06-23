@@ -1,4 +1,4 @@
-import {shallowCopy} from '@/core/clone'
+import {shallowCopy} from 'logisheets-core'
 
 /**
  * @see /resources/funcs/README.md

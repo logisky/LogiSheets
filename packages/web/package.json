@@ -6,6 +6,17 @@
   "description": "Read and write the xlsx files",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./pure": {
+      "types": "./dist/src/pure.d.ts",
+      "default": "./dist/src/pure.js"
+    },
+    "./*": "./dist/*"
+  },
   "scripts": {
     "wasm-build": "wasm-pack build ../../crates/wasms/server --out-dir ../../../packages/web/wasm --target web",
     "build": "yarn wasm-build && npx tsc && cp -R wasm dist/",

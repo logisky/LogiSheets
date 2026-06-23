@@ -4,7 +4,7 @@ import {
     getRadioSelection,
     setRadioSelection,
     type RadioBinding,
-} from '@/core/craft-interactions'
+} from 'logisheets-core'
 import type {CellResolver} from './cell-rect'
 
 export interface RadioLayerProps {

@@ -18,7 +18,7 @@ import {
     Draggable,
     DropResult,
 } from 'react-beautiful-dnd'
-import {FieldSetting} from './types'
+import type {FieldSetting} from 'logisheets-core'
 
 interface FieldListProps {
     fields: FieldSetting[]

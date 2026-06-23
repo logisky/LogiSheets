@@ -1,4 +1,4 @@
-import {lowerCase} from '@/core/strings'
+import {lowerCase} from 'logisheets-core'
 
 export class Candidate {
     constructor(

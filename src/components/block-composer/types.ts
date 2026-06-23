@@ -1,61 +1,8 @@
-// Field Type Definitions
-export type FieldTypeEnum =
-    | 'enum'
-    | 'multiSelect'
-    | 'datetime'
-    | 'boolean'
-    | 'string'
-    | 'number'
-    | 'image'
-    | 'fieldRef'
-    | 'multiSelectRef'
+// The field model (FieldTypeEnum / EnumValue / FieldSetting) lives in
+// logisheets-core — import those directly from there. This module only holds
+// the composer's UI palette.
 
-export interface EnumValue {
-    id: string
-    label: string
-    description: string
-    color: string
-}
-
-export interface FieldSetting {
-    id: string
-    name: string
-    type: FieldTypeEnum
-    description?: string
-    required: boolean
-    primary: boolean
-    enumId?: string
-    defaultValue?: string
-    format?: string // for datetime
-    validation?: string // for string/number
-    unique?: boolean // for string/number — disallow duplicate values within the field
-    /**
-     * Value-formula template. When non-empty, the cell value in every
-     * row of this column is derived from the formula rather than
-     * user-typed. Placeholders supported:
-     *   `#FIELD("name")` → same-row sibling cell as absolute A1 ref
-     *   `#KEY`            → this row's key value as a quoted string
-     * Setting this implicitly makes the field uneditable (the formula
-     * is the constraint). See `logisheets-engine`'s
-     * {@link expandFieldFormula} for substitution.
-     */
-    valueFormula?: string
-    // For fieldRef: the (sheet, block, field) the cell pulls its dropdown
-    // options from. Eligible target fields are those with `unique: true` on
-    // the engine FieldInfo (which includes primary keys, since we stamp
-    // unique=true on primary at save time).
-    //
-    // When `refSelf` is true the target is the block being composed itself.
-    // Since the new block's id isn't allocated until save, refSheetId and
-    // refBlockId are ignored in that case and resolved at save time. The
-    // engine FieldInfo always stores concrete ids, so this flag never
-    // leaves the composer.
-    refSelf?: boolean
-    refSheetId?: number
-    refBlockId?: number
-    refFieldName?: string
-}
-
+// COLORS is a UI palette for the composer — it stays in the UI layer.
 export const COLORS = [
     '#22c55e',
     '#f59e0b',

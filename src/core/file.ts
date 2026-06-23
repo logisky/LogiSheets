@@ -1,5 +1,5 @@
 import {Observable} from 'rxjs'
-import {isArrayBuffer} from './type-guard'
+import {isArrayBuffer} from 'logisheets-core'
 export function getBase64(file: File) {
     const reader = new FileReader()
     return new Observable<string | null>((result) => {

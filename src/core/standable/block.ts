@@ -1,4 +1,4 @@
-import {shallowCopy} from '@/core'
+import {shallowCopy} from 'logisheets-core'
 import {
     BlockCellInfo,
     BlockInfo,

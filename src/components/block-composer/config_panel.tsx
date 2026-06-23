@@ -26,7 +26,8 @@ import {
     Circle as CircleIcon,
     Edit as EditIcon,
 } from '@mui/icons-material'
-import {FieldSetting, EnumValue, FieldTypeEnum, COLORS} from './types'
+import type {FieldSetting, EnumValue, FieldTypeEnum} from 'logisheets-core'
+import {COLORS} from './types'
 import {EnumSetManager, FieldManager} from 'logisheets-engine'
 import {useToast} from '@/ui/notification/useToast'
 

@@ -1,0 +1,53 @@
+{
+    "name": "logisheets-core",
+    "version": "0.1.0",
+    "description": "UI-free LogiSheets logic — runs in the browser or on Node. Depends on logisheets-web only for types; the engine Client is injected by the host.",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./strings": {
+            "types": "./dist/strings/index.d.ts",
+            "default": "./dist/strings/index.js"
+        },
+        "./type-guard": {
+            "types": "./dist/type-guard/index.d.ts",
+            "default": "./dist/type-guard/index.js"
+        },
+        "./selection": {
+            "types": "./dist/selection/index.d.ts",
+            "default": "./dist/selection/index.js"
+        },
+        "./utils": {
+            "types": "./dist/utils/index.d.ts",
+            "default": "./dist/utils/index.js"
+        },
+        "./value": {
+            "types": "./dist/value/index.d.ts",
+            "default": "./dist/value/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run"
+    },
+    "files": [
+        "dist"
+    ],
+    "author": "Jeremy He",
+    "license": "MIT",
+    "peerDependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "logisheets-web": "workspace:*",
+        "typescript": "^5.5.0",
+        "vitest": "^2.0.0"
+    }
+}

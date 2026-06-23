@@ -3295,6 +3295,7 @@ export function createEngine(L: Locale) {
                         )
                     }
                 } catch (e) {
+                    // eslint-disable-next-line no-console
                     console.warn(
                         `round-1 OrderConfiguration sync failed for ${order.orderId}:`,
                         e
@@ -4462,6 +4463,7 @@ export function createEngine(L: Locale) {
                 },
             })
             if (isErrorMessage(tx))
+                // eslint-disable-next-line no-console
                 console.warn('upgrade level bump failed:', tx)
         })
     }
@@ -4668,6 +4670,7 @@ export function createEngine(L: Locale) {
                 },
             })
             if (isErrorMessage(tx))
+                // eslint-disable-next-line no-console
                 console.warn('joint research apply failed:', tx)
         })
     }
@@ -5811,6 +5814,7 @@ export function createEngine(L: Locale) {
                         )
                     }
                 } catch (e) {
+                    // eslint-disable-next-line no-console
                     console.warn(
                         `OrderConfiguration sync failed for ${order.orderId}:`,
                         e
@@ -5907,6 +5911,7 @@ export function createEngine(L: Locale) {
                             false
                         )
                     } catch (e) {
+                        // eslint-disable-next-line no-console
                         console.warn(
                             `advance cleanup failed for ${orderId}:`,
                             e
@@ -5915,6 +5920,7 @@ export function createEngine(L: Locale) {
                 }
             }
         } catch (e) {
+            // eslint-disable-next-line no-console
             console.warn('advance cleanup pass failed:', e)
         }
 

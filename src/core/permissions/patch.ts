@@ -6,7 +6,7 @@ import {
 } from 'logisheets-engine'
 import {toast} from 'react-toastify'
 import {getEngine} from '@/core/engine'
-import {callerRegistry} from './caller-registry'
+import {callerRegistry} from 'logisheets-core'
 
 const CALLER_UUID_KEY = '__callerUuid'
 const PATCHED_FLAG = '__logisheetsPermPatched'

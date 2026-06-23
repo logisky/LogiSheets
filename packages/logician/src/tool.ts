@@ -13,8 +13,8 @@
  *     This keeps capabilities from different crafts from colliding.
  */
 
-import type {Client} from 'logisheets-web'
-import type {CraftInteractionsApi} from './craft-interactions-api'
+import type {Client} from 'logisheets-web/pure'
+import type {CraftInteractionsApi} from './craft-interactions-api.js'
 
 /**
  * Workbook client surface used by tool handlers. We re-export the `Client`

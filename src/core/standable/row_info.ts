@@ -1,5 +1,6 @@
 import {RowInfo} from 'logisheets-engine'
-import {shallowCopy, ptToPx} from '@/core'
+import {shallowCopy} from 'logisheets-core'
+import {ptToPx} from '@/core'
 import {SETTINGS} from '@/core/settings'
 export class StandardRowInfo implements RowInfo {
     constructor(public readonly idx: number) {}

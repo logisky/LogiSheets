@@ -1,4 +1,4 @@
-import {upperCase} from '@/core/strings'
+import {upperCase} from 'logisheets-core'
 import formulas from '../../../resources/funcs/out/funcs.json'
 import {formulaStandable} from '@/core/standable/formula'
 export type Snippet = ReturnType<typeof getAllFormulas>[0]
@@ -7,9 +7,6 @@ const TMP_FLAG = '__LOGI_SHEETS_FORMULA_TMP_FLAG__'
 const PARAM_SEP = ' , '
 const PARAM_ELLIPSE = '...'
 function allFormulas() {
-    /**
-     * TODO(minglong): wait for bazel and merge all function jsons to one json.
-     */
     return formulas.map(formulaStandable)
 }
 
@@ -36,11 +33,6 @@ export function getAllFormulas() {
                 f.argCount.le !== 0
             )
         }
-        /**
-         * 获取到第i个参数的message（包含第i个），返回message和第i个参数在message中的起始位置
-         * @param i 若i为-1，返回默认message
-         * @returns start为-1表示未匹配
-         */
         const getSnippetMessage = (
             i = -1
         ): [
