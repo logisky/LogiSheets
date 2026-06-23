@@ -5,7 +5,7 @@ import {tx} from '@/core/transaction'
 import {
     getNumberSliderBindings,
     type NumberSliderBinding,
-} from '@/core/craft-interactions'
+} from 'logisheets-core'
 import type {CellResolver} from './cell-rect'
 import type {Grid} from 'logisheets-engine'
 

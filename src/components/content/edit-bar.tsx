@@ -3,7 +3,7 @@ import {
     getSelectedCellRange,
 } from 'logisheets-engine'
 import {Cell, ErrorMessage} from 'logisheets-engine'
-import {toA1notation, parseA1notation} from '@/core'
+import {toA1notation, parseA1notation} from 'logisheets-core'
 import {
     SelectedData,
     getFirstCell,
@@ -19,7 +19,7 @@ import {useEngine} from '@/core/engine/provider'
 import {isErrorMessage} from 'logisheets-engine'
 import {TransformOutlined, RuleOutlined} from '@mui/icons-material'
 import {IconButton, Tooltip} from '@mui/material'
-import {callerRegistry} from '@/core/permissions/caller-registry'
+import {callerRegistry} from 'logisheets-core'
 import {isCellUserEditableSync} from '@/core/permissions/field-editable'
 import {
     FormulaEditor,

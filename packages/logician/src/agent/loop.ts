@@ -24,17 +24,17 @@ import type {
     ToolResultEvent,
     UserConfirmEvent,
     UserMessageEvent,
-} from '../conversation'
+} from '../conversation.js'
 import {
     toLlmMessages,
     type AgentContentBlock,
     type AgentMessage,
     type BlobResolver,
-} from '../projection'
-import type {ConversationStore} from '../storage'
-import {toLlmTool, ToolRegistry} from '../tool'
-import type {Tool, ToolContext, WorkbookClient} from '../tool'
-import type {CraftInteractionsApi} from '../craft-interactions-api'
+} from '../projection.js'
+import type {ConversationStore} from '../storage.js'
+import {toLlmTool, ToolRegistry} from '../tool.js'
+import type {Tool, ToolContext, WorkbookClient} from '../tool.js'
+import type {CraftInteractionsApi} from '../craft-interactions-api.js'
 
 // ---------------------------------------------------------------------------
 // LlmClient — minimal surface the loop needs

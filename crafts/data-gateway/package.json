@@ -1,0 +1,21 @@
+{
+    "name": "data-gateway",
+    "version": "0.1.0",
+    "description": "Connect LogiSheets blocks to external systems — import/export structured data",
+    "main": "dist/data-gateway.js",
+    "module": "dist/data-gateway.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/data-gateway && mkdir -p ../../public/data-gateway && cp index.html ../../public/data-gateway/index.html && cp dist/data-gateway.js ../../public/data-gateway/data-gateway.js"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0",
+        "vite": "^5.0.0"
+    }
+}

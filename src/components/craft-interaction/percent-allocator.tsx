@@ -10,7 +10,7 @@ import {
     getPercentAllocatorBindings,
     redistributePercent,
     type PercentAllocatorBinding,
-} from '@/core/craft-interactions'
+} from 'logisheets-core'
 import type {CellResolver} from './cell-rect'
 
 // Palette for pair-identification. Cells in the same `groupId` share

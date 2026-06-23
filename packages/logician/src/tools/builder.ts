@@ -24,15 +24,15 @@ import {
     UpsertFieldFormulasBuilder,
     acquireCraftCalc,
     isErrorMessage,
-} from 'logisheets-web'
-import type {CraftCalc, Value} from 'logisheets-web'
+} from 'logisheets-web/pure'
+import type {CraftCalc, Value} from 'logisheets-web/pure'
 import type {
     ActionEffect,
     Client,
     EditPayload,
     Transaction,
-} from 'logisheets-web'
-import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool'
+} from 'logisheets-web/pure'
+import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool.js'
 
 /** Narrow the workbook client to the concrete `Client` from logisheets-web.
  *  `ctx.workbook: WorkbookClient` is already a type alias for `Client` —
@@ -169,12 +169,13 @@ function detectDateFormat(values: readonly unknown[]): string | null {
         {re: /^\d{4}-\d{1,2}-\d{1,2}$/, fmt: 'yyyy-mm-dd'},
         {re: /^\d{4}\/\d{1,2}\/\d{1,2}$/, fmt: 'yyyy/mm/dd'},
         {re: /^\d{1,2}\/\d{1,2}\/\d{4}$/, fmt: 'mm/dd/yyyy'},
-        {re: /^\d{4}-\d{1,2}-\d{1,2}[ T]\d{1,2}:\d{2}/, fmt: 'yyyy-mm-dd hh:mm'},
+        {
+            re: /^\d{4}-\d{1,2}-\d{1,2}[ T]\d{1,2}:\d{2}/,
+            fmt: 'yyyy-mm-dd hh:mm',
+        },
     ]
     for (const {re, fmt} of patterns) {
-        if (
-            values.every((v) => typeof v === 'string' && re.test(v.trim()))
-        ) {
+        if (values.every((v) => typeof v === 'string' && re.test(v.trim()))) {
             return fmt
         }
     }
@@ -205,9 +206,14 @@ function toExcelSerial(value: unknown, withTime: boolean): number | null {
     if (typeof value !== 'string') return null
     const s = value.trim()
     const m = s.match(
-        /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+        /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
     )
-    let y: number, mo: number, d: number, hh = 0, mm = 0, ss = 0
+    let y: number,
+        mo: number,
+        d: number,
+        hh = 0,
+        mm = 0,
+        ss = 0
     if (m) {
         y = +m[1]
         mo = +m[2]

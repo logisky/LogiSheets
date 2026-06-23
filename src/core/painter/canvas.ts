@@ -64,11 +64,16 @@ export class CanvasApi {
             c.style.height = `${h}px`
         }
 
-        const ctx = c.getContext('2d')
+        const ctx = c.getContext('2d') as
+            | OffscreenCanvasRenderingContext2D
+            | CanvasRenderingContext2D
+            | null
         if (!ctx) {
             return
         }
-        if (ctx instanceof HTMLCanvasElement) {
+        // Only HiDPI-scale the on-screen canvas; the OffscreenCanvas is sized
+        // in device pixels directly by its caller.
+        if (c instanceof HTMLCanvasElement) {
             ctx.scale(dpr(), dpr())
         }
         this._ctx = ctx
@@ -81,7 +86,10 @@ export class CanvasApi {
      */
     setCanvas(canvas: OffscreenCanvas | HTMLCanvasElement) {
         this._canvas = canvas
-        const ctx = canvas.getContext('2d')
+        const ctx = canvas.getContext('2d') as
+            | OffscreenCanvasRenderingContext2D
+            | CanvasRenderingContext2D
+            | null
         if (!ctx) {
             return
         }

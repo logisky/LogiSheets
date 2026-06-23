@@ -16,7 +16,7 @@ import type {
     ConversationEvent,
     ConversationExport,
     ConversationSummary,
-} from './conversation'
+} from './conversation.js'
 
 // ---------------------------------------------------------------------------
 // Interface

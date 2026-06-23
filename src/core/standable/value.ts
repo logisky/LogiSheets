@@ -1,5 +1,5 @@
 import {Value} from 'logisheets-engine'
-import {hasOwnProperty} from '@/core'
+import {hasOwnProperty} from 'logisheets-core'
 export class StandardValue {
     cellValueOneof?:
         | {$case: 'str'; str: string}

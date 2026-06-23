@@ -10,15 +10,15 @@ import {
     BlockInputBuilder,
     DeleteRowsInBlockBuilder,
     isErrorMessage,
-} from 'logisheets-web'
+} from 'logisheets-web/pure'
 import type {
     BlockInfo,
     Client,
     EditPayload,
     Transaction,
     Value,
-} from 'logisheets-web'
-import type {JSONSchema, Tool, ToolContext} from '../tool'
+} from 'logisheets-web/pure'
+import type {JSONSchema, Tool, ToolContext} from '../tool.js'
 
 /** Narrow ToolContext.workbook to the concrete `Client` from
  *  logisheets-web. `WorkbookClient` is a type alias for `Client` —

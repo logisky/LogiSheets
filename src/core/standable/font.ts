@@ -1,5 +1,5 @@
 import {Font, CtFontName, CtUnderlineProperty, Color} from 'logisheets-engine'
-import {shallowCopy} from '@/core'
+import {shallowCopy} from 'logisheets-core'
 import {StandardColor} from './color'
 import {measureText} from './text-measure'
 const DEFAULT_FONT_SIZE = 10

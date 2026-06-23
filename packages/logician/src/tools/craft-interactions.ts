@@ -19,10 +19,10 @@
  * tools return a structured "not available" result instead of throwing.
  */
 
-import {isErrorMessage} from 'logisheets-web'
-import type {BlockInfo, Client} from 'logisheets-web'
-import type {CraftInteractionsApi} from '../craft-interactions-api'
-import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool'
+import {isErrorMessage} from 'logisheets-web/pure'
+import type {BlockInfo, Client} from 'logisheets-web/pure'
+import type {CraftInteractionsApi} from '../craft-interactions-api.js'
+import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool.js'
 
 function asClient(ctx: ToolContext): Client {
     return ctx.workbook as Client
@@ -121,7 +121,10 @@ const CELL_REF_SCHEMA: JSONSchema = {
     type: 'object',
     description: 'Addresses a block cell by field name and row key.',
     properties: {
-        row_key: {type: 'string', description: "Value of the block's key column."},
+        row_key: {
+            type: 'string',
+            description: "Value of the block's key column.",
+        },
         field: {type: 'string'},
     },
     required: ['row_key', 'field'],
@@ -404,7 +407,12 @@ const registerNumberSlider: Tool<RegisterSliderInput> = {
         const rb = blocks.get(input.block)
         if (!rb) throw new Error(`no block with ref name "${input.block}"`)
 
-        const c = resolveCell(rb, input.block, input.cell.row_key, input.cell.field)
+        const c = resolveCell(
+            rb,
+            input.block,
+            input.cell.row_key,
+            input.cell.field
+        )
         api.clearNumberSliders(input.group_id)
         api.registerNumberSlider({
             groupId: input.group_id,
@@ -526,14 +534,18 @@ const readSelection: Tool<ReadInput> = {
                 const selected = api.getRadioSelection(input.group_id) ?? null
                 return {
                     data: {group_id: input.group_id, selected},
-                    display: `radio "${input.group_id}" = ${selected ?? '(none)'}`,
+                    display: `radio "${input.group_id}" = ${
+                        selected ?? '(none)'
+                    }`,
                 }
             }
             case 'multi_select': {
                 const selected = api.getMultiSelectSelections(input.group_id)
                 return {
                     data: {group_id: input.group_id, selected},
-                    display: `multi-select "${input.group_id}" = [${selected.join(', ')}]`,
+                    display: `multi-select "${
+                        input.group_id
+                    }" = [${selected.join(', ')}]`,
                 }
             }
             case 'point': {

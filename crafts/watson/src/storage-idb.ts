@@ -237,6 +237,7 @@ export class IdbConversationStore implements ConversationStore {
             error: (err) => {
                 // Don't crash the host — surface to the console and let the
                 // caller decide what to do.
+                // eslint-disable-next-line no-console
                 console.error('[watson.idb] liveQuery error', err)
             },
         })

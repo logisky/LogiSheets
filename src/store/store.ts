@@ -1,8 +1,6 @@
 import {makeObservable, observable, action} from 'mobx'
 import {createContext} from 'react'
-import {Subject} from 'rxjs'
 import {SelectedData} from 'logisheets-engine'
-import {EventData} from './event'
 
 /**
  * The selection context of whichever view is currently active. The single
@@ -21,7 +19,6 @@ export class GlobalStore {
     constructor() {
         makeObservable(this)
     }
-    $event = new Subject<EventData>()
 
     @observable isTempMode = false
 
@@ -71,10 +68,6 @@ export class GlobalStore {
 
     @action setDiffLayerEnabled(v: boolean) {
         this.diffLayerEnabled = v
-    }
-
-    purge() {
-        this.$event.complete()
     }
 }
 

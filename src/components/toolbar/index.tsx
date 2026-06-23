@@ -32,7 +32,7 @@ import {tx} from '@/core/transaction'
 import {
     getPersistentInteractions,
     loadPersistentInteractions,
-} from '@/core/craft-interactions'
+} from 'logisheets-core'
 import {ColorResult, SketchPicker} from 'react-color'
 import Modal from 'react-modal'
 import Tooltip from '@mui/material/Tooltip'

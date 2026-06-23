@@ -1,5 +1,11 @@
 import {Value} from 'logisheets-engine'
 import type {FieldInfo} from 'logisheets-engine'
+import {
+    isValueEmpty,
+    valueToString as coreValueToString,
+    valueToNumber as coreValueToNumber,
+    valueToDisplayString as coreValueToDisplayString,
+} from 'logisheets-core'
 
 // Geometry + data shared by every rendered cell, regardless of category.
 export interface BlockCellProps {
@@ -44,36 +50,14 @@ export interface InteractiveCellSpec extends BlockCellProps {
 // rendered cell is exactly one of the two.
 export type RenderedCellSpec = DisplayCellSpec | InteractiveCellSpec
 
-// Helper function to extract string from Value
-export const valueToString = (val: Value): string => {
-    if (val === 'empty') return ''
-    if (val.type === 'str') return val.value
-    return ''
-}
-
-// Helper function to extract number from Value
-export const valueToNumber = (val: Value): number | null => {
-    if (val === 'empty') return null
-    if (val.type === 'number') return val.value
-    return null
-}
-
-// Coerce any Value to its display string. Used by fieldRef cells where the
-// referenced field may be string or number — and where the cell stores the
-// referenced value verbatim, no id↔label split.
-export const valueToDisplayString = (val: Value): string => {
-    if (val === 'empty') return ''
-    if (val.type === 'str') return val.value
-    if (val.type === 'number') return String(val.value)
-    if (val.type === 'bool') return val.value ? 'TRUE' : 'FALSE'
-    return ''
-}
-
-const isValueEmpty = (v: Value): boolean => {
-    if (v === 'empty') return true
-    if (v.type === 'str' && v.value === '') return true
-    return false
-}
+// Value helpers now live in logisheets-core (UI-free). Re-exported here so the
+// renderers keep their existing import sites.
+export const valueToString = (val: Value): string =>
+    coreValueToString(val as never)
+export const valueToNumber = (val: Value): number | null =>
+    coreValueToNumber(val as never)
+export const valueToDisplayString = (val: Value): string =>
+    coreValueToDisplayString(val as never)
 
 const pickInteractiveKind = (field: FieldInfo): InteractiveCellKind | null => {
     switch (field.type.type) {
@@ -124,7 +108,7 @@ export const buildRenderedCells = (
         out.push({...base, kind: 'display', displayKind: 'validation'})
     }
 
-    if (base.fieldInfo.required && isValueEmpty(base.value)) {
+    if (base.fieldInfo.required && isValueEmpty(base.value as never)) {
         out.push({...base, kind: 'display', displayKind: 'required'})
     }
 

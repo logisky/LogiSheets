@@ -28,7 +28,7 @@ import {
     unregisterPercentAllocator,
     clearPercentAllocators,
     type PercentAllocatorBinding,
-} from '@/core/craft-interactions'
+} from 'logisheets-core'
 import {makeCellResolver} from './cell-rect'
 import {RadioLayer} from './radio'
 import {MultiSelectLayer} from './multi-select'
@@ -116,7 +116,10 @@ export function injectCraftInteractionAPIs(win: Window): void {
     w.registerNumberSlider = (binding: NumberSliderBinding) =>
         registerNumberSlider(binding)
     w.unregisterNumberSlider = (
-        binding: Pick<NumberSliderBinding, 'groupId' | 'blockId' | 'row' | 'col'>
+        binding: Pick<
+            NumberSliderBinding,
+            'groupId' | 'blockId' | 'row' | 'col'
+        >
     ) => unregisterNumberSlider(binding)
     w.clearNumberSliders = (groupId?: string) => clearNumberSliders(groupId)
 

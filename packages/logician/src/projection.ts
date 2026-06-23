@@ -18,7 +18,7 @@ import type {
     SystemNoteEvent,
     ToolCallEvent,
     ToolResultEvent,
-} from './conversation'
+} from './conversation.js'
 
 // ---------------------------------------------------------------------------
 // Agent IR (Anthropic-compatible shape, used by all LlmClient adapters)
@@ -200,10 +200,11 @@ function stringifyOutput(
 ): string {
     if (typeof output === 'string') return output
     if (output && typeof output === 'object') {
-        const ref = (output as {kind?: string; ref?: unknown}).kind ===
-            'blob_ref' && typeof (output as {ref?: unknown}).ref === 'string'
-            ? (output as {ref: string}).ref
-            : null
+        const ref =
+            (output as {kind?: string; ref?: unknown}).kind === 'blob_ref' &&
+            typeof (output as {ref?: unknown}).ref === 'string'
+                ? (output as {ref: string}).ref
+                : null
         if (ref) {
             const resolved = resolveBlob ? resolveBlob(ref) : null
             return resolved ?? `(blob ${ref} — not resolved)`
@@ -311,16 +312,17 @@ export function toUiBubbles(
                 continue
 
             case 'tool_call': {
-                const idx = bubbles.push({
-                    kind: 'tool',
-                    id: e.id,
-                    ts: e.ts,
-                    turn_id: e.turn_id,
-                    tool_use_id: e.tool_use_id,
-                    name: e.name,
-                    input: e.input,
-                    pending: true,
-                }) - 1
+                const idx =
+                    bubbles.push({
+                        kind: 'tool',
+                        id: e.id,
+                        ts: e.ts,
+                        turn_id: e.turn_id,
+                        tool_use_id: e.tool_use_id,
+                        name: e.name,
+                        input: e.input,
+                        pending: true,
+                    }) - 1
                 toolBubbleByUseId.set(e.tool_use_id, idx)
                 continue
             }
@@ -377,10 +379,11 @@ export function toUiBubbles(
 
     // Tag the last assistant_text of each turn so the UI can add trailing
     // spacing / show a "done" marker without inspecting siblings at render.
-    let lastAssistantIdxByTurn = new Map<string, number>()
+    const lastAssistantIdxByTurn = new Map<string, number>()
     for (let i = 0; i < bubbles.length; i++) {
         const b = bubbles[i]
-        if (b.kind === 'assistant_text') lastAssistantIdxByTurn.set(b.turn_id, i)
+        if (b.kind === 'assistant_text')
+            lastAssistantIdxByTurn.set(b.turn_id, i)
     }
     for (const i of lastAssistantIdxByTurn.values()) {
         ;(bubbles[i] as AssistantTextBubble).last_in_turn = true

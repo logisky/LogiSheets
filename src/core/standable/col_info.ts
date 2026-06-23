@@ -1,5 +1,6 @@
 import {ColInfo} from 'logisheets-engine'
-import {findMdwColw, ptToPx, shallowCopy, width2px, widthToPx} from '@/core'
+import {shallowCopy} from 'logisheets-core'
+import {findMdwColw, ptToPx, width2px, widthToPx} from '@/core'
 import {SETTINGS} from '@/core/settings'
 export class StandardColInfo implements ColInfo {
     constructor(public readonly idx: number) {}
