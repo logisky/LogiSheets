@@ -420,6 +420,38 @@ export class Workbook {
         return new Worksheet(this._id, idx)
     }
 
+    /**
+     * Fill-handle drag: predict the contents for `dst` from the source
+     * block `src` and commit them as a single (undoable) transaction.
+     *
+     * The semantics (formula reference shift, arithmetic series, value
+     * copy) live in the Rust engine; this just predicts then dispatches.
+     * Returns the prediction error if the ranges don't align on one axis.
+     */
+    public fill(
+        sheetIdx: number,
+        src: {
+            startRow: number
+            startCol: number
+            endRow: number
+            endCol: number
+        },
+        dst: {
+            startRow: number
+            startCol: number
+            endRow: number
+            endCol: number
+        }
+    ): Result<ActionEffect> {
+        const inputs = this.getWorksheet(sheetIdx).predictFill(src, dst)
+        if (isErrorMessage(inputs)) return inputs
+        return this.execTransaction({
+            payloads: inputs.map((value) => ({type: 'cellInput', value})),
+            undoable: true,
+            temp: false,
+        })
+    }
+
     public getWorksheetById(id: number): Worksheet {
         return new Worksheet(this._id, id, false)
     }

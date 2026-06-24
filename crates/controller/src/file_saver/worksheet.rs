@@ -2,7 +2,7 @@ use std::vec;
 
 use itertools::Itertools;
 use logisheets_base::SheetId;
-use logisheets_parser::unparse::Stringify;
+use logisheets_parser::unparse::{CellShift, Stringify};
 use logisheets_workbook::{
     logisheets::{BlockLineInfo, BlockRange},
     prelude::{
@@ -372,7 +372,7 @@ fn save_sheet_data<S: SaverTrait>(
                 .formulas
                 .get(&(sheet_id, id))
                 .and_then(|node| {
-                    let f = node.unparse(saver, sheet_id).unwrap();
+                    let f = node.unparse(saver, sheet_id, CellShift::ZERO).unwrap();
                     Some(CtFormula {
                         formula: Some(f),
                         t: StCellFormulaType::Normal, // we only support normal formula for now

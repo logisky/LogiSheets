@@ -2,7 +2,7 @@
  * DataService - main service for interacting with the spreadsheet engine.
  * Combines WorkbookClient and OffscreenClient functionality.
  */
-import type { SheetInfo, SheetDimension, MergeCell, Transaction, ErrorMessage } from "logisheets-web";
+import type { SheetInfo, SheetDimension, MergeCell, Transaction, ErrorMessage, CellInput } from "logisheets-web";
 import { Cell } from "logisheets-web";
 import { WorkbookClient } from "./workbook";
 import type { Grid } from "$types/index";
@@ -39,6 +39,38 @@ export declare class DataService {
     getAvailableBlockId(sheetIdx: number): Resp<number>;
     checkFormula(formula: string): Promise<boolean>;
     handleTransaction(transaction: Transaction, temp?: boolean): Resp<void>;
+    /**
+     * Predict-only fill: ask the engine what each target cell should
+     * receive, without committing. Used to render the drag preview.
+     */
+    predictFill(sheetIdx: number, src: {
+        startRow: number;
+        startCol: number;
+        endRow: number;
+        endCol: number;
+    }, dst: {
+        startRow: number;
+        startCol: number;
+        endRow: number;
+        endCol: number;
+    }): Resp<readonly CellInput[]>;
+    private _fillParams;
+    /**
+     * Fill-handle commit: predict the contents for `dst` from source block
+     * `src`, then apply them as a single undoable transaction (so the whole
+     * drag is one undo step and flows through the normal event pipeline).
+     */
+    fill(sheetIdx: number, src: {
+        startRow: number;
+        startCol: number;
+        endRow: number;
+        endCol: number;
+    }, dst: {
+        startRow: number;
+        startCol: number;
+        endRow: number;
+        endCol: number;
+    }): Resp<void>;
     handleTransactionAndAdjustRowHeights(transaction: Transaction, onlyIncrease?: boolean, fromRowIdx?: number, toRowIdx?: number): Resp<void>;
     undo(): Resp<void>;
     redo(): Resp<void>;

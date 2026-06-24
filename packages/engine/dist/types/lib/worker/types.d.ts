@@ -21,6 +21,7 @@ export declare enum MethodName {
     GetCell = "getCell",
     GetCells = "getCells",
     GetCellsExceptWindow = "getCellsExceptWindow",
+    PredictFill = "predictFill",
     GetBlockInfo = "getBlockInfo",
     GetCellPosition = "getCellPosition",
     Undo = "undo",

@@ -1,5 +1,6 @@
 use logisheets_rs::{
-    BasicError, BlockId, CellPosition, ColInfo, DiyCellId, Error, SheetCoordinate, SheetId,
+    BasicError, BlockId, CellPosition, ColInfo, DiyCellId, Error, FillRange, SheetCoordinate,
+    SheetId,
 };
 use wasm_bindgen::prelude::*;
 
@@ -250,6 +251,39 @@ pub fn get_cell_infos(
     let wb = manager.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
     let result = ws.get_cell_infos(start_row, start_col, end_row, end_col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn predict_fill(
+    id: usize,
+    sheet_idx: usize,
+    src_start_row: usize,
+    src_start_col: usize,
+    src_end_row: usize,
+    src_end_col: usize,
+    dst_start_row: usize,
+    dst_start_col: usize,
+    dst_end_row: usize,
+    dst_end_col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let src = FillRange {
+        start_row: src_start_row,
+        start_col: src_start_col,
+        end_row: src_end_row,
+        end_col: src_end_col,
+    };
+    let dst = FillRange {
+        start_row: dst_start_row,
+        start_col: dst_start_col,
+        end_row: dst_end_row,
+        end_col: dst_end_col,
+    };
+    let result = wb.predict_fill(sheet_idx, src, dst);
     handle_result!(result);
     serde_wasm_bindgen::to_value(&result).unwrap()
 }

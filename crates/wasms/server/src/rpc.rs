@@ -2,7 +2,7 @@ use gents_derives::{Interface, TS};
 use logisheets_rs::BlockId;
 use logisheets_rs::{
     ActionEffect, AppData, AppendixWithCell, BlockField, BlockInfo, CellCoordinateWithSheet,
-    CellInfo, CellPosition, ColId, DisplayWindow, DisplayWindowWithStartPoint, EditPayload,
+    CellInfo, CellInput, CellPosition, ColId, DisplayWindow, DisplayWindowWithStartPoint, EditPayload,
     ErrorMessage, FormulaDisplayInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
     ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style,
     TempStatusDiff, Value,
@@ -28,6 +28,7 @@ pub enum Message {
     GetStyle(GetCellParams),
     GetCells(GetCellsParams),
     GetCellsExceptWindow(GetCellsExceptWindowParams),
+    PredictFill(PredictFillParams),
     GetReproducibleCells(GetReproducibleCellsParams),
     GetReproducibleCell(GetReproducibleCellParams),
     GetCellPosition(GetCellPositionParams),
@@ -183,6 +184,20 @@ pub struct GetCellsParams {
     pub start_col: usize,
     pub end_row: usize,
     pub end_col: usize,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_predict_fill_params.ts", rename_all = "camelCase")]
+pub struct PredictFillParams {
+    pub sheet_idx: usize,
+    pub src_start_row: usize,
+    pub src_start_col: usize,
+    pub src_end_row: usize,
+    pub src_end_col: usize,
+    pub dst_start_row: usize,
+    pub dst_start_col: usize,
+    pub dst_end_row: usize,
+    pub dst_end_col: usize,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -628,6 +643,10 @@ pub struct WorkbookMethods {
         params: GetCellsExceptWindowParams,
         book_id: Option<usize>,
     ) -> Result<Vec<CellInfo>, ErrorMessage>,
+    pub predict_fill: fn(
+        params: PredictFillParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<CellInput>, ErrorMessage>,
     pub get_cell_position: fn(
         params: GetCellPositionParams,
         book_id: Option<usize>,
@@ -797,6 +816,18 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.start_col,
             params.end_row,
             params.end_col,
+        ),
+        Message::PredictFill(params) => ws::predict_fill(
+            id,
+            params.sheet_idx,
+            params.src_start_row,
+            params.src_start_col,
+            params.src_end_row,
+            params.src_end_col,
+            params.dst_start_row,
+            params.dst_start_col,
+            params.dst_end_row,
+            params.dst_end_col,
         ),
         Message::GetCellsExceptWindow(params) => ws::get_cell_infos_except_window(
             id,
