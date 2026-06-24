@@ -14,6 +14,7 @@ import {
     AppendixWithCell,
     ReproducibleCell,
     SheetCoordinate,
+    CellInput,
 } from '../bindings'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
@@ -247,6 +248,47 @@ export class Worksheet {
                 windowStartCol,
                 windowEndRow,
                 windowEndCol,
+            },
+            this._id
+        )
+    }
+
+    /**
+     * Predict the fill-handle result: given a source block and the target
+     * block the user dragged over, returns one `CellInput` per target cell
+     * (formula relative-reference shift, arithmetic series, or value copy).
+     *
+     * This is a pure read-only query — it does not mutate the workbook. The
+     * caller wraps the returned inputs in a single transaction (see
+     * `Workbook.fill`) so the fill is one undo step. `src` and `dst` must
+     * align on a single axis (a pure vertical or horizontal drag).
+     */
+    public predictFill(
+        src: {
+            startRow: number
+            startCol: number
+            endRow: number
+            endCol: number
+        },
+        dst: {
+            startRow: number
+            startCol: number
+            endRow: number
+            endCol: number
+        }
+    ): Result<readonly CellInput[]> {
+        return rpc(
+            'predictFill',
+            {
+                sheetIdx: this._sheetIdx,
+                srcStartRow: src.startRow,
+                srcStartCol: src.startCol,
+                srcEndRow: src.endRow,
+                srcEndCol: src.endCol,
+                dstStartRow: dst.startRow,
+                dstStartCol: dst.startCol,
+                dstEndRow: dst.endRow,
+                dstEndCol: dst.endCol,
             },
             this._id
         )

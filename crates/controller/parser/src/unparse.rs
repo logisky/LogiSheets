@@ -12,48 +12,86 @@ use crate::errors::ParseError;
 use super::ast::Node;
 use super::Result;
 
+/// A relative shift (in rows/cols) applied to a formula's **relative**
+/// references while unparsing. This is the core primitive shared by
+/// autofill and (future) copy/paste: emitting an existing formula AST as
+/// if it lived `row`/`col` away from its origin. Absolute components
+/// (`$`) and non-positional references (defined names) are untouched.
+///
+/// Values can be negative (filling up / left). Resolved indices are
+/// clamped at 0 so a shift can never produce a negative coordinate.
+#[derive(Debug, Clone, Copy)]
+pub struct CellShift {
+    pub row: i32,
+    pub col: i32,
+}
+
+impl CellShift {
+    pub const ZERO: CellShift = CellShift { row: 0, col: 0 };
+
+    pub fn new(row: i32, col: i32) -> Self {
+        CellShift { row, col }
+    }
+}
+
+/// Unparse a formula AST back to its textual form (no shift).
 pub fn unparse<T>(node: &Node, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
 where
     T: NameFetcherTrait,
 {
-    node.unparse(fetcher, curr_sheet)
+    node.unparse(fetcher, curr_sheet, CellShift::ZERO)
+}
+
+/// Unparse a formula AST, shifting every relative reference by `shift`.
+/// Used to translate a formula from its source cell to a target cell
+/// (autofill / copy-paste relative-reference adjustment).
+pub fn unparse_with_shift<T>(
+    node: &Node,
+    fetcher: &mut T,
+    curr_sheet: SheetId,
+    shift: CellShift,
+) -> Result<String>
+where
+    T: NameFetcherTrait,
+{
+    node.unparse(fetcher, curr_sheet, shift)
 }
 
 pub trait Stringify {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait;
 }
 
 impl Stringify for Node {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
         if self.bracket {
-            Ok(format!("({})", self.pure.unparse(fetcher, curr_sheet)?))
+            Ok(format!("({})", self.pure.unparse(fetcher, curr_sheet, shift)?))
         } else {
-            self.pure.unparse(fetcher, curr_sheet)
+            self.pure.unparse(fetcher, curr_sheet, shift)
         }
     }
 }
 
 impl Stringify for PureNode {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
         match self {
-            PureNode::Func(func) => func.unparse(fetcher, curr_sheet),
-            PureNode::Value(v) => v.unparse(fetcher, curr_sheet),
-            PureNode::Reference(cr) => cr.unparse(fetcher, curr_sheet),
-            PureNode::BlockRef(node) => node.unparse(fetcher, curr_sheet),
+            PureNode::Func(func) => func.unparse(fetcher, curr_sheet, shift),
+            PureNode::Value(v) => v.unparse(fetcher, curr_sheet, shift),
+            PureNode::Reference(cr) => cr.unparse(fetcher, curr_sheet, shift),
+            PureNode::BlockRef(node) => node.unparse(fetcher, curr_sheet, shift),
         }
     }
 }
 
 impl Stringify for BlockRefNode {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -65,7 +103,7 @@ impl Stringify for BlockRefNode {
                 by_block,
                 key,
             } => {
-                let key_str = key.unparse(fetcher, curr_sheet)?;
+                let key_str = key.unparse(fetcher, curr_sheet, shift)?;
                 let field_name = fetcher
                     .fetch_block_field_name_by_id(*sheet_id, *block_id, *field_id)
                     .unwrap_or_else(|| String::from("#REF!"));
@@ -91,8 +129,8 @@ impl Stringify for BlockRefNode {
                 key_condition,
                 field_condition,
             } => {
-                let kc = key_condition.unparse(fetcher, curr_sheet)?;
-                let fc = field_condition.unparse(fetcher, curr_sheet)?;
+                let kc = key_condition.unparse(fetcher, curr_sheet, shift)?;
+                let fc = field_condition.unparse(fetcher, curr_sheet, shift)?;
                 if *by_block {
                     Ok(format!(
                         "BLOCKREFSB({}, {}, {}, {})",
@@ -110,7 +148,7 @@ impl Stringify for BlockRefNode {
 }
 
 impl Stringify for Func {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -126,7 +164,7 @@ impl Stringify for Func {
                                 prev.push_str(", ");
                             }
                             let arg_str = arg
-                                .unparse(fetcher, curr_sheet)
+                                .unparse(fetcher, curr_sheet, shift)
                                 .unwrap_or(String::from("error")); // todo
                             prev.push_str(&arg_str);
                             prev
@@ -136,21 +174,21 @@ impl Stringify for Func {
             Operator::Infix(op) => {
                 let r = format!(
                     "{} {} {}",
-                    args.get(0).unwrap().unparse(fetcher, curr_sheet)?,
-                    op.unparse(fetcher, curr_sheet)?,
-                    args.get(1).unwrap().unparse(fetcher, curr_sheet)?,
+                    args.get(0).unwrap().unparse(fetcher, curr_sheet, shift)?,
+                    op.unparse(fetcher, curr_sheet, shift)?,
+                    args.get(1).unwrap().unparse(fetcher, curr_sheet, shift)?,
                 );
                 Ok(r)
             }
             Operator::Postfix(op) => Ok(format!(
                 "{}{}",
-                args.get(0).unwrap().unparse(fetcher, curr_sheet)?,
-                op.unparse(fetcher, curr_sheet)?,
+                args.get(0).unwrap().unparse(fetcher, curr_sheet, shift)?,
+                op.unparse(fetcher, curr_sheet, shift)?,
             )),
             Operator::Prefix(op) => Ok(format!(
                 "{}{}",
-                op.unparse(fetcher, curr_sheet)?,
-                args.get(0).unwrap().unparse(fetcher, curr_sheet)?,
+                op.unparse(fetcher, curr_sheet, shift)?,
+                args.get(0).unwrap().unparse(fetcher, curr_sheet, shift)?,
             )),
             Operator::Comma => {
                 let args_str =
@@ -161,7 +199,7 @@ impl Stringify for Func {
                                 prev.push_str(", ");
                             }
                             let arg_str = arg
-                                .unparse(fetcher, curr_sheet)
+                                .unparse(fetcher, curr_sheet, shift)
                                 .unwrap_or(String::from("error"));
                             prev.push_str(&arg_str);
                             prev
@@ -173,22 +211,22 @@ impl Stringify for Func {
 }
 
 impl Stringify for CellReference {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
         match self {
-            CellReference::Mut(mutref) => mutref.unparse(fetcher, curr_sheet),
-            CellReference::UnMut(unmut_ref) => unmut_ref.unparse(fetcher, curr_sheet),
+            CellReference::Mut(mutref) => mutref.unparse(fetcher, curr_sheet, shift),
+            CellReference::UnMut(unmut_ref) => unmut_ref.unparse(fetcher, curr_sheet, shift),
             CellReference::Name(nid) => fetcher.fetch_defined_name(nid).map_err(|e| e.into()),
-            CellReference::Ext(ext_ref) => ext_ref.unparse(fetcher, curr_sheet),
+            CellReference::Ext(ext_ref) => ext_ref.unparse(fetcher, curr_sheet, shift),
             CellReference::RefErr => Ok("#REF!".to_string()),
         }
     }
 }
 
 impl Stringify for CubeDisplay {
-    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, _: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -204,25 +242,25 @@ impl Stringify for CubeDisplay {
         } = self.ref_abs;
         let cross_str = match cube.cross {
             CubeCross::Single(row, col) => {
-                let row_str = get_row_string(start_row, row);
-                let col_str = get_col_string(start_col, col);
+                let row_str = get_row_string(start_row, row, shift.row);
+                let col_str = get_col_string(start_col, col, shift.col);
                 format!("{}{}", col_str, row_str)
             }
             CubeCross::RowRange(start, end) => {
-                let start_str = get_row_string(start_row, start);
-                let end_str = get_col_string(end_row, end);
+                let start_str = get_row_string(start_row, start, shift.row);
+                let end_str = get_col_string(end_row, end, shift.row);
                 format!("{}:{}", start_str, end_str)
             }
             CubeCross::ColRange(start, end) => {
-                let start_str = get_row_string(start_col, start);
-                let end_str = get_col_string(end_col, end);
+                let start_str = get_row_string(start_col, start, shift.col);
+                let end_str = get_col_string(end_col, end, shift.col);
                 format!("{}:{}", start_str, end_str)
             }
             CubeCross::AddrRange(start, end) => {
-                let sr = get_row_string(start_row, start.row);
-                let sc = get_col_string(start_col, start.col);
-                let er = get_row_string(end_row, end.row);
-                let ec = get_col_string(end_col, end.col);
+                let sr = get_row_string(start_row, start.row, shift.row);
+                let sc = get_col_string(start_col, start.col, shift.col);
+                let er = get_row_string(end_row, end.row, shift.row);
+                let ec = get_col_string(end_col, end.col, shift.col);
                 format!("{}{}:{}{}", sc, sr, ec, er)
             }
         };
@@ -231,7 +269,7 @@ impl Stringify for CubeDisplay {
 }
 
 impl Stringify for ExtRefDisplay {
-    fn unparse<T>(&self, fetcher: &mut T, _: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, _: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -255,25 +293,25 @@ impl Stringify for ExtRefDisplay {
         } = self.ref_abs;
         let cross_str = match ext_ref.cross {
             CubeCross::Single(row, col) => {
-                let row_str = get_row_string(start_row, row);
-                let col_str = get_col_string(start_col, col);
+                let row_str = get_row_string(start_row, row, shift.row);
+                let col_str = get_col_string(start_col, col, shift.col);
                 format!("{}{}", col_str, row_str)
             }
             CubeCross::RowRange(start, end) => {
-                let start_str = get_row_string(start_row, start);
-                let end_str = get_col_string(end_row, end);
+                let start_str = get_row_string(start_row, start, shift.row);
+                let end_str = get_col_string(end_row, end, shift.row);
                 format!("{}:{}", start_str, end_str)
             }
             CubeCross::ColRange(start, end) => {
-                let start_str = get_row_string(start_col, start);
-                let end_str = get_col_string(end_col, end);
+                let start_str = get_row_string(start_col, start, shift.col);
+                let end_str = get_col_string(end_col, end, shift.col);
                 format!("{}:{}", start_str, end_str)
             }
             CubeCross::AddrRange(start, end) => {
-                let sr = get_row_string(start_row, start.row);
-                let sc = get_col_string(start_col, start.col);
-                let er = get_row_string(end_row, end.row);
-                let ec = get_col_string(end_col, end.col);
+                let sr = get_row_string(start_row, start.row, shift.row);
+                let sc = get_col_string(start_col, start.col, shift.col);
+                let er = get_row_string(end_row, end.row, shift.row);
+                let ec = get_col_string(end_col, end.col, shift.col);
                 format!("{}{}:{}{}", sc, sr, ec, er)
             }
         };
@@ -281,8 +319,19 @@ impl Stringify for ExtRefDisplay {
     }
 }
 
-fn get_row_string(abs: bool, idx: usize) -> String {
-    let r = (idx + 1).to_string();
+/// Resolve a positional index for display, applying `shift` when the
+/// component is relative (`!abs`). Clamps at 0 so a shift can never
+/// underflow into a negative coordinate.
+fn shifted_idx(abs: bool, idx: usize, shift: i32) -> usize {
+    if abs {
+        idx
+    } else {
+        (idx as i32 + shift).max(0) as usize
+    }
+}
+
+fn get_row_string(abs: bool, idx: usize, shift: i32) -> String {
+    let r = (shifted_idx(abs, idx, shift) + 1).to_string();
     if abs {
         format!("${}", r)
     } else {
@@ -290,8 +339,8 @@ fn get_row_string(abs: bool, idx: usize) -> String {
     }
 }
 
-fn get_col_string(abs: bool, idx: usize) -> String {
-    let c = index_to_column_label(idx);
+fn get_col_string(abs: bool, idx: usize, shift: i32) -> String {
+    let c = index_to_column_label(shifted_idx(abs, idx, shift));
     if abs {
         format!("${}", c)
     } else {
@@ -300,7 +349,7 @@ fn get_col_string(abs: bool, idx: usize) -> String {
 }
 
 impl Stringify for RangeDisplay {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -332,8 +381,8 @@ impl Stringify for RangeDisplay {
                                            col_abs: bool|
                  -> Result<String> {
                     let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::NormalCell(id))?;
-                    let row_str = get_row_string(row_abs, row);
-                    let col_str = get_col_string(col_abs, col);
+                    let row_str = get_row_string(row_abs, row, shift.row);
+                    let col_str = get_col_string(col_abs, col, shift.col);
                     Ok(format!("{}{}", col_str, row_str))
                 };
                 match normal_range {
@@ -343,15 +392,15 @@ impl Stringify for RangeDisplay {
                     NormalRange::RowRange(start, end) => {
                         let start_idx = fetcher.fetch_row_idx(&curr_sheet, &start)?;
                         let end_idx = fetcher.fetch_row_idx(&curr_sheet, &end)?;
-                        let start_str = get_row_string(start_row, start_idx);
-                        let end_str = get_row_string(end_row, end_idx);
+                        let start_str = get_row_string(start_row, start_idx, shift.row);
+                        let end_str = get_row_string(end_row, end_idx, shift.row);
                         Ok(format!("{}:{}", start_str, end_str))
                     }
                     NormalRange::ColRange(start, end) => {
                         let start_idx = fetcher.fetch_col_idx(&curr_sheet, &start)?;
                         let end_idx = fetcher.fetch_col_idx(&curr_sheet, &end)?;
-                        let start_str = get_col_string(start_row, start_idx);
-                        let end_str = get_col_string(end_row, end_idx);
+                        let start_str = get_col_string(start_row, start_idx, shift.col);
+                        let end_str = get_col_string(end_row, end_idx, shift.col);
                         Ok(format!("{}:{}", start_str, end_str))
                     }
                     NormalRange::AddrRange(start, end) => {
@@ -369,8 +418,8 @@ impl Stringify for RangeDisplay {
                                           col_abs: bool|
                  -> Result<String> {
                     let (row, col) = fetcher.fetch_cell_idx(sheet, &CellId::BlockCell(id))?;
-                    let row_str = get_row_string(row_abs, row);
-                    let col_str = get_col_string(col_abs, col);
+                    let row_str = get_row_string(row_abs, row, shift.row);
+                    let col_str = get_col_string(col_abs, col, shift.col);
                     Ok(format!("{}{}", col_str, row_str))
                 };
                 match block_range {
@@ -392,7 +441,7 @@ impl Stringify for RangeDisplay {
 }
 
 impl Stringify for Value {
-    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId) -> Result<String>
+    fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -405,14 +454,14 @@ impl Stringify for Value {
                 false => "FALSE",
             }
             .to_string(),
-            Value::Error(e) => e.unparse(fetcher, curr_sheet)?,
+            Value::Error(e) => e.unparse(fetcher, curr_sheet, shift)?,
         };
         Ok(result)
     }
 }
 
 impl Stringify for Error {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> Result<String>
+    fn unparse<T>(&self, _: &mut T, _: SheetId, _: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -428,7 +477,7 @@ impl Stringify for Error {
 }
 
 impl Stringify for InfixOperator {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> Result<String>
+    fn unparse<T>(&self, _: &mut T, _: SheetId, _: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -453,7 +502,7 @@ impl Stringify for InfixOperator {
 }
 
 impl Stringify for PrefixOperator {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> Result<String>
+    fn unparse<T>(&self, _: &mut T, _: SheetId, _: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {
@@ -466,7 +515,7 @@ impl Stringify for PrefixOperator {
 }
 
 impl Stringify for PostfixOperator {
-    fn unparse<T>(&self, _: &mut T, _: SheetId) -> Result<String>
+    fn unparse<T>(&self, _: &mut T, _: SheetId, _: CellShift) -> Result<String>
     where
         T: NameFetcherTrait,
     {

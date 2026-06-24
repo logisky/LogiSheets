@@ -209,7 +209,7 @@ mod tests {
         let new_ref = build_cell_reference("B1:B3");
         let new_node = node.update_reference_with(&old_ref, &new_ref);
         let mut fetcher = TestFetcher {};
-        let new_f = new_node.unparse(&mut fetcher, 0);
+        let new_f = new_node.unparse(&mut fetcher, 0, crate::unparse::CellShift::ZERO);
         assert_eq!(new_f, "SUM(B1:B3)")
     }
 
@@ -221,7 +221,7 @@ mod tests {
         let new_ref = build_cell_reference("B1:B3");
         let new_node = node.update_reference_with(&old_ref, &new_ref);
         let mut fetcher = TestFetcher {};
-        let new_f = new_node.unparse(&mut fetcher, 0);
+        let new_f = new_node.unparse(&mut fetcher, 0, crate::unparse::CellShift::ZERO);
         assert_eq!(new_f, "SUM(B1:B3, 2, A1)");
     }
 
@@ -233,7 +233,7 @@ mod tests {
         let new_ref = build_cell_reference("A:B");
         let new_node = node.update_reference_with(&old_ref, &new_ref);
         let mut fetcher = TestFetcher {};
-        let new_f = new_node.unparse(&mut fetcher, 0);
+        let new_f = new_node.unparse(&mut fetcher, 0, crate::unparse::CellShift::ZERO);
         assert_eq!(new_f, "SUM(A:B)");
     }
 }

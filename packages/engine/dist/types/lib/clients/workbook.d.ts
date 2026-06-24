@@ -1,7 +1,7 @@
 /**
  * Workbook Client - communicates with the worker for workbook operations.
  */
-import type { SheetInfo, CellInfo, CellPosition, SheetDimension, MergeCell, BlockInfo, FormulaDisplayInfo, CellCoordinate, SheetCellId, Callback, CellIdCallback, ErrorMessage, AppData, BlockField, TempStatusDiff, ShadowCellInfo, Client, ActionEffect } from "logisheets-web";
+import type { SheetInfo, CellInfo, CellPosition, SheetDimension, MergeCell, BlockInfo, FormulaDisplayInfo, CellCoordinate, SheetCellId, Callback, CellIdCallback, ErrorMessage, AppData, BlockField, TempStatusDiff, ShadowCellInfo, Client, ActionEffect, CellInput, PredictFillParams } from "logisheets-web";
 type Resp<T> = Promise<T | ErrorMessage>;
 export declare class WorkbookClient implements Client {
     private _worker;
@@ -40,6 +40,7 @@ export declare class WorkbookClient implements Client {
         row: number;
         col: number;
     }): Resp<CellPosition>;
+    predictFill(params: PredictFillParams): Resp<readonly CellInput[]>;
     getCellId(params: {
         sheetIdx: number;
         rowIdx: number;

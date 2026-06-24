@@ -2,7 +2,7 @@
  * Workbook worker service - handles all workbook-related operations in a Web Worker.
  */
 import { Workbook } from "logisheets-web";
-import type { BlockInfo, CellInfo, CellPosition, DisplayWindowWithStartPoint, MergeCell, SheetDimension, SheetInfo, CellCoordinate, FormulaDisplayInfo, ActionEffect, Value, ReproducibleCell, AppendixWithCell, SheetCellId, ShadowCellInfo, BlockField, AppData, CellCoordinateWithSheet, TempStatusDiff } from "logisheets-web";
+import type { BlockInfo, CellInfo, CellPosition, DisplayWindowWithStartPoint, MergeCell, SheetDimension, SheetInfo, CellCoordinate, FormulaDisplayInfo, ActionEffect, Value, ReproducibleCell, AppendixWithCell, SheetCellId, ShadowCellInfo, BlockField, AppData, CellCoordinateWithSheet, TempStatusDiff, CellInput, PredictFillParams } from "logisheets-web";
 import type { Result, IWorkbookWorker } from "./types";
 export declare class WorkbookWorkerService implements IWorkbookWorker {
     private _ctx;
@@ -39,6 +39,7 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
         endRow: number;
         endCol: number;
     }): Result<readonly CellInfo[]>;
+    predictFill(params: PredictFillParams): Result<readonly CellInput[]>;
     getCellPosition(params: {
         sheetIdx: number;
         row: number;

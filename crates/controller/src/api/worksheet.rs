@@ -79,6 +79,26 @@ impl<'a> Worksheet<'a> {
     }
 
     pub(crate) fn get_formula_by_id(&self, cell_id: &CellId) -> Result<String> {
+        self.get_formula_with_shift_by_id(cell_id, unparse::CellShift::ZERO)
+    }
+
+    /// Whether `cell_id` carries a formula on this sheet.
+    pub(crate) fn has_formula(&self, cell_id: &CellId) -> bool {
+        self.controller
+            .status
+            .formula_manager
+            .formulas
+            .contains_key(&(self.sheet_id, *cell_id))
+    }
+
+    /// Unparse the formula at `cell_id`, shifting every relative reference
+    /// by `shift`. Returns an empty string when the cell has no formula.
+    /// This is the primitive behind autofill's reference translation.
+    pub(crate) fn get_formula_with_shift_by_id(
+        &self,
+        cell_id: &CellId,
+        shift: unparse::CellShift,
+    ) -> Result<String> {
         if let Some(node) = self
             .controller
             .status
@@ -98,7 +118,7 @@ impl<'a> Worksheet<'a> {
                 ext_ref_manager: &self.controller.status.ext_ref_manager,
                 block_schema_manager: &self.controller.status.block_schema_manager,
             };
-            let f = unparse::unparse(node, &mut name_fetcher, self.sheet_id)?;
+            let f = unparse::unparse_with_shift(node, &mut name_fetcher, self.sheet_id, shift)?;
             Ok(f)
         } else {
             Ok(String::from(""))
