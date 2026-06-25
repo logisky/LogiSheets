@@ -16,10 +16,8 @@ import {
     yForRowEnd,
     getReferenceString,
     buildSelectedDataFromCell,
-    CellInputBuilder,
-    Payload,
 } from 'logisheets-engine'
-import {tx} from '@/core/transaction'
+import {useOps} from '@/core/engine/provider'
 import {
     FormulaEditorWrapper,
     FormulaEditorWrapperRef,
@@ -81,6 +79,7 @@ export function InlineCellEditor({
     onSelectionChange,
     onContentChanged,
 }: InlineCellEditorProps) {
+    const ops = useOps()
     const editorRef = useRef<FormulaEditorWrapperRef>(null)
     const [editing, setEditing] = useState(false)
     const [editorContext, setEditorContext] = useState<EditorContext | null>(
@@ -153,16 +152,12 @@ export function InlineCellEditor({
                     return
                 }
             }
-            const payload: Payload = {
-                type: 'cellInput',
-                value: new CellInputBuilder()
-                    .row(editorContext.row)
-                    .col(editorContext.col)
-                    .sheetIdx(sheetIdx)
-                    .content(newText)
-                    .build(),
-            }
-            await dataSvc.handleTransaction(tx([payload], true))
+            await ops.inputCell(
+                sheetIdx,
+                editorContext.row,
+                editorContext.col,
+                newText
+            )
 
             if (restoreSelection) {
                 onSelectionChange(
@@ -181,7 +176,15 @@ export function InlineCellEditor({
             onContentChanged?.()
             focusCanvas()
         },
-        [editorContext, dataSvc, sheetIdx, onSelectionChange, onContentChanged, focusCanvas]
+        [
+            editorContext,
+            dataSvc,
+            ops,
+            sheetIdx,
+            onSelectionChange,
+            onContentChanged,
+            focusCanvas,
+        ]
     )
 
     const cancelEdit = useCallback(() => {

@@ -1,8 +1,6 @@
 import {Box, Tooltip} from '@mui/material'
-import {EphemeralCellInputBuilder, isErrorMessage} from 'logisheets-engine'
 import {interpretValidation} from 'logisheets-core'
-import {useEngine} from '@/core/engine/provider'
-import {tx} from '@/core/transaction'
+import {useOps} from '@/core/engine/provider'
 import {BlockCellProps} from './cell'
 import {useToast} from '@/ui/notification/useToast'
 
@@ -33,29 +31,17 @@ export const ValidationCell = (props: BlockCellProps) => {
         return null
     }
 
-    const engine = useEngine()
-    const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
     const {toast} = useToast()
     const validation = t.validation
 
     if (validation !== '' && shadowValue === undefined) {
-        // We haven't set a shadow cell for calculating the validation
-        DATA_SERVICE.getWorkbook()
-            .getShadowCellId({sheetIdx, rowIdx, colIdx})
-            .then((shadowCellId) => {
-                if (isErrorMessage(shadowCellId)) {
-                    toast.error('Failed to get shadow cell id')
-                    return shadowCellId
-                }
-                const p = new EphemeralCellInputBuilder()
-                    .id(shadowCellId.cellId.value as number)
-                    .sheetIdx(sheetIdx)
-                    .content(`=${validation}`)
-                    .build()
-                DATA_SERVICE.handleTransaction(
-                    tx([{type: 'ephemeralCellInput', value: p}], false)
-                )
-            })
+        // We haven't set a shadow cell for calculating the validation.
+        // The orchestration lives in logisheets-core's WorkbookOps so the
+        // browser and the Node runtime establish validation identically.
+        ops.setValidationRule(sheetIdx, rowIdx, colIdx, validation).catch(() =>
+            toast.error('Failed to set validation rule')
+        )
         // The last step will trigger re-render. So we can return null here
         return null
     }

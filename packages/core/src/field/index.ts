@@ -54,11 +54,6 @@ export interface FieldSetting {
 
 // ---- Constraint checking ------------------------------------------------
 
-/** Read a single cell's evaluated value. */
-export interface CellReadPort {
-    getValue(sheetIdx: number, row: number, col: number): Value
-}
-
 export interface CellRef {
     sheetIdx: number
     row: number
@@ -95,19 +90,19 @@ function valueText(v: Value): string {
 
 /**
  * Check `required` and `unique` across every field column and return all
- * violating cells. Runs identically in the browser and on Node — only the
- * injected `CellReadPort` differs.
+ * violating cells. Pure: the caller supplies `getValue` (WorkbookOps wraps the
+ * engine), so this runs identically in the browser and on Node.
  */
 export function checkFieldConstraints(
-    port: CellReadPort,
-    columns: readonly FieldColumn[]
+    columns: readonly FieldColumn[],
+    getValue: (sheetIdx: number, row: number, col: number) => Value
 ): Violation[] {
     const out: Violation[] = []
     for (const {field, cells, allowed} of columns) {
         const seen = new Map<string, CellRef>()
         const allowedSet = allowed ? new Set(allowed) : undefined
         for (const cell of cells) {
-            const v = port.getValue(cell.sheetIdx, cell.row, cell.col)
+            const v = getValue(cell.sheetIdx, cell.row, cell.col)
             const empty = isEmpty(v)
 
             if (field.required && empty) {

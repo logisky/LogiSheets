@@ -5,7 +5,6 @@ import {Box, IconButton, Tooltip, Typography} from '@mui/material'
 import {Settings as SettingsIcon, Add as AddIcon} from '@mui/icons-material'
 import {
     Grid,
-    DataService,
     BlockManager,
     xForColStart,
     xForColEnd,
@@ -14,14 +13,9 @@ import {
 } from 'logisheets-engine'
 import {ZINDEX_BLOCK_OUTLINER} from '../const'
 import {MenuComponent} from './menu'
-import {useEngine} from '@/core/engine/provider'
+import {useEngine, useOps} from '@/core/engine/provider'
 import type {FieldInfo} from 'logisheets-engine'
-import {
-    BlockCellInfo,
-    InsertRowsInBlockBuilder,
-    BlockDisplayInfo,
-} from 'logisheets-engine'
-import {tx} from '@/core/transaction'
+import {BlockCellInfo, BlockDisplayInfo} from 'logisheets-engine'
 import {LeftTop} from '@/core/settings'
 import {BlockCellProps, RenderedCellSpec, buildRenderedCells} from './cell'
 import {EnumCell} from './enum-cell'
@@ -42,7 +36,6 @@ export interface BlockInterfaceProps {
 export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
     const {grid, canvasStartX, canvasStartY} = props
     const engine = useEngine()
-    const DATA_SERVICE = engine.getDataService()
     const BLOCK_MANAGER = engine.getBlockManager()
 
     if (!grid.blockInfos || grid.blockInfos.length === 0) {
@@ -95,7 +88,6 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         rowCnt={info.rowCnt}
                         colStart={info.colStart}
                         rowStart={info.rowStart}
-                        dataService={DATA_SERVICE}
                         blockManager={BLOCK_MANAGER}
                         canvasStartX={canvasStartX}
                         canvasStartY={canvasStartY}
@@ -121,7 +113,6 @@ interface BlockInterfaceInternalProps {
     rowCnt: number
     colStart: number
     rowStart: number
-    dataService: DataService
     blockManager: BlockManager
     canvasStartX: number
     canvasStartY: number
@@ -144,7 +135,6 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         colStart,
         rowStart,
         title,
-        dataService,
         blockManager,
         canvasStartX,
         canvasStartY,
@@ -152,6 +142,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         grid,
     } = props
 
+    const ops = useOps()
     const [isHover, setIsHover] = useState(false)
     // Allow a global setting to override hover and keep overlays visible.
     const showInfo = globalStore.alwaysShowBlockInfo || isHover
@@ -248,24 +239,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         event.preventDefault()
         event.stopPropagation()
 
-        const payload = new InsertRowsInBlockBuilder()
-            .sheetIdx(sheetIdx)
-            .blockId(blockId)
-            .cnt(1)
-            .start(rowCnt)
-            .build()
-
-        await dataService.handleTransaction(
-            tx(
-                [
-                    {
-                        type: 'insertRowsInBlock',
-                        value: payload,
-                    },
-                ],
-                true
-            )
-        )
+        await ops.insertRowsInBlock(sheetIdx, blockId, rowCnt, 1)
     }
 
     return (

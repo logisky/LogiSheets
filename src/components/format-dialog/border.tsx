@@ -25,12 +25,8 @@ import {
     PreviewLineComponent,
 } from '@/components/toolbar/preview-line'
 import {StBorderStyle, SelectedData} from 'logisheets-engine'
-import {
-    BatchUpdateType,
-    generateBorderPayloads,
-} from '@/components/toolbar/payload'
-import {useEngine} from '@/core/engine/provider'
-import {tx} from '@/core/transaction'
+import {BatchUpdateType} from 'logisheets-core'
+import {useEngine, useOps} from '@/core/engine/provider'
 import {StandardColor} from '@/core/standable'
 
 export interface BorderModel {
@@ -53,6 +49,7 @@ const BorderPanel = forwardRef<BorderPanelHandle, BorderPanelProps>(
     ({value, onChange, selectedData}, ref) => {
         const engine = useEngine()
         const dataSvc = engine.getDataService()
+        const ops = useOps()
         const [color, setColor] = useState<StandardColor>(
             StandardColor.from(0, 0, 0)
         )
@@ -88,16 +85,11 @@ const BorderPanel = forwardRef<BorderPanelHandle, BorderPanelProps>(
                         const sd = selectedData
                         if (!sd) return
                         const sheetIdx = dataSvc.getCurrentSheetIdx()
-                        const payloads = generateBorderPayloads(sheetIdx, sd, {
+                        ops.setBorder(sheetIdx, sd, {
                             batch,
                             color: color.argb(),
                             borderType: style,
                         })
-                        if (payloads.length) {
-                            dataSvc.handleTransaction(
-                                tx(payloads, true)
-                            )
-                        }
                     } catch (e) {
                         // swallow; parent may handle errors/toasts
                     }

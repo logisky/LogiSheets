@@ -18,9 +18,8 @@
 
 import {useState, useEffect, useCallback} from 'react'
 import {autorun} from 'mobx'
-import {useEngine} from '@/core/engine/provider'
+import {useEngine, useOps} from '@/core/engine/provider'
 import {globalStore} from '@/store'
-import {tx} from '@/core/transaction'
 import type {Payload, TempStatusDiff} from 'logisheets-engine'
 import {isErrorMessage} from 'logisheets-engine'
 import {DiffState, CellDiff, EMPTY_DIFF, valueToString} from './types'
@@ -91,6 +90,7 @@ export function useDiffLayer(): UseDiffLayerReturn {
     const engine = useEngine()
     const dataSvc = engine.getDataService()
     const workbook = engine.getWorkbook()
+    const ops = useOps()
 
     const [diffState, setDiffState] = useState<DiffState>(EMPTY_DIFF)
 
@@ -163,41 +163,25 @@ export function useDiffLayer(): UseDiffLayerReturn {
                 // before we mutate.
                 await Promise.resolve()
             }
-            await dataSvc.handleTransaction(tx(payloads, true, true), true)
+            await ops.applyPayloads(payloads)
         },
-        [dataSvc]
+        [ops]
     )
 
     const commit = useCallback(async () => {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const wb = workbook as unknown as Record<string, unknown>
-            if (typeof wb._call === 'function') {
-                const call = wb._call as (
-                    m: string,
-                    args: unknown
-                ) => Promise<unknown>
-                await call('commitTempStatus', undefined)
-            }
+            await ops.commitTempStatus()
         } catch {
-            // commitTempStatus not available on WorkbookClient
+            // commitTempStatus not available on this client
         }
         globalStore.setTempMode(false) // observer clears diff state
-    }, [workbook])
+    }, [ops])
 
     const discard = useCallback(async () => {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const wb = workbook as unknown as Record<string, unknown>
-            if (typeof wb._call === 'function') {
-                const call = wb._call as (
-                    m: string,
-                    args: unknown
-                ) => Promise<unknown>
-                await call('cleanupTempStatus', undefined)
-            }
+            await ops.cleanupTempStatus()
         } catch {
-            // cleanupTempStatus not available on WorkbookClient
+            // cleanupTempStatus not available on this client
         }
         // Re-render to surface the rolled-back state.
         const grid = engine.getGrid()
@@ -205,7 +189,7 @@ export function useDiffLayer(): UseDiffLayerReturn {
             await engine.render(grid.anchorX, grid.anchorY)
         }
         globalStore.setTempMode(false)
-    }, [workbook, engine])
+    }, [ops, engine])
 
     return {
         diffState,

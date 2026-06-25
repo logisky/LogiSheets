@@ -1,16 +1,35 @@
-import {getSelectedCellRange, getSelectedLines} from 'logisheets-engine'
-import {
+// Format payload generators — engine-neutral.
+//
+// These turn a selection (`SelectedData`) plus a style intent into the
+// cell/line style-update payloads the engine applies. They are PURE LOGIC:
+// they build plain payload objects and import only TYPES from logisheets-web,
+// so they carry no runtime dependency and run identically in the browser and
+// on Node. WorkbookOps wraps each one as a named operation (setFont, setBorder,
+// ...); the host only supplies the current sheet index and the selection.
+//
+// Lifted out of the browser's src/components/toolbar/payload.ts so the Node
+// runtime gets the same formatting operations.
+
+import type {
     Alignment,
     Payload,
     StPatternType,
     StBorderStyle,
     SelectedData,
-    CellStyleUpdateBuilder,
-    LineStyleUpdateBuilder,
-    StyleUpdateTypeBuilder,
-    Color,
+    StyleUpdateType,
     PatternFill,
-} from 'logisheets-engine'
+    Color,
+} from 'logisheets-web'
+
+// Local, type-narrowing equivalents of logisheets-web's getSelectedCellRange /
+// getSelectedLines (which are runtime helpers); inlined here to keep this
+// module free of any runtime import.
+function selectedCellRange(v: SelectedData) {
+    return v.data?.ty === 'cellRange' ? v.data.d : undefined
+}
+function selectedLines(v: SelectedData) {
+    return v.data?.ty === 'line' ? v.data.d : undefined
+}
 
 function hexToColor(hex: string): Color {
     let h = hex.startsWith('#') ? hex.slice(1) : hex
@@ -23,6 +42,25 @@ function hexToColor(hex: string): Color {
     }
 }
 
+function cellStyle(
+    sheetIdx: number,
+    row: number,
+    col: number,
+    ty: StyleUpdateType
+): Payload {
+    return {type: 'cellStyleUpdate', value: {sheetIdx, row, col, ty}}
+}
+
+function lineStyle(
+    sheetIdx: number,
+    from: number,
+    to: number,
+    row: boolean,
+    ty: StyleUpdateType
+): Payload {
+    return {type: 'lineStyleUpdate', value: {sheetIdx, from, to, row, ty}}
+}
+
 export interface FontStyle {
     bold?: boolean
     underline?: boolean
@@ -31,57 +69,37 @@ export interface FontStyle {
     size?: number
     strike?: boolean
 }
+
 export function generateFontPayload(
     sheetIdx: number,
     data: SelectedData,
     update: FontStyle
 ): readonly Payload[] {
     if (!data.data) return []
-    const result: Payload[] = []
-    const t = data.data.ty
-    if (t === 'cellRange') {
+    if (data.data.ty === 'cellRange') {
+        const cellTy: StyleUpdateType = {}
+        if (update.bold !== undefined) cellTy.setFontBold = update.bold
+        if (update.underline !== undefined)
+            cellTy.setFontUnderline = update.underline ? 'single' : 'none'
+        if (update.italic !== undefined) cellTy.setFontItalic = update.italic
+        if (update.color) cellTy.setFontColor = update.color
+        if (update.size) cellTy.setFontSize = update.size
+        if (update.strike !== undefined) cellTy.setFontStrike = update.strike
         const d = data.data.d
-        for (let i = d.startRow; i <= d.endRow; i += 1) {
-            for (let j = d.startCol; j <= d.endCol; j += 1) {
-                const style = new StyleUpdateTypeBuilder()
-                if (update.bold !== undefined) style.setFontBold(update.bold)
-                if (update.underline !== undefined)
-                    style.setFontUnderline(update.underline ? 'single' : 'none')
-                if (update.italic !== undefined) style.setFontItalic(update.italic)
-                if (update.color) style.setFontColor(update.color)
-                if (update.size) style.setFontSize(update.size)
-                if (update.strike !== undefined) style.setFontStrike(update.strike)
-                result.push({
-                    type: 'cellStyleUpdate',
-                    value: new CellStyleUpdateBuilder()
-                        .sheetIdx(sheetIdx)
-                        .row(i)
-                        .col(j)
-                        .ty(style.build())
-                        .build(),
-                })
-            }
-        }
+        const result: Payload[] = []
+        for (let i = d.startRow; i <= d.endRow; i += 1)
+            for (let j = d.startCol; j <= d.endCol; j += 1)
+                result.push(cellStyle(sheetIdx, i, j, cellTy))
         return result
     }
     const d = data.data.d
-    const style = new StyleUpdateTypeBuilder()
-    if (update.bold !== undefined) style.setFontBold(update.bold)
+    const lineTy: StyleUpdateType = {}
+    if (update.bold !== undefined) lineTy.setFontBold = update.bold
     if (update.underline !== undefined)
-        style.setFontUnderline(update.underline ? 'single' : 'none')
-    if (update.italic !== undefined) style.setFontItalic(update.italic)
-    if (update.color) style.setFontColor(update.color)
-    result.push({
-        type: 'lineStyleUpdate',
-        value: new LineStyleUpdateBuilder()
-            .sheetIdx(sheetIdx)
-            .row(d.type === 'row')
-            .from(d.start)
-            .to(d.end)
-            .ty(style.build())
-            .build(),
-    })
-    return result
+        lineTy.setFontUnderline = update.underline ? 'single' : 'none'
+    if (update.italic !== undefined) lineTy.setFontItalic = update.italic
+    if (update.color) lineTy.setFontColor = update.color
+    return [lineStyle(sheetIdx, d.start, d.end, d.type === 'row', lineTy)]
 }
 
 export function generateAlgnmentPayload(
@@ -89,118 +107,23 @@ export function generateAlgnmentPayload(
     data: SelectedData,
     alignment: Alignment
 ): readonly Payload[] {
-    if (!data.data) return []
-    const result: Payload[] = []
-    const t = data.data.ty
-    if (t === 'cellRange') {
-        const d = data.data.d
-        for (let i = d.startRow; i <= d.endRow; i += 1) {
-            for (let j = d.startCol; j <= d.endCol; j += 1) {
-                result.push({
-                    type: 'cellStyleUpdate',
-                    value: new CellStyleUpdateBuilder()
-                        .sheetIdx(sheetIdx)
-                        .row(i)
-                        .col(j)
-                        .ty(new StyleUpdateTypeBuilder().setAlignment(alignment).build())
-                        .build(),
-                })
-            }
-        }
-        return result
-    }
-    const d = data.data.d
-    result.push({
-        type: 'lineStyleUpdate',
-        value: new LineStyleUpdateBuilder()
-            .sheetIdx(sheetIdx)
-            .row(d.type === 'row')
-            .from(d.start)
-            .to(d.end)
-            .ty(new StyleUpdateTypeBuilder().setAlignment(alignment).build())
-            .build(),
-    })
-
-    return result
+    return generateForSelection(sheetIdx, data, {setAlignment: alignment})
 }
 
 export function generateWrapTextPayload(
     sheetIdx: number,
     data: SelectedData,
     wrapText: boolean
-): Payload[] {
-    if (!data.data) return []
-    const result: Payload[] = []
-    const t = data.data.ty
-    if (t === 'cellRange') {
-        const d = data.data.d
-        for (let i = d.startRow; i <= d.endRow; i += 1) {
-            for (let j = d.startCol; j <= d.endCol; j += 1) {
-                result.push({
-                    type: 'cellStyleUpdate',
-                    value: new CellStyleUpdateBuilder()
-                        .sheetIdx(sheetIdx)
-                        .row(i)
-                        .col(j)
-                        .ty(new StyleUpdateTypeBuilder().setAlignment({wrapText}).build())
-                        .build(),
-                })
-            }
-        }
-        return result
-    }
-    const d = data.data.d
-    result.push({
-        type: 'lineStyleUpdate',
-        value: new LineStyleUpdateBuilder()
-            .sheetIdx(sheetIdx)
-            .row(d.type === 'row')
-            .from(d.start)
-            .to(d.end)
-            .ty(new StyleUpdateTypeBuilder().setAlignment({wrapText}).build())
-            .build(),
-    })
-
-    return result
+): readonly Payload[] {
+    return generateForSelection(sheetIdx, data, {setAlignment: {wrapText}})
 }
 
 export function generateNumFmtPayload(
     sheetIdx: number,
     data: SelectedData,
     numFmt: string
-): Payload[] {
-    if (!data.data) return []
-    const result: Payload[] = []
-    const t = data.data.ty
-    if (t === 'cellRange') {
-        const d = data.data.d
-        for (let i = d.startRow; i <= d.endRow; i += 1) {
-            for (let j = d.startCol; j <= d.endCol; j += 1) {
-                result.push({
-                    type: 'cellStyleUpdate',
-                    value: new CellStyleUpdateBuilder()
-                        .sheetIdx(sheetIdx)
-                        .row(i)
-                        .col(j)
-                        .ty(new StyleUpdateTypeBuilder().setNumFmt(numFmt).build())
-                        .build(),
-                })
-            }
-        }
-        return result
-    }
-    const d = data.data.d
-    result.push({
-        type: 'lineStyleUpdate',
-        value: new LineStyleUpdateBuilder()
-            .sheetIdx(sheetIdx)
-            .from(d.start)
-            .to(d.end)
-            .row(d.type === 'row')
-            .ty(new StyleUpdateTypeBuilder().setNumFmt(numFmt).build())
-            .build(),
-    })
-    return result
+): readonly Payload[] {
+    return generateForSelection(sheetIdx, data, {setNumFmt: numFmt})
 }
 
 export function generatePatternFillPayload(
@@ -209,44 +132,31 @@ export function generatePatternFillPayload(
     fgColor?: string,
     bgColor?: string,
     pattern?: StPatternType
-): Payload[] {
-    if (!data.data) return []
-    const result: Payload[] = []
+): readonly Payload[] {
     const fill: PatternFill = {}
     if (fgColor) fill.fgColor = hexToColor(fgColor)
     if (bgColor) fill.bgColor = hexToColor(bgColor)
     if (pattern) fill.patternType = pattern
+    return generateForSelection(sheetIdx, data, {setPatternFill: fill})
+}
 
-    const t = data.data.ty
-    if (t === 'cellRange') {
+/** Apply one `StyleUpdateType` across the selection (cell range or line). */
+function generateForSelection(
+    sheetIdx: number,
+    data: SelectedData,
+    ty: StyleUpdateType
+): readonly Payload[] {
+    if (!data.data) return []
+    if (data.data.ty === 'cellRange') {
         const d = data.data.d
-        for (let i = d.startRow; i <= d.endRow; i += 1) {
-            for (let j = d.startCol; j <= d.endCol; j += 1) {
-                result.push({
-                    type: 'cellStyleUpdate',
-                    value: new CellStyleUpdateBuilder()
-                        .sheetIdx(sheetIdx)
-                        .row(i)
-                        .col(j)
-                        .ty(new StyleUpdateTypeBuilder().setPatternFill(fill).build())
-                        .build(),
-                })
-            }
-        }
+        const result: Payload[] = []
+        for (let i = d.startRow; i <= d.endRow; i += 1)
+            for (let j = d.startCol; j <= d.endCol; j += 1)
+                result.push(cellStyle(sheetIdx, i, j, ty))
         return result
     }
     const d = data.data.d
-    result.push({
-        type: 'lineStyleUpdate',
-        value: new LineStyleUpdateBuilder()
-            .sheetIdx(sheetIdx)
-            .from(d.start)
-            .to(d.end)
-            .row(d.type === 'row')
-            .ty(new StyleUpdateTypeBuilder().setPatternFill(fill).build())
-            .build(),
-    })
-    return result
+    return [lineStyle(sheetIdx, d.start, d.end, d.type === 'row', ty)]
 }
 
 type Direction = 'top' | 'bottom' | 'left' | 'right'
@@ -269,7 +179,7 @@ export interface BorderBatchUpdate {
     borderType?: StBorderStyle
 }
 
-export interface BorderUpdate {
+interface BorderUpdate {
     direction: Direction
     color?: string
     borderType?: StBorderStyle
@@ -281,12 +191,10 @@ export function generateBorderPayloads(
     update: BorderBatchUpdate
 ): readonly Payload[] {
     if (update.color) {
-        if (update.color.startsWith('#')) {
-            update.color = update.color.slice(1)
-        }
+        if (update.color.startsWith('#')) update.color = update.color.slice(1)
         update.color = update.color.toUpperCase()
     }
-    const cellRange = getSelectedCellRange(data)
+    const cellRange = selectedCellRange(data)
     if (cellRange) {
         return generateBorderBatchCellPayload(
             sheetIdx,
@@ -305,30 +213,21 @@ function generateBorderBatchLinePayload(
     data: SelectedData,
     update: BorderBatchUpdate
 ): readonly Payload[] {
-    const lineRange = getSelectedLines(data)
+    const lineRange = selectedLines(data)
     if (!lineRange) return []
     const result: Payload[] = []
     const drawLeftBorder = () => {
-        if (lineRange.type === 'row') {
-            return
-        }
+        if (lineRange.type === 'row') return
         result.push(
-            ...generateLineDoubleBorderPayload(
-                sheetIdx,
-                lineRange.start,
-                false,
-                {
-                    direction: 'left',
-                    color: update.color,
-                    borderType: update.borderType,
-                }
-            )
+            ...generateLineDoubleBorderPayload(sheetIdx, lineRange.start, false, {
+                direction: 'left',
+                color: update.color,
+                borderType: update.borderType,
+            })
         )
     }
     const drawRightBorder = () => {
-        if (lineRange.type === 'row') {
-            return
-        }
+        if (lineRange.type === 'row') return
         result.push(
             ...generateLineDoubleBorderPayload(sheetIdx, lineRange.end, false, {
                 direction: 'right',
@@ -337,29 +236,18 @@ function generateBorderBatchLinePayload(
             })
         )
     }
-
     const drawTopBorder = () => {
-        if (lineRange.type !== 'row') {
-            return
-        }
+        if (lineRange.type !== 'row') return
         result.push(
-            ...generateLineDoubleBorderPayload(
-                sheetIdx,
-                lineRange.start,
-                true,
-                {
-                    direction: 'top',
-                    color: update.color,
-                    borderType: update.borderType,
-                }
-            )
+            ...generateLineDoubleBorderPayload(sheetIdx, lineRange.start, true, {
+                direction: 'top',
+                color: update.color,
+                borderType: update.borderType,
+            })
         )
     }
-
     const drawBottomBorder = () => {
-        if (lineRange.type !== 'row') {
-            return
-        }
+        if (lineRange.type !== 'row') return
         result.push(
             ...generateLineDoubleBorderPayload(sheetIdx, lineRange.end, true, {
                 direction: 'bottom',
@@ -368,26 +256,17 @@ function generateBorderBatchLinePayload(
             })
         )
     }
-
     const position = ['top', 'bottom', 'left', 'right']
     const drawInnerBorder = () => {
         for (let i = lineRange.start; i <= lineRange.end; i += 1) {
             position.forEach((p) => {
                 if (lineRange.type === 'row') {
-                    if (p === 'top' && i === lineRange.start) {
-                        return
-                    }
-                    if (p === 'bottom' && i === lineRange.end) {
-                        return
-                    }
+                    if (p === 'top' && i === lineRange.start) return
+                    if (p === 'bottom' && i === lineRange.end) return
                 }
                 if (lineRange.type === 'col') {
-                    if (p === 'left' && i === lineRange.start) {
-                        return
-                    }
-                    if (p === 'right' && i === lineRange.end) {
-                        return
-                    }
+                    if (p === 'left' && i === lineRange.start) return
+                    if (p === 'right' && i === lineRange.end) return
                 }
                 result.push(
                     generateLineSingleBorderPayload(
@@ -414,27 +293,19 @@ function generateBorderBatchLinePayload(
             drawRightBorder()
             break
         case 'top':
-            if (lineRange.type === 'col') {
-                return []
-            }
+            if (lineRange.type === 'col') return []
             drawTopBorder()
             break
         case 'bottom':
-            if (lineRange.type === 'col') {
-                return []
-            }
+            if (lineRange.type === 'col') return []
             drawBottomBorder()
             break
         case 'left':
-            if (lineRange.type === 'row') {
-                return []
-            }
+            if (lineRange.type === 'row') return []
             drawLeftBorder()
             break
         case 'right':
-            if (lineRange.type === 'row') {
-                return []
-            }
+            if (lineRange.type === 'row') return []
             drawRightBorder()
             break
         case 'horizontal':
@@ -460,10 +331,7 @@ function generateBorderBatchLinePayload(
                             sheetIdx,
                             i,
                             lineRange.type === 'row',
-                            {
-                                direction: d as Direction,
-                                borderType: 'none',
-                            }
+                            {direction: d as Direction, borderType: 'none'}
                         )
                     )
                 })
@@ -482,7 +350,7 @@ function generateBorderBatchCellPayload(
 ): readonly Payload[] {
     const payloads: Payload[] = []
     const drawLeftBorder = () => {
-        for (let i = fromRow; i <= toRow; i += 1) {
+        for (let i = fromRow; i <= toRow; i += 1)
             payloads.push(
                 ...generateDoubleBorderPayload(sheetIdx, i, fromCol, {
                     direction: 'left',
@@ -490,10 +358,9 @@ function generateBorderBatchCellPayload(
                     borderType: update.borderType,
                 })
             )
-        }
     }
     const drawRightBorder = () => {
-        for (let i = fromRow; i <= toRow; i += 1) {
+        for (let i = fromRow; i <= toRow; i += 1)
             payloads.push(
                 ...generateDoubleBorderPayload(sheetIdx, i, toCol, {
                     direction: 'right',
@@ -501,10 +368,9 @@ function generateBorderBatchCellPayload(
                     borderType: update.borderType,
                 })
             )
-        }
     }
     const drawTopBorder = () => {
-        for (let j = fromCol; j <= toCol; j += 1) {
+        for (let j = fromCol; j <= toCol; j += 1)
             payloads.push(
                 ...generateDoubleBorderPayload(sheetIdx, fromRow, j, {
                     direction: 'top',
@@ -512,10 +378,9 @@ function generateBorderBatchCellPayload(
                     borderType: update.borderType,
                 })
             )
-        }
     }
     const drawBottomBorder = () => {
-        for (let j = fromCol; j <= toCol; j += 1) {
+        for (let j = fromCol; j <= toCol; j += 1)
             payloads.push(
                 ...generateDoubleBorderPayload(sheetIdx, toRow, j, {
                     direction: 'bottom',
@@ -523,9 +388,7 @@ function generateBorderBatchCellPayload(
                     borderType: update.borderType,
                 })
             )
-        }
     }
-
     const drawInnerBorder = (type: 'vertical' | 'horizontal' | 'all') => {
         for (let i = fromRow; i <= toRow; i += 1) {
             for (let j = fromCol; j <= toCol; j += 1) {
@@ -597,20 +460,14 @@ function generateLineDoubleBorderPayload(
     row: boolean,
     update: BorderUpdate
 ): Payload[] {
-    const result: Payload[] = []
-    result.push(
+    const result: Payload[] = [
         generateLineSingleBorderPayload(sheetIdx, line, row, {
             direction: update.direction,
             color: update.color,
             borderType: update.borderType,
-        })
-    )
-    let direction: Direction
-    if (row) {
-        direction = 'top'
-    } else {
-        direction = 'left'
-    }
+        }),
+    ]
+    const direction: Direction = row ? 'top' : 'left'
     const op = direction === 'top' ? 'bottom' : 'right'
     if (line - 1 >= 0) {
         result.push(
@@ -630,37 +487,28 @@ function generateLineSingleBorderPayload(
     row: boolean,
     update: BorderUpdate
 ): Payload {
-    const style = new StyleUpdateTypeBuilder()
+    const ty: StyleUpdateType = {}
     switch (update.direction) {
         case 'bottom':
             if (!row) break
-            if (update.color) style.setBottomBorderColor(update.color)
-            if (update.borderType) style.setBottomBorderStyle(update.borderType)
+            if (update.color) ty.setBottomBorderColor = update.color
+            if (update.borderType) ty.setBottomBorderStyle = update.borderType
             break
         case 'top':
-            if (update.color) style.setTopBorderColor(update.color)
-            if (update.borderType) style.setTopBorderStyle(update.borderType)
+            if (update.color) ty.setTopBorderColor = update.color
+            if (update.borderType) ty.setTopBorderStyle = update.borderType
             break
         case 'left':
-            if (update.color) style.setLeftBorderColor(update.color)
-            if (update.borderType) style.setLeftBorderStyle(update.borderType)
+            if (update.color) ty.setLeftBorderColor = update.color
+            if (update.borderType) ty.setLeftBorderStyle = update.borderType
             break
         case 'right':
             if (row) break
-            if (update.color) style.setRightBorderColor(update.color)
-            if (update.borderType) style.setRightBorderStyle(update.borderType)
+            if (update.color) ty.setRightBorderColor = update.color
+            if (update.borderType) ty.setRightBorderStyle = update.borderType
             break
     }
-    return {
-        type: 'lineStyleUpdate',
-        value: new LineStyleUpdateBuilder()
-            .sheetIdx(sheetIdx)
-            .from(line)
-            .to(line)
-            .row(row)
-            .ty(style.build())
-            .build(),
-    }
+    return lineStyle(sheetIdx, line, line, row, ty)
 }
 
 function generateDoubleBorderPayload(
@@ -698,34 +546,26 @@ function generateSingleBorderPayload(
     col: number,
     update: BorderUpdate
 ): Payload {
-    const style = new StyleUpdateTypeBuilder()
+    const ty: StyleUpdateType = {}
     switch (update.direction) {
         case 'bottom':
-            if (update.color) style.setBottomBorderColor(update.color)
-            if (update.borderType) style.setBottomBorderStyle(update.borderType)
+            if (update.color) ty.setBottomBorderColor = update.color
+            if (update.borderType) ty.setBottomBorderStyle = update.borderType
             break
         case 'top':
-            if (update.color) style.setTopBorderColor(update.color)
-            if (update.borderType) style.setTopBorderStyle(update.borderType)
+            if (update.color) ty.setTopBorderColor = update.color
+            if (update.borderType) ty.setTopBorderStyle = update.borderType
             break
         case 'left':
-            if (update.color) style.setLeftBorderColor(update.color)
-            if (update.borderType) style.setLeftBorderStyle(update.borderType)
+            if (update.color) ty.setLeftBorderColor = update.color
+            if (update.borderType) ty.setLeftBorderStyle = update.borderType
             break
         case 'right':
-            if (update.color) style.setRightBorderColor(update.color)
-            if (update.borderType) style.setRightBorderStyle(update.borderType)
+            if (update.color) ty.setRightBorderColor = update.color
+            if (update.borderType) ty.setRightBorderStyle = update.borderType
             break
     }
-    return {
-        type: 'cellStyleUpdate',
-        value: new CellStyleUpdateBuilder()
-            .sheetIdx(sheetIdx)
-            .row(row)
-            .col(col)
-            .ty(style.build())
-            .build(),
-    }
+    return cellStyle(sheetIdx, row, col, ty)
 }
 
 function getClearBorderPayload(
@@ -734,28 +574,20 @@ function getClearBorderPayload(
     col: number,
     direction: Direction
 ): Payload {
-    const style = new StyleUpdateTypeBuilder()
+    const ty: StyleUpdateType = {}
     switch (direction) {
         case 'top':
-            style.setTopBorderStyle('none')
+            ty.setTopBorderStyle = 'none'
             break
         case 'bottom':
-            style.setBottomBorderStyle('none')
+            ty.setBottomBorderStyle = 'none'
             break
         case 'left':
-            style.setLeftBorderStyle('none')
+            ty.setLeftBorderStyle = 'none'
             break
         case 'right':
-            style.setRightBorderStyle('none')
+            ty.setRightBorderStyle = 'none'
             break
     }
-    return {
-        type: 'cellStyleUpdate',
-        value: new CellStyleUpdateBuilder()
-            .sheetIdx(sheetIdx)
-            .row(row)
-            .col(col)
-            .ty(style.build())
-            .build(),
-    }
+    return cellStyle(sheetIdx, row, col, ty)
 }

@@ -3,8 +3,10 @@
  * Provides engine access throughout the React component tree
  */
 
-import {createContext, useContext, FC, ReactNode} from 'react'
+import {createContext, useContext, FC, ReactNode, useMemo} from 'react'
 import {Engine} from 'logisheets-engine'
+import {WorkbookOps} from 'logisheets-core'
+import {globalStore} from '@/store'
 
 interface EngineContextValue {
     engine: Engine
@@ -61,4 +63,22 @@ export function useDataService() {
 export function useBlockManager() {
     const engine = useEngine()
     return engine.getBlockManager()
+}
+
+/**
+ * Hook to access the engine-neutral operation layer (logisheets-core).
+ *
+ * High-level workbook operations live in WorkbookOps so they are shared with
+ * the Node runtime; the browser just injects its worker-backed client here.
+ */
+export function useOps(): WorkbookOps {
+    const engine = useEngine()
+    return useMemo(
+        () =>
+            new WorkbookOps(
+                engine.getWorkbook(),
+                () => globalStore.isTempMode
+            ),
+        [engine]
+    )
 }

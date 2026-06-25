@@ -37,14 +37,14 @@ describe('checkValidations', () => {
             'A1>0': {type: 'bool', value: true},
             'A2>0': {type: 'bool', value: false},
         }
-        const port = {
-            evalFormula: (_s: number, f: string) => values[f] as never,
-        }
         const rules = [
             {sheetIdx: 0, row: 0, col: 0, formula: 'A1>0'},
             {sheetIdx: 0, row: 1, col: 0, formula: 'A2>0'},
         ]
-        const out = checkValidations(port, rules)
+        const out = checkValidations(
+            rules,
+            (_s: number, f: string) => values[f] as never
+        )
         expect(out).toHaveLength(1)
         expect(out[0].row).toBe(1)
     })

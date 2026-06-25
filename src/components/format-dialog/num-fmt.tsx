@@ -1,13 +1,6 @@
 import {useMemo, useState, forwardRef, useImperativeHandle} from 'react'
-import {useEngine} from '@/core/engine/provider'
-import {
-    Payload,
-    SelectedData,
-    CellStyleUpdateBuilder,
-    LineStyleUpdateBuilder,
-    StyleUpdateTypeBuilder,
-} from 'logisheets-engine'
-import {tx} from '@/core/transaction'
+import {useEngine, useOps} from '@/core/engine/provider'
+import {SelectedData} from 'logisheets-engine'
 import Box from '@mui/material/Box'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -94,57 +87,20 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
 
         const engine = useEngine()
         const dataSvc = engine.getDataService()
+        const ops = useOps()
 
         useImperativeHandle(
             ref,
             () => ({
                 confirm: () => {
-                    // Prefer internal apply; fallback to external onConfirm
-                    try {
-                        const d = selectedData.data
-                        if (d && d.ty === 'cellRange') {
-                            const {startRow, endRow, startCol, endCol} = d.d
-                            const sheetIdx = dataSvc.getCurrentSheetIdx()
-                            const payloads: Payload[] = []
-                            for (let r = startRow; r <= endRow; r++) {
-                                for (let c = startCol; c <= endCol; c++) {
-                                    payloads.push({
-                                        type: 'cellStyleUpdate',
-                                        value: new CellStyleUpdateBuilder()
-                                            .sheetIdx(sheetIdx)
-                                            .row(r)
-                                            .col(c)
-                                            .ty(new StyleUpdateTypeBuilder().setNumFmt(fmt).build())
-                                            .build(),
-                                    })
-                                }
-                            }
-                            if (payloads.length) {
-                                dataSvc.handleTransaction(
-                                    tx(payloads, true)
-                                )
-                            }
-                        } else if (d && d.ty === 'line') {
-                            const {start, end, type} = d.d
-                            const sheetIdx = dataSvc.getCurrentSheetIdx()
-                            const p: Payload = {
-                                type: 'lineStyleUpdate',
-                                value: new LineStyleUpdateBuilder()
-                                    .sheetIdx(sheetIdx)
-                                    .from(start)
-                                    .to(end)
-                                    .row(type === 'row')
-                                    .ty(new StyleUpdateTypeBuilder().setNumFmt(fmt).build())
-                                    .build(),
-                            }
-                            dataSvc.handleTransaction(
-                                tx([p], true)
-                            )
-                        }
-                    } catch (e) {
+                    ops.setNumFmt(
+                        dataSvc.getCurrentSheetIdx(),
+                        selectedData,
+                        fmt
+                    ).catch((e) => {
                         // eslint-disable-next-line no-console
                         console.error(e)
-                    }
+                    })
                 },
             }),
             [fmt, dataSvc, selectedData]

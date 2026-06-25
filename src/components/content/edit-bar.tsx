@@ -7,15 +7,12 @@ import {toA1notation, parseA1notation} from 'logisheets-core'
 import {
     SelectedData,
     getFirstCell,
-    CellInputBuilder,
-    Payload,
 } from 'logisheets-engine'
-import {tx} from '@/core/transaction'
 import {useEffect, useState, useRef, useCallback, useMemo} from 'react'
 import {observer} from 'mobx-react-lite'
 import {globalStore} from '@/store'
 import styles from './edit-bar.module.scss'
-import {useEngine} from '@/core/engine/provider'
+import {useEngine, useOps} from '@/core/engine/provider'
 import {isErrorMessage} from 'logisheets-engine'
 import {TransformOutlined, RuleOutlined} from '@mui/icons-material'
 import {IconButton, Tooltip} from '@mui/material'
@@ -69,6 +66,7 @@ export const EditBarComponent = observer(function EditBarComponent({
 }: EditBarProps) {
     const engine = useEngine()
     const dataSvc = engine.getDataService()
+    const ops = useOps()
     // Target the active view: the edit bar reads/writes the view the user
     // last focused (highlighted), not always the main one. Falls back to the
     // props (main view) before any view has published a context.
@@ -188,18 +186,9 @@ export const EditBarComponent = observer(function EditBarComponent({
     const sendCellInput = useCallback(
         (newText: string) => {
             const cell = getFirstCell(selectedData)
-            const payload: Payload = {
-                type: 'cellInput',
-                value: new CellInputBuilder()
-                    .sheetIdx(sheetIdx)
-                    .row(cell.y)
-                    .col(cell.x)
-                    .content(newText)
-                    .build(),
-            }
-            dataSvc.handleTransaction(tx([payload], true))
+            ops.inputCell(sheetIdx, cell.y, cell.x, newText)
         },
-        [selectedData, dataSvc]
+        [selectedData, ops, sheetIdx]
     )
 
     const refocusGrid = () => {

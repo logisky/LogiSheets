@@ -1,14 +1,6 @@
-import {
-    SheetRenameBuilder,
-    DeleteSheetBuilder,
-    Payload,
-    isErrorMessage,
-    SetSheetColorBuilder,
-} from 'logisheets-engine'
-import {tx} from '@/core/transaction'
 import {useEffect, useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
-import {useEngine} from '@/core/engine/provider'
+import {useOps} from '@/core/engine/provider'
 import {useToast} from '@/ui/notification/useToast'
 import {StandardColor} from '@/core/standable'
 import styles from './sheets-tab.module.scss'
@@ -51,8 +43,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
     const bodyTabindexRef = useRef(false)
     const oldName = sheetNames[index] || ''
     const [newName, setNewName] = useState(oldName)
-    const engine = useEngine()
-    const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
     const toast = useToast()
 
     const openRename = () => {
@@ -87,19 +78,9 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
     const rename = () => {
         if (!newName) return
         if (newName === oldName) return
-        const sheetRename: Payload = {
-            type: 'sheetRename',
-            value: new SheetRenameBuilder()
-                .oldName(oldName)
-                .newName(newName)
-                .build(),
-        }
-        DATA_SERVICE.handleTransaction(
-            tx([sheetRename], true)
-        ).then((v) => {
-            if (isErrorMessage(v)) return
-            setIsOpen(false)
-        })
+        ops.renameSheet(oldName, newName)
+            .then(() => setIsOpen(false))
+            .catch(() => {})
     }
 
     const deleteSheet = () => {
@@ -109,16 +90,9 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
             )
             return
         }
-        const payload: Payload = {
-            type: 'deleteSheet',
-            value: new DeleteSheetBuilder().idx(index).build(),
-        }
-        DATA_SERVICE.handleTransaction(tx([payload], true)).then(
-            (v) => {
-                if (isErrorMessage(v)) return
-                setIsOpen(false)
-            }
-        )
+        ops.deleteSheet(index)
+            .then(() => setIsOpen(false))
+            .catch(() => {})
     }
 
     // Hover color picker: single anchor position state
@@ -195,30 +169,17 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
     }
 
     const setSheetColor = (color: string) => {
-        let payload: Payload
-        if (color.length === 0) {
-            payload = {
-                type: 'setSheetColor',
-                value: new SetSheetColorBuilder().idx(index).color('').build(),
-            }
-        } else {
-            const {r, g, b} = hexToRgb(color)
-            const standardColor = StandardColor.from(r, g, b, 1)
-            payload = {
-                type: 'setSheetColor',
-                value: new SetSheetColorBuilder()
-                    .idx(index)
-                    .color(standardColor.argb())
-                    .build(),
-            }
-        }
+        const argb =
+            color.length === 0
+                ? ''
+                : (() => {
+                      const {r, g, b} = hexToRgb(color)
+                      return StandardColor.from(r, g, b, 1).argb()
+                  })()
         closeColorPopover()
-        DATA_SERVICE.handleTransaction(tx([payload], true)).then(
-            (v) => {
-                if (isErrorMessage(v)) return
-                setIsOpen(false)
-            }
-        )
+        ops.setSheetColor(index, argb)
+            .then(() => setIsOpen(false))
+            .catch(() => {})
     }
 
     // Compute a compact height and center it vertically within the tab

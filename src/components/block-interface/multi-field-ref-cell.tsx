@@ -1,8 +1,7 @@
 import {useEffect, useState} from 'react'
 import {Box, Select, MenuItem, Checkbox, ListItemText} from '@mui/material'
-import {CellInputBuilder, Payload, isErrorMessage} from 'logisheets-engine'
-import {useEngine} from '@/core/engine/provider'
-import {tx} from '@/core/transaction'
+import {isErrorMessage} from 'logisheets-engine'
+import {useEngine, useOps} from '@/core/engine/provider'
 import {BlockCellProps, valueToDisplayString} from './cell'
 import {blockEditBus} from './edit-bus'
 import {useEditable} from '@/core/permissions/use-editable'
@@ -39,6 +38,7 @@ export const MultiFieldRefCell = (props: BlockCellProps) => {
 
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
     const [isEditing, setIsEditing] = useState(false)
     const [options, setOptions] = useState<string[] | null>(null)
 
@@ -99,14 +99,7 @@ export const MultiFieldRefCell = (props: BlockCellProps) => {
 
     const handleChange = async (next: string[]) => {
         const newContent = serializeList(next)
-        const p = new CellInputBuilder()
-            .sheetIdx(sheetIdx)
-            .row(rowIdx)
-            .col(colIdx)
-            .content(newContent)
-            .build()
-        const payload: Payload = {type: 'cellInput', value: p}
-        await DATA_SERVICE.handleTransaction(tx([payload], true))
+        await ops.inputCell(sheetIdx, rowIdx, colIdx, newContent)
         blockEditBus.emit({
             sheetIdx,
             rowIdx,
