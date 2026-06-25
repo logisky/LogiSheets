@@ -1,7 +1,7 @@
 use gents_derives::{Interface, TS};
 use logisheets_rs::BlockId;
 use logisheets_rs::{
-    ActionEffect, AppData, AppendixWithCell, BlockField, BlockInfo, CellCoordinateWithSheet,
+    ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo, CellCoordinateWithSheet,
     CellInfo, CellInput, CellPosition, ColId, DisplayWindow, DisplayWindowWithStartPoint, EditPayload,
     ErrorMessage, FormulaDisplayInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
     ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style,
@@ -45,6 +45,7 @@ pub enum Message {
     GetMergedCells(GetMergedCellsParams),
     CalcCondition(CalcConditionParams),
     GetCellIdByBlockRef(GetCellIdByBlockRefParams),
+    ExportBlockData(ExportBlockDataParams),
     GetTempStatusChanges,
     GetBlockDisplayWindow(GetBlockDisplayWindowParams),
     GetBlockRowId(GetBlockRowIdParams),
@@ -58,6 +59,7 @@ pub enum Message {
     GetDiyCellIdWithBlockId(GetDiyCellIdWithBlockIdParams),
     LookupAppendixUpward(LookupAppendixUpwardParams),
     GetNextVisibleCell(GetNextVisibleCellParams),
+    GetDataBoundary(GetDataBoundaryParams),
     GetDisplayUnitsOfFormula(GetDisplayUnitsOfFormulaParams),
     GetRowInfo(GetRowInfoParams),
     GetAvailableBlockId(GetAvailableBlockIdParams),
@@ -348,6 +350,16 @@ pub struct GetCellIdByBlockRefParams {
 }
 
 #[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_export_block_data_params.ts", rename_all = "camelCase")]
+pub struct ExportBlockDataParams {
+    pub ref_name: String,
+    /// Keep only rows whose key value is in this list; `null`/omitted = all.
+    pub key_filter: Option<Vec<String>>,
+    /// Keep only these fields (schema order preserved); `null`/omitted = all.
+    pub field_filter: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_block_display_window_params.ts",
     rename_all = "camelCase"
@@ -463,6 +475,15 @@ pub struct LookupAppendixUpwardParams {
     rename_all = "camelCase"
 )]
 pub struct GetNextVisibleCellParams {
+    pub sheet_idx: usize,
+    pub row_idx: usize,
+    pub col_idx: usize,
+    pub direction: Direction,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_data_boundary_params.ts", rename_all = "camelCase")]
+pub struct GetDataBoundaryParams {
     pub sheet_idx: usize,
     pub row_idx: usize,
     pub col_idx: usize,
@@ -665,6 +686,10 @@ pub struct WorkbookMethods {
         params: GetNextVisibleCellParams,
         book_id: Option<usize>,
     ) -> Result<CellPosition, ErrorMessage>,
+    pub get_data_boundary: fn(
+        params: GetDataBoundaryParams,
+        book_id: Option<usize>,
+    ) -> Result<CellPosition, ErrorMessage>,
 
     // Batch operations
     pub batch_get_cell_info_by_id: fn(
@@ -760,6 +785,10 @@ pub struct WorkbookMethods {
         params: GetCellIdByBlockRefParams,
         book_id: Option<usize>,
     ) -> Result<SheetCellId, ErrorMessage>,
+    pub export_block_data: fn(
+        params: ExportBlockDataParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<BlockDataRow>, ErrorMessage>,
     pub get_temp_status_changes: fn(book_id: Option<usize>) -> Result<TempStatusDiff, ErrorMessage>,
     pub check_formula:
         fn(params: CheckFormulaParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
@@ -888,6 +917,12 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         Message::GetCellIdByBlockRef(params) => {
             controller::get_cell_id_by_block_ref(id, params.ref_name, params.key, params.field)
         }
+        Message::ExportBlockData(params) => controller::export_block_data(
+            id,
+            params.ref_name,
+            params.key_filter,
+            params.field_filter,
+        ),
         Message::GetTempStatusChanges => controller::get_temp_status_changes(id),
         Message::GetBlockDisplayWindow(params) => {
             controller::get_display_window_for_block(id, params.sheet_id, params.block_id)
@@ -944,6 +979,13 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.tag,
         ),
         Message::GetNextVisibleCell(params) => ws::get_next_visible_cell(
+            id,
+            params.sheet_idx,
+            params.row_idx,
+            params.col_idx,
+            params.direction,
+        ),
+        Message::GetDataBoundary(params) => ws::get_data_boundary(
             id,
             params.sheet_idx,
             params.row_idx,

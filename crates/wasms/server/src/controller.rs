@@ -266,6 +266,20 @@ pub fn get_cell_id_by_block_ref(
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
 
+pub fn export_block_data(
+    id: usize,
+    ref_name: String,
+    key_filter: Option<Vec<String>>,
+    field_filter: Option<Vec<String>>,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let r = wb.export_block_data(&ref_name, key_filter, field_filter);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
 pub fn get_temp_status_changes(id: usize) -> JsValue {
     init();
     let manager = MANAGER.get();

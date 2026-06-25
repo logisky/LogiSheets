@@ -261,6 +261,30 @@ impl Navigator {
         Ok(bp.get_block_size())
     }
 
+    /// Absolute rectangles `(start_row, start_col, end_row, end_col)` of every
+    /// block on the sheet. Used by data-boundary navigation (Ctrl+Arrow) to
+    /// treat block edges as hard stops. Blocks whose master can't be resolved
+    /// or that are degenerate (zero rows/cols) are skipped.
+    pub fn get_block_rects(&self, sheet_id: &SheetId) -> Vec<(usize, usize, usize, usize)> {
+        let sheet_nav = match self.sheet_navs.get(sheet_id) {
+            Some(sn) => sn,
+            None => return vec![],
+        };
+        let mut rects = vec![];
+        for (_block_id, bp) in sheet_nav.data.blocks.iter() {
+            let (m_row, m_col) = match self.fetch_normal_cell_idx(sheet_id, &bp.master) {
+                Ok(idx) => idx,
+                Err(_) => continue,
+            };
+            let (row_cnt, col_cnt) = bp.get_block_size();
+            if row_cnt == 0 || col_cnt == 0 {
+                continue;
+            }
+            rects.push((m_row, m_col, m_row + row_cnt - 1, m_col + col_cnt - 1));
+        }
+        rects
+    }
+
     #[inline]
     pub fn get_master_cell(
         &self,

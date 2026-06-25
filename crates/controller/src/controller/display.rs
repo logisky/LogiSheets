@@ -20,6 +20,15 @@ pub struct CellCoordinate {
     pub y: usize,
 }
 
+/// One exported block row: the field values in schema (column) order. Wrapping
+/// the row in a struct keeps the exported matrix as `BlockDataRow[]` rather
+/// than a nested `Value[][]`, which the TS binding generator can't render.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "block_data_row.ts", rename_all = "camelCase")]
+pub struct BlockDataRow {
+    pub cells: Vec<crate::Value>,
+}
+
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "cell_coordinate_with_sheet.ts", rename_all = "camelCase")]
 pub struct CellCoordinateWithSheet {

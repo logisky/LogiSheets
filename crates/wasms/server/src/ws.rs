@@ -416,3 +416,25 @@ pub fn get_next_visible_cell(
     handle_result!(result);
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
+
+pub fn get_data_boundary(
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    direction: Direction,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+
+    let result = match direction {
+        Direction::Up => ws.get_upward_data_boundary(row, col),
+        Direction::Down => ws.get_downward_data_boundary(row, col),
+        Direction::Left => ws.get_leftward_data_boundary(row, col),
+        Direction::Right => ws.get_rightward_data_boundary(row, col),
+    };
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}

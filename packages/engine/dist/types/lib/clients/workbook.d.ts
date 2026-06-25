@@ -1,7 +1,7 @@
 /**
  * Workbook Client - communicates with the worker for workbook operations.
  */
-import type { SheetInfo, CellInfo, CellPosition, SheetDimension, MergeCell, BlockInfo, FormulaDisplayInfo, CellCoordinate, SheetCellId, Callback, CellIdCallback, ErrorMessage, AppData, BlockField, TempStatusDiff, ShadowCellInfo, Client, ActionEffect, CellInput, PredictFillParams } from "logisheets-web";
+import type { SheetInfo, CellInfo, CellPosition, SheetDimension, MergeCell, BlockInfo, FormulaDisplayInfo, CellCoordinate, SheetCellId, Callback, CellIdCallback, ErrorMessage, AppData, BlockField, TempStatusDiff, ShadowCellInfo, Client, ActionEffect, CellInput, PredictFillParams, BlockDataRow } from "logisheets-web";
 type Resp<T> = Promise<T | ErrorMessage>;
 export declare class WorkbookClient implements Client {
     private _worker;
@@ -55,6 +55,12 @@ export declare class WorkbookClient implements Client {
         colIdx: number;
         direction: "up" | "down" | "left" | "right";
     }): Resp<CellCoordinate>;
+    getDataBoundary(params: {
+        sheetIdx: number;
+        rowIdx: number;
+        colIdx: number;
+        direction: "up" | "down" | "left" | "right";
+    }): Resp<CellCoordinate>;
     getBlockInfo(params: {
         sheetId: number;
         blockId: number;
@@ -86,6 +92,11 @@ export declare class WorkbookClient implements Client {
         key: string;
         field: string;
     }): Resp<SheetCellId>;
+    exportBlockData(params: {
+        refName: string;
+        keyFilter?: readonly string[];
+        fieldFilter?: readonly string[];
+    }): Resp<readonly BlockDataRow[]>;
     /**
      * Snapshot of all cell-value differences between the active temp
      * branch and the committed (fork) status. Used by the diff layer.

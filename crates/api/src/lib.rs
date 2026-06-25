@@ -26,7 +26,8 @@ pub use logisheets_controller::api::{
 
 // Re-export display types
 pub use logisheets_controller::controller::display::{
-    BlockCellInfo, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema, BlockSchemaRandomEntry,
+    BlockCellInfo, BlockDataRow, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema,
+    BlockSchemaRandomEntry,
     BlockSchemaType, CellCoordinate, CellCoordinateWithSheet, CellPosition, ColInfo, DisplayWindow,
     DisplayWindowRequest, DisplayWindowWithStartPoint, RowInfo, ShadowCellInfo, SheetInfo,
     TempCellChange, TempStatusDiff,
