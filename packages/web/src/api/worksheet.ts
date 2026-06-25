@@ -139,6 +139,55 @@ export class Worksheet {
         )
     }
 
+    // Ctrl+Arrow: jump to the next data/block boundary. Returns an
+    // ErrorMessage when there is no boundary ahead (caller shows a hint).
+    public getUpwardDataBoundary(row: number, col: number): CellPosition {
+        return rpc(
+            'getDataBoundary',
+            {sheetIdx: this._sheetIdx, rowIdx: row, colIdx: col, direction: 'up'},
+            this._id
+        )
+    }
+
+    public getDownwardDataBoundary(row: number, col: number): CellPosition {
+        return rpc(
+            'getDataBoundary',
+            {
+                sheetIdx: this._sheetIdx,
+                rowIdx: row,
+                colIdx: col,
+                direction: 'down',
+            },
+            this._id
+        )
+    }
+
+    public getLeftwardDataBoundary(row: number, col: number): CellPosition {
+        return rpc(
+            'getDataBoundary',
+            {
+                sheetIdx: this._sheetIdx,
+                rowIdx: row,
+                colIdx: col,
+                direction: 'left',
+            },
+            this._id
+        )
+    }
+
+    public getRightwardDataBoundary(row: number, col: number): CellPosition {
+        return rpc(
+            'getDataBoundary',
+            {
+                sheetIdx: this._sheetIdx,
+                rowIdx: row,
+                colIdx: col,
+                direction: 'right',
+            },
+            this._id
+        )
+    }
+
     public getDisplayWindowWithCellPosition(
         row: number,
         col: number,

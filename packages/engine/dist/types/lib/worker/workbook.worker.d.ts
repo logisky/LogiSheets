@@ -2,7 +2,7 @@
  * Workbook worker service - handles all workbook-related operations in a Web Worker.
  */
 import { Workbook } from "logisheets-web";
-import type { BlockInfo, CellInfo, CellPosition, DisplayWindowWithStartPoint, MergeCell, SheetDimension, SheetInfo, CellCoordinate, FormulaDisplayInfo, ActionEffect, Value, ReproducibleCell, AppendixWithCell, SheetCellId, ShadowCellInfo, BlockField, AppData, CellCoordinateWithSheet, TempStatusDiff, CellInput, PredictFillParams } from "logisheets-web";
+import type { BlockInfo, CellInfo, CellPosition, DisplayWindowWithStartPoint, MergeCell, SheetDimension, SheetInfo, CellCoordinate, FormulaDisplayInfo, ActionEffect, Value, ReproducibleCell, AppendixWithCell, SheetCellId, ShadowCellInfo, BlockField, AppData, CellCoordinateWithSheet, BlockDataRow, TempStatusDiff, CellInput, PredictFillParams } from "logisheets-web";
 import type { Result, IWorkbookWorker } from "./types";
 export declare class WorkbookWorkerService implements IWorkbookWorker {
     private _ctx;
@@ -65,6 +65,12 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
     }): Result<readonly CellInfo[]>;
     batchGetCellCoordinateWithSheetById(ids: readonly SheetCellId[]): Result<readonly CellCoordinateWithSheet[]>;
     getNextVisibleCell(args: {
+        sheetIdx: number;
+        rowIdx: number;
+        colIdx: number;
+        direction: "up" | "down" | "left" | "right";
+    }): Result<CellCoordinate>;
+    getDataBoundary(args: {
         sheetIdx: number;
         rowIdx: number;
         colIdx: number;
@@ -151,6 +157,11 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
         key: string;
         field: string;
     }): Result<SheetCellId>;
+    exportBlockData(params: {
+        refName: string;
+        keyFilter?: readonly string[];
+        fieldFilter?: readonly string[];
+    }): Result<readonly BlockDataRow[]>;
     getTempStatusChanges(): Result<TempStatusDiff>;
     checkFormula(params: {
         formula: string;

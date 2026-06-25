@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 
 use crate::block_manager::schema_manager::schema::Schema;
 use crate::block_manager::schema_manager::schema::SchemaTrait;
@@ -31,6 +31,90 @@ use logisheets_parser::unparse;
 
 use super::workbook::CellPositionerDefault;
 use super::{ReproducibleCell, SheetCoordinate, SheetDimension};
+
+/// The pure boundary rule behind Ctrl+Arrow, on a single axis.
+///
+/// - `p0`: current position along the moving axis (row for vertical motion,
+///   column for horizontal).
+/// - `occupied`: sorted positions on this line that hold a non-empty cell
+///   (block-cell values included; ephemeral cells excluded by the caller).
+/// - `blocks`: `(lo, hi)` spans of blocks crossing this line.
+/// - `forward`: `true` for Down/Right, `false` for Up/Left.
+///
+/// Returns the target position, or `None` when there is nowhere to go.
+/// Asymmetry: going backward (Up/Left) with no data/block ahead falls back to
+/// the start edge `0` (cheap and expected); going forward (Down/Right) returns
+/// `None` so the caller can hint instead of jumping to the far end of the sheet.
+///
+/// Rules, going forward (backward is the mirror):
+///   1. Inside a block but not at its far edge → jump to that edge.
+///   2. The immediately adjacent cell enters a block → jump through to the
+///      block's far edge.
+///   3. Otherwise stop at the nearest of: the cell just before a block we'd
+///      enter (a gap precedes it), or the next non-empty data cell.
+fn boundary_1d(
+    p0: usize,
+    occupied: &BTreeSet<usize>,
+    blocks: &[(usize, usize)],
+    forward: bool,
+) -> Option<usize> {
+    let in_block = |p: usize| {
+        blocks
+            .iter()
+            .find(|(lo, hi)| *lo <= p && p <= *hi)
+            .copied()
+    };
+
+    if forward {
+        if let Some((_, hi)) = in_block(p0) {
+            if p0 < hi {
+                return Some(hi);
+            }
+        }
+        if let Some((_, hi)) = in_block(p0 + 1) {
+            return Some(hi);
+        }
+        let mut best: Option<usize> = None;
+        for (lo, _hi) in blocks {
+            if *lo > p0 + 1 {
+                let cand = lo - 1;
+                best = Some(best.map_or(cand, |b| b.min(cand)));
+            }
+        }
+        if let Some(&d) = occupied.range(p0 + 1..).next() {
+            best = Some(best.map_or(d, |b| b.min(d)));
+        }
+        best
+    } else {
+        if let Some((lo, _)) = in_block(p0) {
+            if p0 > lo {
+                return Some(lo);
+            }
+        }
+        if p0 > 0 {
+            if let Some((lo, _)) = in_block(p0 - 1) {
+                return Some(lo);
+            }
+        }
+        let mut best: Option<usize> = None;
+        for (_lo, hi) in blocks {
+            if *hi + 1 < p0 {
+                let cand = hi + 1;
+                best = Some(best.map_or(cand, |b| b.max(cand)));
+            }
+        }
+        if p0 > 0 {
+            if let Some(&d) = occupied.range(..p0).next_back() {
+                best = Some(best.map_or(d, |b| b.max(d)));
+            }
+        }
+        // Backward (Up/Left) falls back to the start edge (0): reaching the
+        // top/left is cheap and expected, unlike walking to the far end. The
+        // forward branch deliberately returns None instead, so Down/Right
+        // hints rather than jumping to the bottom/right of the whole sheet.
+        best.or(if p0 > 0 { Some(0) } else { None })
+    }
+}
 
 // Use a cache to record the coordinate
 pub struct Worksheet<'a> {
@@ -674,6 +758,83 @@ impl<'a> Worksheet<'a> {
         }
 
         Ok(CellCoordinate { x: c, y: row })
+    }
+
+    // ---- Ctrl+Arrow: jump to the next data / block boundary --------------
+
+    /// Ctrl+Up: jump upward to the next data or block boundary in this column.
+    pub fn get_upward_data_boundary(&self, row: usize, col: usize) -> Result<CellCoordinate> {
+        self.data_boundary(row, col, true, false)
+    }
+
+    /// Ctrl+Down: jump downward to the next data or block boundary in this column.
+    pub fn get_downward_data_boundary(&self, row: usize, col: usize) -> Result<CellCoordinate> {
+        self.data_boundary(row, col, true, true)
+    }
+
+    /// Ctrl+Left: jump left to the next data or block boundary in this row.
+    pub fn get_leftward_data_boundary(&self, row: usize, col: usize) -> Result<CellCoordinate> {
+        self.data_boundary(row, col, false, false)
+    }
+
+    /// Ctrl+Right: jump right to the next data or block boundary in this row.
+    pub fn get_rightward_data_boundary(&self, row: usize, col: usize) -> Result<CellCoordinate> {
+        self.data_boundary(row, col, false, true)
+    }
+
+    /// Shared implementation for Ctrl+Arrow. Scans the occupied cells and the
+    /// block rectangles that cross the active line (`vertical` → the column
+    /// `col`; otherwise the row `row`), then delegates the boundary rule to the
+    /// pure [`boundary_1d`]. Returns `Err` when there is no boundary ahead, so
+    /// the host can show a hint instead of jumping to the far edge of the sheet.
+    fn data_boundary(
+        &self,
+        row: usize,
+        col: usize,
+        vertical: bool,
+        forward: bool,
+    ) -> Result<CellCoordinate> {
+        let nav = &self.controller.status.navigator;
+
+        // Non-empty positions along the active line. Block cells map to their
+        // absolute coordinate just like normal cells; ephemeral cells fail
+        // fetch_cell_idx and are skipped — exactly what we want.
+        let mut occupied: BTreeSet<usize> = BTreeSet::new();
+        if let Some(sc) = self.controller.status.container.get_sheet_container(self.sheet_id) {
+            for (id, cell) in sc.cells.iter() {
+                if matches!(cell.value, logisheets_base::CellValue::Blank) {
+                    continue;
+                }
+                if let Ok((r, c)) = nav.fetch_cell_idx(&self.sheet_id, id) {
+                    if vertical {
+                        if c == col {
+                            occupied.insert(r);
+                        }
+                    } else if r == row {
+                        occupied.insert(c);
+                    }
+                }
+            }
+        }
+
+        // Block spans crossing the active line, as (lo, hi) along the moving axis.
+        let mut spans: Vec<(usize, usize)> = vec![];
+        for (r_lo, c_lo, r_hi, c_hi) in nav.get_block_rects(&self.sheet_id) {
+            if vertical {
+                if c_lo <= col && col <= c_hi {
+                    spans.push((r_lo, r_hi));
+                }
+            } else if r_lo <= row && row <= r_hi {
+                spans.push((c_lo, c_hi));
+            }
+        }
+
+        let p0 = if vertical { row } else { col };
+        match boundary_1d(p0, &occupied, &spans, forward) {
+            Some(p) if vertical => Ok(CellCoordinate { x: col, y: p }),
+            Some(p) => Ok(CellCoordinate { x: p, y: row }),
+            None => Err(Error::Basic(BasicError::CellIdNotFound(row, col))),
+        }
     }
 
     pub fn get_cell_info_in_window(
@@ -1772,5 +1933,72 @@ fn advance(reverse: bool, curr: usize) -> usize {
         curr - 1
     } else {
         curr + 1
+    }
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    use super::boundary_1d;
+    use std::collections::BTreeSet;
+
+    fn occ(rows: &[usize]) -> BTreeSet<usize> {
+        rows.iter().copied().collect()
+    }
+
+    #[test]
+    fn next_data_cell_forward() {
+        // Data at 3 and 7; from 0 we stop at the nearest one ahead.
+        let o = occ(&[3, 7]);
+        assert_eq!(boundary_1d(0, &o, &[], true), Some(3));
+        assert_eq!(boundary_1d(3, &o, &[], true), Some(7));
+        // Nothing past 7 -> no boundary.
+        assert_eq!(boundary_1d(7, &o, &[], true), None);
+    }
+
+    #[test]
+    fn next_data_cell_backward() {
+        let o = occ(&[3, 7]);
+        assert_eq!(boundary_1d(10, &o, &[], false), Some(7));
+        assert_eq!(boundary_1d(7, &o, &[], false), Some(3));
+        // No data above row 3 -> fall back to the start edge 0 (Up/Left).
+        assert_eq!(boundary_1d(3, &o, &[], false), Some(0));
+        // Already at the start edge -> nowhere to go.
+        assert_eq!(boundary_1d(0, &o, &[], false), None);
+    }
+
+    #[test]
+    fn backward_falls_back_to_start_forward_does_not() {
+        // Empty line: Up/Left jump to 0; Down/Right find nothing -> None.
+        assert_eq!(boundary_1d(5, &occ(&[]), &[], false), Some(0));
+        assert_eq!(boundary_1d(5, &occ(&[]), &[], true), None);
+    }
+
+    #[test]
+    fn inside_block_jumps_to_far_edge() {
+        let blocks = [(5usize, 9usize)];
+        // From inside (6) going down -> bottom edge 9.
+        assert_eq!(boundary_1d(6, &occ(&[]), &blocks, true), Some(9));
+        // From inside (6) going up -> top edge 5.
+        assert_eq!(boundary_1d(6, &occ(&[]), &blocks, false), Some(5));
+    }
+
+    #[test]
+    fn approach_block_stops_before_entering() {
+        let blocks = [(5usize, 9usize)];
+        // A gap precedes the block: stop at 4, the cell just before it.
+        assert_eq!(boundary_1d(0, &occ(&[]), &blocks, true), Some(4));
+        // Already adjacent (at 4): next press enters and jumps to far edge 9.
+        assert_eq!(boundary_1d(4, &occ(&[]), &blocks, true), Some(9));
+        // At the bottom edge (9): leaving -> nothing further -> None.
+        assert_eq!(boundary_1d(9, &occ(&[]), &blocks, true), None);
+    }
+
+    #[test]
+    fn data_before_block_wins_when_closer() {
+        let blocks = [(10usize, 15usize)];
+        // Data at 8 is closer than the block's pre-edge (9).
+        assert_eq!(boundary_1d(0, &occ(&[8]), &blocks, true), Some(8));
+        // Without that data cell, stop just before the block at 9.
+        assert_eq!(boundary_1d(0, &occ(&[]), &blocks, true), Some(9));
     }
 }

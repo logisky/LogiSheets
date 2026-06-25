@@ -19,6 +19,7 @@ import {
     GetShadowCellIdsParams,
     GetAvailableBlockIdParams,
     TempStatusDiff,
+    BlockDataRow,
 } from '../bindings'
 import {ColId, RowId} from '../types'
 import {Worksheet} from './worksheet'
@@ -202,6 +203,25 @@ export class Workbook {
         field: string
     ): Result<SheetCellId> {
         return rpc('getCellIdByBlockRef', {refName, key, field}, this._id)
+    }
+
+    /**
+     * Export a block's data as a row-per-key, column-per-field matrix of
+     * values. `keyFilter`/`fieldFilter` narrow the rows/columns (omit for
+     * all). Columns follow the schema's field order (filtered); pair them with
+     * the field metadata from the field manager — including which field is the
+     * key — on the caller side.
+     */
+    public exportBlockData(
+        refName: string,
+        keyFilter?: readonly string[],
+        fieldFilter?: readonly string[]
+    ): Result<readonly BlockDataRow[]> {
+        return rpc(
+            'exportBlockData',
+            {refName, keyFilter, fieldFilter},
+            this._id
+        )
     }
 
     /**

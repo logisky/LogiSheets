@@ -73,7 +73,10 @@ export class SpreadsheetRuntime {
 
     /** Read a single cell's evaluated value. */
     public getValue(sheetIdx: number, row: number, col: number): Value {
-        return handle({method: 'getValue', value: {sheetIdx, row, col}}, this.bookId)
+        return handle(
+            {method: 'getValue', value: {sheetIdx, row, col}},
+            this.bookId
+        )
     }
 
     /** Release the workbook's engine resources. */

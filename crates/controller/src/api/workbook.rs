@@ -4,8 +4,8 @@ use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
     controller::{
         display::{
-            BlockField, BlockInfo, CellCoordinateWithSheet, CellPosition, ShadowCellInfo,
-            SheetInfo, TempCellChange, TempStatusDiff, Value as DisplayValue,
+            BlockDataRow, BlockField, BlockInfo, CellCoordinateWithSheet, CellPosition,
+            ShadowCellInfo, SheetInfo, TempCellChange, TempStatusDiff, Value as DisplayValue,
         },
         status::Status,
     },
@@ -634,6 +634,77 @@ impl Workbook {
             sheet_id,
             cell_id: CellId::BlockCell(bcid),
         })
+    }
+
+    /// Export a block's data as a row-per-key, column-per-field matrix of
+    /// values.
+    ///
+    /// - `ref_name`: the block's bound ref name.
+    /// - `key_filter`: when `Some`, keep only rows whose key cell's string
+    ///   value is in the list (order follows the block's keys, not the
+    ///   filter); when `None`, every key row is returned.
+    /// - `field_filter`: when `Some`, keep only these fields, in the schema's
+    ///   field order; when `None`, every field is returned.
+    ///
+    /// Columns follow the same order as `get_all_fields(ref_name)` (filtered),
+    /// so the host can pair each column with that field list and the key index
+    /// it already holds — no metadata is duplicated here.
+    pub fn export_block_data(
+        &self,
+        ref_name: &str,
+        key_filter: Option<Vec<String>>,
+        field_filter: Option<Vec<String>>,
+    ) -> Result<Vec<BlockDataRow>> {
+        let status = &self.controller.status;
+        let navigator = &status.navigator;
+        let schema = &status.block_schema_manager;
+        let bp_fetcher = |sid: &SheetId, bid: &BlockId| navigator.get_block_place(sid, bid).ok();
+
+        let unknown = || BasicError::InvalidFormula(format!("unknown block ref: {}", ref_name));
+
+        // Fields to emit, in schema order, optionally narrowed by the filter.
+        let all_fields = schema.get_all_fields(ref_name).ok_or_else(unknown)?;
+        let fields: Vec<String> = match &field_filter {
+            Some(wanted) => all_fields
+                .into_iter()
+                .filter(|f| wanted.iter().any(|w| w == f))
+                .collect(),
+            None => all_fields,
+        };
+
+        let (sheet_id, key_cell_ids) = schema
+            .get_all_key_cell_ids(ref_name, &bp_fetcher)
+            .ok_or_else(unknown)?;
+
+        let text_fetcher = |id: TextId| status.text_id_manager.get_string(&id).unwrap_or_default();
+        let key_set: Option<std::collections::HashSet<String>> =
+            key_filter.map(|ks| ks.into_iter().collect());
+
+        let mut rows: Vec<BlockDataRow> = vec![];
+        for key_cell in key_cell_ids {
+            if let Some(set) = &key_set {
+                let key_str = status
+                    .container
+                    .get_cell(sheet_id, &CellId::BlockCell(key_cell))
+                    .map(|cell| cell.value.to_string(&text_fetcher))
+                    .unwrap_or_default();
+                if !set.contains(&key_str) {
+                    continue;
+                }
+            }
+            let mut row = Vec::with_capacity(fields.len());
+            for field in &fields {
+                let value = match schema.partially_resolve(ref_name, key_cell, field) {
+                    Some(bcid) => {
+                        read_display_value(status, sheet_id, &CellId::BlockCell(bcid))
+                    }
+                    None => DisplayValue::Empty,
+                };
+                row.push(value);
+            }
+            rows.push(BlockDataRow { cells: row });
+        }
+        Ok(rows)
     }
 
     /// Snapshot of every cell whose value differs between the active
