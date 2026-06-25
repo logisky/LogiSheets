@@ -1,8 +1,7 @@
 import {useEffect, useState} from 'react'
 import {Box, Select, MenuItem} from '@mui/material'
-import {CellInputBuilder, Payload, isErrorMessage} from 'logisheets-engine'
-import {useEngine} from '@/core/engine/provider'
-import {tx} from '@/core/transaction'
+import {isErrorMessage} from 'logisheets-engine'
+import {useEngine, useOps} from '@/core/engine/provider'
 import {BlockCellProps, valueToDisplayString} from './cell'
 import {blockEditBus} from './edit-bus'
 import {useEditable} from '@/core/permissions/use-editable'
@@ -28,6 +27,7 @@ export const FieldRefCell = (props: BlockCellProps) => {
 
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
     const [isEditing, setIsEditing] = useState(false)
     const [options, setOptions] = useState<string[] | null>(null)
 
@@ -87,14 +87,7 @@ export const FieldRefCell = (props: BlockCellProps) => {
 
     const handleChange = async (newValue: string) => {
         setIsEditing(false)
-        const p = new CellInputBuilder()
-            .sheetIdx(sheetIdx)
-            .row(rowIdx)
-            .col(colIdx)
-            .content(newValue)
-            .build()
-        const payload: Payload = {type: 'cellInput', value: p}
-        await DATA_SERVICE.handleTransaction(tx([payload], true))
+        await ops.inputCell(sheetIdx, rowIdx, colIdx, newValue)
         blockEditBus.emit({
             sheetIdx,
             rowIdx,

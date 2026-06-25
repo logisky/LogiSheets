@@ -5,45 +5,65 @@
 // The browser supplies logisheets-engine's worker client; here we supply a
 // synchronous client built on the Node WASM `handle()` entry point.
 //
-// Everything the runtime needs from the engine is funneled through the small
-// ports that logisheets-core defines, so the logic stays shared and only the
-// wiring lives here.
+// All workbook logic lives in logisheets-core's WorkbookOps; the runtime only
+// adapts the synchronous Node `handle()` entry point into the async Client that
+// WorkbookOps consumes, then exposes that ops layer.
 
 import {handle} from 'logisheets/wasm/logisheets_wasm_server.js'
-import type {Value} from 'logisheets-web'
+import type {Value, Client} from 'logisheets-web'
 import {
-    writeRecords,
-    readRecords,
-    checkValidations,
-    checkFieldConstraints,
-    type EnginePort,
-    type ValidationPort,
-    type CellReadPort,
-    type WriteTarget,
+    WorkbookOps,
     type ValidationRule,
     type FieldColumn,
     type Violation,
-    type GatewayTransaction,
 } from 'logisheets-core'
 
 // Re-export the core surface so consumers import everything from one place.
 export * from 'logisheets-core'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Rpc = (method: string, value?: Record<string, unknown>) => any
+/**
+ * Adapt the synchronous Node `handle()` entry point into the async {@link
+ * Client} that logisheets-core's operation layer expects.
+ *
+ * Every WorkbookMethods call has the shape `client.method(params)` and maps
+ * 1:1 onto `handle({method, value: params}, bookId)`, so a single generic
+ * Proxy covers the whole interface — no per-method boilerplate. Results are
+ * wrapped in a resolved Promise so a Node caller can `await` exactly like the
+ * browser. The callback/register* members are not used by the operation layer
+ * and are intentionally absent.
+ */
+function makeNodeClient(bookId: number): Client {
+    return new Proxy(
+        {},
+        {
+            get(_target, prop) {
+                const method = String(prop)
+                return (params?: Record<string, unknown>) =>
+                    Promise.resolve(
+                        handle(
+                            params === undefined
+                                ? method
+                                : {method, value: params},
+                            bookId
+                        )
+                    )
+            },
+        }
+    ) as unknown as Client
+}
 
 /**
  * A live workbook in the Node WASM engine, with logisheets-core's logic
  * available as methods. Construct one per workbook.
  */
-export class SpreadsheetRuntime
-    implements EnginePort, CellReadPort, ValidationPort
-{
+export class SpreadsheetRuntime {
     private readonly bookId: number
-    private ephemeralSeq = 1
+    /** The shared, engine-neutral operation layer, bound to this workbook. */
+    public readonly ops: WorkbookOps
 
     private constructor(bookId: number) {
         this.bookId = bookId
+        this.ops = new WorkbookOps(makeNodeClient(bookId))
     }
 
     /** Create an empty workbook. */
@@ -51,75 +71,52 @@ export class SpreadsheetRuntime
         return new SpreadsheetRuntime(handle('newWorkbook') as number)
     }
 
-    private readonly rpc: Rpc = (method, value) =>
-        handle(value === undefined ? method : {method, value}, this.bookId)
+    /** Read a single cell's evaluated value. */
+    public getValue(sheetIdx: number, row: number, col: number): Value {
+        return handle({method: 'getValue', value: {sheetIdx, row, col}}, this.bookId)
+    }
 
     /** Release the workbook's engine resources. */
     public close(): void {
-        this.rpc('release')
+        handle('release', this.bookId)
     }
 
-    // ---- EnginePort -----------------------------------------------------
-    public handleTransaction(tx: GatewayTransaction): {status: {type: string}} {
-        return this.rpc('handleTransaction', {transaction: tx})
-    }
+    // ---- High-level operations (thin delegators to ops) -----------------
 
-    // ---- CellReadPort ---------------------------------------------------
-    public getValue(sheetIdx: number, row: number, col: number): Value {
-        return this.rpc('getValue', {sheetIdx, row, col})
-    }
-
-    // ---- ValidationPort -------------------------------------------------
-    // Evaluate a formula by parking it in an ephemeral cell and reading the
-    // engine's result — the same mechanism the browser uses for shadow cells.
-    public evalFormula(sheetIdx: number, formula: string): Value {
-        const id = this.ephemeralSeq++
-        this.rpc('handleTransaction', {
-            transaction: {
-                payloads: [
-                    {
-                        type: 'ephemeralCellInput',
-                        value: {sheetIdx, id, content: '=' + formula},
-                    },
-                ],
-                undoable: false,
-                temp: false,
-            },
-        })
-        const sheetId = this.rpc('getSheetId', {sheetIdx}) as number
-        const infos = this.rpc('batchGetCellInfoById', {
-            ids: [{sheetId, cellId: {type: 'ephemeralCell', value: id}}],
-        })
-        return infos[0].value
-    }
-
-    // ---- High-level logisheets-core operations --------------------------
-
-    /** Import: write rows of string cells into the sheet. */
-    public writeRecords(
-        target: WriteTarget,
-        records: ReadonlyArray<ReadonlyArray<string>>,
-        undoable = true
-    ): boolean {
-        return writeRecords(this, target, records, undoable)
-    }
-
-    /** Export: read a rectangle of evaluated values back out. */
-    public readRecords(
-        target: WriteTarget,
-        rows: number,
-        cols: number
-    ): Value[][] {
-        return readRecords(this, target, rows, cols)
+    /** Write a value or formula into a cell. */
+    public inputCell(
+        sheetIdx: number,
+        row: number,
+        col: number,
+        content: string
+    ): Promise<unknown> {
+        return this.ops.inputCell(sheetIdx, row, col, content)
     }
 
     /** Check formula-based validation rules; return violating cells. */
-    public checkValidations(rules: readonly ValidationRule[]): Violation[] {
-        return checkValidations(this, rules)
+    public checkValidations(
+        rules: readonly ValidationRule[]
+    ): Promise<Violation[]> {
+        return this.ops.checkValidations(rules)
     }
 
     /** Check required / unique / membership field constraints. */
-    public checkFieldConstraints(columns: readonly FieldColumn[]): Violation[] {
-        return checkFieldConstraints(this, columns)
+    public checkFieldConstraints(
+        columns: readonly FieldColumn[]
+    ): Promise<Violation[]> {
+        return this.ops.checkFieldConstraints(columns)
+    }
+
+    /**
+     * Establish a cell's validation rule — the same operation the browser
+     * runs, served from logisheets-core's WorkbookOps.
+     */
+    public setValidationRule(
+        sheetIdx: number,
+        row: number,
+        col: number,
+        formula: string
+    ): Promise<void> {
+        return this.ops.setValidationRule(sheetIdx, row, col, formula)
     }
 }

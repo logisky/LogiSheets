@@ -4,13 +4,9 @@
 // to be valid (this is exactly the model used by the browser's ValidationCell:
 // it writes `=<formula>` into a shadow/ephemeral cell, lets the WASM engine
 // evaluate it, and reads back a bool). The *evaluation* lives entirely in the
-// engine, so it already runs on Node — this module is only the orchestration
-// and result interpretation, lifted out of the React component into pure logic.
-//
-// The host injects how a formula gets evaluated through `ValidationPort`:
-//   - browser:  shadow-cell id + ephemeralCellInput via the worker client
-//   - node:     ephemeralCellInput via synchronous handle()
-// Either way the engine does the real work.
+// engine, so it already runs on Node — this module is only the pure result
+// interpretation. The engine access is supplied by the caller as a plain
+// `evalFormula` function (WorkbookOps wraps the Client); see ../ops.
 
 import type {Value} from 'logisheets-web'
 
@@ -38,11 +34,6 @@ export interface Violation {
     formula?: string
     kind: ViolationKind
     message: string
-}
-
-/** The engine seam: evaluate a formula in a sheet and hand back its Value. */
-export interface ValidationPort {
-    evalFormula(sheetIdx: number, formula: string): Value
 }
 
 /**
@@ -83,17 +74,17 @@ export function interpretValidation(
 }
 
 /**
- * Check every rule against the engine and return the cells that break their
- * validation. Works identically in the browser and on Node — the only
- * difference is which `ValidationPort` the host injects.
+ * Check every rule and return the cells that break their validation. Pure:
+ * the caller supplies `evalFormula` (WorkbookOps wraps the engine). `rules`
+ * are evaluated against the values already resolved by the caller.
  */
 export function checkValidations(
-    port: ValidationPort,
-    rules: readonly ValidationRule[]
+    rules: readonly ValidationRule[],
+    evalFormula: (sheetIdx: number, formula: string) => Value
 ): Violation[] {
     const out: Violation[] = []
     for (const rule of rules) {
-        const value = port.evalFormula(rule.sheetIdx, rule.formula)
+        const value = evalFormula(rule.sheetIdx, rule.formula)
         const violation = interpretValidation(rule, value)
         if (violation) out.push(violation)
     }

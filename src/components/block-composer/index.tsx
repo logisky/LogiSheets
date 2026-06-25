@@ -1,20 +1,17 @@
 import {useState} from 'react'
 import {Box, Typography, Dialog, DialogContent, TextField} from '@mui/material'
-import {getSelectedCellRange} from 'logisheets-engine'
 import {
-    BindFormSchemaBuilder,
+    getSelectedCellRange,
     SelectedData,
-    UpsertFieldRenderInfoBuilder,
     getFirstCell,
+    isErrorMessage,
 } from 'logisheets-engine'
 import {useToast} from '@/ui/notification/useToast'
-import {useEngine} from '@/core/engine/provider'
+import {useEngine, useOps} from '@/core/engine/provider'
 import type {FieldInfo, FieldTypeEnum} from 'logisheets-engine'
 import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
-import type {FieldSetting} from 'logisheets-core'
-import {CreateBlockBuilder, isErrorMessage, Payload} from 'logisheets-engine'
-import {tx} from '@/core/transaction'
+import type {FieldSetting, FormBlockField} from 'logisheets-core'
 
 export * from './types'
 
@@ -28,6 +25,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const {toast} = useToast()
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
     const BLOCK_MANAGER = engine.getBlockManager()
 
     const [fields, setFields] = useState<FieldSetting[]>([
@@ -208,46 +206,14 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             return [r.id, r]
         })
         const {y: row, x: col} = getFirstCell(selectedData)
-        const len = fs.length
-        // check if the block range is available
-
-        const payloads: Payload[] = []
-        const createBlockPayload: Payload = {
-            type: 'createBlock',
-            value: new CreateBlockBuilder()
-                .sheetIdx(currentSheetIdx)
-                .id(blockId)
-                .masterRow(row)
-                .masterCol(col)
-                .rowCnt(1)
-                .colCnt(len)
-                .build(),
-        }
-        payloads.push(createBlockPayload)
         const keyIdx = fields.findIndex((f) => f.primary)
 
-        const bindFormSchemaPayload: Payload = {
-            type: 'bindFormSchema',
-            value: new BindFormSchemaBuilder()
-                .refName(refName)
-                .sheetIdx(currentSheetIdx)
-                .blockId(blockId)
-                .fieldFrom(0)
-                .row(true)
-                .keyIdx(keyIdx < 0 ? 0 : keyIdx)
-                .fields(fs.map((f) => f[1].name))
-                .renderIds(fs.map((f) => f[0]))
-                // Per-field value-formula templates (#FIELD("X") / #KEY).
-                // The composer's FieldSetting carries `valueFormula`;
-                // forward it (empty string for free-form fields).
-                .fieldFormulas(fields.map((f) => f.valueFormula ?? ''))
-                .build(),
-        }
-        payloads.push(bindFormSchemaPayload)
-
-        fs.forEach(([fieldId, field], i) => {
+        // Flatten each resolved field into the engine-neutral shape the
+        // operation layer needs; the validation/FieldInfo composition and
+        // FieldManager registration above stay here (engine render state).
+        const formBlockFields: FormBlockField[] = fs.map(([fieldId, field], i) => {
             let diyRender = false
-            let formatter = ''
+            let numFmt = ''
             switch (field.type.type) {
                 case 'image':
                 case 'enum':
@@ -257,28 +223,34 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 case 'multiSelectRef':
                     diyRender = true
                     break
-                case 'string':
-                    break
                 case 'datetime':
                 case 'number':
-                    formatter = field.type.formatter
+                    numFmt = field.type.formatter
                     break
                 default:
                     break
             }
-            const p = new UpsertFieldRenderInfoBuilder()
-                .renderId(fieldId)
-                .diyRender(diyRender)
-                .styleUpdate({
-                    setNumFmt: formatter,
-                })
-                .build()
-            payloads.push({type: 'upsertFieldRenderInfo', value: p})
+            return {
+                name: field.name,
+                renderId: fieldId,
+                valueFormula: fields[i].valueFormula ?? '',
+                diyRender,
+                numFmt,
+            }
         })
 
-        const result = await DATA_SERVICE.handleTransaction(tx(payloads, true))
-        if (isErrorMessage(result)) {
-            toast(result.msg, {type: 'error'})
+        try {
+            await ops.createFormBlock({
+                sheetIdx: currentSheetIdx,
+                blockId,
+                masterRow: row,
+                masterCol: col,
+                refName,
+                keyIdx,
+                fields: formBlockFields,
+            })
+        } catch (e) {
+            toast((e as Error).message, {type: 'error'})
             return
         }
 

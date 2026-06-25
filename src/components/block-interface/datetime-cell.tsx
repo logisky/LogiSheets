@@ -4,9 +4,7 @@ import {StaticDatePicker} from '@mui/x-date-pickers/StaticDatePicker'
 import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider'
 import {AdapterDayjs} from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs, {Dayjs} from 'dayjs'
-import {CellInputBuilder, Payload} from 'logisheets-engine'
-import {useEngine} from '@/core/engine/provider'
-import {tx} from '@/core/transaction'
+import {useOps} from '@/core/engine/provider'
 import {BlockCellProps, valueToNumber} from './cell'
 import {useEditable} from '@/core/permissions/use-editable'
 import {blockEditBus} from './edit-bus'
@@ -46,8 +44,7 @@ export const DatetimeCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
-    const engine = useEngine()
-    const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
     const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null)
 
@@ -88,17 +85,7 @@ export const DatetimeCell = (props: BlockCellProps) => {
         const day = newDate.date()
 
         const newContent = `=DATE(${year}, ${month}, ${day})`
-        const p = new CellInputBuilder()
-            .sheetIdx(sheetIdx)
-            .row(rowIdx)
-            .col(colIdx)
-            .content(newContent)
-            .build()
-        const payload: Payload = {
-            type: 'cellInput',
-            value: p,
-        }
-        await DATA_SERVICE.handleTransaction(tx([payload], true))
+        await ops.inputCell(sheetIdx, rowIdx, colIdx, newContent)
         blockEditBus.emit({
             sheetIdx,
             rowIdx,

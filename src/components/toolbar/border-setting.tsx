@@ -1,5 +1,5 @@
 import {SelectedData} from 'logisheets-engine'
-import {useEngine} from '@/core/engine/provider'
+import {useEngine, useOps} from '@/core/engine/provider'
 import {useState} from 'react'
 import {
     Box,
@@ -25,8 +25,7 @@ import BorderLeftIcon from '@mui/icons-material/BorderLeft'
 import {ColorResult, SketchPicker} from 'react-color'
 import {borderStyleNames, PreviewLineComponent} from './preview-line'
 import {StBorderStyle} from 'logisheets-engine'
-import {tx} from '@/core/transaction'
-import {BatchUpdateType, generateBorderPayloads} from './payload'
+import {BatchUpdateType} from 'logisheets-core'
 import {StandardColor} from '@/core/standable'
 
 export interface BorderSettingProps {
@@ -40,6 +39,7 @@ export const BorderSettingComponent = ({
 }: BorderSettingProps) => {
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
 
     const [color, setColor] = useState<StandardColor>(
         StandardColor.from(0, 0, 0)
@@ -51,20 +51,13 @@ export const BorderSettingComponent = ({
     const applySettings = () => {
         if (!selectedData) return
 
-        const payloads = generateBorderPayloads(
-            DATA_SERVICE.getCurrentSheetIdx(),
-            selectedData,
-            {
-                batch: selectedRange as BatchUpdateType,
-                color: color.argb(),
-                borderType: style,
-            }
-        )
-        DATA_SERVICE.handleTransaction(tx(payloads, true)).then(
-            (resp) => {
-                if (!resp) close()
-            }
-        )
+        ops.setBorder(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
+            batch: selectedRange as BatchUpdateType,
+            color: color.argb(),
+            borderType: style,
+        })
+            .then(() => close())
+            .catch(() => {})
     }
     /**
      * TODO: Set these values according to borderStyle

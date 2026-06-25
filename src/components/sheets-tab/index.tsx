@@ -1,13 +1,6 @@
 import {useState, FC, useEffect} from 'react'
-import {
-    CreateSheetBuilder,
-    Grid,
-    isErrorMessage,
-    Payload,
-    SheetInfo,
-} from 'logisheets-engine'
-import {tx} from '@/core/transaction'
-import {useEngine} from '@/core/engine/provider'
+import {Grid, isErrorMessage, SheetInfo} from 'logisheets-engine'
+import {useEngine, useOps} from '@/core/engine/provider'
 import {StandardColor} from '@/core/standable'
 import AddIcon from '@mui/icons-material/Add'
 import Box from '@mui/material/Box'
@@ -35,7 +28,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
 }) => {
     const engine = useEngine()
     const workbook = engine.getWorkbook()
-    const dataService = engine.getDataService()
+    const ops = useOps()
     const [sheets, setSheets] = useState([] as readonly SheetInfo[])
     const [isOpen, setIsOpen] = useState(false)
     const [modalPosition, setModalPosition] = useState({
@@ -79,19 +72,9 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     const addSheet = () => {
         const newSheetName = findNewSheetName(sheets.map((s) => s.name))
         const newIdx = sheets.length
-        const payload: Payload = {
-            type: 'createSheet',
-            value: new CreateSheetBuilder()
-                .newName(newSheetName)
-                .idx(newIdx)
-                .build(),
-        }
-        dataService
-            .handleTransaction(tx([payload], true))
-            .then((v) => {
-                if (v) return
-                activeSheet$(newIdx)
-            })
+        ops.createSheet(newSheetName, newIdx)
+            .then(() => activeSheet$(newIdx))
+            .catch(() => {})
     }
 
     return (

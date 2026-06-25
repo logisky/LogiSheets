@@ -1,7 +1,6 @@
 import {useCallback, useRef, useState} from 'react'
-import {CellInputBuilder, Payload, type BlockDisplayInfo} from 'logisheets-engine'
-import {useEngine} from '@/core/engine/provider'
-import {tx} from '@/core/transaction'
+import {type BlockDisplayInfo} from 'logisheets-engine'
+import {useOps} from '@/core/engine/provider'
 import {
     getNumberSliderBindings,
     type NumberSliderBinding,
@@ -70,8 +69,7 @@ const NumberSliderCell = ({
     absRow,
     absCol,
 }: NumberSliderCellProps) => {
-    const engine = useEngine()
-    const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
 
     const step = binding.step ?? 1
     const clamp = (v: number) =>
@@ -90,18 +88,9 @@ const NumberSliderCell = ({
 
     const sendTransaction = useCallback(
         (v: number) => {
-            const payload: Payload = {
-                type: 'cellInput',
-                value: new CellInputBuilder()
-                    .sheetIdx(binding.sheetIdx)
-                    .row(absRow)
-                    .col(absCol)
-                    .content(String(v))
-                    .build(),
-            }
-            DATA_SERVICE.handleTransaction(tx([payload], true))
+            ops.inputCell(binding.sheetIdx, absRow, absCol, String(v))
         },
-        [DATA_SERVICE, binding.sheetIdx, absRow, absCol]
+        [ops, binding.sheetIdx, absRow, absCol]
     )
 
     const onWheel = (e: React.WheelEvent) => {

@@ -1,11 +1,5 @@
-import {
-    BlockInputBuilder,
-    Payload,
-    type BlockDisplayInfo,
-    type Grid,
-} from 'logisheets-engine'
-import {useEngine} from '@/core/engine/provider'
-import {tx} from '@/core/transaction'
+import {type BlockDisplayInfo, type Grid} from 'logisheets-engine'
+import {useOps} from '@/core/engine/provider'
 import {
     getPercentAllocatorBindings,
     redistributePercent,
@@ -78,8 +72,7 @@ export const PercentAllocatorLayer = ({
     resolver,
     grid,
 }: PercentAllocatorLayerProps) => {
-    const engine = useEngine()
-    const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
 
     const bindings = getPercentAllocatorBindings().filter(
         (b) => b.sheetIdx === activeSheet
@@ -130,23 +123,20 @@ export const PercentAllocatorLayer = ({
                     // Emit only the cells that actually changed — keeps the
                     // dep graph churn minimal when one slot rounds to its
                     // current value.
-                    const payloads: Payload[] = []
+                    const inputs = []
                     for (let i = 0; i < group.length; i++) {
                         if (Math.abs(next[i] - currents[i]) < 1e-12) continue
                         const b = group[i]
-                        payloads.push({
-                            type: 'blockInput',
-                            value: new BlockInputBuilder()
-                                .sheetIdx(b.sheetIdx)
-                                .blockId(b.blockId)
-                                .row(b.row)
-                                .col(b.col)
-                                .input(String(next[i]))
-                                .build(),
+                        inputs.push({
+                            sheetIdx: b.sheetIdx,
+                            blockId: b.blockId,
+                            row: b.row,
+                            col: b.col,
+                            input: String(next[i]),
                         })
                     }
-                    if (payloads.length === 0) return
-                    await DATA_SERVICE.handleTransaction(tx(payloads, true))
+                    if (inputs.length === 0) return
+                    await ops.inputBlockCells(inputs)
                 }
 
                 return group.map((b, idx) => {

@@ -5,16 +5,10 @@ import styles from './toolbar.module.scss'
 import modalStyles from '../modal.module.scss'
 import {getSelectedCellRange, getSelectedLines, Grid} from 'logisheets-engine'
 import {Cell, ErrorMessage} from 'logisheets-engine'
-import {useEngine} from '@/core/engine/provider'
+import {useEngine, useOps} from '@/core/engine/provider'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {BorderSettingComponent} from './border-setting'
-import {
-    generateAlgnmentPayload,
-    generateFontPayload,
-    generateNumFmtPayload,
-    generatePatternFillPayload,
-    generateWrapTextPayload,
-} from './payload'
+import {generateFontPayload, generateWrapTextPayload} from 'logisheets-core'
 import {
     CellFormatBrushBuilder,
     HorizontalAlignment,
@@ -83,6 +77,7 @@ export const Toolbar = observer(
     ({selectedData, setGrid, setActiveSheet}: ToolbarProps) => {
         const engine = useEngine()
         const DATA_SERVICE = engine.getDataService()
+        const ops = useOps()
         const BLOCK_MANAGER = engine.getBlockManager()
         const {toast} = useToast()
         const hasSelectedData =
@@ -257,12 +252,11 @@ export const Toolbar = observer(
                 default:
                     break
             }
-            const payloads = generateNumFmtPayload(
+            ops.setNumFmt(
                 DATA_SERVICE.getCurrentSheetIdx(),
                 selectedData,
                 numFmt
             )
-            DATA_SERVICE.handleTransaction(tx(payloads, true))
         }
 
         // Init style when selection changes
@@ -409,7 +403,7 @@ export const Toolbar = observer(
                             .dstSheetIdx(fb.sheetIdx)
                             .build(),
                     }
-                    DATA_SERVICE.handleTransaction(tx([payload], true))
+                    ops.applyPayloads([payload])
                     setFormatBrushOn(null)
                     return
                 }
@@ -428,7 +422,7 @@ export const Toolbar = observer(
                             .row(lineRange.type === 'row')
                             .build(),
                     }
-                    DATA_SERVICE.handleTransaction(tx([payload], true))
+                    ops.applyPayloads([payload])
                     setFormatBrushOn(null)
                 }
             }
@@ -454,24 +448,18 @@ export const Toolbar = observer(
             const {r, g, b, a} = result.rgb
             const color = StandardColor.from(r, g, b, a)
             if (colorPicking === 'font') {
-                const payloads = generateFontPayload(
-                    DATA_SERVICE.getCurrentSheetIdx(),
-                    selectedData,
-                    {color: color.argb()}
-                )
-                DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() => {
+                ops.setFont(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
+                    color: color.argb(),
+                }).then(() => {
                     setFontColor(color.css())
                     setColorPicking('')
                 })
             } else if (colorPicking === 'fill') {
-                const payloads = generatePatternFillPayload(
+                ops.setPatternFill(
                     DATA_SERVICE.getCurrentSheetIdx(),
                     selectedData,
-                    undefined,
-                    color.argb(),
-                    'solid'
-                )
-                DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() => {
+                    {bgColor: color.argb(), pattern: 'solid'}
+                ).then(() => {
                     setFillColor(color.css())
                     setColorPicking('')
                 })
@@ -481,51 +469,31 @@ export const Toolbar = observer(
         const onToggleBold = () => {
             if (!selectedData) return
             const v = !bold
-            const payloads = generateFontPayload(
-                DATA_SERVICE.getCurrentSheetIdx(),
-                selectedData,
-                {bold: v}
-            )
-            DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
-                setBold(v)
-            )
+            ops.setFont(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
+                bold: v,
+            }).then(() => setBold(v))
         }
         const onToggleItalic = () => {
             if (!selectedData) return
             const v = !italic
-            const payloads = generateFontPayload(
-                DATA_SERVICE.getCurrentSheetIdx(),
-                selectedData,
-                {italic: v}
-            )
-            DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
-                setItalic(v)
-            )
+            ops.setFont(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
+                italic: v,
+            }).then(() => setItalic(v))
         }
         const onToggleUnderline = () => {
             if (!selectedData) return
             const v = !underline
-            const payloads = generateFontPayload(
-                DATA_SERVICE.getCurrentSheetIdx(),
-                selectedData,
-                {underline: v}
-            )
-            DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
-                setUnderline(v)
-            )
+            ops.setFont(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
+                underline: v,
+            }).then(() => setUnderline(v))
         }
 
         const onToggleStrike = () => {
             if (!selectedData) return
             const v = !strike
-            const payloads = generateFontPayload(
-                DATA_SERVICE.getCurrentSheetIdx(),
-                selectedData,
-                {strike: v}
-            )
-            DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
-                setStrike(v)
-            )
+            ops.setFont(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
+                strike: v,
+            }).then(() => setStrike(v))
         }
 
         const onToggleWrapText = () => {
@@ -558,17 +526,10 @@ export const Toolbar = observer(
                 | 'right-bottom'
         ) => {
             if (!selectedData) return
-            const payloads = generateAlgnmentPayload(
-                DATA_SERVICE.getCurrentSheetIdx(),
-                selectedData,
-                {
-                    horizontal: v.split('-')[0] as HorizontalAlignment,
-                    vertical: v.split('-')[1] as VerticalAlignment,
-                }
-            )
-            DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
-                setAlignment(v)
-            )
+            ops.setAlignment(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
+                horizontal: v.split('-')[0] as HorizontalAlignment,
+                vertical: v.split('-')[1] as VerticalAlignment,
+            }).then(() => setAlignment(v))
             setAlignAnchor(null)
         }
 
@@ -599,21 +560,18 @@ export const Toolbar = observer(
             if (!cr) return
             const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
             if (mergedOn) {
-                return DATA_SERVICE.handleTransaction(
-                    tx(
-                        [
-                            {
-                                type: 'splitMergedCells',
-                                value: new SplitMergedCellsBuilder()
-                                    .sheetIdx(sheetIdx)
-                                    .row(cr.startRow)
-                                    .col(cr.startCol)
-                                    .build(),
-                            },
-                        ],
-                        true
-                    )
-                ).then(() => setMergedOn(false))
+                return ops
+                    .applyPayloads([
+                        {
+                            type: 'splitMergedCells',
+                            value: new SplitMergedCellsBuilder()
+                                .sheetIdx(sheetIdx)
+                                .row(cr.startRow)
+                                .col(cr.startCol)
+                                .build(),
+                        },
+                    ])
+                    .then(() => setMergedOn(false))
             }
             const payloads: Payload[] = mergedCells.map((v) => ({
                 type: 'splitMergedCells',
@@ -633,7 +591,7 @@ export const Toolbar = observer(
                     .endCol(cr.endCol)
                     .build(),
             })
-            DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() =>
+            ops.applyPayloads(payloads).then(() =>
                 setMergedOn(true)
             )
         }

@@ -5,8 +5,9 @@
 // injected by the host.
 
 export * from './port.js'
+export * from './ops/index.js'
+export * from './format/index.js'
 export * from './craft-interactions/index.js'
-export * from './structured/index.js'
 export * from './validation/index.js'
 export * from './field/index.js'
 export * from './value/index.js'

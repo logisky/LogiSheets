@@ -18,14 +18,7 @@ import {
     Radio,
     Stack,
 } from '@mui/material'
-import {
-    CellInputBuilder,
-    Payload,
-    SetColWidthBuilder,
-    SetRowHeightBuilder,
-} from 'logisheets-engine'
-import {useEngine} from '@/core/engine/provider'
-import {tx} from '@/core/transaction'
+import {useOps} from '@/core/engine/provider'
 import {BlockCellProps, valueToString} from './cell'
 import {pxToPt, pxToWidth} from '@/core'
 import {useEditable} from '@/core/permissions/use-editable'
@@ -36,8 +29,7 @@ export const ImageCell = (props: BlockCellProps) => {
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
-    const engine = useEngine()
-    const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
 
     const [imageSize, setImageSize] = useState<ImageSize>('100%')
     const [contextMenu, setContextMenu] = useState<{
@@ -96,51 +88,15 @@ export const ImageCell = (props: BlockCellProps) => {
 
     const handleDialogOk = async () => {
         if (!imageDimensions) return
-        const payloads: Payload[] = []
-        // Save the URL to the cell
-        const p = new CellInputBuilder()
-            .sheetIdx(sheetIdx)
-            .row(rowIdx)
-            .col(colIdx)
-            .content(tempUrl)
-            .build()
-        const payload: Payload = {
-            type: 'cellInput',
-            value: p,
-        }
-        payloads.push(payload)
         const imageWidth = imageDimensions.width * getSizeMultiplier()
-        if (width < imageWidth) {
-            const columnAdjust = new SetColWidthBuilder()
-                .sheetIdx(sheetIdx)
-                .col(colIdx)
-                .width(pxToWidth(imageWidth))
-                .build()
-            const payload: Payload = {
-                type: 'setColWidth',
-                value: columnAdjust,
-            }
-            payloads.push(payload)
-        }
         const imageHeight = imageDimensions.height * getSizeMultiplier()
-        if (height < imageHeight) {
-            const rowAdjust = new SetRowHeightBuilder()
-                .sheetIdx(sheetIdx)
-                .row(rowIdx)
-                .height(pxToPt(imageHeight))
-                .build()
-            const payload: Payload = {
-                type: 'setRowHeight',
-                value: rowAdjust,
-            }
-            payloads.push(payload)
-        }
-
-        await DATA_SERVICE.handleTransaction(tx(payloads, true)).then(() => {
-            // Update the display size
-            setDialogOpen(false)
-            setImageDimensions(null)
+        await ops.setCellImage(sheetIdx, rowIdx, colIdx, tempUrl, {
+            colWidth: width < imageWidth ? pxToWidth(imageWidth) : undefined,
+            rowHeight: height < imageHeight ? pxToPt(imageHeight) : undefined,
         })
+        // Update the display size
+        setDialogOpen(false)
+        setImageDimensions(null)
     }
 
     const getSizeMultiplier = () => {

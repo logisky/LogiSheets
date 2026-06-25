@@ -2,9 +2,7 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import styles from './block-interface.module.scss'
 import React from 'react'
-import {useEngine} from '@/core/engine/provider'
-import {RemoveBlockBuilder} from 'logisheets-web'
-import {tx} from '@/core/transaction'
+import {useOps} from '@/core/engine/provider'
 
 export interface MenuProps {
     readonly sheetId: number
@@ -50,8 +48,7 @@ export const ClickableList = ({
 
 export const MenuComponent = (props: MenuProps) => {
     const {sheetIdx, blockId, isOpen, setIsOpen} = props
-    const engine = useEngine()
-    const DATA_SERVICE = engine.getDataService()
+    const ops = useOps()
 
     const items = [
         {
@@ -63,20 +60,7 @@ export const MenuComponent = (props: MenuProps) => {
         {
             label: 'Delete',
             onClick: () => {
-                DATA_SERVICE.handleTransaction(
-                    tx(
-                        [
-                            {
-                                type: 'removeBlock',
-                                value: new RemoveBlockBuilder()
-                                    .sheetIdx(sheetIdx)
-                                    .id(blockId)
-                                    .build(),
-                            },
-                        ],
-                        true
-                    )
-                )
+                ops.removeBlock(sheetIdx, blockId)
             },
         },
     ]
