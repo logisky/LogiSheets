@@ -1,5 +1,5 @@
 import * as path from 'path'
-import {Configuration, DefinePlugin, ProvidePlugin} from 'webpack'
+import {Configuration, ProvidePlugin} from 'webpack'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin'
 import 'webpack-dev-server'
@@ -29,7 +29,7 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             ],
             compress: false,
             hot: true,
-            port: 4200,
+            port: Number(process.env.PORT) || 4200,
         },
         experiments: {
             asyncWebAssembly: true,
@@ -55,11 +55,6 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             },
         },
         plugins: [
-            new DefinePlugin({
-                'process.env.LOGISHEETS_API_KEY': JSON.stringify(
-                    process.env.LOGISHEETS_API_KEY || ''
-                ),
-            }),
             new ForkTsCheckerWebpackPlugin({
                 typescript: {configFile: './tsconfig.json'},
             }),

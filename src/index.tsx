@@ -12,13 +12,6 @@ import './core/i18n/i18n'
 import 'logisheets-engine/style.css'
 
 initEngine().then(async (engine) => {
-    // Activate license to remove watermark
-    // API KEY is read from environment variable for security
-    const apiKey = process.env.LOGISHEETS_API_KEY
-    if (apiKey) {
-        await engine.setLicense(apiKey)
-    }
-
     const root = createRoot(document.getElementById('root') as HTMLElement)
 
     root.render(

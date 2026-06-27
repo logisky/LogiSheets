@@ -15,7 +15,6 @@ dist
 # crafts
 crafts/**/*/dist
 public/**/*
-!packages/engine/dist
 
 # jest files
 coverage/
