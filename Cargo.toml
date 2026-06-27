@@ -32,7 +32,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.1.0"
 authors = ["JeremyHe <yiliang.he@qq.com>"]
 license = "MIT"
 edition = "2018"
@@ -56,15 +56,17 @@ xmlserde = "0.12"
 xmlserde_derives = "0.12"
 wildescape = "0.1"
 
-logisheets_lexer = { path = "crates/controller/lexer", version = "1.0.0" }
-logisheets_parser = { path = "crates/controller/parser", version = "1.0.0" }
-logisheets_base = { path = "crates/controller/base", version = "1.0.0" }
-logisheets_controller = { path = "crates/controller", version = "1.0.0" }
+logisheets_lexer = { path = "crates/controller/lexer", version = "1.1.0" }
+logisheets_parser = { path = "crates/controller/parser", version = "1.1.0" }
+logisheets_base = { path = "crates/controller/base", version = "1.1.0" }
+logisheets_controller = { path = "crates/controller", version = "1.1.0" }
+logisheets_lexer4fmt = { path = "crates/controller/lexer4fmt", version = "1.1.0" }
+logisheets_astchecker = { path = "crates/controller/ast_checker", version = "1.1.0" }
 
-logisheets_workbook_derives = { path = "crates/workbook/derives", version = "1.0.0" }
+logisheets_workbook_derives = { path = "crates/workbook/derives", version = "1.1.0" }
 xmldiff = { path = "crates/xmldiff", version = "1.0.0" }
-logisheets_workbook = { path = "crates/workbook", version = "1.0.0" }
-logisheets-rs = { path = "crates/api", version = "1.0.0" }
+logisheets_workbook = { path = "crates/workbook", version = "1.1.0" }
+logisheets-rs = { path = "crates/api", version = "1.1.0" }
 
 [dependencies]
 logisheets_controller = { workspace = true }

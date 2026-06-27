@@ -22,7 +22,8 @@
         "build:types": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.types.json",
         "copy:wasm": "cp ../web/wasm/logisheets_wasm_server_bg.wasm ./dist/assets/",
         "check": "svelte-check --tsconfig ./tsconfig.json",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "prepack": "yarn build"
     },
     "repository": {
         "type": "git",
@@ -39,13 +40,13 @@
         "dist"
     ],
     "dependencies": {
-        "logisheets-web": "workspace:*",
         "rxjs": "^7.8.1",
         "ssf": "^0.11.2"
     },
     "devDependencies": {
         "@sveltejs/vite-plugin-svelte": "^4.0.0",
         "@tsconfig/svelte": "^5.0.4",
+        "logisheets-web": "workspace:*",
         "svelte": "^5.0.0",
         "svelte-check": "^4.0.0",
         "terser": "^5.46.0",

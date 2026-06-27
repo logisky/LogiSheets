@@ -4,11 +4,11 @@
 #   1. Rust crates to crates.io (ordered so each one's deps are
 #      already up there by the time it publishes).
 #   2. npm packages (logisheets-web → logisheets → logisheets-engine).
-#      The web/node packages have prepublishOnly hooks that rebuild
-#      WASM + TS, so no separate build step is needed. The engine
-#      package ships the pre-built dist as-is — make sure you've
-#      run the engine's own `npm run build:obfuscate` upstream
-#      before invoking this script if engine artifacts changed.
+#      web/node self-build via prepublishOnly (WASM + TS); the engine
+#      builds via its own `prepack` hook (`yarn build`) at pack time.
+#      The engine bundles logisheets-web (kept as a devDependency), so its
+#      published runtime deps carry no `workspace:*` — plain `npm publish`
+#      works for all three.
 #
 # Versions must already be bumped in Cargo.toml / package.json before
 # running this. The script does NOT touch versions; it only publishes
@@ -69,10 +69,10 @@ CARGO_MANIFESTS=(
 )
 
 # ---------------------------------------------------------------------------
-# npm packages — order matters because logisheets (node) `link`s from web/src,
-# and logisheets-engine has logisheets-web as a peerDependency. Publishing
-# web first means consumers installing engine + web together get a coherent
-# pair.
+# npm packages — order matters: logisheets (node) `link`s from web/src, and
+# the engine's `prepack` (`yarn build`) bundles logisheets-web + its wasm.
+# Publishing web first ensures web's wasm/dist exist by the time the engine
+# packs.
 # ---------------------------------------------------------------------------
 NPM_PACKAGES=(
     "packages/web"
@@ -97,13 +97,14 @@ publish_cargo() {
 publish_npm() {
     for pkg in "${NPM_PACKAGES[@]}"; do
         echo ""
-        echo "==> npm publish: $pkg"
+        echo "==> publish: $pkg"
         # Subshell so the cd is scoped — we want to return to repo root
         # for the next package's relative path to resolve.
         (
             cd "$pkg"
             # --access public so scoped or first-time packages don't
             # silently fail on the npm registry's default-private rule.
+            # (The engine's prepack builds its dist; no workspace: deps ship.)
             npm publish $NPM_DRY --access public
         )
     done

@@ -26,12 +26,12 @@ unicode-segmentation = "1.10.1"
 wildescape = { workspace = true }
 uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
 
-logisheets_base = { path = "./base", version = "1.0.0" }
-logisheets_lexer = { path = "./lexer", version = "1.0.0" }
-logisheets_lexer4fmt = { path = "./lexer4fmt", version = "1.0.0" }
-logisheets_parser = { path = "./parser", version = "1.0.0" }
-logisheets_workbook = { path = "../workbook", version = "1.0.0" }
-logisheets_astchecker = { path = "./ast_checker", version = "1.0.0" }
+logisheets_base = { workspace = true}
+logisheets_lexer = { workspace = true}
+logisheets_lexer4fmt = { workspace = true }
+logisheets_parser = { workspace = true}
+logisheets_workbook = { workspace = true }
+logisheets_astchecker = { workspace = true }
 
 gents = { workspace = true }
 gents_derives = { workspace = true }
