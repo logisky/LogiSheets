@@ -3,12 +3,13 @@
 # Publish every release artifact in this repo in one shot:
 #   1. Rust crates to crates.io (ordered so each one's deps are
 #      already up there by the time it publishes).
-#   2. npm packages (logisheets-web → logisheets → logisheets-engine).
-#      web/node self-build via prepublishOnly (WASM + TS); the engine
-#      builds via its own `prepack` hook (`yarn build`) at pack time.
-#      The engine bundles logisheets-web (kept as a devDependency), so its
-#      published runtime deps carry no `workspace:*` — plain `npm publish`
-#      works for all three.
+#   2. npm packages (logisheets-web → logisheets → logisheets-engine →
+#      logisheets-formula-editor). web/node self-build via prepublishOnly
+#      (WASM + TS); the engine and formula-editor build via their own `prepack`
+#      hooks (`yarn build`) at pack time. None ship a runtime `workspace:*`
+#      dependency (the engine keeps logisheets-web as a devDependency;
+#      formula-editor bundles its deps and treats logisheets-engine as an
+#      optional peer), so plain `npm publish` works for all four.
 #
 # Versions must already be bumped in Cargo.toml / package.json before
 # running this. The script does NOT touch versions; it only publishes
@@ -69,15 +70,21 @@ CARGO_MANIFESTS=(
 )
 
 # ---------------------------------------------------------------------------
-# npm packages — order matters: logisheets (node) `link`s from web/src, and
-# the engine's `prepack` (`yarn build`) bundles logisheets-web + its wasm.
-# Publishing web first ensures web's wasm/dist exist by the time the engine
-# packs.
+# npm packages — order matters. Each builds itself at pack time (web/node via
+# prepublishOnly; engine + formula-editor via a `prepack` hook), so publishing
+# in dependency order means each package's local deps are already built when it
+# packs:
+#   - logisheets (node) `link`s from web/src.
+#   - the engine's build bundles logisheets-web + its wasm.
+#   - formula-editor's build type-checks against the engine's emitted types
+#     (logisheets-engine is an optional peer used by its /inline entry), so the
+#     engine must be built/published before it.
 # ---------------------------------------------------------------------------
 NPM_PACKAGES=(
     "packages/web"
     "packages/node"
     "packages/engine"
+    "packages/formula-editor"
 )
 
 publish_cargo() {

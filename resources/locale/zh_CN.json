@@ -11,6 +11,370 @@
     "functions": {
         "switch": {
             "description": "根据值列表计算表达式并返回第一个与第一个匹配值对应的结果。如果没有匹配项，则返回可选默认值。"
+        },
+        "sum": {
+            "description": "将某一单元格区域中的所有数字相加。"
+        },
+        "or": {
+            "description": "如果任一参数为 TRUE，则返回 TRUE；如果所有参数均为 FALSE，则返回 FALSE。"
+        },
+        "countblank": {
+            "description": "计算指定单元格区域中空白单元格的个数。"
+        },
+        "norm": {
+            "dist": {
+                "description": "返回指定平均值和标准偏差下的正态分布。"
+            },
+            "s": {
+                "inv": {
+                    "description": "返回标准正态累积分布函数的反函数（z 值）。"
+                }
+            }
+        },
+        "abs": {
+            "description": "返回数字的绝对值。绝对值是不带符号的数值。"
+        },
+        "acos": {
+            "description": "返回数字的反余弦值（以弧度表示），范围为 0 到 π。"
+        },
+        "acosh": {
+            "description": "返回数字的反双曲余弦值，参数必须大于或等于 1。"
+        },
+        "aggregate": {
+            "description": "返回列表或数据库中的聚合结果，可选择忽略隐藏行和错误值。"
+        },
+        "pi": {
+            "description": "返回圆周率 π 的值（3.14159265358979），精确到 15 位。"
+        },
+        "sumsq": {
+            "description": "返回所有参数的平方和。"
+        },
+        "bitor": {
+            "description": "对两个整数执行按位“或”运算并返回结果。"
+        },
+        "gammaln.precise": {
+            "description": "返回伽马函数的自然对数。"
+        },
+        "permut": {
+            "description": "返回从给定数目的对象中选取若干对象的排列数。"
+        },
+        "imcosh": {
+            "description": "返回以文本表示的复数的双曲余弦值。"
+        },
+        "negbinomdist": {
+            "description": "返回负二项式分布的概率。"
+        },
+        "isna": {
+            "description": "如果值为 #N/A 错误，则返回 TRUE，否则返回 FALSE。"
+        },
+        "imcsc": {
+            "description": "返回以文本表示的复数的余割值。"
+        },
+        "row": {
+            "description": "返回引用的行号；若省略参数，则返回包含该公式的单元格的行号。"
+        },
+        "average": {
+            "description": "返回所有参数的平均值（算术平均值）。"
+        },
+        "count": {
+            "description": "计算参数列表中包含数字的个数。"
+        },
+        "countif": {
+            "description": "计算某一区域中满足给定条件的单元格的个数。"
+        },
+        "left": {
+            "description": "根据指定的字符数，返回文本字符串中的第一个或前几个字符。"
+        },
+        "round": {
+            "description": "将数字按指定的位数进行四舍五入。"
+        },
+        "len": {
+            "description": "返回文本字符串中的字符个数。"
+        },
+        "sumif": {
+            "description": "对满足给定条件的单元格求和。"
+        },
+        "today": {
+            "description": "返回当前日期的序列号，在重新计算或打开工作表时更新。"
+        },
+        "sumifs": {
+            "description": "对区域中满足多个条件的单元格求和。"
+        },
+        "averageifs": {
+            "description": "返回满足多个条件的单元格的平均值。"
+        },
+        "maxifs": {
+            "description": "返回满足一组条件的单元格中的最大值。"
+        },
+        "hex2bin": {
+            "description": "将十六进制数转换为二进制数。"
+        },
+        "month": {
+            "description": "返回日期中的月份，介于 1 到 12 之间。"
+        },
+        "exp": {
+            "description": "返回 e 的指定次幂。"
+        },
+        "sin": {
+            "description": "返回给定角度（以弧度表示）的正弦值。"
+        },
+        "irr": {
+            "description": "返回一系列现金流的内部收益率。"
+        },
+        "second": {
+            "description": "返回时间值中的秒数，介于 0 到 59 之间。"
+        },
+        "pv": {
+            "description": "基于固定利率和等额分期付款，计算投资的现值。"
+        },
+        "odd": {
+            "description": "将数字向上舍入到最接近的奇数。"
+        },
+        "hex2dec": {
+            "description": "将十六进制数转换为十进制数。"
+        },
+        "hex2oct": {
+            "description": "将十六进制数转换为八进制数。"
+        },
+        "quotient": {
+            "description": "返回除法运算结果的整数部分。"
+        },
+        "day": {
+            "description": "返回日期中的天数，介于 1 到 31 之间。"
+        },
+        "imaginary": {
+            "description": "返回以文本表示的复数的虚部系数。"
+        },
+        "oct2hex": {
+            "description": "将八进制数转换为十六进制数。"
+        },
+        "tbilleq": {
+            "description": "返回国库券的等价债券收益率。"
+        },
+        "tbillyield": {
+            "description": "返回国库券的收益率。"
+        },
+        "tbillprice": {
+            "description": "返回面值 100 元的国库券的价格。"
+        },
+        "mode": {
+            "description": "返回一组数据或区域中出现频率最高的值。"
+        },
+        "ln": {
+            "description": "返回数字的自然对数。"
+        },
+        "year": {
+            "description": "返回某日期对应的年份。"
+        },
+        "iferror": {
+            "description": "如果公式计算出错，则返回指定的值，否则返回公式的结果。"
+        },
+        "imabs": {
+            "description": "返回以文本表示的复数的绝对值（模）。"
+        },
+        "true": {
+            "description": "返回逻辑值 TRUE。"
+        },
+        "ppmt": {
+            "description": "返回在给定期次内某项投资本金的偿还额。"
+        },
+        "gammaln": {
+            "description": "返回伽马函数的自然对数 Γ(number)。",
+            "precise": {
+                "description": "返回伽马函数的自然对数。"
+            }
+        },
+        "bitlshift": {
+            "description": "将数字的各二进制位向左移动指定的位数。"
+        },
+        "bitrshift": {
+            "description": "将数字的各二进制位向右移动指定的位数。"
+        },
+        "blockref": {
+            "description": "通过键和字段获取块单元格的值。"
+        },
+        "blockrefs": {
+            "description": "获取键和字段满足条件的块单元格的值。"
+        },
+        "rand": {
+            "description": "返回大于等于 0 且小于 1 的均匀分布随机数。"
+        },
+        "right": {
+            "description": "根据指定的字符数，返回文本字符串中的最后一个或几个字符。"
+        },
+        "lower": {
+            "description": "将文本转换为小写。"
+        },
+        "degrees": {
+            "description": "将弧度转换为角度。"
+        },
+        "gcd": {
+            "description": "返回两个或多个整数的最大公约数。"
+        },
+        "imconjugate": {
+            "description": "返回以文本表示的复数的共轭复数。"
+        },
+        "expondist": {
+            "description": "返回指数分布。"
+        },
+        "cos": {
+            "description": "返回给定角度（以弧度表示）的余弦值。"
+        },
+        "days": {
+            "description": "返回两个日期之间相隔的天数。"
+        },
+        "false": {
+            "description": "返回逻辑值 FALSE。"
+        },
+        "iserror": {
+            "description": "如果值为除 #N/A 之外的任何错误值，则返回 TRUE。"
+        },
+        "stdev": {
+            "description": "基于样本估算标准偏差。"
+        },
+        "trim": {
+            "description": "删除文本中多余的空格，仅在词之间保留一个空格。"
+        },
+        "bitxor": {
+            "description": "对两个整数执行按位“异或”运算并返回结果。"
+        },
+        "log10": {
+            "description": "返回数字以 10 为底的对数。"
+        },
+        "tan": {
+            "description": "返回给定角度（以弧度表示）的正切值。"
+        },
+        "weibull": {
+            "description": "返回韦伯分布。"
+        },
+        "gamma.dist": {
+            "description": "返回伽马分布。"
+        },
+        "imreal": {
+            "description": "返回以文本表示的复数的实部系数。"
+        },
+        "rank.eq": {
+            "description": "返回数字在一组数字中的排位；若多个值排位相同，则返回该组的最高排位。"
+        },
+        "minute": {
+            "description": "返回时间值中的分钟数，介于 0 到 59 之间。"
+        },
+        "imln": {
+            "description": "返回以文本表示的复数的自然对数。"
+        },
+        "norm.s.inv": {
+            "description": "返回标准正态累积分布函数的反函数（z 值）。"
+        },
+        "accrint": {
+            "description": "返回定期支付利息的有价证券的应计利息。"
+        },
+        "weekday": {
+            "description": "返回某日期对应的星期几，通常为 1（星期日）到 7（星期六）。"
+        },
+        "imlog2": {
+            "description": "返回以文本表示的复数以 2 为底的对数。"
+        },
+        "na": {
+            "description": "返回错误值 #N/A。"
+        },
+        "oct2bin": {
+            "description": "将八进制数转换为二进制数。"
+        },
+        "norm.dist": {
+            "description": "返回指定平均值和标准偏差下的正态分布。"
+        },
+        "rank": {
+            "description": "返回数字在一组数字中的排位（旧版 Excel 中并列取平均值）。",
+            "eq": {
+                "description": "返回数字在一组数字中的排位；若多个值排位相同，则返回该组的最高排位。"
+            }
+        },
+        "sign": {
+            "description": "返回数字的符号：正数返回 1，零返回 0，负数返回 -1。"
+        },
+        "asin": {
+            "description": "返回数字的反正弦值（以弧度表示）。"
+        },
+        "sln": {
+            "description": "返回某项资产在一个期间内的直线折旧值。"
+        },
+        "sqrtpi": {
+            "description": "返回某数乘以 π 后的平方根。"
+        },
+        "complex": {
+            "description": "根据实部和虚部系数（及可选后缀）返回以文本表示的复数。"
+        },
+        "imexp": {
+            "description": "返回以文本表示的复数的指数值。"
+        },
+        "ipmt": {
+            "description": "返回给定期次内某项投资的利息偿还额。"
+        },
+        "fv": {
+            "description": "基于固定利率和等额分期付款，返回投资的未来值。"
+        },
+        "npv": {
+            "description": "基于贴现率和一系列未来付款，计算投资的净现值。"
+        },
+        "exact": {
+            "description": "比较两个文本字符串是否完全相同（区分大小写）。"
+        },
+        "dec2oct": {
+            "description": "将十进制数转换为八进制数。"
+        },
+        "concatenate": {
+            "description": "将多个文本项合并为一个文本字符串。"
+        },
+        "harmean": {
+            "description": "返回一组数据的调和平均值。"
+        },
+        "yielddisc": {
+            "description": "返回折价发行的有价证券的年收益率。"
+        },
+        "cot": {
+            "description": "返回角度（以弧度表示）的余切值。"
+        },
+        "bin2dec": {
+            "description": "将二进制数转换为十进制数。"
+        },
+        "gamma": {
+            "description": "返回数字的伽马函数值。",
+            "dist": {
+                "description": "返回伽马分布。"
+            }
+        },
+        "time": {
+            "description": "返回特定时间的小数值。"
+        },
+        "atanh": {
+            "description": "返回数字的反双曲正切值。"
+        },
+        "normsdist": {
+            "description": "返回给定 z 值的标准正态累积分布（旧版 NORMSDIST）。"
+        },
+        "cumipmt": {
+            "description": "返回贷款在两个期间之间累计支付的利息。"
+        },
+        "imcos": {
+            "description": "返回以文本表示的复数的余弦值。"
+        },
+        "pmt": {
+            "description": "基于固定利率和等额分期付款，计算贷款的每期付款额。"
+        },
+        "imtanh": {
+            "description": "返回以文本表示的复数的双曲正切值。"
+        },
+        "rri": {
+            "description": "返回某项投资增长的等效利率。"
+        },
+        "fact": {
+            "description": "返回数字的阶乘。"
+        },
+        "date": {
+            "description": "返回特定日期的序列号。"
+        },
+        "nominal": {
+            "description": "将实际年利率转换为名义利率。"
         }
     }
 }

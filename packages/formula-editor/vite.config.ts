@@ -18,13 +18,24 @@ export default defineConfig({
     },
     build: {
         lib: {
-            entry: resolve(__dirname, 'src/lib/index.ts'),
-            name: 'FormulaEditorReact',
-            fileName: 'index',
+            // Two entries: `index` (includes the React wrapper) and `core`
+            // (framework-agnostic, no React). Consumers pick via subpath.
+            entry: {
+                index: resolve(__dirname, 'src/lib/index.ts'),
+                core: resolve(__dirname, 'src/lib/core.ts'),
+                engine: resolve(__dirname, 'src/lib/engine.ts'),
+                inline: resolve(__dirname, 'src/lib/inline.ts'),
+            },
             formats: ['es'],
         },
         rollupOptions: {
-            external: ['react', 'react-dom', 'react/jsx-runtime'],
+            // logisheets-engine is a peer (only the /inline entry uses it).
+            external: [
+                'react',
+                'react-dom',
+                'react/jsx-runtime',
+                'logisheets-engine',
+            ],
             output: {
                 globals: {
                     react: 'React',

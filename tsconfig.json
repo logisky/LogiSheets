@@ -19,7 +19,10 @@
     "outDir": "./dist/",
     "paths": {
       "@/*": ["./src/*"],
-      "@logisheets/formula-editor": ["./packages/formula-editor/src/lib/index.ts"]
+      "logisheets-formula-editor": ["./packages/formula-editor/src/lib/index.ts"],
+      "logisheets-formula-editor/inline": [
+        "./packages/formula-editor/src/lib/inline.ts"
+      ]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,

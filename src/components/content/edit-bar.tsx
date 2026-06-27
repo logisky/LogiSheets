@@ -4,10 +4,7 @@ import {
 } from 'logisheets-engine'
 import {Cell, ErrorMessage} from 'logisheets-engine'
 import {toA1notation, parseA1notation} from 'logisheets-core'
-import {
-    SelectedData,
-    getFirstCell,
-} from 'logisheets-engine'
+import {SelectedData, getFirstCell} from 'logisheets-engine'
 import {useEffect, useState, useRef, useCallback, useMemo} from 'react'
 import {observer} from 'mobx-react-lite'
 import {globalStore} from '@/store'
@@ -21,34 +18,14 @@ import {isCellUserEditableSync} from '@/core/permissions/field-editable'
 import {
     FormulaEditor,
     FormulaEditorRef,
-    FormulaDisplayInfo,
-    FormulaFunction,
-} from '@logisheets/formula-editor'
-import {getAllFormulas} from '@/core/snippet'
+    createEngineFormulaSource,
+} from 'logisheets-formula-editor'
+import {getFormulaFunctions} from '@/core/snippet'
 
 export interface EditBarProps {
     selectedData: SelectedData
     selectedData$: (e: SelectedData) => void
     selectedDataContentChanged: object
-}
-
-// Convert LogiSheets formula snippets into the FormulaFunction shape the
-// editor's autocomplete expects. Cached because snippets are static.
-let cachedFormulaFunctions: FormulaFunction[] | null = null
-function getFormulaFunctions(): FormulaFunction[] {
-    if (!cachedFormulaFunctions) {
-        cachedFormulaFunctions = getAllFormulas().map((s) => ({
-            name: s.name,
-            description: s.description,
-            args: s.args.map((a) => ({
-                argName: a.argName,
-                description: a.description,
-                startRepeated: a.startRepeated,
-            })),
-            argCount: s.argCount,
-        }))
-    }
-    return cachedFormulaFunctions
 }
 
 // Build the editor display string from a Cell. Formulas keep their leading
@@ -91,7 +68,14 @@ export const EditBarComponent = observer(function EditBarComponent({
     const [sheetName, setSheetName] = useState('')
     const editorRef = useRef<FormulaEditorRef>(null)
 
-    const formulaFunctions = useMemo(() => getFormulaFunctions(), [])
+    // One-call engine binding: getDisplayUnits + the app's function list.
+    const source = useMemo(
+        () =>
+            createEngineFormulaSource(dataSvc, {
+                formulaFunctions: getFormulaFunctions(),
+            }),
+        [dataSvc]
+    )
     // Set when Escape is pressed so the synthetic blur fired by refocusing
     // the grid doesn't accidentally commit. Reset inside commitFormula on
     // its first guarded call.
@@ -170,23 +154,10 @@ export const EditBarComponent = observer(function EditBarComponent({
             })
     }, [selectedData, isEditing, dataSvc, lookupValidation, sheetIdx])
 
-    // Backend tokenization: the editor calls this on every change to get
-    // syntax highlighting + cell-ref info.
-    const getDisplayUnits = useCallback(
-        async (formula: string): Promise<FormulaDisplayInfo | undefined> => {
-            const result = await dataSvc
-                .getWorkbook()
-                .getDisplayUnitsOfFormula(formula)
-            if (isErrorMessage(result)) return undefined
-            return result
-        },
-        [dataSvc]
-    )
-
     const sendCellInput = useCallback(
         (newText: string) => {
             const cell = getFirstCell(selectedData)
-            ops.inputCell(sheetIdx, cell.y, cell.x, newText)
+            return ops.inputCell(sheetIdx, cell.y, cell.x, newText)
         },
         [selectedData, ops, sheetIdx]
     )
@@ -202,7 +173,7 @@ export const EditBarComponent = observer(function EditBarComponent({
         })
     }
 
-    const commitFormula = (value: string) => {
+    const commitFormula = async (value: string) => {
         if (cancellingRef.current) {
             cancellingRef.current = false
             return
@@ -225,7 +196,16 @@ export const EditBarComponent = observer(function EditBarComponent({
                     engine.getGrid()
                 )
             ) {
-                sendCellInput(value)
+                // Await the write, then re-read so the bar shows the committed
+                // value. The selectedDataContentChanged bump can fire before
+                // the input is applied, which would otherwise leave the bar
+                // displaying the stale (pre-commit) value.
+                await sendCellInput(value)
+                const c = await dataSvc.getCellInfo(sheetIdx, cell.y, cell.x)
+                if (!isErrorMessage(c)) {
+                    setFormulaText(cellToDisplayText(c))
+                    setRawValue(c.getText())
+                }
             }
         }
         setIsEditing(false)
@@ -241,12 +221,10 @@ export const EditBarComponent = observer(function EditBarComponent({
             return
         }
         const {startRow: row, startCol: col} = selectedCell
-        dataSvc
-            .getCellInfo(sheetIdx, row, col)
-            .then((c) => {
-                if (isErrorMessage(c)) return
-                setFormulaText(cellToDisplayText(c))
-            })
+        dataSvc.getCellInfo(sheetIdx, row, col).then((c) => {
+            if (isErrorMessage(c)) return
+            setFormulaText(cellToDisplayText(c))
+        })
         refocusGrid()
     }
 
@@ -336,8 +314,8 @@ export const EditBarComponent = observer(function EditBarComponent({
                         onSubmit={() => editorRef.current?.blur()}
                         onBlur={commitFormula}
                         onCancel={cancelEdit}
-                        getDisplayUnits={getDisplayUnits}
-                        formulaFunctions={formulaFunctions}
+                        getDisplayUnits={source.getDisplayUnits}
+                        formulaFunctions={source.formulaFunctions}
                         sheetName={sheetName}
                         config={{
                             fontSize: 12,

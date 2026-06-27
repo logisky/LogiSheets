@@ -1,16 +1,21 @@
 /**
- * @logisheets/formula-editor-react
+ * logisheets-formula-editor
  *
- * A React component for editing spreadsheet formulas with:
- * - Token-based syntax highlighting (via backend API)
- * - Autocomplete for formula functions
- * - Cell reference highlighting with colors
+ * A spreadsheet formula editor with token-based syntax highlighting (via a
+ * host callback), function autocomplete, signature help, and cell-reference
+ * coloring. Built on CodeMirror 6.
  *
- * Built on CodeMirror 6 for robust text editing.
+ * This root entry includes the React `<FormulaEditor>` component. For a
+ * framework-agnostic (vanilla / Vue / Svelte / Angular) build with no React
+ * dependency, import from `logisheets-formula-editor/core` instead.
  */
 
+// React component (thin wrapper over the vanilla core)
 export {FormulaEditor} from './FormulaEditor'
 export type {FormulaEditorRef} from './FormulaEditor'
 
-export * from './types'
-export * from './utils'
+// Framework-agnostic core + types + utils
+export * from './core'
+
+// Engine binding (one-call wiring from a DataService to editor props)
+export * from './engine'

@@ -1,4 +1,4 @@
-# @logisheets/formula-editor-react
+# logisheets-formula-editor-react
 
 A React component for editing spreadsheet formulas with syntax highlighting and autocomplete, built on [CodeMirror 6](https://codemirror.net/).
 
@@ -35,7 +35,7 @@ yarn install
 ## Usage
 
 ```tsx
-import { FormulaEditor, FormulaDisplayInfo, FormulaFunction } from '@logisheets/formula-editor-react'
+import { FormulaEditor, FormulaDisplayInfo, FormulaFunction } from 'logisheets-formula-editor-react'
 
 // Define available functions for autocomplete
 const functions: FormulaFunction[] = [
