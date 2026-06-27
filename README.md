@@ -78,7 +78,7 @@ The WASM wrappers expose the engine over a simple RPC surface and carry no exten
 | **logisheets-core** | `packages/core` | Engine-neutral extension logic, shared by every host |
 | **logisheets-runtime** | `packages/runtime` | Headless spreadsheet runtime for Node |
 | **logisheets-engine** | `packages/engine` | Canvas-based spreadsheet UI component — watermarked, contact us for removal |
-| **@logisheets/formula-editor** | `packages/formula-editor` | CodeMirror 6 formula editor |
+| **logisheets-formula-editor** | `packages/formula-editor` | CodeMirror 6 formula editor |
 | **logician** | `packages/logician` | AI agent toolkit for operating workbooks (browser + Node) |
 
 ## Contributing

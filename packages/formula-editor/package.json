@@ -1,7 +1,6 @@
 {
-    "name": "@logisheets/formula-editor",
-    "version": "0.1.0",
-    "private": true,
+    "name": "logisheets-formula-editor",
+    "version": "1.1.0",
     "type": "module",
     "main": "./dist/index.js",
     "module": "./dist/index.js",
@@ -11,7 +10,29 @@
             "import": "./dist/index.js",
             "types": "./dist/index.d.ts"
         },
+        "./core": {
+            "import": "./dist/core.js",
+            "types": "./dist/core.d.ts"
+        },
+        "./engine": {
+            "import": "./dist/engine.js",
+            "types": "./dist/engine.d.ts"
+        },
+        "./inline": {
+            "import": "./dist/inline.js",
+            "types": "./dist/inline.d.ts"
+        },
         "./styles.css": "./dist/styles.css"
+    },
+    "peerDependencies": {
+        "logisheets-engine": "*",
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0"
+    },
+    "peerDependenciesMeta": {
+        "logisheets-engine": {
+            "optional": true
+        }
     },
     "files": [
         "dist"
@@ -20,7 +41,9 @@
         "dev": "vite",
         "build": "tsc && vite build",
         "preview": "vite preview",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "gen:functions": "node scripts/gen-builtin-functions.mjs",
+        "prepack": "yarn build"
     },
     "dependencies": {
         "@codemirror/autocomplete": "^6.18.0",
@@ -29,10 +52,6 @@
         "@codemirror/state": "^6.4.0",
         "@codemirror/view": "^6.30.0",
         "@lezer/highlight": "^1.2.0"
-    },
-    "peerDependencies": {
-        "react": "^18.0.0 || ^19.0.0",
-        "react-dom": "^18.0.0 || ^19.0.0"
     },
     "devDependencies": {
         "@vitejs/plugin-react": "^4.3.1",

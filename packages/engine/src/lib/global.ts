@@ -89,10 +89,19 @@ export {
   buildSelectedDataFromCellRange,
   buildSelectedDataFromLines,
   getReferenceString,
+  getCellRect,
+  isCellInGridWindow,
+  getReferenceHighlightRects,
   ptToPx,
   pxToPt,
   pxToWidth,
   simpleUuid,
+} from "./components/utils";
+
+export type {
+  CellRect,
+  HighlightRect,
+  FormulaCellRef,
 } from "./components/utils";
 
 // Context menu types

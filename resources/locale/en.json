@@ -9,6 +9,25 @@
         }
     },
     "functions": {
+        "sum": {
+            "description": "Adds all the numbers in a range of cells."
+        },
+        "or": {
+            "description": "Returns TRUE if any argument is TRUE; returns FALSE if all arguments are FALSE."
+        },
+        "countblank": {
+            "description": "Counts the number of empty cells in a specified range of cells."
+        },
+        "norm": {
+            "dist": {
+                "description": "Returns the normal distribution for the specified mean and standard deviation."
+            },
+            "s": {
+                "inv": {
+                    "description": "Returns the inverse of the standard normal cumulative distribution."
+                }
+            }
+        },
         "abs": {
             "description": "Returns the absolute value of a number. The absolute value of a number is the number without its sign."
         },
@@ -160,7 +179,10 @@
             "description": "Returns the payment on the principal for a given period for an investment."
         },
         "gammaln": {
-            "description": "Returns the natural logarithm of the Gamma function, \u0393(number)."
+            "description": "Returns the natural logarithm of the Gamma function, \u0393(number).",
+            "precise": {
+                "description": "Returns the natural logarithm of the gamma function."
+            }
         },
         "bitlshift": {
             "description": "Shifts bits of a number to the left by a specified number of positions."
@@ -262,7 +284,10 @@
             "description": "Returns the normal distribution for the specified mean and standard deviation."
         },
         "rank": {
-            "description": "Returns the rank of a number in a list of numbers (ties averaged in older Excel versions)."
+            "description": "Returns the rank of a number in a list of numbers (ties averaged in older Excel versions).",
+            "eq": {
+                "description": "Returns the rank of a number in a list of numbers; if more than one value has the same rank, the top rank of that set is returned."
+            }
         },
         "sign": {
             "description": "Returns the sign of a number: 1 (positive), 0 (zero), or -1 (negative)."
@@ -313,7 +338,10 @@
             "description": "Converts a binary number to decimal."
         },
         "gamma": {
-            "description": "Returns the Gamma function value for a number."
+            "description": "Returns the Gamma function value for a number.",
+            "dist": {
+                "description": "Returns the gamma distribution."
+            }
         },
         "time": {
             "description": "Returns the decimal number for a particular time."

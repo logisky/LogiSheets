@@ -49,6 +49,158 @@ export const yForRowEnd = (rowIdx: number, grid: Grid): number => {
   return acc;
 };
 
+export interface CellRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Pixel rectangle (in canvas space) of a single cell — where an in-cell
+ * editor should sit. `originX`/`originY` offset by the header panel sizes
+ * (e.g. the engine config's leftTopWidth/leftTopHeight). `defaultWidth`/
+ * `defaultHeight` are used only if the cell isn't in the visible window.
+ */
+export const getCellRect = (
+  grid: Grid,
+  row: number,
+  col: number,
+  opts: {
+    originX?: number;
+    originY?: number;
+    defaultWidth?: number;
+    defaultHeight?: number;
+  } = {},
+): CellRect => {
+  const { originX = 0, originY = 0, defaultWidth = 0, defaultHeight = 0 } = opts;
+  const colInfo = grid.columns.find((c) => c.idx === col);
+  const rowInfo = grid.rows.find((r) => r.idx === row);
+  return {
+    x: xForColStart(col, grid) + originX,
+    y: yForRowStart(row, grid) + originY,
+    width: colInfo?.width ?? defaultWidth,
+    height: rowInfo?.height ?? defaultHeight,
+  };
+};
+
+/** Whether a cell is within the grid's currently rendered window. */
+export const isCellInGridWindow = (
+  grid: Grid,
+  row: number,
+  col: number,
+): boolean => {
+  const minRow = grid.rows[0]?.idx ?? 0;
+  const maxRow = grid.rows[grid.rows.length - 1]?.idx ?? 0;
+  const minCol = grid.columns[0]?.idx ?? 0;
+  const maxCol = grid.columns[grid.columns.length - 1]?.idx ?? 0;
+  return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
+};
+
+/** A cell reference as parsed by the backend (getDisplayUnitsOfFormula). */
+export interface FormulaCellRef {
+  workbook?: string;
+  sheet1?: string;
+  sheet2?: string;
+  row1?: number;
+  col1?: number;
+  row2?: number;
+  col2?: number;
+}
+
+export interface HighlightRect extends CellRect {
+  /** Index into the caller's color palette (refs are colored in order). */
+  colorIndex: number;
+}
+
+/**
+ * Pixel rectangles (canvas space) for highlighting the local cell references
+ * of a formula being edited — one rect per local, single-sheet ref, in order,
+ * with a `colorIndex` the caller maps to its palette. Cross-workbook /
+ * cross-sheet / other-sheet refs are skipped; ranges and merged single cells
+ * are expanded; indices are clamped to the visible window.
+ */
+export const getReferenceHighlightRects = (
+  cellRefs: readonly FormulaCellRef[],
+  grid: Grid,
+  sheetName: string,
+  opts: { originX?: number; originY?: number } = {},
+): HighlightRect[] => {
+  const { originX = 0, originY = 0 } = opts;
+  if (cellRefs.length === 0) return [];
+
+  const rects: HighlightRect[] = [];
+  let colorIndex = 0;
+  const firstCol = grid.columns[0]?.idx ?? 0;
+  const lastCol = grid.columns[grid.columns.length - 1]?.idx ?? firstCol;
+  const firstRow = grid.rows[0]?.idx ?? 0;
+  const lastRow = grid.rows[grid.rows.length - 1]?.idx ?? firstRow;
+  const clampCol = (c: number) => Math.min(Math.max(c, firstCol), lastCol);
+  const clampRow = (r: number) => Math.min(Math.max(r, firstRow), lastRow);
+
+  for (const cellRef of cellRefs) {
+    if (cellRef.workbook) continue;
+    if (
+      cellRef.sheet1 !== undefined &&
+      cellRef.sheet2 !== undefined &&
+      cellRef.sheet1 !== cellRef.sheet2
+    )
+      continue;
+    if (cellRef.sheet1 && cellRef.sheet1 !== sheetName) continue;
+    if (cellRef.row1 === undefined || cellRef.col1 === undefined) continue;
+
+    const idx = colorIndex++;
+    const r1 = clampRow(cellRef.row1);
+    const c1 = clampCol(cellRef.col1);
+    let endRow: number;
+    let endCol: number;
+    let startRow: number;
+    let startCol: number;
+
+    if (cellRef.row2 !== undefined && cellRef.col2 !== undefined) {
+      const r2 = clampRow(cellRef.row2);
+      const c2 = clampCol(cellRef.col2);
+      startRow = Math.min(r1, r2);
+      endRow = Math.max(r1, r2);
+      startCol = Math.min(c1, c2);
+      endCol = Math.max(c1, c2);
+    } else {
+      startRow = r1;
+      startCol = c1;
+      endRow = r1;
+      endCol = c1;
+      // A single ref over a merged cell covers the whole merge.
+      if (grid.mergeCells) {
+        for (const m of grid.mergeCells) {
+          if (
+            m.startCol <= c1 &&
+            c1 <= m.endCol &&
+            m.startRow <= r1 &&
+            r1 <= m.endRow
+          ) {
+            endRow = Math.max(endRow, m.endRow);
+            endCol = Math.max(endCol, m.endCol);
+          }
+        }
+      }
+    }
+
+    const sx = originX + xForColStart(startCol, grid);
+    const ex = originX + xForColEnd(endCol, grid);
+    const sy = originY + yForRowStart(startRow, grid);
+    const ey = originY + yForRowEnd(endRow, grid);
+    rects.push({
+      x: sx,
+      y: sy,
+      width: Math.max(0, ex - sx),
+      height: Math.max(0, ey - sy),
+      colorIndex: idx,
+    });
+  }
+
+  return rects;
+};
+
 export const getPosition = (rowIdx: number, colIdx: number, grid: Grid) => {
   let xAcc = -grid.subOffsetX;
   let x0 = 0;

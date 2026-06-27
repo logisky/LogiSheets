@@ -48,9 +48,14 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             extensions: ['.ts', '.tsx', '.js', '.json', '.d.ts'],
             alias: {
                 '@': path.resolve(__dirname, 'src'),
-                '@logisheets/formula-editor': path.resolve(
+                // Exact ($) so it doesn't swallow subpath imports below.
+                'logisheets-formula-editor$': path.resolve(
                     __dirname,
                     'packages/formula-editor/src/lib/index.ts'
+                ),
+                'logisheets-formula-editor/inline': path.resolve(
+                    __dirname,
+                    'packages/formula-editor/src/lib/inline.ts'
                 ),
             },
         },

@@ -4301,26 +4301,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@logisheets/formula-editor@workspace:packages/formula-editor":
-  version: 0.0.0-use.local
-  resolution: "@logisheets/formula-editor@workspace:packages/formula-editor"
-  dependencies:
-    "@codemirror/autocomplete": "npm:^6.18.0"
-    "@codemirror/commands": "npm:^6.6.0"
-    "@codemirror/language": "npm:^6.10.0"
-    "@codemirror/state": "npm:^6.4.0"
-    "@codemirror/view": "npm:^6.30.0"
-    "@lezer/highlight": "npm:^1.2.0"
-    "@vitejs/plugin-react": "npm:^4.3.1"
-    typescript: "npm:^5.5.3"
-    vite: "npm:^5.4.0"
-    vite-plugin-dts: "npm:^4.0.0"
-  peerDependencies:
-    react: ^18.0.0 || ^19.0.0
-    react-dom: ^18.0.0 || ^19.0.0
-  languageName: unknown
-  linkType: soft
-
 "@mapbox/node-pre-gyp@npm:^2.0.0":
   version: 2.0.3
   resolution: "@mapbox/node-pre-gyp@npm:2.0.3"
@@ -16824,6 +16804,30 @@ __metadata:
     terser: "npm:^5.46.0"
     typescript: "npm:^5.5.0"
     vite: "npm:^6.0.0"
+  languageName: unknown
+  linkType: soft
+
+"logisheets-formula-editor@workspace:packages/formula-editor":
+  version: 0.0.0-use.local
+  resolution: "logisheets-formula-editor@workspace:packages/formula-editor"
+  dependencies:
+    "@codemirror/autocomplete": "npm:^6.18.0"
+    "@codemirror/commands": "npm:^6.6.0"
+    "@codemirror/language": "npm:^6.10.0"
+    "@codemirror/state": "npm:^6.4.0"
+    "@codemirror/view": "npm:^6.30.0"
+    "@lezer/highlight": "npm:^1.2.0"
+    "@vitejs/plugin-react": "npm:^4.3.1"
+    typescript: "npm:^5.5.3"
+    vite: "npm:^5.4.0"
+    vite-plugin-dts: "npm:^4.0.0"
+  peerDependencies:
+    logisheets-engine: "*"
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+  peerDependenciesMeta:
+    logisheets-engine:
+      optional: true
   languageName: unknown
   linkType: soft
 
