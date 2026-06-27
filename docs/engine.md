@@ -59,8 +59,8 @@ All fields are optional (pass a `Partial<EngineConfig>`); defaults come from
 | --- | --- | --- |
 | `leftTopWidth` | `number` | Width of the left (row-number) header panel, in pixels. |
 | `leftTopHeight` | `number` | Height of the top (column-letter) header panel, in pixels. |
-| `showHorizontalGridLines` | `boolean` | Draw horizontal grid lines. |
-| `showVerticalGridLines` | `boolean` | Draw vertical grid lines. |
+| `showHorizontalGridLines` | `boolean` | Draw horizontal grid lines (default `true`). Toggle at runtime with [`setShowGridLines`](#display-settings). |
+| `showVerticalGridLines` | `boolean` | Draw vertical grid lines (default `true`). Toggle at runtime with [`setShowGridLines`](#display-settings). |
 | `defaultCellWidth` | `number` | Default column width, in points (pt). |
 | `defaultCellHeight` | `number` | Default row height, in points (pt). |
 | `scrollbarSize` | `number` | Scrollbar thickness, in pixels. |
@@ -225,6 +225,23 @@ const status = await engine.setLicense(apiKey)
 if (!status.valid) console.warn('License invalid:', status.reason)
 ```
 
+## Display settings
+
+Runtime display options that change how the grid is painted. They update the
+shared config and re-render every mounted view of the workbook.
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `setShowGridLines` | `setShowGridLines(show: boolean): Promise<void>` | Show or hide the default cell grid lines across all views. Sets both `showHorizontalGridLines` and `showVerticalGridLines`. |
+
+```ts
+// e.g. wired to a "Show gridlines" toggle in your toolbar
+await engine.setShowGridLines(false) // hide; pass true to show again
+```
+
+The initial value comes from [`EngineConfig`](#constructor-config-engineconfig)
+(`showHorizontalGridLines` / `showVerticalGridLines`, both `true` by default).
+
 ## Editing data — `DataService`
 
 `engine.getDataService()` is the high-level service for edits and rendering. It
@@ -243,6 +260,7 @@ Most methods return `Promise<T | ErrorMessage>` — check with `isErrorMessage()
 | `loadWorkbook` | `loadWorkbook(buf: Uint8Array, name: string): Promise<Grid \| ErrorMessage>` | Load `.xlsx` (worker side only — prefer `engine.loadFile` while mounted). |
 | `initOffscreen` | `initOffscreen(canvas: OffscreenCanvas): Promise<void \| ErrorMessage>` | Bind an offscreen canvas for rendering. |
 | `setLicense` / `clearLicense` | — | Same as on the engine. |
+| `setShowGridLines` | `setShowGridLines(horizontal: boolean, vertical: boolean): void` | Show/hide grid lines (worker-global). Prefer `engine.setShowGridLines`, which also re-renders. |
 | `getCurrentSheetIdx` | `(): number` | Active sheet index. |
 | `setCurrentSheetIdx` | `(idx: number): void` | Set the active sheet. |
 | `getCurrentSheetId` | `(): number` | Stable id of the active sheet. |
@@ -412,50 +430,179 @@ interface ContextMenuItem {
 The click handler receives a `ContextMenuContext`: `{selectedData, target:
 'cell' | 'row' | 'column', row?, col?, event: MouseEvent}`.
 
-## Putting it together (React)
+## Using with a framework
 
-The main app constructs the engine at startup, shares it through React context,
-and mounts it inside a component.
+The engine is **framework-agnostic**. It renders into a plain DOM element via
+`engine.mount(el)`, so there is no per-framework component to install and no
+React/Vue/Angular peer dependency. Your framework only owns the *lifecycle* —
+create the engine, mount on attach, tear down on unmount — and everything else
+is the same `Engine` API everywhere.
 
-```tsx
-// startup (src/index.tsx)
-import {EngineProvider} from '@/core/engine/provider'
-import {initEngine} from '@/core/engine' // wraps `new Engine()` + waits for 'ready'
-import 'logisheets-engine/style.css'
+The recipe is always the same:
 
-initEngine().then((engine) => {
-    createRoot(document.getElementById('root')!).render(
-        <EngineProvider engine={engine}>
-            <App />
-        </EngineProvider>,
-    )
-})
+1. Construct **one** `Engine` (it spins up its own Web Worker — keep it in a
+   module/store/context, don't recreate it on every render).
+2. Wait for the `ready` event — the worker + WASM initialize asynchronously.
+3. `mount(element, options)` into a **sized** container (give it `width`/`height`).
+4. Subscribe to events (`gridChange`, `selectionChange`, …) and drive edits
+   through `getDataService()` / `getWorkbook()`.
+5. On teardown: `unmount()` (the engine stays alive and re-mountable); call
+   `destroy()` when you're done with it for good (terminates the worker).
+
+A small "mount once ready" helper captures step 2–3 (handles the case where the
+engine is already ready, since `ready` won't fire again):
+
+```ts
+import type {Engine} from 'logisheets-engine'
+
+export function mountWhenReady(engine: Engine, el: HTMLElement) {
+    const run = () => engine.mount(el, {showSheetTabs: true, showScrollbars: true})
+    engine.isReady() ? run() : engine.on('ready', run)
+}
 ```
 
+### React
+
 ```tsx
-// a canvas component (simplified from src/components/engine-canvas)
-function EngineCanvas() {
-    const engine = useEngine() // from context
+import {useEffect, useRef} from 'react'
+import {Engine, type Grid} from 'logisheets-engine'
+import 'logisheets-engine/style.css'
+
+// Created once at module scope so it survives re-renders. In a real app you'd
+// usually hold it in a context/store (the LogiSheets app uses `initEngine()` +
+// an `EngineProvider`, see `src/core/engine/`).
+const engine = new Engine()
+
+export function Spreadsheet() {
     const ref = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        engine.mount(ref.current!, {showSheetTabs: true, showScrollbars: true})
-        const onGrid = (g: Grid | null) => setGrid(g)
+        const onReady = () => engine.mount(ref.current!, {showSheetTabs: true})
+        engine.isReady() ? onReady() : engine.on('ready', onReady)
+
+        const onGrid = (_g: Grid | null) => {
+            /* react to each render, e.g. update overlays */
+        }
         engine.on('gridChange', onGrid)
+
         return () => {
             engine.off('gridChange', onGrid)
-            engine.unmount()
+            engine.unmount() // keep `engine` alive for the next mount
         }
-    }, [engine])
+    }, [])
 
     return <div ref={ref} style={{width: '100%', height: '100%'}} />
 }
 ```
 
-The same shape works in any framework: construct the engine, wait for `ready`,
-`mount` into a node, subscribe to events, and drive edits through
-`getDataService()` / `getWorkbook()`.
+### Vue 3
 
-The package also ships a thin **React adapter** (`SpreadsheetAdapterProps`) and
-exports the raw Svelte components (`Spreadsheet`, `ColumnHeaders`, `RowHeaders`,
-`Selector`, `SheetTabs`, `Scrollbar`, `ContextMenu`) for fully custom layouts.
+```vue
+<script setup lang="ts">
+import {onMounted, onBeforeUnmount, ref} from 'vue'
+import {Engine} from 'logisheets-engine'
+import 'logisheets-engine/style.css'
+
+const host = ref<HTMLDivElement>()
+const engine = new Engine()
+
+onMounted(() => {
+    const mount = () => engine.mount(host.value!, {showSheetTabs: true})
+    engine.isReady() ? mount() : engine.on('ready', mount)
+})
+onBeforeUnmount(() => engine.destroy())
+</script>
+
+<template>
+    <div ref="host" style="width: 100%; height: 100%" />
+</template>
+```
+
+### Svelte
+
+```svelte
+<script lang="ts">
+import {onMount, onDestroy} from 'svelte'
+import {Engine} from 'logisheets-engine'
+import 'logisheets-engine/style.css'
+
+let host: HTMLDivElement
+const engine = new Engine()
+
+onMount(() => {
+    const mount = () => engine.mount(host, {showSheetTabs: true})
+    engine.isReady() ? mount() : engine.on('ready', mount)
+})
+onDestroy(() => engine.destroy())
+</script>
+
+<div bind:this={host} style="width: 100%; height: 100%"></div>
+```
+
+### Angular
+
+```ts
+import {AfterViewInit, Component, ElementRef, OnDestroy, ViewChild} from '@angular/core'
+import {Engine} from 'logisheets-engine'
+import 'logisheets-engine/style.css'
+
+@Component({
+    selector: 'app-spreadsheet',
+    template: `<div #host style="width:100%;height:100%"></div>`,
+})
+export class SpreadsheetComponent implements AfterViewInit, OnDestroy {
+    @ViewChild('host', {static: true}) host!: ElementRef<HTMLDivElement>
+    private engine = new Engine()
+
+    ngAfterViewInit() {
+        const mount = () => this.engine.mount(this.host.nativeElement, {showSheetTabs: true})
+        this.engine.isReady() ? mount() : this.engine.on('ready', mount)
+    }
+    ngOnDestroy() {
+        this.engine.destroy()
+    }
+}
+```
+
+### Vanilla JS / `<script>` tag
+
+As an ES module (with a bundler):
+
+```ts
+import {Engine} from 'logisheets-engine'
+import 'logisheets-engine/style.css'
+
+const engine = new Engine()
+engine.on('ready', () => engine.mount(document.getElementById('app')!))
+```
+
+Or via the UMD build with no bundler — the whole API hangs off the
+`LogiSheetsEngine` global:
+
+```html
+<link rel="stylesheet" href="logisheets-engine.css" />
+<script src="logisheets-engine.umd.js"></script>
+<script>
+  const engine = new LogiSheetsEngine.Engine()
+  engine.on('ready', () => engine.mount(document.getElementById('app')))
+</script>
+```
+
+::: warning Common gotchas
+- **Size the container.** The grid fills its host element; a `<div>` with no
+  height renders nothing.
+- **One engine, mount/unmount many times.** Don't `new Engine()` on every
+  render — reuse the instance and `destroy()` only on final teardown.
+- **Strict / double-invoked effects** (React 18 dev, etc.): `mount()` warns if
+  already mounted. Pair every `mount` with an `unmount` in the cleanup, as above.
+:::
+
+### Advanced: custom layouts
+
+For fully custom layouts you can import the raw Svelte components directly —
+`Spreadsheet`, `ColumnHeaders`, `RowHeaders`, `Selector`, `SheetTabs`,
+`Scrollbar`, `ContextMenu` — and compose them yourself instead of using
+`mount()`. The `adapters` module additionally exports React-oriented **prop
+types** (`SpreadsheetAdapterProps`, `CanvasAdapterProps`) and a
+`convertCanvasPropsToAdapterProps` helper for teams writing their own React
+wrapper; these are type-level conveniences, not a shipped React component.

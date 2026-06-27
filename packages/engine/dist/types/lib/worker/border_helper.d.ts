@@ -4,6 +4,8 @@
  */
 import type { BorderPr } from "logisheets-web";
 import type { CellView } from "./view_manager";
+/** Show/hide the default cell gridlines. Affects every subsequent render. */
+export declare function setGridVisibility(horizontal: boolean, vertical: boolean): void;
 export interface BorderSegment {
     pr: BorderPr | undefined;
     from: number;

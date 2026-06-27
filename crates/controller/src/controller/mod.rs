@@ -563,6 +563,18 @@ impl Controller {
             }
         }
     }
+
+    /// Drop the undo/redo history, keeping the current workbook state as the
+    /// new baseline. Nothing is reverted — only the history is cleared. Used
+    /// by headless/server callers that treat each operation as atomic and
+    /// don't want history to accumulate across requests.
+    pub fn clear_history(&mut self) {
+        if let Some(temp) = &mut self.temp_status {
+            temp.version_manager.set_init_status(self.status.clone());
+        } else {
+            self.version_manager.set_init_status(self.status.clone());
+        }
+    }
 }
 
 #[cfg(test)]

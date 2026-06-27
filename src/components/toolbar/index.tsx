@@ -802,52 +802,61 @@ export const Toolbar = observer(
                 {/* Center cluster: all remaining controls */}
                 <div className={styles.center}>
                     {activeTab === 'view' ? (
-                        <div className={styles.section}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        size="small"
-                                        checked={globalStore.splitView}
-                                        onChange={(e) =>
-                                            globalStore.setSplitView(
-                                                e.target.checked
-                                            )
+                        <div className={styles.viewSection}>
+                            {[
+                                {
+                                    label: 'Split view (2nd view)',
+                                    checked: globalStore.splitView,
+                                    onChange: (v: boolean) =>
+                                        globalStore.setSplitView(v),
+                                },
+                                {
+                                    label: 'Diff layer',
+                                    checked: globalStore.diffLayerEnabled,
+                                    onChange: (v: boolean) =>
+                                        globalStore.setDiffLayerEnabled(v),
+                                },
+                                {
+                                    label: 'Block overlays always visible',
+                                    checked: globalStore.alwaysShowBlockInfo,
+                                    onChange: (v: boolean) =>
+                                        globalStore.setAlwaysShowBlockInfo(v),
+                                },
+                                {
+                                    label: 'Show gridlines',
+                                    checked: globalStore.showGridlines,
+                                    onChange: (v: boolean) => {
+                                        globalStore.setShowGridlines(v)
+                                        engine.setShowGridLines(v)
+                                    },
+                                },
+                            ].map((t) => (
+                                <div
+                                    className={styles.toggleItem}
+                                    key={t.label}
+                                >
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                size="small"
+                                                checked={t.checked}
+                                                onChange={(e) =>
+                                                    t.onChange(e.target.checked)
+                                                }
+                                            />
                                         }
+                                        label={t.label}
+                                        labelPlacement="start"
+                                        sx={{
+                                            m: 0,
+                                            gap: '6px',
+                                            '& .MuiFormControlLabel-label': {
+                                                fontSize: 12,
+                                            },
+                                        }}
                                     />
-                                }
-                                label="Split view (2nd view)"
-                                sx={{'& .MuiFormControlLabel-label': {fontSize: 12}}}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        size="small"
-                                        checked={globalStore.diffLayerEnabled}
-                                        onChange={(e) =>
-                                            globalStore.setDiffLayerEnabled(
-                                                e.target.checked
-                                            )
-                                        }
-                                    />
-                                }
-                                label="Diff layer"
-                                sx={{'& .MuiFormControlLabel-label': {fontSize: 12}}}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        size="small"
-                                        checked={globalStore.alwaysShowBlockInfo}
-                                        onChange={(e) =>
-                                            globalStore.setAlwaysShowBlockInfo(
-                                                e.target.checked
-                                            )
-                                        }
-                                    />
-                                }
-                                label="Block overlays always visible"
-                                sx={{'& .MuiFormControlLabel-label': {fontSize: 12}}}
-                            />
+                                </div>
+                            ))}
                         </div>
                     ) : null}
                     {activeTab === 'home' ? (

@@ -133,6 +133,7 @@ export declare class WorkbookClient implements Client {
     }): Resp<any>;
     undo(): Resp<boolean>;
     redo(): Resp<boolean>;
+    cleanHistory(): Resp<void>;
     commitTempStatus(): Resp<ActionEffect>;
     cleanupTempStatus(): Resp<void>;
     loadWorkbook(params: {

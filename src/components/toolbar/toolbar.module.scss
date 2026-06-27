@@ -25,6 +25,27 @@
   gap: 10px;
 }
 
+/* View tab: each option is a self-contained bordered pill so the label is
+   unambiguously tied to its own switch, with clear gaps between options. */
+.viewSection {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.toggleItem {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 6px 0 10px;
+  border: 1px solid #e0e3e7;
+  border-radius: 8px;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+.toggleItem:hover {
+  background: #f1f5f9;
+}
+
 /* Make controls visually smaller without changing container height */
 .host :global(.MuiButton-root) {
   padding: 2px 6px;

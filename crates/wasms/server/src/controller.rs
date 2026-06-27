@@ -126,6 +126,14 @@ pub(crate) fn redo(id: usize) -> bool {
     }
 }
 
+pub(crate) fn clean_history(id: usize) {
+    init();
+    let mut manager = MANAGER.get_mut();
+    if let Some(ctrl) = manager.get_mut_workbook(&id) {
+        ctrl.clear_history();
+    }
+}
+
 pub(crate) fn commit_temp_status(id: usize) -> JsValue {
     init();
     let mut manager = MANAGER.get_mut();

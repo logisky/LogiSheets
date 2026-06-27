@@ -18,6 +18,7 @@ export declare class OffscreenClient {
         reason?: string;
     }>;
     clearLicense(): void;
+    setGridLines(horizontal: boolean, vertical: boolean): void;
     dispose(canvasId: number): void;
     private _call;
 }

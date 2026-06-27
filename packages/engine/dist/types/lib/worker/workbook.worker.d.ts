@@ -144,6 +144,7 @@ export declare class WorkbookWorkerService implements IWorkbookWorker {
     }): Result<ActionEffect>;
     undo(): Result<boolean>;
     redo(): Result<boolean>;
+    cleanHistory(): Result<void>;
     commitTempStatus(): Result<void>;
     cleanupTempStatus(): Result<void>;
     toggleStatus(useTemp: boolean): Result<void>;

@@ -5,21 +5,23 @@
 // The browser supplies logisheets-engine's worker client; here we supply a
 // synchronous client built on the Node WASM `handle()` entry point.
 //
-// All workbook logic lives in logisheets-core's WorkbookOps; the runtime only
+// A single {@link SpreadsheetRuntime} owns many {@link Workbook}s at once
+// (wb1, wb2, wb3, …); every operation runs against one specific workbook. All
+// workbook logic lives in logisheets-core's WorkbookOps; the runtime only
 // adapts the synchronous Node `handle()` entry point into the async Client that
-// WorkbookOps consumes, then exposes that ops layer.
+// WorkbookOps consumes, then exposes that ops layer per workbook.
 
+import {readFile} from 'node:fs/promises'
+import {basename, resolve} from 'node:path'
 import {handle} from 'logisheets/wasm/logisheets_wasm_server.js'
 import type {Value, Client} from 'logisheets-web'
-import {
-    WorkbookOps,
-    type ValidationRule,
-    type FieldColumn,
-    type Violation,
-} from 'logisheets-core'
+import {WorkbookOps} from 'logisheets-core'
 
 // Re-export the core surface so consumers import everything from one place.
 export * from 'logisheets-core'
+
+// The developer-defined JSON-RPC server (operations run against this runtime).
+export * from './rpc.js'
 
 /**
  * Adapt the synchronous Node `handle()` entry point into the async {@link
@@ -53,73 +55,170 @@ function makeNodeClient(bookId: number): Client {
 }
 
 /**
- * A live workbook in the Node WASM engine, with logisheets-core's logic
- * available as methods. Construct one per workbook.
+ * A single live workbook in the Node WASM engine, with logisheets-core's logic
+ * available as methods. You don't construct one directly — obtain it from
+ * {@link SpreadsheetRuntime.createWorkbook} or
+ * {@link SpreadsheetRuntime.loadWorkbook}, then run every operation against
+ * this handle so the target workbook is always explicit.
  */
-export class SpreadsheetRuntime {
-    private readonly bookId: number
+export class Workbook {
+    /** The workbook's engine id (unique across the whole process). */
+    public readonly id: number
     /** The shared, engine-neutral operation layer, bound to this workbook. */
     public readonly ops: WorkbookOps
+    /**
+     * The raw async {@link Client} bound to this workbook — every
+     * `WorkbookMethods` call mapped onto the Node engine. This is the
+     * last-resort escape hatch: prefer {@link ops}, but when an operation has
+     * no `WorkbookOps` method yet, you can drive the engine directly here.
+     */
+    public readonly client: Client
+    /** Absolute path this workbook was loaded from, if any. */
+    public readonly path?: string
 
-    private constructor(bookId: number) {
-        this.bookId = bookId
-        this.ops = new WorkbookOps(makeNodeClient(bookId))
-    }
+    private released = false
 
-    /** Create an empty workbook. */
-    public static create(): SpreadsheetRuntime {
-        return new SpreadsheetRuntime(handle('newWorkbook') as number)
+    /** @internal Construct via {@link SpreadsheetRuntime}. */
+    public constructor(bookId: number, path?: string) {
+        this.id = bookId
+        this.client = makeNodeClient(bookId)
+        this.ops = new WorkbookOps(this.client)
+        this.path = path
     }
 
     /** Read a single cell's evaluated value. */
     public getValue(sheetIdx: number, row: number, col: number): Value {
         return handle(
             {method: 'getValue', value: {sheetIdx, row, col}},
-            this.bookId
+            this.id
         )
     }
 
-    /** Release the workbook's engine resources. */
-    public close(): void {
-        handle('release', this.bookId)
+    /** Undo the most recent transaction. Returns whether anything was undone. */
+    public async undo(): Promise<boolean> {
+        return (await this.client.undo()) === true
     }
 
-    // ---- High-level operations (thin delegators to ops) -----------------
-
-    /** Write a value or formula into a cell. */
-    public inputCell(
-        sheetIdx: number,
-        row: number,
-        col: number,
-        content: string
-    ): Promise<unknown> {
-        return this.ops.inputCell(sheetIdx, row, col, content)
-    }
-
-    /** Check formula-based validation rules; return violating cells. */
-    public checkValidations(
-        rules: readonly ValidationRule[]
-    ): Promise<Violation[]> {
-        return this.ops.checkValidations(rules)
-    }
-
-    /** Check required / unique / membership field constraints. */
-    public checkFieldConstraints(
-        columns: readonly FieldColumn[]
-    ): Promise<Violation[]> {
-        return this.ops.checkFieldConstraints(columns)
+    /** Redo the most recently undone transaction. Returns whether anything was redone. */
+    public async redo(): Promise<boolean> {
+        return (await this.client.redo()) === true
     }
 
     /**
-     * Establish a cell's validation rule — the same operation the browser
-     * runs, served from logisheets-core's WorkbookOps.
+     * Drop the undo/redo history, keeping the current state as the baseline.
+     * Nothing is reverted — only the history is cleared (bounds memory and
+     * makes prior changes permanent).
      */
-    public setValidationRule(
-        sheetIdx: number,
-        row: number,
-        col: number,
-        formula: string
-    ): Promise<void> {
-        return this.ops.setValidationRule(sheetIdx, row, col, formula)
+    public async cleanHistory(): Promise<void> {
+        await this.client.cleanHistory()
+    }
+
+    /**
+     * Revert every change still on the undo stack, returning the workbook to
+     * its current baseline. Assumes the history was clean at the baseline (the
+     * mutation lifecycle in {@link RpcServer.registerMutation} guarantees this),
+     * so it undoes exactly the changes made since.
+     */
+    public async discardChanges(): Promise<void> {
+        // eslint-disable-next-line no-await-in-loop
+        while ((await this.client.undo()) === true) {
+            /* keep undoing until the stack is empty */
+        }
+    }
+
+    /** @internal Release engine resources. Use {@link SpreadsheetRuntime.close}. */
+    public release(): void {
+        if (this.released) return
+        this.released = true
+        handle('release', this.id)
+    }
+}
+
+/**
+ * The headless runtime: a container for many open {@link Workbook}s. Create one
+ * per Node process, then load or create as many workbooks as you need — each
+ * operation is issued against the specific workbook handle you hold.
+ *
+ * ```ts
+ * const rt = new SpreadsheetRuntime()
+ * const wb1 = await rt.loadWorkbook('a.xlsx')
+ * const wb2 = await rt.loadWorkbook('b.xlsx')
+ * const wb3 = rt.createWorkbook()
+ * await wb1.ops.inputCell(0, 0, 0, 'hi')
+ * ```
+ */
+export class SpreadsheetRuntime {
+    /** Loaded-from-disk workbooks, keyed by absolute path, for dedup. */
+    private readonly byPath = new Map<string, Workbook>()
+    /** Every open workbook this runtime owns. */
+    private readonly open = new Set<Workbook>()
+
+    /** Create a new empty workbook. */
+    public createWorkbook(): Workbook {
+        const wb = new Workbook(handle('newWorkbook') as number)
+        this.open.add(wb)
+        return wb
+    }
+
+    /**
+     * Load a workbook from a .xlsx file on disk. Calling this twice with the
+     * same path returns the already-loaded {@link Workbook} rather than
+     * reloading — {@link close} it to release the engine and clear the entry.
+     */
+    public async loadWorkbook(path: string): Promise<Workbook> {
+        const key = resolve(path)
+        const existing = this.byPath.get(key)
+        if (existing) return existing
+
+        const content = await readFile(key)
+        const wb = this.loadWorkbookFromBytes(content, basename(key), key)
+        this.byPath.set(key, wb)
+        return wb
+    }
+
+    /**
+     * Load a workbook from raw .xlsx bytes already in memory.
+     *
+     * @param name file name used by the engine (e.g. for the workbook title)
+     */
+    public loadWorkbookFromBytes(
+        content: Uint8Array,
+        name: string,
+        path?: string
+    ): Workbook {
+        const bookId = handle('newWorkbook') as number
+        // The engine's deserializer expects a plain number array, not a
+        // typed array / Buffer — mirror the browser SDK's `Array.from(buf)`.
+        const code = handle(
+            {
+                method: 'loadWorkbook',
+                value: {content: Array.from(content), name},
+            },
+            bookId
+        ) as number
+        if (code !== 0) {
+            handle('release', bookId)
+            throw new Error(`failed to load workbook "${name}" (code ${code})`)
+        }
+        const wb = new Workbook(bookId, path)
+        this.open.add(wb)
+        return wb
+    }
+
+    /** All workbooks currently open in this runtime. */
+    public get workbooks(): readonly Workbook[] {
+        return [...this.open]
+    }
+
+    /** Close one workbook, releasing its engine resources. */
+    public close(wb: Workbook): void {
+        this.open.delete(wb)
+        if (wb.path !== undefined) this.byPath.delete(wb.path)
+        wb.release()
+    }
+
+    /** Close every open workbook. */
+    public closeAll(): void {
+        for (const wb of [...this.open]) this.close(wb)
     }
 }

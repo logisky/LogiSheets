@@ -26,6 +26,7 @@ export declare enum MethodName {
     GetCellPosition = "getCellPosition",
     Undo = "undo",
     Redo = "redo",
+    CleanHistory = "cleanHistory",
     HandleTransaction = "handleTransaction",
     HandleTransactionWithoutEvents = "handleTransactionWithoutEvents",
     LoadWorkbook = "loadWorkbook",
@@ -76,7 +77,8 @@ export declare enum OffscreenRenderName {
     Dispose = "dispose",
     GetAppropriateHeights = "getAppropriateHeights",
     SetLicense = "setLicense",
-    ClearLicense = "clearLicense"
+    ClearLicense = "clearLicense",
+    SetGridLines = "setGridLines"
 }
 export type Result<T> = T | ErrorMessage;
 export interface IWorkbookWorker {

@@ -219,11 +219,16 @@ function generateBorderBatchLinePayload(
     const drawLeftBorder = () => {
         if (lineRange.type === 'row') return
         result.push(
-            ...generateLineDoubleBorderPayload(sheetIdx, lineRange.start, false, {
-                direction: 'left',
-                color: update.color,
-                borderType: update.borderType,
-            })
+            ...generateLineDoubleBorderPayload(
+                sheetIdx,
+                lineRange.start,
+                false,
+                {
+                    direction: 'left',
+                    color: update.color,
+                    borderType: update.borderType,
+                }
+            )
         )
     }
     const drawRightBorder = () => {
@@ -239,11 +244,16 @@ function generateBorderBatchLinePayload(
     const drawTopBorder = () => {
         if (lineRange.type !== 'row') return
         result.push(
-            ...generateLineDoubleBorderPayload(sheetIdx, lineRange.start, true, {
-                direction: 'top',
-                color: update.color,
-                borderType: update.borderType,
-            })
+            ...generateLineDoubleBorderPayload(
+                sheetIdx,
+                lineRange.start,
+                true,
+                {
+                    direction: 'top',
+                    color: update.color,
+                    borderType: update.borderType,
+                }
+            )
         )
     }
     const drawBottomBorder = () => {

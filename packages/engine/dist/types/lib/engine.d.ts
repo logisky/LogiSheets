@@ -124,6 +124,11 @@ export declare class Engine {
      * Clear the current license and show watermark again.
      */
     clearLicense(): void;
+    /**
+     * Show or hide the default cell gridlines across every view of this
+     * workbook. Updates the shared config and re-renders all mounted views.
+     */
+    setShowGridLines(show: boolean): Promise<void>;
     private _ensureReady;
 }
 export default Engine;

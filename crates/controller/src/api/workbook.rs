@@ -163,6 +163,13 @@ impl Workbook {
         self.controller.redo()
     }
 
+    /// Clear the undo/redo history, keeping the current state as the baseline.
+    /// Nothing is reverted; only the history is dropped.
+    #[inline]
+    pub fn clear_history(&mut self) {
+        self.controller.clear_history()
+    }
+
     // ----- Named checkpoints -------------------------------------------
     //
     // Save / delete / list are workbook methods (not payloads) because

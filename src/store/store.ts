@@ -69,6 +69,14 @@ export class GlobalStore {
     @action setDiffLayerEnabled(v: boolean) {
         this.diffLayerEnabled = v
     }
+
+    // When true (default), the engine draws the default cell gridlines. The
+    // View toolbar toggle mirrors this to engine.setShowGridLines.
+    @observable showGridlines = true
+
+    @action setShowGridlines(v: boolean) {
+        this.showGridlines = v
+    }
 }
 
 export const globalStore = new GlobalStore()
