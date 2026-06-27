@@ -219,10 +219,7 @@ export class WorkbookOps {
 
     /** Set a sheet tab's color (ARGB string; empty clears it). */
     setSheetColor(idx: number, color: string): Promise<ActionEffect> {
-        return this.apply(
-            [{type: 'setSheetColor', value: {idx, color}}],
-            true
-        )
+        return this.apply([{type: 'setSheetColor', value: {idx, color}}], true)
     }
 
     // ---- blocks ---------------------------------------------------------
@@ -322,13 +319,13 @@ export class WorkbookOps {
         data: SelectedData,
         update: BorderBatchUpdate
     ): Promise<void> {
-        await this.applyGenerated(generateBorderPayloads(sheetIdx, data, update))
+        await this.applyGenerated(
+            generateBorderPayloads(sheetIdx, data, update)
+        )
     }
 
     /** Apply a generated payload list, skipping the round-trip when empty. */
-    private async applyGenerated(
-        payloads: readonly Payload[]
-    ): Promise<void> {
+    private async applyGenerated(payloads: readonly Payload[]): Promise<void> {
         if (payloads.length === 0) return
         await this.apply(payloads, true)
     }
@@ -354,8 +351,15 @@ export class WorkbookOps {
         keyIdx: number
         fields: readonly FormBlockField[]
     }): Promise<void> {
-        const {sheetIdx, blockId, masterRow, masterCol, refName, keyIdx, fields} =
-            opts
+        const {
+            sheetIdx,
+            blockId,
+            masterRow,
+            masterCol,
+            refName,
+            keyIdx,
+            fields,
+        } = opts
         const payloads: Payload[] = [
             {
                 type: 'createBlock',
@@ -515,8 +519,9 @@ export class WorkbookOps {
                 await this.evalFormula(rule.sheetIdx, rule.formula)
             )
         }
-        return checkValidationsPure(rules, (_sheetIdx, formula) =>
-            values.get(formula) as Value
+        return checkValidationsPure(
+            rules,
+            (_sheetIdx, formula) => values.get(formula) as Value
         )
     }
 

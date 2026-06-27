@@ -25,6 +25,11 @@ export declare class DataService {
         reason?: string;
     }>;
     clearLicense(): void;
+    /**
+     * Show/hide the default cell gridlines. The setting is worker-global; the
+     * caller (Engine.setShowGridLines) re-renders the mounted views.
+     */
+    setShowGridLines(horizontal: boolean, vertical: boolean): void;
     loadWorkbook(buf: Uint8Array, name: string, canvasId?: number): Resp<Grid>;
     getSheetIdByIdx(idx: number): number;
     getSheetNameByIdx(idx: number): string;

@@ -23,6 +23,11 @@ export declare class OffscreenWorkerService {
      * Clear license and show watermark again
      */
     clearLicense(): void;
+    /**
+     * Show/hide the default cell gridlines. Module-level in border_helper, so
+     * one call affects every canvas this worker renders. Callers re-render.
+     */
+    setGridLines(horizontal: boolean, vertical: boolean): void;
     resize(canvasId: number, width: number, height: number, dpr: number): Result<Grid>;
     render(canvasId: number, sheetId: number, anchorX: number, anchorY: number): Result<Grid>;
     getAppropriateHeights(canvasId: number, sheetId: number, anchorX: number, anchorY: number): Result<AppropriateHeight[]>;

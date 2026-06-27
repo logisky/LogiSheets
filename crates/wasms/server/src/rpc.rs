@@ -70,6 +70,7 @@ pub enum Message {
     GetAllBlockFields,
     Undo,
     Redo,
+    CleanHistory,
     NewWorkbook,
     Release,
     GetSheetCount,
@@ -762,6 +763,7 @@ pub struct WorkbookMethods {
     // Transaction operations
     pub undo: fn(book_id: Option<usize>) -> Result<bool, ErrorMessage>,
     pub redo: fn(book_id: Option<usize>) -> Result<bool, ErrorMessage>,
+    pub clean_history: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
     pub toggle_status:
         fn(params: ToggleStatusParams, book_id: Option<usize>) -> Result<(), ErrorMessage>,
     pub cleanup_temp_status: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
@@ -1023,6 +1025,10 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         Message::Redo => {
             let result = controller::redo(id);
             serde_wasm_bindgen::to_value(&result).unwrap()
+        }
+        Message::CleanHistory => {
+            controller::clean_history(id);
+            JsValue::NULL
         }
         Message::GetAllBlockFields => controller::get_all_block_fields(id),
         Message::Release => {

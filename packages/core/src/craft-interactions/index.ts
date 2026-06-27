@@ -276,7 +276,7 @@ export interface NumberSliderBinding {
     col: number
     min: number
     max: number
-    step?: number       // default 1
+    step?: number // default 1
     initialValue?: number
 }
 
@@ -338,7 +338,6 @@ export function adjustPointAllocation(
     notifyStore()
 }
 
-
 // ---- Percent allocator --------------------------------------------------
 // Sibling of `PointAllocator`, but tailored to "sum-to-100% across a small
 // set of cells" — the common case being a two-supplier split per material.
@@ -376,7 +375,10 @@ export function registerPercentAllocator(
 }
 
 export function unregisterPercentAllocator(
-    binding: Pick<PercentAllocatorBinding, 'groupId' | 'blockId' | 'row' | 'col'>
+    binding: Pick<
+        PercentAllocatorBinding,
+        'groupId' | 'blockId' | 'row' | 'col'
+    >
 ): void {
     percentBindings.delete(percentBindingKey(binding))
     notifyStore()
@@ -472,7 +474,8 @@ export function redistributePercent(
         )
         for (let i = 0; i < n; i++) {
             if (i === targetIdx) continue
-            const share = othersWeight > 0 ? base[i] / othersWeight : 1 / (n - 1)
+            const share =
+                othersWeight > 0 ? base[i] / othersWeight : 1 / (n - 1)
             next[i] = Math.max(0, Math.min(1, base[i] + adjust * share))
         }
     }
@@ -566,7 +569,10 @@ export function loadPersistentInteractions(data: unknown): void {
     if (Array.isArray(d.multiSelectBindings)) {
         for (const b of d.multiSelectBindings) {
             if (b && typeof b === 'object') {
-                multiSelectBindings.set(multiSelectKey(b), b as MultiSelectBinding)
+                multiSelectBindings.set(
+                    multiSelectKey(b),
+                    b as MultiSelectBinding
+                )
             }
         }
     }
@@ -578,7 +584,9 @@ export function loadPersistentInteractions(data: unknown): void {
     }
     multiSelectSelections.clear()
     if (d.multiSelectSelections) {
-        for (const [groupId, values] of Object.entries(d.multiSelectSelections)) {
+        for (const [groupId, values] of Object.entries(
+            d.multiSelectSelections
+        )) {
             if (Array.isArray(values)) {
                 multiSelectSelections.set(
                     groupId,
@@ -593,7 +601,10 @@ export function loadPersistentInteractions(data: unknown): void {
     if (Array.isArray(d.pointBindings)) {
         for (const b of d.pointBindings) {
             if (b && typeof b === 'object') {
-                pointBindings.set(pointBindingKey(b), b as PointAllocatorBinding)
+                pointBindings.set(
+                    pointBindingKey(b),
+                    b as PointAllocatorBinding
+                )
             }
         }
     }
@@ -628,7 +639,10 @@ export function loadPersistentInteractions(data: unknown): void {
     if (Array.isArray(d.numberSliderBindings)) {
         for (const b of d.numberSliderBindings) {
             if (b && typeof b === 'object') {
-                numberSliderBindings.set(numberSliderKey(b), b as NumberSliderBinding)
+                numberSliderBindings.set(
+                    numberSliderKey(b),
+                    b as NumberSliderBinding
+                )
             }
         }
     }
@@ -638,7 +652,10 @@ export function loadPersistentInteractions(data: unknown): void {
     if (Array.isArray(d.percentBindings)) {
         for (const b of d.percentBindings) {
             if (b && typeof b === 'object') {
-                percentBindings.set(percentBindingKey(b), b as PercentAllocatorBinding)
+                percentBindings.set(
+                    percentBindingKey(b),
+                    b as PercentAllocatorBinding
+                )
             }
         }
     }
