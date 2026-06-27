@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationDir": "./dist/types",
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "./dist/types"
+  },
+  "include": [
+    "src/vite-env.d.ts",
+    "src/lib/adapters/**/*.ts",
+    "src/lib/block/**/*.ts",
+    "src/lib/clients/**/*.ts",
+    "src/lib/worker/**/*.ts",
+    "src/lib/components/utils.ts",
+    "src/lib/components/contextMenuTypes.ts",
+    "src/lib/engine.ts",
+    "src/lib/index.ts",
+    "src/lib/global.ts",
+    "src/types/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.svelte",
+    "src/**/*.test.ts",
+    "src/lib/components/index.ts",
+    "node_modules"
+  ]
+}

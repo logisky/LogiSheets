@@ -16,6 +16,14 @@
         },
         "./style.css": "./dist/logisheets-engine.css"
     },
+    "scripts": {
+        "dev": "vite dev",
+        "build": "vite build --config vite.config.lib.ts && yarn build:types && yarn copy:wasm",
+        "build:types": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.types.json",
+        "copy:wasm": "cp ../web/wasm/logisheets_wasm_server_bg.wasm ./dist/assets/",
+        "check": "svelte-check --tsconfig ./tsconfig.json",
+        "preview": "vite preview"
+    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/logisky/LogiSheets.git"
@@ -30,8 +38,19 @@
     "files": [
         "dist"
     ],
-    "peerDependencies": {
-        "logisheets-web": ">=0.8.0"
+    "dependencies": {
+        "logisheets-web": "workspace:*",
+        "rxjs": "^7.8.1",
+        "ssf": "^0.11.2"
+    },
+    "devDependencies": {
+        "@sveltejs/vite-plugin-svelte": "^4.0.0",
+        "@tsconfig/svelte": "^5.0.4",
+        "svelte": "^5.0.0",
+        "svelte-check": "^4.0.0",
+        "terser": "^5.46.0",
+        "typescript": "^5.5.0",
+        "vite": "^6.0.0"
     },
     "bugs": {
         "url": "https://github.com/logisky/LogiSheets/issues"
