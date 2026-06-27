@@ -32,6 +32,7 @@ jobs:
       - run: yarn workspace logisheets-core test
       - run: yarn workspace logician build
       - run: yarn run run-scripts && yarn run wasm
+      - run: yarn workspace logisheets-engine build
       - run: yarn build
 
       - name: Build and test logisheets-node

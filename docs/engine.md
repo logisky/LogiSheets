@@ -210,21 +210,6 @@ const grid = await engine.loadFile(new Uint8Array(buf), 'workbook.xlsx')
 const result = await engine.getWorkbook().save({}) // result.data: Uint8Array
 ```
 
-## License / watermark
-
-The community build renders a watermark. Validation happens **inside the
-worker** and cannot be bypassed.
-
-| Method | Signature | Description |
-| --- | --- | --- |
-| `setLicense` | `setLicense(apiKey: string): Promise<{valid: boolean; reason?: string}>` | Activate a license key; removes the watermark if valid. |
-| `clearLicense` | `clearLicense(): void` | Drop the license and show the watermark again. |
-
-```ts
-const status = await engine.setLicense(apiKey)
-if (!status.valid) console.warn('License invalid:', status.reason)
-```
-
 ## Display settings
 
 Runtime display options that change how the grid is painted. They update the
@@ -259,7 +244,6 @@ Most methods return `Promise<T | ErrorMessage>` — check with `isErrorMessage()
 | `resize` | `resize(width: number, height: number, dpr: number): Promise<Grid \| ErrorMessage>` | Resize and re-render. `dpr` is the device pixel ratio. |
 | `loadWorkbook` | `loadWorkbook(buf: Uint8Array, name: string): Promise<Grid \| ErrorMessage>` | Load `.xlsx` (worker side only — prefer `engine.loadFile` while mounted). |
 | `initOffscreen` | `initOffscreen(canvas: OffscreenCanvas): Promise<void \| ErrorMessage>` | Bind an offscreen canvas for rendering. |
-| `setLicense` / `clearLicense` | — | Same as on the engine. |
 | `setShowGridLines` | `setShowGridLines(horizontal: boolean, vertical: boolean): void` | Show/hide grid lines (worker-global). Prefer `engine.setShowGridLines`, which also re-renders. |
 | `getCurrentSheetIdx` | `(): number` | Active sheet index. |
 | `setCurrentSheetIdx` | `(idx: number): void` | Set the active sheet. |
