@@ -2,7 +2,7 @@
     "name": "logisheets-engine",
     "author": "Jeremy He<yiliang.he@qq.com>",
     "license": "MIT",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "LogiSheets spreadsheet engine - a high-performance spreadsheet rendering and editing library",
     "type": "module",
     "main": "./dist/logisheets-engine.umd.js",
@@ -18,9 +18,8 @@
     },
     "scripts": {
         "dev": "vite dev",
-        "build": "vite build --config vite.config.lib.ts && yarn build:types && yarn copy:wasm",
+        "build": "vite build --config vite.config.lib.ts && yarn build:types",
         "build:types": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.types.json",
-        "copy:wasm": "cp ../web/wasm/logisheets_wasm_server_bg.wasm ./dist/assets/",
         "check": "svelte-check --tsconfig ./tsconfig.json",
         "preview": "vite preview",
         "prepack": "yarn build"
@@ -40,13 +39,13 @@
         "dist"
     ],
     "dependencies": {
+        "logisheets-web": "^1.1.0",
         "rxjs": "^7.8.1",
         "ssf": "^0.11.2"
     },
     "devDependencies": {
         "@sveltejs/vite-plugin-svelte": "^4.0.0",
         "@tsconfig/svelte": "^5.0.4",
-        "logisheets-web": "workspace:*",
         "svelte": "^5.0.0",
         "svelte-check": "^4.0.0",
         "terser": "^5.46.0",
