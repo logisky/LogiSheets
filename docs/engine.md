@@ -19,10 +19,18 @@ import {Engine} from 'logisheets-engine'
 import 'logisheets-engine/style.css' // required — ships the grid styles
 ```
 
-::: tip Reference app
-Every pattern below is taken from the main LogiSheets app. The fullest live
-example is `src/core/engine/` and `src/components/engine-canvas/` in the
-[LogiSheets repo](https://github.com/logisky/LogiSheets/tree/main/src).
+::: tip Runnable examples
+Want working code to start from? The
+[**logisheets-examples**](https://github.com/logisky/logisheets-examples/tree/main/logisheets-engine)
+repo has minimal, runnable apps for **vanilla JS, React, Vue, Svelte and
+Angular** — each embedding the engine together with the
+[`logisheets-formula-editor`](https://www.npmjs.com/package/logisheets-formula-editor)
+(a formula bar and in-cell editing with autocomplete). Clone it, then
+`cd <framework> && npm install && npm run dev`.
+
+The inline snippets below are distilled from those examples and the main
+LogiSheets app (`src/core/engine/`, `src/components/engine-canvas/` in the
+[LogiSheets repo](https://github.com/logisky/LogiSheets/tree/main/src)).
 :::
 
 ## Lifecycle
@@ -445,6 +453,28 @@ export function mountWhenReady(engine: Engine, el: HTMLElement) {
 }
 ```
 
+::: tip Full runnable versions
+The snippets below are intentionally minimal. For complete, runnable apps for
+each framework — wired up with the [formula editor](#formula-editor-logisheets-formula-editor)
+and the required bundler config — see the
+[**logisheets-examples**](https://github.com/logisky/logisheets-examples/tree/main/logisheets-engine)
+repo.
+:::
+
+::: warning Bundler config
+`logisheets-engine` ships as a pre-built ES module that spawns a Web Worker and
+loads WASM (both **inlined** into the bundle — no asset copying needed). Tell
+your bundler not to re-process it:
+
+- **Vite** — exclude it from dependency pre-bundling, or the worker/WASM URLs break:
+  ```ts
+  // vite.config.ts
+  export default defineConfig({optimizeDeps: {exclude: ['logisheets-engine']}})
+  ```
+- **Angular** — the bundle is large; raise the build budgets in `angular.json`
+  and keep the `zone.js` polyfill. No worker/WASM config is needed.
+:::
+
 ### React
 
 ```tsx
@@ -590,3 +620,91 @@ For fully custom layouts you can import the raw Svelte components directly —
 types** (`SpreadsheetAdapterProps`, `CanvasAdapterProps`) and a
 `convertCanvasPropsToAdapterProps` helper for teams writing their own React
 wrapper; these are type-level conveniences, not a shipped React component.
+
+## Formula editor (`logisheets-formula-editor`)
+
+The engine renders the grid but does **not** ship a formula bar or an in-cell
+editor — it only emits `startEdit` and lets you read/write cells. The companion
+package [`logisheets-formula-editor`](https://www.npmjs.com/package/logisheets-formula-editor)
+provides both, built on CodeMirror 6 with function autocomplete, signature help
+and cell-reference highlighting.
+
+```bash
+npm install logisheets-formula-editor
+```
+
+It is framework-agnostic, with entry points for each use:
+
+| Import | What it is |
+| --- | --- |
+| `logisheets-formula-editor` | React `<FormulaEditor>` component (thin wrapper over `/core`). |
+| `logisheets-formula-editor/core` | `createFormulaEditor(el, opts)` — the vanilla editor, no framework. |
+| `logisheets-formula-editor/engine` | `createEngineFormulaSource(dataService)` — one-call wiring from the engine. |
+| `logisheets-formula-editor/inline` | `createInlineCellEditor(opts)` — the in-cell editor controller. |
+
+Styles are injected at runtime, so there is no stylesheet to import.
+
+### Wiring it to the engine
+
+`createEngineFormulaSource` turns `engine.getDataService()` into the tokenizer +
+function list the editor needs. Spread the result into either editor.
+
+**Formula bar** (vanilla `/core`; the React `<FormulaEditor>` takes the same props):
+
+```ts
+import {createFormulaEditor} from 'logisheets-formula-editor/core'
+import {createEngineFormulaSource} from 'logisheets-formula-editor/engine'
+
+const source = createEngineFormulaSource(engine.getDataService())
+const bar = createFormulaEditor(document.getElementById('formula-bar')!, {
+    ...source,
+    onSubmit: (value) => {
+        const sel = engine.getSelection()
+        if (sel.data?.ty !== 'cellRange') return
+        const {startRow, startCol} = sel.data.d
+        // commit — see "Editing data" above
+        engine.getWorkbook().handleTransaction({
+            transaction: {
+                payloads: [{type: 'cellInput', value: {sheetIdx: engine.getCurrentSheetIndex(), row: startRow, col: startCol, content: value}}],
+                undoable: true,
+                temp: false,
+            },
+            temp: false,
+        })
+    },
+})
+// keep the bar showing the selected cell
+engine.on('selectionChange', async (sel) => {
+    if (sel.data?.ty !== 'cellRange') return
+    const {startRow, startCol} = sel.data.d
+    const cell = await engine.getDataService().getCellInfo(engine.getCurrentSheetIndex(), startRow, startCol)
+    if (!isErrorMessage(cell)) bar.setValue(cell.getFormula() ? `=${cell.getFormula()}` : cell.getText())
+})
+```
+
+**In-cell editor** — the controller listens for the engine's `startEdit`,
+positions an editor over the target cell, commits, and paints reference
+highlights. Keep it in sync with `gridChange`:
+
+```ts
+import {createInlineCellEditor} from 'logisheets-formula-editor/inline'
+
+const inline = createInlineCellEditor({
+    container: gridEl, // the same element you mounted the engine into
+    eventSource: engine, // the Engine (or a Session) emitting startEdit
+    dataService: engine.getDataService(),
+    sheetIdx: engine.getCurrentSheetIndex(),
+    getSheetName: () => engine.getSheets()[engine.getCurrentSheetIndex()]?.name ?? '',
+    inputCell: (sheetIdx, row, col, text) => engine.getWorkbook().handleTransaction({
+        transaction: {payloads: [{type: 'cellInput', value: {sheetIdx, row, col, content: text}}], undoable: true, temp: false},
+        temp: false,
+    }),
+    setSelection: (sel) => engine.setSelection(sel),
+    grid: engine.getGrid(),
+})
+engine.on('gridChange', (g) => inline.setGrid(g))
+```
+
+For full, runnable wiring in every framework, see the
+[**logisheets-examples**](https://github.com/logisky/logisheets-examples/tree/main/logisheets-engine)
+repo.
