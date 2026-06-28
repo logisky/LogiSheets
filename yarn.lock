@@ -16796,7 +16796,7 @@ __metadata:
   dependencies:
     "@sveltejs/vite-plugin-svelte": "npm:^4.0.0"
     "@tsconfig/svelte": "npm:^5.0.4"
-    logisheets-web: "workspace:*"
+    logisheets-web: "npm:^1.1.0"
     rxjs: "npm:^7.8.1"
     ssf: "npm:^0.11.2"
     svelte: "npm:^5.0.0"
@@ -16842,7 +16842,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"logisheets-web@workspace:*, logisheets-web@workspace:packages/web":
+"logisheets-web@npm:^1.1.0, logisheets-web@workspace:*, logisheets-web@workspace:packages/web":
   version: 0.0.0-use.local
   resolution: "logisheets-web@workspace:packages/web"
   languageName: unknown

@@ -32,8 +32,13 @@ import type {
   SessionEventType,
   SessionEventMap,
 } from "./session";
-// Import worker as Worker constructor for library builds (Vite inlines this)
-import MyWorker from "./worker/worker.ts?worker";
+// Import the worker INLINED (base64 blob) rather than as a separate asset.
+// A separate worker chunk is emitted with an absolute `/assets/worker-*.js`
+// URL, which only resolves when the host statically serves the engine's dist
+// at the web root. Inlining makes the published bundle self-contained, so any
+// consumer (Vite / webpack / Angular / plain script) boots the engine with no
+// asset-copying or base-path configuration. (The WASM is already inlined.)
+import MyWorker from "./worker/worker.ts?worker&inline";
 
 /** Workbook-level events, shared across all views. */
 export type EngineEventType = "ready" | "sheetChange" | "cellChange" | "error";

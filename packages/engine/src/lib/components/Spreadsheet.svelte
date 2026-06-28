@@ -4,7 +4,10 @@
     import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType } from 'logisheets-web'
     import { isErrorMessage } from 'logisheets-web'
     import { DataService } from '$lib/clients/service'
-    import MyWorker from '../worker/worker.ts?worker'
+    // Inlined (base64 blob) so the published bundle is self-contained — see
+    // the matching import in engine.ts for why a separate worker asset breaks
+    // external consumers.
+    import MyWorker from '../worker/worker.ts?worker&inline'
     import {
         match,
         xForColStart,
