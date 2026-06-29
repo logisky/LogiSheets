@@ -16808,7 +16808,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"logisheets-core@workspace:*, logisheets-core@workspace:packages/core":
+"logisheets-core@npm:^1.1.0, logisheets-core@workspace:*, logisheets-core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "logisheets-core@workspace:packages/core"
   dependencies:
@@ -16816,7 +16816,7 @@ __metadata:
     typescript: "npm:^5.5.0"
     vitest: "npm:^2.0.0"
   peerDependencies:
-    logisheets-web: "workspace:*"
+    logisheets-web: ^1.1.0
   languageName: unknown
   linkType: soft
 
@@ -16865,8 +16865,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "logisheets-runtime@workspace:packages/runtime"
   dependencies:
-    logisheets: "workspace:*"
-    logisheets-core: "workspace:*"
+    logisheets: "npm:^1.1.0"
+    logisheets-core: "npm:^1.1.0"
     typescript: "npm:^5.5.0"
     vitest: "npm:^2.0.0"
   languageName: unknown
@@ -16878,7 +16878,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"logisheets@workspace:*, logisheets@workspace:packages/node":
+"logisheets@npm:^1.1.0, logisheets@workspace:packages/node":
   version: 0.0.0-use.local
   resolution: "logisheets@workspace:packages/node"
   languageName: unknown
