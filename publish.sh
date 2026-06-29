@@ -3,13 +3,16 @@
 # Publish every release artifact in this repo in one shot:
 #   1. Rust crates to crates.io (ordered so each one's deps are
 #      already up there by the time it publishes).
-#   2. npm packages (logisheets-web → logisheets → logisheets-engine →
-#      logisheets-formula-editor). web/node self-build via prepublishOnly
-#      (WASM + TS); the engine and formula-editor build via their own `prepack`
-#      hooks (`yarn build`) at pack time. None ship a runtime `workspace:*`
-#      dependency (the engine keeps logisheets-web as a devDependency;
-#      formula-editor bundles its deps and treats logisheets-engine as an
-#      optional peer), so plain `npm publish` works for all four.
+#   2. npm packages (logisheets-web → logisheets → logisheets-core →
+#      logisheets-engine → logisheets-runtime → logisheets-formula-editor).
+#      web/node self-build via prepublishOnly (WASM + TS); core/engine/runtime/
+#      formula-editor build via their own `prepack` hooks (`yarn build`) at pack
+#      time. `npm publish` does NOT rewrite `workspace:*`, so every shipped
+#      dependency must be a real semver range: the engine/formula-editor bundle
+#      or peer-dep their deps; core (peer logisheets-web) and runtime (deps
+#      logisheets + logisheets-core) use `^` ranges, resolved to the local
+#      workspace in dev and the registry once published. Order matters so each
+#      package's deps are already on the registry when it publishes.
 #
 # Versions must already be bumped in Cargo.toml / package.json before
 # running this. The script does NOT touch versions; it only publishes
@@ -83,7 +86,9 @@ CARGO_MANIFESTS=(
 NPM_PACKAGES=(
     "packages/web"
     "packages/node"
+    "packages/core"
     "packages/engine"
+    "packages/runtime"
     "packages/formula-editor"
 )
 
