@@ -12,6 +12,10 @@ yarn-error.log
 
 # bundle generate files
 dist
+# generated WASM (built by `yarn wasm` / each package's wasm-build; shipped to
+# npm via the package's `files`, which npm includes regardless of this ignore)
+packages/node/wasm
+packages/web/wasm
 # crafts
 crafts/**/*/dist
 public/**/*

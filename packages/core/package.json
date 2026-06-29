@@ -35,7 +35,8 @@
     "scripts": {
         "build": "tsc -p tsconfig.build.json",
         "typecheck": "tsc --noEmit",
-        "test": "vitest run"
+        "test": "vitest run",
+        "prepack": "yarn build"
     },
     "files": [
         "dist"
@@ -43,7 +44,7 @@
     "author": "Jeremy He",
     "license": "MIT",
     "peerDependencies": {
-        "logisheets-web": "workspace:*"
+        "logisheets-web": "^1.1.0"
     },
     "devDependencies": {
         "logisheets-web": "workspace:*",
