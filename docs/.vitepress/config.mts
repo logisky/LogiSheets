@@ -27,6 +27,10 @@ export default defineConfig({
                         text: 'Embed the spreadsheet UI (engine)',
                         link: '/engine',
                     },
+                    {
+                        text: 'Headless on Node (runtime)',
+                        link: '/runtime',
+                    },
                     {text: 'Extend with crafts', link: '/craft/craft'},
                 ],
             },
