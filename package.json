@@ -62,6 +62,8 @@
         "start:react": "react-scripts start",
         "start:wasm": "yarn run run-scripts && yarn run wasm && yarn workspace logisheets-engine build && webpack serve --config=webpack.config.ts --hot --env=dev --env=stand-alone",
         "test": "vitest run",
+        "test:e2e": "playwright test",
+        "test:e2e:headed": "playwright test --headed",
         "wasm": "yarn run wasm:server",
         "wasm:server": "wasm-pack build crates/wasms/server --out-dir ../../../packages/web/wasm --target web",
         "docs:dev": "vitepress dev docs",
@@ -81,6 +83,7 @@
         ]
     },
     "devDependencies": {
+        "@playwright/test": "^1.61.1",
         "@types/glob": "^7.2.0",
         "@types/jest": "^27.4.0",
         "@types/lodash": "^4.17.1",

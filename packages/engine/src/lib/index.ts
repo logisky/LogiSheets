@@ -32,6 +32,7 @@ export {
 export type {
   ContextMenuItem,
   ContextMenuContext,
+  ContextMenuTarget,
 } from "./components/contextMenuTypes";
 
 // Client exports

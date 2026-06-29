@@ -1,9 +1,13 @@
-import {useEffect, useRef, useState} from 'react'
+import {useEffect, useRef, useState, useCallback} from 'react'
 import {observer} from 'mobx-react-lite'
 import {useEngine} from '@/core/engine/provider'
 import type {Session, Grid, SelectedData} from 'logisheets-engine'
 import {SheetsTabComponent} from '@/components/sheets-tab'
 import {globalStore} from '@/store'
+import {
+    CanvasContextMenu,
+    type ContextMenuTrigger,
+} from '@/components/engine-canvas/canvas-context-menu'
 import {ViewOverlayLayer} from './view-overlay-layer'
 import {InlineCellEditor} from './inline-cell-editor'
 import {ActiveViewBadge} from './active-view-badge'
@@ -40,6 +44,27 @@ export const SpreadsheetView = observer(function SpreadsheetView({
     const [selectedData, setSelectedData] = useState<SelectedData>({
         source: 'none',
     })
+
+    // Route live activeSheet / selection through stable callbacks for the
+    // context-menu component.
+    const activeSheetRef = useRef(activeSheet)
+    activeSheetRef.current = activeSheet
+    const getActiveSheet = useCallback(() => activeSheetRef.current, [])
+    const setSelection = useCallback((d: SelectedData) => {
+        sessionRef.current?.setSelection(d)
+        setSelectedData(d)
+    }, [])
+    // Subscribe to THIS session's contextMenu event (re-binds once the session
+    // is created). The engine renders no menu; the host menu below does.
+    const subscribeContextMenu = useCallback(
+        (cb: (e: ContextMenuTrigger) => void) => {
+            const s = session
+            if (!s) return () => {}
+            s.on('contextMenu', cb)
+            return () => s.off('contextMenu', cb)
+        },
+        [session]
+    )
 
     useEffect(() => {
         if (!containerRef.current) return
@@ -140,6 +165,12 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                 />
                 <ActiveViewBadge active={isActive} />
             </div>
+            <CanvasContextMenu
+                subscribe={subscribeContextMenu}
+                dataSvc={dataSvc}
+                getActiveSheet={getActiveSheet}
+                setSelection={setSelection}
+            />
             <SheetsTabComponent
                 activeSheet={activeSheet}
                 activeSheet$={(idx) => {

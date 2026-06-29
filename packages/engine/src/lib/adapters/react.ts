@@ -8,10 +8,7 @@ import type { SelectedData, SheetInfo, CellLayout } from "logisheets-web";
 
 import type { Grid, EngineConfig } from "$types/index";
 
-import type {
-  ContextMenuItem,
-  ContextMenuContext,
-} from "../components/contextMenuTypes";
+import type { ContextMenuContext } from "../components/contextMenuTypes";
 
 /**
  * Props for the React Spreadsheet component adapter.
@@ -30,8 +27,6 @@ export interface SpreadsheetAdapterProps {
   showSheetTabs?: boolean;
   /** Show scrollbars */
   showScrollbars?: boolean;
-  /** Custom context menu items */
-  contextMenuItems?: ContextMenuItem[];
 
   // Event callbacks - React naming convention (onXxx)
   /** Callback when selection changes */
@@ -42,11 +37,11 @@ export interface SpreadsheetAdapterProps {
   onGridChange?: (grid: Grid | null) => void;
   /** Callback when sheets list changes */
   onSheetsChange?: (sheets: readonly SheetInfo[]) => void;
-  /** Callback when context menu item is clicked */
-  onContextMenuItemClick?: (
-    item: ContextMenuItem,
-    context: ContextMenuContext | null,
-  ) => void;
+  /**
+   * The user opened the context menu. The engine renders no menu — the host
+   * renders its own at `(x, y)` (viewport coords) using `context`.
+   */
+  onContextMenu?: (context: ContextMenuContext, x: number, y: number) => void;
 }
 
 /**

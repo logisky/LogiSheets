@@ -22,10 +22,7 @@ import type { DataService } from "./clients/service";
 import type { Grid, EngineConfig } from "$types/index";
 import { mount, unmount } from "svelte";
 import Spreadsheet from "./components/Spreadsheet.svelte";
-import type {
-  ContextMenuItem,
-  ContextMenuContext,
-} from "./components/contextMenuTypes";
+import type { ContextMenuContext } from "./components/contextMenuTypes";
 
 /** Events scoped to a single view. */
 export type SessionEventType =
@@ -34,6 +31,7 @@ export type SessionEventType =
   | "activeSheetChange"
   | "startEdit"
   | "invalidFormula"
+  | "contextMenu"
   | "error";
 
 export interface SessionEventMap {
@@ -42,6 +40,13 @@ export interface SessionEventMap {
   activeSheetChange: number;
   startEdit: { row: number; col: number; initialText: string };
   invalidFormula: void;
+  /**
+   * The user opened the context menu (right-clicked a cell or a row/column
+   * header). The engine renders NO menu of its own — the host listens for
+   * this and renders whatever menu it likes at `(x, y)` (viewport
+   * coordinates), using `context` to decide the items.
+   */
+  contextMenu: { context: ContextMenuContext; x: number; y: number };
   error: Error;
 }
 
@@ -54,8 +59,6 @@ export interface SessionMountOptions {
   showSheetTabs?: boolean;
   /** Show scrollbars */
   showScrollbars?: boolean;
-  /** Custom context menu items */
-  contextMenuItems?: ContextMenuItem[];
   /** Cell layouts for custom rendering */
   cellLayouts?: CellLayout[];
   /** Getter for whether a formula is being edited (prevents canvas from taking focus) */
@@ -124,6 +127,7 @@ export class Session {
         "activeSheetChange",
         "startEdit",
         "invalidFormula",
+        "contextMenu",
         "error",
       ] as SessionEventType[]
     ).forEach((type) => {
@@ -156,7 +160,6 @@ export class Session {
         config: this._config,
         showSheetTabs: options.showSheetTabs ?? true,
         showScrollbars: options.showScrollbars ?? true,
-        contextMenuItems: options.contextMenuItems ?? [],
         getIsEditingFormula: options.getIsEditingFormula,
         onSelectedDataChange: (data: SelectedData) => {
           this._selectedData = data;
@@ -173,11 +176,9 @@ export class Session {
         onSheetsChange: (sheets: readonly SheetInfo[]) => {
           this._host.notifySheetsChange(sheets);
         },
-        onContextMenuItemClick: (
-          _item: ContextMenuItem,
-          _context: ContextMenuContext | null,
-        ) => {
-          // Can be extended for custom handling
+        // Engine renders no menu — surface the trigger so the host can.
+        onContextMenu: (context: ContextMenuContext, x: number, y: number) => {
+          this._emit("contextMenu", { context, x, y });
         },
         onStartEdit: (row: number, col: number, initialText: string) => {
           this._emit("startEdit", { row, col, initialText });

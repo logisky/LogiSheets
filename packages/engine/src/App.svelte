@@ -1,10 +1,18 @@
 <script lang="ts">
-    import { Spreadsheet } from '$lib/index'
+    import { Spreadsheet, ContextMenu } from '$lib/index'
     import type { ContextMenuItem, ContextMenuContext } from '$lib/index'
     import type { Grid } from '$types/index'
     import type { SelectedData } from 'logisheets-web'
 
     let spreadsheetComponent: Spreadsheet | undefined = $state()
+
+    // The engine renders no menu of its own — it emits `onContextMenu` and the
+    // host renders whatever it likes. This demo renders the engine's optional
+    // <ContextMenu> helper, but a host could use any menu UI here.
+    let menuVisible = $state(false)
+    let menuX = $state(0)
+    let menuY = $state(0)
+    let menuContext: ContextMenuContext | null = $state(null)
     let selectedData: SelectedData = $state({ source: 'none' })
     let activeSheet = $state(0)
     let grid: Grid | null = $state(null)
@@ -230,10 +238,23 @@
             bind:selectedData
             bind:activeSheet
             showSheetTabs={false}
-            contextMenuItems={contextMenuItems}
             onSelectedDataChange={(data) => selectedData = data}
             onGridChange={(g) => grid = g}
-            onContextMenuItemClick={handleContextMenuClick}
+            onContextMenu={(context, x, y) => {
+                menuContext = context
+                menuX = x
+                menuY = y
+                menuVisible = true
+            }}
+        />
+        <ContextMenu
+            visible={menuVisible}
+            x={menuX}
+            y={menuY}
+            items={contextMenuItems}
+            context={menuContext}
+            onItemClick={handleContextMenuClick}
+            onClose={() => (menuVisible = false)}
         />
     </div>
 

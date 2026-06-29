@@ -34,8 +34,7 @@
     import Selector from './Selector.svelte'
     import SheetTabs from './SheetTabs.svelte'
     import Scrollbar from './Scrollbar.svelte'
-    import ContextMenu from './ContextMenu.svelte'
-    import type { ContextMenuItem, ContextMenuContext } from './contextMenuTypes'
+    import type { ContextMenuContext } from './contextMenuTypes'
     import { dispatchShortcut, type ShortcutHandlers } from './shortcuts'
 
 // Auto-scroll constants
@@ -68,8 +67,6 @@ let isDragging = false; // True while user is drag-selecting
         showSheetTabs?: boolean
         /** Show scrollbars */
         showScrollbars?: boolean
-        /** Custom context menu items */
-        contextMenuItems?: ContextMenuItem[]
         /** Callback when selection changes */
         onSelectedDataChange?: (data: SelectedData) => void
         /** Callback when active sheet changes */
@@ -78,8 +75,12 @@ let isDragging = false; // True while user is drag-selecting
         onGridChange?: (grid: Grid | null) => void
         /** Callback when sheets list changes */
         onSheetsChange?: (sheets: readonly SheetInfo[]) => void
-        /** Callback when context menu item is clicked */
-        onContextMenuItemClick?: (item: ContextMenuItem, context: ContextMenuContext | null) => void
+        /**
+         * The user opened the context menu (right-clicked a cell or a
+         * row/column header). The engine renders no menu itself — the host
+         * uses this to render its own menu at `(x, y)` (viewport coords).
+         */
+        onContextMenu?: (context: ContextMenuContext, x: number, y: number) => void
         /** Callback when user wants to start editing a cell (double-click or direct typing) */
         onStartEdit?: (row: number, col: number, initialText: string) => void
         /** Callback when an invalid formula is entered */
@@ -102,12 +103,11 @@ let isDragging = false; // True while user is drag-selecting
         config = {},
         showSheetTabs = true,
         showScrollbars = true,
-        contextMenuItems = [],
         onSelectedDataChange,
         onActiveSheetChange,
         onGridChange,
         onSheetsChange,
-        onContextMenuItemClick,
+        onContextMenu,
         onStartEdit,
         onInvalidFormula,
         onSave,
@@ -205,12 +205,6 @@ let isDragging = false; // True while user is drag-selecting
     let lastClickTime = 0
     let lastClickRow = -1
     let lastClickCol = -1
-
-    // Context menu state
-    let contextMenuVisible = $state(false)
-    let contextMenuX = $state(0)
-    let contextMenuY = $state(0)
-    let contextMenuContext: ContextMenuContext | null = $state(null)
 
     // Cleanup references
     let resizeObserver: ResizeObserver | null = null
@@ -616,6 +610,47 @@ let isDragging = false; // True while user is drag-selecting
                 width: Math.max(0, endX - startX),
                 height: Math.max(0, endY - startY),
             }
+        } else if (sel.ty === 'line') {
+            // Whole-row / whole-column selection. The box spans the selected
+            // lines along one axis and the full visible grid along the other,
+            // clamped to what's currently rendered (null if scrolled away).
+            if (sel.d.type === 'row') {
+                const visStartRow = Math.max(sel.d.start, firstRow)
+                const visEndRow = Math.min(sel.d.end, lastRow)
+                if (visStartRow > visEndRow) {
+                    selector = null
+                    return
+                }
+                const startY = yForRowStart(visStartRow, g)
+                const endY = yForRowEnd(visEndRow, g)
+                const startX = xForColStart(firstCol, g)
+                const endX = xForColEnd(lastCol, g)
+                selector = {
+                    x: LeftTop.width + startX - 1,
+                    y: LeftTop.height + startY - 1,
+                    width: Math.max(0, endX - startX),
+                    height: Math.max(0, endY - startY),
+                }
+            } else {
+                const visStartCol = Math.max(sel.d.start, firstCol)
+                const visEndCol = Math.min(sel.d.end, lastCol)
+                if (visStartCol > visEndCol) {
+                    selector = null
+                    return
+                }
+                const startX = xForColStart(visStartCol, g)
+                const endX = xForColEnd(visEndCol, g)
+                const startY = yForRowStart(firstRow, g)
+                const endY = yForRowEnd(lastRow, g)
+                selector = {
+                    x: LeftTop.width + startX - 1,
+                    y: LeftTop.height + startY - 1,
+                    width: Math.max(0, endX - startX),
+                    height: Math.max(0, endY - startY),
+                }
+            }
+        } else {
+            selector = null
         }
     }
 
@@ -1017,12 +1052,12 @@ let isDragging = false; // True while user is drag-selecting
         window.addEventListener('mouseup', handleUp)
     }
 
-    function onContextMenu(e: MouseEvent) {
+    function handleCanvasContextMenu(e: MouseEvent) {
         e.preventDefault()
         e.stopPropagation()
 
-        // Only show if we have custom menu items
-        if (contextMenuItems.length === 0) return
+        // Nothing to do if the host isn't listening for the menu trigger.
+        if (!onContextMenu) return
 
         if (!grid || !canvasEl) return
 
@@ -1058,62 +1093,36 @@ let isDragging = false; // True while user is drag-selecting
                 onSelectedDataChange?.(data)
             }
 
-            contextMenuContext = {
-                selectedData: selectedData,
-                target: 'cell',
-                row,
-                col,
-                event: e,
-            }
+            onContextMenu(
+                { selectedData, target: 'cell', row, col, event: e },
+                e.clientX,
+                e.clientY,
+            )
         } else {
-            contextMenuContext = {
-                selectedData: selectedData,
-                target: 'cell',
-                event: e,
-            }
+            onContextMenu(
+                { selectedData, target: 'cell', event: e },
+                e.clientX,
+                e.clientY,
+            )
         }
-
-        contextMenuX = e.clientX
-        contextMenuY = e.clientY
-        contextMenuVisible = true
-    }
-
-    function closeContextMenu() {
-        contextMenuVisible = false
-        contextMenuContext = null
-    }
-
-    function handleContextMenuItemClick(item: ContextMenuItem, context: ContextMenuContext | null) {
-        onContextMenuItemClick?.(item, context)
-        closeContextMenu()
     }
 
     function onColumnContextMenu(col: number, e: MouseEvent) {
-        if (contextMenuItems.length === 0) return
-
-        contextMenuContext = {
-            selectedData: selectedData,
-            target: 'column',
-            col,
-            event: e,
-        }
-        contextMenuX = e.clientX
-        contextMenuY = e.clientY
-        contextMenuVisible = true
+        if (!onContextMenu) return
+        onContextMenu(
+            { selectedData, target: 'column', col, event: e },
+            e.clientX,
+            e.clientY,
+        )
     }
 
     function onRowContextMenu(row: number, e: MouseEvent) {
-        if (contextMenuItems.length === 0) return
-
-        contextMenuContext = {
-            selectedData: selectedData,
-            target: 'row',
-            row,
-            event: e,
-        }
-        contextMenuX = e.clientX
-        contextMenuY = e.clientY
-        contextMenuVisible = true
+        if (!onContextMenu) return
+        onContextMenu(
+            { selectedData, target: 'row', row, event: e },
+            e.clientX,
+            e.clientY,
+        )
     }
 
     // ========================================================================
@@ -1582,7 +1591,7 @@ let isDragging = false; // True while user is drag-selecting
                 class="main-canvas"
                 style="left: {LeftTop.width}px; top: {LeftTop.height}px; width: calc(100% - {LeftTop.width}px - {showScrollbars ? cfg.scrollbarSize : 0}px); height: calc(100% - {LeftTop.height}px - {showScrollbars ? cfg.scrollbarSize : 0}px);"
                 onmousedown={onMouseDown}
-                oncontextmenu={onContextMenu}
+                oncontextmenu={handleCanvasContextMenu}
                 onwheel={onWheel}
                 onkeydown={onKeyDown}
             >
@@ -1650,17 +1659,6 @@ let isDragging = false; // True while user is drag-selecting
             {/if}
         </div>
     </div>
-
-    <!-- Context menu -->
-    <ContextMenu
-        visible={contextMenuVisible}
-        x={contextMenuX}
-        y={contextMenuY}
-        items={contextMenuItems}
-        context={contextMenuContext}
-        onItemClick={handleContextMenuItemClick}
-        onClose={closeContextMenu}
-    />
 
     <!-- Sheet tabs -->
     {#if showSheetTabs}

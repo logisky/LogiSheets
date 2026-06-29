@@ -35,15 +35,13 @@ export interface SpreadsheetProps {
   config?: Partial<EngineConfig>;
   showSheetTabs?: boolean;
   showScrollbars?: boolean;
-  contextMenuItems?: ContextMenuItem[];
   onSelectedDataChange?: (data: SelectedData) => void;
   onActiveSheetChange?: (sheet: number) => void;
   onGridChange?: (grid: Grid | null) => void;
   onSheetsChange?: (sheets: readonly SheetInfo[]) => void;
-  onContextMenuItemClick?: (
-    item: ContextMenuItem,
-    context: ContextMenuContext | null,
-  ) => void;
+  // The engine renders no menu — the host listens for this and renders its
+  // own at (x, y) (viewport coords).
+  onContextMenu?: (context: ContextMenuContext, x: number, y: number) => void;
 }
 
 export interface ColumnHeadersProps {

@@ -33,6 +33,12 @@ jobs:
       - run: yarn workspace logician build
       - run: yarn run run-scripts && yarn run wasm
       - run: yarn workspace logisheets-engine build
+
+      - name: Install Playwright browser
+        run: yarn playwright install --with-deps chromium
+      - name: Run engine UI e2e tests
+        run: yarn test:e2e
+
       - run: yarn build
 
       - name: Build and test logisheets-node
