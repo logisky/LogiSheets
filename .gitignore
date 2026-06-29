@@ -45,3 +45,8 @@ packages/**/*/bindings
 docs/.vitepress/dist
 docs/.vitepress/cache
 docs/node_modules
+
+# Playwright
+/test-results
+/playwright-report
+/playwright/.cache

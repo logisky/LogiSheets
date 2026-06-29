@@ -2,7 +2,7 @@
     "name": "logisheets-engine",
     "author": "Jeremy He<yiliang.he@qq.com>",
     "license": "MIT",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "LogiSheets spreadsheet engine - a high-performance spreadsheet rendering and editing library",
     "type": "module",
     "main": "./dist/logisheets-engine.umd.js",

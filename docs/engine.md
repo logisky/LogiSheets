@@ -81,7 +81,6 @@ Passed as the second argument to `mount()`. All optional.
 | --- | --- | --- |
 | `showSheetTabs` | `boolean` | Render the sheet-tab bar at the bottom. Set `false` if you provide your own tabs. |
 | `showScrollbars` | `boolean` | Render scrollbars. |
-| `contextMenuItems` | `ContextMenuItem[]` | Items for the right-click context menu. See [ContextMenuItem](#contextmenuitem). |
 | `cellLayouts` | `CellLayout[]` | Per-cell visual overrides (background, tooltip). See [CellLayout](#celllayout). |
 | `getIsEditingFormula` | `() => boolean` | Return `true` while the user is editing a formula in your own input, so the canvas doesn't steal focus. |
 | `onInvalidFormula` | `() => void` | Called when the user commits an invalid formula. |
@@ -108,6 +107,7 @@ type is determined by the event:
 | `activeSheetChange` | `number` | The active sheet index changed. |
 | `sheetChange` | `readonly SheetInfo[]` | The list of sheets changed (add/remove/rename). |
 | `startEdit` | `{row: number; col: number; initialText: string}` | The user began editing a cell — open your editor at `(row, col)` seeded with `initialText`. |
+| `contextMenu` | `{context: ContextMenuContext; x: number; y: number}` | The user right-clicked a cell or a row/column header. The engine renders **no** menu — render your own at `(x, y)` (viewport coords). See [Context menu](#context-menu). |
 | `cellChange` | `void` | A cell value changed. |
 | `invalidFormula` | `void` | An invalid formula was entered. |
 | `error` | `Error` | An internal error occurred. |
@@ -116,6 +116,7 @@ type is determined by the event:
 engine.on('selectionChange', (data) => setSelection(data))
 engine.on('gridChange', (grid) => setGrid(grid))
 engine.on('startEdit', ({row, col, initialText}) => openEditor(row, col, initialText))
+engine.on('contextMenu', ({context, x, y}) => openMyMenu(context, x, y))
 ```
 
 ## Reading and pushing state
@@ -132,6 +133,47 @@ synchronously, and lets you push state back in imperatively.
 | `setCurrentSheetIndex` | `setCurrentSheetIndex(index: number): void` | Switch the active sheet (refreshes the grid). |
 | `getSheets` | `getSheets(): readonly SheetInfo[]` | Cached sheet info. |
 | `getConfig` | `getConfig(): EngineConfig` | The resolved configuration. |
+
+## Context menu
+
+The engine does **not** render a right-click menu of its own — menus are pure
+host UI, so you build them with your own framework and styles. When the user
+right-clicks a cell or a row/column header, the engine emits a `contextMenu`
+event with the [`ContextMenuContext`](#contextmenucontext) and the cursor
+position; you render whatever menu you like at `(x, y)` and act on the result
+through `getDataService()`.
+
+```ts
+engine.on('contextMenu', ({context, x, y}) => {
+    // context.target is 'cell' | 'row' | 'column'
+    // context.selectedData / context.row / context.col describe the target
+    myMenu.openAt(x, y, context)
+})
+```
+
+A typical handler branches on `context.target` to build different menus (cell:
+*Format / Clear*; row/column header: *Insert / Delete / Format*) and runs the
+chosen action as a transaction — e.g. inserting rows:
+
+```ts
+async function insertRows(context, count) {
+    const lines = getSelectedLines(context.selectedData) // {start, end, type}
+    const start = lines ? Math.min(lines.start, lines.end) : (context.row ?? 0)
+    await engine.getDataService().handleTransaction({
+        payloads: [{type: 'insertRows', value: {sheetIdx: engine.getCurrentSheetIndex(), start, count}}],
+        undoable: true,
+        temp: false,
+    })
+}
+```
+
+::: tip Optional menu component
+If you don't want to build a menu from scratch, the engine also ships a small,
+data-driven Svelte `ContextMenu` component (see [Advanced: custom
+layouts](#advanced-custom-layouts)). It's entirely optional — the engine never
+renders it for you. The main LogiSheets app renders its own MUI menu from the
+`contextMenu` event (`src/components/engine-canvas/canvas-context-menu.tsx`).
+:::
 
 ## Multiple views (Sessions)
 
@@ -196,7 +238,7 @@ delegate to:
 | `getCurrentSheetIndex` / `setCurrentSheetIndex` | `(…)` | Read / switch **this view's** active sheet. |
 | `getSheets` | `(): readonly SheetInfo[]` | Shared sheet list. |
 | `getConfig` | `(): EngineConfig` | Resolved configuration. |
-| `on` / `off` | `(type, cb)` | Per-view events: `selectionChange`, `gridChange`, `activeSheetChange`, `startEdit`, `invalidFormula`, `error`. |
+| `on` / `off` | `(type, cb)` | Per-view events: `selectionChange`, `gridChange`, `activeSheetChange`, `startEdit`, `contextMenu`, `invalidFormula`, `error`. |
 | `destroy` | `(): void` | Unmount and release this session from the engine. |
 
 Workbook-level events (`ready`, `sheetChange`, `cellChange`) stay on the
@@ -405,22 +447,21 @@ interface CellLayout {
 }
 ```
 
-### `ContextMenuItem`
+### `ContextMenuContext`
+
+The payload of the `contextMenu` event describes *what* was right-clicked:
 
 ```ts
-interface ContextMenuItem {
-    id: string
-    label: string
-    icon?: string          // emoji or text
-    disabled?: boolean
-    separator?: boolean     // show a divider after this item
-    shortcut?: string       // display-only hint
-    children?: ContextMenuItem[]
+interface ContextMenuContext {
+    selectedData: SelectedData
+    target: 'cell' | 'row' | 'column'
+    row?: number // index of the clicked row / cell
+    col?: number // index of the clicked column / cell
+    event: MouseEvent
 }
 ```
 
-The click handler receives a `ContextMenuContext`: `{selectedData, target:
-'cell' | 'row' | 'column', row?, col?, event: MouseEvent}`.
+See [Context menu](#context-menu) for how to use it.
 
 ## Using with a framework
 
@@ -615,9 +656,19 @@ Or via the UMD build with no bundler — the whole API hangs off the
 
 For fully custom layouts you can import the raw Svelte components directly —
 `Spreadsheet`, `ColumnHeaders`, `RowHeaders`, `Selector`, `SheetTabs`,
-`Scrollbar`, `ContextMenu` — and compose them yourself instead of using
-`mount()`. The `adapters` module additionally exports React-oriented **prop
-types** (`SpreadsheetAdapterProps`, `CanvasAdapterProps`) and a
+`Scrollbar` — and compose them yourself instead of using `mount()`.
+
+`ContextMenu` is also exported, but it is an **optional** menu helper, not part
+of the rendered grid: feed it items + a position and it draws a styled menu (it
+supports plain action items and an inline numeric `stepper` item). Most hosts
+skip it and render their own menu from the [`contextMenu` event](#context-menu).
+It takes `{visible, x, y, items: ContextMenuItem[], context, onItemClick,
+onClose}`, where each `ContextMenuItem` is `{id, label, icon?, disabled?,
+separator?, shortcut?, children?, type?: 'action' | 'stepper', min?, max?,
+value?}`.
+
+The `adapters` module additionally exports React-oriented **prop types**
+(`SpreadsheetAdapterProps`, `CanvasAdapterProps`) and a
 `convertCanvasPropsToAdapterProps` helper for teams writing their own React
 wrapper; these are type-level conveniences, not a shipped React component.
 

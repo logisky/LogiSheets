@@ -22,8 +22,16 @@
         items: ContextMenuItem[]
         /** Context when menu was triggered */
         context: ContextMenuContext | null
-        /** Called when a menu item is clicked */
-        onItemClick?: (item: ContextMenuItem, context: ContextMenuContext | null) => void
+        /**
+         * Called when a menu item is clicked. `value` is the current amount
+         * from a `stepper` item in the same menu (if any), so action items can
+         * act on the user-chosen quantity.
+         */
+        onItemClick?: (
+            item: ContextMenuItem,
+            context: ContextMenuContext | null,
+            value?: number,
+        ) => void
         /** Called when menu should close */
         onClose?: () => void
     }
@@ -46,6 +54,44 @@
     let adjustedX = $state(0)
     let adjustedY = $state(0)
     let activeSubmenu: string | null = $state(null)
+
+    // Current value of each `stepper` item, keyed by item id. Reset to the
+    // item's default every time the menu (re)opens so it tracks the latest
+    // selection-derived default.
+    let stepperValues = $state<Record<string, number>>({})
+    $effect(() => {
+        if (!visible) return
+        const next: Record<string, number> = {}
+        for (const it of items) {
+            if (it.type === 'stepper') next[it.id] = it.value ?? it.min ?? 1
+        }
+        stepperValues = next
+    })
+
+    function clampStepper(item: ContextMenuItem, v: number): number {
+        const min = item.min ?? 1
+        const max = item.max ?? 1000
+        if (Number.isNaN(v)) return min
+        return Math.min(max, Math.max(min, Math.round(v)))
+    }
+
+    function adjustStepper(item: ContextMenuItem, delta: number) {
+        const cur = stepperValues[item.id] ?? item.min ?? 1
+        stepperValues = {...stepperValues, [item.id]: clampStepper(item, cur + delta)}
+    }
+
+    function setStepper(item: ContextMenuItem, v: number) {
+        stepperValues = {...stepperValues, [item.id]: clampStepper(item, v)}
+    }
+
+    // The amount an action item should act on: the first stepper's value, or
+    // undefined when the menu has no stepper.
+    function currentStepperValue(): number | undefined {
+        for (const it of items) {
+            if (it.type === 'stepper') return stepperValues[it.id]
+        }
+        return undefined
+    }
 
     // ========================================================================
     // Position adjustment to keep menu in viewport
@@ -87,7 +133,7 @@
             activeSubmenu = activeSubmenu === item.id ? null : item.id
             return
         }
-        onItemClick?.(item, context)
+        onItemClick?.(item, context, currentStepperValue())
         onClose?.()
     }
 
@@ -122,6 +168,38 @@
         tabindex="-1"
     >
         {#each items as item (item.id)}
+            {#if item.type === 'stepper'}
+                <div class="menu-stepper" role="group" aria-label={item.label}>
+                    <span class="menu-icon-placeholder"></span>
+                    <span class="menu-label">{item.label}</span>
+                    <div class="stepper-control">
+                        <button
+                            type="button"
+                            class="stepper-btn"
+                            aria-label="decrease"
+                            onclick={(e) => { e.stopPropagation(); adjustStepper(item, -1) }}
+                        >−</button>
+                        <input
+                            class="stepper-input"
+                            type="number"
+                            min={item.min ?? 1}
+                            max={item.max ?? 1000}
+                            value={stepperValues[item.id] ?? item.min ?? 1}
+                            onclick={(e) => e.stopPropagation()}
+                            oninput={(e) => setStepper(item, parseInt((e.currentTarget as HTMLInputElement).value, 10))}
+                        />
+                        <button
+                            type="button"
+                            class="stepper-btn"
+                            aria-label="increase"
+                            onclick={(e) => { e.stopPropagation(); adjustStepper(item, 1) }}
+                        >+</button>
+                    </div>
+                </div>
+                {#if item.separator}
+                    <div class="menu-separator"></div>
+                {/if}
+            {:else}
             <div class="menu-item-wrapper">
                 <button
                     class="menu-item"
@@ -180,6 +258,7 @@
             </div>
             {#if item.separator}
                 <div class="menu-separator"></div>
+            {/if}
             {/if}
         {/each}
     </div>
@@ -274,5 +353,58 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         padding: 4px 0;
         z-index: 10001;
+    }
+
+    .menu-stepper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        color: #333;
+    }
+
+    .stepper-control {
+        display: flex;
+        align-items: center;
+        border: 1px solid #d0d0d0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .stepper-btn {
+        width: 22px;
+        height: 22px;
+        border: none;
+        background: #f5f5f5;
+        color: #333;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stepper-btn:hover {
+        background: #e8e8e8;
+    }
+
+    .stepper-input {
+        width: 40px;
+        height: 22px;
+        border: none;
+        border-left: 1px solid #d0d0d0;
+        border-right: 1px solid #d0d0d0;
+        text-align: center;
+        font-size: 12px;
+        color: #333;
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    .stepper-input::-webkit-outer-spin-button,
+    .stepper-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
     }
 </style>

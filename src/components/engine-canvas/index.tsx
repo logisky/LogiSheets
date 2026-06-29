@@ -6,13 +6,14 @@
  * InlineCellEditor + ViewOverlayLayer building blocks.
  */
 
-import {FC, useRef, useEffect, useState} from 'react'
+import {FC, useRef, useEffect, useState, useCallback} from 'react'
 import {useEngine} from '@/core/engine/provider'
 import type {Grid, SelectedData, CellLayout} from 'logisheets-engine'
 import {ViewOverlayLayer} from '@/components/spreadsheet-view/view-overlay-layer'
 import {InlineCellEditor} from '@/components/spreadsheet-view/inline-cell-editor'
 import {DiffLayer} from '@/components/diff-layer'
 import type {DiffState} from '@/components/diff-layer'
+import {CanvasContextMenu, type ContextMenuTrigger} from './canvas-context-menu'
 import styles from './engine-canvas.module.scss'
 
 export interface EngineCanvasProps {
@@ -47,6 +48,24 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
     // Set by InlineCellEditor; read by the engine mount so the canvas doesn't
     // steal focus while an editor is open.
     const editingRef = useRef<() => boolean>(() => false)
+
+    // The context-menu component reads live activeSheet / selection setters,
+    // so route them through refs that stay current across renders.
+    const activeSheetRef = useRef(activeSheet)
+    activeSheetRef.current = activeSheet
+    const setSelectionRef = useRef(selectedData$)
+    setSelectionRef.current = selectedData$
+    const getActiveSheet = useCallback(() => activeSheetRef.current, [])
+    const setSelection = useCallback((d: SelectedData) => setSelectionRef.current(d), [])
+    // The engine renders no menu — it emits `contextMenu`; the host menu below
+    // subscribes here.
+    const subscribeContextMenu = useCallback(
+        (cb: (e: ContextMenuTrigger) => void) => {
+            engine.on('contextMenu', cb)
+            return () => engine.off('contextMenu', cb)
+        },
+        [engine]
+    )
 
     // Mount the engine UI (default session)
     useEffect(() => {
@@ -135,6 +154,12 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                 activeSheet={activeSheet}
                 canvasStartX={canvasPos.x}
                 canvasStartY={canvasPos.y}
+            />
+            <CanvasContextMenu
+                subscribe={subscribeContextMenu}
+                dataSvc={dataSvc}
+                getActiveSheet={getActiveSheet}
+                setSelection={setSelection}
             />
         </div>
     )
