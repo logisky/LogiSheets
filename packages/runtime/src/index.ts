@@ -23,6 +23,9 @@ export * from 'logisheets-core'
 // The developer-defined JSON-RPC server (operations run against this runtime).
 export * from './rpc.js'
 
+// Craft loading: reconstruct the crafts a workbook depends on, headlessly.
+export * from './craft.js'
+
 /**
  * Adapt the synchronous Node `handle()` entry point into the async {@link
  * Client} that logisheets-core's operation layer expects.

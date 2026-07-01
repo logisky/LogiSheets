@@ -26,6 +26,8 @@ import {tx} from '@/core/transaction'
 import {
     getPersistentInteractions,
     loadPersistentInteractions,
+    getPersistentCraftStates,
+    loadPersistentCraftStates,
 } from 'logisheets-core'
 import {ColorResult, SketchPicker} from 'react-color'
 import Modal from 'react-modal'
@@ -109,6 +111,13 @@ export const Toolbar = observer(
                 }
                 let appData = await DATA_SERVICE.getWorkbook().getAppData()
                 if (isErrorMessage(appData)) appData = []
+                // Reset all host-held, AppData-backed state before applying the
+                // loaded workbook's. A workbook with no `logisheets` AppData
+                // entry would otherwise silently inherit the previously-open
+                // workbook's block fields, craft interactions, and craft state.
+                BLOCK_MANAGER.clear()
+                loadPersistentInteractions(undefined)
+                loadPersistentCraftStates(undefined)
                 appData.forEach((d: {name: string; data: string}) => {
                     if (d.name !== 'logisheets') return
                     // Envelope format (current): a JSON object with `version`,
@@ -120,6 +129,7 @@ export const Toolbar = observer(
                         version?: number
                         blockManager?: string
                         craftInteractions?: unknown
+                        craftStates?: unknown
                     } | null = null
                     try {
                         const parsed = JSON.parse(d.data)
@@ -138,6 +148,7 @@ export const Toolbar = observer(
                             BLOCK_MANAGER.parseAppData(envelope.blockManager)
                         }
                         loadPersistentInteractions(envelope.craftInteractions)
+                        loadPersistentCraftStates(envelope.craftStates)
                     } else {
                         BLOCK_MANAGER.parseAppData(d.data)
                     }
@@ -669,6 +680,7 @@ export const Toolbar = observer(
                 version: 1,
                 blockManager: persistentData,
                 craftInteractions: getPersistentInteractions(),
+                craftStates: getPersistentCraftStates(),
             })
             const saveResult = await DATA_SERVICE.getWorkbook().save({
                 appData: envelope,
