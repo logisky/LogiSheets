@@ -12,7 +12,7 @@ import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
 import {buildSelectedDataFromCell} from 'logisheets-engine'
-import {callerRegistry} from 'logisheets-core'
+import {callerRegistry, getCraftState, setCraftState} from 'logisheets-core'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
@@ -150,6 +150,13 @@ export const CraftPanel = ({
                     toast.info(text)
             }
         }
+        // Craft state persistence. A craft pushes its own opaque JSON state
+        // here; the host folds it into the saved workbook's AppData and hands
+        // it back on the next load. The host never parses the string — the
+        // craft owns its schema. Keyed by craftId (this iframe's src), which
+        // is stable across sessions, so state round-trips to the right craft.
+        win.setCraftState = (json: string) => setCraftState(craftId, json)
+        win.getCraftState = (): string | undefined => getCraftState(craftId)
         injectCraftInteractionAPIs(win)
     }
 

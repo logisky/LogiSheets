@@ -25,29 +25,21 @@ jobs:
         with:
           node-version: "22"
 
-      - run: yarn install && cargo install --locked wasm-pack
-      - run: yarn workspace logisheets-web build
-      - run: yarn workspace logisheets-web test
-      - run: yarn workspace logisheets-core build
-      - run: yarn workspace logisheets-core test
-      - run: yarn workspace logician build
-      - run: yarn run run-scripts && yarn run wasm
-      - run: yarn workspace logisheets-engine build
+      - name: Install and build (JS / WASM)
+        run: ./scripts/ci-build.sh
+
+      - name: Test logisheets-web and logisheets-core
+        run: |
+          yarn workspace logisheets-web test
+          yarn workspace logisheets-core test
 
       - name: Install Playwright browser
         run: yarn playwright install --with-deps chromium
       - name: Run engine UI e2e tests
         run: yarn test:e2e
 
-      - run: yarn build
+      - name: Test logisheets-node
+        run: yarn workspace logisheets test
 
-      - name: Build and test logisheets-node
-        run: |
-          yarn workspace logisheets run link
-          yarn workspace logisheets build
-          yarn workspace logisheets test
-
-      - name: Build and test logisheets-runtime
-        run: |
-          yarn workspace logisheets-runtime build
-          yarn workspace logisheets-runtime test
+      - name: Test logisheets-runtime
+        run: yarn workspace logisheets-runtime test

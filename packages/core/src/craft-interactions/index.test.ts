@@ -228,9 +228,22 @@ describe('craft-interactions persistence', () => {
         expect(getMultiSelectSelections('m1')).toEqual(['x'])
     })
 
+    it('resets prior state when loading empty/undefined input', () => {
+        // The load path is authoritative: opening a workbook with no
+        // interaction state must clear whatever the previously-open workbook
+        // left in memory, not leave it behind.
+        setRadioSelection('seed', 'v')
+        loadPersistentInteractions(undefined)
+        expect(getRadioSelection('seed')).toBeUndefined()
+
+        setRadioSelection('seed', 'v')
+        loadPersistentInteractions(null)
+        expect(getRadioSelection('seed')).toBeUndefined()
+    })
+
     it('tolerates malformed input without throwing', () => {
         setRadioSelection('seed', 'v')
-        // Each of these should be a safe no-op-or-reset, never a throw.
+        // Each of these should be a safe reset, never a throw.
         expect(() => loadPersistentInteractions(null)).not.toThrow()
         expect(() => loadPersistentInteractions(undefined)).not.toThrow()
         expect(() => loadPersistentInteractions('not an object')).not.toThrow()

@@ -49,4 +49,14 @@ export class BlockManager {
     this.enumSetManager.fromJSON(enumSets);
     this.fieldManager.fromJSON(fields);
   }
+
+  /**
+   * Drop all host-side block metadata. Call before loading a workbook so a
+   * book with no block AppData doesn't inherit the previously-open book's
+   * fields/enum sets.
+   */
+  public clear(): void {
+    this.fieldManager.clear();
+    this.enumSetManager.clear();
+  }
 }

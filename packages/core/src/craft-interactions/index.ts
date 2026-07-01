@@ -545,8 +545,12 @@ export function getPersistentInteractions(): PersistedShape {
 }
 
 export function loadPersistentInteractions(data: unknown): void {
-    if (!data || typeof data !== 'object') return
-    const d = data as Partial<PersistedShape>
+    // Always clear first, then repopulate from whatever the workbook carried.
+    // Passing undefined/null (a workbook with no interaction state) therefore
+    // resets to empty rather than leaving the previous workbook's state behind.
+    const d = (
+        data && typeof data === 'object' ? data : {}
+    ) as Partial<PersistedShape>
 
     // Radio
     radioBindings.clear()
