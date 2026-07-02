@@ -60,11 +60,21 @@ export const CraftPanel = ({
             value: '/markdown-table-extractor/index.html',
         },
         {
+            label: 'Data Gateway',
+            value: '/data-gateway/index.html',
+        },
+        {
             label: 'Watson',
             value: '/watson/index.html',
         },
     ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
+    // Crafts that need to react to the sheet selection subscribe here instead
+    // of polling `window.selection`. The set persists across `inject()` re-runs
+    // (which happen on every selection change); it's cleared only when the
+    // iframe navigates to a fresh page, since a reloaded craft's callbacks
+    // belong to a now-dead realm.
+    const selectionListeners = useRef(new Set<(s: Selection) => void>())
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const BLOCK_MANAGER = engine.getBlockManager()
@@ -157,6 +167,16 @@ export const CraftPanel = ({
         // is stable across sessions, so state round-trips to the right craft.
         win.setCraftState = (json: string) => setCraftState(craftId, json)
         win.getCraftState = (): string | undefined => getCraftState(craftId)
+        // Subscribe to sheet-selection changes. The craft passes a callback;
+        // the host invokes it with the current Selection whenever the selection
+        // moves (see the effect below) and returns a disposer. Registration
+        // survives inject() re-runs because the listener set lives in a ref.
+        win.onSelectionChange = (cb: (s: Selection) => void): (() => void) => {
+            selectionListeners.current.add(cb)
+            return () => {
+                selectionListeners.current.delete(cb)
+            }
+        }
         injectCraftInteractionAPIs(win)
     }
 
@@ -171,6 +191,23 @@ export const CraftPanel = ({
         setActiveSheet,
         iframeSrc,
     ])
+
+    // Push selection changes to subscribed crafts. Declared after the inject()
+    // effect so it runs second — window.selection is already refreshed by the
+    // time listeners fire — and it also hands each callback the fresh Selection.
+    useEffect(() => {
+        const selection: Selection = {
+            sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
+            data: selectedData,
+        } as Selection
+        selectionListeners.current.forEach((l) => {
+            try {
+                l(selection)
+            } catch {
+                /* a craft listener throwing must not break the others */
+            }
+        })
+    }, [selectedData, DATA_SERVICE])
 
     return (
         <Box>
@@ -233,7 +270,13 @@ export const CraftPanel = ({
                         <iframe
                             ref={iframeRef}
                             src={iframeSrc}
-                            onLoad={inject}
+                            onLoad={() => {
+                                // A fresh page: the old craft's listener
+                                // closures belong to a now-dead realm — drop
+                                // them before the new page re-subscribes.
+                                selectionListeners.current.clear()
+                                inject()
+                            }}
                             style={{
                                 border: 'none',
                                 width: '100%',

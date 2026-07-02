@@ -16,7 +16,14 @@
 // The registry is a seam: production wires it to a real HTTP registry, tests
 // (and local dev) use {@link MockCraftRegistry}.
 
-import type {CraftManifest, CraftRuntime, CraftState} from 'logisheets-core'
+import type {
+    CraftManifest,
+    CraftRuntime,
+    CraftState,
+    Violation,
+    JsonRpcRequest,
+    JsonRpcResponse,
+} from 'logisheets-core'
 import type {Workbook} from './index.js'
 
 /**
@@ -60,11 +67,14 @@ export interface CraftRegistry {
     ): Promise<unknown | undefined>
 }
 
-/** One craft the loader brought up, with its manifest and live runtime. */
+/** One craft the loader brought up, with its manifest, live runtime, and the
+ * parsed state it was loaded with (kept so the request/validate/response hooks
+ * can be re-invoked with the same state per RPC exchange). */
 export interface LoadedCraft<S extends CraftState = CraftState> {
     readonly craftId: string
     readonly manifest: CraftManifest
     readonly runtime: NodeCraftRuntime<S>
+    readonly state: S
 }
 
 /**
@@ -154,10 +164,85 @@ async function loadOneCraft(
     const state = parseState(stateJson)
     if (!state) return undefined
 
-    const result = runtime.onLoad(state, wb)
+    // onLoad may run engine operations (async on every host), so await it.
+    const result = await runtime.onLoad(state, wb)
     if (isErrorMessage(result)) return undefined
 
-    return {craftId, manifest, runtime}
+    return {craftId, manifest, runtime, state}
+}
+
+/**
+ * Notify every loaded craft that an RPC request's inputs are about to be
+ * applied, and collect any objections. A craft signals "reject this request"
+ * by returning an ErrorMessage (or throwing) from `onRequest` — e.g. the
+ * data-gateway craft rejects a request that names a block it isn't allowed to
+ * write. Returns the objection messages (empty when every craft is fine); a
+ * host that gets a non-empty result should reject the request before applying
+ * it.
+ */
+export async function applyCraftRequest(
+    loaded: readonly LoadedCraft[],
+    req: JsonRpcRequest,
+    wb: Workbook
+): Promise<string[]> {
+    const errors: string[] = []
+    for (const craft of loaded) {
+        try {
+            // eslint-disable-next-line no-await-in-loop
+            const res = await craft.runtime.onRequest(req, craft.state, wb)
+            if (isErrorMessage(res)) errors.push(res.msg)
+        } catch (e) {
+            errors.push(e instanceof Error ? e.message : String(e))
+        }
+    }
+    return errors
+}
+
+/**
+ * The validation checkpoint: run every loaded craft's `onValidate` now that
+ * the request's inputs are in place, and return the union of the cells that
+ * fail their rules. An empty result means every craft is satisfied and the
+ * host may proceed to read the response; a non-empty result means the host
+ * should reject the request and roll the inputs back. Crafts with no
+ * `onValidate` contribute nothing; a craft that errors is treated as
+ * contributing no violations (its objection, if any, surfaced in onRequest).
+ */
+export async function validateLoadedCrafts(
+    loaded: readonly LoadedCraft[],
+    wb: Workbook
+): Promise<Violation[]> {
+    const violations: Violation[] = []
+    for (const craft of loaded) {
+        if (!craft.runtime.onValidate) continue
+        // eslint-disable-next-line no-await-in-loop
+        const res = await craft.runtime.onValidate(craft.state, wb)
+        if (isErrorMessage(res)) continue
+        violations.push(...res)
+    }
+    return violations
+}
+
+/**
+ * Hand every loaded craft the RPC response about to be returned (e.g. so a
+ * craft can read its output blocks back). Returns any objection messages, same
+ * contract as {@link applyCraftRequest}.
+ */
+export async function applyCraftResponse(
+    loaded: readonly LoadedCraft[],
+    resp: JsonRpcResponse,
+    wb: Workbook
+): Promise<string[]> {
+    const errors: string[] = []
+    for (const craft of loaded) {
+        try {
+            // eslint-disable-next-line no-await-in-loop
+            const res = await craft.runtime.onResponse(resp, craft.state, wb)
+            if (isErrorMessage(res)) errors.push(res.msg)
+        } catch (e) {
+            errors.push(e instanceof Error ? e.message : String(e))
+        }
+    }
+    return errors
 }
 
 /**
@@ -221,7 +306,7 @@ function parseState(stateJson: string): CraftState | undefined {
     return parsed as CraftState
 }
 
-function isErrorMessage(v: unknown): boolean {
+function isErrorMessage(v: unknown): v is {msg: string} {
     return (
         typeof v === 'object' &&
         v !== null &&

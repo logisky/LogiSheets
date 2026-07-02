@@ -80,10 +80,10 @@ describe('SpreadsheetRuntime (Node, real WASM engine)', () => {
         await writeBlock(wb, [['5']])
 
         // Same operation the browser's ValidationCell runs, served from
-        // logisheets-core. It parks `=A1>0` in A1's shadow cell.
-        await expect(
-            wb.ops.setValidationRule(0, 0, 0, 'A1>0')
-        ).resolves.toBeUndefined()
+        // logisheets-core. It parks `=A1>0` in A1's shadow cell and returns the
+        // shadow's id so callers can read the verdict back by id later.
+        const shadow = await wb.ops.setValidationRule(0, 0, 0, 'A1>0')
+        expect(shadow.cellId.type).toBe('ephemeralCell')
 
         rt.closeAll()
     })

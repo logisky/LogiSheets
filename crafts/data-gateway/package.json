@@ -1,21 +1,26 @@
 {
     "name": "data-gateway",
     "version": "0.1.0",
-    "description": "Connect LogiSheets blocks to external systems — import/export structured data",
+    "description": "Gate external RPC access to a workbook: declare request-writable / request-readable blocks and per-cell validation rules",
     "main": "dist/data-gateway.js",
     "module": "dist/data-gateway.js",
     "types": "dist/index.d.ts",
     "scripts": {
-        "build": "vite build && yarn copy-to-public",
-        "copy-to-public": "rm -rf ../../public/data-gateway && mkdir -p ../../public/data-gateway && cp index.html ../../public/data-gateway/index.html && cp dist/data-gateway.js ../../public/data-gateway/data-gateway.js"
+        "build": "vite build && vite build --config vite.runtime.config.ts && yarn copy-to-public",
+        "build:runtime": "vite build --config vite.runtime.config.ts",
+        "test": "vitest run",
+        "copy-to-public": "rm -rf ../../public/data-gateway && mkdir -p ../../public/data-gateway && cp index.html ../../public/data-gateway/index.html && cp manifest.json ../../public/data-gateway/manifest.json && cp dist/data-gateway.js ../../public/data-gateway/data-gateway.js && cp dist/data-gateway.runtime.js ../../public/data-gateway/data-gateway.runtime.js"
     },
     "author": "Jeremy He",
     "license": "MIT",
     "dependencies": {
+        "logisheets-core": "workspace:*",
+        "logisheets-formula-editor": "workspace:*",
         "logisheets-web": "workspace:*"
     },
     "devDependencies": {
         "typescript": "^5.5.0",
-        "vite": "^5.0.0"
+        "vite": "^5.0.0",
+        "vitest": "^2.0.0"
     }
 }
