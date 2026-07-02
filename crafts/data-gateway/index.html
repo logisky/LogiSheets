@@ -17,13 +17,35 @@
     }
 
     h1 {
-      margin: 0 0 16px;
+      margin: 0 0 4px;
       font-size: 20px;
+    }
+
+    p.intro {
+      margin: 0 0 16px;
+      font-size: 12px;
+      color: #6b7280;
     }
   </style>
 </head>
 <body>
   <h1>Data Gateway</h1>
+  <p class="intro">
+    Mark blocks as request-writable (input) or request-readable (output),
+    and attach validation rules to selected cells.
+  </p>
+  <div id="root"></div>
   <script src="./data-gateway.js"></script>
+  <script>
+    // Bootstrap once the bundle is on the global. The host injects
+    // window.selection / window.workbook / window.getCraftState etc. before
+    // and after this loads; mount() reads them lazily so late injection is fine.
+    (function boot() {
+      var root = document.getElementById('root')
+      if (window.DataGateway && root) {
+        window.DataGateway.mount(root, window)
+      }
+    })()
+  </script>
 </body>
 </html>

@@ -24,11 +24,13 @@ import type {
     Alignment,
     StPatternType,
     Value,
+    SheetCellId,
 } from 'logisheets-web'
 import type {Client} from '../port.js'
 import {makeTransaction} from '../transaction/index.js'
 import {
     checkValidations as checkValidationsPure,
+    interpretValidation,
     type ValidationRule,
     type Violation,
 } from '../validation/index.js'
@@ -450,7 +452,7 @@ export class WorkbookOps {
         row: number,
         col: number,
         formula: string
-    ): Promise<void> {
+    ): Promise<SheetCellId> {
         const shadow = await this.client.getShadowCellId({
             sheetIdx,
             rowIdx: row,
@@ -472,6 +474,43 @@ export class WorkbookOps {
             ],
             false
         )
+        // Return the shadow's stable id so callers can cache it and later read
+        // the verdict back by id (see {@link checkValidationShadows}) without
+        // re-resolving the cell's coordinates.
+        return shadow
+    }
+
+    /**
+     * Read a set of *installed* validation shadows by their ids and interpret
+     * each — the read half of {@link setValidationRule}.
+     *
+     * The engine evaluates each shadow reactively (with `#PLACEHOLDER` bound to
+     * its target cell), so a caller that cached the shadow ids at install time
+     * gets the up-to-date verdicts here in a single batch read, with no
+     * coordinate resolution. `rule` is carried only into the returned
+     * {@link Violation} for reporting; the evaluation is entirely the engine's.
+     *
+     * Returns one {@link Violation} per failing cell (passing cells and empty
+     * shadows contribute nothing), in input order.
+     */
+    async checkValidationShadows(
+        entries: readonly {shadow: SheetCellId; rule: ValidationRule}[]
+    ): Promise<Violation[]> {
+        if (entries.length === 0) return []
+        const infos = await this.client.batchGetCellInfoById({
+            ids: entries.map((e) => e.shadow),
+        })
+        if (isErrorMessage(infos)) {
+            throw new Error('Failed to read shadow cells: ' + infos.msg)
+        }
+        const out: Violation[] = []
+        for (let i = 0; i < entries.length; i++) {
+            const info = infos[i]
+            if (!info) continue
+            const violation = interpretValidation(entries[i].rule, info.value)
+            if (violation) out.push(violation)
+        }
+        return out
     }
 
     /**
