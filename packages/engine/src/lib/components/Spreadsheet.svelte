@@ -1480,11 +1480,19 @@ let isDragging = false; // True while user is drag-selecting
     // Public API
     // ========================================================================
 
-    export async function loadWorkbook(data: Uint8Array, name: string) {
-        if (!dataService) return
-        await dataService.loadWorkbook(data, name)
+    // Returns true when the workbook was loaded, false when it was not — either
+    // the beforeLoad gate vetoed it (user declined the overwrite) or the load
+    // failed. Callers use this to skip post-load bookkeeping on a no-op.
+    export async function loadWorkbook(
+        data: Uint8Array,
+        name: string
+    ): Promise<boolean> {
+        if (!dataService) return false
+        const res = await dataService.loadWorkbook(data, name)
+        if (isErrorMessage(res)) return false
         await render("loadWorkbook")
         await updateDocumentDimensions()
+        return true
     }
 
     export function setActiveSheet(idx: number) {

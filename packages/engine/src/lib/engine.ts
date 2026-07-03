@@ -20,7 +20,7 @@
 
 import type { SheetInfo, SelectedData, CellLayout } from "logisheets-web";
 import { isErrorMessage } from "logisheets-web";
-import { DataService } from "./clients/service";
+import { DataService, type BeforeLoadWorkbook } from "./clients/service";
 import { WorkbookClient } from "./clients/workbook";
 import { BlockManager } from "./block";
 import type { Grid, EngineConfig } from "$types/index";
@@ -232,6 +232,16 @@ export class Engine {
   async loadFile(buffer: Uint8Array, filename: string): Promise<Grid | null> {
     this._ensureReady();
     return this.getDefaultSession().loadFile(buffer, filename);
+  }
+
+  /**
+   * Register a gate invoked before a workbook load replaces the current one
+   * (see {@link DataService.setBeforeLoadWorkbook}). The host can show an
+   * overwrite confirmation and return `false` to cancel. Pass `undefined` to
+   * clear it.
+   */
+  setBeforeLoadWorkbook(handler?: BeforeLoadWorkbook): void {
+    this._dataService.setBeforeLoadWorkbook(handler);
   }
 
   async render(anchorX = 0, anchorY = 0): Promise<Grid | null> {

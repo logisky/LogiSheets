@@ -24,11 +24,33 @@ import type { Grid } from "$types/index";
 type Resp<T> = Promise<T | ErrorMessage>;
 type SheetId = number;
 
+/**
+ * Host-provided gate invoked before a workbook load replaces the one currently
+ * open. Return `false` to abort the load (e.g. the user declined an overwrite
+ * confirmation). When no gate is registered the load always proceeds, so
+ * headless callers (the Node runtime) are unaffected.
+ */
+export type BeforeLoadWorkbook = () => boolean | Promise<boolean>;
+
+/**
+ * Sentinel `ErrorMessage.msg` returned by {@link DataService.loadWorkbook} when
+ * a registered {@link BeforeLoadWorkbook} gate vetoes the load. It is a
+ * user-initiated cancellation, not a failure — surface it as a silent no-op
+ * (use {@link isLoadCancelled}) rather than an error.
+ */
+export const WORKBOOK_LOAD_CANCELLED = "__workbook_load_cancelled__";
+
+/** Whether `v` is the {@link WORKBOOK_LOAD_CANCELLED} sentinel. */
+export function isLoadCancelled(v: unknown): boolean {
+  return isErrorMessage(v) && v.msg === WORKBOOK_LOAD_CANCELLED;
+}
+
 export class DataService {
   private _workbook: WorkbookClient;
   private _offscreen: OffscreenClient;
   private _sheetInfos: readonly SheetInfo[] = [];
   private _sheetUpdateCallback: Callback[] = [];
+  private _beforeLoad?: BeforeLoadWorkbook;
 
   // Legacy "active view" sheet pointer. Rendering is per-canvas (each view
   // passes its own sheetId), so this is NOT on the render path — it's a
@@ -113,11 +135,26 @@ export class DataService {
   // File Operations
   // ========================================================================
 
+  /**
+   * Register a gate invoked before every {@link loadWorkbook}. Loading a
+   * workbook discards the one currently open, so the host can use this to
+   * confirm the overwrite with the user. Pass `undefined` to clear it. Every
+   * load path (UI file-open, the engine demo, crafts) funnels through
+   * `loadWorkbook`, so a single gate here covers them all.
+   */
+  public setBeforeLoadWorkbook(handler?: BeforeLoadWorkbook): void {
+    this._beforeLoad = handler;
+  }
+
   public async loadWorkbook(
     buf: Uint8Array,
     name: string,
     canvasId = 0,
   ): Resp<Grid> {
+    if (this._beforeLoad) {
+      const proceed = await this._beforeLoad();
+      if (!proceed) return { msg: WORKBOOK_LOAD_CANCELLED, ty: 0 };
+    }
     await this._workbook.loadWorkbook({ content: buf, name });
     // The previous workbook's _sheetInfos cache is now stale. The
     // worker-side sheetUpdated event isn't guaranteed to fire on load, so
