@@ -205,12 +205,9 @@ impl BlockSchemaExecutor {
 
                 // Pad-to-len the optional rule vecs so callers can omit
                 // them (send vec![]) and have it mean "all None".
-                let field_formulas =
-                    pad_to_len(p.field_formulas, p.fields.len());
-                let validation_formulas =
-                    pad_to_len(p.validation_formulas, p.fields.len());
-                let editability_formulas =
-                    pad_to_len(p.editability_formulas, p.fields.len());
+                let field_formulas = pad_to_len(p.field_formulas, p.fields.len());
+                let validation_formulas = pad_to_len(p.validation_formulas, p.fields.len());
+                let editability_formulas = pad_to_len(p.editability_formulas, p.fields.len());
 
                 // Length checks after pad — if user sent a non-empty but
                 // wrong-length vec, that's an error.
@@ -238,11 +235,7 @@ impl BlockSchemaExecutor {
                 let declared_names: std::collections::HashSet<String> =
                     p.fields.iter().cloned().collect();
                 validate_field_refs(&field_formulas, &declared_names, "field_formulas")?;
-                validate_field_refs(
-                    &validation_formulas,
-                    &declared_names,
-                    "validation_formulas",
-                )?;
+                validate_field_refs(&validation_formulas, &declared_names, "validation_formulas")?;
                 validate_field_refs(
                     &editability_formulas,
                     &declared_names,
@@ -250,10 +243,8 @@ impl BlockSchemaExecutor {
                 )?;
 
                 let mut value_iter = normalize_formula_vec(field_formulas).into_iter();
-                let mut validation_iter =
-                    normalize_formula_vec(validation_formulas).into_iter();
-                let mut editability_iter =
-                    normalize_formula_vec(editability_formulas).into_iter();
+                let mut validation_iter = normalize_formula_vec(validation_formulas).into_iter();
+                let mut editability_iter = normalize_formula_vec(editability_formulas).into_iter();
 
                 let mut fields = Vec::new();
                 for (i, (field, render_id)) in p
@@ -360,35 +351,32 @@ impl BlockSchemaExecutor {
                 // Snapshot existing per-field rules so apply_rule_update
                 // can preserve them for any kind with an empty incoming
                 // vec.
-                let existing_rules: Vec<(
-                    Option<String>,
-                    Option<String>,
-                    Option<String>,
-                )> = match existing {
-                    Schema::RowSchema(s) => s
-                        .fields
-                        .iter()
-                        .map(|(_, e)| {
-                            (
-                                e.value_formula.clone(),
-                                e.validation_formula.clone(),
-                                e.editability_formula.clone(),
-                            )
-                        })
-                        .collect(),
-                    Schema::ColSchema(s) => s
-                        .fields
-                        .iter()
-                        .map(|(_, e)| {
-                            (
-                                e.value_formula.clone(),
-                                e.validation_formula.clone(),
-                                e.editability_formula.clone(),
-                            )
-                        })
-                        .collect(),
-                    Schema::RandomSchema(_) => unreachable!(),
-                };
+                let existing_rules: Vec<(Option<String>, Option<String>, Option<String>)> =
+                    match existing {
+                        Schema::RowSchema(s) => s
+                            .fields
+                            .iter()
+                            .map(|(_, e)| {
+                                (
+                                    e.value_formula.clone(),
+                                    e.validation_formula.clone(),
+                                    e.editability_formula.clone(),
+                                )
+                            })
+                            .collect(),
+                        Schema::ColSchema(s) => s
+                            .fields
+                            .iter()
+                            .map(|(_, e)| {
+                                (
+                                    e.value_formula.clone(),
+                                    e.validation_formula.clone(),
+                                    e.editability_formula.clone(),
+                                )
+                            })
+                            .collect(),
+                        Schema::RandomSchema(_) => unreachable!(),
+                    };
 
                 let field_formulas = apply_rule_update(
                     field_empty,
@@ -434,11 +422,7 @@ impl BlockSchemaExecutor {
                     Schema::RandomSchema(_) => unreachable!(),
                 };
                 validate_field_refs(&field_formulas, &declared_names, "field_formulas")?;
-                validate_field_refs(
-                    &validation_formulas,
-                    &declared_names,
-                    "validation_formulas",
-                )?;
+                validate_field_refs(&validation_formulas, &declared_names, "validation_formulas")?;
                 validate_field_refs(
                     &editability_formulas,
                     &declared_names,

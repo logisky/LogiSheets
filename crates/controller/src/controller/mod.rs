@@ -26,13 +26,13 @@ pub mod display;
 mod executor;
 pub mod status;
 pub mod style;
+use crate::checkpoint_manager::{CheckpointManager, CheckpointMeta};
 use crate::edit_action::{
     ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, SheetCellId, SheetColId,
     SheetRowId, StatusCode, WorkbookUpdateType,
 };
 use crate::errors::{Error, Result};
 use crate::file_loader::load_file;
-use crate::checkpoint_manager::{CheckpointManager, CheckpointMeta};
 use crate::file_saver::save_file;
 use crate::formula_manager::Vertex;
 use crate::settings::Settings;
@@ -345,7 +345,7 @@ impl Controller {
                     cell_updated: false,
                     cells_removed: HashSet::new(),
                     sid_assigner: &mut self.sid_assigner,
-            checkpoint_manager: &self.checkpoint_manager,
+                    checkpoint_manager: &self.checkpoint_manager,
                     style_updated: HashSet::new(),
                     row_inserted: vec![],
                     row_removed: vec![],
@@ -459,7 +459,7 @@ impl Controller {
                     sheet_updated: false,
                     cell_updated: false,
                     sid_assigner: &mut self.sid_assigner,
-            checkpoint_manager: &self.checkpoint_manager,
+                    checkpoint_manager: &self.checkpoint_manager,
                     cells_removed: HashSet::new(),
                     style_updated: HashSet::new(),
                     row_inserted: vec![],
@@ -1344,8 +1344,8 @@ mod tests {
         assert!(!bytes.is_empty(), "saved bytes should be non-empty");
 
         // Load → new controller.
-        let restored = Controller::from_file("rt".to_string(), &bytes)
-            .expect("load should succeed");
+        let restored =
+            Controller::from_file("rt".to_string(), &bytes).expect("load should succeed");
 
         // Post-load: sheet name preserved? Look up by name.
         let sheet_id_after = restored
@@ -1430,12 +1430,9 @@ mod tests {
         // The host renders via `Workbook::get_sheet_by_idx(...)` →
         // `get_display_window` (the same path WASM exposes to the worker
         // RPC). Round-trip through the public Workbook API to mirror that.
-        let workbook =
-            crate::Workbook::from_file(&bytes, "rt".to_string()).expect("load");
+        let workbook = crate::Workbook::from_file(&bytes, "rt".to_string()).expect("load");
         let ws = workbook.get_sheet_by_idx(0).expect("sheet 0 worksheet");
-        let window = ws
-            .get_display_window(0, 0, 20, 20)
-            .expect("display window");
+        let window = ws.get_display_window(0, 0, 20, 20).expect("display window");
         let block_ids: Vec<_> = window.blocks.iter().map(|b| b.info.block_id).collect();
         assert!(
             block_ids.contains(&7),

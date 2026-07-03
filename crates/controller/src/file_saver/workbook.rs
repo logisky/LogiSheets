@@ -1,7 +1,10 @@
 use itertools::Itertools;
 use logisheets_workbook::{
     logisheets::{AppData, LogiSheetsData, Sheet},
-    prelude::{CtExternalReference, CtExternalReferences, CtSheet, CtSheets, WorkbookPart},
+    prelude::{
+        CtExternalReference, CtExternalReferences, CtPerson, CtSheet, CtSheets, Persons,
+        WorkbookPart,
+    },
     workbook::{DocProps, Wb, Worksheet, Xl},
 };
 use std::collections::HashMap;
@@ -125,6 +128,7 @@ pub fn save_workbook<S: SaverTrait>(
     } else {
         None
     };
+    let persons = save_persons(attachment_manager);
     let workbook = Wb {
         xl: Xl {
             workbook_part: get_workbook(ct_sheets, ct_references),
@@ -133,6 +137,7 @@ pub fn save_workbook<S: SaverTrait>(
             worksheets,
             external_links,
             theme,
+            persons,
         },
         doc_props: DocProps::default(),
         logisheets: Some(LogiSheetsData {
@@ -142,6 +147,27 @@ pub fn save_workbook<S: SaverTrait>(
         }),
     };
     Ok(workbook)
+}
+
+/// Serialize the workbook-level person registry to `xl/persons/person.xml`.
+/// Returns `None` when no persons exist (so no part / rel is emitted).
+fn save_persons(attachment_manager: &CellAttachmentsManager) -> Option<Persons> {
+    let persons = attachment_manager
+        .comments
+        .persons
+        .iter()
+        .map(|(_, p)| CtPerson {
+            display_name: p.display_name.clone(),
+            id: p.guid.clone(),
+            user_id: p.user_id.clone(),
+            provider_id: p.provider_id.clone(),
+        })
+        .collect::<Vec<_>>();
+    if persons.is_empty() {
+        None
+    } else {
+        Some(Persons { persons })
+    }
 }
 
 fn get_workbook(ct_sheets: CtSheets, ext_references: Vec<CtExternalReference>) -> WorkbookPart {

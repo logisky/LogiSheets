@@ -10,12 +10,12 @@ use crate::{
     block_manager::schema_manager::executor::BlockSchemaExecutor,
     calc_engine::CalcEngine,
     cell_attachments::executor::CellAttachmentsExecutor,
+    checkpoint_manager::CheckpointManager,
     connectors::{
         BlockSchemaConnector, CalcConnector, CellAttachmentsConnector, ContainerConnector,
         CubeConnector, ExclusiveConnector, FormulaConnector, NavigatorConnector, RangeConnector,
         SheetInfoConnector,
     },
-    checkpoint_manager::CheckpointManager,
     container::ContainerExecutor,
     cube_manager::executors::CubeExecutor,
     edit_action::{EditPayload, PayloadsAction, SheetRename},

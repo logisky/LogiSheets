@@ -15,6 +15,7 @@ import {
     ReproducibleCell,
     SheetCoordinate,
     CellInput,
+    Comment,
 } from '../bindings'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
@@ -427,6 +428,16 @@ export class Worksheet {
             },
             this._id
         )
+    }
+
+    /**
+     * All comment threads on this sheet. Each `Comment` is a cell-anchored
+     * thread whose `notes` carry author identity, timestamp, text and resolved
+     * `@mentions`. Mutations go through the workbook transaction API
+     * (`addComment` / `editComment` / `deleteComment` / `resolveComment`).
+     */
+    public getComments(): Result<Comment[]> {
+        return rpc('getComments', {sheetIdx: this._sheetIdx}, this._id)
     }
 
     public getFullyCoveredBlocks(

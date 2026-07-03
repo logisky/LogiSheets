@@ -1,5 +1,7 @@
 export * from './workbook'
 export * from './worksheet'
+export {DefaultAuthorService} from './author'
+export type {Author, AuthorService} from './author'
 export {CalcException, CustomFunc, Calculator} from './calculator'
 export type {Executor} from './calculator'
 export * from './cell'

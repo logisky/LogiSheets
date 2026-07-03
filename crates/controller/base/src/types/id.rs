@@ -13,6 +13,7 @@ pub type BlockId = usize;
 pub const CURR_BOOK: ExtBookId = 0;
 pub type ExtBookId = u8;
 pub type AuthorId = u8;
+pub type PersonId = u32;
 pub type StyleId = u32;
 
 pub type EphemeralId = u64;

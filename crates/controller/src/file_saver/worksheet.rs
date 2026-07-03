@@ -7,8 +7,9 @@ use logisheets_workbook::{
     logisheets::{BlockLineInfo, BlockRange},
     prelude::{
         Comments, CtAuthors, CtCell, CtCol, CtColor, CtCols, CtComment, CtCommentList, CtFormula,
-        CtMergeCell, CtMergeCells, CtRow, CtRst, CtSheet, CtSheetData, CtSheetPr,
-        StCellFormulaType, StSheetState, WorksheetPart,
+        CtMention, CtMentions, CtMergeCell, CtMergeCells, CtRow, CtRst, CtSheet, CtSheetData,
+        CtSheetPr, CtThreadedComment, PlainTextString, StCellFormulaType, StSheetState,
+        ThreadedComments, WorksheetPart,
     },
     workbook::Worksheet,
 };
@@ -150,9 +151,11 @@ fn save_worksheet<S: SaverTrait>(
         saver,
     );
     let comments = save_comments(sheet_id, attachment_manager, saver);
+    let threaded_comments = save_threaded_comments(sheet_id, attachment_manager, saver);
     Worksheet {
         worksheet_part,
         comments,
+        threaded_comments,
     }
 }
 
@@ -238,30 +241,31 @@ fn save_sheet_pr<S: SaverTrait>(
     })
 }
 
+/// Legacy `commentsN.xml` mirror. Threaded comments are the source of truth,
+/// but we still emit a legacy comment (author + text of each thread's root
+/// note) so that pre-2018 readers see something. Excel marks these mirrors with
+/// an author of `tc={guid}`; we do the same.
 fn save_comments<S: SaverTrait>(
     sheet_id: SheetId,
     attachment_manager: &CellAttachmentsManager,
     saver: &mut S,
 ) -> Option<Comments> {
+    let comments = &attachment_manager.comments;
     let mut author_sorted_set: SortedSet<String> = SortedSet::new();
-    let sheet_comments = attachment_manager
-        .comments
+    let sheet_comments = comments
         .data
         .get(&sheet_id)?
-        .comments
+        .threads
         .iter()
-        .map(|(cell_id, comment)| {
-            let author_id = comment.author;
-            let author = attachment_manager
-                .comments
-                .authors
-                .get_string(&author_id)
-                .unwrap_or_default();
+        .filter_map(|(cell_id, thread)| {
+            // Only the root note is mirrored to the legacy comment.
+            let root = thread.iter().find(|n| n.parent.is_none())?;
+            let author = format!("tc={}", root.id);
             let author_id = author_sorted_set.insert(author) as u32;
-            let comment_plain_text = convert_string_to_plain_text_string(comment.text.clone());
-            let (row, col) = saver.fetch_cell_idx(&sheet_id, cell_id).unwrap();
+            let comment_plain_text = convert_string_to_plain_text_string(root.text.clone());
+            let (row, col) = saver.fetch_cell_idx(&sheet_id, cell_id).ok()?;
             let reference = unparse_cell(row, col);
-            CtComment {
+            Some(CtComment {
                 text: CtRst {
                     t: Some(comment_plain_text),
                     r: vec![],
@@ -272,23 +276,87 @@ fn save_comments<S: SaverTrait>(
                 reference,
                 author_id,
                 shape_id: None,
-                guid: Some(format!("{}", uuid::Uuid::new_v4())),
-            }
+                guid: Some(root.id.clone()),
+            })
         })
         .collect::<Vec<_>>();
+    if sheet_comments.is_empty() {
+        return None;
+    }
     let authors = author_sorted_set
         .to_vec()
         .into_iter()
         .map(|e| convert_string_to_plain_text_string(e))
         .collect::<Vec<_>>();
-    let comments = Comments {
+    Some(Comments {
         authors: CtAuthors { authors },
         comment_list: CtCommentList {
             comments: sheet_comments,
         },
-    };
+    })
+}
 
-    Some(comments)
+/// Threaded comments (`threadedCommentN.xml`) — the source of truth. `personId`
+/// / `mentionpersonId` reference the workbook-level `xl/persons/person.xml`
+/// written from the same [`PersonManager`].
+fn save_threaded_comments<S: SaverTrait>(
+    sheet_id: SheetId,
+    attachment_manager: &CellAttachmentsManager,
+    saver: &mut S,
+) -> Option<ThreadedComments> {
+    let comments = &attachment_manager.comments;
+    let sheet = comments.data.get(&sheet_id)?;
+    let mut out: Vec<CtThreadedComment> = vec![];
+    for (cell_id, thread) in sheet.threads.iter() {
+        let Ok((row, col)) = saver.fetch_cell_idx(&sheet_id, cell_id) else {
+            continue;
+        };
+        let reference = unparse_cell(row, col);
+        for note in thread.iter() {
+            let person_id = comments
+                .persons
+                .get(&note.person)
+                .map(|p| p.guid.clone())
+                .unwrap_or_default();
+            let mentions = if note.mentions.is_empty() {
+                None
+            } else {
+                Some(CtMentions {
+                    mention: note
+                        .mentions
+                        .iter()
+                        .map(|m| CtMention {
+                            mention_person_id: comments
+                                .persons
+                                .get(&m.person)
+                                .map(|p| p.guid.clone())
+                                .unwrap_or_default(),
+                            mention_id: m.mention_id.clone(),
+                            start_index: m.start as u32,
+                            length: m.len as u32,
+                        })
+                        .collect(),
+                })
+            };
+            out.push(CtThreadedComment {
+                text: Some(PlainTextString {
+                    value: note.text.clone(),
+                    space: None,
+                }),
+                mentions,
+                reference: reference.clone(),
+                dt: note.dt.clone(),
+                person_id,
+                id: note.id.clone(),
+                parent_id: note.parent.clone(),
+                done: note.resolved,
+            });
+        }
+    }
+    if out.is_empty() {
+        return None;
+    }
+    Some(ThreadedComments { comments: out })
 }
 
 fn save_merge_cells<S: SaverTrait>(

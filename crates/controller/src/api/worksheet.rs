@@ -2,6 +2,7 @@ use std::collections::{BTreeSet, HashSet};
 
 use crate::block_manager::schema_manager::schema::Schema;
 use crate::block_manager::schema_manager::schema::SchemaTrait;
+use crate::cell_attachments::comment::{CommentNote as InternalNote, Comments as InternalComments};
 use crate::controller::display::BlockSchema;
 use crate::controller::display::BlockSchemaRandomEntry;
 use crate::controller::display::BlockSchemaType;
@@ -22,8 +23,12 @@ use crate::{
     },
     Controller, Error,
 };
-use crate::{CellInfo, ColInfo, Comment, MergeCell, RowInfo, Style, Value};
+use crate::{
+    CellInfo, ColInfo, Comment, CommentMentionInfo, CommentNote, CommentPerson, MergeCell, RowInfo,
+    Style, Value,
+};
 use logisheets_base::errors::BasicError;
+use logisheets_base::PersonId;
 use logisheets_base::{
     BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, SheetId, StyleId, TextId,
 };
@@ -58,12 +63,7 @@ fn boundary_1d(
     blocks: &[(usize, usize)],
     forward: bool,
 ) -> Option<usize> {
-    let in_block = |p: usize| {
-        blocks
-            .iter()
-            .find(|(lo, hi)| *lo <= p && p <= *hi)
-            .copied()
-    };
+    let in_block = |p: usize| blocks.iter().find(|(lo, hi)| *lo <= p && p <= *hi).copied();
 
     if forward {
         if let Some((_, hi)) = in_block(p0) {
@@ -365,25 +365,13 @@ impl<'a> Worksheet<'a> {
             .navigator
             .fetch_cell_id(&self.sheet_id, row, col)
             .ok()?;
-        let comment = self
-            .controller
-            .status
-            .cell_attachment_manager
-            .comments
-            .get_comment(&self.sheet_id, &cell_id)?;
-        let author = self
-            .controller
-            .status
-            .cell_attachment_manager
-            .comments
-            .get_author_name(&comment.author)
-            .unwrap_or(String::from(""));
-        Some(Comment {
-            row,
-            col,
-            author,
-            content: comment.text.clone(),
-        })
+        let comments = &self.controller.status.cell_attachment_manager.comments;
+        let thread = comments.get_thread(&self.sheet_id, &cell_id)?;
+        let notes = thread
+            .iter()
+            .map(|n| build_comment_note(comments, n))
+            .collect::<Vec<_>>();
+        Some(Comment { row, col, notes })
     }
 
     pub fn get_diy_cell_id_with_block_id(
@@ -800,7 +788,12 @@ impl<'a> Worksheet<'a> {
         // absolute coordinate just like normal cells; ephemeral cells fail
         // fetch_cell_idx and are skipped — exactly what we want.
         let mut occupied: BTreeSet<usize> = BTreeSet::new();
-        if let Some(sc) = self.controller.status.container.get_sheet_container(self.sheet_id) {
+        if let Some(sc) = self
+            .controller
+            .status
+            .container
+            .get_sheet_container(self.sheet_id)
+        {
             for (id, cell) in sc.cells.iter() {
                 if matches!(cell.value, logisheets_base::CellValue::Blank) {
                     continue;
@@ -1038,49 +1031,28 @@ impl<'a> Worksheet<'a> {
     }
 
     pub fn get_comments(&self) -> Vec<Comment> {
-        let comments = self
-            .controller
-            .status
-            .cell_attachment_manager
-            .comments
-            .data
-            .get(&self.sheet_id);
-        if let Some(comments) = comments {
-            comments
-                .comments
-                .clone()
-                .iter()
-                .fold(vec![], |mut prev, (id, c)| {
-                    if let Ok((row, col)) = self
-                        .controller
-                        .status
-                        .navigator
-                        .fetch_cell_idx(&self.sheet_id, id)
-                    {
-                        let author_id = c.author;
-                        let author = self
-                            .controller
-                            .status
-                            .cell_attachment_manager
-                            .comments
-                            .get_author_name(&author_id)
-                            .unwrap();
-                        let content = c.text.to_string();
-                        let comment = Comment {
-                            row,
-                            col,
-                            author,
-                            content,
-                        };
-                        prev.push(comment);
-                        prev
-                    } else {
-                        prev
-                    }
-                })
-        } else {
-            vec![]
-        }
+        let comments = &self.controller.status.cell_attachment_manager.comments;
+        let Some(sheet_comments) = comments.data.get(&self.sheet_id) else {
+            return vec![];
+        };
+        sheet_comments
+            .threads
+            .iter()
+            .fold(vec![], |mut prev, (cell_id, thread)| {
+                if let Ok((row, col)) = self
+                    .controller
+                    .status
+                    .navigator
+                    .fetch_cell_idx(&self.sheet_id, cell_id)
+                {
+                    let notes = thread
+                        .iter()
+                        .map(|n| build_comment_note(comments, n))
+                        .collect::<Vec<_>>();
+                    prev.push(Comment { row, col, notes });
+                }
+                prev
+            })
     }
 
     pub fn get_all_fully_covered_blocks(
@@ -1933,6 +1905,41 @@ fn advance(reverse: bool, curr: usize) -> usize {
         curr - 1
     } else {
         curr + 1
+    }
+}
+
+fn build_comment_person(comments: &InternalComments, person_id: &PersonId) -> CommentPerson {
+    match comments.get_person(person_id) {
+        Some(p) => CommentPerson {
+            display_name: p.display_name.clone(),
+            user_id: p.user_id.clone(),
+            provider_id: p.provider_id.clone(),
+        },
+        None => CommentPerson {
+            display_name: String::new(),
+            user_id: None,
+            provider_id: None,
+        },
+    }
+}
+
+fn build_comment_note(comments: &InternalComments, note: &InternalNote) -> CommentNote {
+    CommentNote {
+        id: note.id.clone(),
+        author: build_comment_person(comments, &note.person),
+        dt: note.dt.clone(),
+        content: note.text.clone(),
+        parent_id: note.parent.clone(),
+        mentions: note
+            .mentions
+            .iter()
+            .map(|m| CommentMentionInfo {
+                start: m.start,
+                len: m.len,
+                person: build_comment_person(comments, &m.person),
+            })
+            .collect(),
+        resolved: note.resolved,
     }
 }
 

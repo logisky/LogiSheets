@@ -401,5 +401,34 @@ fn convert_diff<C: VersionExecCtx>(
         // (set in executor.rs's special-case branch). Surface here
         // as "no diff to record", which is the conservative answer.
         EditPayload::RestoreCheckpoint(_) => Ok(None),
+        // Comment mutations don't change cell values, but they alter the
+        // comment overlay for the sheet. Record a conservative sheet-wide
+        // diff so undo/redo re-renders comment indicators. `UpsertPerson`
+        // is workbook-scoped with no per-sheet visual, so it records nothing.
+        EditPayload::AddComment(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::EditComment(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::DeleteComment(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::ResolveComment(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::UpsertPerson(_) => Ok(None),
     }
 }

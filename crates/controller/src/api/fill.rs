@@ -37,10 +37,10 @@
 use logisheets_base::CellId;
 use logisheets_parser::unparse::CellShift;
 
+use crate::api::worksheet::Worksheet;
 use crate::controller::display::Value;
 use crate::edit_action::CellInput;
 use crate::errors::{Error, Result};
-use crate::api::worksheet::Worksheet;
 use crate::Workbook;
 
 /// A rectangular block of cells, in row/col indices (0-based, inclusive).
@@ -150,11 +150,11 @@ impl<'a> Worksheet<'a> {
             .iter()
             .map(|p| {
                 let (row, col) = to_rc(p);
-                let cell_id = self
-                    .controller
-                    .status
-                    .navigator
-                    .fetch_cell_id(&self.sheet_id, row, col)?;
+                let cell_id =
+                    self.controller
+                        .status
+                        .navigator
+                        .fetch_cell_id(&self.sheet_id, row, col)?;
                 if self.has_formula(&cell_id) {
                     Ok(SrcCell::Formula(cell_id))
                 } else {
@@ -184,9 +184,7 @@ impl<'a> Worksheet<'a> {
         let first = src_positions[0] as i64;
 
         let all_formula = src_cells.iter().all(|c| matches!(c, SrcCell::Formula(_)));
-        let arithmetic = (n >= 2)
-            .then(|| numeric_series(src_cells))
-            .flatten();
+        let arithmetic = (n >= 2).then(|| numeric_series(src_cells)).flatten();
 
         for &t in targets {
             let content = if let Some((v0, step)) = arithmetic {
@@ -200,7 +198,9 @@ impl<'a> Worksheet<'a> {
                 // Periodic copy of the source block.
                 let idx = (t as i64 - first).rem_euclid(n as i64) as usize;
                 match &src_cells[idx] {
-                    SrcCell::Formula(id) => self.shifted_formula(src_positions[idx], *id, t, axis)?,
+                    SrcCell::Formula(id) => {
+                        self.shifted_formula(src_positions[idx], *id, t, axis)?
+                    }
                     SrcCell::Number(num) => format_number(*num),
                     SrcCell::Raw(s) => s.clone(),
                 }
@@ -393,9 +393,6 @@ mod tests {
             .predict_fill(0, rng(0, 0, 0, 1), rng(0, 2, 0, 3))
             .unwrap();
         let contents: Vec<_> = res.iter().map(|c| (c.col, c.content.clone())).collect();
-        assert_eq!(
-            contents,
-            vec![(2, "30".to_string()), (3, "40".to_string())]
-        );
+        assert_eq!(contents, vec![(2, "30".to_string()), (3, "40".to_string())]);
     }
 }

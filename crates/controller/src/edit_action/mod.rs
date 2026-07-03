@@ -131,6 +131,13 @@ pub enum EditPayload {
     MergeCells(MergeCells),
     SplitMergedCells(SplitMergedCells),
 
+    // Comments (threaded + @mentions). See `cell_attachments::comment`.
+    AddComment(AddComment),
+    EditComment(EditComment),
+    DeleteComment(DeleteComment),
+    ResolveComment(ResolveComment),
+    UpsertPerson(UpsertPerson),
+
     // Sheet
     SheetRename(SheetRename),
     CreateSheet(CreateSheet),
@@ -1034,6 +1041,83 @@ pub struct SplitMergedCells {
     pub col: usize,
 }
 
+/// A person's identity as supplied by the host. In the open-source `src` app
+/// only `display_name` is set (the author types their own name); enterprise
+/// deployments fill in `user_id` + `provider_id` from their corporate
+/// directory. The core dedupes these into stable persons.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "author_input.ts", rename_all = "camelCase")]
+pub struct AuthorInput {
+    pub display_name: String,
+    pub user_id: Option<String>,
+    pub provider_id: Option<String>,
+}
+
+/// A `@mention` span inside a comment's text. `start`/`len` are unicode-scalar
+/// offsets into `content` (matching OOXML `startIndex`/`length`). `mention_id`
+/// is optional; the core generates one when absent.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "comment_mention.ts", rename_all = "camelCase")]
+pub struct CommentMention {
+    pub start: usize,
+    pub len: usize,
+    pub author: AuthorInput,
+    pub mention_id: Option<String>,
+}
+
+/// Add a root comment or a reply to a cell. `comment_id` is a client-generated
+/// GUID (so the host can edit/reply/delete without a round-trip); `parent_id`
+/// set makes this note a reply to that root. `dt` is a host-provided ISO-8601
+/// timestamp (the host owns the clock).
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "add_comment.ts", builder, rename_all = "camelCase")]
+pub struct AddComment {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
+    pub comment_id: String,
+    pub parent_id: Option<String>,
+    pub author: AuthorInput,
+    pub dt: String,
+    pub content: String,
+    pub mentions: Vec<CommentMention>,
+}
+
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "edit_comment.ts", builder, rename_all = "camelCase")]
+pub struct EditComment {
+    pub sheet_idx: usize,
+    pub comment_id: String,
+    pub content: String,
+    pub mentions: Vec<CommentMention>,
+}
+
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "delete_comment.ts", builder, rename_all = "camelCase")]
+pub struct DeleteComment {
+    pub sheet_idx: usize,
+    pub comment_id: String,
+}
+
+/// Mark a comment thread as resolved / reopened (OOXML `done`).
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "resolve_comment.ts", builder, rename_all = "camelCase")]
+pub struct ResolveComment {
+    pub sheet_idx: usize,
+    pub comment_id: String,
+    pub resolved: bool,
+}
+
+/// Register or refresh a person without authoring a comment — e.g. to
+/// pre-load directory users so they can be mentioned before they've posted.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "upsert_person.ts", builder, rename_all = "camelCase")]
+pub struct UpsertPerson {
+    pub display_name: String,
+    pub user_id: Option<String>,
+    pub provider_id: Option<String>,
+}
+
 impl From<MergeCells> for EditPayload {
     fn from(value: MergeCells) -> Self {
         EditPayload::MergeCells(value)
@@ -1043,6 +1127,36 @@ impl From<MergeCells> for EditPayload {
 impl From<SplitMergedCells> for EditPayload {
     fn from(value: SplitMergedCells) -> Self {
         EditPayload::SplitMergedCells(value)
+    }
+}
+
+impl From<AddComment> for EditPayload {
+    fn from(value: AddComment) -> Self {
+        EditPayload::AddComment(value)
+    }
+}
+
+impl From<EditComment> for EditPayload {
+    fn from(value: EditComment) -> Self {
+        EditPayload::EditComment(value)
+    }
+}
+
+impl From<DeleteComment> for EditPayload {
+    fn from(value: DeleteComment) -> Self {
+        EditPayload::DeleteComment(value)
+    }
+}
+
+impl From<ResolveComment> for EditPayload {
+    fn from(value: ResolveComment) -> Self {
+        EditPayload::ResolveComment(value)
+    }
+}
+
+impl From<UpsertPerson> for EditPayload {
+    fn from(value: UpsertPerson) -> Self {
+        EditPayload::UpsertPerson(value)
     }
 }
 
@@ -1218,6 +1332,13 @@ impl Payload for BindFormSchema {}
 impl Payload for UpsertFieldFormulas {}
 impl Payload for BindRandomSchema {}
 impl Payload for RestoreCheckpoint {}
+impl Payload for MergeCells {}
+impl Payload for SplitMergedCells {}
+impl Payload for AddComment {}
+impl Payload for EditComment {}
+impl Payload for DeleteComment {}
+impl Payload for ResolveComment {}
+impl Payload for UpsertPerson {}
 
 #[cfg(test)]
 mod tests {

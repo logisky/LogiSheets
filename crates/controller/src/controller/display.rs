@@ -214,13 +214,47 @@ pub struct MergeCell {
     pub end_col: usize,
 }
 
+/// A person referenced by a comment (author or mention). Enterprise builds
+/// populate `user_id` + `provider_id` from their directory; the `src` app
+/// leaves them `None` and only sets `display_name`.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "comment_person.ts", rename_all = "camelCase")]
+pub struct CommentPerson {
+    pub display_name: String,
+    pub user_id: Option<String>,
+    pub provider_id: Option<String>,
+}
+
+/// A resolved `@mention` span within a note's content.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "comment_mention_info.ts", rename_all = "camelCase")]
+pub struct CommentMentionInfo {
+    pub start: usize,
+    pub len: usize,
+    pub person: CommentPerson,
+}
+
+/// A single note in a comment thread (root or reply).
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "comment_note.ts", rename_all = "camelCase")]
+pub struct CommentNote {
+    pub id: String,
+    pub author: CommentPerson,
+    pub dt: String,
+    pub content: String,
+    pub parent_id: Option<String>,
+    pub mentions: Vec<CommentMentionInfo>,
+    pub resolved: bool,
+}
+
+/// A comment thread anchored at a cell. `notes` is ordered (root first, then
+/// replies).
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "comment.ts", rename_all = "camelCase")]
 pub struct Comment {
     pub row: usize,
     pub col: usize,
-    pub author: String,
-    pub content: String,
+    pub notes: Vec<CommentNote>,
 }
 
 #[derive(Debug, Clone, TS)]

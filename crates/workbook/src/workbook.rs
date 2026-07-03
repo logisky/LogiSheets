@@ -2,9 +2,11 @@ use crate::logisheets::LogiSheetsData;
 use crate::ooxml::comments::Comments;
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
 use crate::ooxml::external_links::*;
+use crate::ooxml::persons::Persons;
 use crate::ooxml::sst::SstPart;
 use crate::ooxml::style_sheet::StylesheetPart;
 use crate::ooxml::theme::ThemePart;
+use crate::ooxml::threaded_comments::ThreadedComments;
 use crate::ooxml::workbook::WorkbookPart;
 use crate::ooxml::worksheet::WorksheetPart;
 use std::collections::HashMap;
@@ -28,12 +30,19 @@ pub struct Xl {
     pub worksheets: HashMap<Id, Worksheet>,
     pub external_links: HashMap<Id, ExternalLink>,
     pub theme: Option<(Id, ThemePart)>,
+    /// Workbook-scoped person list backing threaded comments / `@mentions`
+    /// (`xl/persons/person.xml`).
+    pub persons: Option<Persons>,
 }
 
 #[derive(Debug)]
 pub struct Worksheet {
     pub worksheet_part: WorksheetPart,
+    /// Legacy comments (`xl/commentsN.xml`), kept as a back-compat mirror.
     pub comments: Option<Comments>,
+    /// Threaded comments (`xl/threadedComments/threadedCommentN.xml`) — the
+    /// source of truth when present.
+    pub threaded_comments: Option<ThreadedComments>,
 }
 
 #[derive(Debug)]

@@ -77,6 +77,37 @@ export class GlobalStore {
     @action setShowGridlines(v: boolean) {
         this.showGridlines = v
     }
+
+    // When true (default), cell comment indicators are drawn on the grid and
+    // their threads can be opened. The View toolbar toggle mirrors this.
+    @observable showComments = true
+
+    @action setShowComments(v: boolean) {
+        this.showComments = v
+    }
+
+    // A one-shot request to open the "new comment" editor on a specific cell,
+    // raised by the right-click "Add comment" menu item and consumed by the
+    // matching view's CommentLayer. Cleared once handled.
+    @observable.ref pendingCommentCell: PendingComment | null = null
+
+    @action requestAddComment(c: PendingComment) {
+        // Replace with a fresh object each time so repeated requests on the
+        // same cell still re-trigger the editor.
+        this.pendingCommentCell = {...c, nonce: (c.nonce ?? 0) + 1}
+    }
+
+    @action clearPendingCommentCell() {
+        this.pendingCommentCell = null
+    }
+}
+
+export interface PendingComment {
+    sheetIdx: number
+    row: number
+    col: number
+    /** Bumped so requesting the same cell twice still re-fires the editor. */
+    nonce?: number
 }
 
 export const globalStore = new GlobalStore()

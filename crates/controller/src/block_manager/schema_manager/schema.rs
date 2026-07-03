@@ -335,11 +335,7 @@ impl SchemaTrait for RowSchema {
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole {
         if cell.col == self.key {
             BlockCellRole::Key
-        } else if self
-            .fields
-            .iter()
-            .any(|(_, e)| e.field_axis_id == cell.col)
-        {
+        } else if self.fields.iter().any(|(_, e)| e.field_axis_id == cell.col) {
             BlockCellRole::Field(cell.col as BlockFieldId)
         } else {
             BlockCellRole::None
@@ -430,11 +426,7 @@ impl SchemaTrait for ColSchema {
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole {
         if cell.row == self.key {
             BlockCellRole::Key
-        } else if self
-            .fields
-            .iter()
-            .any(|(_, e)| e.field_axis_id == cell.row)
-        {
+        } else if self.fields.iter().any(|(_, e)| e.field_axis_id == cell.row) {
             BlockCellRole::Field(cell.row as BlockFieldId)
         } else {
             BlockCellRole::None

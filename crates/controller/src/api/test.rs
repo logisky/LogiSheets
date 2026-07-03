@@ -1,6 +1,7 @@
 use crate::edit_action::{
-    CreateBlock, EditPayload, LineStyleUpdate, ModifyPolicy, PayloadsAction, SheetRename,
-    StyleUpdateType, WorkbookUpdateType,
+    AddComment, AuthorInput, CommentMention, CreateBlock, DeleteComment, EditComment, EditPayload,
+    LineStyleUpdate, ModifyPolicy, PayloadsAction, ResolveComment, SheetRename, StyleUpdateType,
+    WorkbookUpdateType,
 };
 
 use super::{EditAction, Workbook};
@@ -188,4 +189,206 @@ fn create_block_with_owner_and_policy_roundtrip() {
         .expect("block missing after reload");
     assert_eq!(info.owner, "what-if-calculator");
     assert!(matches!(info.modify_policy, ModifyPolicy::OwnerAndUser));
+}
+
+fn author(name: &str) -> AuthorInput {
+    AuthorInput {
+        display_name: name.to_string(),
+        user_id: None,
+        provider_id: None,
+    }
+}
+
+fn enterprise_author(name: &str, user_id: &str) -> AuthorInput {
+    AuthorInput {
+        display_name: name.to_string(),
+        user_id: Some(user_id.to_string()),
+        provider_id: Some("AD".to_string()),
+    }
+}
+
+#[test]
+fn comment_thread_add_reply_mention_edit_delete() {
+    let mut wb = Workbook::default();
+
+    // Root comment authored by Alice, mentioning Bob (an enterprise user).
+    let root_id = "{root-0000-0000-0000-000000000001}".to_string();
+    let bob = enterprise_author("Bob", "bob@corp.com");
+    let r = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::AddComment(AddComment {
+            sheet_idx: 0,
+            row: 2,
+            col: 3,
+            comment_id: root_id.clone(),
+            parent_id: None,
+            author: enterprise_author("Alice", "alice@corp.com"),
+            dt: "2026-07-03T10:00:00Z".to_string(),
+            content: "Please review @Bob".to_string(),
+            mentions: vec![CommentMention {
+                start: 15,
+                len: 4,
+                author: bob.clone(),
+                mention_id: None,
+            }],
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(r.status, crate::edit_action::StatusCode::Ok(_)));
+
+    // Reply authored by Bob.
+    let reply_id = "{reply-0000-0000-0000-000000000002}".to_string();
+    let _ = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::AddComment(AddComment {
+            sheet_idx: 0,
+            row: 2,
+            col: 3,
+            comment_id: reply_id.clone(),
+            parent_id: Some(root_id.clone()),
+            author: bob.clone(),
+            dt: "2026-07-03T10:05:00Z".to_string(),
+            content: "Done".to_string(),
+            mentions: vec![],
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let comment = ws.get_comment(2, 3).expect("comment thread missing");
+        assert_eq!(comment.notes.len(), 2);
+        let root = &comment.notes[0];
+        assert_eq!(root.author.display_name, "Alice");
+        assert_eq!(root.author.user_id.as_deref(), Some("alice@corp.com"));
+        assert_eq!(root.mentions.len(), 1);
+        assert_eq!(root.mentions[0].person.display_name, "Bob");
+        assert!(root.parent_id.is_none());
+        let reply = &comment.notes[1];
+        assert_eq!(reply.author.display_name, "Bob");
+        assert_eq!(reply.parent_id.as_deref(), Some(root_id.as_str()));
+        // Alice + Bob mentioned/authored, so at least 2 sheet comments? Only one thread.
+        assert_eq!(ws.get_comments().len(), 1);
+    }
+
+    // Edit the root note's text.
+    let _ = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::EditComment(EditComment {
+            sheet_idx: 0,
+            comment_id: root_id.clone(),
+            content: "Reviewed, thanks".to_string(),
+            mentions: vec![],
+        })],
+        undoable: true,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let comment = ws.get_comment(2, 3).unwrap();
+        assert_eq!(comment.notes[0].content, "Reviewed, thanks");
+        assert_eq!(comment.notes[0].mentions.len(), 0);
+    }
+
+    // Resolve the thread.
+    let _ = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::ResolveComment(ResolveComment {
+            sheet_idx: 0,
+            comment_id: root_id.clone(),
+            resolved: true,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(ws.get_comment(2, 3).unwrap().notes[0].resolved);
+    }
+
+    // Delete the reply only — root should remain.
+    let _ = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteComment(DeleteComment {
+            sheet_idx: 0,
+            comment_id: reply_id.clone(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert_eq!(ws.get_comment(2, 3).unwrap().notes.len(), 1);
+    }
+
+    // Deleting the root removes the whole thread.
+    let _ = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteComment(DeleteComment {
+            sheet_idx: 0,
+            comment_id: root_id.clone(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(ws.get_comment(2, 3).is_none());
+    }
+}
+
+#[test]
+fn comment_roundtrip_persists_thread_and_persons() {
+    let mut wb = Workbook::default();
+    let root_id = "{root-0000-0000-0000-0000000000aa}".to_string();
+    let reply_id = "{reply-0000-0000-0000-0000000000bb}".to_string();
+    let bob = enterprise_author("Bob", "bob@corp.com");
+
+    let _ = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::AddComment(AddComment {
+                sheet_idx: 0,
+                row: 5,
+                col: 1,
+                comment_id: root_id.clone(),
+                parent_id: None,
+                author: author("Guest"),
+                dt: "2026-07-03T12:00:00Z".to_string(),
+                content: "cc @Bob".to_string(),
+                mentions: vec![CommentMention {
+                    start: 3,
+                    len: 4,
+                    author: bob.clone(),
+                    mention_id: None,
+                }],
+            }),
+            EditPayload::AddComment(AddComment {
+                sheet_idx: 0,
+                row: 5,
+                col: 1,
+                comment_id: reply_id.clone(),
+                parent_id: Some(root_id.clone()),
+                author: bob.clone(),
+                dt: "2026-07-03T12:01:00Z".to_string(),
+                content: "ack".to_string(),
+                mentions: vec![],
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    let bytes = wb.save().expect("save");
+    let reloaded = Workbook::from_file(&bytes, "comments.xlsx".to_string()).expect("reload");
+    let ws = reloaded.get_sheet_by_idx(0).unwrap();
+    let comment = ws.get_comment(5, 1).expect("thread lost on reload");
+    assert_eq!(comment.notes.len(), 2);
+    assert_eq!(comment.notes[0].content, "cc @Bob");
+    assert_eq!(comment.notes[0].mentions.len(), 1);
+    // The mentioned person's directory identity survived the round trip.
+    assert_eq!(
+        comment.notes[0].mentions[0].person.user_id.as_deref(),
+        Some("bob@corp.com")
+    );
+    assert_eq!(
+        comment.notes[1].parent_id.as_deref(),
+        Some(root_id.as_str())
+    );
+    assert_eq!(comment.notes[1].author.display_name, "Bob");
 }

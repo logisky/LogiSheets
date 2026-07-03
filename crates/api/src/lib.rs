@@ -27,10 +27,9 @@ pub use logisheets_controller::api::{
 // Re-export display types
 pub use logisheets_controller::controller::display::{
     BlockCellInfo, BlockDataRow, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema,
-    BlockSchemaRandomEntry,
-    BlockSchemaType, CellCoordinate, CellCoordinateWithSheet, CellPosition, ColInfo, DisplayWindow,
-    DisplayWindowRequest, DisplayWindowWithStartPoint, RowInfo, ShadowCellInfo, SheetInfo,
-    TempCellChange, TempStatusDiff,
+    BlockSchemaRandomEntry, BlockSchemaType, CellCoordinate, CellCoordinateWithSheet, CellPosition,
+    ColInfo, DisplayWindow, DisplayWindowRequest, DisplayWindowWithStartPoint, RowInfo,
+    ShadowCellInfo, SheetInfo, TempCellChange, TempStatusDiff,
 };
 
 // Re-export edit actions
@@ -58,9 +57,7 @@ pub use logisheets_controller::sid_assigner::ShadowKind;
 
 // Re-export checkpoint primitives so the WASM RPC layer can build
 // response DTOs from them.
-pub use logisheets_controller::checkpoint_manager::{
-    CheckpointManager, CheckpointMeta,
-};
+pub use logisheets_controller::checkpoint_manager::{CheckpointManager, CheckpointMeta};
 
 // Re-export value and style types
 pub use logisheets_controller::{Appendix, AppendixWithCell, Comment, MergeCell, Style, Value};

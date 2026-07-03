@@ -246,7 +246,10 @@ mod tests {
                 assert_eq!(s.fields[0].1.field_axis_id, 3);
                 assert_eq!(s.fields[0].1.render_id, "render-qty");
                 assert_eq!(s.fields[0].1.value_formula.as_deref(), Some("=#KEY*2"));
-                assert_eq!(s.fields[1].1.validation_formula.as_deref(), Some("LEN(#PLACEHOLDER)>0"));
+                assert_eq!(
+                    s.fields[1].1.validation_formula.as_deref(),
+                    Some("LEN(#PLACEHOLDER)>0")
+                );
             }
             _ => panic!("expected RowSchema at (1, 10)"),
         }
@@ -264,7 +267,10 @@ mod tests {
             Some(Schema::RandomSchema(s)) => {
                 assert_eq!(s.name, "scattered");
                 assert_eq!(s.key_field.len(), 2);
-                assert_eq!(s.key_field[0], ("k1".to_string(), 1, 2, "render-k1".to_string()));
+                assert_eq!(
+                    s.key_field[0],
+                    ("k1".to_string(), 1, 2, "render-k1".to_string())
+                );
             }
             _ => panic!("expected RandomSchema at (1, 12)"),
         }

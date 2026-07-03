@@ -846,6 +846,12 @@ export const Toolbar = observer(
                                         engine.setShowGridLines(v)
                                     },
                                 },
+                                {
+                                    label: 'Show comments',
+                                    checked: globalStore.showComments,
+                                    onChange: (v: boolean) =>
+                                        globalStore.setShowComments(v),
+                                },
                             ].map((t) => (
                                 <div
                                     className={styles.toggleItem}

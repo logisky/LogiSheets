@@ -5,9 +5,9 @@ pub mod api;
 mod async_func_manager;
 mod block_manager;
 mod calc_engine;
-pub mod checkpoint_manager;
 mod cell;
 mod cell_attachments;
+pub mod checkpoint_manager;
 mod connectors;
 mod container;
 pub mod controller;
@@ -36,7 +36,7 @@ use logisheets_base::CellId;
 use logisheets_base::SheetId;
 
 pub use controller::{
-    display::{Comment, MergeCell, Value},
+    display::{Comment, CommentMentionInfo, CommentNote, CommentPerson, MergeCell, Value},
     style::{Border, BorderPr, Fill, Font, Style},
     take_last_error, Controller,
 };

@@ -9,6 +9,7 @@ import type {
   SheetDimension,
   MergeCell,
   BlockInfo,
+  Comment,
   FormulaDisplayInfo,
   CellCoordinate,
   SheetCellId,
@@ -289,6 +290,12 @@ export class WorkbookClient implements Client {
   }): Resp<readonly MergeCell[]> {
     return this._call(MethodName.GetMergedCells, params) as Resp<
       readonly MergeCell[]
+    >;
+  }
+
+  getComments(params: { sheetIdx: number }): Resp<readonly Comment[]> {
+    return this._call(MethodName.GetComments, params) as Resp<
+      readonly Comment[]
     >;
   }
 
