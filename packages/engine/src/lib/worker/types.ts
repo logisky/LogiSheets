@@ -62,6 +62,7 @@ export enum MethodName {
   LoadWorkbook = "loadWorkbook",
   IsReady = "isReady",
   GetMergedCells = "getMergedCells",
+  GetComments = "getComments",
   CalcCondition = "calcCondition",
   GetCellIdByBlockRef = "getCellIdByBlockRef",
 

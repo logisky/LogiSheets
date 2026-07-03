@@ -10,6 +10,7 @@ import type {
   CellPosition,
   DisplayWindowWithStartPoint,
   MergeCell,
+  Comment,
   SheetDimension,
   SheetInfo,
   CellCoordinate,
@@ -289,6 +290,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
       params.endRow,
       params.endCol,
     );
+  }
+
+  public getComments(params: {
+    sheetIdx: number;
+  }): Result<readonly Comment[]> {
+    return this.getSheet(params.sheetIdx).getComments();
   }
 
   // ========================================================================
@@ -636,6 +643,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
           break;
         case MethodName.GetMergedCells:
           result = this.getMergedCells(args);
+          break;
+        case MethodName.GetComments:
+          result = this.getComments(args);
           break;
         case MethodName.CalcCondition:
           result = this.calcCondition(args);

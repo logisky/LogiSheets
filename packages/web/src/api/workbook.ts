@@ -20,12 +20,14 @@ import {
     GetAvailableBlockIdParams,
     TempStatusDiff,
     BlockDataRow,
+    CommentMention,
 } from '../bindings'
 import {ColId, RowId} from '../types'
 import {Worksheet} from './worksheet'
 import {Calculator, CustomFunc} from './calculator'
 import {isErrorMessage, Result} from './utils'
 import {BlockManager} from './block_manager'
+import {Author} from './author'
 
 function rpc(
     method: string,
@@ -35,6 +37,12 @@ function rpc(
 ): any {
     const msg = params === undefined ? method : {method, value: params}
     return handle(msg, bookId ?? null)
+}
+
+// GUID for comment / thread ids, wrapped in braces to match the OOXML
+// threaded-comment convention (`{XXXX-...}`).
+function newGuid(): string {
+    return `{${crypto.randomUUID()}}`
 }
 
 export type ReturnCode = number
@@ -136,6 +144,129 @@ export class Workbook {
             }
         }
         return id
+    }
+
+    /**
+     * Add a comment (a new root thread, or a reply when `parentId` is given) to
+     * a cell. `author` and any `mentions[].author` are identities resolved by
+     * the host's {@link AuthorService}; the core dedupes them into stable
+     * persons. The note id (GUID) and timestamp are generated here and the id
+     * is returned so the host can later edit / reply to / delete this note.
+     */
+    public addComment(p: {
+        sheetIdx: number
+        row: number
+        col: number
+        author: Author
+        content: string
+        mentions?: readonly CommentMention[]
+        parentId?: string
+        undoable?: boolean
+    }): {commentId: string; effect: ActionEffect} {
+        const commentId = newGuid()
+        const effect = this.execTransaction({
+            payloads: [
+                {
+                    type: 'addComment',
+                    value: {
+                        sheetIdx: p.sheetIdx,
+                        row: p.row,
+                        col: p.col,
+                        commentId,
+                        parentId: p.parentId,
+                        author: p.author,
+                        dt: new Date().toISOString(),
+                        content: p.content,
+                        mentions: p.mentions ?? [],
+                    },
+                },
+            ],
+            undoable: p.undoable ?? true,
+            temp: false,
+        })
+        return {commentId, effect}
+    }
+
+    /** Replace an existing note's text + mentions. */
+    public editComment(p: {
+        sheetIdx: number
+        commentId: string
+        content: string
+        mentions?: readonly CommentMention[]
+        undoable?: boolean
+    }): ActionEffect {
+        return this.execTransaction({
+            payloads: [
+                {
+                    type: 'editComment',
+                    value: {
+                        sheetIdx: p.sheetIdx,
+                        commentId: p.commentId,
+                        content: p.content,
+                        mentions: p.mentions ?? [],
+                    },
+                },
+            ],
+            undoable: p.undoable ?? true,
+            temp: false,
+        })
+    }
+
+    /**
+     * Delete a note. Deleting a thread's root note removes the whole thread
+     * (root + all replies).
+     */
+    public deleteComment(p: {
+        sheetIdx: number
+        commentId: string
+        undoable?: boolean
+    }): ActionEffect {
+        return this.execTransaction({
+            payloads: [
+                {
+                    type: 'deleteComment',
+                    value: {sheetIdx: p.sheetIdx, commentId: p.commentId},
+                },
+            ],
+            undoable: p.undoable ?? true,
+            temp: false,
+        })
+    }
+
+    /** Mark a comment thread resolved / reopened. */
+    public resolveComment(p: {
+        sheetIdx: number
+        commentId: string
+        resolved: boolean
+        undoable?: boolean
+    }): ActionEffect {
+        return this.execTransaction({
+            payloads: [
+                {
+                    type: 'resolveComment',
+                    value: {
+                        sheetIdx: p.sheetIdx,
+                        commentId: p.commentId,
+                        resolved: p.resolved,
+                    },
+                },
+            ],
+            undoable: p.undoable ?? true,
+            temp: false,
+        })
+    }
+
+    /**
+     * Pre-register (or refresh) a directory person so they can be `@mentioned`
+     * before they've authored anything. Typically fed from an enterprise
+     * {@link AuthorService.searchUsers} result.
+     */
+    public upsertPerson(author: Author): ActionEffect {
+        return this.execTransaction({
+            payloads: [{type: 'upsertPerson', value: author}],
+            undoable: false,
+            temp: false,
+        })
     }
 
     public undo(): boolean {

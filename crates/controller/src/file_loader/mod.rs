@@ -8,7 +8,7 @@ mod vertex;
 
 use logisheets_base::id_fetcher::SheetIdFetcherTrait;
 use logisheets_workbook::prelude::*;
-use sheet::load_comments;
+use sheet::{load_comments, load_persons, load_threaded_comments};
 
 use crate::{
     controller::{status::Status, Controller},
@@ -178,6 +178,11 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             });
     }
     let mut style_loader = StyleLoader::new(&mut style_manager, &xl.styles.1);
+    // Persons are workbook-scoped and referenced by threaded comments, so they
+    // must be registered before any sheet's comments are loaded.
+    if let Some(persons) = &xl.persons {
+        load_persons(persons, &mut cell_attachment_manager);
+    }
     // TODO: Here we should we `.into_iter()` to take the ownership logically
     // rather than call `.clone()` below.
     xl.workbook_part.sheets.sheets.iter().for_each(|ct_sheet| {
@@ -185,7 +190,16 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         let sheet_id = sheet_id_manager.get_or_register_id(sheet_name);
         let id = &ct_sheet.id;
         if let Some(ws) = xl.worksheets.get(id) {
-            if let Some(comments) = &ws.comments {
+            // Threaded comments are the source of truth; fall back to the
+            // legacy `commentsN.xml` only when no threaded part exists.
+            if let Some(threaded) = &ws.threaded_comments {
+                load_threaded_comments(
+                    sheet_id,
+                    threaded,
+                    &mut navigator,
+                    &mut cell_attachment_manager,
+                );
+            } else if let Some(comments) = &ws.comments {
                 load_comments(
                     sheet_id,
                     comments,

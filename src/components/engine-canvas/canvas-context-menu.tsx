@@ -33,6 +33,7 @@ import {
 import FormatDialogContent, {
     type FormatDialogValue,
 } from '@/components/format-dialog'
+import {globalStore} from '@/store'
 
 /** Payload of the engine/session `contextMenu` event. */
 export interface ContextMenuTrigger {
@@ -207,6 +208,17 @@ export function CanvasContextMenu({
         </Box>
     )
 
+    const addComment = (ctx: ContextMenuContext) => {
+        close()
+        const range = getSelectedCellRange(ctx.selectedData)
+        if (!range) return
+        globalStore.requestAddComment({
+            sheetIdx: getActiveSheet(),
+            row: range.startRow,
+            col: range.startCol,
+        })
+    }
+
     const ctx = menu?.context
     const items: ReactNode = !ctx ? null : ctx.target === 'cell' ? (
         [
@@ -215,6 +227,9 @@ export function CanvasContextMenu({
             </MenuItem>,
             <MenuItem key="clear" onClick={() => clearCells(ctx)}>
                 Clear Cells
+            </MenuItem>,
+            <MenuItem key="comment" onClick={() => addComment(ctx)}>
+                Add comment
             </MenuItem>,
         ]
     ) : ctx.target === 'row' ? (

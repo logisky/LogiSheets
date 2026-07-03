@@ -27,6 +27,12 @@ pub const DOC_PROP_CUSTOM: RType =
 pub const LOGISHEETS_APP_DATA: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/logisheets");
 
+// Microsoft extensions for threaded comments (Excel 2018+). Threaded comments
+// are worksheet-scoped; persons are workbook-scoped.
+pub const THREADED_COMMENT: RType =
+    RType("http://schemas.microsoft.com/office/2017/10/relationships/threadedComment");
+pub const PERSON: RType = RType("http://schemas.microsoft.com/office/2017/10/relationships/person");
+
 impl<'a> PartialEq<str> for RType<'a> {
     fn eq(&self, other: &str) -> bool {
         self.0 == other

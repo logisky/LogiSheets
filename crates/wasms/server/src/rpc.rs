@@ -1,11 +1,11 @@
 use gents_derives::{Interface, TS};
 use logisheets_rs::BlockId;
 use logisheets_rs::{
-    ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo, CellCoordinateWithSheet,
-    CellInfo, CellInput, CellPosition, ColId, DisplayWindow, DisplayWindowWithStartPoint, EditPayload,
-    ErrorMessage, FormulaDisplayInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
-    ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style,
-    TempStatusDiff, Value,
+    ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo,
+    CellCoordinateWithSheet, CellInfo, CellInput, CellPosition, ColId, Comment, DisplayWindow,
+    DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo, MergeCell,
+    ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate,
+    SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
 };
 use wasm_bindgen::prelude::*;
 
@@ -43,6 +43,7 @@ pub enum Message {
     SaveWorkbook(SaveParams),
     GetCellId(GetCellIdParams),
     GetMergedCells(GetMergedCellsParams),
+    GetComments(GetCommentsParams),
     CalcCondition(CalcConditionParams),
     GetCellIdByBlockRef(GetCellIdByBlockRefParams),
     ExportBlockData(ExportBlockDataParams),
@@ -333,6 +334,12 @@ pub struct GetMergedCellsParams {
 }
 
 #[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_comments_params.ts", rename_all = "camelCase")]
+pub struct GetCommentsParams {
+    pub sheet_idx: usize,
+}
+
+#[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_calc_condition_params.ts", rename_all = "camelCase")]
 pub struct CalcConditionParams {
     pub sheet_idx: usize,
@@ -351,7 +358,10 @@ pub struct GetCellIdByBlockRefParams {
 }
 
 #[derive(Debug, Clone, TS)]
-#[ts(file_name = "rpc_export_block_data_params.ts", rename_all = "camelCase")]
+#[ts(
+    file_name = "rpc_export_block_data_params.ts",
+    rename_all = "camelCase"
+)]
 pub struct ExportBlockDataParams {
     pub ref_name: String,
     /// Keep only rows whose key value is in this list; `null`/omitted = all.
@@ -483,7 +493,10 @@ pub struct GetNextVisibleCellParams {
 }
 
 #[derive(Debug, Clone, TS)]
-#[ts(file_name = "rpc_get_data_boundary_params.ts", rename_all = "camelCase")]
+#[ts(
+    file_name = "rpc_get_data_boundary_params.ts",
+    rename_all = "camelCase"
+)]
 pub struct GetDataBoundaryParams {
     pub sheet_idx: usize,
     pub row_idx: usize,
@@ -568,7 +581,10 @@ pub struct SaveCheckpointParams {
 }
 
 #[derive(Debug, Clone, TS)]
-#[ts(file_name = "rpc_delete_checkpoint_params.ts", rename_all = "camelCase")]
+#[ts(
+    file_name = "rpc_delete_checkpoint_params.ts",
+    rename_all = "camelCase"
+)]
 pub struct DeleteCheckpointParams {
     pub label: String,
 }
@@ -746,6 +762,10 @@ pub struct WorkbookMethods {
         book_id: Option<usize>,
     ) -> Result<Vec<MergeCell>, ErrorMessage>,
 
+    // Comments (threaded + @mentions)
+    pub get_comments:
+        fn(params: GetCommentsParams, book_id: Option<usize>) -> Result<Vec<Comment>, ErrorMessage>,
+
     // Shadow cells
     pub get_shadow_cell_id: fn(
         params: GetShadowCellIdParams,
@@ -913,6 +933,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.end_row,
             params.end_col,
         ),
+        Message::GetComments(params) => ws::get_comments(id, params.sheet_idx),
         Message::CalcCondition(params) => {
             controller::calc_condition(id, params.sheet_idx, params.condition)
         }
@@ -1081,9 +1102,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.row_cnt,
             params.col_cnt,
         ),
-        Message::GetAllBlocks(params) => {
-            ws::get_all_blocks(id, params.sheet_idx, params.sheet_id)
-        }
+        Message::GetAllBlocks(params) => ws::get_all_blocks(id, params.sheet_idx, params.sheet_id),
         Message::SaveCheckpoint(params) => {
             ws::save_checkpoint(id, params.label, params.description)
         }

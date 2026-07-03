@@ -2,6 +2,7 @@ import {FC, useEffect, useRef} from 'react'
 import {Grid} from 'logisheets-engine'
 import {BlockInterfaceComponent} from '@/components/block-interface'
 import {CraftInteractionComponent} from '@/components/craft-interaction'
+import {CommentLayer} from '@/components/comment-layer'
 
 export interface ViewOverlayLayerProps {
     grid: Grid | null
@@ -100,6 +101,14 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
                 <CraftInteractionComponent
                     grid={grid}
                     activeSheet={activeSheet}
+                />
+            )}
+            {grid && (
+                <CommentLayer
+                    grid={grid}
+                    activeSheet={activeSheet}
+                    canvasStartX={canvasStartX}
+                    canvasStartY={canvasStartY}
                 />
             )}
         </div>

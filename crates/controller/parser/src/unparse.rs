@@ -69,7 +69,10 @@ impl Stringify for Node {
         T: NameFetcherTrait,
     {
         if self.bracket {
-            Ok(format!("({})", self.pure.unparse(fetcher, curr_sheet, shift)?))
+            Ok(format!(
+                "({})",
+                self.pure.unparse(fetcher, curr_sheet, shift)?
+            ))
         } else {
             self.pure.unparse(fetcher, curr_sheet, shift)
         }

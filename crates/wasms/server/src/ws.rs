@@ -191,6 +191,15 @@ pub fn get_merged_cells(
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
 
+pub fn get_comments(id: usize, sheet_idx: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let r = ws.get_comments();
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
 pub fn get_cell_position(id: usize, sheet_idx: usize, row: usize, col: usize) -> JsValue {
     init();
     let manager = MANAGER.get();
@@ -328,11 +337,7 @@ pub fn get_block_info(id: usize, sheet_id: SheetId, block_id: BlockId) -> JsValu
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
-pub fn get_all_blocks(
-    id: usize,
-    sheet_idx: Option<usize>,
-    sheet_id: Option<SheetId>,
-) -> JsValue {
+pub fn get_all_blocks(id: usize, sheet_idx: Option<usize>, sheet_id: Option<SheetId>) -> JsValue {
     init();
     let manager = MANAGER.get();
     let wb = manager.get_workbook(&id).unwrap();
@@ -363,11 +368,8 @@ pub fn list_checkpoints(id: usize) -> JsValue {
     let wb = manager.get_workbook(&id).unwrap();
     // Convert CheckpointMeta to the RPC DTO (drops the Status payload —
     // the manager's `list()` already only returns label + description).
-    let metas: Vec<crate::rpc::CheckpointMetaDto> = wb
-        .list_checkpoints()
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    let metas: Vec<crate::rpc::CheckpointMetaDto> =
+        wb.list_checkpoints().into_iter().map(Into::into).collect();
     serde_wasm_bindgen::to_value(&metas).unwrap()
 }
 

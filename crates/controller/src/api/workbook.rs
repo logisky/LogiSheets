@@ -181,16 +181,10 @@ impl Workbook {
     /// Snapshot the current workbook state under `label`. Overwrites
     /// any existing checkpoint with the same label. Returns the number
     /// of checkpoints currently stored after the save.
-    pub fn save_checkpoint(
-        &mut self,
-        label: String,
-        description: Option<String>,
-    ) -> usize {
-        self.controller.checkpoint_manager.save(
-            label,
-            description,
-            self.controller.status.clone(),
-        );
+    pub fn save_checkpoint(&mut self, label: String, description: Option<String>) -> usize {
+        self.controller
+            .checkpoint_manager
+            .save(label, description, self.controller.status.clone());
         self.controller.checkpoint_manager.len()
     }
 
@@ -202,9 +196,7 @@ impl Workbook {
     /// Enumerate all checkpoints, newest first. Returns just labels
     /// and descriptions — the bulky `Status` snapshot stays inside the
     /// manager.
-    pub fn list_checkpoints(
-        &self,
-    ) -> Vec<crate::checkpoint_manager::CheckpointMeta> {
+    pub fn list_checkpoints(&self) -> Vec<crate::checkpoint_manager::CheckpointMeta> {
         self.controller.checkpoint_manager.list()
     }
 
@@ -386,16 +378,11 @@ impl Workbook {
         for sid in sheet_ids {
             // Snapshot block ids to avoid borrowing the navigator across
             // the get_block_info call (which itself reads the navigator).
-            let block_ids: Vec<BlockId> = match self
-                .controller
-                .status
-                .navigator
-                .sheet_navs
-                .get(&sid)
-            {
-                Some(nav) => nav.data.blocks.keys().copied().collect(),
-                None => continue,
-            };
+            let block_ids: Vec<BlockId> =
+                match self.controller.status.navigator.sheet_navs.get(&sid) {
+                    Some(nav) => nav.data.blocks.keys().copied().collect(),
+                    None => continue,
+                };
             let ws = self.get_sheet_by_id(sid)?;
             for bid in block_ids {
                 // Skip blocks whose lookup fails (defensive — shouldn't
@@ -702,9 +689,7 @@ impl Workbook {
             let mut row = Vec::with_capacity(fields.len());
             for field in &fields {
                 let value = match schema.partially_resolve(ref_name, key_cell, field) {
-                    Some(bcid) => {
-                        read_display_value(status, sheet_id, &CellId::BlockCell(bcid))
-                    }
+                    Some(bcid) => read_display_value(status, sheet_id, &CellId::BlockCell(bcid)),
                     None => DisplayValue::Empty,
                 };
                 row.push(value);

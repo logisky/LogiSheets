@@ -7,6 +7,7 @@ pub mod doc_props;
 pub mod drawings;
 pub mod enum_groups;
 pub mod external_links;
+pub mod persons;
 pub mod relationships;
 pub mod simple_types;
 pub mod sst;
@@ -14,5 +15,6 @@ pub mod style_sheet;
 #[cfg(test)]
 pub mod test_utils;
 pub mod theme;
+pub mod threaded_comments;
 pub mod workbook;
 pub mod worksheet;

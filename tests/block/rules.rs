@@ -42,7 +42,13 @@ fn ok(wb: &mut Workbook, payloads: Vec<EditPayload>) {
 }
 
 /// Read a shadow's computed value at sheet-absolute (row, col).
-fn shadow_value(wb: &mut Workbook, sheet_idx: usize, row: usize, col: usize, kind: ShadowKind) -> Value {
+fn shadow_value(
+    wb: &mut Workbook,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    kind: ShadowKind,
+) -> Value {
     let scid = wb
         .get_shadow_cell_id(sheet_idx, row, col, kind)
         .unwrap_or_else(|e| panic!("get_shadow_cell_id failed: {:?}", e));
@@ -162,13 +168,25 @@ fn test_validation_shadow_installed_at_bind_time() {
 
     // Row 0 (value=5) → FALSE
     let v0 = shadow_value(&mut wb, 0, 0, 1, ShadowKind::Validation);
-    assert!(matches!(v0, Value::Bool(false)), "row 0 should fail validation, got {:?}", v0);
+    assert!(
+        matches!(v0, Value::Bool(false)),
+        "row 0 should fail validation, got {:?}",
+        v0
+    );
     // Row 1 (value=10) → TRUE
     let v1 = shadow_value(&mut wb, 0, 1, 1, ShadowKind::Validation);
-    assert!(matches!(v1, Value::Bool(true)), "row 1 should pass, got {:?}", v1);
+    assert!(
+        matches!(v1, Value::Bool(true)),
+        "row 1 should pass, got {:?}",
+        v1
+    );
     // Row 2 (value=15) → TRUE
     let v2 = shadow_value(&mut wb, 0, 2, 1, ShadowKind::Validation);
-    assert!(matches!(v2, Value::Bool(true)), "row 2 should pass, got {:?}", v2);
+    assert!(
+        matches!(v2, Value::Bool(true)),
+        "row 2 should pass, got {:?}",
+        v2
+    );
 }
 
 /// Editability mirror: same plumbing, different ShadowKind. The
@@ -182,9 +200,17 @@ fn test_editability_shadow_installed_at_bind_time() {
     );
 
     let v0 = shadow_value(&mut wb, 0, 0, 1, ShadowKind::UserEditable);
-    assert!(matches!(v0, Value::Bool(true)), "row 0 editable, got {:?}", v0);
+    assert!(
+        matches!(v0, Value::Bool(true)),
+        "row 0 editable, got {:?}",
+        v0
+    );
     let v2 = shadow_value(&mut wb, 0, 2, 1, ShadowKind::UserEditable);
-    assert!(matches!(v2, Value::Bool(false)), "row 2 not editable, got {:?}", v2);
+    assert!(
+        matches!(v2, Value::Bool(false)),
+        "row 2 not editable, got {:?}",
+        v2
+    );
 }
 
 /// `#FIELD("key")` should resolve to the row's key column. We build a
@@ -198,19 +224,24 @@ fn test_field_substitution_in_validation() {
     );
 
     let v0 = shadow_value(&mut wb, 0, 0, 1, ShadowKind::Validation);
-    assert!(matches!(v0, Value::Bool(false)), "row 0 (k0) should fail, got {:?}", v0);
+    assert!(
+        matches!(v0, Value::Bool(false)),
+        "row 0 (k0) should fail, got {:?}",
+        v0
+    );
     let v1 = shadow_value(&mut wb, 0, 1, 1, ShadowKind::Validation);
-    assert!(matches!(v1, Value::Bool(true)), "row 1 (k1) should pass, got {:?}", v1);
+    assert!(
+        matches!(v1, Value::Bool(true)),
+        "row 1 (k1) should pass, got {:?}",
+        v1
+    );
 }
 
 /// `#KEY` resolves to the row's key value (the cell at col 0). Verifies
 /// the bare-keyword path, distinct from `#FIELD("key")`.
 #[test]
 fn test_key_substitution_in_validation() {
-    let mut wb = fresh_block_with_data(
-        vec![None, Some(r#"#KEY="k2""#.into())],
-        vec![None, None],
-    );
+    let mut wb = fresh_block_with_data(vec![None, Some(r#"#KEY="k2""#.into())], vec![None, None]);
 
     let v0 = shadow_value(&mut wb, 0, 0, 1, ShadowKind::Validation);
     assert!(matches!(v0, Value::Bool(false)));
@@ -359,7 +390,11 @@ fn test_upsert_empty_vec_preserves_existing_rules() {
     );
 
     let after = shadow_value(&mut wb, 0, 0, 1, ShadowKind::Validation);
-    assert!(matches!(after, Value::Bool(false)), "validation should be preserved, got {:?}", after);
+    assert!(
+        matches!(after, Value::Bool(false)),
+        "validation should be preserved, got {:?}",
+        after
+    );
 }
 
 /// `validation_formulas: vec![Some(new_rule), ...]` replaces the
@@ -392,7 +427,12 @@ fn test_upsert_replaces_rule_and_recomputes() {
 
     for r in 0..3 {
         let v = shadow_value(&mut wb, 0, r, 1, ShadowKind::Validation);
-        assert!(matches!(v, Value::Bool(true)), "row {} after loosen should pass, got {:?}", r, v);
+        assert!(
+            matches!(v, Value::Bool(true)),
+            "row {} after loosen should pass, got {:?}",
+            r,
+            v
+        );
     }
 }
 

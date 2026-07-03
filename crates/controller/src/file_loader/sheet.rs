@@ -4,7 +4,10 @@ use logisheets_workbook::prelude::*;
 use crate::{
     block_manager::schema_manager::SchemaManager,
     cell::Cell,
-    cell_attachments::{comment::Comment, CellAttachmentsManager},
+    cell_attachments::{
+        comment::{CommentNote, Mention, PersonInput},
+        CellAttachmentsManager,
+    },
     connectors::FormulaConnector,
     container::{col_info_manager::ColInfo, row_info_manager::RowInfo, DataContainer},
     cube_manager::CubeManager,
@@ -84,6 +87,91 @@ pub fn load_merge_cells(
     })
 }
 
+/// Register the workbook-level person list, preserving each person's on-disk
+/// GUID so threaded-comment `personId` / `mentionpersonId` references resolve.
+pub fn load_persons(persons: &Persons, cell_attachment_manager: &mut CellAttachmentsManager) {
+    for p in persons.persons.iter() {
+        cell_attachment_manager.comments.persons.register_with_guid(
+            p.id.clone(),
+            PersonInput {
+                display_name: p.display_name.clone(),
+                user_id: p.user_id.clone(),
+                provider_id: p.provider_id.clone(),
+            },
+        );
+    }
+}
+
+/// Load threaded comments (the source of truth). Persons must have been loaded
+/// first via [`load_persons`]; any unknown `personId` is tolerated by
+/// registering a placeholder person keyed on the raw GUID.
+pub fn load_threaded_comments(
+    sheet_id: SheetId,
+    threaded: &ThreadedComments,
+    navigator: &mut Navigator,
+    cell_attachment_manager: &mut CellAttachmentsManager,
+) {
+    for c in threaded.comments.iter() {
+        let Some((row, col)) = parse_cell(&c.reference) else {
+            continue;
+        };
+        let Ok(cell_id) = navigator.fetch_cell_id(&sheet_id, row, col) else {
+            continue;
+        };
+        let person = resolve_person_by_guid(cell_attachment_manager, &c.person_id);
+        let mentions = c
+            .mentions
+            .as_ref()
+            .map(|ms| {
+                ms.mention
+                    .iter()
+                    .map(|m| Mention {
+                        person: resolve_person_by_guid(
+                            cell_attachment_manager,
+                            &m.mention_person_id,
+                        ),
+                        start: m.start_index as usize,
+                        len: m.length as usize,
+                        mention_id: m.mention_id.clone(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let note = CommentNote {
+            id: c.id.clone(),
+            person,
+            dt: c.dt.clone(),
+            text: c.text.as_ref().map(|t| t.value.clone()).unwrap_or_default(),
+            parent: c.parent_id.clone(),
+            mentions,
+            resolved: c.done,
+        };
+        cell_attachment_manager
+            .comments
+            .add_note(sheet_id, cell_id, note);
+    }
+}
+
+fn resolve_person_by_guid(
+    cell_attachment_manager: &mut CellAttachmentsManager,
+    guid: &str,
+) -> logisheets_base::PersonId {
+    if let Some(id) = cell_attachment_manager.comments.persons.get_by_guid(guid) {
+        return id;
+    }
+    cell_attachment_manager.comments.persons.register_with_guid(
+        guid.to_string(),
+        PersonInput {
+            display_name: String::new(),
+            user_id: None,
+            provider_id: None,
+        },
+    )
+}
+
+/// Legacy `commentsN.xml` fallback used only when a sheet has no threaded
+/// comments. Each legacy comment becomes a single root note authored by an
+/// ad-hoc person (name only — legacy comments carry no directory identity).
 pub fn load_comments(
     sheet_id: SheetId,
     comments: &Comments,
@@ -96,30 +184,42 @@ pub fn load_comments(
         .iter()
         .map(|plain_text| plain_text.value.to_string())
         .collect::<Vec<_>>();
-    comments
-        .comment_list
-        .comments
-        .iter()
-        .for_each(|c| match parse_cell(&c.reference) {
-            Some((row, col)) => {
-                if let Ok(cell_id) = navigator.fetch_cell_id(&sheet_id, row, col) {
-                    let text = rst_to_plain_text(&c.text);
-                    let author = authors.get(c.author_id as usize).unwrap();
-                    let author_id = cell_attachment_manager
-                        .comments
-                        .authors
-                        .get_or_register_id(author);
-                    let comment = Comment {
-                        author: author_id,
-                        text,
-                    };
-                    cell_attachment_manager
-                        .comments
-                        .add_comment(sheet_id, cell_id, comment);
-                }
-            }
-            None => {}
-        })
+    for c in comments.comment_list.comments.iter() {
+        let Some((row, col)) = parse_cell(&c.reference) else {
+            continue;
+        };
+        let Ok(cell_id) = navigator.fetch_cell_id(&sheet_id, row, col) else {
+            continue;
+        };
+        let text = rst_to_plain_text(&c.text);
+        let author_name = authors
+            .get(c.author_id as usize)
+            .cloned()
+            .unwrap_or_default();
+        let person = cell_attachment_manager
+            .comments
+            .persons
+            .get_or_register(PersonInput {
+                display_name: author_name,
+                user_id: None,
+                provider_id: None,
+            });
+        let note = CommentNote {
+            id: c
+                .guid
+                .clone()
+                .unwrap_or_else(|| format!("{{{}}}", uuid::Uuid::new_v4())),
+            person,
+            dt: String::new(),
+            text,
+            parent: None,
+            mentions: imbl::Vector::new(),
+            resolved: false,
+        };
+        cell_attachment_manager
+            .comments
+            .add_note(sheet_id, cell_id, note);
+    }
 }
 
 pub fn load_sheet_data(

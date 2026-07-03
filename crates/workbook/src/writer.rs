@@ -3,10 +3,13 @@ use crate::ooxml::content_types::{ContentTypes, CtDefault, CtOverride};
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
 use crate::ooxml::relationships::{CtRelationship, Relationships};
 use crate::prelude::StTargetMode;
-use crate::prelude::{Comments, SstPart, StylesheetPart, ThemePart, WorkbookPart, WorksheetPart};
+use crate::prelude::{
+    Comments, Persons, SstPart, StylesheetPart, ThemePart, ThreadedComments, WorkbookPart,
+    WorksheetPart,
+};
 use crate::rtypes::{
     RType, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM, EXT_LINK, LOGISHEETS_APP_DATA,
-    SST, STYLE, THEME, WORKBOOK, WORKSHEET,
+    PERSON, SST, STYLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
 };
 use std::io::{Cursor, Write};
 use xmlserde::xml_serialize_with_decl;
@@ -164,6 +167,9 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
 
     writer.add_directory("xl/worksheets", options())?;
     writer.add_directory("xl/worksheets/_rels", options())?;
+    if worksheets.values().any(|w| w.threaded_comments.is_some()) {
+        writer.add_directory("xl/threadedComments", options())?;
+    }
 
     while let Some(sheet_id) = sheet_ids.pop() {
         if let Some(ws) = worksheets.remove(&sheet_id) {
@@ -211,6 +217,19 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
         });
     }
 
+    if let Some(persons) = xl.persons {
+        writer.add_directory("xl/persons", options())?;
+        let persons_proof =
+            write_persons(persons, writer, FileLocation::from("xl/persons/person.xml"))?;
+        result.push(persons_proof);
+        relationships.push(CtRelationship {
+            id: String::from("rIdPersons"),
+            ty: PERSON.0.to_string(),
+            target: String::from("persons/person.xml"),
+            target_mode: StTargetMode::Internal,
+        });
+    }
+
     let p = write_workbook_part(
         xl.workbook_part,
         writer,
@@ -247,7 +266,7 @@ fn write_worksheet<'a>(
 ) -> ZipResult<Vec<WriteProof>> {
     let mut result = Vec::<WriteProof>::new();
     let mut relationships = Vec::<CtRelationship>::new();
-    let rid = 1_usize;
+    let mut rid = 1_usize;
 
     if let Some(comments) = wb.comments {
         let p = write_comment(
@@ -259,6 +278,22 @@ fn write_worksheet<'a>(
             id: format!("rId{}", rid),
             target: format!("../comments{}.xml", idx),
             ty: COMMENTS.0.to_string(),
+            target_mode: StTargetMode::Internal,
+        });
+        result.push(p);
+        rid += 1;
+    }
+
+    if let Some(threaded) = wb.threaded_comments {
+        let p = write_threaded_comments(
+            threaded,
+            writer,
+            FileLocation::from(format!("xl/threadedComments/threadedComment{}.xml", idx)),
+        )?;
+        relationships.push(CtRelationship {
+            id: format!("rId{}", rid),
+            target: format!("../threadedComments/threadedComment{}.xml", idx),
+            ty: THREADED_COMMENT.0.to_string(),
             target_mode: StTargetMode::Internal,
         });
         result.push(p);
@@ -285,6 +320,8 @@ define_se_func!(write_stylesheet, StylesheetPart, STYLE);
 define_se_func!(write_theme, ThemePart, THEME);
 
 define_se_func!(write_comment, Comments, COMMENTS);
+define_se_func!(write_persons, Persons, PERSON);
+define_se_func!(write_threaded_comments, ThreadedComments, THREADED_COMMENT);
 define_se_func!(write_sheet_part, WorksheetPart, WORKSHEET);
 define_se_func!(write_workbook_part, WorkbookPart, WORKBOOK);
 
@@ -385,6 +422,8 @@ fn get_content_type(rtype: RType) -> &'static str {
     match rtype {
         SST => "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml",
         COMMENTS => "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml",
+        PERSON => "application/vnd.ms-excel.person+xml",
+        THREADED_COMMENT => "application/vnd.ms-excel.threadedcomments+xml",
         WORKSHEET => "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
         WORKBOOK => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
         DOC_PROP_APP => "application/vnd.openxmlformats-officedocument.extended-properties+xml",

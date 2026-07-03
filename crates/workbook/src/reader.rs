@@ -6,8 +6,9 @@ use crate::ooxml::doc_props::DocPropCore;
 use crate::ooxml::doc_props::DocPropCustom;
 use crate::ooxml::theme::ThemePart;
 use crate::ooxml::{
-    comments::Comments, external_links::ExternalLinkPart, relationships::Relationships,
-    sst::SstPart, style_sheet::StylesheetPart, workbook::WorkbookPart, worksheet::WorksheetPart,
+    comments::Comments, external_links::ExternalLinkPart, persons::Persons,
+    relationships::Relationships, sst::SstPart, style_sheet::StylesheetPart,
+    threaded_comments::ThreadedComments, workbook::WorkbookPart, worksheet::WorksheetPart,
 };
 use crate::workbook::Id;
 use crate::workbook::Xl;
@@ -140,6 +141,7 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
     let mut worksheets = HashMap::<Id, Worksheet>::new();
     let mut external_links = HashMap::<Id, ExternalLink>::new();
     let mut theme = Option::<(Id, ThemePart)>::None;
+    let mut persons = Option::<Persons>::None;
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -226,6 +228,20 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
                     }
                 }
             }
+            PERSON => {
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(s) = path.to_str() {
+                    match de_persons(s, archive) {
+                        Ok(p) => {
+                            persons = Some(p);
+                        }
+                        Err(e) => {
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
+                        }
+                    }
+                }
+            }
             _ => {}
         });
     Ok(Xl {
@@ -235,6 +251,7 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
         worksheets,
         external_links,
         theme,
+        persons,
     })
 }
 
@@ -244,6 +261,7 @@ fn de_worksheet<R: Read + Seek>(
 ) -> Result<Worksheet, SerdeErr> {
     let worksheet_part = de_worksheet_part(path, archive)?;
     let mut comments = Option::<Comments>::None;
+    let mut threaded_comments = Option::<ThreadedComments>::None;
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -255,6 +273,7 @@ fn de_worksheet<R: Read + Seek>(
         return Ok(Worksheet {
             worksheet_part,
             comments,
+            threaded_comments,
         });
     }
     let relationships = result.unwrap();
@@ -274,11 +293,24 @@ fn de_worksheet<R: Read + Seek>(
                     }
                 }
             }
+            THREADED_COMMENT => {
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(tc_path) = path.to_str() {
+                    match de_threaded_comments(tc_path, archive) {
+                        Ok(c) => {
+                            threaded_comments = Some(c);
+                        }
+                        Err(_) => {}
+                    }
+                }
+            }
             _ => {}
         });
     Ok(Worksheet {
         worksheet_part,
         comments,
+        threaded_comments,
     })
 }
 
@@ -301,6 +333,8 @@ define_de_func!(de_external_link_part, ExternalLinkPart);
 define_de_func!(de_workbook_part, WorkbookPart);
 define_de_func!(de_worksheet_part, WorksheetPart);
 define_de_func!(de_comments, Comments);
+define_de_func!(de_persons, Persons);
+define_de_func!(de_threaded_comments, ThreadedComments);
 define_de_func!(de_sst, SstPart);
 define_de_func!(de_style_part, StylesheetPart);
 define_de_func!(de_theme, ThemePart);
