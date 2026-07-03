@@ -19,6 +19,7 @@
 import type { SheetInfo, SelectedData, CellLayout } from "logisheets-web";
 import { isErrorMessage } from "logisheets-web";
 import type { DataService } from "./clients/service";
+import { isLoadCancelled } from "./clients/service";
 import type { Grid, EngineConfig } from "$types/index";
 import { mount, unmount } from "svelte";
 import Spreadsheet from "./components/Spreadsheet.svelte";
@@ -275,7 +276,11 @@ export class Session {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mounted = this._mountedComponent as any;
     if (mounted && typeof mounted.loadWorkbook === "function") {
-      await mounted.loadWorkbook(buffer, filename);
+      // The mounted component returns false when the beforeLoad gate vetoed
+      // the load (nothing changed) — propagate that as a null result so the
+      // host skips its post-load bookkeeping.
+      const loaded = await mounted.loadWorkbook(buffer, filename);
+      if (!loaded) return null;
       return this._grid;
     }
     const result = await this._dataService.loadWorkbook(
@@ -284,7 +289,9 @@ export class Session {
       this._canvasId,
     );
     if (isErrorMessage(result)) {
-      this._emit("error", new Error(result.msg));
+      // A gate veto is a user-initiated cancellation, not a failure — stay
+      // silent instead of emitting an error.
+      if (!isLoadCancelled(result)) this._emit("error", new Error(result.msg));
       return null;
     }
     this._grid = result;

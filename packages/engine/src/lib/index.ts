@@ -36,7 +36,14 @@ export type {
 } from "./components/contextMenuTypes";
 
 // Client exports
-export { DataService, WorkbookClient, OffscreenClient } from "./clients";
+export {
+  DataService,
+  WorkbookClient,
+  OffscreenClient,
+  WORKBOOK_LOAD_CANCELLED,
+  isLoadCancelled,
+} from "./clients";
+export type { BeforeLoadWorkbook } from "./clients";
 
 // Worker exports
 export { WorkbookWorkerService, OffscreenWorkerService } from "./worker";

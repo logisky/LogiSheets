@@ -88,10 +88,14 @@ export const Toolbar = observer(
         // File open
         const fileInputRef = useRef<HTMLInputElement>(null)
         const onOpenClick = () => fileInputRef.current?.click()
-        const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
             const file = e.target.files?.item(0)
             if (!file) return
-            const readFile = file.arrayBuffer().then(async (buf) => {
+            // Reset the input so picking the same file again re-fires change —
+            // matters when the user cancels the overwrite prompt and retries.
+            e.target.value = ''
+            try {
+                const buf = await file.arrayBuffer()
                 // Use engine.loadFile, NOT DATA_SERVICE.loadWorkbook. The
                 // engine path delegates to the mounted Spreadsheet's own
                 // `loadWorkbook` (engine.ts:loadFile -> mounted.loadWorkbook),
@@ -106,7 +110,9 @@ export const Toolbar = observer(
                     file.name
                 )
                 if (!grid) {
-                    // todo!
+                    // No grid: the user declined the overwrite prompt, or the
+                    // load failed (the engine surfaces failures via its own
+                    // error event). Either way nothing changed — stay silent.
                     return
                 }
                 let appData = await DATA_SERVICE.getWorkbook().getAppData()
@@ -168,12 +174,10 @@ export const Toolbar = observer(
                 // sheet 0 via the mounted component).
                 setActiveSheet(0)
                 setBookName(file.name.replace(/\.[^/.]+$/, ''))
-            })
-            toast.promise(readFile, {
-                pending: 'Loading file...',
-                error: 'Read file error, retry later',
-                success: `Read file ${file.name}`,
-            })
+                toast.success(`Read file ${file.name}`)
+            } catch {
+                toast.error('Read file error, retry later')
+            }
         }
 
         // File menu (dropdown)
