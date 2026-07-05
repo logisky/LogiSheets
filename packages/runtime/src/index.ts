@@ -26,6 +26,13 @@ export * from './rpc.js'
 // Craft loading: reconstruct the crafts a workbook depends on, headlessly.
 export * from './craft.js'
 
+// Directory watcher: hot-(re)load workbooks from `wb_*.json` descriptors.
+export * from './watcher.js'
+
+// Enterprise integration: register with the control panel, expose pin/unpin/task
+// RPC, pull crafts from the enterprise registry (logisheets-enterprise).
+export * from './enterprise.js'
+
 /**
  * Adapt the synchronous Node `handle()` entry point into the async {@link
  * Client} that logisheets-core's operation layer expects.

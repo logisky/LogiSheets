@@ -188,6 +188,57 @@ Standard JSON-RPC error codes are exported (`RPC_PARSE_ERROR`,
 `RPC_INVALID_REQUEST`, `RPC_METHOD_NOT_FOUND`, `RPC_INVALID_PARAMS`,
 `RPC_INTERNAL_ERROR`); application errors can use their own positive codes.
 
+## Hot-reloading workbooks — `WorkbookWatcher`
+
+`WorkbookWatcher` polls a directory for **descriptor files** named `wb_*.json`
+and keeps the runtime's workbooks in sync with them. Each descriptor names a
+workbook by a stable *string* id (the watcher's own namespace, distinct from the
+engine's numeric `Workbook.id`), a version, and where to fetch its `.xlsx` — a
+local `path`, a `url`, or both:
+
+```json
+{"id": "sales-2026", "version": 7, "path": "books/sales.xlsx"}
+{"id": "sales-2026", "version": 7, "url": "https://host/books/sales.xlsx"}
+```
+
+At least one of `path`/`url` must be present; when both are, `path` wins (local
+reads are cheaper). Relative `path`s resolve against the watched directory; a
+`url` is fetched with `fetch`. A url-sourced workbook records no local `path` on
+its handle.
+
+On each pass (every 10s by default) the watcher (re)loads any descriptor whose
+version differs from what it last loaded and swaps the new workbook in under that
+id — so an external system can publish a new revision by writing the file with a
+bumped version, and the running runtime picks it up automatically. A reload
+always reads the source fresh (bypassing `loadWorkbook`'s path dedup) so a
+same-source, new-version write is honoured; the previous workbook is released
+only after the new one loads, so a failed load (bad json, missing file, non-200
+url) leaves the old one in place and is reported via `onError`.
+
+| Member | Signature | Description |
+| --- | --- | --- |
+| constructor | `new WorkbookWatcher(runtime, dir, options?)` | Watch `dir` for `wb_*.json` descriptors, loading into `runtime`. |
+| `start` | `(): void` | Scan once now, then every `intervalMs`. The interval is `unref`'d so it never keeps the process alive alone. |
+| `stop` | `(): void` | Stop polling (loaded workbooks stay open). |
+| `scanOnce` | `(): Promise<void>` | Run a single scan pass now (also called by the interval). Overlapping calls are skipped. |
+| `get` | `(id: string): Workbook \| undefined` | The live workbook currently loaded under `id`. |
+| `ids` | `readonly string[]` | Every string id currently loaded. |
+
+`options` is `{intervalMs?: number; onLoad?; onError?}` — `onLoad(id, wb,
+descriptor)` fires after each swap, `onError(file, err)` reports a descriptor
+that couldn't be read, parsed, or loaded.
+
+```ts
+const runtime = new SpreadsheetRuntime()
+const watcher = new WorkbookWatcher(runtime, './watch', {
+    intervalMs: 10_000,
+    onLoad: (id) => console.log('loaded', id),
+})
+watcher.start()
+// ... elsewhere, serve the current revision:
+const wb = watcher.get('sales-2026')
+```
+
 ## Relationship to the other packages
 
 | Package | Where it runs | What it is |
