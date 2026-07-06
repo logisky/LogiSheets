@@ -1,2 +1,13 @@
 INPUT   E5  =EXACT(6,24)
 CHECKSTR    E5  FALSE
+
+# case-sensitive text comparison
+INPUT E6 =EXACT("Word","Word")
+CHECKSTR E6 TRUE
+
+INPUT E7 =EXACT("Word","word")
+CHECKSTR E7 FALSE
+
+# trailing space makes them differ
+INPUT E8 =EXACT("a","a ")
+CHECKSTR E8 FALSE

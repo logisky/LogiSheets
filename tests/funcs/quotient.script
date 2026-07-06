@@ -1,2 +1,19 @@
 INPUT   Q1   =QUOTIENT(55,5)
 CHECKNUM    Q1  11
+
+# integer part of the division, truncated toward zero
+INPUT Q2 =QUOTIENT(9,4)
+CHECKNUM Q2 2
+
+INPUT Q3 =QUOTIENT(-7,2)
+CHECKNUM Q3 -3
+
+INPUT Q4 =QUOTIENT(7,-2)
+CHECKNUM Q4 -3
+
+INPUT Q5 =QUOTIENT(-7,-2)
+CHECKNUM Q5 3
+
+# division by zero -> #DIV/0!
+INPUT Q6 =QUOTIENT(5,0)
+CHECKERR Q6 #DIV/0!

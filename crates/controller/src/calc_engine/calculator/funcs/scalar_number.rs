@@ -57,6 +57,56 @@ where
     }
 }
 
+/// Like [`calc`], but the per-element function may fail (e.g. SQRT of a
+/// negative), producing a cell error instead of a NaN number.
+fn calc_checked<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex
+where
+    C: Connector,
+    F: 'static + Fn(f64) -> Result<f64, ast::Error>,
+{
+    if args.len() != 1 {
+        return CalcVertex::from_error(ast::Error::Unspecified);
+    }
+    let arg = args.into_iter().next().unwrap();
+    let value = fetcher.get_calc_value(arg);
+    let v = match value {
+        CalcValue::Scalar(s) => CalcValue::Scalar(call_checked(&s, &func)),
+        CalcValue::Range(r) => CalcValue::Range(r.map(move |v| call_checked(v, &func))),
+        CalcValue::Cube(_) => CalcValue::Scalar(Value::Error(ast::Error::Ref)),
+        CalcValue::Union(u) => {
+            if u.len() == 1 {
+                let arg = *u.into_iter().next().unwrap();
+                let v = vec![CalcVertex::Value(arg)];
+                if let CalcVertex::Value(value) = calc_checked(v, fetcher, func) {
+                    value
+                } else {
+                    CalcValue::Scalar(Value::Error(ast::Error::Value))
+                }
+            } else {
+                CalcValue::Scalar(Value::Error(ast::Error::Value))
+            }
+        }
+    };
+    CalcVertex::Value(v)
+}
+
+fn call_checked<F>(value: &Value, func: &F) -> Value
+where
+    F: Fn(f64) -> Result<f64, ast::Error>,
+{
+    let apply = |x: f64| match func(x) {
+        Ok(n) => Value::Number(n),
+        Err(e) => Value::Error(e),
+    };
+    match value {
+        Value::Blank => apply(0_f64),
+        Value::Number(n) => apply(n.clone()),
+        Value::Text(_) => Value::Error(ast::Error::Value),
+        Value::Boolean(b) => apply(if *b { 1_f64 } else { 0_f64 }),
+        Value::Error(e) => Value::Error(e.clone()),
+    }
+}
+
 pub fn calc_abs<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
@@ -131,14 +181,26 @@ pub fn calc_sqrt<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    calc(args, fetcher, |a| a.sqrt())
+    calc_checked(args, fetcher, |a| {
+        if a < 0. {
+            Err(ast::Error::Num)
+        } else {
+            Ok(a.sqrt())
+        }
+    })
 }
 
 pub fn calc_sqrtpi<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    calc(args, fetcher, |a| (std::f64::consts::PI * a).sqrt())
+    calc_checked(args, fetcher, |a| {
+        if a < 0. {
+            Err(ast::Error::Num)
+        } else {
+            Ok((std::f64::consts::PI * a).sqrt())
+        }
+    })
 }
 
 pub fn calc_acos<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

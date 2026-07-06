@@ -1,0 +1,11 @@
+# IFNA replaces only #N/A
+INPUT A1 =IFNA(NA(),"missing")
+CHECKSTR A1 missing
+
+# non-error value passes through
+INPUT A2 =IFNA(42,"missing")
+CHECKNUM A2 42
+
+# a non-#N/A error is NOT replaced by IFNA
+INPUT A3 =IFNA(1/0,"missing")
+CHECKERR A3 #DIV/0!

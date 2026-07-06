@@ -1,0 +1,39 @@
+INPUT A1 1
+INPUT B1 one
+INPUT A2 2
+INPUT B2 two
+INPUT A3 3
+INPUT B3 three
+INPUT A4 4
+INPUT B4 four
+
+# exact match returns the paired column value
+INPUT D1 =VLOOKUP(3,A1:B4,2,FALSE)
+CHECKSTR D1 three
+
+# exact match, first column returns the key itself
+INPUT D2 =VLOOKUP(2,A1:B4,1,FALSE)
+CHECKNUM D2 2
+
+# no exact match -> #N/A
+INPUT D3 =VLOOKUP(9,A1:B4,2,FALSE)
+CHECKERR D3 #N/A
+
+# column index < 1 -> #VALUE!
+INPUT D4 =VLOOKUP(2,A1:B4,0,FALSE)
+CHECKERR D4 #VALUE!
+
+# approximate match (default): largest key <= lookup, sorted ascending
+INPUT D5 =VLOOKUP(2.5,A1:B4,2)
+CHECKSTR D5 two
+
+INPUT D6 =VLOOKUP(2.5,A1:B4,2,TRUE)
+CHECKSTR D6 two
+
+# above every key -> takes the last (largest) row
+INPUT D7 =VLOOKUP(10,A1:B4,2)
+CHECKSTR D7 four
+
+# below every key -> #N/A
+INPUT D8 =VLOOKUP(0,A1:B4,2)
+CHECKERR D8 #N/A

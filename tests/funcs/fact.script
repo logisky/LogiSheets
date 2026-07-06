@@ -2,3 +2,18 @@ INPUT   F1 =FACT(1)
 CHECKNUM F1 1
 INPUT   F1 =FACT(4)
 CHECKNUM F1 24
+
+# 0! == 1
+INPUT F2 =FACT(0)
+CHECKNUM F2 1
+
+# non-integer argument is truncated
+INPUT F3 =FACT(6.9)
+CHECKNUM F3 720
+
+INPUT F4 =FACT(10)
+CHECKNUM F4 3628800
+
+# negative argument -> #NUM!
+INPUT F5 =FACT(-1)
+CHECKERR F5 #NUM!

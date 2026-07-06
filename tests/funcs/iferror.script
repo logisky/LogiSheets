@@ -1,2 +1,13 @@
 INPUT   I2  =IFERROR(1,FALSE)
 CHECKNUM   I2  1
+
+# an error value is replaced by the fallback
+INPUT I3 =IFERROR(1/0,"dz")
+CHECKSTR I3 dz
+
+INPUT I4 =IFERROR(NA(),99)
+CHECKNUM I4 99
+
+# a non-error value passes through
+INPUT I5 =IFERROR("ok","fallback")
+CHECKSTR I5 ok

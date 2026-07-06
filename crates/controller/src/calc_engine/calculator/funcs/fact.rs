@@ -16,10 +16,13 @@ where
     assert_or_return!(args.len() == 1, ast::Error::Unspecified);
     let first = args.into_iter().next().unwrap();
     assert_f64_from_calc_value!(num, fetcher.get_calc_value(first));
-    let res = fact(num.floor() as u64).to_u64();
-    if let Some(res) = res {
-        CalcVertex::from_number(res as f64)
-    } else {
-        CalcVertex::from_error(ast::Error::Value)
+    // FACT truncates its argument; negatives and anything past 170! (which
+    // overflows f64) are #NUM! in Excel.
+    assert_or_return!(num >= 0., ast::Error::Num);
+    let n = num.floor();
+    assert_or_return!(n <= 170., ast::Error::Num);
+    match fact(n as u64).to_f64() {
+        Some(res) if res.is_finite() => CalcVertex::from_number(res),
+        _ => CalcVertex::from_error(ast::Error::Num),
     }
 }

@@ -1,2 +1,12 @@
 INPUT   O4  =ODD(24)
 CHECKNUM    O4  25
+
+# already odd stays; rounds away from zero to next odd
+INPUT O5 =ODD(1)
+CHECKNUM O5 1
+INPUT O6 =ODD(2)
+CHECKNUM O6 3
+INPUT O7 =ODD(1.5)
+CHECKNUM O7 3
+INPUT O8 =ODD(-2)
+CHECKNUM O8 -3

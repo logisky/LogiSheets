@@ -1,2 +1,19 @@
 INPUT   G6  =GCD(21,7)
 CHECKNUM    G6 7
+
+INPUT G1 =GCD(12,18)
+CHECKNUM G1 6
+
+# GCD with 0 returns the other value
+INPUT G2 =GCD(0,8)
+CHECKNUM G2 8
+
+# negative argument -> #NUM!
+INPUT G3 =GCD(-4,8)
+CHECKERR G3 #NUM!
+
+# values beyond u32 range are handled (64-bit)
+INPUT G7 6000000000
+INPUT G8 9000000000
+INPUT G4 =GCD(G7,G8)
+CHECKNUM G4 3000000000

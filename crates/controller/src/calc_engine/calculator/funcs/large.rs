@@ -39,7 +39,12 @@ where
     assert_or_return!(k >= 1., ast::Error::Num);
     match get_nums(first) {
         Ok(mut s) => {
-            let result = f(&mut s, k.trunc() as usize);
+            // k out of range (including an empty data set) is #NUM!, not a panic.
+            let k = k.trunc() as usize;
+            if k < 1 || k > s.len() {
+                return CalcVertex::from_error(ast::Error::Num);
+            }
+            let result = f(&mut s, k);
             CalcVertex::from_number(result)
         }
         Err(e) => CalcVertex::from_error(e),

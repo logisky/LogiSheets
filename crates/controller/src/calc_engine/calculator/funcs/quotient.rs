@@ -12,6 +12,7 @@ where
     assert_f64_from_calc_value!(numerator, first);
     let second = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(denominator, second);
+    assert_or_return!(denominator != 0., ast::Error::Div0);
     let res = numerator / denominator;
     let res = res.trunc();
     CalcVertex::from_number(res)

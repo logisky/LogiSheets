@@ -1,2 +1,10 @@
 INPUT   L2  =LEFT("left",2)
 CHECKSTR    L2  le
+
+# more chars than the string returns the whole string
+INPUT L4 =LEFT("left",10)
+CHECKSTR L4 left
+
+# negative chars -> #VALUE!
+INPUT L5 =LEFT("left",-1)
+CHECKERR L5 #VALUE!
