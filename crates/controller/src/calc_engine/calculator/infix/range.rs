@@ -183,19 +183,15 @@ fn get_range_of_point_and_interval(p: usize, interval: (usize, usize)) -> (usize
 
 #[inline]
 fn order(l: usize, r: usize) -> (usize, usize) {
-    if l < r {
-        (l, r)
-    } else {
-        (r, l)
-    }
+    if l < r { (l, r) } else { (r, l) }
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::{CalcValue, Value};
     use super::{
-        ast, get_range, get_range_without_prefix, Address, CalcReference, CalcVertex, ColRange,
-        Reference, RowRange,
+        Address, CalcReference, CalcVertex, ColRange, Reference, RowRange, ast, get_range,
+        get_range_without_prefix,
     };
 
     #[test]

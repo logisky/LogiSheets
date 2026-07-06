@@ -46,10 +46,10 @@ pub use logisheets_controller::edit_action::{
 };
 
 // Re-export style types
-pub use logisheets_controller::controller::style::{from_hex_str, PatternFill};
+pub use logisheets_controller::controller::style::{PatternFill, from_hex_str};
 
 // Re-export error types (via api module re-exports)
-pub use logisheets_controller::{take_last_error, Error, ErrorMessage, Result};
+pub use logisheets_controller::{Error, ErrorMessage, Result, take_last_error};
 
 // Re-export shadow-cell kind so RPC payloads and host code can tag
 // which derived computation each shadow cell represents.
@@ -63,7 +63,7 @@ pub use logisheets_controller::checkpoint_manager::{CheckpointManager, Checkpoin
 pub use logisheets_controller::{Appendix, AppendixWithCell, Comment, MergeCell, Style, Value};
 
 // Re-export FormulaDisplayInfo and lex functions
-pub use logisheets_controller::{lex_and_fmt, lex_success, FormulaDisplayInfo};
+pub use logisheets_controller::{FormulaDisplayInfo, lex_and_fmt, lex_success};
 
 // Re-export async calculation types
 pub use logisheets_base::async_func::{AsyncCalcResult, AsyncErr, Task};

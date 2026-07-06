@@ -1,8 +1,8 @@
 use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, Cube, CubeId, SheetId,
+    Cube, CubeId, SheetId, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
 };
 
-use super::{utils::get_lower_upper_bound_of_cross, CubeExecutor, CubeUpdateType};
+use super::{CubeExecutor, CubeUpdateType, utils::get_lower_upper_bound_of_cross};
 
 pub fn insert_line<C>(
     exec_ctx: CubeExecutor,

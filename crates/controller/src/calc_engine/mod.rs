@@ -10,7 +10,7 @@ use logisheets_base::{Addr, BlockRange, NormalRange, Range};
 use crate::formula_manager::{FormulaManager, Vertex};
 use crate::settings::CalcConfig;
 use crate::{CellId, SheetId};
-pub use calc_order::{calc_order, CalcUnit};
+pub use calc_order::{CalcUnit, calc_order};
 
 use self::connector::Connector;
 use calculator::calculator::calc;

@@ -17,7 +17,7 @@ use logisheets_workbook::{
 use crate::{
     cell_attachments::CellAttachmentsManager,
     container::SheetDataContainer,
-    file_saver::utils::{convert_string_to_plain_text_string, unparse_cell, SortedSet},
+    file_saver::utils::{SortedSet, convert_string_to_plain_text_string, unparse_cell},
     formula_manager::FormulaManager,
     id_manager::SheetIdManager,
     navigator::SheetNav,
@@ -25,7 +25,7 @@ use crate::{
     workbook::sheet_info_manager::SheetInfoManager,
 };
 
-use super::{error::SaveError, SaverTrait};
+use super::{SaverTrait, error::SaveError};
 
 pub fn save_sheets<S: SaverTrait>(
     sheet_id: SheetId,

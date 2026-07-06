@@ -9,9 +9,9 @@ use delete_line::delete_line;
 use delete_sheet::delete_sheet;
 use input::input;
 use insert_line::insert_line;
-use logisheets_base::{errors::BasicError, Cube, CubeId};
+use logisheets_base::{Cube, CubeId, errors::BasicError};
 
-use crate::{edit_action::EditPayload, Error};
+use crate::{Error, edit_action::EditPayload};
 
 use super::{ctx::CubeExecCtx, manager::CubeManager};
 

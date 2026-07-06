@@ -36,9 +36,5 @@ where
 #[inline]
 fn mod_7_and_return_7_if_0(num: u64) -> u8 {
     let res = num % 7;
-    if res == 0 {
-        7
-    } else {
-        res as u8
-    }
+    if res == 0 { 7 } else { res as u8 }
 }

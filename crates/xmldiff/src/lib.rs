@@ -1,5 +1,5 @@
-use diff::diff_xml_data;
 pub use diff::Diff;
+use diff::diff_xml_data;
 use xml_data::to_xml_data;
 
 mod diff;

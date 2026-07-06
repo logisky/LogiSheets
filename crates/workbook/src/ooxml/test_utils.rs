@@ -1,5 +1,5 @@
 use regex::Regex;
-use xmlserde::quick_xml::{events::*, Reader, Writer};
+use xmlserde::quick_xml::{Reader, Writer, events::*};
 
 pub fn in_one_line(xml: &str) -> String {
     let regex = Regex::new(r">\s+<").unwrap();

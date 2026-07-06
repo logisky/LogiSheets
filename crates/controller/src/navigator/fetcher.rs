@@ -1,8 +1,8 @@
-use crate::lock::{locked_read, locked_write, Locked};
+use crate::lock::{Locked, locked_read, locked_write};
 
 use super::sheet_nav::{Cache, Data};
 use logisheets_base::{
-    errors::BasicError, BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId,
+    BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId, errors::BasicError,
 };
 
 type Result<T> = std::result::Result<T, BasicError>;

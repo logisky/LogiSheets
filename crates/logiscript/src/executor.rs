@@ -9,7 +9,7 @@ use crate::operator::{
     BlockShiftData, CheckEmpty, CheckError, CheckFormula, CheckNum, CheckString, Input, Operator,
     ShiftData, Statement, Switch,
 };
-use crate::parser::{parse, ParseError};
+use crate::parser::{ParseError, parse};
 
 #[derive(Debug)]
 pub struct ExecError {

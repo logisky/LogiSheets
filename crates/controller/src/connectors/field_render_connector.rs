@@ -1,7 +1,7 @@
 use logisheets_base::StyleId;
 
 use crate::{
-    block_manager::field_manager::ctx::FieldRenderExecCtx, edit_action::StyleUpdateType, Error,
+    Error, block_manager::field_manager::ctx::FieldRenderExecCtx, edit_action::StyleUpdateType,
 };
 
 pub struct FieldRenderConnector<'a> {

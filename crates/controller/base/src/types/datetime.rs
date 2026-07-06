@@ -1,4 +1,4 @@
-use chrono::{prelude::*, Duration};
+use chrono::{Duration, prelude::*};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct EasyDate {
@@ -68,11 +68,7 @@ impl EasyDate {
         }
         let year = {
             let year = self.year as i32 + y_delta;
-            if year >= 0 {
-                year as u32
-            } else {
-                0
-            }
+            if year >= 0 { year as u32 } else { 0 }
         };
         self.year = year;
         self.month = month as u8;
@@ -141,11 +137,7 @@ pub fn get_serial_num_by_date_1900(year: u32, month: u32, day: u32) -> Option<u3
     let year = if year < 1900 { year + 1900 } else { year };
     let (year, month) = {
         let (y, m) = (year + month / 12, month % 12);
-        if m == 0 {
-            (y - 1, 12)
-        } else {
-            (y, m)
-        }
+        if m == 0 { (y - 1, 12) } else { (y, m) }
     };
     let init_date = NaiveDate::from_ymd_opt(year as i32, month, 1).unwrap();
     let duration = Duration::days((day - 1) as i64);
@@ -229,12 +221,12 @@ pub fn parse_date_time(s: &str) -> Option<f64> {
 
 #[cfg(test)]
 mod tests {
+    use super::EasyDate;
     use super::get_date_by_serial_num_1900;
     use super::get_decimal_num_by_time;
     use super::get_serial_num_by_date_1900;
     use super::get_time_by_decimal_num;
     use super::parse_date_time;
-    use super::EasyDate;
 
     #[test]
     fn parse_time_test() {

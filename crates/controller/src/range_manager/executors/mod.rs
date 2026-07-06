@@ -18,12 +18,12 @@ use delete_sheet::delete_sheet;
 use input::{input, input_ephemeral};
 use insert_block_line::insert_block_line;
 use insert_line::insert_line;
-use logisheets_base::{errors::BasicError, BlockRange, NormalRange, Range, RangeId, SheetId};
+use logisheets_base::{BlockRange, NormalRange, Range, RangeId, SheetId, errors::BasicError};
 use remove_block::remove_block;
 use resize_block::resize_block;
 
 use crate::{
-    edit_action::EditPayload, range_manager::executors::occupy_addr_range::occupy_addr_range, Error,
+    Error, edit_action::EditPayload, range_manager::executors::occupy_addr_range::occupy_addr_range,
 };
 
 use super::{ctx::RangeExecCtx, manager::RangeManager};

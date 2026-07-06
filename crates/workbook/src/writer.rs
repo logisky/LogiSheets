@@ -8,13 +8,13 @@ use crate::prelude::{
     WorksheetPart,
 };
 use crate::rtypes::{
-    RType, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM, EXT_LINK, LOGISHEETS_APP_DATA,
-    PERSON, SST, STYLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
+    COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM, EXT_LINK, LOGISHEETS_APP_DATA, PERSON,
+    RType, SST, STYLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
 };
 use std::io::{Cursor, Write};
 use xmlserde::xml_serialize_with_decl;
-use zip::write::{FileOptions, ZipWriter};
 use zip::CompressionMethod;
+use zip::write::{FileOptions, ZipWriter};
 
 use crate::workbook::{DocProps, Wb, Worksheet, Xl};
 use zip::result::ZipResult;

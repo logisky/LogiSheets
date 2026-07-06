@@ -10,6 +10,7 @@ use thiserror::Error;
 use xmlserde::*;
 
 pub mod prelude {
+    pub use super::SerdeErr;
     pub use super::ooxml::comments::*;
     pub use super::ooxml::complex_types::*;
     pub use super::ooxml::external_links::*;
@@ -25,7 +26,6 @@ pub mod prelude {
     pub use super::workbook::Wb;
     pub use super::workbook::Xl;
     pub use super::writer::*;
-    pub use super::SerdeErr;
 }
 
 #[derive(Debug, Error)]

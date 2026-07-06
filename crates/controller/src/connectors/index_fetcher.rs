@@ -1,8 +1,8 @@
 use crate::{navigator::Navigator, workbook::sheet_info_manager::SheetInfoManager};
 use logisheets_base::{
+    BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId,
     errors::{BasicError, Result},
     index_fetcher::IndexFetcherTrait,
-    BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId,
 };
 pub struct IndexFetcher<'a> {
     pub navigator: &'a Navigator,

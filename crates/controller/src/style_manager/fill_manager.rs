@@ -44,10 +44,6 @@ impl FillManager {
         };
         // todo
         let new_id = self.get_id(&new_fill);
-        if id != new_id {
-            Some(new_id)
-        } else {
-            None
-        }
+        if id != new_id { Some(new_id) } else { None }
     }
 }

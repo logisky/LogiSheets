@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::iter::Peekable;
 
-use pest::iterators::Pair;
 use pest::RuleType;
+use pest::iterators::Pair;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[allow(dead_code)]

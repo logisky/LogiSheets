@@ -39,11 +39,7 @@ where
                 sum += idx as f64 + 1.;
             }
         });
-        if cnt == 0. {
-            None
-        } else {
-            Some(sum / cnt)
-        }
+        if cnt == 0. { None } else { Some(sum / cnt) }
     };
     calc(args, fetcher, handler)
 }

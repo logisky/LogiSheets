@@ -4,8 +4,8 @@ use logisheets_rs::{
 };
 use wasm_bindgen::prelude::*;
 
-use crate::controller::init;
 use crate::controller::MANAGER;
+use crate::controller::init;
 use crate::handle_result;
 use crate::rpc::Direction;
 

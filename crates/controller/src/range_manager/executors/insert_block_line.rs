@@ -1,7 +1,7 @@
 use super::{RangeExecutor, RangeUpdateType};
 use logisheets_base::{
-    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockId, BlockRange, RangeId,
-    SheetId,
+    BlockId, BlockRange, RangeId, SheetId, id_fetcher::IdFetcherTrait,
+    index_fetcher::IndexFetcherTrait,
 };
 
 pub fn insert_block_line<C>(

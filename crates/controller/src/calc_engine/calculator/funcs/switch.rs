@@ -1,4 +1,4 @@
-use super::super::compare::{compare, CompareResult};
+use super::super::compare::{CompareResult, compare};
 use super::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;
 use logisheets_parser::ast;

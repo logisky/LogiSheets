@@ -1,5 +1,5 @@
 use gents_derives::TS;
-use logisheets_base::{async_func::Task, BlockId, CellId, ColId, EphemeralId, RowId, SheetId};
+use logisheets_base::{BlockId, CellId, ColId, EphemeralId, RowId, SheetId, async_func::Task};
 
 pub trait Payload: Into<EditPayload> {}
 
@@ -895,7 +895,7 @@ impl Default for StatusCode {
     }
 }
 
-use crate::{controller::style::PatternFill, ReproducibleCell};
+use crate::{ReproducibleCell, controller::style::PatternFill};
 use logisheets_workbook::prelude::*;
 
 #[derive(Debug, Clone, TS)]

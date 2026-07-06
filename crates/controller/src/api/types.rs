@@ -1,7 +1,7 @@
 use gents_derives::TS;
 use logisheets_base::{BlockId, DiyCellId};
 
-use crate::{style_manager::RawStyle, Appendix, Style, Value};
+use crate::{Appendix, Style, Value, style_manager::RawStyle};
 
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "save_file_result.ts", rename_all = "camelCase")]

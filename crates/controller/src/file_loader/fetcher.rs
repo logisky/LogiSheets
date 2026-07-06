@@ -5,8 +5,8 @@ use crate::{
 };
 
 use logisheets_base::{
-    errors::Result, id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait, BlockCellId,
-    BlockId, ColId, ExtBookId, NormalCellId, RowId, SheetId,
+    BlockCellId, BlockId, ColId, ExtBookId, NormalCellId, RowId, SheetId, errors::Result,
+    id_fetcher::IdFetcherTrait, index_fetcher::IndexFetcherTrait,
 };
 use logisheets_workbook::workbook::Wb;
 

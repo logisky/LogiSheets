@@ -122,7 +122,7 @@ mod tests {
     use std::collections::HashMap;
     use std::collections::HashSet;
 
-    use super::{calc_order, CalcUnit};
+    use super::{CalcUnit, calc_order};
     use crate::formula_manager::graph::Graph;
     use imbl::OrdSet;
     use itertools::Itertools;

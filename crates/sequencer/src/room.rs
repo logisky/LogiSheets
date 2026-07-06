@@ -1,6 +1,6 @@
 use crate::{Edit, Join, SequencerInitWorkbook, SequencerMessage, UserId, UserMessage};
-use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::{self, Receiver, Sender};
 
 use logisheets_controller::Controller;
 use logisheets_controller::Error;

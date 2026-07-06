@@ -134,8 +134,8 @@ pub fn match_text_pattern(pattern: &str, text: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        match_condition, match_text_pattern, parse_condition, Condition, ConditionValue,
-        LogicalCondition, Op,
+        Condition, ConditionValue, LogicalCondition, Op, match_condition, match_text_pattern,
+        parse_condition,
     };
     use crate::calc_engine::calculator::calc_vertex::Value;
 

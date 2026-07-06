@@ -1,7 +1,7 @@
 use crate::lock::locked_write;
 use imbl::HashMap;
 use logisheets_base::{
-    errors::BasicError, BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId,
+    BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId, errors::BasicError,
 };
 
 pub use self::{block::BlockPlace, sheet_nav::SheetNav};
@@ -379,11 +379,7 @@ impl Navigator {
             sheet_nav.data.blocks.iter().fold(
                 0 as BlockId,
                 |acc, (b_id, _)| {
-                    if *b_id > acc {
-                        *b_id
-                    } else {
-                        acc
-                    }
+                    if *b_id > acc { *b_id } else { acc }
                 },
             );
         Ok(bid + 1)

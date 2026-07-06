@@ -226,20 +226,8 @@ where
 
     fn get_avail_index(&self, i: usize, j: usize) -> (usize, usize) {
         let (row, col) = self.get_avail_size();
-        let new_i = {
-            if i >= row && row == 1 {
-                0_usize
-            } else {
-                i
-            }
-        };
-        let new_j = {
-            if j >= col && col == 1 {
-                0_usize
-            } else {
-                j
-            }
-        };
+        let new_i = { if i >= row && row == 1 { 0_usize } else { i } };
+        let new_j = { if j >= col && col == 1 { 0_usize } else { j } };
         (new_i, new_j)
     }
 

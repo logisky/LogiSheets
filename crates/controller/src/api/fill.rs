@@ -37,11 +37,11 @@
 use logisheets_base::CellId;
 use logisheets_parser::unparse::CellShift;
 
+use crate::Workbook;
 use crate::api::worksheet::Worksheet;
 use crate::controller::display::Value;
 use crate::edit_action::CellInput;
 use crate::errors::{Error, Result};
-use crate::Workbook;
 
 /// A rectangular block of cells, in row/col indices (0-based, inclusive).
 #[derive(Debug, Clone, Copy)]
@@ -296,8 +296,8 @@ fn format_number(n: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::FillRange;
-    use crate::edit_action::{CellInput, EditAction, EditPayload, PayloadsAction};
     use crate::Workbook;
+    use crate::edit_action::{CellInput, EditAction, EditPayload, PayloadsAction};
 
     fn input(wb: &mut Workbook, row: usize, col: usize, content: &str) {
         wb.handle_action(EditAction::Payloads(PayloadsAction {

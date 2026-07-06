@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
+    CellInfo, Controller,
     controller::{
         display::{
             BlockDataRow, BlockField, BlockInfo, CellCoordinateWithSheet, CellPosition,
@@ -10,17 +11,16 @@ use crate::{
         status::Status,
     },
     edit_action::{ActionEffect, PayloadsAction, SheetCellId, StatusCode},
-    lock::{locked_write, new_locked, Locked},
-    CellInfo, Controller,
+    lock::{Locked, locked_write, new_locked},
 };
 use crate::{
     edit_action::{EditAction, EphemeralCellInput},
     errors::{Error, Result},
 };
 use logisheets_base::{
+    BlockCellId, BlockId, CellId, ColId, RowId, SheetId, TextId,
     async_func::{AsyncCalcResult, Task},
     errors::BasicError,
-    BlockCellId, BlockId, CellId, ColId, RowId, SheetId, TextId,
 };
 use logisheets_lexer::lex;
 use logisheets_workbook::logisheets::AppData;

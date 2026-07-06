@@ -1,15 +1,15 @@
 use std::collections::HashSet;
 
-use logisheets_base::{errors::BasicError, BlockId, SheetId};
+use logisheets_base::{BlockId, SheetId, errors::BasicError};
 
 use crate::{
+    Error,
     block_manager::schema_manager::{
         ctx::BlockSchemaCtx,
         manager::SchemaManager,
         schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema, SchemaTrait},
     },
     edit_action::EditPayload,
-    Error,
 };
 
 /// Normalize a `Vec<Option<String>>` of formula templates: trim whitespace,
@@ -21,11 +21,7 @@ fn normalize_formula_vec(input: Vec<Option<String>>) -> Vec<Option<String>> {
         .map(|f| {
             f.and_then(|s| {
                 let t = s.trim().to_string();
-                if t.is_empty() {
-                    None
-                } else {
-                    Some(t)
-                }
+                if t.is_empty() { None } else { Some(t) }
             })
         })
         .collect()

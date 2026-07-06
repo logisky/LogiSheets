@@ -2,14 +2,14 @@ use imbl::Vector;
 use logisheets_base::errors::BasicError;
 
 use crate::{
-    edit_action::{AuthorInput, CommentMention, EditPayload},
     Error,
+    edit_action::{AuthorInput, CommentMention, EditPayload},
 };
 
 use super::{
+    CellAttachmentsManager,
     comment::{CommentNote, Mention, PersonInput},
     ctx::CellAttachmentsExecCtx,
-    CellAttachmentsManager,
 };
 
 fn to_person_input(a: AuthorInput) -> PersonInput {

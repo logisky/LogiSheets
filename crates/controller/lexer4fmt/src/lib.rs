@@ -4,7 +4,7 @@ use tracing::error;
 
 mod fmt;
 
-pub use fmt::{lex_and_fmt, CellRef, FormulaDisplayInfo, TokenType, TokenUnit};
+pub use fmt::{CellRef, FormulaDisplayInfo, TokenType, TokenUnit, lex_and_fmt};
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]

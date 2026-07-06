@@ -1,9 +1,9 @@
 use logisheets_base::{BlockCellId, BlockId, BlockRange, NormalRange, Range, RangeId, SheetId};
 
 use crate::range_manager::{
+    RangeExecutor,
     ctx::RangeExecCtx,
     executors::{NewRange, RangeUpdateType},
-    RangeExecutor,
 };
 
 pub fn convert_to_block<C>(

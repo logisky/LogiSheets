@@ -1,6 +1,6 @@
 use imbl::{HashMap, HashSet, Vector};
 use itertools::Itertools;
-use logisheets_base::{errors::BasicError, SheetId};
+use logisheets_base::{SheetId, errors::BasicError};
 
 use crate::edit_action::EditPayload;
 

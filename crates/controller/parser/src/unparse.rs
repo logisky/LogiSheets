@@ -1,6 +1,6 @@
 use logisheets_base::{
-    index_to_column_label, name_fetcher::NameFetcherTrait, BlockCellId, BlockRange, CellId,
-    CubeCross, NormalCellId, NormalRange, Range, RefAbs, SheetId,
+    BlockCellId, BlockRange, CellId, CubeCross, NormalCellId, NormalRange, Range, RefAbs, SheetId,
+    index_to_column_label, name_fetcher::NameFetcherTrait,
 };
 
 use crate::ast::{
@@ -9,8 +9,8 @@ use crate::ast::{
 };
 use crate::errors::ParseError;
 
-use super::ast::Node;
 use super::Result;
+use super::ast::Node;
 
 /// A relative shift (in rows/cols) applied to a formula's **relative**
 /// references while unparsing. This is the core primitive shared by
@@ -335,20 +335,12 @@ fn shifted_idx(abs: bool, idx: usize, shift: i32) -> usize {
 
 fn get_row_string(abs: bool, idx: usize, shift: i32) -> String {
     let r = (shifted_idx(abs, idx, shift) + 1).to_string();
-    if abs {
-        format!("${}", r)
-    } else {
-        r
-    }
+    if abs { format!("${}", r) } else { r }
 }
 
 fn get_col_string(abs: bool, idx: usize, shift: i32) -> String {
     let c = index_to_column_label(shifted_idx(abs, idx, shift));
-    if abs {
-        format!("${}", c)
-    } else {
-        c
-    }
+    if abs { format!("${}", c) } else { c }
 }
 
 impl Stringify for RangeDisplay {
@@ -531,9 +523,9 @@ impl Stringify for PostfixOperator {
 #[cfg(test)]
 mod tests {
     use super::unparse;
+    use crate::Parser;
     use crate::context::Context;
     use crate::test_utils::{TestIdFetcher, TestVertexFetcher};
-    use crate::Parser;
 
     #[test]
     fn comma_formula_test() {

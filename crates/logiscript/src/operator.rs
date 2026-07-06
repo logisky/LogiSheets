@@ -1,6 +1,6 @@
 use logisheets_controller::{
-    edit_action::{ConvertBlock, CreateBlock, MoveBlock, RemoveBlock, ResizeBlock},
     BlockId,
+    edit_action::{ConvertBlock, CreateBlock, MoveBlock, RemoveBlock, ResizeBlock},
 };
 
 #[derive(Debug)]

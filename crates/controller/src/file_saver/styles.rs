@@ -1,6 +1,6 @@
 use crate::style_manager::{
-    border_manager::BorderManager, fill_manager::FillManager, font_manager::FontManager,
-    num_fmt_manager::NumFmtManager, xf_manager::XfManager, StyleManager,
+    StyleManager, border_manager::BorderManager, fill_manager::FillManager,
+    font_manager::FontManager, num_fmt_manager::NumFmtManager, xf_manager::XfManager,
 };
 use logisheets_workbook::prelude::{
     CtBorders, CtCellStyleXfs, CtCellXfs, CtFills, CtFonts, CtNumFmt, CtNumFmts, StylesheetPart,
