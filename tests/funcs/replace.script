@@ -1,0 +1,8 @@
+INPUT A1 =REPLACE("abcdef",2,3,"XY")
+CHECKSTR A1 aXYef
+# start beyond the end appends
+INPUT A2 =REPLACE("abc",5,2,"XY")
+CHECKSTR A2 abcXY
+# start_num < 1 -> #VALUE!
+INPUT A3 =REPLACE("abc",0,1,"X")
+CHECKERR A3 #VALUE!

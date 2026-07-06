@@ -76,3 +76,29 @@ where
 {
     calc(args, fetcher, |a| a.to_lowercase().to_string())
 }
+
+pub fn calc_proper<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    // Capitalize the first letter of every word (a run of letters); everything
+    // else is passed through and resets the "start of word" state.
+    calc(args, fetcher, |a| {
+        let mut result = String::new();
+        let mut prev_alpha = false;
+        for ch in a.chars() {
+            if ch.is_alphabetic() {
+                if prev_alpha {
+                    result.extend(ch.to_lowercase());
+                } else {
+                    result.extend(ch.to_uppercase());
+                }
+                prev_alpha = true;
+            } else {
+                result.push(ch);
+                prev_alpha = false;
+            }
+        }
+        result
+    })
+}

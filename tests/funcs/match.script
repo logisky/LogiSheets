@@ -1,0 +1,29 @@
+INPUT A1 10
+INPUT A2 20
+INPUT A3 30
+INPUT A4 40
+# exact match (type 0)
+INPUT B1 =MATCH(30, A1:A4, 0)
+CHECKNUM B1 3
+# approximate (type 1): largest value <= lookup
+INPUT B2 =MATCH(25, A1:A4, 1)
+CHECKNUM B2 2
+# default match_type is 1
+INPUT B3 =MATCH(25, A1:A4)
+CHECKNUM B3 2
+# no exact match -> #N/A
+INPUT B4 =MATCH(99, A1:A4, 0)
+CHECKERR B4 #N/A
+# case-insensitive text exact match
+INPUT C1 apple
+INPUT C2 banana
+INPUT C3 cherry
+INPUT B5 =MATCH("BANANA", C1:C3, 0)
+CHECKNUM B5 2
+# descending array, type -1: smallest value >= lookup
+INPUT D1 40
+INPUT D2 30
+INPUT D3 20
+INPUT D4 10
+INPUT B6 =MATCH(25, D1:D4, -1)
+CHECKNUM B6 2

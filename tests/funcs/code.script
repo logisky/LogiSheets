@@ -1,0 +1,5 @@
+INPUT A1 =CODE("A")
+CHECKNUM A1 65
+# uses the first character
+INPUT A2 =CODE("abc")
+CHECKNUM A2 97

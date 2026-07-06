@@ -1,0 +1,5 @@
+INPUT A1 =INT(5.9)
+CHECKNUM A1 5
+# rounds DOWN (toward -infinity)
+INPUT A2 =INT(-2.5)
+CHECKNUM A2 -3

@@ -9,6 +9,99 @@
         }
     },
     "functions": {
+        "address": {
+            "description": "根据行号和列号，以文本形式创建单元格引用。"
+        },
+        "offset": {
+            "description": "返回从指定引用偏移给定行数和列数的新引用，并可指定其大小。"
+        },
+        "textjoin": {
+            "description": "使用分隔符连接多个区域或字符串中的文本，可选择忽略空值。"
+        },
+        "find": {
+            "description": "返回一个文本字符串在另一个文本字符串中的起始位置（区分大小写）。"
+        },
+        "substitute": {
+            "description": "在文本字符串中用新文本替换旧文本；可选择只替换第几次出现。"
+        },
+        "replace": {
+            "description": "根据指定的字符数，用另一文本字符串替换文本字符串中的一部分。"
+        },
+        "concat": {
+            "description": "将多个值或区域中的文本连接成一个字符串。"
+        },
+        "proper": {
+            "description": "将文本中每个单词的首字母大写，其余字母小写。"
+        },
+        "char": {
+            "description": "返回由代码数字（1-255）指定的字符。"
+        },
+        "code": {
+            "description": "返回文本字符串中第一个字符的数字代码。"
+        },
+        "value": {
+            "description": "将表示数字的文本字符串转换为数字。"
+        },
+        "xor": {
+            "description": "当为 TRUE 的参数个数为奇数时返回 TRUE。"
+        },
+        "iseven": {
+            "description": "如果数字为偶数则返回 TRUE。"
+        },
+        "isodd": {
+            "description": "如果数字为奇数则返回 TRUE。"
+        },
+        "max": {
+            "description": "返回一组数值中的最大值。"
+        },
+        "min": {
+            "description": "返回一组数值中的最小值。"
+        },
+        "product": {
+            "description": "将所有以参数形式给出的数字相乘并返回乘积。"
+        },
+        "median": {
+            "description": "返回一组数字的中位数（中间值）。"
+        },
+        "counta": {
+            "description": "计算区域中非空单元格的个数。"
+        },
+        "mod": {
+            "description": "返回两数相除的余数，结果的符号与除数相同。"
+        },
+        "int": {
+            "description": "将数字向下舍入到最接近的整数。"
+        },
+        "trunc": {
+            "description": "去除数字的小数部分（或保留指定位数），将其截尾取整。"
+        },
+        "power": {
+            "description": "返回某数的乘幂结果。"
+        },
+        "log": {
+            "description": "返回以指定底数（默认为 10）的对数。"
+        },
+        "ceiling": {
+            "description": "将数字沿绝对值增大的方向向上舍入到最接近的 significance 的倍数。"
+        },
+        "floor": {
+            "description": "将数字沿绝对值减小的方向向下舍入到最接近的 significance 的倍数。"
+        },
+        "not": {
+            "description": "对参数的逻辑值求反。"
+        },
+        "mid": {
+            "description": "从文本字符串中指定的起始位置返回指定数目的字符。"
+        },
+        "match": {
+            "description": "返回区域中与指定值匹配的项的相对位置。"
+        },
+        "sumproduct": {
+            "description": "将各数组中对应的元素相乘，并返回乘积之和。"
+        },
+        "search": {
+            "description": "返回一个文本字符串在另一个文本字符串中的起始位置（不区分大小写）。"
+        },
         "switch": {
             "description": "根据值列表计算表达式并返回第一个与第一个匹配值对应的结果。如果没有匹配项，则返回可选默认值。"
         },

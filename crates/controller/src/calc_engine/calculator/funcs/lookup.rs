@@ -173,3 +173,102 @@ fn match_text(pattern: &str, values: &[Value], approximatly: bool) -> Option<usi
     }
     return None;
 }
+
+/// MATCH(lookup_value, lookup_array, [match_type]) — 1-based position of
+/// `lookup_value` in the (1-D) `lookup_array`. match_type 1 (default) finds the
+/// largest value <= lookup (array sorted ascending), 0 finds an exact match
+/// (case-insensitive, wildcards allowed for text), -1 finds the smallest value
+/// >= lookup (array sorted descending). #N/A when nothing matches.
+pub fn calc_match<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    assert_or_return!(args.len() >= 2 && args.len() <= 3, ast::Error::Unspecified);
+    let mut args_iter = args.into_iter();
+    let first = fetcher.get_calc_value(args_iter.next().unwrap());
+    let lookup = match first {
+        CalcValue::Scalar(v) => v,
+        _ => return CalcVertex::from_error(ast::Error::Value),
+    };
+    let second = fetcher.get_calc_value(args_iter.next().unwrap());
+    assert_range_from_calc_value!(arr, second);
+    let match_type = if let Some(a) = args_iter.next() {
+        let v = fetcher.get_calc_value(a);
+        assert_f64_from_calc_value!(mt, v);
+        mt.trunc() as i64
+    } else {
+        1
+    };
+
+    let values: Vec<Value> = arr.into_iter().collect();
+    let idx = if match_type == 0 {
+        match_exact_position(&lookup, &values)
+    } else if match_type > 0 {
+        // Largest value <= lookup (ascending); on ties the later one wins.
+        match_ordered_position(&lookup, &values, true)
+    } else {
+        // Smallest value >= lookup (descending); on ties the later one wins.
+        match_ordered_position(&lookup, &values, false)
+    };
+    match idx {
+        Some(i) => CalcVertex::from_number((i + 1) as f64),
+        None => CalcVertex::from_error(ast::Error::Na),
+    }
+}
+
+fn match_exact_position(lookup: &Value, values: &[Value]) -> Option<usize> {
+    match lookup {
+        Value::Number(n) => values
+            .iter()
+            .position(|v| matches!(v, Value::Number(m) if m == n)),
+        Value::Boolean(b) => values
+            .iter()
+            .position(|v| matches!(v, Value::Boolean(x) if x == b)),
+        Value::Text(p) => {
+            let pl = p.to_lowercase();
+            values.iter().position(|v| match v {
+                Value::Text(s) => match_text_pattern(&pl, &s.to_lowercase()),
+                _ => false,
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Shared ordered scan for match types 1 and -1. `le` selects the largest value
+/// <= lookup; otherwise the smallest value >= lookup. Ties keep the later index.
+fn match_ordered_position(lookup: &Value, values: &[Value], le: bool) -> Option<usize> {
+    match lookup {
+        Value::Number(target) => {
+            let mut best: Option<(f64, usize)> = None;
+            for (i, v) in values.iter().enumerate() {
+                if let Value::Number(n) = v {
+                    let ok = if le { *n <= *target } else { *n >= *target };
+                    let better = best.map_or(true, |(b, _)| if le { *n >= b } else { *n <= b });
+                    if ok && better {
+                        best = Some((*n, i));
+                    }
+                }
+            }
+            best.map(|(_, i)| i)
+        }
+        Value::Text(target) => {
+            let t = target.to_lowercase();
+            let mut best: Option<(String, usize)> = None;
+            for (i, v) in values.iter().enumerate() {
+                if let Value::Text(s) = v {
+                    let sl = s.to_lowercase();
+                    let ok = if le { sl <= t } else { sl >= t };
+                    let better = best
+                        .as_ref()
+                        .map_or(true, |(b, _)| if le { sl >= *b } else { sl <= *b });
+                    if ok && better {
+                        best = Some((sl, i));
+                    }
+                }
+            }
+            best.map(|(_, i)| i)
+        }
+        _ => None,
+    }
+}

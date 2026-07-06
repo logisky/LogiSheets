@@ -13,6 +13,48 @@ where
     CalcVertex::from_number(cnt as f64)
 }
 
+/// COUNTA(...) — count every value that is not empty (numbers, text, booleans
+/// and even errors all count; only blank cells / empty scalars don't).
+pub fn calc_counta<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    let cnt = args
+        .into_iter()
+        .map(|arg| fetcher.get_calc_value(arg))
+        .fold(0_u32, |i, e| i + counta_calc_value(e));
+    CalcVertex::from_number(cnt as f64)
+}
+
+fn counta_calc_value(value: CalcValue) -> u32 {
+    match value {
+        CalcValue::Scalar(s) => match s {
+            Value::Blank => 0,
+            _ => 1,
+        },
+        CalcValue::Range(r) => {
+            r.into_iter().fold(
+                0_u32,
+                |s, e| {
+                    if matches!(e, Value::Blank) { s } else { s + 1 }
+                },
+            )
+        }
+        CalcValue::Cube(c) => {
+            c.into_iter().fold(
+                0_u32,
+                |s, e| {
+                    if matches!(e, Value::Blank) { s } else { s + 1 }
+                },
+            )
+        }
+        CalcValue::Union(values) => values
+            .into_iter()
+            .map(|v| counta_calc_value(*v))
+            .fold(0_u32, |prev, this| prev + this),
+    }
+}
+
 fn count_calc_value(value: CalcValue) -> u16 {
     match value {
         CalcValue::Scalar(s) => match s {

@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use logisheets_base::{
-    Addr, BlockId, CellId, ColId, CubeId, RangeId, RowId, SheetId, errors::BasicError,
+    Addr, BlockId, BlockRange, CellId, ColId, CubeId, NormalRange, Range, RangeId, RowId, SheetId,
+    errors::BasicError,
 };
 
 use crate::{
@@ -294,6 +295,23 @@ impl<'a> Executor<'a> {
             col_removed,
             header_updated,
         } = self;
+
+        // Volatile cells (RAND / NOW / OFFSET / … that called
+        // `set_curr_as_dirty` on their previous run) were parked in
+        // `dirty_cells_next_round`. Fold them into this run's dirty set so they
+        // recalculate, then clear the carry-over — it's repopulated below with
+        // whatever marks itself volatile during this run.
+        let mut dirty_vertices = dirty_vertices;
+        for (sheet_id, cell_id) in std::mem::take(&mut status.dirty_cells_next_round) {
+            let range = match cell_id {
+                CellId::NormalCell(c) => Range::Normal(NormalRange::Single(c)),
+                CellId::BlockCell(b) => Range::Block(BlockRange::Single(b)),
+                CellId::EphemeralCell(e) => Range::Ephemeral(e),
+            };
+            let range_id = status.range_manager.get_range_id(&sheet_id, &range);
+            dirty_vertices.insert(Vertex::Range(sheet_id, range_id));
+        }
+
         let connector = CalcConnector {
             range_manager: &status.range_manager,
             cube_manager: &status.cube_manager,
@@ -324,6 +342,10 @@ impl<'a> Executor<'a> {
         engine.start();
 
         updated_cells.extend(calc_cells);
+        // Carry cells that marked themselves volatile this run into the next
+        // one so they recalculate again (the loop that makes RAND/NOW/OFFSET
+        // recalc on every transaction).
+        status.dirty_cells_next_round = dirty_cells_in_next_run.into_iter().collect();
         Ok(Executor {
             status,
             sid_assigner,

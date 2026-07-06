@@ -238,6 +238,38 @@ where
     calc(args, fetcher, |a| a.ln())
 }
 
+/// INT(number) — round DOWN to the nearest integer (toward -infinity), so
+/// INT(-2.5) is -3.
+pub fn calc_int<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc(args, fetcher, |a| a.floor())
+}
+
+/// LOG(number, [base]) — logarithm of `number` in the given base (default 10).
+/// `number` must be > 0 and `base` a valid logarithm base (> 0 and != 1),
+/// otherwise #NUM!.
+pub fn calc_log<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    assert_or_return!(args.len() == 1 || args.len() == 2, ast::Error::Unspecified);
+    let mut args_iter = args.into_iter();
+    let first = fetcher.get_calc_value(args_iter.next().unwrap());
+    assert_f64_from_calc_value!(number, first);
+    let base = if let Some(arg) = args_iter.next() {
+        let v = fetcher.get_calc_value(arg);
+        assert_f64_from_calc_value!(b, v);
+        b
+    } else {
+        10.
+    };
+    assert_or_return!(number > 0., ast::Error::Num);
+    assert_or_return!(base > 0. && base != 1., ast::Error::Num);
+    CalcVertex::from_number(number.ln() / base.ln())
+}
+
 pub fn calc_log10<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,

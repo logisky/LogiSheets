@@ -1,0 +1,13 @@
+INPUT A1 Hello
+INPUT A2 World
+INPUT B1 =CONCAT(A1," ",A2)
+CHECKSTR B1 Hello World
+# ranges are flattened in order
+INPUT C1 a
+INPUT C2 b
+INPUT C3 c
+INPUT B2 =CONCAT(C1:C3)
+CHECKSTR B2 abc
+# numbers become text
+INPUT B3 =CONCAT("x",1,2)
+CHECKSTR B3 x12

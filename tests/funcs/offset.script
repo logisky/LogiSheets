@@ -1,0 +1,24 @@
+INPUT A1 1
+INPUT A2 2
+INPUT A3 3
+INPUT B1 10
+INPUT B2 20
+INPUT B3 30
+# single-cell offsets
+INPUT C1 =OFFSET(A1,2,0)
+CHECKNUM C1 3
+INPUT C2 =OFFSET(A1,0,1)
+CHECKNUM C2 10
+# resized to a range, then summed
+INPUT C3 =SUM(OFFSET(A1,0,0,3,1))
+CHECKNUM C3 6
+INPUT C5 =SUM(OFFSET(A1,0,0,3,2))
+CHECKNUM C5 66
+# moving off the sheet -> #REF!
+INPUT C4 =OFFSET(A1,-1,0)
+CHECKERR C4 #REF!
+
+# OFFSET is volatile: changing the TARGET cell (not a static arg) still
+# recalculates the result on the next run.
+INPUT A3 99
+CHECKNUM C1 99

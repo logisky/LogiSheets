@@ -84,6 +84,42 @@ where
     calc(args, fetcher, &f)
 }
 
+pub fn calc_iseven<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc(args, fetcher, &|v| parity(v))
+}
+
+pub fn calc_isodd<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc(args, fetcher, &|v| parity(v).map(|even| !even))
+}
+
+/// Whether a value's (truncated) integer part is even. Numbers/blank/bools
+/// coerce; text is #VALUE! and errors propagate — matching ISEVEN/ISODD.
+fn parity(v: &CalcValue) -> Result<bool, ast::Error> {
+    let n = match v {
+        CalcValue::Scalar(s) => match s {
+            Value::Number(n) => *n,
+            Value::Blank => 0.,
+            Value::Boolean(b) => {
+                if *b {
+                    1.
+                } else {
+                    0.
+                }
+            }
+            Value::Text(_) => return Err(ast::Error::Value),
+            Value::Error(e) => return Err(e.clone()),
+        },
+        _ => return Err(ast::Error::Value),
+    };
+    Ok((n.trunc() as i64) % 2 == 0)
+}
+
 fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, f: &F) -> CalcVertex
 where
     C: Connector,

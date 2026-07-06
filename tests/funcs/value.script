@@ -1,0 +1,10 @@
+INPUT A1 =VALUE("123")
+CHECKNUM A1 123
+INPUT A2 =VALUE("  3.14 ")
+CHECKNUM A2 3.14
+# a trailing percent divides by 100
+INPUT A3 =VALUE("50%")
+CHECKNUM A3 0.5
+# non-numeric text -> #VALUE!
+INPUT A4 =VALUE("abc")
+CHECKERR A4 #VALUE!

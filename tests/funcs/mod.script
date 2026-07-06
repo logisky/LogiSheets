@@ -1,0 +1,10 @@
+INPUT A1 =MOD(7,3)
+CHECKNUM A1 1
+# result takes the sign of the divisor
+INPUT A2 =MOD(-3,2)
+CHECKNUM A2 1
+INPUT A3 =MOD(3,-2)
+CHECKNUM A3 -1
+# zero divisor
+INPUT A4 =MOD(5,0)
+CHECKERR A4 #DIV/0!

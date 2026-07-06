@@ -1,0 +1,1 @@
+{"name":"COUNTA","description":"functions.counta.description","argCount":{"ge":1},"args":[{"argName":"value","startRepeated":true}]}

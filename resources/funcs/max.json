@@ -1,0 +1,1 @@
+{"name":"MAX","description":"functions.max.description","argCount":{"ge":1},"args":[{"argName":"number","startRepeated":true}]}

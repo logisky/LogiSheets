@@ -1,0 +1,1 @@
+{"name":"MID","description":"functions.mid.description","argCount":{"eq":3},"args":[{"argName":"text"},{"argName":"start_num"},{"argName":"num_chars"}]}

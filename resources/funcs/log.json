@@ -1,0 +1,1 @@
+{"name":"LOG","description":"functions.log.description","argCount":{"ge":1,"le":2},"args":[{"argName":"number"},{"argName":"base"}]}

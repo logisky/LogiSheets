@@ -1,0 +1,12 @@
+INPUT A1 a
+INPUT A2 b
+INPUT A4 d
+# A3 is blank; ignore_empty=TRUE skips it (no double delimiter)
+INPUT B1 =TEXTJOIN("-",TRUE,A1:A4)
+CHECKSTR B1 a-b-d
+# ignore_empty=FALSE keeps the gap
+INPUT B2 =TEXTJOIN("-",FALSE,A1:A4)
+CHECKSTR B2 a-b--d
+# literal args
+INPUT B3 =TEXTJOIN(",",TRUE,"x","y","z")
+CHECKSTR B3 x,y,z

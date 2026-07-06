@@ -1,0 +1,1 @@
+{"name":"TEXTJOIN","description":"functions.textjoin.description","argCount":{"ge":3},"args":[{"argName":"delimiter"},{"argName":"ignore_empty"},{"argName":"text","startRepeated":true}]}
