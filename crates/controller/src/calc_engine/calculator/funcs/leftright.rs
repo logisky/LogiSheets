@@ -7,9 +7,9 @@ pub fn calc_left<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    let func = |s: String, n: u8| -> String {
+    let func = |s: String, n: usize| -> String {
         s.graphemes(true)
-            .take(n as usize)
+            .take(n)
             .fold(String::from(""), |mut prev, g| {
                 prev.push_str(g);
                 prev
@@ -22,16 +22,13 @@ pub fn calc_right<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    let func = |s: String, n: u8| -> String {
+    let func = |s: String, n: usize| -> String {
         let graphemes = s.graphemes(true);
-        graphemes
-            .rev()
-            .take(n as usize)
-            .fold(String::from(""), |prev, g| {
-                let mut curr = g.to_string();
-                curr = curr + prev.as_str();
-                curr
-            })
+        graphemes.rev().take(n).fold(String::from(""), |prev, g| {
+            let mut curr = g.to_string();
+            curr = curr + prev.as_str();
+            curr
+        })
     };
     calc(args, fetcher, func)
 }
@@ -39,7 +36,7 @@ where
 fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex
 where
     C: Connector,
-    F: Fn(String, u8) -> String,
+    F: Fn(String, usize) -> String,
 {
     assert_or_return!(args.len() == 2, ast::Error::Unspecified);
     let mut args_iter = args.into_iter();
@@ -47,6 +44,9 @@ where
     assert_text_from_calc_value!(s, first);
     let second = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(n, second);
-    let res = func(s, n as u8);
+    // Negative num_chars is #VALUE!; otherwise take that many graphemes
+    // (capping past the string length is handled by `take`).
+    assert_or_return!(n >= 0., ast::Error::Value);
+    let res = func(s, n.trunc() as usize);
     CalcVertex::from_string(res)
 }

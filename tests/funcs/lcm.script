@@ -1,0 +1,23 @@
+INPUT A1 =LCM(4,6)
+CHECKNUM A1 12
+
+INPUT A2 =LCM(3,5)
+CHECKNUM A2 15
+
+# LCM with 0 is 0
+INPUT A3 =LCM(0,5)
+CHECKNUM A3 0
+
+# negative argument -> #NUM!
+INPUT A4 =LCM(-3,5)
+CHECKERR A4 #NUM!
+
+# LCM(0,0) is 0 (no divide-by-zero)
+INPUT A5 =LCM(0,0)
+CHECKNUM A5 0
+
+# values beyond u32 range are handled (64-bit)
+INPUT B1 2000000000
+INPUT B2 3000000000
+INPUT A6 =LCM(B1,B2)
+CHECKNUM A6 6000000000

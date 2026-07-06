@@ -9,3 +9,17 @@ CHECKNUM A3 1.4
 
 INPUT A4 =MROUND(5, -2)
 CHECKERR A4 #NUM!
+
+# zero number returns zero
+INPUT A5 =MROUND(0, 5)
+CHECKNUM A5 0
+
+# rounds to nearest multiple
+INPUT A6 =MROUND(7, 5)
+CHECKNUM A6 5
+
+INPUT A7 =MROUND(8, 5)
+CHECKNUM A7 10
+
+INPUT A8 =MROUND(11, 3)
+CHECKNUM A8 12

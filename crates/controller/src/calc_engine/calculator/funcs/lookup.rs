@@ -135,21 +135,22 @@ fn match_exact_value(pattern: &Value, values: &[Value]) -> Option<usize> {
 }
 
 fn match_num(num: f64, values: &[Value], approximatly: bool) -> Option<usize> {
-    let mut result_n = num;
+    // Approximate match (the default): the largest value <= `num`, matching
+    // Excel's behavior on an ascending-sorted first column. Track the best
+    // candidate seen so far, starting below every possible value so the first
+    // qualifying entry is always taken.
+    let mut result_n = f64::NEG_INFINITY;
     let mut result_idx = None;
     for (i, v) in values.iter().enumerate() {
-        match v {
-            Value::Number(n) => {
-                if approximatly {
-                    if *n < num && *n > result_n {
-                        result_idx = Some(i);
-                        result_n = *n;
-                    }
-                } else if num == *n {
-                    return Some(i);
+        if let Value::Number(n) = v {
+            if approximatly {
+                if *n <= num && *n > result_n {
+                    result_idx = Some(i);
+                    result_n = *n;
                 }
+            } else if num == *n {
+                return Some(i);
             }
-            _ => {}
         }
     }
     result_idx

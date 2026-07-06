@@ -1,2 +1,14 @@
 INPUT   E4  =EVEN(5)
 CHECKNUM E4 6
+
+# already even stays; rounds away from zero to next even
+INPUT E5 =EVEN(2)
+CHECKNUM E5 2
+INPUT E6 =EVEN(3)
+CHECKNUM E6 4
+INPUT E7 =EVEN(1.5)
+CHECKNUM E7 2
+INPUT E8 =EVEN(-1)
+CHECKNUM E8 -2
+INPUT E9 =EVEN(0)
+CHECKNUM E9 0

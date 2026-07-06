@@ -24,3 +24,17 @@ CHECKSTR E2 Bolts
 
 INPUT E3 =CHOOSE(3,"Wide",115,"world",8)
 CHECKSTR E3 world
+
+# index is truncated toward zero
+INPUT E4 =CHOOSE(2.9,10,20,30)
+CHECKNUM E4 20
+
+# index beyond the value list -> #VALUE!
+INPUT E5 =CHOOSE(4,10,20,30)
+CHECKERR E5 #VALUE!
+
+# index < 1 -> #VALUE!
+INPUT E6 =CHOOSE(0,10,20,30)
+CHECKERR E6 #VALUE!
+INPUT E7 =CHOOSE(-1,10,20,30)
+CHECKERR E7 #VALUE!

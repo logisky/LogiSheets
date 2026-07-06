@@ -46,7 +46,7 @@ export const FormulaEditReminder = observer(function FormulaEditReminder() {
             }}
         >
             <span style={{whiteSpace: 'nowrap'}}>
-                正在为 <b>{snap.cellRef}</b> 输入公式
+                Editing formula for <b>{snap.cellRef}</b>
             </span>
             <code
                 style={{
@@ -71,7 +71,7 @@ export const FormulaEditReminder = observer(function FormulaEditReminder() {
                 onClick={() => formulaEditCoordinator.commitActive()}
                 style={btnStyle('#2e7d32')}
             >
-                确认 (Enter)
+                Confirm (Enter)
             </button>
             <button
                 type="button"
@@ -79,7 +79,7 @@ export const FormulaEditReminder = observer(function FormulaEditReminder() {
                 onClick={() => formulaEditCoordinator.cancelActive()}
                 style={btnStyle('#b0680f')}
             >
-                取消 (Esc)
+                Cancel (Esc)
             </button>
         </div>
     )

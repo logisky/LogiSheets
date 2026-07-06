@@ -14,6 +14,9 @@ where
     let first = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(idx, first);
 
+    // Index < 1 is #VALUE! in Excel; guard before the usize subtraction below
+    // so a zero/negative index can't underflow and panic.
+    assert_or_return!(idx >= 1., ast::Error::Value);
     let idx = idx.trunc() as usize;
     let v = args_iter.skip(idx - 1).next();
     assert_or_return!(v.is_some(), ast::Error::Value);

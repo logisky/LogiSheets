@@ -1,4 +1,4 @@
-pub fn multi_gcd(nums: &[u32]) -> u32 {
+pub fn multi_gcd(nums: &[u64]) -> u64 {
     if nums.len() == 0 {
         return 0;
     }
@@ -6,7 +6,7 @@ pub fn multi_gcd(nums: &[u32]) -> u32 {
     nums.iter().fold(first, |prev, this| gcd(prev, *this))
 }
 
-pub fn gcd(n1: u32, n2: u32) -> u32 {
+pub fn gcd(n1: u64, n2: u64) -> u64 {
     let (mut a, mut b) = if n1 > n2 { (n1, n2) } else { (n2, n1) };
     while b != 0 {
         let r = a % b;

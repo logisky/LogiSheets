@@ -1,2 +1,9 @@
 INPUT S5    =SQRT(5)
 CHECKNUM    S5  2.236067977
+
+INPUT S1 =SQRT(0)
+CHECKNUM S1 0
+
+# negative argument -> #NUM!
+INPUT S2 =SQRT(-1)
+CHECKERR S2 #NUM!

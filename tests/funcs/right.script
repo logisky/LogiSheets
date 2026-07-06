@@ -1,2 +1,10 @@
 INPUT   R14 =RIGHT("abdcdhrtfjh",2)
 CHECKSTR    R14 jh
+
+# more chars than the string returns the whole string
+INPUT R1 =RIGHT("abc",10)
+CHECKSTR R1 abc
+
+# negative chars -> #VALUE!
+INPUT R2 =RIGHT("abc",-1)
+CHECKERR R2 #VALUE!
