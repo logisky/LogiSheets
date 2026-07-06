@@ -837,7 +837,10 @@ export function createFormulaEditor(
     }
 
     return {
-        focus: () => view?.focus(),
+        // preventScroll: the in-cell editor may be parked off-screen while a
+        // cross-sheet formula reference is being picked; refocusing it to keep
+        // Enter working must not scroll the page to it.
+        focus: () => view?.contentDOM.focus({preventScroll: true}),
         blur: () => view?.contentDOM.blur(),
         getValue: () => view?.state.doc.toString() ?? '',
         setValue: (newValue: string) => {

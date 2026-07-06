@@ -11,6 +11,7 @@ import {
 import {ViewOverlayLayer} from './view-overlay-layer'
 import {InlineCellEditor} from './inline-cell-editor'
 import {ActiveViewBadge} from './active-view-badge'
+import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
 
 /**
  * A self-contained, independent view of the shared workbook.
@@ -78,7 +79,9 @@ export const SpreadsheetView = observer(function SpreadsheetView({
         s.mount(containerRef.current, {
             showSheetTabs: false,
             showScrollbars: true,
-            getIsEditingFormula: () => editingRef.current(),
+            getIsEditingFormula: () =>
+                editingRef.current() ||
+                formulaEditCoordinator.isFormulaEditing(),
         })
         return () => {
             s.off('activeSheetChange', onActiveSheet)
@@ -149,12 +152,17 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                     <InlineCellEditor
                         eventSource={session}
                         grid={grid}
+                        viewId={viewId}
                         sheetIdx={activeSheet}
                         sheetName={dataSvc.getSheetNameByIdx(activeSheet)}
                         dataSvc={dataSvc}
                         containerRef={containerRef}
                         editingRef={editingRef}
                         onSelectionChange={setSelectedData}
+                        setViewSheet={(idx) => {
+                            setActiveSheet(idx)
+                            sessionRef.current?.setCurrentSheetIndex(idx)
+                        }}
                     />
                 )}
                 <ViewOverlayLayer

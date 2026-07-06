@@ -33,6 +33,8 @@ export interface FormulaWorkbook {
 export interface EngineFormulaServices {
     getWorkbook(): FormulaWorkbook
     checkFormula(formula: string): Promise<boolean>
+    /** Sheet name for a given index — used to build cross-sheet references. */
+    getSheetNameByIdx(idx: number): string
 }
 
 export interface EngineFormulaSourceOptions {

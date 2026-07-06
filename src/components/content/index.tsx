@@ -9,6 +9,7 @@ import {CellLayout, SelectedData} from 'logisheets-engine'
 import {useDiffLayer} from '@/components/diff-layer'
 import {SpreadsheetView} from '@/components/spreadsheet-view'
 import {ActiveViewBadge} from '@/components/spreadsheet-view/active-view-badge'
+import {FormulaEditReminder} from '@/components/formula-edit-reminder'
 import {globalStore} from '@/store'
 // import {DiffLayerTestPanel} from '@/components/diff-layer/DiffLayerTestPanel'
 
@@ -62,7 +63,8 @@ export const ContentComponent = observer(function ContentComponent({
         />
     )
     return (
-        <div className={styles.host}>
+        <div className={styles.host} style={{position: 'relative'}}>
+            <FormulaEditReminder />
             <EditBarComponent
                 selectedData={selectedData}
                 selectedData$={selectedData$}

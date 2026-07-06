@@ -31,6 +31,7 @@ import {
     isCellInGridWindow,
     getReferenceHighlightRects,
     getReferenceString,
+    qualifyReference,
     buildSelectedDataFromCell,
 } from 'logisheets-engine'
 import type {
@@ -39,6 +40,43 @@ import type {
     Session,
     FormulaCellRef,
 } from 'logisheets-engine'
+
+/**
+ * A single in-progress formula edit, registered with a {@link FormulaCoordinator}
+ * so OTHER views can feed it references (Excel "point mode" across sheets/views).
+ */
+export interface FormulaEditEntry {
+    /** Stable id of the view that owns this edit. */
+    readonly viewId: string
+    /** Sheet index the cell being edited lives on. */
+    getEditSheetIdx(): number
+    /** Display reference of the edited cell, e.g. "Sheet1!B2". */
+    getCellRef(): string
+    /** Current (live) formula text. */
+    getText(): string
+    /** Insert a reference for a selection made in `sourceSheetIdx`. */
+    insertExternalRef(sourceSheetIdx: number, data: SelectedData): void
+    /** Refocus the editor (e.g. after a sheet tab grabbed focus) so Enter
+     *  keeps committing. */
+    focus(): void
+    /** Commit / cancel the edit (for the cross-sheet reminder's buttons). */
+    commit(): void
+    cancel(): void
+}
+
+/**
+ * App-provided coordinator that tracks the one active formula edit across all
+ * views, so any view's cell click routes a reference to it instead of
+ * committing, and sheet tabs / other canvases know not to steal focus.
+ */
+export interface FormulaCoordinator {
+    setActive(entry: FormulaEditEntry): void
+    clear(entry: FormulaEditEntry): void
+    getActive(): FormulaEditEntry | null
+    isFormulaEditing(): boolean
+    /** Notify that the active entry's live text changed (for the reminder). */
+    notifyChange?(entry: FormulaEditEntry): void
+}
 
 export interface InlineCellEditorOptions {
     /** Element the editor + highlight overlays mount into (the view's canvas
@@ -49,8 +87,10 @@ export interface InlineCellEditorOptions {
     eventSource: Pick<Session, 'on' | 'off'>
     /** Engine data service — `getWorkbook()` + `checkFormula()`. */
     dataService: EngineFormulaServices
-    /** This view's sheet index. */
-    sheetIdx: number
+    /** Stable id of the view that owns this editor (cross-view routing). */
+    viewId: string
+    /** This view's CURRENT sheet index (read fresh; changes as tabs switch). */
+    getViewSheetIdx: () => number
     /** Current sheet name (read fresh; used for local cell-ref coloring). */
     getSheetName: () => string
     /** Commit a cell value (the host's input/ops layer). The return value is
@@ -63,6 +103,11 @@ export interface InlineCellEditorOptions {
     ) => unknown
     /** Move the view's selection (e.g. after committing). */
     setSelection: (data: SelectedData) => void
+    /** Switch the view to a sheet — used to return to the edited cell's sheet
+     *  after committing a formula built from another sheet. */
+    setViewSheet?: (sheetIdx: number) => void
+    /** Cross-view formula-edit coordinator (Excel point mode across views). */
+    coordinator?: FormulaCoordinator
     /** Initial grid; keep updated via {@link InlineCellEditorHandle.setGrid}. */
     grid?: Grid | null
     /** Header panel offsets (engine config leftTopWidth/Height). Default 32/24. */
@@ -94,6 +139,9 @@ export interface InlineCellEditorHandle {
 
 interface EditCtx {
     sheetName: string
+    /** Sheet the edited cell lives on (captured at edit start; independent of
+     *  the view's current sheet, which may change while editing a formula). */
+    sheetIdx: number
     row: number
     col: number
     position: {x: number; y: number; width: number; height: number}
@@ -108,10 +156,13 @@ export function createInlineCellEditor(
         container,
         eventSource,
         dataService,
-        sheetIdx,
+        viewId,
+        getViewSheetIdx,
         getSheetName,
         inputCell,
         setSelection,
+        setViewSheet,
+        coordinator,
         origin = {x: 32, y: 24},
         canEdit = () => true,
         formulaFunctions = builtinFormulaFunctions,
@@ -131,6 +182,9 @@ export function createInlineCellEditor(
     let inserting = false
     let editorText = ''
     let lastRef = ''
+    // Whether this editor is currently registered with the coordinator as the
+    // active formula edit (true only while in formula "point" mode).
+    let registered = false
 
     let wrapperEl: HTMLDivElement | null = null
     const highlightEls: HTMLDivElement[] = []
@@ -192,6 +246,9 @@ export function createInlineCellEditor(
         // insertion sets `inserting` first so this doesn't clear it.
         if (!inserting) prevInsertion = null
         inserting = false
+        // Entering/leaving formula mode (toggling the leading `=`) flips
+        // coordinator registration; also pushes live text to the reminder.
+        updateFormulaRegistration()
     }
 
     function insertReference(ref: string) {
@@ -210,6 +267,63 @@ export function createInlineCellEditor(
         prevInsertion = {text: ref, startPos: prevInsertion?.startPos ?? cursorPos}
     }
 
+    /**
+     * Turn a selection made in `sourceSheetIdx` into a reference and insert it,
+     * qualifying with the sheet name when it differs from the edited cell's
+     * sheet (e.g. `Sheet2!A1`). Dedupes and replaces the previous insertion so
+     * clicking around swaps a single ref rather than appending.
+     */
+    function applySelectionAsRef(sourceSheetIdx: number, data: SelectedData) {
+        if (!ctx) return
+        const body = getReferenceString(data)
+        if (!body) return
+        const ref =
+            sourceSheetIdx === ctx.sheetIdx
+                ? body
+                : qualifyReference(
+                      body,
+                      dataService.getSheetNameByIdx(sourceSheetIdx)
+                  )
+        if (ref === lastRef) return
+        lastRef = ref
+        insertReference(ref)
+    }
+
+    // Identity handed to the coordinator so other views can feed refs to this
+    // edit and the reminder can read its live target/text.
+    const coordinatorEntry: FormulaEditEntry = {
+        viewId,
+        getEditSheetIdx: () => ctx?.sheetIdx ?? -1,
+        getCellRef: () => {
+            if (!ctx) return ''
+            const body = getReferenceString(
+                buildSelectedDataFromCell(ctx.row, ctx.col, 'none')
+            )
+            return qualifyReference(body, ctx.sheetName)
+        },
+        getText: () => editorText,
+        insertExternalRef: (srcIdx, data) => applySelectionAsRef(srcIdx, data),
+        focus: () => editorHandle?.focus(),
+        commit: () => commitEdit(editorText, true),
+        cancel: () => cancelEdit(),
+    }
+
+    /**
+     * Register / unregister with the coordinator as formula "point" mode
+     * toggles (text starts with `=`), and push live text while active.
+     */
+    function updateFormulaRegistration() {
+        const nowFormula = isEditingFormula()
+        if (nowFormula && !registered) {
+            registered = true
+            coordinator?.setActive(coordinatorEntry)
+        } else if (!nowFormula && registered) {
+            registered = false
+            coordinator?.clear(coordinatorEntry)
+        }
+        if (registered) coordinator?.notifyChange?.(coordinatorEntry)
+    }
+
     function teardownEditor() {
         editorHandle?.destroy()
         editorHandle = null
@@ -218,6 +332,10 @@ export function createInlineCellEditor(
     }
 
     function finishEditing() {
+        if (registered) {
+            registered = false
+            coordinator?.clear(coordinatorEntry)
+        }
         editing = false
         ctx = null
         cellRefs = []
@@ -237,7 +355,8 @@ export function createInlineCellEditor(
         cursorPosition: 'start' | 'end' = 'end'
     ) {
         if (!grid) return
-        if (!canEdit(sheetIdx, row, col, grid)) return
+        const editSheetIdx = getViewSheetIdx()
+        if (!canEdit(editSheetIdx, row, col, grid)) return
         if (editing) finishEditing()
 
         const position = getCellRect(grid, row, col, {
@@ -247,7 +366,7 @@ export function createInlineCellEditor(
             defaultHeight: 25,
         })
         editorText = initialText
-        ctx = {sheetName: getSheetName(), row, col, position}
+        ctx = {sheetName: getSheetName(), sheetIdx: editSheetIdx, row, col, position}
         editing = true
         onEditingChange?.(true)
 
@@ -282,14 +401,25 @@ export function createInlineCellEditor(
             },
             style: {width: '100%', boxSizing: 'border-box'},
             onChange: handleChange,
-            onBlur: (v) => commitEdit(v, false),
+            // While picking references for a formula (point mode), losing focus
+            // — clicking a sheet tab, another view, the reminder — must NOT
+            // commit (Excel behavior); only Enter / the reminder button do.
+            // Plain-text edits still commit on blur.
+            onBlur: (v) => {
+                if (!isEditingFormula()) commitEdit(v, false)
+            },
             onSubmit: (v) => commitEdit(v, true),
             onCancel: cancelEdit,
         })
+
+        // The initial text may already be a formula (user typed `=` to start),
+        // so register point mode immediately.
+        updateFormulaRegistration()
     }
 
     async function commitEdit(value: string, restoreSelection = true) {
         if (!ctx) return
+        const {row, col, sheetIdx: editSheetIdx} = ctx
         const newText = value.trim()
         if (newText.startsWith('=')) {
             const valid = await source.checkFormula(newText)
@@ -298,9 +428,11 @@ export function createInlineCellEditor(
                 return
             }
         }
-        const {row, col} = ctx
-        await inputCell(sheetIdx, row, col, newText)
+        await inputCell(editSheetIdx, row, col, newText)
         if (restoreSelection) {
+            // If the user built the formula from another sheet, return to the
+            // edited cell's sheet before selecting it (Excel behavior).
+            if (getViewSheetIdx() !== editSheetIdx) setViewSheet?.(editSheetIdx)
             setSelection(buildSelectedDataFromCell(row, col, 'none'))
         }
         finishEditing()
@@ -327,13 +459,23 @@ export function createInlineCellEditor(
     }
 
     const onSelectionChange = (data: SelectedData) => {
+        // This view owns the active formula edit: insert the ref, qualifying by
+        // this view's CURRENT sheet (which may differ from the edited cell's).
         if (isEditingFormula()) {
-            const newRef = getReferenceString(data)
-            if (newRef && newRef !== lastRef) {
-                lastRef = newRef
-                insertReference(newRef)
-            }
+            applySelectionAsRef(getViewSheetIdx(), data)
             return
+        }
+        // Another view owns an active formula edit and this view has nothing of
+        // its own open: feed it the ref (cross-session point mode) while still
+        // moving this view's own selection for visual feedback. Don't commit.
+        if (!editing) {
+            const active = coordinator?.getActive()
+            if (active && active !== coordinatorEntry) {
+                active.insertExternalRef(getViewSheetIdx(), data)
+                setSelection(data)
+                onContentChanged?.()
+                return
+            }
         }
         if (editing && ctx && data.data?.ty === 'cellRange') {
             const {startRow, startCol} = data.data.d
@@ -355,7 +497,14 @@ export function createInlineCellEditor(
         setGrid(next: Grid | null) {
             grid = next
             if (editing && ctx && grid) {
-                if (!isCellInGridWindow(grid, ctx.row, ctx.col)) {
+                // Park the in-cell editor off-screen when the view is showing a
+                // different sheet than the edited cell (its coordinates might
+                // coincide with a real cell there) — the reminder is the cue —
+                // or when the cell has scrolled out of the window.
+                if (
+                    getViewSheetIdx() !== ctx.sheetIdx ||
+                    !isCellInGridWindow(grid, ctx.row, ctx.col)
+                ) {
                     ctx.position.x = -9999
                     ctx.position.y = -9999
                 } else {

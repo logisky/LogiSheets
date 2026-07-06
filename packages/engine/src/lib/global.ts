@@ -89,6 +89,8 @@ export {
   buildSelectedDataFromCellRange,
   buildSelectedDataFromLines,
   getReferenceString,
+  quoteSheetName,
+  qualifyReference,
   getCellRect,
   isCellInGridWindow,
   getReferenceHighlightRects,

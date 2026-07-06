@@ -1,0 +1,91 @@
+.findBar {
+  position: absolute;
+  top: 12px;
+  right: 24px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #e6e8eb;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  width: 320px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid #cfd4d9;
+  border-radius: 4px;
+  outline: none;
+
+  &:focus {
+    border-color: #4c8bf5;
+  }
+
+  &.inputError {
+    border-color: #e5484d;
+  }
+}
+
+.count {
+  min-width: 64px;
+  text-align: right;
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #374151;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #f1f3f5;
+  }
+
+  &:disabled {
+    color: #b7bcc2;
+    cursor: default;
+  }
+}
+
+.options {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #374151;
+  flex-wrap: wrap;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.error {
+  font-size: 11px;
+  color: #e5484d;
+}

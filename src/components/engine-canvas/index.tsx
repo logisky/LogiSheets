@@ -9,6 +9,9 @@
 import {FC, useRef, useEffect, useState, useCallback} from 'react'
 import {useEngine} from '@/core/engine/provider'
 import type {Grid, SelectedData, CellLayout} from 'logisheets-engine'
+import {buildSelectedDataFromCell, getSelectedCellRange} from 'logisheets-engine'
+import {FindOverlay} from '@/components/find-dialog'
+import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
 import {ViewOverlayLayer} from '@/components/spreadsheet-view/view-overlay-layer'
 import {InlineCellEditor} from '@/components/spreadsheet-view/inline-cell-editor'
 import {DiffLayer} from '@/components/diff-layer'
@@ -57,6 +60,25 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
     setSelectionRef.current = selectedData$
     const getActiveSheet = useCallback(() => activeSheetRef.current, [])
     const setSelection = useCallback((d: SelectedData) => setSelectionRef.current(d), [])
+
+    // Find overlay (Ctrl/⌘+F). The engine emits `find`; we own the UI.
+    const [findOpen, setFindOpen] = useState(false)
+    const selectedDataRef = useRef(selectedData)
+    selectedDataRef.current = selectedData
+    useEffect(() => {
+        const openFind = () => setFindOpen(true)
+        engine.on('find', openFind)
+        return () => engine.off('find', openFind)
+    }, [engine])
+    const getActiveCell = useCallback(() => {
+        const r = getSelectedCellRange(selectedDataRef.current)
+        return r ? {row: r.startRow, col: r.startCol} : null
+    }, [])
+    const navigateToCell = useCallback(
+        (row: number, col: number) =>
+            setSelectionRef.current(buildSelectedDataFromCell(row, col, 'none')),
+        []
+    )
     // The engine renders no menu — it emits `contextMenu`; the host menu below
     // subscribes here.
     const subscribeContextMenu = useCallback(
@@ -74,7 +96,10 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             showSheetTabs: false, // We use our own SheetsTabComponent
             showScrollbars: true,
             cellLayouts,
-            getIsEditingFormula: () => editingRef.current(),
+            // Don't steal focus while THIS view is editing, or while ANY view
+            // has an open formula edit (so clicking cells here points into it).
+            getIsEditingFormula: () =>
+                editingRef.current() || formulaEditCoordinator.isFormulaEditing(),
         })
         mountedRef.current = true
         return () => {
@@ -140,12 +165,14 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             <InlineCellEditor
                 eventSource={engine}
                 grid={grid}
+                viewId="main"
                 sheetIdx={activeSheet}
                 sheetName={dataSvc.getSheetNameByIdx(activeSheet)}
                 dataSvc={dataSvc}
                 containerRef={containerRef}
                 editingRef={editingRef}
                 onSelectionChange={selectedData$}
+                setViewSheet={activeSheet$}
                 onContentChanged={() => selectedDataContentChanged$({})}
             />
             {/* Block + craft overlays (clip to this view) */}
@@ -160,6 +187,14 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                 dataSvc={dataSvc}
                 getActiveSheet={getActiveSheet}
                 setSelection={setSelection}
+            />
+            <FindOverlay
+                open={findOpen}
+                onClose={() => setFindOpen(false)}
+                engine={engine}
+                sheetIdx={activeSheet}
+                getActiveCell={getActiveCell}
+                onNavigate={navigateToCell}
             />
         </div>
     )

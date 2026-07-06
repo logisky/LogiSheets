@@ -516,6 +516,32 @@ export function getReferenceString(v: SelectedData): string {
   return "";
 }
 
+/**
+ * Quote a sheet name for use in an A1 reference, following Excel's rules: a
+ * plain identifier (letter/underscore start, then letters/digits/underscore/
+ * dot) that does NOT look like a cell reference is left unquoted; anything
+ * else is wrapped in single quotes with embedded quotes doubled.
+ *   "Sheet2"    -> Sheet2
+ *   "My Sheet"  -> 'My Sheet'
+ *   "A1"        -> 'A1'   (looks like a cell ref, must be quoted)
+ *   "a'b"       -> 'a''b'
+ */
+export function quoteSheetName(name: string): string {
+  const isSimple = /^[A-Za-z_][A-Za-z0-9_.]*$/.test(name);
+  const looksLikeCellRef = /^[A-Za-z]{1,3}[0-9]+$/.test(name);
+  const looksLikeR1C1 = /^[Rr][0-9]*[Cc][0-9]*$/.test(name);
+  if (isSimple && !looksLikeCellRef && !looksLikeR1C1) return name;
+  return `'${name.replace(/'/g, "''")}'`;
+}
+
+/**
+ * Prefix a reference body (e.g. "A1" or "A1:B2") with a sheet qualifier:
+ *   qualifyReference("A1", "My Sheet") -> "'My Sheet'!A1"
+ */
+export function qualifyReference(body: string, sheetName: string): string {
+  return `${quoteSheetName(sheetName)}!${body}`;
+}
+
 // ============================================================================
 // Unit Conversions
 // ============================================================================
