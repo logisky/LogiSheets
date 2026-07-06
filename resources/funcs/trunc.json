@@ -1,0 +1,1 @@
+{"name":"TRUNC","description":"functions.trunc.description","argCount":{"ge":1,"le":2},"args":[{"argName":"number"},{"argName":"num_digits"}]}

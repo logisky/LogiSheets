@@ -9,6 +9,99 @@
         }
     },
     "functions": {
+        "address": {
+            "description": "Creates a cell reference as text, given the row and column numbers."
+        },
+        "offset": {
+            "description": "Returns a reference offset from a starting reference by a number of rows and columns, optionally resized."
+        },
+        "textjoin": {
+            "description": "Joins text from multiple ranges or strings using a delimiter, optionally ignoring empty values."
+        },
+        "find": {
+            "description": "Returns the position of one text string within another (case-sensitive)."
+        },
+        "substitute": {
+            "description": "Replaces occurrences of old text with new text in a string; optionally only the nth occurrence."
+        },
+        "replace": {
+            "description": "Replaces part of a text string, based on the number of characters you specify, with another string."
+        },
+        "concat": {
+            "description": "Joins the text from multiple values or ranges into a single string."
+        },
+        "proper": {
+            "description": "Capitalizes the first letter of each word in a text string and lowercases the rest."
+        },
+        "char": {
+            "description": "Returns the character specified by a code number (1-255)."
+        },
+        "code": {
+            "description": "Returns the numeric code of the first character in a text string."
+        },
+        "value": {
+            "description": "Converts a text string that represents a number into a number."
+        },
+        "xor": {
+            "description": "Returns TRUE when an odd number of arguments are TRUE."
+        },
+        "iseven": {
+            "description": "Returns TRUE if the number is even."
+        },
+        "isodd": {
+            "description": "Returns TRUE if the number is odd."
+        },
+        "max": {
+            "description": "Returns the largest value in a set of numbers."
+        },
+        "min": {
+            "description": "Returns the smallest value in a set of numbers."
+        },
+        "product": {
+            "description": "Multiplies all the numbers given as arguments and returns the product."
+        },
+        "median": {
+            "description": "Returns the median (the middle value) of the given numbers."
+        },
+        "counta": {
+            "description": "Counts the number of cells that are not empty."
+        },
+        "mod": {
+            "description": "Returns the remainder after a number is divided by a divisor; the result has the same sign as the divisor."
+        },
+        "int": {
+            "description": "Rounds a number down to the nearest integer."
+        },
+        "trunc": {
+            "description": "Truncates a number to an integer by removing the fractional part, or to a given number of digits."
+        },
+        "power": {
+            "description": "Returns the result of a number raised to a power."
+        },
+        "log": {
+            "description": "Returns the logarithm of a number to the base you specify (default 10)."
+        },
+        "ceiling": {
+            "description": "Rounds a number up, away from zero, to the nearest multiple of significance."
+        },
+        "floor": {
+            "description": "Rounds a number down, toward zero, to the nearest multiple of significance."
+        },
+        "not": {
+            "description": "Reverses the logical value of its argument."
+        },
+        "mid": {
+            "description": "Returns a specific number of characters from a text string, starting at the position you specify."
+        },
+        "match": {
+            "description": "Returns the relative position of an item in a range that matches a specified value."
+        },
+        "sumproduct": {
+            "description": "Multiplies corresponding components in the given arrays and returns the sum of those products."
+        },
+        "search": {
+            "description": "Returns the position of one text string within another (case-insensitive)."
+        },
         "sum": {
             "description": "Adds all the numbers in a range of cells."
         },

@@ -1,0 +1,1 @@
+{"name":"SUMPRODUCT","description":"functions.sumproduct.description","argCount":{"ge":1},"args":[{"argName":"array","startRepeated":true}]}

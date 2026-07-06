@@ -1,0 +1,1 @@
+{"name":"MIN","description":"functions.min.description","argCount":{"ge":1},"args":[{"argName":"number","startRepeated":true}]}

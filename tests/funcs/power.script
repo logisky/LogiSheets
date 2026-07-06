@@ -1,0 +1,9 @@
+INPUT A1 =POWER(2,10)
+CHECKNUM A1 1024
+INPUT A2 =POWER(2,-1)
+CHECKNUM A2 0.5
+INPUT A3 =POWER(9,0.5)
+CHECKNUM A3 3
+# negative base with a fractional exponent -> #NUM!
+INPUT A4 =POWER(-8,0.5)
+CHECKERR A4 #NUM!

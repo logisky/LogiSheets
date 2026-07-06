@@ -1,0 +1,1 @@
+{"name":"SUBSTITUTE","description":"functions.substitute.description","argCount":{"ge":3,"le":4},"args":[{"argName":"text"},{"argName":"old_text"},{"argName":"new_text"},{"argName":"instance_num"}]}

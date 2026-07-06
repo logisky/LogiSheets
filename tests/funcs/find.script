@@ -1,0 +1,10 @@
+INPUT A1 =FIND("c","abcdef")
+CHECKNUM A1 3
+# case-SENSITIVE: uppercase C is not found
+INPUT A2 =FIND("C","abcdef")
+CHECKERR A2 #VALUE!
+INPUT A3 =FIND("cd","abcdef")
+CHECKNUM A3 3
+# start_num skips earlier matches
+INPUT A4 =FIND("a","abcabc",2)
+CHECKNUM A4 4

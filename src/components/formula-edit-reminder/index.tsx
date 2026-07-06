@@ -26,6 +26,7 @@ export const FormulaEditReminder = observer(function FormulaEditReminder() {
 
     return (
         <div
+            data-testid="formula-edit-reminder"
             style={{
                 position: 'absolute',
                 top: 8,

@@ -371,6 +371,8 @@ export function createInlineCellEditor(
         onEditingChange?.(true)
 
         wrapperEl = document.createElement('div')
+        // Stable hook for hosts/tests to find the open in-cell editor.
+        wrapperEl.className = 'logisheets-inline-cell-editor'
         // Explicit, opaque box so the in-cell editor clearly stands out over
         // the grid (white fill, defined border + shadow, above everything).
         wrapperEl.style.cssText =

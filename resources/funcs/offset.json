@@ -1,0 +1,1 @@
+{"name":"OFFSET","description":"functions.offset.description","argCount":{"ge":3,"le":5},"args":[{"argName":"reference"},{"argName":"rows"},{"argName":"cols"},{"argName":"height"},{"argName":"width"}]}

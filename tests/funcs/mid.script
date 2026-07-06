@@ -1,0 +1,11 @@
+INPUT A1 =MID("abcdef", 2, 3)
+CHECKSTR A1 bcd
+# more chars than remain returns to the end
+INPUT A2 =MID("abcdef", 4, 10)
+CHECKSTR A2 def
+# start_num < 1 -> #VALUE!
+INPUT A3 =MID("abc", 0, 2)
+CHECKERR A3 #VALUE!
+# negative num_chars -> #VALUE!
+INPUT A4 =MID("abc", 2, -1)
+CHECKERR A4 #VALUE!

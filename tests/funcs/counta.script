@@ -1,0 +1,9 @@
+INPUT A1 5
+INPUT A2 hello
+INPUT A4 world
+# A3 is left blank
+INPUT B1 =COUNTA(A1:A4)
+CHECKNUM B1 3
+# COUNT only counts numbers
+INPUT B2 =COUNT(A1:A4)
+CHECKNUM B2 1

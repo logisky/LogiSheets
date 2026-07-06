@@ -1,5 +1,7 @@
 #[macro_use]
 mod macros;
+mod address;
+mod aggregate;
 mod and;
 mod asyncs;
 mod average;
@@ -38,14 +40,17 @@ mod leftright;
 mod len;
 mod lookup;
 mod mode;
+mod modulo;
 mod na;
 mod norm_s_dist;
 mod npv;
+mod offset;
 mod or;
 mod pduration;
 mod permutation;
 mod pi;
 mod pmt;
+mod power;
 mod quotient;
 mod rand;
 mod rank;
@@ -55,13 +60,17 @@ mod round;
 mod row;
 mod scalar_number;
 mod scalar_text;
+mod search;
 mod sln;
 mod sum;
 mod sumif;
+mod sumproduct;
 mod switch;
 mod tbill;
+mod text;
 mod utils;
 mod vlookup;
+mod xor;
 
 use logisheets_parser::ast;
 
@@ -76,11 +85,13 @@ where
         return asyncs::calc(name, args, fetcher);
     }
     match name.to_uppercase().as_str() {
+        "#CRITBINOM" => distribution::binom::calc_inv(args, fetcher),
         "ABS" => scalar_number::calc_abs(args, fetcher),
         "ACCRINT" => bonds::accrint::calc_accrint(args, fetcher),
         "ACCRINTM" => bonds::accrint::calc_accrintm(args, fetcher),
         "ACOS" => scalar_number::calc_acos(args, fetcher),
         "ACOSH" => scalar_number::calc_acosh(args, fetcher),
+        "ADDRESS" => address::calc(args, fetcher),
         "AND" => and::calc(args, fetcher),
         "ASIN" => scalar_number::calc_asin(args, fetcher),
         "ASINH" => scalar_number::calc_asinh(args, fetcher),
@@ -100,30 +111,29 @@ where
         "BITOR" => bits::bit::calc_bitor(args, fetcher),
         "BITRSHIFT" => bits::bit::calc_bitrshift(args, fetcher),
         "BITXOR" => bits::bit::calc_bitxor(args, fetcher),
-        // BLOCKREF / BLOCKREFS / BLOCKREFB / BLOCKREFSB are now compiled to
-        // `PureNode::BlockRef` at parse time and dispatched directly from
-        // `calculator::calc_node`. The strings only show up here if a user
-        // managed to register a function literally named one of these — in
-        // which case we fall through to the generic UNRECOGNIZED branch.
+        "CEILING" => round::calc_ceiling(args, fetcher),
+        "CHAR" => text::calc_char(args, fetcher),
         "CHISQ.DIST" => distribution::chisqdist::calc_chisqdist(args, fetcher),
         "CHISQ.DIST.RT" => distribution::chisqdist::calc_chisqdist_rt(args, fetcher),
         "CHOOSE" => choose::calc(args, fetcher),
+        "CODE" => text::calc_code(args, fetcher),
         "COLUMN" => row::calc_column(args, fetcher),
         "COLUMNS" => row::calc_columns(args, fetcher),
         "COMBIN" => permutation::calc_combine(args, fetcher),
         "COMPLEX" => complex::calc(args, fetcher),
+        "CONCAT" => text::calc_concat(args, fetcher),
         "CONCATENATE" => concatenate::calc(args, fetcher),
         "COS" => scalar_number::calc_cos(args, fetcher),
         "COT" => scalar_number::calc_cot(args, fetcher),
         "COTH" => scalar_number::calc_coth(args, fetcher),
         "COUNT" => count::calc(args, fetcher),
+        "COUNTA" => count::calc_counta(args, fetcher),
         "COUNTBLANK" => countblank::calc(args, fetcher),
         "COUNTIF" => countif::calc(args, fetcher),
         "COUNTIFS" => sumif::calc_countifs(args, fetcher),
         "COUPNCD" => bonds::coupncd::calc(args, fetcher),
         "COUPNUM" => bonds::coupnum::calc(args, fetcher),
         "COUPPCD" => bonds::couppcd::calc(args, fetcher),
-        "#CRITBINOM" => distribution::binom::calc_inv(args, fetcher),
         "CSC" => scalar_number::calc_csc(args, fetcher),
         "CUMIPMT" => cumipmt::cumipmt(args, fetcher),
         "DATE" => datetime::date::calc(args, fetcher),
@@ -144,10 +154,12 @@ where
         "EXPON.DIST" => distribution::exp::calc(args, fetcher),
         "EXPONDIST" => distribution::exp::calc(args, fetcher),
         "F.DIST" => distribution::fisher::calc(args, fetcher),
-        "FDIST" => distribution::fisher::calc(args, fetcher),
         "FACT" => fact::calc(args, fetcher),
         "FACTDOUBLE" => scalar_number::calc_factdouble(args, fetcher),
         "FALSE" => boolean::calc_false(args),
+        "FDIST" => distribution::fisher::calc(args, fetcher),
+        "FIND" => search::calc_find(args, fetcher),
+        "FLOOR" => round::calc_floor(args, fetcher),
         "FV" => fvpv::fv(args, fetcher),
         "GAMMA" => scalar_number::calc_gamma(args, fetcher),
         "GAMMA.DIST" => distribution::gammadist::calc_gammadist(args, fetcher),
@@ -186,16 +198,19 @@ where
         "IMTANH" => im::calc_imtanh(args, fetcher),
         "INDEX" => index::calc(args, fetcher),
         "INDIRECT" => indirect::calc(args, fetcher),
+        "INT" => scalar_number::calc_int(args, fetcher),
         "INTRATE" => bonds::intrate::calc(args, fetcher),
         "IPMT" => pmt::ipmt(args, fetcher),
         "IRR" => irr::calc(args, fetcher),
         "ISBLANK" => is::calc_isblank(args, fetcher),
         "ISERR" => iserr::calc(args, fetcher, iserr::IsErrType::ExceptNa),
         "ISERROR" => iserr::calc(args, fetcher, iserr::IsErrType::All),
+        "ISEVEN" => is::calc_iseven(args, fetcher),
         "ISLOGICAL" => is::calc_islogical(args, fetcher),
         "ISNA" => iserr::calc(args, fetcher, iserr::IsErrType::Na),
         "ISNONTEXT" => is::calc_isnontext(args, fetcher),
         "ISNUMBER" => is::calc_isnumber(args, fetcher),
+        "ISODD" => is::calc_isodd(args, fetcher),
         "ISTEXT" => is::calc_istext(args, fetcher),
         "LARGE" => large::calc_large(args, fetcher),
         "LCM" => gcdlcm::calc_lcm(args, fetcher),
@@ -203,11 +218,18 @@ where
         "LEN" => len::calc_len(args, fetcher),
         "LENB" => len::calc_lenb(args, fetcher),
         "LN" => scalar_number::calc_ln(args, fetcher),
+        "LOG" => scalar_number::calc_log(args, fetcher),
         "LOG10" => scalar_number::calc_log10(args, fetcher),
         "LOWER" => scalar_text::calc_lower(args, fetcher),
+        "MATCH" => lookup::calc_match(args, fetcher),
+        "MAX" => aggregate::calc_max(args, fetcher),
         "MAXIFS" => sumif::calc_maxifs(args, fetcher),
+        "MEDIAN" => aggregate::calc_median(args, fetcher),
+        "MID" => leftright::calc_mid(args, fetcher),
+        "MIN" => aggregate::calc_min(args, fetcher),
         "MINIFS" => sumif::calc_minifs(args, fetcher),
         "MINUTE" => datetime::hms::calc_minute(args, fetcher),
+        "MOD" => modulo::calc(args, fetcher),
         "MODE" => mode::calc(args, fetcher),
         "MODE.SNGL" => mode::calc(args, fetcher),
         "MONTH" => datetime::ymd::calc_month(args, fetcher),
@@ -223,12 +245,14 @@ where
         "NORMINV" => distribution::norminv::calc_norminv(args, fetcher),
         "NORMSDIST" => scalar_number::calc_normsdist(args, fetcher),
         "NORMSINV" => distribution::norminv::calc_normsinv(args, fetcher),
+        "NOT" => boolean::calc_not(args, fetcher),
         "NOW" => datetime::now::calc(args, fetcher),
         "NPV" => npv::calc(args, fetcher),
         "OCT2BIN" => bits::hob2hob::calc_oct2bin(args, fetcher),
         "OCT2DEC" => bits::hob2dec::calc_oct2dec(args, fetcher),
         "OCT2HEX" => bits::hob2hob::calc_oct2hex(args, fetcher),
         "ODD" => scalar_number::calc_odd(args, fetcher),
+        "OFFSET" => offset::calc(args, fetcher),
         "OR" => or::calc(args, fetcher),
         "PDURATION" => pduration::pduration(args, fetcher),
         "PERMUT" => permutation::calc_permut(args, fetcher),
@@ -236,10 +260,13 @@ where
         "PMT" => pmt::pmt(args, fetcher),
         "POISSON" => distribution::poisson::calc(args, fetcher),
         "POISSON.DIST" => distribution::poisson::calc(args, fetcher),
+        "POWER" => power::calc(args, fetcher),
         "PPMT" => pmt::ppmt(args, fetcher),
         "PRICE" => bonds::price::calc(args, fetcher),
         "PRICEDISC" => bonds::pricedisc::calc(args, fetcher),
         "PRICEMAT" => bonds::pricemat::calc(args, fetcher),
+        "PRODUCT" => aggregate::calc_product(args, fetcher),
+        "PROPER" => scalar_text::calc_proper(args, fetcher),
         "PV" => fvpv::pv(args, fetcher),
         "QUOTIENT" => quotient::calc(args, fetcher),
         "RADIANS" => scalar_number::calc_radians(args, fetcher),
@@ -252,14 +279,16 @@ where
         "REGEXEXTRACT" => regex_funcs::calc_regexextract(args, fetcher),
         "REGEXREPLACE" => regex_funcs::calc_regexreplace(args, fetcher),
         "REGEXTEST" => regex_funcs::calc_regextest(args, fetcher),
+        "REPLACE" => text::calc_replace(args, fetcher),
         "REPT" => rept::calc(args, fetcher),
         "RIGHT" => leftright::calc_right(args, fetcher),
         "ROUND" => round::calc_round(args, fetcher),
-        "ROUNDUP" => round::calc_roundup(args, fetcher),
         "ROUNDDOWN" => round::calc_rounddown(args, fetcher),
+        "ROUNDUP" => round::calc_roundup(args, fetcher),
         "ROW" => row::calc_row(args, fetcher),
         "ROWS" => row::calc_rows(args, fetcher),
         "RRI" => pduration::rri(args, fetcher),
+        "SEARCH" => search::calc_search(args, fetcher),
         "SECOND" => datetime::hms::calc_second(args, fetcher),
         "SIGN" => scalar_number::calc_sign(args, fetcher),
         "SIN" => scalar_number::calc_sin(args, fetcher),
@@ -271,6 +300,8 @@ where
         "SUM" => sum::calc(args, fetcher),
         "SUMIF" => sumif::calc_sumif(args, fetcher),
         "SUMIFS" => sumif::calc_sumifs(args, fetcher),
+        "SUMPRODUCT" => sumproduct::calc(args, fetcher),
+        "SUBSTITUTE" => text::calc_substitute(args, fetcher),
         "SUMSQ" => sum::calc_sumsq(args, fetcher),
         "SWITCH" => switch::calc(args, fetcher),
         "SYD" => sln::syd(args, fetcher),
@@ -279,20 +310,29 @@ where
         "TBILLEQ" => tbill::calc_tbilleq(args, fetcher),
         "TBILLPRICE" => tbill::calc_tbillprice(args, fetcher),
         "TBILLYIELD" => tbill::calc_tbillyield(args, fetcher),
+        "TEXTJOIN" => text::calc_textjoin(args, fetcher),
         "TIME" => datetime::time::calc(args, fetcher),
         "TODAY" => datetime::today::calc(args),
         "TRIM" => scalar_text::calc_trim(args, fetcher),
         "TRUE" => boolean::calc_true(args),
+        "TRUNC" => round::calc_trunc(args, fetcher),
         "UPPER" => scalar_text::calc_upper(args, fetcher),
+        "VALUE" => text::calc_value(args, fetcher),
         "VAR" => distribution::statistics::calc_var(args, fetcher),
         "VAR.S" => distribution::statistics::calc_var(args, fetcher),
         "VLOOKUP" => lookup::calc_vlookup(args, fetcher),
         "WEEKDAY" => datetime::weekday::calc(args, fetcher),
         "WEIBULL" => distribution::weibull::calc(args, fetcher),
         "WEIBULL.DIST" => distribution::weibull::calc(args, fetcher),
+        "XOR" => xor::calc(args, fetcher),
         "YEAR" => datetime::ymd::calc_year(args, fetcher),
         "YIELDDISC" => bonds::yielddisc::calc(args, fetcher),
         "YIELDMAT" => bonds::yieldmat::calc(args, fetcher),
+        // BLOCKREF / BLOCKREFS / BLOCKREFB / BLOCKREFSB are now compiled to
+        // `PureNode::BlockRef` at parse time and dispatched directly from
+        // `calculator::calc_node`. The strings only show up here if a user
+        // managed to register a function literally named one of these — in
+        // which case we fall through to the generic UNRECOGNIZED branch.
         _ => CalcVertex::from_error(ast::Error::Name),
     }
 }

@@ -1,0 +1,1 @@
+{"name":"FLOOR","description":"functions.floor.description","argCount":{"eq":2},"args":[{"argName":"number"},{"argName":"significance"}]}

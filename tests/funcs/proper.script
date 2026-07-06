@@ -1,0 +1,5 @@
+INPUT A1 =PROPER("hello world")
+CHECKSTR A1 Hello World
+# letters after non-letters start a new word
+INPUT A2 =PROPER("JOHN o'brien")
+CHECKSTR A2 John O'Brien

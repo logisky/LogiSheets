@@ -1,0 +1,1 @@
+{"name":"MATCH","description":"functions.match.description","argCount":{"ge":2,"le":3},"args":[{"argName":"lookup_value"},{"argName":"lookup_array"},{"argName":"match_type"}]}

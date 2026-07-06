@@ -1,0 +1,14 @@
+INPUT A1 =SEARCH("c", "abcdef")
+CHECKNUM A1 3
+# case-insensitive
+INPUT A2 =SEARCH("C", "abcdef")
+CHECKNUM A2 3
+# start_num skips earlier matches
+INPUT A3 =SEARCH("a", "abcabc", 2)
+CHECKNUM A3 4
+# multi-char needle
+INPUT A4 =SEARCH("de", "abcdef")
+CHECKNUM A4 4
+# not found -> #VALUE!
+INPUT A5 =SEARCH("z", "abc")
+CHECKERR A5 #VALUE!

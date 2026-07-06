@@ -1,0 +1,1 @@
+{"name":"REPLACE","description":"functions.replace.description","argCount":{"eq":4},"args":[{"argName":"old_text"},{"argName":"start_num"},{"argName":"num_chars"},{"argName":"new_text"}]}

@@ -1,0 +1,1 @@
+{"name":"CEILING","description":"functions.ceiling.description","argCount":{"eq":2},"args":[{"argName":"number"},{"argName":"significance"}]}

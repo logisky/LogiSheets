@@ -1,0 +1,8 @@
+INPUT A1 =SUBSTITUTE("a-b-c","-","+")
+CHECKSTR A1 a+b+c
+# only the Nth occurrence
+INPUT A2 =SUBSTITUTE("a-b-c","-","+",2)
+CHECKSTR A2 a-b+c
+# empty old_text leaves the text unchanged
+INPUT A3 =SUBSTITUTE("abc","","x")
+CHECKSTR A3 abc
