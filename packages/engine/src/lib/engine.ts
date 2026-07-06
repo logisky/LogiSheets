@@ -61,6 +61,7 @@ const SESSION_EVENT_TYPES: readonly SessionEventType[] = [
   "activeSheetChange",
   "startEdit",
   "invalidFormula",
+  "find",
   "contextMenu",
   "error",
 ];

@@ -21,14 +21,12 @@ where
                         0.
                     }
                 }
-                CalcValue::Range(r) => {
-                    r.into_iter()
-                        .fold(0., |prev, v| if is_blank(v) { prev + 1. } else { prev })
-                }
-                CalcValue::Cube(c) => {
-                    c.into_iter()
-                        .fold(0., |prev, v| if is_blank(v) { prev + 1. } else { prev })
-                }
+                CalcValue::Range(r) => r
+                    .into_iter()
+                    .fold(0., |prev, v| if is_blank(v) { prev + 1. } else { prev }),
+                CalcValue::Cube(c) => c
+                    .into_iter()
+                    .fold(0., |prev, v| if is_blank(v) { prev + 1. } else { prev }),
                 CalcValue::Union(_) => unreachable!(),
             };
             CalcVertex::from_number(num)

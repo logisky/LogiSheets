@@ -89,11 +89,7 @@ impl BorderManager {
         }
 
         let new_id = self.get_id(&border);
-        if new_id != id {
-            Some(new_id)
-        } else {
-            None
-        }
+        if new_id != id { Some(new_id) } else { None }
     }
 }
 

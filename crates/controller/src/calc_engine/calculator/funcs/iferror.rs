@@ -1,8 +1,8 @@
 use crate::calc_engine::calculator::calc_vertex::CalcValue;
 use crate::calc_engine::connector::Connector;
 
-use super::utils::{is_error, is_na_error};
 use super::CalcVertex;
+use super::utils::{is_error, is_na_error};
 use logisheets_parser::ast;
 
 fn calc<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, f: &F) -> CalcVertex

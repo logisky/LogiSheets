@@ -1,5 +1,5 @@
 use super::condition::{
-    get_condition_value, match_condition, parse_condition, Condition, LogicalCondition, Op,
+    Condition, LogicalCondition, Op, get_condition_value, match_condition, parse_condition,
 };
 use crate::calc_engine::connector::Connector;
 use logisheets_parser::ast;
@@ -50,9 +50,5 @@ fn count_if_calc_value(cond: &Condition, value: CalcValue) -> u32 {
 }
 
 fn count_if_value(condition: &Condition, v: &Value) -> u32 {
-    if match_condition(condition, v) {
-        1
-    } else {
-        0
-    }
+    if match_condition(condition, v) { 1 } else { 0 }
 }

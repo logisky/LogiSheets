@@ -206,11 +206,7 @@ where
         let pos = n >= 0.;
         let c = n.abs().ceil() as u32;
         let u_c = if c % 2 == 0 { c + 1 } else { c };
-        if pos {
-            u_c as f64
-        } else {
-            -(u_c as f64)
-        }
+        if pos { u_c as f64 } else { -(u_c as f64) }
     };
     calc(args, fetcher, func)
 }
@@ -223,11 +219,7 @@ where
         let pos = n >= 0.;
         let c = n.abs().ceil() as u32;
         let u_c = if c % 2 == 0 { c } else { c + 1 };
-        if pos {
-            u_c as f64
-        } else {
-            -(u_c as f64)
-        }
+        if pos { u_c as f64 } else { -(u_c as f64) }
     };
     calc(args, fetcher, func)
 }

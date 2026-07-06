@@ -1,8 +1,8 @@
 pub use crate::{
+    Comment, MergeCell, Style, Value,
     controller::display::{ColInfo, RowInfo},
     edit_action::EditAction,
     errors::{Error, ErrorMessage, Result},
-    Comment, MergeCell, Style, Value,
 };
 mod cell_positioner;
 mod fill;

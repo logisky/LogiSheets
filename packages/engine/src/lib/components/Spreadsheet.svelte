@@ -87,6 +87,8 @@ let isDragging = false; // True while user is drag-selecting
         onInvalidFormula?: () => void
         /** Callback for the Save shortcut (Ctrl/⌘+S) — host decides how to persist. */
         onSave?: () => void
+        /** Callback for the Find shortcut (Ctrl/⌘+F) — host opens its find UI. */
+        onFind?: () => void
         /** Ctrl/⌘+Arrow found no data/block boundary ahead — host may show a hint. */
         onNoDataBoundary?: (direction: 'up' | 'down' | 'left' | 'right') => void
         /** External data service (when used via Engine.mount()) */
@@ -111,6 +113,7 @@ let isDragging = false; // True while user is drag-selecting
         onStartEdit,
         onInvalidFormula,
         onSave,
+        onFind,
         onNoDataBoundary,
         dataService: externalDataService = null,
         getIsEditingFormula,
@@ -1212,6 +1215,10 @@ let isDragging = false; // True while user is drag-selecting
         // Persisting is the host's call (file export, server sync, ...); the
         // grid just forwards the intent.
         save: () => onSave?.(),
+        // Find is owned by the host UI (a React overlay). The grid only
+        // forwards the intent; returning a handler makes dispatchShortcut
+        // preventDefault, so the browser's native Ctrl+F is suppressed.
+        find: () => onFind?.(),
     }
 
     /** Begin editing the selected cell, seeding the editor with `initial`. */

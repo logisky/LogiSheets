@@ -1,6 +1,6 @@
 use super::{RangeExecCtx, RangeExecutor, RangeUpdateType};
 use logisheets_base::{
-    errors::BasicError, BlockRange, EphemeralId, NormalRange, Range, RangeId, SheetId,
+    BlockRange, EphemeralId, NormalRange, Range, RangeId, SheetId, errors::BasicError,
 };
 
 pub fn input<C>(

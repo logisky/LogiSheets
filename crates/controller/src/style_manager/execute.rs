@@ -1,7 +1,7 @@
-use super::{errors::StyleError, xf_manager::CtrlXf, RawStyle, StyleManager};
+use super::{RawStyle, StyleManager, errors::StyleError, xf_manager::CtrlXf};
 use crate::{
-    edit_action::{HorizontalAlignment, StyleUpdateType, VerticalAlignment},
     Error,
+    edit_action::{HorizontalAlignment, StyleUpdateType, VerticalAlignment},
 };
 use logisheets_base::StyleId;
 use logisheets_workbook::prelude::{CtCellAlignment, StHorizontalAlignment, StVerticalAlignment};

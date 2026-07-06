@@ -1,12 +1,12 @@
-use logisheets_base::errors::BasicError;
 use logisheets_base::CellId;
+use logisheets_base::errors::BasicError;
 
-use crate::edit_action::EditPayload;
 use crate::Error;
+use crate::edit_action::EditPayload;
 
+use super::ExclusiveManager;
 use super::appendix::Appendix;
 use super::ctx::ExclusiveManagerExecCtx;
-use super::ExclusiveManager;
 
 pub struct ExclusiveManagerExecutor {
     pub manager: ExclusiveManager,
@@ -40,7 +40,7 @@ impl ExclusiveManagerExecutor {
                     _ => {
                         return Err(Error::PayloadError(String::from(
                             "Cannot set diy cell on normal cell",
-                        )))
+                        )));
                     }
                 };
                 Ok((self, true))
@@ -99,7 +99,7 @@ impl ExclusiveManagerExecutor {
                         _ => {
                             return Err(Error::PayloadError(String::from(
                                 "Cannot set diy cell on normal cell",
-                            )))
+                            )));
                         }
                     }
                 }

@@ -155,10 +155,10 @@ pub mod tests_utils {
     use logisheets_base::{BlockCellId, SheetId};
     use logisheets_parser::ast;
 
+    use crate::CellId;
     use crate::calc_engine::calculator::calc_vertex::{CalcValue, CalcVertex};
     use crate::calc_engine::connector::Connector;
     use crate::errors::Result;
-    use crate::CellId;
 
     pub struct TestFetcher {}
     impl AsyncFuncCommitTrait for TestFetcher {

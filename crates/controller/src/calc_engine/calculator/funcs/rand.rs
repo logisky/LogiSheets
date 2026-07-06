@@ -3,7 +3,7 @@ use crate::calc_engine::{
     connector::Connector,
 };
 use logisheets_parser::ast;
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
@@ -14,7 +14,8 @@ where
     let _ = fetcher.set_curr_as_dirty();
 
     let mut rng = thread_rng();
-    CalcVertex::from_number(rng.gen())
+    // `gen` is a reserved keyword in edition 2024; call the method via r#.
+    CalcVertex::from_number(rng.r#gen())
 }
 
 pub fn calc_randbetween<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

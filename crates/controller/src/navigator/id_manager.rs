@@ -1,4 +1,4 @@
-use imbl::{hashset::HashSet, Vector};
+use imbl::{Vector, hashset::HashSet};
 use logisheets_base::{BlockId, ColId, RowId};
 
 #[derive(Clone, Debug)]

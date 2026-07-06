@@ -11,7 +11,7 @@ use logisheets_workbook::prelude::*;
 use sheet::{load_comments, load_persons, load_threaded_comments};
 
 use crate::{
-    controller::{status::Status, Controller},
+    controller::{Controller, status::Status},
     file_loader::{
         external_links::load_external_link,
         sheet::{load_cols, load_merge_cells, load_sheet_data, load_sheet_format_pr},

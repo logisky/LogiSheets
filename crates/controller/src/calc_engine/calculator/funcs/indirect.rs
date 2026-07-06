@@ -3,7 +3,7 @@ use crate::calc_engine::{
     calculator::calc_vertex::{CalcReference, Reference},
     connector::Connector,
 };
-use logisheets_base::{column_label_to_index, Addr};
+use logisheets_base::{Addr, column_label_to_index};
 use logisheets_parser::ast;
 use regex::Regex;
 

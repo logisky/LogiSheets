@@ -1,6 +1,6 @@
 {
     "name": "logisheets-core",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "UI-free LogiSheets logic — runs in the browser or on Node. Depends on logisheets-web only for types; the engine Client is injected by the host.",
     "main": "./dist/index.js",
     "module": "./dist/index.js",

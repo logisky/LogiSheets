@@ -1,0 +1,13 @@
+vite v6.4.3 building for production...
+transforming...
+✓ 385 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/logisheets-engine.css         8.65 kB │ gzip:     1.98 kB
+dist/logisheets-engine.es.js  16,324.60 kB │ gzip: 5,536.22 kB
+Entry module "src/lib/global.ts" is using named and default exports together. Consumers of your bundle will have to use `LogiSheetsEngine.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+dist/logisheets-engine.css          8.65 kB │ gzip:     1.98 kB
+dist/logisheets-engine.umd.js  15,940.47 kB │ gzip: 5,459.84 kB
+✓ built in 7.66s
+1783303265350 START "/Users/jeremyhe/work/logisky/LogiSheets/packages/engine"
+1783303265354 COMPLETED 649 FILES 0 ERRORS 0 WARNINGS 0 FILES_WITH_PROBLEMS

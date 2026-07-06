@@ -1,12 +1,12 @@
 use logisheets_base::{
+    BlockCellId, SheetId, StyleId,
     block_affect::BlockAffectTrait,
     id_fetcher::{IdFetcherTrait, SheetIdFetcherByIdxTrait},
     index_fetcher::IndexFetcherTrait,
-    BlockCellId, SheetId, StyleId,
 };
 
 use crate::style_manager::RawStyle;
-use crate::{edit_action::StyleUpdateType, Error};
+use crate::{Error, edit_action::StyleUpdateType};
 
 pub trait ContainerExecCtx:
     IdFetcherTrait + IndexFetcherTrait + BlockAffectTrait + SheetIdFetcherByIdxTrait

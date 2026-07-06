@@ -1,5 +1,5 @@
 use super::condition::{
-    get_condition_value, match_condition, parse_condition, Condition, LogicalCondition, Op,
+    Condition, LogicalCondition, Op, get_condition_value, match_condition, parse_condition,
 };
 use crate::calc_engine::connector::Connector;
 use itertools::Itertools;
@@ -59,13 +59,7 @@ pub fn calc_maxifs<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    let sum_func = |a: f64, b: f64| -> f64 {
-        if a > b {
-            a
-        } else {
-            b
-        }
-    };
+    let sum_func = |a: f64, b: f64| -> f64 { if a > b { a } else { b } };
     let result = |sum: f64, _: f64| CalcVertex::from_number(sum);
     calc_ifs(args, fetcher, &result, &sum_func)
 }
@@ -74,13 +68,7 @@ pub fn calc_minifs<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    let sum_func = |a: f64, b: f64| -> f64 {
-        if a > b {
-            b
-        } else {
-            a
-        }
-    };
+    let sum_func = |a: f64, b: f64| -> f64 { if a > b { b } else { a } };
     let result = |sum: f64, _: f64| CalcVertex::from_number(sum);
     calc_ifs(args, fetcher, &result, &sum_func)
 }

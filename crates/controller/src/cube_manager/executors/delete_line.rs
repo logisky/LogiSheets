@@ -1,6 +1,6 @@
 use logisheets_base::{Cube, CubeId, SheetId};
 
-use super::{utils::get_lower_upper_bound_of_cross, CubeExecCtx, CubeExecutor, CubeUpdateType};
+use super::{CubeExecCtx, CubeExecutor, CubeUpdateType, utils::get_lower_upper_bound_of_cross};
 
 pub fn delete_line<C>(
     exec_ctx: CubeExecutor,

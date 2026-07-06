@@ -383,7 +383,7 @@ fn get_auto_color(luminance: f64) -> Color {
 
 #[cfg(test)]
 mod tests {
-    use super::{color_to_ct_color, from_hex_str, Color};
+    use super::{Color, color_to_ct_color, from_hex_str};
 
     #[test]
     fn test_from_hex_str() {

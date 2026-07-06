@@ -5,11 +5,11 @@ use crate::{
     block_manager::schema_manager::SchemaManager,
     cell::Cell,
     cell_attachments::{
-        comment::{CommentNote, Mention, PersonInput},
         CellAttachmentsManager,
+        comment::{CommentNote, Mention, PersonInput},
     },
     connectors::FormulaConnector,
-    container::{col_info_manager::ColInfo, row_info_manager::RowInfo, DataContainer},
+    container::{DataContainer, col_info_manager::ColInfo, row_info_manager::RowInfo},
     cube_manager::CubeManager,
     ext_book_manager::ExtBooksManager,
     ext_ref_manager::ExtRefManager,

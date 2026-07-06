@@ -1,16 +1,16 @@
 use logisheets_base::{
-    errors::BasicError, matrix_value::cross_product_usize, BlockCellId, BlockId, CellId, CellValue,
-    NormalCellId, SheetId, TextId,
+    BlockCellId, BlockId, CellId, CellValue, NormalCellId, SheetId, TextId, errors::BasicError,
+    matrix_value::cross_product_usize,
 };
 
 use crate::{
+    Error,
     cell::Cell,
     edit_action::{CellStyleUpdate, EditPayload},
     utils::resize_rect_diff,
-    Error,
 };
 
-use super::{ctx::ContainerExecCtx, DataContainer};
+use super::{DataContainer, ctx::ContainerExecCtx};
 
 pub struct ContainerExecutor {
     pub container: DataContainer,

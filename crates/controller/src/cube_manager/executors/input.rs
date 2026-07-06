@@ -1,6 +1,6 @@
 use logisheets_base::{Cube, CubeCross, CubeId};
 
-use crate::{cube_manager::ctx::CubeExecCtx, SheetId};
+use crate::{SheetId, cube_manager::ctx::CubeExecCtx};
 
 use super::{CubeExecutor, CubeUpdateType};
 

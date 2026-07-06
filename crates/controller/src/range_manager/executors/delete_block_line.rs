@@ -1,9 +1,9 @@
 use logisheets_base::{BlockId, BlockRange, CellId, Range, RangeId};
 
 use super::{NewRange, RangeUpdateType};
-use crate::{range_manager::ctx::RangeExecCtx, SheetId};
+use crate::{SheetId, range_manager::ctx::RangeExecCtx};
 
-use super::{utils::cut_and_get_new_bound, RangeExecutor};
+use super::{RangeExecutor, utils::cut_and_get_new_bound};
 
 pub fn delete_block_line<C>(
     exec_ctx: RangeExecutor,

@@ -9,7 +9,7 @@ use manager::VersionManagerHelper;
 
 use crate::{controller::status::Status, edit_action::PayloadsAction};
 
-use self::diff::{convert_payloads_to_sheet_diff, Diff, SheetDiff};
+use self::diff::{Diff, SheetDiff, convert_payloads_to_sheet_diff};
 
 const HISTORY_SIZE: usize = 50;
 /// VersionManager records the history of a workbook and the payloads. It can help

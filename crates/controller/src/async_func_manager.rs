@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use logisheets_base::{
-    async_func::{AsyncCalcResult, Task},
     CellId,
+    async_func::{AsyncCalcResult, Task},
 };
 
 use crate::SheetId;

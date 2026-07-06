@@ -11,8 +11,8 @@ use std::collections::HashMap;
 
 use crate::{
     block_manager::{
-        field_manager::{persistence::field_renders_to_xml, FieldRenderManager},
-        schema_manager::{persistence::schemas_to_xml, SchemaManager},
+        field_manager::{FieldRenderManager, persistence::field_renders_to_xml},
+        schema_manager::{SchemaManager, persistence::schemas_to_xml},
     },
     cell_attachments::CellAttachmentsManager,
     container::DataContainer,
@@ -29,7 +29,7 @@ use crate::{
     workbook::sheet_info_manager::SheetInfoManager,
 };
 
-use super::{error::SaveError, sst::save_sst, SaverTrait};
+use super::{SaverTrait, error::SaveError, sst::save_sst};
 
 pub fn save_workbook<S: SaverTrait>(
     data_container: &DataContainer,

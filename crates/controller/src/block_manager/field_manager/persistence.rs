@@ -20,8 +20,8 @@ use crate::edit_action::StyleUpdateType;
 use crate::style_manager::StyleManager;
 use logisheets_workbook::logisheets::FieldRenderXml;
 
-use super::info::FieldRenderInfo;
 use super::FieldRenderManager;
+use super::info::FieldRenderInfo;
 
 pub fn field_renders_to_xml(
     manager: &FieldRenderManager,

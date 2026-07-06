@@ -45,11 +45,7 @@ where
         }
         NormalRange::Single(cell) => {
             let (row, col) = context.fetch_normal_cell_index(&sheet_id, cell).unwrap();
-            if horizontal {
-                (row, row)
-            } else {
-                (col, col)
-            }
+            if horizontal { (row, row) } else { (col, col) }
         }
     }
 }

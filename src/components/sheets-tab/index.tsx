@@ -8,6 +8,7 @@ import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import IconButton from '@mui/material/IconButton'
 import {ContextMenuComponent} from './contextmenu'
+import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
 import styles from './sheets-tab.module.scss'
 
 export interface SheetTabProps {
@@ -67,6 +68,13 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
 
     const onTabChange = (_: unknown, idx: number) => {
         activeSheet$(idx)
+        // If a formula is being edited, switching sheets is "point mode": the
+        // editor stays open (it won't commit on blur). The tab button grabbed
+        // focus, so hand it back to the editor once the switch settles, keeping
+        // Enter as confirm while the user picks a cross-sheet reference.
+        if (formulaEditCoordinator.isFormulaEditing()) {
+            setTimeout(() => formulaEditCoordinator.focusActive(), 0)
+        }
     }
 
     const addSheet = () => {

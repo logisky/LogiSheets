@@ -14,8 +14,8 @@ use logisheets_workbook::logisheets::{
     ColSchemaXml, RandomKeyFieldXml, RandomSchemaXml, RowSchemaXml, SchemaFieldXml,
 };
 
-use super::schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema};
 use super::SchemaManager;
+use super::schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema};
 
 /// Pull every schema bound to `sheet_id` out of `manager` and project it
 /// into the three xmlserde-friendly vecs that the workbook's `Sheet` carries.

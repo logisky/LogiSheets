@@ -1,4 +1,4 @@
-use crate::style_manager::{xf_manager::CtrlXf, StyleManager};
+use crate::style_manager::{StyleManager, xf_manager::CtrlXf};
 use logisheets_base::StyleId;
 use logisheets_workbook::prelude::*;
 use std::collections::HashMap;

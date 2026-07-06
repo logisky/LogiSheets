@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use quick_xml::{events::*, Reader};
+use quick_xml::{Reader, events::*};
 
 #[derive(Debug)]
 pub struct Error {}

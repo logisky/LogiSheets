@@ -1,5 +1,5 @@
-use super::rtypes::*;
 use super::SerdeErr;
+use super::rtypes::*;
 use crate::logisheets::LogiSheetsData;
 use crate::ooxml::doc_props::DocPropApp;
 use crate::ooxml::doc_props::DocPropCore;

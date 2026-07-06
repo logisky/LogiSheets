@@ -36,17 +36,18 @@ use logisheets_base::CellId;
 use logisheets_base::SheetId;
 
 pub use controller::{
+    Controller,
     display::{Comment, CommentMentionInfo, CommentNote, CommentPerson, MergeCell, Value},
     style::{Border, BorderPr, Fill, Font, Style},
-    take_last_error, Controller,
+    take_last_error,
 };
 pub use exclusive::{Appendix, AppendixWithCell};
 pub use logisheets_workbook::prelude::SerdeErr;
 
+pub use logisheets_base::BlockId;
 pub use logisheets_base::async_func::AsyncCalcResult;
 pub use logisheets_base::async_func::AsyncErr;
 pub use logisheets_base::async_func::Task;
-pub use logisheets_base::BlockId;
 
 pub use logisheets_lexer4fmt::{CellRef, FormulaDisplayInfo, TokenType, TokenUnit};
 

@@ -1,6 +1,6 @@
 use logisheets_parser::ast;
 
-use super::super::utils::{get_condition_result, ConditionResult};
+use super::super::utils::{ConditionResult, get_condition_result};
 use super::super::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;
 use statrs::distribution::{Continuous, ContinuousCDF, Normal};

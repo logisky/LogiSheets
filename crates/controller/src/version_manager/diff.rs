@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-use logisheets_base::{errors::BasicError, BlockId, CellId, ColId, RowId, SheetId};
+use logisheets_base::{BlockId, CellId, ColId, RowId, SheetId, errors::BasicError};
 
 use crate::{
+    Error,
     controller::status::Status,
     edit_action::{EditPayload, PayloadsAction},
-    Error,
 };
 
 use super::ctx::{VersionExecCtx, VersionExecCtxImpl};

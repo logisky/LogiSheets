@@ -12,23 +12,23 @@ use crate::controller::display::{
 };
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
-use crate::lock::{locked_write, Locked};
+use crate::lock::{Locked, locked_write};
 use crate::navigator::BlockPlace;
 use crate::style_manager::RawStyle;
 use crate::{
+    CellInfo, ColInfo, Comment, CommentMentionInfo, CommentNote, CommentPerson, MergeCell, RowInfo,
+    Style, Value,
+};
+use crate::{
+    Controller, Error,
     connectors::NameFetcher,
     controller::{
         display::{get_default_col_width, get_default_row_height},
         style::StyleConverter,
     },
-    Controller, Error,
 };
-use crate::{
-    CellInfo, ColInfo, Comment, CommentMentionInfo, CommentNote, CommentPerson, MergeCell, RowInfo,
-    Style, Value,
-};
-use logisheets_base::errors::BasicError;
 use logisheets_base::PersonId;
+use logisheets_base::errors::BasicError;
 use logisheets_base::{
     BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, SheetId, StyleId, TextId,
 };
@@ -1901,11 +1901,7 @@ impl<'a> Worksheet<'a> {
 
 #[inline]
 fn advance(reverse: bool, curr: usize) -> usize {
-    if reverse {
-        curr - 1
-    } else {
-        curr + 1
-    }
+    if reverse { curr - 1 } else { curr + 1 }
 }
 
 fn build_comment_person(comments: &InternalComments, person_id: &PersonId) -> CommentPerson {

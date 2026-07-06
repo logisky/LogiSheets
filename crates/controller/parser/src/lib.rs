@@ -12,7 +12,7 @@ extern crate lazy_static;
 use crate::climber::{Assoc, Climber, ClimberBuilder, Operator};
 use context::ContextTrait;
 use errors::ParseError;
-use logisheets_base::{id_fetcher::IdFetcherTrait, SheetId};
+use logisheets_base::{SheetId, id_fetcher::IdFetcherTrait};
 use logisheets_lexer::*;
 use pest::iterators::Pair;
 use reference::build_cell_reference;
@@ -577,9 +577,9 @@ fn build_numerical_constant(pair: Pair<Rule>) -> ast::PureNode {
 
 #[cfg(test)]
 mod tests {
+    use super::Parser;
     use super::ast;
     use super::parse_number;
-    use super::Parser;
     use crate::context::Context;
     use crate::test_utils::TestIdFetcher;
     use crate::test_utils::TestVertexFetcher;

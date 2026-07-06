@@ -6,8 +6,8 @@ use logisheets_base::errors::BasicError;
 use logisheets_base::get_curr_addr::GetCurrAddrTrait;
 use logisheets_base::set_curr_cell::SetCurrCellTrait;
 use logisheets_base::{
-    matrix_value::{cross_product_usize, MatrixValue},
     Addr, CellId, CellValue, Error, FuncId, NameId, SheetId, TextId,
+    matrix_value::{MatrixValue, cross_product_usize},
 };
 use logisheets_base::{BlockCellId, BlockId, BlockRange, CubeCross, NormalRange, Range};
 use logisheets_parser::ast;

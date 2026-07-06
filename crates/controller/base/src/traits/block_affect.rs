@@ -1,4 +1,4 @@
-use crate::{errors::BasicError, BlockCellId, BlockId, NormalCellId, SheetId};
+use crate::{BlockCellId, BlockId, NormalCellId, SheetId, errors::BasicError};
 
 pub trait BlockAffectTrait {
     fn get_all_block_cells(

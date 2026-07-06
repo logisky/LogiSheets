@@ -1,7 +1,7 @@
-use logisheets_base::{errors::BasicError, CellId, ColId, RowId, SheetId};
+use logisheets_base::{CellId, ColId, RowId, SheetId, errors::BasicError};
 
-use super::{ctx::NavExecCtx, BlockPlace, Navigator, SheetNav};
-use crate::{edit_action::EditPayload, Error};
+use super::{BlockPlace, Navigator, SheetNav, ctx::NavExecCtx};
+use crate::{Error, edit_action::EditPayload};
 
 pub struct NavExecutor {
     pub nav: Navigator,

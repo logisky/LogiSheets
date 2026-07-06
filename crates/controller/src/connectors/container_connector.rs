@@ -1,13 +1,14 @@
 use logisheets_base::{
+    BlockCellId, BlockId, CellId, ColId, ExtBookId, NormalCellId, RowId, SheetId, StyleId,
     block_affect::BlockAffectTrait,
     errors::BasicError,
     id_fetcher::{IdFetcherTrait, SheetIdFetcherByIdxTrait},
     index_fetcher::IndexFetcherTrait,
     matrix_value::cross_product_usize,
-    BlockCellId, BlockId, CellId, ColId, ExtBookId, NormalCellId, RowId, SheetId, StyleId,
 };
 
 use crate::{
+    Error,
     container::ctx::ContainerExecCtx,
     edit_action::StyleUpdateType,
     ext_book_manager::ExtBooksManager,
@@ -15,7 +16,6 @@ use crate::{
     navigator::Navigator,
     style_manager::{RawStyle, StyleManager},
     workbook::sheet_info_manager::SheetInfoManager,
-    Error,
 };
 
 pub struct ContainerConnector<'a> {

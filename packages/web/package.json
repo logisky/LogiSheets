@@ -2,7 +2,7 @@
   "name": "logisheets-web",
   "author": "Jeremy He<yiliang.he@qq.com>",
   "license": "MIT",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Read and write the xlsx files",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

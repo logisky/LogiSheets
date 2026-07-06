@@ -4,12 +4,12 @@ use crate::{
     errors::ParseError,
 };
 
-use super::ast;
 use super::Result;
+use super::ast;
 
 use logisheets_base::{
-    column_label_to_index, id_fetcher::IdFetcherTrait, Addr, BlockRange, CellId, Cube, CubeCross,
-    ExtRef, NormalRange, Range, RefAbs, SheetId,
+    Addr, BlockRange, CellId, Cube, CubeCross, ExtRef, NormalRange, Range, RefAbs, SheetId,
+    column_label_to_index, id_fetcher::IdFetcherTrait,
 };
 use logisheets_lexer::*;
 use pest::iterators::Pair;

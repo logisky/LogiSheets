@@ -1,4 +1,4 @@
-use logisheets_base::{errors::BasicError, id_fetcher::SheetIdFetcherByIdxTrait, SheetId};
+use logisheets_base::{SheetId, errors::BasicError, id_fetcher::SheetIdFetcherByIdxTrait};
 
 use crate::{
     id_manager::SheetIdManager, navigator::ctx::NavExecCtx,

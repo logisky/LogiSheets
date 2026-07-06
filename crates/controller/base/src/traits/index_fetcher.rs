@@ -1,4 +1,4 @@
-use crate::{errors::BasicError, BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId};
+use crate::{BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId, errors::BasicError};
 
 pub trait IndexFetcherTrait {
     fn fetch_row_index(&self, sheet_id: &SheetId, row_id: &RowId) -> Result<usize, BasicError>;

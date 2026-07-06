@@ -1,4 +1,4 @@
-use logisheets_base::datetime::{get_time_by_decimal_num, Time};
+use logisheets_base::datetime::{Time, get_time_by_decimal_num};
 use logisheets_parser::ast;
 
 use crate::calc_engine::connector::Connector;

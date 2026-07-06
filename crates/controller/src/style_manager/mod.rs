@@ -20,7 +20,7 @@ use xf_manager::XfManager;
 
 use logisheets_workbook::prelude::{CtBorder, CtCellAlignment, CtCellProtection, CtFill, CtFont};
 
-use crate::{edit_action::StyleUpdateType, Error};
+use crate::{Error, edit_action::StyleUpdateType};
 
 use self::execute::execute_style_update;
 

@@ -32,6 +32,7 @@ export type SessionEventType =
   | "activeSheetChange"
   | "startEdit"
   | "invalidFormula"
+  | "find"
   | "contextMenu"
   | "error";
 
@@ -41,6 +42,7 @@ export interface SessionEventMap {
   activeSheetChange: number;
   startEdit: { row: number; col: number; initialText: string };
   invalidFormula: void;
+  find: void;
   /**
    * The user opened the context menu (right-clicked a cell or a row/column
    * header). The engine renders NO menu of its own — the host listens for
@@ -128,6 +130,7 @@ export class Session {
         "activeSheetChange",
         "startEdit",
         "invalidFormula",
+        "find",
         "contextMenu",
         "error",
       ] as SessionEventType[]
@@ -187,6 +190,9 @@ export class Session {
         onInvalidFormula: () => {
           this._emit("invalidFormula", undefined);
           options.onInvalidFormula?.();
+        },
+        onFind: () => {
+          this._emit("find", undefined);
         },
         // Pass data service for internal use
         dataService: this._dataService,

@@ -3,7 +3,7 @@ pub mod range;
 
 use super::super::connector::Connector;
 use super::calc_vertex::{CalcValue, CalcVertex, Value};
-use super::compare::{compare, CompareResult};
+use super::compare::{CompareResult, compare};
 use intersect::intersect;
 use logisheets_parser::ast;
 use range::get_range;
