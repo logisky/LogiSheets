@@ -29,6 +29,7 @@
         "logisheets-core": "workspace:*",
         "logisheets-engine": "workspace:*",
         "logisheets-web": "workspace:*",
+        "logisheets-zk-web": "workspace:*",
         "mobx": "^6.12.3",
         "mobx-react": "^9.1.1",
         "neverthrow": "^8.2.0",

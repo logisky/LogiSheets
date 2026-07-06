@@ -22,7 +22,8 @@
       "logisheets-formula-editor": ["./packages/formula-editor/src/lib/index.ts"],
       "logisheets-formula-editor/inline": [
         "./packages/formula-editor/src/lib/inline.ts"
-      ]
+      ],
+      "logisheets-zk-web": ["./packages/zk-web/src/index.ts"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -41,6 +42,7 @@
     "src/**/*.ts",
     "packages/web/**/*.ts",
     "packages/formula-editor/src/**/*.ts",
-    "packages/formula-editor/src/**/*.tsx"
+    "packages/formula-editor/src/**/*.tsx",
+    "packages/zk-web/src/**/*.ts"
   ]
 }

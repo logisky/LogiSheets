@@ -1,0 +1,41 @@
+[workspace]
+resolver = "2"
+members = [
+    "logisheets-zk-math",
+    "logisheets-zk-core",
+    "logisheets-zk-guest",
+    "logisheets-zk-host",
+    "logisheets-zk-methods",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["LogiSheets Team"]
+
+[workspace.dependencies]
+# RiscZero
+risc0-zkvm = { version = "1.2", default-features = false }
+risc0-build = "1.2"
+risc0-zkp = "1.2"
+
+# Crypto
+sha2 = { version = "0.10", default-features = false }
+hex = { version = "0.4", default-features = false }
+
+# Serialization
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+
+# Error handling
+thiserror = { version = "1.0", default-features = false }
+
+# Collections for no_std
+hashbrown = { version = "0.15", default-features = false, features = ["serde"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"

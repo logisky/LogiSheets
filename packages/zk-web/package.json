@@ -1,0 +1,22 @@
+{
+    "name": "logisheets-zk-web",
+    "author": "LogiSheets Team",
+    "license": "MIT",
+    "version": "0.1.0",
+    "description": "Blockchain and ZK integration layer for LogiSheets",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "npx tsc",
+        "test": "npx vitest run"
+    },
+    "dependencies": {
+        "logisheets-core": "workspace:*"
+    },
+    "peerDependencies": {
+        "viem": "^2.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.2"
+    }
+}

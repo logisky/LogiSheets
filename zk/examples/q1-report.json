@@ -1,0 +1,41 @@
+{
+    "public": {
+        "formulaRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "values": {
+            "StartValue": 1000000,
+            "EndValue": 1150000,
+            "DiscountRate": 0.05
+        },
+        "expectedOutputs": [
+            {"name": "Quarterly_ROI"},
+            {"name": "Net_Gain"}
+        ]
+    },
+    "private": {
+        "formulasWithProofs": [
+            {
+                "formula": {
+                    "id": "0x0101010101010101010101010101010101010101010101010101010101010101",
+                    "name": "Quarterly_ROI",
+                    "expression": "=(EndValue - StartValue) / StartValue",
+                    "version": 1
+                },
+                "proof": {
+                    "siblings": []
+                }
+            },
+            {
+                "formula": {
+                    "id": "0x0202020202020202020202020202020202020202020202020202020202020202",
+                    "name": "Net_Gain",
+                    "expression": "=EndValue - StartValue",
+                    "version": 1
+                },
+                "proof": {
+                    "siblings": []
+                }
+            }
+        ],
+        "values": {}
+    }
+}

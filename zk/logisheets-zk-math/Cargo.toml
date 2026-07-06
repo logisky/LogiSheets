@@ -1,0 +1,12 @@
+[package]
+name = "logisheets-zk-math"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "No-std financial math functions for LogiSheets ZK proving"
+
+[dependencies]
+libm = "0.2"
+
+[features]
+default = []

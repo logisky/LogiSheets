@@ -1,0 +1,14 @@
+[package]
+name = "logisheets-zk-methods"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Build integration for the LogiSheets ZK guest program"
+build = "build.rs"
+publish = false
+
+[dependencies]
+risc0-zkvm = { workspace = true, default-features = false }
+
+[build-dependencies]
+risc0-build.workspace = true

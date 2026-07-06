@@ -1,0 +1,24 @@
+[package]
+name = "logisheets-zk-host"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Host-side prover and CLI for LogiSheets ZK quarterly reports"
+
+[dependencies]
+logisheets-zk-core = { path = "../logisheets-zk-core" }
+logisheets-zk-math = { path = "../logisheets-zk-math" }
+serde.workspace = true
+serde_json = { workspace = true, features = ["std"] }
+clap.workspace = true
+sha2.workspace = true
+hex = { workspace = true, features = ["std"] }
+thiserror.workspace = true
+
+# Optional real RiscZero proving.
+logisheets-zk-methods = { path = "../logisheets-zk-methods", optional = true }
+risc0-zkvm = { workspace = true, features = ["default"], optional = true }
+
+[features]
+default = []
+prove = ["dep:logisheets-zk-methods", "dep:risc0-zkvm"]

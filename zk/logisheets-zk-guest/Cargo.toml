@@ -1,0 +1,14 @@
+[package]
+name = "logisheets-zk-guest"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+risc0-zkvm = { workspace = true, default-features = false }
+logisheets-zk-core = { path = "../logisheets-zk-core", default-features = false, features = ["guest"] }
+logisheets-zk-math = { path = "../logisheets-zk-math" }
+serde.workspace = true
+hashbrown.workspace = true
+
