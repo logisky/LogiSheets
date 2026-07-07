@@ -99,7 +99,7 @@ publish_cargo() {
     for manifest in "${CARGO_MANIFESTS[@]}"; do
         echo ""
         echo "==> cargo publish: $manifest"
-        cargo publish $CARGO_DRY --manifest-path "$manifest"
+        cargo publish $CARGO_DRY --manifest-path "$manifest" || true
         # crates.io indexes asynchronously — give it room before the
         # next crate (which may depend on this one) tries to resolve.
         # Skip the sleep on dry-run since nothing was actually pushed.
