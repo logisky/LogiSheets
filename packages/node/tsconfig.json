@@ -2,8 +2,9 @@
     "compilerOptions": {
         "allowJs": true,
         "declaration": true,
-        "module": "ESNext",
-        "moduleResolution": "Bundler",
+        "module": "CommonJS",
+        "moduleResolution": "Node",
+        "esModuleInterop": true,
         "noImplicitAny": true,
         "strict": true,
         "skipLibCheck": true,
