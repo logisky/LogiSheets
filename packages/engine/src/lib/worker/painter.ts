@@ -296,6 +296,29 @@ export class Painter {
     this._ctx.setLineDash([]);
   }
 
+  /**
+   * Draw an image inside a cell. Coordinates are canvas (CSS) pixels with the
+   * anchor already subtracted. The image is scaled to fit within the cell
+   * while preserving its aspect ratio, and centered.
+   */
+  public renderImage(
+    bitmap: ImageBitmap,
+    startCol: number,
+    startRow: number,
+    width: number,
+    height: number,
+  ): void {
+    if (!this._ctx) return;
+    if (width <= 0 || height <= 0 || bitmap.width <= 0 || bitmap.height <= 0)
+      return;
+    const scale = Math.min(width / bitmap.width, height / bitmap.height);
+    const w = bitmap.width * scale;
+    const h = bitmap.height * scale;
+    const x = startCol + (width - w) / 2;
+    const y = startRow + (height - h) / 2;
+    this._ctx.drawImage(bitmap, x, y, w, h);
+  }
+
   private _fill(box: Box, style?: StandardStyle): void {
     if (!this._ctx) return;
     const fill = style?.fill;

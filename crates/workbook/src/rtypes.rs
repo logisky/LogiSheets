@@ -15,6 +15,10 @@ pub const COMMENTS: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments");
 pub const THEME: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme");
+pub const DRAWING: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing");
+pub const IMAGE: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/image");
 pub const DOC_PROP_APP: RType = RType(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
 );

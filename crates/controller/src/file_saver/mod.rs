@@ -84,6 +84,7 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
         controller.app_data.clone(),
         block_schema_manager,
         field_render_manager,
+        &controller.status.image_manager,
         &mut saver,
     )
 }

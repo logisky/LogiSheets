@@ -69,7 +69,10 @@ CARGO_MANIFESTS=(
     "crates/controller/parser/Cargo.toml"
     "crates/controller/ast_checker/Cargo.toml"
     "crates/controller/Cargo.toml"
-    "Cargo.toml"
+    # Public Rust SDK. Published last so its controller/workbook/base deps are
+    # already on crates.io. The workspace-root crate (`logisheets`) is NOT
+    # published — it only hosts the integration tests (publish = false).
+    "crates/api/Cargo.toml"
 )
 
 # ---------------------------------------------------------------------------
@@ -96,7 +99,7 @@ publish_cargo() {
     for manifest in "${CARGO_MANIFESTS[@]}"; do
         echo ""
         echo "==> cargo publish: $manifest"
-        cargo publish $CARGO_DRY --manifest-path "$manifest"
+        cargo publish $CARGO_DRY --manifest-path "$manifest" || true
         # crates.io indexes asynchronously — give it room before the
         # next crate (which may depend on this one) tries to resolve.
         # Skip the sleep on dry-run since nothing was actually pushed.

@@ -200,6 +200,15 @@ pub fn get_comments(id: usize, sheet_idx: usize) -> JsValue {
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
 
+pub fn get_cell_images(id: usize, sheet_idx: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let r = ws.get_cell_images();
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
 pub fn get_cell_position(id: usize, sheet_idx: usize, row: usize, col: usize) -> JsValue {
     init();
     let manager = MANAGER.get();

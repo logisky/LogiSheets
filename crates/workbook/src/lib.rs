@@ -13,6 +13,7 @@ pub mod prelude {
     pub use super::SerdeErr;
     pub use super::ooxml::comments::*;
     pub use super::ooxml::complex_types::*;
+    pub use super::ooxml::drawing_part::*;
     pub use super::ooxml::external_links::*;
     pub use super::ooxml::persons::*;
     pub use super::ooxml::simple_types::*;
@@ -23,7 +24,10 @@ pub mod prelude {
     pub use super::ooxml::workbook::*;
     pub use super::ooxml::worksheet::*;
     pub use super::reader::*;
+    pub use super::workbook::Media;
     pub use super::workbook::Wb;
+    pub use super::workbook::Worksheet;
+    pub use super::workbook::WorksheetDrawing;
     pub use super::workbook::Xl;
     pub use super::writer::*;
 }

@@ -214,6 +214,19 @@ pub struct MergeCell {
     pub end_col: usize,
 }
 
+/// An image placed in a cell. `data` is the base64-encoded image bytes and
+/// `format` is the bare file extension (e.g. `png`). Used by the frontend to
+/// render the image on the canvas at the cell's position.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "cell_image_info.ts", rename_all = "camelCase")]
+pub struct CellImageInfo {
+    pub row: usize,
+    pub col: usize,
+    pub id: String,
+    pub format: String,
+    pub data: String,
+}
+
 /// A person referenced by a comment (author or mention). Enterprise builds
 /// populate `user_id` + `provider_id` from their directory; the `src` app
 /// leaves them `None` and only sets `display_name`.

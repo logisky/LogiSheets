@@ -11,6 +11,7 @@ import type {
   DisplayWindowWithStartPoint,
   MergeCell,
   Comment,
+  CellImageInfo,
   SheetDimension,
   SheetInfo,
   CellCoordinate,
@@ -296,6 +297,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
     sheetIdx: number;
   }): Result<readonly Comment[]> {
     return this.getSheet(params.sheetIdx).getComments();
+  }
+
+  public getCellImages(params: {
+    sheetIdx: number;
+  }): Result<readonly CellImageInfo[]> {
+    return this.getSheet(params.sheetIdx).getCellImages();
   }
 
   // ========================================================================
@@ -646,6 +653,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
           break;
         case MethodName.GetComments:
           result = this.getComments(args);
+          break;
+        case MethodName.GetCellImages:
+          result = this.getCellImages(args);
           break;
         case MethodName.CalcCondition:
           result = this.calcCondition(args);

@@ -2,7 +2,8 @@ use gents_derives::{Interface, TS};
 use logisheets_rs::BlockId;
 use logisheets_rs::{
     ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo,
-    CellCoordinateWithSheet, CellInfo, CellInput, CellPosition, ColId, Comment, DisplayWindow,
+    CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, ColId, Comment,
+    DisplayWindow,
     DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo, MergeCell,
     ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate,
     SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
@@ -44,6 +45,7 @@ pub enum Message {
     GetCellId(GetCellIdParams),
     GetMergedCells(GetMergedCellsParams),
     GetComments(GetCommentsParams),
+    GetCellImages(GetCellImagesParams),
     CalcCondition(CalcConditionParams),
     GetCellIdByBlockRef(GetCellIdByBlockRefParams),
     ExportBlockData(ExportBlockDataParams),
@@ -336,6 +338,12 @@ pub struct GetMergedCellsParams {
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_comments_params.ts", rename_all = "camelCase")]
 pub struct GetCommentsParams {
+    pub sheet_idx: usize,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_cell_images_params.ts", rename_all = "camelCase")]
+pub struct GetCellImagesParams {
     pub sheet_idx: usize,
 }
 
@@ -766,6 +774,12 @@ pub struct WorkbookMethods {
     pub get_comments:
         fn(params: GetCommentsParams, book_id: Option<usize>) -> Result<Vec<Comment>, ErrorMessage>,
 
+    // Cell images
+    pub get_cell_images: fn(
+        params: GetCellImagesParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<CellImageInfo>, ErrorMessage>,
+
     // Shadow cells
     pub get_shadow_cell_id: fn(
         params: GetShadowCellIdParams,
@@ -934,6 +948,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.end_col,
         ),
         Message::GetComments(params) => ws::get_comments(id, params.sheet_idx),
+        Message::GetCellImages(params) => ws::get_cell_images(id, params.sheet_idx),
         Message::CalcCondition(params) => {
             controller::calc_condition(id, params.sheet_idx, params.condition)
         }

@@ -5,7 +5,7 @@ use logisheets_workbook::{
         CtExternalReference, CtExternalReferences, CtPerson, CtSheet, CtSheets, Persons,
         WorkbookPart,
     },
-    workbook::{DocProps, Wb, Worksheet, Xl},
+    workbook::{DocProps, Media, Wb, Worksheet, WorksheetDrawing, Xl},
 };
 use std::collections::HashMap;
 
@@ -22,6 +22,7 @@ use crate::{
     },
     formula_manager::FormulaManager,
     id_manager::{SheetIdManager, TextIdManager},
+    image_manager::ImageManager,
     navigator::Navigator,
     settings::Settings,
     style_manager::StyleManager,
@@ -46,11 +47,16 @@ pub fn save_workbook<S: SaverTrait>(
     app_data: Vec<AppData>,
     block_schema_manager: &SchemaManager,
     field_render_manager: &FieldRenderManager,
+    image_manager: &ImageManager,
     saver: &mut S,
 ) -> Result<Wb, SaveError> {
     let mut worksheets: HashMap<String, Worksheet> = HashMap::new();
     let mut ct_sheets: Vec<CtSheet> = vec![];
     let mut sheets: Vec<Sheet> = vec![];
+    // Accumulated across all sheets: image bytes go to xl/media/ with globally
+    // unique names; each sheet's drawing references them by relationship.
+    let mut medias: Vec<Media> = vec![];
+    let mut media_counter: usize = 0;
 
     sheet_id_manager
         .get_all_ids()
@@ -77,15 +83,35 @@ pub fn save_workbook<S: SaverTrait>(
             )
         })
         .sorted_by_key(|a| a.0)
-        .for_each(|(sheet_pos, ct_sheet, worksheet, block_ranges)| {
-            worksheets.insert(ct_sheet.id.clone(), worksheet);
-            ct_sheets.push(ct_sheet);
+        .for_each(|(sheet_pos, ct_sheet, mut worksheet, block_ranges)| {
             // The tuple's first element is the sheet *position* (usize),
             // not the `SheetId`. Resolve the id from the position manager
             // so `schemas_to_xml` can filter by stable id.
             let sheet_id = sheet_pos_manager
                 .get_sheet_id(sheet_pos)
                 .expect("sheet position has a registered sheet id");
+
+            // Attach cell images as a SpreadsheetDrawingML part. Each image's
+            // stable CellId is resolved to a (row, col) position; images on
+            // deleted cells (no position) are dropped.
+            let mut cell_images: Vec<(i32, i32, String)> = vec![];
+            for (cell_id, img) in image_manager.images_of_sheet(sheet_id) {
+                if let Ok((row, col)) = navigator.fetch_cell_idx(&sheet_id, &cell_id) {
+                    media_counter += 1;
+                    let media_name = format!("image{}.{}", media_counter, img.format);
+                    cell_images.push((col as i32, row as i32, media_name.clone()));
+                    medias.push(Media {
+                        name: media_name,
+                        data: (*img.data).clone(),
+                    });
+                }
+            }
+            if !cell_images.is_empty() {
+                worksheet.drawing = Some(WorksheetDrawing::from_cell_images(&cell_images));
+            }
+
+            worksheets.insert(ct_sheet.id.clone(), worksheet);
+            ct_sheets.push(ct_sheet);
             let (row_schemas, col_schemas, random_schemas) =
                 schemas_to_xml(block_schema_manager, sheet_id);
             // field_renders_to_xml is invoked once at the end, below —
@@ -138,6 +164,7 @@ pub fn save_workbook<S: SaverTrait>(
             external_links,
             theme,
             persons,
+            medias,
         },
         doc_props: DocProps::default(),
         logisheets: Some(LogiSheetsData {

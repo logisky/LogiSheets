@@ -1,17 +1,14 @@
+# The root crate is NOT published — the public Rust SDK is `logisheets-rs`
+# (crates/api). This package exists only to host the workspace and the
+# integration test suite in `tests/` (which `use logisheets::…`), so it keeps a
+# minimal `src/lib.rs` re-export. `publish = false` guards against an accidental
+# `cargo publish` from the repo root.
 [package]
 name = "logisheets"
 version.workspace = true
 description = "A web spreadsheets application written in Rust and Typescript"
-keywords = ["excel", "spreadsheets", "ooxml", "logisheets", "xlsx"]
-readme = "README.md"
-repository = "https://github.com/logisky/LogiSheets"
 license.workspace = true
-include = [
-    "crates/workbook/**/*",
-    "crates/controller/**/*",
-    "src/lib.rs",
-    "Cargo.toml",
-]
+publish = false
 edition.workspace = true
 
 [workspace]
@@ -32,7 +29,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.2.0"
+version = "1.3.0"
 authors = ["JeremyHe <yiliang.he@qq.com>"]
 license = "MIT"
 edition = "2024"

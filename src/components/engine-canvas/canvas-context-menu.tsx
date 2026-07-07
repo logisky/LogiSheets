@@ -219,6 +219,66 @@ export function CanvasContextMenu({
         })
     }
 
+    // Insert an image into the clicked cell. Opens a native file picker, reads
+    // the file as base64 and dispatches a `SetCellImage` payload. The image
+    // fills the cell and resizes with it.
+    const insertImage = (ctx: ContextMenuContext) => {
+        close()
+        const range = getSelectedCellRange(ctx.selectedData)
+        if (!range) return
+        const sheetIdx = getActiveSheet()
+        const {startRow: row, startCol: col} = range
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/png,image/jpeg,image/gif,image/bmp'
+        input.onchange = () => {
+            const file = input.files?.[0]
+            if (!file) return
+            const reader = new FileReader()
+            reader.onload = () => {
+                const result = String(reader.result ?? '')
+                const comma = result.indexOf(',')
+                if (comma < 0) return
+                const data = result.slice(comma + 1)
+                let format = 'png'
+                const m = /^data:image\/([a-z0-9.+-]+);/i.exec(result)
+                if (m) format = m[1].toLowerCase()
+                else {
+                    const dot = file.name.lastIndexOf('.')
+                    if (dot >= 0) format = file.name.slice(dot + 1).toLowerCase()
+                }
+                const imageId =
+                    typeof crypto !== 'undefined' && crypto.randomUUID
+                        ? crypto.randomUUID()
+                        : `img-${Date.now()}-${Math.round(Math.random() * 1e9)}`
+                doTxn([
+                    {
+                        type: 'setCellImage',
+                        value: {sheetIdx, row, col, imageId, format, data},
+                    } as Payload,
+                ])
+            }
+            reader.readAsDataURL(file)
+        }
+        input.click()
+    }
+
+    const removeImage = (ctx: ContextMenuContext) => {
+        close()
+        const range = getSelectedCellRange(ctx.selectedData)
+        if (!range) return
+        doTxn([
+            {
+                type: 'deleteCellImage',
+                value: {
+                    sheetIdx: getActiveSheet(),
+                    row: range.startRow,
+                    col: range.startCol,
+                },
+            } as Payload,
+        ])
+    }
+
     const ctx = menu?.context
     const items: ReactNode = !ctx ? null : ctx.target === 'cell' ? (
         [
@@ -230,6 +290,13 @@ export function CanvasContextMenu({
             </MenuItem>,
             <MenuItem key="comment" onClick={() => addComment(ctx)}>
                 Add comment
+            </MenuItem>,
+            <Divider key="imgd" />,
+            <MenuItem key="insert-image" onClick={() => insertImage(ctx)}>
+                Insert image
+            </MenuItem>,
+            <MenuItem key="remove-image" onClick={() => removeImage(ctx)}>
+                Remove image
             </MenuItem>,
         ]
     ) : ctx.target === 'row' ? (
