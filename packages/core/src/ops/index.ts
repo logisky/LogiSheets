@@ -252,6 +252,29 @@ export class WorkbookOps {
         )
     }
 
+    /**
+     * Move a block so its master (top-left) cell lands at
+     * (`newMasterRow`, `newMasterCol`). The engine relocates the whole block
+     * region; the caller is responsible for making sure the destination is
+     * clear (see the drag-to-move overlay, which cancels on collision).
+     */
+    moveBlock(
+        sheetIdx: number,
+        blockId: number,
+        newMasterRow: number,
+        newMasterCol: number
+    ): Promise<ActionEffect> {
+        return this.apply(
+            [
+                {
+                    type: 'moveBlock',
+                    value: {sheetIdx, id: blockId, newMasterRow, newMasterCol},
+                },
+            ],
+            true
+        )
+    }
+
     // ---- formatting -----------------------------------------------------
     //
     // Each method turns the current sheet + selection into style-update
