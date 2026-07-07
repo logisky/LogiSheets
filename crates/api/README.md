@@ -9,7 +9,7 @@ crates (`logisheets_controller`, `logisheets_workbook`, …). Add just this one:
 
 ```toml
 [dependencies]
-logisheets-rs = "1.2"
+logisheets-rs = "1.3"
 ```
 
 ## Quick start
