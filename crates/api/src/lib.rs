@@ -27,9 +27,10 @@ pub use logisheets_controller::api::{
 // Re-export display types
 pub use logisheets_controller::controller::display::{
     BlockCellInfo, BlockDataRow, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema,
-    BlockSchemaRandomEntry, BlockSchemaType, CellCoordinate, CellCoordinateWithSheet, CellPosition,
-    ColInfo, DisplayWindow, DisplayWindowRequest, DisplayWindowWithStartPoint, RowInfo,
-    ShadowCellInfo, SheetInfo, TempCellChange, TempStatusDiff,
+    BlockSchemaRandomEntry, BlockSchemaType, CellCoordinate, CellCoordinateWithSheet,
+    CellImageInfo, CellPosition, ColInfo, DisplayWindow, DisplayWindowRequest,
+    DisplayWindowWithStartPoint, RowInfo, ShadowCellInfo, SheetInfo, TempCellChange,
+    TempStatusDiff,
 };
 
 // Re-export edit actions
@@ -38,11 +39,11 @@ pub use logisheets_controller::edit_action::{
     BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellClear, CellFormatBrush, CellInput,
     CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols,
     DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
-    EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
-    InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock, PayloadsAction,
-    RemoveBlock, ReproduceCells, ResizeBlock, SetColWidth, SetRowHeight, SetSheetColor,
-    SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells, StatusCode, StyleUpdateType,
-    UpsertFieldRenderInfo, VerticalAlignment,
+    DeleteCellImage, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock,
+    InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock,
+    PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetCellImage, SetColWidth,
+    SetRowHeight, SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells,
+    StatusCode, StyleUpdateType, UpsertFieldRenderInfo, VerticalAlignment,
 };
 
 // Re-export style types

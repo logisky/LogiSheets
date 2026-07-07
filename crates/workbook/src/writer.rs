@@ -1,6 +1,8 @@
 use crate::logisheets::LogiSheetsData;
+use crate::ooxml::complex_types::CtDrawing;
 use crate::ooxml::content_types::{ContentTypes, CtDefault, CtOverride};
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
+use crate::ooxml::drawing_part::CtWsDr;
 use crate::ooxml::relationships::{CtRelationship, Relationships};
 use crate::prelude::StTargetMode;
 use crate::prelude::{
@@ -8,8 +10,8 @@ use crate::prelude::{
     WorksheetPart,
 };
 use crate::rtypes::{
-    COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM, EXT_LINK, LOGISHEETS_APP_DATA, PERSON,
-    RType, SST, STYLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
+    COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM, DRAWING, EXT_LINK, LOGISHEETS_APP_DATA,
+    PERSON, RType, SST, STYLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
 };
 use std::io::{Cursor, Write};
 use xmlserde::xml_serialize_with_decl;
@@ -170,6 +172,20 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
     if worksheets.values().any(|w| w.threaded_comments.is_some()) {
         writer.add_directory("xl/threadedComments", options())?;
     }
+    if worksheets.values().any(|w| w.drawing.is_some()) {
+        writer.add_directory("xl/drawings", options())?;
+        writer.add_directory("xl/drawings/_rels", options())?;
+    }
+
+    // Binary media parts (images) live under xl/media/ and are shared across
+    // the workbook. Written once here; drawings reference them via rels.
+    if !xl.medias.is_empty() {
+        writer.add_directory("xl/media", options())?;
+        for media in xl.medias.iter() {
+            writer.start_file(format!("xl/media/{}", media.name), options())?;
+            writer.write(&media.data)?;
+        }
+    }
 
     while let Some(sheet_id) = sheet_ids.pop() {
         if let Some(ws) = worksheets.remove(&sheet_id) {
@@ -260,13 +276,40 @@ fn write_logisheets_data(data: LogiSheetsData, writer: &mut Writer) -> ZipResult
 }
 
 fn write_worksheet<'a>(
-    wb: Worksheet,
+    mut wb: Worksheet,
     writer: &mut Writer,
     idx: usize,
 ) -> ZipResult<Vec<WriteProof>> {
     let mut result = Vec::<WriteProof>::new();
     let mut relationships = Vec::<CtRelationship>::new();
     let mut rid = 1_usize;
+
+    // A drawing part holds the sheet's cell images. Emit it (plus its own rels
+    // to media) and point the worksheet's <drawing r:id> at it.
+    if let Some(drawing) = wb.drawing.take() {
+        let drawing_rid = format!("rId{}", rid);
+        rid += 1;
+        let p = write_drawing_part(
+            drawing.content,
+            writer,
+            FileLocation::from(format!("xl/drawings/drawing{}.xml", idx)),
+        )?;
+        result.push(p);
+        write_relationships(
+            Relationships {
+                relationships: drawing.rels,
+            },
+            writer,
+            &format!("xl/drawings/_rels/drawing{}.xml.rels", idx),
+        )?;
+        relationships.push(CtRelationship {
+            id: drawing_rid.clone(),
+            target: format!("../drawings/drawing{}.xml", idx),
+            ty: DRAWING.0.to_string(),
+            target_mode: StTargetMode::Internal,
+        });
+        wb.worksheet_part.drawing = Some(CtDrawing { id: drawing_rid });
+    }
 
     if let Some(comments) = wb.comments {
         let p = write_comment(
@@ -324,6 +367,7 @@ define_se_func!(write_persons, Persons, PERSON);
 define_se_func!(write_threaded_comments, ThreadedComments, THREADED_COMMENT);
 define_se_func!(write_sheet_part, WorksheetPart, WORKSHEET);
 define_se_func!(write_workbook_part, WorkbookPart, WORKBOOK);
+define_se_func!(write_drawing_part, CtWsDr, DRAWING);
 
 define_se_func!(write_doc_app, DocPropApp, DOC_PROP_APP);
 define_se_func!(write_doc_core, DocPropCore, DOC_PROP_CORE);
@@ -385,6 +429,18 @@ fn write_content_types(proofs: Vec<WriteProof>, writer: &mut Writer) -> ZipResul
             content_type: String::from("image/png"),
         },
         CtDefault {
+            extension: String::from("jpg"),
+            content_type: String::from("image/jpeg"),
+        },
+        CtDefault {
+            extension: String::from("gif"),
+            content_type: String::from("image/gif"),
+        },
+        CtDefault {
+            extension: String::from("bmp"),
+            content_type: String::from("image/bmp"),
+        },
+        CtDefault {
             extension: String::from("rels"),
             content_type: String::from("application/vnd.openxmlformats-package.relationships+xml"),
         },
@@ -432,6 +488,7 @@ fn get_content_type(rtype: RType) -> &'static str {
         STYLE => "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml",
         EXT_LINK => "application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml",
         THEME => "application/vnd.openxmlformats-officedocument.theme+xml",
+        DRAWING => "application/vnd.openxmlformats-officedocument.drawing+xml",
         _ => "",
     }
 }

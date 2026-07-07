@@ -21,6 +21,7 @@ mod file_loader;
 mod file_saver;
 mod formula_manager;
 mod id_manager;
+pub mod image_manager;
 mod lock;
 mod navigator;
 mod range_manager;

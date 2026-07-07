@@ -16,6 +16,7 @@ import {
     SheetCoordinate,
     CellInput,
     Comment,
+    CellImageInfo,
 } from '../bindings'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
@@ -438,6 +439,16 @@ export class Worksheet {
      */
     public getComments(): Result<Comment[]> {
         return rpc('getComments', {sheetIdx: this._sheetIdx}, this._id)
+    }
+
+    /**
+     * All images placed in this sheet's cells. Each `CellImageInfo` carries the
+     * cell `(row, col)`, the image `format` (bare extension, e.g. `png`) and
+     * the base64-encoded image `data`. Mutations go through the workbook
+     * transaction API (`SetCellImage` / `DeleteCellImage`).
+     */
+    public getCellImages(): Result<CellImageInfo[]> {
+        return rpc('getCellImages', {sheetIdx: this._sheetIdx}, this._id)
     }
 
     public getFullyCoveredBlocks(

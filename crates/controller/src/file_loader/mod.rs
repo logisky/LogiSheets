@@ -18,11 +18,14 @@ use crate::{
         styles::StyleLoader,
     },
     id_manager::SheetIdManager,
-    navigator::BlockPlace,
+    image_manager::{CellImage, ImageManager},
+    navigator::{BlockPlace, Navigator},
     settings::Settings,
     theme_manager::ThemeManager,
     utils::turn_indexed_color_to_rgb,
 };
+use logisheets_base::SheetId;
+use std::sync::Arc;
 
 use self::sheet::load_sheet_views;
 pub struct SheetIdFetcher<'a> {
@@ -55,6 +58,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         dirty_cells_next_round: dirty_cells,
         mut block_schema_manager,
         mut field_render_manager,
+        mut image_manager,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {
         sheet_id_manager: &mut sheet_id_manager,
@@ -252,7 +256,16 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                 &block_schema_manager,
                 &mut style_loader,
                 &xl,
-            )
+            );
+            if let Some(drawing) = &ws.drawing {
+                load_cell_images(
+                    sheet_id,
+                    drawing,
+                    &xl.medias,
+                    &navigator,
+                    &mut image_manager,
+                );
+            }
         }
     });
     let status = Status {
@@ -274,11 +287,58 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         exclusive_manager,
         block_schema_manager,
         field_render_manager,
+        image_manager,
     };
     if let Some(theme) = xl.theme {
         settings.theme = ThemeManager::from(theme.1);
     }
     Controller::from(status, book_name, settings, app_data)
+}
+
+/// Pull cell images out of a worksheet drawing part into the `ImageManager`.
+/// Each `twoCellAnchor` picture is resolved through the drawing's rels to a
+/// media file, and anchored to the `CellId` of its `from` marker so it moves
+/// with the cell.
+fn load_cell_images(
+    sheet_id: SheetId,
+    drawing: &WorksheetDrawing,
+    medias: &[Media],
+    navigator: &Navigator,
+    image_manager: &mut ImageManager,
+) {
+    for anchor in drawing.content.two_cell_anchors.iter() {
+        let (col, row) = anchor.anchor_cell();
+        if col < 0 || row < 0 {
+            continue;
+        }
+        let embed = match anchor.embed_rid() {
+            Some(e) => e,
+            None => continue,
+        };
+        let media_name = match drawing.media_name_of(embed) {
+            Some(n) => n,
+            None => continue,
+        };
+        let media = match medias.iter().find(|m| m.name == media_name) {
+            Some(m) => m,
+            None => continue,
+        };
+        let (id, format) = match media_name.rsplit_once('.') {
+            Some((base, ext)) => (base.to_string(), ext.to_ascii_lowercase()),
+            None => (media_name.clone(), String::from("png")),
+        };
+        if let Ok(cell_id) = navigator.fetch_cell_id(&sheet_id, row as usize, col as usize) {
+            image_manager.insert(
+                sheet_id,
+                cell_id,
+                CellImage {
+                    id,
+                    format,
+                    data: Arc::new(media.data.clone()),
+                },
+            );
+        }
+    }
 }
 
 fn load_sheet_pr(

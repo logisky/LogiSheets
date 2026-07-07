@@ -21,6 +21,7 @@ import type {
   TempStatusDiff,
   ShadowCellInfo,
   Client,
+  CellImageInfo,
   ActionEffect,
   CellInput,
   PredictFillParams,
@@ -296,6 +297,14 @@ export class WorkbookClient implements Client {
   getComments(params: { sheetIdx: number }): Resp<readonly Comment[]> {
     return this._call(MethodName.GetComments, params) as Resp<
       readonly Comment[]
+    >;
+  }
+
+  getCellImages(params: {
+    sheetIdx: number;
+  }): Resp<readonly CellImageInfo[]> {
+    return this._call(MethodName.GetCellImages, params) as Resp<
+      readonly CellImageInfo[]
     >;
   }
 

@@ -3,15 +3,26 @@
  */
 
 import { isErrorMessage } from "logisheets-web";
+import type { CellImageInfo } from "logisheets-web";
 import type { Grid, AppropriateHeight } from "$types/index";
 import type { IWorkbookWorker, Result } from "./types";
 import { OffscreenRenderName } from "./types";
 import { ViewManager } from "./view_manager";
+import type { CellView } from "./view_manager";
 import { Painter } from "./painter";
 import { Pool } from "./pool";
 import { setGridVisibility } from "./border_helper";
 
 const pool = new Pool();
+
+/** Decode a standard base64 string to bytes (workers provide `atob`). */
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const len = bin.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
 
 /** Per-canvas rendering state. One entry per on-screen view. */
 interface CanvasState {
@@ -33,6 +44,12 @@ export class OffscreenWorkerService {
   // single shared instance serves all canvases.
   private _canvases: Map<number, CanvasState> = new Map();
   private _painter: Painter = new Painter();
+
+  // Decoded cell images, keyed by their stable image id. Decoding is async
+  // (createImageBitmap), so the first render that needs an image schedules the
+  // decode and re-renders the canvas once it resolves.
+  private _imageBitmaps: Map<string, ImageBitmap> = new Map();
+  private _pendingImages: Set<string> = new Set();
 
   private _getCanvas(canvasId: number): CanvasState {
     const state = this._canvases.get(canvasId);
@@ -131,6 +148,16 @@ export class OffscreenWorkerService {
       viewResponse.anchorY,
     );
 
+    // Draw cell images on top of the grid. Uses viewResponse.data (released to
+    // the pool below), so must run before that release.
+    this._renderCellImages(
+      canvasId,
+      sheetId,
+      viewResponse.data,
+      viewResponse.anchorX,
+      viewResponse.anchorY,
+    );
+
     // Include all visible rows/columns (including partially visible ones)
     // A row/column is visible if its end position extends beyond the anchor
     const visibleRows = viewResponse.data.rows.filter(
@@ -220,6 +247,87 @@ export class OffscreenWorkerService {
     pool.releaseCellView(viewResponse.data);
 
     return result;
+  }
+
+  /**
+   * Draw the sheet's cell images that fall within the current view. Images
+   * whose bitmap isn't decoded yet are scheduled for async decode; the canvas
+   * re-renders once they're ready.
+   */
+  private _renderCellImages(
+    canvasId: number,
+    sheetId: number,
+    data: CellView,
+    anchorX: number,
+    anchorY: number,
+  ): void {
+    const ws = this._workbook.getWorkbook().getWorksheetById(sheetId);
+    const images = ws.getCellImages();
+    if (isErrorMessage(images) || images.length === 0) return;
+
+    // Pixel spans of the visible rows/columns, keyed by row/col index.
+    const rowSpan = new Map<number, { start: number; end: number }>();
+    data.rows.forEach((r) =>
+      rowSpan.set(r.coordinate.startRow, {
+        start: r.position.startRow,
+        end: r.position.endRow,
+      }),
+    );
+    const colSpan = new Map<number, { start: number; end: number }>();
+    data.cols.forEach((c) =>
+      colSpan.set(c.coordinate.startCol, {
+        start: c.position.startCol,
+        end: c.position.endCol,
+      }),
+    );
+
+    images.forEach((img: CellImageInfo) => {
+      const rs = rowSpan.get(img.row);
+      const cs = colSpan.get(img.col);
+      if (!rs || !cs) return; // not in the visible window
+      const bitmap = this._imageBitmaps.get(img.id);
+      if (bitmap) {
+        this._painter.renderImage(
+          bitmap,
+          cs.start - anchorX,
+          rs.start - anchorY,
+          cs.end - cs.start,
+          rs.end - rs.start,
+        );
+      } else {
+        this._loadImageBitmap(img, canvasId);
+      }
+    });
+  }
+
+  /** Decode an image to an `ImageBitmap` and re-render its canvas when ready. */
+  private _loadImageBitmap(img: CellImageInfo, canvasId: number): void {
+    if (this._pendingImages.has(img.id)) return;
+    this._pendingImages.add(img.id);
+    let bytes: Uint8Array;
+    try {
+      bytes = base64ToBytes(img.data);
+    } catch {
+      this._pendingImages.delete(img.id);
+      return;
+    }
+    const blob = new Blob([bytes as unknown as BlobPart], {
+      type: `image/${img.format}`,
+    });
+    createImageBitmap(blob)
+      .then((bitmap) => {
+        this._imageBitmaps.set(img.id, bitmap);
+        this._pendingImages.delete(img.id);
+        // Redraw the canvas now that the bitmap is available. The returned
+        // Grid is discarded — the visible effect is the canvas repaint.
+        const state = this._canvases.get(canvasId);
+        if (state) {
+          this.render(canvasId, state.sheetId, state.anchorX, state.anchorY);
+        }
+      })
+      .catch(() => {
+        this._pendingImages.delete(img.id);
+      });
   }
 
   public getAppropriateHeights(

@@ -124,6 +124,10 @@ pub enum EditPayload {
     EphemeralCellInput(EphemeralCellInput),
     EphemeralCellRemove(EphemeralCellRemove),
     CellClear(CellClear),
+
+    // Cell images (stored as SpreadsheetDrawingML pictures on save).
+    SetCellImage(SetCellImage),
+    DeleteCellImage(DeleteCellImage),
     SetColWidth(SetColWidth),
     SetRowHeight(SetRowHeight),
     SetVisible(SetVisible),
@@ -290,6 +294,30 @@ pub struct InsertCols {
     pub sheet_idx: usize,
     pub start: usize,
     pub count: usize,
+}
+
+/// Place an image inside a cell. The image fills the cell and resizes with it.
+/// `data` is the base64-encoded image bytes; `format` is the image format
+/// (e.g. `png`, `jpeg`); `image_id` is a stable, workbook-unique identifier
+/// chosen by the caller (used to name the media part on save).
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "set_cell_image.ts", builder, rename_all = "camelCase")]
+pub struct SetCellImage {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
+    pub image_id: String,
+    pub format: String,
+    pub data: String,
+}
+
+/// Remove the image placed in a cell, if any.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "delete_cell_image.ts", builder, rename_all = "camelCase")]
+pub struct DeleteCellImage {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
 }
 
 /// Take the `content` as input to the cell. The type of the `content` can be referred automatically.
@@ -1170,6 +1198,18 @@ impl From<CellInput> for EditPayload {
         EditPayload::CellInput(value)
     }
 }
+impl From<SetCellImage> for EditPayload {
+    fn from(value: SetCellImage) -> Self {
+        EditPayload::SetCellImage(value)
+    }
+}
+impl From<DeleteCellImage> for EditPayload {
+    fn from(value: DeleteCellImage) -> Self {
+        EditPayload::DeleteCellImage(value)
+    }
+}
+impl Payload for SetCellImage {}
+impl Payload for DeleteCellImage {}
 impl From<CreateBlock> for EditPayload {
     fn from(value: CreateBlock) -> Self {
         EditPayload::CreateBlock(value)

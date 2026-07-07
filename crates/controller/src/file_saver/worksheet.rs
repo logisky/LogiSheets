@@ -156,6 +156,9 @@ fn save_worksheet<S: SaverTrait>(
         worksheet_part,
         comments,
         threaded_comments,
+        // Cell images are attached later in `save_workbook`, which has the
+        // navigator and image manager needed to resolve cell positions.
+        drawing: None,
     }
 }
 

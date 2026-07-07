@@ -1,10 +1,75 @@
 use crate::edit_action::{
-    AddComment, AuthorInput, CommentMention, CreateBlock, DeleteComment, EditComment, EditPayload,
-    LineStyleUpdate, ModifyPolicy, PayloadsAction, ResolveComment, SheetRename, StyleUpdateType,
-    WorkbookUpdateType,
+    AddComment, AuthorInput, CommentMention, CreateBlock, DeleteCellImage, DeleteComment,
+    EditComment, EditPayload, LineStyleUpdate, ModifyPolicy, PayloadsAction, ResolveComment,
+    SetCellImage, SheetRename, StyleUpdateType, WorkbookUpdateType,
 };
 
 use super::{EditAction, Workbook};
+
+#[test]
+fn cell_image_round_trip() {
+    use crate::image_manager::base64;
+
+    // A tiny 1x1 transparent PNG.
+    let png: &[u8] = &[
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x01, 0x02, 0x03, 0xFD, 0xFE, 0xFF,
+    ];
+    let data_b64 = base64::encode(png);
+
+    let mut wb = Workbook::default();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetCellImage(SetCellImage {
+            sheet_idx: 0,
+            row: 2,
+            col: 3,
+            image_id: "img-a".to_string(),
+            format: "png".to_string(),
+            data: data_b64.clone(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(effect.status, crate::edit_action::StatusCode::Ok(_)));
+
+    // The image is visible via the display API.
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let imgs = ws.get_cell_images();
+    assert_eq!(imgs.len(), 1);
+    assert_eq!((imgs[0].row, imgs[0].col), (2, 3));
+    assert_eq!(imgs[0].format, "png");
+    assert_eq!(base64::decode(&imgs[0].data).unwrap(), png);
+    drop(ws);
+
+    // Save to xlsx and reload — the image survives the round trip.
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    let ws2 = wb2.get_sheet_by_idx(0).unwrap();
+    let imgs2 = ws2.get_cell_images();
+    assert_eq!(imgs2.len(), 1, "image should survive save/load");
+    assert_eq!((imgs2[0].row, imgs2[0].col), (2, 3));
+    assert_eq!(imgs2[0].format, "png");
+    assert_eq!(base64::decode(&imgs2[0].data).unwrap(), png);
+
+    // Undo removes it.
+    wb.handle_action(EditAction::Undo);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_cell_images().len(), 0, "undo should remove the image");
+    drop(ws);
+
+    // Delete payload also removes it (redo first to bring it back).
+    wb.handle_action(EditAction::Redo);
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteCellImage(DeleteCellImage {
+            sheet_idx: 0,
+            row: 2,
+            col: 3,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_cell_images().len(), 0, "delete should remove the image");
+}
 
 #[test]
 fn new_workbook() {

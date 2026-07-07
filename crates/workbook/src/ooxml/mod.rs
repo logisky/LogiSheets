@@ -4,6 +4,7 @@ pub mod content_types;
 pub mod core_properties;
 pub mod defaults;
 pub mod doc_props;
+pub mod drawing_part;
 pub mod drawings;
 pub mod enum_groups;
 pub mod external_links;

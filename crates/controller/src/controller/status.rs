@@ -11,6 +11,7 @@ use crate::ext_book_manager::ExtBooksManager;
 use crate::ext_ref_manager::ExtRefManager;
 use crate::formula_manager::FormulaManager;
 use crate::id_manager::FuncIdManager;
+use crate::image_manager::ImageManager;
 use crate::id_manager::NameIdManager;
 use crate::id_manager::SheetIdManager;
 use crate::id_manager::TextIdManager;
@@ -41,6 +42,7 @@ pub struct Status {
     pub exclusive_manager: ExclusiveManager,
     pub block_schema_manager: SchemaManager,
     pub field_render_manager: FieldRenderManager,
+    pub image_manager: ImageManager,
 
     pub dirty_cells_next_round: HashSet<(SheetId, CellId)>,
 }
@@ -68,6 +70,7 @@ impl Default for Status {
             dirty_cells_next_round: HashSet::new(),
             block_schema_manager: SchemaManager::default(),
             field_render_manager: FieldRenderManager::default(),
+            image_manager: ImageManager::new(),
         }
     }
 }

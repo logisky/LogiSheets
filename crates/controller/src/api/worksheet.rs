@@ -7,8 +7,8 @@ use crate::controller::display::BlockSchema;
 use crate::controller::display::BlockSchemaRandomEntry;
 use crate::controller::display::BlockSchemaType;
 use crate::controller::display::{
-    BlockCellInfo, BlockDisplayInfo, BlockInfo, CellCoordinate, CellPosition, DisplayWindow,
-    DisplayWindowWithStartPoint,
+    BlockCellInfo, BlockDisplayInfo, BlockInfo, CellCoordinate, CellImageInfo, CellPosition,
+    DisplayWindow, DisplayWindowWithStartPoint,
 };
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
@@ -274,6 +274,36 @@ impl<'a> Worksheet<'a> {
             .navigator
             .fetch_cell_id(&self.sheet_id, row, col)?;
         self.get_cell_info_by_cell_id(&cell_id)
+    }
+
+    /// All images placed in this sheet's cells, each resolved to its current
+    /// `(row, col)` position with the bytes base64-encoded for transport.
+    /// Images whose anchor cell no longer exists are skipped.
+    pub fn get_cell_images(&self) -> Vec<CellImageInfo> {
+        let mut result = self
+            .controller
+            .status
+            .image_manager
+            .images_of_sheet(self.sheet_id)
+            .into_iter()
+            .filter_map(|(cell_id, img)| {
+                let (row, col) = self
+                    .controller
+                    .status
+                    .navigator
+                    .fetch_cell_idx(&self.sheet_id, &cell_id)
+                    .ok()?;
+                Some(CellImageInfo {
+                    row,
+                    col,
+                    id: img.id,
+                    format: img.format,
+                    data: crate::image_manager::base64::encode(&img.data),
+                })
+            })
+            .collect::<Vec<_>>();
+        result.sort_by_key(|c| (c.row, c.col));
+        result
     }
 
     pub fn get_cell_infos(

@@ -63,6 +63,7 @@ export enum MethodName {
   IsReady = "isReady",
   GetMergedCells = "getMergedCells",
   GetComments = "getComments",
+  GetCellImages = "getCellImages",
   CalcCondition = "calcCondition",
   GetCellIdByBlockRef = "getCellIdByBlockRef",
 

@@ -4,6 +4,7 @@ use crate::logisheets::LogiSheetsData;
 use crate::ooxml::doc_props::DocPropApp;
 use crate::ooxml::doc_props::DocPropCore;
 use crate::ooxml::doc_props::DocPropCustom;
+use crate::ooxml::drawing_part::CtWsDr;
 use crate::ooxml::theme::ThemePart;
 use crate::ooxml::{
     comments::Comments, external_links::ExternalLinkPart, persons::Persons,
@@ -11,6 +12,8 @@ use crate::ooxml::{
     threaded_comments::ThreadedComments, workbook::WorkbookPart, worksheet::WorksheetPart,
 };
 use crate::workbook::Id;
+use crate::workbook::Media;
+use crate::workbook::WorksheetDrawing;
 use crate::workbook::Xl;
 use std::collections::HashMap;
 use std::{
@@ -142,6 +145,7 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
     let mut external_links = HashMap::<Id, ExternalLink>::new();
     let mut theme = Option::<(Id, ThemePart)>::None;
     let mut persons = Option::<Persons>::None;
+    let mut medias = Vec::<Media>::new();
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -158,7 +162,7 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
                 let target = &r.target;
                 let path = get_target_abs_path(rels, target);
                 if let Some(s) = path.to_str() {
-                    match de_worksheet(s, archive) {
+                    match de_worksheet(s, archive, &mut medias) {
                         Ok(w) => {
                             worksheets.insert(id, w);
                         }
@@ -252,16 +256,19 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
         external_links,
         theme,
         persons,
+        medias,
     })
 }
 
 fn de_worksheet<R: Read + Seek>(
     path: &str,
     archive: &mut ZipArchive<R>,
+    medias: &mut Vec<Media>,
 ) -> Result<Worksheet, SerdeErr> {
     let worksheet_part = de_worksheet_part(path, archive)?;
     let mut comments = Option::<Comments>::None;
     let mut threaded_comments = Option::<ThreadedComments>::None;
+    let mut drawing = Option::<WorksheetDrawing>::None;
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -274,6 +281,7 @@ fn de_worksheet<R: Read + Seek>(
             worksheet_part,
             comments,
             threaded_comments,
+            drawing,
         });
     }
     let relationships = result.unwrap();
@@ -305,13 +313,78 @@ fn de_worksheet<R: Read + Seek>(
                     }
                 }
             }
+            DRAWING => {
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(d_path) = path.to_str() {
+                    match de_ws_drawing(d_path, archive, medias) {
+                        Ok(d) => {
+                            drawing = Some(d);
+                        }
+                        Err(e) => {
+                            println!("parsing drawing: {:?} but meet error:{:?}", d_path, e)
+                        }
+                    }
+                }
+            }
             _ => {}
         });
     Ok(Worksheet {
         worksheet_part,
         comments,
         threaded_comments,
+        drawing,
     })
+}
+
+/// Read a worksheet drawing part (`xl/drawings/drawingN.xml`) plus its
+/// relationships, and pull any referenced image media into `medias`.
+fn de_ws_drawing<R: Read + Seek>(
+    path: &str,
+    archive: &mut ZipArchive<R>,
+    medias: &mut Vec<Media>,
+) -> Result<WorksheetDrawing, SerdeErr> {
+    let content = de_drawing_part(path, archive)?;
+    let rels_buf = get_rels(path)?;
+    let relationships = match rels_buf.to_str() {
+        Some(rels) => de_relationships(rels, archive)
+            .map(|r| (rels.to_string(), r.relationships))
+            .ok(),
+        None => None,
+    };
+    let (rels_path, rels) = match relationships {
+        Some(v) => v,
+        None => {
+            return Ok(WorksheetDrawing {
+                content,
+                rels: Vec::new(),
+            });
+        }
+    };
+    for r in rels.iter() {
+        if RType(&r.ty) == IMAGE {
+            let media_abs = get_target_abs_path(&rels_path, &r.target);
+            if let Some(mp) = media_abs.to_str() {
+                let name = mp.rsplit('/').next().unwrap_or(mp).to_string();
+                if !medias.iter().any(|m| m.name == name) {
+                    if let Ok(data) = read_binary(mp, archive) {
+                        medias.push(Media { name, data });
+                    }
+                }
+            }
+        }
+    }
+    Ok(WorksheetDrawing { content, rels })
+}
+
+fn read_binary<R: Read + Seek>(
+    path: &str,
+    archive: &mut ZipArchive<R>,
+) -> Result<Vec<u8>, SerdeErr> {
+    let mut file = archive.by_name(path)?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf)?;
+    Ok(buf)
 }
 
 macro_rules! define_de_func {
@@ -338,6 +411,7 @@ define_de_func!(de_threaded_comments, ThreadedComments);
 define_de_func!(de_sst, SstPart);
 define_de_func!(de_style_part, StylesheetPart);
 define_de_func!(de_theme, ThemePart);
+define_de_func!(de_drawing_part, CtWsDr);
 define_de_func!(de_doc_prop_custom, DocPropCustom);
 define_de_func!(de_doc_prop_app, DocPropApp);
 define_de_func!(de_doc_prop_core, DocPropCore);

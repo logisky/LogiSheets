@@ -23,6 +23,7 @@ use crate::{
     edit_action::{EditPayload, PayloadsAction, SheetRename},
     exclusive::executor::ExclusiveManagerExecutor,
     formula_manager::{FormulaExecutor, Vertex},
+    image_manager::ImageExecutor,
     navigator::{NavExecutor, Navigator},
     range_manager::RangeExecutor,
     settings::CalcConfig,
@@ -162,6 +163,9 @@ impl<'a> Executor<'a> {
         let (cell_attachments, updated) = result.execute_cell_attachments(payload.clone())?;
         result.status.cell_attachment_manager = cell_attachments.manager;
 
+        let (image_executor, image_updated) = result.execute_image(payload.clone())?;
+        result.status.image_manager = image_executor.manager;
+
         let mut dirty_ranges = range_executor.dirty_ranges;
         range_executor.removed_ranges.into_iter().for_each(|e| {
             dirty_ranges.insert(e);
@@ -198,7 +202,7 @@ impl<'a> Executor<'a> {
         )?;
 
         let cell_updated =
-            if updated || nav_updated || cell_attatchment_updated || exclusive_updated {
+            if updated || nav_updated || cell_attatchment_updated || exclusive_updated || image_updated {
                 true
             } else {
                 result.updated_cells.len() > 0 || result.cells_removed.len() > 0
@@ -249,6 +253,7 @@ impl<'a> Executor<'a> {
                 exclusive_manager: result.status.exclusive_manager,
                 block_schema_manager: result.status.block_schema_manager,
                 field_render_manager: result.status.field_render_manager,
+                image_manager: result.status.image_manager,
             },
             version_manager: result.version_manager,
             async_func_manager: result.async_func_manager,
@@ -444,6 +449,20 @@ impl<'a> Executor<'a> {
             text_id_manager: &mut self.status.text_id_manager,
         };
         let executor = CellAttachmentsExecutor::new(self.status.cell_attachment_manager.clone());
+        executor.execute(&mut ctx, payload)
+    }
+
+    fn execute_image(&mut self, payload: EditPayload) -> Result<(ImageExecutor, bool), Error> {
+        let mut ctx = CellAttachmentsConnector {
+            sheet_pos_manager: &self.status.sheet_info_manager,
+            navigator: &self.status.navigator,
+            sheet_id_manager: &mut self.status.sheet_id_manager,
+            name_id_manager: &mut self.status.name_id_manager,
+            external_links_manager: &mut self.status.external_links_manager,
+            func_id_manager: &mut self.status.func_id_manager,
+            text_id_manager: &mut self.status.text_id_manager,
+        };
+        let executor = ImageExecutor::new(self.status.image_manager.clone());
         executor.execute(&mut ctx, payload)
     }
 
