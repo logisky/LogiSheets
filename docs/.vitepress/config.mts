@@ -5,6 +5,10 @@ export default defineConfig({
     title: 'LogiSheets',
     description:
         'A web-based spreadsheet engine in Rust + WASM, usable from Rust, Node.js and the browser.',
+    head: [
+        // Browser-tab favicon (reuses the nav logo image).
+        ['link', {rel: 'icon', type: 'image/jpeg', href: '/logo/logisheets.jpg'}],
+    ],
     themeConfig: {
         logo: '/logo/logisheets.jpg',
         nav: [
