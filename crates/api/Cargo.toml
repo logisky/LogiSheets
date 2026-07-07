@@ -3,8 +3,13 @@ name = "logisheets-rs"
 version.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "The Rust API for LogiSheets spreadsheet engine"
+description = "The Rust API for LogiSheets — a spreadsheet engine that reads, edits, and writes .xlsx"
 edition.workspace = true
+readme = "README.md"
+repository = "https://github.com/logisky/LogiSheets"
+homepage = "https://logisheets.com"
+keywords = ["excel", "spreadsheet", "xlsx", "ooxml", "formula"]
+categories = ["parser-implementations", "data-structures"]
 
 [dependencies]
 logisheets_controller = { workspace = true }

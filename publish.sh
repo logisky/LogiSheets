@@ -69,7 +69,10 @@ CARGO_MANIFESTS=(
     "crates/controller/parser/Cargo.toml"
     "crates/controller/ast_checker/Cargo.toml"
     "crates/controller/Cargo.toml"
-    "Cargo.toml"
+    # Public Rust SDK. Published last so its controller/workbook/base deps are
+    # already on crates.io. The workspace-root crate (`logisheets`) is NOT
+    # published — it only hosts the integration tests (publish = false).
+    "crates/api/Cargo.toml"
 )
 
 # ---------------------------------------------------------------------------

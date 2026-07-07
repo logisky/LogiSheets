@@ -1,6 +1,6 @@
 {
     "name": "logisheets-core",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "UI-free LogiSheets logic — runs in the browser or on Node. Depends on logisheets-web only for types; the engine Client is injected by the host.",
     "main": "./dist/index.js",
     "module": "./dist/index.js",
@@ -44,7 +44,7 @@
     "author": "Jeremy He",
     "license": "MIT",
     "peerDependencies": {
-        "logisheets-web": "^1.1.0"
+        "logisheets-web": "^1.3.0"
     },
     "devDependencies": {
         "logisheets-web": "workspace:*",
