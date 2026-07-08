@@ -175,7 +175,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     StDataValidationErrorStyle {
         Stop => "stop",
         Warning => "warning",
@@ -184,7 +184,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     StDataValidationImeMode {
         NoControl => "noControl",
         Off => "off",
@@ -200,7 +200,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     StDataValidationOperator {
         Between => "between",
         NotBetween => "notBetween",
@@ -214,7 +214,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     StDataValidationType {
         None => "none",
         Whole => "whole",

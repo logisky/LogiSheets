@@ -2170,7 +2170,7 @@ pub struct CtHeaderFooter {
     pub align_with_margins: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDataValidations {
     #[xmlserde(name = b"dataValidation", ty = "child", vec_size = "count")]
     pub data_validations: Vec<CtDataValidation>,
@@ -2184,7 +2184,7 @@ pub struct CtDataValidations {
     pub count: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDataValidation {
     #[xmlserde(name = b"formula1", ty = "child")]
     pub formula1: Option<PlainTextString>,

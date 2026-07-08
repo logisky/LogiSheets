@@ -18,6 +18,10 @@ pub struct CellInfo {
     pub style: Style,
     pub block_id: Option<BlockId>,
     pub diy_cell_id: Option<DiyCellId>,
+    /// The value of this cell's data-validation shadow, if one exists. It is
+    /// the boolean result of the validation rule (`false` ⇒ the cell's value
+    /// violates the rule). `None` when the cell has no data-validation shadow.
+    pub validation_shadow: Option<Value>,
 }
 
 #[derive(Debug, Clone, TS)]

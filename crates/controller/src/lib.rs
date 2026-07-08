@@ -12,6 +12,7 @@ mod connectors;
 mod container;
 pub mod controller;
 mod cube_manager;
+pub mod data_validation_manager;
 pub mod edit_action;
 mod errors;
 pub mod exclusive;

@@ -57,6 +57,105 @@ impl Workbook {
         self.controller.handle_action(action)
     }
 
+    /// Install a `ShadowKind::Validation` shadow formula on every non-empty
+    /// cell that is covered by a data-validation rule and doesn't have one yet.
+    /// The shadow evaluates the rule to a boolean; the frontend flags cells
+    /// whose shadow is `false`. Read-only rules → we never remove shadows here.
+    /// Empty cells are intentionally left unshadowed (unflagged).
+    ///
+    /// Only run once at load (`from_file`): shadows are materialized for the
+    /// cells that are non-empty in the loaded file. Cells edited afterwards are
+    /// not (re)synced for now.
+    fn sync_data_validation_shadows(&mut self) {
+        use crate::data_validation_manager::{parse_sqref, translate};
+        use crate::edit_action::{EphemeralCellInput, PayloadsAction};
+        use crate::sid_assigner::ShadowKind;
+        use logisheets_base::CellValue;
+
+        if self.controller.status.data_validation_manager.is_empty() {
+            return;
+        }
+
+        // Pass 1 (immutable): collect the cells that need a new shadow.
+        let mut pending: Vec<(usize, SheetId, CellId, String)> = Vec::new();
+        {
+            let status = &self.controller.status;
+            for (sheet_id, dvs) in status.data_validation_manager.validations.iter() {
+                let rules: Vec<(Vec<_>, String)> = dvs
+                    .data_validations
+                    .iter()
+                    .filter_map(|dv| {
+                        let f = translate::rule_to_formula(dv)?;
+                        Some((parse_sqref(&dv.sqref), f))
+                    })
+                    .collect();
+                if rules.is_empty() {
+                    continue;
+                }
+                let sheet_idx = match status.sheet_info_manager.pos.iter().position(|s| s == sheet_id)
+                {
+                    Some(i) => i,
+                    None => continue,
+                };
+                let container = match status.container.get_sheet_container(*sheet_id) {
+                    Some(c) => c,
+                    None => continue,
+                };
+                for (cell_id, cell) in container.cells.iter() {
+                    if matches!(cell.value, CellValue::Blank) {
+                        continue;
+                    }
+                    let nc = match cell_id {
+                        CellId::NormalCell(nc) => nc,
+                        _ => continue,
+                    };
+                    if self
+                        .controller
+                        .sid_assigner
+                        .find_shadow_id(*sheet_id, *cell_id, ShadowKind::Validation)
+                        .is_some()
+                    {
+                        continue;
+                    }
+                    let (row, col) = match status.navigator.fetch_normal_cell_idx(sheet_id, nc) {
+                        Ok(x) => x,
+                        Err(_) => continue,
+                    };
+                    if let Some((_, formula)) = rules
+                        .iter()
+                        .find(|(ranges, _)| ranges.iter().any(|r| r.contains(row, col)))
+                    {
+                        pending.push((sheet_idx, *sheet_id, *cell_id, formula.clone()));
+                    }
+                }
+            }
+        }
+        if pending.is_empty() {
+            return;
+        }
+
+        // Pass 2 (mut): allocate shadow ids, then install formulas.
+        let mut payloads = Vec::with_capacity(pending.len());
+        for (sheet_idx, sheet_id, cell_id, formula) in pending {
+            let sid =
+                self.controller
+                    .sid_assigner
+                    .get_shawdow_id(sheet_id, cell_id, ShadowKind::Validation);
+            payloads.push(crate::edit_action::EditPayload::EphemeralCellInput(
+                EphemeralCellInput {
+                    sheet_idx,
+                    id: sid,
+                    content: format!("={formula}"),
+                },
+            ));
+        }
+        self.controller.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads,
+            undoable: false,
+            init: false,
+        }));
+    }
+
     pub fn get_sheet_name_by_idx(&self, idx: usize) -> Result<String> {
         let sheet_id = self
             .controller
@@ -128,14 +227,18 @@ impl Workbook {
 
     /// Create a workbook from a .xlsx file.
     pub fn from_file(buf: &[u8], book_name: String) -> Result<Self> {
-        let mut controller = Controller::from_file(book_name, buf)?;
-        controller
-            .version_manager
-            .set_init_status(controller.status.clone());
-        Ok(Workbook {
+        let controller = Controller::from_file(book_name, buf)?;
+        let mut wb = Workbook {
             controller,
             cell_positioners: new_locked(HashMap::new()),
-        })
+        };
+        // Materialize validation shadows for the loaded, non-empty cells before
+        // snapshotting the init status, so the baseline includes them.
+        wb.sync_data_validation_shadows();
+        wb.controller
+            .version_manager
+            .set_init_status(wb.controller.status.clone());
+        Ok(wb)
     }
 
     #[inline]

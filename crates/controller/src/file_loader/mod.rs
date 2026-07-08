@@ -59,6 +59,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         mut block_schema_manager,
         mut field_render_manager,
         mut image_manager,
+        mut data_validation_manager,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {
         sheet_id_manager: &mut sheet_id_manager,
@@ -266,6 +267,10 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     &mut image_manager,
                 );
             }
+            // Excel data validation is stored verbatim per sheet for round-trip.
+            if let Some(dv) = &ws.worksheet_part.data_validations {
+                data_validation_manager.set_sheet(sheet_id, dv.clone());
+            }
         }
     });
     let status = Status {
@@ -288,6 +293,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         block_schema_manager,
         field_render_manager,
         image_manager,
+        data_validation_manager,
     };
     if let Some(theme) = xl.theme {
         settings.theme = ThemeManager::from(theme.1);
