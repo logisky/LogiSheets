@@ -254,6 +254,7 @@ impl<'a> Executor<'a> {
                 block_schema_manager: result.status.block_schema_manager,
                 field_render_manager: result.status.field_render_manager,
                 image_manager: result.status.image_manager,
+                data_validation_manager: result.status.data_validation_manager,
             },
             version_manager: result.version_manager,
             async_func_manager: result.async_func_manager,

@@ -20,6 +20,7 @@ use crate::{
     file_saver::{
         external_links::save_external_link, styles::save_sheet_style, worksheet::save_sheets,
     },
+    data_validation_manager::DataValidationManager,
     formula_manager::FormulaManager,
     id_manager::{SheetIdManager, TextIdManager},
     image_manager::ImageManager,
@@ -48,6 +49,7 @@ pub fn save_workbook<S: SaverTrait>(
     block_schema_manager: &SchemaManager,
     field_render_manager: &FieldRenderManager,
     image_manager: &ImageManager,
+    data_validation_manager: &DataValidationManager,
     saver: &mut S,
 ) -> Result<Wb, SaveError> {
     let mut worksheets: HashMap<String, Worksheet> = HashMap::new();
@@ -109,6 +111,10 @@ pub fn save_workbook<S: SaverTrait>(
             if !cell_images.is_empty() {
                 worksheet.drawing = Some(WorksheetDrawing::from_cell_images(&cell_images));
             }
+
+            // Round-trip Excel data validation, stored verbatim per sheet.
+            worksheet.worksheet_part.data_validations =
+                data_validation_manager.get_sheet(sheet_id).cloned();
 
             worksheets.insert(ct_sheet.id.clone(), worksheet);
             ct_sheets.push(ct_sheet);

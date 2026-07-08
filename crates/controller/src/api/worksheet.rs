@@ -253,6 +253,7 @@ impl<'a> Worksheet<'a> {
                 style: self.get_style_by_id(cell_id)?,
                 block_id: None,
                 diy_cell_id,
+                validation_shadow: None,
             });
         }
         let formula = self.get_formula_by_id(cell_id)?;
@@ -264,7 +265,20 @@ impl<'a> Worksheet<'a> {
             style,
             block_id,
             diy_cell_id,
+            validation_shadow: self.get_validation_shadow(cell_id),
         })
+    }
+
+    /// The value of the `Validation` shadow for this cell, if one has been
+    /// materialized (only non-empty cells covered by a data-validation rule get
+    /// one). The value is the rule's boolean result — `false` means invalid.
+    fn get_validation_shadow(&self, cell_id: &CellId) -> Option<Value> {
+        let shadow_id = self.controller.sid_assigner.find_shadow_id(
+            self.sheet_id,
+            *cell_id,
+            crate::sid_assigner::ShadowKind::Validation,
+        )?;
+        self.get_value_by_id(&CellId::EphemeralCell(shadow_id)).ok()
     }
 
     pub fn get_cell_info(&self, row: usize, col: usize) -> Result<CellInfo> {

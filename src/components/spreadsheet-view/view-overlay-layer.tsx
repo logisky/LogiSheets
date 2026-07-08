@@ -3,6 +3,7 @@ import {Grid} from 'logisheets-engine'
 import {BlockInterfaceComponent} from '@/components/block-interface'
 import {CraftInteractionComponent} from '@/components/craft-interaction'
 import {CommentLayer} from '@/components/comment-layer'
+import {DataValidationOverlay} from '@/components/data-validation-overlay'
 
 export interface ViewOverlayLayerProps {
     grid: Grid | null
@@ -110,6 +111,9 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
                     canvasStartX={canvasStartX}
                     canvasStartY={canvasStartY}
                 />
+            )}
+            {grid && (
+                <DataValidationOverlay grid={grid} activeSheet={activeSheet} />
             )}
         </div>
     )

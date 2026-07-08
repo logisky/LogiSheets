@@ -7,6 +7,164 @@ use crate::edit_action::{
 use super::{EditAction, Workbook};
 
 #[test]
+fn data_validation_round_trip() {
+    use logisheets_workbook::prelude::{
+        CtDataValidation, CtDataValidations, PlainTextString, StDataValidationErrorStyle,
+        StDataValidationImeMode, StDataValidationOperator, StDataValidationType, Wb, write,
+    };
+
+    // Start from a valid empty workbook, then inject a data-validation rule at
+    // the workbook layer to simulate an xlsx authored by Excel.
+    let base = Workbook::default().save().unwrap();
+    let mut raw = Wb::from_file(&base).unwrap();
+    let dv = CtDataValidations {
+        data_validations: vec![CtDataValidation {
+            formula1: Some(PlainTextString {
+                value: "\"Apple,Banana,Cherry\"".to_string(),
+                space: None,
+            }),
+            formula2: None,
+            ty: StDataValidationType::List,
+            error_style: StDataValidationErrorStyle::Stop,
+            ime_mode: StDataValidationImeMode::NoControl,
+            operator: StDataValidationOperator::Between,
+            blank: true,
+            show_drop_down: false,
+            show_input_message: false,
+            show_error_message: true,
+            prompt_title: None,
+            prompt: None,
+            sqref: "A1:A10".to_string(),
+        }],
+        disable_prompts: false,
+        x_window: None,
+        y_window: None,
+        count: 1,
+    };
+    raw.xl
+        .worksheets
+        .values_mut()
+        .next()
+        .unwrap()
+        .worksheet_part
+        .data_validations = Some(dv);
+    let input = write(raw).unwrap();
+
+    // Round-trip through the controller: load, save, reload.
+    let wb = Workbook::from_file(&input, "dv".to_string()).unwrap();
+    let out = wb.save().unwrap();
+
+    // The validation must survive (previously the saver dropped it: wrote None).
+    let reloaded = Wb::from_file(&out).unwrap();
+    let ws = reloaded.xl.worksheets.values().next().unwrap();
+    let dv2 = ws
+        .worksheet_part
+        .data_validations
+        .as_ref()
+        .expect("data validation should survive the controller round trip");
+    assert_eq!(dv2.data_validations.len(), 1);
+    assert_eq!(dv2.data_validations[0].sqref, "A1:A10");
+    assert!(matches!(
+        dv2.data_validations[0].ty,
+        StDataValidationType::List
+    ));
+    assert_eq!(
+        dv2.data_validations[0].formula1.as_ref().unwrap().value,
+        "\"Apple,Banana,Cherry\""
+    );
+}
+
+#[test]
+fn data_validation_flags_invalid_cell() {
+    use crate::controller::display::Value;
+    use crate::edit_action::CellInput;
+    use crate::sid_assigner::ShadowKind;
+    use logisheets_base::CellId;
+    use logisheets_workbook::prelude::{
+        CtDataValidation, CtDataValidations, PlainTextString, StDataValidationErrorStyle,
+        StDataValidationImeMode, StDataValidationOperator, StDataValidationType, Wb, write,
+    };
+
+    // Author an xlsx that already contains A1="Apple" (valid) and A2="Zebra"
+    // (invalid) so the values are present at load time — shadows are only
+    // materialized on load (from_file), not on later edits.
+    let mut authored = Workbook::default();
+    authored.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "Apple".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "Zebra".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+    let base = authored.save().unwrap();
+
+    // Inject a list rule on A1:A10 accepting only Apple/Banana.
+    let mut raw = Wb::from_file(&base).unwrap();
+    let dv = CtDataValidations {
+        data_validations: vec![CtDataValidation {
+            formula1: Some(PlainTextString {
+                value: "\"Apple,Banana\"".to_string(),
+                space: None,
+            }),
+            formula2: None,
+            ty: StDataValidationType::List,
+            error_style: StDataValidationErrorStyle::Stop,
+            ime_mode: StDataValidationImeMode::NoControl,
+            operator: StDataValidationOperator::Between,
+            blank: true,
+            show_drop_down: false,
+            show_input_message: false,
+            show_error_message: true,
+            prompt_title: None,
+            prompt: None,
+            sqref: "A1:A10".to_string(),
+        }],
+        disable_prompts: false,
+        x_window: None,
+        y_window: None,
+        count: 1,
+    };
+    raw.xl
+        .worksheets
+        .values_mut()
+        .next()
+        .unwrap()
+        .worksheet_part
+        .data_validations = Some(dv);
+    let input = write(raw).unwrap();
+
+    // Loading materializes the validation shadows for the non-empty cells.
+    let mut wb = Workbook::from_file(&input, "dv".to_string()).unwrap();
+
+    let mut read = |row: usize| -> Value {
+        let scid = wb
+            .get_shadow_cell_id(0, row, 0, ShadowKind::Validation)
+            .unwrap();
+        let id = match scid.cell_id {
+            CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        wb.get_shadow_info_by_id(id).unwrap().value
+    };
+    assert!(matches!(read(0), Value::Bool(true)), "Apple should be valid");
+    assert!(
+        matches!(read(1), Value::Bool(false)),
+        "Zebra should be invalid"
+    );
+}
+
+#[test]
 fn cell_image_round_trip() {
     use crate::image_manager::base64;
 
