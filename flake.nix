@@ -38,6 +38,10 @@
               # wasm
               rust-cbindgen
               wabt
+
+              # release tooling
+              cargo-edit   # `cargo set-version` for bumping crate versions
+              just         # runs the release recipes in ./justfile
             ];
           };
         };
