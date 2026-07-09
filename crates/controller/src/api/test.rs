@@ -165,6 +165,85 @@ fn data_validation_flags_invalid_cell() {
 }
 
 #[test]
+fn get_cell_list_validation_reads_list_type() {
+    use crate::data_validation_manager::ListValidation;
+    use logisheets_workbook::prelude::{
+        CtDataValidation, CtDataValidations, PlainTextString, StDataValidationErrorStyle,
+        StDataValidationImeMode, StDataValidationOperator, StDataValidationType, Wb, write,
+    };
+
+    let mk = |ty: StDataValidationType, f1: &str, sqref: &str| CtDataValidation {
+        formula1: Some(PlainTextString {
+            value: f1.to_string(),
+            space: None,
+        }),
+        formula2: None,
+        ty,
+        error_style: StDataValidationErrorStyle::Stop,
+        ime_mode: StDataValidationImeMode::NoControl,
+        operator: StDataValidationOperator::Between,
+        blank: true,
+        show_drop_down: true,
+        show_input_message: false,
+        show_error_message: false,
+        prompt_title: None,
+        prompt: None,
+        sqref: sqref.to_string(),
+    };
+
+    let base = Workbook::default().save().unwrap();
+    let mut raw = Wb::from_file(&base).unwrap();
+    let dv = CtDataValidations {
+        data_validations: vec![
+            // Inline list on A1:A10.
+            mk(StDataValidationType::List, "\"East,West,North,South\"", "A1:A10"),
+            // Range-reference list on C1.
+            mk(StDataValidationType::List, "$G$1:$G$4", "C1"),
+            // A non-list rule that must be ignored on B1.
+            mk(StDataValidationType::Whole, "1", "B1"),
+        ],
+        disable_prompts: false,
+        x_window: None,
+        y_window: None,
+        count: 3,
+    };
+    raw.xl
+        .worksheets
+        .values_mut()
+        .next()
+        .unwrap()
+        .worksheet_part
+        .data_validations = Some(dv);
+    let input = write(raw).unwrap();
+    let wb = Workbook::from_file(&input, "dv".to_string()).unwrap();
+
+    // Inline list: A1 (row 0, col 0) is covered.
+    assert_eq!(
+        wb.get_cell_list_validation(0, 0, 0),
+        Some(ListValidation::Inline(vec![
+            "East".into(),
+            "West".into(),
+            "North".into(),
+            "South".into(),
+        ]))
+    );
+    // Still covered lower in the sqref range (A10).
+    assert!(matches!(
+        wb.get_cell_list_validation(0, 9, 0),
+        Some(ListValidation::Inline(_))
+    ));
+    // Range reference comes back raw for the caller to resolve.
+    assert_eq!(
+        wb.get_cell_list_validation(0, 0, 2),
+        Some(ListValidation::Reference("$G$1:$G$4".to_string()))
+    );
+    // A non-list rule is not surfaced.
+    assert_eq!(wb.get_cell_list_validation(0, 0, 1), None);
+    // A cell outside every sqref has no validation.
+    assert_eq!(wb.get_cell_list_validation(0, 5, 5), None);
+}
+
+#[test]
 fn cell_image_round_trip() {
     use crate::image_manager::base64;
 
