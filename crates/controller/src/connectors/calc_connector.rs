@@ -672,6 +672,27 @@ impl<'a> BlockRefTrait for CalcConnector<'a> {
         key: &String,
         field_id: logisheets_base::BlockFieldId,
     ) -> Option<(SheetId, BlockCellId)> {
+        // Empty key => "the sole row" of a degenerate (single-row / single-col)
+        // block. Such a block has no meaningful key column, so its key cell is
+        // left empty; the value-matching path below can't find it because empty
+        // cells carry no stored value. Resolve it by geometry instead: the
+        // schema enumerates exactly one key cell id, and we return that row's
+        // field cell. Only unambiguous when there is a single row — a block with
+        // multiple rows queried by empty key is treated as "not found".
+        if key.is_empty() {
+            let bp = self.navigator.get_block_place(&sheet_id, &block_id).ok()?;
+            let key_cell_ids = self
+                .block_schema_manager
+                .get_all_key_cell_ids_by_block(sheet_id, block_id, bp)?;
+            let [only_key] = key_cell_ids.as_slice() else {
+                return None;
+            };
+            let cell_id = self.block_schema_manager.partially_resolve_by_field_id(
+                sheet_id, block_id, *only_key, field_id,
+            )?;
+            return Some((sheet_id, cell_id));
+        }
+
         let keys = self.get_all_keys_by_block(sheet_id, block_id);
         keys.into_iter()
             .find(|(k, _, _)| k == key)

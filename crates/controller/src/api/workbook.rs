@@ -251,6 +251,34 @@ impl Workbook {
         self.controller.app_data = app_data;
     }
 
+    /// List-type data-validation options for a cell, or `None` if the cell is
+    /// not covered by a `list` validation. Inline literal lists come back as
+    /// `ListValidation::Inline(values)` ready to use; range / named references
+    /// come back as `ListValidation::Reference(raw)` for the caller to resolve
+    /// via its own cell reads. Only `list` validations are surfaced — this is
+    /// the read path douyoushu uses to infer `enum` inputs.
+    pub fn get_cell_list_validation(
+        &self,
+        sheet_idx: usize,
+        row: usize,
+        col: usize,
+    ) -> Option<crate::data_validation_manager::ListValidation> {
+        use crate::data_validation_manager::{list_validation, parse_sqref};
+        let sheet_id = self.controller.get_sheet_id_by_idx(sheet_idx)?;
+        let dvs = self
+            .controller
+            .status
+            .data_validation_manager
+            .get_sheet(sheet_id)?;
+        dvs.data_validations.iter().find_map(|dv| {
+            let opts = list_validation(dv)?;
+            parse_sqref(&dv.sqref)
+                .iter()
+                .any(|r| r.contains(row, col))
+                .then_some(opts)
+        })
+    }
+
     #[inline]
     pub fn save(&self) -> Result<Vec<u8>> {
         self.controller.save()

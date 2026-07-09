@@ -14,7 +14,42 @@ pub mod translate;
 
 use imbl::HashMap;
 use logisheets_base::SheetId;
-use logisheets_workbook::prelude::CtDataValidations;
+use logisheets_workbook::prelude::{CtDataValidation, CtDataValidations, StDataValidationType};
+
+/// The options offered by a `list`-type data validation. Douyoushu uses this to
+/// turn a cell's dropdown into an `enum` input in the published manifest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ListValidation {
+    /// Inline literal options parsed from `formula1` = `"a,b,c"`. Ready to use.
+    Inline(Vec<String>),
+    /// A range or named-range reference (the raw `formula1`, e.g. `$D$1:$D$5`
+    /// or `Lists!$A$1:$A$9`). The caller resolves it to concrete values via its
+    /// own cell reads — kept out of the engine so cross-sheet / named refs stay
+    /// the caller's concern.
+    Reference(String),
+}
+
+/// If `dv` is a `list` validation with operands, return its options; otherwise
+/// `None` (non-list types are intentionally not surfaced).
+pub fn list_validation(dv: &CtDataValidation) -> Option<ListValidation> {
+    if !matches!(dv.ty, StDataValidationType::List) {
+        return None;
+    }
+    let src = dv.formula1.as_ref()?.value.trim().to_string();
+    if src.len() >= 2 && src.starts_with('"') && src.ends_with('"') {
+        // Inline comma-separated literals. Excel escapes an embedded quote as
+        // `""`; undo that per item. Commas can't appear inside inline items
+        // (comma is the separator), so a plain split is faithful.
+        let inner = &src[1..src.len() - 1];
+        let items = inner
+            .split(',')
+            .map(|s| s.trim().replace("\"\"", "\""))
+            .collect();
+        Some(ListValidation::Inline(items))
+    } else {
+        Some(ListValidation::Reference(src))
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct DataValidationManager {

@@ -372,6 +372,140 @@ mod funcs {
         }
     }
 
+    /// Douyoushu scalar I/O: a degenerate single-row block has no meaningful
+    /// key column, so its key cell is left empty. `BLOCKREF(ref, "", field)`
+    /// must resolve the sole row by geometry (not by matching a stored key
+    /// value, which doesn't exist), and stay reactive to field-cell edits.
+    #[test]
+    fn test_block_ref_empty_key_resolves_scalar() {
+        use logisheets::Workbook;
+        let mut wb = Workbook::default();
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                // 1 row x 2 cols: col0 = key (left EMPTY), col1 = field "v".
+                .add_payload(CreateBlock {
+                    sheet_idx: 0,
+                    id: 7,
+                    master_row: 0,
+                    master_col: 0,
+                    row_cnt: 1,
+                    col_cnt: 2,
+                    owner: None,
+                    modify_policy: None,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 1,
+                    content: "30".to_string(),
+                })
+                .add_payload(BindFormSchema {
+                    ref_name: "price".to_string(),
+                    sheet_idx: 0,
+                    block_id: 7,
+                    field_from: 1,
+                    key_idx: 0,
+                    fields: vec!["v".into()],
+                    render_ids: vec!["r-v".into()],
+                    field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
+                    row: true,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 5,
+                    col: 5,
+                    content: r#"=BLOCKREF("price", "", "v")"#.to_string(),
+                }),
+        ));
+
+        let v = wb.get_sheet_by_idx(0).unwrap().get_value(5, 5).unwrap();
+        assert!(
+            matches!(v, logisheets::Value::Number(n) if n == 30.0),
+            "empty-key BLOCKREF should resolve the sole row: {:?}",
+            wb.get_sheet_by_idx(0).unwrap().get_value(5, 5)
+        );
+
+        // Reactivity: writing the field cell (the runtime's input sink) must
+        // re-fire the BLOCKREF formula that reads it.
+        wb.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+            CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 1,
+                content: "42".to_string(),
+            },
+        )));
+        let v = wb.get_sheet_by_idx(0).unwrap().get_value(5, 5).unwrap();
+        match v {
+            logisheets::Value::Number(n) => assert_eq!(n, 42.0, "empty-key BLOCKREF stale"),
+            other => panic!("empty-key BLOCKREF non-number: {:?}", other),
+        }
+    }
+
+    /// Guard: empty key is only unambiguous for a single-row block. A block
+    /// with multiple rows queried by empty key has no defined "sole row", so
+    /// `BLOCKREF(ref, "", field)` must resolve to an error rather than silently
+    /// picking a row.
+    #[test]
+    fn test_block_ref_empty_key_ambiguous_is_error() {
+        use logisheets::Workbook;
+        let mut wb = Workbook::default();
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                // 2 rows x 2 cols, keys left empty => ambiguous.
+                .add_payload(CreateBlock {
+                    sheet_idx: 0,
+                    id: 8,
+                    master_row: 0,
+                    master_col: 0,
+                    row_cnt: 2,
+                    col_cnt: 2,
+                    owner: None,
+                    modify_policy: None,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 1,
+                    content: "10".to_string(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 1,
+                    col: 1,
+                    content: "20".to_string(),
+                })
+                .add_payload(BindFormSchema {
+                    ref_name: "ambig".to_string(),
+                    sheet_idx: 0,
+                    block_id: 8,
+                    field_from: 1,
+                    key_idx: 0,
+                    fields: vec!["v".into()],
+                    render_ids: vec!["r-v".into()],
+                    field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
+                    row: true,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 5,
+                    col: 5,
+                    content: r#"=BLOCKREF("ambig", "", "v")"#.to_string(),
+                }),
+        ));
+
+        let v = wb.get_sheet_by_idx(0).unwrap().get_value(5, 5).unwrap();
+        assert!(
+            matches!(v, logisheets::Value::Error(_)),
+            "ambiguous empty-key BLOCKREF should be an error, got: {:?}",
+            v
+        );
+    }
+
     /// Regression: renaming a block schema must not break already-typed
     /// BlockRef formulas. The new id-keyed AST keeps `(sheet_id, block_id)`
     /// in the formula so a rename of the ref-name leaves dependencies intact.
