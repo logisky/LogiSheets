@@ -15,6 +15,12 @@
 # npm packages that get published, in publish.sh order.
 npm_dirs := "packages/web packages/node packages/core packages/engine packages/runtime packages/formula-editor"
 
+# Published npm packages as dir:name pairs (name = registry name).
+npm_pkgs := "packages/web:logisheets-web packages/node:logisheets packages/core:logisheets-core packages/engine:logisheets-engine packages/runtime:logisheets-runtime packages/formula-editor:logisheets-formula-editor"
+
+# Published crates as their crates.io names (all inherit the workspace version locally).
+crates := "xmldiff logisheets_workbook_derives logisheets_workbook logisheets_base logisheets_lexer logisheets_lexer4fmt logisheets_parser logisheets_astchecker logisheets_controller logisheets-rs"
+
 # Rust crates that are NOT published and keep their own version line.
 rust_exclude := "--exclude logiscript --exclude logisheets_sequencer"
 
@@ -30,6 +36,28 @@ versions:
     echo "npm packages:"
     for d in {{npm_dirs}}; do
         printf "  %-30s %s\n" "$(node -p "require('./$d/package.json').name")" "$(node -p "require('./$d/package.json').version")"
+    done
+
+# Show the LIVE published versions (npm registry + crates.io) next to local,
+# flagging drift with `*`. Needs network.
+published:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ws_local="$(sed -n '/^\[workspace.package\]/,/^\[/ s/^version = "\(.*\)"/\1/p' Cargo.toml)"
+    printf "%-30s %-10s %-10s\n" "package" "local" "published"
+    echo "npm (registry):"
+    for pair in {{npm_pkgs}}; do
+        dir="${pair%%:*}"; name="${pair##*:}"
+        local_v="$(node -p "require('./$dir/package.json').version")"
+        pub_v="$(npm view "$name" version 2>/dev/null || echo '(unpublished)')"
+        mark=""; [ "$local_v" != "$pub_v" ] && mark=" *"
+        printf "  %-28s %-10s %-10s%s\n" "$name" "$local_v" "$pub_v" "$mark"
+    done
+    echo "crates.io:"
+    for c in {{crates}}; do
+        pub_v="$(curl -s "https://crates.io/api/v1/crates/$c" -H 'User-Agent: logisheets-release' | node -e 'let d="";process.stdin.on("data",x=>d+=x).on("end",()=>{try{console.log(JSON.parse(d).crate.max_stable_version)}catch{console.log("(unpublished)")}})')"
+        mark=""; [ "$ws_local" != "$pub_v" ] && mark=" *"
+        printf "  %-28s %-10s %-10s%s\n" "$c" "$ws_local" "$pub_v" "$mark"
     done
 
 # Coordinated release: set the ENTIRE repo (Rust + every npm package) to
