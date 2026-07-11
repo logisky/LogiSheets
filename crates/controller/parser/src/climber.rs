@@ -17,14 +17,19 @@ pub enum Assoc {
 #[allow(dead_code)]
 pub struct Operator<R: RuleType> {
     rule: R,
+    /// Binding power. Operators in the SAME tier (e.g. `*` and `/`, or `+` and
+    /// `-`) MUST share a precedence so they evaluate left-to-right; a higher
+    /// number binds tighter.
+    prec: u32,
     assoc: Assoc,
     next: Option<Box<Operator<R>>>,
 }
 
 impl<R: RuleType> Operator<R> {
-    pub fn new(rule: R, assoc: Assoc) -> Operator<R> {
+    pub fn new(rule: R, prec: u32, assoc: Assoc) -> Operator<R> {
         Operator {
             rule,
+            prec,
             assoc,
             next: None,
         }
@@ -179,8 +184,7 @@ impl<R: RuleType> ClimberBuilder<R> {
     }
 
     pub fn op(mut self, op: Operator<R>) -> Self {
-        let prec = self.ops.len() as u32;
-        self.ops.insert(op.rule, (prec, op.assoc));
+        self.ops.insert(op.rule, (op.prec, op.assoc));
         self
     }
 

@@ -20,24 +20,31 @@ use regex::Regex;
 
 type Result<T> = std::result::Result<T, ParseError>;
 lazy_static! {
+    // Precedence tiers (low binds looser). Operators in the SAME tier share a
+    // level so they evaluate left-to-right — the previous code auto-incremented
+    // per `.op()`, giving `*` a tighter bind than `/` (and `+` looser than `-`,
+    // etc.), so `a/b*c` wrongly parsed as `a/(b*c)`. Tiers match Excel.
     static ref CLIMBER: Climber<Rule> = ClimberBuilder::new()
-        .op(Operator::new(Rule::comma, Assoc::Left))
-        .op(Operator::new(Rule::ge_op, Assoc::Left))
-        .op(Operator::new(Rule::gt_op, Assoc::Left))
-        .op(Operator::new(Rule::le_op, Assoc::Left))
-        .op(Operator::new(Rule::lt_op, Assoc::Left))
-        .op(Operator::new(Rule::neq_op, Assoc::Left))
-        .op(Operator::new(Rule::eq_op, Assoc::Left))
-        .op(Operator::new(Rule::concat_op, Assoc::Left))
-        .op(Operator::new(Rule::minus_op, Assoc::Left))
-        .op(Operator::new(Rule::plus_op, Assoc::Left))
-        .op(Operator::new(Rule::div_op, Assoc::Left))
-        .op(Operator::new(Rule::multiply_op, Assoc::Left))
-        .op(Operator::new(Rule::exp_op, Assoc::Left))
-        .op(Operator::new(Rule::postfix_op, Assoc::Postfix))
-        .op(Operator::new(Rule::prefix_op, Assoc::Prefix))
-        .op(Operator::new(Rule::space_op, Assoc::Left))
-        .op(Operator::new(Rule::colon_op, Assoc::Left))
+        .op(Operator::new(Rule::comma, 0, Assoc::Left))
+        // comparison operators — all equal
+        .op(Operator::new(Rule::ge_op, 1, Assoc::Left))
+        .op(Operator::new(Rule::gt_op, 1, Assoc::Left))
+        .op(Operator::new(Rule::le_op, 1, Assoc::Left))
+        .op(Operator::new(Rule::lt_op, 1, Assoc::Left))
+        .op(Operator::new(Rule::neq_op, 1, Assoc::Left))
+        .op(Operator::new(Rule::eq_op, 1, Assoc::Left))
+        .op(Operator::new(Rule::concat_op, 2, Assoc::Left))
+        // addition / subtraction — equal
+        .op(Operator::new(Rule::minus_op, 3, Assoc::Left))
+        .op(Operator::new(Rule::plus_op, 3, Assoc::Left))
+        // multiplication / division — equal
+        .op(Operator::new(Rule::div_op, 4, Assoc::Left))
+        .op(Operator::new(Rule::multiply_op, 4, Assoc::Left))
+        .op(Operator::new(Rule::exp_op, 5, Assoc::Left))
+        .op(Operator::new(Rule::postfix_op, 6, Assoc::Postfix))
+        .op(Operator::new(Rule::prefix_op, 7, Assoc::Prefix))
+        .op(Operator::new(Rule::space_op, 8, Assoc::Left))
+        .op(Operator::new(Rule::colon_op, 9, Assoc::Left))
         .build();
     static ref NUM_REGEX: Regex =
         Regex::new(r#"([0-9]+)?(\.?([0-9]+))?([Ee]([+-]?[0-9]+))?"#).unwrap();
@@ -635,6 +642,47 @@ mod tests {
             }
             _ => panic!(),
         }
+    }
+
+    // `*` and `/` (and `+`/`-`) are the same tier and must be left-associative:
+    // `10/2*5` is `(10/2)*5`, NOT `10/(2*5)`. Regression for the precedence bug
+    // where each operator got its own increasing precedence.
+    #[test]
+    fn same_tier_operators_are_left_associative() {
+        let parser = Parser {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
+        let mut context = Context {
+            book_name: "book",
+            id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
+        };
+        // Return (root infix op, left-arg infix op) for a binary formula.
+        let ops = |n: &ast::Node| -> (ast::InfixOperator, ast::InfixOperator) {
+            let (rootop, args) = match &n.pure {
+                ast::PureNode::Func(f) => match &f.op {
+                    ast::Operator::Infix(op) => (op, &f.args),
+                    _ => panic!("root not infix"),
+                },
+                _ => panic!("root not a func"),
+            };
+            let leftop = match &args[0].pure {
+                ast::PureNode::Func(f) => match &f.op {
+                    ast::Operator::Infix(op) => op,
+                    _ => panic!("left not infix"),
+                },
+                _ => panic!("left not a func"),
+            };
+            (rootop.clone(), leftop.clone())
+        };
+        // 10/2*5 must be (10/2)*5 → root Multiply, left Divide.
+        let (root, left) = ops(&parser.parse("10/2*5", 1, &mut context).unwrap());
+        assert!(matches!(root, ast::InfixOperator::Multiply), "root of 10/2*5 must be *");
+        assert!(matches!(left, ast::InfixOperator::Divide), "left of 10/2*5 must be /");
+        // 10-2+3 must be (10-2)+3 → root Plus, left Minus.
+        let (root, left) = ops(&parser.parse("10-2+3", 1, &mut context).unwrap());
+        assert!(matches!(root, ast::InfixOperator::Plus), "root of 10-2+3 must be +");
+        assert!(matches!(left, ast::InfixOperator::Minus), "left of 10-2+3 must be -");
     }
 
     #[test]
