@@ -243,6 +243,20 @@ export class Worksheet {
         ) as Result<CellInfo>
     }
 
+    // The enum option set of a cell's list data-validation (inline lists),
+    // or undefined when the cell has no such dropdown. Used by douyoushu to
+    // prefill enum inputs from a workbook's existing dropdowns.
+    public getCellListValidation(
+        rowIdx: number,
+        colIdx: number
+    ): Result<readonly string[] | undefined> {
+        return rpc(
+            'getCellListValidation',
+            {sheetIdx: this._sheetIdx, row: rowIdx, col: colIdx},
+            this._id
+        ) as Result<readonly string[] | undefined>
+    }
+
     public getReproducibleCell(
         rowIdx: number,
         colIdx: number

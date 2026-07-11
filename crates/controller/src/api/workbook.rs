@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
@@ -18,11 +18,12 @@ use crate::{
     errors::{Error, Result},
 };
 use logisheets_base::{
-    BlockCellId, BlockId, CellId, ColId, RowId, SheetId, TextId,
+    BlockCellId, BlockId, CellId, ColId, FuncId, RowId, SheetId, TextId,
     async_func::{AsyncCalcResult, Task},
     errors::BasicError,
 };
 use logisheets_lexer::lex;
+use logisheets_parser::ast;
 use logisheets_workbook::logisheets::AppData;
 
 const CALC_CONDITION_EPHEMERAL_ID: u64 = 225715;
@@ -279,6 +280,24 @@ impl Workbook {
         })
     }
 
+    /// Flattened, wasm-friendly form of [`get_cell_list_validation`]: the enum
+    /// option set for a cell, or `None` if it has no `list` validation. Inline
+    /// literal lists return their values; a range/named reference returns `None`
+    /// (the caller can't use it as a fixed set without resolving cells). Kept
+    /// simple so it crosses the wasm boundary as `Option<Vec<String>>`.
+    pub fn get_cell_enum_options(
+        &self,
+        sheet_idx: usize,
+        row: usize,
+        col: usize,
+    ) -> Option<Vec<String>> {
+        use crate::data_validation_manager::ListValidation;
+        match self.get_cell_list_validation(sheet_idx, row, col)? {
+            ListValidation::Inline(values) => Some(values),
+            ListValidation::Reference(_) => None,
+        }
+    }
+
     #[inline]
     pub fn save(&self) -> Result<Vec<u8>> {
         self.controller.save()
@@ -354,6 +373,29 @@ impl Workbook {
     #[inline]
     pub fn get_all_sheet_info(&self) -> Vec<SheetInfo> {
         self.controller.get_all_sheet_info()
+    }
+
+    /// Every distinct formula function name used across the whole workbook
+    /// (cell formulas + defined names), read from the parsed ASTs — no
+    /// re-parsing of formula text. Names are uppercased as stored at parse time
+    /// (`_XLFN.`/`_XLWS.` prefixes are kept as written), sorted and deduped.
+    /// Hosts use this to detect which functions a workbook relies on.
+    pub fn get_formula_function_names(&self) -> Vec<String> {
+        let status = &self.controller.status;
+        let mut ids: BTreeSet<FuncId> = BTreeSet::new();
+        for node in status.formula_manager.formulas.values() {
+            collect_func_ids(node, &mut ids);
+        }
+        for node in status.formula_manager.names.values() {
+            collect_func_ids(node, &mut ids);
+        }
+        let mut names: Vec<String> = ids
+            .iter()
+            .filter_map(|id| status.func_id_manager.get_string(id))
+            .collect();
+        names.sort();
+        names.dedup();
+        names
     }
 
     #[inline]
@@ -951,5 +993,34 @@ fn read_display_value(status: &Status, sheet_id: SheetId, cell_id: &CellId) -> D
         logisheets_base::CellValue::Number(n) => DisplayValue::Number(n),
         logisheets_base::CellValue::InlineStr(_) => DisplayValue::Empty,
         logisheets_base::CellValue::FormulaStr(ref s) => DisplayValue::Str(s.clone()),
+    }
+}
+
+/// Recursively collect every `Operator::Function` id in an AST node. Recurses
+/// through function args and the sub-expressions of BLOCKREF/BLOCKREFS (their
+/// key/field conditions may themselves call functions). BLOCKREF itself is a
+/// dedicated node, not an `Operator::Function`, so it is intentionally skipped.
+fn collect_func_ids(node: &ast::Node, out: &mut BTreeSet<FuncId>) {
+    match &node.pure {
+        ast::PureNode::Func(f) => {
+            if let ast::Operator::Function(fid) = &f.op {
+                out.insert(*fid);
+            }
+            for arg in &f.args {
+                collect_func_ids(arg, out);
+            }
+        }
+        ast::PureNode::BlockRef(b) => match b {
+            ast::BlockRefNode::Single { key, .. } => collect_func_ids(key, out),
+            ast::BlockRefNode::Multi {
+                key_condition,
+                field_condition,
+                ..
+            } => {
+                collect_func_ids(key_condition, out);
+                collect_func_ids(field_condition, out);
+            }
+        },
+        ast::PureNode::Value(_) | ast::PureNode::Reference(_) => {}
     }
 }

@@ -20,6 +20,19 @@ where
     }
 }
 
+/// CLEAN(text) — strip the non-printable control characters (code points below
+/// 32) from `text`.
+pub fn calc_clean<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    assert_or_return!(args.len() == 1, ast::Error::Unspecified);
+    let v = fetcher.get_calc_value(args.into_iter().next().unwrap());
+    assert_text_from_calc_value!(s, v);
+    let cleaned: String = s.chars().filter(|c| (*c as u32) >= 32).collect();
+    CalcVertex::from_string(cleaned)
+}
+
 /// CODE(text) — the numeric code of the first character of `text`.
 pub fn calc_code<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where

@@ -46,9 +46,11 @@ export const enum WorkerUpdate {
 export enum MethodName {
   GetSheetDimension = "getSheetDimension",
   GetAllSheetInfo = "getAllSheetInfo",
+  GetFormulaFunctionNames = "getFormulaFunctionNames",
   GetDisplayWindow = "getDisplayWindow",
   GetBlockDisplayWindow = "getBlockDisplayWindow",
   GetCell = "getCell",
+  GetCellListValidation = "getCellListValidation",
   GetCells = "getCells",
   GetCellsExceptWindow = "getCellsExceptWindow",
   PredictFill = "predictFill",
@@ -141,6 +143,7 @@ export type Result<T> = T | ErrorMessage;
 export interface IWorkbookWorker {
   isReady(): Result<boolean>;
   getAllSheetInfo(): Result<readonly SheetInfo[]>;
+  getFormulaFunctionNames(): Result<readonly string[]>;
   getDisplayWindow(params: any): Result<DisplayWindowWithStartPoint>;
   getCell(params: any): Result<CellInfo>;
   getCells(params: any): Result<readonly CellInfo[]>;

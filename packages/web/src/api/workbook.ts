@@ -314,6 +314,15 @@ export class Workbook {
         return rpc('getAllSheetInfo', undefined, this._id)
     }
 
+    /**
+     * Every distinct formula function name used across the workbook (cell
+     * formulas + defined names), read from the parsed ASTs. Uppercased as
+     * stored at parse time, sorted + deduped.
+     */
+    public getFormulaFunctionNames(): Result<string[]> {
+        return rpc('getFormulaFunctionNames', undefined, this._id)
+    }
+
     public checkFormula(f: string): boolean {
         return rpc('checkFormula', {formula: f}, this._id)
     }

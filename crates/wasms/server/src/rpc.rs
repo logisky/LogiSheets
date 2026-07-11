@@ -24,6 +24,7 @@ pub enum Message {
     GetSheetDimension(GetSheetDimensionParams),
     GetDisplayWindow(GetDisplayWindowParams),
     GetCell(GetCellParams),
+    GetCellListValidation(GetCellParams),
     GetValue(GetCellParams),
     GetFormula(GetCellParams),
     GetStyle(GetCellParams),
@@ -78,6 +79,7 @@ pub enum Message {
     Release,
     GetSheetCount,
     GetAllSheetInfo,
+    GetFormulaFunctionNames,
     GetAppData,
     CleanTempStatus,
     CommitTempStatus,
@@ -647,6 +649,8 @@ pub struct WorkbookMethods {
         book_id: Option<usize>,
     ) -> Result<SheetDimension, ErrorMessage>,
     pub get_all_sheet_info: fn(book_id: Option<usize>) -> Result<Vec<SheetInfo>, ErrorMessage>,
+    pub get_formula_function_names:
+        fn(book_id: Option<usize>) -> Result<Vec<String>, ErrorMessage>,
     pub get_sheet_idx:
         fn(params: GetSheetIdxParams, book_id: Option<usize>) -> Result<usize, ErrorMessage>,
     pub get_sheet_id:
@@ -869,6 +873,9 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.end_col,
         ),
         Message::GetCell(params) => ws::get_cell_info(id, params.sheet_idx, params.row, params.col),
+        Message::GetCellListValidation(params) => {
+            ws::get_cell_list_validation(id, params.sheet_idx, params.row, params.col)
+        }
         Message::GetValue(params) => ws::get_value(id, params.sheet_idx, params.row, params.col),
         Message::GetFormula(params) => {
             ws::get_formula(id, params.sheet_idx, params.row, params.col)
@@ -1076,6 +1083,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             serde_wasm_bindgen::to_value(&count).unwrap()
         }
         Message::GetAllSheetInfo => controller::get_all_sheet_info(id),
+        Message::GetFormulaFunctionNames => controller::get_formula_function_names(id),
         Message::GetAppData => controller::get_app_data(id),
         Message::CleanTempStatus => {
             controller::clean_temp_status(id);

@@ -11,6 +11,7 @@ use logisheets_workbook::prelude::*;
 use sheet::{load_comments, load_persons, load_threaded_comments};
 
 use crate::{
+    connectors::FormulaConnector,
     controller::{Controller, status::Status},
     file_loader::{
         external_links::load_external_link,
@@ -21,6 +22,7 @@ use crate::{
     image_manager::{CellImage, ImageManager},
     navigator::{BlockPlace, Navigator},
     settings::Settings,
+    sid_assigner::ShadowIdAssigner,
     theme_manager::ThemeManager,
     utils::turn_indexed_color_to_rgb,
 };
@@ -273,6 +275,34 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             }
         }
     });
+
+    // Range→member-cell dependency edges aren't laid down during the
+    // incremental load (`add_ast_node` records only the formula→range edge, and
+    // a formula can reference cells that load later). Now that every cell and
+    // range is registered, rebuild them so range formulas (e.g. `=SUM(A1:B2)`)
+    // recompute when a member cell changes — mirroring the live input path.
+    {
+        let mut sid = ShadowIdAssigner::new();
+        let connector = FormulaConnector {
+            book_name: book_name.as_str(),
+            sheet_pos_manager: &mut sheet_info_manager,
+            sheet_id_manager: &mut sheet_id_manager,
+            text_id_manager: &mut text_id_manager,
+            func_id_manager: &mut func_id_manager,
+            range_manager: &mut range_manager,
+            cube_manager: &mut cube_manager,
+            ext_ref_manager: &mut ext_ref_manager,
+            name_id_manager: &mut name_id_manager,
+            id_navigator: &navigator,
+            idx_navigator: &navigator,
+            external_links_manager: &mut external_links_manager,
+            block_schema_manager: &block_schema_manager,
+            container: &container,
+            sid_assigner: &mut sid,
+        };
+        formula_manager.rebuild_range_deps(&connector);
+    }
+
     let status = Status {
         navigator,
         formula_manager,

@@ -72,6 +72,17 @@ pub fn get_cell_info(id: usize, sheet_idx: usize, row: usize, col: usize) -> JsV
     serde_wasm_bindgen::to_value(&cell).unwrap()
 }
 
+// The enum option set of a cell's list data-validation (inline lists only),
+// or null. Serialized as `string[] | null`. Used by douyoushu to prefill enum
+// inputs from a workbook's existing dropdowns.
+pub fn get_cell_list_validation(id: usize, sheet_idx: usize, row: usize, col: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let result = wb.get_cell_enum_options(sheet_idx, row, col);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
 pub fn get_col_info(id: usize, sheet_idx: usize, col_idx: usize) -> JsValue {
     init();
     let manager = MANAGER.get();

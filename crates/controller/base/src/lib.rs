@@ -323,8 +323,27 @@ impl CellValue {
                 }),
                 StCellType::N,
             ),
-            CellValue::InlineStr(_) => todo!(),
-            CellValue::FormulaStr(_) => todo!(),
+            // A formula whose cached result is a string → xlsx `t="str"` with
+            // the string in `<v>`. Inverse of the read path
+            // (`StCellType::Str => FormulaStr`). Previously `todo!()`, which
+            // panicked when saving any workbook containing formula cells.
+            CellValue::FormulaStr(s) => (
+                Some(PlainTextString {
+                    value: s,
+                    space: None,
+                }),
+                StCellType::Str,
+            ),
+            // Best-effort: flatten an inline rich string to its plain text and
+            // write it as a string value. Rich-run formatting is not preserved
+            // on save yet — but this no longer panics.
+            CellValue::InlineStr(rst) => (
+                Some(PlainTextString {
+                    value: rst.t.map(|p| p.value).unwrap_or_default(),
+                    space: None,
+                }),
+                StCellType::Str,
+            ),
         }
     }
 

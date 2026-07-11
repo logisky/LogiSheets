@@ -1,0 +1,2 @@
+INPUT A1 =IMDIV("-5+10i","1+2i")
+CHECKSTR A1 3+4i

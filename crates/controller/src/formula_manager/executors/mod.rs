@@ -4,7 +4,8 @@ use std::collections::HashSet;
 
 pub use input_formula::{
     add_ast_node, input_block_cell_shadow_template, input_block_cell_template, input_block_formula,
-    input_ephemeral_formula, input_formula, remove_ephemeral_formula, remove_formula,
+    input_ephemeral_formula, input_formula, rebuild_range_deps, remove_ephemeral_formula,
+    remove_formula,
 };
 use logisheets_base::{BlockId, BlockRange, CubeId, Range, RangeId, SheetId, errors::BasicError};
 

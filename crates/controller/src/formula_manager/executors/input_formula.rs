@@ -537,6 +537,30 @@ pub fn add_ast_node(
         .for_each(|new_dep| manager.graph.add_dep(this_vertex.clone(), new_dep));
 }
 
+/// Post-load pass: add the Range→member-cell dependency edges for every formula
+/// in the workbook. The file-load path (`add_ast_node`) records only the
+/// formula→range edge and skips the range→member expansion the live path does
+/// (`register_parsed_ast` via `ctx.get_range_deps`). It must run AFTER all
+/// cells + ranges are registered, because a formula can reference a range whose
+/// member cells load later (e.g. `D5=SUM(A5:B6)` is read before row 6). Without
+/// these edges a range formula never recomputes when a member cell changes —
+/// while a cell-ref (`=A1`) works, since its dep vertex IS the member cell.
+/// Idempotent: `add_dep` is a set insert.
+pub fn rebuild_range_deps<C: FormulaExecCtx>(manager: &mut FormulaManager, ctx: &C) {
+    let mut deps = HashSet::<Vertex>::new();
+    for ast in manager.formulas.values() {
+        get_all_vertices_from_ast(ast, &mut deps);
+    }
+    for ast in manager.names.values() {
+        get_all_vertices_from_ast(ast, &mut deps);
+    }
+    for dep in deps {
+        for range_dep in ctx.get_range_deps(&dep) {
+            manager.graph.add_dep(dep.clone(), range_dep);
+        }
+    }
+}
+
 /// Walk the AST looking for any `BLOCKREF` / `BLOCKREFS` whose target
 /// `(sheet, block)` matches `(self_sheet, self_block)`. Returns the
 /// human-readable kind ("BLOCKREF" / "BLOCKREFS") of the first match.

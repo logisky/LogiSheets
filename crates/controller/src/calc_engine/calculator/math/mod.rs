@@ -10,7 +10,7 @@ pub mod fv;
 pub mod gcd;
 pub mod irr;
 pub mod lcm;
-mod newton_iter;
+pub mod newton_iter;
 pub mod npv;
 pub mod pduration;
 pub mod pmt;

@@ -143,6 +143,84 @@ where
     calc_complex(args, fetcher, func)
 }
 
+pub fn calc_imsum<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc_fold(args, fetcher, Complex::new(0., 0.), |acc, c| acc + c)
+}
+
+pub fn calc_improduct<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc_fold(args, fetcher, Complex::new(1., 0.), |acc, c| acc * c)
+}
+
+pub fn calc_imsub<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc_pair(args, fetcher, |a, b| a - b)
+}
+
+pub fn calc_imdiv<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc_pair(args, fetcher, |a, b| a / b)
+}
+
+/// Parse one complex-number argument ("a+bi") from a fetched value.
+fn arg_to_complex(value: CalcValue) -> Result<Complex<f64>, ast::Error> {
+    let s = match value {
+        CalcValue::Scalar(Value::Text(t)) => t,
+        CalcValue::Scalar(Value::Number(n)) => return Ok(Complex::new(n, 0.)),
+        CalcValue::Scalar(Value::Blank) => return Ok(Complex::new(0., 0.)),
+        CalcValue::Scalar(Value::Boolean(_)) => return Err(ast::Error::Value),
+        CalcValue::Scalar(Value::Error(e)) => return Err(e),
+        _ => return Err(ast::Error::Value),
+    };
+    build_complex(&s).ok_or(ast::Error::Num)
+}
+
+/// Combine one-or-more complex arguments left-to-right from `init` (IMSUM/IMPRODUCT).
+fn calc_fold<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, init: Complex<f64>, func: F) -> CalcVertex
+where
+    C: Connector,
+    F: Fn(Complex<f64>, Complex<f64>) -> Complex<f64>,
+{
+    assert_or_return!(!args.is_empty(), ast::Error::Unspecified);
+    let mut acc = init;
+    for arg in args {
+        let value = fetcher.get_calc_value(arg);
+        match arg_to_complex(value) {
+            Ok(c) => acc = func(acc, c),
+            Err(e) => return CalcVertex::from_error(e),
+        }
+    }
+    CalcVertex::from_text(format!("{}", acc))
+}
+
+/// Combine exactly two complex arguments (IMSUB/IMDIV).
+fn calc_pair<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex
+where
+    C: Connector,
+    F: Fn(Complex<f64>, Complex<f64>) -> Complex<f64>,
+{
+    assert_or_return!(args.len() == 2, ast::Error::Unspecified);
+    let mut iter = args.into_iter();
+    let a = match arg_to_complex(fetcher.get_calc_value(iter.next().unwrap())) {
+        Ok(c) => c,
+        Err(e) => return CalcVertex::from_error(e),
+    };
+    let b = match arg_to_complex(fetcher.get_calc_value(iter.next().unwrap())) {
+        Ok(c) => c,
+        Err(e) => return CalcVertex::from_error(e),
+    };
+    CalcVertex::from_text(format!("{}", func(a, b)))
+}
+
 fn calc_f64<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, func: F) -> CalcVertex
 where
     C: Connector,

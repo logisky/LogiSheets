@@ -17,12 +17,14 @@ mod count;
 mod countblank;
 mod countif;
 mod cumipmt;
+mod datefns;
 mod datetime;
 mod delta;
 mod distribution;
 mod effect;
 mod exact;
 mod fact;
+mod finance;
 mod fvpv;
 mod gcdlcm;
 mod gestep;
@@ -41,11 +43,13 @@ mod len;
 mod lookup;
 mod mode;
 mod modulo;
+mod more_math;
 mod na;
 mod norm_s_dist;
 mod npv;
 mod offset;
 mod or;
+mod order_stats;
 mod pduration;
 mod permutation;
 mod pi;
@@ -55,6 +59,7 @@ mod quotient;
 mod rand;
 mod rank;
 mod regex_funcs;
+mod regression;
 mod rept;
 mod round;
 mod row;
@@ -65,9 +70,11 @@ mod sln;
 mod sum;
 mod sumif;
 mod sumproduct;
+mod subtotal;
 mod switch;
 mod tbill;
 mod text;
+mod type_fns;
 mod utils;
 mod vlookup;
 mod xor;
@@ -84,8 +91,63 @@ where
     if fetcher.is_async_func(name) {
         return asyncs::calc(name, args, fetcher);
     }
-    match name.to_uppercase().as_str() {
+    // Newer functions are stored in the file with a future/worksheet-class
+    // prefix (e.g. `_xlfn.STDEV.S`, `_xlfn._xlws.FILTER`); strip it so the bare
+    // name reaches the dispatch below.
+    let upper = name.to_uppercase();
+    let normalized = upper
+        .strip_prefix("_XLFN._XLWS.")
+        .or_else(|| upper.strip_prefix("_XLFN."))
+        .or_else(|| upper.strip_prefix("_XLWS."))
+        .unwrap_or(upper.as_str());
+    match normalized {
         "#CRITBINOM" => distribution::binom::calc_inv(args, fetcher),
+        // --- functions added alongside the douyoushu runtime work ---
+        "ATAN2" => more_math::calc_atan2(args, fetcher),
+        "CLEAN" => text::calc_clean(args, fetcher),
+        "CORREL" => regression::calc_correl(args, fetcher),
+        "COSH" => scalar_number::calc_cosh(args, fetcher),
+        "COVAR" => regression::calc_covar(args, fetcher),
+        "COVARIANCE.P" => regression::calc_covar(args, fetcher),
+        "COVARIANCE.S" => regression::calc_covar_s(args, fetcher),
+        "FINDB" => search::calc_find(args, fetcher),
+        "FISHER" => scalar_number::calc_atanh(args, fetcher),
+        "FISHERINV" => scalar_number::calc_tanh(args, fetcher),
+        "FORECAST" => regression::calc_forecast(args, fetcher),
+        "LEFTB" => leftright::calc_left(args, fetcher),
+        "MIDB" => leftright::calc_mid(args, fetcher),
+        "PERCENTILE" => order_stats::calc_percentile(args, fetcher),
+        "PERCENTILE.INC" => order_stats::calc_percentile(args, fetcher),
+        "PERCENTRANK" => order_stats::calc_percentrank(args, fetcher),
+        "PERCENTRANK.INC" => order_stats::calc_percentrank(args, fetcher),
+        "QUARTILE" => order_stats::calc_quartile(args, fetcher),
+        "QUARTILE.INC" => order_stats::calc_quartile(args, fetcher),
+        "REPLACEB" => text::calc_replace(args, fetcher),
+        "RIGHTB" => leftright::calc_right(args, fetcher),
+        "SEARCHB" => search::calc_search(args, fetcher),
+        "TRIMMEAN" => order_stats::calc_trimmean(args, fetcher),
+        "IMDIV" => im::calc_imdiv(args, fetcher),
+        "IMPRODUCT" => im::calc_improduct(args, fetcher),
+        "IMSUB" => im::calc_imsub(args, fetcher),
+        "IMSUM" => im::calc_imsum(args, fetcher),
+        "INTERCEPT" => regression::calc_intercept(args, fetcher),
+        "KURT" => distribution::statistics::calc_kurt(args, fetcher),
+        "MULTINOMIAL" => more_math::calc_multinomial(args, fetcher),
+        "N" => type_fns::calc_n(args, fetcher),
+        "PEARSON" => regression::calc_correl(args, fetcher),
+        "RSQ" => regression::calc_rsq(args, fetcher),
+        "SINH" => scalar_number::calc_sinh(args, fetcher),
+        "SKEW" => distribution::statistics::calc_skew(args, fetcher),
+        "SLOPE" => regression::calc_slope(args, fetcher),
+        "STANDARDIZE" => more_math::calc_standardize(args, fetcher),
+        "STDEV.P" => distribution::statistics::calc_stdevp(args, fetcher),
+        "STDEV.S" => distribution::statistics::calc_stdev(args, fetcher),
+        "STDEVP" => distribution::statistics::calc_stdevp(args, fetcher),
+        "SUMX2MY2" => regression::calc_sumx2my2(args, fetcher),
+        "SUMX2PY2" => regression::calc_sumx2py2(args, fetcher),
+        "SUMXMY2" => regression::calc_sumxmy2(args, fetcher),
+        "T" => type_fns::calc_t(args, fetcher),
+        "TYPE" => type_fns::calc_type(args, fetcher),
         "ABS" => scalar_number::calc_abs(args, fetcher),
         "ACCRINT" => bonds::accrint::calc_accrint(args, fetcher),
         "ACCRINTM" => bonds::accrint::calc_accrintm(args, fetcher),
@@ -97,6 +159,7 @@ where
         "ASINH" => scalar_number::calc_asinh(args, fetcher),
         "ATAN" => scalar_number::calc_atan(args, fetcher),
         "ATANH" => scalar_number::calc_atanh(args, fetcher),
+        "AVEDEV" => distribution::statistics::calc_avedev(args, fetcher),
         "AVERAGE" => average::calc_average(args, fetcher),
         "AVERAGEIF" => sumif::calc_averageif(args, fetcher),
         "AVERAGEIFS" => sumif::calc_averageifs(args, fetcher),
@@ -136,6 +199,19 @@ where
         "COUPPCD" => bonds::couppcd::calc(args, fetcher),
         "CSC" => scalar_number::calc_csc(args, fetcher),
         "CUMIPMT" => cumipmt::cumipmt(args, fetcher),
+        // --- Tier-1 finance / date / aggregate family (2026-07-09) ---
+        "CUMPRINC" => finance::calc_cumprinc(args, fetcher),
+        "DATEDIF" => datefns::calc_datedif(args, fetcher),
+        "DAYS360" => datefns::calc_days360(args, fetcher),
+        "DB" => finance::calc_db(args, fetcher),
+        "DDB" => finance::calc_ddb(args, fetcher),
+        "NETWORKDAYS" => datefns::calc_networkdays(args, fetcher),
+        "NPER" => finance::calc_nper(args, fetcher),
+        "RATE" => finance::calc_rate(args, fetcher),
+        "SUBTOTAL" => subtotal::calc(args, fetcher),
+        "VARP" => distribution::statistics::calc_varp(args, fetcher),
+        "VAR.P" => distribution::statistics::calc_varp(args, fetcher),
+        "YEARFRAC" => datefns::calc_yearfrac(args, fetcher),
         "DATE" => datetime::date::calc(args, fetcher),
         "DAY" => datetime::ymd::calc_day(args, fetcher),
         "DAYS" => datetime::days::calc(args, fetcher),
@@ -144,6 +220,7 @@ where
         "DEC2OCT" => bits::dec2hob::calc_dec2oct(args, fetcher),
         "DEGREES" => scalar_number::calc_degrees(args, fetcher),
         "DELTA" => delta::calc(args, fetcher),
+        "DEVSQ" => distribution::statistics::calc_devsq(args, fetcher),
         "DISC" => bonds::disc::calc(args, fetcher),
         "EDATE" => datetime::edate::calc(args, fetcher),
         "EFFECT" => effect::effect(args, fetcher),

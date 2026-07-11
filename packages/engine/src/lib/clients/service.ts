@@ -231,6 +231,17 @@ export class DataService {
     });
   }
 
+  // The enum option set of a cell's list data-validation (inline lists), or
+  // undefined when the cell has no such dropdown. Used by douyoushu to prefill
+  // enum inputs from a workbook's existing dropdowns.
+  public getCellListValidation(
+    sheetIdx: number,
+    row: number,
+    col: number,
+  ): Resp<readonly string[] | undefined> {
+    return this._workbook.getCellListValidation({ sheetIdx, row, col });
+  }
+
   public getMergedCells(
     sheetIdx: number,
     targetStartRow: number,

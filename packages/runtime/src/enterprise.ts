@@ -24,11 +24,12 @@ import type {AddressInfo} from 'node:net'
 import {SpreadsheetRuntime, type Workbook} from './index.js'
 import {
     loadCrafts,
+    runCraftExchange,
     type CraftRegistry,
     type LoadedCraft,
 } from './craft.js'
 import {WorkbookWatcher} from './watcher.js'
-import type {CraftManifest} from 'logisheets-core'
+import type {CraftManifest, JsonRpcRequest} from 'logisheets-core'
 
 // ── Control-plane client (§2.2) ──────────────────────────────────────────────
 
@@ -91,7 +92,10 @@ export class ControlPlaneClient {
         }).catch(() => {})
     }
 
-    async ingest(runtimeId: string, accessEvents: AccessEvent[]): Promise<void> {
+    async ingest(
+        runtimeId: string,
+        accessEvents: AccessEvent[]
+    ): Promise<void> {
         if (accessEvents.length === 0) return
         await fetch(this.url('/api/ingest'), {
             method: 'POST',
@@ -111,7 +115,7 @@ export class ControlPlaneClient {
 export class HttpCraftRegistry implements CraftRegistry {
     constructor(
         private readonly registryUrl: string,
-        private readonly token: string | null,
+        private readonly token: string | null
     ) {}
 
     private headers(): Record<string, string> {
@@ -120,8 +124,11 @@ export class HttpCraftRegistry implements CraftRegistry {
 
     async getManifest(craftId: string): Promise<CraftManifest | undefined> {
         const res = await fetch(
-            `${this.registryUrl.replace(/\/$/, '')}/api/craft/${encodeURIComponent(craftId)}`,
-            {headers: this.headers()},
+            `${this.registryUrl.replace(
+                /\/$/,
+                ''
+            )}/api/craft/${encodeURIComponent(craftId)}`,
+            {headers: this.headers()}
         ).catch(() => undefined)
         if (!res || !res.ok) return undefined
         const body = (await res.json()) as {
@@ -137,16 +144,18 @@ export class HttpCraftRegistry implements CraftRegistry {
 
     async importRuntime(
         _craftId: string,
-        manifest: CraftManifest,
+        manifest: CraftManifest
     ): Promise<unknown | undefined> {
         if (!manifest.rtJs) return undefined
         // manifest.rtJs is expected to be a fetchable URL to the runtime bundle.
         const res = await fetch(manifest.rtJs, {headers: this.headers()}).catch(
-            () => undefined,
+            () => undefined
         )
         if (!res || !res.ok) return undefined
         const code = await res.text()
-        const dataUrl = `data:text/javascript;base64,${Buffer.from(code).toString('base64')}`
+        const dataUrl = `data:text/javascript;base64,${Buffer.from(
+            code
+        ).toString('base64')}`
         try {
             return await import(dataUrl)
         } catch {
@@ -166,6 +175,25 @@ export interface TaskContext {
 
 /** A task handler runs one `rpcCall` against an ephemerally-loaded workbook. */
 export type TaskHandler = (ctx: TaskContext) => unknown | Promise<unknown>
+
+/**
+ * The standard `compute` task handler: drive the workbook's loaded crafts
+ * through one JSON-RPC exchange (see {@link runCraftExchange}). Generic and
+ * craft-agnostic — the crafts loaded from the workbook's AppData define what
+ * "compute" does via their `onRequest`/`onResponse`; a runtime serving craft
+ * workbooks uses this instead of hand-writing the exchange. `ctx.params` is
+ * forwarded verbatim as the request params (e.g. `{inputs}`) and the JSON-RPC
+ * response envelope is returned.
+ */
+export const craftComputeHandler: TaskHandler = (ctx) => {
+    const req: JsonRpcRequest = {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'compute',
+        params: ctx.params,
+    }
+    return runCraftExchange(ctx.crafts, ctx.workbook, req)
+}
 
 // ── Enterprise runtime server (§2.3) ─────────────────────────────────────────
 
@@ -192,6 +220,9 @@ export class EnterpriseRuntimeServer {
         this.runtime = opts.runtime
         this.registry = opts.registry
         this.secret = opts.secret
+        // Ship a generic `compute` by default so a craft-serving runtime needs
+        // no bespoke handler; anything in opts.taskHandlers can override it.
+        this.handlers.set('compute', craftComputeHandler)
         for (const [name, h] of Object.entries(opts.taskHandlers ?? {}))
             this.handlers.set(name, h)
     }
@@ -223,7 +254,7 @@ export class EnterpriseRuntimeServer {
         if (!server) return Promise.resolve()
         this.server = undefined
         return new Promise((resolve, reject) =>
-            server.close((err) => (err ? reject(err) : resolve())),
+            server.close((err) => (err ? reject(err) : resolve()))
         )
     }
 
@@ -243,12 +274,13 @@ export class EnterpriseRuntimeServer {
 
     private async onRequest(
         req: IncomingMessage,
-        res: ServerResponse,
+        res: ServerResponse
     ): Promise<void> {
         try {
             const url = req.url ?? '/'
             if (req.method === 'GET' && url === '/status') {
-                if (!this.authOk(req)) return json(res, 403, {error: 'forbidden'})
+                if (!this.authOk(req))
+                    return json(res, 403, {error: 'forbidden'})
                 return json(res, 200, {
                     pins: [...this.pins.keys()],
                     open: this.runtime.workbooks.length,
@@ -298,7 +330,9 @@ export class EnterpriseRuntimeServer {
         if (!handler) throw new Error(`unknown rpcCall: ${body.rpcCall}`)
         const wb = await this.loadFromUrl(body.workbookUrl)
         try {
-            const crafts = this.registry ? await loadCrafts(wb, this.registry) : []
+            const crafts = this.registry
+                ? await loadCrafts(wb, this.registry)
+                : []
             return await handler({workbook: wb, crafts, params: body.params})
         } finally {
             this.runtime.close(wb)
@@ -342,7 +376,7 @@ export interface EnterpriseRuntimeHandle {
  * heartbeating. The control panel then dials this runtime for pin/task.
  */
 export async function startEnterpriseRuntime(
-    opts: EnterpriseRuntimeOptions,
+    opts: EnterpriseRuntimeOptions
 ): Promise<EnterpriseRuntimeHandle> {
     const runtime = new SpreadsheetRuntime()
     const server = new EnterpriseRuntimeServer({
@@ -361,13 +395,13 @@ export async function startEnterpriseRuntime(
 
     if (reg.registryUrl) {
         server.setRegistry(
-            new HttpCraftRegistry(reg.registryUrl, reg.registryToken),
+            new HttpCraftRegistry(reg.registryUrl, reg.registryToken)
         )
     }
 
     const interval = setInterval(
         () => void client.heartbeat(reg.runtimeId),
-        opts.heartbeatMs ?? 30_000,
+        opts.heartbeatMs ?? 30_000
     )
     interval.unref?.()
 
