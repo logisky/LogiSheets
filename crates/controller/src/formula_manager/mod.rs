@@ -9,7 +9,8 @@ use logisheets_parser::ast;
 
 use crate::CellId;
 
-use self::executors::add_ast_node;
+use self::ctx::FormulaExecCtx;
+use self::executors::{add_ast_node, rebuild_range_deps};
 pub use executors::FormulaExecutor;
 
 #[derive(Debug, Clone)]
@@ -38,6 +39,13 @@ impl FormulaManager {
         ast: ast::Node,
     ) {
         add_ast_node(self, sheet_id, cell_id, range_id, ast)
+    }
+
+    /// Rebuild Range→member-cell dependency edges for all formulas after a file
+    /// load (see `executors::rebuild_range_deps`). Call once, after every cell
+    /// and range is registered, so range formulas recompute correctly.
+    pub fn rebuild_range_deps<C: FormulaExecCtx>(&mut self, ctx: &C) {
+        rebuild_range_deps(self, ctx)
     }
 }
 

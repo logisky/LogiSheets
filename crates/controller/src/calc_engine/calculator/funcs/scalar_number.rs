@@ -177,6 +177,20 @@ where
     calc(args, fetcher, |a| 1. / a.tanh())
 }
 
+pub fn calc_sinh<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc(args, fetcher, |a| a.sinh())
+}
+
+pub fn calc_cosh<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    calc(args, fetcher, |a| a.cosh())
+}
+
 pub fn calc_sqrt<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,

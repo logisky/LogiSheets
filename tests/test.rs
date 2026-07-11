@@ -44,6 +44,65 @@ mod funcs {
         });
     }
 
+    /// Regression: a RANGE-reference formula (`=SUM(A1:A2)`) must still
+    /// recompute when a member cell changes AFTER the workbook is saved and
+    /// reloaded. The file-load path used to record only the formula→range edge
+    /// and skip the range→member-cell edges the live path builds, so a reloaded
+    /// `SUM` went stale on edits (while a cell-ref `=A1` worked). Fixed by the
+    /// post-load `FormulaManager::rebuild_range_deps` pass in `file_loader`.
+    #[test]
+    fn test_range_dep_recomputes_after_reload() {
+        use logisheets::Workbook;
+        let mut wb = Workbook::default();
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 0,
+                    content: "1".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 1,
+                    col: 0,
+                    content: "2".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 2,
+                    content: "=SUM(A1:A2)".into(),
+                }),
+        ));
+        let v = wb.get_sheet_by_idx(0).unwrap().get_value(0, 2).unwrap();
+        assert!(
+            matches!(v, logisheets::Value::Number(n) if n == 3.0),
+            "pre-save SUM(A1:A2): {:?}",
+            v
+        );
+
+        // Save → reload, then change a member cell on the reloaded workbook.
+        let mut bytes = wb.save().expect("save");
+        let mut reopened =
+            Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+        reopened.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+            CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "10".into(),
+            },
+        )));
+        let v = reopened.get_sheet_by_idx(0).unwrap().get_value(0, 2).unwrap();
+        match v {
+            logisheets::Value::Number(n) => {
+                assert_eq!(n, 12.0, "range formula went stale after reload+edit")
+            }
+            other => panic!("SUM non-number after reload+edit: {:?}", other),
+        }
+    }
+
     #[test]
     fn test_block_ref() {
         let mut wb = load_script("tests/funcs/block_ref_data.script");

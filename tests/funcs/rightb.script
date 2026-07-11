@@ -1,0 +1,2 @@
+INPUT A1 =RIGHTB("hello",2)
+CHECKSTR A1 lo

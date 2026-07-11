@@ -1,0 +1,2 @@
+INPUT A1 =IMSUB("5+6i","1+2i")
+CHECKSTR A1 4+4i

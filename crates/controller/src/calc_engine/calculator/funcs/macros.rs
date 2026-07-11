@@ -6,6 +6,22 @@ macro_rules! assert_or_return {
     };
 }
 
+/// Pull the next (optional) argument off an args iterator as an `f64`, using
+/// `$default` when it is absent. A present-but-erroring argument early-returns
+/// the error from the enclosing function (Excel propagates it).
+macro_rules! optional_f64 {
+    ($iter:expr, $fetcher:expr, $default:expr) => {
+        match $iter.next() {
+            Some(__arg) => {
+                let __v = $fetcher.get_calc_value(__arg);
+                assert_f64_from_calc_value!(__f, __v);
+                __f
+            }
+            None => $default,
+        }
+    };
+}
+
 macro_rules! assert_range_from_calc_value {
     ($var:ident, $value:expr) => {
         let _v = match $value {

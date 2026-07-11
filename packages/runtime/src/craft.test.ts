@@ -11,6 +11,10 @@ import {
     applyCraftRequest,
     validateLoadedCrafts,
     applyCraftResponse,
+    runCraftExchange,
+    loadCrafts,
+    MemoryCraftRegistry,
+    RPC_VALIDATION_FAILED,
     type LoadedCraft,
     type Workbook,
 } from './index.js'
@@ -165,5 +169,121 @@ describe('craft exchange helpers (real WASM engine)', () => {
         )
         expect(errs).toEqual([])
         expect(seen).toEqual([42])
+    })
+})
+
+describe('runCraftExchange (real WASM engine)', () => {
+    let rt: SpreadsheetRuntime
+    let wb: Workbook
+
+    beforeEach(() => {
+        rt = new SpreadsheetRuntime()
+        wb = rt.createWorkbook()
+    })
+    afterEach(() => rt.closeAll())
+
+    it('drives onRequest → onResponse into a JSON-RPC result', async () => {
+        // A craft that writes params.value into A1, then reads A1 back out.
+        const runtime: CraftRuntime<CraftState, Workbook> = {
+            onLoad: () => undefined,
+            onRequest: async (req, _s, w) => {
+                const v = (req.params as {value?: number})?.value
+                if (v !== undefined) await w.ops.inputCell(0, 0, 0, String(v))
+                return undefined
+            },
+            onResponse: async (resp, _s, w) => {
+                resp.result = {a1: await w.client.getValue({sheetIdx: 0, row: 0, col: 0})}
+                return undefined
+            },
+        }
+        const resp = await runCraftExchange([loaded(runtime, {})], wb, {
+            jsonrpc: '2.0',
+            id: 7,
+            method: 'compute',
+            params: {value: 42},
+        })
+        expect(resp.id).toBe(7)
+        expect(resp.error).toBeUndefined()
+        expect(resp.result).toMatchObject({a1: {type: 'number', value: 42}})
+    })
+
+    it('maps an onRequest objection to INVALID_PARAMS (-32602)', async () => {
+        const runtime: CraftRuntime<CraftState, Workbook> = {
+            onLoad: () => undefined,
+            onRequest: () => ({msg: 'nope', ty: 0}),
+            onResponse: () => undefined,
+        }
+        const resp = await runCraftExchange([loaded(runtime, {})], wb, {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'compute',
+        })
+        expect(resp.error?.code).toBe(-32602)
+        expect(resp.error?.message).toContain('nope')
+        expect(resp.result).toBeUndefined()
+    })
+
+    it('maps onValidate violations to VALIDATION_FAILED, carrying the violations', async () => {
+        const rule = {sheetIdx: 0, row: 0, col: 0, formula: '#PLACEHOLDER>10'}
+        let shadow: SheetCellId
+        const runtime: CraftRuntime<CraftState, Workbook> = {
+            onLoad: async (_s, w) => {
+                shadow = await w.ops.setValidationRule(0, 0, 0, rule.formula)
+                return undefined
+            },
+            onRequest: async (_r, _s, w) => {
+                await w.ops.inputCell(0, 0, 0, '5') // fails #>10
+                return undefined
+            },
+            onValidate: (_s, w) => w.ops.checkValidationShadows([{shadow, rule}]),
+            onResponse: () => undefined,
+        }
+        const crafts = [loaded(runtime, {})]
+        await crafts[0].runtime.onLoad({}, wb)
+
+        const resp = await runCraftExchange(crafts, wb, {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'compute',
+        })
+        expect(resp.error?.code).toBe(RPC_VALIDATION_FAILED)
+        expect(Array.isArray(resp.error?.data)).toBe(true)
+        expect(resp.result).toBeUndefined()
+    })
+})
+
+describe('MemoryCraftRegistry + loadCrafts round-trip (real WASM engine)', () => {
+    it('discovers a craft from a saved AppData envelope and runs its onLoad', async () => {
+        const rt = new SpreadsheetRuntime()
+        const wb = rt.createWorkbook()
+        await wb.ops.inputCell(0, 0, 0, '1')
+
+        // Embed craft state in AppData exactly as a publish step would, then
+        // reload from the saved bytes — this is the whole discovery path.
+        const state = {greeting: 'hi'}
+        const appData = JSON.stringify({
+            craftStates: {'my-craft': JSON.stringify(state)},
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const save = await (wb.client as any).saveWorkbook({appData})
+        expect(save.code).toBe(0)
+        const wb2 = rt.loadWorkbookFromBytes(new Uint8Array(save.data), 'x.xlsx')
+
+        let seenState: unknown
+        const runtime: CraftRuntime<CraftState, Workbook> = {
+            onLoad: (s) => {
+                seenState = s
+                return undefined
+            },
+            onRequest: () => undefined,
+            onResponse: () => undefined,
+        }
+        const registry = new MemoryCraftRegistry().add('my-craft', runtime)
+
+        const crafts = await loadCrafts(wb2, registry)
+        expect(crafts).toHaveLength(1)
+        expect(crafts[0].craftId).toBe('my-craft')
+        expect(seenState).toEqual(state)
+        rt.closeAll()
     })
 })

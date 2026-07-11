@@ -1,0 +1,2 @@
+INPUT A1 =T("hello")
+CHECKSTR A1 hello

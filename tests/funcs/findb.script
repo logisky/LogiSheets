@@ -1,0 +1,2 @@
+INPUT A1 =FINDB("l","hello")
+CHECKNUM A1 3

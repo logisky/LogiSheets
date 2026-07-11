@@ -13,8 +13,9 @@
 //      imported module *is* the craft's {@link CraftRuntime},
 //   4. call the runtime's `onLoad(state, workbook)` so it can rehydrate.
 //
-// The registry is a seam: production wires it to a real HTTP registry, tests
-// (and local dev) use {@link MockCraftRegistry}.
+// The registry is a seam: production may wire it to a real HTTP registry;
+// embedding hosts, local dev, and tests use the in-process {@link
+// MemoryCraftRegistry}.
 
 import type {
     CraftManifest,
@@ -245,24 +246,86 @@ export async function applyCraftResponse(
     return errors
 }
 
+// JSON-RPC 2.0 error codes (kept local so this pure-logic module doesn't pull
+// in the HTTP server that also owns them).
+const RPC_INVALID_PARAMS = -32602
+const RPC_INTERNAL_ERROR = -32603
+/** Application code: a craft's `onValidate` rejected the request's inputs. */
+export const RPC_VALIDATION_FAILED = 1001
+
+function errorResponse(
+    id: string | number | null,
+    code: number,
+    message: string,
+    data?: unknown
+): JsonRpcResponse {
+    return {
+        jsonrpc: '2.0',
+        id,
+        error: data === undefined ? {code, message} : {code, message, data},
+    }
+}
+
 /**
- * A default {@link CraftRegistry} for local dev and tests. Crafts are
- * registered in-process against a fake base url; `importRuntime` just returns
- * the pre-registered module so no network or bundler is involved.
+ * Run one JSON-RPC exchange against a workbook's loaded crafts and return the
+ * reply. This is the generic "run a craft's request/response" primitive — a
+ * host registers it as an RPC method (or task handler) and never re-implements
+ * the exchange. Composes the three hooks in order:
+ *
+ *   1. {@link applyCraftRequest}   — write the request's inputs (`#INVALID_PARAMS` if a craft rejects one),
+ *   2. {@link validateLoadedCrafts} — validate them (`#VALIDATION_FAILED` + the violations if any fail),
+ *   3. {@link applyCraftResponse}  — read the outputs into `result` (`#INTERNAL_ERROR` if a craft errors).
+ *
+ * The crafts define what the exchange does (via their onRequest/onResponse);
+ * this function is entirely craft-agnostic.
  */
-export class MockCraftRegistry implements CraftRegistry {
+export async function runCraftExchange(
+    loaded: readonly LoadedCraft[],
+    wb: Workbook,
+    req: JsonRpcRequest
+): Promise<JsonRpcResponse> {
+    const id = req.id ?? null
+
+    const reqErrors = await applyCraftRequest(loaded, req, wb)
+    if (reqErrors.length)
+        return errorResponse(id, RPC_INVALID_PARAMS, reqErrors.join('; '))
+
+    const violations = await validateLoadedCrafts(loaded, wb)
+    if (violations.length)
+        return errorResponse(id, RPC_VALIDATION_FAILED, 'validation failed', violations)
+
+    const resp: JsonRpcResponse = {jsonrpc: '2.0', id}
+    const respErrors = await applyCraftResponse(loaded, resp, wb)
+    if (respErrors.length)
+        return errorResponse(id, RPC_INTERNAL_ERROR, respErrors.join('; '))
+
+    return resp
+}
+
+/**
+ * An in-memory {@link CraftRegistry}: crafts are registered in-process with
+ * their already-imported runtime module, so `importRuntime` returns it directly
+ * — no network, bundler, or filesystem. This is the general-purpose registry
+ * for a host that knows its crafts up front (embedding, local dev, tests);
+ * production may instead back the registry with a real HTTP registry.
+ */
+export class MemoryCraftRegistry implements CraftRegistry {
     private readonly entries = new Map<
         string,
         {manifest: CraftManifest; module: unknown}
     >()
 
-    /** Register a craft's manifest and its already-imported runtime module. */
-    public add(
-        craftId: string,
-        manifest: CraftManifest,
-        module: unknown
-    ): this {
-        this.entries.set(craftId, {manifest, module})
+    /**
+     * Register a craft by id with its runtime module (a {@link CraftRuntime},
+     * or a module whose default export is one). `manifest` is optional
+     * metadata; the default carries a non-empty `rtJs` so {@link loadCrafts}
+     * imports the module instead of skipping the craft as runtime-less.
+     */
+    public add(craftId: string, module: unknown, manifest?: CraftManifest): this {
+        this.entries.set(craftId, {
+            manifest: manifest ?? {rtJs: craftId, html: ''},
+            module,
+        })
         return this
     }
 

@@ -100,6 +100,10 @@ export class WorkbookWorkerService implements IWorkbookWorker {
     return this.workbook.getAllSheetInfo();
   }
 
+  public getFormulaFunctionNames(): Result<readonly string[]> {
+    return this.workbook.getFormulaFunctionNames();
+  }
+
   public getSheetDimension(sheetIdx: number): Result<SheetDimension> {
     const ws = this.getSheet(sheetIdx);
     return ws.getSheetDimension();
@@ -132,6 +136,15 @@ export class WorkbookWorkerService implements IWorkbookWorker {
   }): Result<CellInfo> {
     const ws = this.getSheet(params.sheetIdx);
     return ws.getCellInfo(params.row, params.col);
+  }
+
+  public getCellListValidation(params: {
+    sheetIdx: number;
+    row: number;
+    col: number;
+  }): Result<readonly string[] | undefined> {
+    const ws = this.getSheet(params.sheetIdx);
+    return ws.getCellListValidation(params.row, params.col);
   }
 
   public getCells(params: {
@@ -618,6 +631,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         case MethodName.GetAllSheetInfo:
           result = this.getAllSheetInfo();
           break;
+        case MethodName.GetFormulaFunctionNames:
+          result = this.getFormulaFunctionNames();
+          break;
         case MethodName.Undo:
           result = this.undo();
           break;
@@ -635,6 +651,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
           break;
         case MethodName.GetCell:
           result = this.getCell(args);
+          break;
+        case MethodName.GetCellListValidation:
+          result = this.getCellListValidation(args);
           break;
         case MethodName.GetCells:
           result = this.getCells(args);

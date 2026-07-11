@@ -107,6 +107,12 @@ export class WorkbookClient implements Client {
     return this._call(MethodName.GetAllSheetInfo) as Resp<readonly SheetInfo[]>;
   }
 
+  getFormulaFunctionNames(): Resp<readonly string[]> {
+    return this._call(MethodName.GetFormulaFunctionNames) as Resp<
+      readonly string[]
+    >;
+  }
+
   // Accepts the generated params-object (contract) or the raw sheet index
   // (legacy in-app callers). Normalized to the index the worker expects.
   getSheetDimension(
@@ -141,6 +147,16 @@ export class WorkbookClient implements Client {
     col: number;
   }): Resp<CellInfo> {
     return this._call(MethodName.GetCell, params) as Resp<CellInfo>;
+  }
+
+  getCellListValidation(params: {
+    sheetIdx: number;
+    row: number;
+    col: number;
+  }): Resp<readonly string[] | undefined> {
+    return this._call(MethodName.GetCellListValidation, params) as Resp<
+      readonly string[] | undefined
+    >;
   }
 
   getCells(params: {
