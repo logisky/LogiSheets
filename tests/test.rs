@@ -31,7 +31,8 @@ mod funcs {
 
     use crate::{load_script, test_script};
     use logisheets_controller::edit_action::{
-        BindFormSchema, CellInput, CreateBlock, PayloadsAction, UpsertFieldFormulas,
+        BindFormSchema, BlockInput, CellInput, CreateBlock, CreateSheet, ModifyPolicy,
+        PayloadsAction, UpsertFieldFormulas,
     };
 
     #[test]
@@ -101,6 +102,123 @@ mod funcs {
             }
             other => panic!("SUM non-number after reload+edit: {:?}", other),
         }
+    }
+
+    /// Regression: a formula with a parenthesized sub-expression as the LEFT
+    /// operand — `C1 = (1+E1)^E2` over cross-sheet BLOCKREF helpers — must keep
+    /// its value after save→reload→edit. The bug was in the grammar: the
+    /// top-level `"(" ~ expression ~ ")"` alternative dropped the bracket flag,
+    /// so unparse saved `(1+E1)^E2` as `1+E1^E2`; on reload that re-parsed as
+    /// `1+(E1^E2)` and silently changed the result. (This is douyoushu's 房贷
+    /// `(1+r)^n` staleness — a save/unparse bug, not a recompute one.)
+    #[test]
+    fn test_blockref_chain_recomputes_after_reload() {
+        use logisheets::Workbook;
+        // Mirror the douyoushu 房贷 layout: TWO blocks on a hidden sheet, each a
+        // separate input; the visible sheet pulls both via BLOCKREF, feeds them
+        // through helper cells, and combines them with `^` (the shape that went
+        // stale). On reload BOTH inputs are written in ONE transaction (as the
+        // craft's onRequest does).
+        let mut wb = Workbook::default();
+        // Match buildBlockPlan exactly: createBlock → seed key+value via RAW
+        // cellInput (not blockInput) → bindFormSchema AFTER seeding.
+        let mk_block = |a: PayloadsAction, id: usize, refname: &str, seed: &str| {
+            let mr = (id - 1) * 2; // buildBlockPlan layout: rows 0, 2, 4
+            a.add_payload(CreateBlock {
+                sheet_idx: 1,
+                id,
+                master_row: mr,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: Some(ModifyPolicy::OwnerAndUser),
+            })
+            .add_payload(CellInput {
+                sheet_idx: 1,
+                row: mr,
+                col: 0,
+                content: "k".to_string(),
+            })
+            .add_payload(CellInput {
+                sheet_idx: 1,
+                row: mr,
+                col: 1,
+                content: seed.to_string(),
+            })
+            .add_payload(BindFormSchema {
+                ref_name: refname.to_string(),
+                sheet_idx: 1,
+                block_id: id,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec![String::from("v")],
+                render_ids: vec![format!("r{id}")],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            })
+        };
+        // Phase 1: sellers's sheet before baking. A1/A2/A3 hold plain values;
+        // helpers E1..E4 and the output C1 exactly mirror the 房贷 calculator.
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                .add_payload(CellInput { sheet_idx: 0, row: 0, col: 0, content: "100".into() })
+                .add_payload(CellInput { sheet_idx: 0, row: 1, col: 0, content: "4.9".into() })
+                .add_payload(CellInput { sheet_idx: 0, row: 2, col: 0, content: "30".into() })
+                .add_payload(CellInput { sheet_idx: 0, row: 0, col: 4, content: "=A1*10000".into() })
+                .add_payload(CellInput { sheet_idx: 0, row: 1, col: 4, content: "=A2/100/12".into() })
+                .add_payload(CellInput { sheet_idx: 0, row: 2, col: 4, content: "=A3*12".into() })
+                .add_payload(CellInput { sheet_idx: 0, row: 3, col: 4, content: "=(1+E2)^E3".into() })
+                .add_payload(CellInput { sheet_idx: 0, row: 0, col: 2, content: "=ROUND(E1*E2*E4/(E4-1),2)".into() }),
+        ));
+        // Phase 2 (buildBlockPlan): three input blocks, then rewrite A1/A2/A3 to
+        // =BLOCKREF pulling from them.
+        let mut action = PayloadsAction::new().add_payload(CreateSheet {
+            idx: 1,
+            new_name: "hidden".to_string(),
+        });
+        action = mk_block(action, 1, "loan", "100");
+        action = mk_block(action, 2, "rate", "4.9");
+        action = mk_block(action, 3, "years", "30");
+        action = action
+            .add_payload(CellInput { sheet_idx: 0, row: 0, col: 0, content: r#"=BLOCKREF("loan", "k", "v")"#.into() })
+            .add_payload(CellInput { sheet_idx: 0, row: 1, col: 0, content: r#"=BLOCKREF("rate", "k", "v")"#.into() })
+            .add_payload(CellInput { sheet_idx: 0, row: 2, col: 0, content: r#"=BLOCKREF("years", "k", "v")"#.into() })
+            // Output MIRROR cells on the hidden sheet (buildBlockPlan layout):
+            // reactive `=<sellerSheet>!<outCell>` at cols 100/164/228.
+            .add_payload(CellInput { sheet_idx: 1, row: 0, col: 100, content: "=Sheet1!C1".into() })
+            .add_payload(CellInput { sheet_idx: 1, row: 0, col: 164, content: "=Sheet1!C2".into() })
+            .add_payload(CellInput { sheet_idx: 1, row: 0, col: 228, content: "=Sheet1!C3".into() });
+        wb.handle_action(EditAction::Payloads(action));
+
+        let num = |wb: &mut Workbook, r, c| match wb
+            .get_sheet_by_idx(0)
+            .unwrap()
+            .get_value(r, c)
+            .unwrap()
+        {
+            logisheets::Value::Number(n) => n,
+            other => panic!("expected number at ({r},{c}): {:?}", other),
+        };
+        assert!((num(&mut wb, 3, 4) - 4.3362).abs() < 0.01, "E4=(1+E2)^E3 pre-save: {}", num(&mut wb, 3, 4));
+
+        // Double round-trip, then write ALL THREE inputs in ONE tx (as onRequest does).
+        let mut bytes = wb.save().expect("save");
+        let mut wb = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+        let mut bytes = wb.save().expect("save2");
+        let mut wb = Workbook::from_file(&mut bytes, "reload2".to_string()).expect("reopen2");
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                .add_payload(BlockInput { sheet_idx: 1, block_id: 1, row: 0, col: 1, input: "100".into() })
+                .add_payload(BlockInput { sheet_idx: 1, block_id: 2, row: 0, col: 1, input: "4.9".into() })
+                .add_payload(BlockInput { sheet_idx: 1, block_id: 3, row: 0, col: 1, input: "30".into() }),
+        ));
+        let e4 = num(&mut wb, 3, 4);
+        let monthly = num(&mut wb, 0, 2);
+        assert!((e4 - 4.3362).abs() < 0.01, "E4=(1+E2)^E3 went stale after reload+edit: {}", e4);
+        assert!(monthly > 5000.0 && monthly < 5500.0, "monthly after reload+edit: {}", monthly);
     }
 
     #[test]

@@ -544,6 +544,25 @@ mod tests {
     }
 
     #[test]
+    fn bracket_lhs_pow_roundtrip() {
+        let parser = Parser {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertex_fetcher = TestVertexFetcher {};
+        let node = {
+            let mut context = Context {
+                book_name: "book",
+                id_fetcher: &mut id_fetcher,
+                vertex_fetcher: &mut vertex_fetcher,
+            };
+            parser.parse("(1+2)^3", 1, &mut context).unwrap()
+        };
+        let a = unparse(&node, &mut id_fetcher, 0).unwrap();
+        // `(1+2)^3` must NOT round-trip to `1+2^3` — that would silently change
+        // the formula's meaning on save/reload.
+        assert_eq!(a, "(1 + 2) ^ 3");
+    }
+
+    #[test]
     fn brakcet_test() {
         let parser = Parser {};
         let sum = "1*(3-2)";

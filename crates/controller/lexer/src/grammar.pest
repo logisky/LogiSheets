@@ -3,7 +3,10 @@ start = _{SOI ~ formula ~ EOI}
 formula = {expression}
 
 expression = {
-    ("(" ~ expression ~ ")" ~ expr)
+    // Use `expression_bracket` (not raw `"(" ~ expression ~ ")"`) so the
+    // parenthesized sub-expression is tagged as bracketed; otherwise the paren
+    // is dropped on unparse and `(1+2)^3` round-trips to `1+2^3` on save/reload.
+    (expression_bracket ~ expr)
     | (function_call ~ expr)
     | (cell_reference ~ expr)
     | (constant ~ expr)
