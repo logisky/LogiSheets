@@ -23,6 +23,27 @@ mod block;
 #[cfg(test)]
 mod common;
 
+// Operator & expression semantics (precedence, associativity, unary minus,
+// power, percent, comparison, concatenation, coercion) — the class of bug that
+// the '/'-then-'*' precedence error belonged to. Runs every *.script in
+// tests/operators/ the same way the funcs suite does.
+#[cfg(test)]
+mod operators {
+    use glob::glob;
+
+    use crate::test_script;
+
+    #[test]
+    fn test_operators() {
+        let scripts = glob("tests/operators/*.script").expect("");
+        scripts.into_iter().for_each(|p| {
+            let path = p.unwrap();
+            let path = path.to_str().unwrap();
+            test_script(path)
+        });
+    }
+}
+
 #[cfg(test)]
 mod funcs {
 
@@ -85,8 +106,7 @@ mod funcs {
 
         // Save → reload, then change a member cell on the reloaded workbook.
         let mut bytes = wb.save().expect("save");
-        let mut reopened =
-            Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+        let mut reopened = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
         reopened.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
             CellInput {
                 sheet_idx: 0,
@@ -95,7 +115,11 @@ mod funcs {
                 content: "10".into(),
             },
         )));
-        let v = reopened.get_sheet_by_idx(0).unwrap().get_value(0, 2).unwrap();
+        let v = reopened
+            .get_sheet_by_idx(0)
+            .unwrap()
+            .get_value(0, 2)
+            .unwrap();
         match v {
             logisheets::Value::Number(n) => {
                 assert_eq!(n, 12.0, "range formula went stale after reload+edit")
@@ -164,14 +188,54 @@ mod funcs {
         // helpers E1..E4 and the output C1 exactly mirror the 房贷 calculator.
         wb.handle_action(EditAction::Payloads(
             PayloadsAction::new()
-                .add_payload(CellInput { sheet_idx: 0, row: 0, col: 0, content: "100".into() })
-                .add_payload(CellInput { sheet_idx: 0, row: 1, col: 0, content: "4.9".into() })
-                .add_payload(CellInput { sheet_idx: 0, row: 2, col: 0, content: "30".into() })
-                .add_payload(CellInput { sheet_idx: 0, row: 0, col: 4, content: "=A1*10000".into() })
-                .add_payload(CellInput { sheet_idx: 0, row: 1, col: 4, content: "=A2/100/12".into() })
-                .add_payload(CellInput { sheet_idx: 0, row: 2, col: 4, content: "=A3*12".into() })
-                .add_payload(CellInput { sheet_idx: 0, row: 3, col: 4, content: "=(1+E2)^E3".into() })
-                .add_payload(CellInput { sheet_idx: 0, row: 0, col: 2, content: "=ROUND(E1*E2*E4/(E4-1),2)".into() }),
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 0,
+                    content: "100".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 1,
+                    col: 0,
+                    content: "4.9".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 2,
+                    col: 0,
+                    content: "30".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 4,
+                    content: "=A1*10000".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 1,
+                    col: 4,
+                    content: "=A2/100/12".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 2,
+                    col: 4,
+                    content: "=A3*12".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 3,
+                    col: 4,
+                    content: "=(1+E2)^E3".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 2,
+                    content: "=ROUND(E1*E2*E4/(E4-1),2)".into(),
+                }),
         ));
         // Phase 2 (buildBlockPlan): three input blocks, then rewrite A1/A2/A3 to
         // =BLOCKREF pulling from them.
@@ -183,14 +247,44 @@ mod funcs {
         action = mk_block(action, 2, "rate", "4.9");
         action = mk_block(action, 3, "years", "30");
         action = action
-            .add_payload(CellInput { sheet_idx: 0, row: 0, col: 0, content: r#"=BLOCKREF("loan", "k", "v")"#.into() })
-            .add_payload(CellInput { sheet_idx: 0, row: 1, col: 0, content: r#"=BLOCKREF("rate", "k", "v")"#.into() })
-            .add_payload(CellInput { sheet_idx: 0, row: 2, col: 0, content: r#"=BLOCKREF("years", "k", "v")"#.into() })
+            .add_payload(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: r#"=BLOCKREF("loan", "k", "v")"#.into(),
+            })
+            .add_payload(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: r#"=BLOCKREF("rate", "k", "v")"#.into(),
+            })
+            .add_payload(CellInput {
+                sheet_idx: 0,
+                row: 2,
+                col: 0,
+                content: r#"=BLOCKREF("years", "k", "v")"#.into(),
+            })
             // Output MIRROR cells on the hidden sheet (buildBlockPlan layout):
             // reactive `=<sellerSheet>!<outCell>` at cols 100/164/228.
-            .add_payload(CellInput { sheet_idx: 1, row: 0, col: 100, content: "=Sheet1!C1".into() })
-            .add_payload(CellInput { sheet_idx: 1, row: 0, col: 164, content: "=Sheet1!C2".into() })
-            .add_payload(CellInput { sheet_idx: 1, row: 0, col: 228, content: "=Sheet1!C3".into() });
+            .add_payload(CellInput {
+                sheet_idx: 1,
+                row: 0,
+                col: 100,
+                content: "=Sheet1!C1".into(),
+            })
+            .add_payload(CellInput {
+                sheet_idx: 1,
+                row: 0,
+                col: 164,
+                content: "=Sheet1!C2".into(),
+            })
+            .add_payload(CellInput {
+                sheet_idx: 1,
+                row: 0,
+                col: 228,
+                content: "=Sheet1!C3".into(),
+            });
         wb.handle_action(EditAction::Payloads(action));
 
         let num = |wb: &mut Workbook, r, c| match wb
@@ -202,7 +296,11 @@ mod funcs {
             logisheets::Value::Number(n) => n,
             other => panic!("expected number at ({r},{c}): {:?}", other),
         };
-        assert!((num(&mut wb, 3, 4) - 4.3362).abs() < 0.01, "E4=(1+E2)^E3 pre-save: {}", num(&mut wb, 3, 4));
+        assert!(
+            (num(&mut wb, 3, 4) - 4.3362).abs() < 0.01,
+            "E4=(1+E2)^E3 pre-save: {}",
+            num(&mut wb, 3, 4)
+        );
 
         // Double round-trip, then write ALL THREE inputs in ONE tx (as onRequest does).
         let mut bytes = wb.save().expect("save");
@@ -211,14 +309,40 @@ mod funcs {
         let mut wb = Workbook::from_file(&mut bytes, "reload2".to_string()).expect("reopen2");
         wb.handle_action(EditAction::Payloads(
             PayloadsAction::new()
-                .add_payload(BlockInput { sheet_idx: 1, block_id: 1, row: 0, col: 1, input: "100".into() })
-                .add_payload(BlockInput { sheet_idx: 1, block_id: 2, row: 0, col: 1, input: "4.9".into() })
-                .add_payload(BlockInput { sheet_idx: 1, block_id: 3, row: 0, col: 1, input: "30".into() }),
+                .add_payload(BlockInput {
+                    sheet_idx: 1,
+                    block_id: 1,
+                    row: 0,
+                    col: 1,
+                    input: "100".into(),
+                })
+                .add_payload(BlockInput {
+                    sheet_idx: 1,
+                    block_id: 2,
+                    row: 0,
+                    col: 1,
+                    input: "4.9".into(),
+                })
+                .add_payload(BlockInput {
+                    sheet_idx: 1,
+                    block_id: 3,
+                    row: 0,
+                    col: 1,
+                    input: "30".into(),
+                }),
         ));
         let e4 = num(&mut wb, 3, 4);
         let monthly = num(&mut wb, 0, 2);
-        assert!((e4 - 4.3362).abs() < 0.01, "E4=(1+E2)^E3 went stale after reload+edit: {}", e4);
-        assert!(monthly > 5000.0 && monthly < 5500.0, "monthly after reload+edit: {}", monthly);
+        assert!(
+            (e4 - 4.3362).abs() < 0.01,
+            "E4=(1+E2)^E3 went stale after reload+edit: {}",
+            e4
+        );
+        assert!(
+            monthly > 5000.0 && monthly < 5500.0,
+            "monthly after reload+edit: {}",
+            monthly
+        );
     }
 
     #[test]

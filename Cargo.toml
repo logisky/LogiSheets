@@ -27,6 +27,9 @@ members = [
     "crates/workbook",
     "crates/xmldiff",
 ]
+# The fuzz crate needs a nightly-only toolchain (libfuzzer-sys); keep it out of
+# the default workspace so `cargo build/test --workspace` on stable is unaffected.
+exclude = ["fuzz"]
 
 [workspace.package]
 version = "1.5.0"
@@ -73,3 +76,4 @@ logisheets_workbook = { workspace = true }
 glob = "0.3.1"
 logiscript = { path = "crates/logiscript" }
 logisheets_base = { workspace = true }
+proptest = "1"

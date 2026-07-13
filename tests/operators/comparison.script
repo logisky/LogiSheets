@@ -1,0 +1,28 @@
+# Comparison operators produce booleans (checked as TRUE / FALSE strings).
+INPUT C1 =1<2
+CHECKSTR C1 TRUE
+
+INPUT C2 =2<1
+CHECKSTR C2 FALSE
+
+INPUT C3 =2>=2
+CHECKSTR C3 TRUE
+
+INPUT C4 =2<=1
+CHECKSTR C4 FALSE
+
+INPUT C5 =1=1
+CHECKSTR C5 TRUE
+
+INPUT C6 =1<>2
+CHECKSTR C6 TRUE
+
+INPUT C7 =1<>1
+CHECKSTR C7 FALSE
+
+# arithmetic binds tighter than comparison
+INPUT C8 =1+1=2
+CHECKSTR C8 TRUE
+
+INPUT C9 =2*3>5
+CHECKSTR C9 TRUE
