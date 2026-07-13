@@ -1,0 +1,38 @@
+# Arithmetic operator precedence & associativity (Excel rules).
+# No dedicated operator test existed before; this is where the '/'-then-'*'
+# precedence bug (10/2*5 wrongly = 1) slipped through — pinned here as the
+# first regression.
+
+# REGRESSION: * and / share precedence and are left-associative.
+INPUT A1 =10/2*5
+CHECKNUM A1 25
+
+INPUT A2 =8/4/2
+CHECKNUM A2 1
+
+INPUT A3 =2*3/6
+CHECKNUM A3 1
+
+# * / bind tighter than + -
+INPUT A4 =1+2*3
+CHECKNUM A4 7
+
+INPUT A5 =2*3+1
+CHECKNUM A5 7
+
+# + and - share precedence, left-associative
+INPUT A6 =2-3+4
+CHECKNUM A6 3
+
+INPUT A7 =10-2-3
+CHECKNUM A7 5
+
+# parentheses override precedence
+INPUT A8 =(1+2)*3
+CHECKNUM A8 9
+
+INPUT A9 =1+2*3-4/2
+CHECKNUM A9 5
+
+INPUT A10 =((1+2)*(3+4))
+CHECKNUM A10 21

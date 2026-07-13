@@ -1,0 +1,42 @@
+# Power (^), unary minus, and percent (%) — including Excel's SPECIFIC rules,
+# which differ from ordinary math. These are classic engine-divergence traps.
+
+INPUT B1 =2^3
+CHECKNUM B1 8
+
+INPUT B2 =2^10
+CHECKNUM B2 1024
+
+# Excel: '^' is LEFT-associative, so 2^3^2 = (2^3)^2 = 64 (NOT 512).
+INPUT B3 =2^3^2
+CHECKNUM B3 64
+
+# Excel quirk: unary minus binds TIGHTER than '^', so -3^2 = (-3)^2 = 9
+# (ordinary math would read it as -(3^2) = -9).
+INPUT B4 =-3^2
+CHECKNUM B4 9
+
+INPUT B5 =-2^2
+CHECKNUM B5 4
+
+# ...but BINARY minus keeps '^' first: 0-3^2 = -9.
+INPUT B6 =0-3^2
+CHECKNUM B6 -9
+
+# '^' binds tighter than * and /
+INPUT B7 =2*3^2
+CHECKNUM B7 18
+
+# percent is postfix, highest precedence
+INPUT B8 =50%
+CHECKNUM B8 0.5
+
+INPUT B9 =200*50%
+CHECKNUM B9 100
+
+INPUT B10 =100+50%
+CHECKNUM B10 100.5
+
+# % applies before ^ : 50%^2 = 0.5^2 = 0.25
+INPUT B11 =50%^2
+CHECKNUM B11 0.25

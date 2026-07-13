@@ -1,0 +1,28 @@
+# String concatenation (&) and type coercion in expressions.
+INPUT D1 ="a"&"b"
+CHECKSTR D1 ab
+
+# numbers coerce to text under &
+INPUT D2 =1&2
+CHECKSTR D2 12
+
+INPUT D3 ="x"&1&"y"
+CHECKSTR D3 x1y
+
+# numeric-looking text coerces to number in arithmetic
+INPUT D4 ="3"+2
+CHECKNUM D4 5
+
+INPUT D5 ="3"*"4"
+CHECKNUM D5 12
+
+# booleans coerce to 1 / 0 in arithmetic
+INPUT D6 =TRUE+1
+CHECKNUM D6 2
+
+INPUT D7 =FALSE+5
+CHECKNUM D7 5
+
+# non-numeric text in arithmetic is an error
+INPUT D8 ="abc"+1
+CHECKERR D8 #VALUE!

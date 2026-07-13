@@ -1,0 +1,34 @@
+# Coverage-guided fuzzing (cargo-fuzz / libFuzzer). This crate is EXCLUDED from
+# the main workspace (see root Cargo.toml `exclude = ["fuzz"]`) because
+# libfuzzer-sys needs a nightly toolchain; it does not affect `cargo build/test
+# --workspace` on stable. See README.md to run.
+[package]
+name = "logisheets-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+logisheets = { path = ".." }
+logisheets_controller = { path = "../crates/controller" }
+
+[[bin]]
+name = "formula_parser"
+path = "fuzz_targets/formula_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "xlsx_loader"
+path = "fuzz_targets/xlsx_loader.rs"
+test = false
+doc = false
+bench = false
+
+# Detach from the parent workspace (standard cargo-fuzz layout).
+[workspace]
