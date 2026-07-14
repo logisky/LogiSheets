@@ -17,6 +17,8 @@ import {
     CellInput,
     Comment,
     CellImageInfo,
+    DependentCell,
+    CellRefRange,
 } from '../bindings'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
@@ -53,6 +55,33 @@ export class Worksheet {
 
     public getSheetDimension(): Result<SheetDimension> {
         return rpc('getSheetDimension', {sheetId: this._sheetId}, this._id)
+    }
+
+    /**
+     * Cells whose formula references the given range (Excel "trace dependents").
+     * Each result carries the reference (`via`) it used, resolved to a rectangle,
+     * so callers can tell an aggregate/range reference from a single-cell one.
+     */
+    public getDependents(
+        startRow: number,
+        startCol: number,
+        endRow: number,
+        endCol: number
+    ): Result<DependentCell[]> {
+        return rpc(
+            'getDependents',
+            {sheetIdx: this._sheetIdx, startRow, startCol, endRow, endCol},
+            this._id
+        )
+    }
+
+    /** The ranges/cells a cell's formula references (Excel "trace precedents"). */
+    public getPrecedents(row: number, col: number): Result<CellRefRange[]> {
+        return rpc(
+            'getPrecedents',
+            {sheetIdx: this._sheetIdx, row, col},
+            this._id
+        )
     }
 
     public getDisplayWindow(
@@ -146,7 +175,12 @@ export class Worksheet {
     public getUpwardDataBoundary(row: number, col: number): CellPosition {
         return rpc(
             'getDataBoundary',
-            {sheetIdx: this._sheetIdx, rowIdx: row, colIdx: col, direction: 'up'},
+            {
+                sheetIdx: this._sheetIdx,
+                rowIdx: row,
+                colIdx: col,
+                direction: 'up',
+            },
             this._id
         )
     }

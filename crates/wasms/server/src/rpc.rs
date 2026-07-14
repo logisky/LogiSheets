@@ -2,11 +2,11 @@ use gents_derives::{Interface, TS};
 use logisheets_rs::BlockId;
 use logisheets_rs::{
     ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo,
-    CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, ColId, Comment,
-    DisplayWindow,
-    DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo, MergeCell,
-    ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate,
-    SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
+    CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange, ColId,
+    Comment, DependentCell, DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage,
+    FormulaDisplayInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
+    ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style,
+    TempStatusDiff, Value,
 };
 use wasm_bindgen::prelude::*;
 
@@ -22,6 +22,8 @@ use crate::ws;
 #[ts(file_name = "rpc_message.ts", tag = "method", rename_all = "camelCase")]
 pub enum Message {
     GetSheetDimension(GetSheetDimensionParams),
+    GetDependents(GetDependentsParams),
+    GetPrecedents(GetPrecedentsParams),
     GetDisplayWindow(GetDisplayWindowParams),
     GetCell(GetCellParams),
     GetCellListValidation(GetCellParams),
@@ -113,6 +115,24 @@ pub struct GetCellInfosParams {
 )]
 pub struct GetSheetDimensionParams {
     pub sheet_id: SheetId,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_dependents_params.ts", rename_all = "camelCase")]
+pub struct GetDependentsParams {
+    pub sheet_idx: usize,
+    pub start_row: usize,
+    pub start_col: usize,
+    pub end_row: usize,
+    pub end_col: usize,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_precedents_params.ts", rename_all = "camelCase")]
+pub struct GetPrecedentsParams {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -648,9 +668,17 @@ pub struct WorkbookMethods {
         params: GetSheetDimensionParams,
         book_id: Option<usize>,
     ) -> Result<SheetDimension, ErrorMessage>,
+    // Dependency tracking (Excel "trace precedents/dependents").
+    pub get_dependents: fn(
+        params: GetDependentsParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<DependentCell>, ErrorMessage>,
+    pub get_precedents: fn(
+        params: GetPrecedentsParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<CellRefRange>, ErrorMessage>,
     pub get_all_sheet_info: fn(book_id: Option<usize>) -> Result<Vec<SheetInfo>, ErrorMessage>,
-    pub get_formula_function_names:
-        fn(book_id: Option<usize>) -> Result<Vec<String>, ErrorMessage>,
+    pub get_formula_function_names: fn(book_id: Option<usize>) -> Result<Vec<String>, ErrorMessage>,
     pub get_sheet_idx:
         fn(params: GetSheetIdxParams, book_id: Option<usize>) -> Result<usize, ErrorMessage>,
     pub get_sheet_id:
@@ -863,6 +891,17 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             let sheet_id = params.sheet_id;
             let result = ws::get_sheet_dimension(id, sheet_id);
             result
+        }
+        Message::GetDependents(params) => ws::get_dependents(
+            id,
+            params.sheet_idx,
+            params.start_row,
+            params.start_col,
+            params.end_row,
+            params.end_col,
+        ),
+        Message::GetPrecedents(params) => {
+            ws::get_precedents(id, params.sheet_idx, params.row, params.col)
         }
         Message::GetDisplayWindow(params) => ws::get_display_window(
             id,

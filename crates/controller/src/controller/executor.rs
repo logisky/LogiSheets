@@ -201,12 +201,16 @@ impl<'a> Executor<'a> {
             range_executor.trigger,
         )?;
 
-        let cell_updated =
-            if updated || nav_updated || cell_attatchment_updated || exclusive_updated || image_updated {
-                true
-            } else {
-                result.updated_cells.len() > 0 || result.cells_removed.len() > 0
-            };
+        let cell_updated = if updated
+            || nav_updated
+            || cell_attatchment_updated
+            || exclusive_updated
+            || image_updated
+        {
+            true
+        } else {
+            result.updated_cells.len() > 0 || result.cells_removed.len() > 0
+        };
 
         let (sheet_pos_manager, sheet_updated) = result.execute_sheet_info(&payload)?;
         result.status.sheet_info_manager = sheet_pos_manager;

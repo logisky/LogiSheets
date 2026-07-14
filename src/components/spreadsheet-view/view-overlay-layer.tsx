@@ -4,6 +4,7 @@ import {BlockInterfaceComponent} from '@/components/block-interface'
 import {CraftInteractionComponent} from '@/components/craft-interaction'
 import {CommentLayer} from '@/components/comment-layer'
 import {DataValidationOverlay} from '@/components/data-validation-overlay'
+import {TraceLayer} from './trace-layer'
 
 export interface ViewOverlayLayerProps {
     grid: Grid | null
@@ -115,6 +116,7 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
             {grid && (
                 <DataValidationOverlay grid={grid} activeSheet={activeSheet} />
             )}
+            {grid && <TraceLayer grid={grid} activeSheet={activeSheet} />}
         </div>
     )
 }

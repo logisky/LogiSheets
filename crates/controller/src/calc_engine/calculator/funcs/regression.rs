@@ -37,7 +37,10 @@ fn to_opt_vec(value: CalcValue) -> Result<Vec<Option<f64>>, ast::Error> {
 
 /// Fetch the two array arguments and pair them, dropping pairs where either
 /// side is non-numeric. `#N/A` if the arrays differ in size.
-fn fetch_pairs<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> Result<(Vec<f64>, Vec<f64>), ast::Error>
+fn fetch_pairs<C>(
+    args: Vec<CalcVertex>,
+    fetcher: &mut C,
+) -> Result<(Vec<f64>, Vec<f64>), ast::Error>
 where
     C: Connector,
 {

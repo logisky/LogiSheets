@@ -16,11 +16,11 @@ use crate::{
     },
     cell_attachments::CellAttachmentsManager,
     container::DataContainer,
+    data_validation_manager::DataValidationManager,
     ext_book_manager::ExtBooksManager,
     file_saver::{
         external_links::save_external_link, styles::save_sheet_style, worksheet::save_sheets,
     },
-    data_validation_manager::DataValidationManager,
     formula_manager::FormulaManager,
     id_manager::{SheetIdManager, TextIdManager},
     image_manager::ImageManager,

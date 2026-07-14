@@ -22,6 +22,35 @@ pub fn get_sheet_dimension(id: usize, sheet_id: SheetId) -> JsValue {
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
+pub fn get_dependents(
+    id: usize,
+    sheet_idx: usize,
+    start_row: usize,
+    start_col: usize,
+    end_row: usize,
+    end_col: usize,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let result = ws.get_dependents(start_row, start_col, end_row, end_col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+pub fn get_precedents(id: usize, sheet_idx: usize, row: usize, col: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let result = ws.get_precedents(row, col);
+    handle_result!(result);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
 pub fn get_all_fully_covered_blocks(
     id: usize,
     sheet_id: SheetId,

@@ -677,12 +677,24 @@ mod tests {
         };
         // 10/2*5 must be (10/2)*5 → root Multiply, left Divide.
         let (root, left) = ops(&parser.parse("10/2*5", 1, &mut context).unwrap());
-        assert!(matches!(root, ast::InfixOperator::Multiply), "root of 10/2*5 must be *");
-        assert!(matches!(left, ast::InfixOperator::Divide), "left of 10/2*5 must be /");
+        assert!(
+            matches!(root, ast::InfixOperator::Multiply),
+            "root of 10/2*5 must be *"
+        );
+        assert!(
+            matches!(left, ast::InfixOperator::Divide),
+            "left of 10/2*5 must be /"
+        );
         // 10-2+3 must be (10-2)+3 → root Plus, left Minus.
         let (root, left) = ops(&parser.parse("10-2+3", 1, &mut context).unwrap());
-        assert!(matches!(root, ast::InfixOperator::Plus), "root of 10-2+3 must be +");
-        assert!(matches!(left, ast::InfixOperator::Minus), "left of 10-2+3 must be -");
+        assert!(
+            matches!(root, ast::InfixOperator::Plus),
+            "root of 10-2+3 must be +"
+        );
+        assert!(
+            matches!(left, ast::InfixOperator::Minus),
+            "left of 10-2+3 must be -"
+        );
     }
 
     #[test]

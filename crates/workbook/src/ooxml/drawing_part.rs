@@ -195,8 +195,7 @@ mod tests {
 
     #[test]
     fn cell_image_round_trip() {
-        let anchor =
-            CtTwoCellAnchor::new_cell_image(2, 3, 2, "Picture 1".into(), "rId1".into());
+        let anchor = CtTwoCellAnchor::new_cell_image(2, 3, 2, "Picture 1".into(), "rId1".into());
         let dr = CtWsDr {
             two_cell_anchors: vec![anchor],
         };
@@ -224,7 +223,13 @@ impl CtTwoCellAnchor {
     /// `(col, row)` and resize with it. `embed_rid` is the relationship id of
     /// the media part in the drawing's `.rels`; `pic_id` is the drawing-local
     /// non-visual id; `name` is a human-readable picture name.
-    pub fn new_cell_image(col: i32, row: i32, pic_id: u32, name: String, embed_rid: String) -> Self {
+    pub fn new_cell_image(
+        col: i32,
+        row: i32,
+        pic_id: u32,
+        name: String,
+        embed_rid: String,
+    ) -> Self {
         CtTwoCellAnchor {
             edit_as: default_edit_as(),
             from: CtMarker::new(col, row),
