@@ -47,9 +47,7 @@ fn days360_us(s: EasyDate, e: EasyDate) -> i32 {
     if d2 == 31 && d1 == 30 {
         d2 = 30;
     }
-    (e.year as i32 - s.year as i32) * 360
-        + (e.month as i32 - s.month as i32) * 30
-        + (d2 - d1)
+    (e.year as i32 - s.year as i32) * 360 + (e.month as i32 - s.month as i32) * 30 + (d2 - d1)
 }
 
 /// DAYS360(start, end, [european]) — days between dates on a 360-day year.

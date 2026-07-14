@@ -65,9 +65,7 @@ where
         return CalcVertex::from_error(ast::Error::Num);
     }
     match sorted_nums(arr) {
-        Ok(nums) if !nums.is_empty() => {
-            CalcVertex::from_number(percentile_inc(&nums, q / 4.))
-        }
+        Ok(nums) if !nums.is_empty() => CalcVertex::from_number(percentile_inc(&nums, q / 4.)),
         Ok(_) => CalcVertex::from_error(ast::Error::Num),
         Err(e) => CalcVertex::from_error(e),
     }

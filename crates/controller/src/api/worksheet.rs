@@ -12,6 +12,7 @@ use crate::controller::display::{
 };
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
+use crate::formula_manager::Vertex;
 use crate::lock::{Locked, locked_write};
 use crate::navigator::BlockPlace;
 use crate::style_manager::RawStyle;
@@ -30,12 +31,34 @@ use crate::{
 use logisheets_base::PersonId;
 use logisheets_base::errors::BasicError;
 use logisheets_base::{
-    BlockCellId, BlockId, CellId, ColId, DiyCellId, RowId, SheetId, StyleId, TextId,
+    BlockCellId, BlockId, BlockRange, CellId, ColId, DiyCellId, NormalRange, Range, RangeId, RowId,
+    SheetId, StyleId, TextId,
 };
 use logisheets_parser::unparse;
 
 use super::workbook::CellPositionerDefault;
-use super::{ReproducibleCell, SheetCoordinate, SheetDimension};
+use super::{CellRefRange, DependentCell, ReproducibleCell, SheetCoordinate, SheetDimension};
+
+/// A dependency-graph range vertex resolved to a concrete rectangle (internal to
+/// the dependency-tracking API). `all_rows`/`all_cols` mark whole-column /
+/// whole-row references, whose row/col bounds are unbounded.
+struct ResolvedRect {
+    sheet_id: SheetId,
+    r0: usize,
+    c0: usize,
+    r1: usize,
+    c1: usize,
+    all_rows: bool,
+    all_cols: bool,
+}
+
+impl ResolvedRect {
+    fn intersects(&self, r0: usize, c0: usize, r1: usize, c1: usize) -> bool {
+        let rows_ok = self.all_rows || (self.r0 <= r1 && r0 <= self.r1);
+        let cols_ok = self.all_cols || (self.c0 <= c1 && c0 <= self.c1);
+        rows_ok && cols_ok
+    }
+}
 
 /// The pure boundary rule behind Ctrl+Arrow, on a single axis.
 ///
@@ -1427,6 +1450,207 @@ impl<'a> Worksheet<'a> {
             height: start_row,
             width: start_col,
         })
+    }
+
+    /// Cells whose formula references the given range (Excel "trace dependents").
+    /// One entry per (dependent cell, the reference it used) intersecting the
+    /// query rectangle. Dependents may live on other sheets (each carries its
+    /// own `sheet_idx`). v1 resolves normal (non-block) range references;
+    /// block-relative / cube / name references are skipped.
+    pub fn get_dependents(
+        &self,
+        start_row: usize,
+        start_col: usize,
+        end_row: usize,
+        end_col: usize,
+    ) -> Result<Vec<DependentCell>> {
+        let r0 = start_row.min(end_row);
+        let r1 = start_row.max(end_row);
+        let c0 = start_col.min(end_col);
+        let c1 = start_col.max(end_col);
+        let graph = &self.controller.status.formula_manager.graph;
+        let mut out: Vec<DependentCell> = Vec::new();
+        let mut seen: HashSet<(usize, usize, usize, usize, usize, usize, usize)> = HashSet::new();
+        for (dep_vertex, owners) in graph.rdeps.iter() {
+            let (sid, rid) = match dep_vertex {
+                Vertex::Range(s, r) if *s == self.sheet_id => (*s, *r),
+                _ => continue,
+            };
+            let rect = match self.resolve_range_rect(sid, rid) {
+                Some(x) => x,
+                None => continue,
+            };
+            if !rect.intersects(r0, c0, r1, c1) {
+                continue;
+            }
+            let via = self.rect_to_ref(&rect);
+            for owner in owners.iter() {
+                if let Some((oidx, orow, ocol)) = self.resolve_owner_cell(owner) {
+                    let key = (
+                        oidx,
+                        orow,
+                        ocol,
+                        via.start_row,
+                        via.start_col,
+                        via.end_row,
+                        via.end_col,
+                    );
+                    if seen.insert(key) {
+                        out.push(DependentCell {
+                            sheet_idx: oidx,
+                            row: orow,
+                            col: ocol,
+                            via: via.clone(),
+                        });
+                    }
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// The ranges/cells a cell's formula references (Excel "trace precedents").
+    pub fn get_precedents(&self, row: usize, col: usize) -> Result<Vec<CellRefRange>> {
+        let status = &self.controller.status;
+        let cell_id = status.navigator.fetch_cell_id(&self.sheet_id, row, col)?;
+        let range: Range = cell_id.into();
+        let range_id = match status
+            .range_manager
+            .get_range_id_assert(&self.sheet_id, &range)
+        {
+            Some(id) => id,
+            None => return Ok(vec![]),
+        };
+        let vertex = Vertex::Range(self.sheet_id, range_id);
+        let mut out: Vec<CellRefRange> = Vec::new();
+        let mut seen: HashSet<(usize, usize, usize, usize, usize, bool, bool)> = HashSet::new();
+        if let Some(deps) = status.formula_manager.graph.get_deps(&vertex) {
+            for dep in deps.iter() {
+                if let Vertex::Range(s, r) = dep {
+                    if let Some(rect) = self.resolve_range_rect(*s, *r) {
+                        let refr = self.rect_to_ref(&rect);
+                        let key = (
+                            refr.sheet_idx,
+                            refr.start_row,
+                            refr.start_col,
+                            refr.end_row,
+                            refr.end_col,
+                            refr.all_rows,
+                            refr.all_cols,
+                        );
+                        if seen.insert(key) {
+                            out.push(refr);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// Resolve a normal-range vertex to a rectangle. Block/ephemeral → None.
+    fn resolve_range_rect(&self, sheet_id: SheetId, range_id: RangeId) -> Option<ResolvedRect> {
+        let range = self
+            .controller
+            .status
+            .range_manager
+            .get_range(&sheet_id, &range_id)?;
+        let nav = &self.controller.status.navigator;
+        match range {
+            Range::Normal(NormalRange::Single(nc)) => {
+                let (r, c) = nav.fetch_normal_cell_idx(&sheet_id, &nc).ok()?;
+                Some(ResolvedRect {
+                    sheet_id,
+                    r0: r,
+                    c0: c,
+                    r1: r,
+                    c1: c,
+                    all_rows: false,
+                    all_cols: false,
+                })
+            }
+            Range::Normal(NormalRange::AddrRange(s, e)) => {
+                let (sr, sc) = nav.fetch_normal_cell_idx(&sheet_id, &s).ok()?;
+                let (er, ec) = nav.fetch_normal_cell_idx(&sheet_id, &e).ok()?;
+                Some(ResolvedRect {
+                    sheet_id,
+                    r0: sr.min(er),
+                    c0: sc.min(ec),
+                    r1: sr.max(er),
+                    c1: sc.max(ec),
+                    all_rows: false,
+                    all_cols: false,
+                })
+            }
+            Range::Normal(NormalRange::RowRange(a, b)) => {
+                let ra = nav.fetch_row_idx(&sheet_id, &a).ok()?;
+                let rb = nav.fetch_row_idx(&sheet_id, &b).ok()?;
+                // Whole rows → spans every column.
+                Some(ResolvedRect {
+                    sheet_id,
+                    r0: ra.min(rb),
+                    c0: 0,
+                    r1: ra.max(rb),
+                    c1: 0,
+                    all_rows: false,
+                    all_cols: true,
+                })
+            }
+            Range::Normal(NormalRange::ColRange(a, b)) => {
+                let ca = nav.fetch_col_idx(&sheet_id, &a).ok()?;
+                let cb = nav.fetch_col_idx(&sheet_id, &b).ok()?;
+                // Whole columns → spans every row.
+                Some(ResolvedRect {
+                    sheet_id,
+                    r0: 0,
+                    c0: ca.min(cb),
+                    r1: 0,
+                    c1: ca.max(cb),
+                    all_rows: true,
+                    all_cols: false,
+                })
+            }
+            Range::Block(_) | Range::Ephemeral(_) => None,
+        }
+    }
+
+    /// Resolve an owner (formula-cell) vertex to (sheet_idx, row, col).
+    fn resolve_owner_cell(&self, vertex: &Vertex) -> Option<(usize, usize, usize)> {
+        let (sid, rid) = match vertex {
+            Vertex::Range(s, r) => (*s, *r),
+            _ => return None,
+        };
+        let range = self.controller.status.range_manager.get_range(&sid, &rid)?;
+        let nav = &self.controller.status.navigator;
+        let (row, col) = match range {
+            Range::Normal(NormalRange::Single(nc)) => nav.fetch_normal_cell_idx(&sid, &nc).ok()?,
+            Range::Block(BlockRange::Single(bc)) => nav.fetch_block_cell_idx(&sid, &bc).ok()?,
+            _ => return None,
+        };
+        let idx = self
+            .controller
+            .status
+            .sheet_info_manager
+            .get_sheet_idx(&sid)?;
+        Some((idx, row, col))
+    }
+
+    fn rect_to_ref(&self, rect: &ResolvedRect) -> CellRefRange {
+        let sheet_idx = self
+            .controller
+            .status
+            .sheet_info_manager
+            .get_sheet_idx(&rect.sheet_id)
+            .unwrap_or(0);
+        CellRefRange {
+            sheet_idx,
+            start_row: rect.r0,
+            start_col: rect.c0,
+            end_row: rect.r1,
+            end_col: rect.c1,
+            all_rows: rect.all_rows,
+            all_cols: rect.all_cols,
+        }
     }
 
     pub fn get_row_info(&self, row: usize) -> Option<RowInfo> {

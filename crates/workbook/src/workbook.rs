@@ -3,16 +3,16 @@ use crate::ooxml::comments::Comments;
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
 use crate::ooxml::drawing_part::{CtTwoCellAnchor, CtWsDr};
 use crate::ooxml::external_links::*;
+use crate::ooxml::persons::Persons;
 use crate::ooxml::relationships::CtRelationship;
 use crate::ooxml::simple_types::StTargetMode;
-use crate::rtypes::IMAGE;
-use crate::ooxml::persons::Persons;
 use crate::ooxml::sst::SstPart;
 use crate::ooxml::style_sheet::StylesheetPart;
 use crate::ooxml::theme::ThemePart;
 use crate::ooxml::threaded_comments::ThreadedComments;
 use crate::ooxml::workbook::WorkbookPart;
 use crate::ooxml::worksheet::WorksheetPart;
+use crate::rtypes::IMAGE;
 use std::collections::HashMap;
 
 use crate::SerdeErr;
@@ -74,10 +74,7 @@ impl WorksheetDrawing {
     /// Resolve an `r:embed` id to the media file name (e.g. `image1.png`).
     pub fn media_name_of(&self, embed_rid: &str) -> Option<String> {
         let rel = self.rels.iter().find(|r| r.id == embed_rid)?;
-        rel.target
-            .rsplit('/')
-            .next()
-            .map(|s| s.to_string())
+        rel.target.rsplit('/').next().map(|s| s.to_string())
     }
 
     /// Build a drawing part from cell images. Each item is

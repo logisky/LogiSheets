@@ -100,6 +100,56 @@ export class GlobalStore {
     @action clearPendingCommentCell() {
         this.pendingCommentCell = null
     }
+
+    // ─── Formula auditing: trace precedents / dependents ────────────────────
+    // A one-shot request raised by the right-click "追踪引用/追踪从属" items,
+    // fulfilled by TraceLayer (which has workbook access): it calls the engine's
+    // get_precedents / get_dependents, then publishes `traceResult` for the
+    // overlay to highlight. Mirrors the pendingCommentCell one-shot pattern.
+    @observable.ref traceRequest: TraceRequest | null = null
+
+    @action requestTrace(r: Omit<TraceRequest, 'nonce'>) {
+        this.traceRequest = {...r, nonce: (this.traceRequest?.nonce ?? 0) + 1}
+    }
+
+    // The highlighted result: the origin cell + the cells/ranges it traces to.
+    @observable.ref traceResult: TraceResult | null = null
+
+    @action setTraceResult(r: TraceResult | null) {
+        this.traceResult = r
+        this.traceRequest = null
+    }
+
+    @action clearTrace() {
+        this.traceResult = null
+        this.traceRequest = null
+    }
+}
+
+export type TraceKind = 'precedents' | 'dependents'
+
+export interface TraceRequest {
+    sheetIdx: number
+    row: number
+    col: number
+    kind: TraceKind
+    /** Bumped so the same cell can be re-traced. */
+    nonce?: number
+}
+
+/** A rectangle to highlight (a single cell has start == end). */
+export interface TraceRect {
+    sheetIdx: number
+    startRow: number
+    startCol: number
+    endRow: number
+    endCol: number
+}
+
+export interface TraceResult {
+    origin: {sheetIdx: number; row: number; col: number}
+    kind: TraceKind
+    rects: TraceRect[]
 }
 
 export interface PendingComment {

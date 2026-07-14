@@ -93,7 +93,11 @@ impl Workbook {
                 if rules.is_empty() {
                     continue;
                 }
-                let sheet_idx = match status.sheet_info_manager.pos.iter().position(|s| s == sheet_id)
+                let sheet_idx = match status
+                    .sheet_info_manager
+                    .pos
+                    .iter()
+                    .position(|s| s == sheet_id)
                 {
                     Some(i) => i,
                     None => continue,
@@ -138,10 +142,11 @@ impl Workbook {
         // Pass 2 (mut): allocate shadow ids, then install formulas.
         let mut payloads = Vec::with_capacity(pending.len());
         for (sheet_idx, sheet_id, cell_id, formula) in pending {
-            let sid =
-                self.controller
-                    .sid_assigner
-                    .get_shawdow_id(sheet_id, cell_id, ShadowKind::Validation);
+            let sid = self.controller.sid_assigner.get_shawdow_id(
+                sheet_id,
+                cell_id,
+                ShadowKind::Validation,
+            );
             payloads.push(crate::edit_action::EditPayload::EphemeralCellInput(
                 EphemeralCellInput {
                     sheet_idx,
@@ -150,11 +155,12 @@ impl Workbook {
                 },
             ));
         }
-        self.controller.handle_action(EditAction::Payloads(PayloadsAction {
-            payloads,
-            undoable: false,
-            init: false,
-        }));
+        self.controller
+            .handle_action(EditAction::Payloads(PayloadsAction {
+                payloads,
+                undoable: false,
+                init: false,
+            }));
     }
 
     pub fn get_sheet_name_by_idx(&self, idx: usize) -> Result<String> {

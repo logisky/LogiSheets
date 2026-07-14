@@ -157,7 +157,10 @@ fn data_validation_flags_invalid_cell() {
         };
         wb.get_shadow_info_by_id(id).unwrap().value
     };
-    assert!(matches!(read(0), Value::Bool(true)), "Apple should be valid");
+    assert!(
+        matches!(read(0), Value::Bool(true)),
+        "Apple should be valid"
+    );
     assert!(
         matches!(read(1), Value::Bool(false)),
         "Zebra should be invalid"
@@ -196,7 +199,11 @@ fn get_cell_list_validation_reads_list_type() {
     let dv = CtDataValidations {
         data_validations: vec![
             // Inline list on A1:A10.
-            mk(StDataValidationType::List, "\"East,West,North,South\"", "A1:A10"),
+            mk(
+                StDataValidationType::List,
+                "\"East,West,North,South\"",
+                "A1:A10",
+            ),
             // Range-reference list on C1.
             mk(StDataValidationType::List, "$G$1:$G$4", "C1"),
             // A non-list rule that must be ignored on B1.
@@ -266,7 +273,10 @@ fn cell_image_round_trip() {
         undoable: true,
         init: false,
     }));
-    assert!(matches!(effect.status, crate::edit_action::StatusCode::Ok(_)));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
 
     // The image is visible via the display API.
     let ws = wb.get_sheet_by_idx(0).unwrap();
@@ -290,7 +300,11 @@ fn cell_image_round_trip() {
     // Undo removes it.
     wb.handle_action(EditAction::Undo);
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    assert_eq!(ws.get_cell_images().len(), 0, "undo should remove the image");
+    assert_eq!(
+        ws.get_cell_images().len(),
+        0,
+        "undo should remove the image"
+    );
     drop(ws);
 
     // Delete payload also removes it (redo first to bring it back).
@@ -305,7 +319,11 @@ fn cell_image_round_trip() {
         init: false,
     }));
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    assert_eq!(ws.get_cell_images().len(), 0, "delete should remove the image");
+    assert_eq!(
+        ws.get_cell_images().len(),
+        0,
+        "delete should remove the image"
+    );
 }
 
 #[test]
@@ -693,4 +711,77 @@ fn comment_roundtrip_persists_thread_and_persons() {
         Some(root_id.as_str())
     );
     assert_eq!(comment.notes[1].author.display_name, "Bob");
+}
+
+#[test]
+fn dependency_tracking_precedents_and_dependents() {
+    use super::CellRefRange;
+    use crate::edit_action::CellInput;
+
+    // A1=1, A2=2; C1=SUM(A1:A2) (a RANGE reference), C2=A1*2 (a SINGLE-cell ref).
+    let mut wb = Workbook::default();
+    let cell = |row, col, content: &str| {
+        EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col,
+            content: content.to_string(),
+        })
+    };
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            cell(0, 0, "1"),
+            cell(1, 0, "2"),
+            cell(0, 2, "=SUM(A1:A2)"),
+            cell(1, 2, "=A1*2"),
+        ],
+        undoable: false,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+
+    let is_single = |r: &CellRefRange| {
+        !r.all_rows && !r.all_cols && r.start_row == r.end_row && r.start_col == r.end_col
+    };
+
+    // Dependents of A1:A2 → C1 (via the A1:A2 range) and C2 (via single A1).
+    let deps = ws.get_dependents(0, 0, 1, 0).unwrap();
+    let c1 = deps
+        .iter()
+        .find(|d| d.row == 0 && d.col == 2)
+        .expect("C1 must depend on A1:A2");
+    assert!(
+        !is_single(&c1.via)
+            && c1.via.start_row == 0
+            && c1.via.end_row == 1
+            && c1.via.start_col == 0
+            && c1.via.end_col == 0,
+        "C1's reference is the multi-cell range A1:A2, got {:?}",
+        c1.via
+    );
+    let c2 = deps
+        .iter()
+        .find(|d| d.row == 1 && d.col == 2)
+        .expect("C2 must depend on A1");
+    assert!(is_single(&c2.via), "C2's reference is single-cell A1");
+
+    // Dependents of A2 ALONE → C1 (its range covers A2) but NOT C2 (refs A1).
+    let deps_a2 = ws.get_dependents(1, 0, 1, 0).unwrap();
+    assert!(
+        deps_a2.iter().any(|d| d.row == 0 && d.col == 2),
+        "C1 depends on A2 via the range"
+    );
+    assert!(
+        !deps_a2.iter().any(|d| d.row == 1 && d.col == 2),
+        "C2 does NOT depend on A2"
+    );
+
+    // Precedents of C1 → the A1:A2 range.
+    let prec = ws.get_precedents(0, 2).unwrap();
+    assert!(
+        prec.iter()
+            .any(|r| r.start_row == 0 && r.end_row == 1 && r.start_col == 0 && r.end_col == 0),
+        "C1's precedent is A1:A2, got {:?}",
+        prec
+    );
 }

@@ -687,9 +687,9 @@ impl<'a> BlockRefTrait for CalcConnector<'a> {
             let [only_key] = key_cell_ids.as_slice() else {
                 return None;
             };
-            let cell_id = self.block_schema_manager.partially_resolve_by_field_id(
-                sheet_id, block_id, *only_key, field_id,
-            )?;
+            let cell_id = self
+                .block_schema_manager
+                .partially_resolve_by_field_id(sheet_id, block_id, *only_key, field_id)?;
             return Some((sheet_id, cell_id));
         }
 

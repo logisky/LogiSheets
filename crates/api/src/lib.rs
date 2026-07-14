@@ -20,8 +20,8 @@
 
 // Re-export the main Workbook and Worksheet types from controller/api
 pub use logisheets_controller::api::{
-    CellInfo, FillRange, ReproducibleCell, SaveFileResult, SheetCoordinate, SheetDimension,
-    Workbook, Worksheet,
+    CellInfo, CellRefRange, DependentCell, FillRange, ReproducibleCell, SaveFileResult,
+    SheetCoordinate, SheetDimension, Workbook, Worksheet,
 };
 
 // Re-export display types
@@ -37,9 +37,9 @@ pub use logisheets_controller::controller::display::{
 pub use logisheets_controller::edit_action::{
     ActionEffect, Alignment, AsyncFuncResult, BindFormSchema, BindRandomSchema, BlockInput,
     BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellClear, CellFormatBrush, CellInput,
-    CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCols,
-    DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
-    DeleteCellImage, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock,
+    CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCellImage,
+    DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction,
+    EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock,
     InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock,
     PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetCellImage, SetColWidth,
     SetRowHeight, SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells,

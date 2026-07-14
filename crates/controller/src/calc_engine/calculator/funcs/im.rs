@@ -185,7 +185,12 @@ fn arg_to_complex(value: CalcValue) -> Result<Complex<f64>, ast::Error> {
 }
 
 /// Combine one-or-more complex arguments left-to-right from `init` (IMSUM/IMPRODUCT).
-fn calc_fold<C, F>(args: Vec<CalcVertex>, fetcher: &mut C, init: Complex<f64>, func: F) -> CalcVertex
+fn calc_fold<C, F>(
+    args: Vec<CalcVertex>,
+    fetcher: &mut C,
+    init: Complex<f64>,
+    func: F,
+) -> CalcVertex
 where
     C: Connector,
     F: Fn(Complex<f64>, Complex<f64>) -> Complex<f64>,

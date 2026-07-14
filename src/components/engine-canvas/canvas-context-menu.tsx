@@ -53,7 +53,10 @@ function selectedLineCount(ctx: ContextMenuContext): number {
 function selectedLineRange(ctx: ContextMenuContext): [number, number] {
     const lines = getSelectedLines(ctx.selectedData)
     if (lines)
-        return [Math.min(lines.start, lines.end), Math.max(lines.start, lines.end)]
+        return [
+            Math.min(lines.start, lines.end),
+            Math.max(lines.start, lines.end),
+        ]
     const idx = (ctx.target === 'row' ? ctx.row : ctx.col) ?? 0
     return [idx, idx]
 }
@@ -83,12 +86,16 @@ export function CanvasContextMenu({
     getActiveSheet,
     setSelection,
 }: CanvasContextMenuProps): ReactNode {
-    const [menu, setMenu] = useState<{x: number; y: number; context: ContextMenuContext} | null>(
-        null
-    )
+    const [menu, setMenu] = useState<{
+        x: number
+        y: number
+        context: ContextMenuContext
+    } | null>(null)
     const [count, setCount] = useState(1)
     const [fmtOpen, setFmtOpen] = useState(false)
-    const [fmtSelectedData, setFmtSelectedData] = useState<SelectedData | null>(null)
+    const [fmtSelectedData, setFmtSelectedData] = useState<SelectedData | null>(
+        null
+    )
     const [fmtValue, setFmtValue] = useState<FormatDialogValue>({})
 
     useEffect(() => {
@@ -123,7 +130,10 @@ export function CanvasContextMenu({
         const payloads: Payload[] = []
         for (let r = range.startRow; r <= range.endRow; r++) {
             for (let c = range.startCol; c <= range.endCol; c++) {
-                payloads.push({type: 'cellClear', value: {sheetIdx, row: r, col: c}})
+                payloads.push({
+                    type: 'cellClear',
+                    value: {sheetIdx, row: r, col: c},
+                })
             }
         }
         await doTxn(payloads)
@@ -141,7 +151,9 @@ export function CanvasContextMenu({
         const [lo, hi] = selectedLineRange(ctx)
         const start = where === 'before' ? lo : hi + 1
         const type = axis === 'row' ? 'insertRows' : 'insertCols'
-        const r = await doTxn([{type, value: {sheetIdx, start, count}} as Payload])
+        const r = await doTxn([
+            {type, value: {sheetIdx, start, count}} as Payload,
+        ])
         if (isErrorMessage(r)) return
         if (where === 'before') {
             setSelection(lineSelection(lo + count, hi + count, axis))
@@ -150,7 +162,10 @@ export function CanvasContextMenu({
         }
     }
 
-    const deleteLines = async (ctx: ContextMenuContext, axis: 'row' | 'col') => {
+    const deleteLines = async (
+        ctx: ContextMenuContext,
+        axis: 'row' | 'col'
+    ) => {
         close()
         const sheetIdx = getActiveSheet()
         const [lo, hi] = selectedLineRange(ctx)
@@ -176,7 +191,15 @@ export function CanvasContextMenu({
             onKeyDown={(e) => e.stopPropagation()}
         >
             <span style={{flex: 1}}>Count</span>
-            <Box sx={{display: 'flex', alignItems: 'center', border: '1px solid #d0d0d0', borderRadius: 1, overflow: 'hidden'}}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    border: '1px solid #d0d0d0',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                }}
+            >
                 <button
                     type="button"
                     aria-label="decrease"
@@ -192,7 +215,9 @@ export function CanvasContextMenu({
                     value={count}
                     onChange={(e) => {
                         const v = parseInt(e.target.value, 10)
-                        setCount(Number.isNaN(v) ? 1 : Math.min(1000, Math.max(1, v)))
+                        setCount(
+                            Number.isNaN(v) ? 1 : Math.min(1000, Math.max(1, v))
+                        )
                     }}
                     style={stepInputStyle}
                 />
@@ -216,6 +241,23 @@ export function CanvasContextMenu({
             sheetIdx: getActiveSheet(),
             row: range.startRow,
             col: range.startCol,
+        })
+    }
+
+    // Formula auditing: raise a one-shot trace request for the clicked cell;
+    // TraceLayer fulfills it (get_precedents / get_dependents) and highlights.
+    const traceCell = (
+        ctx: ContextMenuContext,
+        kind: 'precedents' | 'dependents'
+    ) => {
+        close()
+        const range = getSelectedCellRange(ctx.selectedData)
+        if (!range) return
+        globalStore.requestTrace({
+            sheetIdx: getActiveSheet(),
+            row: range.startRow,
+            col: range.startCol,
+            kind,
         })
     }
 
@@ -245,7 +287,8 @@ export function CanvasContextMenu({
                 if (m) format = m[1].toLowerCase()
                 else {
                     const dot = file.name.lastIndexOf('.')
-                    if (dot >= 0) format = file.name.slice(dot + 1).toLowerCase()
+                    if (dot >= 0)
+                        format = file.name.slice(dot + 1).toLowerCase()
                 }
                 const imageId =
                     typeof crypto !== 'undefined' && crypto.randomUUID
@@ -280,62 +323,100 @@ export function CanvasContextMenu({
     }
 
     const ctx = menu?.context
-    const items: ReactNode = !ctx ? null : ctx.target === 'cell' ? (
-        [
-            <MenuItem key="format" onClick={() => openFormat(ctx)}>
-                Format Cells
-            </MenuItem>,
-            <MenuItem key="clear" onClick={() => clearCells(ctx)}>
-                Clear Cells
-            </MenuItem>,
-            <MenuItem key="comment" onClick={() => addComment(ctx)}>
-                Add comment
-            </MenuItem>,
-            <Divider key="imgd" />,
-            <MenuItem key="insert-image" onClick={() => insertImage(ctx)}>
-                Insert image
-            </MenuItem>,
-            <MenuItem key="remove-image" onClick={() => removeImage(ctx)}>
-                Remove image
-            </MenuItem>,
-        ]
-    ) : ctx.target === 'row' ? (
-        [
-            <MenuItem key="ia" onClick={() => insertLines(ctx, 'row', 'before')}>
-                Insert rows above
-            </MenuItem>,
-            <MenuItem key="ib" onClick={() => insertLines(ctx, 'row', 'after')}>
-                Insert rows below
-            </MenuItem>,
-            <Box key="stepper">{stepper}</Box>,
-            <Divider key="d1" />,
-            <MenuItem key="fmt" onClick={() => openFormat(ctx)}>
-                Format cells
-            </MenuItem>,
-            <Divider key="d2" />,
-            <MenuItem key="del" onClick={() => deleteLines(ctx, 'row')}>
-                Delete rows
-            </MenuItem>,
-        ]
-    ) : (
-        [
-            <MenuItem key="il" onClick={() => insertLines(ctx, 'col', 'before')}>
-                Insert columns left
-            </MenuItem>,
-            <MenuItem key="ir" onClick={() => insertLines(ctx, 'col', 'after')}>
-                Insert columns right
-            </MenuItem>,
-            <Box key="stepper">{stepper}</Box>,
-            <Divider key="d1" />,
-            <MenuItem key="fmt" onClick={() => openFormat(ctx)}>
-                Format cells
-            </MenuItem>,
-            <Divider key="d2" />,
-            <MenuItem key="del" onClick={() => deleteLines(ctx, 'col')}>
-                Delete columns
-            </MenuItem>,
-        ]
-    )
+    const items: ReactNode = !ctx
+        ? null
+        : ctx.target === 'cell'
+        ? [
+              <MenuItem key="format" onClick={() => openFormat(ctx)}>
+                  Format Cells
+              </MenuItem>,
+              <MenuItem key="clear" onClick={() => clearCells(ctx)}>
+                  Clear Cells
+              </MenuItem>,
+              <MenuItem key="comment" onClick={() => addComment(ctx)}>
+                  Add comment
+              </MenuItem>,
+              <Divider key="traced" />,
+              <MenuItem
+                  key="trace-prec"
+                  onClick={() => traceCell(ctx, 'precedents')}
+              >
+                  Trace precedents
+              </MenuItem>,
+              <MenuItem
+                  key="trace-dep"
+                  onClick={() => traceCell(ctx, 'dependents')}
+              >
+                  Trace dependents
+              </MenuItem>,
+              ...(globalStore.traceResult
+                  ? [
+                        <MenuItem
+                            key="trace-clear"
+                            onClick={() => {
+                                close()
+                                globalStore.clearTrace()
+                            }}
+                        >
+                            Clear trace
+                        </MenuItem>,
+                    ]
+                  : []),
+              <Divider key="imgd" />,
+              <MenuItem key="insert-image" onClick={() => insertImage(ctx)}>
+                  Insert image
+              </MenuItem>,
+              <MenuItem key="remove-image" onClick={() => removeImage(ctx)}>
+                  Remove image
+              </MenuItem>,
+          ]
+        : ctx.target === 'row'
+        ? [
+              <MenuItem
+                  key="ia"
+                  onClick={() => insertLines(ctx, 'row', 'before')}
+              >
+                  Insert rows above
+              </MenuItem>,
+              <MenuItem
+                  key="ib"
+                  onClick={() => insertLines(ctx, 'row', 'after')}
+              >
+                  Insert rows below
+              </MenuItem>,
+              <Box key="stepper">{stepper}</Box>,
+              <Divider key="d1" />,
+              <MenuItem key="fmt" onClick={() => openFormat(ctx)}>
+                  Format cells
+              </MenuItem>,
+              <Divider key="d2" />,
+              <MenuItem key="del" onClick={() => deleteLines(ctx, 'row')}>
+                  Delete rows
+              </MenuItem>,
+          ]
+        : [
+              <MenuItem
+                  key="il"
+                  onClick={() => insertLines(ctx, 'col', 'before')}
+              >
+                  Insert columns left
+              </MenuItem>,
+              <MenuItem
+                  key="ir"
+                  onClick={() => insertLines(ctx, 'col', 'after')}
+              >
+                  Insert columns right
+              </MenuItem>,
+              <Box key="stepper">{stepper}</Box>,
+              <Divider key="d1" />,
+              <MenuItem key="fmt" onClick={() => openFormat(ctx)}>
+                  Format cells
+              </MenuItem>,
+              <Divider key="d2" />,
+              <MenuItem key="del" onClick={() => deleteLines(ctx, 'col')}>
+                  Delete columns
+              </MenuItem>,
+          ]
 
     return (
         <>
@@ -346,7 +427,10 @@ export function CanvasContextMenu({
                 anchorPosition={menu ? {top: menu.y, left: menu.x} : undefined}
                 transformOrigin={{vertical: 'top', horizontal: 'left'}}
                 disableScrollLock
-                MenuListProps={{autoFocusItem: false, sx: {minWidth: 200, py: 0.5}}}
+                MenuListProps={{
+                    autoFocusItem: false,
+                    sx: {minWidth: 200, py: 0.5},
+                }}
             >
                 {items}
             </Menu>

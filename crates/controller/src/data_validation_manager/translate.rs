@@ -105,7 +105,10 @@ mod tests {
     #[test]
     fn list_inline() {
         let f = rule_to_formula(&dv(Ty::List, Op::Between, Some("\"a,b,c\""), None)).unwrap();
-        assert_eq!(f, "OR(#PLACEHOLDER=\"a\",#PLACEHOLDER=\"b\",#PLACEHOLDER=\"c\")");
+        assert_eq!(
+            f,
+            "OR(#PLACEHOLDER=\"a\",#PLACEHOLDER=\"b\",#PLACEHOLDER=\"c\")"
+        );
     }
 
     #[test]
@@ -131,13 +134,16 @@ mod tests {
 
     #[test]
     fn text_length_lte() {
-        let f = rule_to_formula(&dv(Ty::TextLength, Op::LessThanOrEqual, Some("10"), None)).unwrap();
+        let f =
+            rule_to_formula(&dv(Ty::TextLength, Op::LessThanOrEqual, Some("10"), None)).unwrap();
         assert_eq!(f, "LEN(#PLACEHOLDER)<=10");
     }
 
     #[test]
     fn custom_and_none_unsupported() {
-        assert!(rule_to_formula(&dv(Ty::Custom, Op::Between, Some("ISNUMBER(A1)"), None)).is_none());
+        assert!(
+            rule_to_formula(&dv(Ty::Custom, Op::Between, Some("ISNUMBER(A1)"), None)).is_none()
+        );
         assert!(rule_to_formula(&dv(Ty::None, Op::Between, None, None)).is_none());
     }
 

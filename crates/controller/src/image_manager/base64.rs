@@ -87,6 +87,9 @@ mod tests {
     fn known_vectors() {
         assert_eq!(encode(b"foobar"), "Zm9vYmFy");
         assert_eq!(decode("Zm9vYmFy").unwrap(), b"foobar");
-        assert_eq!(encode(b"any carnal pleasure."), "YW55IGNhcm5hbCBwbGVhc3VyZS4=");
+        assert_eq!(
+            encode(b"any carnal pleasure."),
+            "YW55IGNhcm5hbCBwbGVhc3VyZS4="
+        );
     }
 }

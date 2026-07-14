@@ -12,10 +12,10 @@ use crate::ext_book_manager::ExtBooksManager;
 use crate::ext_ref_manager::ExtRefManager;
 use crate::formula_manager::FormulaManager;
 use crate::id_manager::FuncIdManager;
-use crate::image_manager::ImageManager;
 use crate::id_manager::NameIdManager;
 use crate::id_manager::SheetIdManager;
 use crate::id_manager::TextIdManager;
+use crate::image_manager::ImageManager;
 use crate::navigator::Navigator;
 
 use crate::block_manager::field_manager::FieldRenderManager;
