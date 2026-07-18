@@ -19,6 +19,7 @@ import Divider from '@mui/material/Divider'
 import Box from '@mui/material/Box'
 import Dialog from '@mui/material/Dialog'
 import type {
+    BlockInfo,
     ContextMenuContext,
     SelectedData,
     Transaction,
@@ -33,6 +34,7 @@ import {
 import FormatDialogContent, {
     type FormatDialogValue,
 } from '@/components/format-dialog'
+import {BlockComposerComponent} from '@/components/block-composer'
 import {globalStore} from '@/store'
 
 /** Payload of the engine/session `contextMenu` event. */
@@ -97,6 +99,27 @@ export function CanvasContextMenu({
         null
     )
     const [fmtValue, setFmtValue] = useState<FormatDialogValue>({})
+    // "Link range → block": the picker lists blocks with a matching column count
+    // that aren't already linked; picking one sends a CreateLink payload.
+    const [linkOpen, setLinkOpen] = useState(false)
+    const [linkBlocks, setLinkBlocks] = useState<BlockInfo[]>([])
+    const [linkTarget, setLinkTarget] = useState<{
+        sheetIdx: number
+        masterRow: number
+        masterCol: number
+        rowCnt: number
+        colCnt: number
+        /** The selection that triggered the link, kept for convert-mode create. */
+        selectedData: SelectedData
+    } | null>(null)
+    // "Create new block" path: reuse the block-composer in *convert* mode over
+    // the selected region (keeps its data + remaps formulas). We stash the
+    // selection + its dimensions so the composer can convert it in place.
+    const [convertComposer, setConvertComposer] = useState<{
+        selectedData: SelectedData
+        rowCnt: number
+        colCnt: number
+    } | null>(null)
 
     useEffect(() => {
         return subscribe((e) => {
@@ -261,6 +284,61 @@ export function CanvasContextMenu({
         })
     }
 
+    // Link the selected range to an existing block: fetch the blocks it can link
+    // to (same column count, not already linked) and open the picker.
+    const openLink = async (ctx: ContextMenuContext) => {
+        close()
+        const range = getSelectedCellRange(ctx.selectedData)
+        if (!range) return
+        const sheetIdx = getActiveSheet()
+        const colCnt = range.endCol - range.startCol + 1
+        const rowCnt = range.endRow - range.startRow + 1
+        const res = await dataSvc.getWorkbook().getLinkableBlocks({
+            sheetIdx,
+            colCnt,
+        })
+        if (isErrorMessage(res)) return
+        setLinkTarget({
+            sheetIdx,
+            masterRow: range.startRow,
+            masterCol: range.startCol,
+            rowCnt,
+            colCnt,
+            selectedData: ctx.selectedData,
+        })
+        setLinkBlocks(res as BlockInfo[])
+        setLinkOpen(true)
+    }
+
+    const pickBlock = async (blockId: number) => {
+        setLinkOpen(false)
+        if (!linkTarget) return
+        const {sheetIdx, masterRow, masterCol, rowCnt, colCnt} = linkTarget
+        await doTxn([
+            {
+                type: 'createLink',
+                value: {sheetIdx, masterRow, masterCol, rowCnt, colCnt, blockId},
+            } as Payload,
+        ])
+        // Linking an empty range changes no cell value, so the grid may not
+        // re-render — nudge LinkLayer to refetch and draw the border now.
+        globalStore.bumpLinkRevision()
+    }
+
+    // No suitable block yet — turn the selection into a fresh, growable block.
+    // Reuses the block-composer in *convert* mode (ref name + one field per
+    // selected column) so the block is visible + schema'd and formulas over the
+    // region get remapped to track it. A bare convert would be invisible.
+    const createNewBlock = () => {
+        setLinkOpen(false)
+        if (!linkTarget) return
+        setConvertComposer({
+            selectedData: linkTarget.selectedData,
+            rowCnt: linkTarget.rowCnt,
+            colCnt: linkTarget.colCnt,
+        })
+    }
+
     // Insert an image into the clicked cell. Opens a native file picker, reads
     // the file as base64 and dispatches a `SetCellImage` payload. The image
     // fills the cell and resizes with it.
@@ -335,6 +413,9 @@ export function CanvasContextMenu({
               </MenuItem>,
               <MenuItem key="comment" onClick={() => addComment(ctx)}>
                   Add comment
+              </MenuItem>,
+              <MenuItem key="link" onClick={() => openLink(ctx)}>
+                  Link to block…
               </MenuItem>,
               <Divider key="traced" />,
               <MenuItem
@@ -457,6 +538,56 @@ export function CanvasContextMenu({
                     />
                 )}
             </Dialog>
+
+            <Dialog
+                open={linkOpen}
+                onClose={() => setLinkOpen(false)}
+                disableScrollLock
+                container={document.body}
+                PaperProps={{sx: {zIndex: 2000, minWidth: 320, p: 2}}}
+            >
+                <Box sx={{fontWeight: 600, fontSize: 15, mb: 1}}>
+                    Link to block
+                </Box>
+                <Box sx={{fontSize: 12.5, color: '#667', mb: 1.5}}>
+                    {linkTarget
+                        ? `The selected range (${linkTarget.colCnt} column${
+                              linkTarget.colCnt > 1 ? 's' : ''
+                          }) will read from the block you pick — which can grow.`
+                        : ''}
+                </Box>
+                <MenuItem
+                    onClick={createNewBlock}
+                    sx={{borderRadius: 1, fontWeight: 600, color: '#2563eb'}}
+                >
+                    ＋ Create a new block from selection
+                </MenuItem>
+                {linkBlocks.length > 0 && (
+                    <Divider sx={{my: 0.5}}>or link to an existing block</Divider>
+                )}
+                {linkBlocks.map((b) => (
+                    <MenuItem
+                        key={b.blockId}
+                        onClick={() => pickBlock(b.blockId)}
+                        sx={{borderRadius: 1}}
+                    >
+                        {`Block #${b.blockId} · ${b.rowCnt}×${b.colCnt}${
+                            b.schema?.name ? ` · ${b.schema.name}` : ''
+                        }`}
+                    </MenuItem>
+                ))}
+            </Dialog>
+
+            {convertComposer && (
+                <BlockComposerComponent
+                    selectedData={convertComposer.selectedData}
+                    convertRegion={{
+                        rowCnt: convertComposer.rowCnt,
+                        colCnt: convertComposer.colCnt,
+                    }}
+                    close={() => setConvertComposer(null)}
+                />
+            )}
         </>
     )
 }

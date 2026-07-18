@@ -111,6 +111,20 @@ pub struct BlockInfo {
     pub cells: Vec<BlockCellInfo>,
 }
 
+/// A range that is linked to a backing block: the *source* range (the cells the
+/// user references, e.g. `A1:A10`) resolved to sheet coordinates, plus the block
+/// id it redirects to. The app draws an outer border around the source range.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "link_info.ts", rename_all = "camelCase")]
+pub struct LinkInfo {
+    pub sheet_idx: usize,
+    pub block_id: BlockId,
+    pub start_row: usize,
+    pub start_col: usize,
+    pub end_row: usize,
+    pub end_col: usize,
+}
+
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "block_schema.ts", rename_all = "camelCase")]
 pub struct BlockSchema {

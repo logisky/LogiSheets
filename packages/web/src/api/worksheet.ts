@@ -19,6 +19,7 @@ import {
     CellImageInfo,
     DependentCell,
     CellRefRange,
+    LinkInfo,
 } from '../bindings'
 import {Cell} from './cell'
 import {isErrorMessage, Result} from './utils'
@@ -82,6 +83,22 @@ export class Worksheet {
             {sheetIdx: this._sheetIdx, row, col},
             this._id
         )
+    }
+
+    /** Blocks a `colCnt`-wide range can be linked to: same column count and not
+     * already linked. Used by the "link range → block" picker. */
+    public getLinkableBlocks(colCnt: number): Result<BlockInfo[]> {
+        return rpc(
+            'getLinkableBlocks',
+            {sheetIdx: this._sheetIdx, colCnt},
+            this._id
+        )
+    }
+
+    /** Ranges on this sheet that are linked to a block, in sheet coordinates.
+     * Used to draw an outer border around each linked source range. */
+    public getLinks(): Result<LinkInfo[]> {
+        return rpc('getLinks', {sheetIdx: this._sheetIdx}, this._id)
     }
 
     public getDisplayWindow(

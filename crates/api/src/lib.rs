@@ -29,7 +29,7 @@ pub use logisheets_controller::controller::display::{
     BlockCellInfo, BlockDataRow, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema,
     BlockSchemaRandomEntry, BlockSchemaType, CellCoordinate, CellCoordinateWithSheet,
     CellImageInfo, CellPosition, ColInfo, DisplayWindow, DisplayWindowRequest,
-    DisplayWindowWithStartPoint, RowInfo, ShadowCellInfo, SheetInfo, TempCellChange,
+    DisplayWindowWithStartPoint, LinkInfo, RowInfo, ShadowCellInfo, SheetInfo, TempCellChange,
     TempStatusDiff,
 };
 

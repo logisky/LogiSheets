@@ -425,6 +425,74 @@ export class WorkbookOps {
         await this.apply(payloads, true)
     }
 
+    /**
+     * Turn an EXISTING cell region into a form-backed block in place: like
+     * `createFormBlock`, but `convertBlock` (keeps the region's cells + values
+     * and its row/col extent, and remaps formulas that reference the range so
+     * they track the block). `fields.length` must equal the region's columns.
+     */
+    async convertToFormBlock(opts: {
+        sheetIdx: number
+        blockId: number
+        masterRow: number
+        masterCol: number
+        rowCnt: number
+        colCnt: number
+        refName: string
+        keyIdx: number
+        fields: readonly FormBlockField[]
+    }): Promise<void> {
+        const {
+            sheetIdx,
+            blockId,
+            masterRow,
+            masterCol,
+            rowCnt,
+            colCnt,
+            refName,
+            keyIdx,
+            fields,
+        } = opts
+        const payloads: Payload[] = [
+            {
+                type: 'convertBlock',
+                value: {
+                    sheetIdx,
+                    id: blockId,
+                    masterRow,
+                    masterCol,
+                    rowCnt,
+                    colCnt,
+                },
+            },
+            {
+                type: 'bindFormSchema',
+                value: {
+                    refName,
+                    sheetIdx,
+                    blockId,
+                    fieldFrom: 0,
+                    row: true,
+                    keyIdx: keyIdx < 0 ? 0 : keyIdx,
+                    fields: fields.map((f) => f.name),
+                    renderIds: fields.map((f) => f.renderId),
+                    fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
+                    validationFormulas: [],
+                    editabilityFormulas: [],
+                },
+            },
+            ...fields.map((f) => ({
+                type: 'upsertFieldRenderInfo' as const,
+                value: {
+                    renderId: f.renderId,
+                    diyRender: f.diyRender,
+                    styleUpdate: {setNumFmt: f.numFmt ?? ''},
+                },
+            })),
+        ]
+        await this.apply(payloads, true)
+    }
+
     // ---- generic / temp-branch -----------------------------------------
 
     /**

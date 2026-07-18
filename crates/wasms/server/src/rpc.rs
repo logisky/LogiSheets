@@ -4,7 +4,7 @@ use logisheets_rs::{
     ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo,
     CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange, ColId,
     Comment, DependentCell, DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage,
-    FormulaDisplayInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
+    FormulaDisplayInfo, LinkInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
     ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style,
     TempStatusDiff, Value,
 };
@@ -24,6 +24,8 @@ pub enum Message {
     GetSheetDimension(GetSheetDimensionParams),
     GetDependents(GetDependentsParams),
     GetPrecedents(GetPrecedentsParams),
+    GetLinkableBlocks(GetLinkableBlocksParams),
+    GetLinks(GetLinksParams),
     GetDisplayWindow(GetDisplayWindowParams),
     GetCell(GetCellParams),
     GetCellListValidation(GetCellParams),
@@ -133,6 +135,19 @@ pub struct GetPrecedentsParams {
     pub sheet_idx: usize,
     pub row: usize,
     pub col: usize,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_linkable_blocks_params.ts", rename_all = "camelCase")]
+pub struct GetLinkableBlocksParams {
+    pub sheet_idx: usize,
+    pub col_cnt: usize,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_links_params.ts", rename_all = "camelCase")]
+pub struct GetLinksParams {
+    pub sheet_idx: usize,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -781,6 +796,12 @@ pub struct WorkbookMethods {
         params: GetAllBlocksParams,
         book_id: Option<usize>,
     ) -> Result<Vec<BlockInfo>, ErrorMessage>,
+    pub get_linkable_blocks: fn(
+        params: GetLinkableBlocksParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<BlockInfo>, ErrorMessage>,
+    pub get_links:
+        fn(params: GetLinksParams, book_id: Option<usize>) -> Result<Vec<LinkInfo>, ErrorMessage>,
     pub save_checkpoint:
         fn(params: SaveCheckpointParams, book_id: Option<usize>) -> Result<usize, ErrorMessage>,
     pub delete_checkpoint:
@@ -1165,6 +1186,10 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.col_cnt,
         ),
         Message::GetAllBlocks(params) => ws::get_all_blocks(id, params.sheet_idx, params.sheet_id),
+        Message::GetLinkableBlocks(params) => {
+            ws::get_linkable_blocks(id, params.sheet_idx, params.col_cnt)
+        }
+        Message::GetLinks(params) => ws::get_links(id, params.sheet_idx),
         Message::SaveCheckpoint(params) => {
             ws::save_checkpoint(id, params.label, params.description)
         }

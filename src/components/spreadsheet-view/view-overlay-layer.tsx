@@ -5,6 +5,7 @@ import {CraftInteractionComponent} from '@/components/craft-interaction'
 import {CommentLayer} from '@/components/comment-layer'
 import {DataValidationOverlay} from '@/components/data-validation-overlay'
 import {TraceLayer} from './trace-layer'
+import {LinkLayer} from './link-layer'
 
 export interface ViewOverlayLayerProps {
     grid: Grid | null
@@ -117,6 +118,7 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
                 <DataValidationOverlay grid={grid} activeSheet={activeSheet} />
             )}
             {grid && <TraceLayer grid={grid} activeSheet={activeSheet} />}
+            {grid && <LinkLayer grid={grid} activeSheet={activeSheet} />}
         </div>
     )
 }

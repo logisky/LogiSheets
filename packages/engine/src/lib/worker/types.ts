@@ -47,6 +47,8 @@ export enum MethodName {
     GetSheetDimension = 'getSheetDimension',
     GetDependents = 'getDependents',
     GetPrecedents = 'getPrecedents',
+    GetLinkableBlocks = 'getLinkableBlocks',
+    GetLinks = 'getLinks',
     GetAllSheetInfo = 'getAllSheetInfo',
     GetFormulaFunctionNames = 'getFormulaFunctionNames',
     GetDisplayWindow = 'getDisplayWindow',

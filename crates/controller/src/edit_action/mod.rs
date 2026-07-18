@@ -92,6 +92,7 @@ pub enum EditPayload {
     CreateBlock(CreateBlock),
     ResizeBlock(ResizeBlock),
     ConvertBlock(ConvertBlock),
+    CreateLink(CreateLink),
     BindFormSchema(BindFormSchema),
     UpsertFieldFormulas(UpsertFieldFormulas),
     BindRandomSchema(BindRandomSchema),
@@ -458,6 +459,24 @@ pub struct ConvertBlock {
     pub master_col: usize,
     pub row_cnt: usize,
     pub col_cnt: usize,
+}
+
+/// Link a source cell range to an existing block, so references to the source
+/// (e.g. `A1:A10`) transparently resolve to the block's cells. The source cells
+/// are left untouched (a facade); the block is the real, growable backing store.
+/// The source's column count must equal the block's column count.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "create_link.ts", builder, rename_all = "camelCase")]
+pub struct CreateLink {
+    pub sheet_idx: usize,
+    /// Top-left of the source range.
+    pub master_row: usize,
+    pub master_col: usize,
+    /// Source range extent. `col_cnt` must match the target block's columns.
+    pub row_cnt: usize,
+    pub col_cnt: usize,
+    /// The existing block that backs the source range.
+    pub block_id: usize,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -1339,7 +1358,13 @@ impl From<ConvertBlock> for EditPayload {
         EditPayload::ConvertBlock(value)
     }
 }
+impl From<CreateLink> for EditPayload {
+    fn from(value: CreateLink) -> Self {
+        EditPayload::CreateLink(value)
+    }
+}
 
+impl Payload for CreateLink {}
 impl Payload for BlockInput {}
 impl Payload for BlockStyleUpdate {}
 impl Payload for CellInput {}

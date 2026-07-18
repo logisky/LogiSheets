@@ -8,7 +8,7 @@ use crate::controller::display::BlockSchemaRandomEntry;
 use crate::controller::display::BlockSchemaType;
 use crate::controller::display::{
     BlockCellInfo, BlockDisplayInfo, BlockInfo, CellCoordinate, CellImageInfo, CellPosition,
-    DisplayWindow, DisplayWindowWithStartPoint,
+    DisplayWindow, DisplayWindowWithStartPoint, LinkInfo,
 };
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
@@ -1143,6 +1143,71 @@ impl<'a> Worksheet<'a> {
             })
             .collect::<Vec<_>>();
         result
+    }
+
+    /// Blocks on this sheet a `col_cnt`-wide range can be linked to: same column
+    /// count, and not already the target of a link.
+    pub fn get_linkable_blocks(&self, col_cnt: usize) -> Vec<BlockInfo> {
+        let linked: std::collections::HashSet<BlockId> = self
+            .controller
+            .status
+            .range_manager
+            .get_sheet_manager_assert(&self.sheet_id)
+            .map(|m| m.links.values().map(|br| br.block_id()).collect())
+            .unwrap_or_default();
+        self.get_all_blocks()
+            .into_iter()
+            .filter(|b| b.col_cnt == col_cnt && !linked.contains(&b.block_id))
+            .collect()
+    }
+
+    /// Every range on this sheet that is linked to a block, resolved to sheet
+    /// coordinates. Used by the app to draw an outer border around each linked
+    /// source range. Unbounded row/col link sources are skipped (no finite box).
+    pub fn get_links(&self) -> Vec<LinkInfo> {
+        use logisheets_base::NormalRange;
+        let sheet_idx = match self
+            .controller
+            .status
+            .sheet_info_manager
+            .get_sheet_idx(&self.sheet_id)
+        {
+            Some(idx) => idx,
+            None => return vec![],
+        };
+        let manager = match self
+            .controller
+            .status
+            .range_manager
+            .get_sheet_manager_assert(&self.sheet_id)
+        {
+            Some(m) => m,
+            None => return vec![],
+        };
+        let nav = &self.controller.status.navigator;
+        manager
+            .links
+            .iter()
+            .filter_map(|(source, block_range)| {
+                let (start, end) = match source {
+                    NormalRange::Single(c) => (*c, *c),
+                    NormalRange::AddrRange(s, e) => (*s, *e),
+                    // Unbounded row/col ranges have no finite pixel box.
+                    NormalRange::RowRange(..) | NormalRange::ColRange(..) => return None,
+                };
+                let (start_row, start_col) =
+                    nav.fetch_normal_cell_idx(&self.sheet_id, &start).ok()?;
+                let (end_row, end_col) = nav.fetch_normal_cell_idx(&self.sheet_id, &end).ok()?;
+                Some(LinkInfo {
+                    sheet_idx,
+                    block_id: block_range.block_id(),
+                    start_row: start_row.min(end_row),
+                    start_col: start_col.min(end_col),
+                    end_row: start_row.max(end_row),
+                    end_col: start_col.max(end_col),
+                })
+            })
+            .collect()
     }
 
     pub fn get_all_blocks(&self) -> Vec<BlockInfo> {

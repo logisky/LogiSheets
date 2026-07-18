@@ -113,6 +113,13 @@ impl BlockRange {
     pub fn is_single(&self) -> bool {
         matches!(self, BlockRange::Single(_))
     }
+
+    pub fn block_id(&self) -> BlockId {
+        match self {
+            BlockRange::Single(c) => c.block_id,
+            BlockRange::AddrRange(c, _) => c.block_id,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]

@@ -238,6 +238,12 @@ impl<'a> BlockAffectTrait for FormulaConnector<'a> {
 
 impl<'a> VertexFetcherTrait for FormulaConnector<'a> {
     fn fetch_range_id(&mut self, sheet_id: &SheetId, range: &Range) -> RangeId {
+        // Link resolution (a record column -> its block column, or an invalid
+        // record reference -> #VALUE) is done at RESOLUTION time — in the calc
+        // engine (value) and `get_range_deps` (dependencies) — NOT here. The
+        // formula keeps its ORIGINAL range id (e.g. `A1:A2`), so it round-trips
+        // through save/load with the facade intact and links are restored
+        // independently. See `range_manager::link`.
         self.range_manager.get_range_id(sheet_id, range)
     }
 
@@ -455,6 +461,22 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
             None => return Vec::new(),
         };
 
+        // A reference to a full column of a linked record region depends on the
+        // BLOCK column (so it tracks the block as it grows). Resolve it here, at
+        // dependency-build time, using the current links — the formula's own
+        // range id is left untouched (`A1:A2`), so save/load keeps the facade.
+        let range = if let Range::Normal(nr) = &range {
+            use crate::range_manager::link::{LinkRef, NavLink, resolve_normal};
+            match resolve_normal(&NavLink(self.id_navigator), *sheet_id, &sheet_mgr.links, nr) {
+                LinkRef::Column(br) => Range::Block(br),
+                // Passthrough / Invalid keep the literal range: an invalid record
+                // reference is a `#VALUE!` at calc time and has no block deps.
+                _ => range,
+            }
+        } else {
+            range
+        };
+
         match range {
             Range::Normal(ref normal_range) => sheet_mgr
                 .normal_range_to_id
@@ -469,19 +491,40 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
                     _ => None,
                 })
                 .collect(),
-            Range::Block(ref block_range) => sheet_mgr
-                .block_range_to_id
-                .iter()
-                .filter_map(|(r, id)| match r {
-                    BlockRange::Single(cell) => {
-                        match cell_in_block_range(self, sheet_id, cell, block_range) {
-                            Ok(true) => Some(Vertex::Range(*sheet_id, *id)),
-                            _ => None,
+            Range::Block(ref block_range) => {
+                let mut deps: Vec<Vertex> = sheet_mgr
+                    .block_range_to_id
+                    .iter()
+                    .filter_map(|(r, id)| match r {
+                        BlockRange::Single(cell) => {
+                            match cell_in_block_range(self, sheet_id, cell, block_range) {
+                                Ok(true) => Some(Vertex::Range(*sheet_id, *id)),
+                                _ => None,
+                            }
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                // The per-cell edges above only cover cells inside the range's
+                // FIXED bounds. A block reference (e.g. a linked record column)
+                // must also follow the block as it grows/shrinks: depend on the
+                // block's field column(s) and on the block as a whole, which get
+                // dirtied by field-cell edits (incl. appended rows) and by
+                // structural changes. This is what makes a mapped column behave
+                // like a whole growable column in the dependency graph.
+                if let BlockRange::AddrRange(start, end) = block_range {
+                    let block_id = start.block_id;
+                    deps.push(Vertex::BlockAll(*sheet_id, block_id));
+                    for cell in [start, end] {
+                        if let BlockCellRole::Field(field_id) =
+                            self.block_schema_manager.cell_role(*sheet_id, cell)
+                        {
+                            deps.push(Vertex::Block(*sheet_id, block_id, field_id));
                         }
                     }
-                    _ => None,
-                })
-                .collect(),
+                }
+                deps
+            }
             Range::Ephemeral(_) => Vec::new(),
         }
     }

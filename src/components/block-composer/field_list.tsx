@@ -27,6 +27,11 @@ interface FieldListProps {
     onFieldsReorder: (fields: FieldSetting[]) => void
     onAddField: () => void
     embedded?: boolean
+    /**
+     * When set, the field count is fixed (one field per selected column in
+     * convert mode) — the "Add New Field" button is hidden.
+     */
+    lockFieldCount?: boolean
 }
 
 export const FieldList = ({
@@ -36,6 +41,7 @@ export const FieldList = ({
     onFieldsReorder,
     onAddField,
     embedded = false,
+    lockFieldCount = false,
 }: FieldListProps) => {
     const [isDragEnabled, setIsDragEnabled] = useState(false)
 
@@ -81,23 +87,25 @@ export const FieldList = ({
                 }
             >
                 {/* Header with Add Button */}
-                <Box
-                    sx={{
-                        p: 2,
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                    }}
-                >
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        fullWidth
-                        onClick={onAddField}
-                        sx={{textTransform: 'none'}}
+                {!lockFieldCount && (
+                    <Box
+                        sx={{
+                            p: 2,
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                        }}
                     >
-                        Add New Field
-                    </Button>
-                </Box>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            fullWidth
+                            onClick={onAddField}
+                            sx={{textTransform: 'none'}}
+                        >
+                            Add New Field
+                        </Button>
+                    </Box>
+                )}
 
                 {/* Field List */}
                 {isDragEnabled ? (
