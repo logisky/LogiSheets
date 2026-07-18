@@ -608,10 +608,13 @@ fn parse_row(row: &str) -> Result<(bool, usize)> {
                 .get(2)
                 .ok_or(ParseError::ParseRowFailed(row.to_string()))?
                 .as_str();
+            // Rows are 1-based in A1 notation; row "0" is invalid. Use
+            // `checked_sub` so it fails to parse rather than underflowing usize.
             let idx = label
                 .parse::<usize>()
                 .or(Err(ParseError::ParseRowFailed(row.to_string())))?
-                - 1;
+                .checked_sub(1)
+                .ok_or(ParseError::ParseRowFailed(row.to_string()))?;
             Ok((abs, idx))
         },
     )?;
@@ -668,7 +671,7 @@ fn build_work_sheet_prefix(pair: Pair<Rule>) -> Option<ReferencePrefix> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_column;
+    use super::{parse_column, parse_row};
     #[test]
     fn parse_column_test() {
         let col = "B";
@@ -677,5 +680,13 @@ mod tests {
         let col = "$AB";
         let result = parse_column(col);
         assert!(matches!(result, Ok((true, 27))));
+    }
+
+    #[test]
+    fn parse_row_test() {
+        assert!(matches!(parse_row("1"), Ok((false, 0))));
+        assert!(matches!(parse_row("$10"), Ok((true, 9))));
+        // Row 0 is invalid (1-based) — must fail to parse, NOT underflow usize.
+        assert!(parse_row("0").is_err());
     }
 }
