@@ -31,6 +31,7 @@ import type {
     TempStatusDiff,
     CellInput,
     PredictFillParams,
+    LinkInfo,
 } from 'logisheets-web'
 
 import {WorkerUpdate, MethodName} from './types'
@@ -125,6 +126,19 @@ export class WorkbookWorkerService implements IWorkbookWorker {
             params.endRow,
             params.endCol
         )
+    }
+
+    public getLinkableBlocks(params: {
+        sheetIdx: number
+        colCnt: number
+    }): Result<readonly BlockInfo[]> {
+        const ws = this.getSheet(params.sheetIdx)
+        return ws.getLinkableBlocks(params.colCnt)
+    }
+
+    public getLinks(params: {sheetIdx: number}): Result<readonly LinkInfo[]> {
+        const ws = this.getSheet(params.sheetIdx)
+        return ws.getLinks()
     }
 
     public getPrecedents(params: {
@@ -703,6 +717,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetPrecedents:
                     result = this.getPrecedents(args)
+                    break
+                case MethodName.GetLinkableBlocks:
+                    result = this.getLinkableBlocks(args)
+                    break
+                case MethodName.GetLinks:
+                    result = this.getLinks(args)
                     break
                 case MethodName.GetMergedCells:
                     result = this.getMergedCells(args)

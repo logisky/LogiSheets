@@ -501,6 +501,40 @@ impl Workbook {
         }
     }
 
+    /// Test-only: register a range link — a source normal range `(r0,c0,r1,c1)`
+    /// on `sheet_idx` is redirected to a block's column (`block_id`, block rows
+    /// `blk_r0..=blk_r1` at `blk_col`). Exercises the resolution redirect without
+    /// the (not-yet-built) CreateLink edit payload.
+    #[cfg(test)]
+    pub(crate) fn test_add_range_link(
+        &mut self,
+        sheet_idx: usize,
+        src: (usize, usize, usize, usize),
+        block_id: usize,
+        blk_r0: usize,
+        blk_r1: usize,
+        blk_col: usize,
+    ) {
+        use logisheets_base::{BlockRange, NormalRange};
+        let st = &self.controller.status;
+        let sheet_id = st.sheet_info_manager.get_sheet_id(sheet_idx).unwrap();
+        let a0 = st.navigator.fetch_norm_cell_id(&sheet_id, src.0, src.1).unwrap();
+        let a1 = st.navigator.fetch_norm_cell_id(&sheet_id, src.2, src.3).unwrap();
+        let b0 = st
+            .navigator
+            .fetch_block_cell_id(&sheet_id, &block_id, blk_r0, blk_col)
+            .unwrap();
+        let b1 = st
+            .navigator
+            .fetch_block_cell_id(&sheet_id, &block_id, blk_r1, blk_col)
+            .unwrap();
+        self.controller.status.range_manager.add_link(
+            &sheet_id,
+            NormalRange::AddrRange(a0, a1),
+            BlockRange::AddrRange(b0, b1),
+        );
+    }
+
     pub fn get_sheet_count(&self) -> usize {
         self.controller.status.sheet_info_manager.pos.len()
     }

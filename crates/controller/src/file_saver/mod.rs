@@ -86,6 +86,7 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
         field_render_manager,
         &controller.status.image_manager,
         &controller.status.data_validation_manager,
+        &controller.status.range_manager,
         &mut saver,
     )
 }

@@ -28,6 +28,7 @@ import type {
     CellInput,
     PredictFillParams,
     BlockDataRow,
+    LinkInfo,
 } from 'logisheets-web'
 import {isErrorMessage} from 'logisheets-web'
 import {WorkerUpdate, MethodName} from '../worker/types'
@@ -151,6 +152,23 @@ export class WorkbookClient implements Client {
     }): Resp<readonly CellRefRange[]> {
         return this._call(MethodName.GetPrecedents, params) as Resp<
             readonly CellRefRange[]
+        >
+    }
+
+    // Blocks a range of `colCnt` columns can be linked to (same width, unlinked).
+    getLinkableBlocks(params: {
+        sheetIdx: number
+        colCnt: number
+    }): Resp<readonly BlockInfo[]> {
+        return this._call(MethodName.GetLinkableBlocks, params) as Resp<
+            readonly BlockInfo[]
+        >
+    }
+
+    // Ranges on a sheet that are linked to a block (for the outer-border overlay).
+    getLinks(params: {sheetIdx: number}): Resp<readonly LinkInfo[]> {
+        return this._call(MethodName.GetLinks, params) as Resp<
+            readonly LinkInfo[]
         >
     }
 

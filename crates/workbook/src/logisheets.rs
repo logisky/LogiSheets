@@ -108,6 +108,26 @@ pub struct Sheet {
     pub col_schemas: Vec<ColSchemaXml>,
     #[xmlserde(name = b"randomSchema", ty = "child")]
     pub random_schemas: Vec<RandomSchemaXml>,
+    /// Range links: a source range (facade the user references, e.g. `A1:D10`)
+    /// redirected to a backing block. The block itself is a `blockRange` above;
+    /// this records the source rectangle + target block id so the link is
+    /// restored on load. See the controller's `range_manager::link`.
+    #[xmlserde(name = b"linkRange", ty = "child")]
+    pub link_ranges: Vec<LinkRangeXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct LinkRangeXml {
+    #[xmlserde(name = b"blockId", ty = "attr")]
+    pub block_id: usize,
+    #[xmlserde(name = b"startRow", ty = "attr")]
+    pub start_row: usize,
+    #[xmlserde(name = b"startCol", ty = "attr")]
+    pub start_col: usize,
+    #[xmlserde(name = b"endRow", ty = "attr")]
+    pub end_row: usize,
+    #[xmlserde(name = b"endCol", ty = "attr")]
+    pub end_col: usize,
 }
 
 /// A form schema where data records run along rows. `key` is the column id

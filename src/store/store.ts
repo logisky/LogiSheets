@@ -124,6 +124,17 @@ export class GlobalStore {
         this.traceResult = null
         this.traceRequest = null
     }
+
+    // ─── Range→block links ──────────────────────────────────────────────────
+    // Bumped whenever a link is created/removed so LinkLayer refetches and draws
+    // the outer border immediately. Linking an empty range changes no cell
+    // value, so the normal gridChange/cellUpdated signals don't fire — this is
+    // the explicit nudge for that case.
+    @observable linkRevision = 0
+
+    @action bumpLinkRevision() {
+        this.linkRevision += 1
+    }
 }
 
 export type TraceKind = 'precedents' | 'dependents'

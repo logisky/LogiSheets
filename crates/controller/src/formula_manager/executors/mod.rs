@@ -238,6 +238,16 @@ impl FormulaExecutor {
                 Ok(exec)
             }
             EditPayload::CellClear(p) => remove_formula(self, p.sheet_idx, p.row, p.col, ctx),
+            EditPayload::CreateLink(_) => {
+                // Creating a link remaps existing formulas' ranges to the block
+                // (in the range executor). Their dependency edges were built
+                // against the OLD literal cells, so rebuild them now — this adds
+                // the block-field / block-all edges via `get_range_deps`, so the
+                // formulas track the record column as the block grows.
+                let mut exec = self;
+                rebuild_range_deps(&mut exec.manager, ctx);
+                Ok(exec)
+            }
             _ => Ok(self),
         }?;
         let FormulaExecutor {

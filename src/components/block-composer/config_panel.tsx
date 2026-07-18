@@ -45,6 +45,11 @@ interface FieldConfigPanelProps {
      * to be surfaced separately to support same-block (self) references.
      */
     localFields: readonly FieldSetting[]
+    /**
+     * When false, the field can't be removed (convert mode fixes the field
+     * count to the selected column count) — the delete button is hidden.
+     */
+    canDelete?: boolean
 }
 
 export const FieldConfigPanel = ({
@@ -56,6 +61,7 @@ export const FieldConfigPanel = ({
     enumSetManager,
     fieldManager,
     localFields,
+    canDelete = true,
 }: FieldConfigPanelProps) => {
     const {toast} = useToast()
     const [colorAnchorEl, setColorAnchorEl] = useState<{
@@ -1159,17 +1165,19 @@ export const FieldConfigPanel = ({
                     )}
 
                     {/* Delete Field */}
-                    <Box sx={{pt: 2}}>
-                        <Button
-                            variant="outlined"
-                            color="error"
-                            startIcon={<DeleteIcon />}
-                            onClick={onDelete}
-                            sx={{textTransform: 'none'}}
-                        >
-                            Delete this field
-                        </Button>
-                    </Box>
+                    {canDelete && (
+                        <Box sx={{pt: 2}}>
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                startIcon={<DeleteIcon />}
+                                onClick={onDelete}
+                                sx={{textTransform: 'none'}}
+                            >
+                                Delete this field
+                            </Button>
+                        </Box>
+                    )}
                 </Stack>
             </Box>
 

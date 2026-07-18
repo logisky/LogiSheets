@@ -82,6 +82,44 @@ impl<'a> AsyncFuncCommitTrait for CalcConnector<'a> {
     }
 }
 
+impl<'a> CalcConnector<'a> {
+    /// For a block range that spans a full column from the block's TOP row,
+    /// return the block's CURRENT bottom-row cell in that same column.
+    ///
+    /// A linked record column resolves to a block range with fixed cell ids; when
+    /// the block grows (rows appended at the tail), those ids don't move, so the
+    /// stored range would miss the new rows. Re-deriving the bottom from the
+    /// block's current size at calc time makes the reference behave like a whole
+    /// growable column. Returns `None` (leave the range as-is) for anything that
+    /// isn't a single full-height column of one block.
+    fn grow_block_column_end(
+        &self,
+        sheet_id: SheetId,
+        start: BlockCellId,
+        end: BlockCellId,
+    ) -> Option<BlockCellId> {
+        if start.block_id != end.block_id || start.col != end.col {
+            return None;
+        }
+        let block_id = start.block_id;
+        let master = self.navigator.get_master_cell(&sheet_id, &block_id).ok()?;
+        let (m_row, m_col) = self.navigator.fetch_normal_cell_idx(&sheet_id, &master).ok()?;
+        let (s_row, s_col) = self.navigator.fetch_block_cell_idx(&sheet_id, &start).ok()?;
+        // Only a column anchored at the block's top row is a record column.
+        if s_row != m_row {
+            return None;
+        }
+        let (row_cnt, _) = self.navigator.get_block_size(&sheet_id, &block_id).ok()?;
+        if row_cnt == 0 {
+            return None;
+        }
+        let inner_col = s_col.checked_sub(m_col)?;
+        self.navigator
+            .fetch_block_cell_id(&sheet_id, &block_id, row_cnt - 1, inner_col)
+            .ok()
+    }
+}
+
 impl<'a> Connector for CalcConnector<'a> {
     fn convert(&mut self, cr: &ast::CellReference) -> CalcVertex {
         match cr {
@@ -98,6 +136,30 @@ impl<'a> Connector for CalcConnector<'a> {
                         // result becomes an error value, which beats
                         // a thread panic and matches the `None` arm
                         // below.
+                        //
+                        // First resolve a linked record column to its block
+                        // column (so the reference reads the block), or reject an
+                        // invalid record reference with #VALUE!. The formula's own
+                        // range id stays literal (`A1:A2`); this redirect is purely
+                        // resolution-time, so save/load keeps the facade.
+                        let range = if let Range::Normal(nr) = &range {
+                            use crate::range_manager::link::{LinkRef, NavLink, resolve_normal};
+                            let res = self
+                                .range_manager
+                                .get_sheet_manager_assert(&sheet_id)
+                                .map(|m| {
+                                    resolve_normal(&NavLink(self.navigator), sheet_id, &m.links, nr)
+                                });
+                            match res {
+                                Some(LinkRef::Invalid) => {
+                                    return CalcVertex::from_error(ast::Error::Value);
+                                }
+                                Some(LinkRef::Column(br)) => Range::Block(br),
+                                _ => range,
+                            }
+                        } else {
+                            range
+                        };
                         match range {
                             Range::Normal(nomral_range) => match nomral_range {
                                 NormalRange::Single(normal_cell_id) => {
@@ -177,6 +239,13 @@ impl<'a> Connector for CalcConnector<'a> {
                                     })
                                 }
                                 BlockRange::AddrRange(start, end) => {
+                                    // A linked record column is stored as a fixed
+                                    // cell-id range; re-extend its bottom to the
+                                    // block's CURRENT last row so rows appended to
+                                    // the block are read (the "whole column" node).
+                                    let end = self
+                                        .grow_block_column_end(sheet_id, start, end)
+                                        .unwrap_or(end);
                                     let (Ok((start_row, start_col)), Ok((end_row, end_col))) = (
                                         self.navigator
                                             .fetch_cell_idx(&sheet_id, &CellId::BlockCell(start)),

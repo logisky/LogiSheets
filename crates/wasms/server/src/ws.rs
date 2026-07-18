@@ -51,6 +51,26 @@ pub fn get_precedents(id: usize, sheet_idx: usize, row: usize, col: usize) -> Js
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
+pub fn get_linkable_blocks(id: usize, sheet_idx: usize, col_cnt: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let result = ws.get_linkable_blocks(col_cnt);
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+pub fn get_links(id: usize, sheet_idx: usize) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx);
+    handle_result!(ws);
+    let result = ws.get_links();
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
 pub fn get_all_fully_covered_blocks(
     id: usize,
     sheet_id: SheetId,

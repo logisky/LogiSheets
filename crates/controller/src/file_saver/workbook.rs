@@ -1,6 +1,7 @@
 use itertools::Itertools;
+use logisheets_base::NormalRange;
 use logisheets_workbook::{
-    logisheets::{AppData, LogiSheetsData, Sheet},
+    logisheets::{AppData, LinkRangeXml, LogiSheetsData, Sheet},
     prelude::{
         CtExternalReference, CtExternalReferences, CtPerson, CtSheet, CtSheets, Persons,
         WorkbookPart,
@@ -50,6 +51,7 @@ pub fn save_workbook<S: SaverTrait>(
     field_render_manager: &FieldRenderManager,
     image_manager: &ImageManager,
     data_validation_manager: &DataValidationManager,
+    range_manager: &crate::range_manager::RangeManager,
     saver: &mut S,
 ) -> Result<Wb, SaveError> {
     let mut worksheets: HashMap<String, Worksheet> = HashMap::new();
@@ -120,6 +122,33 @@ pub fn save_workbook<S: SaverTrait>(
             ct_sheets.push(ct_sheet);
             let (row_schemas, col_schemas, random_schemas) =
                 schemas_to_xml(block_schema_manager, sheet_id);
+            // Range links: source rectangle (facade) + target block id.
+            let link_ranges: Vec<LinkRangeXml> = range_manager
+                .get_sheet_manager_assert(&sheet_id)
+                .map(|m| {
+                    m.links
+                        .iter()
+                        .filter_map(|(source, target)| {
+                            let (s0, s1) = match source {
+                                NormalRange::Single(c) => (*c, *c),
+                                NormalRange::AddrRange(a, b) => (*a, *b),
+                                _ => return None,
+                            };
+                            let (start_row, start_col) =
+                                navigator.fetch_normal_cell_idx(&sheet_id, &s0).ok()?;
+                            let (end_row, end_col) =
+                                navigator.fetch_normal_cell_idx(&sheet_id, &s1).ok()?;
+                            Some(LinkRangeXml {
+                                block_id: target.block_id(),
+                                start_row,
+                                start_col,
+                                end_row,
+                                end_col,
+                            })
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
             // field_renders_to_xml is invoked once at the end, below —
             // it's workbook-global, not per sheet.
             let sheet = Sheet {
@@ -128,6 +157,7 @@ pub fn save_workbook<S: SaverTrait>(
                 row_schemas,
                 col_schemas,
                 random_schemas,
+                link_ranges,
             };
             sheets.push(sheet);
         });

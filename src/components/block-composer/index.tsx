@@ -18,26 +18,45 @@ export * from './types'
 export interface BlockComposerProps {
     selectedData?: SelectedData
     close: () => void
+    /**
+     * When set, the composer runs in *convert* mode: instead of creating a
+     * fresh 1-row block at the selection top-left (`createFormBlock`), it turns
+     * the selected region into a block in place (`convertToFormBlock`) — keeping
+     * its cells/values and remapping formulas that reference the range. The
+     * field count is fixed to the region's column count (one field per column).
+     * This is what the Link picker's "create a new block from selection" uses.
+     */
+    convertRegion?: {rowCnt: number; colCnt: number}
 }
 
 export const BlockComposerComponent = (props: BlockComposerProps) => {
-    const {selectedData, close} = props
+    const {selectedData, close, convertRegion} = props
     const {toast} = useToast()
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const ops = useOps()
     const BLOCK_MANAGER = engine.getBlockManager()
 
-    const [fields, setFields] = useState<FieldSetting[]>([
-        {
-            id: '1',
-            name: 'Customer Status',
-            type: 'string',
-            description: 'Current status of the customer',
-            required: true,
-            primary: false,
-        },
-    ])
+    const [fields, setFields] = useState<FieldSetting[]>(() =>
+        convertRegion
+            ? Array.from({length: convertRegion.colCnt}, (_, i) => ({
+                  id: String(i + 1),
+                  name: `Field ${i + 1}`,
+                  type: 'number',
+                  required: false,
+                  primary: i === 0,
+              }))
+            : [
+                  {
+                      id: '1',
+                      name: 'Customer Status',
+                      type: 'string',
+                      description: 'Current status of the customer',
+                      required: true,
+                      primary: false,
+                  },
+              ]
+    )
     const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
         fields[0]?.id || null
     )
@@ -87,6 +106,13 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     }
 
     const handleSave = async () => {
+        if (convertRegion && fields.length !== convertRegion.colCnt) {
+            toast(
+                `Convert mode needs exactly ${convertRegion.colCnt} field(s) — one per selected column.`,
+                {type: 'error'}
+            )
+            return
+        }
         const currentSheetIdx = DATA_SERVICE.getCurrentSheetIdx()
         const currentSheetId = DATA_SERVICE.getCurrentSheetId()
         const blockId = await DATA_SERVICE.getAvailableBlockId(currentSheetIdx)
@@ -240,15 +266,29 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         })
 
         try {
-            await ops.createFormBlock({
-                sheetIdx: currentSheetIdx,
-                blockId,
-                masterRow: row,
-                masterCol: col,
-                refName,
-                keyIdx,
-                fields: formBlockFields,
-            })
+            if (convertRegion) {
+                await ops.convertToFormBlock({
+                    sheetIdx: currentSheetIdx,
+                    blockId,
+                    masterRow: row,
+                    masterCol: col,
+                    rowCnt: convertRegion.rowCnt,
+                    colCnt: convertRegion.colCnt,
+                    refName,
+                    keyIdx,
+                    fields: formBlockFields,
+                })
+            } else {
+                await ops.createFormBlock({
+                    sheetIdx: currentSheetIdx,
+                    blockId,
+                    masterRow: row,
+                    masterCol: col,
+                    refName,
+                    keyIdx,
+                    fields: formBlockFields,
+                })
+            }
         } catch (e) {
             toast((e as Error).message, {type: 'error'})
             return
@@ -309,6 +349,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                         onFieldSelect={setSelectedFieldId}
                         onFieldsReorder={setFields}
                         onAddField={handleAddField}
+                        lockFieldCount={!!convertRegion}
                     />
                 </Box>
 
@@ -330,6 +371,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                             enumSetManager={BLOCK_MANAGER.enumSetManager}
                             fieldManager={BLOCK_MANAGER.fieldManager}
                             localFields={fields}
+                            canDelete={!convertRegion}
                         />
                     ) : (
                         <Box

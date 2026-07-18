@@ -469,6 +469,572 @@ fn overwrite_formula_with_plain_value() {
     }
 }
 
+// A range link redirects a source range (A1:A2) to a backing block's column.
+// The seller's formula references the LITERAL A1:A2, yet:
+//   - it reads the block (redirect at range-id resolution),
+//   - editing the block recomputes it (the dependency edge is really in the
+//     graph, so recalc triggers — not just a lazy value alias),
+//   - growing the block (interior insert) makes the aggregate track new rows,
+//   - the source A1:A2 cells are never touched (non-destructive facade).
+#[test]
+fn range_link_redirects_to_block_and_tracks_growth() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput, InsertRowsInBlock};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // Backing block: 2 rows x 1 col at D1 (row 0, col 3), seeded 10 / 20, WITH a
+    // form schema (a real record — growth tracking rides on the block-field dep).
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 3,
+                row_cnt: 2,
+                col_cnt: 1,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(), sheet_idx: 0, block_id: bid,
+                field_from: 0, key_idx: 0, fields: vec!["v".into()],
+                render_ids: vec!["r0".into()], row: true,
+                field_formulas: vec![], validation_formulas: vec![], editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 3,
+                content: "10".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 3,
+                content: "20".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    // Link A1:A2 -> the block's column (block rows 0..=1, col 0).
+    wb.test_add_range_link(0, (0, 0, 1, 0), bid, 0, 1, 0);
+
+    // Seller formula references the literal A1:A2 -> resolves to the block.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 4,
+            content: "=SUM(A1:A2)".to_string(),
+        })],
+        undoable: false,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(
+            matches!(ws.get_value(0, 4).unwrap(), Value::Number(n) if (n - 30.0).abs() < 1e-9),
+            "linked SUM(A1:A2) should read the block (30), got {:?}",
+            ws.get_value(0, 4).unwrap()
+        );
+        // The source A1 cell was never written — the link is non-destructive.
+        assert!(matches!(ws.get_value(0, 0).unwrap(), Value::Empty));
+    }
+
+    // Edit a block cell -> the linked formula recomputes.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 3,
+            content: "100".to_string(),
+        })],
+        undoable: false,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(
+            matches!(ws.get_value(0, 4).unwrap(), Value::Number(n) if (n - 120.0).abs() < 1e-9),
+            "SUM should recompute after the block changed (120), got {:?}",
+            ws.get_value(0, 4).unwrap()
+        );
+    }
+
+    // Grow the block 2 -> 3 via interior insert, fill the new row.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+            sheet_idx: 0,
+            block_id: bid,
+            start: 1,
+            cnt: 1,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    // After interior insert: D1=100 (old r0), D2=new (empty), D3=20 (old r1).
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 3,
+            content: "5".to_string(),
+        })],
+        undoable: false,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(
+            matches!(ws.get_value(0, 4).unwrap(), Value::Number(n) if (n - 125.0).abs() < 1e-9),
+            "SUM should include the grown row (100+5+20=125), got {:?}",
+            ws.get_value(0, 4).unwrap()
+        );
+    }
+}
+
+// The CreateLink edit payload, driven through the public API, for the real app
+// flow: the seller's SUM(A1:A2) formula ALREADY exists (reading literal cells),
+// THEN the user links A1:A2 to a block. The existing formula must redirect to the
+// block (id remap + recalc), and growth must track — all via handle_action.
+#[test]
+fn create_link_payload_redirects_existing_formula() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput, CreateLink, InsertRowsInBlock};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // Setup: A1=1, A2=2, E1=SUM(A1:A2) (reads the literal cells => 3); plus a
+    // separate backing block (with a form schema — a real record) at D1:D2
+    // seeded 10 / 20.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 0, content: "1".to_string() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 1, col: 0, content: "2".to_string() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 4, content: "=SUM(A1:A2)".to_string() }),
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0, id: bid, master_row: 0, master_col: 3,
+                row_cnt: 2, col_cnt: 1, owner: None, modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(), sheet_idx: 0, block_id: bid,
+                field_from: 0, key_idx: 0, fields: vec!["v".into()],
+                render_ids: vec!["r0".into()], row: true,
+                field_formulas: vec![], validation_formulas: vec![], editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 3, content: "10".to_string() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 1, col: 3, content: "20".to_string() }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(
+            matches!(ws.get_value(0, 4).unwrap(), Value::Number(n) if (n - 3.0).abs() < 1e-9),
+            "before link, SUM(A1:A2) reads the literal cells (3), got {:?}",
+            ws.get_value(0, 4).unwrap()
+        );
+    }
+
+    // Link A1:A2 -> the block. The existing SUM must redirect to the block.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateLink(CreateLink {
+            sheet_idx: 0,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 2,
+            col_cnt: 1,
+            block_id: bid,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(
+            matches!(ws.get_value(0, 4).unwrap(), Value::Number(n) if (n - 30.0).abs() < 1e-9),
+            "after link, the existing SUM redirects to the block (30), got {:?}",
+            ws.get_value(0, 4).unwrap()
+        );
+        // Source cells are untouched — still 1, non-destructive.
+        assert!(matches!(ws.get_value(0, 0).unwrap(), Value::Number(n) if (n - 1.0).abs() < 1e-9));
+    }
+
+    // Grow the block via interior insert + fill -> the linked SUM tracks it.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+                sheet_idx: 0, block_id: bid, start: 1, cnt: 1,
+            }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 1, col: 3, content: "5".to_string() }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(
+            matches!(ws.get_value(0, 4).unwrap(), Value::Number(n) if (n - 35.0).abs() < 1e-9),
+            "linked SUM tracks the grown block (10+5+20=35), got {:?}",
+            ws.get_value(0, 4).unwrap()
+        );
+    }
+}
+
+// Repro of the reported bug: SUM over a range LINKED to a block (block has MORE
+// rows than the source) still read the literal source cells. Covers BOTH orders:
+// formula created BEFORE the link, and formula created AFTER the link.
+#[test]
+fn linked_range_size_mismatch_reads_block_both_orders() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{CellInput, CreateLink};
+
+    let sum_of_block = 1.0 + 3.0 + 4.0 + 5.0 + 6.0 + 7.0; // 26
+
+    // Helper: build a workbook with a 6-row block at D1:D6 (1,3,4,5,6,7) and
+    // literal 1,2,3,4 at A1:A4. `formula_first` controls the order of creating
+    // =SUM(A1:A4) relative to CreateLink(A1:A4 -> block).
+    let build = |formula_first: bool| -> Workbook {
+        let mut wb = Workbook::default();
+        let bid = wb.get_available_block_id(0).unwrap();
+        let mut payloads = vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0, id: bid, master_row: 0, master_col: 3,
+                row_cnt: 6, col_cnt: 1, owner: None, modify_policy: None,
+            }),
+        ];
+        for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0, row: i, col: 3, content: v.to_string(),
+            }));
+        }
+        for (i, v) in [1, 2, 3, 4].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0, row: i, col: 0, content: v.to_string(),
+            }));
+        }
+        let formula = EditPayload::CellInput(CellInput {
+            sheet_idx: 0, row: 0, col: 6, content: "=SUM(A1:A4)".to_string(),
+        });
+        let link = EditPayload::CreateLink(CreateLink {
+            sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 1, block_id: bid,
+        });
+        if formula_first {
+            payloads.push(formula);
+            payloads.push(link);
+        } else {
+            payloads.push(link);
+            payloads.push(formula);
+        }
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads, undoable: false, init: false,
+        }));
+        wb
+    };
+
+    for formula_first in [true, false] {
+        let wb = build(formula_first);
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let got = ws.get_value(0, 6).unwrap();
+        assert!(
+            matches!(got, Value::Number(n) if (n - sum_of_block).abs() < 1e-9),
+            "formula_first={formula_first}: SUM(A1:A4) linked to the 6-row block \
+             should read the block ({sum_of_block}), got {:?}",
+            got
+        );
+    }
+}
+
+// Repro of the reported bug's real cause: a MULTI-column range is linked to a
+// multi-column block, but the user SUMs only ONE column of it (a sub-range). The
+// reference should map to the block's corresponding column.
+#[test]
+fn linked_multicol_subcolumn_reference_reads_block_column() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{CellInput, CreateLink};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // Block D1:E6 (2 cols x 6 rows): col D = 10,20,30,40,50,60; col E = 1,3,4,5,6,7.
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0, id: bid, master_row: 0, master_col: 3,
+        row_cnt: 6, col_cnt: 2, owner: None, modify_policy: None,
+    })];
+    for (i, v) in [10, 20, 30, 40, 50, 60].iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0, row: i, col: 3, content: v.to_string(),
+        }));
+    }
+    for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0, row: i, col: 4, content: v.to_string(),
+        }));
+    }
+    // Literal 1,2,3,4 in A1:B4 (source), then link A1:B4 (2 cols) -> block.
+    for (i, v) in [1, 2, 3, 4].iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0, row: i, col: 0, content: (v * 100).to_string(),
+        }));
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0, row: i, col: 1, content: v.to_string(),
+        }));
+    }
+    // =SUM(B1:B4): only the 2nd column of the linked A1:B4 range.
+    payloads.push(EditPayload::CellInput(CellInput {
+        sheet_idx: 0, row: 0, col: 6, content: "=SUM(B1:B4)".to_string(),
+    }));
+    payloads.push(EditPayload::CreateLink(CreateLink {
+        sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 2, block_id: bid,
+    }));
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads, undoable: false, init: false,
+    }));
+
+    // Desired: B (2nd link col) maps to block col E = 1+3+4+5+6+7 = 26.
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let got = ws.get_value(0, 6).unwrap();
+    assert!(
+        matches!(got, Value::Number(n) if (n - 26.0).abs() < 1e-9),
+        "SUM(B1:B4), a sub-column of linked A1:B4, should read block col E (26), got {:?}",
+        got
+    );
+}
+
+// A link survives save -> load: the link map is persisted in the LogiSheets
+// ooxml part, the formula keeps its FACADE reference (`SUM(A1:A2)`, not the
+// block's coords), and value + growth still work after the round-trip.
+#[test]
+fn link_survives_save_load() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput, CreateLink, InsertRowsInBlock};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0, id: bid, master_row: 0, master_col: 3,
+                row_cnt: 2, col_cnt: 1, owner: None, modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(), sheet_idx: 0, block_id: bid,
+                field_from: 0, key_idx: 0, fields: vec!["v".into()],
+                render_ids: vec!["r0".into()], row: true,
+                field_formulas: vec![], validation_formulas: vec![], editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 3, content: "10".into() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 1, col: 3, content: "20".into() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 5, content: "=SUM(A1:A2)".into() }),
+            EditPayload::CreateLink(CreateLink {
+                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid,
+            }),
+        ],
+        undoable: false, init: false,
+    }));
+    assert!(matches!(wb.get_sheet_by_idx(0).unwrap().get_value(0, 5).unwrap(),
+        Value::Number(n) if (n - 30.0).abs() < 1e-9));
+
+    let bytes = wb.save().expect("save");
+    let mut wb2 = Workbook::from_file(&bytes, "reloaded".into()).expect("load");
+    let ws2 = wb2.get_sheet_by_idx(0).unwrap();
+    // The link persisted...
+    assert_eq!(ws2.get_links().len(), 1, "the link should be restored on load");
+    // ...the formula kept its facade reference (NOT baked to the block coords)...
+    assert_eq!(ws2.get_formula(0, 5).unwrap(), "SUM(A1:A2)");
+    // ...it still reads the block, and the facade A1:A2 stays empty.
+    assert!(matches!(ws2.get_value(0, 5).unwrap(), Value::Number(n) if (n - 30.0).abs() < 1e-9));
+    assert!(matches!(ws2.get_value(0, 0).unwrap(), Value::Empty));
+
+    // Growth still works after load.
+    wb2.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock { sheet_idx: 0, block_id: bid, start: 2, cnt: 1 }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 2, col: 3, content: "7".into() }),
+        ],
+        undoable: false, init: false,
+    }));
+    assert!(matches!(wb2.get_sheet_by_idx(0).unwrap().get_value(0, 5).unwrap(),
+        Value::Number(n) if (n - 37.0).abs() < 1e-9));
+}
+
+// A linked record column must follow the block when it grows at the TAIL
+// (a new record appended after the last row), not just on interior inserts.
+#[test]
+fn linked_column_tracks_tail_append() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{CellInput, CreateLink, InsertRowsInBlock};
+
+    use crate::edit_action::BindFormSchema;
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    // Block D1:D2 = 10, 20, WITH a form schema (a real record block). Link
+    // A1:A2 -> it. =SUM(A1:A2) reads the block = 30.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0, id: bid, master_row: 0, master_col: 3,
+                row_cnt: 2, col_cnt: 1, owner: None, modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(), sheet_idx: 0, block_id: bid,
+                field_from: 0, key_idx: 0, fields: vec!["v".into()],
+                render_ids: vec!["r0".into()], row: true,
+                field_formulas: vec![], validation_formulas: vec![], editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 3, content: "10".into() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 1, col: 3, content: "20".into() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 5, content: "=SUM(A1:A2)".into() }),
+            EditPayload::CreateLink(CreateLink {
+                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid,
+            }),
+        ],
+        undoable: false, init: false,
+    }));
+    let val = |wb: &Workbook| wb.get_sheet_by_idx(0).unwrap().get_value(0, 5).unwrap();
+    assert!(matches!(val(&wb), Value::Number(n) if (n - 30.0).abs() < 1e-9),
+        "baseline SUM = 30, got {:?}", val(&wb));
+
+    // Append a 3rd row at the TAIL (start == row_cnt) and fill it with 7.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+                sheet_idx: 0, block_id: bid, start: 2, cnt: 1,
+            }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 2, col: 3, content: "7".into() }),
+        ],
+        undoable: false, init: false,
+    }));
+    assert!(matches!(val(&wb), Value::Number(n) if (n - 37.0).abs() < 1e-9),
+        "SUM must follow the tail-appended block row (10+20+7=37), got {:?}", val(&wb));
+
+    // LATER edit of the appended cell (separate txn) must also recompute SUM.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0, row: 2, col: 3, content: "100".into(),
+        })],
+        undoable: false, init: false,
+    }));
+    assert!(matches!(val(&wb), Value::Number(n) if (n - 130.0).abs() < 1e-9),
+        "editing the appended cell later must recompute SUM (10+20+100=130), got {:?}", val(&wb));
+}
+
+// A linked region is a variable-length RECORD: it may be referenced only one
+// WHOLE column at a time. References that touch the region any other way
+// (multi-column / whole region / partial height / a single cell) are #VALUE!.
+#[test]
+fn linked_record_rejects_non_column_references() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{CellInput, CreateLink};
+
+    // Build A1:B6 block (col A = 10.., col B = 1,3,4,5,6,7) and literal 1..4 in
+    // A/B rows 1..4 of a DIFFERENT area we'll link. `formula` is placed at G1,
+    // and `formula_first` controls its order vs. CreateLink(D1:E4 -> block).
+    // Layout: block at D1:E6; linked source at A1:B4 (2 cols x 4 rows).
+    let build = |formula: &str, formula_first: bool| -> Workbook {
+        let mut wb = Workbook::default();
+        let bid = wb.get_available_block_id(0).unwrap();
+        let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0, id: bid, master_row: 0, master_col: 3,
+            row_cnt: 6, col_cnt: 2, owner: None, modify_policy: None,
+        })];
+        for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0, row: i, col: 4, content: v.to_string(),
+            }));
+        }
+        for (i, v) in [1, 2, 3, 4].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0, row: i, col: 0, content: (v * 10).to_string(),
+            }));
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0, row: i, col: 1, content: v.to_string(),
+            }));
+        }
+        let f = EditPayload::CellInput(CellInput {
+            sheet_idx: 0, row: 0, col: 6, content: formula.to_string(),
+        });
+        let link = EditPayload::CreateLink(CreateLink {
+            sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 2, block_id: bid,
+        });
+        let payloads = if formula_first {
+            payloads.push(f); payloads.push(link); payloads
+        } else {
+            payloads.push(link); payloads.push(f); payloads
+        };
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads, undoable: false, init: false,
+        }));
+        wb
+    };
+
+    let is_value_err = |wb: &Workbook| -> bool {
+        matches!(wb.get_sheet_by_idx(0).unwrap().get_value(0, 6).unwrap(),
+                 Value::Error(s) if s == "#VALUE!")
+    };
+    let num = |wb: &Workbook| -> f64 {
+        match wb.get_sheet_by_idx(0).unwrap().get_value(0, 6).unwrap() {
+            Value::Number(n) => n,
+            other => panic!("expected number, got {other:?}"),
+        }
+    };
+
+    for first in [true, false] {
+        // Valid full column B -> block col E = 26.
+        assert!((num(&build("=SUM(B1:B4)", first)) - 26.0).abs() < 1e-9);
+        // Whole 2-col region -> #VALUE.
+        assert!(is_value_err(&build("=SUM(A1:B4)", first)), "whole region (first={first})");
+        // Partial-height single column -> #VALUE.
+        assert!(is_value_err(&build("=SUM(A1:A2)", first)), "partial column (first={first})");
+        // A single cell inside the region -> #VALUE.
+        assert!(is_value_err(&build("=A1+0", first)), "single cell (first={first})");
+        // A reference entirely OUTSIDE the region is unaffected (Z1 empty => 0).
+        assert!((num(&build("=SUM(Z1:Z9)", first))).abs() < 1e-9);
+    }
+}
+
+#[test]
+fn get_links_reports_linked_source_range_coords() {
+    use crate::edit_action::{CellInput, CreateLink};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // A backing block at D1:D2, and a formula over A1:A2 linked to it.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 0, content: "1".to_string() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 1, col: 0, content: "2".to_string() }),
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0, id: bid, master_row: 0, master_col: 3,
+                row_cnt: 2, col_cnt: 1, owner: None, modify_policy: None,
+            }),
+            EditPayload::CreateLink(CreateLink {
+                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid,
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let links = ws.get_links();
+    assert_eq!(links.len(), 1, "exactly one link, got {:?}", links);
+    let l = &links[0];
+    // The source range A1:A2 -> rows 0..1, col 0, pointing at the block.
+    assert_eq!(l.block_id, bid);
+    assert_eq!((l.start_row, l.start_col), (0, 0));
+    assert_eq!((l.end_row, l.end_col), (1, 0));
+    assert_eq!(l.sheet_idx, 0);
+}
+
 #[test]
 fn test_check_formula() {
     let wb = Workbook::new();
