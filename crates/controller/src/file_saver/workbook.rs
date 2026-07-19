@@ -122,13 +122,13 @@ pub fn save_workbook<S: SaverTrait>(
             ct_sheets.push(ct_sheet);
             let (row_schemas, col_schemas, random_schemas) =
                 schemas_to_xml(block_schema_manager, sheet_id);
-            // Range links: source rectangle (facade) + target block id.
+            // Range links: source rectangle (facade) + target block (id + sheet).
             let link_ranges: Vec<LinkRangeXml> = range_manager
                 .get_sheet_manager_assert(&sheet_id)
                 .map(|m| {
                     m.links
                         .iter()
-                        .filter_map(|(source, target)| {
+                        .filter_map(|(source, (tgt_sheet, target))| {
                             let (s0, s1) = match source {
                                 NormalRange::Single(c) => (*c, *c),
                                 NormalRange::AddrRange(a, b) => (*a, *b),
@@ -138,8 +138,10 @@ pub fn save_workbook<S: SaverTrait>(
                                 navigator.fetch_normal_cell_idx(&sheet_id, &s0).ok()?;
                             let (end_row, end_col) =
                                 navigator.fetch_normal_cell_idx(&sheet_id, &s1).ok()?;
+                            let block_sheet_idx = sheet_pos_manager.get_sheet_idx(tgt_sheet)?;
                             Some(LinkRangeXml {
                                 block_id: target.block_id(),
+                                block_sheet_idx,
                                 start_row,
                                 start_col,
                                 end_row,

@@ -60,6 +60,27 @@ impl<'a> FormulaConnector<'a> {
             navigator: self.id_navigator,
         }
     }
+
+    /// Dependency vertices that make a formula track a block's field column(s) as
+    /// the block grows/shrinks: `BlockAll` + the `Block(field)` vertex for the
+    /// range's corner columns, all on the block's OWN `sheet` (may be cross-sheet
+    /// for a linked record). Dirtied by any field-cell edit (incl. appended rows)
+    /// and by structural changes.
+    fn block_field_deps(&self, sheet: SheetId, block_range: &BlockRange) -> Vec<Vertex> {
+        let mut deps = Vec::new();
+        if let BlockRange::AddrRange(start, end) = block_range {
+            let block_id = start.block_id;
+            deps.push(Vertex::BlockAll(sheet, block_id));
+            for cell in [start, end] {
+                if let BlockCellRole::Field(field_id) =
+                    self.block_schema_manager.cell_role(sheet, cell)
+                {
+                    deps.push(Vertex::Block(sheet, block_id, field_id));
+                }
+            }
+        }
+        deps
+    }
 }
 
 impl<'a> IdFetcherTrait for FormulaConnector<'a> {
@@ -465,17 +486,18 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         // BLOCK column (so it tracks the block as it grows). Resolve it here, at
         // dependency-build time, using the current links — the formula's own
         // range id is left untouched (`A1:A2`), so save/load keeps the facade.
-        let range = if let Range::Normal(nr) = &range {
+        // The block may be on ANOTHER sheet (cross-sheet link); depend on its
+        // field vertices there.
+        if let Range::Normal(nr) = &range {
             use crate::range_manager::link::{LinkRef, NavLink, resolve_normal};
-            match resolve_normal(&NavLink(self.id_navigator), *sheet_id, &sheet_mgr.links, nr) {
-                LinkRef::Column(br) => Range::Block(br),
-                // Passthrough / Invalid keep the literal range: an invalid record
-                // reference is a `#VALUE!` at calc time and has no block deps.
-                _ => range,
+            if let LinkRef::Column { sheet: tgt, block } =
+                resolve_normal(&NavLink(self.id_navigator), *sheet_id, &sheet_mgr.links, nr)
+            {
+                return self.block_field_deps(tgt, &block);
             }
-        } else {
-            range
-        };
+            // Passthrough / Invalid keep the literal range: an invalid record
+            // reference is a `#VALUE!` at calc time and has no block deps.
+        }
 
         match range {
             Range::Normal(ref normal_range) => sheet_mgr
@@ -506,23 +528,9 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
                     })
                     .collect();
                 // The per-cell edges above only cover cells inside the range's
-                // FIXED bounds. A block reference (e.g. a linked record column)
-                // must also follow the block as it grows/shrinks: depend on the
-                // block's field column(s) and on the block as a whole, which get
-                // dirtied by field-cell edits (incl. appended rows) and by
-                // structural changes. This is what makes a mapped column behave
-                // like a whole growable column in the dependency graph.
-                if let BlockRange::AddrRange(start, end) = block_range {
-                    let block_id = start.block_id;
-                    deps.push(Vertex::BlockAll(*sheet_id, block_id));
-                    for cell in [start, end] {
-                        if let BlockCellRole::Field(field_id) =
-                            self.block_schema_manager.cell_role(*sheet_id, cell)
-                        {
-                            deps.push(Vertex::Block(*sheet_id, block_id, field_id));
-                        }
-                    }
-                }
+                // FIXED bounds. A block reference must ALSO follow the block as it
+                // grows/shrinks — depend on its field column(s) + the whole block.
+                deps.extend(self.block_field_deps(*sheet_id, block_range));
                 deps
             }
             Range::Ephemeral(_) => Vec::new(),

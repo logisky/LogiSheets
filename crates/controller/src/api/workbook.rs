@@ -531,6 +531,7 @@ impl Workbook {
         self.controller.status.range_manager.add_link(
             &sheet_id,
             NormalRange::AddrRange(a0, a1),
+            sheet_id,
             BlockRange::AddrRange(b0, b1),
         );
     }

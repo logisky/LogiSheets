@@ -116,10 +116,18 @@ pub struct Sheet {
     pub link_ranges: Vec<LinkRangeXml>,
 }
 
+fn default_zero_usize() -> usize {
+    0
+}
+
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct LinkRangeXml {
     #[xmlserde(name = b"blockId", ty = "attr")]
     pub block_id: usize,
+    /// Sheet index holding the backing block (may differ from the source sheet —
+    /// a cross-sheet link). Defaults to 0 for legacy files (same-sheet).
+    #[xmlserde(name = b"blockSheetIdx", ty = "attr", default = "default_zero_usize")]
+    pub block_sheet_idx: usize,
     #[xmlserde(name = b"startRow", ty = "attr")]
     pub start_row: usize,
     #[xmlserde(name = b"startCol", ty = "attr")]

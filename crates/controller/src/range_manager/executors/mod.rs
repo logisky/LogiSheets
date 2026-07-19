@@ -128,10 +128,16 @@ impl RangeExecutor {
                 Ok(res)
             }
             EditPayload::CreateLink(p) => {
+                // Source range is on `sheet_id`; the backing block may be on a
+                // DIFFERENT sheet (`tgt_sheet`) — a cross-sheet link. Absent
+                // `block_sheet_idx`, the block is on the source sheet (same-sheet).
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let (blk_rows, blk_cols) = ctx.get_block_size(sheet_id, p.block_id)?;
+                let tgt_sheet = ctx
+                    .fetch_sheet_id_by_index(p.block_sheet_idx.unwrap_or(p.sheet_idx))
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let (blk_rows, blk_cols) = ctx.get_block_size(tgt_sheet, p.block_id)?;
                 // Equal-column invariant: the source's width must match the block.
                 if p.col_cnt != blk_cols || blk_rows == 0 {
                     return Ok(self);
@@ -143,11 +149,12 @@ impl RangeExecutor {
                     p.master_col + p.col_cnt - 1,
                 )?;
                 let source = NormalRange::AddrRange(s0, s1);
-                // Target = the block's full extent; AddrRange by stable block cell
-                // ids so interior row insertion (growth) extends it automatically.
-                let b0 = ctx.fetch_block_cell_id(&sheet_id, &p.block_id, 0, 0)?;
+                // Target = the block's full extent on ITS sheet; AddrRange by
+                // stable block cell ids so interior row insertion (growth) extends
+                // it automatically.
+                let b0 = ctx.fetch_block_cell_id(&tgt_sheet, &p.block_id, 0, 0)?;
                 let b1 =
-                    ctx.fetch_block_cell_id(&sheet_id, &p.block_id, blk_rows - 1, blk_cols - 1)?;
+                    ctx.fetch_block_cell_id(&tgt_sheet, &p.block_id, blk_rows - 1, blk_cols - 1)?;
                 let target = BlockRange::AddrRange(b0, b1);
 
                 let mut exec = self;
@@ -157,11 +164,12 @@ impl RangeExecutor {
                 // DIRTY every existing formula whose range touches the new region
                 // so it re-resolves now; the dependency EDGES are rebuilt right
                 // after, in the formula executor's `CreateLink` arm.
-                exec.manager.add_link(&sheet_id, source, target);
+                exec.manager.add_link(&sheet_id, source, tgt_sheet, target);
                 let nav = crate::range_manager::link::CtxLink(ctx);
                 let mut func = |range: &NormalRange, _id: &RangeId| -> RangeUpdateType {
-                    match crate::range_manager::link::classify(&nav, sheet_id, &source, &target, range)
-                    {
+                    match crate::range_manager::link::classify(
+                        &nav, sheet_id, tgt_sheet, &source, &target, range,
+                    ) {
                         Some(_) => RangeUpdateType::Dirty,
                         None => RangeUpdateType::None,
                     }

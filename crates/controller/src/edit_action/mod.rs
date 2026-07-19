@@ -468,6 +468,7 @@ pub struct ConvertBlock {
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "create_link.ts", builder, rename_all = "camelCase")]
 pub struct CreateLink {
+    /// Sheet holding the SOURCE range (the facade the user references).
     pub sheet_idx: usize,
     /// Top-left of the source range.
     pub master_row: usize,
@@ -477,6 +478,9 @@ pub struct CreateLink {
     pub col_cnt: usize,
     /// The existing block that backs the source range.
     pub block_id: usize,
+    /// Sheet holding the backing BLOCK. `None` = same sheet as the source; set it
+    /// for a cross-sheet link (e.g. a hidden block backing a visible-sheet range).
+    pub block_sheet_idx: Option<usize>,
 }
 
 #[derive(Debug, Clone, TS)]

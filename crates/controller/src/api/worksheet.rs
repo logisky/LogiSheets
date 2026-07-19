@@ -1153,7 +1153,7 @@ impl<'a> Worksheet<'a> {
             .status
             .range_manager
             .get_sheet_manager_assert(&self.sheet_id)
-            .map(|m| m.links.values().map(|br| br.block_id()).collect())
+            .map(|m| m.links.values().map(|(_, br)| br.block_id()).collect())
             .unwrap_or_default();
         self.get_all_blocks()
             .into_iter()
@@ -1188,7 +1188,7 @@ impl<'a> Worksheet<'a> {
         manager
             .links
             .iter()
-            .filter_map(|(source, block_range)| {
+            .filter_map(|(source, (_tgt_sheet, block_range))| {
                 let (start, end) = match source {
                     NormalRange::Single(c) => (*c, *c),
                     NormalRange::AddrRange(s, e) => (*s, *e),

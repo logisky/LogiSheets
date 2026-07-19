@@ -118,6 +118,50 @@ impl<'a> CalcConnector<'a> {
             .fetch_block_cell_id(&sheet_id, &block_id, row_cnt - 1, inner_col)
             .ok()
     }
+
+    /// Build a `CalcReference` for a block range on `sheet` (its OWN sheet — may
+    /// differ from the referencing formula's sheet, for a cross-sheet link). An
+    /// `AddrRange` re-grows its bottom to the block's current last row.
+    fn block_reference(&self, sheet: SheetId, block_range: BlockRange) -> CalcVertex {
+        match block_range {
+            BlockRange::Single(cell) => {
+                let Ok((row, col)) = self
+                    .navigator
+                    .fetch_cell_idx(&sheet, &CellId::BlockCell(cell))
+                else {
+                    return CalcVertex::from_error(ast::Error::Ref);
+                };
+                CalcVertex::Reference(CalcReference {
+                    from_sheet: None,
+                    sheet,
+                    reference: Reference::Addr(Addr { row, col }),
+                })
+            }
+            BlockRange::AddrRange(start, end) => {
+                let end = self.grow_block_column_end(sheet, start, end).unwrap_or(end);
+                let (Ok((start_row, start_col)), Ok((end_row, end_col))) = (
+                    self.navigator.fetch_cell_idx(&sheet, &CellId::BlockCell(start)),
+                    self.navigator.fetch_cell_idx(&sheet, &CellId::BlockCell(end)),
+                ) else {
+                    return CalcVertex::from_error(ast::Error::Ref);
+                };
+                CalcVertex::Reference(CalcReference {
+                    from_sheet: None,
+                    sheet,
+                    reference: Reference::Range(
+                        Addr {
+                            row: start_row,
+                            col: start_col,
+                        },
+                        Addr {
+                            row: end_row,
+                            col: end_col,
+                        },
+                    ),
+                })
+            }
+        }
+    }
 }
 
 impl<'a> Connector for CalcConnector<'a> {
@@ -154,7 +198,11 @@ impl<'a> Connector for CalcConnector<'a> {
                                 Some(LinkRef::Invalid) => {
                                     return CalcVertex::from_error(ast::Error::Value);
                                 }
-                                Some(LinkRef::Column(br)) => Range::Block(br),
+                                // The linked block may be on ANOTHER sheet — build
+                                // the reference on the block's own sheet directly.
+                                Some(LinkRef::Column { sheet: tgt, block }) => {
+                                    return self.block_reference(tgt, block);
+                                }
                                 _ => range,
                             }
                         } else {
@@ -224,52 +272,9 @@ impl<'a> Connector for CalcConnector<'a> {
                                     })
                                 }
                             },
-                            Range::Block(block_range) => match block_range {
-                                BlockRange::Single(block_cell_id) => {
-                                    let Ok((row, col)) = self.navigator.fetch_cell_idx(
-                                        &sheet_id,
-                                        &CellId::BlockCell(block_cell_id),
-                                    ) else {
-                                        return CalcVertex::from_error(ast::Error::Ref);
-                                    };
-                                    CalcVertex::Reference(CalcReference {
-                                        from_sheet: None,
-                                        sheet: sheet_id,
-                                        reference: Reference::Addr(Addr { row, col }),
-                                    })
-                                }
-                                BlockRange::AddrRange(start, end) => {
-                                    // A linked record column is stored as a fixed
-                                    // cell-id range; re-extend its bottom to the
-                                    // block's CURRENT last row so rows appended to
-                                    // the block are read (the "whole column" node).
-                                    let end = self
-                                        .grow_block_column_end(sheet_id, start, end)
-                                        .unwrap_or(end);
-                                    let (Ok((start_row, start_col)), Ok((end_row, end_col))) = (
-                                        self.navigator
-                                            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(start)),
-                                        self.navigator
-                                            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(end)),
-                                    ) else {
-                                        return CalcVertex::from_error(ast::Error::Ref);
-                                    };
-                                    CalcVertex::Reference(CalcReference {
-                                        from_sheet: None,
-                                        sheet: sheet_id,
-                                        reference: Reference::Range(
-                                            Addr {
-                                                row: start_row,
-                                                col: start_col,
-                                            },
-                                            Addr {
-                                                row: end_row,
-                                                col: end_col,
-                                            },
-                                        ),
-                                    })
-                                }
-                            },
+                            Range::Block(block_range) => {
+                                self.block_reference(sheet_id, block_range)
+                            }
                             Range::Ephemeral(id) => CalcVertex::Ephemeral((sheet_id, id)),
                         }
                     }

@@ -652,6 +652,7 @@ fn create_link_payload_redirects_existing_formula() {
             row_cnt: 2,
             col_cnt: 1,
             block_id: bid,
+            block_sheet_idx: None,
         })],
         undoable: false,
         init: false,
@@ -724,7 +725,7 @@ fn linked_range_size_mismatch_reads_block_both_orders() {
             sheet_idx: 0, row: 0, col: 6, content: "=SUM(A1:A4)".to_string(),
         });
         let link = EditPayload::CreateLink(CreateLink {
-            sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 1, block_id: bid,
+            sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 1, block_id: bid, block_sheet_idx: None,
         });
         if formula_first {
             payloads.push(formula);
@@ -792,7 +793,7 @@ fn linked_multicol_subcolumn_reference_reads_block_column() {
         sheet_idx: 0, row: 0, col: 6, content: "=SUM(B1:B4)".to_string(),
     }));
     payloads.push(EditPayload::CreateLink(CreateLink {
-        sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 2, block_id: bid,
+        sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 2, block_id: bid, block_sheet_idx: None,
     }));
     wb.handle_action(EditAction::Payloads(PayloadsAction {
         payloads, undoable: false, init: false,
@@ -806,6 +807,85 @@ fn linked_multicol_subcolumn_reference_reads_block_column() {
         "SUM(B1:B4), a sub-column of linked A1:B4, should read block col E (26), got {:?}",
         got
     );
+}
+
+// CROSS-SHEET link: the seller's `SUM(A1:A2)` on sheet 0 is backed by a schema'd
+// block on sheet 1 (the hidden `__douyoushu_io__` pattern). The formula stays
+// native on its own sheet; value + growth + save/load all track the other sheet.
+#[test]
+fn cross_sheet_linked_column_tracks_block_and_survives_save_load() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{
+        BindFormSchema, CellInput, CreateLink, CreateSheet, InsertRowsInBlock,
+    };
+
+    let mut wb = Workbook::default();
+    // Sheet 1 ("io") holds the backing block.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateSheet(CreateSheet {
+            idx: 1,
+            new_name: "io".into(),
+        })],
+        undoable: false,
+        init: false,
+    }));
+    let bid = wb.get_available_block_id(1).unwrap();
+    // Sheet 1: schema'd block D1:D2 = 10, 20. Sheet 0: =SUM(A1:A2) cross-sheet
+    // linked to that block.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 1, id: bid, master_row: 0, master_col: 3,
+                row_cnt: 2, col_cnt: 1, owner: None, modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(), sheet_idx: 1, block_id: bid,
+                field_from: 0, key_idx: 0, fields: vec!["v".into()],
+                render_ids: vec!["r0".into()], row: true,
+                field_formulas: vec![], validation_formulas: vec![], editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput { sheet_idx: 1, row: 0, col: 3, content: "10".into() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 1, row: 1, col: 3, content: "20".into() }),
+            EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 6, content: "=SUM(A1:A2)".into() }),
+            EditPayload::CreateLink(CreateLink {
+                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1,
+                block_id: bid, block_sheet_idx: Some(1),
+            }),
+        ],
+        undoable: false, init: false,
+    }));
+    let val = |wb: &Workbook| wb.get_sheet_by_idx(0).unwrap().get_value(0, 6).unwrap();
+    assert!(matches!(val(&wb), Value::Number(n) if (n - 30.0).abs() < 1e-9),
+        "cross-sheet SUM reads the block on sheet 1 (30), got {:?}", val(&wb));
+    // The facade A1 on sheet 0 stays empty (non-destructive).
+    assert!(matches!(wb.get_sheet_by_idx(0).unwrap().get_value(0, 0).unwrap(), Value::Empty));
+
+    // Append a row on sheet 1 + fill → the sheet-0 SUM tracks.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock { sheet_idx: 1, block_id: bid, start: 2, cnt: 1 }),
+            EditPayload::CellInput(CellInput { sheet_idx: 1, row: 2, col: 3, content: "7".into() }),
+        ],
+        undoable: false, init: false,
+    }));
+    assert!(matches!(val(&wb), Value::Number(n) if (n - 37.0).abs() < 1e-9),
+        "cross-sheet SUM tracks the appended block row (37), got {:?}", val(&wb));
+    // A later edit of the appended cell (separate txn) recomputes across sheets.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput { sheet_idx: 1, row: 2, col: 3, content: "100".into() })],
+        undoable: false, init: false,
+    }));
+    assert!(matches!(val(&wb), Value::Number(n) if (n - 130.0).abs() < 1e-9),
+        "cross-sheet later edit recomputes (130), got {:?}", val(&wb));
+
+    // Save/load keeps the cross-sheet link (formula stays native on sheet 0).
+    let bytes = wb.save().expect("save");
+    let wb2 = Workbook::from_file(&bytes, "reloaded".into()).expect("load");
+    let ws0 = wb2.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws0.get_links().len(), 1, "cross-sheet link restored on load");
+    assert_eq!(ws0.get_formula(0, 6).unwrap(), "SUM(A1:A2)");
+    assert!(matches!(ws0.get_value(0, 6).unwrap(), Value::Number(n) if (n - 130.0).abs() < 1e-9),
+        "cross-sheet value survives save/load (130)");
 }
 
 // A link survives save -> load: the link map is persisted in the LogiSheets
@@ -834,7 +914,7 @@ fn link_survives_save_load() {
             EditPayload::CellInput(CellInput { sheet_idx: 0, row: 1, col: 3, content: "20".into() }),
             EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 5, content: "=SUM(A1:A2)".into() }),
             EditPayload::CreateLink(CreateLink {
-                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid,
+                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid, block_sheet_idx: None,
             }),
         ],
         undoable: false, init: false,
@@ -893,7 +973,7 @@ fn linked_column_tracks_tail_append() {
             EditPayload::CellInput(CellInput { sheet_idx: 0, row: 1, col: 3, content: "20".into() }),
             EditPayload::CellInput(CellInput { sheet_idx: 0, row: 0, col: 5, content: "=SUM(A1:A2)".into() }),
             EditPayload::CreateLink(CreateLink {
-                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid,
+                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid, block_sheet_idx: None,
             }),
         ],
         undoable: false, init: false,
@@ -962,7 +1042,7 @@ fn linked_record_rejects_non_column_references() {
             sheet_idx: 0, row: 0, col: 6, content: formula.to_string(),
         });
         let link = EditPayload::CreateLink(CreateLink {
-            sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 2, block_id: bid,
+            sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 4, col_cnt: 2, block_id: bid, block_sheet_idx: None,
         });
         let payloads = if formula_first {
             payloads.push(f); payloads.push(link); payloads
@@ -1017,7 +1097,7 @@ fn get_links_reports_linked_source_range_coords() {
                 row_cnt: 2, col_cnt: 1, owner: None, modify_policy: None,
             }),
             EditPayload::CreateLink(CreateLink {
-                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid,
+                sheet_idx: 0, master_row: 0, master_col: 0, row_cnt: 2, col_cnt: 1, block_id: bid, block_sheet_idx: None,
             }),
         ],
         undoable: false,
