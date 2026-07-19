@@ -40,8 +40,15 @@ impl RangeManager {
 
     /// Link a source normal range on `sheet_id` to a backing block range, so
     /// references to the source resolve to the block. See `SheetRangeManager`.
-    pub fn add_link(&mut self, sheet_id: &SheetId, source: NormalRange, target: BlockRange) {
-        self.get_sheet_range_manager(sheet_id).add_link(source, target)
+    pub fn add_link(
+        &mut self,
+        sheet_id: &SheetId,
+        source: NormalRange,
+        target_sheet: SheetId,
+        target: BlockRange,
+    ) {
+        self.get_sheet_range_manager(sheet_id)
+            .add_link(source, target_sheet, target)
     }
 
     pub fn remove_link(&mut self, sheet_id: &SheetId, source: &NormalRange) {
@@ -50,7 +57,11 @@ impl RangeManager {
         }
     }
 
-    pub fn get_link(&self, sheet_id: &SheetId, source: &NormalRange) -> Option<BlockRange> {
+    pub fn get_link(
+        &self,
+        sheet_id: &SheetId,
+        source: &NormalRange,
+    ) -> Option<(SheetId, BlockRange)> {
         self.data.get(sheet_id)?.get_link(source)
     }
 
@@ -83,13 +94,13 @@ pub struct SheetRangeManager {
     pub id_to_ephemeral_range: HashMap<RangeId, EphemeralId>,
     pub ephemeral_range_to_id: HashMap<EphemeralId, RangeId>,
     // Range links: a normal range the user references (e.g. `A1:A10`) is
-    // transparently redirected to a block range that actually backs it. Because
-    // this redirect happens at range-id resolution (`get_range_id`), every
-    // reference to the source resolves to the block's range id — so the
-    // dependency graph, calc-time value fetch, and growth (block row insertion)
-    // all follow from the existing block machinery, with no per-formula edge
-    // surgery. The source's own cells are left untouched (they become a facade).
-    pub links: HashMap<NormalRange, BlockRange>,
+    // transparently redirected to a block range that actually backs it. The
+    // target is `(SheetId, BlockRange)` — the block may live on ANOTHER sheet
+    // (cross-sheet link), e.g. the seller's `SUM(A1:A10)` on sheet 0 backed by a
+    // hidden block on sheet 1. Resolution (calc value + dependency edges) is done
+    // at reference-resolution time and navigates the block on its target sheet.
+    // The source's own cells are left untouched (they become a facade).
+    pub links: HashMap<NormalRange, (SheetId, BlockRange)>,
     pub next_id: RangeId,
 }
 
@@ -107,17 +118,17 @@ impl SheetRangeManager {
         }
     }
 
-    /// Redirect a source normal range to a backing block range. After this,
-    /// resolving the source (via `get_range_id`) yields the block's range id.
-    pub fn add_link(&mut self, source: NormalRange, target: BlockRange) {
-        self.links.insert(source, target);
+    /// Redirect a source normal range to a backing block range on `target_sheet`
+    /// (may differ from this sheet — a cross-sheet link).
+    pub fn add_link(&mut self, source: NormalRange, target_sheet: SheetId, target: BlockRange) {
+        self.links.insert(source, (target_sheet, target));
     }
 
     pub fn remove_link(&mut self, source: &NormalRange) {
         self.links.remove(source);
     }
 
-    pub fn get_link(&self, source: &NormalRange) -> Option<BlockRange> {
+    pub fn get_link(&self, source: &NormalRange) -> Option<(SheetId, BlockRange)> {
         self.links.get(source).copied()
     }
 
@@ -238,8 +249,10 @@ mod tests {
             BlockCellId { block_id: 1, row: 1, col: 0 },
         );
 
-        rm.add_link(&sheet, source, target);
-        assert_eq!(rm.get_link(&sheet, &source), Some(target));
+        // Cross-sheet: source on sheet 0, block on sheet 1.
+        let tgt_sheet: SheetId = 1;
+        rm.add_link(&sheet, source, tgt_sheet, target);
+        assert_eq!(rm.get_link(&sheet, &source), Some((tgt_sheet, target)));
 
         // A plain normal range still resolves to a normal id (no redirect here).
         let id = rm.get_range_id(&sheet, &Range::Normal(source));

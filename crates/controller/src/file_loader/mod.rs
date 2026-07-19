@@ -112,6 +112,11 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             &mut style_manager,
             logisheets.field_renders,
         );
+        // Links are restored AFTER all sheets' blocks load — a cross-sheet link's
+        // target block may live on a sheet loaded later. Collect (source sheet,
+        // link) here, resolve below.
+        let mut pending_links: Vec<(SheetId, logisheets_workbook::logisheets::LinkRangeXml)> =
+            vec![];
         logisheets
             .sheets
             .into_iter()
@@ -183,32 +188,39 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     let sheet_nav = navigator.sheet_navs.get_mut(&sheet_id).unwrap();
                     sheet_nav.data.blocks.insert(block_id, block_place);
                 });
-                // Restore range links AFTER the blocks exist (the target is the
-                // whole block). Resolution + growth ride on this map at calc /
-                // dependency time (rebuilt below), so the facade `A1:A2` and the
-                // link both survive the round-trip.
-                link_ranges.into_iter().for_each(|lr| {
-                    let (rows, cols) = match navigator.get_block_size(&sheet_id, &lr.block_id) {
-                        Ok(v) => v,
-                        Err(_) => return,
-                    };
-                    if rows == 0 || cols == 0 {
-                        return;
-                    }
-                    if let (Ok(s0), Ok(s1), Ok(b0), Ok(b1)) = (
-                        navigator.fetch_norm_cell_id(&sheet_id, lr.start_row, lr.start_col),
-                        navigator.fetch_norm_cell_id(&sheet_id, lr.end_row, lr.end_col),
-                        navigator.fetch_block_cell_id(&sheet_id, &lr.block_id, 0, 0),
-                        navigator.fetch_block_cell_id(&sheet_id, &lr.block_id, rows - 1, cols - 1),
-                    ) {
-                        range_manager.add_link(
-                            &sheet_id,
-                            logisheets_base::NormalRange::AddrRange(s0, s1),
-                            logisheets_base::BlockRange::AddrRange(b0, b1),
-                        );
-                    }
-                });
+                // Defer link restoration until every sheet's blocks exist.
+                link_ranges
+                    .into_iter()
+                    .for_each(|lr| pending_links.push((sheet_id, lr)));
             });
+        // All blocks on all sheets now exist — restore each link. The source range
+        // is on its own sheet; the target block may be on another (`block_sheet_idx`).
+        for (src_sheet, lr) in pending_links {
+            let tgt_sheet = match sheet_info_manager.get_sheet_id(lr.block_sheet_idx) {
+                Some(id) => id,
+                None => continue,
+            };
+            let (rows, cols) = match navigator.get_block_size(&tgt_sheet, &lr.block_id) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+            if rows == 0 || cols == 0 {
+                continue;
+            }
+            if let (Ok(s0), Ok(s1), Ok(b0), Ok(b1)) = (
+                navigator.fetch_norm_cell_id(&src_sheet, lr.start_row, lr.start_col),
+                navigator.fetch_norm_cell_id(&src_sheet, lr.end_row, lr.end_col),
+                navigator.fetch_block_cell_id(&tgt_sheet, &lr.block_id, 0, 0),
+                navigator.fetch_block_cell_id(&tgt_sheet, &lr.block_id, rows - 1, cols - 1),
+            ) {
+                range_manager.add_link(
+                    &src_sheet,
+                    logisheets_base::NormalRange::AddrRange(s0, s1),
+                    tgt_sheet,
+                    logisheets_base::BlockRange::AddrRange(b0, b1),
+                );
+            }
+        }
     }
     let mut style_loader = StyleLoader::new(&mut style_manager, &xl.styles.1);
     // Persons are workbook-scoped and referenced by threaded comments, so they

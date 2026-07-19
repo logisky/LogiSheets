@@ -100,30 +100,33 @@ fn block_corners(r: &BlockRange) -> (BlockCellId, BlockCellId) {
 /// `C1:C10`, `D1:D10`. Anything else that touches the region is an error.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LinkRef {
-    /// A valid full column of the record; redirects to this block column range.
-    Column(BlockRange),
+    /// A valid full column of the record; redirects to this block column range,
+    /// which lives on `sheet` (may differ from the source sheet — cross-sheet).
+    Column { sheet: SheetId, block: BlockRange },
     /// Touches the record but isn't a valid full column → `#VALUE!`.
     Invalid,
     /// Doesn't touch any record; resolve the reference normally.
     Passthrough,
 }
 
-/// Classify `query` against a SINGLE link (`source` → `target`). Returns `None`
-/// if the query doesn't overlap the source region at all; otherwise `Column`
-/// (a valid full-height column) or `Invalid`.
+/// Classify `query` (on `src_sheet`) against a SINGLE link whose target block is
+/// on `tgt_sheet`. Returns `None` if the query doesn't overlap the source region
+/// at all; otherwise `Column` (a valid full-height column, mapped to the block on
+/// `tgt_sheet`) or `Invalid`.
 pub fn classify<N: LinkNav>(
     nav: &N,
-    sheet: SheetId,
+    src_sheet: SheetId,
+    tgt_sheet: SheetId,
     source: &NormalRange,
     target: &BlockRange,
     query: &NormalRange,
 ) -> Option<LinkRef> {
     let (q0, q1) = normal_corners(query)?;
     let (s0, s1) = normal_corners(source)?;
-    let (qr0, qc0) = nav.norm_idx(sheet, &q0)?;
-    let (qr1, qc1) = nav.norm_idx(sheet, &q1)?;
-    let (sr0, sc0) = nav.norm_idx(sheet, &s0)?;
-    let (sr1, sc1) = nav.norm_idx(sheet, &s1)?;
+    let (qr0, qc0) = nav.norm_idx(src_sheet, &q0)?;
+    let (qr1, qc1) = nav.norm_idx(src_sheet, &q1)?;
+    let (sr0, sc0) = nav.norm_idx(src_sheet, &s0)?;
+    let (sr1, sc1) = nav.norm_idx(src_sheet, &s1)?;
     let (qr0, qr1) = (qr0.min(qr1), qr0.max(qr1));
     let (qc0, qc1) = (qc0.min(qc1), qc0.max(qc1));
     let (sr0, sr1) = (sr0.min(sr1), sr0.max(sr1));
@@ -142,29 +145,36 @@ pub fn classify<N: LinkNav>(
 
     // Map that column onto the block's corresponding inner column, spanning the
     // block's full height (reads the whole list + tracks variable-length growth).
+    // The block is navigated on its OWN sheet (`tgt_sheet`).
     let (b0, b1) = block_corners(target);
     let block_id = b0.block_id;
     // `block_idx` returns SHEET coords; the corners' row span is the block's
     // inner bottom-row index (blocks are contiguous rectangles).
-    let (br0, _) = nav.block_idx(sheet, &b0)?;
-    let (br1, _) = nav.block_idx(sheet, &b1)?;
+    let (br0, _) = nav.block_idx(tgt_sheet, &b0)?;
+    let (br1, _) = nav.block_idx(tgt_sheet, &b1)?;
     let block_inner_bottom = br0.max(br1) - br0.min(br1);
     let inner_col = qc0 - sc0;
-    let top = nav.block_cell(sheet, block_id, 0, inner_col)?;
-    let bottom = nav.block_cell(sheet, block_id, block_inner_bottom, inner_col)?;
-    Some(LinkRef::Column(BlockRange::AddrRange(top, bottom)))
+    let top = nav.block_cell(tgt_sheet, block_id, 0, inner_col)?;
+    let bottom = nav.block_cell(tgt_sheet, block_id, block_inner_bottom, inner_col)?;
+    Some(LinkRef::Column {
+        sheet: tgt_sheet,
+        block: BlockRange::AddrRange(top, bottom),
+    })
 }
 
-/// Resolve `query` against every link on the sheet. The first record region the
-/// query touches decides the outcome; if it touches none, it's a `Passthrough`.
+/// Resolve `query` (on `src_sheet`) against every link on that sheet. The first
+/// record region the query touches decides the outcome; if it touches none, it's
+/// a `Passthrough`. Each link's value is `(target_sheet, block)`.
 pub fn resolve_normal<N: LinkNav>(
     nav: &N,
-    sheet: SheetId,
-    links: &HashMap<NormalRange, BlockRange>,
+    src_sheet: SheetId,
+    links: &HashMap<NormalRange, (SheetId, BlockRange)>,
     query: &NormalRange,
 ) -> LinkRef {
     links
         .iter()
-        .find_map(|(source, target)| classify(nav, sheet, source, target, query))
+        .find_map(|(source, (tgt_sheet, target))| {
+            classify(nav, src_sheet, *tgt_sheet, source, target, query)
+        })
         .unwrap_or(LinkRef::Passthrough)
 }
