@@ -187,7 +187,11 @@ export class Painter {
 
     const borderHelper = new BorderHelper(data);
 
-    for (let row = data.fromRow; row <= data.toRow; row++) {
+    // Note the `+ 1`: a cell's bottom/right border is stored one slot past the
+    // cell (it's the top/left of the next cell), and drawn by the *next*
+    // row/col's iteration. Without the extra pass the last visible row's bottom
+    // border and last visible column's right border are never drawn.
+    for (let row = data.fromRow; row <= data.toRow + 1; row++) {
       const border = borderHelper.generateRowBorder(row);
       border.forEach((b) => {
         if (!b.pr) return;
@@ -202,7 +206,7 @@ export class Painter {
       });
     }
 
-    for (let col = data.fromCol; col <= data.toCol; col++) {
+    for (let col = data.fromCol; col <= data.toCol + 1; col++) {
       const border = borderHelper.generateColBorder(col);
       border.forEach((b) => {
         if (!b.pr) return;
@@ -358,14 +362,50 @@ export class Painter {
         : defaultHorizontalAlign(info);
 
     const [tx, textAlign] = box.textX(horizontal);
-    const [ty, textBaseline] = box.textY(alignment?.vertical);
 
     this._ctx.font = font.toCssFont();
     this._ctx.textAlign = textAlign;
-    this._ctx.textBaseline = textBaseline;
     this._ctx.fillStyle = font.standardColor.css();
 
+    const lineHeight = font.size * 1.3;
+    const wrap = alignment?.wrapText === true;
+
+    // Wrapped cells break into multiple lines that fit the cell width (and
+    // honor any manual `\n`). Unwrapped cells keep the single-line path.
+    if (wrap && box.width > 4) {
+      const lines = this._wrapText(t, box.width - 4);
+      const totalH = lines.length * lineHeight;
+      let startY: number;
+      switch (alignment?.vertical) {
+        case "top":
+          startY = box.position.startRow + 2;
+          break;
+        case "bottom":
+          startY = box.position.endRow - 2 - totalH;
+          break;
+        default:
+          startY = (box.position.startRow + box.position.endRow) / 2 - totalH / 2;
+          break;
+      }
+      if (render) {
+        this._ctx.save();
+        this._clipToBox(box);
+        this._ctx.textBaseline = "top";
+        lines.forEach((line, i) => {
+          this._ctx!.fillText(line, tx, startY + i * lineHeight);
+        });
+        this._ctx.restore();
+      }
+      return totalH;
+    }
+
+    const [ty, textBaseline] = box.textY(alignment?.vertical);
+    this._ctx.textBaseline = textBaseline;
+
     if (render) {
+      // Clip to the cell so overflowing text does not spill into neighbors.
+      this._ctx.save();
+      this._clipToBox(box);
       this._ctx.fillText(t, tx, ty);
 
       // Draw strikethrough line manually (canvas doesn't support text-decoration)
@@ -385,9 +425,77 @@ export class Painter {
         this._ctx.lineTo(lineX + metrics.width, lineY);
         this._ctx.stroke();
       }
+      this._ctx.restore();
     }
 
     // Return estimated height
-    return font.size * 1.3;
+    return lineHeight;
+  }
+
+  /** Clip the context to a cell's pixel rect (so its text can't overflow). */
+  private _clipToBox(box: Box): void {
+    if (!this._ctx) return;
+    this._ctx.beginPath();
+    this._ctx.rect(
+      box.position.startCol,
+      box.position.startRow,
+      box.width,
+      box.height,
+    );
+    this._ctx.clip();
+  }
+
+  /**
+   * Break `text` into lines that each fit `maxWidth` (canvas px), honoring
+   * manual line breaks. Wraps on spaces where possible; a single token wider
+   * than the cell is broken by characters (so CJK, which has no spaces, wraps
+   * per-character). Requires `this._ctx.font` to already be set.
+   */
+  private _wrapText(text: string, maxWidth: number): string[] {
+    if (!this._ctx) return [text];
+    const measure = (s: string) => this._ctx!.measureText(s).width;
+    const lines: string[] = [];
+
+    for (const paragraph of text.split("\n")) {
+      if (paragraph === "") {
+        lines.push("");
+        continue;
+      }
+      const words = paragraph.split(" ");
+      let line = "";
+      // Place a word into the (empty) current line, breaking it by characters
+      // if it alone is wider than the cell.
+      const placeFresh = (word: string) => {
+        if (measure(word) <= maxWidth) {
+          line = word;
+          return;
+        }
+        let chunk = "";
+        for (const ch of word) {
+          if (chunk !== "" && measure(chunk + ch) > maxWidth) {
+            lines.push(chunk);
+            chunk = "";
+          }
+          chunk += ch;
+        }
+        line = chunk;
+      };
+      words.forEach((word) => {
+        if (line === "") {
+          placeFresh(word);
+          return;
+        }
+        const candidate = `${line} ${word}`;
+        if (measure(candidate) <= maxWidth) {
+          line = candidate;
+          return;
+        }
+        lines.push(line);
+        line = "";
+        placeFresh(word);
+      });
+      lines.push(line);
+    }
+    return lines;
   }
 }
