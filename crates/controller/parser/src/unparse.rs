@@ -361,6 +361,11 @@ impl Stringify for RangeDisplay {
 
         let range = fetcher.fetch_range(&self.sheet_id, &self.range_id)?;
 
+        // The range's cells live in *its own* sheet's id-space, not the sheet
+        // the formula sits on. Resolving them against `curr_sheet` fails for
+        // cross-sheet references (e.g. `Sheet2!A5:B20`).
+        let sheet_id = self.sheet_id;
+
         let RefAbs {
             start_row,
             start_col,
@@ -382,26 +387,26 @@ impl Stringify for RangeDisplay {
                 };
                 match normal_range {
                     NormalRange::Single(normal_cell) => {
-                        get_normal_cell_str(&curr_sheet, normal_cell, start_row, start_col)
+                        get_normal_cell_str(&sheet_id, normal_cell, start_row, start_col)
                     }
                     NormalRange::RowRange(start, end) => {
-                        let start_idx = fetcher.fetch_row_idx(&curr_sheet, &start)?;
-                        let end_idx = fetcher.fetch_row_idx(&curr_sheet, &end)?;
+                        let start_idx = fetcher.fetch_row_idx(&sheet_id, &start)?;
+                        let end_idx = fetcher.fetch_row_idx(&sheet_id, &end)?;
                         let start_str = get_row_string(start_row, start_idx, shift.row);
                         let end_str = get_row_string(end_row, end_idx, shift.row);
                         Ok(format!("{}:{}", start_str, end_str))
                     }
                     NormalRange::ColRange(start, end) => {
-                        let start_idx = fetcher.fetch_col_idx(&curr_sheet, &start)?;
-                        let end_idx = fetcher.fetch_col_idx(&curr_sheet, &end)?;
-                        let start_str = get_col_string(start_row, start_idx, shift.col);
-                        let end_str = get_col_string(end_row, end_idx, shift.col);
+                        let start_idx = fetcher.fetch_col_idx(&sheet_id, &start)?;
+                        let end_idx = fetcher.fetch_col_idx(&sheet_id, &end)?;
+                        let start_str = get_col_string(start_col, start_idx, shift.col);
+                        let end_str = get_col_string(end_col, end_idx, shift.col);
                         Ok(format!("{}:{}", start_str, end_str))
                     }
                     NormalRange::AddrRange(start, end) => {
                         let start_str =
-                            get_normal_cell_str(&curr_sheet, start, start_row, start_col)?;
-                        let end_str = get_normal_cell_str(&curr_sheet, end, end_row, end_col)?;
+                            get_normal_cell_str(&sheet_id, start, start_row, start_col)?;
+                        let end_str = get_normal_cell_str(&sheet_id, end, end_row, end_col)?;
                         Ok(format!("{}:{}", start_str, end_str))
                     }
                 }
@@ -419,12 +424,12 @@ impl Stringify for RangeDisplay {
                 };
                 match block_range {
                     BlockRange::Single(block_cell_id) => {
-                        get_block_cell_str(&curr_sheet, block_cell_id, start_row, start_col)
+                        get_block_cell_str(&sheet_id, block_cell_id, start_row, start_col)
                     }
                     BlockRange::AddrRange(start, end) => {
                         let start_str =
-                            get_block_cell_str(&curr_sheet, start, start_row, start_col)?;
-                        let end_str = get_block_cell_str(&curr_sheet, end, end_row, end_col)?;
+                            get_block_cell_str(&sheet_id, start, start_row, start_col)?;
+                        let end_str = get_block_cell_str(&sheet_id, end, end_row, end_col)?;
                         Ok(format!("{}:{}", start_str, end_str))
                     }
                 }

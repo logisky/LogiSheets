@@ -66,7 +66,11 @@ where
             match (start.cell_id, end.cell_id) {
                 (CellId::NormalCell(s), CellId::NormalCell(e)) => {
                     let range = Range::Normal(NormalRange::AddrRange(s, e));
-                    let range_id = id_fetcher.fetch_range_id(&curr_sheet, &range);
+                    // Register the range under the reference's own sheet (not
+                    // the formula's sheet) so cross-sheet ranges resolve — this
+                    // must match `RangeDisplay.sheet_id`, and the single-cell
+                    // builder already does the same.
+                    let range_id = id_fetcher.fetch_range_id(&sheet_id, &range);
                     Ok(ast::CellReference::Mut(RangeDisplay {
                         range_id,
                         ref_abs,
@@ -79,7 +83,11 @@ where
                     }
 
                     let range = Range::Block(BlockRange::AddrRange(s, e));
-                    let range_id = id_fetcher.fetch_range_id(&curr_sheet, &range);
+                    // Register the range under the reference's own sheet (not
+                    // the formula's sheet) so cross-sheet ranges resolve — this
+                    // must match `RangeDisplay.sheet_id`, and the single-cell
+                    // builder already does the same.
+                    let range_id = id_fetcher.fetch_range_id(&sheet_id, &range);
                     Ok(ast::CellReference::Mut(RangeDisplay {
                         range_id,
                         ref_abs,
