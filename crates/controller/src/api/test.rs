@@ -6,6 +6,33 @@ use crate::edit_action::{
 };
 
 #[test]
+fn cross_sheet_range_unparses_after_calc() {
+    // Regression: a cross-sheet range argument (`Sheet2!A5:B20`) must survive
+    // unparse. It used to resolve the range's cells against the formula's own
+    // sheet, fail, and render as the literal "error".
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 25,
+            content: "=VLOOKUP(O8,Sheet2!A5:B20,2,FALSE)".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let f = ws.get_formula(0, 25).unwrap();
+    assert!(
+        f.contains("Sheet2!A5:B20"),
+        "cross-sheet range not preserved: {}",
+        f
+    );
+    assert!(!f.contains("error"), "unparse produced 'error': {}", f);
+}
+
+#[test]
 fn update_chart_changes_type_and_title() {
     let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
     let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
