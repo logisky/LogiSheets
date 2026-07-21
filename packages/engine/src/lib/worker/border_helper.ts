@@ -62,6 +62,11 @@ function getDefaultBorder(horizontal: boolean): BorderPr {
   };
 }
 
+/** A border edge that actually draws a line (not unset / not `none`). */
+function isVisibleBorder(pr?: BorderPr): boolean {
+  return !!pr && !!pr.style && pr.style !== "none";
+}
+
 function isSameBorder(a: BorderPr, b: BorderPr): boolean {
   return (
     a.style === b.style &&
@@ -157,24 +162,34 @@ export class BorderHelper {
       for (let i = startRow; i <= endRow; i++) {
         for (let j = startCol; j <= endCol; j++) {
           if (i > startRow) {
-            this._setRowBorder(i - fromRow, j - fromCol, {
-              from: posStartRow,
-              to: posEndRow,
-              start: posStartCol,
-              coordinateX: endCol,
-              coordinateY: endRow,
-              pr: { style: "none" },
-            });
+            this._setRowBorder(
+              i - fromRow,
+              j - fromCol,
+              {
+                from: posStartRow,
+                to: posEndRow,
+                start: posStartCol,
+                coordinateX: endCol,
+                coordinateY: endRow,
+                pr: { style: "none" },
+              },
+              true,
+            );
           }
           if (j > startCol) {
-            this._setColBorder(i - fromRow, j - fromCol, {
-              from: posStartCol,
-              to: posEndCol,
-              start: posStartRow,
-              coordinateX: endCol,
-              coordinateY: endRow,
-              pr: { style: "none" },
-            });
+            this._setColBorder(
+              i - fromRow,
+              j - fromCol,
+              {
+                from: posStartCol,
+                to: posEndCol,
+                start: posStartRow,
+                coordinateX: endCol,
+                coordinateY: endRow,
+                pr: { style: "none" },
+              },
+              true,
+            );
           }
         }
       }
@@ -231,39 +246,54 @@ export class BorderHelper {
     return result;
   }
 
-  private _setRowBorder(row: number, col: number, border: BorderSegment): void {
+  // A shared edge between two cells maps to one slot (cell A's right border ==
+  // cell B's left border). Precedence:
+  //   - `force`: unconditional (used by merge cells to suppress interior lines).
+  //   - An unset / `none` edge is normalized to `undefined` pr: it still carries
+  //     geometry (so the default gridline can draw there) but never overwrites a
+  //     real border on the shared edge, and never suppresses the gridline.
+  //   - Between two real borders, the one with the larger coordinate wins.
+  private _setRowBorder(
+    row: number,
+    col: number,
+    border: BorderSegment,
+    force = false,
+  ): void {
+    if (force) {
+      this._rowBorderStore[row][col] = border;
+      return;
+    }
     const prev = this._rowBorderStore[row][col];
+    const seg = isVisibleBorder(border.pr) ? border : { ...border, pr: undefined };
     if (!prev.pr) {
-      this._rowBorderStore[row][col] = border;
+      this._rowBorderStore[row][col] = seg;
       return;
     }
-    if (border.pr === undefined) {
-      return;
-    }
-    if (
-      border.coordinateX >= prev.coordinateX &&
-      border.coordinateY >= prev.coordinateY
-    ) {
-      this._rowBorderStore[row][col] = border;
-      return;
+    if (!seg.pr) return;
+    if (seg.coordinateX >= prev.coordinateX && seg.coordinateY >= prev.coordinateY) {
+      this._rowBorderStore[row][col] = seg;
     }
   }
 
-  private _setColBorder(row: number, col: number, border: BorderSegment): void {
+  private _setColBorder(
+    row: number,
+    col: number,
+    border: BorderSegment,
+    force = false,
+  ): void {
+    if (force) {
+      this._colBorderStore[col][row] = border;
+      return;
+    }
     const prev = this._colBorderStore[col][row];
+    const seg = isVisibleBorder(border.pr) ? border : { ...border, pr: undefined };
     if (!prev.pr) {
-      this._colBorderStore[col][row] = border;
+      this._colBorderStore[col][row] = seg;
       return;
     }
-    if (border.pr === undefined) {
-      return;
-    }
-    if (
-      border.coordinateX >= prev.coordinateX &&
-      border.coordinateY >= prev.coordinateY
-    ) {
-      this._colBorderStore[col][row] = border;
-      return;
+    if (!seg.pr) return;
+    if (seg.coordinateX >= prev.coordinateX && seg.coordinateY >= prev.coordinateY) {
+      this._colBorderStore[col][row] = seg;
     }
   }
 }
