@@ -68,6 +68,8 @@ export interface FontStyle {
     color?: string
     size?: number
     strike?: boolean
+    /** Font family name, e.g. "Arial", "Times New Roman", "微软雅黑". */
+    name?: string
 }
 
 export function generateFontPayload(
@@ -85,6 +87,7 @@ export function generateFontPayload(
         if (update.color) cellTy.setFontColor = update.color
         if (update.size) cellTy.setFontSize = update.size
         if (update.strike !== undefined) cellTy.setFontStrike = update.strike
+        if (update.name) cellTy.setFontName = update.name
         const d = data.data.d
         const result: Payload[] = []
         for (let i = d.startRow; i <= d.endRow; i += 1)
@@ -99,6 +102,9 @@ export function generateFontPayload(
         lineTy.setFontUnderline = update.underline ? 'single' : 'none'
     if (update.italic !== undefined) lineTy.setFontItalic = update.italic
     if (update.color) lineTy.setFontColor = update.color
+    if (update.size) lineTy.setFontSize = update.size
+    if (update.strike !== undefined) lineTy.setFontStrike = update.strike
+    if (update.name) lineTy.setFontName = update.name
     return [lineStyle(sheetIdx, d.start, d.end, d.type === 'row', lineTy)]
 }
 

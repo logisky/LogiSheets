@@ -257,9 +257,11 @@ export class StandardFont implements Font {
     const fontVariant = "normal";
     const fontWeight = this.bold ? "bold" : "normal";
     const fontSize = `${this.size}${this.fontSizeUnit}`;
-    const fontFamily = this.name;
+    // Quote the family so multi-word names ("Times New Roman") are a single
+    // token in the CSS font shorthand; unquoted, canvas silently falls back.
+    const family = this.name?.val ? `"${this.name.val}"` : "sans-serif";
     const lineHeight = this.lineHeight;
-    return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}/${lineHeight} ${fontFamily.val}`;
+    return `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}/${lineHeight} ${family}`;
   }
 }
 

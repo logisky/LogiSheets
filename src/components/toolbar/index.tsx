@@ -70,6 +70,28 @@ import {useToast} from '@/ui/notification/useToast'
 import {TextField} from '@mui/material'
 import Select, {SelectChangeEvent} from '@mui/material/Select'
 
+// Common, widely-available font families offered in the picker. If the current
+// cell's font isn't in the list it's shown as an extra option so the value is
+// never lost.
+const FONT_FAMILIES = [
+    'Arial',
+    'Helvetica',
+    'Times New Roman',
+    'Georgia',
+    'Courier New',
+    'Verdana',
+    'Tahoma',
+    'Trebuchet MS',
+    'Calibri',
+    'Cambria',
+    'Comic Sans MS',
+    'Impact',
+    '微软雅黑',
+    '宋体',
+    '黑体',
+    '楷体',
+]
+
 export interface ToolbarProps {
     setGrid: (grid: Grid | null) => void
     setActiveSheet: (idx: number) => void
@@ -220,6 +242,7 @@ export const Toolbar = observer(
         const [italic, setItalic] = useState(false)
         const [underline, setUnderline] = useState(false)
         const [strike, setStrike] = useState(false)
+        const [fontName, setFontName] = useState('Arial')
 
         // Alignment popover
         const [alignAnchor, setAlignAnchor] = useState<HTMLElement | null>(null)
@@ -320,6 +343,7 @@ export const Toolbar = observer(
                         font.underline ? font.underline.val !== 'none' : false
                     )
                     setStrike(font.strike)
+                    setFontName(font.name?.val || 'Arial')
                     switch (style.formatter.toLocaleLowerCase()) {
                         case '':
                         case 'general':
@@ -510,6 +534,14 @@ export const Toolbar = observer(
             ops.setFont(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
                 strike: v,
             }).then(() => setStrike(v))
+        }
+
+        const onFontNameChange = (e: SelectChangeEvent<string>) => {
+            if (!selectedData) return
+            const v = e.target.value
+            ops.setFont(DATA_SERVICE.getCurrentSheetIdx(), selectedData, {
+                name: v,
+            }).then(() => setFontName(v))
         }
 
         const onToggleWrapText = () => {
@@ -949,6 +981,27 @@ export const Toolbar = observer(
                                 </IconButton>
                             </span>
                         </Tooltip>
+
+                        <Select
+                            size="small"
+                            value={fontName}
+                            onChange={onFontNameChange}
+                            disabled={!hasSelectedData}
+                            sx={{minWidth: 120, maxHeight: 30, fontSize: 12}}
+                        >
+                            {(FONT_FAMILIES.includes(fontName)
+                                ? FONT_FAMILIES
+                                : [fontName, ...FONT_FAMILIES]
+                            ).map((f) => (
+                                <MenuItem
+                                    key={f}
+                                    value={f}
+                                    sx={{fontSize: 12, fontFamily: f}}
+                                >
+                                    {f}
+                                </MenuItem>
+                            ))}
+                        </Select>
 
                         <Tooltip title="Bold">
                             <span>
