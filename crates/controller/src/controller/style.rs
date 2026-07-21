@@ -292,7 +292,7 @@ impl<'a> StyleConverter<'a> {
             } else if let Some(indexed) = color.indexed {
                 turn_indexed_color_to_rgb(indexed)
             } else if let Some(theme) = color.theme {
-                self.theme_manager.get_color(theme)
+                self.theme_manager.get_theme_color(theme)
             } else {
                 // auto is true.
                 // TODO: Figure out what auto means.

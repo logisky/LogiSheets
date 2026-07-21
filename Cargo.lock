@@ -995,6 +995,7 @@ dependencies = [
  "unicode-segmentation",
  "uuid",
  "wildescape",
+ "xmlserde",
 ]
 
 [[package]]
