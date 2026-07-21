@@ -60,9 +60,11 @@ export class StandardFont implements Font {
         const fontVariant = 'normal'
         const fontWeight = this.bold ? 'bold' : 'normal'
         const fontSize = `${this.size}${this.fontSizeUnit}`
-        const fontFamily = this.name
+        // Quote the family so multi-word names ("Times New Roman") stay one
+        // token in the CSS font shorthand.
+        const fontFamily = this.name?.val ? `"${this.name.val}"` : 'sans-serif'
         const lineHeight = this.lineHeight
-        const result = `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}/${lineHeight} ${fontFamily.val}`
+        const result = `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}/${lineHeight} ${fontFamily}`
         return result
     }
 }
