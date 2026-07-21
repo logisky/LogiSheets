@@ -38,6 +38,7 @@ gents_derives = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+xmlserde = { workspace = true }
 
 [features]
 sequencer = []
