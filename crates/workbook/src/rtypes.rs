@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct RType<'a>(pub &'a str);
 
 pub const WORKBOOK: RType =
@@ -19,6 +19,17 @@ pub const DRAWING: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing");
 pub const IMAGE: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/image");
+// A chart is anchored in a worksheet drawing via a `<xdr:graphicFrame>` whose
+// `<c:chart r:id>` points at a chart part (`xl/charts/chartN.xml`) through the
+// drawing's relationships.
+pub const CHART: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart");
+// Microsoft chart style / color-style satellites of a chart part
+// (`xl/charts/styleN.xml`, `xl/charts/colorsN.xml`).
+pub const CHART_STYLE: RType =
+    RType("http://schemas.microsoft.com/office/2011/relationships/chartStyle");
+pub const CHART_COLOR_STYLE: RType =
+    RType("http://schemas.microsoft.com/office/2011/relationships/chartColorStyle");
 pub const DOC_PROP_APP: RType = RType(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
 );

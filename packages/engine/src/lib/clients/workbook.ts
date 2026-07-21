@@ -24,6 +24,7 @@ import type {
     ShadowCellInfo,
     Client,
     CellImageInfo,
+    ChartInfo,
     ActionEffect,
     CellInput,
     PredictFillParams,
@@ -378,6 +379,12 @@ export class WorkbookClient implements Client {
     getCellImages(params: {sheetIdx: number}): Resp<readonly CellImageInfo[]> {
         return this._call(MethodName.GetCellImages, params) as Resp<
             readonly CellImageInfo[]
+        >
+    }
+
+    getCharts(params: {sheetIdx: number}): Resp<readonly ChartInfo[]> {
+        return this._call(MethodName.GetCharts, params) as Resp<
+            readonly ChartInfo[]
         >
     }
 

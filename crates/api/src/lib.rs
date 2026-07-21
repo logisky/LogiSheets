@@ -28,9 +28,9 @@ pub use logisheets_controller::api::{
 pub use logisheets_controller::controller::display::{
     BlockCellInfo, BlockDataRow, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema,
     BlockSchemaRandomEntry, BlockSchemaType, CellCoordinate, CellCoordinateWithSheet,
-    CellImageInfo, CellPosition, ColInfo, DisplayWindow, DisplayWindowRequest,
-    DisplayWindowWithStartPoint, LinkInfo, RowInfo, ShadowCellInfo, SheetInfo, TempCellChange,
-    TempStatusDiff,
+    CellImageInfo, CellPosition, ChartInfo, ChartSeriesInfo, ColInfo, DisplayWindow,
+    DisplayWindowRequest, DisplayWindowWithStartPoint, LinkInfo, RowInfo, ShadowCellInfo,
+    SheetInfo, TempCellChange, TempStatusDiff,
 };
 
 // Re-export edit actions

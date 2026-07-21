@@ -17,6 +17,7 @@ import {
     CellInput,
     Comment,
     CellImageInfo,
+    ChartInfo,
     DependentCell,
     CellRefRange,
     LinkInfo,
@@ -514,6 +515,16 @@ export class Worksheet {
      */
     public getCellImages(): Result<CellImageInfo[]> {
         return rpc('getCellImages', {sheetIdx: this._sheetIdx}, this._id)
+    }
+
+    /**
+     * All charts anchored on this sheet. Each `ChartInfo` carries the from/to
+     * anchor cells (+ EMU offsets), the chart type, series with cached values,
+     * and legend/axis metadata. The renderer positions the chart from the
+     * anchor and re-reads live values from the source ranges.
+     */
+    public getCharts(): Result<ChartInfo[]> {
+        return rpc('getCharts', {sheetIdx: this._sheetIdx}, this._id)
     }
 
     public getFullyCoveredBlocks(

@@ -645,6 +645,36 @@ mod tests {
     }
 
     #[test]
+    fn load_charts_into_manager() {
+        use logisheets_workbook::prelude::{ChartType, LegendPos};
+        use std::fs;
+        let buf = fs::read("../../tests/graph.xlsx").unwrap();
+        let controller =
+            Controller::from_file(String::from("graph"), &buf).expect("load graph.xlsx");
+
+        // Find the sheet that carries the chart and assert it parsed through.
+        let chart = controller
+            .status
+            .chart_manager
+            .charts
+            .values()
+            .flat_map(|v| v.iter())
+            .next()
+            .expect("a chart should be loaded into the ChartManager");
+
+        assert_eq!(chart.data.chart_type, ChartType::Col);
+        assert!(!chart.data.stacked);
+        assert_eq!(chart.data.legend_pos, Some(LegendPos::Bottom));
+        assert_eq!(chart.data.series.len(), 3);
+        assert_eq!(
+            chart.data.series[0].val_ref.as_deref(),
+            Some("Sheet1!$B$2:$E$2")
+        );
+        // The raw OOXML is retained for lossless save.
+        assert!(chart.raw.iter().any(|p| p.path.ends_with("chart1.xml")));
+    }
+
+    #[test]
     fn controller_ephemeral_input_and_intput() {
         let mut wb = Controller::default();
         let sheet_idx = 0;

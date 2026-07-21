@@ -39,6 +39,7 @@
         "dist"
     ],
     "dependencies": {
+        "echarts": "^5.5.1",
         "logisheets-web": "^1.7.1",
         "rxjs": "^7.8.1",
         "ssf": "^0.11.2"

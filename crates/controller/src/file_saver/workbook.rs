@@ -6,6 +6,7 @@ use logisheets_workbook::{
         CtExternalReference, CtExternalReferences, CtPerson, CtSheet, CtSheets, Persons,
         WorkbookPart,
     },
+    prelude::{ChartAnchor, PassthroughPart},
     workbook::{DocProps, Media, Wb, Worksheet, WorksheetDrawing, Xl},
 };
 use std::collections::HashMap;
@@ -50,6 +51,7 @@ pub fn save_workbook<S: SaverTrait>(
     block_schema_manager: &SchemaManager,
     field_render_manager: &FieldRenderManager,
     image_manager: &ImageManager,
+    chart_manager: &crate::chart_manager::ChartManager,
     data_validation_manager: &DataValidationManager,
     range_manager: &crate::range_manager::RangeManager,
     saver: &mut S,
@@ -110,8 +112,41 @@ pub fn save_workbook<S: SaverTrait>(
                     });
                 }
             }
-            if !cell_images.is_empty() {
-                worksheet.drawing = Some(WorksheetDrawing::from_cell_images(&cell_images));
+            // Charts: resolve each anchor's stable CellIds back to (row, col)
+            // and collect the chart parts (deduped) to re-emit. Charts and
+            // images share one drawing part.
+            let mut chart_anchors: Vec<ChartAnchor> = vec![];
+            let mut chart_parts: Vec<PassthroughPart> = vec![];
+            let mut seen_parts: std::collections::HashSet<String> = std::collections::HashSet::new();
+            for chart in chart_manager.charts_of_sheet(sheet_id) {
+                let from = navigator.fetch_cell_idx(&sheet_id, &chart.from.cell);
+                let to = navigator.fetch_cell_idx(&sheet_id, &chart.to.cell);
+                let ((fr, fc), (tr, tc)) = match (from, to) {
+                    (Ok(f), Ok(t)) => (f, t),
+                    _ => continue,
+                };
+                chart_anchors.push(ChartAnchor {
+                    from_col: fc as i32,
+                    from_row: fr as i32,
+                    from_col_off: chart.from.col_off,
+                    from_row_off: chart.from.row_off,
+                    to_col: tc as i32,
+                    to_row: tr as i32,
+                    to_col_off: chart.to.col_off,
+                    to_row_off: chart.to.row_off,
+                    chart_path: chart.part_path.clone(),
+                    name: format!("Chart {}", chart.id),
+                });
+                for p in chart.raw.iter() {
+                    if seen_parts.insert(p.path.clone()) {
+                        chart_parts.push(p.clone());
+                    }
+                }
+            }
+
+            if !cell_images.is_empty() || !chart_anchors.is_empty() {
+                worksheet.drawing =
+                    Some(WorksheetDrawing::build(&cell_images, chart_anchors, chart_parts));
             }
 
             // Round-trip Excel data validation, stored verbatim per sheet.

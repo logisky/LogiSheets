@@ -4,6 +4,7 @@ use logisheets_base::CellId;
 use logisheets_base::SheetId;
 
 use crate::cell_attachments::CellAttachmentsManager;
+use crate::chart_manager::ChartManager;
 use crate::container::DataContainer;
 use crate::cube_manager::CubeManager;
 use crate::data_validation_manager::DataValidationManager;
@@ -44,6 +45,7 @@ pub struct Status {
     pub block_schema_manager: SchemaManager,
     pub field_render_manager: FieldRenderManager,
     pub image_manager: ImageManager,
+    pub chart_manager: ChartManager,
     pub data_validation_manager: DataValidationManager,
 
     pub dirty_cells_next_round: HashSet<(SheetId, CellId)>,
@@ -73,6 +75,7 @@ impl Default for Status {
             block_schema_manager: SchemaManager::default(),
             field_render_manager: FieldRenderManager::default(),
             image_manager: ImageManager::new(),
+            chart_manager: ChartManager::new(),
             data_validation_manager: DataValidationManager::new(),
         }
     }

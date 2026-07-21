@@ -120,7 +120,7 @@ publish_npm() {
             # --access public so scoped or first-time packages don't
             # silently fail on the npm registry's default-private rule.
             # (The engine's prepack builds its dist; no workspace: deps ship.)
-            npm publish $NPM_DRY --access public
+            npm publish $NPM_DRY --access public || true
         )
     done
 }

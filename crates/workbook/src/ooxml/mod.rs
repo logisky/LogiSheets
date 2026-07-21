@@ -1,3 +1,4 @@
+pub mod chart;
 pub mod comments;
 pub mod complex_types;
 pub mod content_types;

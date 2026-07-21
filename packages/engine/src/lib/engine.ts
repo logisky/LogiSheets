@@ -236,6 +236,21 @@ export class Engine {
   }
 
   /**
+   * Insert a chart from the current selection (each selected column becomes a
+   * series). `chartType` is col|bar|line|area|pie|doughnut|scatter.
+   */
+  insertChart(chartType: string = "col"): void {
+    this._ensureReady();
+    this.getDefaultSession().insertChart(chartType);
+  }
+
+  /** Reconfigure an existing chart (type and/or title). */
+  updateChart(id: string, opts: {chartType?: string; title?: string}): void {
+    this._ensureReady();
+    this.getDefaultSession().updateChart(id, opts);
+  }
+
+  /**
    * Register a gate invoked before a workbook load replaces the current one
    * (see {@link DataService.setBeforeLoadWorkbook}). The host can show an
    * overwrite confirmation and return `false` to cancel. Pass `undefined` to

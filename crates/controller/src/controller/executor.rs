@@ -23,6 +23,7 @@ use crate::{
     edit_action::{EditPayload, PayloadsAction, SheetRename},
     exclusive::executor::ExclusiveManagerExecutor,
     formula_manager::{FormulaExecutor, Vertex},
+    chart_manager::ChartExecutor,
     image_manager::ImageExecutor,
     navigator::{NavExecutor, Navigator},
     range_manager::RangeExecutor,
@@ -166,6 +167,9 @@ impl<'a> Executor<'a> {
         let (image_executor, image_updated) = result.execute_image(payload.clone())?;
         result.status.image_manager = image_executor.manager;
 
+        let (chart_executor, chart_updated) = result.execute_chart(payload.clone())?;
+        result.status.chart_manager = chart_executor.manager;
+
         let mut dirty_ranges = range_executor.dirty_ranges;
         range_executor.removed_ranges.into_iter().for_each(|e| {
             dirty_ranges.insert(e);
@@ -206,6 +210,7 @@ impl<'a> Executor<'a> {
             || cell_attatchment_updated
             || exclusive_updated
             || image_updated
+            || chart_updated
         {
             true
         } else {
@@ -258,6 +263,7 @@ impl<'a> Executor<'a> {
                 block_schema_manager: result.status.block_schema_manager,
                 field_render_manager: result.status.field_render_manager,
                 image_manager: result.status.image_manager,
+                chart_manager: result.status.chart_manager,
                 data_validation_manager: result.status.data_validation_manager,
             },
             version_manager: result.version_manager,
@@ -468,6 +474,20 @@ impl<'a> Executor<'a> {
             text_id_manager: &mut self.status.text_id_manager,
         };
         let executor = ImageExecutor::new(self.status.image_manager.clone());
+        executor.execute(&mut ctx, payload)
+    }
+
+    fn execute_chart(&mut self, payload: EditPayload) -> Result<(ChartExecutor, bool), Error> {
+        let mut ctx = CellAttachmentsConnector {
+            sheet_pos_manager: &self.status.sheet_info_manager,
+            navigator: &self.status.navigator,
+            sheet_id_manager: &mut self.status.sheet_id_manager,
+            name_id_manager: &mut self.status.name_id_manager,
+            external_links_manager: &mut self.status.external_links_manager,
+            func_id_manager: &mut self.status.func_id_manager,
+            text_id_manager: &mut self.status.text_id_manager,
+        };
+        let executor = ChartExecutor::new(self.status.chart_manager.clone());
         executor.execute(&mut ctx, payload)
     }
 

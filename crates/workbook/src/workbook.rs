@@ -1,7 +1,7 @@
 use crate::logisheets::LogiSheetsData;
 use crate::ooxml::comments::Comments;
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
-use crate::ooxml::drawing_part::{CtTwoCellAnchor, CtWsDr};
+use crate::ooxml::drawing_part::{CtMarker, CtTwoCellAnchor, CtWsDr};
 use crate::ooxml::external_links::*;
 use crate::ooxml::persons::Persons;
 use crate::ooxml::relationships::CtRelationship;
@@ -12,7 +12,7 @@ use crate::ooxml::theme::ThemePart;
 use crate::ooxml::threaded_comments::ThreadedComments;
 use crate::ooxml::workbook::WorkbookPart;
 use crate::ooxml::worksheet::WorksheetPart;
-use crate::rtypes::IMAGE;
+use crate::rtypes::{CHART, IMAGE};
 use std::collections::HashMap;
 
 use crate::SerdeErr;
@@ -61,6 +61,25 @@ pub struct Worksheet {
     pub drawing: Option<WorksheetDrawing>,
 }
 
+/// An OOXML part preserved verbatim for lossless round-trip. Currently used for
+/// the chart part tree reached from a drawing (`xl/charts/chartN.xml` and its
+/// `styleN.xml` / `colorsN.xml` satellites): LogiSheets does not yet author
+/// these, so the raw bytes are kept and re-emitted unchanged. Structured
+/// parsing for *rendering* happens elsewhere and need not be lossless.
+#[derive(Debug, Clone)]
+pub struct PassthroughPart {
+    /// Zip-relative path, preserved so relationship targets keep resolving,
+    /// e.g. `xl/charts/chart1.xml`.
+    pub path: String,
+    pub data: Vec<u8>,
+    /// Relationship type of this part — drives its `[Content_Types].xml`
+    /// override on write (see `writer::get_content_type`).
+    pub rtype: crate::rtypes::RType<'static>,
+    /// The part's own relationships (may be empty), written to
+    /// `<dir>/_rels/<file>.rels`.
+    pub rels: Vec<CtRelationship>,
+}
+
 /// A worksheet drawing part together with its relationships, which map the
 /// picture `r:embed` ids to media files under `xl/media/`.
 #[derive(Debug)]
@@ -68,6 +87,9 @@ pub struct WorksheetDrawing {
     pub content: CtWsDr,
     /// `embed rId` -> target such as `../media/image1.png`.
     pub rels: Vec<CtRelationship>,
+    /// Chart parts (and their style/color satellites) referenced by this
+    /// drawing's `graphicFrame` anchors, preserved verbatim for round-trip.
+    pub chart_parts: Vec<PassthroughPart>,
 }
 
 impl WorksheetDrawing {
@@ -107,8 +129,95 @@ impl WorksheetDrawing {
                 two_cell_anchors: anchors,
             },
             rels,
+            chart_parts: Vec::new(),
         }
     }
+
+    /// Build a drawing part from cell images AND charts. Images and chart
+    /// `graphicFrame` anchors share the drawing's relationship-id namespace, so
+    /// ids are allocated across both here to avoid collisions. `chart_parts`
+    /// are the chart XML + style/color satellites to emit alongside.
+    pub fn build(
+        images: &[(i32, i32, String)],
+        charts: Vec<ChartAnchor>,
+        chart_parts: Vec<PassthroughPart>,
+    ) -> Self {
+        let mut anchors = Vec::with_capacity(images.len() + charts.len());
+        let mut rels = Vec::with_capacity(images.len() + charts.len());
+        let mut rid = 1u32;
+        let mut nv_id = 2u32; // cNvPr ids; Excel reserves 1 for the sheet.
+
+        for (col, row, media_name) in images {
+            let embed = format!("rId{}", rid);
+            rid += 1;
+            anchors.push(CtTwoCellAnchor::new_cell_image(
+                *col,
+                *row,
+                nv_id,
+                format!("Image {}", nv_id),
+                embed.clone(),
+            ));
+            nv_id += 1;
+            rels.push(CtRelationship {
+                id: embed,
+                ty: IMAGE.0.to_string(),
+                target: format!("../media/{}", media_name),
+                target_mode: StTargetMode::Internal,
+            });
+        }
+
+        for ca in charts {
+            let embed = format!("rId{}", rid);
+            rid += 1;
+            // The chart part path is workbook-absolute (e.g.
+            // `xl/charts/chart1.xml`); the drawing lives under `xl/drawings/`,
+            // so the relationship target is `../charts/chart1.xml`.
+            let target = match ca.chart_path.strip_prefix("xl/") {
+                Some(rest) => format!("../{}", rest),
+                None => ca.chart_path.clone(),
+            };
+            anchors.push(CtTwoCellAnchor::new_chart_anchor(
+                CtMarker::with_offset(ca.from_col, ca.from_row, ca.from_col_off, ca.from_row_off),
+                CtMarker::with_offset(ca.to_col, ca.to_row, ca.to_col_off, ca.to_row_off),
+                nv_id,
+                ca.name,
+                embed.clone(),
+            ));
+            nv_id += 1;
+            rels.push(CtRelationship {
+                id: embed,
+                ty: CHART.0.to_string(),
+                target,
+                target_mode: StTargetMode::Internal,
+            });
+        }
+
+        WorksheetDrawing {
+            content: CtWsDr {
+                two_cell_anchors: anchors,
+            },
+            rels,
+            chart_parts,
+        }
+    }
+}
+
+/// A chart's placement for [`WorksheetDrawing::build`]: the from/to anchor cells
+/// (col/row + EMU offsets) plus the chart part it references.
+#[derive(Debug, Clone)]
+pub struct ChartAnchor {
+    pub from_col: i32,
+    pub from_row: i32,
+    pub from_col_off: i64,
+    pub from_row_off: i64,
+    pub to_col: i32,
+    pub to_row: i32,
+    pub to_col_off: i64,
+    pub to_row_off: i64,
+    /// Workbook-absolute path of the chart part, e.g. `xl/charts/chart1.xml`.
+    pub chart_path: String,
+    /// Human-readable frame name (e.g. `Chart 1`).
+    pub name: String,
 }
 
 #[derive(Debug)]

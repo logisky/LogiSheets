@@ -78,6 +78,16 @@ export { DEFAULT_ENGINE_CONFIG } from "$types/index";
 // Re-export Range and Cell classes (not just types)
 export { Range as RangeClass, Cell as CellClass } from "$types/index";
 
+// Chart rendering (ECharts-backed). ChartView renders a resolved ChartModel;
+// mapChartToOption is the model→ECharts translation layer.
+export { ChartView, mapChartToOption } from "./chart";
+export type {
+  ChartModel,
+  ChartSeries,
+  ChartType,
+  LegendPosition,
+} from "./chart";
+
 // Engine class - main entry point
 export { Engine, default as EngineDefault } from "./engine";
 export type {

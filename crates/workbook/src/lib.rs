@@ -11,6 +11,10 @@ use xmlserde::*;
 
 pub mod prelude {
     pub use super::SerdeErr;
+    pub use super::ooxml::chart::{
+        ChartData, ChartSeries, ChartType, LegendPos, NewChartSeries, SeriesColor, build_chart_xml,
+        parse_chart,
+    };
     pub use super::ooxml::comments::*;
     pub use super::ooxml::complex_types::*;
     pub use super::ooxml::drawing_part::*;
@@ -24,7 +28,9 @@ pub mod prelude {
     pub use super::ooxml::workbook::*;
     pub use super::ooxml::worksheet::*;
     pub use super::reader::*;
+    pub use super::workbook::ChartAnchor;
     pub use super::workbook::Media;
+    pub use super::workbook::PassthroughPart;
     pub use super::workbook::Wb;
     pub use super::workbook::Worksheet;
     pub use super::workbook::WorksheetDrawing;

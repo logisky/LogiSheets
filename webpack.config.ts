@@ -87,6 +87,18 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
         module: {
             rules: [
                 {
+                    // The logisheets-engine lib bundle inlines its WASM as a
+                    // `new URL("data:application/wasm;base64,...")`. That data
+                    // URI is ~8MB; webpack's default `new URL()` asset handling
+                    // tries to resolve it as a module request and overflows its
+                    // parser stack ("Maximum call stack size exceeded"). Disable
+                    // URL parsing for this bundle so the data URI stays as
+                    // runtime code (the browser resolves the data: URL itself).
+                    // Its `import` statements (e.g. echarts) are unaffected.
+                    test: /logisheets-engine\.(es|umd)\.js$/,
+                    parser: {url: false},
+                },
+                {
                     test: /\.tsx?$/,
                     loader: 'esbuild-loader',
                     options: {

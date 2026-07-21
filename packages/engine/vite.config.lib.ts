@@ -48,7 +48,23 @@ export default defineConfig({
         rollupOptions: {
             // logisheets-web is bundled (not external) — it carries the WASM
             // bindings the worker needs.
+            //
+            // echarts is the exception: it is marked external so it is NOT
+            // pulled into this bundle. Two reasons — (1) the terser
+            // `mangle.properties /^_/` pass below would rename echarts' many
+            // `_`-prefixed internals and break it at runtime; (2) keeping it
+            // external lets the *consumer's* bundler tree-shake echarts down to
+            // the modules registered in src/lib/chart/echarts.ts. It stays a
+            // regular dependency, so it is still auto-installed — consumers do
+            // not need to add it themselves.
+            external: (id) => id === 'echarts' || id.startsWith('echarts/'),
             output: {
+                // UMD consumers must provide echarts as a global named
+                // `echarts`. ESM consumers resolve the bare imports normally.
+                globals: (id) =>
+                    id === 'echarts' || id.startsWith('echarts/')
+                        ? 'echarts'
+                        : '',
                 assetFileNames: (assetInfo) => {
                     if (assetInfo.name === 'style.css') {
                         return 'logisheets-engine.css'
