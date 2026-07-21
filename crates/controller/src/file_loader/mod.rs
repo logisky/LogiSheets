@@ -11,6 +11,7 @@ use logisheets_workbook::prelude::*;
 use sheet::{load_comments, load_persons, load_threaded_comments};
 
 use crate::{
+    chart_manager::{Chart, ChartManager, ChartMarker},
     connectors::FormulaConnector,
     controller::{Controller, status::Status},
     file_loader::{
@@ -61,6 +62,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         mut block_schema_manager,
         mut field_render_manager,
         mut image_manager,
+        mut chart_manager,
         mut data_validation_manager,
     } = Status::default();
     let mut sheet_id_fetcher = SheetIdFetcher {
@@ -306,6 +308,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     &navigator,
                     &mut image_manager,
                 );
+                load_charts(sheet_id, drawing, &navigator, &mut chart_manager);
             }
             // Excel data validation is stored verbatim per sheet for round-trip.
             if let Some(dv) = &ws.worksheet_part.data_validations {
@@ -361,6 +364,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         block_schema_manager,
         field_render_manager,
         image_manager,
+        chart_manager,
         data_validation_manager,
     };
     if let Some(theme) = xl.theme {
@@ -413,6 +417,113 @@ fn load_cell_images(
             );
         }
     }
+}
+
+/// Pull charts out of a worksheet drawing into the `ChartManager`. Chart
+/// `graphicFrame` anchors are paired with CHART parts by document order (exact
+/// for the common single-chart case; multiple charts rely on Excel emitting
+/// anchors and parts in matching order). Each chart is anchored by the CellIds
+/// of its from/to markers so it shifts with row/column edits.
+fn load_charts(
+    sheet_id: SheetId,
+    drawing: &WorksheetDrawing,
+    navigator: &Navigator,
+    chart_manager: &mut ChartManager,
+) {
+    let chart_parts: Vec<&PassthroughPart> = drawing
+        .chart_parts
+        .iter()
+        .filter(|p| p.rtype == logisheets_workbook::rtypes::CHART)
+        .collect();
+    if chart_parts.is_empty() {
+        return;
+    }
+    let anchors: Vec<&CtTwoCellAnchor> = drawing
+        .content
+        .two_cell_anchors
+        .iter()
+        .filter(|a| a.graphic_frame.is_some())
+        .collect();
+
+    // The whole chart part tree (chart XML + style/color satellites) is kept
+    // together for lossless save; shared across the sheet's charts for now.
+    let raw = Arc::new(drawing.chart_parts.clone());
+
+    for (i, part) in chart_parts.iter().enumerate() {
+        let data = match parse_chart(&part.data) {
+            Some(d) => d,
+            None => continue,
+        };
+        let anchor = match anchors.get(i) {
+            Some(a) => *a,
+            None => continue,
+        };
+        // Access marker fields directly rather than naming the marker type:
+        // `CtMarker` is ambiguous through the workbook prelude glob (both
+        // `complex_types` and `drawing_part` export one), but the concrete
+        // field access off the anchor is unambiguous.
+        let from = match chart_marker(
+            sheet_id,
+            anchor.from.col.v,
+            anchor.from.row.v,
+            anchor.from.col_off.v,
+            anchor.from.row_off.v,
+            navigator,
+        ) {
+            Some(m) => m,
+            None => continue,
+        };
+        let to = match chart_marker(
+            sheet_id,
+            anchor.to.col.v,
+            anchor.to.row.v,
+            anchor.to.col_off.v,
+            anchor.to.row_off.v,
+            navigator,
+        ) {
+            Some(m) => m,
+            None => continue,
+        };
+        let id = part
+            .path
+            .rsplit('/')
+            .next()
+            .and_then(|f| f.strip_suffix(".xml"))
+            .unwrap_or("chart")
+            .to_string();
+        chart_manager.add(
+            sheet_id,
+            Chart {
+                id,
+                from,
+                to,
+                part_path: part.path.clone(),
+                data,
+                raw: raw.clone(),
+            },
+        );
+    }
+}
+
+fn chart_marker(
+    sheet_id: SheetId,
+    col: i32,
+    row: i32,
+    col_off: i64,
+    row_off: i64,
+    navigator: &Navigator,
+) -> Option<ChartMarker> {
+    if col < 0 || row < 0 {
+        return None;
+    }
+    let cell = navigator
+        .fetch_cell_id(&sheet_id, row as usize, col as usize)
+        .ok()?;
+    Some(ChartMarker {
+        cell,
+        col_off,
+        row_off,
+    })
 }
 
 fn load_sheet_pr(

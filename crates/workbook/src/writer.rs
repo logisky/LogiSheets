@@ -10,8 +10,9 @@ use crate::prelude::{
     WorksheetPart,
 };
 use crate::rtypes::{
-    COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM, DRAWING, EXT_LINK, LOGISHEETS_APP_DATA,
-    PERSON, RType, SST, STYLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
+    CHART, CHART_COLOR_STYLE, CHART_STYLE, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM,
+    DRAWING, EXT_LINK, LOGISHEETS_APP_DATA, PERSON, RType, SST, STYLE, THEME, THREADED_COMMENT,
+    WORKBOOK, WORKSHEET,
 };
 use std::io::{Cursor, Write};
 use xmlserde::xml_serialize_with_decl;
@@ -176,6 +177,13 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
         writer.add_directory("xl/drawings", options())?;
         writer.add_directory("xl/drawings/_rels", options())?;
     }
+    if worksheets
+        .values()
+        .any(|w| w.drawing.as_ref().is_some_and(|d| !d.chart_parts.is_empty()))
+    {
+        writer.add_directory("xl/charts", options())?;
+        writer.add_directory("xl/charts/_rels", options())?;
+    }
 
     // Binary media parts (images) live under xl/media/ and are shared across
     // the workbook. Written once here; drawings reference them via rels.
@@ -309,6 +317,27 @@ fn write_worksheet<'a>(
             target_mode: StTargetMode::Internal,
         });
         wb.worksheet_part.drawing = Some(CtDrawing { id: drawing_rid });
+
+        // Chart parts (and their style/color satellites) are written verbatim
+        // at their preserved paths so the drawing's `graphicFrame` rels keep
+        // resolving. Their content-type overrides come from the pushed proofs.
+        for part in drawing.chart_parts {
+            writer.start_file(part.path.clone(), options())?;
+            writer.write(&part.data)?;
+            if !part.rels.is_empty() {
+                write_relationships(
+                    Relationships {
+                        relationships: part.rels,
+                    },
+                    writer,
+                    &rels_path_for(&part.path),
+                )?;
+            }
+            result.push(WriteProof {
+                path: FileLocation::Owned(part.path),
+                rtype: part.rtype,
+            });
+        }
     }
 
     if let Some(comments) = wb.comments {
@@ -372,6 +401,15 @@ define_se_func!(write_drawing_part, CtWsDr, DRAWING);
 define_se_func!(write_doc_app, DocPropApp, DOC_PROP_APP);
 define_se_func!(write_doc_core, DocPropCore, DOC_PROP_CORE);
 define_se_func!(write_doc_custom, DocPropCustom, DOC_PROP_CUSTOM);
+
+/// Map a part path to its relationships path, e.g.
+/// `xl/charts/chart1.xml` -> `xl/charts/_rels/chart1.xml.rels`.
+fn rels_path_for(path: &str) -> String {
+    match path.rfind('/') {
+        Some(i) => format!("{}/_rels/{}.rels", &path[..i], &path[i + 1..]),
+        None => format!("_rels/{}.rels", path),
+    }
+}
 
 fn write_relationships(obj: Relationships, writer: &mut Writer, path: &str) -> ZipResult<()> {
     if obj.relationships.len() == 0 {
@@ -489,6 +527,9 @@ fn get_content_type(rtype: RType) -> &'static str {
         EXT_LINK => "application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml",
         THEME => "application/vnd.openxmlformats-officedocument.theme+xml",
         DRAWING => "application/vnd.openxmlformats-officedocument.drawing+xml",
+        CHART => "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
+        CHART_STYLE => "application/vnd.ms-office.chartstyle+xml",
+        CHART_COLOR_STYLE => "application/vnd.ms-office.chartcolorstyle+xml",
         _ => "",
     }
 }
@@ -516,6 +557,89 @@ mod tests {
         let mut f = fs::File::create("tests_output/builtin_style.xlsx").unwrap();
         f.write_all(&res).unwrap();
         zipdiff(&buf, &res);
+    }
+
+    fn read_zip_entry(bytes: &[u8], name: &str) -> String {
+        use std::io::Read;
+        let mut a = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+        let mut f = a.by_name(name).unwrap();
+        let mut s = String::new();
+        f.read_to_string(&mut s).unwrap();
+        s
+    }
+
+    #[test]
+    fn chart_round_trips() {
+        use crate::workbook::Wb;
+        let buf = fs::read("../../tests/graph.xlsx").unwrap();
+        let wb = Wb::from_file(&buf).unwrap();
+
+        // The chart tree is read off the drawing as opaque passthrough parts.
+        let d = wb
+            .xl
+            .worksheets
+            .values()
+            .filter_map(|w| w.drawing.as_ref())
+            .find(|d| !d.chart_parts.is_empty())
+            .expect("chart parts should be read from the drawing");
+        assert!(d.chart_parts.iter().any(|p| p.path.ends_with("chart1.xml")));
+        assert!(d.chart_parts.iter().any(|p| p.path.ends_with("style1.xml")));
+        assert!(d.chart_parts.iter().any(|p| p.path.ends_with("colors1.xml")));
+        // Both anchor object-kinds present in this fixture are preserved: the
+        // chart's graphicFrame and the text-box shape.
+        assert!(
+            d.content
+                .two_cell_anchors
+                .iter()
+                .any(|a| a.graphic_frame.is_some())
+        );
+        assert!(d.content.two_cell_anchors.iter().any(|a| a.sp.is_some()));
+
+        let orig_chart = d
+            .chart_parts
+            .iter()
+            .find(|p| p.path.ends_with("chart1.xml"))
+            .map(|p| p.data.clone())
+            .unwrap();
+
+        // Round-trip: write, then re-read the output.
+        let out = write(wb).unwrap();
+        let wb2 = Wb::from_file(&out).unwrap();
+        let d2 = wb2
+            .xl
+            .worksheets
+            .values()
+            .filter_map(|w| w.drawing.as_ref())
+            .find(|d| !d.chart_parts.is_empty())
+            .expect("chart parts should survive the round-trip");
+
+        assert!(
+            d2.content
+                .two_cell_anchors
+                .iter()
+                .any(|a| a.graphic_frame.is_some()),
+            "graphicFrame anchor lost on round-trip"
+        );
+        assert!(d2.content.two_cell_anchors.iter().any(|a| a.sp.is_some()));
+
+        // Opaque parts must be byte-identical after the round-trip.
+        let rt_chart = d2
+            .chart_parts
+            .iter()
+            .find(|p| p.path.ends_with("chart1.xml"))
+            .map(|p| p.data.clone())
+            .unwrap();
+        assert_eq!(orig_chart, rt_chart, "chart1.xml bytes changed");
+
+        // The content-type override for the chart part is emitted.
+        let ct = read_zip_entry(&out, "[Content_Types].xml");
+        assert!(ct.contains("/xl/charts/chart1.xml"), "chart override missing");
+        assert!(
+            ct.contains("drawingml.chart+xml"),
+            "chart content-type missing"
+        );
+        assert!(ct.contains("/xl/charts/style1.xml"));
+        assert!(ct.contains("/xl/charts/colors1.xml"));
     }
 
     #[ignore]

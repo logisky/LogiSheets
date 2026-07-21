@@ -306,6 +306,30 @@ export class Session {
   }
 
   /**
+   * Insert a chart from the current selection (each selected column becomes a
+   * series). Requires a mounted UI. `chartType` is
+   * col|bar|line|area|pie|doughnut|scatter.
+   */
+  insertChart(chartType: string = "col"): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mounted = this._mountedComponent as any;
+    if (mounted && typeof mounted.insertChart === "function") {
+      mounted.insertChart(chartType);
+    }
+  }
+
+  /**
+   * Reconfigure an existing chart (type and/or title). Requires a mounted UI.
+   */
+  updateChart(id: string, opts: {chartType?: string; title?: string}): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mounted = this._mountedComponent as any;
+    if (mounted && typeof mounted.updateChart === "function") {
+      mounted.updateChart(id, opts);
+    }
+  }
+
+  /**
    * Render the spreadsheet. When UI is mounted, rendering is handled
    * automatically by the component.
    */

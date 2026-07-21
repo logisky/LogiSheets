@@ -7,6 +7,7 @@
 //! properties are not modeled and are dropped on read — LogiSheets is the
 //! source of truth for the images it creates.
 
+use xmlserde::Unparsed;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
 fn default_edit_as() -> String {
@@ -29,6 +30,10 @@ fn default_prst_rect() -> String {
     b"r",
     b"http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 ))]
+#[xmlserde(with_custom_ns(
+    b"c",
+    b"http://schemas.openxmlformats.org/drawingml/2006/chart"
+))]
 pub struct CtWsDr {
     #[xmlserde(name = b"xdr:twoCellAnchor", ty = "child")]
     pub two_cell_anchors: Vec<CtTwoCellAnchor>,
@@ -44,6 +49,22 @@ pub struct CtTwoCellAnchor {
     pub to: CtMarker,
     #[xmlserde(name = b"xdr:pic", ty = "child")]
     pub pic: Option<CtPic>,
+    // A `twoCellAnchor` hosts exactly one object. `pic` (images we create) and
+    // `graphicFrame` (charts — we both read their reference and re-emit them on
+    // save) are modeled structurally. Shapes/groups/connectors are preserved
+    // verbatim as `Unparsed` so drawings authored elsewhere (text boxes etc.)
+    // round-trip. A chart's `graphicFrame` points at a chart part via the
+    // drawing's relationships; the chart part itself is a `PassthroughPart`.
+    #[xmlserde(name = b"xdr:sp", ty = "child")]
+    pub sp: Option<Unparsed>,
+    #[xmlserde(name = b"xdr:grpSp", ty = "child")]
+    pub grp_sp: Option<Unparsed>,
+    #[xmlserde(name = b"xdr:graphicFrame", ty = "child")]
+    pub graphic_frame: Option<CtGraphicFrame>,
+    #[xmlserde(name = b"xdr:cxnSp", ty = "child")]
+    pub cxn_sp: Option<Unparsed>,
+    #[xmlserde(name = b"xdr:contentPart", ty = "child")]
+    pub content_part: Option<Unparsed>,
     #[xmlserde(name = b"xdr:clientData", ty = "child")]
     pub client_data: Option<CtAnchorClientData>,
 }
@@ -62,6 +83,15 @@ pub struct CtMarker {
 }
 
 impl CtMarker {
+    pub fn with_offset(col: i32, row: i32, col_off: i64, row_off: i64) -> Self {
+        CtMarker {
+            col: XdrI32 { v: col },
+            col_off: XdrI64 { v: col_off },
+            row: XdrI32 { v: row },
+            row_off: XdrI64 { v: row_off },
+        }
+    }
+
     pub fn new(col: i32, row: i32) -> Self {
         CtMarker {
             col: XdrI32 { v: col },
@@ -188,6 +218,75 @@ impl Default for CtPresetGeometry2D {
 #[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
 pub struct CtGeomGuideList {}
 
+// --- graphicFrame (charts) -------------------------------------------------
+//
+// Modeled enough to (a) read a chart reference on load and (b) regenerate the
+// anchor on save. `nvGraphicFramePr` and `graphic/graphicData/c:chart` are
+// typed; `xfrm` is preserved opaquely (Excel recomputes it from the anchor's
+// from/to on a twoCellAnchor). Non-chart graphicData (e.g. SmartArt) is not
+// modeled and would not round-trip — charts are the supported case.
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CtGraphicFrame {
+    #[xmlserde(name = b"xdr:nvGraphicFramePr", ty = "child")]
+    pub nv_graphic_frame_pr: Option<CtGraphicFrameNonVisual>,
+    #[xmlserde(name = b"xdr:xfrm", ty = "child")]
+    pub xfrm: Option<Unparsed>,
+    #[xmlserde(name = b"a:graphic", ty = "child")]
+    pub graphic: Option<CtGraphicalObject>,
+}
+
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CtGraphicFrameNonVisual {
+    #[xmlserde(name = b"xdr:cNvPr", ty = "child")]
+    pub c_nv_pr: Option<CtNvDrawingProps>,
+    #[xmlserde(name = b"xdr:cNvGraphicFramePr", ty = "child")]
+    pub c_nv_graphic_frame_pr: Option<CtNvGraphicFrameProps>,
+}
+
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CtNvGraphicFrameProps {}
+
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CtGraphicalObject {
+    #[xmlserde(name = b"a:graphicData", ty = "child")]
+    pub graphic_data: Option<CtGraphicalObjectData>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct CtGraphicalObjectData {
+    #[xmlserde(name = b"uri", ty = "attr")]
+    pub uri: String,
+    #[xmlserde(name = b"c:chart", ty = "child")]
+    pub chart: Option<CChart>,
+}
+
+impl Default for CtGraphicalObjectData {
+    fn default() -> Self {
+        CtGraphicalObjectData {
+            uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),
+            chart: None,
+        }
+    }
+}
+
+/// `<c:chart r:id="...">` — the reference from a drawing to a chart part.
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CChart {
+    #[xmlserde(name = b"r:id", ty = "attr")]
+    pub r_id: Option<String>,
+}
+
+impl CtGraphicFrame {
+    /// The chart-part relationship id this frame references, if any.
+    pub fn chart_rid(&self) -> Option<&str> {
+        self.graphic
+            .as_ref()
+            .and_then(|g| g.graphic_data.as_ref())
+            .and_then(|d| d.chart.as_ref())
+            .and_then(|c| c.r_id.as_deref())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -234,6 +333,11 @@ impl CtTwoCellAnchor {
             edit_as: default_edit_as(),
             from: CtMarker::new(col, row),
             to: CtMarker::new(col + 1, row + 1),
+            sp: None,
+            grp_sp: None,
+            graphic_frame: None,
+            cxn_sp: None,
+            content_part: None,
             pic: Some(CtPic {
                 nv_pic_pr: Some(CtPictureNonVisual {
                     c_nv_pr: Some(CtNvDrawingProps {
@@ -256,6 +360,51 @@ impl CtTwoCellAnchor {
                     prst_geom: Some(CtPresetGeometry2D::default()),
                 }),
             }),
+            client_data: Some(CtAnchorClientData::default()),
+        }
+    }
+
+    /// Build a chart anchor: a `twoCellAnchor` spanning `from`..`to` whose
+    /// `graphicFrame` references a chart part via `chart_rid` (a relationship in
+    /// the drawing's `.rels`). `frame_id` is the drawing-local non-visual id;
+    /// `name` is a human-readable frame name.
+    pub fn new_chart_anchor(
+        from: CtMarker,
+        to: CtMarker,
+        frame_id: u32,
+        name: String,
+        chart_rid: String,
+    ) -> Self {
+        CtTwoCellAnchor {
+            edit_as: default_edit_as(),
+            from,
+            to,
+            pic: None,
+            sp: None,
+            grp_sp: None,
+            graphic_frame: Some(CtGraphicFrame {
+                nv_graphic_frame_pr: Some(CtGraphicFrameNonVisual {
+                    c_nv_pr: Some(CtNvDrawingProps {
+                        id: frame_id,
+                        name,
+                        descr: String::new(),
+                    }),
+                    c_nv_graphic_frame_pr: Some(CtNvGraphicFrameProps::default()),
+                }),
+                xfrm: None,
+                graphic: Some(CtGraphicalObject {
+                    graphic_data: Some(CtGraphicalObjectData {
+                        uri: String::from(
+                            "http://schemas.openxmlformats.org/drawingml/2006/chart",
+                        ),
+                        chart: Some(CChart {
+                            r_id: Some(chart_rid),
+                        }),
+                    }),
+                }),
+            }),
+            cxn_sp: None,
+            content_part: None,
             client_data: Some(CtAnchorClientData::default()),
         }
     }

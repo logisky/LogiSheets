@@ -1,10 +1,264 @@
 use crate::edit_action::{
-    AddComment, AuthorInput, CommentMention, CreateBlock, DeleteCellImage, DeleteComment,
-    EditComment, EditPayload, LineStyleUpdate, ModifyPolicy, PayloadsAction, ResolveComment,
-    SetCellImage, SheetRename, StyleUpdateType, WorkbookUpdateType,
+    AddComment, AuthorInput, CellInput, CommentMention, CreateBlock, CreateChart,
+    CreateChartSeries, DeleteCellImage, DeleteChart, DeleteComment, EditComment, EditPayload,
+    LineStyleUpdate, ModifyPolicy, MoveChart, PayloadsAction, ResolveComment, SetCellImage,
+    SheetRename, StyleUpdateType, UpdateChart, WorkbookUpdateType,
 };
 
+#[test]
+fn update_chart_changes_type_and_title() {
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let chart_id = {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = ws.get_charts();
+        assert_eq!(c[0].chart_type, "col");
+        c[0].chart_id.clone()
+    };
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: chart_id.clone(),
+            chart_type: Some("line".to_string()),
+            title: Some("My Title".to_string()),
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let charts = ws.get_charts();
+    let c = &charts[0];
+    assert_eq!(c.chart_type, "line", "type changed");
+    assert_eq!(c.title.as_deref(), Some("My Title"), "title set");
+    // Data references are preserved through the regeneration.
+    assert_eq!(c.series.len(), 3);
+    assert_eq!(
+        c.series[0].values,
+        vec![Some(11.0), Some(13.0), Some(15.0), Some(24.0)],
+        "series data preserved"
+    );
+}
+
+#[test]
+fn create_chart_from_scratch() {
+    // Start from an empty workbook; put some numbers in B1:C2 to reference.
+    let mut wb = Workbook::default();
+    let inputs = [
+        (0usize, 1usize, "10"),
+        (0, 2, "20"),
+        (1, 1, "30"),
+        (1, 2, "40"),
+    ];
+    let payloads: Vec<EditPayload> = inputs
+        .iter()
+        .map(|(r, c, v)| {
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: *r,
+                col: *c,
+                content: v.to_string(),
+            })
+        })
+        .collect();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+
+    // Create a column chart with two series referencing those cells.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateChart(CreateChart {
+            sheet_idx: 0,
+            chart_id: "chartNew".to_string(),
+            chart_type: "col".to_string(),
+            from_row: 4,
+            from_col: 1,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: 18,
+            to_col: 8,
+            to_col_off: 0,
+            to_row_off: 0,
+            title: Some("My Chart".to_string()),
+            categories_ref: None,
+            series: vec![
+                CreateChartSeries {
+                    name: Some("Row1".to_string()),
+                    value_ref: "Sheet1!$B$1:$C$1".to_string(),
+                },
+                CreateChartSeries {
+                    name: Some("Row2".to_string()),
+                    value_ref: "Sheet1!$B$2:$C$2".to_string(),
+                },
+            ],
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    // The new chart is visible via the display API with live values.
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let charts = ws.get_charts();
+    assert_eq!(charts.len(), 1, "chart created");
+    let c = &charts[0];
+    assert_eq!(c.chart_type, "col");
+    assert_eq!(c.title.as_deref(), Some("My Chart"));
+    assert_eq!(c.series.len(), 2);
+    assert_eq!(c.series[0].values, vec![Some(10.0), Some(20.0)]);
+    assert_eq!(c.series[1].values, vec![Some(30.0), Some(40.0)]);
+    assert_eq!((c.from_row, c.from_col), (4, 1));
+    drop(ws);
+
+    // It survives save/reload.
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    let ws2 = wb2.get_sheet_by_idx(0).unwrap();
+    let charts2 = ws2.get_charts();
+    assert_eq!(charts2.len(), 1, "created chart persists");
+    assert_eq!(charts2[0].series[0].values, vec![Some(10.0), Some(20.0)]);
+}
+
+#[test]
+fn delete_chart_removes_it() {
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let chart_id = {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        ws.get_charts().first().expect("chart present").chart_id.clone()
+    };
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteChart(DeleteChart {
+            sheet_idx: 0,
+            chart_id,
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(ws.get_charts().is_empty(), "chart should be deleted");
+    drop(ws);
+
+    // Deletion persists through save/reload.
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    assert!(
+        wb2.get_sheet_by_idx(0).unwrap().get_charts().is_empty(),
+        "deletion should persist"
+    );
+}
+
 use super::{EditAction, Workbook};
+
+#[test]
+fn chart_reflects_live_data() {
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+
+    // series[0] references Sheet1!$B$2:$E$2 → [11, 13, 15, 24] initially.
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let charts = ws.get_charts();
+        assert_eq!(
+            charts[0].series[0].values,
+            vec![Some(11.0), Some(13.0), Some(15.0), Some(24.0)],
+            "initial live values match the source range"
+        );
+    }
+
+    // Edit B2 (row 1, col 1) → 100. The chart should reflect it (values are
+    // read live from the source range, not the OOXML cache).
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 1,
+            content: "100".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let charts = ws.get_charts();
+    assert_eq!(
+        charts[0].series[0].values[0],
+        Some(100.0),
+        "chart should reflect the edited cell"
+    );
+    assert_eq!(charts[0].series[0].values[1], Some(13.0), "others unchanged");
+
+    // Series scheme colors (accent1..3) resolve to theme RGB hex.
+    let color = charts[0].series[0].color.clone();
+    assert!(
+        color.as_ref().is_some_and(|c| c.len() == 6 || c.len() == 8),
+        "series color should resolve to a theme hex, got {:?}",
+        color
+    );
+}
+
+#[test]
+fn move_chart_updates_anchor() {
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+
+    // The chart is anchored on the first sheet in graph.xlsx.
+    let sheet_idx = 0usize;
+    let chart_id = {
+        let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+        ws.get_charts()
+            .first()
+            .expect("a chart should be present on sheet 0")
+            .chart_id
+            .clone()
+    };
+
+    // Move the chart so its top-left anchors at B3 (row 2, col 1).
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::MoveChart(MoveChart {
+            sheet_idx,
+            chart_id: chart_id.clone(),
+            from_row: 2,
+            from_col: 1,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: 12,
+            to_col: 7,
+            to_col_off: 0,
+            to_row_off: 0,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let charts = ws.get_charts();
+    let c = charts.iter().find(|c| c.chart_id == chart_id).unwrap();
+    assert_eq!((c.from_row, c.from_col), (2, 1), "anchor should have moved");
+    assert_eq!((c.to_row, c.to_col), (12, 7));
+    drop(ws);
+
+    // Save to xlsx and reload: the chart survives the controller round-trip
+    // (Stage 3b) at its moved anchor.
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    let ws2 = wb2.get_sheet_by_idx(sheet_idx).unwrap();
+    let charts2 = ws2.get_charts();
+    assert_eq!(charts2.len(), 1, "chart should survive save/reload");
+    let c2 = &charts2[0];
+    assert_eq!(c2.chart_type, "col", "chart data preserved");
+    assert_eq!((c2.from_row, c2.from_col), (2, 1), "moved anchor persisted");
+    assert_eq!((c2.to_row, c2.to_col), (12, 7));
+    assert_eq!(c2.series.len(), 3);
+}
 
 #[test]
 fn data_validation_round_trip() {

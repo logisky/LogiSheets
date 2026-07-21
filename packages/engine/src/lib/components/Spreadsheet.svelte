@@ -1,9 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import type { Grid, CellLayout, EngineConfig, DEFAULT_ENGINE_CONFIG } from '$types/index'
-    import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType } from 'logisheets-web'
+    import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType, ChartInfo } from 'logisheets-web'
     import { isErrorMessage } from 'logisheets-web'
     import { DataService } from '$lib/clients/service'
+    import ChartView from '$lib/chart/ChartView.svelte'
+    import { mapChartToOption, chartInfoToModel } from '$lib/chart'
     // Inlined (base64 blob) so the published bundle is self-contained — see
     // the matching import in engine.ts for why a separate worker asset breaks
     // external consumers.
@@ -28,6 +30,8 @@
         pxToWidth,
         widthToPx,
         simpleUuid,
+        toA1notation,
+        quoteSheetName,
     } from './utils'
     import ColumnHeaders from './ColumnHeaders.svelte'
     import RowHeaders from './RowHeaders.svelte'
@@ -157,6 +161,279 @@ let isDragging = false; // True while user is drag-selecting
     const sheetAnchors = new Map<number, { x: number; y: number }>()
     // Use external data service if provided, otherwise use internal one
     let dataService: DataService | null = $derived(externalDataService ?? internalDataService)
+
+    // Charts anchored on the active sheet. Refetched when the sheet changes or
+    // a transaction bumps `chartRefreshTick`; positioned reactively off `grid`.
+    let charts: readonly ChartInfo[] = $state([])
+    let chartRefreshTick = $state(0)
+    // 1 CSS px = 9525 EMU at 96 DPI; chart anchor offsets are in EMU.
+    const EMU_PER_PX = 9525
+    $effect(() => {
+        // Track deps explicitly so the fetch re-runs on sheet switch / edits.
+        const svc = dataService
+        const sheet = activeSheet
+        void chartRefreshTick
+        if (!svc) {
+            charts = []
+            return
+        }
+        svc
+            .getWorkbook()
+            .getCharts({ sheetIdx: sheet })
+            .then((r) => {
+                if (!isErrorMessage(r)) charts = r
+            })
+            .catch(() => {})
+    })
+    // Positioned chart boxes in canvas-data space (grid-relative). The layer
+    // container adds the LeftTop header offset. Recomputes on scroll/resize
+    // because it reads `grid`.
+    const chartBoxes = $derived.by(() => {
+        const g = grid
+        if (!g) return []
+        return charts.map((c) => {
+            const x0 = xForColStart(c.fromCol, g) + c.fromColOff / EMU_PER_PX
+            const y0 = yForRowStart(c.fromRow, g) + c.fromRowOff / EMU_PER_PX
+            const x1 = xForColStart(c.toCol, g) + c.toColOff / EMU_PER_PX
+            const y1 = yForRowStart(c.toRow, g) + c.toRowOff / EMU_PER_PX
+            return {
+                id: c.chartId,
+                left: x0,
+                top: y0,
+                width: Math.max(0, x1 - x0),
+                height: Math.max(0, y1 - y0),
+                chartType: c.chartType,
+                option: mapChartToOption(chartInfoToModel(c)),
+            }
+        })
+    })
+
+    const CHART_TYPES = ['col', 'bar', 'line', 'area', 'pie', 'doughnut', 'scatter']
+
+    // ---- Chart selection, move, resize, delete -------------------------
+    let selectedChartId: string | null = $state(null)
+    let chartDrag: {id: string; startX: number; startY: number; dx: number; dy: number} | null =
+        $state(null)
+    let chartResize:
+        | {id: string; corner: string; startX: number; startY: number; dx: number; dy: number}
+        | null = $state(null)
+
+    // Inverse of xForColStart/yForRowStart: which cell + EMU offset a
+    // canvas-data-space pixel falls in. Clamps to the last visible line.
+    function pxToColAnchor(x: number, g: Grid): {col: number; colOff: number} {
+        let acc = -g.subOffsetX
+        for (const c of g.columns) {
+            if (x < acc + c.width) {
+                return {col: c.idx, colOff: Math.max(0, Math.round((x - acc) * EMU_PER_PX))}
+            }
+            acc += c.width
+        }
+        return {col: g.columns[g.columns.length - 1]?.idx ?? 0, colOff: 0}
+    }
+    function pxToRowAnchor(y: number, g: Grid): {row: number; rowOff: number} {
+        let acc = -g.subOffsetY
+        for (const r of g.rows) {
+            if (y < acc + r.height) {
+                return {row: r.idx, rowOff: Math.max(0, Math.round((y - acc) * EMU_PER_PX))}
+            }
+            acc += r.height
+        }
+        return {row: g.rows[g.rows.length - 1]?.idx ?? 0, rowOff: 0}
+    }
+
+    // Apply an in-progress move/resize delta to a box's rect. Used both for
+    // live display and to compute the final rect on drop.
+    function chartRectOf(
+        box: {left: number; top: number; width: number; height: number},
+        drag: {dx: number; dy: number} | null,
+        resize: {corner: string; dx: number; dy: number} | null
+    ) {
+        let {left, top, width, height} = box
+        if (drag) {
+            left += drag.dx
+            top += drag.dy
+        }
+        if (resize) {
+            const {corner, dx, dy} = resize
+            if (corner.includes('e')) width += dx
+            if (corner.includes('s')) height += dy
+            if (corner.includes('w')) {
+                left += dx
+                width -= dx
+            }
+            if (corner.includes('n')) {
+                top += dy
+                height -= dy
+            }
+        }
+        return {left, top, width: Math.max(40, width), height: Math.max(40, height)}
+    }
+
+    function displayChartRect(box: {
+        id: string
+        left: number
+        top: number
+        width: number
+        height: number
+    }) {
+        return chartRectOf(
+            box,
+            chartDrag?.id === box.id ? chartDrag : null,
+            chartResize?.id === box.id ? chartResize : null
+        )
+    }
+
+    function onChartMouseDown(e: MouseEvent, id: string) {
+        e.stopPropagation()
+        e.preventDefault()
+        selectedChartId = id
+        chartDrag = {id, startX: e.clientX, startY: e.clientY, dx: 0, dy: 0}
+        const move = (ev: MouseEvent) => {
+            if (!chartDrag) return
+            chartDrag = {...chartDrag, dx: ev.clientX - chartDrag.startX, dy: ev.clientY - chartDrag.startY}
+        }
+        const up = () => {
+            window.removeEventListener('mousemove', move)
+            window.removeEventListener('mouseup', up)
+            const drag = chartDrag
+            chartDrag = null
+            const box = chartBoxes.find((b) => b.id === id)
+            if (box && drag && (drag.dx !== 0 || drag.dy !== 0)) {
+                commitChartRect(id, chartRectOf(box, drag, null))
+            }
+        }
+        window.addEventListener('mousemove', move)
+        window.addEventListener('mouseup', up)
+    }
+
+    function onChartResizeMouseDown(e: MouseEvent, id: string, corner: string) {
+        e.stopPropagation()
+        e.preventDefault()
+        selectedChartId = id
+        chartResize = {id, corner, startX: e.clientX, startY: e.clientY, dx: 0, dy: 0}
+        const move = (ev: MouseEvent) => {
+            if (!chartResize) return
+            chartResize = {
+                ...chartResize,
+                dx: ev.clientX - chartResize.startX,
+                dy: ev.clientY - chartResize.startY,
+            }
+        }
+        const up = () => {
+            window.removeEventListener('mousemove', move)
+            window.removeEventListener('mouseup', up)
+            const rz = chartResize
+            chartResize = null
+            const box = chartBoxes.find((b) => b.id === id)
+            if (box && rz && (rz.dx !== 0 || rz.dy !== 0)) {
+                commitChartRect(id, chartRectOf(box, null, rz))
+            }
+        }
+        window.addEventListener('mousemove', move)
+        window.addEventListener('mouseup', up)
+    }
+
+    // Move and resize both reduce to "the chart now occupies this rect" → a
+    // MoveChart (from = top-left anchor, to = bottom-right anchor). Local state
+    // is updated optimistically so the chart stays put through the transaction
+    // round-trip (the px→anchor conversion is the inverse of the layout math).
+    function commitChartRect(
+        id: string,
+        rect: {left: number; top: number; width: number; height: number}
+    ) {
+        if (!grid || !dataService) return
+        const from = {...pxToColAnchor(rect.left, grid), ...pxToRowAnchor(rect.top, grid)}
+        const to = {
+            ...pxToColAnchor(rect.left + rect.width, grid),
+            ...pxToRowAnchor(rect.top + rect.height, grid),
+        }
+        charts = charts.map((c) =>
+            c.chartId === id
+                ? {
+                      ...c,
+                      fromCol: from.col,
+                      fromColOff: from.colOff,
+                      fromRow: from.row,
+                      fromRowOff: from.rowOff,
+                      toCol: to.col,
+                      toColOff: to.colOff,
+                      toRow: to.row,
+                      toRowOff: to.rowOff,
+                  }
+                : c
+        )
+        dataService.handleTransaction({
+            payloads: [
+                {
+                    type: 'moveChart',
+                    value: {
+                        sheetIdx: activeSheet,
+                        chartId: id,
+                        fromCol: from.col,
+                        fromColOff: from.colOff,
+                        fromRow: from.row,
+                        fromRowOff: from.rowOff,
+                        toCol: to.col,
+                        toColOff: to.colOff,
+                        toRow: to.row,
+                        toRowOff: to.rowOff,
+                    },
+                },
+            ],
+            undoable: true,
+            temp: false,
+        })
+    }
+
+    function deleteSelectedChart() {
+        const id = selectedChartId
+        if (!id || !dataService) return
+        selectedChartId = null
+        charts = charts.filter((c) => c.chartId !== id)
+        dataService.handleTransaction({
+            payloads: [{type: 'deleteChart', value: {sheetIdx: activeSheet, chartId: id}}],
+            undoable: true,
+            temp: false,
+        })
+    }
+
+    // Reconfigure an existing chart (type/title). UpdateChart changes no cell
+    // values, so await the transaction then refetch (like insertChart).
+    export async function updateChart(
+        id: string,
+        opts: {chartType?: string; title?: string}
+    ) {
+        if (!dataService) return
+        await dataService.handleTransaction({
+            payloads: [
+                {
+                    type: 'updateChart',
+                    value: {
+                        sheetIdx: activeSheet,
+                        chartId: id,
+                        chartType: opts.chartType,
+                        title: opts.title,
+                    },
+                },
+            ],
+            undoable: true,
+            temp: false,
+        })
+        chartRefreshTick++
+    }
+
+    // Delete/Backspace removes the selected chart (only while one is selected).
+    $effect(() => {
+        if (!selectedChartId) return
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                e.preventDefault()
+                deleteSelectedChart()
+            }
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    })
     let canvasEl: HTMLCanvasElement | null = $state(null)
     let offscreenCanvas: OffscreenCanvas | null = null
     let anchorX = $state(0)
@@ -254,6 +531,7 @@ let isDragging = false; // True while user is drag-selecting
                 }
                 await render("cellUpdated-external")
                 updateDocumentDimensions()
+                chartRefreshTick++
             }))
 
             subscriptions.push(externalDataService.registerSheetUpdatedCallback(() => {
@@ -302,6 +580,7 @@ let isDragging = false; // True while user is drag-selecting
                 }
                 await render("cellUpdated-internal")
                 updateDocumentDimensions()
+                chartRefreshTick++
             })
 
             // Also register sheet update callback
@@ -711,6 +990,9 @@ let isDragging = false; // True while user is drag-selecting
     async function onMouseDown(e: MouseEvent) {
         e.stopPropagation()
         e.preventDefault()
+
+        // Clicking the grid deselects any selected chart.
+        selectedChartId = null
 
         if (e.button !== 0) return // Only left click
         if (!grid || !canvasEl) return
@@ -1487,6 +1769,64 @@ let isDragging = false; // True while user is drag-selecting
     // Public API
     // ========================================================================
 
+    /**
+     * Insert a chart from the current selection. Each selected column becomes a
+     * series (values down the rows); the chart is anchored just below the
+     * selection. `chartType` is col|bar|line|area|pie|doughnut|scatter.
+     */
+    export async function insertChart(chartType: string = 'col') {
+        if (!dataService) return
+        const range = getSelectedCellRange(selectedData)
+        if (!range) return
+        const startRow = Math.min(range.startRow, range.endRow)
+        const endRow = Math.max(range.startRow, range.endRow)
+        const startCol = Math.min(range.startCol, range.endCol)
+        const endCol = Math.max(range.startCol, range.endCol)
+        const sheetName = sheets[activeSheet]?.name ?? 'Sheet1'
+        const qs = quoteSheetName(sheetName)
+
+        const series: {name: string | undefined; valueRef: string}[] = []
+        for (let c = startCol; c <= endCol; c++) {
+            const col = toA1notation(c)
+            const valueRef = `${qs}!$${col}$${startRow + 1}:$${col}$${endRow + 1}`
+            series.push({name: undefined, valueRef})
+        }
+
+        // Anchor below the selection, spanning ~8 cols × 15 rows.
+        const fromRow = endRow + 2
+        const fromCol = startCol
+        await dataService.handleTransaction({
+            payloads: [
+                {
+                    type: 'createChart',
+                    value: {
+                        sheetIdx: activeSheet,
+                        chartId: simpleUuid(),
+                        chartType,
+                        fromRow,
+                        fromCol,
+                        fromColOff: 0,
+                        fromRowOff: 0,
+                        toRow: fromRow + 15,
+                        toCol: fromCol + 8,
+                        toColOff: 0,
+                        toRowOff: 0,
+                        title: undefined,
+                        categoriesRef: undefined,
+                        series,
+                    },
+                },
+            ],
+            undoable: true,
+            temp: false,
+        })
+        // Await the transaction so the worker has applied it before we refetch;
+        // createChart changes no cell values, so the cellUpdated callback won't
+        // re-trigger the fetch on its own.
+        selectedChartId = null
+        chartRefreshTick++
+    }
+
     // Returns true when the workbook was loaded, false when it was not — either
     // the beforeLoad gate vetoed it (user declined the overwrite) or the load
     // failed. Callers use this to skip post-load bookkeeping on a no-op.
@@ -1499,6 +1839,10 @@ let isDragging = false; // True while user is drag-selecting
         if (isErrorMessage(res)) return false
         await render("loadWorkbook")
         await updateDocumentDimensions()
+        // A fresh workbook doesn't change activeSheet, so nudge the chart
+        // fetch effect explicitly — otherwise charts only appear after the
+        // first sheet switch.
+        chartRefreshTick++
         return true
     }
 
@@ -1643,6 +1987,61 @@ let isDragging = false; // True while user is drag-selecting
                 </div>
             {/if}
 
+            <!-- Charts: DOM overlay clipped to the data area, positioned from
+                 the grid so they scroll with the cells. -->
+            {#if grid && chartBoxes.length}
+                <div
+                    class="chart-layer"
+                    style="left: {LeftTop.width}px; top: {LeftTop.height}px; width: calc(100% - {LeftTop.width}px - {showScrollbars ? cfg.scrollbarSize : 0}px); height: calc(100% - {LeftTop.height}px - {showScrollbars ? cfg.scrollbarSize : 0}px);"
+                >
+                    {#each chartBoxes as box (box.id)}
+                        {@const r = displayChartRect(box)}
+                        <div
+                            class="chart-box"
+                            class:selected={selectedChartId === box.id}
+                            style="left: {r.left}px; top: {r.top}px;"
+                        >
+                            <ChartView
+                                option={box.option}
+                                width={r.width}
+                                height={r.height}
+                            />
+                            <!-- Transparent capture surface above the ECharts
+                                 canvas so select/drag works (the canvas would
+                                 otherwise swallow the mousedown). -->
+                            <div
+                                class="chart-cover"
+                                role="presentation"
+                                onmousedown={(e) => onChartMouseDown(e, box.id)}
+                            ></div>
+                            {#if selectedChartId === box.id}
+                                <select
+                                    class="chart-type-select"
+                                    value={box.chartType}
+                                    onmousedown={(e) => e.stopPropagation()}
+                                    onchange={(e) =>
+                                        updateChart(box.id, {
+                                            chartType: e.currentTarget.value,
+                                        })}
+                                >
+                                    {#each CHART_TYPES as t (t)}
+                                        <option value={t}>{t}</option>
+                                    {/each}
+                                </select>
+                                {#each ['nw', 'ne', 'sw', 'se'] as corner (corner)}
+                                    <div
+                                        class="chart-handle {corner}"
+                                        role="presentation"
+                                        onmousedown={(e) =>
+                                            onChartResizeMouseDown(e, box.id, corner)}
+                                    ></div>
+                                {/each}
+                            {/if}
+                        </div>
+                    {/each}
+                </div>
+            {/if}
+
             <!-- Scrollbars -->
             {#if showScrollbars}
                 <div class="scrollbar-y" style="width: {cfg.scrollbarSize}px; top: {LeftTop.height}px; bottom: {cfg.scrollbarSize}px;">
@@ -1733,6 +2132,82 @@ let isDragging = false; // True while user is drag-selecting
         width: 100%;
         height: 100%;
         position: relative;
+    }
+
+    /* Chart overlay: above the grid canvas (z 0), below the selection (z 2).
+       Clipped to the data area; charts inside scroll with the grid. Pointer
+       events are disabled for now (charts are display-only). */
+    .chart-layer {
+        position: absolute;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .chart-box {
+        position: absolute;
+    }
+
+    /* Transparent surface above the chart canvas that opts back into pointer
+       events (the layer disables them) so charts can be selected and dragged. */
+    .chart-cover {
+        position: absolute;
+        inset: 0;
+        pointer-events: auto;
+        cursor: move;
+        background: transparent;
+    }
+
+    .chart-box.selected {
+        outline: 2px solid #1a73e8;
+        outline-offset: 1px;
+    }
+
+    /* Corner resize handles, shown on the selected chart. */
+    .chart-handle {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: #fff;
+        border: 1px solid #1a73e8;
+        border-radius: 2px;
+        pointer-events: auto;
+        z-index: 1;
+    }
+    .chart-handle.nw {
+        left: -5px;
+        top: -5px;
+        cursor: nwse-resize;
+    }
+    .chart-handle.ne {
+        right: -5px;
+        top: -5px;
+        cursor: nesw-resize;
+    }
+    .chart-handle.sw {
+        left: -5px;
+        bottom: -5px;
+        cursor: nesw-resize;
+    }
+    .chart-handle.se {
+        right: -5px;
+        bottom: -5px;
+        cursor: nwse-resize;
+    }
+
+    /* Chart-type picker on the selected chart. */
+    .chart-type-select {
+        position: absolute;
+        top: -26px;
+        left: 0;
+        pointer-events: auto;
+        font-size: 12px;
+        padding: 2px 4px;
+        border: 1px solid #1a73e8;
+        border-radius: 3px;
+        background: #fff;
+        cursor: pointer;
+        z-index: 2;
     }
 
     .corner-cell {

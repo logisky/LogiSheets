@@ -1170,7 +1170,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     StTargetMode {
         External => "External",
         Internal => "Internal",

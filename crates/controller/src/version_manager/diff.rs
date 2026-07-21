@@ -147,6 +147,32 @@ fn convert_diff<C: VersionExecCtx>(
             let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
             Ok(Some((Diff::CellValue(cell_id), sheet_id)))
         }
+        EditPayload::MoveChart(p) => {
+            // No chart-specific Diff variant; a move re-anchors a floating
+            // object, so mark the sheet as needing a full redraw.
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::DeleteChart(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::CreateChart(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::UpdateChart(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
         EditPayload::SetColWidth(col) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(col.sheet_idx)

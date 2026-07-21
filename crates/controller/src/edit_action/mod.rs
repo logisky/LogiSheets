@@ -129,6 +129,10 @@ pub enum EditPayload {
     // Cell images (stored as SpreadsheetDrawingML pictures on save).
     SetCellImage(SetCellImage),
     DeleteCellImage(DeleteCellImage),
+    MoveChart(MoveChart),
+    DeleteChart(DeleteChart),
+    CreateChart(CreateChart),
+    UpdateChart(UpdateChart),
     SetColWidth(SetColWidth),
     SetRowHeight(SetRowHeight),
     SetVisible(SetVisible),
@@ -319,6 +323,78 @@ pub struct DeleteCellImage {
     pub sheet_idx: usize,
     pub row: usize,
     pub col: usize,
+}
+
+/// Move (and/or resize) a chart to a new anchor. The chart is identified by
+/// `chart_id` on the given sheet. `from`/`to` are the new top-left and
+/// bottom-right anchor corners, each a cell position plus an EMU offset into
+/// that cell (1px = 9525 EMU at 96 DPI). Anchoring to cells (not pixels) is how
+/// the chart shifts with row/column edits.
+/// Delete a chart from a sheet, identified by `chart_id`.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "delete_chart.ts", builder, rename_all = "camelCase")]
+pub struct DeleteChart {
+    pub sheet_idx: usize,
+    pub chart_id: String,
+}
+
+/// Reconfigure an existing chart in place, keeping its anchor and data
+/// references. Any field left `None` keeps the chart's current value.
+/// `chart_type` is one of `col|bar|line|area|pie|doughnut|scatter`.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "update_chart.ts", builder, rename_all = "camelCase")]
+pub struct UpdateChart {
+    pub sheet_idx: usize,
+    pub chart_id: String,
+    pub chart_type: Option<String>,
+    pub title: Option<String>,
+}
+
+/// One series for [`CreateChart`]: an optional name and a value reference
+/// formula (e.g. `Sheet1!$B$2:$E$2`).
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "create_chart_series.ts", builder, rename_all = "camelCase")]
+pub struct CreateChartSeries {
+    pub name: Option<String>,
+    pub value_ref: String,
+}
+
+/// Create a new chart anchored at `from`..`to`. `chart_type` is one of
+/// `col|bar|line|area|pie|doughnut|scatter`. `chart_id` must be workbook-unique
+/// (the caller generates it; it also names the chart part). Series values are
+/// read live from the referenced ranges, so no cached values are needed here.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "create_chart.ts", builder, rename_all = "camelCase")]
+pub struct CreateChart {
+    pub sheet_idx: usize,
+    pub chart_id: String,
+    pub chart_type: String,
+    pub from_row: usize,
+    pub from_col: usize,
+    pub from_col_off: i64,
+    pub from_row_off: i64,
+    pub to_row: usize,
+    pub to_col: usize,
+    pub to_col_off: i64,
+    pub to_row_off: i64,
+    pub title: Option<String>,
+    pub categories_ref: Option<String>,
+    pub series: Vec<CreateChartSeries>,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "move_chart.ts", builder, rename_all = "camelCase")]
+pub struct MoveChart {
+    pub sheet_idx: usize,
+    pub chart_id: String,
+    pub from_row: usize,
+    pub from_col: usize,
+    pub from_col_off: i64,
+    pub from_row_off: i64,
+    pub to_row: usize,
+    pub to_col: usize,
+    pub to_col_off: i64,
+    pub to_row_off: i64,
 }
 
 /// Take the `content` as input to the cell. The type of the `content` can be referred automatically.
@@ -1233,6 +1309,30 @@ impl From<DeleteCellImage> for EditPayload {
 }
 impl Payload for SetCellImage {}
 impl Payload for DeleteCellImage {}
+impl From<MoveChart> for EditPayload {
+    fn from(value: MoveChart) -> Self {
+        EditPayload::MoveChart(value)
+    }
+}
+impl Payload for MoveChart {}
+impl From<DeleteChart> for EditPayload {
+    fn from(value: DeleteChart) -> Self {
+        EditPayload::DeleteChart(value)
+    }
+}
+impl Payload for DeleteChart {}
+impl From<CreateChart> for EditPayload {
+    fn from(value: CreateChart) -> Self {
+        EditPayload::CreateChart(value)
+    }
+}
+impl Payload for CreateChart {}
+impl From<UpdateChart> for EditPayload {
+    fn from(value: UpdateChart) -> Self {
+        EditPayload::UpdateChart(value)
+    }
+}
+impl Payload for UpdateChart {}
 impl From<CreateBlock> for EditPayload {
     fn from(value: CreateBlock) -> Self {
         EditPayload::CreateBlock(value)

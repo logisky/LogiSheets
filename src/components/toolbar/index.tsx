@@ -62,6 +62,7 @@ import {
     AlignHorizontalCenterOutlined,
     WrapText as WrapTextIcon,
     StrikethroughS,
+    BarChart as BarChartIcon,
 } from '@mui/icons-material'
 import {isErrorMessage} from 'logisheets-web'
 import {StandardColor, StandardFont} from '@/core/standable'
@@ -913,6 +914,17 @@ export const Toolbar = observer(
                             >
                                 <ScienceIcon fontSize="small" />
                             </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Insert column chart from selection">
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => engine.insertChart('col')}
+                                    disabled={!hasSelectedData}
+                                >
+                                    <BarChartIcon fontSize="small" />
+                                </IconButton>
+                            </span>
                         </Tooltip>
                     </div>
                     <Divider

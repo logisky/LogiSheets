@@ -2,7 +2,8 @@ use gents_derives::{Interface, TS};
 use logisheets_rs::BlockId;
 use logisheets_rs::{
     ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo,
-    CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange, ColId,
+    CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
+    ChartInfo, ColId,
     Comment, DependentCell, DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage,
     FormulaDisplayInfo, LinkInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
     ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style,
@@ -51,6 +52,7 @@ pub enum Message {
     GetMergedCells(GetMergedCellsParams),
     GetComments(GetCommentsParams),
     GetCellImages(GetCellImagesParams),
+    GetCharts(GetChartsParams),
     CalcCondition(CalcConditionParams),
     GetCellIdByBlockRef(GetCellIdByBlockRefParams),
     ExportBlockData(ExportBlockDataParams),
@@ -381,6 +383,12 @@ pub struct GetCommentsParams {
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_cell_images_params.ts", rename_all = "camelCase")]
 pub struct GetCellImagesParams {
+    pub sheet_idx: usize,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_get_charts_params.ts", rename_all = "camelCase")]
+pub struct GetChartsParams {
     pub sheet_idx: usize,
 }
 
@@ -833,6 +841,10 @@ pub struct WorkbookMethods {
         book_id: Option<usize>,
     ) -> Result<Vec<CellImageInfo>, ErrorMessage>,
 
+    // Charts
+    pub get_charts:
+        fn(params: GetChartsParams, book_id: Option<usize>) -> Result<Vec<ChartInfo>, ErrorMessage>,
+
     // Shadow cells
     pub get_shadow_cell_id: fn(
         params: GetShadowCellIdParams,
@@ -1016,6 +1028,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         ),
         Message::GetComments(params) => ws::get_comments(id, params.sheet_idx),
         Message::GetCellImages(params) => ws::get_cell_images(id, params.sheet_idx),
+        Message::GetCharts(params) => ws::get_charts(id, params.sheet_idx),
         Message::CalcCondition(params) => {
             controller::calc_condition(id, params.sheet_idx, params.condition)
         }

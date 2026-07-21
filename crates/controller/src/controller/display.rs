@@ -241,6 +241,45 @@ pub struct CellImageInfo {
     pub data: String,
 }
 
+/// One data series of a chart, resolved for rendering. `values` holds the
+/// cached numeric values (gaps are `null`); the frontend re-reads live values
+/// from the source range and only falls back to these.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_series_info.ts", rename_all = "camelCase")]
+pub struct ChartSeriesInfo {
+    pub name: Option<String>,
+    pub values: Vec<Option<f64>>,
+    /// Resolved fill color as an RGB/ARGB hex (no `#`), or `None` to use the
+    /// renderer's default palette. Scheme colors are resolved against the theme.
+    pub color: Option<String>,
+}
+
+/// A chart anchored on a sheet, resolved for rendering. The anchor is its
+/// from/to cell positions plus EMU offsets into those cells; `chart_type` is
+/// one of `col|bar|line|area|pie|doughnut|scatter`; `legend_pos` (if any) is
+/// `top|bottom|left|right`.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_info.ts", rename_all = "camelCase")]
+pub struct ChartInfo {
+    pub chart_id: String,
+    pub from_row: usize,
+    pub from_col: usize,
+    pub from_col_off: i64,
+    pub from_row_off: i64,
+    pub to_row: usize,
+    pub to_col: usize,
+    pub to_col_off: i64,
+    pub to_row_off: i64,
+    pub chart_type: String,
+    pub stacked: bool,
+    pub title: Option<String>,
+    pub legend_pos: Option<String>,
+    pub categories: Vec<String>,
+    pub series: Vec<ChartSeriesInfo>,
+    pub cat_axis_title: Option<String>,
+    pub val_axis_title: Option<String>,
+}
+
 /// A person referenced by a comment (author or mention). Enterprise builds
 /// populate `user_id` + `provider_id` from their directory; the `src` app
 /// leaves them `None` and only sets `display_name`.

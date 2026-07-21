@@ -8,7 +8,7 @@ use crate::controller::display::BlockSchemaRandomEntry;
 use crate::controller::display::BlockSchemaType;
 use crate::controller::display::{
     BlockCellInfo, BlockDisplayInfo, BlockInfo, CellCoordinate, CellImageInfo, CellPosition,
-    DisplayWindow, DisplayWindowWithStartPoint, LinkInfo,
+    ChartInfo, ChartSeriesInfo, DisplayWindow, DisplayWindowWithStartPoint, LinkInfo,
 };
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
@@ -341,6 +341,192 @@ impl<'a> Worksheet<'a> {
             .collect::<Vec<_>>();
         result.sort_by_key(|c| (c.row, c.col));
         result
+    }
+
+    /// Resolve an authored series color to an RGB/ARGB hex. Direct RGB passes
+    /// through; scheme colors (accent1..6, tx/bg/dk/lt, hyperlink) map to the
+    /// workbook theme. Returns `None` when unknown or there is no theme.
+    fn resolve_series_color(
+        &self,
+        color: &logisheets_workbook::prelude::SeriesColor,
+    ) -> Option<String> {
+        use logisheets_workbook::prelude::SeriesColor;
+        match color {
+            SeriesColor::Srgb(hex) => Some(hex.clone()),
+            SeriesColor::Scheme(name) => {
+                let idx = match name.as_str() {
+                    "dk1" | "tx1" => 0,
+                    "lt1" | "bg1" => 1,
+                    "dk2" | "tx2" => 2,
+                    "lt2" | "bg2" => 3,
+                    "accent1" => 4,
+                    "accent2" => 5,
+                    "accent3" => 6,
+                    "accent4" => 7,
+                    "accent5" => 8,
+                    "accent6" => 9,
+                    "hlink" => 10,
+                    "folHlink" => 11,
+                    _ => return None,
+                };
+                let c = self.controller.settings.theme.get_color(idx);
+                if c.is_empty() { None } else { Some(c) }
+            }
+        }
+    }
+
+    /// Resolve a chart series reference (e.g. `Sheet1!$B$2:$E$2`) to its
+    /// current numeric values, row-major. Non-numeric / empty cells become
+    /// `None`. Returns `None` if the reference can't be parsed or its sheet
+    /// can't be found (the caller then keeps the cached values).
+    fn resolve_series_values(&self, val_ref: &str) -> Option<Vec<Option<f64>>> {
+        let (sheet_name, sr, sc, er, ec) = Self::parse_a1_range(val_ref)?;
+        let sheet_id = match sheet_name {
+            Some(name) => *self.controller.status.sheet_id_manager.get_id(&name)?,
+            None => self.sheet_id,
+        };
+        let mut out = Vec::new();
+        for row in sr..=er {
+            for col in sc..=ec {
+                let v = self
+                    .controller
+                    .status
+                    .navigator
+                    .fetch_cell_id(&sheet_id, row, col)
+                    .ok()
+                    .and_then(|cid| self.controller.status.container.get_cell(sheet_id, &cid))
+                    .and_then(|cell| match &cell.value {
+                        logisheets_base::CellValue::Number(n) => Some(*n),
+                        _ => None,
+                    });
+                out.push(v);
+            }
+        }
+        Some(out)
+    }
+
+    /// Parse an A1 reference `[Sheet!]$C$R[:$C$R]` into
+    /// `(sheet, start_row, start_col, end_row, end_col)` (0-based, normalized).
+    fn parse_a1_range(s: &str) -> Option<(Option<String>, usize, usize, usize, usize)> {
+        let (sheet, range) = match s.rfind('!') {
+            Some(i) => {
+                let mut name = s[..i].to_string();
+                if name.len() >= 2 && name.starts_with('\'') && name.ends_with('\'') {
+                    name = name[1..name.len() - 1].replace("''", "'");
+                }
+                (Some(name), &s[i + 1..])
+            }
+            None => (None, s),
+        };
+        let (start, end) = match range.split_once(':') {
+            Some((a, b)) => (a, b),
+            None => (range, range),
+        };
+        let (c1, r1) = Self::parse_a1_cell(start)?;
+        let (c2, r2) = Self::parse_a1_cell(end)?;
+        Some((sheet, r1.min(r2), c1.min(c2), r1.max(r2), c1.max(c2)))
+    }
+
+    /// Parse a single A1 cell like `$B$2` into `(col, row)`, 0-based.
+    fn parse_a1_cell(s: &str) -> Option<(usize, usize)> {
+        let s = s.replace('$', "");
+        let bytes = s.as_bytes();
+        let mut i = 0;
+        let mut col = 0usize;
+        while i < bytes.len() && bytes[i].is_ascii_alphabetic() {
+            col = col * 26 + ((bytes[i].to_ascii_uppercase() - b'A') as usize + 1);
+            i += 1;
+        }
+        if i == 0 || i >= bytes.len() {
+            return None;
+        }
+        let row: usize = s[i..].parse().ok()?;
+        if col == 0 || row == 0 {
+            return None;
+        }
+        Some((col - 1, row - 1))
+    }
+
+    /// All charts anchored on this sheet, each resolved to its current from/to
+    /// cell positions. Charts whose anchor cells no longer exist are skipped.
+    /// `data` (type, series, cached values) comes from the chart's parsed
+    /// OOXML; the frontend re-reads live values from the source ranges.
+    pub fn get_charts(&self) -> Vec<ChartInfo> {
+        use logisheets_workbook::prelude::{ChartType, LegendPos};
+
+        let chart_type_str = |t: &ChartType| -> String {
+            match t {
+                ChartType::Col => "col",
+                ChartType::Bar => "bar",
+                ChartType::Line => "line",
+                ChartType::Area => "area",
+                ChartType::Pie => "pie",
+                ChartType::Doughnut => "doughnut",
+                ChartType::Scatter => "scatter",
+            }
+            .to_string()
+        };
+        let legend_pos_str = |p: &LegendPos| -> String {
+            match p {
+                LegendPos::Top => "top",
+                LegendPos::Bottom => "bottom",
+                LegendPos::Left => "left",
+                LegendPos::Right => "right",
+            }
+            .to_string()
+        };
+
+        let nav = &self.controller.status.navigator;
+        self.controller
+            .status
+            .chart_manager
+            .charts_of_sheet(self.sheet_id)
+            .into_iter()
+            .filter_map(|chart| {
+                let (from_row, from_col) =
+                    nav.fetch_cell_idx(&self.sheet_id, &chart.from.cell).ok()?;
+                let (to_row, to_col) =
+                    nav.fetch_cell_idx(&self.sheet_id, &chart.to.cell).ok()?;
+                let d = &chart.data;
+                Some(ChartInfo {
+                    chart_id: chart.id.clone(),
+                    from_row,
+                    from_col,
+                    from_col_off: chart.from.col_off,
+                    from_row_off: chart.from.row_off,
+                    to_row,
+                    to_col,
+                    to_col_off: chart.to.col_off,
+                    to_row_off: chart.to.row_off,
+                    chart_type: chart_type_str(&d.chart_type),
+                    stacked: d.stacked,
+                    title: d.title.clone(),
+                    legend_pos: d.legend_pos.as_ref().map(legend_pos_str),
+                    categories: d.categories.clone(),
+                    series: d
+                        .series
+                        .iter()
+                        .map(|s| ChartSeriesInfo {
+                            name: s.name.clone(),
+                            // Live values re-read from the source range so the
+                            // chart reflects edits; fall back to the OOXML cache
+                            // if the reference can't be resolved.
+                            values: s
+                                .val_ref
+                                .as_deref()
+                                .and_then(|r| self.resolve_series_values(r))
+                                .unwrap_or_else(|| s.cached_values.clone()),
+                            color: s
+                                .color
+                                .as_ref()
+                                .and_then(|c| self.resolve_series_color(c)),
+                        })
+                        .collect(),
+                    cat_axis_title: d.cat_axis_title.clone(),
+                    val_axis_title: d.val_axis_title.clone(),
+                })
+            })
+            .collect()
     }
 
     pub fn get_cell_infos(

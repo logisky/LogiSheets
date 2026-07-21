@@ -13,6 +13,7 @@ use crate::ooxml::{
 };
 use crate::workbook::Id;
 use crate::workbook::Media;
+use crate::workbook::PassthroughPart;
 use crate::workbook::WorksheetDrawing;
 use crate::workbook::Xl;
 use std::collections::HashMap;
@@ -358,23 +359,93 @@ fn de_ws_drawing<R: Read + Seek>(
             return Ok(WorksheetDrawing {
                 content,
                 rels: Vec::new(),
+                chart_parts: Vec::new(),
             });
         }
     };
+    let mut chart_parts = Vec::<PassthroughPart>::new();
     for r in rels.iter() {
-        if RType(&r.ty) == IMAGE {
-            let media_abs = get_target_abs_path(&rels_path, &r.target);
-            if let Some(mp) = media_abs.to_str() {
-                let name = mp.rsplit('/').next().unwrap_or(mp).to_string();
-                if !medias.iter().any(|m| m.name == name) {
-                    if let Ok(data) = read_binary(mp, archive) {
-                        medias.push(Media { name, data });
+        match RType(&r.ty) {
+            IMAGE => {
+                let media_abs = get_target_abs_path(&rels_path, &r.target);
+                if let Some(mp) = media_abs.to_str() {
+                    let name = mp.rsplit('/').next().unwrap_or(mp).to_string();
+                    if !medias.iter().any(|m| m.name == name) {
+                        if let Ok(data) = read_binary(mp, archive) {
+                            medias.push(Media { name, data });
+                        }
                     }
+                }
+            }
+            CHART => {
+                let chart_abs = get_target_abs_path(&rels_path, &r.target);
+                if let Some(cs) = chart_abs.to_str() {
+                    read_chart_tree(cs, archive, &mut chart_parts);
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(WorksheetDrawing {
+        content,
+        rels,
+        chart_parts,
+    })
+}
+
+/// Read a chart part plus its style/color satellites as opaque passthrough
+/// parts. The chart part keeps its own relationships (to the satellites) so the
+/// whole tree can be re-emitted verbatim.
+fn read_chart_tree<R: Read + Seek>(
+    chart_path: &str,
+    archive: &mut ZipArchive<R>,
+    out: &mut Vec<PassthroughPart>,
+) {
+    let chart = match read_passthrough_part(chart_path, CHART, archive) {
+        Some(p) => p,
+        None => return,
+    };
+    let chart_rels_path = get_rels(chart_path)
+        .ok()
+        .and_then(|p| p.to_str().map(|s| s.to_string()));
+    let satellites = chart.rels.clone();
+    out.push(chart);
+    if let Some(crp) = chart_rels_path {
+        for sr in satellites {
+            let sat_rtype = match RType(&sr.ty) {
+                CHART_STYLE => CHART_STYLE,
+                CHART_COLOR_STYLE => CHART_COLOR_STYLE,
+                _ => continue,
+            };
+            let sat_abs = get_target_abs_path(&crp, &sr.target);
+            if let Some(ss) = sat_abs.to_str() {
+                if let Some(part) = read_passthrough_part(ss, sat_rtype, archive) {
+                    out.push(part);
                 }
             }
         }
     }
-    Ok(WorksheetDrawing { content, rels })
+}
+
+/// Read a single part's bytes plus its `_rels` (if present) verbatim.
+fn read_passthrough_part<R: Read + Seek>(
+    path: &str,
+    rtype: RType<'static>,
+    archive: &mut ZipArchive<R>,
+) -> Option<PassthroughPart> {
+    let data = read_binary(path, archive).ok()?;
+    let rels = get_rels(path)
+        .ok()
+        .and_then(|p| p.to_str().map(|s| s.to_string()))
+        .and_then(|rp| de_relationships(&rp, archive).ok())
+        .map(|r| r.relationships)
+        .unwrap_or_default();
+    Some(PassthroughPart {
+        path: path.to_string(),
+        data,
+        rtype,
+        rels,
+    })
 }
 
 fn read_binary<R: Read + Seek>(

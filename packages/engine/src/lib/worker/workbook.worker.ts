@@ -12,6 +12,7 @@ import type {
     MergeCell,
     Comment,
     CellImageInfo,
+    ChartInfo,
     SheetDimension,
     DependentCell,
     CellRefRange,
@@ -357,6 +358,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         sheetIdx: number
     }): Result<readonly CellImageInfo[]> {
         return this.getSheet(params.sheetIdx).getCellImages()
+    }
+
+    public getCharts(params: {
+        sheetIdx: number
+    }): Result<readonly ChartInfo[]> {
+        return this.getSheet(params.sheetIdx).getCharts()
     }
 
     // ========================================================================
@@ -732,6 +739,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetCellImages:
                     result = this.getCellImages(args)
+                    break
+                case MethodName.GetCharts:
+                    result = this.getCharts(args)
                     break
                 case MethodName.CalcCondition:
                     result = this.calcCondition(args)

@@ -17,6 +17,7 @@ pub mod edit_action;
 mod errors;
 pub mod exclusive;
 mod ext_book_manager;
+pub mod chart_manager;
 mod ext_ref_manager;
 mod file_loader;
 mod file_saver;

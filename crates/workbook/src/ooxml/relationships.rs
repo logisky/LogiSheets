@@ -10,7 +10,7 @@ pub struct Relationships {
     pub relationships: Vec<CtRelationship>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtRelationship {
     #[xmlserde(name = b"Id", ty = "attr")]
     pub id: String,
