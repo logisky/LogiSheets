@@ -1,6 +1,6 @@
 {
     "name": "logisheets-runtime",
-    "version": "1.7.1",
+    "version": "1.8.0",
     "description": "Headless LogiSheets spreadsheet runtime for Node — logisheets-core wired to the Node WASM engine. The Node counterpart of the browser app.",
     "type": "module",
     "main": "./dist/index.js",
@@ -18,8 +18,8 @@
     "author": "Jeremy He",
     "license": "MIT",
     "dependencies": {
-        "logisheets": "^1.7.1",
-        "logisheets-core": "^1.7.1"
+        "logisheets": "^1.8.0",
+        "logisheets-core": "^1.8.0"
     },
     "devDependencies": {
         "typescript": "^5.5.0",
