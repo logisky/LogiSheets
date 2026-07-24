@@ -111,7 +111,7 @@
         "typescript": "^5.7.2",
         "vercel": "^56.4.1",
         "vitepress": "^1.6.4",
-        "vitest": "^1.6.1",
+        "vitest": "3.2.6",
         "webpack": "^5.97.1",
         "webpack-cli": "^4.9.2",
         "worker-loader": "^3.0.8"
