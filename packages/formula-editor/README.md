@@ -1,6 +1,9 @@
-# logisheets-formula-editor-react
+# logisheets-formula-editor
 
-A React component for editing spreadsheet formulas with syntax highlighting and autocomplete, built on [CodeMirror 6](https://codemirror.net/).
+A formula editor for spreadsheets with syntax highlighting and autocomplete,
+built on [CodeMirror 6](https://codemirror.net/). Ships a React component at the
+package root and a **framework-agnostic core** (`/core`) usable from vanilla JS,
+Vue, Svelte, Angular, etc.
 
 ## Features
 
@@ -28,14 +31,16 @@ This design ensures:
 ## Installation
 
 ```bash
-# From the LogiSheets root directory
-yarn install
+npm install logisheets-formula-editor
 ```
 
-## Usage
+For the React component (package root), `react` and `react-dom` are peer
+dependencies. The `/core` entry has no framework dependency.
+
+## Usage (React)
 
 ```tsx
-import { FormulaEditor, FormulaDisplayInfo, FormulaFunction } from 'logisheets-formula-editor-react'
+import { FormulaEditor, FormulaDisplayInfo, FormulaFunction } from 'logisheets-formula-editor'
 
 // Define available functions for autocomplete
 const functions: FormulaFunction[] = [
@@ -110,6 +115,27 @@ interface FormulaEditorConfig {
 }
 ```
 
+## Framework-agnostic core
+
+The React `<FormulaEditor>` is a thin wrapper over a framework-free core. To use
+it from vanilla JS (or Vue, Svelte, Angular, …), import from the `/core` subpath
+and mount it onto a DOM element — the same pattern as `logisheets-engine`:
+
+```ts
+import {createFormulaEditor} from 'logisheets-formula-editor/core'
+import 'logisheets-formula-editor/styles.css'
+
+const editor = createFormulaEditor(el, {
+    getDisplayUnits,      // same backend callback as the React prop
+    formulaFunctions,
+    // fontSize, textAlign, wordWrap, onChange, onSubmit, …
+})
+```
+
+The core exposes `FormulaEditorHandle` / `FormulaEditorOptions`. Additional
+subpaths: `/engine` (LogiSheets engine integration) and `/inline` (inline editing
+variant).
+
 ## Keyboard Shortcuts
 
 | Key | Action |
@@ -138,7 +164,7 @@ We use CodeMirror 6 instead of a custom canvas-based editor because it provides:
 
 ```bash
 # Start the demo app
-cd packages/formula-editor-react
+cd packages/formula-editor
 yarn dev
 
 # Open http://localhost:5173

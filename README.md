@@ -1,8 +1,8 @@
 # LogiSheets
 
-![Logo](./docs/logo/logisheets.jpg)
+![Logo](./docs/public/logo/logisheets.jpg)
 
-[![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT/Mit-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 **From sheets to systems.** LogiSheets is a web-based spreadsheet built on a Rust engine compiled to WebAssembly — it reads, manipulates, and writes real `.xlsx` files, and runs the same engine in the browser and on Node. But it's more than a grid: with **structured data (Blocks)** that carry schema, types, and validation, and a **plugin system (Crafts)** that turns workbooks into real applications, a LogiSheets spreadsheet stops being a static document and becomes a building block of an actual system.
 
@@ -77,7 +77,7 @@ The WASM wrappers expose the engine over a simple RPC surface and carry no exten
 | **logisheets** (node) | `packages/node` | Node.js WASM bindings |
 | **logisheets-core** | `packages/core` | Engine-neutral extension logic, shared by every host |
 | **logisheets-runtime** | `packages/runtime` | Headless spreadsheet runtime for Node |
-| **logisheets-engine** | `packages/engine` | Canvas-based spreadsheet UI component — watermarked, contact us for removal |
+| **logisheets-engine** | `packages/engine` | Canvas-based spreadsheet UI component (MIT, fully open source) |
 | **logisheets-formula-editor** | `packages/formula-editor` | CodeMirror 6 formula editor |
 | **logician** | `packages/logician` | AI agent toolkit for operating workbooks (browser + Node) |
 
