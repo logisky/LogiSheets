@@ -275,6 +275,46 @@ export class WorkbookOps {
         )
     }
 
+    /**
+     * Sort a block's records by the named field. Rows are reordered for a
+     * row-schema block, columns for a col-schema block. The engine computes a
+     * type-aware order (numbers numerically, text lexicographically, blanks
+     * last); the reorder is one undoable transaction.
+     *
+     * Throws for random-schema blocks (no fields) or an unknown field name.
+     */
+    async sortBlock(
+        sheetIdx: number,
+        blockId: number,
+        field: string,
+        asc = true,
+        undoable = true
+    ): Promise<ActionEffect> {
+        const order = await this.client.getBlockSortOrder({
+            sheetIdx,
+            blockId,
+            field,
+            asc,
+        })
+        if (isErrorMessage(order)) {
+            throw new Error('Sort failed: ' + order.msg)
+        }
+        return this.apply(
+            [
+                {
+                    type: 'reorderBlockLines',
+                    value: {
+                        sheetIdx,
+                        blockId,
+                        isRow: order.isRow,
+                        newOrder: order.newOrder,
+                    },
+                },
+            ],
+            undoable
+        )
+    }
+
     // ---- formatting -----------------------------------------------------
     //
     // Each method turns the current sheet + selection into style-update

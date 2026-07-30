@@ -353,7 +353,11 @@ pub struct UpdateChart {
 /// One series for [`CreateChart`]: an optional name and a value reference
 /// formula (e.g. `Sheet1!$B$2:$E$2`).
 #[derive(Debug, Clone, TS)]
-#[ts(file_name = "create_chart_series.ts", builder, rename_all = "camelCase")]
+#[ts(
+    file_name = "create_chart_series.ts",
+    builder,
+    rename_all = "camelCase"
+)]
 pub struct CreateChartSeries {
     pub name: Option<String>,
     pub value_ref: String,

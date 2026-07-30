@@ -177,10 +177,11 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
         writer.add_directory("xl/drawings", options())?;
         writer.add_directory("xl/drawings/_rels", options())?;
     }
-    if worksheets
-        .values()
-        .any(|w| w.drawing.as_ref().is_some_and(|d| !d.chart_parts.is_empty()))
-    {
+    if worksheets.values().any(|w| {
+        w.drawing
+            .as_ref()
+            .is_some_and(|d| !d.chart_parts.is_empty())
+    }) {
         writer.add_directory("xl/charts", options())?;
         writer.add_directory("xl/charts/_rels", options())?;
     }
@@ -584,7 +585,11 @@ mod tests {
             .expect("chart parts should be read from the drawing");
         assert!(d.chart_parts.iter().any(|p| p.path.ends_with("chart1.xml")));
         assert!(d.chart_parts.iter().any(|p| p.path.ends_with("style1.xml")));
-        assert!(d.chart_parts.iter().any(|p| p.path.ends_with("colors1.xml")));
+        assert!(
+            d.chart_parts
+                .iter()
+                .any(|p| p.path.ends_with("colors1.xml"))
+        );
         // Both anchor object-kinds present in this fixture are preserved: the
         // chart's graphicFrame and the text-box shape.
         assert!(
@@ -633,7 +638,10 @@ mod tests {
 
         // The content-type override for the chart part is emitted.
         let ct = read_zip_entry(&out, "[Content_Types].xml");
-        assert!(ct.contains("/xl/charts/chart1.xml"), "chart override missing");
+        assert!(
+            ct.contains("/xl/charts/chart1.xml"),
+            "chart override missing"
+        );
         assert!(
             ct.contains("drawingml.chart+xml"),
             "chart content-type missing"

@@ -53,6 +53,12 @@ impl Workbook {
         }
     }
 
+    /// Read-only access to the controller status, for sibling api modules
+    /// (e.g. `sort_block`) that live outside this file.
+    pub(crate) fn status(&self) -> &crate::controller::status::Status {
+        &self.controller.status
+    }
+
     /// Execute the `EditAction`
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
         self.controller.handle_action(action)
@@ -518,8 +524,14 @@ impl Workbook {
         use logisheets_base::{BlockRange, NormalRange};
         let st = &self.controller.status;
         let sheet_id = st.sheet_info_manager.get_sheet_id(sheet_idx).unwrap();
-        let a0 = st.navigator.fetch_norm_cell_id(&sheet_id, src.0, src.1).unwrap();
-        let a1 = st.navigator.fetch_norm_cell_id(&sheet_id, src.2, src.3).unwrap();
+        let a0 = st
+            .navigator
+            .fetch_norm_cell_id(&sheet_id, src.0, src.1)
+            .unwrap();
+        let a1 = st
+            .navigator
+            .fetch_norm_cell_id(&sheet_id, src.2, src.3)
+            .unwrap();
         let b0 = st
             .navigator
             .fetch_block_cell_id(&sheet_id, &block_id, blk_r0, blk_col)

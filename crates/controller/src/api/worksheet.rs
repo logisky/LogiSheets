@@ -485,8 +485,7 @@ impl<'a> Worksheet<'a> {
             .filter_map(|chart| {
                 let (from_row, from_col) =
                     nav.fetch_cell_idx(&self.sheet_id, &chart.from.cell).ok()?;
-                let (to_row, to_col) =
-                    nav.fetch_cell_idx(&self.sheet_id, &chart.to.cell).ok()?;
+                let (to_row, to_col) = nav.fetch_cell_idx(&self.sheet_id, &chart.to.cell).ok()?;
                 let d = &chart.data;
                 Some(ChartInfo {
                     chart_id: chart.id.clone(),
@@ -516,10 +515,7 @@ impl<'a> Worksheet<'a> {
                                 .as_deref()
                                 .and_then(|r| self.resolve_series_values(r))
                                 .unwrap_or_else(|| s.cached_values.clone()),
-                            color: s
-                                .color
-                                .as_ref()
-                                .and_then(|c| self.resolve_series_color(c)),
+                            color: s.color.as_ref().and_then(|c| self.resolve_series_color(c)),
                         })
                         .collect(),
                     cat_axis_title: d.cat_axis_title.clone(),

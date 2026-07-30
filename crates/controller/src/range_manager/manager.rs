@@ -245,8 +245,16 @@ mod tests {
             NormalCellId { row: 9, col: 0 },
         );
         let target = BlockRange::AddrRange(
-            BlockCellId { block_id: 1, row: 0, col: 0 },
-            BlockCellId { block_id: 1, row: 1, col: 0 },
+            BlockCellId {
+                block_id: 1,
+                row: 0,
+                col: 0,
+            },
+            BlockCellId {
+                block_id: 1,
+                row: 1,
+                col: 0,
+            },
         );
 
         // Cross-sheet: source on sheet 0, block on sheet 1.

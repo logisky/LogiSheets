@@ -364,6 +364,21 @@ pub fn get_block_values(
     serde_wasm_bindgen::to_value(&r).unwrap()
 }
 
+pub fn get_block_sort_order(
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+    field: String,
+    asc: bool,
+) -> JsValue {
+    init();
+    let manager = MANAGER.get();
+    let wb = manager.get_workbook(&id).unwrap();
+    let r = wb.get_block_sort_order(sheet_idx, block_id, &field, asc);
+    handle_result!(r);
+    serde_wasm_bindgen::to_value(&r).unwrap()
+}
+
 pub fn get_block_row_id(
     id: usize,
     sheet_id: SheetId,

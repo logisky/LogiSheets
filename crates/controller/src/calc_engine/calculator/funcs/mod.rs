@@ -138,6 +138,7 @@ where
         "RSQ" => regression::calc_rsq(args, fetcher),
         "SINH" => scalar_number::calc_sinh(args, fetcher),
         "SKEW" => distribution::statistics::calc_skew(args, fetcher),
+        "SKEW.P" => distribution::statistics::calc_skewp(args, fetcher),
         "SLOPE" => regression::calc_slope(args, fetcher),
         "STANDARDIZE" => more_math::calc_standardize(args, fetcher),
         "STDEV.P" => distribution::statistics::calc_stdevp(args, fetcher),

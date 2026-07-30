@@ -1,13 +1,12 @@
 use gents_derives::{Interface, TS};
 use logisheets_rs::BlockId;
 use logisheets_rs::{
-    ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo,
+    ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo, BlockSortOrder,
     CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
-    ChartInfo, ColId,
-    Comment, DependentCell, DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage,
-    FormulaDisplayInfo, LinkInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
-    ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style,
-    TempStatusDiff, Value,
+    ChartInfo, ColId, Comment, DependentCell, DisplayWindow, DisplayWindowWithStartPoint,
+    EditPayload, ErrorMessage, FormulaDisplayInfo, LinkInfo, MergeCell, ReproducibleCell, RowId,
+    RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId,
+    SheetInfo, Style, TempStatusDiff, Value,
 };
 use wasm_bindgen::prelude::*;
 
@@ -63,6 +62,7 @@ pub enum Message {
     GetSheetIdx(GetSheetIdxParams),
     GetSheetId(GetSheetIdParams),
     GetBlockValues(GetBlockValuesParams),
+    GetBlockSortOrder(GetBlockSortOrderParams),
     GetShadowCellId(GetShadowCellIdParams),
     GetShadowCellIds(GetShadowCellIdsParams),
     GetShadowInfoById(GetShadowInfoByIdParams),
@@ -140,7 +140,10 @@ pub struct GetPrecedentsParams {
 }
 
 #[derive(Debug, Clone, TS)]
-#[ts(file_name = "rpc_get_linkable_blocks_params.ts", rename_all = "camelCase")]
+#[ts(
+    file_name = "rpc_get_linkable_blocks_params.ts",
+    rename_all = "camelCase"
+)]
 pub struct GetLinkableBlocksParams {
     pub sheet_idx: usize,
     pub col_cnt: usize,
@@ -472,6 +475,20 @@ pub struct GetBlockValuesParams {
 
 #[derive(Debug, Clone, TS)]
 #[ts(
+    file_name = "rpc_get_block_sort_order_params.ts",
+    rename_all = "camelCase"
+)]
+pub struct GetBlockSortOrderParams {
+    pub sheet_idx: usize,
+    pub block_id: BlockId,
+    /// The name of the field to sort by.
+    pub field: String,
+    /// Ascending when true, descending when false.
+    pub asc: bool,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(
     file_name = "rpc_get_shadow_cell_id_params.ts",
     rename_all = "camelCase"
 )]
@@ -797,6 +814,10 @@ pub struct WorkbookMethods {
         params: GetBlockValuesParams,
         book_id: Option<usize>,
     ) -> Result<Vec<String>, ErrorMessage>,
+    pub get_block_sort_order: fn(
+        params: GetBlockSortOrderParams,
+        book_id: Option<usize>,
+    ) -> Result<BlockSortOrder, ErrorMessage>,
     pub get_available_block_id:
         fn(params: GetAvailableBlockIdParams, book_id: Option<usize>) -> Result<u32, ErrorMessage>,
     pub get_all_block_fields: fn(book_id: Option<usize>) -> Result<Vec<BlockField>, ErrorMessage>,
@@ -1059,6 +1080,13 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.block_id,
             params.row_ids,
             params.col_ids,
+        ),
+        Message::GetBlockSortOrder(params) => controller::get_block_sort_order(
+            id,
+            params.sheet_idx,
+            params.block_id,
+            params.field,
+            params.asc,
         ),
         Message::GetShadowCellId(params) => controller::get_shadow_cell_id(
             id,
