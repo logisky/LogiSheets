@@ -30,10 +30,7 @@ fn default_prst_rect() -> String {
     b"r",
     b"http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 ))]
-#[xmlserde(with_custom_ns(
-    b"c",
-    b"http://schemas.openxmlformats.org/drawingml/2006/chart"
-))]
+#[xmlserde(with_custom_ns(b"c", b"http://schemas.openxmlformats.org/drawingml/2006/chart"))]
 pub struct CtWsDr {
     #[xmlserde(name = b"xdr:twoCellAnchor", ty = "child")]
     pub two_cell_anchors: Vec<CtTwoCellAnchor>,
@@ -394,9 +391,7 @@ impl CtTwoCellAnchor {
                 xfrm: None,
                 graphic: Some(CtGraphicalObject {
                     graphic_data: Some(CtGraphicalObjectData {
-                        uri: String::from(
-                            "http://schemas.openxmlformats.org/drawingml/2006/chart",
-                        ),
+                        uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),
                         chart: Some(CChart {
                             r_id: Some(chart_rid),
                         }),

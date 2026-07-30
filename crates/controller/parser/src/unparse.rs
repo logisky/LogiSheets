@@ -427,8 +427,7 @@ impl Stringify for RangeDisplay {
                         get_block_cell_str(&sheet_id, block_cell_id, start_row, start_col)
                     }
                     BlockRange::AddrRange(start, end) => {
-                        let start_str =
-                            get_block_cell_str(&sheet_id, start, start_row, start_col)?;
+                        let start_str = get_block_cell_str(&sheet_id, start, start_row, start_col)?;
                         let end_str = get_block_cell_str(&sheet_id, end, end_row, end_col)?;
                         Ok(format!("{}:{}", start_str, end_str))
                     }

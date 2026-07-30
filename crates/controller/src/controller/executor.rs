@@ -12,6 +12,7 @@ use crate::{
     block_manager::schema_manager::executor::BlockSchemaExecutor,
     calc_engine::CalcEngine,
     cell_attachments::executor::CellAttachmentsExecutor,
+    chart_manager::ChartExecutor,
     checkpoint_manager::CheckpointManager,
     connectors::{
         BlockSchemaConnector, CalcConnector, CellAttachmentsConnector, ContainerConnector,
@@ -23,7 +24,6 @@ use crate::{
     edit_action::{EditPayload, PayloadsAction, SheetRename},
     exclusive::executor::ExclusiveManagerExecutor,
     formula_manager::{FormulaExecutor, Vertex},
-    chart_manager::ChartExecutor,
     image_manager::ImageExecutor,
     navigator::{NavExecutor, Navigator},
     range_manager::RangeExecutor,

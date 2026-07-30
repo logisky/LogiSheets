@@ -85,6 +85,32 @@ where
     calc(args, fetcher, func)
 }
 
+pub fn calc_skewp<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    // Population skewness: (1/n) · Σ((xᵢ − x̄)/σ)³, with the population σ
+    // (√(Σ(xᵢ − x̄)²/n)). Matches Excel's SKEW.P: needs n ≥ 3 and σ > 0.
+    let func = |nums: Vec<f64>| -> Option<f64> {
+        let n = nums.len();
+        if n < 3 {
+            return None;
+        }
+        let nf = n as f64;
+        let mean = nums.iter().sum::<f64>() / nf;
+        let sigma = (nums.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / nf).sqrt();
+        if sigma == 0. {
+            return None;
+        }
+        let sum_cubed = nums
+            .iter()
+            .map(|x| ((x - mean) / sigma).powi(3))
+            .sum::<f64>();
+        Some(sum_cubed / nf)
+    };
+    calc(args, fetcher, func)
+}
+
 pub fn calc_kurt<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,

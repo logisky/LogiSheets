@@ -3,11 +3,10 @@ use logisheets_rs::BlockId;
 use logisheets_rs::{
     ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo,
     CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
-    ChartInfo, ColId,
-    Comment, DependentCell, DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage,
-    FormulaDisplayInfo, LinkInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult,
-    ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style,
-    TempStatusDiff, Value,
+    ChartInfo, ColId, Comment, DependentCell, DisplayWindow, DisplayWindowWithStartPoint,
+    EditPayload, ErrorMessage, FormulaDisplayInfo, LinkInfo, MergeCell, ReproducibleCell, RowId,
+    RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId,
+    SheetInfo, Style, TempStatusDiff, Value,
 };
 use wasm_bindgen::prelude::*;
 
@@ -140,7 +139,10 @@ pub struct GetPrecedentsParams {
 }
 
 #[derive(Debug, Clone, TS)]
-#[ts(file_name = "rpc_get_linkable_blocks_params.ts", rename_all = "camelCase")]
+#[ts(
+    file_name = "rpc_get_linkable_blocks_params.ts",
+    rename_all = "camelCase"
+)]
 pub struct GetLinkableBlocksParams {
     pub sheet_idx: usize,
     pub col_cnt: usize,

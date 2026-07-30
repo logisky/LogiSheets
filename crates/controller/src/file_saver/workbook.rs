@@ -2,11 +2,11 @@ use itertools::Itertools;
 use logisheets_base::NormalRange;
 use logisheets_workbook::{
     logisheets::{AppData, LinkRangeXml, LogiSheetsData, Sheet},
+    prelude::{ChartAnchor, PassthroughPart},
     prelude::{
         CtExternalReference, CtExternalReferences, CtPerson, CtSheet, CtSheets, Persons,
         WorkbookPart,
     },
-    prelude::{ChartAnchor, PassthroughPart},
     workbook::{DocProps, Media, Wb, Worksheet, WorksheetDrawing, Xl},
 };
 use std::collections::HashMap;
@@ -117,7 +117,8 @@ pub fn save_workbook<S: SaverTrait>(
             // images share one drawing part.
             let mut chart_anchors: Vec<ChartAnchor> = vec![];
             let mut chart_parts: Vec<PassthroughPart> = vec![];
-            let mut seen_parts: std::collections::HashSet<String> = std::collections::HashSet::new();
+            let mut seen_parts: std::collections::HashSet<String> =
+                std::collections::HashSet::new();
             for chart in chart_manager.charts_of_sheet(sheet_id) {
                 let from = navigator.fetch_cell_idx(&sheet_id, &chart.from.cell);
                 let to = navigator.fetch_cell_idx(&sheet_id, &chart.to.cell);
@@ -145,8 +146,11 @@ pub fn save_workbook<S: SaverTrait>(
             }
 
             if !cell_images.is_empty() || !chart_anchors.is_empty() {
-                worksheet.drawing =
-                    Some(WorksheetDrawing::build(&cell_images, chart_anchors, chart_parts));
+                worksheet.drawing = Some(WorksheetDrawing::build(
+                    &cell_images,
+                    chart_anchors,
+                    chart_parts,
+                ));
             }
 
             // Round-trip Excel data validation, stored verbatim per sheet.

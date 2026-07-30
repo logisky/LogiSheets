@@ -103,8 +103,14 @@ impl<'a> CalcConnector<'a> {
         }
         let block_id = start.block_id;
         let master = self.navigator.get_master_cell(&sheet_id, &block_id).ok()?;
-        let (m_row, m_col) = self.navigator.fetch_normal_cell_idx(&sheet_id, &master).ok()?;
-        let (s_row, s_col) = self.navigator.fetch_block_cell_idx(&sheet_id, &start).ok()?;
+        let (m_row, m_col) = self
+            .navigator
+            .fetch_normal_cell_idx(&sheet_id, &master)
+            .ok()?;
+        let (s_row, s_col) = self
+            .navigator
+            .fetch_block_cell_idx(&sheet_id, &start)
+            .ok()?;
         // Only a column anchored at the block's top row is a record column.
         if s_row != m_row {
             return None;
@@ -140,8 +146,10 @@ impl<'a> CalcConnector<'a> {
             BlockRange::AddrRange(start, end) => {
                 let end = self.grow_block_column_end(sheet, start, end).unwrap_or(end);
                 let (Ok((start_row, start_col)), Ok((end_row, end_col))) = (
-                    self.navigator.fetch_cell_idx(&sheet, &CellId::BlockCell(start)),
-                    self.navigator.fetch_cell_idx(&sheet, &CellId::BlockCell(end)),
+                    self.navigator
+                        .fetch_cell_idx(&sheet, &CellId::BlockCell(start)),
+                    self.navigator
+                        .fetch_cell_idx(&sheet, &CellId::BlockCell(end)),
                 ) else {
                     return CalcVertex::from_error(ast::Error::Ref);
                 };
@@ -188,12 +196,17 @@ impl<'a> Connector for CalcConnector<'a> {
                         // resolution-time, so save/load keeps the facade.
                         let range = if let Range::Normal(nr) = &range {
                             use crate::range_manager::link::{LinkRef, NavLink, resolve_normal};
-                            let res = self
-                                .range_manager
-                                .get_sheet_manager_assert(&sheet_id)
-                                .map(|m| {
-                                    resolve_normal(&NavLink(self.navigator), sheet_id, &m.links, nr)
-                                });
+                            let res =
+                                self.range_manager
+                                    .get_sheet_manager_assert(&sheet_id)
+                                    .map(|m| {
+                                        resolve_normal(
+                                            &NavLink(self.navigator),
+                                            sheet_id,
+                                            &m.links,
+                                            nr,
+                                        )
+                                    });
                             match res {
                                 Some(LinkRef::Invalid) => {
                                     return CalcVertex::from_error(ast::Error::Value);

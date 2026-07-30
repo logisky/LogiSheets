@@ -518,8 +518,14 @@ impl Workbook {
         use logisheets_base::{BlockRange, NormalRange};
         let st = &self.controller.status;
         let sheet_id = st.sheet_info_manager.get_sheet_id(sheet_idx).unwrap();
-        let a0 = st.navigator.fetch_norm_cell_id(&sheet_id, src.0, src.1).unwrap();
-        let a1 = st.navigator.fetch_norm_cell_id(&sheet_id, src.2, src.3).unwrap();
+        let a0 = st
+            .navigator
+            .fetch_norm_cell_id(&sheet_id, src.0, src.1)
+            .unwrap();
+        let a1 = st
+            .navigator
+            .fetch_norm_cell_id(&sheet_id, src.2, src.3)
+            .unwrap();
         let b0 = st
             .navigator
             .fetch_block_cell_id(&sheet_id, &block_id, blk_r0, blk_col)

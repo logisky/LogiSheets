@@ -116,7 +116,11 @@ pub fn parse_chart(bytes: &[u8]) -> Option<ChartData> {
 fn detect_type(plot: &CtPlotArea) -> Option<(ChartType, bool, &Vec<CtSer>)> {
     if let Some(b) = &plot.bar_chart {
         let horizontal = b.bar_dir.as_ref().and_then(|d| d.val.as_deref()) == Some("bar");
-        let ty = if horizontal { ChartType::Bar } else { ChartType::Col };
+        let ty = if horizontal {
+            ChartType::Bar
+        } else {
+            ChartType::Col
+        };
         return Some((ty, is_stacked(b.grouping.as_ref()), &b.ser));
     }
     if let Some(l) = &plot.line_chart {
@@ -649,24 +653,42 @@ pub fn build_chart_xml(
 
     match chart_type {
         ChartType::Col | ChartType::Bar => {
-            let dir = if matches!(chart_type, ChartType::Bar) { "bar" } else { "col" };
+            let dir = if matches!(chart_type, ChartType::Bar) {
+                "bar"
+            } else {
+                "col"
+            };
             s.push_str("<c:barChart>");
             s.push_str(&format!("<c:barDir val=\"{}\"/>", dir));
             s.push_str("<c:grouping val=\"clustered\"/><c:varyColors val=\"0\"/>");
             push_cartesian_series(&mut s, categories_ref, series);
-            s.push_str(&format!("<c:axId val=\"{}\"/><c:axId val=\"{}\"/>", AX_CAT, AX_VAL));
+            s.push_str(&format!(
+                "<c:axId val=\"{}\"/><c:axId val=\"{}\"/>",
+                AX_CAT, AX_VAL
+            ));
             s.push_str("</c:barChart>");
         }
         ChartType::Line | ChartType::Area => {
-            let tag = if matches!(chart_type, ChartType::Area) { "areaChart" } else { "lineChart" };
+            let tag = if matches!(chart_type, ChartType::Area) {
+                "areaChart"
+            } else {
+                "lineChart"
+            };
             s.push_str(&format!("<c:{}>", tag));
             s.push_str("<c:grouping val=\"standard\"/><c:varyColors val=\"0\"/>");
             push_cartesian_series(&mut s, categories_ref, series);
-            s.push_str(&format!("<c:axId val=\"{}\"/><c:axId val=\"{}\"/>", AX_CAT, AX_VAL));
+            s.push_str(&format!(
+                "<c:axId val=\"{}\"/><c:axId val=\"{}\"/>",
+                AX_CAT, AX_VAL
+            ));
             s.push_str(&format!("</c:{}>", tag));
         }
         ChartType::Pie | ChartType::Doughnut => {
-            let tag = if matches!(chart_type, ChartType::Doughnut) { "doughnutChart" } else { "pieChart" };
+            let tag = if matches!(chart_type, ChartType::Doughnut) {
+                "doughnutChart"
+            } else {
+                "pieChart"
+            };
             s.push_str(&format!("<c:{}>", tag));
             s.push_str("<c:varyColors val=\"1\"/>");
             push_cartesian_series(&mut s, categories_ref, series);
@@ -676,9 +698,14 @@ pub fn build_chart_xml(
             s.push_str(&format!("</c:{}>", tag));
         }
         ChartType::Scatter => {
-            s.push_str("<c:scatterChart><c:scatterStyle val=\"lineMarker\"/><c:varyColors val=\"0\"/>");
+            s.push_str(
+                "<c:scatterChart><c:scatterStyle val=\"lineMarker\"/><c:varyColors val=\"0\"/>",
+            );
             push_scatter_series(&mut s, categories_ref, series);
-            s.push_str(&format!("<c:axId val=\"{}\"/><c:axId val=\"{}\"/>", AX_CAT, AX_VAL));
+            s.push_str(&format!(
+                "<c:axId val=\"{}\"/><c:axId val=\"{}\"/>",
+                AX_CAT, AX_VAL
+            ));
             s.push_str("</c:scatterChart>");
         }
     }
