@@ -17,6 +17,7 @@ import type {
     BlockDisplayInfo,
     ActionEffect,
     CellCoordinate,
+    BlockSortOrder,
 } from 'logisheets-web'
 
 import type {Grid, AppropriateHeight} from '$types/index'
@@ -94,6 +95,7 @@ export enum MethodName {
     GetSheetIdx = 'getSheetIdx',
     GetSheetId = 'getSheetId',
     GetBlockValues = 'getBlockValues',
+    GetBlockSortOrder = 'getBlockSortOrder',
     GetAvailableBlockId = 'getAvailableBlockId',
 
     GetDiyCellIdWithBlockId = 'getDiyCellIdWithBlockId',
@@ -164,6 +166,7 @@ export interface IWorkbookWorker {
     loadWorkbook(params: any): Result<void>
     getSheetIdx(params: any): Result<number>
     getBlockValues(params: any): Result<readonly string[]>
+    getBlockSortOrder(params: any): Result<BlockSortOrder>
     getAvailableBlockId(params: any): Result<number>
     getSheetId(params: any): Result<number>
     getDisplayUnitsOfFormula(f: string): Result<FormulaDisplayInfo>

@@ -33,6 +33,8 @@ import type {
     CellInput,
     PredictFillParams,
     LinkInfo,
+    BlockSortOrder,
+    GetBlockSortOrderParams,
 } from 'logisheets-web'
 
 import {WorkerUpdate, MethodName} from './types'
@@ -360,9 +362,7 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         return this.getSheet(params.sheetIdx).getCellImages()
     }
 
-    public getCharts(params: {
-        sheetIdx: number
-    }): Result<readonly ChartInfo[]> {
+    public getCharts(params: {sheetIdx: number}): Result<readonly ChartInfo[]> {
         return this.getSheet(params.sheetIdx).getCharts()
     }
 
@@ -385,6 +385,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         colIds: any
     }): Result<readonly string[]> {
         return this.workbook.getBlockValues(params)
+    }
+
+    public getBlockSortOrder(
+        params: GetBlockSortOrderParams
+    ): Result<BlockSortOrder> {
+        return this.workbook.getBlockSortOrder(params)
     }
 
     public getAvailableBlockId(params: {sheetIdx: number}): Result<number> {
@@ -760,6 +766,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetBlockValues:
                     result = this.getBlockValues(args)
+                    break
+                case MethodName.GetBlockSortOrder:
+                    result = this.getBlockSortOrder(args)
                     break
                 case MethodName.GetAvailableBlockId:
                     result = this.getAvailableBlockId(args)

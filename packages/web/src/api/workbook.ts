@@ -4,6 +4,8 @@ import {
     AsyncFuncResult,
     BlockField,
     BlockInfo,
+    BlockSortOrder,
+    GetBlockSortOrderParams,
     FormulaDisplayInfo,
     ShadowCellInfo,
     SheetCellId,
@@ -612,6 +614,52 @@ export class Workbook {
         })
     }
 
+    /**
+     * Read-only: compute the row/column order that sorts a block by one of
+     * its fields. The engine compares typed cell values (numbers numerically,
+     * text lexicographically, blanks last), so this is the reliable source of
+     * a sort order. Fails for random-schema blocks (no fields).
+     */
+    public getBlockSortOrder(
+        params: GetBlockSortOrderParams
+    ): Result<BlockSortOrder> {
+        return rpc(
+            'getBlockSortOrder',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Sort a block's records by the named field and commit the reorder as a
+     * single (undoable) transaction. The engine computes the type-aware order;
+     * this just dispatches the resulting `reorderBlockLines` payload.
+     */
+    public sortBlock(
+        sheetIdx: number,
+        blockId: number,
+        field: string,
+        asc: boolean
+    ): Result<ActionEffect> {
+        const order = this.getBlockSortOrder({sheetIdx, blockId, field, asc})
+        if (isErrorMessage(order)) return order
+        return this.execTransaction({
+            payloads: [
+                {
+                    type: 'reorderBlockLines',
+                    value: {
+                        sheetIdx,
+                        blockId,
+                        isRow: order.isRow,
+                        newOrder: order.newOrder,
+                    },
+                },
+            ],
+            undoable: true,
+            temp: false,
+        })
+    }
+
     public getWorksheetById(id: number): Worksheet {
         return new Worksheet(this._id, id, false)
     }
@@ -694,10 +742,7 @@ export class Workbook {
     /** Snapshot the current workbook state under `label`. Overwrites
      *  any existing checkpoint with the same label. Returns the number
      *  of checkpoints currently stored after this save. */
-    public saveCheckpoint(
-        label: string,
-        description?: string
-    ): Result<number> {
+    public saveCheckpoint(label: string, description?: string): Result<number> {
         return rpc(
             'saveCheckpoint',
             {label, description} as unknown as Record<string, unknown>,

@@ -658,6 +658,11 @@ export class WorkbookClient implements Client {
             Client['getBlockValues']
         >
 
+    getBlockSortOrder: Client['getBlockSortOrder'] = (params) =>
+        this._call(MethodName.GetBlockSortOrder, params) as ReturnType<
+            Client['getBlockSortOrder']
+        >
+
     getDiyCellIdWithBlockId: Client['getDiyCellIdWithBlockId'] = (params) =>
         this._call(MethodName.GetDiyCellIdWithBlockId, params) as ReturnType<
             Client['getDiyCellIdWithBlockId']

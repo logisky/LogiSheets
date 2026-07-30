@@ -53,6 +53,12 @@ impl Workbook {
         }
     }
 
+    /// Read-only access to the controller status, for sibling api modules
+    /// (e.g. `sort_block`) that live outside this file.
+    pub(crate) fn status(&self) -> &crate::controller::status::Status {
+        &self.controller.status
+    }
+
     /// Execute the `EditAction`
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
         self.controller.handle_action(action)

@@ -6,6 +6,7 @@ pub use crate::{
 };
 mod cell_positioner;
 mod fill;
+mod sort_block;
 mod types;
 mod workbook;
 mod worksheet;
@@ -14,6 +15,7 @@ mod worksheet;
 mod test;
 pub use fill::FillRange;
 pub use logisheets_base::BlockId;
+pub use sort_block::BlockSortOrder;
 pub use types::*;
 pub use workbook::Workbook;
 pub use worksheet::Worksheet;

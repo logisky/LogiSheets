@@ -2064,3 +2064,445 @@ fn dependency_tracking_precedents_and_dependents() {
         prec
     );
 }
+
+// End-to-end sort-a-block-by-field, through the real engine: build a row-schema
+// block with typed values, compute the order via the public `get_block_sort_order`
+// API, apply it as a `ReorderBlockLines` transaction, then read the cells back to
+// confirm the records land in sorted order. Also covers the error branches
+// (unknown field, random-schema block). The sort_block unit tests already cover
+// the pure comparator; this exercises field resolution, typed value reads, and
+// the reorder semantics against a live controller.
+#[test]
+fn sort_block_by_field_end_to_end() {
+    use crate::api::BlockSortOrder;
+    use crate::controller::display::Value;
+    use crate::edit_action::{
+        BindFormSchema, BindRandomSchema, CellInput, RandomSchemaUnit, ReorderBlockLines,
+    };
+
+    // A fresh workbook with a 4-record × 2-field row-schema block at A1.
+    // Fields: "name" (col 0, text), "age" (col 1, number). Records are
+    // deliberately out of order on BOTH fields.
+    fn build() -> (Workbook, usize) {
+        let mut wb = Workbook::default();
+        let bid = wb.get_available_block_id(0).unwrap();
+        let records = [
+            ("Charlie", "30"),
+            ("Alice", "10"),
+            ("Bob", "20"),
+            ("Dave", "5"),
+        ];
+        let mut payloads = vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: records.len(),
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "people".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["name".into(), "age".into()],
+                render_ids: vec!["r_name".into(), "r_age".into()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            }),
+        ];
+        for (r, (name, age)) in records.iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: 0,
+                content: name.to_string(),
+            }));
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: 1,
+                content: age.to_string(),
+            }));
+        }
+        // Seed as the init baseline so an undo of a later (undoable) sort
+        // returns to the populated block rather than the empty workbook.
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads,
+            undoable: false,
+            init: true,
+        }));
+        (wb, bid)
+    }
+
+    // Read the 4 records top-to-bottom: names (col 0, text) and ages (col 1, number).
+    fn names(wb: &Workbook) -> Vec<String> {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        (0..4)
+            .map(|r| match ws.get_value(r, 0).unwrap() {
+                Value::Str(s) => s,
+                other => panic!("name at row {r} not text: {other:?}"),
+            })
+            .collect()
+    }
+    fn ages(wb: &Workbook) -> Vec<f64> {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        (0..4)
+            .map(|r| match ws.get_value(r, 1).unwrap() {
+                Value::Number(n) => n,
+                other => panic!("age at row {r} not a number: {other:?}"),
+            })
+            .collect()
+    }
+    fn apply(wb: &mut Workbook, bid: usize, order: BlockSortOrder) {
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::ReorderBlockLines(ReorderBlockLines {
+                sheet_idx: 0,
+                block_id: bid,
+                is_row: order.is_row,
+                new_order: order.new_order,
+            })],
+            undoable: false,
+            init: false,
+        }));
+    }
+
+    // Ascending by the numeric "age" field: 30,10,20,5 → indices [3,1,2,0].
+    // The reorder must move whole records, so names follow their ages.
+    {
+        let (mut wb, bid) = build();
+        let order = wb.get_block_sort_order(0, bid, "age", true).unwrap();
+        assert!(order.is_row, "row-schema block sorts by reordering rows");
+        assert_eq!(order.new_order, vec![3, 1, 2, 0]);
+        apply(&mut wb, bid, order);
+        assert_eq!(ages(&wb), vec![5.0, 10.0, 20.0, 30.0]);
+        assert_eq!(names(&wb), vec!["Dave", "Alice", "Bob", "Charlie"]);
+    }
+
+    // Descending by "age": 30,20,10,5 → indices [0,2,1,3].
+    {
+        let (mut wb, bid) = build();
+        let order = wb.get_block_sort_order(0, bid, "age", false).unwrap();
+        assert_eq!(order.new_order, vec![0, 2, 1, 3]);
+        apply(&mut wb, bid, order);
+        assert_eq!(ages(&wb), vec![30.0, 20.0, 10.0, 5.0]);
+        assert_eq!(names(&wb), vec!["Charlie", "Bob", "Alice", "Dave"]);
+    }
+
+    // Ascending by the text "name" field: Alice,Bob,Charlie,Dave → indices [1,2,0,3].
+    {
+        let (mut wb, bid) = build();
+        let order = wb.get_block_sort_order(0, bid, "name", true).unwrap();
+        assert_eq!(order.new_order, vec![1, 2, 0, 3]);
+        apply(&mut wb, bid, order);
+        assert_eq!(names(&wb), vec!["Alice", "Bob", "Charlie", "Dave"]);
+        assert_eq!(ages(&wb), vec![10.0, 20.0, 30.0, 5.0]);
+    }
+
+    // Unknown field → error (never silently a no-op).
+    {
+        let (wb, bid) = build();
+        assert!(
+            wb.get_block_sort_order(0, bid, "nope", true).is_err(),
+            "unknown field name must error"
+        );
+    }
+
+    // A random-schema block has no field axis → sorting is rejected.
+    {
+        let mut wb = Workbook::default();
+        let bid = wb.get_available_block_id(0).unwrap();
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![
+                EditPayload::CreateBlock(CreateBlock {
+                    sheet_idx: 0,
+                    id: bid,
+                    master_row: 0,
+                    master_col: 0,
+                    row_cnt: 2,
+                    col_cnt: 1,
+                    owner: None,
+                    modify_policy: None,
+                }),
+                EditPayload::BindRandomSchema(BindRandomSchema {
+                    ref_name: "rnd".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    units: vec![RandomSchemaUnit {
+                        key: "k0".into(),
+                        render_id: "r0".into(),
+                        row: 0,
+                        col: 0,
+                    }],
+                }),
+            ],
+            undoable: false,
+            init: false,
+        }));
+        assert!(
+            wb.get_block_sort_order(0, bid, "k0", true).is_err(),
+            "random-schema blocks have no sortable fields"
+        );
+    }
+
+    // Undo/redo: the sort's mutation is a `ReorderBlockLines` payload dispatched
+    // as an UNDOABLE transaction (exactly what the frontend `sortBlock` op does),
+    // so it lands on the undo stack. Ctrl-Z restores the original record order;
+    // redo re-applies the sort. This is the property that would break if sorting
+    // bypassed the payload pipeline.
+    {
+        let (mut wb, bid) = build();
+        let order = wb.get_block_sort_order(0, bid, "age", true).unwrap();
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::ReorderBlockLines(ReorderBlockLines {
+                sheet_idx: 0,
+                block_id: bid,
+                is_row: order.is_row,
+                new_order: order.new_order,
+            })],
+            undoable: true,
+            init: false,
+        }));
+        assert_eq!(ages(&wb), vec![5.0, 10.0, 20.0, 30.0], "sorted after apply");
+
+        wb.handle_action(EditAction::Undo);
+        assert_eq!(
+            ages(&wb),
+            vec![30.0, 10.0, 20.0, 5.0],
+            "undo restores the original record order"
+        );
+
+        wb.handle_action(EditAction::Redo);
+        assert_eq!(
+            ages(&wb),
+            vec![5.0, 10.0, 20.0, 30.0],
+            "redo re-applies the sort"
+        );
+    }
+}
+
+// Reproduces the browser app's exact flow: create a 1-record block with a single
+// field, GROW it with InsertRowsInBlock (the "add row" button), then type the
+// field values in — instead of seeding every record at creation time. Guards
+// against the sort reading blank values (identity order) when records arrive via
+// interior inserts.
+#[test]
+fn sort_block_grown_by_insert_rows() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput, InsertRowsInBlock, ReorderBlockLines};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // One-record block at A1 with a single string field, then grow to 3 records.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 1,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "people".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["Customer Status".into()],
+                render_ids: vec!["r0".into()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            }),
+            // Add two rows (interior insert at index 1), like clicking "add row".
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+                sheet_idx: 0,
+                block_id: bid,
+                start: 1,
+                cnt: 2,
+            }),
+            // Type the three records' values (rows 0..=2, col 0).
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "Charlie".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "Alice".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 2,
+                col: 0,
+                content: "Bob".into(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    let names = |wb: &Workbook| -> Vec<String> {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        (0..3)
+            .map(|r| match ws.get_value(r, 0).unwrap() {
+                Value::Str(s) => s,
+                Value::Empty => String::new(),
+                other => panic!("row {r} not text: {other:?}"),
+            })
+            .collect()
+    };
+    assert_eq!(
+        names(&wb),
+        vec!["Charlie", "Alice", "Bob"],
+        "records populated as typed"
+    );
+
+    let order = wb
+        .get_block_sort_order(0, bid, "Customer Status", true)
+        .unwrap();
+    assert_eq!(
+        order.new_order,
+        vec![1, 2, 0],
+        "ascending order must reflect the typed values, not blanks (identity)"
+    );
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::ReorderBlockLines(ReorderBlockLines {
+            sheet_idx: 0,
+            block_id: bid,
+            is_row: order.is_row,
+            new_order: order.new_order,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    assert_eq!(names(&wb), vec!["Alice", "Bob", "Charlie"]);
+}
+
+// A formula that references a block cell must keep referencing THAT cell across a
+// sort: LogiSheets tracks references by stable cell-id, not by position. So after
+// the sort moves the referenced cell to a new coordinate, the formula (a) still
+// evaluates to that cell's value, and (b) unparses to the cell's NEW coordinate.
+#[test]
+fn sort_block_reference_follows_moved_cell() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput, ReorderBlockLines};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    let cell = |row, col, content: &str| {
+        EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col,
+            content: content.to_string(),
+        })
+    };
+
+    // 4-record block at A1: field "name" (col A), "age" (col B). Charlie's age
+    // (30) sits at B1. A formula in D1 references B1.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 4,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "people".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["name".into(), "age".into()],
+                render_ids: vec!["r_name".into(), "r_age".into()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            }),
+            cell(0, 0, "Charlie"),
+            cell(0, 1, "30"),
+            cell(1, 0, "Alice"),
+            cell(1, 1, "10"),
+            cell(2, 0, "Bob"),
+            cell(2, 1, "20"),
+            cell(3, 0, "Dave"),
+            cell(3, 1, "5"),
+            // D1 (row 0, col 3) references Charlie's age cell B1.
+            cell(0, 3, "=B1"),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    // Before sorting: D1 reads Charlie's age via B1.
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(
+            matches!(ws.get_value(0, 3).unwrap(), Value::Number(n) if (n - 30.).abs() < 1e-9),
+            "D1 should read B1 = 30 before the sort, got {:?}",
+            ws.get_value(0, 3).unwrap()
+        );
+        assert_eq!(ws.get_formula(0, 3).unwrap(), "B1");
+    }
+
+    // Sort ascending by age → [3,1,2,0]: Charlie (row 0) moves to row 3, so his
+    // age cell moves B1 → B4.
+    let order = wb.get_block_sort_order(0, bid, "age", true).unwrap();
+    assert_eq!(order.new_order, vec![3, 1, 2, 0]);
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::ReorderBlockLines(ReorderBlockLines {
+            sheet_idx: 0,
+            block_id: bid,
+            is_row: order.is_row,
+            new_order: order.new_order,
+        })],
+        undoable: false,
+        init: false,
+    }));
+
+    // After sorting: the reference followed the cell to B4. The formula's VALUE
+    // is unchanged (still Charlie's 30, not the 5 now sitting at B1), and its
+    // TEXT re-anchored to the new coordinate.
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert!(
+            matches!(ws.get_value(0, 3).unwrap(), Value::Number(n) if (n - 30.).abs() < 1e-9),
+            "D1 must still read Charlie's 30 (the cell it referenced), got {:?}",
+            ws.get_value(0, 3).unwrap()
+        );
+        assert_eq!(
+            ws.get_formula(0, 3).unwrap(),
+            "B4",
+            "the reference must re-anchor to the moved cell's new coordinate"
+        );
+        // Sanity: B1 now holds Dave's 5, confirming the record really moved.
+        assert!(
+            matches!(ws.get_value(0, 1).unwrap(), Value::Number(n) if (n - 5.).abs() < 1e-9),
+            "B1 should now hold Dave's 5 after the sort"
+        );
+    }
+}

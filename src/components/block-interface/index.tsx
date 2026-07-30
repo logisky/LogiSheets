@@ -2,8 +2,22 @@ import {useEffect, useState} from 'react'
 import {observer} from 'mobx-react-lite'
 import {toast} from 'react-toastify'
 import {globalStore} from '@/store'
-import {Box, IconButton, Tooltip, Typography} from '@mui/material'
-import {Settings as SettingsIcon, Add as AddIcon} from '@mui/icons-material'
+import {
+    Box,
+    IconButton,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+    Tooltip,
+    Typography,
+} from '@mui/material'
+import {
+    Settings as SettingsIcon,
+    Add as AddIcon,
+    ArrowUpward as ArrowUpwardIcon,
+    ArrowDownward as ArrowDownwardIcon,
+} from '@mui/icons-material'
 import {
     Grid,
     BlockManager,
@@ -219,6 +233,25 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
     // Allow a global setting to override hover and keep overlays visible.
     const showInfo = globalStore.alwaysShowBlockInfo || isHover
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    // Field-header sort menu: which field name was clicked and the element to
+    // anchor the asc/desc menu to.
+    const [sortMenu, setSortMenu] = useState<{
+        anchor: HTMLElement
+        field: string
+    } | null>(null)
+
+    const handleSortField = async (field: string, asc: boolean) => {
+        setSortMenu(null)
+        try {
+            await ops.sortBlock(sheetIdx, blockId, field, asc)
+        } catch (e) {
+            toast.error(
+                `Failed to sort by "${field}": ${
+                    e instanceof Error ? e.message : String(e)
+                }`
+            )
+        }
+    }
     const [clickMousePosition, setClickMousePosition] = useState({x: 0, y: 0})
     const [descriptorUrl, setDescriptorUrl] = useState<string | undefined>()
     const [error, setError] = useState<string | undefined>()
@@ -692,10 +725,20 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             return (
                                 <Tooltip
                                     key={idx}
-                                    title={f.description || fieldName}
+                                    title={`${
+                                        f.description || fieldName
+                                    } — click to sort`}
                                     arrow
                                 >
                                     <Box
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setSortMenu({
+                                                anchor: e.currentTarget,
+                                                field: fieldName,
+                                            })
+                                        }}
                                         sx={{
                                             width: `${width}px`,
                                             height: '100%',
@@ -709,6 +752,10 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                             boxShadow: 2,
                                             pointerEvents: 'auto',
                                             boxSizing: 'border-box',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                filter: 'brightness(1.1)',
+                                            },
                                         }}
                                     >
                                         <Typography
@@ -732,6 +779,36 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                         })}
                     </Box>
                 )}
+
+                {/* Field sort menu (opened by clicking a field-name header). */}
+                <Menu
+                    open={sortMenu !== null}
+                    anchorEl={sortMenu?.anchor ?? null}
+                    onClose={() => setSortMenu(null)}
+                    anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+                    transformOrigin={{vertical: 'top', horizontal: 'center'}}
+                >
+                    <MenuItem
+                        onClick={() =>
+                            sortMenu && handleSortField(sortMenu.field, true)
+                        }
+                    >
+                        <ListItemIcon>
+                            <ArrowUpwardIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Sort ascending</ListItemText>
+                    </MenuItem>
+                    <MenuItem
+                        onClick={() =>
+                            sortMenu && handleSortField(sortMenu.field, false)
+                        }
+                    >
+                        <ListItemIcon>
+                            <ArrowDownwardIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Sort descending</ListItemText>
+                    </MenuItem>
+                </Menu>
 
                 {/* Add row button (bottom) — hover only, like the settings
                     button. */}
@@ -776,30 +853,31 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                 dispatched separately on the `kind` discriminator so the two
                 categories never collide. Hidden while dragging so only the
                 block outline + drop ghost are shown. */}
-            {!isDragging && renderedCells.map((spec, idx) => {
-                if (spec.kind === 'interactive') {
-                    switch (spec.interactiveKind) {
-                        case 'enum':
-                            return <EnumCell key={idx} {...spec} />
-                        case 'boolean':
-                            return <BoolCell key={idx} {...spec} />
-                        case 'datetime':
-                            return <DatetimeCell key={idx} {...spec} />
-                        case 'image':
-                            return <ImageCell key={idx} {...spec} />
-                        case 'fieldRef':
-                            return <FieldRefCell key={idx} {...spec} />
-                        case 'multiSelectRef':
-                            return <MultiFieldRefCell key={idx} {...spec} />
+            {!isDragging &&
+                renderedCells.map((spec, idx) => {
+                    if (spec.kind === 'interactive') {
+                        switch (spec.interactiveKind) {
+                            case 'enum':
+                                return <EnumCell key={idx} {...spec} />
+                            case 'boolean':
+                                return <BoolCell key={idx} {...spec} />
+                            case 'datetime':
+                                return <DatetimeCell key={idx} {...spec} />
+                            case 'image':
+                                return <ImageCell key={idx} {...spec} />
+                            case 'fieldRef':
+                                return <FieldRefCell key={idx} {...spec} />
+                            case 'multiSelectRef':
+                                return <MultiFieldRefCell key={idx} {...spec} />
+                        }
                     }
-                }
-                switch (spec.displayKind) {
-                    case 'validation':
-                        return <ValidationCell key={idx} {...spec} />
-                    case 'required':
-                        return <RequiredCell key={idx} {...spec} />
-                }
-            })}
+                    switch (spec.displayKind) {
+                        case 'validation':
+                            return <ValidationCell key={idx} {...spec} />
+                        case 'required':
+                            return <RequiredCell key={idx} {...spec} />
+                    }
+                })}
 
             {/* Menu */}
             {isMenuOpen && (

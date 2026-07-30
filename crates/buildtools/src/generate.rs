@@ -1,11 +1,12 @@
 use gents::FileGroup;
-use logisheets_rs::{AsyncFuncResult, DisplayWindowRequest};
+use logisheets_rs::{AsyncFuncResult, BlockSortOrder, DisplayWindowRequest};
 
 fn main() {
     let path = "packages/web/src/bindings";
     let mut file_group = FileGroup::new();
     file_group.add::<DisplayWindowRequest>();
     file_group.add::<AsyncFuncResult>();
+    file_group.add::<BlockSortOrder>();
 
     use logisheets_sequencer::{SequencerMessage, UserMessage};
     file_group.add::<SequencerMessage>();
