@@ -35,6 +35,9 @@ import FormatDialogContent, {
     type FormatDialogValue,
 } from '@/components/format-dialog'
 import {BlockComposerComponent} from '@/components/block-composer'
+import {inferBlockFromSelection} from '@/components/block-composer/infer-selection'
+import type {FieldSetting} from 'logisheets-core'
+import {useToast} from '@/ui/notification/useToast'
 import {globalStore} from '@/store'
 
 /** Payload of the engine/session `contextMenu` event. */
@@ -88,6 +91,7 @@ export function CanvasContextMenu({
     getActiveSheet,
     setSelection,
 }: CanvasContextMenuProps): ReactNode {
+    const {toast} = useToast()
     const [menu, setMenu] = useState<{
         x: number
         y: number
@@ -119,6 +123,8 @@ export function CanvasContextMenu({
         selectedData: SelectedData
         rowCnt: number
         colCnt: number
+        /** Inferred schema for the Ctrl+T-style "Convert to block" entry. */
+        initialFields?: FieldSetting[]
     } | null>(null)
 
     useEffect(() => {
@@ -339,6 +345,25 @@ export function CanvasContextMenu({
         })
     }
 
+    // "Convert to block" (the LogiSheets analogue of Excel's Ctrl+T): infer a
+    // schema from the selected region — field names from a header row, types
+    // from the data (see block-composer/infer) — then open the composer in
+    // convert mode pre-filled. The user confirms/edits before it's created.
+    const convertToBlock = async (ctx: ContextMenuContext) => {
+        close()
+        const result = await inferBlockFromSelection(dataSvc, ctx.selectedData)
+        if ('error' in result) {
+            toast(result.error, {type: 'info'})
+            return
+        }
+        setConvertComposer({
+            selectedData: result.selectedData,
+            rowCnt: result.convertRegion.rowCnt,
+            colCnt: result.convertRegion.colCnt,
+            initialFields: result.initialFields,
+        })
+    }
+
     // Insert an image into the clicked cell. Opens a native file picker, reads
     // the file as base64 and dispatches a `SetCellImage` payload. The image
     // fills the cell and resizes with it.
@@ -416,6 +441,12 @@ export function CanvasContextMenu({
               </MenuItem>,
               <MenuItem key="link" onClick={() => openLink(ctx)}>
                   Link to block…
+              </MenuItem>,
+              <MenuItem
+                  key="convert-block"
+                  onClick={() => convertToBlock(ctx)}
+              >
+                  Convert to block…
               </MenuItem>,
               <Divider key="traced" />,
               <MenuItem
@@ -585,6 +616,7 @@ export function CanvasContextMenu({
                         rowCnt: convertComposer.rowCnt,
                         colCnt: convertComposer.colCnt,
                     }}
+                    initialFields={convertComposer.initialFields}
                     close={() => setConvertComposer(null)}
                 />
             )}

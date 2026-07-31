@@ -27,10 +27,18 @@ export interface BlockComposerProps {
      * This is what the Link picker's "create a new block from selection" uses.
      */
     convertRegion?: {rowCnt: number; colCnt: number}
+    /**
+     * Seed the field list instead of the built-in defaults. Used by the Ctrl+T
+     * "convert selection to block" flow, which infers field names/types from the
+     * selected data (see ./infer) so the composer opens pre-filled. The user
+     * still edits everything before saving. In convert mode the length must
+     * match the region's column count.
+     */
+    initialFields?: FieldSetting[]
 }
 
 export const BlockComposerComponent = (props: BlockComposerProps) => {
-    const {selectedData, close, convertRegion} = props
+    const {selectedData, close, convertRegion, initialFields} = props
     const {toast} = useToast()
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
@@ -38,7 +46,9 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const BLOCK_MANAGER = engine.getBlockManager()
 
     const [fields, setFields] = useState<FieldSetting[]>(() =>
-        convertRegion
+        initialFields && initialFields.length > 0
+            ? initialFields
+            : convertRegion
             ? Array.from({length: convertRegion.colCnt}, (_, i) => ({
                   id: String(i + 1),
                   name: `Field ${i + 1}`,
