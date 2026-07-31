@@ -13,9 +13,21 @@
  */
 
 import {useState, useEffect, useCallback, type ReactNode} from 'react'
-import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined'
+import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined'
+import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined'
+import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined'
+import GridOnOutlinedIcon from '@mui/icons-material/GridOnOutlined'
+import NorthEastOutlinedIcon from '@mui/icons-material/NorthEastOutlined'
+import SouthWestOutlinedIcon from '@mui/icons-material/SouthWestOutlined'
+import LayersClearOutlinedIcon from '@mui/icons-material/LayersClearOutlined'
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
+import HideImageOutlinedIcon from '@mui/icons-material/HideImageOutlined'
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import Box from '@mui/material/Box'
 import Dialog from '@mui/material/Dialog'
 import type {
@@ -35,6 +47,9 @@ import FormatDialogContent, {
     type FormatDialogValue,
 } from '@/components/format-dialog'
 import {BlockComposerComponent} from '@/components/block-composer'
+import {inferBlockFromSelection} from '@/components/block-composer/infer-selection'
+import type {FieldSetting} from 'logisheets-core'
+import {useToast} from '@/ui/notification/useToast'
 import {globalStore} from '@/store'
 
 /** Payload of the engine/session `contextMenu` event. */
@@ -88,6 +103,7 @@ export function CanvasContextMenu({
     getActiveSheet,
     setSelection,
 }: CanvasContextMenuProps): ReactNode {
+    const {toast} = useToast()
     const [menu, setMenu] = useState<{
         x: number
         y: number
@@ -119,6 +135,8 @@ export function CanvasContextMenu({
         selectedData: SelectedData
         rowCnt: number
         colCnt: number
+        /** Inferred schema for the Ctrl+T-style "Convert to block" entry. */
+        initialFields?: FieldSetting[]
     } | null>(null)
 
     useEffect(() => {
@@ -339,6 +357,25 @@ export function CanvasContextMenu({
         })
     }
 
+    // "Convert to block" (the LogiSheets analogue of Excel's Ctrl+T): infer a
+    // schema from the selected region — field names from a header row, types
+    // from the data (see block-composer/infer) — then open the composer in
+    // convert mode pre-filled. The user confirms/edits before it's created.
+    const convertToBlock = async (ctx: ContextMenuContext) => {
+        close()
+        const result = await inferBlockFromSelection(dataSvc, ctx.selectedData)
+        if ('error' in result) {
+            toast(result.error, {type: 'info'})
+            return
+        }
+        setConvertComposer({
+            selectedData: result.selectedData,
+            rowCnt: result.convertRegion.rowCnt,
+            colCnt: result.convertRegion.colCnt,
+            initialFields: result.initialFields,
+        })
+    }
+
     // Insert an image into the clicked cell. Opens a native file picker, reads
     // the file as base64 and dispatches a `SetCellImage` payload. The image
     // fills the cell and resizes with it.
@@ -405,116 +442,166 @@ export function CanvasContextMenu({
         ? null
         : ctx.target === 'cell'
         ? [
-              <MenuItem key="format" onClick={() => openFormat(ctx)}>
+              <ContextMenuItem
+                  key="format"
+                  icon={<TuneOutlinedIcon />}
+                  onClick={() => openFormat(ctx)}
+              >
                   Format Cells
-              </MenuItem>,
-              <MenuItem key="clear" onClick={() => clearCells(ctx)}>
+              </ContextMenuItem>,
+              <ContextMenuItem
+                  key="clear"
+                  icon={<BackspaceOutlinedIcon />}
+                  onClick={() => clearCells(ctx)}
+              >
                   Clear Cells
-              </MenuItem>,
-              <MenuItem key="comment" onClick={() => addComment(ctx)}>
+              </ContextMenuItem>,
+              <ContextMenuItem
+                  key="comment"
+                  icon={<AddCommentOutlinedIcon />}
+                  onClick={() => addComment(ctx)}
+              >
                   Add comment
-              </MenuItem>,
-              <MenuItem key="link" onClick={() => openLink(ctx)}>
+              </ContextMenuItem>,
+              <ContextMenuItem
+                  key="link"
+                  icon={<LinkOutlinedIcon />}
+                  onClick={() => openLink(ctx)}
+              >
                   Link to block…
-              </MenuItem>,
+              </ContextMenuItem>,
+              <ContextMenuItem
+                  key="convert-block"
+                  icon={<GridOnOutlinedIcon />}
+                  onClick={() => convertToBlock(ctx)}
+              >
+                  Convert to block…
+              </ContextMenuItem>,
               <Divider key="traced" />,
-              <MenuItem
+              <ContextMenuItem
                   key="trace-prec"
+                  icon={<NorthEastOutlinedIcon />}
                   onClick={() => traceCell(ctx, 'precedents')}
               >
                   Trace precedents
-              </MenuItem>,
-              <MenuItem
+              </ContextMenuItem>,
+              <ContextMenuItem
                   key="trace-dep"
+                  icon={<SouthWestOutlinedIcon />}
                   onClick={() => traceCell(ctx, 'dependents')}
               >
                   Trace dependents
-              </MenuItem>,
+              </ContextMenuItem>,
               ...(globalStore.traceResult
                   ? [
-                        <MenuItem
+                        <ContextMenuItem
                             key="trace-clear"
+                            icon={<LayersClearOutlinedIcon />}
                             onClick={() => {
                                 close()
                                 globalStore.clearTrace()
                             }}
                         >
                             Clear trace
-                        </MenuItem>,
+                        </ContextMenuItem>,
                     ]
                   : []),
               <Divider key="imgd" />,
-              <MenuItem key="insert-image" onClick={() => insertImage(ctx)}>
+              <ContextMenuItem
+                  key="insert-image"
+                  icon={<ImageOutlinedIcon />}
+                  onClick={() => insertImage(ctx)}
+              >
                   Insert image
-              </MenuItem>,
-              <MenuItem key="remove-image" onClick={() => removeImage(ctx)}>
+              </ContextMenuItem>,
+              <ContextMenuItem
+                  key="remove-image"
+                  icon={<HideImageOutlinedIcon />}
+                  onClick={() => removeImage(ctx)}
+              >
                   Remove image
-              </MenuItem>,
+              </ContextMenuItem>,
           ]
         : ctx.target === 'row'
         ? [
-              <MenuItem
+              <ContextMenuItem
                   key="ia"
+                  icon={<AddOutlinedIcon />}
                   onClick={() => insertLines(ctx, 'row', 'before')}
               >
                   Insert rows above
-              </MenuItem>,
-              <MenuItem
+              </ContextMenuItem>,
+              <ContextMenuItem
                   key="ib"
+                  icon={<AddOutlinedIcon />}
                   onClick={() => insertLines(ctx, 'row', 'after')}
               >
                   Insert rows below
-              </MenuItem>,
+              </ContextMenuItem>,
               <Box key="stepper">{stepper}</Box>,
               <Divider key="d1" />,
-              <MenuItem key="fmt" onClick={() => openFormat(ctx)}>
+              <ContextMenuItem
+                  key="fmt"
+                  icon={<TuneOutlinedIcon />}
+                  onClick={() => openFormat(ctx)}
+              >
                   Format cells
-              </MenuItem>,
+              </ContextMenuItem>,
               <Divider key="d2" />,
-              <MenuItem key="del" onClick={() => deleteLines(ctx, 'row')}>
+              <ContextMenuItem
+                  key="del"
+                  icon={<DeleteOutlinedIcon />}
+                  danger
+                  onClick={() => deleteLines(ctx, 'row')}
+              >
                   Delete rows
-              </MenuItem>,
+              </ContextMenuItem>,
           ]
         : [
-              <MenuItem
+              <ContextMenuItem
                   key="il"
+                  icon={<AddOutlinedIcon />}
                   onClick={() => insertLines(ctx, 'col', 'before')}
               >
                   Insert columns left
-              </MenuItem>,
-              <MenuItem
+              </ContextMenuItem>,
+              <ContextMenuItem
                   key="ir"
+                  icon={<AddOutlinedIcon />}
                   onClick={() => insertLines(ctx, 'col', 'after')}
               >
                   Insert columns right
-              </MenuItem>,
+              </ContextMenuItem>,
               <Box key="stepper">{stepper}</Box>,
               <Divider key="d1" />,
-              <MenuItem key="fmt" onClick={() => openFormat(ctx)}>
+              <ContextMenuItem
+                  key="fmt"
+                  icon={<TuneOutlinedIcon />}
+                  onClick={() => openFormat(ctx)}
+              >
                   Format cells
-              </MenuItem>,
+              </ContextMenuItem>,
               <Divider key="d2" />,
-              <MenuItem key="del" onClick={() => deleteLines(ctx, 'col')}>
+              <ContextMenuItem
+                  key="del"
+                  icon={<DeleteOutlinedIcon />}
+                  danger
+                  onClick={() => deleteLines(ctx, 'col')}
+              >
                   Delete columns
-              </MenuItem>,
+              </ContextMenuItem>,
           ]
 
     return (
         <>
-            <Menu
+            <ContextMenu
                 open={!!menu}
                 onClose={close}
                 anchorReference="anchorPosition"
                 anchorPosition={menu ? {top: menu.y, left: menu.x} : undefined}
-                transformOrigin={{vertical: 'top', horizontal: 'left'}}
-                disableScrollLock
-                MenuListProps={{
-                    autoFocusItem: false,
-                    sx: {minWidth: 200, py: 0.5},
-                }}
             >
                 {items}
-            </Menu>
+            </ContextMenu>
 
             <Dialog
                 open={fmtOpen && !!fmtSelectedData}
@@ -585,6 +672,7 @@ export function CanvasContextMenu({
                         rowCnt: convertComposer.rowCnt,
                         colCnt: convertComposer.colCnt,
                     }}
+                    initialFields={convertComposer.initialFields}
                     close={() => setConvertComposer(null)}
                 />
             )}

@@ -1,10 +1,6 @@
 import {useState, MouseEvent} from 'react'
 import {
     Box,
-    Menu,
-    MenuItem,
-    ListItemIcon,
-    ListItemText,
     Dialog,
     DialogTitle,
     DialogContent,
@@ -18,7 +14,9 @@ import {
     Radio,
     Stack,
 } from '@mui/material'
+import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined'
 import {useOps} from '@/core/engine/provider'
+import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import {BlockCellProps, valueToString} from './cell'
 import {pxToPt, pxToWidth} from '@/core'
 import {useEditable} from '@/core/permissions/use-editable'
@@ -166,7 +164,7 @@ export const ImageCell = (props: BlockCellProps) => {
                 )}
             </Box>
 
-            <Menu
+            <ContextMenu
                 open={contextMenu !== null}
                 onClose={handleClose}
                 anchorReference="anchorPosition"
@@ -175,33 +173,30 @@ export const ImageCell = (props: BlockCellProps) => {
                         ? {top: contextMenu.mouseY, left: contextMenu.mouseX}
                         : undefined
                 }
-                slotProps={{
-                    paper: {
-                        sx: {
-                            minWidth: 160,
-                        },
-                    },
-                }}
             >
-                <MenuItem
+                <ContextMenuItem
                     onClick={() => handleSizeChange('50%')}
                     selected={imageSize === '50%'}
+                    icon={
+                        <CheckOutlinedIcon
+                            sx={{opacity: imageSize === '50%' ? 1 : 0}}
+                        />
+                    }
                 >
-                    <ListItemIcon>
-                        {imageSize === '50%' ? '✓' : ''}
-                    </ListItemIcon>
-                    <ListItemText>50% Display</ListItemText>
-                </MenuItem>
-                <MenuItem
+                    50% Display
+                </ContextMenuItem>
+                <ContextMenuItem
                     onClick={() => handleSizeChange('100%')}
                     selected={imageSize === '100%'}
+                    icon={
+                        <CheckOutlinedIcon
+                            sx={{opacity: imageSize === '100%' ? 1 : 0}}
+                        />
+                    }
                 >
-                    <ListItemIcon>
-                        {imageSize === '100%' ? '✓' : ''}
-                    </ListItemIcon>
-                    <ListItemText>100% Display</ListItemText>
-                </MenuItem>
-            </Menu>
+                    100% Display
+                </ContextMenuItem>
+            </ContextMenu>
 
             <Dialog
                 open={dialogOpen}

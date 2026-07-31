@@ -2,16 +2,8 @@ import {useEffect, useState} from 'react'
 import {observer} from 'mobx-react-lite'
 import {toast} from 'react-toastify'
 import {globalStore} from '@/store'
-import {
-    Box,
-    IconButton,
-    Menu,
-    MenuItem,
-    ListItemIcon,
-    ListItemText,
-    Tooltip,
-    Typography,
-} from '@mui/material'
+import {Box, IconButton, Tooltip, Typography} from '@mui/material'
+import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import {
     Settings as SettingsIcon,
     Add as AddIcon,
@@ -781,34 +773,30 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                 )}
 
                 {/* Field sort menu (opened by clicking a field-name header). */}
-                <Menu
+                <ContextMenu
                     open={sortMenu !== null}
                     anchorEl={sortMenu?.anchor ?? null}
                     onClose={() => setSortMenu(null)}
                     anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
                     transformOrigin={{vertical: 'top', horizontal: 'center'}}
                 >
-                    <MenuItem
+                    <ContextMenuItem
+                        icon={<ArrowUpwardIcon />}
                         onClick={() =>
                             sortMenu && handleSortField(sortMenu.field, true)
                         }
                     >
-                        <ListItemIcon>
-                            <ArrowUpwardIcon fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Sort ascending</ListItemText>
-                    </MenuItem>
-                    <MenuItem
+                        Sort ascending
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        icon={<ArrowDownwardIcon />}
                         onClick={() =>
                             sortMenu && handleSortField(sortMenu.field, false)
                         }
                     >
-                        <ListItemIcon>
-                            <ArrowDownwardIcon fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Sort descending</ListItemText>
-                    </MenuItem>
-                </Menu>
+                        Sort descending
+                    </ContextMenuItem>
+                </ContextMenu>
 
                 {/* Add row button (bottom) — hover only, like the settings
                     button. */}

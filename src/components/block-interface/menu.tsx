@@ -1,8 +1,9 @@
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import styles from './block-interface.module.scss'
 import React from 'react'
 import {useOps} from '@/core/engine/provider'
+import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 
 export interface MenuProps {
     readonly sheetId: number
@@ -53,12 +54,15 @@ export const MenuComponent = (props: MenuProps) => {
     const items = [
         {
             label: 'Modify',
+            icon: <EditOutlinedIcon />,
             onClick: () => {
                 // todo
             },
         },
         {
             label: 'Delete',
+            icon: <DeleteOutlinedIcon />,
+            danger: true,
             onClick: () => {
                 ops.removeBlock(sheetIdx, blockId)
             },
@@ -66,33 +70,33 @@ export const MenuComponent = (props: MenuProps) => {
     ]
 
     return (
-        <>
-            <Menu
-                open={isOpen}
-                onClose={() => setIsOpen(false)}
-                anchorReference="anchorPosition"
-                anchorPosition={{
-                    top: props.clickMousePosition.y,
-                    left: props.clickMousePosition.x,
-                }}
-                disableRestoreFocus={true}
-            >
-                {items.map((item, idx) => (
-                    <MenuItem
-                        key={idx}
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            item.onClick()
-                            setIsOpen(false)
-                        }}
-                        onMouseDown={(e) => {
-                            e.stopPropagation()
-                        }}
-                    >
-                        {item.label}
-                    </MenuItem>
-                ))}
-            </Menu>
-        </>
+        <ContextMenu
+            open={isOpen}
+            onClose={() => setIsOpen(false)}
+            anchorReference="anchorPosition"
+            anchorPosition={{
+                top: props.clickMousePosition.y,
+                left: props.clickMousePosition.x,
+            }}
+            disableRestoreFocus={true}
+        >
+            {items.map((item, idx) => (
+                <ContextMenuItem
+                    key={idx}
+                    icon={item.icon}
+                    danger={item.danger}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        item.onClick()
+                        setIsOpen(false)
+                    }}
+                    onMouseDown={(e) => {
+                        e.stopPropagation()
+                    }}
+                >
+                    {item.label}
+                </ContextMenuItem>
+            ))}
+        </ContextMenu>
     )
 }
