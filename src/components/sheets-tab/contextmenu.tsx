@@ -4,11 +4,13 @@ import {useOps} from '@/core/engine/provider'
 import {useToast} from '@/ui/notification/useToast'
 import {StandardColor} from '@/core/standable'
 import styles from './sheets-tab.module.scss'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
 import Popover from '@mui/material/Popover'
 import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined'
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import {ZINDEX_UI} from '../const'
 
 export interface ContextMenuProps {
@@ -188,7 +190,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
 
     return (
         <>
-            <Menu
+            <ContextMenu
                 open={isOpen}
                 onClose={() => {
                     setIsOpen(false)
@@ -200,12 +202,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                 disableRestoreFocus
                 anchorReference="anchorPosition"
                 anchorPosition={{top: top - 140, left}}
-                transformOrigin={{vertical: 'top', horizontal: 'left'}}
                 disableScrollLock={true}
-                MenuListProps={{
-                    autoFocusItem: false,
-                    onMouseLeave: scheduleCloseColorPopover,
-                }}
                 TransitionProps={{
                     onExited: () => {
                         // Clean up inert and body tabindex after Menu fully unmounts
@@ -225,30 +222,35 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                     },
                 }}
                 slotProps={{
-                    paper: {
-                        sx: {minWidth: 200, p: 0.5},
-                        onMouseEnter: cancelCloseColorPopover,
-                    },
+                    paper: {onMouseEnter: cancelCloseColorPopover},
                 }}
+                MenuListProps={{onMouseLeave: scheduleCloseColorPopover}}
             >
-                <MenuItem onClick={openRename} onMouseEnter={closeColorPopover}>
-                    ✏️ Rename
-                </MenuItem>
-                <MenuItem
+                <ContextMenuItem
+                    icon={<EditOutlinedIcon />}
+                    onClick={openRename}
+                    onMouseEnter={closeColorPopover}
+                >
+                    Rename
+                </ContextMenuItem>
+                <ContextMenuItem
+                    icon={<PaletteOutlinedIcon />}
                     onMouseEnter={(e) => {
                         openColorPopover(e.currentTarget as HTMLElement)
                     }}
                 >
-                    🎨 Color
-                </MenuItem>
+                    Color
+                </ContextMenuItem>
                 <Divider />
-                <MenuItem
+                <ContextMenuItem
+                    icon={<DeleteOutlinedIcon />}
+                    danger
                     onClick={deleteSheet}
                     onMouseEnter={closeColorPopover}
                 >
-                    🗑️ Delete
-                </MenuItem>
-            </Menu>
+                    Delete
+                </ContextMenuItem>
+            </ContextMenu>
             <Popover
                 open={colorAnchorPos !== null}
                 anchorReference="anchorPosition"
