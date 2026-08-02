@@ -17,6 +17,9 @@ export interface MenuProps {
     readonly setDescriptorUrl: (url: string | undefined) => void
     readonly setError: (error: string | undefined) => void
     readonly setSuccessMessage: (message: string | undefined) => void
+    /** Open the block composer in edit mode over this block. Owned by the
+     *  parent so it survives this menu unmounting on select. */
+    readonly onModify: () => void
 }
 
 export interface ClickableListProps {
@@ -48,15 +51,17 @@ export const ClickableList = ({
 }
 
 export const MenuComponent = (props: MenuProps) => {
-    const {sheetIdx, blockId, isOpen, setIsOpen} = props
+    const {sheetIdx, blockId, isOpen, setIsOpen, onModify} = props
     const ops = useOps()
 
     const items = [
         {
             label: 'Modify',
             icon: <EditOutlinedIcon />,
+            // Delegate to the parent — selecting an item closes (unmounts) this
+            // menu, so the composer it opens must live in the parent.
             onClick: () => {
-                // todo
+                onModify()
             },
         },
         {

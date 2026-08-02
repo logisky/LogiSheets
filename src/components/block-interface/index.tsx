@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react'
+import {useEffect, useRef, useState} from 'react'
 import {observer} from 'mobx-react-lite'
 import {toast} from 'react-toastify'
 import {globalStore} from '@/store'
@@ -21,6 +21,7 @@ import {
 } from 'logisheets-engine'
 import {ZINDEX_BLOCK_OUTLINER} from '../const'
 import {MenuComponent} from './menu'
+import {BlockComposerComponent} from '@/components/block-composer'
 import {useEngine, useOps, useDataService} from '@/core/engine/provider'
 import type {FieldInfo} from 'logisheets-engine'
 import {BlockCellInfo, BlockDisplayInfo} from 'logisheets-engine'
@@ -225,6 +226,9 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
     // Allow a global setting to override hover and keep overlays visible.
     const showInfo = globalStore.alwaysShowBlockInfo || isHover
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    // Block composer opened in edit mode by the gear menu's "Modify". Owned here
+    // (not in MenuComponent) so it survives the menu unmounting on select.
+    const [editComposerOpen, setEditComposerOpen] = useState(false)
     // Field-header sort menu: which field name was clicked and the element to
     // anchor the asc/desc menu to.
     const [sortMenu, setSortMenu] = useState<{
@@ -504,6 +508,88 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         window.addEventListener('mouseup', onUp)
     }
 
+    // Field-header drag-to-reorder. Grab a field header and drop it at another
+    // field position → one `moveBlockLine` (isRow:false) transaction. Only
+    // promotes to a drag past DRAG_THRESHOLD, so a plain click still opens the
+    // sort menu; `fieldDragMovedRef` suppresses the click that follows a drag.
+    // `fieldDrag.ins` is the drop boundary (0..colCnt) shown as an insertion
+    // line between field headers.
+    const [fieldDrag, setFieldDrag] = useState<{
+        from: number
+        ins: number
+    } | null>(null)
+    const fieldDragMovedRef = useRef(false)
+
+    const handleFieldDragStart =
+        (fromIdx: number) => (e: React.MouseEvent) => {
+            if (e.button !== 0) return
+            e.stopPropagation()
+            // Prevent the browser from starting a text selection on the field
+            // name while dragging.
+            e.preventDefault()
+            fieldDragMovedRef.current = false
+            const DRAG_THRESHOLD = 3
+            const startX = e.clientX
+            const startY = e.clientY
+            let dragging = false
+            let ins: number | null = null
+
+            // Map the pointer to a drop boundary in [0, colCnt]: the hovered
+            // block column's left half inserts before it, right half after.
+            // Pointer outside the block's own column span clamps to an edge.
+            const computeIns = (me: MouseEvent): number => {
+                const cx = me.clientX - canvasStartX
+                const cell = cellAtCanvas(cx, me.clientY - canvasStartY, grid)
+                if (!cell || cell.col < colStart) return 0
+                if (cell.col >= colStart + colCnt) return colCnt
+                const inner = cell.col - colStart
+                const colInfo = grid.columns.find(
+                    (c: {idx: number; width: number}) => c.idx === cell.col
+                )
+                const mid =
+                    xForColStart(cell.col, grid) + (colInfo?.width ?? 0) / 2
+                return cx < mid ? inner : inner + 1
+            }
+
+            const onMove = (me: MouseEvent) => {
+                if (!dragging) {
+                    if (
+                        Math.abs(me.clientX - startX) < DRAG_THRESHOLD &&
+                        Math.abs(me.clientY - startY) < DRAG_THRESHOLD
+                    )
+                        return
+                    dragging = true
+                    fieldDragMovedRef.current = true
+                }
+                ins = computeIns(me)
+                setFieldDrag({from: fromIdx, ins})
+            }
+
+            const onUp = async () => {
+                window.removeEventListener('mousemove', onMove)
+                window.removeEventListener('mouseup', onUp)
+                setFieldDrag(null)
+                if (!dragging || ins === null) return
+                // `move_line` is remove(from) then insert(to), so `to` is the
+                // index in the post-removal frame: a boundary to the right of
+                // the removed field shifts left by one.
+                const to = ins > fromIdx ? ins - 1 : ins
+                if (to === fromIdx) return
+                try {
+                    await ops.moveBlockLine(sheetIdx, blockId, fromIdx, to, false)
+                } catch (err) {
+                    toast.error(
+                        `Failed to move field: ${
+                            err instanceof Error ? err.message : String(err)
+                        }`
+                    )
+                }
+            }
+
+            window.addEventListener('mousemove', onMove)
+            window.addEventListener('mouseup', onUp)
+        }
+
     return (
         <Box
             data-testid="block-interface"
@@ -719,13 +805,19 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                     key={idx}
                                     title={`${
                                         f.description || fieldName
-                                    } — click to sort`}
+                                    } — click to sort, drag to reorder`}
                                     arrow
                                 >
                                     <Box
-                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onMouseDown={handleFieldDragStart(idx)}
                                         onClick={(e) => {
                                             e.stopPropagation()
+                                            // Suppress the click that follows a
+                                            // drag; a plain click still sorts.
+                                            if (fieldDragMovedRef.current) {
+                                                fieldDragMovedRef.current = false
+                                                return
+                                            }
                                             setSortMenu({
                                                 anchor: e.currentTarget,
                                                 field: fieldName,
@@ -744,7 +836,15 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                             boxShadow: 2,
                                             pointerEvents: 'auto',
                                             boxSizing: 'border-box',
-                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                            cursor:
+                                                fieldDrag?.from === idx
+                                                    ? 'grabbing'
+                                                    : 'grab',
+                                            opacity:
+                                                fieldDrag?.from === idx
+                                                    ? 0.4
+                                                    : 1,
                                             '&:hover': {
                                                 filter: 'brightness(1.1)',
                                             },
@@ -769,6 +869,35 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                 </Tooltip>
                             )
                         })}
+                        {/* Insertion line at the drop boundary while a field
+                            header is being dragged. */}
+                        {fieldDrag &&
+                            (() => {
+                                let left = 0
+                                for (let j = 0; j < fieldDrag.ins; j++) {
+                                    const ci = grid.columns.find(
+                                        (c: {idx: number; width: number}) =>
+                                            c.idx === colStart + j
+                                    )
+                                    left += (ci?.width ?? 0) + 1
+                                }
+                                return (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            left: `${Math.max(0, left - 1)}px`,
+                                            top: 0,
+                                            width: '3px',
+                                            height: '100%',
+                                            borderRadius: '2px',
+                                            background: 'rgb(255, 193, 7)',
+                                            boxShadow: 1,
+                                            pointerEvents: 'none',
+                                            zIndex: 1,
+                                        }}
+                                    />
+                                )
+                            })()}
                     </Box>
                 )}
 
@@ -879,6 +1008,16 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     setDescriptorUrl={setDescriptorUrl}
                     setError={setError}
                     setSuccessMessage={setSuccessMessage}
+                    onModify={() => setEditComposerOpen(true)}
+                />
+            )}
+
+            {/* "Modify" → block composer in edit mode. Rendered here (not in the
+                menu) so it stays mounted after the menu closes. */}
+            {editComposerOpen && (
+                <BlockComposerComponent
+                    editTarget={{sheetIdx, sheetId, blockId}}
+                    close={() => setEditComposerOpen(false)}
                 />
             )}
         </Box>

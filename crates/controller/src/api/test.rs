@@ -2506,3 +2506,4 @@ fn sort_block_reference_follows_moved_cell() {
         );
     }
 }
+

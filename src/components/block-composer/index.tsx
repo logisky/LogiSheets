@@ -1,5 +1,12 @@
-import {useState} from 'react'
-import {Box, Typography, Dialog, DialogContent, TextField} from '@mui/material'
+import {useEffect, useState} from 'react'
+import {
+    Box,
+    Button,
+    Typography,
+    Dialog,
+    DialogContent,
+    TextField,
+} from '@mui/material'
 import {
     getSelectedCellRange,
     SelectedData,
@@ -35,10 +42,25 @@ export interface BlockComposerProps {
      * match the region's column count.
      */
     initialFields?: FieldSetting[]
+    /**
+     * When set, the composer runs in *edit* mode on an EXISTING form block:
+     * the block's ref name and current fields are loaded on open, and Save
+     * dispatches `editFormBlock` (a tail `resizeBlock` + re-`bindFormSchema`)
+     * instead of creating a block.
+     *
+     * v1 contract — **existing fields are immutable pass-throughs**: they are
+     * shown read-only, cannot be deleted, renamed, or re-typed (which would
+     * break `BLOCKREF` / `#FIELD` references). Editing is limited to renaming
+     * the block and APPENDING new fields at the end. This keeps the column
+     * count monotonically non-decreasing, so only a tail resize is needed and
+     * no existing cell/formula is disturbed.
+     */
+    editTarget?: {sheetIdx: number; sheetId: number; blockId: number}
 }
 
 export const BlockComposerComponent = (props: BlockComposerProps) => {
-    const {selectedData, close, convertRegion, initialFields} = props
+    const {selectedData, close, convertRegion, initialFields, editTarget} =
+        props
     const {toast} = useToast()
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
@@ -56,6 +78,8 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                   required: false,
                   primary: i === 0,
               }))
+            : editTarget
+            ? []
             : [
                   {
                       id: '1',
@@ -70,17 +94,96 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
         fields[0]?.id || null
     )
-
-    if (!selectedData) {
-        return null
-    }
-    const range = getSelectedCellRange(selectedData)
-    if (!range) {
-        return null
-    }
     const [refName, setRefName] = useState('')
 
+    // Edit-mode state. `originalById` holds the verbatim FormBlockField for
+    // each pre-existing field, keyed by its stable renderId — these are
+    // passed through on save untouched (never re-`create`d, so the block's
+    // cells stay wired to their render/type metadata). `editMeta` carries the
+    // block's current column count + key index, needed by `editFormBlock`.
+    const [editLoading, setEditLoading] = useState<boolean>(!!editTarget)
+    const [originalById, setOriginalById] = useState<
+        Map<string, FormBlockField>
+    >(() => new Map())
+    const [editMeta, setEditMeta] = useState<{
+        colCnt: number
+        keyIdx: number
+    } | null>(null)
+
+    useEffect(() => {
+        if (!editTarget) return
+        let cancelled = false
+        ;(async () => {
+            const info = await DATA_SERVICE.getWorkbook().getBlockInfo({
+                sheetId: editTarget.sheetId,
+                blockId: editTarget.blockId,
+            })
+            if (cancelled) return
+            if (isErrorMessage(info) || !info.schema) {
+                toast('Could not read this block’s structure', {
+                    type: 'error',
+                })
+                close()
+                return
+            }
+            const schema = info.schema
+            const renders = new Map(
+                info.fieldRenders.map((r) => [r.renderId, r])
+            )
+            // The field *type* only lives host-side in FieldManager (keyed by
+            // renderId == FieldInfo.id). Use it for a read-only type label; a
+            // block loaded from file with no host state falls back to 'string'.
+            const infoByRender = new Map(
+                BLOCK_MANAGER.fieldManager
+                    .getByBlock(editTarget.sheetId, editTarget.blockId)
+                    .map((fi) => [fi.id, fi])
+            )
+            const keyIdx = schema.keys[0]?.idx ?? 0
+            const sorted = [...schema.fields].sort((a, b) => a.idx - b.idx)
+            const orig = new Map<string, FormBlockField>()
+            const seedFields: FieldSetting[] = sorted.map((fe) => {
+                const render = renders.get(fe.renderId)
+                orig.set(fe.renderId, {
+                    name: fe.field,
+                    renderId: fe.renderId,
+                    valueFormula: fe.valueFormula ?? '',
+                    diyRender: render?.diyRender ?? false,
+                    numFmt: render?.style?.formatter ?? '',
+                })
+                const fi = infoByRender.get(fe.renderId)
+                return {
+                    id: fe.renderId,
+                    name: fe.field,
+                    type: (fi?.type.type ?? 'string') as FieldSetting['type'],
+                    required: fi?.required ?? false,
+                    primary: fe.idx === keyIdx,
+                }
+            })
+            setOriginalById(orig)
+            setFields(seedFields)
+            setSelectedFieldId(seedFields[0]?.id ?? null)
+            setRefName(schema.name)
+            setEditMeta({colCnt: info.colCnt, keyIdx})
+            setEditLoading(false)
+        })()
+        return () => {
+            cancelled = true
+        }
+        // editTarget is a stable prop for the lifetime of the dialog.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editTarget])
+
+    if (!editTarget && !selectedData) {
+        return null
+    }
+    // create/convert need a real selection; edit does not.
+    if (!editTarget && selectedData && !getSelectedCellRange(selectedData)) {
+        return null
+    }
+
     const selectedField = fields.find((f) => f.id === selectedFieldId)
+    const isOriginal = (id: string | null | undefined) =>
+        !!id && originalById.has(id)
 
     const handleAddField = () => {
         const newField: FieldSetting = {
@@ -109,69 +212,44 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     }
 
     const handleDeleteField = (id: string) => {
+        // Existing fields are immutable in edit mode — never deletable.
+        if (isOriginal(id)) return
         setFields(fields.filter((f) => f.id !== id))
         if (selectedFieldId === id) {
             setSelectedFieldId(fields[0]?.id || null)
         }
     }
 
-    const handleSave = async () => {
-        if (convertRegion && fields.length !== convertRegion.colCnt) {
-            toast(
-                `Convert mode needs exactly ${convertRegion.colCnt} field(s) — one per selected column.`,
-                {type: 'error'}
-            )
-            return
-        }
-        const currentSheetIdx = DATA_SERVICE.getCurrentSheetIdx()
-        const currentSheetId = DATA_SERVICE.getCurrentSheetId()
-        const blockId = await DATA_SERVICE.getAvailableBlockId(currentSheetIdx)
-        if (isErrorMessage(blockId)) {
-            toast(blockId.msg, {type: 'error'})
-            return
-        }
-
-        let ty: FieldTypeEnum
-
-        // Compose the final validation formula for string/number fields by
-        // joining the user-typed rule with a generated uniqueness check.
-        // The unique check uses BLOCKREFSB to read every value in this field
-        // across the whole block, then COUNTIF to ensure the current value
-        // appears exactly once. #PLACEHOLDER expands to the cell's value at
-        // evaluation time.
-        const composeValidation = (field: FieldSetting): string => {
-            const userValidation = (field.validation ?? '').trim()
-            if (!field.unique) return userValidation
-            const escapedName = field.name.replace(/"/g, '""')
-            const uniqueCheck = `COUNTIF(BLOCKREFSB(${currentSheetId}, ${blockId}, "*", "${escapedName}"), #PLACEHOLDER) = 1`
-            if (!userValidation) return uniqueCheck
-            return `AND(${userValidation}, ${uniqueCheck})`
-        }
-
-        // For a fieldRef cell we auto-inject an existence check pointing at
-        // the target block: any value picked from the dropdown should still
-        // be present there. If the source row is later deleted/renamed the
-        // ref becomes dangling and surfaces via the existing validation
-        // warning indicator. For a self-ref target we resolve to the block
-        // being composed (its id was allocated above).
-        const resolveRefTarget = (
-            field: FieldSetting
-        ): {sheetId: number; blockId: number} => {
-            if (field.refSelf) {
-                return {sheetId: currentSheetId, blockId}
+    // Build one engine-neutral FormBlockField for a NEW field: registers a
+    // FieldInfo in the host FieldManager (allocating a fresh renderId),
+    // composes validation, and flattens to the operation-layer shape. Shared
+    // by create / convert / edit so field semantics stay identical.
+    const makeFieldBuilder =
+        (sheetId: number, blockId: number) =>
+        (field: FieldSetting): FormBlockField => {
+            const composeValidation = (f: FieldSetting): string => {
+                const userValidation = (f.validation ?? '').trim()
+                if (!f.unique) return userValidation
+                const escapedName = f.name.replace(/"/g, '""')
+                const uniqueCheck = `COUNTIF(BLOCKREFSB(${sheetId}, ${blockId}, "*", "${escapedName}"), #PLACEHOLDER) = 1`
+                if (!userValidation) return uniqueCheck
+                return `AND(${userValidation}, ${uniqueCheck})`
             }
-            return {
-                sheetId: field.refSheetId!,
-                blockId: field.refBlockId!,
+            const resolveRefTarget = (
+                f: FieldSetting
+            ): {sheetId: number; blockId: number} => {
+                if (f.refSelf) {
+                    return {sheetId, blockId}
+                }
+                return {sheetId: f.refSheetId!, blockId: f.refBlockId!}
             }
-        }
-        const composeRefValidation = (field: FieldSetting): string => {
-            const {sheetId, blockId: bid} = resolveRefTarget(field)
-            const escapedName = (field.refFieldName ?? '').replace(/"/g, '""')
-            return `COUNTIF(BLOCKREFSB(${sheetId}, ${bid}, "*", "${escapedName}"), #PLACEHOLDER) >= 1`
-        }
+            const composeRefValidation = (f: FieldSetting): string => {
+                const {sheetId: rSheetId, blockId: bid} = resolveRefTarget(f)
+                const escapedName = (f.refFieldName ?? '').replace(/"/g, '""')
+                return `COUNTIF(BLOCKREFSB(${rSheetId}, ${bid}, "*", "${escapedName}"), #PLACEHOLDER) >= 1`
+            }
 
-        const fs: [string, FieldInfo][] = fields.map((field) => {
+            let ty: FieldTypeEnum
             if (field.type === 'enum') {
                 ty = {type: 'enum', id: field.enumId!}
             } else if (field.type === 'multiSelect') {
@@ -191,42 +269,29 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             } else if (field.type === 'image') {
                 ty = {type: 'image'}
             } else if (field.type === 'fieldRef') {
-                const {sheetId, blockId: bid} = resolveRefTarget(field)
+                const {sheetId: rSheetId, blockId: bid} = resolveRefTarget(field)
                 ty = {
                     type: 'fieldRef',
-                    sheetId,
+                    sheetId: rSheetId,
                     blockId: bid,
                     fieldName: field.refFieldName!,
                     validation: composeRefValidation(field),
                 }
-            } else if (field.type === 'multiSelectRef') {
-                // multiSelectRef stores a comma-separated string of values.
-                // Auto-validation isn't injected for v1 — a CSV value would
-                // require splitting + per-item COUNTIF, which the existing
-                // ValidationCell shadow-cell pipeline doesn't natively
-                // express. The dropdown only offers existing target values,
-                // so well-behaved edits stay valid; renames in the source
-                // block will silently produce dangling refs until v2.
-                const {sheetId, blockId: bid} = resolveRefTarget(field)
+            } else {
+                // multiSelectRef — no auto-validation in v1 (see create path).
+                const {sheetId: rSheetId, blockId: bid} = resolveRefTarget(field)
                 ty = {
                     type: 'multiSelectRef',
-                    sheetId,
+                    sheetId: rSheetId,
                     blockId: bid,
                     fieldName: field.refFieldName!,
                     validation: '',
                 }
             }
-            // Primary keys are unique by definition; stamp it so cross-block
-            // enumeration doesn't have to special-case them.
             const isUnique = !!field.unique || !!field.primary
-            // valueFormula was previously stored on FieldInfo for the
-            // composer's edit-time use; post-Phase-1+2 the template is
-            // engine-managed and reachable via `BlockInfo.schema.fields[i]
-            // .valueFormula`. FieldSetting still carries it for the
-            // composer form, but we no longer mirror it onto FieldInfo.
             const f: FieldInfo = {
                 id: field.id,
-                sheetId: currentSheetId,
+                sheetId,
                 blockId,
                 name: field.name,
                 type: ty,
@@ -234,23 +299,11 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 required: field.required,
                 unique: isUnique,
             }
-            const r = BLOCK_MANAGER.fieldManager.create(
-                currentSheetId,
-                blockId,
-                f
-            )
-            return [r.id, r]
-        })
-        const {y: row, x: col} = getFirstCell(selectedData)
-        const keyIdx = fields.findIndex((f) => f.primary)
+            const r = BLOCK_MANAGER.fieldManager.create(sheetId, blockId, f)
 
-        // Flatten each resolved field into the engine-neutral shape the
-        // operation layer needs; the validation/FieldInfo composition and
-        // FieldManager registration above stay here (engine render state).
-        const formBlockFields: FormBlockField[] = fs.map(([fieldId, field], i) => {
             let diyRender = false
             let numFmt = ''
-            switch (field.type.type) {
+            switch (ty.type) {
                 case 'image':
                 case 'enum':
                 case 'multiSelect':
@@ -261,19 +314,72 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     break
                 case 'datetime':
                 case 'number':
-                    numFmt = field.type.formatter
+                    numFmt = ty.formatter
                     break
                 default:
                     break
             }
             return {
                 name: field.name,
-                renderId: fieldId,
-                valueFormula: fields[i].valueFormula ?? '',
+                renderId: r.id,
+                valueFormula: field.valueFormula ?? '',
                 diyRender,
                 numFmt,
             }
+        }
+
+    const handleSaveEdit = async () => {
+        if (!editTarget || !editMeta) return
+        const {sheetIdx, sheetId, blockId} = editTarget
+        const build = makeFieldBuilder(sheetId, blockId)
+        // Existing fields pass through verbatim (keep renderId); only the
+        // appended new fields are registered/built.
+        const formBlockFields: FormBlockField[] = fields.map((f) => {
+            const original = originalById.get(f.id)
+            return original ?? build(f)
         })
+        try {
+            await ops.editFormBlock({
+                sheetIdx,
+                blockId,
+                currentColCnt: editMeta.colCnt,
+                refName,
+                keyIdx: editMeta.keyIdx,
+                fields: formBlockFields,
+            })
+        } catch (e) {
+            toast((e as Error).message, {type: 'error'})
+            return
+        }
+        close()
+        toast('Block updated successfully!', {type: 'success'})
+    }
+
+    const handleSave = async () => {
+        if (editTarget) {
+            await handleSaveEdit()
+            return
+        }
+        if (!selectedData) return
+        if (convertRegion && fields.length !== convertRegion.colCnt) {
+            toast(
+                `Convert mode needs exactly ${convertRegion.colCnt} field(s) — one per selected column.`,
+                {type: 'error'}
+            )
+            return
+        }
+        const currentSheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+        const currentSheetId = DATA_SERVICE.getCurrentSheetId()
+        const blockId = await DATA_SERVICE.getAvailableBlockId(currentSheetIdx)
+        if (isErrorMessage(blockId)) {
+            toast(blockId.msg, {type: 'error'})
+            return
+        }
+
+        const build = makeFieldBuilder(currentSheetId, blockId)
+        const formBlockFields: FormBlockField[] = fields.map(build)
+        const {y: row, x: col} = getFirstCell(selectedData)
+        const keyIdx = fields.findIndex((f) => f.primary)
 
         try {
             if (convertRegion) {
@@ -371,7 +477,74 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                         flexDirection: 'column',
                     }}
                 >
-                    {selectedField ? (
+                    {editLoading ? (
+                        <Box
+                            sx={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            <Typography color="text.secondary">
+                                Loading block…
+                            </Typography>
+                        </Box>
+                    ) : selectedField && isOriginal(selectedField.id) ? (
+                        <Box
+                            sx={{
+                                flex: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    p: 3,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 1,
+                                    flex: 1,
+                                }}
+                            >
+                                <Typography variant="h6">
+                                    {selectedField.name}
+                                </Typography>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Type: {selectedField.type}
+                                    {selectedField.primary ? ' · key' : ''}
+                                </Typography>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{mt: 1}}
+                                >
+                                    Existing field — cannot be renamed,
+                                    re-typed, or deleted in this version (that
+                                    would break references). Use “Add New Field”
+                                    on the left to append new fields.
+                                </Typography>
+                            </Box>
+                            <Box
+                                sx={{
+                                    p: 2,
+                                    display: 'flex',
+                                    justifyContent: 'flex-end',
+                                    gap: 1,
+                                    borderTop: '1px solid',
+                                    borderColor: 'divider',
+                                }}
+                            >
+                                <Button onClick={close}>Cancel</Button>
+                                <Button variant="contained" onClick={handleSave}>
+                                    Save Changes
+                                </Button>
+                            </Box>
+                        </Box>
+                    ) : selectedField ? (
                         <FieldConfigPanel
                             field={selectedField}
                             onUpdate={handleUpdateField}
