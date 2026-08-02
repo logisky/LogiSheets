@@ -315,6 +315,37 @@ export class WorkbookOps {
         )
     }
 
+    /**
+     * Move a single block line (column or row) from one position to another —
+     * positional `remove(from)` then `insert(to)` on the block's line order
+     * (`MoveBlockLine`). For a row-schema form block, a FIELD is a column, so
+     * reordering fields is `isRow = false` with block-inner column indices.
+     *
+     * `to` is the index in the post-removal frame (matching the engine's
+     * `move_line`). The field's stable line id keeps its cell data, and the
+     * schema's per-field `idx` is re-derived from the new position on the next
+     * read — so both data and field order follow the move automatically; no
+     * re-`bindFormSchema` is needed.
+     */
+    moveBlockLine(
+        sheetIdx: number,
+        blockId: number,
+        from: number,
+        to: number,
+        isRow = false,
+        undoable = true
+    ): Promise<ActionEffect> {
+        return this.apply(
+            [
+                {
+                    type: 'moveBlockLine',
+                    value: {sheetIdx, blockId, from, to, isRow},
+                },
+            ],
+            undoable
+        )
+    }
+
     // ---- formatting -----------------------------------------------------
     //
     // Each method turns the current sheet + selection into style-update
@@ -530,6 +561,83 @@ export class WorkbookOps {
                 },
             })),
         ]
+        await this.apply(payloads, true)
+    }
+
+    /**
+     * Edit an EXISTING form-backed block: rename it, re-type / re-formula its
+     * existing fields, and/or append new fields — in one transaction. The v1
+     * contract is **fields are never removed**, so the column count is
+     * monotonically non-decreasing: `fields.length >= currentColCnt`. That
+     * keeps this safe with only a *tail* `resizeBlock` (new columns are
+     * appended, existing field columns — and the cells/formulas that
+     * reference them — are untouched, and no schema entry is ever orphaned).
+     *
+     * `fields` is the FULL field list (existing fields first, in their
+     * current order, followed by any newly-added fields). Existing fields
+     * MUST keep their original `renderId` so the block's cells stay wired to
+     * their render/type metadata; the host reconstructs the list from
+     * `BlockInfo.schema.fields[i].renderId`.
+     *
+     * Order matters: the `resizeBlock` runs BEFORE `bindFormSchema` so the
+     * appended field columns exist when the schema binds to them. Validation
+     * / editability formulas are carried on `FieldInfo` (the field type) via
+     * the host's FieldManager, same as `createFormBlock`, so this only needs
+     * to round-trip each field's value-formula template.
+     */
+    async editFormBlock(opts: {
+        sheetIdx: number
+        blockId: number
+        currentColCnt: number
+        refName: string
+        keyIdx: number
+        fields: readonly FormBlockField[]
+    }): Promise<void> {
+        const {sheetIdx, blockId, currentColCnt, refName, keyIdx, fields} = opts
+        const newColCnt = fields.length
+        if (newColCnt < currentColCnt) {
+            throw new Error(
+                `editFormBlock cannot remove fields: got ${newColCnt} field(s) ` +
+                    `for a block with ${currentColCnt} column(s).`
+            )
+        }
+        const payloads: Payload[] = []
+        if (newColCnt !== currentColCnt) {
+            payloads.push({
+                type: 'resizeBlock',
+                value: {
+                    sheetIdx,
+                    id: blockId,
+                    newColCnt,
+                },
+            })
+        }
+        payloads.push({
+            type: 'bindFormSchema',
+            value: {
+                refName,
+                sheetIdx,
+                blockId,
+                fieldFrom: 0,
+                row: true,
+                keyIdx: keyIdx < 0 ? 0 : keyIdx,
+                fields: fields.map((f) => f.name),
+                renderIds: fields.map((f) => f.renderId),
+                fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
+                validationFormulas: [],
+                editabilityFormulas: [],
+            },
+        })
+        payloads.push(
+            ...fields.map((f) => ({
+                type: 'upsertFieldRenderInfo' as const,
+                value: {
+                    renderId: f.renderId,
+                    diyRender: f.diyRender,
+                    styleUpdate: {setNumFmt: f.numFmt ?? ''},
+                },
+            }))
+        )
         await this.apply(payloads, true)
     }
 

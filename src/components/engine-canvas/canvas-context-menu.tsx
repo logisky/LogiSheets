@@ -12,7 +12,7 @@
  * completely different menu from the same event — the engine imposes nothing.
  */
 
-import {useState, useEffect, useCallback, type ReactNode} from 'react'
+import {useState, useEffect, useCallback, useRef, type ReactNode} from 'react'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined'
@@ -20,6 +20,7 @@ import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined'
 import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined'
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined'
 import GridOnOutlinedIcon from '@mui/icons-material/GridOnOutlined'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import NorthEastOutlinedIcon from '@mui/icons-material/NorthEastOutlined'
 import SouthWestOutlinedIcon from '@mui/icons-material/SouthWestOutlined'
 import LayersClearOutlinedIcon from '@mui/icons-material/LayersClearOutlined'
@@ -138,11 +139,65 @@ export function CanvasContextMenu({
         /** Inferred schema for the Ctrl+T-style "Convert to block" entry. */
         initialFields?: FieldSetting[]
     } | null>(null)
+    // "Edit block" path: when the right-clicked cell falls inside an existing
+    // form block, we resolve its ids on menu-open (async hit-test) into
+    // `editCandidate`, which gates the "Edit block…" item. Picking it opens the
+    // composer in edit mode over that block.
+    const [editCandidate, setEditCandidate] = useState<{
+        sheetIdx: number
+        sheetId: number
+        blockId: number
+    } | null>(null)
+    const [editComposer, setEditComposer] = useState<{
+        sheetIdx: number
+        sheetId: number
+        blockId: number
+    } | null>(null)
+
+    // Keep the latest service + active-sheet accessor reachable from the
+    // one-time `subscribe` effect without re-subscribing on every render.
+    const dataSvcRef = useRef(dataSvc)
+    dataSvcRef.current = dataSvc
+    const getActiveSheetRef = useRef(getActiveSheet)
+    getActiveSheetRef.current = getActiveSheet
 
     useEffect(() => {
         return subscribe((e) => {
             setMenu({x: e.x, y: e.y, context: e.context})
             setCount(selectedLineCount(e.context))
+            // Resolve whether the click landed inside an existing form block so
+            // the "Edit block…" item can appear. Enumerate the sheet's blocks
+            // and find the one whose rect contains the anchor cell.
+            setEditCandidate(null)
+            const ctx = e.context
+            if (ctx.target !== 'cell') return
+            // Hit-test the CLICKED cell, not the selection's top-left — a
+            // persisted multi-cell selection would otherwise miss a block that
+            // doesn't start at the selection anchor.
+            const range = getSelectedCellRange(ctx.selectedData)
+            const row = ctx.row ?? range?.startRow
+            const col = ctx.col ?? range?.startCol
+            if (row === undefined || col === undefined) return
+            const sheetIdx = getActiveSheetRef.current()
+            void (async () => {
+                const wb = dataSvcRef.current.getWorkbook()
+                const res = await wb.getAllBlocks({sheetIdx})
+                if (isErrorMessage(res)) return
+                const hit = res.find(
+                    (b) =>
+                        !!b.schema &&
+                        row >= b.rowStart &&
+                        row < b.rowStart + b.rowCnt &&
+                        col >= b.colStart &&
+                        col < b.colStart + b.colCnt
+                )
+                if (!hit) return
+                setEditCandidate({
+                    sheetIdx: hit.sheetIdx,
+                    sheetId: hit.sheetId,
+                    blockId: hit.blockId,
+                })
+            })()
         })
     }, [subscribe])
 
@@ -376,6 +431,15 @@ export function CanvasContextMenu({
         })
     }
 
+    // Edit an existing form block the click landed in: open the composer in
+    // edit mode. v1 allows renaming the block and appending fields (existing
+    // fields are read-only). `editCandidate` was resolved on menu-open.
+    const openEditBlock = () => {
+        close()
+        if (!editCandidate) return
+        setEditComposer(editCandidate)
+    }
+
     // Insert an image into the clicked cell. Opens a native file picker, reads
     // the file as base64 and dispatches a `SetCellImage` payload. The image
     // fills the cell and resizes with it.
@@ -477,6 +541,17 @@ export function CanvasContextMenu({
               >
                   Convert to block…
               </ContextMenuItem>,
+              ...(editCandidate
+                  ? [
+                        <ContextMenuItem
+                            key="edit-block"
+                            icon={<EditOutlinedIcon />}
+                            onClick={openEditBlock}
+                        >
+                            Edit block…
+                        </ContextMenuItem>,
+                    ]
+                  : []),
               <Divider key="traced" />,
               <ContextMenuItem
                   key="trace-prec"
@@ -674,6 +749,13 @@ export function CanvasContextMenu({
                     }}
                     initialFields={convertComposer.initialFields}
                     close={() => setConvertComposer(null)}
+                />
+            )}
+
+            {editComposer && (
+                <BlockComposerComponent
+                    editTarget={editComposer}
+                    close={() => setEditComposer(null)}
                 />
             )}
         </>
