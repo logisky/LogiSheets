@@ -72,5 +72,5 @@ test('gear menu → "Modify" opens the composer in edit mode, pre-filled', async
     const existing = d.getByRole('button', {name: /Customer Status/i})
     await expect(existing).toBeVisible()
     await existing.click()
-    await expect(d.getByText(/Existing field/i)).toBeVisible()
+    await expect(d.getByText(/re-typed/i)).toBeVisible()
 })

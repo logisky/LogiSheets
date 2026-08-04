@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material'
 import type {FieldSetting, EnumValue, FieldTypeEnum} from 'logisheets-core'
 import {COLORS} from './types'
+import {buttonSx, primaryButtonSx, cardSx, sectionLabelSx} from './styles'
 import {EnumSetManager, FieldManager} from 'logisheets-engine'
 import {useToast} from '@/ui/notification/useToast'
 
@@ -292,14 +293,28 @@ export const FieldConfigPanel = ({
                     alignItems: 'center',
                 }}
             >
-                <Typography variant="h6" fontWeight={600}>
-                    {field.name}
-                </Typography>
+                <Box sx={{minWidth: 0}}>
+                    <Typography sx={sectionLabelSx}>Field</Typography>
+                    <Typography
+                        variant="subtitle1"
+                        fontWeight={600}
+                        noWrap
+                        sx={{lineHeight: 1.3}}
+                    >
+                        {field.name}
+                    </Typography>
+                </Box>
                 <Box display="flex" gap={1}>
-                    <Button onClick={onCancel} size="small">
+                    <Button onClick={onCancel} size="small" sx={buttonSx}>
                         Cancel
                     </Button>
-                    <Button onClick={onSave} variant="contained" size="small">
+                    <Button
+                        onClick={onSave}
+                        variant="contained"
+                        size="small"
+                        disableElevation
+                        sx={primaryButtonSx}
+                    >
                         Save Changes
                     </Button>
                 </Box>
@@ -309,12 +324,10 @@ export const FieldConfigPanel = ({
             <Box sx={{flex: 1, p: 3, overflowY: 'auto'}}>
                 <Stack spacing={3}>
                     {/* Basic Settings */}
-                    <Card variant="outlined">
+                    <Card variant="outlined" sx={cardSx}>
                         <CardContent>
                             <Typography
-                                variant="subtitle1"
-                                fontWeight={600}
-                                mb={2}
+                                sx={{...sectionLabelSx, mb: 2}}
                             >
                                 Basic Settings
                             </Typography>
@@ -570,12 +583,10 @@ export const FieldConfigPanel = ({
                             const enumSet = enumSetManager.get(field.enumId)
                             return enumSet && enumSet.variants.length > 0
                         })() && (
-                            <Card variant="outlined">
+                            <Card variant="outlined" sx={cardSx}>
                                 <CardContent>
                                     <Typography
-                                        variant="subtitle1"
-                                        fontWeight={600}
-                                        mb={2}
+                                        sx={{...sectionLabelSx, mb: 2}}
                                     >
                                         Enum Values
                                     </Typography>
@@ -645,12 +656,10 @@ export const FieldConfigPanel = ({
 
                     {/* Default Value Section */}
                     {showEnumSection && field.enumId && (
-                        <Card variant="outlined">
+                        <Card variant="outlined" sx={cardSx}>
                             <CardContent>
                                 <Typography
-                                    variant="subtitle1"
-                                    fontWeight={600}
-                                    mb={1}
+                                    sx={{...sectionLabelSx, mb: 1}}
                                 >
                                     Default Value
                                 </Typography>
@@ -711,12 +720,10 @@ export const FieldConfigPanel = ({
 
                     {/* DateTime Format */}
                     {field.type === 'datetime' && (
-                        <Card variant="outlined">
+                        <Card variant="outlined" sx={cardSx}>
                             <CardContent>
                                 <Typography
-                                    variant="subtitle1"
-                                    fontWeight={600}
-                                    mb={2}
+                                    sx={{...sectionLabelSx, mb: 2}}
                                 >
                                     Date/Time Format
                                 </Typography>
@@ -749,12 +756,10 @@ export const FieldConfigPanel = ({
 
                     {/* Number Format */}
                     {field.type === 'number' && (
-                        <Card variant="outlined">
+                        <Card variant="outlined" sx={cardSx}>
                             <CardContent>
                                 <Typography
-                                    variant="subtitle1"
-                                    fontWeight={600}
-                                    mb={2}
+                                    sx={{...sectionLabelSx, mb: 2}}
                                 >
                                     Number Format
                                 </Typography>
@@ -891,12 +896,10 @@ export const FieldConfigPanel = ({
                                 : field.refSheetId ?? ''
 
                             return (
-                                <Card variant="outlined">
+                                <Card variant="outlined" sx={cardSx}>
                                     <CardContent>
                                         <Typography
-                                            variant="subtitle1"
-                                            fontWeight={600}
-                                            mb={2}
+                                            sx={{...sectionLabelSx, mb: 2}}
                                         >
                                             Reference Target
                                         </Typography>
@@ -1089,12 +1092,10 @@ export const FieldConfigPanel = ({
 
                     {/* Validation for String/Number */}
                     {(field.type === 'string' || field.type === 'number') && (
-                        <Card variant="outlined">
+                        <Card variant="outlined" sx={cardSx}>
                             <CardContent>
                                 <Typography
-                                    variant="subtitle1"
-                                    fontWeight={600}
-                                    mb={2}
+                                    sx={{...sectionLabelSx, mb: 2}}
                                 >
                                     Validation Rule
                                 </Typography>

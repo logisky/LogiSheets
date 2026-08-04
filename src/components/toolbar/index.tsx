@@ -63,6 +63,8 @@ import {
     WrapText as WrapTextIcon,
     StrikethroughS,
     BarChart as BarChartIcon,
+    GridViewOutlined as GridViewIcon,
+    Download as DownloadIcon,
 } from '@mui/icons-material'
 import {isErrorMessage} from 'logisheets-web'
 import {StandardColor, StandardFont} from '@/core/standable'
@@ -711,6 +713,20 @@ export const Toolbar = observer(
                 </svg>
             )
         }
+        async function onExportCsv(): Promise<void> {
+            const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+            const csv = await DATA_SERVICE.exportSheetToCsv(sheetIdx)
+            // Prepend a UTF-8 BOM so Excel opens non-ASCII text correctly.
+            const blob = new Blob(['﻿' + csv], {
+                type: 'text/csv;charset=utf-8',
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${bookName || 'Untitled'}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+        }
         async function onSave(): Promise<void> {
             const persistentData = BLOCK_MANAGER.getPersistentData([])
             const envelope = JSON.stringify({
@@ -791,6 +807,19 @@ export const Toolbar = observer(
                                 style={{marginRight: 8}}
                             />
                             Save
+                        </MenuItem>
+                        <MenuItem
+                            onClick={() => {
+                                closeFileMenu()
+                                onExportCsv()
+                            }}
+                            sx={{fontSize: 12}}
+                        >
+                            <DownloadIcon
+                                fontSize="small"
+                                style={{marginRight: 8}}
+                            />
+                            Export as CSV
                         </MenuItem>
                     </Menu>
                     <TextField
@@ -1199,15 +1228,21 @@ export const Toolbar = observer(
                     {/* Special */}
                     <div className={styles.section}>
                         <Button
-                            variant="contained"
+                            variant="outlined"
                             size="small"
                             color="primary"
                             onClick={() => setComposerOpen(true)}
-                            startIcon={<span>⚙️</span>}
+                            startIcon={<GridViewIcon />}
                             disabled={
                                 selectedData === undefined ||
                                 getSelectedCellRange(selectedData) === undefined
                             }
+                            sx={{
+                                borderRadius: '8px',
+                                fontWeight: 600,
+                                px: 1.25,
+                                whiteSpace: 'nowrap',
+                            }}
                         >
                             CreateBlock
                         </Button>

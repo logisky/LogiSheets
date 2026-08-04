@@ -113,6 +113,35 @@ impl ExclusiveManagerExecutor {
                     .create_new_diy_cell(p.sheet_id, cell_id);
                 Ok((self, true))
             }
+            EditPayload::RemoveDiyCell(remove_diy_cell) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(remove_diy_cell.sheet_idx)
+                    .map_err(|l| Error::Basic(BasicError::SheetIdxExceed(l)))?;
+                let cell_id = ctx
+                    .fetch_cell_id(&sheet_id, remove_diy_cell.row, remove_diy_cell.col)
+                    .map_err(|l| Error::Basic(l))?;
+                match cell_id {
+                    logisheets_base::CellId::BlockCell(block_cell_id) => {
+                        self.manager
+                            .diy_cell_manager
+                            .remove_diy_cell(sheet_id, block_cell_id);
+                    }
+                    _ => {
+                        return Err(Error::PayloadError(String::from(
+                            "Cannot remove diy cell on normal cell",
+                        )));
+                    }
+                };
+                Ok((self, true))
+            }
+            EditPayload::RemoveDiyCellById(p) => {
+                let cell_id =
+                    ctx.fetch_block_cell_id(&p.sheet_id, &p.block_id, p.row_idx, p.col_idx)?;
+                self.manager
+                    .diy_cell_manager
+                    .remove_diy_cell(p.sheet_id, cell_id);
+                Ok((self, true))
+            }
             EditPayload::RemoveBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)

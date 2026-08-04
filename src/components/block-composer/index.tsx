@@ -18,6 +18,7 @@ import {useEngine, useOps} from '@/core/engine/provider'
 import type {FieldInfo, FieldTypeEnum} from 'logisheets-engine'
 import {FieldList} from './field_list'
 import {FieldConfigPanel} from './config_panel'
+import {dialogPaperSx, buttonSx, primaryButtonSx, sectionLabelSx} from './styles'
 import type {FieldSetting, FormBlockField} from 'logisheets-core'
 
 export * from './types'
@@ -420,7 +421,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             onClose={close}
             maxWidth="lg"
             fullWidth
-            PaperProps={{sx: {height: '80vh'}}}
+            PaperProps={{sx: dialogPaperSx}}
         >
             <DialogContent sx={{p: 0, display: 'flex', height: '100%'}}>
                 <Box
@@ -503,11 +504,17 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                                     p: 3,
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: 1,
+                                    gap: 0.75,
                                     flex: 1,
                                 }}
                             >
-                                <Typography variant="h6">
+                                <Typography sx={sectionLabelSx}>
+                                    Existing field
+                                </Typography>
+                                <Typography
+                                    variant="subtitle1"
+                                    fontWeight={600}
+                                >
                                     {selectedField.name}
                                 </Typography>
                                 <Typography
@@ -522,10 +529,10 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                                     color="text.secondary"
                                     sx={{mt: 1}}
                                 >
-                                    Existing field — cannot be renamed,
-                                    re-typed, or deleted in this version (that
-                                    would break references). Use “Add New Field”
-                                    on the left to append new fields.
+                                    Existing fields can’t be renamed, re-typed,
+                                    or deleted in this version (that would break
+                                    references). Use “Add New Field” on the left
+                                    to append new fields.
                                 </Typography>
                             </Box>
                             <Box
@@ -538,8 +545,15 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                                     borderColor: 'divider',
                                 }}
                             >
-                                <Button onClick={close}>Cancel</Button>
-                                <Button variant="contained" onClick={handleSave}>
+                                <Button onClick={close} sx={buttonSx}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    disableElevation
+                                    onClick={handleSave}
+                                    sx={primaryButtonSx}
+                                >
                                     Save Changes
                                 </Button>
                             </Box>

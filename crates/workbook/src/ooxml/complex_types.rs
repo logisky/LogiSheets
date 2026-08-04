@@ -32,7 +32,7 @@ pub struct PlainTextString {
     pub space: Option<String>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Default, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Default, Debug, Clone)]
 pub struct PlainTextU32 {
     #[xmlserde(ty = "text")]
     pub value: i32,
@@ -103,7 +103,7 @@ pub struct CtPhoneticRun {
     pub eb: u32,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtColors {
     #[xmlserde(name = b"indexedColors", ty = "child")]
     pub indexed_colors: Option<CtIndexedColors>,
@@ -111,19 +111,19 @@ pub struct CtColors {
     pub mru_colors: Option<CtMruColors>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtIndexedColors {
     #[xmlserde(name = b"rgbColor", ty = "child")]
     pub rgb_color: Vec<CtRgbColor>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtRgbColor {
     #[xmlserde(name = b"rgb", ty = "attr")]
     pub rgb: Option<StUnsignedIntHex>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtMruColors {
     #[xmlserde(name = b"color", ty = "child")]
     pub color: Vec<CtColor>,
@@ -178,7 +178,7 @@ pub struct CtBorderPr {
     pub style: StBorderStyle,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtBorders {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -186,7 +186,7 @@ pub struct CtBorders {
     pub borders: Vec<CtBorder>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtCellStyles {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -194,7 +194,7 @@ pub struct CtCellStyles {
     pub cell_styles: Vec<CtCellStyle>,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtCellStyle {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: Option<String>,
@@ -247,7 +247,7 @@ pub struct CtGradientStop {
     pub position: f64,
 }
 
-#[derive(XmlSerialize, XmlDeserialize, Debug)]
+#[derive(XmlSerialize, XmlDeserialize, Debug, Clone)]
 pub struct CtFills {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -384,7 +384,7 @@ pub struct CtFontScheme {
     pub val: StFontScheme,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtFonts {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -462,7 +462,7 @@ pub struct CtFontFamily {
     pub val: StFontFamily,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtTableStyle {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
@@ -476,7 +476,7 @@ pub struct CtTableStyle {
     pub table_style_elements: Vec<CtTableStyleElement>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtTableStyles {
     #[xmlserde(name = b"tableStyle", ty = "child", vec_size = "count")]
     pub table_styles: Vec<CtTableStyle>,
@@ -488,7 +488,7 @@ pub struct CtTableStyles {
     pub default_pivot_style: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtTableStyleElement {
     #[xmlserde(name = b"type", ty = "attr")]
     pub ty: StTableStyleType,
@@ -498,7 +498,7 @@ pub struct CtTableStyleElement {
     pub dxf_id: Option<StDxfId>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDxfs {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -506,7 +506,7 @@ pub struct CtDxfs {
     pub dxfs: Vec<CtDxf>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDxf {
     #[xmlserde(name = b"font", ty = "child")]
     pub font: Option<CtFont>,
@@ -522,7 +522,7 @@ pub struct CtDxf {
     pub protection: Option<CtCellProtection>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtNumFmt {
     #[xmlserde(name = b"numFmtId", ty = "attr")]
     pub num_fmt_id: StNumFmtId,
@@ -530,7 +530,7 @@ pub struct CtNumFmt {
     pub format_code: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtNumFmts {
     #[xmlserde(name = b"numFmt", ty = "child", vec_size = "count")]
     pub num_fmts: Vec<CtNumFmt>,
@@ -538,7 +538,7 @@ pub struct CtNumFmts {
     pub count: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtXf {
     #[xmlserde(name = b"alignment", ty = "child")]
     pub alignment: Option<CtCellAlignment>,
@@ -572,7 +572,7 @@ pub struct CtXf {
     pub apply_protection: Option<bool>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtCellStyleXfs {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -580,7 +580,7 @@ pub struct CtCellStyleXfs {
     pub xfs: Vec<CtXf>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtCellXfs {
     #[xmlserde(name = b"xf", ty = "child", vec_size = "count")]
     pub xfs: Vec<CtXf>,
@@ -588,7 +588,7 @@ pub struct CtCellXfs {
     pub count: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtComment {
     #[xmlserde(name = b"text", ty = "child")]
     pub text: CtRst,
@@ -604,19 +604,19 @@ pub struct CtComment {
     pub guid: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCommentList {
     #[xmlserde(name = b"comment", ty = "child")]
     pub comments: Vec<CtComment>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtAuthors {
     #[xmlserde(name = b"author", ty = "child")]
     pub authors: Vec<PlainTextString>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtObjectAnchor {
     #[xmlserde(name = b"moveWithCells", ty = "attr", default = "default_false")]
     pub move_with_cells: bool,
@@ -628,7 +628,7 @@ pub struct CtObjectAnchor {
     pub to: CtMarker,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtMarker {
     #[xmlserde(name = b"xdr:col", ty = "child")]
     pub col: PlainTextU32,
@@ -640,7 +640,7 @@ pub struct CtMarker {
     pub row_off: PlainTextU32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCommentPr {
     #[xmlserde(name = b"anchor", ty = "child")]
     pub anchor: CtObjectAnchor,
@@ -670,7 +670,7 @@ pub struct CtCommentPr {
     pub auto_scale: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtFileVersion {
     #[xmlserde(name = b"appName", ty = "attr")]
     pub app_name: Option<String>,
@@ -684,13 +684,13 @@ pub struct CtFileVersion {
     pub code_name: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDefinedNames {
     #[xmlserde(name = b"definedName", ty = "child")]
     pub names: Vec<CtDefinedName>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDefinedName {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
@@ -724,7 +724,7 @@ pub struct CtDefinedName {
     pub workbook_parameter: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtFileRecoveryPr {
     #[xmlserde(name = b"autoRecover", ty = "attr", default = "default_true")]
     pub auto_recover: bool,
@@ -736,7 +736,7 @@ pub struct CtFileRecoveryPr {
     pub repair_load: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCalcPr {
     #[xmlserde(name = b"calcId", ty = "attr")]
     pub calc_id: u32,
@@ -766,7 +766,7 @@ pub struct CtCalcPr {
     pub force_full_calc: Option<bool>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtSmartTagPr {
     #[xmlserde(name = b"embed", ty = "attr", default = "default_false")]
     pub embed: bool,
@@ -774,7 +774,7 @@ pub struct CtSmartTagPr {
     pub show: StSmartTagShow,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtWorkbookPr {
     #[xmlserde(name = b"date1904", ty = "attr", default = "default_false")]
     pub date1904: bool,
@@ -826,7 +826,7 @@ pub struct CtWorkbookPr {
     pub default_theme_version: Option<u32>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtWorkbookProtection {
     #[xmlserde(name = b"lockStructure", ty = "attr", default = "default_false")]
     pub lock_structure: bool,
@@ -852,7 +852,7 @@ pub struct CtWorkbookProtection {
     pub workbook_spin_count: Option<u32>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtWebPublishing {
     #[xmlserde(name = b"css", ty = "attr", default = "default_true")]
     pub css: bool,
@@ -876,19 +876,19 @@ pub struct CtWebPublishing {
     pub character_set: Option<String>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtOleSize {
     #[xmlserde(name = b"ref", ty = "attr")]
     pub reference: StRef,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtPivotCaches {
     #[xmlserde(name = b"pivot_cache", ty = "child")]
     pub pivot_caches: Vec<CtPivotCache>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtPivotCache {
     #[xmlserde(name = b"cacheId", ty = "attr")]
     pub cache_id: u32,
@@ -896,7 +896,7 @@ pub struct CtPivotCache {
     pub id: String,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtFileSharing {
     #[xmlserde(name = b"readOnlyRecommended", ty = "attr", default = "default_false")]
     pub read_only_recommended: bool,
@@ -912,13 +912,13 @@ pub struct CtFileSharing {
     pub spin_count: Option<u32>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtSmartTagTypes {
     #[xmlserde(name = b"smartTagType", ty = "child")]
     pub smart_tag_types: Vec<CtSmartTagType>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtSmartTagType {
     #[xmlserde(name = b"namespaceUri", ty = "attr")]
     pub namespace_uri: Option<String>,
@@ -928,19 +928,19 @@ pub struct CtSmartTagType {
     pub url: Option<String>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtExternalReferences {
     #[xmlserde(name = b"externalReference", ty = "child")]
     pub external_references: Vec<CtExternalReference>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtExternalReference {
     #[xmlserde(name = b"r:id", ty = "attr")]
     pub id: String,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtWebPublishObjects {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -948,7 +948,7 @@ pub struct CtWebPublishObjects {
     pub web_publish_objects: Vec<CtWebPublishObject>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtWebPublishObject {
     #[xmlserde(name = b"id", ty = "attr")]
     pub id: u32,
@@ -964,7 +964,7 @@ pub struct CtWebPublishObject {
     pub auto_republish: bool,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtFunctionGroups {
     #[xmlserde(name = b"functionGroup", ty = "child")]
     pub function_groups: Vec<CtFunctionGroup>,
@@ -976,19 +976,19 @@ pub struct CtFunctionGroups {
     pub built_in_group_count: u32,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtFunctionGroup {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtBookViews {
     #[xmlserde(name = b"workbookView", ty = "child")]
     pub views: Vec<CtBookView>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtBookView {
     #[xmlserde(name = b"visibility", ty = "attr", default = "st_visibility_visible")]
     pub visibility: StVisibility,
@@ -1022,13 +1022,13 @@ pub struct CtBookView {
     pub auto_filter_date_grouping: bool,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtCustomWorkbookViews {
     #[xmlserde(name = b"customWorkbookView", ty = "child")]
     pub custom_workbook_views: Vec<CtCustomWorkbookView>,
 }
 
-#[derive(Debug, XmlDeserialize, XmlSerialize)]
+#[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtCustomWorkbookView {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
@@ -1084,13 +1084,13 @@ pub struct CtCustomWorkbookView {
     pub show_objects: StObjects,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheets {
     #[xmlserde(name = b"sheet", ty = "child")]
     pub sheets: Vec<CtSheet>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheet {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
@@ -1102,7 +1102,7 @@ pub struct CtSheet {
     pub id: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheetPr {
     #[xmlserde(name = b"tabColor", ty = "child")]
     pub tab_color: Option<CtColor>,
@@ -1134,7 +1134,7 @@ pub struct CtSheetPr {
     pub enable_format_conditions_calculation: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtOutlinePr {
     #[xmlserde(name = b"applyStyles", ty = "attr", default = "default_false")]
     pub apply_styles: bool,
@@ -1146,7 +1146,7 @@ pub struct CtOutlinePr {
     pub show_outline_symbols: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPageSetupPr {
     #[xmlserde(name = b"autoPageBreaks", ty = "attr", default = "default_true")]
     pub auto_page_breaks: bool,
@@ -1154,7 +1154,7 @@ pub struct CtPageSetupPr {
     pub fit_to_page: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheetDimension {
     #[xmlserde(name = b"ref", ty = "attr")]
     pub reference: StRef,
@@ -1376,7 +1376,7 @@ pub struct CtIndex {
     pub v: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheetCalcPr {
     #[xmlserde(name = b"fullCalcOnLoad", ty = "attr", default = "default_false")]
     pub full_calc_on_load: bool,
@@ -1404,13 +1404,13 @@ pub struct CtSheetFormatPr {
     pub outline_level_col: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCols {
     #[xmlserde(name = b"col", ty = "child")]
     pub cols: Vec<CtCol>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCol {
     #[xmlserde(name = b"min", ty = "attr")]
     pub min: u32,
@@ -1434,13 +1434,13 @@ pub struct CtCol {
     pub collapsed: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtControls {
     #[xmlserde(name = b"control", ty = "child")]
     pub controls: Vec<CtControl>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtControl {
     #[xmlserde(name = b"controlPr", ty = "child")]
     pub control_pr: Option<CtControlPr>,
@@ -1452,7 +1452,7 @@ pub struct CtControl {
     pub name: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtControlPr {
     #[xmlserde(name = b"anchor", ty = "child")]
     pub anchor: CtObjectAnchor,
@@ -1488,7 +1488,7 @@ pub struct CtControlPr {
     pub id: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtIgnoredError {
     #[xmlserde(name = b"sqref", ty = "attr")]
     pub sqref: String, // todo
@@ -1512,25 +1512,25 @@ pub struct CtIgnoredError {
     pub calculated_column: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtIgnoredErrors {
     #[xmlserde(name = b"ignoredError", ty = "child")]
     pub ignored_errors: Vec<CtIgnoredError>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCellWatches {
     #[xmlserde(name = b"cellWatch", ty = "child")]
     pub cell_watches: Vec<CtCellWatch>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCellWatch {
     #[xmlserde(name = b"r", ty = "attr")]
     pub r: StCellRef,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPageBreak {
     #[xmlserde(name = b"count", ty = "attr", default = "default_zero_u32")]
     pub count: u32,
@@ -1540,7 +1540,7 @@ pub struct CtPageBreak {
     pub breaks: Vec<CtBreak>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtBreak {
     #[xmlserde(name = b"id", ty = "attr", default = "default_zero_u32")]
     pub id: u32,
@@ -1554,7 +1554,7 @@ pub struct CtBreak {
     pub pt: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtTableParts {
     #[xmlserde(name = b"tablePart", ty = "child", vec_size = "count")]
     pub parts: Vec<CtTablePart>,
@@ -1562,19 +1562,19 @@ pub struct CtTableParts {
     pub count: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtTablePart {
     #[xmlserde(name = b"r:id", ty = "attr")]
     pub id: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSmartTags {
     #[xmlserde(name = b"cellSmartTags", ty = "child")]
     pub tags: Vec<CtCellSmartTags>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCellSmartTags {
     #[xmlserde(name = b"r", ty = "attr")]
     pub r: StCellRef,
@@ -1582,7 +1582,7 @@ pub struct CtCellSmartTags {
     pub tags: Vec<CtCellSmartTag>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCellSmartTag {
     #[xmlserde(name = b"cellSmartTagPr", ty = "child")]
     pub cell_smart_tag_pr: Vec<CtCellSmartTagPr>,
@@ -1594,7 +1594,7 @@ pub struct CtCellSmartTag {
     pub xml_based: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCellSmartTagPr {
     #[xmlserde(name = b"key", ty = "attr")]
     pub key: String,
@@ -1602,13 +1602,13 @@ pub struct CtCellSmartTagPr {
     pub value: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDrawing {
     #[xmlserde(name = b"r:id", ty = "attr")]
     pub id: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDrawingHF {
     #[xmlserde(name = b"id", ty = "attr")]
     pub id: String,
@@ -1650,7 +1650,7 @@ pub struct CtDrawingHF {
     pub rff: Option<u32>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheetProtection {
     #[xmlserde(name = b"algorithmName", ty = "attr")]
     pub algorithm_name: Option<String>,
@@ -1694,13 +1694,13 @@ pub struct CtSheetProtection {
     pub select_unlocked_cells: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtProtectedRanges {
     #[xmlserde(name = b"protectedRange", ty = "child")]
     pub ranges: Vec<CtProtectedRange>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtProtectedRange {
     #[xmlserde(name = b"securityDescriptor", ty = "child")]
     pub desciptors: Vec<PlainTextString>,
@@ -1718,7 +1718,7 @@ pub struct CtProtectedRange {
     pub spin_count: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtMergeCells {
     #[xmlserde(name = b"mergeCell", ty = "child", vec_size = "count")]
     pub merge_cells: Vec<CtMergeCell>,
@@ -1726,19 +1726,19 @@ pub struct CtMergeCells {
     pub count: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtMergeCell {
     #[xmlserde(name = b"ref", ty = "attr")]
     pub reference: StRef,
 }
 
-// #[derive(Debug, XmlSerialize, XmlDeserialize)]
+// #[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 // pub struct CtOleObjects {
 //     #[xmlserde(name = b"oleObject", ty = "child")]
 //     pub objects: Vec<CtOleObject>,
 // }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtOleObject {
     #[xmlserde(name = b"objectPr", ty = "child")]
     pub object_pr: Option<CtObjectPr>,
@@ -1758,7 +1758,7 @@ pub struct CtOleObject {
     pub id: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtObjectPr {
     #[xmlserde(name = b"anchor", ty = "child")]
     pub anchor: CtObjectAnchor,
@@ -1788,7 +1788,7 @@ pub struct CtObjectPr {
     pub id: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPrintOptions {
     #[xmlserde(name = b"horizontalCentered", ty = "attr", default = "default_false")]
     pub horizontal_centered: bool,
@@ -1802,7 +1802,7 @@ pub struct CtPrintOptions {
     pub grid_lines_set: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPageSetup {
     #[xmlserde(name = b"paperSize", ty = "attr", default = "default_one_u32")]
     pub paper_size: u32,
@@ -1848,7 +1848,7 @@ pub struct CtPageSetup {
     pub id: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtWebPublishItems {
     #[xmlserde(name = b"webPublishItem", ty = "child", vec_size = "count")]
     pub items: Vec<CtWebPublishItem>,
@@ -1856,7 +1856,7 @@ pub struct CtWebPublishItems {
     pub count: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtWebPublishItem {
     #[xmlserde(name = b"id", ty = "attr")]
     pub id: u32,
@@ -1876,7 +1876,7 @@ pub struct CtWebPublishItem {
     pub auto_republish: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSortState {
     #[xmlserde(name = b"sortCondition", ty = "child")]
     pub condictions: Vec<CtSortCondition>,
@@ -1886,7 +1886,7 @@ pub struct CtSortState {
     pub case_sensitive: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSortCondition {
     #[xmlserde(name = b"descending", ty = "attr", default = "default_false")]
     pub descending: bool,
@@ -1904,7 +1904,7 @@ pub struct CtSortCondition {
     pub icon_id: Option<u32>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtPageMargins {
     #[xmlserde(name = b"left", ty = "attr")]
     pub left: f64,
@@ -1920,7 +1920,7 @@ pub struct CtPageMargins {
     pub footer: f64,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtAutoFilter {
     #[xmlserde(name = b"filterColumn", ty = "child")]
     pub filter_columns: Vec<CtFilterColumn>,
@@ -1930,7 +1930,7 @@ pub struct CtAutoFilter {
     pub reference: StRef,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtFilterColumn {
     // Choice start todo!
     #[xmlserde(name = b"filters", ty = "child")]
@@ -1954,7 +1954,7 @@ pub struct CtFilterColumn {
     pub show_button: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtFilters {
     #[xmlserde(name = b"filter", ty = "child")]
     pub filters: Vec<CtFilter>,
@@ -1966,7 +1966,7 @@ pub struct CtFilters {
     pub calendar_type: StCalendarType,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDateGroupItem {
     #[xmlserde(name = b"year", ty = "attr")]
     pub year: u16,
@@ -1984,13 +1984,13 @@ pub struct CtDateGroupItem {
     pub date_time_grouping: StDateTimeGrouping,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtFilter {
     #[xmlserde(name = b"val", ty = "attr")]
     pub val: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCustomFilters {
     #[xmlserde(name = b"customFilter", ty = "child")]
     pub filters: Vec<CtCustomFilter>,
@@ -1998,7 +1998,7 @@ pub struct CtCustomFilters {
     pub and: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCustomFilter {
     #[xmlserde(name = b"operator", ty = "attr", default = "st_filter_operator_equal")]
     pub operator: StFilterOperator,
@@ -2006,7 +2006,7 @@ pub struct CtCustomFilter {
     pub val: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtTop10 {
     #[xmlserde(name = b"top", ty = "attr", default = "default_true")]
     pub top: bool,
@@ -2018,7 +2018,7 @@ pub struct CtTop10 {
     pub filter_val: Option<f64>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtColorFilter {
     #[xmlserde(name = b"dxfId", ty = "attr")]
     pub dxf_id: Option<StDxfId>,
@@ -2026,7 +2026,7 @@ pub struct CtColorFilter {
     pub cell_color: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtIconFilter {
     #[xmlserde(name = b"iconSet", ty = "attr")]
     pub icon_set: StIconSetType,
@@ -2034,7 +2034,7 @@ pub struct CtIconFilter {
     pub icon_id: Option<u32>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDynamicFilter {
     #[xmlserde(name = b"type", ty = "attr")]
     pub ty: StDynamicFilterType,
@@ -2046,13 +2046,13 @@ pub struct CtDynamicFilter {
     pub max_val_iso: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtHyperlinks {
     #[xmlserde(name = b"hyperlink", ty = "child")]
     pub links: Vec<CtHyperlink>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtHyperlink {
     #[xmlserde(name = b"ref", ty = "attr")]
     pub reference: StRef,
@@ -2066,7 +2066,7 @@ pub struct CtHyperlink {
     pub display: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDataConsolidate {
     #[xmlserde(name = b"dataRefs", ty = "child")]
     pub data_refs: Option<CtDataRefs>,
@@ -2084,7 +2084,7 @@ pub struct CtDataConsolidate {
     pub link: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDataRefs {
     #[xmlserde(name = b"dataRef", ty = "child", vec_size = "count")]
     pub data_ref: Vec<CtDataRef>,
@@ -2092,7 +2092,7 @@ pub struct CtDataRefs {
     pub count: u32,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDataRef {
     #[xmlserde(name = b"ref", ty = "attr")]
     pub reference: Option<StRef>,
@@ -2102,7 +2102,7 @@ pub struct CtDataRef {
     pub sheet: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtScenarios {
     #[xmlserde(name = b"scenario", ty = "child")]
     pub scearios: Vec<CtScenario>,
@@ -2114,7 +2114,7 @@ pub struct CtScenarios {
     pub sqref: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtScenario {
     #[xmlserde(name = b"CtInputCells", ty = "child")]
     pub input_cells: Vec<CtInputCells>,
@@ -2132,7 +2132,7 @@ pub struct CtScenario {
     pub comment: Option<String>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtInputCells {
     #[xmlserde(name = b"r", ty = "attr")]
     pub r: StCellRef,
@@ -2146,7 +2146,7 @@ pub struct CtInputCells {
     pub num_fmt_id: Option<StNumFmtId>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtHeaderFooter {
     #[xmlserde(name = b"oddHeader", ty = "child")]
     pub odd_header: Option<PlainTextString>,
@@ -2226,7 +2226,7 @@ pub struct CtDataValidation {
     pub sqref: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtConditionalFormatting {
     #[xmlserde(name = b"cfRule", ty = "child")]
     pub cf_rules: Vec<CtCfRule>,
@@ -2236,7 +2236,7 @@ pub struct CtConditionalFormatting {
     pub sqref: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCfRule {
     #[xmlserde(name = b"formula", ty = "child")]
     pub formulas: Vec<PlainTextString>,
@@ -2274,7 +2274,7 @@ pub struct CtCfRule {
     pub equal_average: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDataBar {
     #[xmlserde(name = b"cfvo", ty = "child")]
     pub cfvos: Vec<CtCfvo>, // must has 2 elements
@@ -2288,7 +2288,7 @@ pub struct CtDataBar {
     pub show_value: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtIconSet {
     #[xmlserde(name = b"cfvo", ty = "child")]
     pub cfvos: Vec<CtCfvo>, // at least 2 elements
@@ -2306,7 +2306,7 @@ pub struct CtIconSet {
     pub reverse: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCfvo {
     #[xmlserde(name = b"type", ty = "attr")]
     pub ty: StCfvoType,
@@ -2316,7 +2316,7 @@ pub struct CtCfvo {
     pub gte: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtColorScale {
     #[xmlserde(name = b"cfvo", ty = "child")]
     pub cfvos: Vec<CtCfvo>, // at least 2
@@ -2324,13 +2324,13 @@ pub struct CtColorScale {
     pub colors: Vec<CtColor>, // at least 2
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCustomProperties {
     #[xmlserde(name = b"customPr", ty = "child")]
     pub custom_prs: Vec<CtCustomProperty>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCustomProperty {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
@@ -2338,13 +2338,13 @@ pub struct CtCustomProperty {
     pub id: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCustomSheetViews {
     #[xmlserde(name = b"custom_sheet_view", ty = "child")]
     pub views: Vec<CtCustomSheetView>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCustomSheetView {
     #[xmlserde(name = b"pane", ty = "child")]
     pub pane: Option<CtPane>,
@@ -2406,19 +2406,19 @@ pub struct CtCustomSheetView {
     pub top_left_cell: Option<StCellRef>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheetBackgroundPicture {
     #[xmlserde(name = b"r:id", ty = "attr")]
     pub id: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtSheetData {
     #[xmlserde(name = b"row", ty = "child")]
     pub rows: Vec<CtRow>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize, Default)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize, Default)]
 pub struct CtRow {
     #[xmlserde(name = b"c", ty = "child")]
     pub cells: Vec<CtCell>,
@@ -2448,7 +2448,7 @@ pub struct CtRow {
     pub ph: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCell {
     #[xmlserde(name = b"f", ty = "child")]
     pub f: Option<CtFormula>,
@@ -2470,7 +2470,7 @@ pub struct CtCell {
     pub ph: bool,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtFormula {
     #[xmlserde(ty = "text")]
     pub formula: Option<String>,
