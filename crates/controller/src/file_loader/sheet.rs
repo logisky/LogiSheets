@@ -361,6 +361,43 @@ pub fn load_sheet_views(settings: &mut Settings, sheet_id: SheetId, sheet_views:
     settings.sheet_views.insert(sheet_id, sheet_views.clone());
 }
 
+/// Capture the worksheet OOXML parts the controller does not model, so they
+/// survive open→save (see `PreservedWorksheetParts`). Only stores an entry when
+/// at least one part is present, to avoid empty rows for freshly-created sheets.
+pub fn load_preserved_parts(
+    settings: &mut Settings,
+    sheet_id: SheetId,
+    wp: &WorksheetPart,
+) {
+    let parts = crate::settings::PreservedWorksheetParts {
+        sheet_calc_pr: wp.sheet_calc_pr.clone(),
+        sheet_protection: wp.sheet_protection.clone(),
+        protected_ranges: wp.protected_ranges.clone(),
+        scenarios: wp.scenarios.clone(),
+        auto_filter: wp.auto_filter.clone(),
+        sort_state: wp.sort_state.clone(),
+        data_consolidate: wp.data_consolidate.clone(),
+        custom_sheet_views: wp.custom_sheet_views.clone(),
+        phonetic_pr: wp.phonetic_pr.clone(),
+        conditional_formatting: wp.conditional_formatting.clone(),
+        hyperlinks: wp.hyperlinks.clone(),
+        print_options: wp.print_options.clone(),
+        page_margins: wp.page_margins.clone(),
+        page_setup: wp.page_setup.clone(),
+        header_footer: wp.header_footer.clone(),
+        row_breaks: wp.row_breaks.clone(),
+        col_breaks: wp.col_breaks.clone(),
+        custom_properties: wp.custom_properties.clone(),
+        cell_watches: wp.cell_watches.clone(),
+        ignored_errors: wp.ignored_errors.clone(),
+        smart_tags: wp.smart_tags.clone(),
+        controls: wp.controls.clone(),
+        web_publish_items: wp.web_publish_items.clone(),
+        table_parts: wp.table_parts.clone(),
+    };
+    settings.preserved_parts.insert(sheet_id, parts);
+}
+
 fn rst_to_plain_text(rst: &CtRst) -> String {
     match &rst.t {
         Some(p) => p.value.to_string(),

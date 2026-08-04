@@ -3,13 +3,12 @@
   align-items: center;
   gap: 6px;
   height: 100%;
-  padding: 0px 10px; /* keep container height; smaller inner controls below */
-  background: #ffffff; /* clearer card */
-  border-radius: 10px; /* clearer rounded rect */
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
-  border: 2px solid #dfe4ea; /* clearer edge */
-  backdrop-filter: saturate(160%) blur(4px);
-  color: #445066;
+  padding: 0 12px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  border: 1px solid #e4e7ec; /* hairline, matches the app's card/menu edges */
+  color: #475467;
 }
 
 .center {
@@ -22,11 +21,11 @@
 .section {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
-/* View tab: each option is a self-contained bordered pill so the label is
-   unambiguously tied to its own switch, with clear gaps between options. */
+/* View tab: each option is a self-contained pill so the label is unambiguously
+   tied to its own switch, with clear gaps between options. */
 .viewSection {
   display: inline-flex;
   align-items: center;
@@ -36,28 +35,74 @@
   display: inline-flex;
   align-items: center;
   height: 30px;
-  padding: 0 6px 0 10px;
-  border: 1px solid #e0e3e7;
+  padding: 0 8px 0 12px;
+  border: 1px solid #e4e7ec;
   border-radius: 8px;
-  background: #f8fafc;
+  background: #ffffff;
   white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 .toggleItem:hover {
-  background: #f1f5f9;
+  background: #f9fafb;
+  border-color: #d0d5dd;
 }
 
-/* Make controls visually smaller without changing container height */
+/* Compact, refined controls (container height unchanged). */
 .host :global(.MuiButton-root) {
-  padding: 2px 6px;
+  padding: 3px 8px;
   min-width: auto;
   font-size: 12px;
-  text-transform: none; /* Disable uppercase transformation */
+  text-transform: none;
+  border-radius: 8px;
 }
+
+/* Icon buttons: quiet by default, soft rounded hover with a subtle accent. */
 .host :global(.MuiIconButton-root) {
-  padding: 2px;
+  padding: 5px;
+  border-radius: 8px;
+  color: #475467;
+  transition: background 0.12s ease, color 0.12s ease;
 }
+.host :global(.MuiIconButton-root:hover) {
+  background: #f2f4f7;
+  color: #1d4ed8;
+}
+.host :global(.MuiIconButton-root.Mui-disabled) {
+  color: #c3c8d0;
+}
+
 .host :global(.MuiSvgIcon-root) {
   font-size: 18px;
+}
+
+/* Dropdowns (font family, number format): rounded hairline, refined focus. */
+.host :global(.MuiOutlinedInput-root) {
+  border-radius: 8px;
+  background: #ffffff;
+}
+.host :global(.MuiOutlinedInput-notchedOutline) {
+  border-color: #e4e7ec;
+}
+.host :global(.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline) {
+  border-color: #d0d5dd;
+}
+.host
+  :global(.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) {
+  border-width: 1px;
+}
+
+/* Ribbon tabs. */
+.host :global(.MuiTab-root) {
+  color: #667085;
+  font-weight: 600;
+}
+.host :global(.MuiTab-root.Mui-selected) {
+  color: #1d4ed8;
+}
+.host :global(.MuiTabs-indicator) {
+  background-color: #1d4ed8;
+  height: 2px;
+  border-radius: 2px;
 }
 
 .group {
@@ -69,8 +114,8 @@
 }
 
 .divider {
-  margin: 0 4px !important;
-  opacity: 0.5;
+  margin: 0 6px !important;
+  border-color: #eaecf0 !important;
 }
 
 .alignIcon {
@@ -100,11 +145,15 @@
 .alignCell {
   width: 28px;
   height: 28px;
-  border: 1px solid #e0e3e7;
-  border-radius: 4px;
+  border: 1px solid #e4e7ec;
+  border-radius: 6px;
   background: #fff;
   color: #334155;
   cursor: pointer;
+}
+.alignCell:hover {
+  background: #f2f4f7;
+  border-color: #d0d5dd;
 }
 .alignCell:disabled {
   opacity: 0.4;

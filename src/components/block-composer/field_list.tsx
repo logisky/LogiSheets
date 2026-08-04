@@ -96,11 +96,22 @@ export const FieldList = ({
                         }}
                     >
                         <Button
-                            variant="contained"
+                            variant="outlined"
                             startIcon={<AddIcon />}
                             fullWidth
                             onClick={onAddField}
-                            sx={{textTransform: 'none'}}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: 1.5,
+                                borderColor: 'divider',
+                                color: 'text.primary',
+                                fontWeight: 600,
+                                bgcolor: 'background.paper',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    bgcolor: 'action.hover',
+                                },
+                            }}
                         >
                             Add New Field
                         </Button>

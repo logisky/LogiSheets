@@ -35,7 +35,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StCalcMode {
         Manual => "manual",
         Auto => "auto",
@@ -44,7 +44,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StCellComments {
         None => "none",
         AsDisplayed => "asDisplayed",
@@ -53,7 +53,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StCellFormulaType {
         Array => "array",
         DataTable => "dataTable",
@@ -71,7 +71,7 @@ pub type StCellSpans = Vec<StCellSpan>;
 pub type StCellStyleXfId = u32;
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StCellType {
         B => "b",
         D => "d",
@@ -85,7 +85,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.12
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StCfType {
         Expression => "expression",
         CellIs => "cellIs",
@@ -108,7 +108,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StCfvoType {
         Num => "num",
         Percent => "percent",
@@ -120,7 +120,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StComments {
         CommNone => "commNone",
         CommIndicator => "commIndicator",
@@ -130,7 +130,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.15
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StConditionalFormattingOperator {
         LessThan => "lessThan",
         LessThanOrEqual => "lessThanOrEqual",
@@ -148,7 +148,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StCredMethod {
         Integrated => "integrated",
         None => "none",
@@ -158,7 +158,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StDataConsolidateFunction {
         Average => "average",
         Count => "count",
@@ -228,7 +228,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StDateTimeGrouping {
         Year => "year",
         Month => "month",
@@ -240,7 +240,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StDdeValueType {
         Nil => "nil",
         B => "b",
@@ -251,7 +251,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StDvAspect {
         DvaspectContent => "DVASPECT_CONTENT",
         DvaspectIcon => "DVASPECT_ICON",
@@ -262,7 +262,7 @@ pub type StDxfId = u32;
 
 xml_serde_enum! {
     /// 18.18.26
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StDynamicFilterType {
         Null => "null",
         AboveAverage => "aboveAverage",
@@ -303,7 +303,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StExternalConnectionType {
         General => "general",
         Text => "text",
@@ -319,7 +319,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.28
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StFieldSortType {
         Manual => "manual",
         Ascending => "ascending",
@@ -328,7 +328,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StFileType {
         DOS => "dos",
         Linux => "lin",
@@ -340,7 +340,7 @@ xml_serde_enum! {
 pub type StFillId = u32;
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StFilterOperator {
         Equal => "equal",
         LessThan => "lessThan",
@@ -364,7 +364,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StFormatAction {
         Blank => "blank",
         Formatting => "formatting",
@@ -377,7 +377,7 @@ pub type StFormula = String;
 
 xml_serde_enum! {
     /// 18.18.36
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StFormulaExpression {
         Ref => "ref",
         RefError => "refError",
@@ -399,7 +399,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.38
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StGroupBy {
         Range => "range",
         Seconds => "seconds",
@@ -414,7 +414,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.39
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StGrowShrinkType {
         InsertDelete => "insertDelete",
         InsertClear => "insertClear",
@@ -440,7 +440,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.41
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StHtmlFmt {
         None => "none",
         Rtf => "rtf",
@@ -450,7 +450,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.42
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StIconSetType {
         ThreeArrows => "3Arrows",
         ThreeArrowsGray => "3ArrowsGray",
@@ -474,7 +474,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.43
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StItemType {
         Data => "data",
         Default => "default",
@@ -495,7 +495,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.44
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StMdxFunctionType {
         M => "m",
         V => "v",
@@ -509,7 +509,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.45
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StMdxKpiProperty {
         V => "v",
         G => "g",
@@ -522,7 +522,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.46
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StMdxSetOrder {
         U => "u",
         A => "a",
@@ -538,7 +538,7 @@ pub type StNumFmtId = u32;
 
 xml_serde_enum! {
     /// 18.18.48
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StObjects {
         All => "all",
         Placeholders => "placeholders",
@@ -548,7 +548,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.49
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StOleUpdate {
         OleupdateAlways => "OLEUPDATE_ALWAYS",
         OleupdateOncall => "OLEUPDATE_ONCALL",
@@ -557,7 +557,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.50
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StOrientation {
         Default => "default",
         Portrait => "portrait",
@@ -567,7 +567,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.51
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StPageOrder {
         DownThenOver => "downThenOver",
         OverThenDown => "overThenDown",
@@ -597,7 +597,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.54
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StParameterType {
         Prompt => "prompt",
         Value => "value",
@@ -669,7 +669,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.59
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StPivotFilterType {
         Unknown => "unknown",
         Count => "count",
@@ -742,7 +742,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.60
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StPrintError {
         Displayed => "displayed",
         Blank => "blank",
@@ -753,7 +753,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.61
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StQualifier {
         DoubleQuote => "doubleQuote",
         SingleQuote => "singleQuote",
@@ -766,7 +766,7 @@ pub type StRefA = String;
 
 xml_serde_enum! {
     /// 18.18.64
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StRefMode {
         A1 => "A1",
         R1C1 => "R1C1",
@@ -775,7 +775,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.65
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StRevisionAction {
         Add => "add",
         Delete => "delete",
@@ -784,7 +784,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.66
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StRwColActionType {
         InsertRow => "insertRow",
         DeleteRow => "deleteRow",
@@ -795,7 +795,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.67
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StScope {
         Selection => "selection",
         Data => "data",
@@ -805,7 +805,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.68
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StSheetState {
         Visible => "visible",
         Hidden => "hidden",
@@ -825,7 +825,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.70
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StShowDataAs {
         Normal => "normal",
         Difference => "difference",
@@ -841,7 +841,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.71
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StSmartTagShow {
         All => "all",
         None => "none",
@@ -851,7 +851,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.72
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StSortBy {
         Value => "value",
         CellColor => "cellColor",
@@ -862,7 +862,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.73
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StSortMethod {
         Stroke => "stroke",
         PinYin => "pinYin",
@@ -872,7 +872,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.74
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StSortType {
         None => "none",
         Ascending => "ascending",
@@ -886,7 +886,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.75
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StSourceType {
         Worksheet => "worksheet",
         External => "external",
@@ -899,7 +899,7 @@ pub type StSqref = Vec<StRef>;
 
 xml_serde_enum! {
     /// 18.18.77
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTableStyleType {
        WholeTable => "wholeTable",
        HeaderRow => "headerRow",
@@ -934,7 +934,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.78
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTableType {
         Worksheet => "worksheet",
         Xml => "xml",
@@ -944,7 +944,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.79
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTargetScreenSize {
         FiveThree => "544x376",
         SixFour => "640x480",
@@ -962,7 +962,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.80
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTextHAlign {
         Left => "left",
         Center => "center",
@@ -974,7 +974,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.81
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTextVAlign {
         Top => "top",
         Center => "center",
@@ -986,7 +986,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.82
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTimePeriod {
        Today => "today",
        Yesterday => "yesterday",
@@ -1003,7 +1003,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.83
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTotalsRowFunction {
         None => "none",
         Sum => "sum",
@@ -1020,7 +1020,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.84
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StType {
         None => "none",
         All => "all",
@@ -1044,7 +1044,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.87
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StUpdateLinks {
         UserSet => "userSet",
         Never => "never",
@@ -1067,7 +1067,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.89
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StVisibility {
         Visible => "visible",
         Hidden => "hidden",
@@ -1077,7 +1077,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.90
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StVolDepType {
         RealTimeData => "realTimeData",
         OlapFunctions => "olapFunctions",
@@ -1086,7 +1086,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.91
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StVolValueType {
         B => "b",
         N => "n",
@@ -1097,7 +1097,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.92
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StWebSourceType {
         Sheet => "sheet",
         PrintArea => "printArea",
@@ -1140,7 +1140,7 @@ xml_serde_enum! {
 
 xml_serde_enum! {
     /// 18.18.92
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StConformanceClass {
         Strict => "strict",
         Transitional => "transitional",
@@ -1150,7 +1150,7 @@ xml_serde_enum! {
 pub type StPositiveUniversalMeasure = String;
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StCalendarType {
         Gregorian => "gregorian",
         GregorianUs => "gregorianUs",
@@ -1178,7 +1178,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StBlackWhiteMode {
         Clr => "clr",
         Auto => "auto",
@@ -1195,7 +1195,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StFontCollectionIndex {
         Major => "major",
         Minor => "minor",
@@ -1204,7 +1204,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTextShapeType {
         TextNoShape => "textNoShape",
         TextPlain => "textPlain",
@@ -1254,7 +1254,7 @@ pub type StGeomGuideName = String;
 pub type StCoordinate32 = i64;
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTextHorzOverflowType {
         Overflow => "overflow",
         Clip => "clip",
@@ -1262,7 +1262,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTextVertOverflowType {
         Overflow => "overflow",
         Ellipsis => "ellipsis",
@@ -1271,7 +1271,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTextVerticalType {
         Horz => "horz",
         Vert => "vert",
@@ -1284,7 +1284,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTextWrappingType {
         None => "none",
         Square => "square",
@@ -1292,7 +1292,7 @@ xml_serde_enum! {
 }
 
 xml_serde_enum! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     StTextAnchoringType {
         T=>"t",
         Ctr => "ctr",

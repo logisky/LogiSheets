@@ -114,7 +114,7 @@ test('right-clicking inside a block offers "Edit block…" and opens the compose
     // Selecting an existing field shows the read-only notice (existing fields
     // are immutable in v1).
     await existing.click()
-    await expect(d.getByText(/Existing field/i)).toBeVisible()
+    await expect(d.getByText(/re-typed/i)).toBeVisible()
 })
 
 test('appending a field and saving runs editFormBlock end-to-end', async ({

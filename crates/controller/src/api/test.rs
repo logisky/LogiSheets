@@ -1,8 +1,8 @@
 use crate::edit_action::{
     AddComment, AuthorInput, CellInput, CommentMention, CreateBlock, CreateChart,
-    CreateChartSeries, DeleteCellImage, DeleteChart, DeleteComment, EditComment, EditPayload,
-    LineStyleUpdate, ModifyPolicy, MoveChart, PayloadsAction, ResolveComment, SetCellImage,
-    SheetRename, StyleUpdateType, UpdateChart, WorkbookUpdateType,
+    CreateChartSeries, CreateDiyCell, DeleteCellImage, DeleteChart, DeleteComment, EditComment,
+    EditPayload, LineStyleUpdate, ModifyPolicy, MoveChart, PayloadsAction, RemoveDiyCell,
+    ResolveComment, SetCellImage, SheetRename, StyleUpdateType, UpdateChart, WorkbookUpdateType,
 };
 
 #[test]
@@ -690,6 +690,122 @@ fn create_block() {
     ws.get_cell_position(3, 3).unwrap();
     let resp = ws.get_display_window_response(0., 0., 100., 100.).unwrap();
     assert_eq!(resp.window.blocks.len(), 1);
+}
+
+#[test]
+fn worksheet_page_setup_survives_save_load() {
+    // Regression: page setup / margins / header-footer were parsed on load but
+    // hardcoded to `None` on save, so open→save dropped them. They must now be
+    // preserved verbatim. graph.xlsx carries <pageSetup>, <pageMargins> and
+    // <headerFooter>.
+    use logisheets_workbook::prelude::Wb;
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let saved = wb.save().unwrap();
+
+    let doc = Wb::from_file(&saved).unwrap();
+    assert!(
+        doc.xl
+            .worksheets
+            .values()
+            .any(|ws| ws.worksheet_part.page_setup.is_some()),
+        "pageSetup should survive open→save"
+    );
+    assert!(
+        doc.xl
+            .worksheets
+            .values()
+            .any(|ws| ws.worksheet_part.page_margins.is_some()),
+        "pageMargins should survive open→save"
+    );
+    assert!(
+        doc.xl
+            .worksheets
+            .values()
+            .any(|ws| ws.worksheet_part.header_footer.is_some()),
+        "headerFooter should survive open→save"
+    );
+}
+
+#[test]
+fn worksheet_protection_survives_save_load() {
+    // 6.xlsx carries <sheetProtection>; it must survive open→save (previously
+    // hardcoded to `None`).
+    use logisheets_workbook::prelude::Wb;
+    let buf = std::fs::read("../../tests/6.xlsx").unwrap();
+    let wb = Workbook::from_file(&buf, "6".to_string()).unwrap();
+    let saved = wb.save().unwrap();
+
+    let doc = Wb::from_file(&saved).unwrap();
+    assert!(
+        doc.xl
+            .worksheets
+            .values()
+            .any(|ws| ws.worksheet_part.sheet_protection.is_some()),
+        "sheetProtection should survive open→save"
+    );
+}
+
+#[test]
+fn remove_diy_cell_round_trips_without_panicking() {
+    // Regression: RemoveDiyCell / RemoveDiyCellById had a `todo!()` in the diff
+    // computation (engine panic) and no arm in the exclusive executor (silent
+    // no-op). This exercises the create → remove round-trip: it must return Ok
+    // (no panic) and actually clear the DIY-cell registration.
+    let mut wb = Workbook::default();
+    let id = wb.get_available_block_id(0).unwrap();
+    // A 3x3 block anchored at (1,1) so (1,1) is a BlockCell (DIY cells require
+    // a block cell).
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id,
+            master_row: 1,
+            master_col: 1,
+            row_cnt: 3,
+            col_cnt: 3,
+            owner: None,
+            modify_policy: None,
+        })],
+        undoable: false,
+        init: false,
+    }));
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateDiyCell(CreateDiyCell {
+            sheet_idx: 0,
+            row: 1,
+            col: 1,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(
+        ws.get_diy_cell_id(1, 1).is_ok(),
+        "DIY cell should exist after CreateDiyCell"
+    );
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::RemoveDiyCell(RemoveDiyCell {
+            sheet_idx: 0,
+            row: 1,
+            col: 1,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "RemoveDiyCell should succeed, got {:?}",
+        effect.status
+    );
+
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(
+        ws.get_diy_cell_id(1, 1).is_err(),
+        "DIY cell should be gone after RemoveDiyCell"
+    );
 }
 
 #[test]

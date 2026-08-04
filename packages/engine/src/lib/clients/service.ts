@@ -15,6 +15,8 @@ import type {
   SetRowHeightBuilder,
   ErrorMessage,
   CellInput,
+  Value,
+  SheetCoordinate,
 } from "logisheets-web";
 import { isErrorMessage, Cell } from "logisheets-web";
 import { WorkbookClient } from "./workbook";
@@ -23,6 +25,36 @@ import type { Grid } from "$types/index";
 
 type Resp<T> = Promise<T | ErrorMessage>;
 type SheetId = number;
+
+// Cap coordinates per batch request so a huge sheet is read in chunks instead
+// of one giant RPC (mirrors the find engine's banding).
+const CSV_COORDS_PER_REQUEST = 20000;
+
+// Serialize a cell value to a CSV field: the RAW value (numbers via String(n),
+// bools as TRUE/FALSE, errors verbatim), NOT the number-formatted display
+// string — the batch reader returns neither the number format nor the formula.
+function valueToCsvField(value: Value): string {
+  if (value === "empty") return "";
+  switch (value.type) {
+    case "str":
+      return value.value;
+    case "number":
+      return String(value.value);
+    case "bool":
+      return value.value ? "TRUE" : "FALSE";
+    case "error":
+      return value.value;
+  }
+}
+
+// RFC 4180: quote a field iff it contains a comma, double-quote, CR or LF;
+// escape embedded double-quotes by doubling.
+function csvEscapeField(field: string): string {
+  if (/[",\r\n]/.test(field)) {
+    return '"' + field.replace(/"/g, '""') + '"';
+  }
+  return field;
+}
 
 /**
  * Host-provided gate invoked before a workbook load replaces the one currently
@@ -218,6 +250,53 @@ export class DataService {
 
   public getSheetDimension(sheetIdx: number): Resp<SheetDimension> {
     return this._workbook.getSheetDimension(sheetIdx);
+  }
+
+  /**
+   * Serialize a sheet's used range to RFC 4180 CSV text. Reads the used-range
+   * bounds (`getSheetDimension`) then batch-reads values row-major
+   * (`getReproducibleCells`) — it does not touch the Rust engine beyond those
+   * queries. Returns an empty string for an empty sheet.
+   *
+   * Note: the RAW cell value is written (see `valueToCsvField`), not the
+   * number-formatted display string, so a cell shown as `1,200` or a date
+   * exports as its underlying value.
+   */
+  public async exportSheetToCsv(sheetIdx: number): Promise<string> {
+    const dim = await this._workbook.getSheetDimension(sheetIdx);
+    if (isErrorMessage(dim)) return "";
+    const { maxRow, maxCol } = dim;
+    if (maxRow < 0 || maxCol < 0) return "";
+
+    const cols = maxCol + 1;
+    // Dense grid so gaps between sparse cells become empty fields.
+    const grid: string[][] = Array.from({ length: maxRow + 1 }, () =>
+      new Array<string>(cols).fill(""),
+    );
+
+    const bandRows = Math.max(1, Math.floor(CSV_COORDS_PER_REQUEST / cols));
+    for (let startRow = 0; startRow <= maxRow; startRow += bandRows) {
+      const endRow = Math.min(startRow + bandRows - 1, maxRow);
+      const coordinates: SheetCoordinate[] = [];
+      for (let r = startRow; r <= endRow; r++) {
+        for (let c = 0; c <= maxCol; c++) {
+          coordinates.push({ row: r, col: c });
+        }
+      }
+      const cells = await this._workbook.getReproducibleCells({
+        sheetIdx,
+        coordinates,
+      });
+      if (isErrorMessage(cells)) continue;
+      for (const cell of cells) {
+        const { row, col } = cell.coordinate;
+        grid[row][col] = valueToCsvField(cell.value);
+      }
+    }
+
+    return grid
+      .map((row) => row.map(csvEscapeField).join(","))
+      .join("\r\n");
   }
 
   // ========================================================================

@@ -303,8 +303,24 @@ fn convert_diff<C: VersionExecCtx>(
             },
             p.sheet_id,
         ))),
-        EditPayload::RemoveDiyCell(_) => todo!(),
-        EditPayload::RemoveDiyCellById(_) => todo!(),
+        EditPayload::RemoveDiyCell(remove_diy_cell) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(remove_diy_cell.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            let row = remove_diy_cell.row;
+            let col = remove_diy_cell.col;
+            let cell_id = ctx
+                .fetch_cell_id(&sheet_id, row, col)
+                .map_err(|_| BasicError::CellIdNotFound(row, col))?;
+            Ok(Some((Diff::CellValue(cell_id), sheet_id)))
+        }
+        EditPayload::RemoveDiyCellById(p) => Ok(Some((
+            Diff::BlockUpdate {
+                sheet_id: p.sheet_id,
+                id: p.block_id,
+            },
+            p.sheet_id,
+        ))),
         EditPayload::CreateAppendix(p) => {
             let sheet_id = if let Some(id) = p.sheet_id {
                 id

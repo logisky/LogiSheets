@@ -177,6 +177,10 @@ fn save_worksheet_part<S: SaverTrait>(
     let sheet_pr = save_sheet_pr(sheet_id, sheet_info_manager, saver);
     let sheet_format_pr = settings.sheet_format_pr.get(&sheet_id).map(|e| e.clone());
     let sheet_views = settings.sheet_views.get(&sheet_id).map(|e| e.clone());
+    // Re-emit the unmodeled worksheet parts captured at load (conditional
+    // formatting, hyperlinks, filters, page setup, protection, table parts, ...)
+    // so open→save preserves them instead of dropping them.
+    let preserved = settings.preserved_parts.get(&sheet_id);
     WorksheetPart {
         cols,
         sheet_data,
@@ -184,35 +188,39 @@ fn save_worksheet_part<S: SaverTrait>(
         dimension: None,
         sheet_views,
         sheet_format_pr,
-        sheet_calc_pr: None,
-        sheet_protection: None,
-        protected_ranges: None,
-        scenarios: None,
-        auto_filter: None,
-        sort_state: None,
-        data_consolidate: None,
-        custom_sheet_views: None,
+        sheet_calc_pr: preserved.and_then(|p| p.sheet_calc_pr.clone()),
+        sheet_protection: preserved.and_then(|p| p.sheet_protection.clone()),
+        protected_ranges: preserved.and_then(|p| p.protected_ranges.clone()),
+        scenarios: preserved.and_then(|p| p.scenarios.clone()),
+        auto_filter: preserved.and_then(|p| p.auto_filter.clone()),
+        sort_state: preserved.and_then(|p| p.sort_state.clone()),
+        data_consolidate: preserved.and_then(|p| p.data_consolidate.clone()),
+        custom_sheet_views: preserved.and_then(|p| p.custom_sheet_views.clone()),
         merge_cells: merge_cells,
-        phonetic_pr: None,
-        conditional_formatting: vec![],
+        phonetic_pr: preserved.and_then(|p| p.phonetic_pr.clone()),
+        conditional_formatting: preserved
+            .map(|p| p.conditional_formatting.clone())
+            .unwrap_or_default(),
+        // Set later from the DataValidationManager (see file_saver/workbook.rs).
         data_validations: None,
-        hyperlinks: None,
-        print_options: None,
-        page_margins: None,
-        page_setup: None,
-        header_footer: None,
-        row_breaks: None,
-        col_breaks: None,
-        custom_properties: None,
-        cell_watches: None,
-        ignored_errors: None,
-        smart_tags: None,
+        hyperlinks: preserved.and_then(|p| p.hyperlinks.clone()),
+        print_options: preserved.and_then(|p| p.print_options.clone()),
+        page_margins: preserved.and_then(|p| p.page_margins.clone()),
+        page_setup: preserved.and_then(|p| p.page_setup.clone()),
+        header_footer: preserved.and_then(|p| p.header_footer.clone()),
+        row_breaks: preserved.and_then(|p| p.row_breaks.clone()),
+        col_breaks: preserved.and_then(|p| p.col_breaks.clone()),
+        custom_properties: preserved.and_then(|p| p.custom_properties.clone()),
+        cell_watches: preserved.and_then(|p| p.cell_watches.clone()),
+        ignored_errors: preserved.and_then(|p| p.ignored_errors.clone()),
+        smart_tags: preserved.and_then(|p| p.smart_tags.clone()),
+        // Set later from the image/chart managers (see file_saver/workbook.rs).
         drawing: None,
         drawing_hf: None,
         picture: None,
-        controls: None,
-        web_publish_items: None,
-        table_parts: None,
+        controls: preserved.and_then(|p| p.controls.clone()),
+        web_publish_items: preserved.and_then(|p| p.web_publish_items.clone()),
+        table_parts: preserved.and_then(|p| p.table_parts.clone()),
     }
 }
 

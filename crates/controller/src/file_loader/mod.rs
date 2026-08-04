@@ -30,7 +30,7 @@ use crate::{
 use logisheets_base::SheetId;
 use std::sync::Arc;
 
-use self::sheet::load_sheet_views;
+use self::sheet::{load_preserved_parts, load_sheet_views};
 pub struct SheetIdFetcher<'a> {
     pub sheet_id_manager: &'a mut SheetIdManager,
 }
@@ -314,6 +314,10 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             if let Some(dv) = &ws.worksheet_part.data_validations {
                 data_validation_manager.set_sheet(sheet_id, dv.clone());
             }
+            // Unmodeled worksheet parts (conditional formatting, hyperlinks,
+            // filters, page setup, protection, table parts, ...) are preserved
+            // verbatim so open→save doesn't drop them.
+            load_preserved_parts(&mut settings, sheet_id, &ws.worksheet_part);
         }
     });
 
