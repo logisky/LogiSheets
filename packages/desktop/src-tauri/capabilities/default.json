@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Baseline capability for the main window: enables core IPC so the frontend can `invoke` app commands (e.g. `handle`). App-defined commands are not permission-gated in Tauri v2, so only `core:default` is needed here; add plugin permissions (dialog, fs, ...) as native features land.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

@@ -27,9 +27,13 @@ members = [
     "crates/workbook",
     "crates/xmldiff",
 ]
-# The fuzz crate needs a nightly-only toolchain (libfuzzer-sys); keep it out of
-# the default workspace so `cargo build/test --workspace` on stable is unaffected.
-exclude = ["fuzz"]
+# Crates kept OUT of the default workspace so `cargo build/test --workspace`
+# stays portable on stable/headless CI:
+#   - fuzz: needs a nightly-only toolchain (libfuzzer-sys).
+#   - packages/desktop/src-tauri: a Tauri GUI app whose deps (wry) require
+#     platform GUI system libs (glib/gtk/webkit2gtk) that Linux CI lacks. It is
+#     its own standalone workspace; build it with `cargo tauri dev/build`.
+exclude = ["fuzz", "packages/desktop/src-tauri"]
 
 [workspace.package]
 version = "1.8.0"

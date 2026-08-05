@@ -1,0 +1,38 @@
+# NOTE: excluded from the root cargo workspace (see root Cargo.toml `exclude`),
+# because its `wry` dependency needs GUI system libs that headless Linux CI
+# lacks. This is therefore a STANDALONE crate/workspace with explicit (not
+# workspace-inherited) package fields and its own Cargo.lock.
+[package]
+name = "logisheets-desktop"
+version = "0.1.0"
+edition = "2021"
+description = "LogiSheets desktop application (Tauri host)"
+publish = false
+
+# The library holds the app logic (so it can also target mobile later); the
+# binary is a thin `main` that calls `run()`.
+[lib]
+name = "logisheets_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# Only needed by the optional native engine (see the `native-engine` feature).
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "1", optional = true }
+logisheets-rs = { path = "../../../crates/api", features = ["rpc"], optional = true }
+
+[features]
+# OFF by default. The default desktop build is a lean shell that runs the
+# existing web app (WASM engine) inside the Tauri window. Enable this to also
+# compile the in-process native engine + `handle` command (for a future hybrid:
+# native open/save of huge .xlsx, batch export) — see src/commands.rs.
+default = []
+native-engine = ["dep:logisheets-rs", "dep:serde", "dep:serde_json"]
+
+# Standalone workspace (excluded from the repo root workspace) so it has its own
+# Cargo.lock and doesn't pull GUI system-lib deps into the core `--workspace` build.
+[workspace]

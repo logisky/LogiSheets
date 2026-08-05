@@ -13,7 +13,7 @@ fn main() {
     file_group.add::<UserMessage>();
 
     // RPC types - params and interface
-    use logisheets_wasm_server::rpc::WorkbookMethods;
+    use logisheets_rs::rpc::WorkbookMethods;
     file_group.add_rpc::<WorkbookMethods>();
 
     file_group.gen_files(path, true);
