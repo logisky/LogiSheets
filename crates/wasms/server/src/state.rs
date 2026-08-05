@@ -46,6 +46,28 @@ pub fn input_async_result(id: usize, result: JsValue) -> JsValue {
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
 
+/// Render a number with an Excel number-format code, natively via `ssf-rs`
+/// (the Rust port of SheetJS `ssf`). Replaces the browser's old dependency on
+/// the `ssf` npm package. On an unsupported/invalid format it falls back to the
+/// JavaScript `String(value)` representation, matching the previous behavior.
+#[wasm_bindgen]
+pub fn format_number(fmt: &str, value: f64) -> String {
+    match ssf_rs::format(fmt, &ssf_rs::Value::Num(value), false) {
+        Ok(s) => s,
+        Err(_) => ssf_rs::jsnum::to_string_js(value),
+    }
+}
+
+/// Render a text value with an Excel number-format code (for the `@` text
+/// section). Falls back to the text itself on an unsupported format.
+#[wasm_bindgen]
+pub fn format_text(fmt: &str, text: &str) -> String {
+    match ssf_rs::format(fmt, &ssf_rs::Value::Text(text.to_string()), false) {
+        Ok(s) => s,
+        Err(_) => text.to_string(),
+    }
+}
+
 fn parse_async_value(s: String) -> AsyncCalcResult {
     match s.as_str() {
         "#TIMEOUT!" => Err(AsyncErr::TimeOut),

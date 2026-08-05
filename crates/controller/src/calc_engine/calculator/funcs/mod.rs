@@ -388,6 +388,7 @@ where
         "TBILLEQ" => tbill::calc_tbilleq(args, fetcher),
         "TBILLPRICE" => tbill::calc_tbillprice(args, fetcher),
         "TBILLYIELD" => tbill::calc_tbillyield(args, fetcher),
+        "TEXT" => text::calc_text(args, fetcher),
         "TEXTJOIN" => text::calc_textjoin(args, fetcher),
         "TIME" => datetime::time::calc(args, fetcher),
         "TODAY" => datetime::today::calc(args),

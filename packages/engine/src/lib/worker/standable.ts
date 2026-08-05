@@ -19,7 +19,7 @@ import type {
   PatternFill,
   MergeCell,
 } from "logisheets-web";
-import * as SSF from "ssf";
+import { formatNumber } from "logisheets-web";
 
 // ============================================================================
 // Unit Conversion Functions
@@ -357,11 +357,9 @@ export class StandardCell {
       // to no format) → fall back to default JS stringification so we
       // don't accidentally show extra precision or scientific notation.
       if (fmt && fmt.toLowerCase() !== "general") {
-        try {
-          return SSF.format(fmt, num);
-        } catch {
-          return String(num);
-        }
+        // Native numfmt rendering via ssf-rs (WASM). Falls back to String(num)
+        // internally on an unsupported format, matching the previous behavior.
+        return formatNumber(fmt, num);
       }
       return String(num);
     }

@@ -23,6 +23,7 @@ members = [
     "crates/controller/parser",
     "crates/logiscript",
     "crates/sequencer",
+    "crates/ssf-rs",
     "crates/wasms/server",
     "crates/workbook",
     "crates/xmldiff",
@@ -59,6 +60,8 @@ thiserror = "1.0"
 xmlserde = "0.12"
 xmlserde_derives = "0.12"
 wildescape = "0.1"
+
+ssf-rs = { path = "crates/ssf-rs", version = "0.1.0" }
 
 logisheets_lexer = { path = "crates/controller/lexer", version = "1.8.0" }
 logisheets_parser = { path = "crates/controller/parser", version = "1.8.0" }

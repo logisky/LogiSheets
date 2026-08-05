@@ -26,6 +26,8 @@ unicode-segmentation = "1.10.1"
 wildescape = { workspace = true }
 uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
 
+ssf-rs = { workspace = true }
+
 logisheets_base = { workspace = true}
 logisheets_lexer = { workspace = true}
 logisheets_lexer4fmt = { workspace = true }
