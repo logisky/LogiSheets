@@ -15,3 +15,14 @@ categories = ["parser-implementations", "data-structures"]
 logisheets_controller = { workspace = true }
 logisheets_base = { workspace = true }
 logisheets_workbook = { workspace = true }
+
+# Only pulled in by the `rpc` feature: the RPC protocol types derive TS bindings
+# (gents) and serde, and nothing in the default public API needs them.
+gents = { workspace = true, optional = true }
+gents_derives = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+
+[features]
+# The transport-agnostic RPC layer (`logisheets_rs::rpc`). Enabled by the WASM
+# binding (`logisheets_wasm_server`), the desktop host, and `buildtools`.
+rpc = ["dep:gents", "dep:gents_derives", "dep:serde"]

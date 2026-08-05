@@ -11029,6 +11029,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"logisheets-desktop@workspace:packages/desktop":
+  version: 0.0.0-use.local
+  resolution: "logisheets-desktop@workspace:packages/desktop"
+  languageName: unknown
+  linkType: soft
+
 "logisheets-engine@workspace:*, logisheets-engine@workspace:packages/engine":
   version: 0.0.0-use.local
   resolution: "logisheets-engine@workspace:packages/engine"

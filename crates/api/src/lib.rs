@@ -78,3 +78,9 @@ pub use logisheets_base::errors::BasicError;
 // Re-export workbook types
 pub use logisheets_workbook::logisheets::AppData;
 pub use logisheets_workbook::prelude::{StBorderStyle, StPatternType, StUnderlineValues};
+
+// Transport-agnostic RPC layer (Manager + wire protocol + logic functions),
+// consumed by the browser WASM binding and the native desktop host. Gated so
+// the default public API stays a thin `Workbook` facade.
+#[cfg(feature = "rpc")]
+pub mod rpc;

@@ -1,0 +1,11 @@
+{
+  "name": "logisheets-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LogiSheets desktop app (Tauri host; reuses the web frontend)",
+  "scripts": {
+    "tauri": "cargo tauri",
+    "dev": "cargo tauri dev",
+    "build": "cargo tauri build"
+  }
+}
