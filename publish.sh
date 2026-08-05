@@ -58,6 +58,16 @@ fi
 # Rust crates — strict topological order. Each `cargo publish` waits a few
 # seconds afterwards so crates.io has time to index the new version before
 # the next crate that depends on it tries to fetch it.
+#
+# NOTE: `ssf-rs` is intentionally NOT listed here. It is versioned and published
+# INDEPENDENTLY of the workspace (it stays on its own 0.1.x line and is skipped
+# by `just release`). The controller pins it at a fixed version, so it only
+# needs to be on crates.io *before* the controller publishes. Publish it out of
+# band whenever it changes (rare):
+#
+#     cargo publish --manifest-path crates/ssf-rs/Cargo.toml
+#
+# then wait for crates.io to index it before running this script.
 # ---------------------------------------------------------------------------
 CARGO_MANIFESTS=(
     "crates/xmldiff/Cargo.toml"
