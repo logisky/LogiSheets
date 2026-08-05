@@ -80,6 +80,7 @@ The WASM wrappers expose the engine over a simple RPC surface and carry no exten
 | **logisheets-engine** | `packages/engine` | Canvas-based spreadsheet UI component (MIT, fully open source) |
 | **logisheets-formula-editor** | `packages/formula-editor` | CodeMirror 6 formula editor |
 | **logician** | `packages/logician` | AI agent toolkit for operating workbooks (browser + Node) |
+| **logisheets-desktop** | `packages/desktop` | Desktop app — a [Tauri](https://tauri.app/) shell that runs the web app (WASM engine) in a native window (experimental; see its [README](./packages/desktop/README.md)) |
 
 ## Contributing
 

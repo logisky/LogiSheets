@@ -1,7 +1,5 @@
 import {StandardValue} from './value'
-import {format} from 'ssf'
 import {StandardStyle} from './style'
-import {extract} from '@/core/html'
 
 export class StandardCell {
     style?: StandardStyle
@@ -13,13 +11,12 @@ export class StandardCell {
         this.style = style
     }
 
+    // Number-format rendering now lives in the engine worker (native ssf-rs via
+    // WASM); this main-thread helper only does plain stringification.
     getFormattedText() {
         const num = this.getNumber()
-        if (num !== undefined)
-            return format(extract(this.style?.formatter ?? ''), num)
-        const v = this.getText()
-        const formatter = this.style?.formatter ?? ''
-        return format(extract(formatter), v)
+        if (num !== undefined) return String(num)
+        return this.getText()
     }
 
     getText() {

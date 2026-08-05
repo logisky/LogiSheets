@@ -187,6 +187,48 @@ fn push_calc_value(value: CalcValue, out: &mut String) -> Result<(), ast::Error>
     }
 }
 
+/// TEXT(value, format_text) — format `value` using the Excel number-format code
+/// `format_text`, returning the display string. Formatting is done natively via
+/// the `ssf-rs` renderer (a port of SheetJS's `ssf`).
+///
+/// Note: the engine currently assumes the 1900 date system throughout (there is
+/// no 1904 support anywhere), so date serials are rendered with `date1904 =
+/// false`, consistent with the rest of the calc engine.
+pub fn calc_text<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    assert_or_return!(args.len() == 2, ast::Error::Unspecified);
+    let mut it = args.into_iter();
+    let value = fetcher.get_calc_value(it.next().unwrap());
+    let fmt_v = fetcher.get_calc_value(it.next().unwrap());
+    assert_text_from_calc_value!(fmt, fmt_v);
+
+    // Reduce the value argument to a scalar and map it to an ssf value. Text that
+    // looks numeric is coerced to a number (matching Excel's TEXT), so
+    // `TEXT("123.5","0.00")` -> "123.50"; genuinely non-numeric text falls
+    // through to the format's text ("@") section.
+    let scalar = match value {
+        CalcValue::Scalar(v) => v,
+        _ => return CalcVertex::from_error(ast::Error::Value),
+    };
+    let ssf_value = match scalar {
+        Value::Blank => ssf_rs::Value::Num(0.0),
+        Value::Number(n) => ssf_rs::Value::Num(n),
+        Value::Boolean(b) => ssf_rs::Value::Text(if b { "TRUE" } else { "FALSE" }.to_string()),
+        Value::Text(t) => match t.parse::<f64>() {
+            Ok(n) => ssf_rs::Value::Num(n),
+            Err(_) => ssf_rs::Value::Text(t),
+        },
+        Value::Error(e) => return CalcVertex::from_error(e),
+    };
+
+    match ssf_rs::format(&fmt, &ssf_value, false) {
+        Ok(s) => CalcVertex::from_string(s),
+        Err(_) => CalcVertex::from_error(ast::Error::Value),
+    }
+}
+
 fn push_value(v: Value, out: &mut String) -> Result<(), ast::Error> {
     match v {
         Value::Blank => Ok(()),

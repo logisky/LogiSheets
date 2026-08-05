@@ -26,6 +26,7 @@ serde-wasm-bindgen = "0.5"
 console_error_panic_hook = { version = "0.1.6", optional = true }
 
 logisheets-rs = { workspace = true, features = ["rpc"] }
+ssf-rs = { workspace = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.30"

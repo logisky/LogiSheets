@@ -21,8 +21,12 @@ npm_pkgs := "packages/web:logisheets-web packages/node:logisheets packages/core:
 # Published crates as their crates.io names (all inherit the workspace version locally).
 crates := "xmldiff logisheets_workbook_derives logisheets_workbook logisheets_base logisheets_lexer logisheets_lexer4fmt logisheets_parser logisheets_astchecker logisheets_controller logisheets-rs"
 
-# Rust crates that are NOT published and keep their own version line.
-rust_exclude := "--exclude logiscript --exclude logisheets_sequencer"
+# Rust crates the coordinated `release` bump must NOT touch:
+#   - logiscript / logisheets_sequencer: not published; keep their own line.
+#   - ssf-rs: published SEPARATELY on its own version (0.1.x). The controller
+#     pins it at a fixed version, so `release` must leave BOTH ssf-rs's version
+#     and that pin alone. Publish it out of band — see publish.sh.
+rust_exclude := "--exclude logiscript --exclude logisheets_sequencer --exclude ssf-rs"
 
 # Default: show what `just` can do.
 default:

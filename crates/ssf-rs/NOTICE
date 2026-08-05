@@ -1,0 +1,23 @@
+ssf-rs
+Copyright (C) LogiSheets contributors
+
+This product is a derivative work of ssf (SpreadSheet Format) by SheetJS.
+
+  ssf.js
+  Copyright (C) 2013-present SheetJS LLC
+  https://sheetjs.com
+  Licensed under the Apache License, Version 2.0.
+
+Portions of this software (the number-format grammar, the value-to-string
+rendering algorithms, the built-in format table, and the associated edge-case
+handling) are ported from ssf v0.11.2 and remain under the Apache License,
+Version 2.0.
+
+Changes made in this port relative to the upstream JavaScript source:
+
+  - Translated from JavaScript to Rust.
+  - Calendar dates are derived from the date serial via pure civil-date
+    arithmetic rather than the host `Date` object, making results deterministic
+    and independent of the host timezone/DST.
+  - The public formatting entry points return `Result` values instead of
+    throwing on unsupported/invalid input.

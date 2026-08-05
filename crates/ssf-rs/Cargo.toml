@@ -1,0 +1,21 @@
+[package]
+name = "ssf-rs"
+version = "0.1.0"
+edition = "2021"
+description = "A faithful Rust port of SheetJS's ssf (SpreadSheet Format) — renders a value with an Excel number-format code to a display string. Backs the TEXT() worksheet function."
+license = "Apache-2.0"
+repository = "https://github.com/proclml/LogiSheets"
+readme = "README.md"
+keywords = ["excel", "spreadsheet", "number-format", "ssf", "xlsx"]
+categories = ["value-formatting"]
+
+[lib]
+name = "ssf_rs"
+path = "src/lib.rs"
+
+[dependencies]
+regex = "1"
+
+[dev-dependencies]
+# Differential tests shell out to Node.js + the reference `ssf` package; no Rust
+# deps required for them.

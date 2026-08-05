@@ -28,7 +28,20 @@ fn res_to_js<T: serde::Serialize>(r: Result<T, ErrorMessage>) -> JsValue {
 #[wasm_bindgen]
 pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
     state::init();
-    let msg: Message = serde_wasm_bindgen::from_value(msg).unwrap();
+    // A malformed or unknown message must NOT panic. A panic here poisons the
+    // whole wasm instance — every subsequent call traps with `unreachable`, so
+    // one bad request from a client would take the engine down for good. Return
+    // a bare `ErrorMessage` instead (the same wire shape the logic functions use
+    // on failure; the JS SDK distinguishes success/error by shape).
+    let msg: Message = match serde_wasm_bindgen::from_value(msg) {
+        Ok(m) => m,
+        Err(e) => {
+            return res_to_js::<()>(Err(ErrorMessage {
+                msg: format!("invalid request message: {e}"),
+                ty: 6,
+            }));
+        }
+    };
 
     // Handle messages that don't require a book_id
     if let Message::NewWorkbook = &msg {
@@ -36,7 +49,17 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         return ok_to_js(&controller::new_workbook(&mut mgr));
     }
 
-    let id = book_id.expect("book id");
+    // Every remaining message needs a book id; a missing one is a client error,
+    // not a reason to panic.
+    let id = match book_id {
+        Some(id) => id,
+        None => {
+            return res_to_js::<()>(Err(ErrorMessage {
+                msg: "missing book id".to_string(),
+                ty: 6,
+            }));
+        }
+    };
     let mut mgr = state::MANAGER.get_mut();
     match msg {
         Message::NewWorkbook => unreachable!(),

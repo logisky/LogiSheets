@@ -1,0 +1,44 @@
+# TEXT(value, format_text) — native number-format rendering via ssf-rs.
+# Expected values match Excel / the reference ssf.
+
+INPUT A1 =TEXT(0.1234,"0.00%")
+CHECKSTR A1 12.34%
+
+INPUT A2 =TEXT(1234.5,"#,##0.00")
+CHECKSTR A2 1,234.50
+
+INPUT A3 =TEXT(-1234567,"#,##0")
+CHECKSTR A3 -1,234,567
+
+INPUT A4 =TEXT(3.14159,"0.00")
+CHECKSTR A4 3.14
+
+INPUT A5 =TEXT(42,"General")
+CHECKSTR A5 42
+
+INPUT A6 =TEXT(0.5,"0%")
+CHECKSTR A6 50%
+
+INPUT A7 =TEXT(12345.678,"0.00E+00")
+CHECKSTR A7 1.23E+04
+
+INPUT A8 =TEXT(45000,"yyyy-mm-dd")
+CHECKSTR A8 2023-03-15
+
+INPUT A9 =TEXT(45000,"d-mmm-yy")
+CHECKSTR A9 15-Mar-23
+
+INPUT A10 =TEXT(0.5,"h:mm:ss")
+CHECKSTR A10 12:00:00
+
+INPUT A11 =TEXT(123456789,"000-00-0000")
+CHECKSTR A11 123-45-6789
+
+# numeric-looking text is coerced to a number
+INPUT A12 =TEXT("1234.5","#,##0.00")
+CHECKSTR A12 1,234.50
+
+# a cell reference as the value argument
+INPUT B1 0.875
+INPUT A13 =TEXT(B1,"0.0%")
+CHECKSTR A13 87.5%
