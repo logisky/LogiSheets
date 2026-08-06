@@ -9,6 +9,18 @@
         }
     },
     "functions": {
+        "text": {
+            "description": "Formats a number and converts it to text using the given number-format code (e.g. \"0.00%\", \"yyyy-mm-dd\")."
+        },
+        "fixed": {
+            "description": "Rounds a number to the specified number of decimals and returns it as text, with or without thousands separators."
+        },
+        "dollar": {
+            "description": "Converts a number to text using currency format, with a dollar sign, thousands separators, and the specified number of decimals."
+        },
+        "usdollar": {
+            "description": "Converts a number to text using US dollar currency format. Legacy alias of DOLLAR."
+        },
         "address": {
             "description": "Creates a cell reference as text, given the row and column numbers."
         },

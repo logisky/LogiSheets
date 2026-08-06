@@ -48,6 +48,23 @@ pub const THREADED_COMMENT: RType =
     RType("http://schemas.microsoft.com/office/2017/10/relationships/threadedComment");
 pub const PERSON: RType = RType("http://schemas.microsoft.com/office/2017/10/relationships/person");
 
+// Pivot tables. A pivot cache is workbook-scoped: `workbook.xml` links a
+// `pivotCacheDefinition` (which links its `pivotCacheRecords`). A pivot table is
+// worksheet-scoped: `sheetN.xml` links a `pivotTable`, which links back to the
+// `pivotCacheDefinition` it draws from.
+pub const PIVOT_CACHE_DEFINITION: RType = RType(
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheDefinition",
+);
+pub const PIVOT_CACHE_RECORDS: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheRecords");
+pub const PIVOT_TABLE: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotTable");
+
+// An Excel structured table / ListObject part (`xl/tables/tableN.xml`),
+// worksheet-scoped and also listed in the worksheet's `<tableParts>`.
+pub const TABLE: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/table");
+
 impl<'a> PartialEq<str> for RType<'a> {
     fn eq(&self, other: &str) -> bool {
         self.0 == other

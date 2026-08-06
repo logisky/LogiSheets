@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<pivotTableDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" name="PivotTable1" cacheId="1" applyNumberFormats="0" applyBorderFormats="0" applyFontFormats="0" applyPatternFormats="0" applyAlignmentFormats="0" applyWidthHeightFormats="1" dataCaption="Values" updatedVersion="8" minRefreshableVersion="3" useAutoFormatting="1" itemPrintTitles="1" createdVersion="8" indent="0" outline="1" outlineData="1" multipleFieldFilters="0">
+  <location ref="A3:B6" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>
+  <pivotFields count="2">
+    <pivotField axis="axisRow" showAll="0">
+      <items count="3">
+        <item x="0"/>
+        <item x="1"/>
+        <item t="default"/>
+      </items>
+    </pivotField>
+    <pivotField dataField="1" showAll="0"/>
+  </pivotFields>
+  <rowFields count="1">
+    <field x="0"/>
+  </rowFields>
+  <rowItems count="3">
+    <i><x/></i>
+    <i><x v="1"/></i>
+    <i t="grand"><x/></i>
+  </rowItems>
+  <colItems count="1">
+    <i/>
+  </colItems>
+  <dataFields count="1">
+    <dataField name="Sum of Sales" fld="1" baseField="0" baseItem="0"/>
+  </dataFields>
+  <pivotTableStyleInfo name="PivotStyleLight16" showRowHeaders="1" showColHeaders="1" showRowStripes="0" showColStripes="0" showLastColumn="1"/>
+</pivotTableDefinition>

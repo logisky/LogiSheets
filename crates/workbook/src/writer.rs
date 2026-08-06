@@ -11,9 +11,10 @@ use crate::prelude::{
 };
 use crate::rtypes::{
     CHART, CHART_COLOR_STYLE, CHART_STYLE, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM,
-    DRAWING, EXT_LINK, LOGISHEETS_APP_DATA, PERSON, RType, SST, STYLE, THEME, THREADED_COMMENT,
-    WORKBOOK, WORKSHEET,
+    DRAWING, EXT_LINK, LOGISHEETS_APP_DATA, PERSON, PIVOT_CACHE_DEFINITION, PIVOT_CACHE_RECORDS,
+    PIVOT_TABLE, RType, SST, STYLE, TABLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
 };
+use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use xmlserde::xml_serialize_with_decl;
 use zip::CompressionMethod;
@@ -196,9 +197,42 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
         }
     }
 
+    // Pivot cache definition parts are written at deterministic paths
+    // (`pivotCacheDefinition{n}.xml`, in workbook order). Map each cache's
+    // `cacheId` (from the workbook part's `<pivotCaches>`) to the relationship
+    // target a pivot table uses to reach it, so tables can be wired below.
+    let mut cache_target_by_id: HashMap<u32, String> = HashMap::new();
+    if let Some(pcs) = &xl.workbook_part.pivot_caches {
+        for (i, cache) in xl.pivot_caches.iter().enumerate() {
+            if let Some(pc) = pcs.pivot_caches.iter().find(|pc| pc.id == cache.rel_id) {
+                cache_target_by_id.insert(
+                    pc.cache_id,
+                    format!("../pivotCache/pivotCacheDefinition{}.xml", i + 1),
+                );
+            }
+        }
+    }
+    if worksheets.values().any(|w| !w.pivot_tables.is_empty()) {
+        writer.add_directory("xl/pivotTables", options())?;
+        writer.add_directory("xl/pivotTables/_rels", options())?;
+    }
+    if worksheets.values().any(|w| !w.tables.is_empty()) {
+        writer.add_directory("xl/tables", options())?;
+    }
+    // Pivot tables and tables are each numbered globally across the workbook.
+    let mut pivot_table_ctr = 1_usize;
+    let mut table_ctr = 1_usize;
+
     while let Some(sheet_id) = sheet_ids.pop() {
         if let Some(ws) = worksheets.remove(&sheet_id) {
-            let prooves = write_worksheet(ws, writer, idx)?;
+            let prooves = write_worksheet(
+                ws,
+                writer,
+                idx,
+                &mut pivot_table_ctr,
+                &cache_target_by_id,
+                &mut table_ctr,
+            )?;
             result.extend(prooves);
             relationships.push(CtRelationship {
                 id: sheet_id,
@@ -255,6 +289,48 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
         });
     }
 
+    // Pivot caches (workbook-scoped). Each definition is linked from
+    // workbook.xml.rels; each records part is linked from the definition's rels.
+    if !xl.pivot_caches.is_empty() {
+        writer.add_directory("xl/pivotCache", options())?;
+        writer.add_directory("xl/pivotCache/_rels", options())?;
+        for (i, cache) in xl.pivot_caches.into_iter().enumerate() {
+            let n = i + 1;
+            let def_proof = write_pivot_cache_definition(
+                cache.definition,
+                writer,
+                FileLocation::from(format!("xl/pivotCache/pivotCacheDefinition{}.xml", n)),
+            )?;
+            result.push(def_proof);
+            if let Some((rec_rel_id, records)) = cache.records {
+                let rec_proof = write_pivot_cache_records(
+                    records,
+                    writer,
+                    FileLocation::from(format!("xl/pivotCache/pivotCacheRecords{}.xml", n)),
+                )?;
+                result.push(rec_proof);
+                write_relationships(
+                    Relationships {
+                        relationships: vec![CtRelationship {
+                            id: rec_rel_id,
+                            ty: PIVOT_CACHE_RECORDS.0.to_string(),
+                            target: format!("pivotCacheRecords{}.xml", n),
+                            target_mode: StTargetMode::Internal,
+                        }],
+                    },
+                    writer,
+                    &format!("xl/pivotCache/_rels/pivotCacheDefinition{}.xml.rels", n),
+                )?;
+            }
+            relationships.push(CtRelationship {
+                id: cache.rel_id,
+                ty: PIVOT_CACHE_DEFINITION.0.to_string(),
+                target: format!("pivotCache/pivotCacheDefinition{}.xml", n),
+                target_mode: StTargetMode::Internal,
+            });
+        }
+    }
+
     let p = write_workbook_part(
         xl.workbook_part,
         writer,
@@ -288,10 +364,67 @@ fn write_worksheet<'a>(
     mut wb: Worksheet,
     writer: &mut Writer,
     idx: usize,
+    pivot_ctr: &mut usize,
+    cache_target_by_id: &HashMap<u32, String>,
+    table_ctr: &mut usize,
 ) -> ZipResult<Vec<WriteProof>> {
     let mut result = Vec::<WriteProof>::new();
     let mut relationships = Vec::<CtRelationship>::new();
     let mut rid = 1_usize;
+
+    // Structured tables on this sheet. Numbered globally via `table_ctr`; the
+    // relationship id is preserved so the worksheet's `<tableParts>` still
+    // resolves.
+    for tp in std::mem::take(&mut wb.tables) {
+        let n = *table_ctr;
+        *table_ctr += 1;
+        let p = write_table(
+            tp.table,
+            writer,
+            FileLocation::from(format!("xl/tables/table{}.xml", n)),
+        )?;
+        result.push(p);
+        relationships.push(CtRelationship {
+            id: tp.rel_id,
+            ty: TABLE.0.to_string(),
+            target: format!("../tables/table{}.xml", n),
+            target_mode: StTargetMode::Internal,
+        });
+    }
+
+    // Pivot tables anchored on this sheet. Numbered globally via `pivot_ctr`;
+    // each links back to its cache definition through its own `.rels`.
+    for pt in std::mem::take(&mut wb.pivot_tables) {
+        let n = *pivot_ctr;
+        *pivot_ctr += 1;
+        let cache_id = pt.definition.cache_id;
+        let p = write_pivot_table_definition(
+            pt.definition,
+            writer,
+            FileLocation::from(format!("xl/pivotTables/pivotTable{}.xml", n)),
+        )?;
+        result.push(p);
+        relationships.push(CtRelationship {
+            id: pt.rel_id,
+            ty: PIVOT_TABLE.0.to_string(),
+            target: format!("../pivotTables/pivotTable{}.xml", n),
+            target_mode: StTargetMode::Internal,
+        });
+        if let Some(target) = cache_target_by_id.get(&cache_id) {
+            write_relationships(
+                Relationships {
+                    relationships: vec![CtRelationship {
+                        id: pt.cache_rel_id,
+                        ty: PIVOT_CACHE_DEFINITION.0.to_string(),
+                        target: target.clone(),
+                        target_mode: StTargetMode::Internal,
+                    }],
+                },
+                writer,
+                &format!("xl/pivotTables/_rels/pivotTable{}.xml.rels", n),
+            )?;
+        }
+    }
 
     // A drawing part holds the sheet's cell images. Emit it (plus its own rels
     // to media) and point the worksheet's <drawing r:id> at it.
@@ -402,6 +535,23 @@ define_se_func!(write_drawing_part, CtWsDr, DRAWING);
 define_se_func!(write_doc_app, DocPropApp, DOC_PROP_APP);
 define_se_func!(write_doc_core, DocPropCore, DOC_PROP_CORE);
 define_se_func!(write_doc_custom, DocPropCustom, DOC_PROP_CUSTOM);
+
+define_se_func!(
+    write_pivot_cache_definition,
+    crate::ooxml::pivot_cache_definition::PivotCacheDefinition,
+    PIVOT_CACHE_DEFINITION
+);
+define_se_func!(
+    write_pivot_cache_records,
+    crate::ooxml::pivot_cache_records::PivotCacheRecords,
+    PIVOT_CACHE_RECORDS
+);
+define_se_func!(
+    write_pivot_table_definition,
+    crate::ooxml::pivot_table::PivotTableDefinition,
+    PIVOT_TABLE
+);
+define_se_func!(write_table, crate::ooxml::table::Table, TABLE);
 
 /// Map a part path to its relationships path, e.g.
 /// `xl/charts/chart1.xml` -> `xl/charts/_rels/chart1.xml.rels`.
@@ -531,6 +681,16 @@ fn get_content_type(rtype: RType) -> &'static str {
         CHART => "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
         CHART_STYLE => "application/vnd.ms-office.chartstyle+xml",
         CHART_COLOR_STYLE => "application/vnd.ms-office.chartcolorstyle+xml",
+        PIVOT_CACHE_DEFINITION => {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheDefinition+xml"
+        }
+        PIVOT_CACHE_RECORDS => {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml"
+        }
+        PIVOT_TABLE => {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml"
+        }
+        TABLE => "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml",
         _ => "",
     }
 }
@@ -648,6 +808,107 @@ mod tests {
         );
         assert!(ct.contains("/xl/charts/style1.xml"));
         assert!(ct.contains("/xl/charts/colors1.xml"));
+    }
+
+    #[test]
+    fn pivot_round_trips() {
+        use crate::ooxml::simple_types::StSourceType;
+        use crate::workbook::Wb;
+        let buf = fs::read("../../tests/calc_test.xlsx").unwrap();
+        let wb = Wb::from_file(&buf).unwrap();
+
+        // The pivot cache (definition + records) is read off the workbook.
+        assert_eq!(wb.xl.pivot_caches.len(), 1, "pivot cache should be read");
+        let cache = &wb.xl.pivot_caches[0];
+        assert!(cache.records.is_some(), "cache records should be read");
+        assert_eq!(cache.definition.cache_fields.count, 9);
+        assert!(matches!(
+            cache.definition.cache_source.ty,
+            StSourceType::Worksheet
+        ));
+
+        // The pivot table is read off its worksheet.
+        let pt = wb
+            .xl
+            .worksheets
+            .values()
+            .flat_map(|w| &w.pivot_tables)
+            .next()
+            .expect("pivot table should be read");
+        let name = pt.definition.name.clone();
+        let cache_id = pt.definition.cache_id;
+        assert!(!name.is_empty());
+
+        // Round-trip: write, then re-read.
+        let out = write(wb).unwrap();
+        let wb2 = Wb::from_file(&out).unwrap();
+        assert_eq!(wb2.xl.pivot_caches.len(), 1, "cache lost on round-trip");
+        assert!(wb2.xl.pivot_caches[0].records.is_some());
+        assert_eq!(wb2.xl.pivot_caches[0].definition.cache_fields.count, 9);
+        let pt2 = wb2
+            .xl
+            .worksheets
+            .values()
+            .flat_map(|w| &w.pivot_tables)
+            .next()
+            .expect("pivot table lost on round-trip");
+        assert_eq!(pt2.definition.name, name);
+        assert_eq!(pt2.definition.cache_id, cache_id);
+
+        // Content-type overrides + relationship wiring are emitted.
+        let ct = read_zip_entry(&out, "[Content_Types].xml");
+        assert!(ct.contains("/xl/pivotCache/pivotCacheDefinition1.xml"));
+        assert!(ct.contains("pivotCacheDefinition+xml"));
+        assert!(ct.contains("/xl/pivotCache/pivotCacheRecords1.xml"));
+        assert!(ct.contains("/xl/pivotTables/pivotTable1.xml"));
+        let wbrels = read_zip_entry(&out, "xl/_rels/workbook.xml.rels");
+        assert!(
+            wbrels.contains("pivotCache/pivotCacheDefinition1.xml"),
+            "workbook->cache rel missing"
+        );
+    }
+
+    #[test]
+    fn table_round_trips() {
+        use crate::ooxml::table::Table;
+        use crate::workbook::{TablePart, Wb};
+        // No fixture ships an Excel table, so inject one into a real workbook,
+        // then round-trip it through write -> read.
+        let buf = fs::read("../../tests/6.xlsx").unwrap();
+        let mut wb = Wb::from_file(&buf).unwrap();
+        let table: Table =
+            crate::xml_deserialize_from_str(include_str!("../examples/table.xml")).unwrap();
+        let ws = wb
+            .xl
+            .worksheets
+            .values_mut()
+            .next()
+            .expect("a worksheet to attach the table to");
+        ws.tables.push(TablePart {
+            rel_id: "rIdTbl1".to_string(),
+            table,
+        });
+
+        let out = write(wb).unwrap();
+        let wb2 = Wb::from_file(&out).unwrap();
+        let t = wb2
+            .xl
+            .worksheets
+            .values()
+            .flat_map(|w| &w.tables)
+            .next()
+            .expect("table lost on round-trip");
+        assert_eq!(t.table.display_name, "Table1");
+        assert_eq!(t.table.reference, "A1:C4");
+        assert_eq!(t.table.table_columns.table_column.len(), 3);
+        assert_eq!(t.table.totals_row_count, 1);
+
+        let ct = read_zip_entry(&out, "[Content_Types].xml");
+        assert!(ct.contains("/xl/tables/table1.xml"), "table override missing");
+        assert!(
+            ct.contains("spreadsheetml.table+xml"),
+            "table content-type missing"
+        );
     }
 
     #[ignore]

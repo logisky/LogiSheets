@@ -39,6 +39,35 @@ pub struct Xl {
     pub persons: Option<Persons>,
     /// Binary media parts (`xl/media/*`), e.g. images embedded in cells.
     pub medias: Vec<Media>,
+    /// Workbook-scoped pivot caches (`xl/pivotCache/*`). The workbook part's
+    /// `<pivotCaches>` element links each cache's `cacheId` to the `rel_id`
+    /// here (see [`PivotCache`]).
+    pub pivot_caches: Vec<PivotCache>,
+}
+
+/// A pivot cache: a `pivotCacheDefinition` plus its (optional) `pivotCacheRecords`.
+#[derive(Debug, Clone)]
+pub struct PivotCache {
+    /// Relationship id in `workbook.xml.rels` (and the `r:id` of the matching
+    /// `<pivotCache>` element in the workbook part), e.g. `rId7`.
+    pub rel_id: Id,
+    pub definition: crate::ooxml::pivot_cache_definition::PivotCacheDefinition,
+    /// The records part and the relationship id linking to it from the
+    /// definition's own `.rels` (usually `rId1`).
+    pub records: Option<(Id, crate::ooxml::pivot_cache_records::PivotCacheRecords)>,
+}
+
+/// A pivot table on a worksheet: a `pivotTableDefinition` plus the relationship
+/// ids wiring it into the package.
+#[derive(Debug, Clone)]
+pub struct PivotTablePart {
+    /// Relationship id in the owning `sheetN.xml.rels`, e.g. `rId1`.
+    pub rel_id: Id,
+    pub definition: crate::ooxml::pivot_table::PivotTableDefinition,
+    /// Relationship id in this pivot table's own `.rels` pointing at the cache
+    /// definition (usually `rId1`). The cache it resolves to is determined by
+    /// `definition.cache_id` matching a workbook `<pivotCache cacheId=…>`.
+    pub cache_rel_id: Id,
 }
 
 /// A binary media part stored under `xl/media/`.
@@ -59,6 +88,20 @@ pub struct Worksheet {
     pub threaded_comments: Option<ThreadedComments>,
     /// Worksheet drawing (`xl/drawings/drawingN.xml`) holding cell images.
     pub drawing: Option<WorksheetDrawing>,
+    /// Pivot tables anchored on this worksheet (`xl/pivotTables/*`).
+    pub pivot_tables: Vec<PivotTablePart>,
+    /// Structured tables (`ListObject`s) on this worksheet (`xl/tables/*`).
+    pub tables: Vec<TablePart>,
+}
+
+/// A structured table on a worksheet: the `CT_Table` plus the relationship id
+/// wiring it into the sheet (the same `r:id` appears in the worksheet's
+/// `<tableParts>`).
+#[derive(Debug, Clone)]
+pub struct TablePart {
+    /// Relationship id in the owning `sheetN.xml.rels`, e.g. `rId2`.
+    pub rel_id: Id,
+    pub table: crate::ooxml::table::Table,
 }
 
 /// An OOXML part preserved verbatim for lossless round-trip. Currently used for

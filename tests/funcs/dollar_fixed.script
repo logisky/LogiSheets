@@ -1,0 +1,53 @@
+# FIXED and DOLLAR (and the USDOLLAR alias) — number-format text rendering
+# via ssf-rs. Expected values match Excel.
+
+# --- FIXED(number, [decimals=2], [no_commas=FALSE]) ---
+INPUT A1 =FIXED(1234.567)
+CHECKSTR A1 1,234.57
+
+INPUT A2 =FIXED(1234.567,1)
+CHECKSTR A2 1,234.6
+
+INPUT A3 =FIXED(1234.567,0)
+CHECKSTR A3 1,235
+
+INPUT A4 =FIXED(1234.567,2,TRUE)
+CHECKSTR A4 1234.57
+
+INPUT A5 =FIXED(-1234.567,2)
+CHECKSTR A5 -1,234.57
+
+# negative decimals round to the left of the decimal point
+INPUT A6 =FIXED(1234.567,-2)
+CHECKSTR A6 1,200
+
+INPUT A7 =FIXED(1250,-2)
+CHECKSTR A7 1,300
+
+INPUT A8 =FIXED(0,2)
+CHECKSTR A8 0.00
+
+# --- DOLLAR(number, [decimals=2]) ---
+INPUT B1 =DOLLAR(1234.567)
+CHECKSTR B1 $1,234.57
+
+INPUT B2 =DOLLAR(1234.567,0)
+CHECKSTR B2 $1,235
+
+INPUT B3 =DOLLAR(-1234.567)
+CHECKSTR B3 ($1,234.57)
+
+INPUT B4 =DOLLAR(1234.567,-2)
+CHECKSTR B4 $1,200
+
+INPUT B5 =DOLLAR(0)
+CHECKSTR B5 $0.00
+
+# USDOLLAR is a legacy alias of DOLLAR
+INPUT B6 =USDOLLAR(1234.567,2)
+CHECKSTR B6 $1,234.57
+
+# a cell reference as the value argument
+INPUT C1 -9876.5
+INPUT B7 =DOLLAR(C1)
+CHECKSTR B7 ($9,876.50)

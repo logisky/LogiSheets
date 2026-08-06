@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="Table1" displayName="Table1" ref="A1:C4" totalsRowCount="1">
+  <autoFilter ref="A1:C3"/>
+  <tableColumns count="3">
+    <tableColumn id="1" name="Region"/>
+    <tableColumn id="2" name="Qty"/>
+    <tableColumn id="3" name="Sales" totalsRowFunction="sum">
+      <totalsRowFormula>SUBTOTAL(109,Table1[Sales])</totalsRowFormula>
+    </tableColumn>
+  </tableColumns>
+  <tableStyleInfo name="TableStyleMedium2" showFirstColumn="0" showLastColumn="0" showRowStripes="1" showColumnStripes="0"/>
+</table>
