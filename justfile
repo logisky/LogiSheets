@@ -18,15 +18,17 @@ npm_dirs := "packages/web packages/node packages/core packages/engine packages/r
 # Published npm packages as dir:name pairs (name = registry name).
 npm_pkgs := "packages/web:logisheets-web packages/node:logisheets packages/core:logisheets-core packages/engine:logisheets-engine packages/runtime:logisheets-runtime packages/formula-editor:logisheets-formula-editor"
 
-# Published crates as their crates.io names (all inherit the workspace version locally).
-crates := "xmldiff logisheets_workbook_derives logisheets_workbook logisheets_base logisheets_lexer logisheets_lexer4fmt logisheets_parser logisheets_astchecker logisheets_controller logisheets-rs"
+# Published crates as their crates.io names (all inherit the workspace version
+# locally). ssf-rs and xmldiff are NOT here — they are versioned independently.
+crates := "logisheets_workbook_derives logisheets_workbook logisheets_base logisheets_lexer logisheets_lexer4fmt logisheets_parser logisheets_astchecker logisheets_controller logisheets-rs"
 
 # Rust crates the coordinated `release` bump must NOT touch:
 #   - logiscript / logisheets_sequencer: not published; keep their own line.
-#   - ssf-rs: published SEPARATELY on its own version (0.1.x). The controller
-#     pins it at a fixed version, so `release` must leave BOTH ssf-rs's version
-#     and that pin alone. Publish it out of band — see publish.sh.
-rust_exclude := "--exclude logiscript --exclude logisheets_sequencer --exclude ssf-rs"
+#   - ssf-rs, xmldiff: published SEPARATELY on their own versions. A published
+#     workspace crate pins each at a fixed version (controller -> ssf-rs,
+#     workbook -> xmldiff), so `release` must leave BOTH the crate's version and
+#     that pin alone. Publish them out of band — see publish.sh.
+rust_exclude := "--exclude logiscript --exclude logisheets_sequencer --exclude ssf-rs --exclude xmldiff"
 
 # Default: show what `just` can do.
 default:
