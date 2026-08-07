@@ -49,7 +49,9 @@ export const RootContainer = () => {
                     style={{
                         position: 'absolute',
                         right: 0,
-                        top: SETTINGS.blockViewTop,
+                        // Sit just below the toolbar so the reopen handle
+                        // doesn't overlap the top-right toolbar controls.
+                        top: SETTINGS.topBar,
                         zIndex: 10,
                     }}
                 >

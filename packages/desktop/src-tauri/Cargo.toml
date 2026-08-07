@@ -20,9 +20,10 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
-# Only needed by the optional native engine (see the `native-engine` feature).
-serde = { version = "1", features = ["derive"], optional = true }
-serde_json = { version = "1", optional = true }
+# Used by the default craft-storage commands (src/storage.rs) to (de)serialize
+# the app-data JSON, and by the optional native engine.
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
 logisheets-rs = { path = "../../../crates/api", features = ["rpc"], optional = true }
 
 [features]
@@ -31,7 +32,7 @@ logisheets-rs = { path = "../../../crates/api", features = ["rpc"], optional = t
 # compile the in-process native engine + `handle` command (for a future hybrid:
 # native open/save of huge .xlsx, batch export) — see src/commands.rs.
 default = []
-native-engine = ["dep:logisheets-rs", "dep:serde", "dep:serde_json"]
+native-engine = ["dep:logisheets-rs"]
 
 # Standalone workspace (excluded from the repo root workspace) so it has its own
 # Cargo.lock and doesn't pull GUI system-lib deps into the core `--workspace` build.

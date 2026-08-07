@@ -12,7 +12,13 @@ import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
 import {buildSelectedDataFromCell} from 'logisheets-engine'
-import {callerRegistry, getCraftState, setCraftState} from 'logisheets-core'
+import {
+    callerRegistry,
+    getCraftState,
+    setCraftState,
+    makeCraftStorage,
+} from 'logisheets-core'
+import {SETTINGS} from '@/core/settings'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
@@ -58,10 +64,6 @@ export const CraftPanel = ({
         {
             label: 'Markdown Table Extractor',
             value: '/markdown-table-extractor/index.html',
-        },
-        {
-            label: 'Data Gateway',
-            value: '/data-gateway/index.html',
         },
         {
             label: 'Watson',
@@ -167,6 +169,11 @@ export const CraftPanel = ({
         // is stable across sessions, so state round-trips to the right craft.
         win.setCraftState = (json: string) => setCraftState(craftId, json)
         win.getCraftState = (): string | undefined => getCraftState(craftId)
+        // Device-scoped, per-craft key/value storage (localStorage on the web,
+        // the app-data dir on desktop). Unlike craft state above, this does NOT
+        // ride the workbook — it persists across documents on this machine.
+        // Bound to craftId so a craft only ever sees its own namespace.
+        win.craftStorage = makeCraftStorage(craftId)
         // Subscribe to sheet-selection changes. The craft passes a callback;
         // the host invokes it with the current Selection whenever the selection
         // moves (see the effect below) and returns a disposer. Registration
@@ -217,9 +224,14 @@ export const CraftPanel = ({
                 open={open}
                 sx={{
                     // Drawer paper is position: fixed, so the docked root
-                    // doesn't need to reserve space in the flex flow.
+                    // doesn't need to reserve space in the flex flow. Offset it
+                    // below the toolbar so the panel starts at the toolbar's
+                    // bottom edge instead of covering it (keeps the top-right
+                    // GitHub badge and other toolbar controls clickable).
                     '& .MuiDrawer-paper': {
                         width: '360px',
+                        top: SETTINGS.topBar,
+                        height: `calc(100% - ${SETTINGS.topBar})`,
                         boxSizing: 'border-box',
                         backgroundColor: '#f2f4f7',
                         display: 'flex',

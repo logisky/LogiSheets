@@ -7,7 +7,7 @@ import {
     loadPersistentCraftStates,
 } from './state'
 
-const CRAFT_A = '/data-gateway/index.html'
+const CRAFT_A = '/markdown-table-extractor/index.html'
 const CRAFT_B = '/what-if-calculator/index.html'
 
 describe('craft-state store', () => {

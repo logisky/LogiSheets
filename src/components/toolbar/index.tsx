@@ -8,6 +8,7 @@ import {Cell, ErrorMessage} from 'logisheets-engine'
 import {useEngine, useOps} from '@/core/engine/provider'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {BorderSettingComponent} from './border-setting'
+import {GithubStar} from './github-star'
 import {generateFontPayload, generateWrapTextPayload} from 'logisheets-core'
 import {
     CellFormatBrushBuilder,
@@ -1250,6 +1251,9 @@ export const Toolbar = observer(
                       </>
                     ) : null}
                 </div>
+
+                {/* GitHub star badge (far right) */}
+                <GithubStar />
 
                 {/* Color pickers */}
                 <Modal
