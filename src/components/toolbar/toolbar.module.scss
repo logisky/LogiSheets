@@ -134,6 +134,38 @@
   object-fit: contain;
 }
 
+/* GitHub star badge (right end of the toolbar) */
+.github {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  margin-left: 6px;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  color: #24292f;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.github:hover {
+  background: #f2f4f7;
+  border-color: #d0d5dd;
+}
+.githubStars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475467;
+}
+.githubStarIcon {
+  font-size: 14px !important;
+  color: #eab308;
+}
+
 /* Alignment popover grid (3x3) */
 .alignGrid {
   display: grid;
