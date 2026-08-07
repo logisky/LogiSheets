@@ -207,6 +207,28 @@ export interface EnterpriseServerOptions {
     taskHandlers?: Record<string, TaskHandler>
 }
 
+/**
+ * A framework-neutral view of an incoming HTTP request. Lets a non-Node host
+ * (e.g. a Cloudflare Worker `fetch` handler) drive {@link
+ * EnterpriseRuntimeServer.handleRequest} without Node's `IncomingMessage`.
+ * `body` is the ALREADY-PARSED JSON body (POST only; the host owns parsing).
+ */
+export interface RuntimeHttpRequest {
+    method: string
+    /** URL pathname, e.g. `/task`. */
+    path: string
+    /** The `Authorization` header value, for the shared-secret gate. */
+    authorization?: string
+    body?: unknown
+}
+
+/** The framework-neutral result of {@link EnterpriseRuntimeServer.handleRequest};
+ *  a `body` of `undefined` means "no content" (write just the status). */
+export interface RuntimeHttpResponse {
+    status: number
+    body?: unknown
+}
+
 export class EnterpriseRuntimeServer {
     private readonly runtime: SpreadsheetRuntime
     private registry?: CraftRegistry
@@ -258,9 +280,81 @@ export class EnterpriseRuntimeServer {
         )
     }
 
-    private authOk(req: IncomingMessage): boolean {
+    private authOk(authorization: string | undefined): boolean {
         if (!this.secret) return true
-        return req.headers.authorization === `Bearer ${this.secret}`
+        return authorization === `Bearer ${this.secret}`
+    }
+
+    /**
+     * Transport-agnostic request handler: the `/pin` · `/unpin` · `/task` ·
+     * `/status` routing with NO dependency on Node's http types. The Node
+     * server ({@link onRequest}) routes through this, and so can any other host
+     * — e.g. a Cloudflare Worker, which cannot use {@link listen} (Workers have
+     * no listening socket; they're `fetch`-driven):
+     *
+     * ```ts
+     * export default {
+     *   async fetch(request: Request) {
+     *     const url = new URL(request.url)
+     *     const body =
+     *       request.method === 'POST' ? await request.json() : undefined
+     *     const {status, body: out} = await server.handleRequest({
+     *       method: request.method,
+     *       path: url.pathname,
+     *       authorization: request.headers.get('authorization') ?? undefined,
+     *       body,
+     *     })
+     *     return out === undefined
+     *       ? new Response(null, {status})
+     *       : Response.json(out, {status})
+     *   },
+     * }
+     * ```
+     */
+    public async handleRequest(
+        req: RuntimeHttpRequest
+    ): Promise<RuntimeHttpResponse> {
+        if (req.method === 'GET' && req.path === '/status') {
+            if (!this.authOk(req.authorization))
+                return {status: 403, body: {error: 'forbidden'}}
+            return {
+                status: 200,
+                body: {
+                    pins: [...this.pins.keys()],
+                    open: this.runtime.workbooks.length,
+                },
+            }
+        }
+        if (req.method !== 'POST') return {status: 405}
+        if (!this.authOk(req.authorization))
+            return {status: 403, body: {error: 'forbidden'}}
+        const body = req.body ?? {}
+        try {
+            if (req.path === '/pin')
+                return {
+                    status: 200,
+                    body: await this.pin(body as {wbUrl?: string}),
+                }
+            if (req.path === '/unpin')
+                return {status: 200, body: this.unpin(body as {wbId?: string})}
+            if (req.path === '/task')
+                return {
+                    status: 200,
+                    body: await this.task(
+                        body as {
+                            workbookUrl?: string
+                            rpcCall?: string
+                            params?: unknown
+                        }
+                    ),
+                }
+            return {status: 404, body: {error: 'not found'}}
+        } catch (e) {
+            return {
+                status: 500,
+                body: {error: e instanceof Error ? e.message : String(e)},
+            }
+        }
     }
 
     private async loadFromUrl(url: string): Promise<Workbook> {
@@ -272,28 +366,27 @@ export class EnterpriseRuntimeServer {
         return wb
     }
 
+    // Node http transport: parse the request into a framework-neutral shape,
+    // route it through {@link handleRequest}, and write the result back. All
+    // routing/auth lives in handleRequest so non-Node hosts share it verbatim.
     private async onRequest(
         req: IncomingMessage,
         res: ServerResponse
     ): Promise<void> {
         try {
-            const url = req.url ?? '/'
-            if (req.method === 'GET' && url === '/status') {
-                if (!this.authOk(req))
-                    return json(res, 403, {error: 'forbidden'})
-                return json(res, 200, {
-                    pins: [...this.pins.keys()],
-                    open: this.runtime.workbooks.length,
-                })
-            }
-            if (req.method !== 'POST') return void res.writeHead(405).end()
-            if (!this.authOk(req)) return json(res, 403, {error: 'forbidden'})
-            const body = JSON.parse((await readBody(req)) || '{}')
-
-            if (url === '/pin') return json(res, 200, await this.pin(body))
-            if (url === '/unpin') return json(res, 200, this.unpin(body))
-            if (url === '/task') return json(res, 200, await this.task(body))
-            return json(res, 404, {error: 'not found'})
+            const body =
+                req.method === 'POST'
+                    ? JSON.parse((await readBody(req)) || '{}')
+                    : undefined
+            const out = await this.handleRequest({
+                method: req.method ?? 'GET',
+                path: req.url ?? '/',
+                authorization: req.headers.authorization,
+                body,
+            })
+            if (out.body === undefined)
+                return void res.writeHead(out.status).end()
+            json(res, out.status, out.body)
         } catch (e) {
             json(res, 500, {error: e instanceof Error ? e.message : String(e)})
         }
