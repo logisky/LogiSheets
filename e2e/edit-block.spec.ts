@@ -4,11 +4,11 @@ import {test, expect, type Page} from '@playwright/test'
  * End-to-end coverage for "Edit block…" — the cell right-click entry that opens
  * the block composer in *edit* mode over an existing form block.
  *
- * v1 contract: existing fields are read-only pass-throughs (cannot be renamed /
- * re-typed / deleted); editing is limited to renaming the block and APPENDING
- * new fields. Saving dispatches `ops.editFormBlock` — a tail `resizeBlock`
- * (col count grows) + re-`bindFormSchema` + per-field `upsertFieldRenderInfo`,
- * all in one transaction.
+ * Contract: existing fields are editable (name / type / validation / required),
+ * each rebuilt preserving its `renderId`; the block ref name is editable too.
+ * Fields cannot be DELETED (column count is monotonically non-decreasing).
+ * Saving dispatches `ops.editFormBlock` — a tail `resizeBlock` (col count grows)
+ * + re-`bindFormSchema` + per-field `upsertFieldRenderInfo`, in one transaction.
  *
  * We first create a block via the already-covered "Convert to block…" flow,
  * then drive the edit flow on top of it. The grid is a canvas (cells addressed
@@ -111,10 +111,10 @@ test('right-clicking inside a block offers "Edit block…" and opens the compose
     const existing = d.getByRole('button', {name: /Customer Status/i})
     await expect(existing).toBeVisible()
 
-    // Selecting an existing field shows the read-only notice (existing fields
-    // are immutable in v1).
+    // Selecting an existing field opens its config, pre-filled and editable
+    // (existing fields can now be re-typed/renamed; only deletion is barred).
     await existing.click()
-    await expect(d.getByText(/re-typed/i)).toBeVisible()
+    await expect(d.getByLabel('Field Name')).toHaveValue('Customer Status')
 })
 
 test('appending a field and saving runs editFormBlock end-to-end', async ({

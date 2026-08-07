@@ -71,6 +71,8 @@ test('gear menu → "Modify" opens the composer in edit mode, pre-filled', async
     await expect(d.getByPlaceholder(/customers/i)).toHaveValue('mod-test')
     const existing = d.getByRole('button', {name: /Customer Status/i})
     await expect(existing).toBeVisible()
+    // Selecting an existing field opens its config, pre-filled and editable
+    // (existing fields can now be re-typed/renamed; only deletion is barred).
     await existing.click()
-    await expect(d.getByText(/re-typed/i)).toBeVisible()
+    await expect(d.getByLabel('Field Name')).toHaveValue('Customer Status')
 })

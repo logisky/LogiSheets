@@ -94,8 +94,10 @@ fn is_called(name: &str, hay: &str) -> bool {
 
 /// Function names present in the autocomplete metadata (`out/funcs.json`).
 fn intellisense_names() -> BTreeSet<String> {
-    let txt = fs::read_to_string(repo_root().join("resources/funcs/out/funcs.json"))
-        .expect("read resources/funcs/out/funcs.json");
+    let txt = fs::read_to_string(
+        repo_root().join("packages/formula-editor/src/lib/builtin-functions.json"),
+    )
+    .expect("read packages/formula-editor/src/lib/builtin-functions.json");
     let bytes = txt.as_bytes();
     let key = "\"name\"";
     let mut set = BTreeSet::new();
@@ -202,7 +204,7 @@ fn every_function_has_intellisense() {
         &dispatched,
         |f| hints.contains(f),
         "tests/coverage_baseline_intellisense.txt",
-        "autocomplete/signature entry (智能提示)",
+        "autocomplete/signature entry",
         "add resources/funcs/<name>.json + a functions.<name>.description in resources/locale/en.json, then `yarn run-scripts`",
     );
 }
