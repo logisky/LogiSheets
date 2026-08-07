@@ -147,6 +147,7 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
     let mut theme = Option::<(Id, ThemePart)>::None;
     let mut persons = Option::<Persons>::None;
     let mut medias = Vec::<Media>::new();
+    let mut pivot_caches = Vec::<crate::workbook::PivotCache>::new();
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -247,6 +248,19 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
                     }
                 }
             }
+            PIVOT_CACHE_DEFINITION => {
+                let id = r.id;
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(s) = path.to_str() {
+                    match de_pivot_cache(id, s, archive) {
+                        Ok(pc) => pivot_caches.push(pc),
+                        Err(e) => {
+                            println!("parsing file: {:?} but meet error:{:?}", s, e)
+                        }
+                    }
+                }
+            }
             _ => {}
         });
     Ok(Xl {
@@ -258,6 +272,7 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
         theme,
         persons,
         medias,
+        pivot_caches,
     })
 }
 
@@ -270,6 +285,8 @@ fn de_worksheet<R: Read + Seek>(
     let mut comments = Option::<Comments>::None;
     let mut threaded_comments = Option::<ThreadedComments>::None;
     let mut drawing = Option::<WorksheetDrawing>::None;
+    let mut pivot_tables = Vec::<crate::workbook::PivotTablePart>::new();
+    let mut tables = Vec::<crate::workbook::TablePart>::new();
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -283,6 +300,8 @@ fn de_worksheet<R: Read + Seek>(
             comments,
             threaded_comments,
             drawing,
+            pivot_tables,
+            tables,
         });
     }
     let relationships = result.unwrap();
@@ -328,6 +347,32 @@ fn de_worksheet<R: Read + Seek>(
                     }
                 }
             }
+            PIVOT_TABLE => {
+                let id = r.id;
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(pt_path) = path.to_str() {
+                    match de_pivot_table(id, pt_path, archive) {
+                        Ok(pt) => pivot_tables.push(pt),
+                        Err(e) => {
+                            println!("parsing pivot table: {:?} but meet error:{:?}", pt_path, e)
+                        }
+                    }
+                }
+            }
+            TABLE => {
+                let id = r.id;
+                let target = &r.target;
+                let path = get_target_abs_path(rels, target);
+                if let Some(t_path) = path.to_str() {
+                    match de_table(t_path, archive) {
+                        Ok(table) => tables.push(crate::workbook::TablePart { rel_id: id, table }),
+                        Err(e) => {
+                            println!("parsing table: {:?} but meet error:{:?}", t_path, e)
+                        }
+                    }
+                }
+            }
             _ => {}
         });
     Ok(Worksheet {
@@ -335,6 +380,8 @@ fn de_worksheet<R: Read + Seek>(
         comments,
         threaded_comments,
         drawing,
+        pivot_tables,
+        tables,
     })
 }
 
@@ -487,6 +534,78 @@ define_de_func!(de_doc_prop_custom, DocPropCustom);
 define_de_func!(de_doc_prop_app, DocPropApp);
 define_de_func!(de_doc_prop_core, DocPropCore);
 define_de_func!(de_logisheets_data, LogiSheetsData);
+define_de_func!(
+    de_pivot_cache_definition,
+    crate::ooxml::pivot_cache_definition::PivotCacheDefinition
+);
+define_de_func!(
+    de_pivot_cache_records,
+    crate::ooxml::pivot_cache_records::PivotCacheRecords
+);
+define_de_func!(
+    de_pivot_table_definition,
+    crate::ooxml::pivot_table::PivotTableDefinition
+);
+define_de_func!(de_table, crate::ooxml::table::Table);
+
+/// Read a pivot cache: `pivotCacheDefinitionN.xml` plus (via its `.rels`) the
+/// `pivotCacheRecordsN.xml` it points to.
+fn de_pivot_cache<R: Read + Seek>(
+    rel_id: Id,
+    path: &str,
+    archive: &mut ZipArchive<R>,
+) -> Result<crate::workbook::PivotCache, SerdeErr> {
+    let definition = de_pivot_cache_definition(path, archive)?;
+    let mut records = None;
+    if let Ok(rels_buf) = get_rels(path) {
+        if let Some(rels) = rels_buf.to_str() {
+            if let Ok(relationships) = de_relationships(rels, archive) {
+                for r in relationships.relationships.into_iter() {
+                    if RType(&r.ty) == PIVOT_CACHE_RECORDS {
+                        let abs = get_target_abs_path(rels, &r.target);
+                        if let Some(rp) = abs.to_str() {
+                            if let Ok(rec) = de_pivot_cache_records(rp, archive) {
+                                records = Some((r.id, rec));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(crate::workbook::PivotCache {
+        rel_id,
+        definition,
+        records,
+    })
+}
+
+/// Read a pivot table: `pivotTableN.xml` plus (via its `.rels`) the relationship
+/// id that links it back to its pivot cache definition.
+fn de_pivot_table<R: Read + Seek>(
+    rel_id: Id,
+    path: &str,
+    archive: &mut ZipArchive<R>,
+) -> Result<crate::workbook::PivotTablePart, SerdeErr> {
+    let definition = de_pivot_table_definition(path, archive)?;
+    let mut cache_rel_id = String::new();
+    if let Ok(rels_buf) = get_rels(path) {
+        if let Some(rels) = rels_buf.to_str() {
+            if let Ok(relationships) = de_relationships(rels, archive) {
+                for r in relationships.relationships.into_iter() {
+                    if RType(&r.ty) == PIVOT_CACHE_DEFINITION {
+                        cache_rel_id = r.id;
+                    }
+                }
+            }
+        }
+    }
+    Ok(crate::workbook::PivotTablePart {
+        rel_id,
+        definition,
+        cache_rel_id,
+    })
+}
 
 /// Given a path `/foo/test.xml`, find its relationships `/foo/_rels/test.xml.rels`
 fn get_rels(path: &str) -> Result<PathBuf, SerdeErr> {

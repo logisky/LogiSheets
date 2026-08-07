@@ -242,6 +242,8 @@ pub fn save_workbook<S: SaverTrait>(
             theme,
             persons,
             medias,
+            // The engine does not yet model pivot caches; none emitted on save.
+            pivot_caches: Vec::new(),
         },
         doc_props: DocProps::default(),
         logisheets: Some(LogiSheetsData {

@@ -438,12 +438,11 @@ fn test_upsert_replaces_rule_and_recomputes() {
 
 /// `validation_formulas: vec![None; field_count]` is the explicit clear
 /// — every per-field rule is removed and the engine strips the formulas
-/// off existing validation shadows. We verify the formula is gone by
-/// dirtying the underlying value and confirming the shadow doesn't
-/// recompute (it still holds the cached value from before the clear).
-/// Cached-value persistence after clear is intentional: shadow ids stay
-/// allocated, just no longer computed. Host widgets that care about
-/// "no rule" should check the schema, not the shadow's stale value.
+/// off existing validation shadows AND purges the shadow's stale value.
+/// Clearing a rule fully cancels the previous validation: the shadow reads
+/// back `Empty` (no warning), not the last-computed boolean. We also confirm
+/// the formula is truly gone by dirtying the underlying value and checking
+/// the shadow does NOT recompute (a removed formula can't re-evaluate).
 #[test]
 fn test_upsert_all_none_clears_shadows() {
     let mut wb = fresh_block_with_data(
@@ -467,10 +466,19 @@ fn test_upsert_all_none_clears_shadows() {
         })],
     );
 
-    // Now bump row 0's value to 50 (which WOULD pass the old rule). If
-    // the formula were still wired up, the shadow would re-evaluate to
-    // Bool(true). If it's been removed, the shadow stays at its cached
-    // pre-clear value (Bool(false)).
+    // The stale Bool(false) must be gone — clearing the rule cancels the
+    // previous validation, so the shadow reads Empty (no warning), not the
+    // last-computed value.
+    let cleared = shadow_value(&mut wb, 0, 0, 1, ShadowKind::Validation);
+    assert!(
+        matches!(cleared, Value::Empty),
+        "clearing the rule should purge the stale shadow value, got {:?}",
+        cleared
+    );
+
+    // Bump row 0's value to 50 (which WOULD pass the old rule). If the
+    // formula were still wired up, the shadow would re-evaluate to Bool(true).
+    // Since it's removed, the shadow stays Empty — no active formula.
     ok(
         &mut wb,
         vec![EditPayload::BlockInput(BlockInput {
@@ -484,9 +492,9 @@ fn test_upsert_all_none_clears_shadows() {
 
     let after = shadow_value(&mut wb, 0, 0, 1, ShadowKind::Validation);
     assert!(
-        matches!(after, Value::Bool(false)),
-        "after clear the shadow should not recompute on data change, \
-         got {:?} (would be Bool(true) if formula were still active)",
+        matches!(after, Value::Empty),
+        "after clear the shadow must not recompute on data change, \
+         got {:?} (would be Bool(true) if the formula were still active)",
         after
     );
 }

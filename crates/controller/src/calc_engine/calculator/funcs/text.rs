@@ -229,6 +229,94 @@ where
     }
 }
 
+/// Resolve a `decimals` argument into the value to hand to the formatter and
+/// the number of fractional digits to render. Negative `decimals` round the
+/// value to the left of the decimal point (matching Excel FIXED/DOLLAR).
+fn round_for_decimals(number: f64, decimals: i64) -> (f64, usize) {
+    if decimals < 0 {
+        let p = 10f64.powi((-decimals).min(100) as i32);
+        ((number / p).round() * p, 0)
+    } else {
+        (number, decimals.min(127) as usize)
+    }
+}
+
+/// FIXED(number, [decimals=2], [no_commas=FALSE]) — round `number` to
+/// `decimals` places and render it as text via `ssf-rs`. Thousands separators
+/// are included unless `no_commas` is TRUE; negative `decimals` round to the
+/// left of the decimal point.
+pub fn calc_fixed<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    assert_or_return!(!args.is_empty() && args.len() <= 3, ast::Error::Unspecified);
+    let mut it = args.into_iter();
+    let num_v = fetcher.get_calc_value(it.next().unwrap());
+    assert_f64_from_calc_value!(number, num_v);
+    let decimals = match it.next() {
+        Some(a) => {
+            let v = fetcher.get_calc_value(a);
+            assert_f64_from_calc_value!(d, v);
+            d.trunc() as i64
+        }
+        None => 2,
+    };
+    let no_commas = match it.next() {
+        Some(a) => {
+            let v = fetcher.get_calc_value(a);
+            assert_bool_from_calc_value!(nc, v);
+            nc
+        }
+        None => false,
+    };
+
+    let (value, frac) = round_for_decimals(number, decimals);
+    let intpat = if no_commas { "0" } else { "#,##0" };
+    let fmt = if frac > 0 {
+        format!("{}.{}", intpat, "0".repeat(frac))
+    } else {
+        intpat.to_string()
+    };
+    match ssf_rs::format(&fmt, &ssf_rs::Value::Num(value), false) {
+        Ok(s) => CalcVertex::from_string(s),
+        Err(_) => CalcVertex::from_error(ast::Error::Value),
+    }
+}
+
+/// DOLLAR(number, [decimals=2]) — currency text via `ssf-rs`: `$`, thousands
+/// separators, `decimals` places, with negatives shown in parentheses.
+/// (USDOLLAR is a legacy alias that dispatches here.)
+pub fn calc_dollar<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    assert_or_return!(!args.is_empty() && args.len() <= 2, ast::Error::Unspecified);
+    let mut it = args.into_iter();
+    let num_v = fetcher.get_calc_value(it.next().unwrap());
+    assert_f64_from_calc_value!(number, num_v);
+    let decimals = match it.next() {
+        Some(a) => {
+            let v = fetcher.get_calc_value(a);
+            assert_f64_from_calc_value!(d, v);
+            d.trunc() as i64
+        }
+        None => 2,
+    };
+
+    let (value, frac) = round_for_decimals(number, decimals);
+    let dec = if frac > 0 {
+        format!(".{}", "0".repeat(frac))
+    } else {
+        String::new()
+    };
+    let pos = format!("\"$\"#,##0{}", dec);
+    let fmt = format!("{};({})", pos, pos);
+    match ssf_rs::format(&fmt, &ssf_rs::Value::Num(value), false) {
+        Ok(s) => CalcVertex::from_string(s),
+        Err(_) => CalcVertex::from_error(ast::Error::Value),
+    }
+}
+
 fn push_value(v: Value, out: &mut String) -> Result<(), ast::Error> {
     match v {
         Value::Blank => Ok(()),

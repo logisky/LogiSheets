@@ -230,96 +230,115 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
     if let Some(persons) = &xl.persons {
         load_persons(persons, &mut cell_attachment_manager);
     }
+    // Structured tables (`<table>` parts) aren't modeled by the engine; we turn
+    // each into a form block after the load finishes (see `convert_tables_to_blocks`).
+    // Collect the conversion specs during the sheet walk, where the OOXML table
+    // metadata is in scope.
+    let mut pending_tables: Vec<TableConvertSpec> = Vec::new();
     // TODO: Here we should we `.into_iter()` to take the ownership logically
     // rather than call `.clone()` below.
-    xl.workbook_part.sheets.sheets.iter().for_each(|ct_sheet| {
-        let sheet_name = &ct_sheet.name;
-        let sheet_id = sheet_id_manager.get_or_register_id(sheet_name);
-        let id = &ct_sheet.id;
-        if let Some(ws) = xl.worksheets.get(id) {
-            // Threaded comments are the source of truth; fall back to the
-            // legacy `commentsN.xml` only when no threaded part exists.
-            if let Some(threaded) = &ws.threaded_comments {
-                load_threaded_comments(
+    xl.workbook_part
+        .sheets
+        .sheets
+        .iter()
+        .enumerate()
+        .for_each(|(sheet_idx, ct_sheet)| {
+            let sheet_name = &ct_sheet.name;
+            let sheet_id = sheet_id_manager.get_or_register_id(sheet_name);
+            let id = &ct_sheet.id;
+            if let Some(ws) = xl.worksheets.get(id) {
+                // Threaded comments are the source of truth; fall back to the
+                // legacy `commentsN.xml` only when no threaded part exists.
+                if let Some(threaded) = &ws.threaded_comments {
+                    load_threaded_comments(
+                        sheet_id,
+                        threaded,
+                        &mut navigator,
+                        &mut cell_attachment_manager,
+                    );
+                } else if let Some(comments) = &ws.comments {
+                    load_comments(
+                        sheet_id,
+                        comments,
+                        &mut navigator,
+                        &mut cell_attachment_manager,
+                    );
+                }
+                if let Some(cols) = &ws.worksheet_part.cols {
+                    load_cols(
+                        sheet_id,
+                        &cols.cols,
+                        &mut container,
+                        &mut style_loader,
+                        &mut navigator,
+                    )
+                }
+                if let Some(merge_cells) = &ws.worksheet_part.merge_cells {
+                    load_merge_cells(
+                        sheet_id,
+                        merge_cells,
+                        &mut navigator,
+                        &mut cell_attachment_manager,
+                    )
+                }
+                if let Some(sheet_format_pr) = &ws.worksheet_part.sheet_format_pr {
+                    load_sheet_format_pr(&mut settings, sheet_id, sheet_format_pr)
+                }
+                if let Some(sheet_views) = &ws.worksheet_part.sheet_views {
+                    load_sheet_views(&mut settings, sheet_id, sheet_views);
+                }
+                if let Some(sheet_pr) = &ws.worksheet_part.sheet_pr {
+                    load_sheet_pr(&mut sheet_info_manager, sheet_id, sheet_pr);
+                }
+                load_sheet_data(
                     sheet_id,
-                    threaded,
+                    &book_name,
+                    &ws.worksheet_part.sheet_data,
                     &mut navigator,
-                    &mut cell_attachment_manager,
-                );
-            } else if let Some(comments) = &ws.comments {
-                load_comments(
-                    sheet_id,
-                    comments,
-                    &mut navigator,
-                    &mut cell_attachment_manager,
-                );
-            }
-            if let Some(cols) = &ws.worksheet_part.cols {
-                load_cols(
-                    sheet_id,
-                    &cols.cols,
+                    &mut sheet_id_manager,
+                    &mut sheet_info_manager,
+                    &mut text_id_manager,
+                    &mut func_id_manager,
+                    &mut name_id_manager,
+                    &mut external_links_manager,
                     &mut container,
+                    &mut formula_manager,
+                    &mut range_manager,
+                    &mut cube_manager,
+                    &mut ext_ref_manager,
+                    &block_schema_manager,
                     &mut style_loader,
-                    &mut navigator,
-                )
-            }
-            if let Some(merge_cells) = &ws.worksheet_part.merge_cells {
-                load_merge_cells(
-                    sheet_id,
-                    merge_cells,
-                    &mut navigator,
-                    &mut cell_attachment_manager,
-                )
-            }
-            if let Some(sheet_format_pr) = &ws.worksheet_part.sheet_format_pr {
-                load_sheet_format_pr(&mut settings, sheet_id, sheet_format_pr)
-            }
-            if let Some(sheet_views) = &ws.worksheet_part.sheet_views {
-                load_sheet_views(&mut settings, sheet_id, sheet_views);
-            }
-            if let Some(sheet_pr) = &ws.worksheet_part.sheet_pr {
-                load_sheet_pr(&mut sheet_info_manager, sheet_id, sheet_pr);
-            }
-            load_sheet_data(
-                sheet_id,
-                &book_name,
-                &ws.worksheet_part.sheet_data,
-                &mut navigator,
-                &mut sheet_id_manager,
-                &mut sheet_info_manager,
-                &mut text_id_manager,
-                &mut func_id_manager,
-                &mut name_id_manager,
-                &mut external_links_manager,
-                &mut container,
-                &mut formula_manager,
-                &mut range_manager,
-                &mut cube_manager,
-                &mut ext_ref_manager,
-                &block_schema_manager,
-                &mut style_loader,
-                &xl,
-            );
-            if let Some(drawing) = &ws.drawing {
-                load_cell_images(
-                    sheet_id,
-                    drawing,
-                    &xl.medias,
-                    &navigator,
-                    &mut image_manager,
+                    &xl,
                 );
-                load_charts(sheet_id, drawing, &navigator, &mut chart_manager);
+                if let Some(drawing) = &ws.drawing {
+                    load_cell_images(
+                        sheet_id,
+                        drawing,
+                        &xl.medias,
+                        &navigator,
+                        &mut image_manager,
+                    );
+                    load_charts(sheet_id, drawing, &navigator, &mut chart_manager);
+                }
+                // Excel data validation is stored verbatim per sheet for round-trip.
+                if let Some(dv) = &ws.worksheet_part.data_validations {
+                    data_validation_manager.set_sheet(sheet_id, dv.clone());
+                }
+                // Unmodeled worksheet parts (conditional formatting, hyperlinks,
+                // filters, page setup, protection, ...) are preserved verbatim so
+                // open→save doesn't drop them. `<tableParts>` is intentionally NOT
+                // preserved: we convert every `<table>` into a block below and never
+                // author a `tableN.xml`, so a retained reference would dangle.
+                load_preserved_parts(&mut settings, sheet_id, &ws.worksheet_part);
+                // Queue each structured table for table→block conversion (done
+                // after the load completes, once the container holds every cell).
+                for tp in ws.tables.iter() {
+                    if let Some(spec) = table_part_to_spec(sheet_idx, &tp.table) {
+                        pending_tables.push(spec);
+                    }
+                }
             }
-            // Excel data validation is stored verbatim per sheet for round-trip.
-            if let Some(dv) = &ws.worksheet_part.data_validations {
-                data_validation_manager.set_sheet(sheet_id, dv.clone());
-            }
-            // Unmodeled worksheet parts (conditional formatting, hyperlinks,
-            // filters, page setup, protection, table parts, ...) are preserved
-            // verbatim so open→save doesn't drop them.
-            load_preserved_parts(&mut settings, sheet_id, &ws.worksheet_part);
-        }
-    });
+        });
 
     // Range→member-cell dependency edges aren't laid down during the
     // incremental load (`add_ast_node` records only the formula→range edge, and
@@ -374,7 +393,136 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
     if let Some(theme) = xl.theme {
         settings.theme = ThemeManager::from(theme.1);
     }
-    Controller::from(status, book_name, settings, app_data)
+    let mut controller = Controller::from(status, book_name, settings, app_data);
+    convert_tables_to_blocks(&mut controller, pending_tables);
+    controller
+}
+
+/// A structured OOXML table queued for conversion into a form block. Positions
+/// are 0-based; the region already EXCLUDES the header row(s) (which supply the
+/// field names) and any totals row(s).
+struct TableConvertSpec {
+    sheet_idx: usize,
+    master_row: usize,
+    master_col: usize,
+    row_cnt: usize,
+    col_cnt: usize,
+    /// Field names, one per column, taken from the table's column headers
+    /// (blank/missing names fall back to `Field N`).
+    field_names: Vec<String>,
+}
+
+/// Turn one OOXML `<table>` into a conversion spec: parse its `ref` range, drop
+/// the header and totals rows, and pull the column names. Returns `None` when
+/// the table has no data rows or an unparseable reference.
+fn table_part_to_spec(
+    sheet_idx: usize,
+    table: &logisheets_workbook::prelude::Table,
+) -> Option<TableConvertSpec> {
+    let rect = crate::data_validation_manager::parse_sqref(&table.reference)
+        .into_iter()
+        .next()?;
+    // A whole-row/col ref (open bound) isn't a real table region.
+    if rect.r1 == usize::MAX || rect.c1 == usize::MAX {
+        return None;
+    }
+    let header = table.header_row_count as usize;
+    let totals = table.totals_row_count as usize;
+    let master_row = rect.r0 + header;
+    if rect.r1 < master_row {
+        return None;
+    }
+    let rows_incl_totals = rect.r1 - master_row + 1;
+    if rows_incl_totals <= totals {
+        return None; // header/totals only — nothing to record.
+    }
+    let row_cnt = rows_incl_totals - totals;
+    let col_cnt = rect.c1 - rect.c0 + 1;
+    if row_cnt == 0 || col_cnt == 0 {
+        return None;
+    }
+    let mut field_names: Vec<String> = table
+        .table_columns
+        .table_column
+        .iter()
+        .map(|c| c.name.clone())
+        .collect();
+    field_names.resize(col_cnt, String::new());
+    for (i, name) in field_names.iter_mut().enumerate() {
+        if name.trim().is_empty() {
+            *name = format!("Field {}", i + 1);
+        }
+    }
+    Some(TableConvertSpec {
+        sheet_idx,
+        master_row,
+        master_col: rect.c0,
+        row_cnt,
+        col_cnt,
+        field_names,
+    })
+}
+
+/// Realize each queued table as a form block: `ConvertBlock` keeps the region's
+/// existing cell values while re-homing them into the block, then
+/// `BindFormSchema` attaches a schema whose ref name is `unspecified-<blockId>`
+/// and whose fields are the table's column headers (all "unspecified" type —
+/// the host renders them as plain cells). A failure on one table is skipped so
+/// the rest of the workbook still loads.
+fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvertSpec>) {
+    use crate::edit_action::{
+        BindFormSchema, ConvertBlock, EditAction, EditPayload, PayloadsAction,
+    };
+    for spec in specs {
+        let sheet_id = match controller
+            .status
+            .sheet_info_manager
+            .get_sheet_id(spec.sheet_idx)
+        {
+            Some(id) => id,
+            None => continue,
+        };
+        let block_id = match controller
+            .status
+            .navigator
+            .get_available_block_id(&sheet_id)
+        {
+            Ok(id) => id,
+            Err(_) => continue,
+        };
+        let ref_name = format!("unspecified-{}", block_id);
+        let render_ids: Vec<String> = (0..spec.col_cnt)
+            .map(|c| format!("{}-{}", ref_name, c))
+            .collect();
+        let payloads = vec![
+            EditPayload::ConvertBlock(ConvertBlock {
+                sheet_idx: spec.sheet_idx,
+                id: block_id,
+                master_row: spec.master_row,
+                master_col: spec.master_col,
+                row_cnt: spec.row_cnt,
+                col_cnt: spec.col_cnt,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name,
+                sheet_idx: spec.sheet_idx,
+                block_id,
+                field_from: 0,
+                key_idx: 0,
+                fields: spec.field_names,
+                render_ids,
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            }),
+        ];
+        controller.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads,
+            undoable: false,
+            init: false,
+        }));
+    }
 }
 
 /// Pull cell images out of a worksheet drawing part into the `ImageManager`.

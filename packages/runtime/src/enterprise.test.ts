@@ -18,7 +18,11 @@ import {
 const FIXTURE = fileURLToPath(new URL('../../../tests/6.xlsx', import.meta.url))
 
 // A mock control panel: register → creds, heartbeat/ingest → ok.
-function mockControlPlane(): Promise<{server: Server; url: string; hits: string[]}> {
+function mockControlPlane(): Promise<{
+    server: Server
+    url: string
+    hits: string[]
+}> {
     const hits: string[] = []
     return new Promise((resolve) => {
         const server = createServer((req, res) => {
@@ -26,16 +30,19 @@ function mockControlPlane(): Promise<{server: Server; url: string; hits: string[
             let body = ''
             req.on('data', (c) => (body += c))
             req.on('end', () => {
-                res.writeHead(req.url === '/api/runtimes/register' ? 201 : 200, {
-                    'content-type': 'application/json',
-                })
+                res.writeHead(
+                    req.url === '/api/runtimes/register' ? 201 : 200,
+                    {
+                        'content-type': 'application/json',
+                    }
+                )
                 if (req.url === '/api/runtimes/register') {
                     res.end(
                         JSON.stringify({
                             runtimeId: 'rt-1',
                             registryUrl: null,
                             registryToken: null,
-                        }),
+                        })
                     )
                 } else res.end(JSON.stringify({ok: true}))
             })
@@ -62,7 +69,10 @@ function fileServer(bytes: Uint8Array): Promise<{server: Server; url: string}> {
 }
 
 const SECRET = 'test-secret'
-const auth = {authorization: `Bearer ${SECRET}`, 'content-type': 'application/json'}
+const auth = {
+    authorization: `Bearer ${SECRET}`,
+    'content-type': 'application/json',
+}
 
 let cp: Awaited<ReturnType<typeof mockControlPlane>>
 let files: Awaited<ReturnType<typeof fileServer>>
@@ -161,7 +171,7 @@ describe('EnterpriseRuntimeServer', () => {
         const dir = mkdtempSync(join(tmpdir(), 'lse-watch-'))
         writeFileSync(
             join(dir, 'wb_t.json'),
-            JSON.stringify({id: 't', version: 1, path: FIXTURE}),
+            JSON.stringify({id: 't', version: 1, path: FIXTURE})
         )
         const handle = await startEnterpriseRuntime({
             controlPlaneUrl: cp.url,
@@ -205,7 +215,9 @@ describe('EnterpriseRuntimeServer', () => {
         expect(wbId).toBeTruthy()
 
         const status = await (
-            await fetch(`${base}/status`, {headers: {authorization: `Bearer ${SECRET}`}})
+            await fetch(`${base}/status`, {
+                headers: {authorization: `Bearer ${SECRET}`},
+            })
         ).json()
         expect(status.pins).toContain(wbId)
 
@@ -216,5 +228,61 @@ describe('EnterpriseRuntimeServer', () => {
         })
         expect(unpin.status).toBe(200)
         expect(runtime.workbooks.length).toBe(0)
+    })
+
+    // The transport-agnostic entry a non-Node host (e.g. a Cloudflare Worker
+    // `fetch`) uses — same routing/auth as the HTTP server, no Node req/res.
+    describe('handleRequest (transport-agnostic)', () => {
+        it('gates on the shared secret', async () => {
+            expect(
+                (await server.handleRequest({method: 'GET', path: '/status'}))
+                    .status
+            ).toBe(403)
+        })
+
+        it('reports status', async () => {
+            const out = await server.handleRequest({
+                method: 'GET',
+                path: '/status',
+                authorization: `Bearer ${SECRET}`,
+            })
+            expect(out.status).toBe(200)
+            expect((out.body as {pins: string[]}).pins).toEqual([])
+        })
+
+        it('rejects non-POST to a POST route with 405 and no body', async () => {
+            const out = await server.handleRequest({
+                method: 'GET',
+                path: '/task',
+                authorization: `Bearer ${SECRET}`,
+            })
+            expect(out.status).toBe(405)
+            expect(out.body).toBeUndefined()
+        })
+
+        it('runs a task against a fetched workbook', async () => {
+            const out = await server.handleRequest({
+                method: 'POST',
+                path: '/task',
+                authorization: `Bearer ${SECRET}`,
+                body: {workbookUrl: files.url, rpcCall: 'echo', params: {x: 2}},
+            })
+            expect(out.status).toBe(200)
+            expect((out.body as {params: unknown}).params).toEqual({x: 2})
+            expect(runtime.workbooks.length).toBe(0) // ephemeral: released
+        })
+
+        it('maps a handler error to 500', async () => {
+            const out = await server.handleRequest({
+                method: 'POST',
+                path: '/task',
+                authorization: `Bearer ${SECRET}`,
+                body: {workbookUrl: files.url, rpcCall: 'nope'},
+            })
+            expect(out.status).toBe(500)
+            expect((out.body as {error: string}).error).toMatch(
+                /unknown rpcCall/
+            )
+        })
     })
 })

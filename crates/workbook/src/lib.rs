@@ -20,9 +20,14 @@ pub mod prelude {
     pub use super::ooxml::drawing_part::*;
     pub use super::ooxml::external_links::*;
     pub use super::ooxml::persons::*;
+    pub use super::ooxml::pivot_cache_definition::*;
+    pub use super::ooxml::pivot_cache_records::*;
+    pub use super::ooxml::pivot_shared::*;
+    pub use super::ooxml::pivot_table::*;
     pub use super::ooxml::simple_types::*;
     pub use super::ooxml::sst::SstPart;
     pub use super::ooxml::style_sheet::StylesheetPart;
+    pub use super::ooxml::table::*;
     pub use super::ooxml::theme::*;
     pub use super::ooxml::threaded_comments::*;
     pub use super::ooxml::workbook::*;

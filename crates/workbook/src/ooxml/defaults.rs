@@ -12,6 +12,38 @@ pub fn default_zero_f64() -> f64 {
     0.0
 }
 
+pub fn default_one_f64() -> f64 {
+    1.0
+}
+
+pub fn st_group_by_range() -> StGroupBy {
+    StGroupBy::Range
+}
+
+pub fn default_ten_u32() -> u32 {
+    10
+}
+
+pub fn st_field_sort_type_manual() -> StFieldSortType {
+    StFieldSortType::Manual
+}
+
+pub fn st_item_type_data() -> StItemType {
+    StItemType::Data
+}
+
+pub fn st_show_data_as_normal() -> StShowDataAs {
+    StShowDataAs::Normal
+}
+
+pub fn st_format_action_formatting() -> StFormatAction {
+    StFormatAction::Formatting
+}
+
+pub fn st_scope_selection() -> StScope {
+    StScope::Selection
+}
+
 pub fn default_zero_u32() -> u32 {
     0
 }

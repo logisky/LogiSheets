@@ -159,6 +159,10 @@ fn save_worksheet<S: SaverTrait>(
         // Cell images are attached later in `save_workbook`, which has the
         // navigator and image manager needed to resolve cell positions.
         drawing: None,
+        // The engine does not yet model pivot tables; none are emitted on save.
+        pivot_tables: Vec::new(),
+        // The engine does not yet model structured tables; none on save.
+        tables: Vec::new(),
     }
 }
 

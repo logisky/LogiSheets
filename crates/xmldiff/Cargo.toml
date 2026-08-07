@@ -1,6 +1,8 @@
 [package]
 name = "xmldiff"
-version.workspace = true
+# Independently versioned — NOT bumped by `just release` (see justfile
+# rust_exclude). Bump this by hand only when xmldiff itself changes.
+version = "1.9.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

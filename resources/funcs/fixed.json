@@ -1,0 +1,6 @@
+{
+    "name": "FIXED",
+    "description": "functions.fixed.description",
+    "argCount": {"ge": 1, "le": 3},
+    "args": [{"argName": "number"}, {"argName": "decimals"}, {"argName": "no_commas"}]
+}

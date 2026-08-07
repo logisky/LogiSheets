@@ -10,10 +10,15 @@ pub mod drawings;
 pub mod enum_groups;
 pub mod external_links;
 pub mod persons;
+pub mod pivot_cache_definition;
+pub mod pivot_cache_records;
+pub mod pivot_shared;
+pub mod pivot_table;
 pub mod relationships;
 pub mod simple_types;
 pub mod sst;
 pub mod style_sheet;
+pub mod table;
 #[cfg(test)]
 pub mod test_utils;
 pub mod theme;

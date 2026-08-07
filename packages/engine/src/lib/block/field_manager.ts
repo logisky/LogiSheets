@@ -2,6 +2,12 @@
  * Represents a field's type and configuration
  */
 export type FieldTypeEnum =
+  /**
+   * A field whose type has not been declared. Free-form: rendered as a plain
+   * cell (no widget), no type validation, not a membership field, no
+   * number/date formatting. The explicit "not yet decided" state.
+   */
+  | { type: "unspecified" }
   | { type: "enum"; id: string }
   | { type: "multiSelect"; id: string }
   | { type: "datetime"; formatter: string }
@@ -71,6 +77,14 @@ export interface FieldInfo {
   /** Default value */
   defaultValue?: string
   /**
+   * The user's RAW validation rule as typed in the composer, before the host
+   * auto-composes the unique / reference existence checks into
+   * `type.validation`. Kept so the edit dialog can show (and re-edit) the
+   * original rule without re-wrapping the auto-injected checks. Undefined for
+   * fields with no user validation, or blocks loaded from file (no host state).
+   */
+  validationRaw?: string
+  /**
    * Static field-level write permission flag for the player (non-owner
    * caller). Read by the host permission patch:
    *
@@ -138,6 +152,18 @@ export class FieldManager {
     this.fields.set(fieldId, fieldInfo);
 
     return fieldInfo;
+  }
+
+  /**
+   * Register a field under its own `id`, creating it or replacing an existing
+   * entry. Unlike {@link create} (which allocates a fresh id), this preserves a
+   * caller-supplied id — used when editing a block so an existing field keeps
+   * its `renderId` (the block's cells stay wired) while its type / validation /
+   * required flags are updated. Also covers blocks loaded from file that have
+   * no host `FieldInfo` yet.
+   */
+  upsert(field: FieldInfo): void {
+    this.fields.set(field.id, field);
   }
 
   /**

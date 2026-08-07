@@ -38,7 +38,14 @@ async function cellCenter(page: Page, col: string, row: number) {
 }
 
 // Select a single cell and turn it into a form block via the composer.
-async function createBlockAt(page: Page, col: string, row: number) {
+// `name` must be unique per block: ref names are workbook-global and the
+// composer now rejects duplicates on save.
+async function createBlockAt(
+    page: Page,
+    col: string,
+    row: number,
+    name = 'drag-test'
+) {
     const start = await cellCenter(page, col, row)
     // A tiny drag makes a one-cell range selection (enables CreateBlock).
     await page.mouse.move(start.x, start.y)
@@ -50,7 +57,7 @@ async function createBlockAt(page: Page, col: string, row: number) {
     await expect(create).toBeEnabled()
     await create.click()
 
-    await page.getByPlaceholder(/customers/i).fill('drag-test')
+    await page.getByPlaceholder(/customers/i).fill(name)
     await page.getByRole('button', {name: /save changes/i}).click()
 
     await expect(blockOutline(page)).toBeVisible({timeout: 15_000})
@@ -128,9 +135,10 @@ test('dropping a block onto a non-empty cell is refused with a toast', async ({
 test('dropping a block onto another block is refused with a toast', async ({
     page,
 }) => {
-    // Block A at B3, block B at F3 — both one-cell form blocks.
-    await createBlockAt(page, 'B', 3)
-    await createBlockAt(page, 'F', 3)
+    // Block A at B3, block B at F3 — both one-cell form blocks. Distinct ref
+    // names: the composer rejects duplicate ref names on save.
+    await createBlockAt(page, 'B', 3, 'drag-a')
+    await createBlockAt(page, 'F', 3, 'drag-b')
 
     // Block A is the one whose master is column B (index 1). Its cells are
     // empty, so this is purely a block-overlap refusal.

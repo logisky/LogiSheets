@@ -1,0 +1,6 @@
+{
+    "name": "USDOLLAR",
+    "description": "functions.usdollar.description",
+    "argCount": {"ge": 1, "le": 2},
+    "args": [{"argName": "number"}, {"argName": "decimals"}]
+}

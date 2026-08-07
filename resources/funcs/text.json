@@ -1,0 +1,6 @@
+{
+    "name": "TEXT",
+    "description": "functions.text.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "value"}, {"argName": "format_text"}]
+}

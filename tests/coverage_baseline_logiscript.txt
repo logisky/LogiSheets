@@ -1,0 +1,37 @@
+# Functions dispatched before the logiscript-coverage guard existed and not
+# yet covered by a tests/**/*.script. This list may only SHRINK: add a script
+# for the function and remove it here. New functions must NOT be added.
+ACCRINTM
+BINOM.DIST
+BITAND
+COLUMN
+COLUMNS
+COUNTIFS
+COUPNCD
+COUPNUM
+COUPPCD
+COVARIANCE.P
+COVARIANCE.S
+EXPON.DIST
+FALSE
+FDIST
+HLOOKUP
+ISBLANK
+ISERR
+ISLOGICAL
+ISNONTEXT
+ISNUMBER
+ISTEXT
+MINIFS
+MODE.SNGL
+NEGBINOMDIST
+PERCENTILE.INC
+PERCENTRANK.INC
+POISSON.DIST
+QUARTILE.INC
+RANDBETWEEN
+ROWS
+STDEV.P
+STDEV.S
+VAR.P
+WEIBULL.DIST

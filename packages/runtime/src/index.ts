@@ -13,12 +13,64 @@
 
 import {readFile} from 'node:fs/promises'
 import {basename, resolve} from 'node:path'
-import {handle} from 'logisheets/wasm/logisheets_wasm_server.js'
+import {createRequire} from 'node:module'
 import type {Value, Client} from 'logisheets-web'
 import {WorkbookOps} from 'logisheets-core'
 
 // Re-export the core surface so consumers import everything from one place.
 export * from 'logisheets-core'
+
+// ── WASM engine entry point (injectable) ─────────────────────────────────────
+//
+// Every workbook operation runs synchronously through the wasm-bindgen `handle`
+// entry. WHERE that comes from depends on the host:
+//   - Node (default): the node-target glue (`logisheets/wasm/…`), which reads
+//     the .wasm from disk and auto-initializes on load. Loaded lazily on first
+//     use via `createRequire`, so nothing runs at import time.
+//   - A non-Node host (e.g. a Cloudflare Worker, which has no `fs`/`require`):
+//     the host initializes the WEB-target glue itself — `initSync({module})`
+//     with an imported `WebAssembly.Module` — and injects its `handle` via
+//     {@link setWasmHandle} BEFORE any operation. The node path is then never
+//     touched, so `node:module`/`fs` are imported-but-unused there.
+
+/** The wasm-bindgen `handle(msg, bookId?)` entry — the single call the whole
+ *  runtime issues against the engine. */
+export type WasmHandle = (msg: unknown, bookId?: number | null) => unknown
+
+let handleImpl: WasmHandle | undefined
+
+/**
+ * Inject the wasm `handle` entry. Required on non-Node hosts (Cloudflare
+ * Worker, Deno, browser): initialize the web-target glue with an imported
+ * module and pass its `handle` here BEFORE creating/loading any workbook, e.g.
+ *
+ * ```ts
+ * import wasmModule from 'logisheets-web/wasm/logisheets_wasm_server_bg.wasm'
+ * import {initSync, handle} from 'logisheets-web/wasm/logisheets_wasm_server.js'
+ * initSync({module: wasmModule})
+ * setWasmHandle(handle)
+ * ```
+ *
+ * Optional on Node — the node-target glue is loaded on first use if unset.
+ */
+export function setWasmHandle(fn: WasmHandle): void {
+    handleImpl = fn
+}
+
+// Node fallback: synchronously require the node-target glue (it auto-initializes
+// the wasm from disk on load). Only reached when no handle was injected; a
+// non-Node host injects first, so `createRequire` never runs there.
+function loadNodeHandle(): WasmHandle {
+    const require = createRequire(import.meta.url)
+    return require('logisheets/wasm/logisheets_wasm_server.js').handle
+}
+
+/** The engine entry the runtime calls; resolves the injected handle (or the
+ *  Node default) on first use. */
+function handle(msg: unknown, bookId?: number | null): unknown {
+    if (handleImpl === undefined) handleImpl = loadNodeHandle()
+    return handleImpl(msg, bookId)
+}
 
 // The developer-defined JSON-RPC server (operations run against this runtime).
 export * from './rpc.js'
@@ -101,7 +153,7 @@ export class Workbook {
         return handle(
             {method: 'getValue', value: {sheetIdx, row, col}},
             this.id
-        )
+        ) as Value
     }
 
     /** Undo the most recent transaction. Returns whether anything was undone. */

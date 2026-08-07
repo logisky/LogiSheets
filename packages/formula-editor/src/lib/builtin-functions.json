@@ -67,6 +67,31 @@
     ]
   },
   {
+    "name": "ADDRESS",
+    "description": "Creates a cell reference as text, given the row and column numbers.",
+    "argCount": {
+      "ge": 2,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "row_num"
+      },
+      {
+        "argName": "col_num"
+      },
+      {
+        "argName": "abs_num"
+      },
+      {
+        "argName": "a1"
+      },
+      {
+        "argName": "sheet_text"
+      }
+    ]
+  },
+  {
     "name": "AGGREGATE",
     "description": "Returns an aggregate in a list or database. The AGGREGATE function can apply different aggregate functions to a list or database with the option to ignore hidden rows and error values.",
     "argCount": {
@@ -230,6 +255,45 @@
     ]
   },
   {
+    "name": "CEILING",
+    "description": "Rounds a number up, away from zero, to the nearest multiple of significance.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "significance"
+      }
+    ]
+  },
+  {
+    "name": "CHAR",
+    "description": "Returns the character specified by a code number (1-255).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "CODE",
+    "description": "Returns the numeric code of the first character in a text string.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
     "name": "COMPLEX",
     "description": "Returns a complex number as text given real and imaginary coefficients and an optional suffix.",
     "argCount": {
@@ -245,6 +309,19 @@
       },
       {
         "argName": "suffix"
+      }
+    ]
+  },
+  {
+    "name": "CONCAT",
+    "description": "Joins the text from multiple values or ranges into a single string.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "text",
+        "startRepeated": true
       }
     ]
   },
@@ -276,6 +353,19 @@
   {
     "name": "COUNT",
     "description": "Counts how many numbers are in the list of supplied arguments.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "value",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "COUNTA",
+    "description": "Counts the number of cells that are not empty.",
     "argCount": {
       "ge": 1
     },
@@ -371,6 +461,22 @@
     ]
   },
   {
+    "name": "DOLLAR",
+    "description": "Converts a number to text using currency format, with a dollar sign, thousands separators, and the specified number of decimals.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "decimals"
+      }
+    ]
+  },
+  {
     "name": "EXACT",
     "description": "Checks whether two text strings are exactly the same (case-sensitive).",
     "argCount": {
@@ -422,6 +528,59 @@
       "eq": 0
     },
     "args": []
+  },
+  {
+    "name": "FIND",
+    "description": "Returns the position of one text string within another (case-sensitive).",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "find_text"
+      },
+      {
+        "argName": "within_text"
+      },
+      {
+        "argName": "start_num"
+      }
+    ]
+  },
+  {
+    "name": "FIXED",
+    "description": "Rounds a number to the specified number of decimals and returns it as text, with or without thousands separators.",
+    "argCount": {
+      "ge": 1,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "decimals"
+      },
+      {
+        "argName": "no_commas"
+      }
+    ]
+  },
+  {
+    "name": "FLOOR",
+    "description": "Rounds a number down, toward zero, to the nearest multiple of significance.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "significance"
+      }
+    ]
   },
   {
     "name": "FV",
@@ -687,6 +846,18 @@
     ]
   },
   {
+    "name": "INT",
+    "description": "Rounds a number down to the nearest integer.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
     "name": "IPMT",
     "description": "Returns the interest payment for a given period of an investment.",
     "argCount": {
@@ -744,6 +915,18 @@
     ]
   },
   {
+    "name": "ISEVEN",
+    "description": "Returns TRUE if the number is even.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
     "name": "ISNA",
     "description": "Returns TRUE if the value is the #N/A error; otherwise returns FALSE.",
     "argCount": {
@@ -752,6 +935,18 @@
     "args": [
       {
         "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "ISODD",
+    "description": "Returns TRUE if the number is odd.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
       }
     ]
   },
@@ -796,6 +991,22 @@
     ]
   },
   {
+    "name": "LOG",
+    "description": "Returns the logarithm of a number to the base you specify (default 10).",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "base"
+      }
+    ]
+  },
+  {
     "name": "LOG10",
     "description": "Returns the base-10 logarithm of a number.",
     "argCount": {
@@ -816,6 +1027,38 @@
     "args": [
       {
         "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "MATCH",
+    "description": "Returns the relative position of an item in a range that matches a specified value.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "lookup_value"
+      },
+      {
+        "argName": "lookup_array"
+      },
+      {
+        "argName": "match_type"
+      }
+    ]
+  },
+  {
+    "name": "MAX",
+    "description": "Returns the largest value in a set of numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
       }
     ]
   },
@@ -842,6 +1085,50 @@
     ]
   },
   {
+    "name": "MEDIAN",
+    "description": "Returns the median (the middle value) of the given numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "MID",
+    "description": "Returns a specific number of characters from a text string, starting at the position you specify.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "start_num"
+      },
+      {
+        "argName": "num_chars"
+      }
+    ]
+  },
+  {
+    "name": "MIN",
+    "description": "Returns the smallest value in a set of numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
     "name": "MINUTE",
     "description": "Returns the minute component of a time value, a number from 0 to 59.",
     "argCount": {
@@ -850,6 +1137,21 @@
     "args": [
       {
         "argName": "serial_number"
+      }
+    ]
+  },
+  {
+    "name": "MOD",
+    "description": "Returns the remainder after a number is divided by a divisor; the result has the same sign as the divisor.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "divisor"
       }
     ]
   },
@@ -938,6 +1240,18 @@
     ]
   },
   {
+    "name": "NOT",
+    "description": "Reverses the logical value of its argument.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "logical"
+      }
+    ]
+  },
+  {
     "name": "NPV",
     "description": "Calculates the net present value of an investment based on a discount rate and a series of future payments.",
     "argCount": {
@@ -998,6 +1312,31 @@
     ]
   },
   {
+    "name": "OFFSET",
+    "description": "Returns a reference offset from a starting reference by a number of rows and columns, optionally resized.",
+    "argCount": {
+      "ge": 3,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "reference"
+      },
+      {
+        "argName": "rows"
+      },
+      {
+        "argName": "cols"
+      },
+      {
+        "argName": "height"
+      },
+      {
+        "argName": "width"
+      }
+    ]
+  },
+  {
     "name": "OR",
     "description": "Returns TRUE if any argument is TRUE; returns FALSE if all arguments are FALSE.",
     "argCount": {
@@ -1034,6 +1373,21 @@
     "args": []
   },
   {
+    "name": "POWER",
+    "description": "Returns the result of a number raised to a power.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "power"
+      }
+    ]
+  },
+  {
     "name": "PPMT",
     "description": "Returns the payment on the principal for a given period for an investment.",
     "argCount": {
@@ -1058,6 +1412,31 @@
       },
       {
         "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "PRODUCT",
+    "description": "Multiplies all the numbers given as arguments and returns the product.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "PROPER",
+    "description": "Capitalizes the first letter of each word in a text string and lowercases the rest.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
       }
     ]
   },
@@ -1150,6 +1529,27 @@
     ]
   },
   {
+    "name": "REPLACE",
+    "description": "Replaces part of a text string, based on the number of characters you specify, with another string.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "old_text"
+      },
+      {
+        "argName": "start_num"
+      },
+      {
+        "argName": "num_chars"
+      },
+      {
+        "argName": "new_text"
+      }
+    ]
+  },
+  {
     "name": "RIGHT",
     "description": "Returns the last character or characters in a text string, based on the number of characters you specify.",
     "argCount": {
@@ -1190,6 +1590,25 @@
       {
         "argName": "reference",
         "description": "Optional. The reference from which to return the row number."
+      }
+    ]
+  },
+  {
+    "name": "SEARCH",
+    "description": "Returns the position of one text string within another (case-insensitive).",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "find_text"
+      },
+      {
+        "argName": "within_text"
+      },
+      {
+        "argName": "start_num"
       }
     ]
   },
@@ -1273,6 +1692,28 @@
     ]
   },
   {
+    "name": "SUBSTITUTE",
+    "description": "Replaces occurrences of old text with new text in a string; optionally only the nth occurrence.",
+    "argCount": {
+      "ge": 3,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "old_text"
+      },
+      {
+        "argName": "new_text"
+      },
+      {
+        "argName": "instance_num"
+      }
+    ]
+  },
+  {
     "name": "SUM",
     "description": "Adds all the numbers in a range of cells.",
     "argCount": {
@@ -1325,6 +1766,19 @@
       },
       {
         "argName": "criteria"
+      }
+    ]
+  },
+  {
+    "name": "SUMPRODUCT",
+    "description": "Multiplies corresponding components in the given arrays and returns the sum of those products.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "array",
+        "startRepeated": true
       }
     ]
   },
@@ -1428,6 +1882,40 @@
     ]
   },
   {
+    "name": "TEXT",
+    "description": "Formats a number and converts it to text using the given number-format code (e.g. \"0.00%\", \"yyyy-mm-dd\").",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "value"
+      },
+      {
+        "argName": "format_text"
+      }
+    ]
+  },
+  {
+    "name": "TEXTJOIN",
+    "description": "Joins text from multiple ranges or strings using a delimiter, optionally ignoring empty values.",
+    "argCount": {
+      "ge": 3
+    },
+    "args": [
+      {
+        "argName": "delimiter"
+      },
+      {
+        "argName": "ignore_empty"
+      },
+      {
+        "argName": "text",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
     "name": "TODAY",
     "description": "Returns the current date as a serial number. The value updates when the worksheet is recalculated or opened.",
     "argCount": {
@@ -1454,6 +1942,50 @@
       "eq": 0
     },
     "args": []
+  },
+  {
+    "name": "TRUNC",
+    "description": "Truncates a number to an integer by removing the fractional part, or to a given number of digits.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "num_digits"
+      }
+    ]
+  },
+  {
+    "name": "USDOLLAR",
+    "description": "Converts a number to text using US dollar currency format. Legacy alias of DOLLAR.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "decimals"
+      }
+    ]
+  },
+  {
+    "name": "VALUE",
+    "description": "Converts a text string that represents a number into a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
   },
   {
     "name": "WEEKDAY",
@@ -1489,6 +2021,19 @@
       },
       {
         "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "XOR",
+    "description": "Returns TRUE when an odd number of arguments are TRUE.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "logical",
+        "startRepeated": true
       }
     ]
   },

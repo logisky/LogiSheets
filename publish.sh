@@ -59,18 +59,19 @@ fi
 # seconds afterwards so crates.io has time to index the new version before
 # the next crate that depends on it tries to fetch it.
 #
-# NOTE: `ssf-rs` is intentionally NOT listed here. It is versioned and published
-# INDEPENDENTLY of the workspace (it stays on its own 0.1.x line and is skipped
-# by `just release`). The controller pins it at a fixed version, so it only
-# needs to be on crates.io *before* the controller publishes. Publish it out of
-# band whenever it changes (rare):
+# NOTE: `ssf-rs` and `xmldiff` are intentionally NOT listed here. They are
+# versioned and published INDEPENDENTLY of the workspace (each stays on its own
+# version line and is skipped by `just release`). A published crate pins each at
+# a fixed version (controller -> ssf-rs, workbook -> xmldiff), so each only needs
+# to be on crates.io *before* the crate that depends on it publishes. Publish
+# them out of band whenever they change (rare):
 #
 #     cargo publish --manifest-path crates/ssf-rs/Cargo.toml
+#     cargo publish --manifest-path crates/xmldiff/Cargo.toml
 #
-# then wait for crates.io to index it before running this script.
+# then wait for crates.io to index them before running this script.
 # ---------------------------------------------------------------------------
 CARGO_MANIFESTS=(
-    "crates/xmldiff/Cargo.toml"
     "crates/workbook/derives/Cargo.toml"
     "crates/workbook/Cargo.toml"
     "crates/controller/base/Cargo.toml"

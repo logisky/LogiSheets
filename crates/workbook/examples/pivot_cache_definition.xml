@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<pivotCacheDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1" refreshedBy="tester" refreshedDate="45000.5" createdVersion="8" refreshedVersion="8" minRefreshableVersion="3" recordCount="3">
+  <cacheSource type="worksheet">
+    <worksheetSource ref="A1:B4" sheet="Sheet1"/>
+  </cacheSource>
+  <cacheFields count="2">
+    <cacheField name="Region" numFmtId="0">
+      <sharedItems count="2">
+        <s v="East"/>
+        <s v="West"/>
+      </sharedItems>
+    </cacheField>
+    <cacheField name="Sales" numFmtId="0">
+      <sharedItems containsSemiMixedTypes="0" containsString="0" containsNumber="1" containsInteger="1" minValue="10" maxValue="30"/>
+    </cacheField>
+  </cacheFields>
+</pivotCacheDefinition>
