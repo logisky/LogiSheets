@@ -205,6 +205,20 @@ impl<'a> Executor<'a> {
             range_executor.trigger,
         )?;
 
+        // A cleared per-field rule (validation/editability going `Some -> None`)
+        // detaches its shadow formula but leaves the shadow's last computed
+        // value in the container; the calc engine won't revisit a formula-less
+        // cell to blank it. Purge those values here so readers that key off
+        // shadow-id existence stop surfacing the stale warning / lock.
+        for (sheet_id, cell_id) in &formula_executor.ephemeral_shadows_cleared {
+            result.status.container.remove_cell(*sheet_id, cell_id);
+            // Signal the value changed (now empty) so the transaction reports
+            // an update and hosts re-read the affected block's shadow values.
+            // Ephemeral cells already flow through `updated_cells` elsewhere
+            // (e.g. EphemeralCellInput), so this is consistent.
+            result.updated_cells.insert((*sheet_id, *cell_id));
+        }
+
         // Accumulate across the transaction's payloads: if ANY payload changed
         // cells (or the block/nav structure), the whole transaction did — even
         // when a later payload (e.g. the trailing `upsertFieldRenderInfo` of a
@@ -589,6 +603,7 @@ impl<'a> Executor<'a> {
             dirty_blocks,
             dirty_cubes,
             trigger,
+            ephemeral_shadows_cleared: HashSet::new(),
         };
         executor.execute(payload, &mut ctx)
     }

@@ -96,6 +96,36 @@ function cellAtCanvas(
     return {row, col}
 }
 
+/**
+ * Blocks converted from an OOXML `<table>` at load time carry a schema ref name
+ * of `unspecified-*` but NO host-side FieldInfo — that state lives in the
+ * appData blob, which a foreign .xlsx has none of. The renderer skips any block
+ * whose fields don't resolve in FieldManager, so synthesize a plain
+ * "unspecified" field (name from the schema, keyed by renderId) for each one
+ * that's missing. Idempotent — it only writes fields not already registered, so
+ * it's safe to call on every render.
+ */
+function hydrateUnspecifiedFields(
+    blockManager: BlockManager,
+    info: BlockDisplayInfo['info']
+): void {
+    const schema = info.schema
+    if (!schema || !schema.name.startsWith('unspecified-')) return
+    for (const f of schema.fields) {
+        if (blockManager.fieldManager.get(f.renderId)) continue
+        blockManager.fieldManager.upsert({
+            id: f.renderId,
+            sheetId: info.sheetId,
+            blockId: info.blockId,
+            refName: schema.name,
+            name: f.field,
+            type: {type: 'unspecified'},
+            required: false,
+            unique: false,
+        })
+    }
+}
+
 export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
     const {grid, canvasStartX, canvasStartY} = props
     const engine = useEngine()
@@ -125,6 +155,10 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                 // hasn't been restored into FieldManager yet (the appData
                 // parse runs before the craft re-registers fields).
                 if (!info.schema) return null
+
+                // Tables converted on load (`unspecified-*` schema ref) have no
+                // host FieldInfo yet — synthesize plain fields so they render.
+                hydrateUnspecifiedFields(BLOCK_MANAGER, info)
 
                 const sortedFields = [...info.schema.fields].sort(
                     (a, b) => a.idx - b.idx
@@ -520,75 +554,73 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
     } | null>(null)
     const fieldDragMovedRef = useRef(false)
 
-    const handleFieldDragStart =
-        (fromIdx: number) => (e: React.MouseEvent) => {
-            if (e.button !== 0) return
-            e.stopPropagation()
-            // Prevent the browser from starting a text selection on the field
-            // name while dragging.
-            e.preventDefault()
-            fieldDragMovedRef.current = false
-            const DRAG_THRESHOLD = 3
-            const startX = e.clientX
-            const startY = e.clientY
-            let dragging = false
-            let ins: number | null = null
+    const handleFieldDragStart = (fromIdx: number) => (e: React.MouseEvent) => {
+        if (e.button !== 0) return
+        e.stopPropagation()
+        // Prevent the browser from starting a text selection on the field
+        // name while dragging.
+        e.preventDefault()
+        fieldDragMovedRef.current = false
+        const DRAG_THRESHOLD = 3
+        const startX = e.clientX
+        const startY = e.clientY
+        let dragging = false
+        let ins: number | null = null
 
-            // Map the pointer to a drop boundary in [0, colCnt]: the hovered
-            // block column's left half inserts before it, right half after.
-            // Pointer outside the block's own column span clamps to an edge.
-            const computeIns = (me: MouseEvent): number => {
-                const cx = me.clientX - canvasStartX
-                const cell = cellAtCanvas(cx, me.clientY - canvasStartY, grid)
-                if (!cell || cell.col < colStart) return 0
-                if (cell.col >= colStart + colCnt) return colCnt
-                const inner = cell.col - colStart
-                const colInfo = grid.columns.find(
-                    (c: {idx: number; width: number}) => c.idx === cell.col
-                )
-                const mid =
-                    xForColStart(cell.col, grid) + (colInfo?.width ?? 0) / 2
-                return cx < mid ? inner : inner + 1
-            }
-
-            const onMove = (me: MouseEvent) => {
-                if (!dragging) {
-                    if (
-                        Math.abs(me.clientX - startX) < DRAG_THRESHOLD &&
-                        Math.abs(me.clientY - startY) < DRAG_THRESHOLD
-                    )
-                        return
-                    dragging = true
-                    fieldDragMovedRef.current = true
-                }
-                ins = computeIns(me)
-                setFieldDrag({from: fromIdx, ins})
-            }
-
-            const onUp = async () => {
-                window.removeEventListener('mousemove', onMove)
-                window.removeEventListener('mouseup', onUp)
-                setFieldDrag(null)
-                if (!dragging || ins === null) return
-                // `move_line` is remove(from) then insert(to), so `to` is the
-                // index in the post-removal frame: a boundary to the right of
-                // the removed field shifts left by one.
-                const to = ins > fromIdx ? ins - 1 : ins
-                if (to === fromIdx) return
-                try {
-                    await ops.moveBlockLine(sheetIdx, blockId, fromIdx, to, false)
-                } catch (err) {
-                    toast.error(
-                        `Failed to move field: ${
-                            err instanceof Error ? err.message : String(err)
-                        }`
-                    )
-                }
-            }
-
-            window.addEventListener('mousemove', onMove)
-            window.addEventListener('mouseup', onUp)
+        // Map the pointer to a drop boundary in [0, colCnt]: the hovered
+        // block column's left half inserts before it, right half after.
+        // Pointer outside the block's own column span clamps to an edge.
+        const computeIns = (me: MouseEvent): number => {
+            const cx = me.clientX - canvasStartX
+            const cell = cellAtCanvas(cx, me.clientY - canvasStartY, grid)
+            if (!cell || cell.col < colStart) return 0
+            if (cell.col >= colStart + colCnt) return colCnt
+            const inner = cell.col - colStart
+            const colInfo = grid.columns.find(
+                (c: {idx: number; width: number}) => c.idx === cell.col
+            )
+            const mid = xForColStart(cell.col, grid) + (colInfo?.width ?? 0) / 2
+            return cx < mid ? inner : inner + 1
         }
+
+        const onMove = (me: MouseEvent) => {
+            if (!dragging) {
+                if (
+                    Math.abs(me.clientX - startX) < DRAG_THRESHOLD &&
+                    Math.abs(me.clientY - startY) < DRAG_THRESHOLD
+                )
+                    return
+                dragging = true
+                fieldDragMovedRef.current = true
+            }
+            ins = computeIns(me)
+            setFieldDrag({from: fromIdx, ins})
+        }
+
+        const onUp = async () => {
+            window.removeEventListener('mousemove', onMove)
+            window.removeEventListener('mouseup', onUp)
+            setFieldDrag(null)
+            if (!dragging || ins === null) return
+            // `move_line` is remove(from) then insert(to), so `to` is the
+            // index in the post-removal frame: a boundary to the right of
+            // the removed field shifts left by one.
+            const to = ins > fromIdx ? ins - 1 : ins
+            if (to === fromIdx) return
+            try {
+                await ops.moveBlockLine(sheetIdx, blockId, fromIdx, to, false)
+            } catch (err) {
+                toast.error(
+                    `Failed to move field: ${
+                        err instanceof Error ? err.message : String(err)
+                    }`
+                )
+            }
+        }
+
+        window.addEventListener('mousemove', onMove)
+        window.addEventListener('mouseup', onUp)
+    }
 
     return (
         <Box
@@ -815,7 +847,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                             // Suppress the click that follows a
                                             // drag; a plain click still sorts.
                                             if (fieldDragMovedRef.current) {
-                                                fieldDragMovedRef.current = false
+                                                fieldDragMovedRef.current =
+                                                    false
                                                 return
                                             }
                                             setSortMenu({

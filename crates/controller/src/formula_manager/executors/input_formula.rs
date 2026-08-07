@@ -207,6 +207,20 @@ fn remove<C: FormulaExecCtx>(
 
     formulas.remove(&(sheet, cell_id));
 
+    // Dropping a formula only detaches it from the dep graph — the calc engine
+    // never revisits a formula-less cell, so the cell's last computed value
+    // lingers in the container. For an ephemeral (shadow) cell that value is
+    // meaningless without its formula (a validation/editability shadow whose
+    // rule was cleared), and readers keying off shadow-id existence would keep
+    // surfacing the stale warning / lock. Record it so the controller purges
+    // the container value after formula execution. Normal / block cells are
+    // left alone: their own value is user data, and the container executor
+    // already clears them on `CellClear`.
+    let mut ephemeral_shadows_cleared = executor.ephemeral_shadows_cleared;
+    if let CellId::EphemeralCell(_) = cell_id {
+        ephemeral_shadows_cleared.insert((sheet, cell_id));
+    }
+
     Ok(FormulaExecutor {
         manager: FormulaManager {
             graph,
@@ -218,6 +232,7 @@ fn remove<C: FormulaExecCtx>(
         dirty_cubes: executor.dirty_cubes,
         dirty_blocks: executor.dirty_blocks,
         trigger: executor.trigger,
+        ephemeral_shadows_cleared,
     })
 }
 
@@ -329,6 +344,15 @@ fn register_parsed_ast<C: FormulaExecCtx>(
     let mut dirty_vertices = executor.dirty_vertices;
     dirty_vertices.insert(this_vertex);
 
+    // Setting a formula on an ephemeral cell (e.g. re-materializing a
+    // validation/editability shadow with a new rule) supersedes any pending
+    // clear for that same shadow in this transaction — the calc pass will
+    // recompute it, so it must not be purged from the container.
+    let mut ephemeral_shadows_cleared = executor.ephemeral_shadows_cleared;
+    if let CellId::EphemeralCell(_) = cell_id {
+        ephemeral_shadows_cleared.remove(&(sheet, cell_id));
+    }
+
     Ok(FormulaExecutor {
         manager: FormulaManager {
             graph,
@@ -340,6 +364,7 @@ fn register_parsed_ast<C: FormulaExecCtx>(
         dirty_cubes: executor.dirty_cubes,
         dirty_blocks: executor.dirty_blocks,
         trigger: executor.trigger,
+        ephemeral_shadows_cleared,
     })
 }
 

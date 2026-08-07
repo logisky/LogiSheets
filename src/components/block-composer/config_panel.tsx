@@ -15,6 +15,7 @@ import {
     Checkbox,
     FormControlLabel,
     Popover,
+    Tooltip,
     Dialog,
     DialogTitle,
     DialogContent,
@@ -51,6 +52,12 @@ interface FieldConfigPanelProps {
      * count to the selected column count) — the delete button is hidden.
      */
     canDelete?: boolean
+    /**
+     * When false, the "Primary" (key column) checkbox is disabled. Edit mode
+     * keeps the block's original key column fixed, so allowing the toggle would
+     * mislead — the change is ignored on save.
+     */
+    canEditPrimary?: boolean
 }
 
 export const FieldConfigPanel = ({
@@ -63,6 +70,7 @@ export const FieldConfigPanel = ({
     fieldManager,
     localFields,
     canDelete = true,
+    canEditPrimary = true,
 }: FieldConfigPanelProps) => {
     const {toast} = useToast()
     const [colorAnchorEl, setColorAnchorEl] = useState<{
@@ -326,9 +334,7 @@ export const FieldConfigPanel = ({
                     {/* Basic Settings */}
                     <Card variant="outlined" sx={cardSx}>
                         <CardContent>
-                            <Typography
-                                sx={{...sectionLabelSx, mb: 2}}
-                            >
+                            <Typography sx={{...sectionLabelSx, mb: 2}}>
                                 Basic Settings
                             </Typography>
                             <Stack spacing={2.5}>
@@ -418,6 +424,9 @@ export const FieldConfigPanel = ({
                                                 })
                                             }}
                                         >
+                                            <MenuItem value="unspecified">
+                                                Unspecified
+                                            </MenuItem>
                                             <MenuItem value="enum">
                                                 Enum
                                             </MenuItem>
@@ -551,26 +560,37 @@ export const FieldConfigPanel = ({
                                             </Typography>
                                         }
                                     />
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                size="small"
-                                                checked={!!field.primary}
-                                                onChange={(e) =>
-                                                    onUpdate({
-                                                        ...field,
-                                                        primary:
-                                                            e.target.checked,
-                                                    })
-                                                }
-                                            />
+                                    <Tooltip
+                                        title={
+                                            canEditPrimary
+                                                ? ''
+                                                : 'The key column is fixed when editing an existing block.'
                                         }
-                                        label={
-                                            <Typography variant="body2">
-                                                Primary
-                                            </Typography>
-                                        }
-                                    />
+                                        disableHoverListener={canEditPrimary}
+                                    >
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    size="small"
+                                                    checked={!!field.primary}
+                                                    disabled={!canEditPrimary}
+                                                    onChange={(e) =>
+                                                        onUpdate({
+                                                            ...field,
+                                                            primary:
+                                                                e.target
+                                                                    .checked,
+                                                        })
+                                                    }
+                                                />
+                                            }
+                                            label={
+                                                <Typography variant="body2">
+                                                    Primary
+                                                </Typography>
+                                            }
+                                        />
+                                    </Tooltip>
                                 </Box>
                             </Stack>
                         </CardContent>
@@ -585,9 +605,7 @@ export const FieldConfigPanel = ({
                         })() && (
                             <Card variant="outlined" sx={cardSx}>
                                 <CardContent>
-                                    <Typography
-                                        sx={{...sectionLabelSx, mb: 2}}
-                                    >
+                                    <Typography sx={{...sectionLabelSx, mb: 2}}>
                                         Enum Values
                                     </Typography>
                                     <Box
@@ -658,9 +676,7 @@ export const FieldConfigPanel = ({
                     {showEnumSection && field.enumId && (
                         <Card variant="outlined" sx={cardSx}>
                             <CardContent>
-                                <Typography
-                                    sx={{...sectionLabelSx, mb: 1}}
-                                >
+                                <Typography sx={{...sectionLabelSx, mb: 1}}>
                                     Default Value
                                 </Typography>
                                 <Typography
@@ -722,9 +738,7 @@ export const FieldConfigPanel = ({
                     {field.type === 'datetime' && (
                         <Card variant="outlined" sx={cardSx}>
                             <CardContent>
-                                <Typography
-                                    sx={{...sectionLabelSx, mb: 2}}
-                                >
+                                <Typography sx={{...sectionLabelSx, mb: 2}}>
                                     Date/Time Format
                                 </Typography>
                                 <TextField
@@ -758,9 +772,7 @@ export const FieldConfigPanel = ({
                     {field.type === 'number' && (
                         <Card variant="outlined" sx={cardSx}>
                             <CardContent>
-                                <Typography
-                                    sx={{...sectionLabelSx, mb: 2}}
-                                >
+                                <Typography sx={{...sectionLabelSx, mb: 2}}>
                                     Number Format
                                 </Typography>
                                 <Stack spacing={2}>
@@ -1094,9 +1106,7 @@ export const FieldConfigPanel = ({
                     {(field.type === 'string' || field.type === 'number') && (
                         <Card variant="outlined" sx={cardSx}>
                             <CardContent>
-                                <Typography
-                                    sx={{...sectionLabelSx, mb: 2}}
-                                >
+                                <Typography sx={{...sectionLabelSx, mb: 2}}>
                                     Validation Rule
                                 </Typography>
                                 <Stack spacing={2}>

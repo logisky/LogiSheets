@@ -7,7 +7,9 @@ pub use input_formula::{
     input_ephemeral_formula, input_formula, rebuild_range_deps, remove_ephemeral_formula,
     remove_formula,
 };
-use logisheets_base::{BlockId, BlockRange, CubeId, Range, RangeId, SheetId, errors::BasicError};
+use logisheets_base::{
+    BlockId, BlockRange, CellId, CubeId, Range, RangeId, SheetId, errors::BasicError,
+};
 
 use crate::block_manager::schema_manager::schema::BlockCellRole;
 use crate::{Error, edit_action::EditPayload};
@@ -23,6 +25,14 @@ pub struct FormulaExecutor {
     pub dirty_blocks: HashSet<(SheetId, BlockId)>,
     pub dirty_cubes: HashSet<CubeId>,
     pub trigger: Option<(SheetId, RangeId)>,
+    /// Ephemeral (shadow) cells whose formula was just removed — e.g. a
+    /// per-field validation/editability rule cleared to `None`. Removing the
+    /// formula only detaches it from the dep graph; the shadow's last computed
+    /// value lingers in the container (the calc engine never revisits a
+    /// formula-less cell). Readers that key off shadow-id existence would keep
+    /// surfacing that stale warning / lock, so the controller purges these from
+    /// the container after formula execution.
+    pub ephemeral_shadows_cleared: HashSet<(SheetId, CellId)>,
 }
 
 impl FormulaExecutor {
@@ -257,6 +267,7 @@ impl FormulaExecutor {
             dirty_blocks,
             dirty_cubes,
             trigger,
+            ephemeral_shadows_cleared,
         } = executor;
 
         if let Some((sheet, range)) = trigger {
@@ -325,6 +336,7 @@ impl FormulaExecutor {
             dirty_cubes: Default::default(),
             dirty_ranges: Default::default(),
             dirty_blocks: Default::default(),
+            ephemeral_shadows_cleared,
         })
     }
 }

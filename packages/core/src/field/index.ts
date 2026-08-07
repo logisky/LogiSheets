@@ -16,6 +16,7 @@ import {isValueEmpty} from '../value/index.js'
 // ---- Field model (mirrors block-composer/types.ts) ----------------------
 
 export type FieldTypeEnum =
+    | 'unspecified'
     | 'enum'
     | 'multiSelect'
     | 'datetime'

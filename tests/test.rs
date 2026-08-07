@@ -673,6 +673,154 @@ mod funcs {
         }
     }
 
+    /// Renaming a block's schema ref-name must NOT break formulas that already
+    /// reference it. Block refs are resolved to the block id at PARSE time and
+    /// both the AST and the dependency graph are id-keyed, so re-binding the
+    /// SAME block with a new `ref_name` leaves existing formulas evaluating —
+    /// and still reactive. (Confirms the "references use the id, not the name"
+    /// property.)
+    #[test]
+    fn test_rename_block_ref_name_keeps_formulas() {
+        use logisheets::Workbook;
+        let mut wb = Workbook::default();
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                .add_payload(CreateBlock {
+                    sheet_idx: 0,
+                    id: 42,
+                    master_row: 0,
+                    master_col: 0,
+                    row_cnt: 2,
+                    col_cnt: 2,
+                    owner: None,
+                    modify_policy: None,
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 0,
+                    content: "alice".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 0,
+                    col: 1,
+                    content: "30".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 1,
+                    col: 0,
+                    content: "bob".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 1,
+                    col: 1,
+                    content: "40".into(),
+                })
+                .add_payload(BindFormSchema {
+                    ref_name: "people".into(),
+                    sheet_idx: 0,
+                    block_id: 42,
+                    field_from: 1,
+                    key_idx: 0,
+                    fields: vec!["age".into()],
+                    render_ids: vec!["r-age".into()],
+                    field_formulas: vec![],
+                    validation_formulas: vec![],
+                    editability_formulas: vec![],
+                    row: true,
+                })
+                // Two formulas referencing the block BY NAME "people".
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 10,
+                    col: 5,
+                    content: r#"=BLOCKREF("people", "alice", "age")"#.into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: 10,
+                    col: 6,
+                    content: r#"=SUM(BLOCKREFS("people", "*", "age"))"#.into(),
+                }),
+        ));
+
+        let get = |wb: &Workbook, r: usize, c: usize| {
+            wb.get_sheet_by_idx(0).unwrap().get_value(r, c).unwrap()
+        };
+        assert!(
+            matches!(get(&wb, 10, 5), logisheets::Value::Number(n) if n == 30.0),
+            "BLOCKREF before rename"
+        );
+        assert!(
+            matches!(get(&wb, 10, 6), logisheets::Value::Number(n) if n == 70.0),
+            "BLOCKREFS before rename"
+        );
+
+        // RENAME: re-bind the SAME block (id 42) with a new ref_name. The
+        // layout / fields are unchanged — only the name in `refs` moves.
+        wb.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+            BindFormSchema {
+                ref_name: "humans".into(),
+                sheet_idx: 0,
+                block_id: 42,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec!["age".into()],
+                render_ids: vec!["r-age".into()],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            },
+        )));
+
+        // The existing formulas (typed with the OLD name) STILL evaluate.
+        assert!(
+            matches!(get(&wb, 10, 5), logisheets::Value::Number(n) if n == 30.0),
+            "BLOCKREF must survive the rename"
+        );
+        assert!(
+            matches!(get(&wb, 10, 6), logisheets::Value::Number(n) if n == 70.0),
+            "BLOCKREFS must survive the rename"
+        );
+
+        // ...and stay REACTIVE — editing a field cell recomputes them, proving
+        // the id-keyed dependency edges survived the rename.
+        wb.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+            CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 1,
+                content: "31".into(),
+            },
+        )));
+        assert!(
+            matches!(get(&wb, 10, 5), logisheets::Value::Number(n) if n == 31.0),
+            "BLOCKREF reactive after rename"
+        );
+        assert!(
+            matches!(get(&wb, 10, 6), logisheets::Value::Number(n) if n == 71.0),
+            "BLOCKREFS reactive after rename"
+        );
+
+        // A NEW formula typed with the NEW name resolves to the same block.
+        wb.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+            CellInput {
+                sheet_idx: 0,
+                row: 10,
+                col: 7,
+                content: r#"=BLOCKREF("humans", "alice", "age")"#.into(),
+            },
+        )));
+        assert!(
+            matches!(get(&wb, 10, 7), logisheets::Value::Number(n) if n == 31.0),
+            "the new ref name resolves to the same block"
+        );
+    }
+
     /// Douyoushu scalar I/O: a degenerate single-row block has no meaningful
     /// key column, so its key cell is left empty. `BLOCKREF(ref, "", field)`
     /// must resolve the sole row by geometry (not by matching a stored key

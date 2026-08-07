@@ -874,6 +874,155 @@ fn overwrite_formula_with_plain_value() {
     }
 }
 
+// An OOXML `<table>` in a loaded .xlsx becomes a form block: the header row
+// supplies the field names (and stays as normal cells), the data rows become
+// the block's records (values preserved), the schema ref is `unspecified-*`,
+// and re-saving never writes the table back out.
+#[test]
+fn table_converts_to_block_on_load() {
+    use crate::controller::display::Value;
+    use crate::edit_action::CellInput;
+    use logisheets_workbook::prelude::{CtTableColumn, CtTableColumns, Table, Wb, write};
+    use logisheets_workbook::workbook::TablePart;
+
+    // Build a CT_TableColumn with just a name; everything else defaulted/empty.
+    fn make_col(id: u32, name: &str) -> CtTableColumn {
+        CtTableColumn {
+            calculated_column_formula: None,
+            totals_row_formula: None,
+            xml_column_pr: None,
+            ext_lst: None,
+            id,
+            unique_name: None,
+            name: name.to_string(),
+            totals_row_function: None,
+            totals_row_label: None,
+            query_table_field_id: None,
+            header_row_dxf_id: None,
+            data_dxf_id: None,
+            totals_row_dxf_id: None,
+            header_row_cell_style: None,
+            data_cell_style: None,
+            totals_row_cell_style: None,
+        }
+    }
+    fn make_table(reference: &str, cols: &[&str]) -> Table {
+        Table {
+            auto_filter: None,
+            sort_state: None,
+            table_columns: CtTableColumns {
+                table_column: cols
+                    .iter()
+                    .enumerate()
+                    .map(|(i, n)| make_col(i as u32 + 1, n))
+                    .collect(),
+                count: cols.len() as u32,
+            },
+            table_style_info: None,
+            ext_lst: None,
+            id: 1,
+            name: None,
+            display_name: "Table1".to_string(),
+            comment: None,
+            reference: reference.to_string(),
+            table_type: None,
+            header_row_count: 1,
+            insert_row: false,
+            insert_row_shift: false,
+            totals_row_count: 0,
+            totals_row_shown: true,
+            published: false,
+            header_row_dxf_id: None,
+            data_dxf_id: None,
+            totals_row_dxf_id: None,
+            header_row_border_dxf_id: None,
+            table_border_dxf_id: None,
+            totals_row_border_dxf_id: None,
+            header_row_cell_style: None,
+            data_cell_style: None,
+            totals_row_cell_style: None,
+            connection_id: None,
+        }
+    }
+
+    // 1. Author a 4x3 grid: header row (Region/Q1/Q2) + 3 data rows.
+    let grid = [
+        ["Region", "Q1", "Q2"],
+        ["East", "10", "20"],
+        ["West", "30", "40"],
+        ["North", "50", "60"],
+    ];
+    let mut authored = Workbook::default();
+    let mut payloads = vec![];
+    for (r, row) in grid.iter().enumerate() {
+        for (c, val) in row.iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: val.to_string(),
+            }));
+        }
+    }
+    authored.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: false,
+        init: false,
+    }));
+    let base = authored.save().unwrap();
+
+    // 2. Inject a <table> over A1:C4 (header row 1). The writer emits the table
+    //    part + its worksheet relationship; the reader re-discovers it via rels.
+    let mut raw = Wb::from_file(&base).unwrap();
+    let ws = raw.xl.worksheets.values_mut().next().unwrap();
+    ws.tables.push(TablePart {
+        rel_id: "rId777".to_string(),
+        table: make_table("A1:C4", &["Region", "Q1", "Q2"]),
+    });
+    let input = write(raw).unwrap();
+
+    // 3. Load — the table is converted into a block.
+    let wb = Workbook::from_file(&input, "tbl".to_string()).unwrap();
+
+    // Exactly one block, covering the DATA rows only (A2:C4), header excluded.
+    let ws0 = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws0.get_all_blocks();
+    assert_eq!(blocks.len(), 1, "the table should have become one block");
+    let b = &blocks[0];
+    assert_eq!((b.row_start, b.col_start), (1, 0), "block starts below header");
+    assert_eq!((b.row_cnt, b.col_cnt), (3, 3), "block covers the 3 data rows");
+
+    // Schema ref is `unspecified-*` and its fields are the header names.
+    let schema = b.schema.as_ref().expect("converted block has a schema");
+    assert!(
+        schema.name.starts_with("unspecified-"),
+        "ref name should be unspecified-*, got {:?}",
+        schema.name
+    );
+    let field_names: Vec<&str> = schema.fields.iter().map(|f| f.field.as_str()).collect();
+    assert_eq!(field_names, vec!["Region", "Q1", "Q2"]);
+
+    // Header cells stay as normal cells; data values are preserved (now in the block).
+    assert!(matches!(ws0.get_value(0, 0).unwrap(), Value::Str(s) if s == "Region"));
+    assert!(matches!(ws0.get_value(1, 0).unwrap(), Value::Str(s) if s == "East"));
+    assert!(
+        matches!(ws0.get_value(3, 2).unwrap(), Value::Number(n) if (n - 60.0).abs() < 1e-9)
+    );
+
+    // 4. Re-save: no table is written back; the block persists as private data.
+    let resaved = wb.save().unwrap();
+    let raw2 = Wb::from_file(&resaved).unwrap();
+    assert!(
+        raw2.xl.worksheets.values().all(|w| w.tables.is_empty()),
+        "the engine must not write the block back out as a table"
+    );
+    // Reload the re-saved file: the block round-trips (from logisheets data).
+    let wb2 = Workbook::from_file(&resaved, "tbl2".to_string()).unwrap();
+    let ws2 = wb2.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws2.get_all_blocks().len(), 1, "block survives save/reload");
+    assert!(matches!(ws2.get_value(1, 0).unwrap(), Value::Str(s) if s == "East"));
+}
+
 // A range link redirects a source range (A1:A2) to a backing block's column.
 // The seller's formula references the LITERAL A1:A2, yet:
 //   - it reads the block (redirect at range-id resolution),
@@ -1006,6 +1155,118 @@ fn range_link_redirects_to_block_and_tracks_growth() {
             matches!(ws.get_value(0, 4).unwrap(), Value::Number(n) if (n - 125.0).abs() < 1e-9),
             "SUM should include the grown row (100+5+20=125), got {:?}",
             ws.get_value(0, 4).unwrap()
+        );
+    }
+}
+
+// Clearing a per-field validation / editability rule (Some -> None) must cancel
+// the previous rule's effect: the shadow cell's stale computed value has to be
+// purged, otherwise readers that key off shadow-id existence keep surfacing the
+// old warning / lock even though no rule is in force any more.
+#[test]
+fn clearing_field_rule_purges_stale_shadow_value() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput, UpsertFieldFormulas};
+    use crate::sid_assigner::ShadowKind;
+    use logisheets_base::CellId;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // 2x1 block at D1 (row 0, col 3). Bind a schema whose single field carries
+    // both a validation and an editability rule that FAIL for the seeded value
+    // (`#PLACEHOLDER > 100` on 10 / 20 -> false), then seed the cells.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 3,
+                row_cnt: 2,
+                col_cnt: 1,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["v".into()],
+                render_ids: vec!["r0".into()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![Some("#PLACEHOLDER>100".into())],
+                editability_formulas: vec![Some("#PLACEHOLDER>100".into())],
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 3,
+                content: "10".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 3,
+                content: "20".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    // Read the shadow value for the block cell at (row, col=3) & kind.
+    let read = |wb: &mut Workbook, row: usize, kind: ShadowKind| -> Value {
+        let scid = wb.get_shadow_cell_id(0, row, 3, kind).unwrap();
+        let id = match scid.cell_id {
+            CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        wb.get_shadow_info_by_id(id).unwrap().value
+    };
+
+    // Sanity: the rules are in force and failing.
+    assert!(
+        matches!(read(&mut wb, 0, ShadowKind::Validation), Value::Bool(false)),
+        "validation should fail (10 > 100 is false) while the rule is set"
+    );
+    assert!(
+        matches!(
+            read(&mut wb, 0, ShadowKind::UserEditable),
+            Value::Bool(false)
+        ),
+        "editability should be false while the rule is set"
+    );
+
+    // Clear BOTH rules (send `vec![None]` = explicitly clear the field's rule;
+    // `field_formulas: vec![]` leaves value templates untouched).
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpsertFieldFormulas(UpsertFieldFormulas {
+            sheet_idx: 0,
+            block_id: bid,
+            field_formulas: vec![],
+            validation_formulas: vec![None],
+            editability_formulas: vec![None],
+        })],
+        undoable: false,
+        init: false,
+    }));
+
+    // The stale shadow values must be gone (empty == no warning / editable),
+    // for every row the rule covered.
+    for row in [0usize, 1usize] {
+        assert!(
+            matches!(read(&mut wb, row, ShadowKind::Validation), Value::Empty),
+            "validation shadow at row {row} should be empty after the rule is cleared, got {:?}",
+            read(&mut wb, row, ShadowKind::Validation)
+        );
+        assert!(
+            matches!(read(&mut wb, row, ShadowKind::UserEditable), Value::Empty),
+            "editability shadow at row {row} should be empty after the rule is cleared, got {:?}",
+            read(&mut wb, row, ShadowKind::UserEditable)
         );
     }
 }
@@ -2622,4 +2883,3 @@ fn sort_block_reference_follows_moved_cell() {
         );
     }
 }
-

@@ -25,18 +25,15 @@ export class BlockManager {
   public fieldManager = new FieldManager();
 
   /**
-   * Serialize host-side block metadata (FieldManager + EnumSetManager)
-   * into the opaque JSON blob the embedder hands to `workbook.save` as
-   * `appData`.
+   * Serialize host-side block metadata (FieldManager + EnumSetManager) into the
+   * opaque JSON blob the embedder hands to `workbook.save` as `appData`. On load
+   * `parseAppData` rebuilds both managers from it. This is the single channel
+   * for host-owned block metadata — the engine stores the blob verbatim and
+   * hands it back via `getAppData`; it never interprets it.
    *
-   * NOTE: The `blockFields` parameter exists only for API back-compat —
-   * earlier versions used it to filter FieldManager entries by what the
-   * worker reported via `getAllBlockFields()`. That filter dropped every
-   * field for crafts that populate FieldManager (via `fieldManager.create`)
-   * but never push the IDs into the worker's `block_line_info_manager`
-   * (e.g. factory-simulator), which is the common case. FieldManager is
-   * the host-side source of truth; we serialize it directly here and
-   * ignore the parameter. Safe to pass `[]`.
+   * NOTE: `blockFields` is retained only for call-site back-compat and ignored;
+   * FieldManager is the host-side source of truth and is serialized directly.
+   * Safe to pass `[]`.
    */
   public getPersistentData(_blockFields: readonly BlockField[] = []): string {
     const fieldInfosJson = JSON.stringify(this.fieldManager.getAll());
@@ -46,8 +43,8 @@ export class BlockManager {
 
   public parseAppData(data: string): void {
     const { fields, enumSets } = JSON.parse(data);
-    this.enumSetManager.fromJSON(enumSets);
-    this.fieldManager.fromJSON(fields);
+    if (typeof enumSets === "string") this.enumSetManager.fromJSON(enumSets);
+    if (typeof fields === "string") this.fieldManager.fromJSON(fields);
   }
 
   /**
