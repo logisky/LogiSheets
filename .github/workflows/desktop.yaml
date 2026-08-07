@@ -1,0 +1,113 @@
+name: desktop build
+
+# Manual only. Builds the Tauri desktop app for macOS and Windows and uploads
+# the installers as workflow artifacts. Nothing is published or signed — this
+# produces unsigned bundles for testing (see packages/desktop/README.md).
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Build the web frontend ONCE on Linux.
+  #
+  # The Tauri app is a thin shell that loads this web bundle (tauri.conf.json
+  # `frontendDist: ../../../dist`, `beforeBuildCommand` empty). The bundle is
+  # OS-independent, and the repo's build scripts are POSIX `.sh` — so we build
+  # `dist/` here where they run cleanly, then hand it to the per-OS bundlers.
+  # This also keeps wasm-pack / yarn off the macOS and Windows runners.
+  # ---------------------------------------------------------------------------
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Rust (for the WASM engine)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.95"
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Runs the exact same install + build sequence as PR CI, ending in
+      # `yarn build`, which produces the repo-root `dist/` that Tauri bundles.
+      - name: Build web frontend (JS + WASM)
+        run: ./scripts/ci-build.sh
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 3
+
+  # ---------------------------------------------------------------------------
+  # 2. Bundle the desktop app per OS using the prebuilt frontend.
+  #
+  # No JS toolchain needed here: we download `dist/` and run `cargo tauri
+  # build`, which bundles it (beforeBuildCommand is empty). src-tauri is a
+  # standalone crate excluded from the cargo workspace, so it builds in place.
+  # ---------------------------------------------------------------------------
+  bundle:
+    needs: frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest # Apple Silicon (aarch64)
+            artifact: macos
+          - os: windows-latest # x86_64
+            artifact: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download prebuilt frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.95"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # src-tauri has its own Cargo.lock (standalone crate).
+          workspaces: packages/desktop/src-tauri
+
+      # The tauri CLI, from npm — it ships a prebuilt native binary (no
+      # compile) and is a CI-only global install, so it never enters the
+      # repo's dependency graph (see packages/desktop/README.md).
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install tauri CLI
+        run: npm install -g @tauri-apps/cli@^2
+
+      - name: Build desktop bundle
+        working-directory: packages/desktop
+        run: tauri build
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: logisheets-desktop-${{ matrix.artifact }}
+          # macOS: bundle/dmg/*.dmg + bundle/macos/*.app
+          # Windows: bundle/msi/*.msi + bundle/nsis/*.exe
+          path: packages/desktop/src-tauri/target/release/bundle/**
+          if-no-files-found: error
+          retention-days: 7

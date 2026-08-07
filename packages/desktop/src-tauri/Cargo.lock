@@ -1813,7 +1813,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets-rs"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -1825,7 +1825,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_astchecker"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "logisheets_base",
  "logisheets_parser",
@@ -1833,7 +1833,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_base"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "chrono",
  "futures",
@@ -1847,7 +1847,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_controller"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "chrono",
  "colorsys",
@@ -1870,6 +1870,7 @@ dependencies = [
  "rand 0.8.7",
  "regex",
  "serde",
+ "ssf-rs",
  "statrs",
  "thiserror 1.0.69",
  "unicode-segmentation",
@@ -1879,7 +1880,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_lexer"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pest",
  "pest_derive",
@@ -1888,7 +1889,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_lexer4fmt"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -1900,7 +1901,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_parser"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "chrono",
  "lazy_static",
@@ -1914,7 +1915,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_workbook"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -1930,7 +1931,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_workbook_derives"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "paste",
  "proc-macro2",
@@ -3311,6 +3312,13 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps",
+]
+
+[[package]]
+name = "ssf-rs"
+version = "0.1.0"
+dependencies = [
+ "regex",
 ]
 
 [[package]]

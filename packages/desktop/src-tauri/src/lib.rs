@@ -1,5 +1,8 @@
 #[cfg(feature = "native-engine")]
 mod commands;
+mod storage;
+
+use tauri::Manager;
 
 /// Entry point for the LogiSheets desktop app (Tauri host).
 ///
@@ -11,12 +14,39 @@ mod commands;
 /// `handle` command (mirror of the browser WASM `handle`) for a future hybrid /
 /// full-native path. Off by default so the shell doesn't bundle a second engine.
 pub fn run() {
-    let builder = tauri::Builder::default();
+    let builder = tauri::Builder::default()
+        // Device-scoped craft storage (backs the web app's window.craftStorage).
+        // The store is loaded in `setup`, where the AppHandle can resolve the
+        // app-data directory.
+        .setup(|app| {
+            let store = storage::CraftStorageState::load(app.handle());
+            app.manage(store);
+            Ok(())
+        });
 
+    // `invoke_handler` can be set only once, so the full command list is chosen
+    // per configuration: craft-storage always, plus the native engine `handle`
+    // when that feature is on.
     #[cfg(feature = "native-engine")]
     let builder = builder
         .manage(commands::AppState::default())
-        .invoke_handler(tauri::generate_handler![commands::handle]);
+        .invoke_handler(tauri::generate_handler![
+            storage::craft_storage_get,
+            storage::craft_storage_set,
+            storage::craft_storage_remove,
+            storage::craft_storage_keys,
+            storage::craft_storage_clear,
+            commands::handle,
+        ]);
+
+    #[cfg(not(feature = "native-engine"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        storage::craft_storage_get,
+        storage::craft_storage_set,
+        storage::craft_storage_remove,
+        storage::craft_storage_keys,
+        storage::craft_storage_clear,
+    ]);
 
     builder
         .run(tauri::generate_context!())
