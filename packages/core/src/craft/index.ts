@@ -1,4 +1,5 @@
 export * from './runtime.js'
 export * from './state.js'
+export * from './storage.js'
 export * from './manifest.js'
 export * from './rpc.js'

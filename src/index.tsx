@@ -8,8 +8,13 @@ import App from './App'
 import reportWebVitals from './reportWebVitals'
 import {EngineProvider} from '@/core/engine/provider'
 import {initEngine} from '@/core/engine'
+import {installCraftStorageBackend} from '@/core/craft-storage'
 import './core/i18n/i18n'
 import 'logisheets-engine/style.css'
+
+// Pick the device-scoped craft-storage backend (localStorage / Tauri app-data)
+// before any craft iframe can mount.
+installCraftStorageBackend()
 
 initEngine().then(async (engine) => {
     const root = createRoot(document.getElementById('root') as HTMLElement)

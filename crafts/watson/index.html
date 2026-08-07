@@ -243,8 +243,8 @@
   <div class="modal-overlay" id="modal-settings">
     <div class="modal">
       <h2>Anthropic API key</h2>
-      <p>Key is stored in this browser only (localStorage). It is sent directly
-         to api.anthropic.com on each request — no server in between.</p>
+      <p>Key is stored on this device only (via LogiSheets craft storage). It is
+         sent directly to api.anthropic.com on each request — no server in between.</p>
       <input type="password" id="input-api-key" placeholder="sk-ant-..." autocomplete="off" />
       <h2>Model</h2>
       <input type="text" id="input-model" placeholder="claude-opus-4-7" />
@@ -292,17 +292,94 @@
     });
     const workbookId = window.workbookId || null;
 
-    // ---------- Settings (localStorage-backed) ----------
-    const KEY_API   = 'watson.apiKey';
-    const KEY_MODEL = 'watson.model';
+    // ---------- Settings (craftStorage-backed) ----------
+    // The host injects `window.craftStorage` — device-scoped, per-craft
+    // key/value storage (localStorage on web, the app-data dir on desktop).
+    // It is already namespaced per craft, so we use short keys. Like
+    // `window.workbook` it is async and only injected on the iframe's onLoad
+    // (AFTER this script runs), so we hydrate an in-memory cache once at boot
+    // (see hydrateSettings) and keep the getters synchronous — the LLM client
+    // reads the key fresh on every request.
+    const KEY_API   = 'apiKey';
+    const KEY_MODEL = 'model';
     const DEFAULT_MODEL = 'claude-opus-4-7';
 
+    // Pre-craftStorage localStorage keys. Migrated once at boot, then removed.
+    const LEGACY_API   = 'watson.apiKey';
+    const LEGACY_MODEL = 'watson.model';
+
+    // Read the host store lazily (it lands after this script runs). Null when
+    // Watson runs standalone (outside LogiSheets) — then we fall back to
+    // localStorage so the craft still works in dev.
+    const craftStore = () => window.craftStorage || null;
+
+    let cacheKey   = null;
+    let cacheModel = DEFAULT_MODEL;
+
     const settings = {
-      getKey:   () => localStorage.getItem(KEY_API),
-      setKey:   v  => v ? localStorage.setItem(KEY_API, v) : localStorage.removeItem(KEY_API),
-      getModel: () => localStorage.getItem(KEY_MODEL) || DEFAULT_MODEL,
-      setModel: v  => localStorage.setItem(KEY_MODEL, v || DEFAULT_MODEL),
+      getKey:   () => cacheKey,
+      setKey:   v  => { cacheKey = v || null; persistSetting(KEY_API, cacheKey); },
+      getModel: () => cacheModel || DEFAULT_MODEL,
+      setModel: v  => { cacheModel = v || DEFAULT_MODEL; persistSetting(KEY_MODEL, cacheModel); },
     };
+
+    function persistSetting(key, value) {
+      const cs = craftStore();
+      if (cs) {
+        const p = value == null ? cs.remove(key) : cs.set(key, value);
+        Promise.resolve(p).catch(e =>
+          console.error('[watson] craftStorage write failed', e));
+        return;
+      }
+      // Standalone fallback: localStorage under the legacy keys.
+      const lk = 'watson.' + key;
+      if (value == null) localStorage.removeItem(lk);
+      else localStorage.setItem(lk, value);
+    }
+
+    // Resolve once window.craftStorage is injected (host does it on the
+    // iframe's onLoad, right after this script runs). Resolves null if it
+    // never appears (standalone), so boot falls back to localStorage.
+    function whenCraftStorageReady(timeoutMs = 3000) {
+      return new Promise(resolve => {
+        if (window.craftStorage) return resolve(window.craftStorage);
+        const start = Date.now();
+        const iv = setInterval(() => {
+          if (window.craftStorage) { clearInterval(iv); resolve(window.craftStorage); }
+          else if (Date.now() - start > timeoutMs) { clearInterval(iv); resolve(null); }
+        }, 30);
+      });
+    }
+
+    // Populate the in-memory cache from the backend, migrating any pre-
+    // craftStorage localStorage keys on first run. Runs once, before the
+    // agent is built.
+    async function hydrateSettings() {
+      const cs = await whenCraftStorageReady();
+      if (cs) {
+        let key   = await cs.get(KEY_API);
+        let model = await cs.get(KEY_MODEL);
+        // One-time migration from the old localStorage keys (same origin on
+        // web, so a previous Watson's values are readable here).
+        const legacyKey = localStorage.getItem(LEGACY_API);
+        if (key == null && legacyKey) {
+          key = legacyKey;
+          await cs.set(KEY_API, key);
+          localStorage.removeItem(LEGACY_API);
+        }
+        const legacyModel = localStorage.getItem(LEGACY_MODEL);
+        if (model == null && legacyModel) {
+          model = legacyModel;
+          await cs.set(KEY_MODEL, model);
+          localStorage.removeItem(LEGACY_MODEL);
+        }
+        cacheKey   = key || null;
+        cacheModel = model || DEFAULT_MODEL;
+      } else {
+        cacheKey   = localStorage.getItem(LEGACY_API) || null;
+        cacheModel = localStorage.getItem(LEGACY_MODEL) || DEFAULT_MODEL;
+      }
+    }
 
     // ---------- DOM ----------
     const $ = sel => document.querySelector(sel);
@@ -580,6 +657,7 @@
 
     // ---------- Boot ----------
     (async function boot() {
+      await hydrateSettings();
       rebuildAgent();
       await loadOrCreateConversation();
       subscribe();
