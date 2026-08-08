@@ -17,6 +17,7 @@ import {InlineCellEditor} from '@/components/spreadsheet-view/inline-cell-editor
 import {DiffLayer} from '@/components/diff-layer'
 import type {DiffState} from '@/components/diff-layer'
 import {CanvasContextMenu, type ContextMenuTrigger} from './canvas-context-menu'
+import {useCraftInputInterception} from '@/core/craft-input/use-interception'
 import styles from './engine-canvas.module.scss'
 
 export interface EngineCanvasProps {
@@ -47,6 +48,10 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
     const engine = useEngine()
     const dataSvc = engine.getDataService()
     const mountedRef = useRef(false)
+
+    // Route this view's canvas input through the active craft (if any) before
+    // the engine sees it. The Engine facade hit-tests the primary view.
+    useCraftInputInterception(containerRef, engine, 'main')
 
     // Set by InlineCellEditor; read by the engine mount so the canvas doesn't
     // steal focus while an editor is open.

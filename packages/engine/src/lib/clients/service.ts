@@ -163,6 +163,14 @@ export class DataService {
     this._offscreen.setGridLines(horizontal, vertical);
   }
 
+  /**
+   * Set the worker-global zoom factor. Returns a promise so the caller
+   * (Engine.setZoom) can await the worker adopting it before re-rendering.
+   */
+  public setZoom(zoom: number): Promise<unknown> {
+    return this._offscreen.setZoom(zoom);
+  }
+
   // ========================================================================
   // File Operations
   // ========================================================================

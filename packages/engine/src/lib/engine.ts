@@ -26,6 +26,7 @@ import { BlockManager } from "./block";
 import type { Grid, EngineConfig } from "$types/index";
 import { DEFAULT_ENGINE_CONFIG } from "$types/index";
 import { Session } from "./session";
+import { setZoomFactor, getZoomFactor } from "./components/utils";
 import type {
   SessionHost,
   SessionMountOptions,
@@ -284,6 +285,44 @@ export class Engine {
 
   getCurrentSheetIndex(): number {
     return this._defaultSession?.getCurrentSheetIndex() ?? 0;
+  }
+
+  /**
+   * Synchronous viewport-point → cell hit-test for the default (primary) view.
+   * Returns null when unmounted or the point is outside the data canvas. See
+   * {@link Session.hitTestCell}.
+   */
+  hitTestCell(clientX: number, clientY: number): { row: number; col: number } | null {
+    return this._defaultSession?.hitTestCell(clientX, clientY) ?? null;
+  }
+
+  /**
+   * Global canvas zoom, as a factor (1 = 100%). Modeled as an effective-DPI
+   * multiplier on the unit↔px converters, so layout, hit-testing, overlays and
+   * fonts all scale coherently across every view. Clamped to [0.5, 3]. Applies
+   * to all views (the worker + workbook are shared), which is why it's global.
+   */
+  async setZoom(factor: number): Promise<void> {
+    const z = Math.min(3, Math.max(0.5, factor));
+    const current = getZoomFactor();
+    if (Math.abs(z - current) < 1e-6) return;
+    const ratio = z / current;
+    // Main-thread converters (scroll extent, anchors, resize math).
+    setZoomFactor(z);
+    // Worker converters (layout + paint). Await so the re-render below lays
+    // out at the new scale.
+    await this._dataService.setZoom(z);
+    // Re-render every mounted view, keeping each one's top-left cell in view.
+    await Promise.all(
+      [...this._sessions].map((s) =>
+        s.getGrid() ? s.applyZoom(ratio) : Promise.resolve(),
+      ),
+    );
+  }
+
+  /** Current global zoom factor (1 = 100%). */
+  getZoom(): number {
+    return getZoomFactor();
   }
 
   setCurrentSheetIndex(index: number): void {

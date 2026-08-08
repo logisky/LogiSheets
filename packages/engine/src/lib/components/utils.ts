@@ -548,20 +548,36 @@ export function qualifyReference(body: string, sheetName: string): string {
 
 const DEFAULT_PPI = 96;
 
+// Global zoom factor — the MAIN-THREAD copy (the worker keeps its own in
+// worker/standable.ts). Zoom is an "effective DPI" multiplier on the
+// workbook-unit ↔ px converters; the Engine keeps both copies in sync (see
+// Engine.setZoom). On this side it governs scroll extent (document height/
+// width), scroll-to-cell anchors, and row/column resize math; the actual cell
+// layout px arrive from the worker already zoomed.
+let zoomFactor = 1;
+
+export function setZoomFactor(z: number): void {
+  zoomFactor = z > 0 ? z : 1;
+}
+
+export function getZoomFactor(): number {
+  return zoomFactor;
+}
+
 export function ptToPx(pt: number): number {
-  return Math.round(((pt * DEFAULT_PPI) / 72) * 100) / 100;
+  return Math.round(((pt * DEFAULT_PPI * zoomFactor) / 72) * 100) / 100;
 }
 
 export function pxToPt(px: number): number {
-  return Math.round(((px * 72) / DEFAULT_PPI) * 100) / 100;
+  return Math.round(((px * 72) / (DEFAULT_PPI * zoomFactor)) * 100) / 100;
 }
 
 export function widthToPx(w: number): number {
-  return w * 7;
+  return w * 7 * zoomFactor;
 }
 
 export function pxToWidth(px: number): number {
-  return px / 7;
+  return px / 7 / zoomFactor;
 }
 
 // ============================================================================

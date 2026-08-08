@@ -17,6 +17,9 @@ import {
     getCraftState,
     setCraftState,
     makeCraftStorage,
+    registerCraftInputHandler,
+    setActiveCraft,
+    type CraftInputHandler,
 } from 'logisheets-core'
 import {SETTINGS} from '@/core/settings'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
@@ -174,6 +177,19 @@ export const CraftPanel = ({
         // ride the workbook — it persists across documents on this machine.
         // Bound to craftId so a craft only ever sees its own namespace.
         win.craftStorage = makeCraftStorage(craftId)
+        // Canvas input capability: the craft registers a handler that runs —
+        // synchronously — before the engine handles a mouse/keyboard event on
+        // any spreadsheet canvas, and decides whether the engine should still
+        // handle it. Only fires while this craft is active (panel open + this
+        // craft selected); see the setActiveCraft effect below.
+        win.onCanvasInput = (handler: CraftInputHandler) =>
+            registerCraftInputHandler(craftId, handler)
+        // Global canvas zoom (1 = 100%, clamped to [0.5, 3]). Applies to every
+        // view — the engine shares one worker/workbook — which is why it's a
+        // global control. A craft typically pairs this with onCanvasInput:
+        // consume Ctrl+wheel and call setCanvasZoom to drive zoom itself.
+        win.setCanvasZoom = (factor: number) => engine.setZoom(factor)
+        win.getCanvasZoom = (): number => engine.getZoom()
         // Subscribe to sheet-selection changes. The craft passes a callback;
         // the host invokes it with the current Selection whenever the selection
         // moves (see the effect below) and returns a disposer. Registration
@@ -186,6 +202,14 @@ export const CraftPanel = ({
         }
         injectCraftInteractionAPIs(win)
     }
+
+    // Mark this craft active for canvas-input routing only while the panel is
+    // open AND this craft is the selected one. When closed or switched away,
+    // the active craft is cleared so canvas events flow straight to the engine.
+    useEffect(() => {
+        setActiveCraft(open ? iframeSrc : null)
+        return () => setActiveCraft(null)
+    }, [open, iframeSrc])
 
     useEffect(() => {
         inject()
@@ -245,7 +269,12 @@ export const CraftPanel = ({
                     justifyContent="flex-end"
                     sx={{p: 1}}
                 >
-                    <IconButton size="small" color="default" onClick={onClose}>
+                    <IconButton
+                        size="small"
+                        color="default"
+                        aria-label="Close craft panel"
+                        onClick={onClose}
+                    >
                         <ChevronRight />
                     </IconButton>
                 </Stack>
