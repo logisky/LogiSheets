@@ -135,6 +135,7 @@ export enum OffscreenRenderName {
     Dispose = 'dispose',
     GetAppropriateHeights = 'getAppropriateHeights',
     SetGridLines = 'setGridLines',
+    SetZoom = 'setZoom',
 }
 
 // ============================================================================

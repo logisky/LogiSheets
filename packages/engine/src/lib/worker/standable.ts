@@ -28,20 +28,37 @@ import { formatNumber } from "logisheets-web";
 const DEFAULT_PPI = 96;
 const PPI = DEFAULT_PPI;
 
+// Global zoom factor. Zoom is modeled as an "effective DPI" multiplier riding
+// the workbook-unit ↔ px converters: at zoom z every cell occupies z× the CSS
+// pixels, so the display window naturally fits fewer/more cells and everything
+// downstream (Grid px, hit-testing, overlays, fonts) scales coherently. This
+// is the WORKER realm's copy; the main thread keeps its own in ../components/
+// utils.ts, and the Engine keeps both in sync (see Engine.setZoom). Kept
+// separate from DPR, which only controls crispness, not layout.
+let zoomFactor = 1;
+
+export function setZoomFactor(z: number): void {
+  zoomFactor = z > 0 ? z : 1;
+}
+
+export function getZoomFactor(): number {
+  return zoomFactor;
+}
+
 export function ptToPx(pt: number): number {
-  return Math.round(((pt * PPI) / 72) * 100) / 100;
+  return Math.round(((pt * PPI * zoomFactor) / 72) * 100) / 100;
 }
 
 export function pxToPt(px: number): number {
-  return Math.round(((px * 72) / PPI) * 100) / 100;
+  return Math.round(((px * 72) / (PPI * zoomFactor)) * 100) / 100;
 }
 
 export function widthToPx(w: number): number {
-  return w * 7;
+  return w * 7 * zoomFactor;
 }
 
 export function pxToWidth(px: number): number {
-  return px / 7;
+  return px / 7 / zoomFactor;
 }
 
 // ============================================================================

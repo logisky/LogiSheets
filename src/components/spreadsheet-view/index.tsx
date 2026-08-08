@@ -12,6 +12,7 @@ import {ViewOverlayLayer} from './view-overlay-layer'
 import {InlineCellEditor} from './inline-cell-editor'
 import {ActiveViewBadge} from './active-view-badge'
 import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
+import {useCraftInputInterception} from '@/core/craft-input/use-interception'
 
 /**
  * A self-contained, independent view of the shared workbook.
@@ -45,6 +46,10 @@ export const SpreadsheetView = observer(function SpreadsheetView({
     const [selectedData, setSelectedData] = useState<SelectedData>({
         source: 'none',
     })
+
+    // Route this view's canvas input through the active craft (if any) before
+    // the engine sees it. Re-runs once the session is created.
+    useCraftInputInterception(containerRef, session, viewId)
 
     // Route live activeSheet / selection through stable callbacks for the
     // context-menu component.

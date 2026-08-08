@@ -58,6 +58,7 @@ export const RootContainer = () => {
                     <IconButton
                         size="medium"
                         color="default"
+                        aria-label="Open craft panel"
                         onClick={() => setCraftPanelVisible(true)}
                     >
                         <ChevronLeft />

@@ -12,6 +12,7 @@ import type { CellView } from "./view_manager";
 import { Painter } from "./painter";
 import { Pool } from "./pool";
 import { setGridVisibility } from "./border_helper";
+import { setZoomFactor } from "./standable";
 
 const pool = new Pool();
 
@@ -85,6 +86,15 @@ export class OffscreenWorkerService {
    */
   public setGridLines(horizontal: boolean, vertical: boolean): void {
     setGridVisibility(horizontal, vertical);
+  }
+
+  /**
+   * Worker-global zoom (effective-DPI multiplier on the unit↔px converters).
+   * Module-level in standable, so one call affects every canvas this worker
+   * lays out and paints. Callers re-render.
+   */
+  public setZoom(zoom: number): void {
+    setZoomFactor(zoom);
   }
 
   public resize(
@@ -388,6 +398,7 @@ export class OffscreenWorkerService {
       m !== OffscreenRenderName.Init &&
       m !== OffscreenRenderName.Dispose &&
       m !== OffscreenRenderName.SetGridLines &&
+      m !== OffscreenRenderName.SetZoom &&
       !this._canvases.has(canvasId)
     ) {
       this._ctx.postMessage({
@@ -427,6 +438,9 @@ export class OffscreenWorkerService {
           break;
         case OffscreenRenderName.SetGridLines:
           result = this.setGridLines(args.horizontal, args.vertical);
+          break;
+        case OffscreenRenderName.SetZoom:
+          result = this.setZoom(args.zoom);
           break;
         default:
           this._ctx.postMessage({

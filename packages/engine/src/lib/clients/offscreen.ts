@@ -84,6 +84,13 @@ export class OffscreenClient {
     this._call(OffscreenRenderName.SetGridLines, { horizontal, vertical });
   }
 
+  // Worker-global zoom. Returns a promise so the caller can await the worker
+  // adopting the new factor BEFORE re-rendering (unlike setGridLines, layout
+  // depends on it).
+  setZoom(zoom: number): Resp<void> {
+    return this._call(OffscreenRenderName.SetZoom, { zoom }) as Resp<void>;
+  }
+
   dispose(canvasId: number): void {
     this._call(OffscreenRenderName.Dispose, { canvasId });
   }

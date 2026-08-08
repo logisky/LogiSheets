@@ -399,6 +399,36 @@ export class Session {
     return this._currentSheetIdx;
   }
 
+  /**
+   * Resolve a viewport point (clientX/clientY) to a cell in THIS view,
+   * synchronously and with no worker round-trip. Returns null when the point
+   * is outside the data canvas or the view isn't mounted. Used by host-side
+   * craft input routing, which must decide synchronously whether to forward an
+   * event to the engine.
+   */
+  hitTestCell(clientX: number, clientY: number): { row: number; col: number } | null {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mounted = this._mountedComponent as any;
+    if (mounted && typeof mounted.hitTestCell === "function") {
+      return mounted.hitTestCell(clientX, clientY);
+    }
+    return null;
+  }
+
+  /**
+   * Re-render this view after a global zoom change, keeping its top-left cell
+   * in view. `ratio` is newZoom/oldZoom. No-op when unmounted. The worker must
+   * already hold the new zoom (Engine.setZoom guarantees this).
+   */
+  applyZoom(ratio: number): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mounted = this._mountedComponent as any;
+    if (mounted && typeof mounted.applyZoom === "function") {
+      return mounted.applyZoom(ratio);
+    }
+    return Promise.resolve();
+  }
+
   setCurrentSheetIndex(index: number): void {
     this._currentSheetIdx = index;
     // Keep the data service's legacy "active view" pointer in sync — but

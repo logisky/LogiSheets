@@ -241,6 +241,38 @@ let isDragging = false; // True while user is drag-selecting
         return {row: g.rows[g.rows.length - 1]?.idx ?? 0, rowOff: 0}
     }
 
+    // Synchronous pointer→cell hit-test, exposed on the mounted component so a
+    // host can resolve a viewport point to a cell WITHOUT a worker round-trip
+    // (see Session.hitTestCell / Engine.hitTestCell). Mirrors onMouseDown's
+    // mapping: clientX/Y → canvas-relative → match() against the current grid +
+    // scroll anchors. Returns null when the point is outside the data canvas.
+    export function hitTestCell(
+        clientX: number,
+        clientY: number,
+    ): {row: number; col: number} | null {
+        if (!grid || !canvasEl) return null
+        const rect = canvasEl.getBoundingClientRect()
+        if (
+            clientX < rect.left ||
+            clientX > rect.right ||
+            clientY < rect.top ||
+            clientY > rect.bottom
+        )
+            return null
+        const matched = match(
+            clientX - rect.left,
+            clientY - rect.top,
+            anchorX,
+            anchorY,
+            grid,
+        )
+        if (!matched) return null
+        return {
+            row: matched.coordinate.startRow,
+            col: matched.coordinate.startCol,
+        }
+    }
+
     // Apply an in-progress move/resize delta to a box's rect. Used both for
     // live display and to compute the final rect on drop.
     function chartRectOf(
@@ -764,6 +796,15 @@ let isDragging = false; // True while user is drag-selecting
             pendingAnchorY = g.anchorY
         }
         onGridChange?.(grid)
+    }
+
+    // Re-render after a global zoom change. `ratio` is newZoom/oldZoom; scaling
+    // the current px anchor by it keeps the same top-left workbook position in
+    // view instead of jumping. The worker must already hold the new zoom (the
+    // Engine sets it before calling this), so this render lays out at the new
+    // scale. Exposed on the mounted component (see Session.applyZoom).
+    export function applyZoom(ratio: number): Promise<void> {
+        return renderWithAnchor(anchorX * ratio, anchorY * ratio, 'applyZoom')
     }
 
     // ========================================================================
