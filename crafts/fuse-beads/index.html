@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>电子拼豆</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      background-color: #f5f5f7;
+      color: #111827;
+      font-size: 13px;
+    }
+    h1 { margin: 0 0 4px; font-size: 18px; }
+    .subtitle { color: #6b7280; font-size: 12px; margin-bottom: 14px; }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .section-title { font-weight: 600; font-size: 13px; color: #374151; margin-bottom: 8px; }
+    .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    label.field { display: inline-flex; align-items: center; gap: 4px; color: #4b5563; }
+    label.field input {
+      width: 52px; padding: 3px 6px; font-size: 12px;
+      border: 1px solid #d1d5db; border-radius: 4px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 6px 14px; font-size: 13px; border-radius: 999px;
+      border: 1px solid #d1d5db; background: #f9fafb; color: #111827; cursor: pointer;
+    }
+    .btn:hover { background: #e5e7eb; }
+    .btn-primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { opacity: 0.6; cursor: default; }
+
+    /* Current brushes */
+    .brushes { display: flex; gap: 10px; }
+    .brush {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #fafafa;
+    }
+    .brush .key { font-weight: 700; font-size: 12px; color: #6b7280; }
+    .brush .swatch-lg {
+      width: 34px; height: 34px; border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.18); background-image:
+        linear-gradient(45deg,#eee 25%,transparent 25%),
+        linear-gradient(-45deg,#eee 25%,transparent 25%),
+        linear-gradient(45deg,transparent 75%,#eee 75%),
+        linear-gradient(-45deg,transparent 75%,#eee 75%);
+      background-size: 10px 10px;
+      background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+    }
+    .brush .meta { font-size: 12px; line-height: 1.3; }
+    .brush .meta .name { font-weight: 600; }
+    .brush .meta .code { color: #6b7280; }
+
+    /* Swatch grids */
+    .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+    .swatch {
+      position: relative; width: 26px; height: 26px; border-radius: 5px;
+      border: 1px solid rgba(0,0,0,0.18); cursor: pointer;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .swatch:hover { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .swatch .code {
+      font-size: 8px; color: rgba(0,0,0,0.55); background: rgba(255,255,255,0.7);
+      border-radius: 2px; padding: 0 1px; line-height: 1.1; pointer-events: none;
+    }
+    .swatch.picked::after {
+      content: "✓"; position: absolute; top: -6px; right: -6px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #2563eb; color: #fff; font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* Palette category tabs */
+    .tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .tab {
+      padding: 3px 9px; font-size: 12px; border-radius: 999px;
+      border: 1px solid #d1d5db; background: #f9fafb; color: #374151; cursor: pointer;
+      line-height: 1.4;
+    }
+    .tab:hover { background: #eef2f7; }
+    .tab.active { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .tab .count { opacity: 0.6; font-size: 10px; margin-left: 3px; }
+    .tab.active .count { opacity: 0.8; }
+    /* Height-capped grid so the panel never grows with the color count */
+    .palette-body {
+      max-height: 168px; overflow-y: auto; padding: 2px;
+      border: 1px solid #eef0f3; border-radius: 6px; background: #fcfcfd;
+    }
+    .palette-body .swatches { gap: 5px; }
+    .palette-body .swatch { width: 24px; height: 24px; }
+
+    /* Workspace chips */
+    .ws { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ws-item { position: relative; }
+    .ws-item .swatch { width: 30px; height: 30px; }
+    .ws-item .rm {
+      position: absolute; top: -6px; right: -6px; width: 15px; height: 15px;
+      border-radius: 50%; border: none; background: #ef4444; color: #fff;
+      font-size: 10px; line-height: 1; cursor: pointer; display: none;
+    }
+    .ws-item:hover .rm { display: block; }
+    .ws-empty { color: #9ca3af; font-size: 12px; }
+    .hint { color: #6b7280; font-size: 11px; margin-top: 6px; line-height: 1.5; }
+    .confirm-bar {
+      margin-top: 10px; padding: 8px 10px; border-radius: 6px;
+      border: 1px solid #fdba74; background: #fff7ed;
+    }
+    .confirm-msg { font-size: 12px; color: #7c2d12; margin-bottom: 8px; }
+    .confirm-actions { display: flex; gap: 8px; }
+    .eraser-face {
+      background: repeating-linear-gradient(45deg,#fff,#fff 4px,#f0f0f0 4px,#f0f0f0 8px) !important;
+    }
+  </style>
+</head>
+<body>
+  <h1>电子拼豆</h1>
+  <div class="subtitle">Fuse Beads · MARD 色板 — 在表格上一格一格拼出你的像素图</div>
+
+  <div class="card">
+    <div class="row">
+      <label class="field">行 <input id="rows-input" type="number" min="1" value="120" /></label>
+      <label class="field">列 <input id="cols-input" type="number" min="1" value="120" /></label>
+      <label class="field">格边(px) <input id="side-input" type="number" min="6" value="22" /></label>
+      <button id="start-btn" class="btn btn-primary" type="button">开始拼豆</button>
+    </div>
+    <div class="hint">点击「开始拼豆」会新建一个名为「拼豆板」的表并把格子调成正方形，然后跳转过去。</div>
+    <div id="rebuild-confirm" class="confirm-bar" style="display:none">
+      <div class="confirm-msg">「拼豆板」已存在，<b>重制会清空现有图案</b>。确定重制？</div>
+      <div class="confirm-actions">
+        <button id="confirm-rebuild" type="button" class="btn btn-primary btn-sm">确认重制</button>
+        <button id="cancel-rebuild" type="button" class="btn btn-sm">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">当前画笔</div>
+    <div class="brushes">
+      <div class="brush">
+        <span class="key">左键 L</span>
+        <div id="left-swatch" class="swatch-lg"></div>
+        <div class="meta"><div id="left-name" class="name">未选</div><div id="left-code" class="code"></div></div>
+      </div>
+      <div class="brush">
+        <span class="key">右键 R</span>
+        <div id="right-swatch" class="swatch-lg"></div>
+        <div class="meta"><div id="right-name" class="name">未选</div><div id="right-code" class="code"></div></div>
+      </div>
+    </div>
+    <div class="hint">在下方「我的工作区」里：<b>左键</b>点色块设为左键画笔，<b>右键</b>点色块设为右键画笔。<br/>在画布上：左键涂左色，右键涂右色，按住拖动可连续涂。<b>Shift + 滚轮</b>缩放画布。</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">我的工作区</div>
+    <div id="workspace" class="ws"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">选豆区</div>
+    <div id="palette"></div>
+  </div>
+
+  <script src="./fuse-beads.js"></script>
+  <script>
+    // ---- state -------------------------------------------------------------
+    var boardSheetIdx = null
+    // brush: null (none) | 'ERASER' | bead code string
+    var leftBrush = null
+    var rightBrush = null
+    var chosen = ['ERASER'] // codes shown in the workspace; eraser is always there
+    var activeCat = null    // active palette category key (selects which tab shows)
+    var dragBtn = null      // 0 = left drag, 2 = right drag, null = idle
+    var lastKey = null      // last painted "r:c", to dedupe drag strokes
+
+    function notify(level, msg) {
+      try { if (window.notifyCraft) window.notifyCraft(level, msg) } catch (e) {}
+      if (level === 'error') console.error('[fuse-beads]', msg)
+    }
+
+    function brushHex(brush) {
+      if (brush === null) return undefined // no paint
+      if (brush === 'ERASER') return null   // clear fill
+      var b = FuseBeads.BEAD_BY_CODE[brush]
+      return b ? b.hex : undefined
+    }
+
+    // ---- current-brush display --------------------------------------------
+    function renderBrush(side) {
+      var brush = side === 'left' ? leftBrush : rightBrush
+      var sw = document.getElementById(side + '-swatch')
+      var nameEl = document.getElementById(side + '-name')
+      var codeEl = document.getElementById(side + '-code')
+      sw.className = 'swatch-lg'
+      if (brush === null) {
+        sw.style.background = ''
+        nameEl.textContent = '未选'; codeEl.textContent = ''
+      } else if (brush === 'ERASER') {
+        sw.style.background = ''
+        sw.classList.add('eraser-face')
+        nameEl.textContent = '橡皮'; codeEl.textContent = '擦除'
+      } else {
+        var b = FuseBeads.BEAD_BY_CODE[brush]
+        sw.style.background = b.hex
+        nameEl.textContent = b.code; codeEl.textContent = b.hex.toUpperCase()
+      }
+    }
+    function renderBrushes() { renderBrush('left'); renderBrush('right') }
+
+    // ---- workspace ---------------------------------------------------------
+    function assignBrush(side, brush) {
+      if (side === 'left') leftBrush = brush; else rightBrush = brush
+      renderBrushes()
+    }
+    function faceStyle(el, brush) {
+      if (brush === 'ERASER') { el.classList.add('eraser-face'); el.style.background = '' }
+      else { el.style.background = FuseBeads.BEAD_BY_CODE[brush].hex }
+    }
+    function renderWorkspace() {
+      var ws = document.getElementById('workspace')
+      ws.innerHTML = ''
+      if (chosen.length === 0) {
+        var empty = document.createElement('div')
+        empty.className = 'ws-empty'
+        empty.textContent = '从下面「选豆区」点选颜色，加到这里'
+        ws.appendChild(empty)
+        return
+      }
+      chosen.forEach(function (code) {
+        var item = document.createElement('div')
+        item.className = 'ws-item'
+
+        var sw = document.createElement('div')
+        sw.className = 'swatch'
+        faceStyle(sw, code)
+        sw.title = code === 'ERASER'
+          ? '橡皮：左键点设为左画笔，右键点设为右画笔'
+          : (FuseBeads.BEAD_BY_CODE[code].code + ' ' + FuseBeads.BEAD_BY_CODE[code].hex +
+             ' — 左键设左画笔，右键设右画笔')
+        var label = document.createElement('span')
+        label.className = 'code'
+        label.textContent = code === 'ERASER' ? '橡皮' : FuseBeads.BEAD_BY_CODE[code].code
+        sw.appendChild(label)
+
+        sw.addEventListener('click', function () { assignBrush('left', code) })
+        sw.addEventListener('contextmenu', function (ev) {
+          ev.preventDefault(); assignBrush('right', code)
+        })
+        item.appendChild(sw)
+
+        if (code !== 'ERASER') {
+          var rm = document.createElement('button')
+          rm.className = 'rm'; rm.type = 'button'; rm.textContent = '×'
+          rm.title = '从工作区移除'
+          rm.addEventListener('click', function (ev) {
+            ev.stopPropagation()
+            chosen = chosen.filter(function (c) { return c !== code })
+            if (leftBrush === code) assignBrush('left', null)
+            if (rightBrush === code) assignBrush('right', null)
+            renderWorkspace(); renderPalette()
+          })
+          item.appendChild(rm)
+        }
+        ws.appendChild(item)
+      })
+    }
+
+    // ---- palette -----------------------------------------------------------
+    function togglePick(code) {
+      if (chosen.indexOf(code) >= 0) {
+        chosen = chosen.filter(function (c) { return c !== code })
+        if (leftBrush === code) assignBrush('left', null)
+        if (rightBrush === code) assignBrush('right', null)
+      } else {
+        chosen.push(code)
+      }
+      renderWorkspace(); renderPalette()
+    }
+    function renderPalette() {
+      var root = document.getElementById('palette')
+      root.innerHTML = ''
+      var cats = FuseBeads.PALETTE.filter(function (c) { return c.beads.length })
+      if (activeCat === null && cats.length) activeCat = cats[0].key
+
+      // Category tabs (one row, wraps). Only the active category's grid shows,
+      // so the panel height stays fixed no matter how many colors exist.
+      var tabs = document.createElement('div')
+      tabs.className = 'tabs'
+      cats.forEach(function (c) {
+        var t = document.createElement('button')
+        t.type = 'button'
+        t.className = 'tab' + (c.key === activeCat ? ' active' : '')
+        t.innerHTML = c.label + '<span class="count">' + c.beads.length + '</span>'
+        t.addEventListener('click', function () { activeCat = c.key; renderPalette() })
+        tabs.appendChild(t)
+      })
+      root.appendChild(tabs)
+
+      var body = document.createElement('div')
+      body.className = 'palette-body'
+      var grid = document.createElement('div')
+      grid.className = 'swatches'
+      var cat = cats.find(function (c) { return c.key === activeCat })
+      ;(cat ? cat.beads : []).forEach(function (b) {
+        var sw = document.createElement('div')
+        sw.className = 'swatch' + (chosen.indexOf(b.code) >= 0 ? ' picked' : '')
+        sw.style.background = b.hex
+        sw.title = b.code // full official MARD code, shown on hover
+        var lab = document.createElement('span')
+        lab.className = 'code'; lab.textContent = b.num // number within the series tab
+        sw.appendChild(lab)
+        sw.addEventListener('click', function () { togglePick(b.code) })
+        grid.appendChild(sw)
+      })
+      body.appendChild(grid)
+      root.appendChild(body)
+    }
+
+    // ---- painting (canvas input) ------------------------------------------
+    function paintAt(row, col, brush) {
+      var hex = brushHex(brush)
+      if (hex === undefined) return false // no brush on this button → let engine select
+      var key = row + ':' + col
+      if (key === lastKey) return true
+      lastKey = key
+      FuseBeads.paintCell(window.workbook, boardSheetIdx, row, col, hex)
+        .catch(function (e) { notify('error', '涂色失败：' + (e && e.message || e)) })
+      return true
+    }
+
+    function canvasHandler(e) {
+      // Shift + wheel → zoom, on any sheet.
+      if (e.type === 'wheel' && e.shiftKey) {
+        var cur = window.getCanvasZoom ? window.getCanvasZoom() : 1
+        window.setCanvasZoom(e.deltaY < 0 ? cur * 1.1 : cur / 1.1)
+        return true
+      }
+      // Everything else only applies on the bead board.
+      if (boardSheetIdx === null || e.sheetIdx !== boardSheetIdx) return false
+
+      switch (e.type) {
+        case 'contextmenu':
+          return true // never show the native right-click menu on the board
+        case 'mousedown':
+          if (e.row == null || e.col == null) return false
+          lastKey = null
+          if (e.button === 0) { dragBtn = 0; paintAt(e.row, e.col, leftBrush) }
+          else if (e.button === 2) { dragBtn = 2; paintAt(e.row, e.col, rightBrush) }
+          else { dragBtn = null }
+          // Always consume mousedown on the board. Besides painting, this blocks
+          // the stray cell selection AND the engine's double-click-to-edit —
+          // which it detects from a rapid SECOND mousedown (not a dblclick
+          // event), so consuming mousedown is the only way to stop the formula
+          // editor from opening while painting.
+          return true
+        case 'mousemove':
+          if (dragBtn === null) return false
+          var mask = dragBtn === 0 ? 1 : 2
+          if (!(e.buttons & mask)) { dragBtn = null; return false }
+          if (e.row != null && e.col != null)
+            paintAt(e.row, e.col, dragBtn === 0 ? leftBrush : rightBrush)
+          return true
+        case 'mouseup':
+          dragBtn = null; lastKey = null; return true
+        case 'click':
+        case 'dblclick':
+          return true // never select or open the editor on the board
+      }
+      return false
+    }
+
+    // ---- start / setup -----------------------------------------------------
+    function showRebuildConfirm(show) {
+      document.getElementById('rebuild-confirm').style.display = show ? 'block' : 'none'
+    }
+
+    // Clicking 开始拼豆: if the board already exists, ask before wiping it.
+    async function start() {
+      if (!window.workbook) { notify('error', '工作簿尚未就绪，请稍候再试'); return }
+      var exists = false
+      try {
+        exists = (await FuseBeads.findSheetIdx(window.workbook, '拼豆板')) >= 0
+      } catch (e) { /* treat as not-exists; build() will surface real errors */ }
+      if (exists) { showRebuildConfirm(true); return }
+      await build()
+    }
+
+    // Actually (re)build the board. Rebuild deletes the old 拼豆板 and makes a
+    // fresh one — only reached for a brand-new board or after the user confirms.
+    async function build() {
+      showRebuildConfirm(false)
+      var btn = document.getElementById('start-btn')
+      btn.disabled = true; var old = btn.textContent; btn.textContent = '正在创建…'
+      try {
+        var opts = {
+          name: '拼豆板',
+          rows: parseInt(document.getElementById('rows-input').value, 10) || 120,
+          cols: parseInt(document.getElementById('cols-input').value, 10) || 120,
+          sidePx: parseInt(document.getElementById('side-input').value, 10) || 22,
+        }
+        // If we're rebuilding an EXISTING board, move the view off it first:
+        // setupBoard deletes 拼豆板, and the canvas crashes if it's asked to
+        // render the sheet that just disappeared. Sheet index 0 always exists.
+        // Yield a couple of frames so the view actually switches before delete.
+        var existingIdx = -1
+        try { existingIdx = await FuseBeads.findSheetIdx(window.workbook, '拼豆板') } catch (e) {}
+        if (existingIdx >= 0 && window.setSelection) {
+          window.setSelection(0, 0, 0)
+          await new Promise(function (r) {
+            requestAnimationFrame(function () { requestAnimationFrame(r) })
+          })
+        }
+        var idx = await FuseBeads.setupBoard(window.workbook, opts)
+        boardSheetIdx = idx
+        if (window.setSelection) window.setSelection(idx, 0, 0)
+        notify('success', '拼豆板已就绪，开始拼豆吧！')
+      } catch (e) {
+        notify('error', '创建拼豆板失败：' + (e && e.message || e))
+      } finally {
+        btn.disabled = false; btn.textContent = old
+      }
+    }
+
+    // ---- boot --------------------------------------------------------------
+    function whenHostReady(cb) {
+      var tries = 0
+      ;(function loop() {
+        if (typeof window.onCanvasInput === 'function') { cb(); return }
+        if (tries++ > 600) { console.warn('[fuse-beads] host APIs not injected'); return }
+        setTimeout(loop, 50)
+      })()
+    }
+
+    function init() {
+      renderBrushes()
+      renderWorkspace()
+      renderPalette()
+      document.getElementById('start-btn').addEventListener('click', start)
+      document.getElementById('confirm-rebuild').addEventListener('click', build)
+      document.getElementById('cancel-rebuild').addEventListener('click', function () {
+        showRebuildConfirm(false)
+      })
+      // Register the canvas paint/zoom handler once the host has injected it,
+      // and hide the cell selection — this craft paints, it doesn't select, so
+      // the selection box would just get in the way.
+      whenHostReady(function () {
+        window.onCanvasInput(canvasHandler)
+        if (window.setSelectionSuppressed) window.setSelectionSuppressed(true)
+      })
+    }
+
+    window.addEventListener('DOMContentLoaded', init)
+  </script>
+</body>
+</html>

@@ -34,6 +34,9 @@ type CraftPanelProps = {
     setSelectedData: (data: SelectedData) => void
     setActiveSheet: (index: number) => void
     setCellLayouts: (data: CellLayout[]) => void
+    // Lets the active craft suppress the cell selection entirely (see
+    // `win.setSelectionSuppressed`). Reset whenever the active craft changes.
+    setSelectionSuppressed: (suppressed: boolean) => void
     onClose: () => void
     // Deep-link entry: craft to show initially (see core/craft-deeplink.ts).
     initialCraftSrc?: string
@@ -46,6 +49,7 @@ export const CraftPanel = ({
     setSelectedData,
     setActiveSheet,
     setCellLayouts,
+    setSelectionSuppressed,
     initialCraftSrc,
 }: CraftPanelProps) => {
     const [iframeSrc, setIframeSrc] = useState(
@@ -71,6 +75,10 @@ export const CraftPanel = ({
         {
             label: 'Watson',
             value: '/watson/index.html',
+        },
+        {
+            label: '电子拼豆 (Fuse Beads)',
+            value: '/fuse-beads/index.html',
         },
     ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
@@ -190,6 +198,13 @@ export const CraftPanel = ({
         // consume Ctrl+wheel and call setCanvasZoom to drive zoom itself.
         win.setCanvasZoom = (factor: number) => engine.setZoom(factor)
         win.getCanvasZoom = (): number => engine.getZoom()
+        // Let a craft that doesn't use the cell selection (e.g. a painting
+        // craft like fuse-beads) hide it while active. While suppressed the
+        // host forces the selection to the empty "none" state, so no highlight
+        // box shows and the craft's own setSelection jumps sheets without
+        // selecting a cell. Reset when the active craft changes (below).
+        win.setSelectionSuppressed = (suppressed: boolean) =>
+            setSelectionSuppressed(!!suppressed)
         // Subscribe to sheet-selection changes. The craft passes a callback;
         // the host invokes it with the current Selection whenever the selection
         // moves (see the effect below) and returns a disposer. Registration
@@ -208,8 +223,13 @@ export const CraftPanel = ({
     // the active craft is cleared so canvas events flow straight to the engine.
     useEffect(() => {
         setActiveCraft(open ? iframeSrc : null)
+        // Selection suppression belongs to whichever craft is active now; clear
+        // it on every craft switch / panel close so it never leaks to the next
+        // craft (or to normal spreadsheet use). A craft that wants it re-opts in
+        // via win.setSelectionSuppressed after it loads.
+        setSelectionSuppressed(false)
         return () => setActiveCraft(null)
-    }, [open, iframeSrc])
+    }, [open, iframeSrc, setSelectionSuppressed])
 
     useEffect(() => {
         inject()

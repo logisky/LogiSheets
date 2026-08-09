@@ -12,6 +12,7 @@ cd "$SCRIPT_DIR" || exit 1
 crafts=(
     "factory-simulator-en"
     "factory-simulator-zh"
+    "fuse-beads"
     "markdown-table-extractor"
     "watson"
     "what-if-calculator"
