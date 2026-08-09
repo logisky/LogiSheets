@@ -80,6 +80,10 @@ export const CraftPanel = ({
             label: '电子拼豆 (Fuse Beads)',
             value: '/fuse-beads/index.html',
         },
+        {
+            label: '记忆挑战 (Memory Grid)',
+            value: '/memory-grid/index.html',
+        },
     ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     // Crafts that need to react to the sheet selection subscribe here instead

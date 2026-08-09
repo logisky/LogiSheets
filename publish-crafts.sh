@@ -14,6 +14,7 @@ crafts=(
     "factory-simulator-zh"
     "fuse-beads"
     "markdown-table-extractor"
+    "memory-grid"
     "watson"
     "what-if-calculator"
 )

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>记忆挑战</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      background: #f5f5f7; color: #111827; font-size: 13px;
+    }
+    h1 { margin: 0 0 4px; font-size: 18px; }
+    .subtitle { color: #6b7280; font-size: 12px; margin-bottom: 14px; }
+    .card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+    }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .level-line { font-size: 15px; font-weight: 700; }
+    .best { color: #6b7280; font-size: 12px; }
+    .bar { height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; margin: 10px 0; }
+    .bar > div { height: 100%; background: #2563eb; width: 0; transition: width .2s; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 8px 16px; font-size: 14px; border-radius: 999px;
+      border: 1px solid #d1d5db; background: #f9fafb; color: #111827; cursor: pointer;
+    }
+    .btn:hover { background: #e5e7eb; }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .link { background: none; border: none; color: #6b7280; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+    .status { font-size: 14px; font-weight: 600; }
+    .question { font-size: 15px; margin: 8px 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,.2); display: inline-block; vertical-align: middle; }
+    .count { color: #6b7280; font-size: 12px; }
+    .result-pass { color: #15803d; font-weight: 700; font-size: 15px; }
+    .result-fail { color: #b91c1c; font-weight: 700; font-size: 15px; }
+    .hint { color: #6b7280; font-size: 11px; line-height: 1.6; margin-top: 8px; }
+    .hidden { display: none !important; }
+    .big { font-size: 22px; font-weight: 800; text-align: center; padding: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>记忆挑战</h1>
+  <div class="subtitle">Memory Grid — 记住闪现格子的颜色和数字，共 24 关</div>
+
+  <div class="card">
+    <div class="row" style="justify-content: space-between;">
+      <span id="level-line" class="level-line">第 1 / 24 关</span>
+      <span id="best" class="best">最高通关：0</span>
+    </div>
+    <div class="bar"><div id="bar-fill"></div></div>
+    <div class="row">
+      <button id="start-btn" class="btn btn-primary" type="button">开始本关</button>
+      <button id="reset-btn" class="link" type="button">重置进度</button>
+    </div>
+    <div id="allclear" class="big hidden">🎉 全部 24 关通关！</div>
+  </div>
+
+  <div id="play-card" class="card hidden">
+    <div id="status" class="status">准备…</div>
+    <div id="question" class="question hidden"></div>
+    <div id="pick-count" class="count hidden"></div>
+    <div class="row" style="margin-top: 8px;">
+      <button id="confirm-btn" class="btn btn-primary hidden" type="button">确认</button>
+    </div>
+    <div id="result" class="row hidden" style="margin-top: 8px; gap: 10px;">
+      <span id="result-msg"></span>
+      <button id="next-btn" class="btn btn-primary hidden" type="button">下一关</button>
+      <button id="retry-btn" class="btn hidden" type="button">重试本关</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hint">
+      玩法：点「开始本关」后，格子会一个个闪现颜色/数字，记住它们；闪完根据问题在棋盘上<b>点选</b>对应的格子（再点一次取消），选够后点「确认」。<br/>
+      答错会揭示正确答案（绿色），可重试本关；答对进入下一关，进度会自动保存。
+    </div>
+  </div>
+
+  <script src="./memory-grid.js"></script>
+  <script>
+    var MG = window.MemoryGrid
+    var boardSheetIdx = null
+    var progress = {level: 1, best: 0}
+    var round = null
+    var spec = null
+    var phase = 'idle' // idle | showing | answering | result
+    var chosen = new Set()
+    var busy = false
+
+    var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms) }) }
+
+    function notify(level, msg) {
+      try { if (window.notifyCraft) window.notifyCraft(level, msg) } catch (e) {}
+      if (level === 'error') console.error('[memory-grid]', msg)
+    }
+
+    // ---- progress / craft-state -------------------------------------
+    function loadProgress() {
+      var json = window.getCraftState ? window.getCraftState() : undefined
+      progress = MG.parseProgress(json)
+    }
+    function saveProgress() {
+      if (window.setCraftState) window.setCraftState(MG.serializeProgress(progress))
+    }
+
+    // ---- rendering --------------------------------------------------
+    function renderHeader() {
+      var allClear = progress.level > MG.TOTAL_LEVELS
+      document.getElementById('level-line').textContent = allClear
+        ? '已全部通关' : ('第 ' + progress.level + ' / ' + MG.TOTAL_LEVELS + ' 关')
+      document.getElementById('best').textContent = '最高通关：' + progress.best
+      document.getElementById('bar-fill').style.width =
+        Math.round((progress.best / MG.TOTAL_LEVELS) * 100) + '%'
+      document.getElementById('allclear').classList.toggle('hidden', !allClear)
+      document.getElementById('start-btn').classList.toggle('hidden', allClear)
+    }
+
+    function show(id, visible) { document.getElementById(id).classList.toggle('hidden', !visible) }
+
+    function renderQuestion() {
+      var q = round.question
+      var el = document.getElementById('question')
+      el.innerHTML = ''
+      var text = document.createElement('span')
+      // insert a color swatch where relevant
+      if (q.type === 'color' || q.type === 'both') {
+        var sw = document.createElement('span')
+        sw.className = 'swatch'
+        sw.style.background = MG.COLORS[q.colorIdx].hex
+        el.appendChild(sw)
+      }
+      text.textContent = q.text
+      el.appendChild(text)
+      updatePickCount()
+    }
+
+    function updatePickCount() {
+      var el = document.getElementById('pick-count')
+      el.textContent = '已选 ' + chosen.size + ' / ' + round.question.count
+    }
+
+    // ---- board / picking --------------------------------------------
+    function togglePick(row, col) {
+      var key = row + ':' + col
+      if (chosen.has(key)) {
+        chosen.delete(key)
+        MG.paintMark(window.workbook, boardSheetIdx, row, col, null).catch(function (e) { notify('error', e) })
+      } else {
+        chosen.add(key)
+        MG.paintMark(window.workbook, boardSheetIdx, row, col, MG.MARK_HEX).catch(function (e) { notify('error', e) })
+      }
+      updatePickCount()
+    }
+
+    function canvasHandler(e) {
+      if (boardSheetIdx === null || e.sheetIdx !== boardSheetIdx) return false
+      switch (e.type) {
+        case 'contextmenu':
+          return true
+        case 'mousedown':
+          if (phase === 'answering' && e.button === 0 && e.row != null && e.col != null)
+            togglePick(e.row, e.col)
+          // Always consume on the board: blocks stray selection AND the
+          // engine's double-click-to-edit (detected from a 2nd mousedown).
+          return true
+        case 'click':
+        case 'dblclick':
+        case 'mouseup':
+          return true
+      }
+      return false
+    }
+
+    // ---- game flow --------------------------------------------------
+    async function startLevel() {
+      if (busy) return
+      if (!window.workbook) { notify('error', '工作簿尚未就绪'); return }
+      if (progress.level > MG.TOTAL_LEVELS) return
+      busy = true
+      spec = MG.getLevel(progress.level)
+      chosen = new Set()
+      round = MG.generateRound(spec)
+
+      show('play-card', true)
+      show('question', false); show('pick-count', false)
+      show('confirm-btn', false); show('result', false)
+      show('next-btn', false); show('retry-btn', false)
+      document.getElementById('start-btn').disabled = true
+      var statusEl = document.getElementById('status')
+      statusEl.textContent = '准备…'
+      phase = 'showing'
+
+      try {
+        boardSheetIdx = await MG.ensureBoard(window.workbook)
+        if (window.setSelection) window.setSelection(boardSheetIdx, 0, 0)
+        await sleep(150)
+        await MG.clearBoard(window.workbook, boardSheetIdx)
+        await sleep(600)
+
+        // Flash the sequence, grouped by `simultaneous`.
+        var order = round.order
+        var groups = []
+        for (var i = 0; i < order.length; i += spec.simultaneous)
+          groups.push(order.slice(i, i + spec.simultaneous))
+        var shown = 0
+        for (var g = 0; g < groups.length; g++) {
+          var cs = groups[g].map(function (idx) { return round.cells[idx] })
+          shown += cs.length
+          statusEl.textContent = '记住！ (' + shown + ' / ' + round.cells.length + ')'
+          await MG.showCells(window.workbook, boardSheetIdx, cs)
+          await sleep(spec.showMs)
+          await MG.clearCells(window.workbook, boardSheetIdx, cs)
+          await sleep(180)
+        }
+
+        // Answer phase.
+        phase = 'answering'
+        statusEl.textContent = '轮到你了 👇'
+        renderQuestion()
+        show('question', true); show('pick-count', true); show('confirm-btn', true)
+      } catch (e) {
+        notify('error', '出错了：' + (e && e.message || e))
+        phase = 'idle'
+        document.getElementById('start-btn').disabled = false
+      } finally {
+        busy = false
+      }
+    }
+
+    async function confirmAnswer() {
+      if (busy || phase !== 'answering') return
+      busy = true
+      try {
+        var answerKeys = new Set(round.answerCells.map(function (c) { return c.row + ':' + c.col }))
+        var ok = chosen.size === answerKeys.size &&
+          [].every.call(Array.from(chosen), function (k) { return answerKeys.has(k) })
+
+        phase = 'result'
+        show('confirm-btn', false)
+        show('result', true)
+        var msg = document.getElementById('result-msg')
+
+        if (ok) {
+          // brief green confirm on the answer cells
+          for (var c of round.answerCells)
+            await MG.paintMark(window.workbook, boardSheetIdx, c.row, c.col, MG.RIGHT_HEX)
+          progress.best = Math.max(progress.best, progress.level)
+          progress.level = Math.min(progress.level + 1, MG.TOTAL_LEVELS + 1)
+          saveProgress()
+          renderHeader()
+          msg.className = 'result-pass'
+          msg.textContent = '✅ 通过！'
+          if (progress.level > MG.TOTAL_LEVELS) {
+            msg.textContent = '✅ 通过！全部 24 关完成 🎉'
+          } else {
+            show('next-btn', true)
+          }
+        } else {
+          // reveal: wrong picks red, correct cells green
+          for (var k of Array.from(chosen)) {
+            if (!answerKeys.has(k)) {
+              var p = k.split(':')
+              await MG.paintMark(window.workbook, boardSheetIdx, +p[0], +p[1], MG.WRONG_HEX)
+            }
+          }
+          for (var a of round.answerCells)
+            await MG.paintMark(window.workbook, boardSheetIdx, a.row, a.col, MG.RIGHT_HEX)
+          msg.className = 'result-fail'
+          msg.textContent = '❌ 差一点！绿色是正确答案。'
+          show('retry-btn', true)
+        }
+        document.getElementById('status').textContent = ''
+      } catch (e) {
+        notify('error', e)
+      } finally {
+        busy = false
+      }
+    }
+
+    function endToMenu() {
+      show('play-card', false)
+      phase = 'idle'
+      document.getElementById('start-btn').disabled = false
+      renderHeader()
+    }
+
+    async function resetProgress() {
+      progress = {level: 1, best: 0}
+      saveProgress()
+      if (boardSheetIdx !== null && window.workbook)
+        await MG.clearBoard(window.workbook, boardSheetIdx).catch(function () {})
+      endToMenu()
+    }
+
+    // ---- boot -------------------------------------------------------
+    function whenHostReady(cb) {
+      var tries = 0
+      ;(function loop() {
+        if (typeof window.onCanvasInput === 'function' && window.workbook) { cb(); return }
+        if (tries++ > 600) { console.warn('[memory-grid] host APIs not injected'); return }
+        setTimeout(loop, 50)
+      })()
+    }
+
+    function init() {
+      MG = window.MemoryGrid
+      renderHeader()
+      document.getElementById('start-btn').addEventListener('click', startLevel)
+      document.getElementById('confirm-btn').addEventListener('click', confirmAnswer)
+      document.getElementById('next-btn').addEventListener('click', function () {
+        show('result', false); startLevel()
+      })
+      document.getElementById('retry-btn').addEventListener('click', function () {
+        show('result', false); startLevel()
+      })
+      document.getElementById('reset-btn').addEventListener('click', resetProgress)
+
+      whenHostReady(function () {
+        window.onCanvasInput(canvasHandler)
+        if (window.setSelectionSuppressed) window.setSelectionSuppressed(true)
+        loadProgress()
+        renderHeader()
+      })
+    }
+
+    window.addEventListener('DOMContentLoaded', init)
+  </script>
+</body>
+</html>
