@@ -91,6 +91,16 @@ where
         self.ids.insert(new_name, id);
     }
 
+    /// Release a `name -> id` entry so the name becomes available for
+    /// registration again. This is the removal half of `rename` without the
+    /// re-insert. Only the name mapping is dropped; the numeric id is
+    /// intentionally NOT recycled, because ids are stable identities that
+    /// other managers and formulas may still reference. Returns the released
+    /// id, if the name was registered.
+    pub fn remove_name(&mut self, name: &str) -> Option<T> {
+        self.ids.remove(name)
+    }
+
     pub fn get_or_register_id(&mut self, name: &str) -> T {
         match self.ids.get(name) {
             Some(r) => r.clone(),
