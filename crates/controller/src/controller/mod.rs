@@ -907,6 +907,42 @@ mod tests {
     }
 
     #[test]
+    fn recreate_deleted_sheet_name() {
+        // Regression: deleting a sheet must release its name so the same name
+        // can be used again by a later CreateSheet. Previously the name stayed
+        // reserved in sheet_id_manager (delete never cleaned it up), so the
+        // re-create failed with SheetNameAlreadyExists (ActionEffect version 0).
+        let mut wb = Controller::default();
+        let name = "拼豆板".to_string();
+        let create = || {
+            EditAction::Payloads(PayloadsAction {
+                payloads: vec![EditPayload::CreateSheet(CreateSheet {
+                    new_name: name.clone(),
+                    idx: 1,
+                })],
+                undoable: true,
+                init: false,
+            })
+        };
+
+        let result = wb.handle_action(create());
+        assert!(result.version > 0, "first create should succeed");
+
+        let result = wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::DeleteSheet(DeleteSheet { idx: 1 })],
+            undoable: true,
+            init: false,
+        }));
+        assert!(result.version > 0, "delete should succeed");
+
+        let result = wb.handle_action(create());
+        assert!(
+            result.version > 0,
+            "recreating a sheet with a previously-deleted name should succeed"
+        );
+    }
+
+    #[test]
     fn set_block_line_name_field() {
         let mut wb = Controller::default();
         let sheet_idx = 0;

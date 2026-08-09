@@ -1,0 +1,21 @@
+{
+    "name": "memory-grid",
+    "version": "0.1.0",
+    "description": "A 24-level memory game on an 8x8 LogiSheets grid: recall flashed colors/numbers",
+    "main": "dist/memory-grid.js",
+    "module": "dist/memory-grid.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/memory-grid&& mkdir -p ../../public/memory-grid&& cp index.html ../../public/memory-grid/index.html && cp dist/memory-grid.js ../../public/memory-grid/memory-grid.js"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0",
+        "vite": "^5.0.0"
+    }
+}

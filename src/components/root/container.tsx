@@ -1,5 +1,5 @@
 import {Toolbar} from '@/components/toolbar'
-import {useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 import {ContentComponent} from '@/components/content'
 import {SETTINGS} from '@/core/settings'
 import styles from './root.module.scss'
@@ -14,6 +14,21 @@ export const RootContainer = () => {
     const [selectedData, setSelectedData] = useState<SelectedData>({
         source: 'none',
     })
+    // Some crafts (e.g. fuse-beads, which paints cells) don't want a cell
+    // selection at all — the highlight box just gets in the way. The active
+    // craft opts in via `window.setSelectionSuppressed(true)` (injected by the
+    // craft panel); while on, every selection is forced to the empty "none"
+    // state. A ref keeps the guarded setter stable across renders.
+    const [suppressSelection, setSuppressSelection] = useState(false)
+    const suppressSelectionRef = useRef(suppressSelection)
+    suppressSelectionRef.current = suppressSelection
+    const applySelectedData = useCallback((d: SelectedData) => {
+        setSelectedData(suppressSelectionRef.current ? {source: 'none'} : d)
+    }, [])
+    // When suppression turns on, drop any existing selection immediately.
+    useEffect(() => {
+        if (suppressSelection) setSelectedData({source: 'none'})
+    }, [suppressSelection])
     const [grid, setGrid] = useState<Grid | null>(null)
     const [isCraftPanelVisible, setCraftPanelVisible] = useState(
         !!craftDeepLink
@@ -34,7 +49,7 @@ export const RootContainer = () => {
                 </div>
                 <div className={styles.content}>
                     <ContentComponent
-                        selectedData$={setSelectedData}
+                        selectedData$={applySelectedData}
                         selectedData={selectedData}
                         grid={grid}
                         setGrid={setGrid}
@@ -68,8 +83,9 @@ export const RootContainer = () => {
             <CraftPanel
                 open={isCraftPanelVisible}
                 initialCraftSrc={craftDeepLink?.iframeSrc}
-                setSelectedData={setSelectedData}
+                setSelectedData={applySelectedData}
                 selectedData={selectedData}
+                setSelectionSuppressed={setSuppressSelection}
                 onClose={() => {
                     setCraftPanelVisible(false)
                 }}

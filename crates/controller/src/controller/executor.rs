@@ -141,6 +141,25 @@ impl<'a> Executor<'a> {
             return Ok(result);
         }
 
+        // Deleting a sheet must also release its name from the sheet-id
+        // manager so a later CreateSheet can reuse that name. The per-manager
+        // delete executors below drop the sheet's data, position and nav
+        // state, but none of them touch the name->id map; leaving the entry
+        // behind makes NavigatorConnector::get_sheet_id reject the reused name
+        // with SheetNameAlreadyExists (e.g. recreating a board sheet after
+        // deleting it would fail). We free only the name here — the numeric
+        // SheetId is left as-is, so any dangling id references stay untouched.
+        // This resolves the name before the normal pipeline runs the actual
+        // deletion; it does not return early. An out-of-range idx is ignored
+        // so the pipeline can surface the proper error.
+        if let EditPayload::DeleteSheet(ref ds) = payload {
+            if let Some(id) = result.status.sheet_info_manager.get_sheet_id(ds.idx) {
+                if let Some(name) = result.status.sheet_id_manager.get_string(&id) {
+                    result.status.sheet_id_manager.remove_name(&name);
+                }
+            }
+        }
+
         let old_navigator = result.status.navigator.clone();
         let (nav_executor, nav_updated) = result.execute_navigator(payload.clone())?;
 
