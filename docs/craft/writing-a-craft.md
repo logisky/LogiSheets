@@ -159,15 +159,24 @@ export async function writeHello(workbook: Workbook, selection: Selection) {
 </body></html>
 ```
 
-### 5. Register it (in **two** places — see Gotchas)
+### 5. Register it (one place: `crafts.config.json`)
 
-Add to the `tools` array in `src/components/craft-panel/index.tsx`:
+Add your craft to the `registry` in `crafts.config.json` (repo root) — the
+single source of truth the panel, the publish step, and the desktop build all
+read:
 
-```ts
-{ label: 'Hello Craft', value: '/hello-craft/index.html' },
+```json
+"registry": {
+  …
+  "hello-craft": {"label": "Hello Craft"}
+}
 ```
 
-…and to the `crafts=(…)` list in `publish-crafts.sh`.
+That's it — it's now in the `default` distribution (`"crafts": "all"`), so the
+panel offers it and `publish-crafts.sh` ships it. To include it in a *specific*
+subset distribution, add its directory name to that distribution's `crafts`
+array. You do **not** edit `craft-panel/index.tsx` or `publish-crafts.sh` — both
+derive their lists from this file (see [Distributions](#distributions)).
 
 ### 6. Build & run
 
@@ -374,13 +383,14 @@ gone sheet). If you rebuild a board, either **switch the view to another sheet
 first** (`setSelection(0, …)`, yield a frame) then delete/recreate, or better —
 **reuse the sheet and just clear its cells** between rounds.
 
-### Register in BOTH places
+### Register in `crafts.config.json`, nowhere else
 
-A craft must be listed in the `tools` array in
-`src/components/craft-panel/index.tsx` **and** in `crafts=(…)` in
-`publish-crafts.sh`. Miss the second and it works in dev but 404s in
-production (webpack doesn't know about craft routes, so the copy step just skips
-it).
+A craft ships iff it's in the `registry` in `crafts.config.json` (and in the
+chosen distribution's craft set — `"all"` includes every registry entry). The
+panel list (webpack `DefinePlugin`) and the published `dist/` set
+(`publish-crafts.sh` via `scripts/craft-dist.mjs`) both derive from it, so they
+can't drift. Forgetting to register means the craft simply won't appear —
+there's no longer a two-list-out-of-sync 404 trap.
 
 ### Host APIs arrive asynchronously
 
@@ -402,6 +412,41 @@ yarn workspace <name> build   # rebuild the craft → copies to public/<name>/
 - If your craft needs a change in the Rust core or the engine, that's a bigger
   chain (`yarn wasm` → rebuild `logisheets-web` → rebuild the engine) — out of
   scope here.
+
+## Distributions (shipping a subset of crafts)
+
+`crafts.config.json` also defines **distributions** — named build targets that
+select which crafts ship, plus the desktop product name / bundle id / window
+title:
+
+```json
+"distributions": {
+  "default": { "productName": "LogiSheets", "identifier": "com.logisheets.desktop",
+               "defaultCraft": "factory-simulator-en", "crafts": "all" },
+  "games":   { "productName": "LogiSheets 小游戏", "identifier": "com.logisheets.games",
+               "windowTitle": "LogiSheets 小游戏", "defaultCraft": "sudoku",
+               "crafts": ["factory-simulator-zh", "fuse-beads", "sudoku", "minesweeper"] }
+}
+```
+
+Pick one at build time with the `CRAFT_DIST` env var (default: `default`):
+
+```bash
+CRAFT_DIST=games yarn build     # or: yarn build:games
+```
+
+Everything downstream honors it:
+
+- **webpack** injects that distribution's craft list into the panel
+  (`resolveCraftTools` → `DefinePlugin` → `__CRAFT_TOOLS__` / `__DEFAULT_CRAFT__`).
+- **`publish-crafts.sh`** ships only that set to `dist/` (via
+  `scripts/craft-dist.mjs crafts`), pruning others.
+- **The desktop build** (`.github/workflows/desktop.yaml`, `workflow_dispatch`
+  input `distribution`) builds `dist/` with `CRAFT_DIST` set, then
+  `tauri build -c "$(node scripts/craft-dist.mjs tauri)"` applies the product
+  name / id / title. Artifacts are named `logisheets-desktop-<distribution>-<os>`.
+
+Add a distribution = add an entry here. Nothing else to touch.
 
 ## Learn from the built-in crafts
 

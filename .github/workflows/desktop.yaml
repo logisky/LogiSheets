@@ -3,11 +3,21 @@ name: desktop build
 # Manual only. Builds the Tauri desktop app for macOS and Windows and uploads
 # the installers as workflow artifacts. Nothing is published or signed — this
 # produces unsigned bundles for testing (see packages/desktop/README.md).
+#
+# `distribution` selects which crafts the app ships and its product name /
+# bundle id / window title — see crafts.config.json (e.g. "default" = full app,
+# "games" = the mini-games edition).
 on:
   workflow_dispatch:
+    inputs:
+      distribution:
+        description: "Craft distribution to package (a key in crafts.config.json)"
+        default: "default"
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
+  CRAFT_DIST: ${{ inputs.distribution }}
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -98,14 +108,20 @@ jobs:
       - name: Install tauri CLI
         run: npm install -g @tauri-apps/cli@^2
 
+      # Product name / bundle id / window title for this distribution, merged
+      # over src-tauri/tauri.conf.json. Passed as a raw JSON string (not a file
+      # path) so there's no cross-platform path resolution to get wrong; the
+      # command-substitution output is one argument even with quotes inside.
+      # `shell: bash` so it's identical on the Windows runner.
       - name: Build desktop bundle
+        shell: bash
         working-directory: packages/desktop
-        run: tauri build
+        run: tauri build -c "$(node ../../scripts/craft-dist.mjs tauri)"
 
       - name: Upload bundle
         uses: actions/upload-artifact@v4
         with:
-          name: logisheets-desktop-${{ matrix.artifact }}
+          name: logisheets-desktop-${{ inputs.distribution }}-${{ matrix.artifact }}
           # macOS: bundle/dmg/*.dmg + bundle/macos/*.app
           # Windows: bundle/msi/*.msi + bundle/nsis/*.exe
           path: packages/desktop/src-tauri/target/release/bundle/**

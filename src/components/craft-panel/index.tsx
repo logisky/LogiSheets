@@ -53,50 +53,12 @@ export const CraftPanel = ({
     initialCraftSrc,
 }: CraftPanelProps) => {
     const [iframeSrc, setIframeSrc] = useState(
-        initialCraftSrc ?? '/factory-simulator-en/index.html'
+        initialCraftSrc ?? __DEFAULT_CRAFT__
     )
-    const tools = [
-        {
-            label: 'Factory Simulator (中文)',
-            value: '/factory-simulator-zh/index.html',
-        },
-        {
-            label: 'Factory Simulator (English)',
-            value: '/factory-simulator-en/index.html',
-        },
-        {
-            label: 'What-if Calculator',
-            value: '/what-if-calculator/index.html',
-        },
-        {
-            label: 'Markdown Table Extractor',
-            value: '/markdown-table-extractor/index.html',
-        },
-        {
-            label: 'Watson',
-            value: '/watson/index.html',
-        },
-        {
-            label: '电子拼豆 (Fuse Beads)',
-            value: '/fuse-beads/index.html',
-        },
-        {
-            label: '记忆挑战 (Memory Grid)',
-            value: '/memory-grid/index.html',
-        },
-        {
-            label: '关灯 (Lights Out)',
-            value: '/lights-out/index.html',
-        },
-        {
-            label: '数独 (Sudoku)',
-            value: '/sudoku/index.html',
-        },
-        {
-            label: '扫雷 (Minesweeper)',
-            value: '/minesweeper/index.html',
-        },
-    ] as const
+    // The craft list is injected at build time from crafts.config.json (webpack
+    // DefinePlugin → resolveCraftTools), selected by the CRAFT_DIST
+    // distribution. Add crafts / distributions there, not here.
+    const tools = __CRAFT_TOOLS__
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     // Crafts that need to react to the sheet selection subscribe here instead
     // of polling `window.selection`. The set persists across `inject()` re-runs
