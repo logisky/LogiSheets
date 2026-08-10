@@ -1,0 +1,21 @@
+{
+    "name": "sudoku",
+    "version": "0.1.0",
+    "description": "Sudoku on a LogiSheets grid — type into cells, conflicts checked live by spreadsheet formulas",
+    "main": "dist/sudoku.js",
+    "module": "dist/sudoku.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/sudoku&& mkdir -p ../../public/sudoku&& cp index.html ../../public/sudoku/index.html && cp dist/sudoku.js ../../public/sudoku/sudoku.js"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0",
+        "vite": "^5.0.0"
+    }
+}
