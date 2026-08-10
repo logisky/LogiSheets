@@ -31,7 +31,7 @@ function resolve() {
 }
 
 function tauriOverride(dist) {
-    return {
+    const o = {
         productName: dist.productName,
         identifier: dist.identifier,
         app: {
@@ -46,6 +46,13 @@ function tauriOverride(dist) {
             ],
         },
     }
+    // Let a distribution restrict bundle targets. Needed for non-ASCII product
+    // names: the Windows WiX/MSI bundler (light.exe) fails on CJK names, so a
+    // Chinese-named distribution ships NSIS (Unicode-safe) instead of MSI.
+    if (Array.isArray(dist.bundleTargets)) {
+        o.bundle = {targets: dist.bundleTargets}
+    }
+    return o
 }
 
 const cmd = process.argv[2]
