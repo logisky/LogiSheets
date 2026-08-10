@@ -1,0 +1,21 @@
+{
+    "name": "lights-out",
+    "version": "0.1.0",
+    "description": "Lights Out puzzle on a LogiSheets grid — toggle a cell + its neighbors, turn every light off",
+    "main": "dist/lights-out.js",
+    "module": "dist/lights-out.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/lights-out&& mkdir -p ../../public/lights-out&& cp index.html ../../public/lights-out/index.html && cp dist/lights-out.js ../../public/lights-out/lights-out.js"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0",
+        "vite": "^5.0.0"
+    }
+}

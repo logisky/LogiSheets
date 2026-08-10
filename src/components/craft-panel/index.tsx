@@ -84,6 +84,18 @@ export const CraftPanel = ({
             label: '记忆挑战 (Memory Grid)',
             value: '/memory-grid/index.html',
         },
+        {
+            label: '关灯 (Lights Out)',
+            value: '/lights-out/index.html',
+        },
+        {
+            label: '数独 (Sudoku)',
+            value: '/sudoku/index.html',
+        },
+        {
+            label: '扫雷 (Minesweeper)',
+            value: '/minesweeper/index.html',
+        },
     ] as const
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     // Crafts that need to react to the sheet selection subscribe here instead

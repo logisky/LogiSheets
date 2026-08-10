@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>数独</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      background: #f5f5f7; color: #111827; font-size: 13px;
+    }
+    h1 { margin: 0 0 4px; font-size: 18px; }
+    .subtitle { color: #6b7280; font-size: 12px; margin-bottom: 14px; }
+    .card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+    }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 8px 14px; font-size: 14px; border-radius: 999px;
+      border: 1px solid #d1d5db; background: #f9fafb; color: #111827; cursor: pointer;
+    }
+    .btn:hover { background: #e5e7eb; }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    select { padding: 6px 8px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; }
+    label.field { display: inline-flex; align-items: center; gap: 6px; color: #4b5563; }
+    .hint { color: #6b7280; font-size: 11px; line-height: 1.6; }
+    .status { font-size: 12px; color: #6b7280; margin-top: 8px; min-height: 16px; }
+    code { background: #f1f5f9; border-radius: 3px; padding: 0 3px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <h1>数独</h1>
+  <div class="subtitle">Sudoku — 直接在格子里填数字，冲突由表格公式实时检查</div>
+
+  <div class="card">
+    <div class="row">
+      <label class="field">难度
+        <select id="difficulty">
+          <option value="easy">简单</option>
+          <option value="medium" selected>中等</option>
+          <option value="hard">困难</option>
+        </select>
+      </label>
+      <button id="new-btn" class="btn btn-primary" type="button">新数独</button>
+    </div>
+    <div class="row" style="margin-top: 8px;">
+      <button id="clear-btn" class="btn" type="button">清空我的填写</button>
+      <button id="solve-btn" class="btn" type="button">显示答案</button>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
+
+  <div class="card">
+    <div class="hint">
+      在右侧「数独」表里，点空格直接<b>输入 1–9</b>（你的数字显示为蓝色，题目提示是黑色加粗）。<br/>
+      校验是<b>普通表格公式</b>，随你输入实时更新：<br/>
+      · <code>K</code> 列 = 每行检查，第 <code>11</code> 行 = 每列检查，<code>K11:M13</code> = 每宫检查；<br/>
+      · 每个检查格里就是 <code>=IF((COUNTIF(区域,1)&gt;1)+…+(COUNTIF(区域,9)&gt;1)&gt;0,"❌","✅")</code> —— 数一下每个数字是否重复；<br/>
+      · <code>K15</code> = 总状态（有冲突 / 填写中 / 完成）。<br/>
+      题目从完整终盘挖洞而来，<b>一定有解</b>（不保证唯一解）。
+    </div>
+  </div>
+
+  <script src="./sudoku.js"></script>
+  <script>
+    var SD = window.Sudoku
+    var wb = null
+    var boardSheetIdx = null
+    var current = null // { puzzle, solution }
+    var busy = false
+
+    function notify(level, msg) {
+      try { if (window.notifyCraft) window.notifyCraft(level, msg) } catch (e) {}
+      if (level === 'error') console.error('[sudoku]', msg)
+    }
+    function setStatus(t) { document.getElementById('status').textContent = t || '' }
+    function setBusy(b) {
+      busy = b
+      ;['new-btn', 'clear-btn', 'solve-btn', 'difficulty'].forEach(function (id) {
+        document.getElementById(id).disabled = b
+      })
+    }
+
+    async function newGame() {
+      if (busy || !wb) { if (!wb) notify('error', '工作簿尚未就绪'); return }
+      setBusy(true); setStatus('正在生成…')
+      try {
+        var diff = document.getElementById('difficulty').value
+        var res = await SD.setupNewGame(wb, diff)
+        boardSheetIdx = res.sheetIdx
+        current = res.puzzle
+        if (window.setSelection) window.setSelection(boardSheetIdx, 0, 0)
+        setStatus('已生成 · 在表格里填 1–9 吧')
+      } catch (e) {
+        notify('error', '生成失败：' + (e && e.message || e)); setStatus('')
+      } finally { setBusy(false) }
+    }
+
+    async function clearMine() {
+      if (busy || !wb || !current) return
+      setBusy(true)
+      try {
+        await SD.clearEntries(wb, boardSheetIdx, current.puzzle)
+        setStatus('已清空你的填写')
+      } catch (e) { notify('error', e) } finally { setBusy(false) }
+    }
+
+    async function showAnswer() {
+      if (busy || !wb || !current) return
+      setBusy(true)
+      try {
+        await SD.fillSolution(wb, boardSheetIdx, current)
+        setStatus('已显示一个解（绿色）')
+      } catch (e) { notify('error', e) } finally { setBusy(false) }
+    }
+
+    function whenHostReady(cb) {
+      var tries = 0
+      ;(function loop() {
+        if (window.workbook) { cb(); return }
+        if (tries++ > 600) { console.warn('[sudoku] workbook not injected'); return }
+        setTimeout(loop, 50)
+      })()
+    }
+
+    function init() {
+      SD = window.Sudoku
+      document.getElementById('new-btn').addEventListener('click', newGame)
+      document.getElementById('clear-btn').addEventListener('click', clearMine)
+      document.getElementById('solve-btn').addEventListener('click', showAnswer)
+      whenHostReady(function () {
+        wb = window.workbook
+        newGame() // lay out a first puzzle right away
+      })
+    }
+    window.addEventListener('DOMContentLoaded', init)
+  </script>
+</body>
+</html>

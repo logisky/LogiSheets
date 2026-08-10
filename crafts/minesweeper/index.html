@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>扫雷</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      background: #f5f5f7; color: #111827; font-size: 13px;
+    }
+    h1 { margin: 0 0 4px; font-size: 18px; }
+    .subtitle { color: #6b7280; font-size: 12px; margin-bottom: 14px; }
+    .card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+    }
+    .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .gauge { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .gauge small { font-size: 11px; font-weight: 500; color: #6b7280; margin-right: 3px; }
+    .face { font-size: 26px; margin-left: auto; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 8px 16px; font-size: 14px; border-radius: 999px;
+      border: 1px solid #d1d5db; background: #f9fafb; color: #111827; cursor: pointer;
+    }
+    .btn:hover { background: #e5e7eb; }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    select { padding: 6px 8px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; }
+    label.field { display: inline-flex; align-items: center; gap: 6px; color: #4b5563; }
+    .best { color: #6b7280; font-size: 12px; margin-top: 8px; }
+    .hint { color: #6b7280; font-size: 11px; line-height: 1.6; }
+    .msg { font-weight: 700; font-size: 14px; min-height: 18px; margin-top: 6px; }
+    .msg.win { color: #15803d; } .msg.lose { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <h1>扫雷</h1>
+  <div class="subtitle">Minesweeper — 左键翻开，右键插旗，找出所有非雷格</div>
+
+  <div class="card">
+    <div class="row">
+      <span class="gauge"><small>💣</small><span id="mines">0</span></span>
+      <span class="gauge"><small>⏱</small><span id="time">0</span>s</span>
+      <span id="face" class="face">🙂</span>
+    </div>
+    <div id="msg" class="msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <label class="field">难度
+        <select id="difficulty">
+          <option value="easy">初级 9×9 · 10</option>
+          <option value="medium">中级 16×16 · 40</option>
+          <option value="hard">高级 16×30 · 99</option>
+        </select>
+      </label>
+      <button id="new-btn" class="btn btn-primary" type="button">新游戏</button>
+    </div>
+    <div id="best" class="best"></div>
+  </div>
+
+  <div class="card">
+    <div class="hint">
+      在右侧「扫雷」表上：<b>左键</b>翻开格子，<b>右键</b>插旗/取消旗。<br/>
+      数字表示周围 8 格里的地雷数；翻到空白会自动展开一片。<br/>
+      首次点击一定安全。把所有非雷格翻开即获胜；踩到 💣 就结束。
+    </div>
+  </div>
+
+  <script src="./minesweeper.js"></script>
+  <script>
+    var MS = window.Minesweeper
+    var wb = null
+    var boardSheetIdx = null
+    var game = null
+    var progress = null
+    var busy = false
+    var timerId = null, startMs = 0
+
+    function notify(level, msg) {
+      try { if (window.notifyCraft) window.notifyCraft(level, msg) } catch (e) {}
+      if (level === 'error') console.error('[minesweeper]', msg)
+    }
+
+    function elapsedSec() { return startMs ? Math.floor((Date.now() - startMs) / 1000) : 0 }
+    function updateTime() { document.getElementById('time').textContent = elapsedSec() }
+    function startTimer() { if (timerId) return; startMs = Date.now(); timerId = setInterval(updateTime, 250) }
+    function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null } }
+
+    function updateGauges() {
+      document.getElementById('mines').textContent = game ? (game.mines - MS.flagsUsed(game)) : 0
+      var face = '🙂'
+      if (game && game.over) face = '😵'
+      else if (game && game.won) face = '😎'
+      document.getElementById('face').textContent = face
+    }
+    function renderBest() {
+      var b = progress.best, fmt = function (v) { return v == null ? '—' : v + 's' }
+      document.getElementById('best').textContent =
+        '最佳：初级 ' + fmt(b.easy) + ' · 中级 ' + fmt(b.medium) + ' · 高级 ' + fmt(b.hard)
+    }
+    function setMsg(t, cls) {
+      var el = document.getElementById('msg'); el.textContent = t || ''
+      el.className = 'msg' + (cls ? ' ' + cls : '')
+    }
+
+    function loadProgress() { progress = MS.parseProgress(window.getCraftState ? window.getCraftState() : undefined) }
+    function saveProgress() { if (window.setCraftState) window.setCraftState(MS.serializeProgress(progress)) }
+
+    // ---- input ------------------------------------------------------
+    function canvasHandler(e) {
+      if (boardSheetIdx === null || e.sheetIdx !== boardSheetIdx) return false
+      if (e.type === 'contextmenu') return true // suppress native menu on board
+      var onBoard = game && e.row != null && e.col != null &&
+        e.row >= 0 && e.row < game.rows && e.col >= 0 && e.col < game.cols
+      if (e.type === 'mousedown') {
+        if (onBoard && !game.over && !game.won) {
+          if (e.button === 2) doFlag(e.row, e.col)
+          else if (e.button === 0) doReveal(e.row, e.col)
+        }
+        return onBoard ? true : false
+      }
+      if (e.type === 'click' || e.type === 'dblclick' || e.type === 'mouseup')
+        return onBoard ? true : false
+      return false
+    }
+
+    async function doReveal(r, c) {
+      if (busy) return
+      busy = true
+      try {
+        var changed = MS.reveal(game, r, c)
+        if (game.started) startTimer()
+        if (changed.length) await MS.renderCells(wb, boardSheetIdx, game, changed)
+        updateGauges()
+        if (game.over) { stopTimer(); setMsg('💥 踩到雷了！点「新游戏」再来', 'lose') }
+        else if (game.won) { stopTimer(); onWin() }
+      } catch (e) { notify('error', e) } finally { busy = false }
+    }
+
+    async function doFlag(r, c) {
+      if (busy) return
+      busy = true
+      try {
+        var i = MS.toggleFlag(game, r, c)
+        if (i >= 0) await MS.renderCells(wb, boardSheetIdx, game, [i])
+        updateGauges()
+      } catch (e) { notify('error', e) } finally { busy = false }
+    }
+
+    function onWin() {
+      var t = elapsedSec(); updateTime()
+      var d = progress.difficulty
+      var prev = progress.best[d]
+      var record = prev == null || t < prev
+      if (record) { progress.best[d] = t; saveProgress(); renderBest() }
+      updateGauges()
+      setMsg('🎉 全部扫清！用时 ' + t + 's' + (record ? '（新纪录！）' : ''), 'win')
+    }
+
+    // ---- new game ---------------------------------------------------
+    async function newGame(diff) {
+      if (busy || !wb) { if (!wb) notify('error', '工作簿尚未就绪'); return }
+      busy = true
+      try {
+        stopTimer(); startMs = 0; updateTime()
+        progress.difficulty = diff
+        saveProgress()
+        game = MS.newGame(MS.DIFFICULTY[diff])
+        boardSheetIdx = await MS.setupBoard(wb, game)
+        if (window.setSelection) window.setSelection(boardSheetIdx, 0, 0)
+        setMsg('')
+        updateGauges(); renderBest()
+      } catch (e) {
+        notify('error', '生成失败：' + (e && e.message || e))
+      } finally { busy = false }
+    }
+
+    // ---- boot -------------------------------------------------------
+    function whenHostReady(cb) {
+      var tries = 0
+      ;(function loop() {
+        if (typeof window.onCanvasInput === 'function' && window.workbook) { cb(); return }
+        if (tries++ > 600) { console.warn('[minesweeper] host APIs not injected'); return }
+        setTimeout(loop, 50)
+      })()
+    }
+
+    function init() {
+      MS = window.Minesweeper
+      document.getElementById('difficulty').addEventListener('change', function (e) { newGame(e.target.value) })
+      document.getElementById('new-btn').addEventListener('click', function () {
+        newGame(document.getElementById('difficulty').value)
+      })
+      whenHostReady(function () {
+        wb = window.workbook
+        window.onCanvasInput(canvasHandler)
+        if (window.setSelectionSuppressed) window.setSelectionSuppressed(true)
+        loadProgress()
+        document.getElementById('difficulty').value = progress.difficulty
+        renderBest()
+        newGame(progress.difficulty)
+      })
+    }
+    window.addEventListener('DOMContentLoaded', init)
+  </script>
+</body>
+</html>

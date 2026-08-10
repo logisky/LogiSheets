@@ -10848,6 +10848,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lights-out@workspace:crafts/lights-out":
+  version: 0.0.0-use.local
+  resolution: "lights-out@workspace:crafts/lights-out"
+  dependencies:
+    logisheets-web: "workspace:*"
+    typescript: "npm:^5.5.0"
+    vite: "npm:^5.0.0"
+  languageName: unknown
+  linkType: soft
+
 "lilconfig@npm:2.1.0":
   version: 2.1.0
   resolution: "lilconfig@npm:2.1.0"
@@ -11887,6 +11897,16 @@ __metadata:
   checksum: 10c0/de9cc32be9996fd941e512248338e43407f63f6d497abe8441fa33447d922e927de54d4cc3c1a3c6d652857acd770389d5a3823f311a744132760ce2be15ccbf
   languageName: node
   linkType: hard
+
+"minesweeper@workspace:crafts/minesweeper":
+  version: 0.0.0-use.local
+  resolution: "minesweeper@workspace:crafts/minesweeper"
+  dependencies:
+    logisheets-web: "workspace:*"
+    typescript: "npm:^5.5.0"
+    vite: "npm:^5.0.0"
+  languageName: unknown
+  linkType: soft
 
 "minimalistic-assert@npm:^1.0.0":
   version: 1.0.1
@@ -15161,6 +15181,16 @@ __metadata:
   checksum: 10c0/a7128ad5a8ed72652c6eba46bed4f416521bc9745a460ef5741edc725252cebf36ee45e33a8615a7057403c93df0866ab9ee955960792db210bb80abd5ac6543
   languageName: node
   linkType: hard
+
+"sudoku@workspace:crafts/sudoku":
+  version: 0.0.0-use.local
+  resolution: "sudoku@workspace:crafts/sudoku"
+  dependencies:
+    logisheets-web: "workspace:*"
+    typescript: "npm:^5.5.0"
+    vite: "npm:^5.0.0"
+  languageName: unknown
+  linkType: soft
 
 "superjson@npm:^2.2.2":
   version: 2.2.6

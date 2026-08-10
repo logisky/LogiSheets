@@ -1,0 +1,21 @@
+{
+    "name": "minesweeper",
+    "version": "0.1.0",
+    "description": "Minesweeper on a LogiSheets grid — left-click to reveal, right-click to flag",
+    "main": "dist/minesweeper.js",
+    "module": "dist/minesweeper.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/minesweeper&& mkdir -p ../../public/minesweeper&& cp index.html ../../public/minesweeper/index.html && cp dist/minesweeper.js ../../public/minesweeper/minesweeper.js"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.0",
+        "vite": "^5.0.0"
+    }
+}

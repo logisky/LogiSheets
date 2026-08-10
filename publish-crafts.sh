@@ -13,8 +13,11 @@ crafts=(
     "factory-simulator-en"
     "factory-simulator-zh"
     "fuse-beads"
+    "lights-out"
     "markdown-table-extractor"
     "memory-grid"
+    "minesweeper"
+    "sudoku"
     "watson"
     "what-if-calculator"
 )

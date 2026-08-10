@@ -36,6 +36,7 @@ export default defineConfig({
                         link: '/runtime',
                     },
                     {text: 'Extend with crafts', link: '/craft/craft'},
+                    {text: 'Write your own craft', link: '/craft/writing-a-craft'},
                 ],
             },
         ],
