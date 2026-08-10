@@ -22,6 +22,13 @@ run() {
 run yarn install
 run cargo install --locked wasm-pack
 
+# --- Codegen: TS bindings from Rust ---
+# `packages/web/src/bindings` is gitignored, so a clean checkout has none and
+# `logisheets-web`'s build (which imports them) would fail. Generate first so
+# this script is self-contained from a fresh checkout (rust.yaml also runs this
+# separately for its clean-tree check; desktop.yaml relies on it being here).
+run cargo run --package buildtools --bin generate --all-features
+
 # --- JS / WASM builds (dependency order) ---
 run yarn workspace logisheets-web build
 run yarn workspace logisheets-core build
