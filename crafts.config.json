@@ -1,0 +1,31 @@
+{
+  "$comment": "Single source of truth for which crafts ship. `registry` maps a craft directory (under crafts/, served at /<dir>/index.html) to its panel label. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). Consumed by webpack (the panel's craft list, via DefinePlugin), publish-crafts.sh (what lands in dist/, via scripts/selected-crafts.mjs) and the desktop CI (product name/id/title, via scripts/tauri-conf.mjs). Add a craft: add it here + register nothing else. Add a distribution: add an entry here.",
+  "registry": {
+    "factory-simulator-zh": {"label": "Factory Simulator (中文)"},
+    "factory-simulator-en": {"label": "Factory Simulator (English)"},
+    "what-if-calculator": {"label": "What-if Calculator"},
+    "markdown-table-extractor": {"label": "Markdown Table Extractor"},
+    "watson": {"label": "Watson"},
+    "fuse-beads": {"label": "电子拼豆 (Fuse Beads)"},
+    "memory-grid": {"label": "记忆挑战 (Memory Grid)"},
+    "lights-out": {"label": "关灯 (Lights Out)"},
+    "sudoku": {"label": "数独 (Sudoku)"},
+    "minesweeper": {"label": "扫雷 (Minesweeper)"}
+  },
+  "distributions": {
+    "default": {
+      "productName": "LogiSheets",
+      "identifier": "com.logisheets.desktop",
+      "windowTitle": "LogiSheets",
+      "defaultCraft": "factory-simulator-en",
+      "crafts": "all"
+    },
+    "games": {
+      "productName": "LogiSheets 小游戏",
+      "identifier": "com.logisheets.games",
+      "windowTitle": "LogiSheets 小游戏",
+      "defaultCraft": "sudoku",
+      "crafts": ["factory-simulator-zh", "fuse-beads", "sudoku", "minesweeper"]
+    }
+  }
+}

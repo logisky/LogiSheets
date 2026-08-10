@@ -1,9 +1,33 @@
 import * as path from 'path'
-import {Configuration, ProvidePlugin} from 'webpack'
+import * as fs from 'fs'
+import {Configuration, ProvidePlugin, DefinePlugin} from 'webpack'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin'
 import 'webpack-dev-server'
+
+// Which crafts the panel offers is driven by crafts.config.json + the
+// CRAFT_DIST env var (default: "default"), so a single config selects the set
+// for the web build, the desktop bundle, and dev. See crafts.config.json.
+function resolveCraftTools(): {tools: {label: string; value: string}[]; defaultCraft: string} {
+    const cfg = JSON.parse(
+        fs.readFileSync(path.resolve(__dirname, 'crafts.config.json'), 'utf8')
+    )
+    const name = process.env.CRAFT_DIST || 'default'
+    const dist = cfg.distributions[name] ?? cfg.distributions.default
+    const dirs: string[] =
+        dist.crafts === 'all' ? Object.keys(cfg.registry) : dist.crafts
+    const tools = dirs.map((d: string) => ({
+        label: cfg.registry[d].label as string,
+        value: `/${d}/index.html`,
+    }))
+    const defaultCraft = dist.defaultCraft
+        ? `/${dist.defaultCraft}/index.html`
+        : tools[0]?.value ?? '/factory-simulator-en/index.html'
+    return {tools, defaultCraft}
+}
+
 module.exports = (env: NodeJS.ProcessEnv): Configuration => {
+    const craft = resolveCraftTools()
     return {
         entry: './src/index.tsx',
         mode: 'development',
@@ -81,6 +105,13 @@ module.exports = (env: NodeJS.ProcessEnv): Configuration => {
             // }),
             new ProvidePlugin({
                 React: 'react',
+            }),
+            // Inject the selected craft list + default craft (see
+            // resolveCraftTools). The craft panel reads these globals instead
+            // of a hardcoded array.
+            new DefinePlugin({
+                __CRAFT_TOOLS__: JSON.stringify(craft.tools),
+                __DEFAULT_CRAFT__: JSON.stringify(craft.defaultCraft),
             }),
         ],
 
