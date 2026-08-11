@@ -4,7 +4,7 @@
 #
 # Installs the JS deps and the wasm-pack toolchain, then builds every artifact
 # the test steps depend on: the web SDK, core, the WASM engine, the engine UI,
-# the webpack bundle, and the Node bindings + runtime. Kept as a script so CI
+# the Vite app bundle, and the Node bindings + runtime. Kept as a script so CI
 # and local reproduction run the exact same sequence in the exact same order
 # (deps are built before their dependents). Tests are run by the workflow as
 # separate steps so a failure points at the culprit.

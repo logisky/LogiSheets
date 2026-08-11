@@ -1,7 +1,7 @@
 // Ambient declarations for non-code imports (CSS/SCSS modules, stylesheets,
 // images). These used to come from `react-scripts`' type definitions; they are
-// kept explicit here now that the CRA/CRACO toolchain has been removed. Webpack
-// resolves the actual files via css-loader / style-loader / asset modules.
+// kept explicit here now that the CRA/CRACO toolchain has been removed. Vite
+// resolves the actual files (CSS modules, side-effect stylesheets, asset URLs).
 
 declare module '*.module.scss' {
     const classes: {readonly [key: string]: string}
