@@ -15,6 +15,17 @@ import {
 } from "./standable";
 import { BorderHelper } from "./border_helper";
 
+// Cell-value visibility. Module-level so a single worker drives all canvases;
+// toggled at runtime via setShowCellValues (see Engine.setShowCellValues).
+// When false, cell fills, borders and gridlines still render — only the cell
+// TEXT (values) is skipped. Mirrors the setGridVisibility flag in border_helper.
+const VALUE_SETTINGS = { showCellValues: true };
+
+/** Show/hide cell VALUES (text). Fills, borders and gridlines are unaffected. */
+export function setShowCellValues(show: boolean): void {
+  VALUE_SETTINGS.showCellValues = show;
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -370,6 +381,12 @@ export class Painter {
     const lineHeight = font.size * 1.3;
     const wrap = alignment?.wrapText === true;
 
+    // Draw the text only when actually rendering AND cell values are enabled.
+    // When hidden we still fall through to return the measured height, so the
+    // getAppropriateHeights (render=false) path and row-height math are
+    // unaffected — only the fillText calls are skipped.
+    const draw = render && VALUE_SETTINGS.showCellValues;
+
     // Wrapped cells break into multiple lines that fit the cell width (and
     // honor any manual `\n`). Unwrapped cells keep the single-line path.
     if (wrap && box.width > 4) {
@@ -387,7 +404,7 @@ export class Painter {
           startY = (box.position.startRow + box.position.endRow) / 2 - totalH / 2;
           break;
       }
-      if (render) {
+      if (draw) {
         this._ctx.save();
         this._clipToBox(box);
         this._ctx.textBaseline = "top";
@@ -402,7 +419,7 @@ export class Painter {
     const [ty, textBaseline] = box.textY(alignment?.vertical);
     this._ctx.textBaseline = textBaseline;
 
-    if (render) {
+    if (draw) {
       // Clip to the cell so overflowing text does not spill into neighbors.
       this._ctx.save();
       this._clipToBox(box);

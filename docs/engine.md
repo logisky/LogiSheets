@@ -69,6 +69,7 @@ All fields are optional (pass a `Partial<EngineConfig>`); defaults come from
 | `leftTopHeight` | `number` | Height of the top (column-letter) header panel, in pixels. |
 | `showHorizontalGridLines` | `boolean` | Draw horizontal grid lines (default `true`). Toggle at runtime with [`setShowGridLines`](#display-settings). |
 | `showVerticalGridLines` | `boolean` | Draw vertical grid lines (default `true`). Toggle at runtime with [`setShowGridLines`](#display-settings). |
+| `showCellValues` | `boolean` | Render cell values / text (default `true`). When `false`, fills, borders and grid lines still render but cell text is skipped. Toggle at runtime with [`setShowCellValues`](#display-settings). |
 | `defaultCellWidth` | `number` | Default column width, in points (pt). |
 | `defaultCellHeight` | `number` | Default row height, in points (pt). |
 | `scrollbarSize` | `number` | Scrollbar thickness, in pixels. |
@@ -268,14 +269,21 @@ shared config and re-render every mounted view of the workbook.
 | Method | Signature | Description |
 | --- | --- | --- |
 | `setShowGridLines` | `setShowGridLines(show: boolean): Promise<void>` | Show or hide the default cell grid lines across all views. Sets both `showHorizontalGridLines` and `showVerticalGridLines`. |
+| `setShowCellValues` | `setShowCellValues(show: boolean): Promise<void>` | Show or hide cell **values** (the text/number content) across all views. Fills, borders and grid lines keep rendering — only the cell text is toggled. |
+| `getShowCellValues` | `getShowCellValues(): boolean` | Whether cell values are currently rendered. |
 
 ```ts
 // e.g. wired to a "Show gridlines" toggle in your toolbar
 await engine.setShowGridLines(false) // hide; pass true to show again
+
+// Hide only the cell text (fills/borders/gridlines stay visible) — e.g. to
+// show a color-fill pattern without its labels.
+await engine.setShowCellValues(false)
 ```
 
-The initial value comes from [`EngineConfig`](#constructor-config-engineconfig)
-(`showHorizontalGridLines` / `showVerticalGridLines`, both `true` by default).
+The initial values come from [`EngineConfig`](#constructor-config-engineconfig):
+`showHorizontalGridLines` / `showVerticalGridLines` / `showCellValues`, all
+`true` by default.
 
 ## Editing data — `DataService`
 
@@ -295,6 +303,7 @@ Most methods return `Promise<T | ErrorMessage>` — check with `isErrorMessage()
 | `loadWorkbook` | `loadWorkbook(buf: Uint8Array, name: string): Promise<Grid \| ErrorMessage>` | Load `.xlsx` (worker side only — prefer `engine.loadFile` while mounted). |
 | `initOffscreen` | `initOffscreen(canvas: OffscreenCanvas): Promise<void \| ErrorMessage>` | Bind an offscreen canvas for rendering. |
 | `setShowGridLines` | `setShowGridLines(horizontal: boolean, vertical: boolean): void` | Show/hide grid lines (worker-global). Prefer `engine.setShowGridLines`, which also re-renders. |
+| `setShowCellValues` | `setShowCellValues(show: boolean): void` | Show/hide cell values / text (worker-global). Prefer `engine.setShowCellValues`, which also re-renders. |
 | `getCurrentSheetIdx` | `(): number` | Active sheet index. |
 | `setCurrentSheetIdx` | `(idx: number): void` | Set the active sheet. |
 | `getCurrentSheetId` | `(): number` | Stable id of the active sheet. |

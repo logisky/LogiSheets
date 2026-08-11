@@ -84,6 +84,12 @@ export class OffscreenClient {
     this._call(OffscreenRenderName.SetGridLines, { horizontal, vertical });
   }
 
+  // Worker-global cell-value visibility. Like setGridLines it's fire-and-forget
+  // (the caller re-renders); text visibility doesn't affect layout.
+  setShowCellValues(show: boolean): void {
+    this._call(OffscreenRenderName.SetShowCellValues, { show });
+  }
+
   // Worker-global zoom. Returns a promise so the caller can await the worker
   // adopting the new factor BEFORE re-rendering (unlike setGridLines, layout
   // depends on it).

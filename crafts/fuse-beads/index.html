@@ -143,6 +143,14 @@
   </div>
 
   <div class="card">
+    <div class="section-title">色号显示</div>
+    <div class="row">
+      <button id="toggle-values" class="btn" type="button">隐藏色号</button>
+      <span class="hint" style="margin:0">拼豆时会把色号写进每个格子，可作「按号涂色」图纸；这里切换画布上是否显示色号。</span>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="section-title">当前画笔</div>
     <div class="brushes">
       <div class="brush">
@@ -173,6 +181,8 @@
   <script>
     // ---- state -------------------------------------------------------------
     var boardSheetIdx = null
+    var boardFontPt = 8       // font size for the color code written into a cell
+    var showValues = true     // whether the engine renders the written codes
     // brush: null (none) | 'ERASER' | bead code string
     var leftBrush = null
     var rightBrush = null
@@ -191,6 +201,11 @@
       if (brush === 'ERASER') return null   // clear fill
       var b = FuseBeads.BEAD_BY_CODE[brush]
       return b ? b.hex : undefined
+    }
+    // The color code written into the cell. Eraser / no-brush write nothing;
+    // a real brush IS its bead code (e.g. "A1", "ZG8").
+    function brushCode(brush) {
+      return (brush === null || brush === 'ERASER') ? '' : brush
     }
 
     // ---- current-brush display --------------------------------------------
@@ -331,7 +346,7 @@
       var key = row + ':' + col
       if (key === lastKey) return true
       lastKey = key
-      FuseBeads.paintCell(window.workbook, boardSheetIdx, row, col, hex)
+      FuseBeads.paintCell(window.workbook, boardSheetIdx, row, col, hex, brushCode(brush), boardFontPt)
         .catch(function (e) { notify('error', '涂色失败：' + (e && e.message || e)) })
       return true
     }
@@ -377,6 +392,17 @@
       return false
     }
 
+    // ---- show / hide the written color codes -------------------------------
+    function applyShowValues() {
+      var btn = document.getElementById('toggle-values')
+      if (btn) btn.textContent = showValues ? '隐藏色号' : '显示色号'
+      if (window.setShowCellValues) window.setShowCellValues(showValues)
+    }
+    function toggleValues() {
+      showValues = !showValues
+      applyShowValues()
+    }
+
     // ---- start / setup -----------------------------------------------------
     function showRebuildConfirm(show) {
       document.getElementById('rebuild-confirm').style.display = show ? 'block' : 'none'
@@ -420,6 +446,7 @@
         }
         var idx = await FuseBeads.setupBoard(window.workbook, opts)
         boardSheetIdx = idx
+        boardFontPt = FuseBeads.labelFontPt(opts.sidePx)
         if (window.setSelection) window.setSelection(idx, 0, 0)
         notify('success', '拼豆板已就绪，开始拼豆吧！')
       } catch (e) {
@@ -444,6 +471,7 @@
       renderWorkspace()
       renderPalette()
       document.getElementById('start-btn').addEventListener('click', start)
+      document.getElementById('toggle-values').addEventListener('click', toggleValues)
       document.getElementById('confirm-rebuild').addEventListener('click', build)
       document.getElementById('cancel-rebuild').addEventListener('click', function () {
         showRebuildConfirm(false)
@@ -454,6 +482,10 @@
       whenHostReady(function () {
         window.onCanvasInput(canvasHandler)
         if (window.setSelectionSuppressed) window.setSelectionSuppressed(true)
+        // The engine's cell-value visibility is app-global and survives a craft
+        // reload; adopt its current state so the button label matches reality.
+        if (window.getShowCellValues) showValues = window.getShowCellValues()
+        applyShowValues()
       })
     }
 

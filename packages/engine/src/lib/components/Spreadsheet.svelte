@@ -132,6 +132,7 @@ let isDragging = false; // True while user is drag-selecting
         leftTopHeight: 24,
         showHorizontalGridLines: true,
         showVerticalGridLines: true,
+        showCellValues: true,
         defaultCellWidth: 6,
         defaultCellHeight: 25,
         scrollbarSize: 16,

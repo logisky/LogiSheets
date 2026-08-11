@@ -202,6 +202,10 @@ interface EngineConfig {
     leftTopHeight: number      // Height of column header panel (default: 24)
     showHorizontalGridLines: boolean  // Show horizontal grid lines (default: true)
     showVerticalGridLines: boolean    // Show vertical grid lines (default: true)
+    showCellValues: boolean    // Render cell values/text (default: true). When
+                               // false, fills/borders/gridlines still render
+                               // but cell text is skipped. Toggle at runtime
+                               // with engine.setShowCellValues(show).
     defaultCellWidth: number   // Default cell width in pt (default: 6)
     defaultCellHeight: number  // Default cell height in pt (default: 25)
     scrollbarSize: number      // Scrollbar thickness in pixels (default: 16)
