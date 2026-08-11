@@ -750,7 +750,7 @@ impl ContainerExecutor {
         cnt: usize,
         is_row: bool,
     ) -> Vec<NormalCellId> {
-        let sheet_container = self.container.data.get(&sheet_id);
+        let sheet_container = self.container.data.get(sheet_id);
         if sheet_container.is_none() {
             return Vec::new();
         }

@@ -46,7 +46,7 @@ where
     }
 
     pub fn get_id(&mut self, data: &T) -> I {
-        let r = self.data_to_id.get(&data);
+        let r = self.data_to_id.get(data);
         match r {
             Some(id) => id.clone(),
             None => self.registry(data.clone()),

@@ -18,7 +18,7 @@ impl RangeManager {
     }
 
     pub fn get_range_id_assert(&self, sheet_id: &SheetId, range: &Range) -> Option<RangeId> {
-        self.data.get(&sheet_id)?.get_range_id_assert(range)
+        self.data.get(sheet_id)?.get_range_id_assert(range)
     }
 
     pub fn get_range_id(&mut self, sheet_id: &SheetId, range: &Range) -> RangeId {
