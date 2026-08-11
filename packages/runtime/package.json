@@ -22,7 +22,8 @@
         "logisheets-core": "^1.9.0"
     },
     "devDependencies": {
-        "typescript": "^5.5.0",
+        "@types/node": "^18",
+        "typescript": "^6.0.0",
         "vitest": "3.2.6"
     }
 }

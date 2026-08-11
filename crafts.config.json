@@ -1,5 +1,5 @@
 {
-  "$comment": "Single source of truth for which crafts ship. `registry` maps a craft directory (under crafts/, served at /<dir>/index.html) to its panel label. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). Consumed by webpack (the panel's craft list, via DefinePlugin), publish-crafts.sh (what lands in dist/, via scripts/selected-crafts.mjs) and the desktop CI (product name/id/title, via scripts/tauri-conf.mjs). Add a craft: add it here + register nothing else. Add a distribution: add an entry here.",
+  "$comment": "Single source of truth for which crafts ship. `registry` maps a craft directory (under crafts/, served at /<dir>/index.html) to its panel label. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). Consumed by Vite (the panel's craft list, via `define` in vite.config.ts), publish-crafts.sh (what lands in dist/, via scripts/craft-dist.mjs) and the desktop CI (product name/id/title, via scripts/tauri-conf.mjs). Add a craft: add it here + register nothing else. Add a distribution: add an entry here.",
   "registry": {
     "factory-simulator-zh": {"label": "Factory Simulator (中文)"},
     "factory-simulator-en": {"label": "Factory Simulator (English)"},

@@ -1396,7 +1396,7 @@ mod tests {
             .status
             .navigator
             .sheet_navs
-            .get(&sheet_id_before)
+            .get(sheet_id_before)
             .expect("sheet nav present before save")
             .data
             .blocks
@@ -1423,7 +1423,7 @@ mod tests {
             .status
             .navigator
             .sheet_navs
-            .get(&sheet_id_after)
+            .get(sheet_id_after)
             .expect("sheet nav present after load")
             .data
             .blocks

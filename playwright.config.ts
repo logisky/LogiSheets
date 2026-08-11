@@ -5,7 +5,7 @@ import {defineConfig, devices} from '@playwright/test'
 const PORT = Number(process.env.E2E_PORT) || 4288
 const BASE_URL = `http://localhost:${PORT}`
 
-// The webpack dev server does NOT rebuild `logisheets-engine` — the app imports
+// The Vite dev server does NOT rebuild `logisheets-engine` — the app imports
 // its prebuilt `dist`. So by default we rebuild the engine before serving, so
 // the tests always run against the current engine source. Set `E2E_NO_BUILD=1`
 // to skip the rebuild for fast iteration when only the app (`src/`) changed.

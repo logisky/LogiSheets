@@ -164,7 +164,7 @@ impl Navigator {
 
     pub fn remove_block(&mut self, sheet_id: &SheetId, block_id: &BlockId) {
         let sheet_nav = self.get_sheet_nav_mut(sheet_id);
-        sheet_nav.data.blocks.remove(&block_id);
+        sheet_nav.data.blocks.remove(block_id);
         sheet_nav.cache = Default::default();
     }
 
@@ -188,7 +188,7 @@ impl Navigator {
                     .fetch_norm_cell_id(&sheet_id, row_idx, col_idx)
                     .unwrap();
                 let sheet_nav = self.get_sheet_nav_mut(sheet_id);
-                if let Some(bp) = sheet_nav.data.blocks.get_mut(&block_id) {
+                if let Some(bp) = sheet_nav.data.blocks.get_mut(block_id) {
                     bp.master = new_master;
                     sheet_nav.cache = Default::default();
                 }
@@ -197,7 +197,7 @@ impl Navigator {
     }
 
     pub fn delete_sheet(&mut self, sheet_id: &SheetId) {
-        self.sheet_navs.remove(&sheet_id);
+        self.sheet_navs.remove(sheet_id);
     }
 
     pub fn create_sheet(&mut self, sheet_id: SheetId) {
@@ -213,7 +213,7 @@ impl Navigator {
     ) -> Result<Vec<BlockId>, BasicError> {
         let sheet_nav = self
             .sheet_navs
-            .get(&sheet_id)
+            .get(sheet_id)
             .ok_or(BasicError::SheetIdNotFound(*sheet_id))?;
         let mut result: Vec<BlockId> = vec![];
         sheet_nav.data.blocks.iter().for_each(|(b_id, bp)| {
@@ -301,12 +301,12 @@ impl Navigator {
     }
 
     fn get_sheet_nav_mut(&mut self, sheet_id: &SheetId) -> &mut SheetNav {
-        if let Some(_) = self.sheet_navs.get(&sheet_id) {
-            self.sheet_navs.get_mut(&sheet_id).unwrap()
+        if let Some(_) = self.sheet_navs.get(sheet_id) {
+            self.sheet_navs.get_mut(sheet_id).unwrap()
         } else {
             self.sheet_navs
                 .insert(sheet_id.clone(), SheetNav::default());
-            self.sheet_navs.get_mut(&sheet_id).unwrap()
+            self.sheet_navs.get_mut(sheet_id).unwrap()
         }
     }
 

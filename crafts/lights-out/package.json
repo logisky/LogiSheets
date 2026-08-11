@@ -15,7 +15,7 @@
         "logisheets-web": "workspace:*"
     },
     "devDependencies": {
-        "typescript": "^5.5.0",
+        "typescript": "^6.0.0",
         "vite": "^5.0.0"
     }
 }
