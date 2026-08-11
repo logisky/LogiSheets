@@ -9,10 +9,9 @@
     "checkJs": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "baseUrl": ".",
     "paths": {
-      "$lib/*": ["src/lib/*"],
-      "$types/*": ["src/types/*"]
+      "$lib/*": ["./src/lib/*"],
+      "$types/*": ["./src/types/*"]
     },
     "strict": true,
     "noEmit": true,

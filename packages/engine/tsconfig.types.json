@@ -5,7 +5,10 @@
     "declarationDir": "./dist/types",
     "emitDeclarationOnly": true,
     "noEmit": false,
-    "outDir": "./dist/types"
+    "outDir": "./dist/types",
+    // TS6 no longer infers rootDir silently; it must be explicit (matches the
+    // common source dir TS5 computed, so the emitted layout is unchanged).
+    "rootDir": "./src"
   },
   "include": [
     "src/vite-env.d.ts",

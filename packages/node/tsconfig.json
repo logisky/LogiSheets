@@ -4,6 +4,12 @@
         "declaration": true,
         "module": "CommonJS",
         "moduleResolution": "Node",
+        // TS6 deprecates the classic "Node" (node10) resolution (removed in
+        // TS7). This package shares bundler-style, extensionless source with
+        // logisheets-web, so migrating to node16/nodenext would break its
+        // relative imports. Silence the deprecation for the 6.x bridge; revisit
+        // the resolution mode when moving to TypeScript 7.
+        "ignoreDeprecations": "6.0",
         "esModuleInterop": true,
         "noImplicitAny": true,
         "strict": true,
