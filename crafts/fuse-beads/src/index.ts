@@ -67,20 +67,77 @@ export function squareDims(sidePx: number): {width: number; height: number} {
     return {width: sidePx / 7, height: (sidePx * 72) / 96}
 }
 
-/** A single-cell fill payload. Pass hex = null to clear the fill (eraser). */
-export function fillPayload(
+/**
+ * 8-hex "standard ARGB" (opaque) font color that stays legible on a #RRGGBB
+ * fill — near-black on light beads, white on dark ones. Font/border colors in
+ * the core need 8 hex digits (AARRGGBB); a 6-digit value renders as no color.
+ */
+export function contrastArgb(hex: string): string {
+    const {red, green, blue} = hexToColor(hex)
+    // Perceived luminance (sRGB weights), 0 (black) … 1 (white).
+    const lum = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+    return lum > 0.6 ? 'FF1A1A1A' : 'FFFFFFFF'
+}
+
+/**
+ * Font size (pt) that keeps a 2–3 char bead code (e.g. "A1", "ZG8") inside a
+ * `sidePx`-square cell. The cell is `sidePx` px wide; a pt renders at ~1.33 px,
+ * so ~0.38·sidePx pt fits three chars with margin. Clamped to a sane range.
+ */
+export function labelFontPt(sidePx: number): number {
+    return Math.max(5, Math.min(14, Math.round(sidePx * 0.38)))
+}
+
+/**
+ * Payloads to paint one cell. When `hex` is set the cell is filled AND the bead
+ * `code` is written into it (centered, sized to fit, contrasting color) so the
+ * pattern doubles as a color-by-number chart. When `hex` is null (eraser) the
+ * fill and the written code are both cleared.
+ */
+export function paintPayloads(
     sheetIdx: number,
     row: number,
     col: number,
-    hex: string | null
-): EditPayload {
-    const ty = hex
-        ? {setPatternFill: {patternType: 'solid', fgColor: hexToColor(hex)}}
-        : {setPatternFill: {patternType: 'none'}}
-    return {
-        type: 'cellStyleUpdate',
-        value: {sheetIdx, row, col, ty},
-    } as EditPayload
+    hex: string | null,
+    code: string,
+    fontPt: number
+): EditPayload[] {
+    if (hex === null) {
+        return [
+            {
+                type: 'cellStyleUpdate',
+                value: {
+                    sheetIdx,
+                    row,
+                    col,
+                    ty: {setPatternFill: {patternType: 'none'}},
+                },
+            },
+            {type: 'cellInput', value: {sheetIdx, row, col, content: ''}},
+        ] as EditPayload[]
+    }
+    return [
+        {type: 'cellInput', value: {sheetIdx, row, col, content: code}},
+        {
+            type: 'cellStyleUpdate',
+            value: {
+                sheetIdx,
+                row,
+                col,
+                // One StyleUpdateType carries fill + font + alignment; the core
+                // applies every present field in a single update.
+                ty: {
+                    setPatternFill: {
+                        patternType: 'solid',
+                        fgColor: hexToColor(hex),
+                    },
+                    setFontSize: fontPt,
+                    setFontColor: contrastArgb(hex),
+                    setAlignment: {horizontal: 'center', vertical: 'center'},
+                },
+            },
+        },
+    ] as EditPayload[]
 }
 
 /** Paint one bead (or erase). Its own undoable step so Ctrl+Z lifts one bead. */
@@ -89,11 +146,13 @@ export async function paintCell(
     sheetIdx: number,
     row: number,
     col: number,
-    hex: string | null
+    hex: string | null,
+    code: string,
+    fontPt: number
 ): Promise<void> {
     await workbook.handleTransaction({
         transaction: {
-            payloads: [fillPayload(sheetIdx, row, col, hex)],
+            payloads: paintPayloads(sheetIdx, row, col, hex, code, fontPt),
             undoable: true,
             temp: false,
         },

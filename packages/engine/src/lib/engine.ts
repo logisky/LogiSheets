@@ -113,6 +113,8 @@ export class Engine {
       this._config.showHorizontalGridLines,
       this._config.showVerticalGridLines,
     );
+    // Likewise push the initial cell-value visibility to the worker.
+    this._dataService.setShowCellValues(this._config.showCellValues);
 
     // Auto-stamp schema ref names from `bindFormSchema` payloads onto
     // the host-side FieldManager so the block-interface widgets can
@@ -461,6 +463,26 @@ export class Engine {
         s.getGrid() ? s.render() : Promise.resolve(null),
       ),
     );
+  }
+
+  /**
+   * Show or hide cell VALUES (the text/number content) across every view of
+   * this workbook. Fills, borders and gridlines keep rendering. Updates the
+   * shared config and re-renders all mounted views.
+   */
+  async setShowCellValues(show: boolean): Promise<void> {
+    this._config.showCellValues = show;
+    this._dataService.setShowCellValues(show);
+    await Promise.all(
+      [...this._sessions].map((s) =>
+        s.getGrid() ? s.render() : Promise.resolve(null),
+      ),
+    );
+  }
+
+  /** Whether cell values (text) are currently rendered. */
+  getShowCellValues(): boolean {
+    return this._config.showCellValues;
   }
 
   // ========================================================================

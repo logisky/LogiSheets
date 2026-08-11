@@ -279,6 +279,27 @@ rapid second mousedown), **not** a `dblclick` event. To stop the formula editor
 opening while you paint, consume `mousedown` on your board (return `true`).
 :::
 
+### Display — `setShowCellValues`, `setCanvasZoom`
+
+Worker-global engine render toggles the craft can drive (they affect **every**
+view — the engine shares one worker/workbook):
+
+- `setCanvasZoom(factor)` / `getCanvasZoom()` — zoom the grid (1 = 100%, clamped
+  to `[0.5, 3]`).
+- `setShowCellValues(show)` / `getShowCellValues()` — show or hide cell **values**
+  (the text/number content). Fills, borders and grid lines keep rendering — only
+  the cell text is toggled. Cell values are still stored; this is display-only.
+
+```ts
+// Fill cells AND write a label into each, then let the user toggle the labels.
+// (fuse-beads does exactly this: it writes each bead's color code into the cell
+// so the pattern doubles as a color-by-number chart, with a "show/hide" button.)
+window.setShowCellValues(false) // hide the written labels; true to show again
+```
+
+Because these are worker-global and outlive an iframe reload, read the current
+state on load (`getShowCellValues()`) so your toggle's label matches reality.
+
 ### Persistence — `setCraftState` / `getCraftState` vs `craftStorage`
 
 - **`setCraftState(json)` / `getCraftState()`** — an opaque per-**document**

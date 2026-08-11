@@ -164,6 +164,14 @@ export class DataService {
   }
 
   /**
+   * Show/hide cell VALUES (text). Worker-global; the caller
+   * (Engine.setShowCellValues) re-renders the mounted views.
+   */
+  public setShowCellValues(show: boolean): void {
+    this._offscreen.setShowCellValues(show);
+  }
+
+  /**
    * Set the worker-global zoom factor. Returns a promise so the caller
    * (Engine.setZoom) can await the worker adopting it before re-rendering.
    */

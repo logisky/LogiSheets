@@ -245,6 +245,9 @@ export interface EngineConfig {
   showHorizontalGridLines: boolean;
   /** Show vertical grid lines */
   showVerticalGridLines: boolean;
+  /** Render cell values (text). When false, fills/borders/gridlines still
+   * render but cell text is skipped. */
+  showCellValues: boolean;
   /** Default cell width in pt */
   defaultCellWidth: number;
   /** Default cell height in pt */
@@ -258,6 +261,7 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   leftTopHeight: 24,
   showHorizontalGridLines: true,
   showVerticalGridLines: true,
+  showCellValues: true,
   defaultCellWidth: 6,
   defaultCellHeight: 25,
   scrollbarSize: 16,

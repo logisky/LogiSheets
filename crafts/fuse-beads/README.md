@@ -20,6 +20,11 @@ on a worksheet.
 - On the canvas: **left-click** paints the left color, **right-click** paints the
   right color, and dragging with a button held paints a continuous stroke.
   **Shift + wheel** zooms the canvas.
+- Every painted bead also gets its **color code written into the cell** (e.g.
+  `A7`, `H1`), centered, sized to fit the square, in a contrasting color (white
+  on dark beads, near-black on light) — so the pattern doubles as a
+  **color-by-number chart**. **色号显示** toggles whether those codes are shown on
+  the canvas (the codes are always stored; this only affects display).
 
 Each painted bead is its own undoable step (`Ctrl+Z` lifts one bead).
 
@@ -30,10 +35,16 @@ the board-setup / paint transactions). The UI and the canvas wiring live in
 `index.html`. It uses the host capabilities injected onto the craft iframe:
 
 - `window.workbook.handleTransaction(...)` — `createSheet` / `deleteSheet`,
-  `setColWidth` / `setRowHeight`, and `cellStyleUpdate` (`setPatternFill`).
+  `setColWidth` / `setRowHeight`, `cellInput` (the color code) and one combined
+  `cellStyleUpdate` (`setPatternFill` + `setFontSize` + `setFontColor` +
+  `setAlignment`). The core applies every field of a `StyleUpdateType` in one
+  update, so a bead's fill and its label styling ride in a single payload.
 - `window.onCanvasInput(handler)` — intercept mouse/wheel events on the canvas
   (added in commit `4c20df3`).
 - `window.setCanvasZoom` / `window.getCanvasZoom` — canvas zoom.
+- `window.setShowCellValues` / `window.getShowCellValues` — show/hide the written
+  color codes (a worker-global engine render toggle; drives the **色号显示**
+  button, which adopts the engine's current state on load).
 - `window.setSelection(sheetIdx, row, col)` — jump to the new sheet.
 
 ## Palette

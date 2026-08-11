@@ -9,7 +9,7 @@ import type { IWorkbookWorker, Result } from "./types";
 import { OffscreenRenderName } from "./types";
 import { ViewManager } from "./view_manager";
 import type { CellView } from "./view_manager";
-import { Painter } from "./painter";
+import { Painter, setShowCellValues } from "./painter";
 import { Pool } from "./pool";
 import { setGridVisibility } from "./border_helper";
 import { setZoomFactor } from "./standable";
@@ -95,6 +95,15 @@ export class OffscreenWorkerService {
    */
   public setZoom(zoom: number): void {
     setZoomFactor(zoom);
+  }
+
+  /**
+   * Show/hide cell VALUES (text). Module-level in painter, so one call affects
+   * every canvas this worker renders. Fills/borders/gridlines are untouched.
+   * Callers re-render.
+   */
+  public setShowCellValues(show: boolean): void {
+    setShowCellValues(show);
   }
 
   public resize(
@@ -399,6 +408,7 @@ export class OffscreenWorkerService {
       m !== OffscreenRenderName.Dispose &&
       m !== OffscreenRenderName.SetGridLines &&
       m !== OffscreenRenderName.SetZoom &&
+      m !== OffscreenRenderName.SetShowCellValues &&
       !this._canvases.has(canvasId)
     ) {
       this._ctx.postMessage({
@@ -441,6 +451,9 @@ export class OffscreenWorkerService {
           break;
         case OffscreenRenderName.SetZoom:
           result = this.setZoom(args.zoom);
+          break;
+        case OffscreenRenderName.SetShowCellValues:
+          result = this.setShowCellValues(args.show);
           break;
         default:
           this._ctx.postMessage({

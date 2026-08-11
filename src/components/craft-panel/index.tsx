@@ -176,6 +176,13 @@ export const CraftPanel = ({
         // consume Ctrl+wheel and call setCanvasZoom to drive zoom itself.
         win.setCanvasZoom = (factor: number) => engine.setZoom(factor)
         win.getCanvasZoom = (): number => engine.getZoom()
+        // Show/hide cell VALUES (text) across every view. Worker-global, like
+        // zoom/gridlines — fills, borders and gridlines keep rendering; only the
+        // cell text is toggled. A craft that writes labels into cells (e.g.
+        // fuse-beads writing the bead code) uses this to switch them on/off.
+        win.setShowCellValues = (show: boolean) =>
+            engine.setShowCellValues(!!show)
+        win.getShowCellValues = (): boolean => engine.getShowCellValues()
         // Let a craft that doesn't use the cell selection (e.g. a painting
         // craft like fuse-beads) hide it while active. While suppressed the
         // host forces the selection to the empty "none" state, so no highlight
