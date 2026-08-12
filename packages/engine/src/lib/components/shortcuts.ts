@@ -44,6 +44,9 @@ export type ShortcutId =
     | 'jumpDown'
     | 'jumpLeft'
     | 'jumpRight'
+    // Sheet navigation
+    | 'nextSheet'
+    | 'prevSheet'
     // Ctrl/⌘ chords
     | 'copy'
     | 'cut'
@@ -133,6 +136,21 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
         key: 'ArrowRight',
         primary: true,
         shift: 'any',
+    },
+    // Ctrl/⌘+PageDown / PageUp: switch to the next / previous sheet (Excel /
+    // Google Sheets convention). The grid captures these while focused, so the
+    // browser's own tab switch is suppressed only when you're in the sheet.
+    {
+        id: 'nextSheet',
+        description: 'Next sheet',
+        key: 'PageDown',
+        primary: true,
+    },
+    {
+        id: 'prevSheet',
+        description: 'Previous sheet',
+        key: 'PageUp',
+        primary: true,
     },
     // ---- Ctrl/⌘ chords ----
     {id: 'copy', description: 'Copy', key: 'c', primary: true},

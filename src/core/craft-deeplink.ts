@@ -19,6 +19,10 @@ const CRAFT_ALIASES: Record<string, string> = {
     'factory-simulator-zh': '/factory-simulator-zh/index.html',
     'what-if-calculator': '/what-if-calculator/index.html',
     'markdown-table-extractor': '/markdown-table-extractor/index.html',
+    'fuse-beads': '/fuse-beads/index.html',
+    'lights-out': '/lights-out/index.html',
+    'memory-grid': '/memory-grid/index.html',
+    sudoku: '/sudoku/index.html',
     watson: '/watson/index.html',
 }
 
