@@ -1529,6 +1529,8 @@ let isDragging = false; // True while user is drag-selecting
         jumpDown: () => jumpToBoundary('down'),
         jumpLeft: () => jumpToBoundary('left'),
         jumpRight: () => jumpToBoundary('right'),
+        nextSheet: () => switchSheet(activeSheet + 1),
+        prevSheet: () => switchSheet(activeSheet - 1),
         bold: () => toggleFontStyle('bold'),
         italic: () => toggleFontStyle('italic'),
         underline: () => toggleFontStyle('underline'),
@@ -1903,6 +1905,28 @@ let isDragging = false; // True while user is drag-selecting
         render("setActiveSheet")
     }
 
+    /**
+     * User-initiated sheet switch, shared by the sheet tabs and the
+     * Ctrl/⌘+PageUp/PageDown shortcuts. No-ops when `idx` is out of range or
+     * already active. Like setActiveSheet it saves/restores the per-sheet
+     * anchor, but it also fires onActiveSheetChange and refreshes the document
+     * dimensions — matching exactly what clicking a tab does.
+     */
+    function switchSheet(idx: number) {
+        if (!dataService) return
+        if (idx < 0 || idx >= sheets.length || idx === activeSheet) return
+        sheetAnchors.set(activeSheet, { x: anchorX, y: anchorY })
+        activeSheet = idx
+        onActiveSheetChange?.(idx)
+        const restored = sheetAnchors.get(idx)
+        anchorX = restored?.x ?? 0
+        anchorY = restored?.y ?? 0
+        pendingAnchorX = anchorX
+        pendingAnchorY = anchorY
+        render("switchSheet")
+        updateDocumentDimensions()
+    }
+
     export function getDataService(): DataService | null {
         return dataService
     }
@@ -2121,20 +2145,7 @@ let isDragging = false; // True while user is drag-selecting
         <SheetTabs
             {sheets}
             {activeSheet}
-            onActiveSheetChange={(idx) => {
-                // Same flicker-avoidance as setActiveSheet — see comment
-                // on sheetAnchors.
-                sheetAnchors.set(activeSheet, { x: anchorX, y: anchorY })
-                activeSheet = idx
-                onActiveSheetChange?.(idx)
-                const restored = sheetAnchors.get(idx)
-                anchorX = restored?.x ?? 0
-                anchorY = restored?.y ?? 0
-                pendingAnchorX = anchorX
-                pendingAnchorY = anchorY
-                render("sheetTabs")
-                updateDocumentDimensions()
-            }}
+            onActiveSheetChange={(idx) => switchSheet(idx)}
             onTransaction={async (tx) => {
                 if (!dataService) return true
                 const result = await dataService.handleTransaction(tx)
