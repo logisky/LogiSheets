@@ -91,9 +91,17 @@ function hexToRgb(hex: string): {red: number; green: number; blue: number} {
  */
 export function contrastText(hex: string): string {
     const {red, green, blue} = hexToRgb(hex)
-    // perceived luminance
-    const lum = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
-    return lum > 0.6 ? 'FF111111' : 'FFFFFFFF'
+    // WCAG relative luminance (gamma-corrected sRGB). A raw 0.299/0.587/0.114
+    // average misjudges saturated mid-tones — it picks WHITE on cyan/green/blue,
+    // where black actually has far higher contrast (white-on-#00ACC1 is only
+    // 2.7:1). Compare both text colors and take the more legible; the
+    // black/white crossover is at L ≈ 0.179 (= sqrt(1.05·0.05) − 0.05).
+    const lin = (c: number): number => {
+        const s = c / 255
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+    }
+    const L = 0.2126 * lin(red) + 0.7152 * lin(green) + 0.0722 * lin(blue)
+    return L > 0.179 ? 'FF111111' : 'FFFFFFFF'
 }
 
 // ---- transactions ------------------------------------------------------
