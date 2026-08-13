@@ -6,7 +6,7 @@
 [package]
 name = "logisheets"
 version.workspace = true
-description = "A web spreadsheets application written in Rust and Typescript"
+description = "A web-based spreadsheet application written in Rust and TypeScript"
 license.workspace = true
 publish = false
 edition.workspace = true

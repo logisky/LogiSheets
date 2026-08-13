@@ -3,7 +3,7 @@
     "author": "Jeremy He<yiliang.he@qq.com>",
     "license": "MIT",
     "version": "1.10.0",
-    "description": "LogiSheets spreadsheet engine - a high-performance spreadsheet rendering and editing library",
+    "description": "Embeddable spreadsheet UI component for LogiSheets — an Excel-like, canvas-rendered data grid with formulas and .xlsx (Excel) import/export, powered by a Rust + WebAssembly engine in a Web Worker.",
     "type": "module",
     "main": "./dist/logisheets-engine.umd.js",
     "module": "./dist/logisheets-engine.es.js",
@@ -32,8 +32,13 @@
         "spreadsheet",
         "excel",
         "xlsx",
+        "data-grid",
+        "spreadsheet-component",
         "canvas",
-        "webworker"
+        "webworker",
+        "svelte",
+        "formula",
+        "wasm"
     ],
     "files": [
         "dist"

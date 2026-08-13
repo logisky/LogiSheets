@@ -1,3 +1,7 @@
+---
+description: Run LogiSheets headlessly on Node.js with logisheets-runtime — the server-side spreadsheet engine with a JSON-RPC server, no browser or canvas required.
+---
+
 # Headless on Node (`logisheets-runtime`)
 
 `logisheets-runtime` is the **server-side counterpart of the browser app**: the

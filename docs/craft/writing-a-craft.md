@@ -1,3 +1,7 @@
+---
+description: "Tutorial: build a LogiSheets craft from scratch — the host API, common patterns, and gotchas for embedding a custom app inside a spreadsheet."
+---
+
 # Writing a craft
 
 A **craft** is a small app that lives inside LogiSheets and drives the

@@ -1,6 +1,29 @@
 {
     "name": "logisheets-formula-editor",
     "version": "1.10.0",
+    "description": "Excel-style formula editor for spreadsheets — syntax highlighting, per-reference cell-ref coloring, and function autocomplete, built on CodeMirror 6. Ships a React component and a framework-agnostic core.",
+    "author": "Jeremy He",
+    "license": "MIT",
+    "keywords": [
+        "formula",
+        "formula-editor",
+        "excel",
+        "spreadsheet",
+        "codemirror",
+        "syntax-highlighting",
+        "autocomplete",
+        "react",
+        "cell-reference"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/logisky/LogiSheets.git",
+        "directory": "packages/formula-editor"
+    },
+    "bugs": {
+        "url": "https://github.com/logisky/LogiSheets/issues"
+    },
+    "homepage": "https://github.com/logisky/LogiSheets",
     "type": "module",
     "main": "./dist/index.js",
     "module": "./dist/index.js",

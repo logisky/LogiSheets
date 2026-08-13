@@ -1,3 +1,7 @@
+---
+description: Embed an Excel-like spreadsheet UI with logisheets-engine — a canvas-rendered, Web Worker-powered data grid with formulas and .xlsx import/export.
+---
+
 # Embed the spreadsheet UI (`logisheets-engine`)
 
 `logisheets-engine` is a ready-made, interactive spreadsheet UI. Where the

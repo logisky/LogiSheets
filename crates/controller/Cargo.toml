@@ -3,8 +3,10 @@ name = "logisheets_controller"
 version.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "the core of LogiSheets"
+description = "Core spreadsheet engine for LogiSheets: formula evaluation, dependency tracking, and undo/redo."
 edition.workspace = true
+repository = "https://github.com/logisky/LogiSheets"
+keywords = ["excel", "spreadsheet", "xlsx", "formula", "ooxml"]
 
 [dependencies]
 thiserror = { workspace = true }

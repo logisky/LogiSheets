@@ -1,3 +1,7 @@
+---
+description: Native Excel chart support in LogiSheets — read, render, create, edit and save OOXML charts (c:chartSpace) with lossless .xlsx round-tripping.
+---
+
 # Charts
 
 Native Excel chart (`c:chartSpace`) support: read, render, create, edit, and
