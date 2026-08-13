@@ -102,7 +102,6 @@ where
         .unwrap_or(upper.as_str());
     match normalized {
         "#CRITBINOM" => distribution::binom::calc_inv(args, fetcher),
-        // --- functions added alongside the douyoushu runtime work ---
         "ATAN2" => more_math::calc_atan2(args, fetcher),
         "CLEAN" => text::calc_clean(args, fetcher),
         "CORREL" => regression::calc_correl(args, fetcher),
@@ -200,7 +199,6 @@ where
         "COUPPCD" => bonds::couppcd::calc(args, fetcher),
         "CSC" => scalar_number::calc_csc(args, fetcher),
         "CUMIPMT" => cumipmt::cumipmt(args, fetcher),
-        // --- Tier-1 finance / date / aggregate family (2026-07-09) ---
         "CUMPRINC" => finance::calc_cumprinc(args, fetcher),
         "DATEDIF" => datefns::calc_datedif(args, fetcher),
         "DAYS360" => datefns::calc_days360(args, fetcher),
