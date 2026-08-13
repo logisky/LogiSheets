@@ -1,0 +1,35 @@
+# LogiSheets
+
+> LogiSheets is a web-based spreadsheet engine written in Rust and compiled to WebAssembly. It reads, edits, and writes real `.xlsx` (Excel) files — formulas, styles, merged cells, and multiple sheets — with the exact same engine running natively in Rust, on Node.js, and in the browser. It is an open-source, programmable alternative to libraries like SheetJS and ExcelJS, with a full dependency-tracked recalculation engine and an embeddable spreadsheet UI.
+
+Key ideas that set it apart:
+
+- **One engine everywhere.** The core is Rust → WASM; the browser app and the headless Node runtime share it with no reimplementation.
+- **Blocks (structured data).** A `Block` keeps a region of cells together as a schema-aware table addressed by stable IDs, so inserts and deletes never break references. Fields carry types, validation, uniqueness, and required constraints.
+- **Crafts (plugins).** Self-contained mini-apps written in plain JS/TS that extend a workbook through the same public API the core uses, turning a spreadsheet into a real application.
+- **AI-native.** `logician` is an agent toolkit that operates workbooks through structured LLM tools; it powers Watson, the in-app assistant, and runs on Node too.
+
+## Documentation
+
+- [What is LogiSheets?](https://docs.logisheets.com/introduction.html): Overview of the project, its design goals, and how the Rust + WASM engine runs natively, on Node, and in the browser.
+- [Read & write spreadsheets (SDK)](https://docs.logisheets.com/usage.html): Core API for scripting a headless `Workbook` from Rust and TypeScript — cells, formulas, styles, blocks, transactions, and undo/redo.
+- [Embed the spreadsheet UI (logisheets-engine)](https://docs.logisheets.com/engine.html): Drop an Excel-like, canvas-rendered spreadsheet grid into any web app; Web Worker + OffscreenCanvas architecture, multiple synchronized views.
+- [Headless on Node (logisheets-runtime)](https://docs.logisheets.com/runtime.html): Server-side spreadsheet runtime that manages many workbooks and exposes a JSON-RPC server, with no browser or canvas.
+- [Charts](https://docs.logisheets.com/chart.html): Native Excel chart (OOXML `c:chartSpace`) support — read, render, create, edit, and save charts with lossless `.xlsx` round-tripping.
+- [Crafts](https://docs.logisheets.com/craft/craft.html): The plugin system — what a craft is, how it is sandboxed, and the host API it is given.
+- [Writing a craft](https://docs.logisheets.com/craft/writing-a-craft.html): Step-by-step tutorial for building a craft from scratch, with patterns and gotchas.
+
+## Packages
+
+- [logisheets-web (npm)](https://www.npmjs.com/package/logisheets-web): Browser SDK — the Rust + WASM workbook API for reading/writing `.xlsx` entirely in the browser.
+- [logisheets (npm)](https://www.npmjs.com/package/logisheets): Node.js bindings for the same engine, no browser required.
+- [logisheets-engine (npm)](https://www.npmjs.com/package/logisheets-engine): Embeddable, canvas-rendered spreadsheet UI component.
+- [logisheets-core (npm)](https://www.npmjs.com/package/logisheets-core): UI-free, engine-neutral workbook operation logic shared by every host.
+- [logisheets-runtime (npm)](https://www.npmjs.com/package/logisheets-runtime): Headless Node spreadsheet runtime built on logisheets-core.
+- [logisheets-formula-editor (npm)](https://www.npmjs.com/package/logisheets-formula-editor): CodeMirror 6 formula editor with syntax highlighting and autocomplete (React + framework-agnostic core).
+- [logisheets-rs (crates.io)](https://crates.io/crates/logisheets-rs): The public Rust API for the spreadsheet engine.
+
+## Optional
+
+- [GitHub repository](https://github.com/logisky/LogiSheets): Source code, issues, and the full monorepo.
+- [Live demo — Factory Simulator](https://www.logisheets.com/?craft=factory-simulator): An interactive simulation game built entirely on LogiSheets (Blocks, live formulas, clickable cells).

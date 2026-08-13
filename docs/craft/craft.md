@@ -1,3 +1,7 @@
+---
+description: Crafts are plugins that turn a LogiSheets spreadsheet into a real application — sandboxed mini-apps driven by the workbook's public API.
+---
+
 # Craft
 
 `Craft` is a core concept of `LogiSheets`. To be general, `craft` is

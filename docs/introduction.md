@@ -1,3 +1,7 @@
+---
+description: What LogiSheets is — a Rust + WebAssembly spreadsheet engine that reads, edits and writes real .xlsx (Excel) files natively, on Node.js and in the browser.
+---
+
 # What is LogiSheets?
 
 LogiSheets is a web-based spreadsheet engine, written in Rust and compiled to

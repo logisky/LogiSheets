@@ -3,7 +3,7 @@
   "author": "Jeremy He<yiliang.he@qq.com>",
   "license": "MIT",
   "version": "1.10.0",
-  "description": "Read and write the xlsx files",
+  "description": "Browser SDK for LogiSheets — a Rust + WebAssembly spreadsheet engine that reads, edits, and writes real .xlsx (Excel) files (formulas, styles, and structure preserved) entirely in the browser.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -30,7 +30,15 @@
   },
   "keywords": [
     "xlsx",
-    "spreadsheets"
+    "excel",
+    "spreadsheet",
+    "spreadsheet-engine",
+    "wasm",
+    "webassembly",
+    "rust",
+    "browser",
+    "formula",
+    "ooxml"
   ],
   "files": [
     "dist",

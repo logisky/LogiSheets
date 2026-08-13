@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_lexer4fmt"
-description = "the lexer for excel formula, used for formula display and suggestions"
+description = "Excel formula lexer for LogiSheets, specialized for formula display and autocomplete suggestions."
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

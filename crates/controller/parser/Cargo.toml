@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_parser"
-description = "the parser of excel formula"
+description = "Parser for Excel formulas, used by the LogiSheets spreadsheet engine."
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

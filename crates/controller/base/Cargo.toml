@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_base"
-description = "some basic definitions for LogiSheets"
+description = "Shared base types and definitions for the LogiSheets spreadsheet engine."
 version.workspace = true
 authors.workspace = true
 license.workspace = true

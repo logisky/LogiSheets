@@ -3,8 +3,14 @@
 ![Logo](./docs/public/logo/logisheets.jpg)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![npm: logisheets-web](https://img.shields.io/npm/v/logisheets-web?label=logisheets-web&logo=npm)](https://www.npmjs.com/package/logisheets-web)
+[![npm: logisheets (node)](https://img.shields.io/npm/v/logisheets?label=logisheets%20%28node%29&logo=npm)](https://www.npmjs.com/package/logisheets)
+[![crates.io: logisheets-rs](https://img.shields.io/crates/v/logisheets-rs?label=logisheets-rs&logo=rust)](https://crates.io/crates/logisheets-rs)
+[![Docs](https://img.shields.io/badge/docs-logisheets.com-brightgreen)](https://docs.logisheets.com/)
 
 **From sheets to systems.** LogiSheets is a web-based spreadsheet built on a Rust engine compiled to WebAssembly — it reads, manipulates, and writes real `.xlsx` files, and runs the same engine in the browser and on Node. But it's more than a grid: with **structured data (Blocks)** that carry schema, types, and validation, and a **plugin system (Crafts)** that turns workbooks into real applications, a LogiSheets spreadsheet stops being a static document and becomes a building block of an actual system.
+
+> An **open-source spreadsheet library** and **Excel (`.xlsx`) engine** for **JavaScript / TypeScript** and **Rust** — read, write, and evaluate spreadsheets with **formula** support in the **browser** (via **WebAssembly**), on **Node.js**, or natively in Rust. A programmable alternative to SheetJS / ExcelJS with a full recalculation engine and an embeddable UI.
 
 ### ▶ See it in action — [Factory Simulator live demo](https://www.logisheets.com/?craft=factory-simulator)
 

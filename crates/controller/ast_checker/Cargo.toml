@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_astchecker"
-description = "validate the arguments in ast"
+description = "Validates Excel formula AST arguments for the LogiSheets spreadsheet engine."
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

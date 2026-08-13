@@ -1,10 +1,12 @@
 [package]
 name = "logisheets_workbook"
-description = "Tools for LogiSheets to unarchive and write .xlsx file"
+description = "Read and write .xlsx (Excel / OOXML) files for LogiSheets."
 authors.workspace = true
 edition.workspace = true
 version.workspace = true
 license.workspace = true
+repository = "https://github.com/logisky/LogiSheets"
+keywords = ["excel", "xlsx", "ooxml", "spreadsheet", "parser"]
 
 [dependencies]
 regex = { workspace = true }

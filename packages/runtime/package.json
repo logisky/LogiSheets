@@ -17,6 +17,27 @@
     ],
     "author": "Jeremy He",
     "license": "MIT",
+    "keywords": [
+        "spreadsheet",
+        "xlsx",
+        "excel",
+        "headless",
+        "nodejs",
+        "server",
+        "wasm",
+        "rust",
+        "formula",
+        "workbook"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/logisky/LogiSheets.git",
+        "directory": "packages/runtime"
+    },
+    "bugs": {
+        "url": "https://github.com/logisky/LogiSheets/issues"
+    },
+    "homepage": "https://github.com/logisky/LogiSheets",
     "dependencies": {
         "logisheets": "^1.10.0",
         "logisheets-core": "^1.10.0"

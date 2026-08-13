@@ -7,7 +7,7 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "compare 2 .xml files and show their differences"
-repository = "https://github.com/logisky/LogiSheets/crates/xmldiff"
+repository = "https://github.com/logisky/LogiSheets"
 
 [dependencies]
 quick-xml = { workspace = true, features = ["serialize"] }

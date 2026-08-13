@@ -1,6 +1,6 @@
 [package]
 name = "logisheets_lexer"
-description = "the lexer for excel formula"
+description = "Lexer for Excel formulas, used by the LogiSheets spreadsheet engine."
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
