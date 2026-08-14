@@ -1172,6 +1172,7 @@ export const Toolbar = observer(
                             <span>
                                 <IconButton
                                     size="small"
+                                    aria-label="Merge"
                                     onClick={onMergeOrSplitClick}
                                     disabled={mergedOn === null}
                                     color={mergedOn ? 'primary' : 'default'}

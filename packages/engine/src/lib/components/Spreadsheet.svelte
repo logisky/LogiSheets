@@ -1087,7 +1087,22 @@ let isDragging = false; // True while user is drag-selecting
         endCell = undefined
         isDragging = true
 
-        const data = buildSelectedDataFromCell(row, col, 'none')
+        // `match()` expands a click inside a merged cell to the whole merge
+        // span (coordinate.endRow/endCol > start). Select the full span so the
+        // selector border covers the merged cell, not just its top-left anchor.
+        const {
+            startRow: mRow,
+            endRow: mEndRow,
+            startCol: mCol,
+            endCol: mEndCol,
+        } = matchedCell.coordinate
+        const data = buildSelectedDataFromCellRange(
+            mRow,
+            mCol,
+            mEndRow,
+            mEndCol,
+            'none'
+        )
         selectedData = data
         onSelectedDataChange?.(data)
 
@@ -1414,8 +1429,21 @@ let isDragging = false; // True while user is drag-selecting
             }
 
             if (!inSelection) {
-                // Select the clicked cell
-                const data = buildSelectedDataFromCell(row, col, 'none')
+                // Select the clicked cell — expand to the full merge span so a
+                // right-click on a merged cell selects the whole merge.
+                const {
+                    startRow: mRow,
+                    endRow: mEndRow,
+                    startCol: mCol,
+                    endCol: mEndCol,
+                } = matchedCell.coordinate
+                const data = buildSelectedDataFromCellRange(
+                    mRow,
+                    mCol,
+                    mEndRow,
+                    mEndCol,
+                    'none'
+                )
                 selectedData = data
                 onSelectedDataChange?.(data)
             }
@@ -1701,109 +1729,116 @@ let isDragging = false; // True while user is drag-selecting
         const selectedCells = getSelectedCellRange(selectedData)
         if (!selectedCells) return
 
-        const row = selectedCells.startRow
-        const col = selectedCells.startCol
         const size = canvasEl.getBoundingClientRect()
         const workbook = dataService.getWorkbook()
         const sheetIdx = activeSheet
 
+        // Merge-aware navigation. The active cell may sit inside a merged cell;
+        // treat the whole merge as the origin so an arrow steps OUT past its
+        // far edge (instead of landing back inside it), and expand whatever
+        // cell we land on to its merge so the selection covers the full merge.
+        const mergeAt = (r: number, c: number) => {
+            if (!grid?.mergeCells) return null
+            for (const m of grid.mergeCells) {
+                if (
+                    m.startRow <= r &&
+                    r <= m.endRow &&
+                    m.startCol <= c &&
+                    c <= m.endCol
+                )
+                    return m
+            }
+            return null
+        }
+        const applySelection = (r: number, c: number) => {
+            const m = mergeAt(r, c)
+            const nd = m
+                ? buildSelectedDataFromCellRange(
+                      m.startRow,
+                      m.startCol,
+                      m.endRow,
+                      m.endCol,
+                      'none'
+                  )
+                : buildSelectedDataFromCellRange(r, c, r, c, 'none')
+            selectedData = nd
+            onSelectedDataChange?.(nd)
+        }
+        const origin = mergeAt(selectedCells.startRow, selectedCells.startCol)
+        const topRow = origin ? origin.startRow : selectedCells.startRow
+        const botRow = origin ? origin.endRow : selectedCells.startRow
+        const leftCol = origin ? origin.startCol : selectedCells.startCol
+        const rightCol = origin ? origin.endCol : selectedCells.startCol
+
         switch (direction) {
             case 'up': {
-                if (row === 0) return
-                // Check if previous row is visible
-                const [startIdx, _endIdx] = findVisibleRowIdxRange(anchorY, size.height - 50, grid)
-                const idx = grid.rows.findIndex((v) => v.idx === row)
+                if (topRow === 0) return
+                // Check if the row above the merge is visible
+                const [startIdx] = findVisibleRowIdxRange(anchorY, size.height - 50, grid)
+                const idx = grid.rows.findIndex((v) => v.idx === topRow)
                 if (idx >= 0 && idx - 1 >= startIdx) {
-                    // Cell above is visible, just select it
-                    const newData = buildSelectedDataFromCellRange(
-                        grid.rows[idx - 1].idx, col, grid.rows[idx - 1].idx, col, 'none'
-                    )
-                    selectedData = newData
-                    onSelectedDataChange?.(newData)
+                    applySelection(grid.rows[idx - 1].idx, leftCol)
                     return
                 }
                 // Need to scroll - get position of cell above
-                const nextCell = await workbook.getNextVisibleCell({ sheetIdx, rowIdx: row, colIdx: col, direction: 'up' })
+                const nextCell = await workbook.getNextVisibleCell({ sheetIdx, rowIdx: topRow, colIdx: leftCol, direction: 'up' })
                 if (isErrorMessage(nextCell)) return
                 const cellPos = await workbook.getCellPosition({ sheetIdx, row: nextCell.y, col: nextCell.x })
                 if (isErrorMessage(cellPos)) return
                 await renderWithAnchor(anchorX, ptToPx(cellPos.y))
-                const newData = buildSelectedDataFromCellRange(nextCell.y, col, nextCell.y, col, 'none')
-                selectedData = newData
-                onSelectedDataChange?.(newData)
+                applySelection(nextCell.y, leftCol)
                 return
             }
             case 'down': {
-                // Check if next row is visible
-                const [_startIdx, endIdx] = findVisibleRowIdxRange(anchorY, size.height - 50, grid)
-                const idx = grid.rows.findIndex((v) => v.idx === row)
+                // Step past the bottom of the merge; check if that row is visible
+                const [, endIdx] = findVisibleRowIdxRange(anchorY, size.height - 50, grid)
+                const idx = grid.rows.findIndex((v) => v.idx === botRow)
                 if (idx >= 0 && idx + 1 <= endIdx) {
-                    // Cell below is visible, just select it
-                    const newData = buildSelectedDataFromCellRange(
-                        grid.rows[idx + 1].idx, col, grid.rows[idx + 1].idx, col, 'none'
-                    )
-                    selectedData = newData
-                    onSelectedDataChange?.(newData)
+                    applySelection(grid.rows[idx + 1].idx, leftCol)
                     return
                 }
                 // Need to scroll - get position of cell below
-                const nextCell = await workbook.getNextVisibleCell({ sheetIdx, rowIdx: row, colIdx: col, direction: 'down' })
+                const nextCell = await workbook.getNextVisibleCell({ sheetIdx, rowIdx: botRow, colIdx: leftCol, direction: 'down' })
                 if (isErrorMessage(nextCell)) return
                 const cellPos = await workbook.getCellPosition({ sheetIdx, row: nextCell.y, col: nextCell.x })
                 if (isErrorMessage(cellPos)) return
                 await renderWithAnchor(anchorX, ptToPx(cellPos.y) - size.height + 50)
-                const newData = buildSelectedDataFromCellRange(nextCell.y, col, nextCell.y, col, 'none')
-                selectedData = newData
-                onSelectedDataChange?.(newData)
+                applySelection(nextCell.y, leftCol)
                 return
             }
             case 'left': {
-                if (col === 0) return
-                // Check if previous col is visible
-                const [startIdx, _endIdx] = findVisibleColIdxRange(anchorX, size.width, grid)
-                const idx = grid.columns.findIndex((v) => v.idx === col)
+                if (leftCol === 0) return
+                // Check if the column left of the merge is visible
+                const [startIdx] = findVisibleColIdxRange(anchorX, size.width, grid)
+                const idx = grid.columns.findIndex((v) => v.idx === leftCol)
                 if (idx > 0 && idx - 1 >= startIdx) {
-                    // Cell to left is visible, just select it
-                    const newData = buildSelectedDataFromCellRange(
-                        row, grid.columns[idx - 1].idx, row, grid.columns[idx - 1].idx, 'none'
-                    )
-                    selectedData = newData
-                    onSelectedDataChange?.(newData)
+                    applySelection(topRow, grid.columns[idx - 1].idx)
                     return
                 }
                 // Need to scroll - get position of cell to left
-                const nextCell = await workbook.getNextVisibleCell({ sheetIdx, rowIdx: row, colIdx: col, direction: 'left' })
+                const nextCell = await workbook.getNextVisibleCell({ sheetIdx, rowIdx: topRow, colIdx: leftCol, direction: 'left' })
                 if (isErrorMessage(nextCell)) return
                 const cellPos = await workbook.getCellPosition({ sheetIdx, row: nextCell.y, col: nextCell.x })
                 if (isErrorMessage(cellPos)) return
                 await renderWithAnchor(ptToPx(cellPos.x), anchorY)
-                const newData = buildSelectedDataFromCellRange(row, nextCell.x, row, nextCell.x, 'none')
-                selectedData = newData
-                onSelectedDataChange?.(newData)
+                applySelection(topRow, nextCell.x)
                 return
             }
             case 'right': {
-                // Check if next col is visible
-                const [_startIdx, endIdx] = findVisibleColIdxRange(anchorX, size.width, grid)
-                const idx = grid.columns.findIndex((v) => v.idx === col)
+                // Step past the right edge of the merge; check if it's visible
+                const [, endIdx] = findVisibleColIdxRange(anchorX, size.width, grid)
+                const idx = grid.columns.findIndex((v) => v.idx === rightCol)
                 if (idx >= 0 && idx + 1 <= endIdx) {
-                    // Cell to right is visible, just select it
-                    const newData = buildSelectedDataFromCellRange(
-                        row, grid.columns[idx + 1].idx, row, grid.columns[idx + 1].idx, 'none'
-                    )
-                    selectedData = newData
-                    onSelectedDataChange?.(newData)
+                    applySelection(topRow, grid.columns[idx + 1].idx)
                     return
                 }
                 // Need to scroll - get position of cell to right
-                const nextCell = await workbook.getNextVisibleCell({ sheetIdx, rowIdx: row, colIdx: col, direction: 'right' })
+                const nextCell = await workbook.getNextVisibleCell({ sheetIdx, rowIdx: topRow, colIdx: rightCol, direction: 'right' })
                 if (isErrorMessage(nextCell)) return
                 const cellPos = await workbook.getCellPosition({ sheetIdx, row: nextCell.y, col: nextCell.x })
                 if (isErrorMessage(cellPos)) return
                 await renderWithAnchor(ptToPx(cellPos.x) - size.width + 100, anchorY)
-                const newData = buildSelectedDataFromCellRange(row, nextCell.x, row, nextCell.x, 'none')
-                selectedData = newData
-                onSelectedDataChange?.(newData)
+                applySelection(topRow, nextCell.x)
                 return
             }
         }
