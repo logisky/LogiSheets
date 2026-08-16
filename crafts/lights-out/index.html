@@ -117,12 +117,12 @@
           solved = true
           progress.solved += 1
           progress.best = progress.best == null ? moves : Math.min(progress.best, moves)
-          progress.board = null
           progress.moves = 0
           saveProgress()
           show('win', true)
         } else {
-          progress.board = board.slice()
+          // The board lives in the workbook (the fills we just rendered); only
+          // the move counter is craft-private, so that's all we persist.
           progress.moves = moves
           saveProgress()
         }
@@ -163,7 +163,6 @@
         board = LO.generatePuzzle(LO.DIFFICULTY[diff])
         startBoard = board.slice()
         moves = 0
-        progress.board = board.slice()
         progress.moves = 0
         saveProgress()
         show('win', false)
@@ -182,7 +181,6 @@
         solved = false
         board = startBoard.slice()
         moves = 0
-        progress.board = board.slice()
         progress.moves = 0
         saveProgress()
         show('win', false)
@@ -195,7 +193,7 @@
 
     function resetProgress() {
       var diff = progress.difficulty
-      progress = {solved: 0, best: null, difficulty: diff, board: null, moves: 0}
+      progress = {solved: 0, best: null, difficulty: diff, moves: 0}
       saveProgress()
       newGame(diff)
     }
@@ -229,12 +227,14 @@
         try {
           boardSheetIdx = await LO.ensureBoard(wb)
           if (window.setSelection) window.setSelection(boardSheetIdx, 0, 0)
-          if (progress.board && !LO.isSolved(progress.board)) {
-            board = progress.board.slice()
+          // The board is reconstructed from the sheet fills (the persisted truth,
+          // possibly changed by Watson's solve tool while we were closed), not
+          // from craftState. An all-off board means there's no game in progress.
+          board = await LO.readBoard(wb, boardSheetIdx)
+          if (!LO.isSolved(board)) {
             moves = progress.moves
             solved = false
             startBoard = null
-            await LO.renderBoard(wb, boardSheetIdx, board)
             renderHeader()
           } else {
             await newGame(progress.difficulty)
