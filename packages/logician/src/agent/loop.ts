@@ -81,7 +81,7 @@ export interface AgentOptions {
     registry: ToolRegistry
     llm: LlmClient
     workbook: WorkbookClient
-    /** Anthropic model id. Default 'claude-opus-4-7'. */
+    /** Anthropic model id. Default 'claude-opus-4-8'. */
     model?: string
     /** Cap on tokens per response. Default 4096. */
     max_tokens?: number
@@ -121,7 +121,7 @@ export class Agent {
         this.registry = opts.registry
         this.llm = opts.llm
         this.workbook = opts.workbook
-        this.model = opts.model ?? 'claude-opus-4-7'
+        this.model = opts.model ?? 'claude-opus-4-8'
         this.maxTokens = opts.max_tokens ?? 4096
         this.systemPrompt = opts.systemPrompt
         this.maxToolIters = opts.max_tool_iterations ?? 16

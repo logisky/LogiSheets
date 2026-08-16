@@ -39,13 +39,23 @@ import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {useWorkbook} from '@/core/engine/provider'
 import {IdbConversationStore} from './lib/storage-idb'
 import {AnthropicBrowserClient} from './lib/llm-anthropic'
+import {getFetch, isTauri} from './lib/net'
 import {WebCraftStore} from './lib/craft-store-web'
 import {makeCraftInteractionsApi} from './lib/craft-interactions-adapter'
+import {
+    PROVIDERS,
+    DEFAULT_PROVIDER,
+    isProviderId,
+    loadStoredKey,
+    loadStoredBaseUrl,
+    keyStorageKey,
+    baseUrlStorageKey,
+    type ProviderId,
+} from './lib/providers'
 import styles from './watson.module.scss'
 
-const KEY_API = 'watson.apiKey'
 const KEY_MODEL = 'watson.model'
-const DEFAULT_MODEL = 'claude-opus-4-7'
+const KEY_PROVIDER = 'watson.provider'
 
 const SYSTEM_PROMPT =
     'You are Watson, an AI assistant inside LogiSheets. ' +
@@ -83,11 +93,14 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
     const [input, setInput] = useState('')
     const [running, setRunning] = useState(false)
     const [status, setStatus] = useState('idle')
-    const [apiKey, setApiKey] = useState(
-        () => localStorage.getItem(KEY_API) || ''
-    )
+    const [provider, setProvider] = useState<ProviderId>(() => {
+        const p = localStorage.getItem(KEY_PROVIDER)
+        return isProviderId(p) ? p : DEFAULT_PROVIDER
+    })
+    const [apiKey, setApiKey] = useState(() => loadStoredKey(provider))
+    const [baseUrl, setBaseUrl] = useState(() => loadStoredBaseUrl(provider))
     const [model, setModel] = useState(
-        () => localStorage.getItem(KEY_MODEL) || DEFAULT_MODEL
+        () => localStorage.getItem(KEY_MODEL) || PROVIDERS[provider].defaultModel
     )
     const [showSettings, setShowSettings] = useState(false)
     const [confirmState, setConfirmState] = useState<PendingConfirm | null>(
@@ -157,10 +170,18 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
         []
     )
 
-    // (Re)build the agent when the model changes (llm/model captured at build).
+    // (Re)build the agent when the provider/model changes (llm/model captured
+    // at build). All providers speak the Anthropic wire format; they differ
+    // only in base URL, auth header, and the browser-access header.
     useEffect(() => {
+        const p = PROVIDERS[provider]
         const llm = new AnthropicBrowserClient({
             apiKey: () => apiKeyRef.current || null,
+            baseUrl: baseUrl || p.baseUrl,
+            authHeader: p.auth,
+            directBrowserAccess: p.directBrowserAccess,
+            // Desktop routes through native HTTP (no CORS); web uses browser fetch.
+            fetchImpl: getFetch(),
         })
         agentRef.current = new Agent({
             store,
@@ -173,7 +194,16 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
             craftInteractions,
             log: (msg) => console.log('[watson]', msg),
         })
-    }, [store, registry, workbook, model, confirm, craftInteractions])
+    }, [
+        store,
+        registry,
+        workbook,
+        model,
+        provider,
+        baseUrl,
+        confirm,
+        craftInteractions,
+    ])
 
     // Boot: load or create a conversation for this workbook, subscribe to it.
     useEffect(() => {
@@ -252,13 +282,23 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
         }
     }, [input, running])
 
-    const saveSettings = useCallback((key: string, mdl: string) => {
-        const k = key.trim()
-        const m = mdl.trim() || DEFAULT_MODEL
-        if (k) localStorage.setItem(KEY_API, k)
-        else localStorage.removeItem(KEY_API)
+    const saveSettings = useCallback((next: SettingsDraft) => {
+        const p = isProviderId(next.provider) ? next.provider : DEFAULT_PROVIDER
+        const k = next.apiKey.trim()
+        const b = next.baseUrl.trim()
+        const m = next.model.trim() || PROVIDERS[p].defaultModel
+        if (k) localStorage.setItem(keyStorageKey(p), k)
+        else localStorage.removeItem(keyStorageKey(p))
+        // Only persist a base URL when it diverges from the provider default,
+        // so shipping a new default later still reaches existing users.
+        if (b && b !== PROVIDERS[p].baseUrl)
+            localStorage.setItem(baseUrlStorageKey(p), b)
+        else localStorage.removeItem(baseUrlStorageKey(p))
+        localStorage.setItem(KEY_PROVIDER, p)
         localStorage.setItem(KEY_MODEL, m)
+        setProvider(p)
         setApiKey(k)
+        setBaseUrl(b || PROVIDERS[p].baseUrl)
         setModel(m)
         setShowSettings(false)
     }, [])
@@ -330,7 +370,9 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
 
             {showSettings && (
                 <SettingsModal
+                    provider={provider}
                     apiKey={apiKey}
+                    baseUrl={baseUrl}
                     model={model}
                     onSave={saveSettings}
                     onClose={() => setShowSettings(false)}
@@ -387,43 +429,112 @@ const Bubble = ({bubble: b}: {bubble: ChatBubble}) => {
     )
 }
 
+interface SettingsDraft {
+    provider: ProviderId
+    apiKey: string
+    baseUrl: string
+    model: string
+}
+
 const SettingsModal = ({
+    provider,
     apiKey,
+    baseUrl,
     model,
     onSave,
     onClose,
 }: {
+    provider: ProviderId
     apiKey: string
+    baseUrl: string
     model: string
-    onSave: (key: string, model: string) => void
+    onSave: (draft: SettingsDraft) => void
     onClose: () => void
 }) => {
+    const [p, setP] = useState<ProviderId>(provider)
     const [k, setK] = useState(apiKey)
+    const [b, setB] = useState(baseUrl)
     const [m, setM] = useState(model)
+    const def = PROVIDERS[p]
+
+    // Switching provider loads that provider's stored key / base URL and
+    // resets the model to its default — the fields always reflect one provider.
+    const onProviderChange = (next: ProviderId) => {
+        setP(next)
+        setK(loadStoredKey(next))
+        setB(loadStoredBaseUrl(next))
+        setM(PROVIDERS[next].defaultModel)
+    }
+
     return (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <h3>Settings</h3>
-                <label>Anthropic API key (stored on this device)</label>
+
+                <label>Provider</label>
+                <select
+                    value={p}
+                    onChange={(e) =>
+                        onProviderChange(e.target.value as ProviderId)
+                    }
+                >
+                    {Object.values(PROVIDERS).map((prov) => (
+                        <option key={prov.id} value={prov.id}>
+                            {prov.label}
+                        </option>
+                    ))}
+                </select>
+
+                <label>{def.keyLabel} (stored on this device)</label>
                 <input
                     type="password"
                     value={k}
                     onChange={(e) => setK(e.target.value)}
-                    placeholder="sk-ant-…"
+                    placeholder={def.keyPlaceholder}
                 />
+                {def.note && <p className={styles.settingsNote}>{def.note}</p>}
+                {/* Providers without browser-CORS support can't be reached from
+                    a web browser directly — but the desktop app calls them
+                    natively, so only warn on the web. */}
+                {!def.directBrowserAccess && !isTauri() && (
+                    <p className={styles.settingsWarn}>
+                        Browsers block direct calls to this provider (CORS). Set
+                        the base URL to a CORS-enabled proxy, or use the desktop
+                        app, which calls it natively — no proxy needed.
+                    </p>
+                )}
+
                 <label>Model</label>
                 <input
+                    list="watson-models"
                     value={m}
                     onChange={(e) => setM(e.target.value)}
-                    placeholder={DEFAULT_MODEL}
+                    placeholder={def.defaultModel}
                 />
+                <datalist id="watson-models">
+                    {def.models.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                            {opt.label}
+                        </option>
+                    ))}
+                </datalist>
+
+                <label>API base URL</label>
+                <input
+                    value={b}
+                    onChange={(e) => setB(e.target.value)}
+                    placeholder={def.baseUrl}
+                />
+
                 <div className={styles.modalRow}>
                     <button className={styles.btn} onClick={onClose}>
                         Cancel
                     </button>
                     <button
                         className={`${styles.btn} ${styles.btnPrimary}`}
-                        onClick={() => onSave(k, m)}
+                        onClick={() =>
+                            onSave({provider: p, apiKey: k, baseUrl: b, model: m})
+                        }
                     >
                         Save
                     </button>
