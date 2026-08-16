@@ -593,6 +593,10 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         return this._workbookImpl!.getAppData()
     }
 
+    public getVersion(): Result<number> {
+        return this._workbookImpl!.getVersion()
+    }
+
     // ========================================================================
     // Block / Checkpoint Operations (Client conformance)
     // ========================================================================
@@ -826,6 +830,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetAppData:
                     result = this.getAppData()
+                    break
+                case MethodName.GetVersion:
+                    result = this.getVersion()
                     break
                 case MethodName.BatchGetCellInfoById:
                     result = this.batchGetCellInfoById(args)

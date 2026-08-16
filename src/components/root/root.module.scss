@@ -13,6 +13,11 @@
   height: 100%;
   width: 100%;
   gap: 6px;
+  box-sizing: border-box;
+  // When Watson is open the content is pushed right by the panel width so the
+  // workbook stays fully visible beside it (see container.tsx). Transition keeps
+  // the reflow smooth.
+  transition: padding-left 0.15s ease;
 }
 .debug-toolbar {
   position: absolute;

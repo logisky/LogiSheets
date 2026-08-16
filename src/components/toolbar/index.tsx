@@ -36,6 +36,8 @@ import Tooltip from '@mui/material/Tooltip'
 import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import ExtensionIcon from '@mui/icons-material/Extension'
 import Popover from '@mui/material/Popover'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
@@ -99,10 +101,26 @@ export interface ToolbarProps {
     setGrid: (grid: Grid | null) => void
     setActiveSheet: (idx: number) => void
     selectedData?: SelectedData
+    /** Toggle the built-in Watson assistant panel. */
+    onToggleWatson?: () => void
+    /** Whether the Watson panel is currently open (highlights the button). */
+    watsonActive?: boolean
+    /** Toggle the craft panel. */
+    onToggleCraft?: () => void
+    /** Whether the craft panel is currently open (highlights the button). */
+    craftActive?: boolean
 }
 
 export const Toolbar = observer(
-    ({selectedData, setGrid, setActiveSheet}: ToolbarProps) => {
+    ({
+        selectedData,
+        setGrid,
+        setActiveSheet,
+        onToggleWatson,
+        watsonActive,
+        onToggleCraft,
+        craftActive,
+    }: ToolbarProps) => {
         const engine = useEngine()
         const DATA_SERVICE = engine.getDataService()
         const ops = useOps()
@@ -878,6 +896,57 @@ export const Toolbar = observer(
                     flexItem
                     className={styles.divider}
                 />
+                {/* Assistants & mode: Watson, crafts, temp mode. Kept in the
+                    left cluster (tab-independent) so they stay visible even when
+                    the ribbon overflows on the right. */}
+                <div className={styles.section}>
+                    {onToggleWatson ? (
+                        <Tooltip title="Ask Watson">
+                            <IconButton
+                                size="small"
+                                aria-label="Toggle Watson AI assistant"
+                                color={watsonActive ? 'primary' : 'default'}
+                                onClick={onToggleWatson}
+                            >
+                                <AutoAwesomeIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    ) : null}
+                    {onToggleCraft ? (
+                        <Tooltip title="Crafts">
+                            <IconButton
+                                size="small"
+                                aria-label="Toggle craft panel"
+                                color={craftActive ? 'primary' : 'default'}
+                                onClick={onToggleCraft}
+                            >
+                                <ExtensionIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    ) : null}
+                    <Tooltip
+                        title={
+                            globalStore.isTempMode
+                                ? 'Exit temp mode (commit)'
+                                : 'Enter temp mode'
+                        }
+                    >
+                        <IconButton
+                            size="small"
+                            onClick={onToggleTempMode}
+                            color={
+                                globalStore.isTempMode ? 'warning' : 'default'
+                            }
+                        >
+                            <ScienceIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </div>
+                <Divider
+                    orientation="vertical"
+                    flexItem
+                    className={styles.divider}
+                />
                 {/* Center cluster: all remaining controls */}
                 <div className={styles.center}>
                     {activeTab === 'view' ? (
@@ -957,36 +1026,6 @@ export const Toolbar = observer(
                             <IconButton size="small" onClick={redo}>
                                 <RedoIcon fontSize="small" />
                             </IconButton>
-                        </Tooltip>
-                        <Tooltip
-                            title={
-                                globalStore.isTempMode
-                                    ? 'Exit temp mode (commit)'
-                                    : 'Enter temp mode'
-                            }
-                        >
-                            <IconButton
-                                size="small"
-                                onClick={onToggleTempMode}
-                                color={
-                                    globalStore.isTempMode
-                                        ? 'warning'
-                                        : 'default'
-                                }
-                            >
-                                <ScienceIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Insert column chart from selection">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => engine.insertChart('col')}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <BarChartIcon fontSize="small" />
-                                </IconButton>
-                            </span>
                         </Tooltip>
                     </div>
                     <Divider
@@ -1227,8 +1266,19 @@ export const Toolbar = observer(
                         className={styles.divider}
                     />
 
-                    {/* Special */}
+                    {/* Insert / create */}
                     <div className={styles.section}>
+                        <Tooltip title="Insert column chart from selection">
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => engine.insertChart('col')}
+                                    disabled={!hasSelectedData}
+                                >
+                                    <BarChartIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                         <Button
                             variant="outlined"
                             size="small"

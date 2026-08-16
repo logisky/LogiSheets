@@ -5,7 +5,7 @@ import {
     type CraftStorageBackend,
 } from './storage'
 
-const CRAFT_A = '/watson/index.html'
+const CRAFT_A = '/lights-out/index.html'
 const CRAFT_B = '/what-if-calculator/index.html'
 
 // A trivial in-test backend so the contract can be exercised without a browser

@@ -117,6 +117,7 @@ export enum MethodName {
 
     GetAllBlockFields = 'getAllBlockFields',
     GetAppData = 'getAppData',
+    GetVersion = 'getVersion',
     GetFullyCoveredBlocks = 'getFullyCoveredBlocks',
     GetAllBlocks = 'getAllBlocks',
     SaveCheckpoint = 'saveCheckpoint',

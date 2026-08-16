@@ -4,11 +4,12 @@ import {ContentComponent} from '@/components/content'
 import {SETTINGS} from '@/core/settings'
 import styles from './root.module.scss'
 import {CraftPanel} from '../craft-panel'
+import {Watson} from '../watson'
+import {LeftDock, LEFT_DOCK_WIDTH} from '../left-dock'
 import {Grid} from 'logisheets-engine'
-import {IconButton} from '@mui/material'
-import {ChevronLeft} from '@mui/icons-material'
 import {CellLayout, SelectedData} from 'logisheets-engine'
 import {parseCraftDeepLink} from '@/core/craft-deeplink'
+
 export const RootContainer = () => {
     const [craftDeepLink] = useState(() => parseCraftDeepLink())
     const [selectedData, setSelectedData] = useState<SelectedData>({
@@ -36,6 +37,11 @@ export const RootContainer = () => {
 
     const [cellLayouts, setCellLayouts] = useState<CellLayout[]>([])
     const [activeSheet, setActiveSheet] = useState(0)
+    const [isWatsonVisible, setWatsonVisible] = useState(false)
+
+    // Watson and the craft panel share one left dock; the workbook is pushed
+    // right by its width whenever either is open (never covered).
+    const dockOpen = isWatsonVisible || isCraftPanelVisible
 
     return (
         <div className={styles.container}>
@@ -45,9 +51,16 @@ export const RootContainer = () => {
                         selectedData={selectedData}
                         setGrid={setGrid}
                         setActiveSheet={setActiveSheet}
+                        onToggleWatson={() => setWatsonVisible((v) => !v)}
+                        watsonActive={isWatsonVisible}
+                        onToggleCraft={() => setCraftPanelVisible((v) => !v)}
+                        craftActive={isCraftPanelVisible}
                     />
                 </div>
-                <div className={styles.content}>
+                <div
+                    className={styles.content}
+                    style={{paddingLeft: dockOpen ? LEFT_DOCK_WIDTH : 0}}
+                >
                     <ContentComponent
                         selectedData$={applySelectedData}
                         selectedData={selectedData}
@@ -59,38 +72,27 @@ export const RootContainer = () => {
                     />
                 </div>
             </div>
-            {!isCraftPanelVisible ? (
-                <div
-                    style={{
-                        position: 'absolute',
-                        right: 0,
-                        // Sit just below the toolbar so the reopen handle
-                        // doesn't overlap the top-right toolbar controls.
-                        top: SETTINGS.topBar,
-                        zIndex: 10,
-                    }}
-                >
-                    <IconButton
-                        size="medium"
-                        color="default"
-                        aria-label="Open craft panel"
-                        onClick={() => setCraftPanelVisible(true)}
-                    >
-                        <ChevronLeft />
-                    </IconButton>
-                </div>
-            ) : null}
-            <CraftPanel
-                open={isCraftPanelVisible}
-                initialCraftSrc={craftDeepLink?.iframeSrc}
-                setSelectedData={applySelectedData}
-                selectedData={selectedData}
-                setSelectionSuppressed={setSuppressSelection}
-                onClose={() => {
-                    setCraftPanelVisible(false)
-                }}
-                setCellLayouts={setCellLayouts}
-                setActiveSheet={setActiveSheet}
+            <LeftDock
+                watsonOpen={isWatsonVisible}
+                craftOpen={isCraftPanelVisible}
+                watson={
+                    <Watson
+                        open={isWatsonVisible}
+                        onClose={() => setWatsonVisible(false)}
+                    />
+                }
+                craft={
+                    <CraftPanel
+                        open={isCraftPanelVisible}
+                        initialCraftSrc={craftDeepLink?.iframeSrc}
+                        setSelectedData={applySelectedData}
+                        selectedData={selectedData}
+                        setSelectionSuppressed={setSuppressSelection}
+                        onClose={() => setCraftPanelVisible(false)}
+                        setCellLayouts={setCellLayouts}
+                        setActiveSheet={setActiveSheet}
+                    />
+                }
             />
         </div>
     )

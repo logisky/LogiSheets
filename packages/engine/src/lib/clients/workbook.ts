@@ -506,6 +506,10 @@ export class WorkbookClient implements Client {
     // App Data & Block Fields
     // ========================================================================
 
+    getVersion(): Resp<number> {
+        return this._call(MethodName.GetVersion) as Resp<number>
+    }
+
     getAppData(): Resp<readonly AppData[]> {
         return this._call(MethodName.GetAppData) as Resp<readonly AppData[]>
     }

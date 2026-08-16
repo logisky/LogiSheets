@@ -568,6 +568,12 @@ export class Workbook {
         return rpc('getAppData', undefined, this._id)
     }
 
+    /** Monotonic counter bumped on every committed write — snapshot it to
+     *  detect concurrent modification (optimistic concurrency). */
+    public getVersion(): number {
+        return rpc('getVersion', undefined, this._id)
+    }
+
     public release() {
         rpc('release', undefined, this._id)
     }
