@@ -1,0 +1,35 @@
+{
+    "name": "logisheets-craftsmith",
+    "version": "0.1.0",
+    "description": "CLI for LogiSheets crafts — scaffold, check, build and pack a craft, generating the capability manifest Watson uses to discover and invoke its tools.",
+    "type": "module",
+    "bin": {
+        "craftsmith": "./dist/cli.js"
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./authoring": {
+            "types": "./authoring.d.ts"
+        }
+    },
+    "scripts": {
+        "build": "esbuild src/cli.ts src/index.ts --bundle --format=esm --platform=node --packages=external --outdir=dist --out-extension:.js=.js",
+        "check": "node dist/cli.js check"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "private": true,
+    "dependencies": {
+        "esbuild": "^0.21.0",
+        "typescript": "^6.0.0"
+    },
+    "files": [
+        "dist",
+        "authoring.d.ts"
+    ]
+}
