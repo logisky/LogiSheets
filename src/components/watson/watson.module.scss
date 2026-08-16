@@ -185,7 +185,8 @@ $panelBg: #ffffff;
         margin: 10px 0 4px;
     }
 
-    input {
+    input,
+    select {
         width: 100%;
         box-sizing: border-box;
         padding: 8px 10px;
@@ -193,10 +194,25 @@ $panelBg: #ffffff;
         border-radius: 8px;
         font: inherit;
         outline: none;
+        background: #fff;
 
         &:focus {
             border-color: $accent;
         }
+    }
+
+    .settingsNote {
+        margin: 6px 0 0;
+        font-size: 11px;
+        line-height: 1.4;
+        color: #667085;
+    }
+
+    .settingsWarn {
+        margin: 6px 0 0;
+        font-size: 11px;
+        line-height: 1.4;
+        color: #b54708;
     }
 
     pre {

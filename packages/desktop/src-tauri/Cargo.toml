@@ -24,6 +24,14 @@ tauri = { version = "2", features = [] }
 # the app-data JSON, and by the optional native engine.
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
+# Native HTTP for the `llm_fetch` command (src/net.rs): lets the frontend reach
+# LLM providers (Kimi/Moonshot, Anthropic, ...) from Rust instead of the webview
+# fetch, sidestepping browser CORS. rustls avoids a system OpenSSL dependency so
+# the desktop build stays portable across CI runners.
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+    "charset",
+] }
 logisheets-rs = { path = "../../../crates/api", features = ["rpc"], optional = true }
 
 [features]

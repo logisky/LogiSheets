@@ -41,8 +41,31 @@ export interface AnthropicBrowserClientOptions {
     /** Anthropic API version. Pinned so SDK upgrades don't break us. */
     apiVersion?: string
 
+    /**
+     * Auth header style. `'x-api-key'` is how Anthropic authenticates;
+     * `'bearer'` sends `Authorization: Bearer <key>`, which is what most
+     * Anthropic-compatible providers (e.g. Kimi / Moonshot) expect.
+     * Default `'x-api-key'`.
+     */
+    authHeader?: 'x-api-key' | 'bearer'
+
+    /**
+     * Send Anthropic's `anthropic-dangerous-direct-browser-access` header.
+     * Anthropic requires it for browser-origin calls; other Anthropic-compatible
+     * endpoints don't know it and may reject it in the CORS preflight, so it's
+     * off for them. Default `true`.
+     */
+    directBrowserAccess?: boolean
+
     /** Retries on network failure / 5xx. Default 1. */
     max_retries?: number
+
+    /**
+     * `fetch` implementation to use. Defaults to the global `fetch`. The
+     * desktop app injects a native (Tauri) fetch so it can reach providers that
+     * don't send CORS headers (see ./net.ts).
+     */
+    fetchImpl?: typeof fetch
 
     /**
      * Hook fired with raw HTTP timing + token-usage info, mostly for
@@ -110,14 +133,20 @@ export class AnthropicBrowserClient implements LlmClient {
     private getApiKey: () => string | null
     private baseUrl: string
     private apiVersion: string
+    private authHeader: 'x-api-key' | 'bearer'
+    private directBrowserAccess: boolean
     private maxRetries: number
+    private fetchImpl: typeof fetch
     private onRequest?: (info: RequestInfo) => void
 
     constructor(opts: AnthropicBrowserClientOptions) {
         this.getApiKey = opts.apiKey
         this.baseUrl = stripTrailingSlash(opts.baseUrl ?? DEFAULT_BASE)
         this.apiVersion = opts.apiVersion ?? DEFAULT_VERSION
+        this.authHeader = opts.authHeader ?? 'x-api-key'
+        this.directBrowserAccess = opts.directBrowserAccess ?? true
         this.maxRetries = opts.max_retries ?? 1
+        this.fetchImpl = opts.fetchImpl ?? globalThis.fetch.bind(globalThis)
         this.onRequest = opts.onRequest
     }
 
@@ -126,7 +155,7 @@ export class AnthropicBrowserClient implements LlmClient {
         if (!key) {
             throw new LlmError(
                 'missing_api_key',
-                'Anthropic API key is not set. Open Watson settings and paste your key.'
+                'API key is not set. Open Watson settings and paste your key.'
             )
         }
 
@@ -144,16 +173,23 @@ export class AnthropicBrowserClient implements LlmClient {
         for (;;) {
             const start = Date.now()
             try {
-                const res = await fetch(url, {
+                const headers: Record<string, string> = {
+                    'content-type': 'application/json',
+                    'anthropic-version': this.apiVersion,
+                }
+                if (this.authHeader === 'bearer') {
+                    headers['authorization'] = `Bearer ${key}`
+                } else {
+                    headers['x-api-key'] = key
+                }
+                if (this.directBrowserAccess) {
+                    // Required for direct browser → Anthropic calls.
+                    // See the comment at the top of this file.
+                    headers['anthropic-dangerous-direct-browser-access'] = 'true'
+                }
+                const res = await this.fetchImpl(url, {
                     method: 'POST',
-                    headers: {
-                        'content-type': 'application/json',
-                        'x-api-key': key,
-                        'anthropic-version': this.apiVersion,
-                        // Required for direct browser → Anthropic calls.
-                        // See the comment at the top of this file.
-                        'anthropic-dangerous-direct-browser-access': 'true',
-                    },
+                    headers,
                     body: JSON.stringify(body),
                     signal: params.signal,
                 })
@@ -186,7 +222,7 @@ export class AnthropicBrowserClient implements LlmClient {
                 throw new LlmError(
                     httpStatusToCode(res.status, errBody),
                     errBody?.error?.message ??
-                        `Anthropic API ${res.status} ${res.statusText}`,
+                        `Model provider API ${res.status} ${res.statusText}`,
                     {status: res.status, body: errBody}
                 )
             } catch (err) {
@@ -203,7 +239,7 @@ export class AnthropicBrowserClient implements LlmClient {
                 }
                 throw new LlmError(
                     'network',
-                    `Network error contacting Anthropic: ${
+                    `Network error contacting the model provider: ${
                         err instanceof Error ? err.message : String(err)
                     }`,
                     {cause: lastErr}

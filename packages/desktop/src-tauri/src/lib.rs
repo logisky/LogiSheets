@@ -1,5 +1,6 @@
 #[cfg(feature = "native-engine")]
 mod commands;
+mod net;
 mod storage;
 
 use tauri::Manager;
@@ -36,6 +37,7 @@ pub fn run() {
             storage::craft_storage_remove,
             storage::craft_storage_keys,
             storage::craft_storage_clear,
+            net::llm_fetch,
             commands::handle,
         ]);
 
@@ -46,6 +48,7 @@ pub fn run() {
         storage::craft_storage_remove,
         storage::craft_storage_keys,
         storage::craft_storage_clear,
+        net::llm_fetch,
     ]);
 
     builder
