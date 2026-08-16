@@ -393,6 +393,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             JsValue::NULL
         }
         Message::GetSheetCount => ok_to_js(&controller::get_sheet_count(&mgr, id)),
+        Message::GetVersion => ok_to_js(&controller::get_version(&mgr, id)),
         Message::GetAllSheetInfo => ok_to_js(&controller::get_all_sheet_info(&mgr, id)),
         Message::GetFormulaFunctionNames => {
             ok_to_js(&controller::get_formula_function_names(&mgr, id))

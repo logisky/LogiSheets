@@ -5,8 +5,8 @@
 //   #craft=factory-simulator-zh
 //
 // `craft` accepts either a short alias (see CRAFT_ALIASES) or a raw iframe
-// path (e.g. /watson/index.html). When present, the host opens the craft
-// panel on that craft automatically.
+// path (e.g. /what-if-calculator/index.html). When present, the host opens the
+// craft panel on that craft automatically.
 
 export interface CraftDeepLink {
     iframeSrc: string
@@ -23,7 +23,6 @@ const CRAFT_ALIASES: Record<string, string> = {
     'lights-out': '/lights-out/index.html',
     'memory-grid': '/memory-grid/index.html',
     sudoku: '/sudoku/index.html',
-    watson: '/watson/index.html',
 }
 
 function resolveCraftSrc(value: string): string | null {

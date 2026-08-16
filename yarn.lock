@@ -9035,6 +9035,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "lights-out@workspace:crafts/lights-out"
   dependencies:
+    logisheets-craftsmith: "workspace:*"
     logisheets-web: "workspace:*"
     typescript: "npm:^6.0.0"
     vite: "npm:^5.0.0"
@@ -9183,6 +9184,17 @@ __metadata:
     vitest: "npm:3.2.6"
   peerDependencies:
     logisheets-web: ^1.10.0
+  languageName: unknown
+  linkType: soft
+
+"logisheets-craftsmith@workspace:*, logisheets-craftsmith@workspace:packages/craftsmith":
+  version: 0.0.0-use.local
+  resolution: "logisheets-craftsmith@workspace:packages/craftsmith"
+  dependencies:
+    esbuild: "npm:^0.21.0"
+    typescript: "npm:^6.0.0"
+  bin:
+    craftsmith: ./dist/cli.js
   languageName: unknown
   linkType: soft
 
@@ -11889,6 +11901,7 @@ __metadata:
     "@typescript-eslint/parser": "npm:^7.5.0"
     "@vitejs/plugin-react": "npm:^4.3.0"
     dayjs: "npm:^1.11.19"
+    dexie: "npm:^4.0.0"
     eslint: "npm:^8.0.1"
     eslint-config-prettier: "npm:^8.5.0"
     eslint-config-standard-with-typescript: "npm:^43.0.1"
@@ -11905,6 +11918,7 @@ __metadata:
     inversify: "npm:^6.2.0"
     lint-staged: "npm:^13.0.3"
     lodash: "npm:^4.17.21"
+    logician: "workspace:*"
     logisheets-core: "workspace:*"
     logisheets-engine: "workspace:*"
     logisheets-web: "workspace:*"
@@ -12584,6 +12598,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "sudoku@workspace:crafts/sudoku"
   dependencies:
+    logisheets-craftsmith: "workspace:*"
     logisheets-web: "workspace:*"
     typescript: "npm:^6.0.0"
     vite: "npm:^5.0.0"
@@ -13896,18 +13911,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"watson@workspace:crafts/watson":
-  version: 0.0.0-use.local
-  resolution: "watson@workspace:crafts/watson"
-  dependencies:
-    dexie: "npm:^4.0.0"
-    logician: "workspace:*"
-    logisheets-web: "workspace:*"
-    typescript: "npm:^6.0.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
 "web-vitals@npm:0.2.4":
   version: 0.2.4
   resolution: "web-vitals@npm:0.2.4"
@@ -13933,6 +13936,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "what-if-calculator@workspace:crafts/what-if-calculator"
   dependencies:
+    logisheets-craftsmith: "workspace:*"
     logisheets-web: "workspace:*"
     typescript: "npm:^6.0.0"
     vite: "npm:^5.0.0"

@@ -4,6 +4,11 @@ use std::collections::{HashMap, VecDeque};
 #[derive(Debug, Default)]
 pub struct VersionManagerHelper<S: Clone, D, const SIZE: usize> {
     pub(crate) version: u32,
+    /// Monotonic counter bumped on EVERY committed write (undoable or not),
+    /// unlike `version` which tracks only the undo history. Used as a cheap
+    /// optimistic-concurrency token: a reader snapshots it, and if it has
+    /// advanced by write time the reader knows the state changed underneath it.
+    pub(crate) revision: u32,
     pub(crate) undo_stack: VecDeque<S>,
     pub(crate) redo_stack: VecDeque<S>,
     pub(crate) diff_undo_stack: VecDeque<HashMap<SheetId, D>>,
@@ -15,6 +20,16 @@ pub struct VersionManagerHelper<S: Clone, D, const SIZE: usize> {
 impl<S: Clone, D, const SIZE: usize> VersionManagerHelper<S, D, SIZE> {
     pub fn version(&self) -> u32 {
         self.version
+    }
+
+    /// The current revision — a monotonic count of committed writes.
+    pub fn revision(&self) -> u32 {
+        self.revision
+    }
+
+    /// Bump the revision. Call once per committed mutation of the workbook.
+    pub fn bump_revision(&mut self) {
+        self.revision = self.revision.wrapping_add(1);
     }
 
     pub fn set_init_status(&mut self, current: S) {
