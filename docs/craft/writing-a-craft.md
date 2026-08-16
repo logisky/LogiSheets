@@ -15,6 +15,15 @@ canvas painter), `lights-out` / `memory-grid` / `minesweeper` (grid games),
 `what-if-calculator` (selection-driven data tools). They're the best reference
 once you know the shape.
 
+::: tip Scaffold with craftsmith
+Don't hand-create the files — run **`npx craftsmith new my-craft`** to generate a
+ready-to-build craft, then use this guide as the reference for the host API. A
+craft can also expose **tools** to **Watson** (the built-in AI assistant) by
+annotating its functions; see [Give a craft AI tools](./craftsmith.md). The
+manual file walkthrough below shows what `craftsmith` produces and how the pieces
+fit.
+:::
+
 ## How a craft runs
 
 A craft is a **standalone package** under `crafts/` that builds to a single

@@ -32,9 +32,10 @@ An interactive simulation game built entirely on LogiSheets — Blocks, live for
 Crafts are self-contained mini-apps that extend LogiSheets through the same public API the core uses. They're written in **plain JavaScript/TypeScript**, so the entire rich frontend ecosystem — UI libraries, charts, editors, AI SDKs — can be brought right into the spreadsheet. Shipped examples live under `crafts/`:
 
 - **factory-simulator** — interactive simulation game (zh / en) showcasing Blocks, formulas, and craft interactions. **[▶ Try it live](https://www.logisheets.com/?craft=factory-simulator)**
-- **Watson** — the in-app AI assistant (built on `logician`)
 - **what-if-calculator** — scenario analysis over workbook values
 - **markdown-table-extractor** — turn Markdown tables into Blocks
+
+Scaffold, check, and build a craft with the **`craftsmith`** CLI (`npx craftsmith new`). A craft can also expose **tools** to **Watson** (the built-in AI assistant) just by annotating its functions — one implementation drives both your UI and the AI. See [Give a craft AI tools](https://docs.logisheets.com/craft/craftsmith).
 
 ## Documentation
 
@@ -86,6 +87,7 @@ The WASM wrappers expose the engine over a simple RPC surface and carry no exten
 | **logisheets-engine** | `packages/engine` | Canvas-based spreadsheet UI component (MIT, fully open source) |
 | **logisheets-formula-editor** | `packages/formula-editor` | CodeMirror 6 formula editor |
 | **logician** | `packages/logician` | AI agent toolkit for operating workbooks (browser + Node) |
+| **logisheets-craftsmith** | `packages/craftsmith` | CLI to scaffold, check, build & pack crafts (generates the tool manifest Watson reads) |
 | **logisheets-desktop** | `packages/desktop` | Desktop app — a [Tauri](https://tauri.app/) shell that runs the web app (WASM engine) in a native window (experimental; see its [README](./packages/desktop/README.md)) |
 
 ## Contributing
