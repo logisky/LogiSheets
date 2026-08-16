@@ -132,6 +132,11 @@ pub fn get_sheet_count(mgr: &Manager, id: usize) -> usize {
     wb.get_sheet_count()
 }
 
+pub fn get_version(mgr: &Manager, id: usize) -> u32 {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.get_version()
+}
+
 pub fn get_all_sheet_info(mgr: &Manager, id: usize) -> Vec<SheetInfo> {
     let wb = mgr.get_workbook(&id).unwrap();
     wb.get_all_sheet_info()

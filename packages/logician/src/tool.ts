@@ -60,6 +60,19 @@ export type ConfirmationPolicy =
 /** Hint to the model (and to the scheduler) about cost. */
 export type ToolCost = 'cheap' | 'normal' | 'expensive'
 
+/**
+ * Scoped read/write access to a craft's persisted state (the opaque per-document
+ * JSON a craft owns via the host's AppData). Present on the ToolContext only for
+ * craft-skill tools, scoped to that craft — so a tool can operate the craft's
+ * stateful feature (a game board, a saved config) and stay consistent with the
+ * craft's own persistence. The schema is the craft's business (it JSON-encodes
+ * it itself), exactly like `window.getCraftState()`/`setCraftState()` in a craft.
+ */
+export interface CraftStateAccess {
+    get(): string | undefined
+    set(json: string): void
+}
+
 /** Context passed to every tool handler. */
 export interface ToolContext {
     /** The active LogiSheets workbook client. */
@@ -70,6 +83,13 @@ export interface ToolContext {
     confirm: (message: string, detail?: unknown) => Promise<boolean>
     /** Emit a progress / log line into the chat transcript. */
     log: (msg: string) => void
+    /**
+     * Persisted state of the craft this tool belongs to, scoped to that craft.
+     * Present only for craft-skill tools whose host wired a craftState provider;
+     * undefined for the built-in tools and headless hosts. A craft tool that
+     * needs it should degrade gracefully when it is absent.
+     */
+    craftState?: CraftStateAccess
     /**
      * Craft-defined cell-overlay widgets (radio / multi-select / point /
      * percent / slider). Optional: present only when the host has craft
@@ -105,6 +125,14 @@ export interface Tool<Input = unknown, Output = unknown> {
     confirmation?: ConfirmationPolicy
     /** Cost hint; defaults to 'normal'. */
     cost?: ToolCost
+    /**
+     * Multi-level category path for organizing tools into a tree (e.g.
+     * ['Data', 'Write'] or ['Structure', 'Sheets']). Purely organizational —
+     * NOT part of the LLM-facing id (`namespace__name`). Optional: when absent,
+     * a built-in default taxonomy is used (see tools/taxonomy.ts). A craft tool
+     * may set it to slot itself into the tree.
+     */
+    category?: readonly string[]
     /** Execute the tool. Throw to signal an error to the LLM. */
     handler: (input: Input, ctx: ToolContext) => Promise<ToolResult<Output>>
 }

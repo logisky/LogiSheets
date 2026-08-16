@@ -321,6 +321,75 @@ export async function clearEntries(
     await commit(workbook, payloads)
 }
 
+// ---- solving (for AI tools / "solve current board") --------------------
+
+/** True if no *filled* cell duplicates within its row / column / 3x3 box. */
+export function isConsistent(grid: Grid): boolean {
+    for (let pos = 0; pos < N * N; pos++) {
+        const v = grid[pos]
+        if (!v) continue
+        grid[pos] = 0
+        const ok = canPlace(grid, pos, v)
+        grid[pos] = v
+        if (!ok) return false
+    }
+    return true
+}
+
+/**
+ * Solve a partial grid (0 = blank), respecting the given cells. Returns a full
+ * valid completion, or null if the givens conflict or admit no solution. Pure.
+ */
+export function solveGrid(grid: Grid): Grid | null {
+    if (!isConsistent(grid)) return null
+    const g = grid.slice()
+    const solve = (pos: number): boolean => {
+        if (pos === N * N) return true
+        if (g[pos] !== 0) return solve(pos + 1)
+        for (let v = 1; v <= 9; v++) {
+            if (canPlace(g, pos, v)) {
+                g[pos] = v
+                if (solve(pos + 1)) return true
+                g[pos] = 0
+            }
+        }
+        return false
+    }
+    return solve(0) ? g : null
+}
+
+/**
+ * Write solved values into the cells that are currently blank in `current`
+ * (green, like "show answer"). Returns how many cells were filled.
+ */
+export async function applySolution(
+    workbook: Workbook,
+    idx: number,
+    current: Grid,
+    solved: Grid
+): Promise<number> {
+    const payloads: EditPayload[] = []
+    let n = 0
+    for (let r = 0; r < N; r++)
+        for (let c = 0; c < N; c++) {
+            const i = r * N + c
+            if (current[i] === 0 && solved[i] !== 0) {
+                payloads.push(input(idx, r, c, String(solved[i])))
+                payloads.push(
+                    styleUpdate(idx, r, c, {
+                        setFontColor: SOLVE_FONT,
+                        setFontBold: false,
+                        setFontSize: 16,
+                        setAlignment: {horizontal: 'center', vertical: 'center'},
+                    })
+                )
+                n++
+            }
+        }
+    await commit(workbook, payloads)
+    return n
+}
+
 /** Fill every blank with the solution (green), for "show answer". */
 export async function fillSolution(
     workbook: Workbook,

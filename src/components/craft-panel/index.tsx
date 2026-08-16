@@ -1,13 +1,11 @@
 import {
     Box,
-    Drawer,
     IconButton,
-    Stack,
     FormControl,
     Select,
     MenuItem,
 } from '@mui/material'
-import {ChevronRight} from '@mui/icons-material'
+import CloseIcon from '@mui/icons-material/Close'
 import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
@@ -21,7 +19,6 @@ import {
     setActiveCraft,
     type CraftInputHandler,
 } from 'logisheets-core'
-import {SETTINGS} from '@/core/settings'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
@@ -90,6 +87,9 @@ export const CraftPanel = ({
             craftUuid
         )
         win.__craftUuid = craftUuid
+        // The ids of all crafts shipped in this distribution — so a craft (e.g.
+        // Watson) can discover its siblings' skills by fetching /<id>/manifest.json.
+        win.installedCrafts = tools.map((t) => t.value)
         win.blockManager = BLOCK_MANAGER
         win.setCellLayouts = setCellLayouts
         win.setSelection = (sheetIdx: number, row: number, col: number) => {
@@ -245,94 +245,78 @@ export const CraftPanel = ({
         })
     }, [selectedData, DATA_SERVICE])
 
+    // Fills its slot in the left dock (the dock owns positioning + the edge
+    // border). Compact header: craft selector + close, then the iframe.
     return (
-        <Box>
-            <Drawer
-                variant="persistent"
-                anchor="right"
-                open={open}
+        <Box
+            sx={{
+                height: '100%',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#f2f4f7',
+            }}
+        >
+            <Box
                 sx={{
-                    // Drawer paper is position: fixed, so the docked root
-                    // doesn't need to reserve space in the flex flow. Offset it
-                    // below the toolbar so the panel starts at the toolbar's
-                    // bottom edge instead of covering it (keeps the top-right
-                    // GitHub badge and other toolbar controls clickable).
-                    '& .MuiDrawer-paper': {
-                        width: '360px',
-                        top: SETTINGS.topBar,
-                        height: `calc(100% - ${SETTINGS.topBar})`,
-                        boxSizing: 'border-box',
-                        backgroundColor: '#f2f4f7',
-                        display: 'flex',
-                        flexDirection: 'column',
-                    },
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    p: 1,
                 }}
             >
-                <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="flex-end"
-                    sx={{p: 1}}
-                >
-                    <IconButton
-                        size="small"
-                        color="default"
-                        aria-label="Close craft panel"
-                        onClick={onClose}
+                <FormControl size="small" fullWidth>
+                    <Select
+                        value={iframeSrc}
+                        onChange={(e) =>
+                            setIframeSrc(e.target.value as string)
+                        }
                     >
-                        <ChevronRight />
-                    </IconButton>
-                </Stack>
-                <Box
-                    sx={{
-                        flex: 1,
-                        borderTop: '1px solid #e0e0e0',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        minHeight: 0,
-                    }}
-                >
-                    <Stack direction="row" spacing={1} sx={{px: 1, pb: 1}}>
-                        <FormControl size="small" fullWidth>
-                            <Select
-                                value={iframeSrc}
-                                onChange={(e) =>
-                                    setIframeSrc(e.target.value as string)
-                                }
+                        {tools.map((tool) => (
+                            <MenuItem
+                                key={tool.value}
+                                value={tool.value}
+                                sx={{fontSize: '0.85rem'}}
                             >
-                                {tools.map((tool) => (
-                                    <MenuItem
-                                        key={tool.value}
-                                        value={tool.value}
-                                        sx={{fontSize: '0.85rem'}}
-                                    >
-                                        {tool.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Stack>
-                    <Box sx={{flex: 1, minHeight: 0}}>
-                        <iframe
-                            ref={iframeRef}
-                            src={iframeSrc}
-                            onLoad={() => {
-                                // A fresh page: the old craft's listener
-                                // closures belong to a now-dead realm — drop
-                                // them before the new page re-subscribes.
-                                selectionListeners.current.clear()
-                                inject()
-                            }}
-                            style={{
-                                border: 'none',
-                                width: '100%',
-                                height: '100%',
-                                display: 'block',
-                            }}
-                        />
-                    </Box>
-                </Box>
-            </Drawer>
+                                {tool.label}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <IconButton
+                    size="small"
+                    color="default"
+                    aria-label="Close craft panel"
+                    onClick={onClose}
+                >
+                    <CloseIcon fontSize="small" />
+                </IconButton>
+            </Box>
+            <Box
+                sx={{
+                    flex: 1,
+                    borderTop: '1px solid #e0e0e0',
+                    minHeight: 0,
+                }}
+            >
+                <iframe
+                    ref={iframeRef}
+                    src={iframeSrc}
+                    onLoad={() => {
+                        // A fresh page: the old craft's listener closures belong
+                        // to a now-dead realm — drop them before the new page
+                        // re-subscribes.
+                        selectionListeners.current.clear()
+                        inject()
+                    }}
+                    style={{
+                        border: 'none',
+                        width: '100%',
+                        height: '100%',
+                        display: 'block',
+                    }}
+                />
+            </Box>
         </Box>
     )
 }

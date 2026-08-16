@@ -81,6 +81,7 @@ pub enum Message {
     NewWorkbook,
     Release,
     GetSheetCount,
+    GetVersion,
     GetAllSheetInfo,
     GetFormulaFunctionNames,
     GetAppData,
@@ -892,6 +893,8 @@ pub struct WorkbookMethods {
     pub save:
         fn(params: SaveParams, book_id: Option<usize>) -> Result<SaveFileResult, ErrorMessage>,
     pub get_app_data: fn(book_id: Option<usize>) -> Result<Vec<AppData>, ErrorMessage>,
+    // Monotonic write counter — snapshot it to detect concurrent modification.
+    pub get_version: fn(book_id: Option<usize>) -> Result<u32, ErrorMessage>,
 
     // Formula operations
     pub get_display_units_of_formula: fn(

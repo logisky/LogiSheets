@@ -1424,6 +1424,8 @@ interface ListBlocksInput {
 
 interface BlockSummary {
     name: string
+    /** Numeric block id — pass to move_block / resize_block / remove_block. */
+    block_id: number
     position: {row: number; col: number}
     row_count: number
     col_count: number
@@ -1492,6 +1494,7 @@ export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
                 // to BLOCKREF / BLOCKREFS in formulas). Schema absent →
                 // legacy / ad-hoc block, fall back to "block#<id>".
                 name: b.schema?.name ?? `block#${b.blockId}`,
+                block_id: b.blockId,
                 position: {row: b.rowStart, col: b.colStart},
                 row_count: b.rowCnt,
                 col_count: b.colCnt,

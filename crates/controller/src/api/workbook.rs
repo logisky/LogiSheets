@@ -552,6 +552,12 @@ impl Workbook {
         self.controller.status.sheet_info_manager.pos.len()
     }
 
+    /// A monotonic counter bumped on every committed write. Readers snapshot it
+    /// to detect concurrent modification (optimistic concurrency).
+    pub fn get_version(&self) -> u32 {
+        self.controller.revision()
+    }
+
     /// To see if the formula is valid.
     pub fn check_formula(&self, f: String) -> bool {
         if f.is_empty() {

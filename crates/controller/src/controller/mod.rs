@@ -158,6 +158,13 @@ impl Controller {
         self.version_manager.version()
     }
 
+    /// A monotonic counter of committed writes to this workbook (undoable or
+    /// not, plus undo/redo). Readers snapshot it to detect whether the state
+    /// changed underneath them — the basis for optimistic concurrency in tools.
+    pub fn revision(&self) -> u32 {
+        self.version_manager.revision()
+    }
+
     pub fn from_file(name: String, f: &[u8]) -> Result<Self> {
         let res = read(f)?;
         Ok(load_file(res, name))
@@ -316,6 +323,7 @@ impl Controller {
         }
         match action {
             EditAction::Undo => {
+                // undo() bumps the revision itself (single funnel).
                 let c = if self.undo() {
                     WorkbookUpdateType::Undo
                 } else {
@@ -376,6 +384,13 @@ impl Controller {
                             .map(|i| i as u32)
                             .collect();
                         self.status = result.status;
+                        // Committed write — bump the revision unless nothing
+                        // actually changed, so readers can detect concurrent
+                        // edits. Go through `result.version_manager` (the same
+                        // `&mut self.version_manager` the executor holds).
+                        if !matches!(c, WorkbookUpdateType::DoNothing) {
+                            result.version_manager.bump_revision();
+                        }
                         ActionEffect {
                             version: result.version_manager.version(),
                             async_tasks: result.async_func_manager.get_calc_tasks(),
@@ -524,7 +539,7 @@ impl Controller {
     }
 
     pub fn undo(&mut self) -> bool {
-        if let Some(temp) = &mut self.temp_status {
+        let changed = if let Some(temp) = &mut self.temp_status {
             // Undo within temp branch; stop at fork point (never crosses into main history)
             match temp.version_manager.undo() {
                 Some(status) => {
@@ -541,11 +556,18 @@ impl Controller {
                 }
                 None => false,
             }
+        };
+        // Undo changes the visible state — bump the revision so readers notice.
+        // (This is the single funnel for undo: the RPC path and handle_action
+        // both call it.)
+        if changed {
+            self.version_manager.bump_revision();
         }
+        changed
     }
 
     pub fn redo(&mut self) -> bool {
-        if let Some(temp) = &mut self.temp_status {
+        let changed = if let Some(temp) = &mut self.temp_status {
             match temp.version_manager.redo() {
                 Some(status) => {
                     self.status = status;
@@ -561,7 +583,11 @@ impl Controller {
                 }
                 None => false,
             }
+        };
+        if changed {
+            self.version_manager.bump_revision();
         }
+        changed
     }
 
     /// Drop the undo/redo history, keeping the current workbook state as the

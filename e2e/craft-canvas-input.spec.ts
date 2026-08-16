@@ -32,7 +32,7 @@ async function waitForGrid(page: Page) {
 // records every event and consumes based on `window.__consume`. A probe on the
 // canvas records whether the event reached the engine.
 async function installCraftHandler(page: Page) {
-    await page.getByRole('button', {name: 'Open craft panel'}).click()
+    await page.getByRole('button', {name: 'Toggle craft panel'}).click()
 
     // Wait until the host has injected onCanvasInput onto the craft iframe.
     await page.waitForFunction(() => {

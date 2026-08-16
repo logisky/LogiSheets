@@ -19,8 +19,10 @@
         "@types/react-modal": "^3.16.3",
         "@types/react-transition-group": "^4.4.4",
         "dayjs": "^1.11.19",
+        "dexie": "^4.0.0",
         "eslint-plugin-react-hooks": "^4.3.0",
         "lodash": "^4.17.21",
+        "logician": "workspace:*",
         "logisheets-core": "workspace:*",
         "logisheets-engine": "workspace:*",
         "logisheets-web": "workspace:*",
@@ -41,7 +43,8 @@
         "web-vitals": "^2.1.4"
     },
     "scripts": {
-        "build-crafts": "./crafts/build.sh",
+        "build-craftsmith": "yarn workspace logisheets-craftsmith build",
+        "build-crafts": "yarn build-craftsmith && ./crafts/build.sh",
         "build": "yarn build-crafts && vite build && ./publish-crafts.sh",
         "build:games": "CRAFT_DIST=games yarn build",
         "gen-bindings": "cargo run --package buildtools --bin generate --all-features",

@@ -6,7 +6,7 @@
 // craft-state (progress) serialization. It talks only to the injected
 // `window.workbook` proxy (getAllSheetInfo + handleTransaction).
 
-import type {EditPayload, SheetInfo} from 'logisheets-web'
+import type {CellInfo, EditPayload, SheetInfo} from 'logisheets-web'
 
 export const BOARD_NAME = '关灯'
 export const SIZE = 5
@@ -26,6 +26,13 @@ export const DIFFICULTY: Record<string, number> = {easy: 4, medium: 8, hard: 14}
 
 export interface Workbook {
     getAllSheetInfo(): Promise<readonly SheetInfo[] | unknown>
+    getCells(params: {
+        sheetIdx: number
+        startRow: number
+        startCol: number
+        endRow: number
+        endCol: number
+    }): Promise<readonly CellInfo[] | unknown>
     handleTransaction(params: {
         transaction: {
             payloads: readonly EditPayload[]
@@ -154,6 +161,42 @@ export async function ensureBoard(workbook: Workbook): Promise<number> {
     return idx
 }
 
+const ON_RGB = hexToRgb(ON_HEX)
+
+/**
+ * Reconstruct the board from the sheet's cell fills — the visible, document-
+ * persisted source of truth (a cell is "on" iff its fill is the lit color).
+ * No craftState needed: the board lives in the workbook. Reads the SIZE×SIZE
+ * region row-major.
+ */
+export async function readBoard(
+    workbook: Workbook,
+    sheetIdx: number
+): Promise<Board> {
+    const res = await workbook.getCells({
+        sheetIdx,
+        startRow: 0,
+        startCol: 0,
+        endRow: SIZE - 1,
+        endCol: SIZE - 1,
+    })
+    const infos = Array.isArray(res) ? (res as CellInfo[]) : []
+    const board = emptyBoard()
+    for (let i = 0; i < infos.length && i < SIZE * SIZE; i++) {
+        const fill = infos[i]?.style?.fill
+        const fg =
+            fill && fill.type === 'patternFill' ? fill.value?.fgColor : undefined
+        board[i] =
+            fg &&
+            fg.red === ON_RGB.red &&
+            fg.green === ON_RGB.green &&
+            fg.blue === ON_RGB.blue
+                ? 1
+                : 0
+    }
+    return board
+}
+
 /** Paint the whole board's on/off fills in one transaction. */
 export async function renderBoard(
     workbook: Workbook,
@@ -214,13 +257,61 @@ export function generatePuzzle(moves: number): Board {
     return board
 }
 
+/**
+ * Solve a solvable board via Gaussian elimination over GF(2). Returns the set of
+ * cell indices to click (each toggles itself + orthogonal neighbors) that turns
+ * every light off, or null if the board is unsolvable (shouldn't happen for
+ * puzzles from `generatePuzzle`). Pure.
+ */
+export function solve(board: Board): number[] | null {
+    const n = SIZE * SIZE
+    // Augmented rows: A[i][j] = 1 iff clicking j toggles i ⇔ j ∈ affected(i);
+    // last column is the target (current light state of cell i).
+    const rows: number[][] = []
+    for (let i = 0; i < n; i++) {
+        const row = new Array(n + 1).fill(0)
+        for (const j of affected(Math.floor(i / SIZE), i % SIZE)) row[j] = 1
+        row[n] = board[i] ? 1 : 0
+        rows.push(row)
+    }
+    const where = new Array(n).fill(-1)
+    let pivot = 0
+    for (let c = 0; c < n && pivot < n; c++) {
+        let sel = -1
+        for (let r = pivot; r < n; r++)
+            if (rows[r][c]) {
+                sel = r
+                break
+            }
+        if (sel < 0) continue
+        ;[rows[pivot], rows[sel]] = [rows[sel], rows[pivot]]
+        where[c] = pivot
+        for (let r = 0; r < n; r++)
+            if (r !== pivot && rows[r][c])
+                for (let k = c; k <= n; k++) rows[r][k] ^= rows[pivot][k]
+        pivot++
+    }
+    const x = new Array(n).fill(0)
+    for (let c = 0; c < n; c++) if (where[c] !== -1) x[c] = rows[where[c]][n]
+    // Apply the candidate solution and verify (also rejects inconsistent boards).
+    const test = board.slice()
+    const moves: number[] = []
+    for (let i = 0; i < n; i++)
+        if (x[i]) {
+            moves.push(i)
+            applyMove(test, Math.floor(i / SIZE), i % SIZE)
+        }
+    return isSolved(test) ? moves : null
+}
+
 // ---- progress (craft-state) --------------------------------------------
 export interface Progress {
     solved: number // puzzles completed
     best: number | null // fewest moves to solve a puzzle (lower is better)
     difficulty: string // 'easy' | 'medium' | 'hard'
-    board: Board | null // current puzzle, to resume
     moves: number // moves made on the current puzzle
+    // NOTE: the board is NOT stored here — it lives in the workbook (cell fills),
+    // which is the document-persisted source of truth. Read it with readBoard().
 }
 
 export function parseProgress(json: string | undefined): Progress {
@@ -228,7 +319,6 @@ export function parseProgress(json: string | undefined): Progress {
         solved: 0,
         best: null,
         difficulty: 'medium',
-        board: null,
         moves: 0,
     }
     if (!json) return dflt
@@ -240,12 +330,8 @@ export function parseProgress(json: string | undefined): Progress {
                 ? Math.floor(p.best)
                 : null
         const difficulty = DIFFICULTY[p.difficulty] ? p.difficulty : 'medium'
-        const board =
-            Array.isArray(p.board) && p.board.length === SIZE * SIZE
-                ? p.board.map((v: unknown) => (v ? 1 : 0))
-                : null
         const moves = intOr(p.moves, 0)
-        return {solved, best, difficulty, board, moves}
+        return {solved, best, difficulty, moves}
     } catch {
         return dflt
     }

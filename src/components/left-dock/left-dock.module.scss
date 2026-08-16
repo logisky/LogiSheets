@@ -1,0 +1,35 @@
+// Left dock — hosts the Watson assistant + craft panel, stacked. Fixed to the
+// left edge below the top toolbar; width/top set inline from SETTINGS.
+.dock {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    flex-direction: column;
+    background: #ffffff;
+    border-right: 1px solid #e4e7ec;
+    box-shadow: 2px 0 8px rgba(16, 24, 40, 0.06);
+    z-index: 20;
+    overflow: hidden;
+}
+
+// Each stacked panel's slot — the panel content fills it.
+.section {
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+}
+
+// Draggable divider between the two stacked panels.
+.divider {
+    flex: 0 0 6px;
+    cursor: row-resize;
+    background: #e4e7ec;
+    border-top: 1px solid #d0d5dd;
+    border-bottom: 1px solid #d0d5dd;
+    touch-action: none;
+
+    &:hover {
+        background: #cbd5e1;
+    }
+}
