@@ -25,6 +25,7 @@ mod effect;
 mod exact;
 mod fact;
 mod finance;
+mod formulatext;
 mod fvpv;
 mod gcdlcm;
 mod gestep;
@@ -77,6 +78,8 @@ mod text;
 mod type_fns;
 mod utils;
 mod vlookup;
+mod xirr;
+mod xnpv;
 mod xor;
 
 use logisheets_parser::ast;
@@ -113,6 +116,8 @@ where
         "FISHER" => scalar_number::calc_atanh(args, fetcher),
         "FISHERINV" => scalar_number::calc_tanh(args, fetcher),
         "FORECAST" => regression::calc_forecast(args, fetcher),
+        "FORMULATEXT" => formulatext::calc(args, fetcher),
+        "ISFORMULA" => is::calc_isformula(args, fetcher),
         "LEFTB" => leftright::calc_left(args, fetcher),
         "MIDB" => leftright::calc_mid(args, fetcher),
         "PERCENTILE" => order_stats::calc_percentile(args, fetcher),
@@ -154,6 +159,7 @@ where
         "ACOS" => scalar_number::calc_acos(args, fetcher),
         "ACOSH" => scalar_number::calc_acosh(args, fetcher),
         "ADDRESS" => address::calc(args, fetcher),
+        "AGGREGATE" => aggregate::calc(args, fetcher),
         "AND" => and::calc(args, fetcher),
         "ASIN" => scalar_number::calc_asin(args, fetcher),
         "ASINH" => scalar_number::calc_asinh(args, fetcher),
@@ -404,6 +410,8 @@ where
         "WEEKDAY" => datetime::weekday::calc(args, fetcher),
         "WEIBULL" => distribution::weibull::calc(args, fetcher),
         "WEIBULL.DIST" => distribution::weibull::calc(args, fetcher),
+        "XIRR" => xirr::calc(args, fetcher),
+        "XNPV" => xnpv::calc(args, fetcher),
         "XOR" => xor::calc(args, fetcher),
         "YEAR" => datetime::ymd::calc_year(args, fetcher),
         "YIELDDISC" => bonds::yielddisc::calc(args, fetcher),

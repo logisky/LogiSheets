@@ -36,6 +36,21 @@ pub fn get_condition_result(calc_value: CalcValue) -> ConditionResult {
     }
 }
 
+/// Flatten a value into a positional `Vec<f64>` (blank → 0, bool → 1/0, numeric
+/// text parsed). Order is preserved so paired series — e.g. XNPV/XIRR values and
+/// dates — stay aligned by position.
+pub fn collect_f64_series(value: CalcValue) -> Result<Vec<f64>, ast::Error> {
+    match value {
+        CalcValue::Scalar(v) => Ok(vec![convert_f64(v)?]),
+        CalcValue::Range(r) => r.into_iter().map(convert_f64).collect(),
+        CalcValue::Cube(c) => c.into_iter().map(convert_f64).collect(),
+        CalcValue::Union(u) => u.into_iter().try_fold(Vec::new(), |mut acc, cv| {
+            acc.extend(collect_f64_series(*cv)?);
+            Ok(acc)
+        }),
+    }
+}
+
 pub fn convert_f64(value: Value) -> Result<f64, ast::Error> {
     match value {
         Value::Blank => Ok(0_f64),
@@ -306,6 +321,14 @@ pub mod tests_utils {
 
         fn get_sheet_id_by_name(&self, _name: &str) -> Result<SheetId> {
             unreachable!()
+        }
+
+        fn get_formula_string(&self, _sheet_id: SheetId, _cell_id: &CellId) -> Option<String> {
+            None
+        }
+
+        fn has_formula(&self, _sheet_id: SheetId, _cell_id: &CellId) -> bool {
+            false
         }
 
         fn commit_calc_values(&mut self, _vertex: (SheetId, CellId), _result: CalcValue) {

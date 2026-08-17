@@ -1,0 +1,18 @@
+# XIRR: internal rate of return for a dated (non-periodic) cash-flow schedule.
+# Same schedule as XNPV; the annualized return is ~37.34%.
+INPUT A1 -10000
+INPUT A2 2750
+INPUT A3 4250
+INPUT A4 3250
+INPUT A5 2750
+INPUT B1 39448
+INPUT B2 39508
+INPUT B3 39751
+INPUT B4 39859
+INPUT B5 39904
+INPUT C1 =XIRR(A1:A5, B1:B5)
+CHECKNUM C1 0.373363
+
+# All-positive flows have no return -> #NUM!
+INPUT C2 =XIRR(A2:A5, B2:B5)
+CHECKERR C2 #NUM!

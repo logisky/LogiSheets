@@ -583,6 +583,18 @@
     ]
   },
   {
+    "name": "FORMULATEXT",
+    "description": "Returns the formula in the referenced cell as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "reference"
+      }
+    ]
+  },
+  {
     "name": "FV",
     "description": "Returns the future value of an investment based on periodic, constant payments and a constant interest rate.",
     "argCount": {
@@ -923,6 +935,18 @@
     "args": [
       {
         "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ISFORMULA",
+    "description": "Returns TRUE if the reference is to a cell containing a formula; otherwise returns FALSE.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "reference"
       }
     ]
   },

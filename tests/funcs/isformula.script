@@ -1,0 +1,13 @@
+# ISFORMULA is TRUE for a cell holding a formula, FALSE otherwise.
+INPUT A1 =1+1
+INPUT A2 =ISFORMULA(A1)
+CHECKSTR A2 TRUE
+
+# A plain value carries no formula.
+INPUT B1 42
+INPUT B2 =ISFORMULA(B1)
+CHECKSTR B2 FALSE
+
+# An empty cell carries no formula.
+INPUT C2 =ISFORMULA(Z9)
+CHECKSTR C2 FALSE

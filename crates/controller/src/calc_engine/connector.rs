@@ -18,6 +18,15 @@ pub trait Connector:
     fn get_cell_idx(&self, sheet_id: SheetId, cell_id: &CellId) -> Result<(usize, usize)>;
     fn get_cell_id(&self, sheet_id: SheetId, row: usize, col: usize) -> Result<CellId>;
     fn get_sheet_id_by_name(&self, name: &str) -> Result<SheetId>;
+
+    /// The unparsed formula text of a cell (without the leading `=`), or `None`
+    /// when the cell carries no formula. Backs the `FORMULATEXT` function.
+    fn get_formula_string(&self, sheet_id: SheetId, cell_id: &CellId) -> Option<String>;
+
+    /// Whether a cell carries a formula. Backs the `ISFORMULA` function — a
+    /// presence check that (unlike `get_formula_string`) never depends on the
+    /// formula being serializable.
+    fn has_formula(&self, sheet_id: SheetId, cell_id: &CellId) -> bool;
     fn commit_calc_values(&mut self, vertex: (SheetId, CellId), result: CalcValue);
     fn is_async_func(&self, func_name: &str) -> bool;
     fn get_range(&self, sheet_id: &SheetId, range: &RangeId) -> Option<Range>;

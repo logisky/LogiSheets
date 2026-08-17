@@ -386,6 +386,9 @@ impl<'a> Executor<'a> {
             dirty_cells_in_next_run: &mut dirty_cells_in_next_run,
             calc_cells: &mut calc_cells,
             block_schema_manager: &status.block_schema_manager,
+            formula_manager: &status.formula_manager,
+            name_id_manager: &status.name_id_manager,
+            ext_ref_manager: &status.ext_ref_manager,
         };
         let engine = CalcEngine {
             formula_manager: &status.formula_manager,

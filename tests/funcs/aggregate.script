@@ -1,0 +1,36 @@
+# AGGREGATE(function_num, options, ...). Data in A1:A6 with one error cell,
+# so the error-ignoring options (2/3/6/7) are exercised.
+INPUT A1 10
+INPUT A2 20
+INPUT A3 30
+INPUT A4 40
+INPUT A5 =NA()
+INPUT A6 50
+
+# option 6 = ignore errors. SUM (9), AVERAGE (1), MAX (4), COUNT (2), MEDIAN (12).
+INPUT B1 =AGGREGATE(9, 6, A1:A6)
+CHECKNUM B1 150
+INPUT B2 =AGGREGATE(1, 6, A1:A6)
+CHECKNUM B2 30
+INPUT B3 =AGGREGATE(4, 6, A1:A6)
+CHECKNUM B3 50
+INPUT B4 =AGGREGATE(2, 6, A1:A6)
+CHECKNUM B4 5
+INPUT B5 =AGGREGATE(12, 6, A1:A6)
+CHECKNUM B5 30
+
+# Array form (14-19): LARGE(k), SMALL(k), PERCENTILE.INC over the same range.
+INPUT C1 =AGGREGATE(14, 6, A1:A6, 2)
+CHECKNUM C1 40
+INPUT C2 =AGGREGATE(15, 6, A1:A6, 1)
+CHECKNUM C2 10
+INPUT C3 =AGGREGATE(16, 6, A1:A6, 0.5)
+CHECKNUM C3 30
+
+# Non-ignoring option (4) lets the error propagate, unlike plain SUM can't avoid.
+INPUT D1 =AGGREGATE(9, 4, A1:A6)
+CHECKERR D1 #N/A
+
+# Bad function_num / options -> #VALUE!
+INPUT D2 =AGGREGATE(99, 6, A1:A6)
+CHECKERR D2 #VALUE!
