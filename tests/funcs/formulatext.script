@@ -1,0 +1,14 @@
+# FORMULATEXT returns the referenced cell's formula as text, with a leading '='.
+INPUT A1 =1+1
+INPUT A2 =FORMULATEXT(A1)
+CHECKSTR A2 =1 + 1
+
+# A cell without a formula -> #N/A.
+INPUT B1 42
+INPUT B2 =FORMULATEXT(B1)
+CHECKERR B2 #N/A
+
+# On a range reference, FORMULATEXT uses the top-left cell.
+INPUT C1 =SUM(1,2)
+INPUT C2 =FORMULATEXT(C1:D3)
+CHECKSTR C2 =SUM(1, 2)

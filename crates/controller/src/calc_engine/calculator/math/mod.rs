@@ -17,3 +17,5 @@ pub mod pmt;
 pub mod pv;
 pub mod sln;
 pub mod tbill;
+pub mod xirr;
+pub mod xnpv;

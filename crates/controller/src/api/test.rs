@@ -989,8 +989,16 @@ fn table_converts_to_block_on_load() {
     let blocks = ws0.get_all_blocks();
     assert_eq!(blocks.len(), 1, "the table should have become one block");
     let b = &blocks[0];
-    assert_eq!((b.row_start, b.col_start), (1, 0), "block starts below header");
-    assert_eq!((b.row_cnt, b.col_cnt), (3, 3), "block covers the 3 data rows");
+    assert_eq!(
+        (b.row_start, b.col_start),
+        (1, 0),
+        "block starts below header"
+    );
+    assert_eq!(
+        (b.row_cnt, b.col_cnt),
+        (3, 3),
+        "block covers the 3 data rows"
+    );
 
     // Schema ref is `unspecified-*` and its fields are the header names.
     let schema = b.schema.as_ref().expect("converted block has a schema");
@@ -1005,9 +1013,7 @@ fn table_converts_to_block_on_load() {
     // Header cells stay as normal cells; data values are preserved (now in the block).
     assert!(matches!(ws0.get_value(0, 0).unwrap(), Value::Str(s) if s == "Region"));
     assert!(matches!(ws0.get_value(1, 0).unwrap(), Value::Str(s) if s == "East"));
-    assert!(
-        matches!(ws0.get_value(3, 2).unwrap(), Value::Number(n) if (n - 60.0).abs() < 1e-9)
-    );
+    assert!(matches!(ws0.get_value(3, 2).unwrap(), Value::Number(n) if (n - 60.0).abs() < 1e-9));
 
     // 4. Re-save: no table is written back; the block persists as private data.
     let resaved = wb.save().unwrap();
@@ -2882,4 +2888,54 @@ fn sort_block_reference_follows_moved_cell() {
             "B1 should now hold Dave's 5 after the sort"
         );
     }
+}
+
+#[test]
+fn formulatext_returns_source_formula_and_na() {
+    use crate::controller::display::Value;
+    use crate::edit_action::CellInput;
+
+    let mut wb = Workbook::default();
+    let input = |row: usize, col: usize, content: &str| {
+        EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col,
+            content: content.to_string(),
+        })
+    };
+    let r = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            input(0, 0, "=1+1"),             // A1: a formula
+            input(1, 0, "42"),               // A2: a plain value (no formula)
+            input(0, 1, "=FORMULATEXT(A1)"), // B1: formula of A1
+            input(1, 1, "=FORMULATEXT(A2)"), // B2: A2 has no formula -> #N/A
+            input(0, 2, "=ISFORMULA(A1)"),   // C1: A1 has a formula -> TRUE
+            input(1, 2, "=ISFORMULA(A2)"),   // C2: A2 has none -> FALSE
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(r.status, crate::edit_action::StatusCode::Ok(_)));
+
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    // FORMULATEXT: the formula text with a leading '=' (Excel behavior).
+    match ws.get_value(0, 1).unwrap() {
+        Value::Str(s) => assert_eq!(s, "=1 + 1"),
+        v => panic!("B1 expected the formula text, got {:?}", v),
+    }
+    // FORMULATEXT of a cell without a formula yields #N/A.
+    match ws.get_value(1, 1).unwrap() {
+        Value::Error(e) => assert_eq!(e, "#N/A"),
+        v => panic!("B2 expected #N/A, got {:?}", v),
+    }
+    // ISFORMULA: TRUE for a formula cell, FALSE otherwise.
+    assert!(
+        matches!(ws.get_value(0, 2).unwrap(), Value::Bool(true)),
+        "C1 expected ISFORMULA(A1) == TRUE"
+    );
+    assert!(
+        matches!(ws.get_value(1, 2).unwrap(), Value::Bool(false)),
+        "C2 expected ISFORMULA(A2) == FALSE"
+    );
 }

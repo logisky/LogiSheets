@@ -1,8 +1,32 @@
 use crate::calc_engine::{
-    calculator::calc_vertex::{CalcValue, CalcVertex, Value},
+    calculator::calc_vertex::{CalcValue, CalcVertex, Reference, Value},
     connector::Connector,
 };
 use logisheets_parser::ast;
+
+/// `ISFORMULA(reference)` — TRUE if the top-left cell of `reference` carries a
+/// formula, FALSE otherwise. A non-reference argument is `#VALUE!` (Excel).
+pub fn calc_isformula<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
+where
+    C: Connector,
+{
+    assert_or_return!(args.len() == 1, ast::Error::Unspecified);
+    let reference = match args.into_iter().next().unwrap() {
+        CalcVertex::Reference(r) => r,
+        _ => return CalcVertex::from_error(ast::Error::Value),
+    };
+    let (row, col) = match reference.reference {
+        Reference::Addr(a) => (a.row, a.col),
+        Reference::Range(s, _) => (s.row, s.col),
+        Reference::ColumnRange(cr) => (0, cr.start),
+        Reference::RowRange(rr) => (rr.start, 0),
+    };
+    let sheet = reference.sheet;
+    match fetcher.get_cell_id(sheet, row, col) {
+        Ok(cell_id) => CalcVertex::from_bool(fetcher.has_formula(sheet, &cell_id)),
+        Err(_) => CalcVertex::from_error(ast::Error::Value),
+    }
+}
 
 pub fn calc_isblank<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where

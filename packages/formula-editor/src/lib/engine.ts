@@ -27,6 +27,25 @@ import {builtinFormulaFunctions} from './functions'
 /** The slice of a workbook client the source needs. */
 export interface FormulaWorkbook {
     getDisplayUnitsOfFormula(formula: string): Promise<unknown>
+    /**
+     * Point-mode arrow move: the next visible cell in a direction (skips hidden
+     * rows/cols). Resolves to a `{x: col, y: row}` coordinate, or an
+     * error-message-like object when there's nowhere to go. Structural on
+     * purpose — the concrete client is logisheets-web's `Workbook`.
+     */
+    getNextVisibleCell(params: {
+        sheetIdx: number
+        rowIdx: number
+        colIdx: number
+        direction: 'up' | 'down' | 'left' | 'right'
+    }): Promise<unknown>
+    /** Ctrl+Arrow: jump to the next data / block boundary (same shape). */
+    getDataBoundary(params: {
+        sheetIdx: number
+        rowIdx: number
+        colIdx: number
+        direction: 'up' | 'down' | 'left' | 'right'
+    }): Promise<unknown>
 }
 
 /** The slice of an engine `DataService` the source needs. */

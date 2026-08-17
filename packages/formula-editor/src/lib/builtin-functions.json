@@ -583,6 +583,18 @@
     ]
   },
   {
+    "name": "FORMULATEXT",
+    "description": "Returns the formula in the referenced cell as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "reference"
+      }
+    ]
+  },
+  {
     "name": "FV",
     "description": "Returns the future value of an investment based on periodic, constant payments and a constant interest rate.",
     "argCount": {
@@ -923,6 +935,18 @@
     "args": [
       {
         "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ISFORMULA",
+    "description": "Returns TRUE if the reference is to a cell containing a formula; otherwise returns FALSE.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "reference"
       }
     ]
   },
@@ -2021,6 +2045,43 @@
       },
       {
         "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "XIRR",
+    "description": "Returns the internal rate of return for a schedule of cash flows that is not necessarily periodic.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "values"
+      },
+      {
+        "argName": "dates"
+      },
+      {
+        "argName": "guess"
+      }
+    ]
+  },
+  {
+    "name": "XNPV",
+    "description": "Returns the net present value for a schedule of cash flows that is not necessarily periodic.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "values"
+      },
+      {
+        "argName": "dates"
       }
     ]
   },

@@ -1,0 +1,18 @@
+# XNPV: net present value of a dated (non-periodic) cash-flow schedule.
+# Flows in A1:A5, Excel serial dates in B1:B5 (2008-01-01 … 2009-04-01).
+INPUT A1 -10000
+INPUT A2 2750
+INPUT A3 4250
+INPUT A4 3250
+INPUT A5 2750
+INPUT B1 39448
+INPUT B2 39508
+INPUT B3 39751
+INPUT B4 39859
+INPUT B5 39904
+INPUT C1 =XNPV(0.09, A1:A5, B1:B5)
+CHECKNUM C1 2086.6476
+
+# Rate <= -1 has no valid discount factor -> #NUM!
+INPUT C2 =XNPV(-2, A1:A5, B1:B5)
+CHECKERR C2 #NUM!

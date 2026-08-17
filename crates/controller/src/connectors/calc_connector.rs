@@ -12,11 +12,17 @@ use logisheets_base::{
 use logisheets_base::{BlockCellId, BlockId, BlockRange, CubeCross, NormalRange, Range};
 use logisheets_parser::ast;
 
+use logisheets_parser::unparse;
+
 use crate::block_manager::schema_manager::SchemaManager;
 use crate::cube_manager::CubeManager;
-use crate::id_manager::SheetIdManager;
+use crate::ext_ref_manager::ExtRefManager;
+use crate::formula_manager::FormulaManager;
+use crate::id_manager::{NameIdManager, SheetIdManager};
 use crate::navigator::BlockPlace;
 use crate::range_manager::RangeManager;
+
+use super::NameFetcher;
 use crate::{
     async_func_manager::AsyncFuncManager,
     calc_engine::calculator::calc_vertex::Value,
@@ -50,6 +56,11 @@ pub struct CalcConnector<'a> {
     pub async_func_manager: &'a mut AsyncFuncManager,
     pub async_funcs: &'a HashSet<String>,
     pub block_schema_manager: &'a SchemaManager,
+    // Read-only managers needed to unparse a cell's formula back to text
+    // (FORMULATEXT). The calc engine otherwise works on values, not source.
+    pub formula_manager: &'a FormulaManager,
+    pub name_id_manager: &'a NameIdManager,
+    pub ext_ref_manager: &'a ExtRefManager,
     pub active_sheet: SheetId,
     pub curr_addr: Addr,
 
@@ -460,6 +471,30 @@ impl<'a> Connector for CalcConnector<'a> {
             Some(id) => Ok(*id),
             None => Err(BasicError::SheetNameNotFound(name.to_string()).into()),
         }
+    }
+
+    fn get_formula_string(&self, sheet_id: SheetId, cell_id: &CellId) -> Option<String> {
+        let node = self.formula_manager.formulas.get(&(sheet_id, *cell_id))?;
+        // Reborrow the mutably-held managers as shared for the name fetcher.
+        let mut name_fetcher = NameFetcher {
+            func_manager: self.func_id_manager,
+            range_manager: self.range_manager,
+            cube_manager: self.cube_manager,
+            ext_ref_manager: self.ext_ref_manager,
+            sheet_id_manager: self.sheet_id_manager,
+            external_links_manager: &*self.ext_links,
+            text_id_manager: &*self.text_id_manager,
+            name_id_manager: self.name_id_manager,
+            navigator: &*self.navigator,
+            block_schema_manager: self.block_schema_manager,
+        };
+        unparse::unparse(node, &mut name_fetcher, sheet_id).ok()
+    }
+
+    fn has_formula(&self, sheet_id: SheetId, cell_id: &CellId) -> bool {
+        self.formula_manager
+            .formulas
+            .contains_key(&(sheet_id, *cell_id))
     }
 
     fn set_curr_as_dirty(&mut self) -> Result<()> {
