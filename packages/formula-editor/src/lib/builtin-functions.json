@@ -2049,6 +2049,43 @@
     ]
   },
   {
+    "name": "XIRR",
+    "description": "Returns the internal rate of return for a schedule of cash flows that is not necessarily periodic.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "values"
+      },
+      {
+        "argName": "dates"
+      },
+      {
+        "argName": "guess"
+      }
+    ]
+  },
+  {
+    "name": "XNPV",
+    "description": "Returns the net present value for a schedule of cash flows that is not necessarily periodic.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "values"
+      },
+      {
+        "argName": "dates"
+      }
+    ]
+  },
+  {
     "name": "XOR",
     "description": "Returns TRUE when an odd number of arguments are TRUE.",
     "argCount": {

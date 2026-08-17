@@ -33,6 +33,7 @@ import {
     getReferenceString,
     qualifyReference,
     buildSelectedDataFromCell,
+    isErrorMessage,
 } from 'logisheets-engine'
 import type {
     Grid,
@@ -126,6 +127,17 @@ export interface InlineCellEditorOptions {
     onEditingChange?: (editing: boolean) => void
     /** Bumped after commits / selection moves so dependents re-read content. */
     onContentChanged?: () => void
+    /**
+     * Override point-mode arrow handling. By default, arrows / Ctrl+Arrow while
+     * editing a formula move the grid selection (via the engine's cell
+     * navigation) so a reference is inserted — the keyboard analogue of clicking
+     * a cell. Provide this to replace that behavior. Return `true` to consume
+     * the key, `false` to let it move the text caret.
+     */
+    onArrowKey?: (
+        direction: 'up' | 'down' | 'left' | 'right',
+        modifiers: {ctrl: boolean; shift: boolean}
+    ) => boolean
 }
 
 export interface InlineCellEditorHandle {
@@ -171,6 +183,7 @@ export function createInlineCellEditor(
         onInvalidFormula,
         onEditingChange,
         onContentChanged,
+        onArrowKey,
     } = options
 
     let grid: Grid | null = options.grid ?? null
@@ -182,6 +195,9 @@ export function createInlineCellEditor(
     let inserting = false
     let editorText = ''
     let lastRef = ''
+    // Point-mode: the cell the arrow keys are currently "pointing" at. Starts at
+    // the edited cell and moves with each arrow; reset when the user types.
+    let pointCell: {row: number; col: number} | null = null
     // Whether this editor is currently registered with the coordinator as the
     // active formula edit (true only while in formula "point" mode).
     let registered = false
@@ -242,9 +258,14 @@ export function createInlineCellEditor(
     function handleChange(value: string) {
         editorText = value
         autoExpand(value)
-        // Manual typing clears the replace-tracking; a programmatic reference
+        // Manual typing clears the replace-tracking (and the point-mode anchor,
+        // so the next arrow starts a fresh pick); a programmatic reference
         // insertion sets `inserting` first so this doesn't clear it.
-        if (!inserting) prevInsertion = null
+        if (!inserting) {
+            prevInsertion = null
+            pointCell = null
+            lastRef = ''
+        }
         inserting = false
         // Entering/leaving formula mode (toggling the leading `=`) flips
         // coordinator registration; also pushes live text to the reminder.
@@ -287,6 +308,44 @@ export function createInlineCellEditor(
         if (ref === lastRef) return
         lastRef = ref
         insertReference(ref)
+    }
+
+    /**
+     * Default point-mode arrow handling: move the pointed cell one step (or to
+     * the data boundary with Ctrl) and insert its reference — the keyboard
+     * analogue of clicking a cell. Returns synchronously (the key is consumed);
+     * the engine round-trip + ref insertion follow.
+     */
+    function movePoint(
+        dir: 'up' | 'down' | 'left' | 'right',
+        mod: {ctrl: boolean; shift: boolean}
+    ): boolean {
+        if (!ctx || !isEditingFormula()) return false
+        void applyPointMove(dir, mod.ctrl)
+        return true
+    }
+
+    async function applyPointMove(
+        dir: 'up' | 'down' | 'left' | 'right',
+        ctrl: boolean
+    ) {
+        if (!ctx) return
+        const sheetIdx = getViewSheetIdx()
+        const from = pointCell ?? {row: ctx.row, col: ctx.col}
+        const params = {sheetIdx, rowIdx: from.row, colIdx: from.col, direction: dir}
+        const wb = dataService.getWorkbook()
+        const resp = ctrl
+            ? await wb.getDataBoundary(params)
+            : await wb.getNextVisibleCell(params)
+        // No cell in that direction (edge / no boundary): keep the key consumed
+        // but do nothing.
+        if (!resp || isErrorMessage(resp)) return
+        const {x: col, y: row} = resp as {x: number; y: number}
+        pointCell = {row, col}
+        const data = buildSelectedDataFromCell(row, col, 'none')
+        applySelectionAsRef(sheetIdx, data)
+        setSelection(data)
+        onContentChanged?.()
     }
 
     // Identity handed to the coordinator so other views can feed refs to this
@@ -343,6 +402,7 @@ export function createInlineCellEditor(
         inserting = false
         editorText = ''
         lastRef = ''
+        pointCell = null
         teardownEditor()
         clearHighlights()
         onEditingChange?.(false)
@@ -412,6 +472,8 @@ export function createInlineCellEditor(
             },
             onSubmit: (v) => commitEdit(v, true),
             onCancel: cancelEdit,
+            // Point mode: default to moving the grid selection (host may override).
+            onArrowKey: onArrowKey ?? movePoint,
         })
 
         // The initial text may already be a formula (user typed `=` to start),

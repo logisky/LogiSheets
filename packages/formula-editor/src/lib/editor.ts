@@ -43,7 +43,7 @@ import type {
     GetDisplayUnitsFunc,
 } from './types'
 import {getCellRefColor} from './types'
-import {isFormula, fuzzyMatch} from './utils'
+import {isFormula, fuzzyMatch, cycleReferenceAbsolute} from './utils'
 
 /**
  * Build a lookup that translates a UTF-8 byte offset into `text` to the
@@ -368,6 +368,74 @@ function buildDecorations(
 }
 
 /**
+ * Excel-style F4: find the cell-reference token under the cursor and cycle its
+ * absolute/relative markers in place. Uses the backend token units held in
+ * state (byte offsets over the formula body, i.e. after the leading '='), the
+ * same source the highlight decorations use, so "current token" stays in sync
+ * with what the user sees highlighted.
+ */
+function cycleReferenceUnderCursor(v: EditorView): boolean {
+    const {state} = v
+    const text = state.doc.toString()
+    if (!isFormula(text)) return false
+    const tokenUnits = state.field(storedTokenUnitsField)
+    if (tokenUnits.length === 0) return false
+
+    const hasEq = text.startsWith('=')
+    const offset = hasEq ? 1 : 0
+    const byteToCharIdx = makeByteToCharIdx(hasEq ? text.slice(1) : text)
+    const cursor = state.selection.main.head
+
+    for (const tu of tokenUnits) {
+        if (tu.tokenType !== 'cellReference') continue
+        const from = byteToCharIdx(tu.start) + offset
+        const to = byteToCharIdx(tu.end) + offset
+        // Match when the cursor is within the reference or right at its end
+        // (the just-typed case: type `A1`, press F4).
+        if (cursor < from || cursor > to) continue
+        const orig = text.slice(from, to)
+        const cycled = cycleReferenceAbsolute(orig)
+        if (cycled === null || cycled === orig) return false
+        v.dispatch({
+            changes: {from, to, insert: cycled},
+            selection: {anchor: from + cycled.length},
+        })
+        return true
+    }
+    return false
+}
+
+/**
+ * Whether the caret is at a position where a cell reference is expected — the
+ * gate for point mode. True when the caret is on/next to a cellReference token
+ * (nudging an existing ref), or the nearest non-space char before it is a
+ * reference-starting delimiter (`=`, an operator, `(`, `,`, `:`). Otherwise the
+ * caret is inside a name/number/text and arrows should move the caret.
+ */
+function isReferenceContext(state: EditorState): boolean {
+    const text = state.doc.toString()
+    if (!isFormula(text)) return false
+    const caret = state.selection.main.head
+    const hasEq = text.startsWith('=')
+    const offset = hasEq ? 1 : 0
+    if (caret < offset) return false
+
+    const byteToCharIdx = makeByteToCharIdx(hasEq ? text.slice(1) : text)
+    const tokenUnits = state.field(storedTokenUnitsField)
+    for (const tu of tokenUnits) {
+        if (tu.tokenType !== 'cellReference') continue
+        const from = byteToCharIdx(tu.start) + offset
+        const to = byteToCharIdx(tu.end) + offset
+        if (caret >= from && caret <= to) return true
+    }
+
+    let i = caret - 1
+    while (i >= offset && /\s/.test(text[i])) i--
+    if (i < offset) return true // right after the leading '='
+    return '=+-*/^&(,<>%:'.includes(text[i])
+}
+
+/**
  * Options for {@link createFormulaEditor}. These mirror the React component's
  * props minus the React-only bits — the React `style` prop maps to `style`
  * here (applied to the host element).
@@ -383,6 +451,18 @@ export interface FormulaEditorOptions {
     onBlur?: (value: string) => void
     onSubmit?: (value: string) => void
     onCancel?: () => void
+    /**
+     * Point-mode: called on an arrow / Ctrl+Arrow key while the caret sits where
+     * a cell reference is expected (after `=`, an operator, `(`, `,`, or on/next
+     * to an existing reference). Return `true` to consume the key — the host has
+     * moved the grid selection / inserted a reference; return `false` to let the
+     * arrow move the text caret instead. The editor has no grid, so the actual
+     * cell selection lives in this callback, not here.
+     */
+    onArrowKey?: (
+        direction: 'up' | 'down' | 'left' | 'right',
+        modifiers: {ctrl: boolean; shift: boolean}
+    ) => boolean
     /** Fetch token / cell-ref info from the host (required). */
     getDisplayUnits: GetDisplayUnitsFunc
     /** Functions offered by autocomplete + signature help. */
@@ -445,6 +525,7 @@ export function createFormulaEditor(
         onBlur: options.onBlur,
         onSubmit: options.onSubmit,
         onCancel: options.onCancel,
+        onArrowKey: options.onArrowKey,
         getDisplayUnits: options.getDisplayUnits,
         formulaFunctions: options.formulaFunctions ?? [],
         sheetName: options.sheetName ?? '',
@@ -582,6 +663,25 @@ export function createFormulaEditor(
             }
         )
 
+        // One point-mode command per direction, in plain (single step) and
+        // Ctrl/Cmd (data-boundary jump) forms. Fires only in reference context;
+        // otherwise returns false so the arrow moves the text caret.
+        const arrowPointModeBindings = () => {
+            const dirs = ['up', 'down', 'left', 'right'] as const
+            const run =
+                (dir: (typeof dirs)[number], ctrl: boolean) =>
+                (v: EditorView) => {
+                    if (!live.onArrowKey) return false
+                    if (!isReferenceContext(v.state)) return false
+                    return live.onArrowKey(dir, {ctrl, shift: false})
+                }
+            const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
+            return dirs.flatMap((dir) => [
+                {key: `Arrow${cap(dir)}`, run: run(dir, false)},
+                {key: `Mod-Arrow${cap(dir)}`, run: run(dir, true)},
+            ])
+        }
+
         const customKeymap = keymap.of([
             {
                 key: 'Backspace',
@@ -641,6 +741,16 @@ export function createFormulaEditor(
                     return true
                 },
             },
+            {
+                // Excel-style F4: cycle the cell reference under the cursor
+                // through relative / absolute forms (A1 → $A$1 → A$1 → $A1).
+                key: 'F4',
+                run: (v) => cycleReferenceUnderCursor(v),
+            },
+            // Point mode: arrows / Ctrl+Arrow pick a cell when the caret is at a
+            // reference-expected position. The handler (host) moves the grid
+            // selection; if it declines, the arrow falls through to caret move.
+            ...arrowPointModeBindings(),
         ])
 
         const theme = EditorView.theme({
@@ -871,6 +981,7 @@ export function createFormulaEditor(
             if ('onBlur' in opts) live.onBlur = opts.onBlur
             if ('onSubmit' in opts) live.onSubmit = opts.onSubmit
             if ('onCancel' in opts) live.onCancel = opts.onCancel
+            if ('onArrowKey' in opts) live.onArrowKey = opts.onArrowKey
             if (opts.getDisplayUnits) live.getDisplayUnits = opts.getDisplayUnits
             if (opts.formulaFunctions) live.formulaFunctions = opts.formulaFunctions
             if (opts.sheetName !== undefined) live.sheetName = opts.sheetName

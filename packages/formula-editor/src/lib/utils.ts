@@ -152,6 +152,54 @@ export function isFormula(text: string): boolean {
 }
 
 /**
+ * Cycle a cell reference's absolute/relative markers the way Excel's F4 does:
+ *
+ *   A1  →  $A$1  →  A$1  →  $A1  →  A1
+ *
+ * Handles an optional sheet/workbook prefix (`Sheet1!A1` keeps the prefix) and
+ * ranges (`A1:B2` — both endpoints move to the same state, as in Excel). The
+ * next state is derived from the first endpoint and applied uniformly.
+ *
+ * Returns `null` when `text` is not a plain A1-style reference (named ranges,
+ * R1C1, structured refs, …) so the caller can leave it untouched.
+ */
+export function cycleReferenceAbsolute(text: string): string | null {
+    const bang = text.lastIndexOf('!')
+    const prefix = bang >= 0 ? text.slice(0, bang + 1) : ''
+    const body = bang >= 0 ? text.slice(bang + 1) : text
+
+    const parsed = body.split(':').map((part) => {
+        const m = /^(\$?)([A-Za-z]{1,3})(\$?)([0-9]+)$/.exec(part)
+        return m
+            ? {colAbs: m[1] === '$', col: m[2], rowAbs: m[3] === '$', row: m[4]}
+            : null
+    })
+    if (parsed.some((p) => p === null)) return null
+
+    // State of the first endpoint, then the next state in the F4 cycle.
+    const first = parsed[0]!
+    const state =
+        !first.colAbs && !first.rowAbs
+            ? 0
+            : first.colAbs && first.rowAbs
+              ? 1
+              : !first.colAbs && first.rowAbs
+                ? 2
+                : 3
+    const [colAbs, rowAbs] = [
+        [false, false],
+        [true, true],
+        [false, true],
+        [true, false],
+    ][(state + 1) % 4]
+
+    const rebuilt = parsed
+        .map((p) => `${colAbs ? '$' : ''}${p!.col}${rowAbs ? '$' : ''}${p!.row}`)
+        .join(':')
+    return prefix + rebuilt
+}
+
+/**
  * Measure text width using a canvas context.
  */
 let measureCanvas: HTMLCanvasElement | null = null
