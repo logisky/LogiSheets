@@ -16,9 +16,8 @@ Key ideas that set it apart:
 - [Embed the spreadsheet UI (logisheets-engine)](https://docs.logisheets.com/engine.html): Drop an Excel-like, canvas-rendered spreadsheet grid into any web app; Web Worker + OffscreenCanvas architecture, multiple synchronized views.
 - [Headless on Node (logisheets-runtime)](https://docs.logisheets.com/runtime.html): Server-side spreadsheet runtime that manages many workbooks and exposes a JSON-RPC server, with no browser or canvas.
 - [Charts](https://docs.logisheets.com/chart.html): Native Excel chart (OOXML `c:chartSpace`) support — read, render, create, edit, and save charts with lossless `.xlsx` round-tripping.
-- [Crafts](https://docs.logisheets.com/craft/craft.html): The plugin system — what a craft is, how it is sandboxed, and the host API it is given.
-- [Writing a craft](https://docs.logisheets.com/craft/writing-a-craft.html): Step-by-step tutorial for building a craft (scaffold with the craftsmith CLI), covering the host API, patterns, and gotchas.
-- [Give a craft AI tools (craftsmith)](https://docs.logisheets.com/craft/craftsmith.html): Annotate a craft's functions as tools the built-in Watson assistant can discover and call; scaffold, check, build, and publish with the craftsmith CLI.
+- [Crafts](https://docs.logisheets.com/craft/craft.html): The core concept — a craft is one piece of logic reachable from the browser, a headless runtime, and AI; what it gives you and how it loads.
+- [Writing a craft](https://docs.logisheets.com/craft/writing-a-craft.html): Step-by-step tutorial for building a craft (scaffold with the craftsmith CLI), covering the host API, patterns, gotchas, and exposing your functions as AI tools for the built-in Watson assistant.
 
 ## Packages
 

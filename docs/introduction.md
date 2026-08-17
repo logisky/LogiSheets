@@ -36,24 +36,32 @@ position-addressing is the source of its most painful failure modes:
   and no declared shape, a plugin or an integration can't reliably read or write
   "the third field of the second row of that table."
 
-LogiSheets fixes this at the data-model level by introducing **Blocks**. A block
-is a rectangular region that is addressed by a **stable ID**, not by
-coordinates:
+LogiSheets fixes this at the data-model level with a single idea: a **Block** —
+a region of the sheet with a **stable identity** and a coordinate space of its
+own. That one property is load-bearing. Give a region an identity, and a whole
+set of things a loose grid simply can't express all follow from it:
 
-- **Cells inside a block keep their relative positions.** Insert or delete rows
-  elsewhere in the sheet and the block — and every reference into it — stays
-  correct. The engine tracks cells by stable IDs internally precisely so this
-  holds.
-- **A block can carry a schema** — named fields and keys — so its contents have
-  *meaning*, not just a location. "Row whose key is `2024-Q1`, field `revenue`"
-  becomes an addressable thing, independent of where the block currently sits.
-- **Blocks have their own coordinate space and edit operations**
-  (`blockInput`, `insertRowsInBlock`, `bindFormSchema`, …), so growing or
-  reshaping a table doesn't disturb the rest of the sheet, and vice versa.
+- **It survives edits.** The engine tracks a block's cells by stable IDs, so
+  inserting or deleting rows elsewhere in the sheet leaves the block — and every
+  reference into it — pointing at the right cells.
+- **It can mean something.** Attach a **schema** — named fields, keys — and the
+  block's contents carry *meaning*, not just a location: "the row keyed
+  `2024-Q1`, field `revenue`" becomes an addressable thing, wherever the block
+  currently sits.
+- **It can be governed.** Because the region has a boundary and an owner, you can
+  hang rules on it — which cells are inputs and which are computed, which ones the
+  **user may edit**, what values are valid. A block is where a form's "only these
+  fields are editable, and only with valid values" actually lives; a loose grid
+  has nowhere to put that.
+- **It can be built on.** A stable handle plus a declared shape is exactly what
+  external code, the AI assistant, and other crafts need to read and write
+  structured data reliably — by *(block, field, key)*, through the block payload
+  family (`blockInput`, `insertRowsInBlock`, `bindFormSchema`, …).
 
-The payoff: data in LogiSheets can be *structured* — tables that know they're
-tables — while still living in a familiar, Excel-compatible spreadsheet. This is
-the foundation everything else is built on.
+These aren't four separate features — they're the same fact, *a region with
+identity*, seen from four angles. The payoff: data in LogiSheets can be
+*structured* — tables that know they're tables — while still living in a familiar,
+Excel-compatible spreadsheet. This is the foundation everything else is built on.
 
 ### Easy to extend (built for secondary development)
 
@@ -148,6 +156,65 @@ The deepest level is what makes LogiSheets more than a spreadsheet: building
   of an embedded form, a what-if calculator, or a table extractor that the user
   interacts with right in the sheet. Crafts are how you extend the platform with
   domain-specific behavior.
+
+#### Blocks are how crafts coexist
+
+Crafts don't run in isolation. Several can operate on the same workbook, and they
+often build on each other — one craft writes data another reads, the AI assistant
+reads what a form craft produced, and the user keeps editing the sheet
+throughout. If a craft addressed its data by raw position (`Sheet1!C5`), any of
+those edits — a row inserted above, a column moved, another craft reshaping a
+table — would silently shift the cells out from under it, and the next read would
+return the wrong thing.
+
+A **block** is the fix. A craft anchors its data to a block and addresses it by
+**_(block, field, key)_** instead of a coordinate. Because the engine tracks a
+block's cells by stable IDs, that address stays valid no matter what happens
+elsewhere in the sheet. Blocks are the **reliable index** that lets crafts
+cooperate — read and write each other's structured data — without stepping on one
+another.
+
+<figure class="block-craft">
+<svg viewBox="0 0 760 320" role="img" aria-label="Two crafts read and write the same block by (block, field, key); the block has a stable ID and schema inside the sheet, so references stay valid as rows and columns shift." xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .box   { fill: var(--vp-c-bg-soft); stroke: var(--vp-c-divider); stroke-width: 1.5; }
+    .blk   { fill: var(--vp-c-bg-soft); stroke: var(--vp-c-brand-1); stroke-width: 2; }
+    .sheet { fill: none; stroke: var(--vp-c-divider); stroke-width: 1.5; stroke-dasharray: 6 5; }
+    .t     { fill: var(--vp-c-text-1); font: 600 14px var(--vp-font-family-base, sans-serif); }
+    .s     { fill: var(--vp-c-text-2); font: 12px var(--vp-font-family-base, sans-serif); }
+    .lbl   { fill: var(--vp-c-brand-1); font: 600 12px var(--vp-font-family-mono, ui-monospace, monospace); }
+    .conn  { stroke: var(--vp-c-brand-1); stroke-width: 1.5; fill: none; opacity: 0.75; }
+  </style>
+
+  <!-- crafts -->
+  <rect class="box" x="70" y="20" width="200" height="60" rx="10"/>
+  <text class="t" x="170" y="46" text-anchor="middle">Craft A</text>
+  <text class="s" x="170" y="66" text-anchor="middle">e.g. a budget form</text>
+
+  <rect class="box" x="490" y="20" width="200" height="60" rx="10"/>
+  <text class="t" x="590" y="46" text-anchor="middle">Craft B</text>
+  <text class="s" x="590" y="66" text-anchor="middle">e.g. a report / the AI</text>
+
+  <!-- connectors from crafts to the block -->
+  <path class="conn" d="M170 80 C 170 150, 300 176, 350 206"/>
+  <path class="conn" d="M590 80 C 590 150, 460 176, 410 206"/>
+  <text class="lbl" x="196" y="140" text-anchor="middle">(block, field, key)</text>
+  <text class="lbl" x="566" y="140" text-anchor="middle">(block, field, key)</text>
+
+  <!-- sheet container -->
+  <rect class="sheet" x="40" y="170" width="680" height="132" rx="10"/>
+  <text class="s" x="58" y="192">Sheet — cells shift as rows / columns change</text>
+
+  <!-- block -->
+  <rect class="blk" x="280" y="206" width="200" height="82" rx="10"/>
+  <text class="t" x="380" y="234" text-anchor="middle">Block #b1</text>
+  <text class="s" x="380" y="254" text-anchor="middle">stable ID + schema</text>
+  <text class="lbl" x="380" y="276" text-anchor="middle">name · qty · price</text>
+</svg>
+</figure>
+
+Both crafts address the same block by _(block, field, key)_; rows and columns can
+shift anywhere in the sheet and each keeps pointing at the right data.
 
 This is where the *"from sheets to systems"* ambition becomes concrete. As an
 example of how far a craft can go, try the **Factory Simulator**:

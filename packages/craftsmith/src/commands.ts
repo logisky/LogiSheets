@@ -347,7 +347,7 @@ export async function countSheets(ctx: SkillCtx): Promise<{sheets: number}> {
             '## Publish',
             '',
             'The built `dist/` is the shippable package. Full guide:',
-            'https://logisheets.dev (Guide → “Give a craft AI tools (craftsmith)”).',
+            'https://docs.logisheets.com/craft/writing-a-craft.html',
             '',
         ].join('\n')
     )

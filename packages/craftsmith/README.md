@@ -4,8 +4,8 @@ CLI for LogiSheets **crafts** — scaffold, validate, build and pack a craft, an
 generate the **capability manifest** that the built-in AI assistant (Watson /
 `logician`) reads to discover a craft's skill and invoke its tools.
 
-The full design and rationale live in
-[docs/craft/craftsmith.md](../../docs/craft/craftsmith.md).
+The full authoring guide lives in
+[docs/craft/writing-a-craft.md](../../docs/craft/writing-a-craft.md).
 
 ## Commands
 

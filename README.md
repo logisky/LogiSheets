@@ -35,7 +35,7 @@ Crafts are self-contained mini-apps that extend LogiSheets through the same publ
 - **what-if-calculator** — scenario analysis over workbook values
 - **markdown-table-extractor** — turn Markdown tables into Blocks
 
-Scaffold, check, and build a craft with the **`craftsmith`** CLI (`npx craftsmith new`). A craft can also expose **tools** to **Watson** (the built-in AI assistant) just by annotating its functions — one implementation drives both your UI and the AI. See [Give a craft AI tools](https://docs.logisheets.com/craft/craftsmith).
+Scaffold, check, and build a craft with the **`craftsmith`** CLI (`npx craftsmith new`). A craft can also expose **tools** to **Watson** (the built-in AI assistant) just by annotating its functions — one implementation drives both your UI and the AI. See [Write your own craft](https://docs.logisheets.com/craft/writing-a-craft).
 
 ## Documentation
 
