@@ -87,6 +87,92 @@ $panelBg: #ffffff;
     border: 1px solid #fedf89;
 }
 
+// Rendered Markdown inside an assistant bubble. Reset the bubble's pre-wrap so
+// paragraphs don't double-space; code keeps its own whitespace.
+.md {
+    white-space: normal;
+
+    p {
+        margin: 0 0 8px;
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    ul,
+    ol {
+        margin: 4px 0 8px;
+        padding-left: 20px;
+    }
+
+    li {
+        margin: 2px 0;
+    }
+
+    a {
+        color: $accent;
+        text-decoration: underline;
+    }
+}
+
+.mdHeading {
+    font-weight: 600;
+    font-size: 13.5px;
+    margin: 6px 0 4px;
+}
+
+.mdCode {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    background: #eceef2;
+    padding: 1px 4px;
+    border-radius: 4px;
+}
+
+.mdPre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    overflow-x: auto;
+    margin: 6px 0;
+
+    code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        white-space: pre;
+    }
+}
+
+// Live "Watson is working" indicator shown while a turn runs.
+.thinking {
+    align-self: flex-start;
+    background: #f2f4f7;
+    color: #667085;
+    font-size: 12px;
+    animation: watsonPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes watsonPulse {
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+// A turn-level error surfaced in the transcript (bad key, network, …).
+.errorBubble {
+    align-self: stretch;
+    max-width: 100%;
+    background: #fef3f2;
+    color: #b42318;
+    border: 1px solid #fecdca;
+    font-size: 12px;
+}
+
 .tool {
     align-self: flex-start;
     max-width: 100%;

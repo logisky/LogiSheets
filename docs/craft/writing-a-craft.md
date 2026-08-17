@@ -1,158 +1,236 @@
 ---
-description: "Tutorial: build a LogiSheets craft from scratch — the host API, common patterns, and gotchas for embedding a custom app inside a spreadsheet."
+description: "Build a LogiSheets craft with the craftsmith CLI — scaffold, write your logic once, give it a browser UI, AI tools (JSDoc), and a headless runtime, then check, build, and publish."
 ---
 
 # Writing a craft
 
-A **craft** is a small app that lives inside LogiSheets and drives the
-spreadsheet. This guide walks from an empty folder to a working craft, then
-documents the host API, the common patterns, and the gotchas that will
-otherwise cost you an afternoon.
+A [**craft**](./craft.md) is one piece of logic reachable from the browser, a
+headless runtime, and AI. **`craftsmith`** is the CLI you use to create, check,
+build, and publish one — it scaffolds the project, reads your code with the
+TypeScript type checker, and emits a shippable package.
 
-By the end you'll understand the crafts already in the repo — `fuse-beads` (a
-canvas painter), `lights-out` / `memory-grid` / `minesweeper` (grid games),
-`sudoku` (a formula-driven puzzle), and `markdown-table-extractor` /
-`what-if-calculator` (selection-driven data tools). They're the best reference
-once you know the shape.
+This guide goes end to end: scaffold with craftsmith, write your logic once in
+`tools.ts`, then add whichever **faces** you need —
+[AI tools](#face-ai-tools-jsdoc) (JSDoc), a [browser UI](#face-a-browser-ui)
+(`index.html`), a [headless runtime](#face-a-headless-runtime) (`runtime.ts`) —
+and finally [check, build, and publish](#check-build-publish).
 
-::: tip Scaffold with craftsmith
-Don't hand-create the files — run **`npx craftsmith new my-craft`** to generate a
-ready-to-build craft, then use this guide as the reference for the host API. A
-craft can also expose **tools** to **Watson** (the built-in AI assistant) by
-annotating its functions; see [Give a craft AI tools](./craftsmith.md). The
-manual file walkthrough below shows what `craftsmith` produces and how the pieces
-fit.
-:::
+## Install & scaffold
 
-## How a craft runs
-
-A craft is a **standalone package** under `crafts/` that builds to a single
-**UMD bundle** and is loaded inside a **same-origin `<iframe>`** in the craft
-panel. Because the iframe is same-origin, the host injects a set of
-capabilities directly onto the craft's `window` — no `postMessage`, just
-function calls. Your craft is plain DOM + JS/TS; there is no required
-framework.
-
-Two things reach your craft:
-
-- **`window.workbook`** and friends — the injected host APIs (read/write the
-  sheet, listen to canvas input, persist state, …). See
-  [Host API](#the-host-api).
-- Your own exported module — the UMD `name` from `vite.config.ts` becomes a
-  global, e.g. `window.MyCraft`, which your `index.html` calls.
-
-## Anatomy of a craft
-
-```
-crafts/my-craft/
-├── package.json      # build + copy-to-public scripts, deps
-├── vite.config.ts    # UMD library build
-├── tsconfig.json      # standalone TS config
-├── index.html        # the UI + wiring (loaded in the iframe)
-├── src/
-│   └── index.ts      # exported helpers (pure logic + workbook calls)
-└── README.md
+```bash
+npm i -D logisheets-craftsmith     # the CLI
+npx craftsmith new my-craft        # scaffold a project
+cd my-craft && npm install
 ```
 
-Convention that pays off: put **pure logic and workbook transactions in
-`src/index.ts`** (typed, testable) and keep **`index.html` for the DOM and the
-event wiring**. Every craft in the repo follows this split.
+`craftsmith new` writes a ready-to-build project:
 
-## Quick start: a minimal craft
+```
+my-craft/
+├── package.json     # identity: craftId, label, version (+ check/build scripts)
+├── tools.ts         # YOUR LOGIC — pure functions (the core)
+├── index.html       # a browser UI (optional)
+└── tsconfig.json
+```
 
-We'll build `hello-craft`: a button that writes into the currently selected
-cell and paints it yellow. It demonstrates reading the selection, building a
-transaction, and toasting the user.
+The file that matters most is **`tools.ts`** — your logic. Everything else is a
+thin face over it. `runtime.ts` isn't scaffolded; add it yourself when you want
+the [runtime face](#face-a-headless-runtime), and `craftsmith build` picks it up
+automatically.
 
-### 1. `package.json`
+## Identity: `package.json`
+
+Three fields identify your craft:
 
 ```json
 {
-    "name": "hello-craft",
-    "version": "0.1.0",
-    "main": "dist/hello-craft.js",
-    "scripts": {
-        "build": "vite build && yarn copy-to-public",
-        "copy-to-public": "rm -rf ../../public/hello-craft && mkdir -p ../../public/hello-craft && cp index.html ../../public/hello-craft/index.html && cp dist/hello-craft.js ../../public/hello-craft/hello-craft.js"
-    },
-    "license": "MIT",
-    "dependencies": { "logisheets-web": "workspace:*" },
-    "devDependencies": { "typescript": "^5.5.0", "vite": "^5.0.0" }
+  "craftId": "my-craft",   // stable, kebab-case — the id the host installs under
+  "label": "My Craft",     // human name shown in the craft picker
+  "version": "0.1.0"
 }
 ```
 
-The `copy-to-public` step is what makes the craft loadable: the dev server and
-production build both serve crafts from `public/<name>/`.
+That's all the host needs. When you publish, it installs your package **by
+`craftId`** and reads the generated `manifest.json` — you don't register the
+craft anywhere by hand.
 
-### 2. `vite.config.ts`
+## The core: your logic in `tools.ts`
+
+A craft's logic is a set of **plain, exported, pure functions**. "Pure" here
+means: takes what it needs through parameters, returns a value, and touches no
+`window`, `document`, or globals. That's the property that lets the *same*
+function serve your UI, the AI, and a unit test.
+
+Each function's **first parameter is `ctx`** — the host-injected context
+(workbook client, etc.). Everything after `ctx` is the function's own input.
 
 ```ts
-import {defineConfig} from 'vite'
-import path from 'node:path'
+import type {SkillCtx} from 'logisheets-craftsmith/authoring'
 
-export default defineConfig({
-    build: {
-        lib: {
-            entry: path.resolve(__dirname, 'src/index.ts'),
-            name: 'HelloCraft', // → window.HelloCraft
-            fileName: () => 'hello-craft.js',
-            formats: ['umd'],
+export async function writeCell(
+    ctx: SkillCtx,
+    row: number,
+    col: number,
+    text: string
+): Promise<{written: string}> {
+    await ctx.workbook.handleTransaction({
+        transaction: {
+            payloads: [
+                {type: 'cellInput', value: {sheetIdx: 0, row, col, content: text}},
+            ],
+            undoable: true,
+            temp: false,
         },
-        target: 'es2018',
-        minify: false,
-    },
-})
+    })
+    return {written: text}
+}
 ```
 
-Copy `tsconfig.json` from any existing craft (they're identical).
+### The `ctx` object
 
-### 3. `src/index.ts` — the logic
+| Field | What it is |
+| --- | --- |
+| `ctx.workbook` | The live LogiSheets client — the full read surface (`getCell`, `getCells`, `getAllSheetInfo`, `getCellInfos`, …) plus `handleTransaction`. |
+| `ctx.workbook.getVersion()` | A number that bumps on every committed write. Use it for [read-then-write safety](#read-then-write-safely). |
+| `ctx.craftState` | Optional `get()` / `set()` for *this craft's* own saved JSON. Only for state **not** already in the sheet. |
+| `ctx.confirm(msg)` | Ask the user to approve; resolves `true` if they do. |
+| `ctx.log(msg)` | Write a progress line into the chat transcript. |
+| `ctx.signal` | An `AbortSignal` that fires if the user cancels the turn. |
+
+::: warning `handleTransaction` never throws on rejection
+It resolves with an `ActionEffect` whose `status.type === 'err'` when the engine
+rejects the payload. Check it if failure matters. See [Gotchas](#gotchas).
+:::
+
+## Face: AI tools (JSDoc)
+
+To expose your functions to **Watson** (the built-in AI assistant), annotate
+them with JSDoc. `craftsmith` reads the annotations *and* the TypeScript
+signature to generate the capability manifest — so it can never drift from your
+code. There are no runtime decorators; it's all plain comments.
+
+### The annotations
+
+Two levels: one **skill** block at the top of the file (what the craft is for),
+and one **`@tool`** block per exported function.
 
 ```ts
-import {getFirstCell} from 'logisheets-web'
-import type {Selection, EditPayload} from 'logisheets-web'
+import type {SkillCtx} from 'logisheets-craftsmith/authoring'
 
-// The subset of window.workbook we use here.
-interface Workbook {
-    handleTransaction(p: {
-        transaction: {payloads: readonly EditPayload[]; undoable: boolean; temp: boolean}
-    }): Promise<unknown>
+/**
+ * @logicianSkill Budget helper: fills and balances a monthly budget. Use when
+ *   the user asks to set up, fill, or rebalance a budget.
+ * @guidance Call count_sheets first if you need the sheet count.
+ */
+
+/**
+ * @tool Write text into a cell on the first sheet.
+ * @param row  Zero-based row index.
+ * @param col  Zero-based column index.
+ * @param text The text to write.
+ * @mutates true
+ * @confirm always
+ */
+export async function writeCell(
+    ctx: SkillCtx,
+    row: number,
+    col: number,
+    text: string
+): Promise<{written: string}> {
+    /* … */
+    return {written: text}
 }
 
-export async function writeHello(workbook: Workbook, selection: Selection) {
-    const first = getFirstCell(selection.data) // {x: col, y: row} or undefined
-    if (!first) return
-    const {sheetIdx} = selection
-    const payloads: EditPayload[] = [
-        {
-            type: 'cellInput',
-            value: {sheetIdx, row: first.y, col: first.x, content: 'Hello from a craft 👋'},
-        } as EditPayload,
-        {
-            type: 'cellStyleUpdate',
-            value: {
-                sheetIdx,
-                row: first.y,
-                col: first.x,
-                // fills use an {red,green,blue} OBJECT (0–255) — see Gotchas
-                ty: {setPatternFill: {patternType: 'solid', fgColor: {red: 255, green: 224, blue: 130}}},
-            },
-        } as EditPayload,
-    ]
-    await workbook.handleTransaction({transaction: {payloads, undoable: true, temp: false}})
+/**
+ * A read-only tool — keep the defaults (@mutates none, @confirm never).
+ * @tool Report how many sheets the workbook has.
+ */
+export async function countSheets(ctx: SkillCtx): Promise<{sheets: number}> {
+    const infos = (await ctx.workbook.getAllSheetInfo()) as unknown[]
+    return {sheets: infos.length}
 }
 ```
 
-### 4. `index.html` — the UI
+| Annotation | Where | Meaning |
+| --- | --- | --- |
+| `@logicianSkill <text>` | once, top of file | What the craft is for and **when** Watson should use it. This is the line Watson sees when browsing installed crafts. |
+| `@guidance <text>` | once, optional | Extra how-to injected when Watson picks this craft (combining tools, gotchas). |
+| `@tool <text>` | each exported fn | Makes the function a callable tool. The text tells the model *when* to call it. |
+| `@param name <text>` | per argument | Describes an argument (shown to the model). |
+| `@mutates none\|temp\|true` | per tool | Does it change the sheet? Default `none`. |
+| `@confirm never\|once\|always\|destructive` | per tool | Ask the user before running? Default `never`. |
+
+::: tip Descriptions are for the model
+Write `@logicianSkill` and `@tool` text as **"what and when"**, not
+implementation notes — that phrasing is exactly how Watson decides whether to
+reach for your craft and which tool to call.
+:::
+
+### Signature rules
+
+`craftsmith` infers the input schema from the real signature, so it enforces:
+
+- **Named export only** — `export function foo` / `export const foo = …`. No
+  anonymous `export default` (there'd be no stable name to dispatch to).
+- **First parameter is `ctx`** — named `ctx` or typed `*Ctx` / `*Context`. It is
+  excluded from the tool's input.
+- **JSON-serializable parameter/return types** — `string`, `number`, `boolean`,
+  **string-literal unions** (→ an `enum` the model must choose from), arrays, and
+  plain object shapes of those. Anything the checker can't serialize is a
+  `craftsmith check` error telling you to simplify it.
+- **Pure / ambient-free** — no `window`, `document`, or top-level side effects.
+  `craftsmith check` lints for this.
+
+### How Watson uses your craft
+
+Watson discovers crafts progressively, so its tool list stays small no matter how
+many are installed:
+
+1. **discover** — it lists installed crafts and each one's `@logicianSkill` line,
+   and picks the one that fits the request.
+2. **use** — it loads that craft's tools (and injects your `@guidance`).
+3. **invoke** — it calls a tool; dispatch runs your function with a `ctx` whose
+   `workbook` is permission-scoped to your craft.
+
+### Read-then-write safely
+
+If a tool reads state, computes, then writes, the user could change the sheet in
+between — and your write would clobber their edit. Snapshot `getVersion()` before
+the read, re-check before the write, and retry if it moved:
+
+```ts
+export async function solve(ctx: SkillCtx): Promise<{ok: boolean}> {
+    for (let attempt = 0; attempt < 4; attempt++) {
+        const v0 = await ctx.workbook.getVersion()
+        const board = await readBoard(ctx.workbook)         // your read
+        const result = compute(board)                        // pure
+        if ((await ctx.workbook.getVersion()) !== v0) continue // changed → retry
+        await write(ctx.workbook, result)
+        return {ok: true}
+    }
+    return {ok: false}
+}
+```
+
+(The engine has no compare-and-swap, so this optimistic check is the right tool.)
+
+## Face: a browser UI
+
+An `index.html` gives your craft a UI in the craft panel. It's loaded in a
+same-origin `<iframe>`; **after** it loads, the host injects `window.workbook`
+and friends onto it. Your page imports the built `./tools.js` and calls the
+**same** functions Watson calls.
 
 ```html
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8" /><title>Hello Craft</title></head>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>My Craft</title></head>
 <body>
-  <button id="go" type="button">Write into the selected cell</button>
-  <script src="./hello-craft.js"></script>
-  <script>
-    // Host APIs are injected asynchronously — wait for them.
+  <button id="go" type="button" disabled>Write into A1</button>
+  <script type="module">
+    import {writeCell} from './tools.js'
+
+    // Host APIs arrive asynchronously — poll for window.workbook before use.
     function whenReady(cb) {
       let n = 0
       ;(function loop() {
@@ -161,230 +239,194 @@ export async function writeHello(workbook: Workbook, selection: Selection) {
         setTimeout(loop, 50)
       })()
     }
-    document.getElementById('go').addEventListener('click', function () {
-      if (!window.workbook || !window.selection) return
-      window.HelloCraft.writeHello(window.workbook, window.selection)
-        .then(function () { window.notifyCraft && window.notifyCraft('success', 'Done!') })
-        .catch(function (e) { window.notifyCraft && window.notifyCraft('error', String(e)) })
+
+    // Build the same ctx shape Watson passes to your tools.
+    const ctx = () => ({
+      workbook: window.workbook,
+      signal: new AbortController().signal,
+      confirm: async () => true,
+      log: (m) => console.log('[my-craft]', m),
     })
-    whenReady(function () { /* ready — enable UI, load state, etc. */ })
+
+    const btn = document.getElementById('go')
+    btn.addEventListener('click', () => {
+      writeCell(ctx(), 0, 0, 'Hello from a craft 👋')
+        .then(() => window.notifyCraft?.('success', 'Done'))
+        .catch((e) => window.notifyCraft?.('error', String(e)))
+    })
+    whenReady(() => { btn.disabled = false })
   </script>
-</body></html>
+</body>
+</html>
 ```
 
-### 5. Register it (one place: `crafts.config.json`)
+### Host API (injected on `window`)
 
-Add your craft to the `registry` in `crafts.config.json` (repo root) — the
-single source of truth the panel, the publish step, and the desktop build all
-read:
+Everything below appears **after** the iframe loads — guard with `whenReady`.
 
-```json
-"registry": {
-  …
-  "hello-craft": {"label": "Hello Craft"}
+- **`window.workbook`** — the same `Client` your tools use: the full read surface
+  plus `handleTransaction`. The `EditPayload`s you'll use most:
+
+  | Payload | Shape |
+  | --- | --- |
+  | write a value/formula | `{type:'cellInput', value:{sheetIdx, row, col, content}}` |
+  | style a cell | `{type:'cellStyleUpdate', value:{sheetIdx, row, col, ty}}` |
+  | create a sheet | `{type:'createSheet', value:{idx, newName}}` |
+  | delete a sheet | `{type:'deleteSheet', value:{idx}}` |
+  | set column width | `{type:'setColWidth', value:{sheetIdx, col, width}}` |
+  | set row height | `{type:'setRowHeight', value:{sheetIdx, row, height}}` |
+
+- **Selection** — `window.selection` (a `{sheetIdx, data}` snapshot),
+  `window.onSelectionChange(cb)` (returns a disposer), `window.setSelection(sheetIdx, row, col)`,
+  and `window.setSelectionSuppressed(true)` to hide the highlight (painting/game crafts use this).
+- **Canvas input** — `window.onCanvasInput(cb)` intercepts mouse/keyboard on the
+  grid **before the engine sees it**. `cb` gets `{type, sheetIdx, row, col, …}`;
+  **return `true` to consume** the event, `false`/`undefined` to pass it through.
+- **Persistence** — `window.setCraftState(json)` / `getCraftState()` for
+  per-document state the host folds into the saved workbook; `window.craftStorage`
+  (async key/value) for device-scoped preferences that persist across documents.
+- **Host UI** — `window.notifyCraft('success'|'info'|'warn'|'error', msg)` shows a
+  toast; `window.setCellLayouts([...])` overlays markers on cells.
+
+## Face: a headless runtime
+
+A craft can also run **without any UI**. Add a `runtime.ts` that default-exports
+a `CraftRuntime` — the host reconstructs it from the workbook's saved state and
+calls lifecycle hooks around each JSON-RPC exchange. This is how a craft runs
+server-side (the Node runtime, the collaboration server), e.g. as a **validation
+gateway** that vets edits before they commit.
+
+The hooks fire in order around one exchange:
+
+| Hook | When | Return |
+| --- | --- | --- |
+| `onLoad(state, wb)` | once, when the workbook opens | rehydrate from state |
+| `onRequest(req, state, wb)` | a request's inputs are about to be applied | reject to block the request |
+| `onValidate(state, wb)` | inputs are in place, **before** the response is read | the cells that fail (empty = all good) — optional |
+| `onResponse(resp, state, wb)` | the response is about to be returned | inspect / annotate |
+
+Every hook returns a `Result<T>`: a plain value (or `undefined`) on success, or
+an `ErrorMessage` (`{msg, ty}`) to reject. A non-empty `onValidate` result tells
+the host to reject the request and roll the inputs back.
+
+```ts
+// runtime.ts
+import type {
+    CraftRuntime,
+    Violation,
+    JsonRpcRequest,
+    JsonRpcResponse,
+} from 'logisheets-craftsmith/authoring'
+
+// Narrow the craft's persisted state to your own shape.
+interface GatewayState {
+    statusCol: number
+    allowed: string[]
+}
+
+export default {
+    // Rehydrate when the workbook opens. Nothing to precompute here.
+    onLoad(_state: GatewayState, _wb) {
+        return
+    },
+
+    // Let inputs be applied; we check them in onValidate below.
+    onRequest(_req: JsonRpcRequest, _state: GatewayState, _wb) {
+        return
+    },
+
+    // Inputs are now written — flag any status cell with a disallowed value.
+    async onValidate(state: GatewayState, wb) {
+        const violations: Violation[] = []
+        for (let row = 1; row < 100; row++) {
+            const cell: any = await wb.getCell({
+                sheetIdx: 0,
+                row,
+                col: state.statusCol,
+            })
+            const value = cell?.value?.value
+            if (value == null || value === 'empty') continue
+            if (!state.allowed.includes(String(value))) {
+                violations.push({
+                    sheetIdx: 0,
+                    row,
+                    col: state.statusCol,
+                    kind: 'membership',
+                    message: `"${value}" is not an allowed status`,
+                })
+            }
+        }
+        return violations // empty = accept; non-empty = host rejects & rolls back
+    },
+
+    onResponse(_resp: JsonRpcResponse, _state: GatewayState, _wb) {
+        return
+    },
+} satisfies CraftRuntime<GatewayState>
+```
+
+`onValidate` is optional — omit it for a runtime that only reacts to requests.
+`craftsmith build` compiles `runtime.ts` to `runtime.js` and records it in the
+manifest automatically; there's nothing else to wire.
+
+## Check, build, publish
+
+```bash
+npx craftsmith check .   # validate the tool contract + purity — no writes
+npx craftsmith build .   # compile tools.ts/runtime.ts → dist/ + manifest.json
+npx craftsmith pack  .   # tar dist/ into a shippable <craftId>-<version>.tgz
+```
+
+`build` produces `dist/`:
+
+```
+dist/
+├── manifest.json   # the generated contract (see below) — never hand-edit
+├── tools.js        # your logic, bundled self-contained (deps included)
+├── runtime.js      # present iff you added runtime.ts
+└── index.html      # present iff you added a UI
+```
+
+The **manifest** is what the host reads to discover and drive your craft. It is a
+**generated build artifact** — run `craftsmith check` in CI to guarantee it
+matches your code:
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "craftId": "my-craft",
+  "version": "0.1.0",
+  "label": "My Craft",
+  "url": "index.html",           // present iff you have a UI
+  "rtJs": "runtime.js",          // present iff you have a runtime
+  "skill": { "description": "…", "guidance": "…" },
+  "tools": [
+    { "name": "write_cell", "description": "…",
+      "inputSchema": { /* from your types */ },
+      "paramOrder": ["row","col","text"],
+      "entry": "tools.js", "export": "writeCell",
+      "mutates": true, "confirmation": "always" }
+  ]
 }
 ```
 
-That's it — it's now in the `default` distribution (`"crafts": "all"`), so the
-panel offers it and `publish-crafts.sh` ships it. To include it in a *specific*
-subset distribution, add its directory name to that distribution's `crafts`
-array. You do **not** edit `craft-panel/index.tsx` or `publish-crafts.sh` — both
-derive their lists from this file (see [Distributions](#distributions)).
-
-### 6. Build & run
-
-```bash
-yarn install                      # first time only (links the workspace)
-yarn workspace hello-craft build  # builds + copies to public/hello-craft/
-```
-
-Start the app (`yarn start:dev`), open the craft panel, pick **Hello Craft**,
-select a cell, click the button. See [Dev workflow](#dev-workflow) for the
-edit-reload loop.
-
-## The host API
-
-Everything below is injected onto the craft's `window` (see `inject()` in
-`src/components/craft-panel/index.tsx`). They appear **after** the iframe loads,
-so guard with a `whenReady` poll before first use.
-
-### Read & write the spreadsheet — `window.workbook`
-
-The primary object. It's the same `Client` the app uses, so it has the full
-read surface (`getCell`, `getCells`, `getAllSheetInfo`, `getStyle`,
-`getSheetDimension`, …) plus mutation via `handleTransaction`.
-
-```ts
-// WRITE: one transaction = one undo step. `temp: false`, `undoable` as you like.
-const effect = await window.workbook.handleTransaction({
-  transaction: {payloads, undoable: true, temp: false},
-})
-
-// READ a computed cell value:
-const cell = await window.workbook.getCell({sheetIdx: 0, row: 0, col: 0})
-const value = cell.value.value   // e.g. a number/string, or an error like "#NAME?"
-
-// List sheets (array order == sheet order):
-const sheets = await window.workbook.getAllSheetInfo() // [{name, id, hidden, tabColor}]
-```
-
-`handleTransaction` **does not throw when the engine rejects the payload** — it
-resolves with an `ActionEffect` whose `status.type === 'err'`. Always check it
-(see Gotchas). Payloads are `EditPayload` objects; the ones you'll use most:
-
-| Payload | Shape |
-| --- | --- |
-| create a sheet | `{type:'createSheet', value:{idx, newName}}` |
-| delete a sheet | `{type:'deleteSheet', value:{idx}}` |
-| set column width | `{type:'setColWidth', value:{sheetIdx, col, width}}` |
-| set row height | `{type:'setRowHeight', value:{sheetIdx, row, height}}` |
-| write a value/formula | `{type:'cellInput', value:{sheetIdx, row, col, content}}` |
-| style a cell | `{type:'cellStyleUpdate', value:{sheetIdx, row, col, ty}}` |
-
-`cellStyleUpdate.ty` is a `StyleUpdateType`: `setPatternFill`, `setFontColor`,
-`setFontBold`, `setFontSize`, `setAlignment:{horizontal, vertical}`,
-`setTop/Bottom/Left/RightBorderStyle` (`'thin'|'medium'|'thick'|'none'`) and the
-matching `…BorderColor`. You can also import builders from `logisheets-web`
-(`CellInputBuilder`, `CellStyleUpdateBuilder`, `StyleUpdateTypeBuilder`, …) if
-you prefer them to object literals.
-
-### Selection — `window.selection`, `setSelection`, `onSelectionChange`
-
-```ts
-window.selection                       // {sheetIdx, data} snapshot
-window.onSelectionChange((s) => {…})   // subscribe; returns a disposer
-window.setSelection(sheetIdx, row, col)// move selection / jump to a sheet
-window.setSelectionSuppressed(true)    // hide the selection highlight entirely
-```
-
-`setSelectionSuppressed(true)` is what painting/game crafts use so no selection
-box gets in the way; it's reset automatically when the panel closes or another
-craft is chosen. Use `getFirstCell(selection.data)` (from `logisheets-web`) to
-get the `{x: col, y: row}` of the active cell.
-
-### Canvas input — `window.onCanvasInput`, `setCanvasZoom`
-
-Intercept mouse/keyboard on the spreadsheet canvas **before the engine sees
-it** — the seam for custom click/drag/paint tools.
-
-```ts
-const dispose = window.onCanvasInput((e) => {
-  // e: {type, sheetIdx, row, col, button, buttons, offsetX, offsetY,
-  //     deltaX, deltaY, key, shiftKey, ctrlKey, altKey, metaKey, …}
-  if (e.type === 'wheel' && e.shiftKey) {
-    window.setCanvasZoom((window.getCanvasZoom() || 1) * (e.deltaY < 0 ? 1.1 : 0.9))
-    return true          // consumed — the engine won't scroll
-  }
-  return false           // pass through to the engine
-})
-```
-
-`e.type` is one of `mousedown | mousemove | mouseup | click | dblclick |
-contextmenu | wheel | keydown | keyup`. **Return `true` to consume** the event
-(the engine never sees it), `false`/`undefined` to let it through. `e.row` /
-`e.col` are the already-hit-tested cell under the pointer (or `null`). The
-handler only fires while the panel is open **and** this craft is the selected
-one.
-
-::: tip Blocking the built-in cell editor
-Double-click-to-edit is triggered by the engine's own `mousedown` handler (a
-rapid second mousedown), **not** a `dblclick` event. To stop the formula editor
-opening while you paint, consume `mousedown` on your board (return `true`).
-:::
-
-### Display — `setShowCellValues`, `setCanvasZoom`
-
-Worker-global engine render toggles the craft can drive (they affect **every**
-view — the engine shares one worker/workbook):
-
-- `setCanvasZoom(factor)` / `getCanvasZoom()` — zoom the grid (1 = 100%, clamped
-  to `[0.5, 3]`).
-- `setShowCellValues(show)` / `getShowCellValues()` — show or hide cell **values**
-  (the text/number content). Fills, borders and grid lines keep rendering — only
-  the cell text is toggled. Cell values are still stored; this is display-only.
-
-```ts
-// Fill cells AND write a label into each, then let the user toggle the labels.
-// (fuse-beads does exactly this: it writes each bead's color code into the cell
-// so the pattern doubles as a color-by-number chart, with a "show/hide" button.)
-window.setShowCellValues(false) // hide the written labels; true to show again
-```
-
-Because these are worker-global and outlive an iframe reload, read the current
-state on load (`getShowCellValues()`) so your toggle's label matches reality.
-
-### Persistence — `setCraftState` / `getCraftState` vs `craftStorage`
-
-- **`setCraftState(json)` / `getCraftState()`** — an opaque per-**document**
-  string the host folds into the saved workbook. Use it for progress that
-  belongs to *this* file (game level, current board). You own the schema
-  (JSON-encode it yourself).
-- **`window.craftStorage`** — a device-scoped async key/value store (localStorage
-  on web, app-data dir on desktop) that persists **across documents** on this
-  machine. Use it for machine-wide preferences.
-
-```ts
-window.setCraftState(JSON.stringify({level: 3, best: 42}))
-const state = JSON.parse(window.getCraftState() || '{}')
-```
-
-### Host UI — `notifyCraft`, `uiSettings`, `setCellLayouts`
-
-- `notifyCraft('success'|'info'|'warn'|'error', msg)` — a toast.
-- `uiSettings` — toggle host modes (temp mode, block-info overlays).
-- `setCellLayouts([...])` — overlay markers on cells (used by `what-if`).
-- `blockManager` / `onBlockCellEdit` — the block-interface APIs (advanced).
-
-## Common patterns
-
-### Give the craft its own sheet with square cells
-
-Games/canvas crafts usually create a dedicated sheet and square up its cells.
-The engine renders `colWidth px = width × 7` and `rowHeight px = pt × 96/72`, so
-for an `S`-px square use **`width = S / 7`** and **`height = S × 0.75`**:
-
-```ts
-// create the sheet (once), then size rows/cols
-const infos = await workbook.getAllSheetInfo()
-const idx = infos.length
-await commit(workbook, [{type: 'createSheet', value: {idx, newName: '我的棋盘'}}])
-const width = S / 7, height = (S * 72) / 96
-const sizing = []
-for (let c = 0; c < COLS; c++) sizing.push({type: 'setColWidth', value: {sheetIdx: idx, col: c, width}})
-for (let r = 0; r < ROWS; r++) sizing.push({type: 'setRowHeight', value: {sheetIdx: idx, row: r, height}})
-await commit(workbook, sizing)
-window.setSelection(idx, 0, 0)  // jump to it
-```
-
-Frame the region with borders (thin gridlines + a thick outer/box boundary) so
-the play area is obvious — see `lights-out`/`minesweeper` for the exact border
-payloads.
-
-### A click-to-paint / game loop
-
-Register an `onCanvasInput` handler, consume the events you handle, and repaint
-only the cells that changed with `cellStyleUpdate` (+ `cellInput` for text). The
-`fuse-beads`, `lights-out` and `minesweeper` crafts are the templates.
-
-### Live validation with formulas (no JS math)
-
-Write `=…` formulas via `cellInput` and let the engine recompute as the user
-types — `sudoku` checks row/column/box conflicts entirely with spreadsheet
-formulas. Note the **no-array-formula** limit below.
+**Publishing** is shipping that `dist/`: publish your package to the craft
+registry your deployment uses. Once installed, the host lists your craft by
+`craftId`, loads `tools.js` for Watson, `index.html` for the panel, and
+`runtime.js` for the server — **no change to the host required**.
 
 ## Gotchas
 
-These are the ones that actually bite. Most were paid for in real debugging.
+These are the ones that actually bite.
 
 ### Two color formats — fills vs borders/fonts
 
 - **Fills** (`setPatternFill.fgColor`) take a **`{red, green, blue}` object**,
   channels `0–255`.
 - **Font & border colors** (`setFontColor`, `setLeftBorderColor`, …) take a
-  **string in "standard ARGB": 8 hex digits, no `#`** — `"FF0B0F19"` =
-  opaque near-black. A `#RRGGBB` value (7 chars) or a 6-digit hex parses to *no
-  color* and the text/border silently doesn't render. (`from_hex_str` in the
-  core requires length ≥ 8, `AARRGGBB`.)
+  **string in "standard ARGB": 8 hex digits, no `#`** — `"FF0B0F19"` is opaque
+  near-black. A `#RRGGBB` value or 6-digit hex parses to *no color* and silently
+  doesn't render (the core requires `AARRGGBB`, length ≥ 8).
 
 ```ts
 setPatternFill: {patternType: 'solid', fgColor: {red: 255, green: 202, blue: 40}} // fill
@@ -394,8 +436,7 @@ setFontColor: 'FF1976D2'                                                        
 ### `handleTransaction` never throws on rejection
 
 It resolves with an `ActionEffect`; a rejected payload sets
-`status.type === 'err'` (and `version` stays `0`). Check it or failures pass
-silently:
+`status.type === 'err'`. Check it or failures pass silently:
 
 ```ts
 const r = await workbook.handleTransaction({transaction: {payloads, undoable: false, temp: false}})
@@ -404,92 +445,18 @@ if (r?.status?.type === 'err') throw new Error('transaction rejected')
 
 ### No dynamic arrays / array formulas
 
-The engine has a rich scalar function set (`COUNTIF`, `SUMPRODUCT`, `LARGE`,
-`RANK`, `INDEX`/`MATCH`, `VLOOKUP`, `MOD`, `IF`, `RAND`, …) but **no spilling and
-no array criteria**: `COUNTIF(range, range)` returns `#UNKNOWN!`. Every formula
-must reduce to one scalar per cell — lay out helper columns and reduce them
-(e.g. sum nine scalar `COUNTIF(range, d)` terms instead of one array formula).
+The engine has a rich scalar function set (`COUNTIF`, `SUMPRODUCT`, `INDEX`/`MATCH`,
+`VLOOKUP`, …) but **no spilling and no array criteria**: every formula must reduce
+to one scalar per cell. Lay out helper columns instead of one array formula.
 
 ### Don't delete the sheet the user is looking at
 
-Deleting the currently-displayed sheet crashes the canvas (it tries to render a
-gone sheet). If you rebuild a board, either **switch the view to another sheet
-first** (`setSelection(0, …)`, yield a frame) then delete/recreate, or better —
-**reuse the sheet and just clear its cells** between rounds.
-
-### Register in `crafts.config.json`, nowhere else
-
-A craft ships iff it's in the `registry` in `crafts.config.json` (and in the
-chosen distribution's craft set — `"all"` includes every registry entry). The
-panel list (webpack `DefinePlugin`) and the published `dist/` set
-(`publish-crafts.sh` via `scripts/craft-dist.mjs`) both derive from it, so they
-can't drift. Forgetting to register means the craft simply won't appear —
-there's no longer a two-list-out-of-sync 404 trap.
+Deleting the currently-displayed sheet crashes the canvas. Switch the view to
+another sheet first (`setSelection(0, …)`, yield a frame) then delete/recreate —
+or better, **reuse the sheet and clear its cells** between rounds.
 
 ### Host APIs arrive asynchronously
 
-`window.workbook`, `window.onCanvasInput`, etc. are injected on iframe load and
-re-injected on selection changes. Poll for them before first use (the
-`whenReady` helper above) rather than touching them at module top level.
-
-## Dev workflow
-
-```bash
-yarn workspace <name> build   # rebuild the craft → copies to public/<name>/
-```
-
-- After a **craft** change: rebuild, then reload the iframe (re-select the craft
-  in the panel, or reload the page).
-- After editing **`craft-panel/index.tsx`** (e.g. adding to `tools`): the dev
-  server recompiles; reload the page. A fresh dev-server start guarantees a
-  clean compile if HMR gets confused.
-- If your craft needs a change in the Rust core or the engine, that's a bigger
-  chain (`yarn wasm` → rebuild `logisheets-web` → rebuild the engine) — out of
-  scope here.
-
-## Distributions (shipping a subset of crafts)
-
-`crafts.config.json` also defines **distributions** — named build targets that
-select which crafts ship, plus the desktop product name / bundle id / window
-title:
-
-```json
-"distributions": {
-  "default": { "productName": "LogiSheets", "identifier": "com.logisheets.desktop",
-               "defaultCraft": "factory-simulator-en", "crafts": "all" },
-  "games":   { "productName": "LogiSheets 小游戏", "identifier": "com.logisheets.games",
-               "windowTitle": "LogiSheets 小游戏", "defaultCraft": "sudoku",
-               "crafts": ["factory-simulator-zh", "fuse-beads", "sudoku", "minesweeper"] }
-}
-```
-
-Pick one at build time with the `CRAFT_DIST` env var (default: `default`):
-
-```bash
-CRAFT_DIST=games yarn build     # or: yarn build:games
-```
-
-Everything downstream honors it:
-
-- **webpack** injects that distribution's craft list into the panel
-  (`resolveCraftTools` → `DefinePlugin` → `__CRAFT_TOOLS__` / `__DEFAULT_CRAFT__`).
-- **`publish-crafts.sh`** ships only that set to `dist/` (via
-  `scripts/craft-dist.mjs crafts`), pruning others.
-- **The desktop build** (`.github/workflows/desktop.yaml`, `workflow_dispatch`
-  input `distribution`) builds `dist/` with `CRAFT_DIST` set, then
-  `tauri build -c "$(node scripts/craft-dist.mjs tauri)"` applies the product
-  name / id / title. Artifacts are named `logisheets-desktop-<distribution>-<os>`.
-
-Add a distribution = add an entry here. Nothing else to touch.
-
-## Learn from the built-in crafts
-
-| Craft | What to copy from it |
-| --- | --- |
-| `fuse-beads` | canvas painting via `onCanvasInput`, fills, palette UI |
-| `lights-out` | smallest full game: own sheet, borders, `craftState` |
-| `memory-grid` / `minesweeper` | game loop, timers, per-cell repaint, difficulty |
-| `sudoku` | formula-driven validation (`cellInput` of `=…`), no interception |
-| `markdown-table-extractor` | selection-driven writes with builders |
-| `what-if-calculator` | temp transactions + `setCellLayouts` overlays |
-```
+`window.workbook`, `window.onCanvasInput`, etc. are injected on iframe load. Poll
+for them (the `whenReady` helper above) rather than touching them at module top
+level.

@@ -85,10 +85,6 @@ export default defineConfig({
                     },
                     {text: 'Extend with crafts', link: '/craft/craft'},
                     {text: 'Write your own craft', link: '/craft/writing-a-craft'},
-                    {
-                        text: 'Give a craft AI tools (craftsmith)',
-                        link: '/craft/craftsmith',
-                    },
                 ],
             },
         ],

@@ -64,3 +64,97 @@ export interface SkillCtx {
     /** This craft's persisted state, scoped to this craft. Optional. */
     craftState?: CraftStateAccess
 }
+
+/* ===========================================================================
+ * Runtime authoring (runtime.ts) — the headless "runtime" face of a craft.
+ * ===========================================================================
+ * A craft's runtime.ts runs WITHOUT a UI. A host (the Node runtime, the
+ * collaboration server) reconstructs it from the workbook's saved craft state
+ * and calls lifecycle hooks around each JSON-RPC exchange. Author it as a
+ * default export:
+ *
+ *   import type {CraftRuntime} from 'logisheets-craftsmith/authoring'
+ *   export default { onLoad, onRequest, onResponse } satisfies CraftRuntime<MyState>
+ *
+ * These mirror logisheets-core's CraftRuntime (packages/core/src/craft/*) so a
+ * craft can depend on craftsmith alone.
+ */
+
+/** logisheets-web's error envelope. A hook returns this to signal failure. */
+export interface ErrorMessage {
+    msg: string
+    ty: number
+}
+
+/** A hook's outcome: the value on success, or an {@link ErrorMessage}. */
+export type Result<T> = T | ErrorMessage
+
+/** A hook may run async engine ops, so it may return a value or a promise. */
+export type MaybePromise<T> = T | Promise<T>
+
+/** A craft's persisted state — always a JSON object. Narrow it with your own type. */
+export type CraftState = Record<string, unknown>
+
+/** JSON-RPC 2.0 request envelope a runtime sees in `onRequest`. */
+export interface JsonRpcRequest {
+    jsonrpc: '2.0'
+    id?: string | number | null
+    method: string
+    params?: unknown
+}
+
+/** JSON-RPC 2.0 error object. */
+export interface JsonRpcError {
+    code: number
+    message: string
+    data?: unknown
+}
+
+/** JSON-RPC 2.0 response envelope a runtime sees in `onResponse`. */
+export interface JsonRpcResponse {
+    jsonrpc: '2.0'
+    id: string | number | null
+    result?: unknown
+    error?: JsonRpcError
+}
+
+/** Why a cell failed validation (returned from `onValidate`). */
+export type ViolationKind =
+    | 'failed'
+    | 'error'
+    | 'required'
+    | 'duplicate'
+    | 'membership'
+
+/** One cell that failed its validation rule. */
+export interface Violation {
+    sheetIdx: number
+    row: number
+    col: number
+    formula?: string
+    kind: ViolationKind
+    message: string
+}
+
+/**
+ * The headless logic of a craft. The host reconstructs it from saved state and
+ * fires these hooks around a single JSON-RPC exchange, in order:
+ *
+ *   onLoad      once, when the workbook is opened — rehydrate from state
+ *   onRequest   a request's inputs are about to be applied
+ *   onValidate  inputs are now in place; check them BEFORE the response is read
+ *   onResponse  the response has been produced and is about to be returned
+ *
+ * `S` is your state shape; `W` is the workbook handle (defaults to the same
+ * {@link SkillWorkbook} surface your tools use). Every hook returns a
+ * {@link Result}: a plain value / `undefined` on success, or an
+ * {@link ErrorMessage} to reject. `onValidate` is optional (omit it if the craft
+ * has no validation); a non-empty violation list tells the host to reject the
+ * request and roll the inputs back.
+ */
+export interface CraftRuntime<S extends CraftState = CraftState, W = SkillWorkbook> {
+    onLoad: (s: S, wb: W) => MaybePromise<Result<void>>
+    onRequest: (req: JsonRpcRequest, s: S, wb: W) => MaybePromise<Result<void>>
+    onValidate?: (s: S, wb: W) => MaybePromise<Result<readonly Violation[]>>
+    onResponse: (resp: JsonRpcResponse, s: S, wb: W) => MaybePromise<Result<void>>
+}

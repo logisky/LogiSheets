@@ -5,7 +5,7 @@
  * tools. It is a BUILD ARTIFACT: generated from `tools.ts`, committed, verified
  * clean in CI, never hand-edited — the single source of truth is the code.
  *
- * See docs/craft/craftsmith.md.
+ * See docs/craft/writing-a-craft.md.
  */
 
 /** JSON Schema draft-07 subset — structurally compatible with logician's. */

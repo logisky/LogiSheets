@@ -14,6 +14,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {IconButton, Tooltip} from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import SendIcon from '@mui/icons-material/Send'
+import StopIcon from '@mui/icons-material/Stop'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import AddIcon from '@mui/icons-material/AddCommentOutlined'
 import {
@@ -42,6 +43,7 @@ import {AnthropicBrowserClient} from './lib/llm-anthropic'
 import {getFetch, isTauri} from './lib/net'
 import {WebCraftStore} from './lib/craft-store-web'
 import {makeCraftInteractionsApi} from './lib/craft-interactions-adapter'
+import {Markdown} from './lib/markdown'
 import {
     PROVIDERS,
     DEFAULT_PROVIDER,
@@ -86,6 +88,32 @@ interface PendingConfirm {
     resolve: (d: {approved: boolean; reason?: string}) => void
 }
 
+// Turn a raw tool id (`cell__set_cells`) into something readable in the UI.
+const prettyTool = (name: string) =>
+    name.replace(/__/g, ' · ').replace(/_/g, ' ')
+
+// Map a caught turn error to a message worth showing the user. Duck-types on the
+// `code` the Anthropic client's LlmError carries; falls back to the message.
+function friendlyError(err: unknown): string {
+    const e = err as {code?: string; message?: string}
+    switch (e?.code) {
+        case 'missing_api_key':
+            return 'No API key set. Open Settings and paste your key.'
+        case 'unauthorized':
+            return 'The API key was rejected. Check it in Settings.'
+        case 'rate_limited':
+            return 'Rate limited by the provider — wait a moment and retry.'
+        case 'network':
+            return 'Network error reaching the model provider. On the web, Kimi needs a CORS proxy; the desktop app calls it natively.'
+        case 'server_error':
+            return 'The model provider had a server error. Try again.'
+        case 'bad_request':
+            return e.message || 'The provider rejected the request.'
+        default:
+            return e?.message || 'Something went wrong. See the console for details.'
+    }
+}
+
 export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
     const workbook = useWorkbook()
 
@@ -103,6 +131,7 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
         () => localStorage.getItem(KEY_MODEL) || PROVIDERS[provider].defaultModel
     )
     const [showSettings, setShowSettings] = useState(false)
+    const [turnError, setTurnError] = useState<string | null>(null)
     const [confirmState, setConfirmState] = useState<PendingConfirm | null>(
         null
     )
@@ -110,6 +139,9 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
     // Fresh-read refs so callbacks never capture stale values.
     const apiKeyRef = useRef(apiKey)
     apiKeyRef.current = apiKey
+    // Whether the transcript is pinned to the bottom. Turns false when the user
+    // scrolls up to read history, so new content doesn't yank them back down.
+    const stickToBottomRef = useRef(true)
 
     // Long-lived singletons (store, registry, conversation, agent).
     const store = useMemo(() => new IdbConversationStore(), [])
@@ -235,14 +267,25 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
         // Re-scope if the workbook changes.
     }, [store, workbookId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Keep the transcript pinned to the bottom on new content.
+    // Keep the transcript pinned to the bottom on new content — but only while
+    // the user hasn't scrolled up to read history.
     useEffect(() => {
         const el = transcriptRef.current
-        if (el) el.scrollTop = el.scrollHeight
-    }, [bubbles, open])
+        if (el && stickToBottomRef.current) el.scrollTop = el.scrollHeight
+    }, [bubbles, open, running, turnError])
+
+    const onTranscriptScroll = useCallback(() => {
+        const el = transcriptRef.current
+        if (!el) return
+        stickToBottomRef.current =
+            el.scrollHeight - el.scrollTop - el.clientHeight < 60
+    }, [])
 
     const newChat = useCallback(async () => {
         unsubRef.current?.()
+        setTurnError(null)
+        setStatus('idle')
+        stickToBottomRef.current = true
         const conv = await store.createConversation({
             title: 'New chat',
             workbook_id: workbookId,
@@ -259,6 +302,7 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
         const text = input.trim()
         if (!text || running) return
         if (!apiKeyRef.current) {
+            setTurnError('Add an API key in Settings to start.')
             setShowSettings(true)
             return
         }
@@ -266,21 +310,34 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
         const convId = convIdRef.current
         if (!agent || !convId) return
         setInput('')
+        setTurnError(null)
         setRunning(true)
         setStatus('thinking…')
+        stickToBottomRef.current = true
         const ctrl = new AbortController()
         abortRef.current = ctrl
         try {
             await agent.runTurn(convId, text, ctrl.signal)
             setStatus('idle')
         } catch (err) {
-            console.error('[watson] runTurn error', err)
-            setStatus('error')
+            if (ctrl.signal.aborted) {
+                setStatus('stopped')
+            } else {
+                console.error('[watson] runTurn error', err)
+                setStatus('error')
+                setTurnError(friendlyError(err))
+            }
         } finally {
             setRunning(false)
             abortRef.current = null
         }
     }, [input, running])
+
+    // Cancel the in-flight turn. The runTurn promise rejects/aborts; `send`'s
+    // catch treats an aborted signal as a clean stop, not an error.
+    const stop = useCallback(() => {
+        abortRef.current?.abort()
+    }, [])
 
     const saveSettings = useCallback((next: SettingsDraft) => {
         const p = isProviderId(next.provider) ? next.provider : DEFAULT_PROVIDER
@@ -312,7 +369,9 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
         <div className={styles.panel} aria-hidden={!open}>
             <header className={styles.header}>
                 <span className={styles.title}>Watson</span>
-                <span className={styles.status}>{status}</span>
+                {status !== 'idle' && (
+                    <span className={styles.status}>{status}</span>
+                )}
                 <span className={styles.spacer} />
                 <Tooltip title="New chat">
                     <IconButton size="small" onClick={newChat}>
@@ -334,13 +393,27 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
                 </Tooltip>
             </header>
 
-            <div className={styles.transcript} ref={transcriptRef}>
-                {bubbles.length === 0 ? (
+            <div
+                className={styles.transcript}
+                ref={transcriptRef}
+                onScroll={onTranscriptScroll}
+            >
+                {bubbles.length === 0 && !running && !turnError ? (
                     <div className={styles.empty}>
                         Ask Watson to build, inspect, or edit your sheet.
                     </div>
                 ) : (
                     bubbles.map((b) => <Bubble key={b.id} bubble={b} />)
+                )}
+                {running && (
+                    <div className={`${styles.bubble} ${styles.thinking}`}>
+                        Watson is working…
+                    </div>
+                )}
+                {turnError && (
+                    <div className={`${styles.bubble} ${styles.errorBubble}`}>
+                        {turnError}
+                    </div>
                 )}
             </div>
 
@@ -352,20 +425,38 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
                     rows={1}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
+                        // Guard against IME composition: pressing Enter to pick a
+                        // candidate (e.g. Chinese input) must not send.
+                        if (
+                            e.key === 'Enter' &&
+                            !e.shiftKey &&
+                            !e.nativeEvent.isComposing
+                        ) {
                             e.preventDefault()
                             void send()
                         }
                     }}
                 />
-                <IconButton
-                    className={styles.sendBtn}
-                    disabled={running || !input.trim()}
-                    onClick={() => void send()}
-                    color="primary"
-                >
-                    <SendIcon fontSize="small" />
-                </IconButton>
+                {running ? (
+                    <Tooltip title="Stop">
+                        <IconButton
+                            className={styles.sendBtn}
+                            onClick={stop}
+                            color="error"
+                        >
+                            <StopIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                ) : (
+                    <IconButton
+                        className={styles.sendBtn}
+                        disabled={!input.trim()}
+                        onClick={() => void send()}
+                        color="primary"
+                    >
+                        <SendIcon fontSize="small" />
+                    </IconButton>
+                )}
             </div>
 
             {showSettings && (
@@ -398,7 +489,7 @@ const Bubble = ({bubble: b}: {bubble: ChatBubble}) => {
     if (b.kind === 'assistant_text')
         return (
             <div className={`${styles.bubble} ${styles.assistant}`}>
-                {b.text}
+                <Markdown text={b.text} />
             </div>
         )
     if (b.kind === 'note')
@@ -421,7 +512,7 @@ const Bubble = ({bubble: b}: {bubble: ChatBubble}) => {
     return (
         <details className={styles.tool}>
             <summary>
-                <span className={styles.toolName}>{b.name}</span>
+                <span className={styles.toolName}>{prettyTool(b.name)}</span>
                 <span className={styles.toolStatus}>{statusLabel}</span>
             </summary>
             <pre>{JSON.stringify(body, null, 2)}</pre>
@@ -456,6 +547,8 @@ const SettingsModal = ({
     const [b, setB] = useState(baseUrl)
     const [m, setM] = useState(model)
     const def = PROVIDERS[p]
+
+    useEscapeKey(onClose)
 
     // Switching provider loads that provider's stored key / base URL and
     // resets the model to its default — the fields always reflect one provider.
@@ -550,11 +643,14 @@ const ConfirmModal = ({
 }: {
     pending: PendingConfirm
     onDecide: (approved: boolean) => void
-}) => (
+}) => {
+    // Esc denies, matching the overlay-click-to-cancel convention.
+    useEscapeKey(() => onDecide(false))
+    return (
     <div className={styles.modalOverlay}>
         <div className={styles.modal}>
             <h3>Approve tool call?</h3>
-            <p className={styles.confirmName}>{pending.name}</p>
+            <p className={styles.confirmName}>{prettyTool(pending.name)}</p>
             <pre>{JSON.stringify(pending.input, null, 2)}</pre>
             <div className={styles.modalRow}>
                 <button className={styles.btn} onClick={() => onDecide(false)}>
@@ -569,4 +665,16 @@ const ConfirmModal = ({
             </div>
         </div>
     </div>
-)
+    )
+}
+
+// Call `onKey` when Escape is pressed while mounted. Shared by the modals.
+function useEscapeKey(onKey: () => void) {
+    useEffect(() => {
+        const h = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onKey()
+        }
+        window.addEventListener('keydown', h)
+        return () => window.removeEventListener('keydown', h)
+    }, [onKey])
+}
