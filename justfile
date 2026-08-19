@@ -13,10 +13,10 @@
 # internal dependency ranges are rewritten to track the depended-on version.
 
 # npm packages that get published, in publish.sh order.
-npm_dirs := "packages/web packages/node packages/core packages/engine packages/runtime packages/formula-editor"
+npm_dirs := "packages/web packages/node packages/core packages/engine packages/runtime packages/formula-editor packages/logician"
 
 # Published npm packages as dir:name pairs (name = registry name).
-npm_pkgs := "packages/web:logisheets-web packages/node:logisheets packages/core:logisheets-core packages/engine:logisheets-engine packages/runtime:logisheets-runtime packages/formula-editor:logisheets-formula-editor"
+npm_pkgs := "packages/web:logisheets-web packages/node:logisheets packages/core:logisheets-core packages/engine:logisheets-engine packages/runtime:logisheets-runtime packages/formula-editor:logisheets-formula-editor packages/logician:logisheets-logician"
 
 # Published crates as their crates.io names (all inherit the workspace version
 # locally). ssf-rs and xmldiff are NOT here — they are versioned independently.
@@ -82,9 +82,10 @@ release VERSION:
     for d in {{npm_dirs}}; do ( cd "$d" && npm pkg set version="$v" >/dev/null ); done
 
     echo "==> npm internal dependency ranges -> ^$v"
-    ( cd packages/core    && npm pkg set "peerDependencies.logisheets-web=^$v" >/dev/null )
-    ( cd packages/engine  && npm pkg set "dependencies.logisheets-web=^$v" >/dev/null )
-    ( cd packages/runtime && npm pkg set "dependencies.logisheets=^$v" "dependencies.logisheets-core=^$v" >/dev/null )
+    ( cd packages/core     && npm pkg set "peerDependencies.logisheets-web=^$v" >/dev/null )
+    ( cd packages/engine   && npm pkg set "dependencies.logisheets-web=^$v" >/dev/null )
+    ( cd packages/runtime  && npm pkg set "dependencies.logisheets=^$v" "dependencies.logisheets-core=^$v" >/dev/null )
+    ( cd packages/logician && npm pkg set "dependencies.logisheets-core=^$v" "dependencies.logisheets-web=^$v" >/dev/null )
 
     echo "Done. Review with: git diff"
 
@@ -105,7 +106,8 @@ bump PKG VERSION:
         logisheets-engine)         dir=packages/engine ;;
         logisheets-runtime)        dir=packages/runtime ;;
         logisheets-formula-editor) dir=packages/formula-editor ;;
-        *) echo "error: unknown package '$pkg'" >&2; echo "one of: logisheets-web logisheets logisheets-core logisheets-engine logisheets-runtime logisheets-formula-editor" >&2; exit 1 ;;
+        logisheets-logician)       dir=packages/logician ;;
+        *) echo "error: unknown package '$pkg'" >&2; echo "one of: logisheets-web logisheets logisheets-core logisheets-engine logisheets-runtime logisheets-formula-editor logisheets-logician" >&2; exit 1 ;;
     esac
 
     echo "==> $pkg -> $v"
@@ -114,12 +116,14 @@ bump PKG VERSION:
     echo "==> internal ranges depending on $pkg -> ^$v"
     case "$pkg" in
         logisheets-web)
-            ( cd packages/core   && npm pkg set "peerDependencies.logisheets-web=^$v" >/dev/null )
-            ( cd packages/engine && npm pkg set "dependencies.logisheets-web=^$v" >/dev/null ) ;;
+            ( cd packages/core     && npm pkg set "peerDependencies.logisheets-web=^$v" >/dev/null )
+            ( cd packages/engine   && npm pkg set "dependencies.logisheets-web=^$v" >/dev/null )
+            ( cd packages/logician && npm pkg set "dependencies.logisheets-web=^$v" >/dev/null ) ;;
         logisheets)
             ( cd packages/runtime && npm pkg set "dependencies.logisheets=^$v" >/dev/null ) ;;
         logisheets-core)
-            ( cd packages/runtime && npm pkg set "dependencies.logisheets-core=^$v" >/dev/null ) ;;
+            ( cd packages/runtime  && npm pkg set "dependencies.logisheets-core=^$v" >/dev/null )
+            ( cd packages/logician && npm pkg set "dependencies.logisheets-core=^$v" >/dev/null ) ;;
         *) echo "  (nothing depends on $pkg internally)" ;;
     esac
 

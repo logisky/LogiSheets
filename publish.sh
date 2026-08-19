@@ -4,15 +4,17 @@
 #   1. Rust crates to crates.io (ordered so each one's deps are
 #      already up there by the time it publishes).
 #   2. npm packages (logisheets-web → logisheets → logisheets-core →
-#      logisheets-engine → logisheets-runtime → logisheets-formula-editor).
+#      logisheets-engine → logisheets-runtime → logisheets-formula-editor →
+#      logisheets-logician).
 #      web/node self-build via prepublishOnly (WASM + TS); core/engine/runtime/
-#      formula-editor build via their own `prepack` hooks (`yarn build`) at pack
-#      time. `npm publish` does NOT rewrite `workspace:*`, so every shipped
-#      dependency must be a real semver range: the engine/formula-editor bundle
-#      or peer-dep their deps; core (peer logisheets-web) and runtime (deps
-#      logisheets + logisheets-core) use `^` ranges, resolved to the local
-#      workspace in dev and the registry once published. Order matters so each
-#      package's deps are already on the registry when it publishes.
+#      formula-editor/logician build via their own `prepack` hooks
+#      (`yarn build`) at pack time. `npm publish` does NOT rewrite
+#      `workspace:*`, so every shipped dependency must be a real semver range:
+#      the engine/formula-editor bundle or peer-dep their deps; core (peer
+#      logisheets-web), runtime (deps logisheets + logisheets-core) and logician
+#      (deps logisheets-core + logisheets-web) use `^` ranges, resolved to the
+#      local workspace in dev and the registry once published. Order matters so
+#      each package's deps are already on the registry when it publishes.
 #
 # Versions must already be bumped in Cargo.toml / package.json before
 # running this. The script does NOT touch versions; it only publishes
@@ -37,7 +39,7 @@ for arg in "$@"; do
         --skip-npm)  SKIP_NPM=1 ;;
         --dry-run)   DRY_RUN=1 ;;
         -h|--help)
-            sed -n '2,20p' "$0"
+            awk 'NR>1 && /^#/ {print; next} NR>1 {exit}' "$0"
             exit 0
             ;;
         *)
@@ -88,14 +90,17 @@ CARGO_MANIFESTS=(
 
 # ---------------------------------------------------------------------------
 # npm packages — order matters. Each builds itself at pack time (web/node via
-# prepublishOnly; engine + formula-editor via a `prepack` hook), so publishing
-# in dependency order means each package's local deps are already built when it
-# packs:
+# prepublishOnly; core, engine, runtime, formula-editor and logician via a
+# `prepack` hook), so publishing in dependency order means each package's local
+# deps are already built when it packs:
 #   - logisheets (node) `link`s from web/src.
 #   - the engine's build bundles logisheets-web + its wasm.
 #   - formula-editor's build type-checks against the engine's emitted types
 #     (logisheets-engine is an optional peer used by its /inline entry), so the
 #     engine must be built/published before it.
+#   - logician (the agent tool layer, consumed by logisheets-mcp) depends on
+#     logisheets-web + logisheets-core via `^` ranges and nothing published
+#     depends on it, so it goes last.
 # ---------------------------------------------------------------------------
 NPM_PACKAGES=(
     "packages/web"
@@ -104,6 +109,7 @@ NPM_PACKAGES=(
     "packages/engine"
     "packages/runtime"
     "packages/formula-editor"
+    "packages/logician"
 )
 
 publish_cargo() {

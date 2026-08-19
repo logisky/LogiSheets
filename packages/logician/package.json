@@ -1,6 +1,6 @@
 {
     "name": "logisheets-logician",
-    "version": "1.10.0",
+    "version": "1.11.0",
     "description": "AI agent tools for LogiSheets — platform-agnostic LLM tool definitions, prompts, and skills for operating a real spreadsheet engine. Powers Watson (the in-app assistant) and logisheets-mcp; reusable in any agent host.",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -20,8 +20,8 @@
         "prepack": "yarn build"
     },
     "dependencies": {
-        "logisheets-core": "^1.10.0",
-        "logisheets-web": "^1.10.0"
+        "logisheets-core": "^1.11.0",
+        "logisheets-web": "^1.11.0"
     },
     "devDependencies": {
         "esbuild": "^0.21.0",
