@@ -11,10 +11,10 @@
 // adapts the synchronous Node `handle()` entry point into the async Client that
 // WorkbookOps consumes, then exposes that ops layer per workbook.
 
-import {readFile} from 'node:fs/promises'
+import {readFile, writeFile} from 'node:fs/promises'
 import {basename, resolve} from 'node:path'
 import {createRequire} from 'node:module'
-import type {Value, Client} from 'logisheets-web'
+import type {Value, Client, SaveFileResult} from 'logisheets-web'
 import {WorkbookOps} from 'logisheets-core'
 
 // Re-export the core surface so consumers import everything from one place.
@@ -154,6 +154,45 @@ export class Workbook {
             {method: 'getValue', value: {sheetIdx, row, col}},
             this.id
         ) as Value
+    }
+
+    /**
+     * Serialize the workbook back to .xlsx bytes.
+     *
+     * `saveWorkbook` is deliberately absent from {@link Client}: it is a
+     * whole-file operation rather than one of the per-cell/per-sheet
+     * `WorkbookMethods`, so it goes straight through the engine entry here.
+     *
+     * @param appData opaque per-document JSON the host owns (craft state and
+     *                friends). It round-trips through the file; pass what the
+     *                engine's `getAppData` gave you, or nothing.
+     */
+    public save(appData = ''): Uint8Array {
+        const r = handle(
+            {method: 'saveWorkbook', value: {appData}},
+            this.id
+        ) as SaveFileResult
+        if (r.code !== 0) {
+            throw new Error(`failed to save workbook (code ${r.code})`)
+        }
+        // The wasm boundary hands back either a typed array or a plain number
+        // array depending on the serializer path; normalize so callers can
+        // always treat this as bytes.
+        return r.data instanceof Uint8Array ? r.data : Uint8Array.from(r.data)
+    }
+
+    /**
+     * Serialize and write the workbook to `path`. Defaults to the path it was
+     * loaded from, so a load -> edit -> `saveAs()` round-trip needs no argument.
+     */
+    public async saveAs(path?: string, appData = ''): Promise<void> {
+        const target = path ?? this.path
+        if (target === undefined) {
+            throw new Error(
+                'saveAs: no path given and this workbook was not loaded from one'
+            )
+        }
+        await writeFile(resolve(target), this.save(appData))
     }
 
     /** Undo the most recent transaction. Returns whether anything was undone. */

@@ -34,7 +34,7 @@ import {
     toUiBubbles,
     installCraftSkillTools,
     type ChatBubble,
-} from 'logician'
+} from 'logisheets-logician'
 import {getCraftState, setCraftState} from 'logisheets-core'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {useWorkbook} from '@/core/engine/provider'

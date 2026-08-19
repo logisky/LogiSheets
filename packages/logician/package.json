@@ -1,7 +1,7 @@
 {
-    "name": "logician",
-    "version": "0.1.0",
-    "description": "AI agent core for LogiSheets — platform-agnostic LLM tools, prompts, and skills for operating workbooks. Used by Watson (browser craft), and reusable in Node CLI / MCP server / other hosts.",
+    "name": "logisheets-logician",
+    "version": "1.11.0",
+    "description": "AI agent tools for LogiSheets — platform-agnostic LLM tool definitions, prompts, and skills for operating a real spreadsheet engine. Powers Watson (the in-app assistant) and logisheets-mcp; reusable in any agent host.",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "type": "module",
@@ -14,14 +14,14 @@
     },
     "author": "Jeremy He",
     "license": "MIT",
-    "private": true,
     "scripts": {
         "build": "tsc && yarn build:node",
-        "build:node": "esbuild src/index.ts --bundle --format=esm --platform=node --external:logisheets-core --external:logisheets --outfile=dist/index.node.js"
+        "build:node": "esbuild src/index.ts --bundle --format=esm --platform=node --external:logisheets-core --external:logisheets --outfile=dist/index.node.js",
+        "prepack": "yarn build"
     },
     "dependencies": {
-        "logisheets-core": "workspace:*",
-        "logisheets-web": "workspace:*"
+        "logisheets-core": "^1.11.0",
+        "logisheets-web": "^1.11.0"
     },
     "devDependencies": {
         "esbuild": "^0.21.0",
@@ -29,5 +29,25 @@
     },
     "files": [
         "dist"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/logisky/LogiSheets.git",
+        "directory": "packages/logician"
+    },
+    "bugs": {
+        "url": "https://github.com/logisky/LogiSheets/issues"
+    },
+    "homepage": "https://github.com/logisky/LogiSheets",
+    "keywords": [
+        "logisheets",
+        "spreadsheet",
+        "llm",
+        "agent",
+        "tools",
+        "mcp",
+        "xlsx",
+        "excel",
+        "ai"
     ]
 }

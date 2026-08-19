@@ -1619,9 +1619,9 @@ impl<'a> Worksheet<'a> {
                                     .into_iter()
                                     .map(|cell_id| {
                                         let idx = block_place
-                                            .cols
+                                            .rows
                                             .iter()
-                                            .position(|col_id| col_id == &cell_id.col)
+                                            .position(|row_id| row_id == &cell_id.row)
                                             .unwrap();
                                         crate::controller::display::BlockSchemaKeyEntry {
                                             key: key_value(cell_id),
@@ -1656,9 +1656,9 @@ impl<'a> Worksheet<'a> {
                                     .into_iter()
                                     .map(|cell_id| {
                                         let idx = block_place
-                                            .rows
+                                            .cols
                                             .iter()
-                                            .position(|row_id| row_id == &cell_id.row)
+                                            .position(|col_id| col_id == &cell_id.col)
                                             .unwrap();
                                         crate::controller::display::BlockSchemaKeyEntry {
                                             key: key_value(cell_id),
@@ -2300,9 +2300,9 @@ impl<'a> Worksheet<'a> {
                             .into_iter()
                             .map(|cell_id| {
                                 let idx = block_place
-                                    .cols
+                                    .rows
                                     .iter()
-                                    .position(|id| id == &cell_id.col)
+                                    .position(|id| id == &cell_id.row)
                                     .unwrap();
                                 crate::controller::display::BlockSchemaKeyEntry {
                                     key: key_value(cell_id),
@@ -2337,9 +2337,9 @@ impl<'a> Worksheet<'a> {
                             .into_iter()
                             .map(|cell_id| {
                                 let idx = block_place
-                                    .rows
+                                    .cols
                                     .iter()
-                                    .position(|id| id == &cell_id.row)
+                                    .position(|id| id == &cell_id.col)
                                     .unwrap();
                                 crate::controller::display::BlockSchemaKeyEntry {
                                     key: key_value(cell_id),

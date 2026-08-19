@@ -79,7 +79,7 @@ where
                 }
                 (CellId::BlockCell(s), CellId::BlockCell(e)) => {
                     if s.block_id != e.block_id {
-                        panic!("")
+                        return Err(ParseError::CrossBlockRange);
                     }
 
                     let range = Range::Block(BlockRange::AddrRange(s, e));
@@ -94,7 +94,8 @@ where
                         sheet_id,
                     }))
                 }
-                _ => panic!(),
+                // One endpoint inside a block and the other outside it.
+                _ => Err(ParseError::PartialBlockRange),
             }
         };
     match first.as_rule() {
