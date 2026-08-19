@@ -4063,3 +4063,280 @@ fn greater_than_spec(
         ..Default::default()
     }
 }
+
+#[test]
+fn empty_app_data_round_trips() {
+    // Regression: the JS/wasm save entry (`save_file`) *always* injects an
+    // AppData record, and its `data` is empty whenever the host has no
+    // app-specific state — every headless / agent-built workbook. That wrote
+    // `<app name="logisheets"></app>`, which yields no text event on read, so
+    // the derived deserializer unwrapped `None` and panicked. Net effect: a
+    // file LogiSheets had just written could not be reopened by LogiSheets.
+    use logisheets_workbook::logisheets::AppData;
+
+    let mut wb = Workbook::default();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: "=1+1".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    wb.set_app_data(vec![AppData {
+        name: "logisheets".to_string(),
+        data: String::new(),
+    }]);
+
+    let bytes = wb.save().unwrap();
+    let reloaded = Workbook::from_file(&bytes, "saved".to_string())
+        .expect("a workbook we just saved must be loadable again");
+
+    // The empty payload comes back as empty, not as a missing record.
+    let apps = reloaded.get_app_data();
+    assert_eq!(apps.len(), 1);
+    assert_eq!(apps[0].name, "logisheets");
+    assert_eq!(apps[0].data, "");
+
+    // And the actual content survived (get_formula returns the unparsed body).
+    assert_eq!(
+        reloaded
+            .get_sheet_by_idx(0)
+            .unwrap()
+            .get_formula(0, 0)
+            .unwrap(),
+        "1 + 1"
+    );
+}
+
+#[test]
+fn non_empty_app_data_still_round_trips() {
+    // The default must not shadow a real payload.
+    use logisheets_workbook::logisheets::AppData;
+
+    let mut wb = Workbook::default();
+    wb.set_app_data(vec![AppData {
+        name: "logisheets".to_string(),
+        data: r#"{"craft":"what-if","n":3}"#.to_string(),
+    }]);
+    let bytes = wb.save().unwrap();
+    let reloaded = Workbook::from_file(&bytes, "saved".to_string()).unwrap();
+    assert_eq!(
+        reloaded.get_app_data()[0].data,
+        r#"{"craft":"what-if","n":3}"#
+    );
+}
+
+/// Regression: a block schema's key entries must report the index of the RECORD
+/// the key identifies — the block-relative row for a RowSchema.
+///
+/// Both `get_all_blocks` and `get_block_info` resolved a key cell's index on the
+/// FIELD axis instead: for a RowSchema they looked the key cell's *column* up in
+/// `block_place.cols`. Every key cell sits in the same key column, so every key
+/// came back with `idx: 0`. Anything addressing a record by key then aimed at
+/// row 0 — a host writing "set field X of record 2025" silently overwrote 2024.
+#[test]
+fn block_schema_key_entries_report_record_row() {
+    use crate::edit_action::{BindFormSchema, CellInput, InsertRowsInBlock};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // 3 rows x 2 cols at A1; col 0 is the key column, col 1 a data field.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 3,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["year".into(), "amount".into()],
+                render_ids: vec!["r0".into(), "r1".into()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "2024".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "2025".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 2,
+                col: 0,
+                content: "2026".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    let keys_of = |wb: &Workbook| -> Vec<(String, usize)> {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let info = ws.get_block_info(bid).unwrap();
+        let schema = info.schema.expect("block should have a schema");
+        schema.keys.iter().map(|k| (k.key.clone(), k.idx)).collect()
+    };
+
+    assert_eq!(
+        keys_of(&wb),
+        vec![
+            ("2024".to_string(), 0),
+            ("2025".to_string(), 1),
+            ("2026".to_string(), 2),
+        ],
+        "each key must carry its own block-relative row"
+    );
+
+    // Field entries stay on the field axis: they index columns.
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let schema = ws.get_block_info(bid).unwrap().schema.unwrap();
+        let fields: Vec<(String, usize)> = schema
+            .fields
+            .iter()
+            .map(|f| (f.field.clone(), f.idx))
+            .collect();
+        assert!(fields.contains(&("year".to_string(), 0)));
+        assert!(fields.contains(&("amount".to_string(), 1)));
+    }
+
+    // Growing the block must renumber, not flatten: insert a row in the middle.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+                sheet_idx: 0,
+                block_id: bid,
+                start: 1,
+                cnt: 1,
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "2024H2".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    assert_eq!(
+        keys_of(&wb),
+        vec![
+            ("2024".to_string(), 0),
+            ("2024H2".to_string(), 1),
+            ("2025".to_string(), 2),
+            ("2026".to_string(), 3),
+        ],
+        "after an interior insert every key must still point at its own row"
+    );
+}
+
+/// Regression: a range with one endpoint inside a block and the other outside
+/// it has no representation (a `Range` is wholly normal or wholly one block's),
+/// and the reference builder used to `panic!()` on it. That took down the whole
+/// engine instance — fatal for a host that just parses whatever formula a user
+/// or an agent typed. It must be a recoverable error instead.
+#[test]
+fn range_straddling_a_block_boundary_does_not_panic() {
+    use crate::edit_action::{BindFormSchema, CellInput};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // A 1x2 block at A1: B1 is a block cell, B10 is an ordinary cell.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["id".into(), "qty".into()],
+                render_ids: vec!["r0".into(), "r1".into()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 1,
+                content: "4".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    // The formula the engine cannot represent. Surviving this call is the test.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 4,
+            content: "=SUM(B1:B10)*2".to_string(),
+        })],
+        undoable: false,
+        init: false,
+    }));
+
+    // The workbook is still usable afterwards: ordinary formulas still work.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 5,
+            col: 0,
+            content: "=1+1".to_string(),
+        })],
+        undoable: false,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(
+        matches!(ws.get_value(5, 0).unwrap(), crate::controller::display::Value::Number(n) if (n - 2.0).abs() < 1e-9),
+        "the engine must stay usable after rejecting the reference"
+    );
+
+    // And it survives a save/load round-trip, which is where a host would hit
+    // this again on reopening the file it just wrote.
+    let bytes = wb.save().unwrap();
+    let reloaded = Workbook::from_file(&bytes, "saved".to_string())
+        .expect("reloading must not panic on the rejected reference");
+    assert_eq!(reloaded.get_sheet_count(), 1);
+}

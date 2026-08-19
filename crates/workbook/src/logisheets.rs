@@ -1,6 +1,18 @@
 use gents_derives::TS;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
+/// Default for required `ty = "text"` fields.
+///
+/// An element written with an empty text payload (`<app name="x"></app>`)
+/// produces no `Event::Text` at all when read back, so a text field without a
+/// default is left unset and the derived deserializer unwraps `None` — i.e.
+/// every file we saved with empty app data was unreadable. Defaulting to the
+/// empty string makes the round-trip total. It also stops xmlserde from
+/// serializing the empty payload, which is what we meant to write anyway.
+fn empty_text() -> String {
+    String::new()
+}
+
 /// Stores the LogiSheets-specific data.
 ///
 /// LogiSheetsData is the root element of the logisheets.xml file.
@@ -90,7 +102,7 @@ pub struct CellAppendix {
     pub col_idx: u32,
     #[xmlserde(name = b"craftId", ty = "attr")]
     pub craft_id: String,
-    #[xmlserde(name = b"content", ty = "text")]
+    #[xmlserde(name = b"content", ty = "text", default = "empty_text")]
     pub content: String,
     #[xmlserde(name = b"craftTag", ty = "attr")]
     pub craft_tag: u32,
@@ -223,6 +235,6 @@ pub struct RandomKeyFieldXml {
 pub struct AppData {
     #[xmlserde(name = b"name", ty = "attr")]
     pub name: String,
-    #[xmlserde(name = b"data", ty = "text")]
+    #[xmlserde(name = b"data", ty = "text", default = "empty_text")]
     pub data: String,
 }
