@@ -855,7 +855,9 @@ export const deleteBlockRows: Tool<DeleteBlockRowsInput, {removed: number}> = {
     description:
         "Delete rows from a block by their key. Missing keys are silently ignored. Also deletes the matching sheet rows (one block per sheet-row assumption). If you try to delete every row, the last one is kept and its cells are cleared instead — the engine doesn't allow rowCnt=0 blocks.",
     mutates: true,
-    confirmation: 'always',
+    // Removes records outright, same as clear_block — hosts should show this
+    // with a destructive affordance, not a plain write confirmation.
+    confirmation: 'destructive',
     inputSchema: {
         properties: {
             block: {type: 'string'},

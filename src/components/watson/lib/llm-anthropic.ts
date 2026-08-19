@@ -21,7 +21,7 @@ import type {
     LlmClient,
     LlmCreateMessageParams,
     LlmResponse,
-} from 'logician'
+} from 'logisheets-logician'
 
 // ---------------------------------------------------------------------------
 // Options
@@ -91,7 +91,7 @@ interface WireRequest {
     model: string
     max_tokens: number
     system?: AgentSystemBlock[]
-    tools?: ReturnType<typeof import('logician').toLlmTool>[]
+    tools?: ReturnType<typeof import('logisheets-logician').toLlmTool>[]
     messages: AgentMessage[]
 }
 

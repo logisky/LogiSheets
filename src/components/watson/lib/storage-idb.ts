@@ -23,7 +23,7 @@ import type {
     ConversationExport,
     ConversationStore,
     ConversationSummary,
-} from 'logician'
+} from 'logisheets-logician'
 
 // ---------------------------------------------------------------------------
 // Dexie schema

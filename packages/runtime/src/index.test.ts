@@ -1,5 +1,7 @@
 import {fileURLToPath} from 'node:url'
-import {resolve, dirname} from 'node:path'
+import {resolve, dirname, join} from 'node:path'
+import {mkdtemp, rm, stat} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
 import {describe, it, expect} from 'vitest'
 import {SpreadsheetRuntime, Workbook} from './index.js'
 
@@ -139,6 +141,57 @@ describe('SpreadsheetRuntime (Node, real WASM engine)', () => {
         const third = await rt.loadWorkbook(FIXTURE)
         expect(third).not.toBe(first)
         rt.closeAll()
+    })
+
+    it('saves to .xlsx bytes and reloads what it wrote', async () => {
+        const rt = new SpreadsheetRuntime()
+        const wb = rt.createWorkbook()
+        await writeBlock(wb, [
+            ['Qty', 'Price'],
+            ['4', '2.5'],
+        ])
+        await wb.ops.inputCell(0, 1, 2, '=A2*B2')
+
+        const bytes = wb.save()
+        expect(bytes).toBeInstanceOf(Uint8Array)
+        // A real xlsx is a zip: "PK\x03\x04".
+        expect([...bytes.slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04])
+
+        // Round-trip: the computed value survives the file.
+        const reopened = rt.loadWorkbookFromBytes(bytes, 'saved.xlsx')
+        expect(reopened.getValue(0, 1, 2)).toEqual({type: 'number', value: 10})
+        rt.closeAll()
+    })
+
+    it('saveAs writes to disk, defaulting to the loaded path', async () => {
+        const dir = await mkdtemp(join(tmpdir(), 'ls-runtime-save-'))
+        try {
+            const rt = new SpreadsheetRuntime()
+            const wb = rt.createWorkbook()
+            await wb.ops.inputCell(0, 0, 0, 'hello')
+
+            const out = join(dir, 'out.xlsx')
+            await wb.saveAs(out)
+            expect((await stat(out)).size).toBeGreaterThan(0)
+
+            // A workbook created (not loaded) has no path to default to.
+            await expect(wb.saveAs()).rejects.toThrow(/not loaded from one/)
+
+            // One loaded from disk does, and saves back over itself.
+            const loaded = await rt.loadWorkbook(out)
+            await loaded.ops.inputCell(0, 0, 1, 'world')
+            await loaded.saveAs()
+
+            rt.close(loaded)
+            const again = await rt.loadWorkbook(out)
+            expect(again.getValue(0, 0, 1)).toEqual({
+                type: 'str',
+                value: 'world',
+            })
+            rt.closeAll()
+        } finally {
+            await rm(dir, {recursive: true, force: true})
+        }
     })
 
     it('holds multiple distinct workbooks at once', async () => {

@@ -45,7 +45,7 @@ import {
     EDIT_TOOLS,
     BUILDER_TOOLS,
     MemoryConversationStore,
-} from 'logician'
+} from 'logisheets-logician'
 import type {WorkbookClient} from 'logisheets-web'
 
 declare const workbook: WorkbookClient // from the host (browser worker or Node)

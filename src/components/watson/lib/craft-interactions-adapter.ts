@@ -19,7 +19,7 @@ import type {
     PercentAllocatorBindingArg,
     PointAllocatorBindingArg,
     RadioBindingArg,
-} from 'logician'
+} from 'logisheets-logician'
 
 /** The subset of the injected window surface we rely on. All optional —
  *  presence is feature-detected before building the adapter. */

@@ -15,7 +15,7 @@ import type {
     CraftManifest,
     InstalledCraftStore,
     InstalledCraftSummary,
-} from 'logician'
+} from 'logisheets-logician'
 
 export interface WebCraftStoreOptions {
     /** Craft ids considered installed (e.g. the current distribution's list). */
