@@ -1,7 +1,24 @@
-use logisheets_base::{CellId, NormalRange, Range, SheetId, id_fetcher::IdFetcherTrait};
+use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId, id_fetcher::IdFetcherTrait};
 use logisheets_parser::{Parser, ast};
 
 use crate::{connectors::FormulaConnector, formula_manager::FormulaManager};
+
+/// The single-cell `Range` addressing `cid`.
+///
+/// A cell inside a block is addressed by `BlockRange`, never `NormalRange` —
+/// its identity is (block, row id, col id), not a sheet coordinate. Registering
+/// a formula under the wrong range kind means the formula manager never
+/// associates it with the cell, so this has to match what the runtime
+/// formula-input path builds (see `formula_manager::executors::input_formula`).
+///
+/// `None` for ephemeral cells, which no file can contain.
+fn single_cell_range(cid: CellId) -> Option<Range> {
+    match cid {
+        CellId::NormalCell(c) => Some(Range::Normal(NormalRange::Single(c))),
+        CellId::BlockCell(b) => Some(Range::Block(BlockRange::Single(b))),
+        CellId::EphemeralCell(_) => None,
+    }
+}
 
 pub fn load_normal_formula<'a, 'b>(
     formula_manager: &'b mut FormulaManager,
@@ -12,14 +29,19 @@ pub fn load_normal_formula<'a, 'b>(
     connector: &'a mut FormulaConnector<'a>,
 ) {
     let cid = connector.fetch_cell_id(&sheet_id, row, col).unwrap();
-    if let CellId::NormalCell(c) = cid {
-        let range = Range::Normal(NormalRange::Single(c));
-        let range_id = connector.range_manager.get_range_id(&sheet_id, &range);
+    // Blocks are registered before sheet data, so a cell covered by one resolves
+    // to a BlockCell here. This used to match only NormalCell and drop the rest,
+    // which silently discarded every formula stored inside a block: the cached
+    // <v> still loaded, so the workbook looked intact while the cell had quietly
+    // stopped being a formula.
+    let Some(range) = single_cell_range(cid) else {
+        return;
+    };
+    let range_id = connector.range_manager.get_range_id(&sheet_id, &range);
 
-        let ast_node = parse_formula(sheet_id, connector, f);
+    let ast_node = parse_formula(sheet_id, connector, f);
 
-        formula_manager.add_ast_node(sheet_id, cid, range_id, ast_node)
-    }
+    formula_manager.add_ast_node(sheet_id, cid, range_id, ast_node)
 }
 
 fn parse_formula<'a: 'c, 'b, 'c>(
@@ -57,13 +79,14 @@ pub fn load_shared_formulas<'a, 'b>(
                 col_shift,
                 connector,
             );
-            if let CellId::NormalCell(c) = cid {
-                let range = Range::Normal(NormalRange::Single(c));
-                let range_id = connector.range_manager.get_range_id(&sheet_id, &range);
-                formula_manager.add_ast_node(sheet_id, cid, range_id, n)
-            } else {
-                unreachable!()
-            }
+            // Same block-cell case as load_normal_formula — and this arm used to
+            // be `unreachable!()`, so a shared formula whose range covered a
+            // block cell panicked the whole load rather than losing one formula.
+            let Some(range) = single_cell_range(cid) else {
+                continue;
+            };
+            let range_id = connector.range_manager.get_range_id(&sheet_id, &range);
+            formula_manager.add_ast_node(sheet_id, cid, range_id, n)
         }
     }
 }

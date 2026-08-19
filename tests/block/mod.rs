@@ -680,3 +680,96 @@ fn test_block_input_after_deleterows_cross_sheet_same_blockid() {
         );
     }
 }
+
+/// A formula stored in a cell INSIDE a block used to vanish when the file was
+/// reloaded.
+///
+/// `load_normal_formula` matched only `CellId::NormalCell` and dropped anything
+/// else. Blocks are registered before sheet data, so every in-block cell
+/// resolves to a `BlockCell` — and its formula was discarded with no error. The
+/// writer had emitted it correctly and the cached `<v>` still loaded, so the
+/// workbook looked intact: right numbers, no formula, nothing recalculating ever
+/// again. Reported via logisheets-mcp, where `get_cells` showed values but no
+/// formulas for a model that had been saved and reopened.
+///
+/// Asserts the formula text comes back AND that it is live, which is the part
+/// that actually matters — a retained string that never recalculates would be
+/// the same bug wearing a disguise.
+#[test]
+fn test_block_cell_formula_survives_reload() {
+    let mut workbook = Workbook::new();
+
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "10".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "20".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 2,
+                input: "=A1+B1".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    let ws = workbook.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_formula(0, 2).unwrap(), "A1 + B1", "pre-save formula");
+
+    let mut bytes = workbook.save().expect("save");
+    let mut reopened = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+
+    let ws = reopened.get_sheet_by_idx(0).unwrap();
+    assert_eq!(
+        ws.get_formula(0, 2).unwrap(),
+        "A1 + B1",
+        "block cell lost its formula on reload"
+    );
+
+    // Live, not just remembered: change a precedent and the formula recomputes.
+    reopened.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: 0,
+            col: 0,
+            input: "100".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let v = reopened
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_value(0, 2)
+        .unwrap();
+    assert!(
+        matches!(v, logisheets::Value::Number(n) if n == 120.0),
+        "reloaded block formula did not recalculate: {:?}",
+        v
+    );
+}
