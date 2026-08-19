@@ -277,6 +277,7 @@ impl<'a> Worksheet<'a> {
                 block_id: None,
                 diy_cell_id,
                 validation_shadow: None,
+                conditional_format: None,
             });
         }
         let formula = self.get_formula_by_id(cell_id)?;
@@ -289,6 +290,171 @@ impl<'a> Worksheet<'a> {
             block_id,
             diy_cell_id,
             validation_shadow: self.get_validation_shadow(cell_id),
+            conditional_format: self.get_conditional_format(cell_id),
+        })
+    }
+
+    /// The conditional formatting in effect for `cell_id`: decode the match
+    /// bitmask from the cell's `ConditionalFormat` shadow, merge the matching
+    /// rules' dxfs onto the cell's own style in priority order, and pick up the
+    /// scale shadow for a colour scale / data bar.
+    ///
+    /// `None` when the sheet has no rules covering the cell, or when no rule
+    /// currently matches and no scale applies — the caller then just renders
+    /// `CellInfo::style`.
+    /// Every conditional-formatting rule on this sheet, in `priority` order —
+    /// the order Excel applies them, and the order a rule-manager dialog lists
+    /// them in.
+    ///
+    /// `spec` round-trips: hand it back in an `UpdateConditionalFormattingRule`
+    /// to edit the rule in place.
+    pub fn get_conditional_formatting_rules(&self) -> Vec<crate::CfRuleInfo> {
+        use crate::conditional_formatting_manager::resolve::ranges_to_sqref;
+        use crate::conditional_formatting_manager::spec::rule_to_spec;
+
+        let status = &self.controller.status;
+        let Some(blocks) = status
+            .conditional_formatting_manager
+            .get_sheet(self.sheet_id)
+        else {
+            return Vec::new();
+        };
+        let dxfs = &status.style_manager.dxf_manager;
+        let mut out: Vec<crate::CfRuleInfo> = blocks
+            .iter()
+            .flat_map(|block| {
+                let range = ranges_to_sqref(&status.navigator, self.sheet_id, &block.ranges);
+                block.rules.iter().map(move |r| crate::CfRuleInfo {
+                    rule_id: r.id,
+                    range: range.clone(),
+                    priority: r.rule.priority,
+                    spec: rule_to_spec(&r.rule, dxfs),
+                    preview: r.rule.dxf_id.and_then(|id| dxfs.get(id)).map(|dxf| {
+                        let converter = StyleConverter {
+                            theme_manager: &self.controller.settings.theme,
+                        };
+                        let base = status.style_manager.get_style(0);
+                        converter
+                            .convert_style(crate::style_manager::dxf_manager::apply_dxf(base, dxf))
+                    }),
+                })
+            })
+            .collect();
+        out.sort_by_key(|r| r.priority);
+        out
+    }
+
+    fn get_conditional_format(&self, cell_id: &CellId) -> Option<crate::ConditionalFormat> {
+        use crate::conditional_formatting_manager::query::{
+            color_scale_at, data_bar_at, icon_at, matched_rules, rules_for_cell,
+        };
+        use crate::sid_assigner::ShadowKind;
+        use logisheets_workbook::prelude::{CtFill, CtPatternFill, StCfType, StPatternType};
+
+        let status = &self.controller.status;
+        if status.conditional_formatting_manager.is_empty() {
+            return None;
+        }
+        let (row, col) = status
+            .navigator
+            .fetch_cell_idx(&self.sheet_id, cell_id)
+            .ok()?;
+        let applicable = rules_for_cell(
+            &status.conditional_formatting_manager,
+            &status.navigator,
+            self.sheet_id,
+            row,
+            col,
+        );
+        if applicable.is_empty() {
+            return None;
+        }
+
+        let shadow_number = |kind: ShadowKind| -> Option<f64> {
+            let sid = self
+                .controller
+                .sid_assigner
+                .find_shadow_id(self.sheet_id, *cell_id, kind)?;
+            match self.get_value_by_id(&CellId::EphemeralCell(sid)).ok()? {
+                Value::Number(n) => Some(n),
+                _ => None,
+            }
+        };
+
+        let mask = shadow_number(ShadowKind::ConditionalFormat).unwrap_or(0.0);
+        let matched = matched_rules(&applicable, mask);
+        let scale = shadow_number(ShadowKind::ConditionalFormatScale);
+        if matched.is_empty() && scale.is_none() {
+            return None;
+        }
+
+        let mut raw = self.get_raw_style_by_id(cell_id).ok()?;
+        for m in &matched {
+            // A rule with no dxf (a pure data bar, say) changes no properties.
+            if let Some(dxf_id) = m.rule.dxf_id {
+                if let Some(dxf) = status.style_manager.dxf_manager.get(dxf_id) {
+                    raw = crate::style_manager::dxf_manager::apply_dxf(raw, dxf);
+                }
+            }
+        }
+
+        // The visual rule that owns `scale` is the highest-priority one, which
+        // is how `shadow_formulas` chose which rule to compute the scale for.
+        let visual = applicable.iter().find(|a| {
+            matches!(
+                a.rule.ty,
+                StCfType::ColorScale | StCfType::DataBar | StCfType::IconSet
+            )
+        });
+        let mut data_bar = None;
+        let mut icon = None;
+        if let (Some(v), Some(scale)) = (visual, scale) {
+            match v.rule.ty {
+                // A colour scale is just a fill, so resolve it here and let it
+                // ride along in `style` — the caller draws nothing extra.
+                StCfType::ColorScale => {
+                    if let Some(c) = color_scale_at(v.rule, scale) {
+                        raw.fill = CtFill::PatternFill(CtPatternFill {
+                            fg_color: Some(c),
+                            bg_color: None,
+                            pattern_type: Some(StPatternType::Solid),
+                        });
+                    }
+                }
+                StCfType::DataBar => {
+                    data_bar = data_bar_at(v.rule, scale).map(|(color, fraction, show_value)| {
+                        crate::CfDataBar {
+                            color: StyleConverter {
+                                theme_manager: &self.controller.settings.theme,
+                            }
+                            .convert_color_pub(color),
+                            fraction,
+                            show_value,
+                        }
+                    });
+                }
+                StCfType::IconSet => {
+                    icon = icon_at(v.rule, scale).map(|(set, index, count, show_value)| {
+                        crate::CfIcon {
+                            set,
+                            index,
+                            count,
+                            show_value,
+                        }
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        let style_converter = StyleConverter {
+            theme_manager: &self.controller.settings.theme,
+        };
+        Some(crate::ConditionalFormat {
+            style: style_converter.convert_style(raw),
+            scale,
+            data_bar,
+            icon,
         })
     }
 

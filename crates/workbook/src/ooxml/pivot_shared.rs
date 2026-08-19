@@ -4,14 +4,20 @@
 
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
-use super::defaults::{default_false, default_zero_i32};
+use super::defaults::{default_false, default_zero_i64};
 
 /// CT_X (§18.10.1.99) — a shared-item index (`x`). Also reused across the pivot
 /// table part (row/col items, references, …).
 #[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtX {
-    #[xmlserde(name = b"v", ty = "attr", default = "default_zero_i32")]
-    pub v: i32,
+    /// Widened past the schema's `xsd:int` on purpose: Excel writes the
+    /// "no item" sentinel as `4294967295` (`u32::MAX`), which overflows an
+    /// `i32`. xmlserde PANICS on an attribute it can't parse, so a narrow type
+    /// here made any workbook with a pivot cache using that sentinel impossible
+    /// to open. `i64` accepts the sentinel and a negative form both, and
+    /// round-trips either spelling unchanged.
+    #[xmlserde(name = b"v", ty = "attr", default = "default_zero_i64")]
+    pub v: i64,
 }
 
 /// CT_Tuple (§18.10.1.94).

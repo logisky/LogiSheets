@@ -19,6 +19,14 @@ pub enum ShadowKind {
     /// Per-cell editability formula — used by the permission patch to
     /// gate writes dynamically based on the row's current state.
     UserEditable,
+    /// Conditional formatting: a bitmask of which of the cell's rules
+    /// currently match. One shadow carries every boolean rule for the
+    /// cell, so the kind needs no per-rule discriminator.
+    ConditionalFormat,
+    /// Conditional formatting: where the cell sits within its rule's
+    /// range, on a 0..=1 scale. Drives colour scales and data bars,
+    /// which need a magnitude rather than a boolean.
+    ConditionalFormatScale,
 }
 
 impl Default for ShadowKind {

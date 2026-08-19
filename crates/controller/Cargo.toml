@@ -39,10 +39,12 @@ logisheets_astchecker = { workspace = true }
 
 gents = { workspace = true }
 gents_derives = { workspace = true }
+# For `XmlValue::serialize` on the OOXML simple-type enums, used to report an
+# icon-set name to the frontend without duplicating the spec's string table.
+xmlserde = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
-xmlserde = { workspace = true }
 
 [features]
 sequencer = []

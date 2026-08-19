@@ -18,6 +18,7 @@ import {
     Comment,
     CellImageInfo,
     ChartInfo,
+    CfRuleInfo,
     DependentCell,
     CellRefRange,
     LinkInfo,
@@ -525,6 +526,23 @@ export class Worksheet {
      */
     public getCharts(): Result<ChartInfo[]> {
         return rpc('getCharts', {sheetIdx: this._sheetIdx}, this._id)
+    }
+
+    /**
+     * Every conditional-formatting rule on this sheet, in `priority` order —
+     * the order they are applied, and the order a rule manager lists them in.
+     *
+     * Each rule's `spec` is the same shape the create/update payloads accept, so
+     * a UI can load one into an editor and send it straight back. `ruleId` is
+     * session-scoped: it is re-minted when the file is reloaded, so it must not
+     * be persisted.
+     */
+    public getConditionalFormattingRules(): Result<CfRuleInfo[]> {
+        return rpc(
+            'getConditionalFormattingRules',
+            {sheetIdx: this._sheetIdx},
+            this._id
+        )
     }
 
     public getFullyCoveredBlocks(

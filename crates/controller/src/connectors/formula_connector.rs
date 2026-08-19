@@ -410,6 +410,10 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
             crate::sid_assigner::ShadowKind::UserEditable => self
                 .block_schema_manager
                 .editability_for_block_cell(sheet_id, cell),
+            // Conditional formatting shadows are driven by the sheet's cf
+            // rules, not by a block schema field template.
+            crate::sid_assigner::ShadowKind::ConditionalFormat
+            | crate::sid_assigner::ShadowKind::ConditionalFormatScale => None,
         }
     }
 

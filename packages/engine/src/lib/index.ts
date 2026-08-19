@@ -110,6 +110,9 @@ export type {
   Transaction,
   Payload,
   SheetInfo,
+  CfRuleInfo,
+  CfRuleSpec,
+  CfFormatSpec,
 } from "logisheets-web";
 
 // Re-export commonly used logisheets-web utilities

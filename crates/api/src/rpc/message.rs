@@ -4,10 +4,10 @@ use crate::BlockId;
 use crate::{
     ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo, BlockSortOrder,
     CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
-    ChartInfo, ColId, Comment, DependentCell, DisplayWindow, DisplayWindowWithStartPoint,
-    EditPayload, ErrorMessage, FormulaDisplayInfo, LinkInfo, MergeCell, ReproducibleCell, RowId,
-    RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId,
-    SheetInfo, Style, TempStatusDiff, Value,
+    CfRuleInfo, ChartInfo, ColId, Comment, DependentCell, DisplayWindow,
+    DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo, LinkInfo,
+    MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId,
+    SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
 };
 
 // ============================================================================
@@ -49,6 +49,7 @@ pub enum Message {
     GetComments(GetCommentsParams),
     GetCellImages(GetCellImagesParams),
     GetCharts(GetChartsParams),
+    GetConditionalFormattingRules(GetConditionalFormattingRulesParams),
     CalcCondition(CalcConditionParams),
     GetCellIdByBlockRef(GetCellIdByBlockRefParams),
     ExportBlockData(ExportBlockDataParams),
@@ -390,6 +391,15 @@ pub struct GetCellImagesParams {
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_charts_params.ts", rename_all = "camelCase")]
 pub struct GetChartsParams {
+    pub sheet_idx: usize,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "rpc_get_conditional_formatting_rules_params.ts",
+    rename_all = "camelCase"
+)]
+pub struct GetConditionalFormattingRulesParams {
     pub sheet_idx: usize,
 }
 
@@ -863,6 +873,14 @@ pub struct WorkbookMethods {
     // Charts
     pub get_charts:
         fn(params: GetChartsParams, book_id: Option<usize>) -> Result<Vec<ChartInfo>, ErrorMessage>,
+
+    // Conditional formatting. The write side goes through `handle_transaction`
+    // with the Create/Update/Move/Delete payloads; this is how a rule manager
+    // lists what is there, and gets each rule's spec back to edit it.
+    pub get_conditional_formatting_rules: fn(
+        params: GetConditionalFormattingRulesParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<CfRuleInfo>, ErrorMessage>,
 
     // Shadow cells
     pub get_shadow_cell_id: fn(
