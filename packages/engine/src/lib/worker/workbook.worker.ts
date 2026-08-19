@@ -13,6 +13,7 @@ import type {
     Comment,
     CellImageInfo,
     ChartInfo,
+    CfRuleInfo,
     SheetDimension,
     DependentCell,
     CellRefRange,
@@ -360,6 +361,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         sheetIdx: number
     }): Result<readonly CellImageInfo[]> {
         return this.getSheet(params.sheetIdx).getCellImages()
+    }
+
+    public getConditionalFormattingRules(params: {
+        sheetIdx: number
+    }): Result<readonly CfRuleInfo[]> {
+        return this.getSheet(params.sheetIdx).getConditionalFormattingRules()
     }
 
     public getCharts(params: {sheetIdx: number}): Result<readonly ChartInfo[]> {
@@ -752,6 +759,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetCharts:
                     result = this.getCharts(args)
+                    break
+                case MethodName.GetConditionalFormattingRules:
+                    result = this.getConditionalFormattingRules(args)
                     break
                 case MethodName.CalcCondition:
                     result = this.calcCondition(args)

@@ -41,12 +41,34 @@ mod tests {
         assert_eq!(p.records.len(), 3);
         assert_eq!(p.records[0].items.len(), 2);
         match &p.records[1].items[0] {
-            PivotRecordItem::Index(x) => assert_eq!(x.v, 1),
+            PivotRecordItem::Index(x) => assert_eq!(x.v, 1i64),
             other => panic!("expected x index, got {:?}", other),
         }
         // serialize -> deserialize again must be stable
         let out = xml_serialize_with_decl(p);
         let p2 = xml_deserialize_from_str::<PivotCacheRecords>(&out).expect("re-deserialize");
         assert_eq!(p2.records.len(), 3);
+    }
+
+    /// Excel writes the "no item" shared-index sentinel as `4294967295`
+    /// (`u32::MAX`). `CtX::v` used to be an `i32`, and xmlserde's derive PANICS
+    /// on an attribute it cannot parse, so a workbook whose pivot cache used the
+    /// sentinel could not be opened AT ALL — the panic came out of the loader
+    /// before anything else was read.
+    #[test]
+    fn shared_item_index_accepts_u32_max_sentinel() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<pivotCacheRecords count="1"><r><x v="4294967295"/><x v="7"/></r></pivotCacheRecords>"#;
+        let p = xml_deserialize_from_str::<PivotCacheRecords>(xml).expect("must deserialize");
+        match &p.records[0].items[0] {
+            PivotRecordItem::Index(x) => assert_eq!(x.v, 4_294_967_295i64),
+            other => panic!("expected x index, got {other:?}"),
+        }
+        // And it must survive being written back out unchanged.
+        let out = xml_serialize_with_decl(p);
+        assert!(
+            out.contains(r#"v="4294967295""#),
+            "sentinel must round-trip verbatim, got {out}"
+        );
     }
 }

@@ -11,7 +11,7 @@ pub mod ctx;
 mod executor;
 mod fetcher;
 mod id_manager;
-mod sheet_nav;
+pub(crate) mod sheet_nav;
 pub use executor::NavExecutor;
 
 #[derive(Debug, Clone, Default)]

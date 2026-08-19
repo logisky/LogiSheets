@@ -1,5 +1,6 @@
 pub mod border_manager;
 pub mod defaults;
+pub mod dxf_manager;
 pub mod errors;
 mod execute;
 pub mod fill_manager;
@@ -12,6 +13,7 @@ use execute::insert_style;
 use gents_derives::TS;
 
 use border_manager::BorderManager;
+use dxf_manager::DxfManager;
 use fill_manager::FillManager;
 use font_manager::FontManager;
 use logisheets_base::StyleId;
@@ -45,6 +47,9 @@ pub struct StyleManager {
     pub cell_xfs_manager: XfManager,
     pub cell_style_xfs_manager: XfManager,
     pub num_fmt_manager: NumFmtManager,
+    /// Differential formats (`<dxfs>`). Referenced by dxfId from conditional
+    /// formatting and table styles; kept in file order (see `DxfManager`).
+    pub dxf_manager: DxfManager,
 }
 
 impl StyleManager {

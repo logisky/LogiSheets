@@ -25,6 +25,7 @@ import type {
     Client,
     CellImageInfo,
     ChartInfo,
+    CfRuleInfo,
     ActionEffect,
     CellInput,
     PredictFillParams,
@@ -386,6 +387,20 @@ export class WorkbookClient implements Client {
         return this._call(MethodName.GetCharts, params) as Resp<
             readonly ChartInfo[]
         >
+    }
+
+    /**
+     * Conditional-formatting rules on a sheet, in `priority` order. Each rule's
+     * `spec` round-trips into an `updateConditionalFormattingRule` payload, and
+     * `ruleId` is session-scoped — never persist it.
+     */
+    getConditionalFormattingRules(params: {
+        sheetIdx: number
+    }): Resp<readonly CfRuleInfo[]> {
+        return this._call(
+            MethodName.GetConditionalFormattingRules,
+            params
+        ) as Resp<readonly CfRuleInfo[]>
     }
 
     // ========================================================================

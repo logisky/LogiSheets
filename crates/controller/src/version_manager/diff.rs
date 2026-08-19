@@ -72,6 +72,33 @@ fn convert_diff<C: VersionExecCtx>(
 ) -> Result<Option<(Diff, SheetId)>, Error> {
     match payload {
         EditPayload::UpsertFieldRenderInfo(_) => Ok(None),
+        // A conditional-formatting edit changes how the whole covered range
+        // renders, and the range is not known here without resolving anchors, so
+        // the sheet is marked wholly stale rather than diffed cell by cell.
+        EditPayload::CreateConditionalFormattingRule(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::UpdateConditionalFormattingRule(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::MoveConditionalFormattingRule(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::DeleteConditionalFormattingRule(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
         EditPayload::BlockInput(bi) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(bi.sheet_idx)

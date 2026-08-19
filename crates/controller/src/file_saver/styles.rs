@@ -23,7 +23,9 @@ pub fn save_sheet_style<S: SaverTrait>(manager: &StyleManager, _: &mut S) -> Sty
         cell_style_xfs,
         cell_xfs,
         cell_styles: None,
-        dxfs: None,
+        // Preserved in load order so every retained `dxfId` (conditional
+        // formatting, table styles) still resolves.
+        dxfs: manager.dxf_manager.to_ct_dxfs(),
         table_styles: None,
         colors: None,
         ext_lst: None,

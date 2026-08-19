@@ -96,12 +96,13 @@ xml_serde_enum! {
         UniqueValues => "uniqueValues",
         DuplicateValues => "duplicateValues",
         ContainsText => "containsText",
+        NotContainsText => "notContainsText",
         BeginsWith => "beginsWith",
         EndsWith => "endsWith",
-        ContainsBlank => "containsBlank",
+        ContainsBlanks => "containsBlanks",
         NotContainsBlanks => "notContainsBlanks",
-        ContainErrors => "containErrors",
-        NotContainErrors => "notContainErrors",
+        ContainsErrors => "containsErrors",
+        NotContainsErrors => "notContainsErrors",
         TimePeriod => "timePeriod",
         AboveAverage => "aboveAverage",
     }
@@ -267,7 +268,7 @@ xml_serde_enum! {
         Null => "null",
         AboveAverage => "aboveAverage",
         BelowAverage => "belowAverage",
-        Tommorow => "tommorow",
+        Tomorrow => "tomorrow",
         Today => "today",
         Yesterday => "yesterday",
         NextWeek => "nextWeek",
@@ -990,7 +991,7 @@ xml_serde_enum! {
     StTimePeriod {
        Today => "today",
        Yesterday => "yesterday",
-       Tommorow => "tommorow",
+       Tomorrow => "tomorrow",
        Last7Days => "last7Days",
        ThisMonth => "thisMonth",
        LastMonth => "lastMonth",
@@ -1305,3 +1306,78 @@ xml_serde_enum! {
 pub type StTextColumnCount = u8; // minInclusive = 1, maxInclusive = 16
 
 pub type StPositiveCoordinate32 = u64;
+
+#[cfg(test)]
+mod cf_enum_spec_strings {
+    use super::{StCfType, StTimePeriod};
+    use xmlserde::XmlValue;
+
+    /// Every ECMA-376 `ST_CfType` / `ST_TimePeriod` value must deserialize.
+    /// These used to be spelled `containsBlank` / `containErrors` /
+    /// `notContainErrors` / `tommorow`, and `notContainsText` was missing
+    /// entirely — a real file using any of them PANICKED the loader (xmlserde's
+    /// derive panics on an attribute it can't parse), which in the browser
+    /// poisons the whole wasm instance.
+    #[test]
+    fn all_spec_values_deserialize() {
+        for s in [
+            "expression",
+            "cellIs",
+            "colorScale",
+            "dataBar",
+            "iconSet",
+            "top10",
+            "uniqueValues",
+            "duplicateValues",
+            "containsText",
+            "notContainsText",
+            "beginsWith",
+            "endsWith",
+            "containsBlanks",
+            "notContainsBlanks",
+            "containsErrors",
+            "notContainsErrors",
+            "timePeriod",
+            "aboveAverage",
+        ] {
+            assert!(
+                StCfType::deserialize(s).is_ok(),
+                "ST_CfType value {s:?} must deserialize"
+            );
+        }
+        for s in [
+            "today",
+            "yesterday",
+            "tomorrow",
+            "last7Days",
+            "thisMonth",
+            "lastMonth",
+            "nextMonth",
+            "thisWeek",
+            "lastWeek",
+            "nextWeek",
+        ] {
+            assert!(
+                StTimePeriod::deserialize(s).is_ok(),
+                "ST_TimePeriod value {s:?} must deserialize"
+            );
+        }
+    }
+
+    /// And each must serialize back to the same spec string.
+    #[test]
+    fn values_round_trip() {
+        for s in [
+            "containsBlanks",
+            "containsErrors",
+            "notContainsErrors",
+            "notContainsText",
+        ] {
+            assert_eq!(StCfType::deserialize(s).unwrap().serialize(), s);
+        }
+        assert_eq!(
+            StTimePeriod::deserialize("tomorrow").unwrap().serialize(),
+            "tomorrow"
+        );
+    }
+}

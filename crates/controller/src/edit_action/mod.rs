@@ -1,3 +1,4 @@
+use crate::conditional_formatting_manager::spec::CfRuleSpec;
 use gents_derives::TS;
 use logisheets_base::{BlockId, CellId, ColId, EphemeralId, RowId, SheetId, async_func::Task};
 
@@ -130,6 +131,10 @@ pub enum EditPayload {
     SetCellImage(SetCellImage),
     DeleteCellImage(DeleteCellImage),
     MoveChart(MoveChart),
+    CreateConditionalFormattingRule(CreateConditionalFormattingRule),
+    UpdateConditionalFormattingRule(UpdateConditionalFormattingRule),
+    MoveConditionalFormattingRule(MoveConditionalFormattingRule),
+    DeleteConditionalFormattingRule(DeleteConditionalFormattingRule),
     DeleteChart(DeleteChart),
     CreateChart(CreateChart),
     UpdateChart(UpdateChart),
@@ -384,6 +389,70 @@ pub struct CreateChart {
     pub title: Option<String>,
     pub categories_ref: Option<String>,
     pub series: Vec<CreateChartSeries>,
+}
+
+/// Add a conditional-formatting rule over `start`..`end` (corners may be given
+/// in any order). The range is anchored on cell ids, so it tracks later row and
+/// column edits; the rule takes the next free `priority`, applying after the
+/// ones already on the sheet.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "create_conditional_formatting_rule.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct CreateConditionalFormattingRule {
+    pub sheet_idx: usize,
+    pub start_row: usize,
+    pub start_col: usize,
+    pub end_row: usize,
+    pub end_col: usize,
+    pub rule: CfRuleSpec,
+}
+
+/// Replace a rule's condition and format, keeping its id, its range and its
+/// `priority` — so editing a rule never reorders it.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "update_conditional_formatting_rule.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct UpdateConditionalFormattingRule {
+    pub sheet_idx: usize,
+    /// From `CellInfo::conditional_format`, or `get_conditional_formatting_rules`.
+    /// Session-scoped: ids are re-minted on load and must not be persisted.
+    pub rule_id: u32,
+    pub rule: CfRuleSpec,
+}
+
+/// Re-target an existing rule at a different range, keeping everything else.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "move_conditional_formatting_rule.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct MoveConditionalFormattingRule {
+    pub sheet_idx: usize,
+    pub rule_id: u32,
+    pub start_row: usize,
+    pub start_col: usize,
+    pub end_row: usize,
+    pub end_col: usize,
+}
+
+/// Remove a rule. The `<conditionalFormatting>` element is dropped with it when
+/// it held no other rules.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "delete_conditional_formatting_rule.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct DeleteConditionalFormattingRule {
+    pub sheet_idx: usize,
+    pub rule_id: u32,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -1319,6 +1388,30 @@ impl From<MoveChart> for EditPayload {
     }
 }
 impl Payload for MoveChart {}
+impl From<CreateConditionalFormattingRule> for EditPayload {
+    fn from(value: CreateConditionalFormattingRule) -> Self {
+        EditPayload::CreateConditionalFormattingRule(value)
+    }
+}
+impl Payload for CreateConditionalFormattingRule {}
+impl From<UpdateConditionalFormattingRule> for EditPayload {
+    fn from(value: UpdateConditionalFormattingRule) -> Self {
+        EditPayload::UpdateConditionalFormattingRule(value)
+    }
+}
+impl Payload for UpdateConditionalFormattingRule {}
+impl From<MoveConditionalFormattingRule> for EditPayload {
+    fn from(value: MoveConditionalFormattingRule) -> Self {
+        EditPayload::MoveConditionalFormattingRule(value)
+    }
+}
+impl Payload for MoveConditionalFormattingRule {}
+impl From<DeleteConditionalFormattingRule> for EditPayload {
+    fn from(value: DeleteConditionalFormattingRule) -> Self {
+        EditPayload::DeleteConditionalFormattingRule(value)
+    }
+}
+impl Payload for DeleteConditionalFormattingRule {}
 impl From<DeleteChart> for EditPayload {
     fn from(value: DeleteChart) -> Self {
         EditPayload::DeleteChart(value)

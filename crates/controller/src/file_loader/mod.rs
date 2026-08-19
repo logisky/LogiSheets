@@ -43,6 +43,7 @@ impl<'a> SheetIdFetcherTrait for SheetIdFetcher<'a> {
 
 pub fn load_file(wb: Wb, book_name: String) -> Controller {
     let Status {
+        conditional_formatting_manager,
         mut navigator,
         mut container,
         mut sheet_id_manager,
@@ -224,6 +225,11 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             }
         }
     }
+    // `<dxfs>` is captured before the per-cell style walk: it is a flat,
+    // position-indexed list (dxfId) that conditional formatting and table
+    // styles reference, not something the xf walk can reach.
+    style_manager.dxf_manager =
+        crate::style_manager::dxf_manager::DxfManager::from_ct_dxfs(xl.styles.1.dxfs.as_ref());
     let mut style_loader = StyleLoader::new(&mut style_manager, &xl.styles.1);
     // Persons are workbook-scoped and referenced by threaded comments, so they
     // must be registered before any sheet's comments are loaded.
@@ -389,13 +395,76 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         image_manager,
         chart_manager,
         data_validation_manager,
+        conditional_formatting_manager,
     };
     if let Some(theme) = xl.theme {
         settings.theme = ThemeManager::from(theme.1);
     }
     let mut controller = Controller::from(status, book_name, settings, app_data);
     convert_tables_to_blocks(&mut controller, pending_tables);
+    // Must run last: `sqref` is resolved against the navigator, and blocks only
+    // exist once the table conversion above has run — a rule covering a
+    // converted table has to anchor on block cell ids, not the normal cell ids
+    // those coordinates had mid-load.
+    model_conditional_formatting(&mut controller);
     controller
+}
+
+/// Move each sheet's `<conditionalFormatting>` out of the verbatim passthrough
+/// and into the manager, resolving every `sqref` rectangle to the stable ids
+/// that let it track row/column edits.
+///
+/// An element whose `sqref` resolves to nothing (malformed, or referring to a
+/// sheet region that no longer exists) is left in `preserved_parts` so it still
+/// round-trips as raw XML — modeling what we can must never lose what we can't.
+fn model_conditional_formatting(controller: &mut Controller) {
+    use crate::conditional_formatting_manager::{CfBlock, CfRule, resolve::resolve_sqref};
+
+    let sheet_ids: Vec<_> = controller
+        .settings
+        .preserved_parts
+        .keys()
+        .cloned()
+        .collect();
+    for sheet_id in sheet_ids {
+        let raw = match controller.settings.preserved_parts.get_mut(&sheet_id) {
+            Some(p) if !p.conditional_formatting.is_empty() => {
+                std::mem::take(&mut p.conditional_formatting)
+            }
+            _ => continue,
+        };
+        // Resolve first (immutable borrow of the navigator), then mint ids
+        // (mutable borrow of the manager) — the two can't overlap.
+        let mut resolved = Vec::new();
+        let mut unmodeled = Vec::new();
+        for cf in raw {
+            let ranges = resolve_sqref(&controller.status.navigator, sheet_id, &cf.sqref);
+            if ranges.is_empty() || cf.cf_rules.is_empty() {
+                unmodeled.push(cf);
+                continue;
+            }
+            resolved.push((ranges, cf.cf_rules, cf.pviot));
+        }
+        let manager = &mut controller.status.conditional_formatting_manager;
+        let mut blocks = imbl::Vector::new();
+        for (ranges, rules, pivot) in resolved {
+            blocks.push_back(CfBlock {
+                ranges,
+                rules: rules
+                    .into_iter()
+                    .map(|rule| CfRule {
+                        id: manager.mint_rule_id(),
+                        rule,
+                    })
+                    .collect(),
+                pivot,
+            });
+        }
+        manager.set_sheet(sheet_id, blocks);
+        if let Some(p) = controller.settings.preserved_parts.get_mut(&sheet_id) {
+            p.conditional_formatting = unmodeled;
+        }
+    }
 }
 
 /// A structured OOXML table queued for conversion into a form block. Positions

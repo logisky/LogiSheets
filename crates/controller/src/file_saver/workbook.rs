@@ -4,8 +4,8 @@ use logisheets_workbook::{
     logisheets::{AppData, LinkRangeXml, LogiSheetsData, Sheet},
     prelude::{ChartAnchor, PassthroughPart},
     prelude::{
-        CtExternalReference, CtExternalReferences, CtPerson, CtSheet, CtSheets, Persons,
-        WorkbookPart,
+        CtConditionalFormatting, CtExternalReference, CtExternalReferences, CtPerson, CtSheet,
+        CtSheets, Persons, WorkbookPart,
     },
     workbook::{DocProps, Media, Wb, Worksheet, WorksheetDrawing, Xl},
 };
@@ -53,6 +53,7 @@ pub fn save_workbook<S: SaverTrait>(
     image_manager: &ImageManager,
     chart_manager: &crate::chart_manager::ChartManager,
     data_validation_manager: &DataValidationManager,
+    conditional_formatting_manager: &crate::conditional_formatting_manager::ConditionalFormattingManager,
     range_manager: &crate::range_manager::RangeManager,
     saver: &mut S,
 ) -> Result<Wb, SaveError> {
@@ -156,6 +157,21 @@ pub fn save_workbook<S: SaverTrait>(
             // Round-trip Excel data validation, stored verbatim per sheet.
             worksheet.worksheet_part.data_validations =
                 data_validation_manager.get_sheet(sheet_id).cloned();
+
+            // Conditional formatting: the modeled rules render their `sqref`
+            // from the current positions of their anchor ids, so a rule whose
+            // rows moved is written out at its new location. Elements that
+            // could not be modeled at load stay in `preserved_parts` and are
+            // already on `worksheet_part`; the modeled ones go in front.
+            let mut modeled = conditional_formatting_manager_to_xml(
+                conditional_formatting_manager,
+                navigator,
+                sheet_id,
+            );
+            modeled.extend(
+                std::mem::take(&mut worksheet.worksheet_part.conditional_formatting).into_iter(),
+            );
+            worksheet.worksheet_part.conditional_formatting = modeled;
 
             worksheets.insert(ct_sheet.id.clone(), worksheet);
             ct_sheets.push(ct_sheet);
@@ -305,4 +321,33 @@ fn get_workbook(ct_sheets: CtSheets, ext_references: Vec<CtExternalReference>) -
         web_publish_objects: None,
         conformance: None,
     }
+}
+
+/// Render a sheet's modeled conditional formatting back to OOXML. A block whose
+/// every range lost its anchors (the rows/columns were deleted) yields no
+/// element — matching Excel, where deleting the covered rows removes the rule.
+fn conditional_formatting_manager_to_xml(
+    manager: &crate::conditional_formatting_manager::ConditionalFormattingManager,
+    navigator: &Navigator,
+    sheet_id: logisheets_base::SheetId,
+) -> Vec<CtConditionalFormatting> {
+    let Some(blocks) = manager.get_sheet(sheet_id) else {
+        return Vec::new();
+    };
+    blocks
+        .iter()
+        .filter_map(|b| {
+            let sqref = crate::conditional_formatting_manager::resolve::ranges_to_sqref(
+                navigator, sheet_id, &b.ranges,
+            );
+            if sqref.is_empty() || b.rules.is_empty() {
+                return None;
+            }
+            Some(CtConditionalFormatting {
+                cf_rules: b.rules.iter().map(|r| r.rule.clone()).collect(),
+                pviot: b.pivot,
+                sqref,
+            })
+        })
+        .collect()
 }

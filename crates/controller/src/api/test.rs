@@ -2939,3 +2939,1127 @@ fn formulatext_returns_source_formula_and_na() {
         "C2 expected ISFORMULA(A2) == FALSE"
     );
 }
+
+/// `<dxfs>` must survive open→save. Conditional formatting rules (preserved
+/// verbatim) address their format by *position* in that list, so dropping it —
+/// as the saver used to, hardcoding `dxfs: None` — left every `cfRule/@dxfId`
+/// dangling in the output file even though the rules themselves were retained.
+#[test]
+fn dxfs_round_trip_keeps_cf_references_resolvable() {
+    use logisheets_workbook::prelude::{
+        CtCfRule, CtColor, CtConditionalFormatting, CtDxf, CtDxfs, CtFill, CtPatternFill, StCfType,
+        StConditionalFormattingOperator, StPatternType, Wb, write,
+    };
+
+    fn solid_dxf(rgb: &str) -> CtDxf {
+        CtDxf {
+            font: None,
+            num_fmt: None,
+            fill: Some(CtFill::PatternFill(CtPatternFill {
+                fg_color: Some(CtColor {
+                    auto: None,
+                    indexed: None,
+                    rgb: Some(rgb.to_string()),
+                    theme: None,
+                    tint: 0.0,
+                }),
+                bg_color: None,
+                pattern_type: Some(StPatternType::Solid),
+            })),
+            alignment: None,
+            border: None,
+            protection: None,
+        }
+    }
+
+    // Author an xlsx the way Excel would: two dxfs in styles.xml, and a rule
+    // that points at the *second* one (dxfId=1).
+    let base = Workbook::default().save().unwrap();
+    let mut raw = Wb::from_file(&base).unwrap();
+    raw.xl.styles.1.dxfs = Some(CtDxfs {
+        count: 2,
+        dxfs: vec![solid_dxf("FFFF0000"), solid_dxf("FFFFFF00")],
+    });
+    raw.xl
+        .worksheets
+        .values_mut()
+        .next()
+        .unwrap()
+        .worksheet_part
+        .conditional_formatting = vec![CtConditionalFormatting {
+        cf_rules: vec![CtCfRule {
+            formulas: vec![],
+            color_scale: None,
+            data_bar: None,
+            icon_set: None,
+            ty: StCfType::CellIs,
+            dxf_id: Some(1),
+            priority: 1,
+            stop_if_true: false,
+            above_average: true,
+            percent: false,
+            bottom: false,
+            operator: Some(StConditionalFormattingOperator::GreaterThan),
+            text: None,
+            time_period: None,
+            rank: None,
+            std_dev: None,
+            equal_average: false,
+        }],
+        pviot: false,
+        sqref: "A1:A10".to_string(),
+    }];
+    let input = write(raw).unwrap();
+
+    let wb = Workbook::from_file(&input, "dxf".to_string()).unwrap();
+    let out = wb.save().unwrap();
+
+    let reloaded = Wb::from_file(&out).unwrap();
+    let dxfs = reloaded
+        .xl
+        .styles
+        .1
+        .dxfs
+        .as_ref()
+        .expect("dxfs should survive the controller round trip");
+    assert_eq!(dxfs.count, 2);
+    assert_eq!(dxfs.dxfs.len(), 2);
+
+    // Order matters: dxfId is an index. The rule's dxfId=1 must still resolve
+    // to the yellow fill it referenced in the input.
+    let ws = reloaded.xl.worksheets.values().next().unwrap();
+    let rule = &ws.worksheet_part.conditional_formatting[0].cf_rules[0];
+    assert_eq!(rule.dxf_id, Some(1));
+    let referenced = dxfs
+        .dxfs
+        .get(rule.dxf_id.unwrap() as usize)
+        .expect("dxfId must be in range");
+    let fg = match referenced.fill.as_ref().unwrap() {
+        CtFill::PatternFill(p) => p.fg_color.as_ref().unwrap().rgb.as_deref(),
+        CtFill::GradientFill(_) => None,
+    };
+    assert_eq!(fg, Some("FFFFFF00"));
+}
+
+/// A workbook with no `<dxfs>` must not grow an empty element.
+#[test]
+fn no_dxfs_stays_absent() {
+    use logisheets_workbook::prelude::Wb;
+
+    let out = Workbook::default().save().unwrap();
+    let reloaded = Wb::from_file(&out).unwrap();
+    assert!(reloaded.xl.styles.1.dxfs.is_none());
+}
+
+/// Build an xlsx that carries `conditional_formatting` on its first sheet, the
+/// way Excel would author it. `base` is an already-saved workbook to inject
+/// into, so callers can set up blocks or cell values first.
+#[cfg(test)]
+fn with_conditional_formatting(
+    base: &[u8],
+    elements: Vec<(&str, Vec<logisheets_workbook::prelude::CtCfRule>)>,
+) -> Vec<u8> {
+    use logisheets_workbook::prelude::{CtConditionalFormatting, Wb, write};
+    let mut raw = Wb::from_file(base).unwrap();
+    raw.xl
+        .worksheets
+        .values_mut()
+        .next()
+        .unwrap()
+        .worksheet_part
+        .conditional_formatting = elements
+        .into_iter()
+        .map(|(sqref, cf_rules)| CtConditionalFormatting {
+            cf_rules,
+            pviot: false,
+            sqref: sqref.to_string(),
+        })
+        .collect();
+    write(raw).unwrap()
+}
+
+/// A minimal `cellIs > 0` rule pointing at dxf 0.
+#[cfg(test)]
+fn cell_is_rule(priority: i32) -> logisheets_workbook::prelude::CtCfRule {
+    use logisheets_workbook::prelude::{CtCfRule, StCfType, StConditionalFormattingOperator};
+    CtCfRule {
+        formulas: vec![],
+        color_scale: None,
+        data_bar: None,
+        icon_set: None,
+        ty: StCfType::CellIs,
+        dxf_id: Some(0),
+        priority,
+        stop_if_true: false,
+        above_average: true,
+        percent: false,
+        bottom: false,
+        operator: Some(StConditionalFormattingOperator::GreaterThan),
+        text: None,
+        time_period: None,
+        rank: None,
+        std_dev: None,
+        equal_average: false,
+    }
+}
+
+/// The first sheet's `conditionalFormatting` sqrefs, after a save.
+#[cfg(test)]
+fn saved_cf_sqrefs(bytes: &[u8]) -> Vec<String> {
+    use logisheets_workbook::prelude::Wb;
+    let reloaded = Wb::from_file(bytes).unwrap();
+    reloaded
+        .xl
+        .worksheets
+        .values()
+        .next()
+        .unwrap()
+        .worksheet_part
+        .conditional_formatting
+        .iter()
+        .map(|cf| cf.sqref.clone())
+        .collect()
+}
+
+/// Every `sqref` shape Excel writes must survive open→save unchanged: bounded
+/// rectangles, single cells, whole columns, whole rows, and multi-token unions.
+#[test]
+fn conditional_formatting_sqref_round_trips() {
+    let base = Workbook::default().save().unwrap();
+    let input = with_conditional_formatting(
+        &base,
+        vec![
+            ("A1:B10", vec![cell_is_rule(1)]),
+            ("D3", vec![cell_is_rule(2)]),
+            ("F:G", vec![cell_is_rule(3)]),
+            ("2:4", vec![cell_is_rule(4)]),
+            ("A20:A21 C20 E20:F21", vec![cell_is_rule(5)]),
+        ],
+    );
+
+    let wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+    let out = wb.save().unwrap();
+
+    assert_eq!(
+        saved_cf_sqrefs(&out),
+        vec!["A1:B10", "D3", "F:G", "2:4", "A20:A21 C20 E20:F21"]
+    );
+}
+
+/// The whole point of modeling `sqref` as ids: inserting a row above a rule's
+/// range moves the range, exactly as Excel does. Kept as a raw A1 string it
+/// would silently keep pointing at the old rows.
+#[test]
+fn conditional_formatting_range_shifts_when_rows_are_inserted() {
+    use crate::edit_action::InsertRows;
+
+    let base = Workbook::default().save().unwrap();
+    let input = with_conditional_formatting(
+        &base,
+        vec![
+            ("A2:A10", vec![cell_is_rule(1)]),
+            ("C:C", vec![cell_is_rule(2)]),
+        ],
+    );
+
+    let mut wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRows(InsertRows {
+            sheet_idx: 0,
+            start: 0,
+            count: 2,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    let out = wb.save().unwrap();
+
+    // The rectangle moved down by two; the whole-column range is unaffected by
+    // a row insert, which is also Excel's behavior.
+    assert_eq!(saved_cf_sqrefs(&out), vec!["A4:A12", "C:C"]);
+}
+
+/// A column insert to the left shifts a rule's columns, including a
+/// whole-column range.
+#[test]
+fn conditional_formatting_range_shifts_when_cols_are_inserted() {
+    use crate::edit_action::InsertCols;
+
+    let base = Workbook::default().save().unwrap();
+    let input = with_conditional_formatting(
+        &base,
+        vec![
+            ("B2:C10", vec![cell_is_rule(1)]),
+            ("D:D", vec![cell_is_rule(2)]),
+        ],
+    );
+
+    let mut wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertCols(InsertCols {
+            sheet_idx: 0,
+            start: 0,
+            count: 1,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    let out = wb.save().unwrap();
+
+    assert_eq!(saved_cf_sqrefs(&out), vec!["C2:D10", "E:E"]);
+}
+
+/// A rule covering a form block must anchor on *block* cell ids, not the normal
+/// cell ids those coordinates would have had before the block existed —
+/// otherwise the range stops tracking as soon as the block's own rows move.
+#[test]
+fn conditional_formatting_anchors_on_block_cells() {
+    use crate::conditional_formatting_manager::CfRange;
+    use crate::edit_action::InsertRowsInBlock;
+    use logisheets_base::CellId;
+
+    // A 3x3 block at (1,1), i.e. B2:D4. Save it so the block is present at load
+    // time — the modeling pass runs after the loader settles.
+    let mut authored = Workbook::default();
+    let block_id = authored.get_available_block_id(0).unwrap();
+    authored.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: block_id,
+            master_row: 1,
+            master_col: 1,
+            row_cnt: 3,
+            col_cnt: 3,
+            owner: None,
+            modify_policy: None,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    let base = authored.save().unwrap();
+    let input = with_conditional_formatting(&base, vec![("B2:D4", vec![cell_is_rule(1)])]);
+
+    let mut wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+    assert_eq!(
+        wb.get_sheet_by_idx(0).unwrap().get_all_blocks().len(),
+        1,
+        "the block must be present at load time for this test to mean anything"
+    );
+
+    // Both corners of B2:D4 land inside the block.
+    {
+        let sheet_id = wb.status().sheet_info_manager.pos[0];
+        let blocks = wb
+            .status()
+            .conditional_formatting_manager
+            .get_sheet(sheet_id)
+            .expect("the rule should be modeled");
+        assert_eq!(blocks.len(), 1);
+        match blocks[0].ranges[0] {
+            CfRange::Rect(start, end) => {
+                assert!(
+                    matches!(start, CellId::BlockCell(_)),
+                    "top-left should anchor on a block cell, got {start:?}"
+                );
+                assert!(
+                    matches!(end, CellId::BlockCell(_)),
+                    "bottom-right should anchor on a block cell, got {end:?}"
+                );
+            }
+            other => panic!("expected a rectangle, got {other:?}"),
+        }
+    }
+
+    // Growing the block from the inside must grow the covered range with it.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+            sheet_idx: 0,
+            block_id,
+            start: 1,
+            cnt: 1,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    let out = wb.save().unwrap();
+    assert_eq!(saved_cf_sqrefs(&out), vec!["B2:D5"]);
+}
+
+/// Modeling must never lose what it can't model: a `sqref` we don't understand
+/// stays in the verbatim passthrough and still round-trips.
+#[test]
+fn unmodelable_conditional_formatting_is_preserved_verbatim() {
+    let base = Workbook::default().save().unwrap();
+    // `B2:B` is half-open but not a clean whole-column range — there is no sane
+    // id to anchor the open end on.
+    let input = with_conditional_formatting(
+        &base,
+        vec![
+            ("B2:B", vec![cell_is_rule(1)]),
+            ("A1:A5", vec![cell_is_rule(2)]),
+        ],
+    );
+
+    let wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+    let sheet_id = wb.status().sheet_info_manager.pos[0];
+    assert_eq!(
+        wb.status()
+            .conditional_formatting_manager
+            .get_sheet(sheet_id)
+            .map(|b| b.len()),
+        Some(1),
+        "only the modelable element should be in the manager"
+    );
+
+    let out = wb.save().unwrap();
+    let mut sqrefs = saved_cf_sqrefs(&out);
+    sqrefs.sort();
+    assert_eq!(sqrefs, vec!["A1:A5", "B2:B"]);
+}
+
+/// End-to-end: a `cellIs > 100` rule must actually evaluate. The cell's
+/// `ConditionalFormat` shadow holds the bitmask of matching rules, so bit 0 set
+/// (value 1) means the single rule matched.
+#[test]
+fn conditional_formatting_rule_evaluates_on_load() {
+    use crate::controller::display::Value;
+    use crate::edit_action::CellInput;
+    use crate::sid_assigner::ShadowKind;
+    use logisheets_workbook::prelude::{CtCfRule, PlainTextString};
+
+    fn greater_than(v: &str) -> CtCfRule {
+        let mut r = cell_is_rule(1);
+        r.formulas = vec![PlainTextString {
+            value: v.to_string(),
+            space: None,
+        }];
+        r
+    }
+
+    // A1 = 150 (matches), A2 = 50 (does not). Values must exist at load time.
+    let mut authored = Workbook::default();
+    authored.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "150".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "50".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+    let base = authored.save().unwrap();
+    let input = with_conditional_formatting(&base, vec![("A1:A10", vec![greater_than("100")])]);
+
+    let mut wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+
+    let mut mask = |row: usize| -> Value {
+        let scid = wb
+            .get_shadow_cell_id(0, row, 0, ShadowKind::ConditionalFormat)
+            .unwrap();
+        let id = match scid.cell_id {
+            logisheets_base::CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        wb.get_shadow_info_by_id(id).unwrap().value
+    };
+
+    // Bit 0 is the only rule, so 1 means "matched" and 0 means "did not".
+    let a1 = mask(0);
+    assert!(
+        matches!(a1, Value::Number(n) if n == 1.0),
+        "A1=150 should match the >100 rule, got {a1:?}"
+    );
+    let a2 = mask(1);
+    assert!(
+        matches!(a2, Value::Number(n) if n == 0.0),
+        "A2=50 should not match, got {a2:?}"
+    );
+    // A3 is blank, so no formula was installed for it: reading its shadow gives
+    // no match rather than a stale one.
+    let a3 = mask(2);
+    assert!(
+        !matches!(a3, Value::Number(n) if n != 0.0),
+        "a blank cell must not report a match, got {a3:?}"
+    );
+}
+
+/// The gap that made validation's "only sync at load" approach unacceptable for
+/// conditional formatting: typing into a cell that was blank at load time must
+/// still light the rule up, and clearing it must turn the rule off again.
+#[test]
+fn conditional_formatting_resyncs_after_edits() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{CellClear, CellInput, InsertRows};
+    use crate::sid_assigner::ShadowKind;
+    use logisheets_workbook::prelude::{CtCfRule, PlainTextString};
+
+    fn greater_than(v: &str) -> CtCfRule {
+        let mut r = cell_is_rule(1);
+        r.formulas = vec![PlainTextString {
+            value: v.to_string(),
+            space: None,
+        }];
+        r
+    }
+
+    // Nothing in the sheet at load: every covered cell is blank, so no shadow
+    // is materialized up front.
+    let base = Workbook::default().save().unwrap();
+    let input = with_conditional_formatting(&base, vec![("A1:A10", vec![greater_than("100")])]);
+    let mut wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+
+    let input_at = |wb: &mut Workbook, row: usize, content: &str| {
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row,
+                col: 0,
+                content: content.to_string(),
+            })],
+            undoable: true,
+            init: false,
+        }));
+    };
+    let mask = |wb: &mut Workbook, row: usize| -> Value {
+        let scid = wb
+            .get_shadow_cell_id(0, row, 0, ShadowKind::ConditionalFormat)
+            .unwrap();
+        let id = match scid.cell_id {
+            logisheets_base::CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        wb.get_shadow_info_by_id(id).unwrap().value
+    };
+
+    // Type a matching value into a cell that had no shadow.
+    input_at(&mut wb, 4, "500");
+    let v = mask(&mut wb, 4);
+    assert!(
+        matches!(v, Value::Number(n) if n == 1.0),
+        "A5=500 should match after the edit, got {v:?}"
+    );
+
+    // Overwrite with a non-matching value.
+    input_at(&mut wb, 4, "5");
+    let v = mask(&mut wb, 4);
+    assert!(
+        matches!(v, Value::Number(n) if n == 0.0),
+        "A5=5 should stop matching, got {v:?}"
+    );
+
+    // Clearing the cell must not leave a stale match behind.
+    input_at(&mut wb, 4, "500");
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellClear(CellClear {
+            sheet_idx: 0,
+            row: 4,
+            col: 0,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let v = mask(&mut wb, 4);
+    assert!(
+        !matches!(v, Value::Number(n) if n != 0.0),
+        "a cleared cell must not report a match, got {v:?}"
+    );
+
+    // A row insert moves the range; the value that rode down with it keeps its
+    // formatting, and the rule still covers its new position.
+    input_at(&mut wb, 2, "700");
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRows(InsertRows {
+            sheet_idx: 0,
+            start: 0,
+            count: 1,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let v = mask(&mut wb, 3);
+    assert!(
+        matches!(v, Value::Number(n) if n == 1.0),
+        "the value moved to A4 and should still match, got {v:?}"
+    );
+}
+
+/// The payoff of the whole stage: a matching rule's differential format arrives
+/// on `CellInfo` already merged onto the cell's own style, so the frontend has
+/// nothing to decide. And a dxf that sets only one property must leave the
+/// cell's other properties intact.
+#[test]
+fn conditional_format_reaches_cell_info_merged() {
+    use crate::edit_action::CellInput;
+    use logisheets_workbook::prelude::{
+        CtCfRule, CtColor, CtDxf, CtDxfs, CtFill, CtFont, CtPatternFill, PlainTextString,
+        StPatternType, Wb, write,
+    };
+
+    fn red(rgb: &str) -> CtColor {
+        CtColor {
+            auto: None,
+            indexed: None,
+            rgb: Some(rgb.to_string()),
+            theme: None,
+            tint: 0.0,
+        }
+    }
+
+    // A1 = 150 (matches >100), A2 = 50 (does not), both bold via the cell's own
+    // style so we can check the dxf does not clobber it.
+    let mut authored = Workbook::default();
+    authored.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "150".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "50".to_string(),
+            }),
+            EditPayload::CellStyleUpdate(crate::edit_action::CellStyleUpdate {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                ty: StyleUpdateType {
+                    set_font_bold: Some(true),
+                    ..Default::default()
+                },
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+    let base = authored.save().unwrap();
+
+    // Inject a dxf that sets ONLY a fill colour, and a rule pointing at it.
+    let mut raw = Wb::from_file(&base).unwrap();
+    raw.xl.styles.1.dxfs = Some(CtDxfs {
+        count: 1,
+        dxfs: vec![CtDxf {
+            font: Some(CtFont {
+                bold: false,
+                italic: false,
+                underline: None,
+                color: Some(red("FFFF0000")),
+                sz: None,
+                name: None,
+                charset: None,
+                family: None,
+                strike: false,
+                outline: false,
+                shadow: false,
+                condense: false,
+                extend: false,
+                vert_align: None,
+                scheme: None,
+            }),
+            num_fmt: None,
+            fill: Some(CtFill::PatternFill(CtPatternFill {
+                fg_color: Some(red("FFFFFF00")),
+                bg_color: None,
+                pattern_type: Some(StPatternType::Solid),
+            })),
+            alignment: None,
+            border: None,
+            protection: None,
+        }],
+    });
+    let base = write(raw).unwrap();
+
+    let mut rule = cell_is_rule(1);
+    rule.formulas = vec![PlainTextString {
+        value: "100".to_string(),
+        space: None,
+    }];
+    let input = with_conditional_formatting(&base, vec![("A1:A10", vec![rule])]);
+
+    let wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+
+    let a1 = ws.get_cell_info(0, 0).unwrap();
+    let cf = a1
+        .conditional_format
+        .as_ref()
+        .expect("A1=150 matches, so it must carry a conditional format");
+    // The dxf's font colour came through...
+    // Color channels are 0..255 here.
+    assert_eq!(
+        cf.style.font.color.as_ref().and_then(|c| c.red),
+        Some(255.0),
+        "the dxf font colour should be applied"
+    );
+    // ...and the cell's own bold survived, because a dxf is a partial style.
+    assert!(
+        cf.style.font.bold,
+        "the cell's own bold must not be clobbered by a dxf that doesn't set it"
+    );
+    // The base style is still reported unchanged alongside it.
+    assert!(
+        a1.style.font.color.as_ref().and_then(|c| c.red) != Some(255.0),
+        "CellInfo::style should remain the cell's own style"
+    );
+
+    // A2 does not match, so it carries no conditional format at all.
+    let a2 = ws.get_cell_info(1, 0).unwrap();
+    assert!(
+        a2.conditional_format.is_none(),
+        "A2=50 does not match; no conditional format expected"
+    );
+}
+
+/// Undo must put the conditional formatting back too. The rules live in
+/// `Status` (so they ride the snapshot), but the shadows are installed with
+/// `undoable: false`, so this checks that the re-sync hook fires on an undo and
+/// re-derives the match from the restored value.
+#[test]
+fn conditional_formatting_follows_undo_and_redo() {
+    use crate::controller::display::Value;
+    use crate::edit_action::CellInput;
+    use crate::sid_assigner::ShadowKind;
+    use logisheets_workbook::prelude::{CtCfRule, PlainTextString};
+
+    fn greater_than(v: &str) -> CtCfRule {
+        let mut r = cell_is_rule(1);
+        r.formulas = vec![PlainTextString {
+            value: v.to_string(),
+            space: None,
+        }];
+        r
+    }
+
+    let base = Workbook::default().save().unwrap();
+    let input = with_conditional_formatting(&base, vec![("A1:A10", vec![greater_than("100")])]);
+    let mut wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
+
+    let mask = |wb: &mut Workbook| -> Value {
+        let scid = wb
+            .get_shadow_cell_id(0, 0, 0, ShadowKind::ConditionalFormat)
+            .unwrap();
+        let id = match scid.cell_id {
+            logisheets_base::CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        wb.get_shadow_info_by_id(id).unwrap().value
+    };
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: "500".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let v = mask(&mut wb);
+    assert!(
+        matches!(v, Value::Number(n) if n == 1.0),
+        "A1=500 should match, got {v:?}"
+    );
+
+    wb.handle_action(EditAction::Undo);
+    let v = mask(&mut wb);
+    assert!(
+        !matches!(v, Value::Number(n) if n != 0.0),
+        "after undo A1 is blank again, so it must not report a match, got {v:?}"
+    );
+
+    wb.handle_action(EditAction::Redo);
+    let v = mask(&mut wb);
+    assert!(
+        matches!(v, Value::Number(n) if n == 1.0),
+        "after redo A1=500 should match again, got {v:?}"
+    );
+}
+
+/// A whole-column conditional format is commonly written out as an explicit
+/// `A1:A1048576`, addressing the last row of the xlsx grid. The navigator used
+/// to allocate only 1,000,000 rows per sheet and `Fetcher::get_row_id` panics
+/// past the end, so resolving such a range brought the whole loader down —
+/// which in the browser also poisons the wasm instance.
+#[test]
+fn conditional_formatting_spanning_the_full_grid_loads() {
+    let base = Workbook::default().save().unwrap();
+    let input = with_conditional_formatting(
+        &base,
+        vec![
+            ("A1:A1048576", vec![cell_is_rule(1)]),
+            ("B1:XFD1", vec![cell_is_rule(2)]),
+        ],
+    );
+
+    let wb = Workbook::from_file(&input, "grid".to_string()).expect("must load");
+    let total: usize = wb
+        .status()
+        .conditional_formatting_manager
+        .data
+        .iter()
+        .flat_map(|(_, b)| b.iter())
+        .map(|b| b.rules.len())
+        .sum();
+    assert_eq!(total, 2, "both full-extent rules should survive the load");
+
+    // And the extents must come back out intact rather than clamped to the
+    // populated area.
+    let out = wb.save().unwrap();
+    let reloaded = logisheets_workbook::prelude::Wb::from_file(&out).unwrap();
+    let ws = reloaded.xl.worksheets.values().next().unwrap();
+    let sqrefs: Vec<&str> = ws
+        .worksheet_part
+        .conditional_formatting
+        .iter()
+        .map(|c| c.sqref.as_str())
+        .collect();
+    assert!(
+        sqrefs.contains(&"A1:A1048576"),
+        "expected the full-column range back, got {sqrefs:?}"
+    );
+    assert!(
+        sqrefs.contains(&"B1:XFD1"),
+        "expected the full-row range back, got {sqrefs:?}"
+    );
+}
+
+/// Authoring a rule from scratch: create it, see it take effect on the right
+/// cells, save it, and read it back from the file.
+#[test]
+fn create_conditional_formatting_rule_end_to_end() {
+    use crate::edit_action::{CellInput, CreateConditionalFormattingRule};
+
+    let mut wb = Workbook::default();
+    // A1=50, A2=500 so exactly one of them should match.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "50".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "500".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    let spec = greater_than_spec("100", "FFFFC7CE");
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateConditionalFormattingRule(
+            CreateConditionalFormattingRule {
+                sheet_idx: 0,
+                start_row: 0,
+                start_col: 0,
+                end_row: 9,
+                end_col: 0,
+                rule: spec,
+            },
+        )],
+        undoable: true,
+        init: false,
+    }));
+
+    // The rule is listed, with a range and a round-trippable spec.
+    let rules = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_conditional_formatting_rules();
+    assert_eq!(rules.len(), 1);
+    assert_eq!(rules[0].range, "A1:A10");
+    assert_eq!(rules[0].spec.ty, "cellIs");
+    assert_eq!(rules[0].spec.operator.as_deref(), Some("greaterThan"));
+    assert_eq!(rules[0].spec.operands, vec!["100".to_string()]);
+    assert_eq!(
+        rules[0]
+            .spec
+            .format
+            .as_ref()
+            .and_then(|f| f.fill_color.as_deref()),
+        Some("FFFFC7CE")
+    );
+    assert!(rules[0].preview.is_some(), "a preview style should resolve");
+
+    // And it actually applies: A2 (500) matches, A1 (50) does not.
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(
+        ws.get_cell_info(1, 0).unwrap().conditional_format.is_some(),
+        "A2=500 should be formatted"
+    );
+    assert!(
+        ws.get_cell_info(0, 0).unwrap().conditional_format.is_none(),
+        "A1=50 must not match a >100 rule"
+    );
+
+    // It survives the file.
+    let bytes = wb.save().unwrap();
+    let reloaded = Workbook::from_file(&bytes, "cf".to_string()).unwrap();
+    let rules = reloaded
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_conditional_formatting_rules();
+    assert_eq!(rules.len(), 1, "the authored rule must survive a save");
+    assert_eq!(rules[0].range, "A1:A10");
+    assert_eq!(
+        rules[0]
+            .spec
+            .format
+            .as_ref()
+            .and_then(|f| f.fill_color.as_deref()),
+        Some("FFFFC7CE"),
+        "the authored dxf must survive too"
+    );
+}
+
+/// Update reuses the rule's dxf slot instead of appending, so editing a rule
+/// repeatedly does not grow `<dxfs>`; delete removes the rule and its element.
+#[test]
+fn update_and_delete_conditional_formatting_rule() {
+    use crate::edit_action::{DeleteConditionalFormattingRule, UpdateConditionalFormattingRule};
+
+    let mut wb = Workbook::default();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateConditionalFormattingRule(
+            crate::edit_action::CreateConditionalFormattingRule {
+                sheet_idx: 0,
+                start_row: 0,
+                start_col: 0,
+                end_row: 9,
+                end_col: 0,
+                rule: greater_than_spec("100", "FFFFC7CE"),
+            },
+        )],
+        undoable: true,
+        init: false,
+    }));
+    let rules = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_conditional_formatting_rules();
+    let id = rules[0].rule_id;
+    let dxfs_after_create = wb.status().style_manager.dxf_manager.len();
+    assert_eq!(dxfs_after_create, 1);
+
+    // Edit it three times; the dxf list must not grow.
+    for color in ["FF00FF00", "FF0000FF", "FFFFFF00"] {
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::UpdateConditionalFormattingRule(
+                UpdateConditionalFormattingRule {
+                    sheet_idx: 0,
+                    rule_id: id,
+                    rule: greater_than_spec("200", color),
+                },
+            )],
+            undoable: true,
+            init: false,
+        }));
+    }
+    let rules = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_conditional_formatting_rules();
+    assert_eq!(rules.len(), 1);
+    assert_eq!(rules[0].rule_id, id, "an update must keep the rule's id");
+    assert_eq!(rules[0].spec.operands, vec!["200".to_string()]);
+    assert_eq!(
+        rules[0]
+            .spec
+            .format
+            .as_ref()
+            .and_then(|f| f.fill_color.as_deref()),
+        Some("FFFFFF00")
+    );
+    assert_eq!(
+        wb.status().style_manager.dxf_manager.len(),
+        dxfs_after_create,
+        "repeated edits must reuse the rule's dxf slot"
+    );
+
+    // Delete removes it entirely.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteConditionalFormattingRule(
+            DeleteConditionalFormattingRule {
+                sheet_idx: 0,
+                rule_id: id,
+            },
+        )],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        wb.get_sheet_by_idx(0)
+            .unwrap()
+            .get_conditional_formatting_rules()
+            .is_empty(),
+        "the rule should be gone"
+    );
+    assert!(
+        wb.status().conditional_formatting_manager.is_empty(),
+        "an element left with no rules should be dropped"
+    );
+}
+
+/// A malformed spec must be rejected with a message, not stored as a rule that
+/// silently never matches.
+#[test]
+fn invalid_conditional_formatting_specs_are_rejected() {
+    use crate::conditional_formatting_manager::spec::CfRuleSpec;
+    use crate::edit_action::CreateConditionalFormattingRule;
+
+    let cases: Vec<(&str, CfRuleSpec)> = vec![
+        (
+            "unknown type",
+            CfRuleSpec {
+                ty: "notARule".to_string(),
+                ..Default::default()
+            },
+        ),
+        (
+            "cellIs with no operator",
+            CfRuleSpec {
+                ty: "cellIs".to_string(),
+                operands: vec!["1".to_string()],
+                ..Default::default()
+            },
+        ),
+        (
+            "between with one operand",
+            CfRuleSpec {
+                ty: "cellIs".to_string(),
+                operator: Some("between".to_string()),
+                operands: vec!["1".to_string()],
+                ..Default::default()
+            },
+        ),
+        (
+            "containsText with no text",
+            CfRuleSpec {
+                ty: "containsText".to_string(),
+                ..Default::default()
+            },
+        ),
+        (
+            "colorScale with one colour",
+            CfRuleSpec {
+                ty: "colorScale".to_string(),
+                colors: vec!["FFFF0000".to_string()],
+                ..Default::default()
+            },
+        ),
+    ];
+
+    for (name, spec) in cases {
+        let mut wb = Workbook::default();
+        let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CreateConditionalFormattingRule(
+                CreateConditionalFormattingRule {
+                    sheet_idx: 0,
+                    start_row: 0,
+                    start_col: 0,
+                    end_row: 0,
+                    end_col: 0,
+                    rule: spec,
+                },
+            )],
+            undoable: true,
+            init: false,
+        }));
+        assert!(
+            matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+            "{name} should be rejected with an error, got {:?}",
+            effect.status
+        );
+        assert!(
+            wb.get_sheet_by_idx(0)
+                .unwrap()
+                .get_conditional_formatting_rules()
+                .is_empty(),
+            "{name} must not leave a rule behind"
+        );
+    }
+}
+
+/// An authored rule's range is anchored on cell ids, so inserting a row above it
+/// shifts it the way Excel does.
+#[test]
+fn authored_rule_range_shifts_on_insert() {
+    use crate::edit_action::{CreateConditionalFormattingRule, InsertRows};
+
+    let mut wb = Workbook::default();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateConditionalFormattingRule(
+            CreateConditionalFormattingRule {
+                sheet_idx: 0,
+                start_row: 4,
+                start_col: 0,
+                end_row: 9,
+                end_col: 0,
+                rule: greater_than_spec("100", "FFFFC7CE"),
+            },
+        )],
+        undoable: true,
+        init: false,
+    }));
+    assert_eq!(
+        wb.get_sheet_by_idx(0)
+            .unwrap()
+            .get_conditional_formatting_rules()[0]
+            .range,
+        "A5:A10"
+    );
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRows(InsertRows {
+            sheet_idx: 0,
+            start: 0,
+            count: 2,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert_eq!(
+        wb.get_sheet_by_idx(0)
+            .unwrap()
+            .get_conditional_formatting_rules()[0]
+            .range,
+        "A7:A12",
+        "the range must follow the rows it was anchored to"
+    );
+}
+
+/// A `cellIs greaterThan` spec with a solid fill, the shape a UI would send.
+fn greater_than_spec(
+    operand: &str,
+    fill: &str,
+) -> crate::conditional_formatting_manager::spec::CfRuleSpec {
+    use crate::conditional_formatting_manager::spec::{CfFormatSpec, CfRuleSpec};
+    CfRuleSpec {
+        ty: "cellIs".to_string(),
+        operator: Some("greaterThan".to_string()),
+        operands: vec![operand.to_string()],
+        format: Some(CfFormatSpec {
+            fill_color: Some(fill.to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

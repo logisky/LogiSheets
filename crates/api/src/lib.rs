@@ -20,7 +20,7 @@
 
 // Re-export the main Workbook and Worksheet types from controller/api
 pub use logisheets_controller::api::{
-    BlockSortOrder, CellInfo, CellRefRange, DependentCell, FillRange, ReproducibleCell,
+    BlockSortOrder, CellInfo, CellRefRange, CfRuleInfo, DependentCell, FillRange, ReproducibleCell,
     SaveFileResult, SheetCoordinate, SheetDimension, Workbook, Worksheet,
 };
 

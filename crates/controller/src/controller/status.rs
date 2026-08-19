@@ -5,6 +5,7 @@ use logisheets_base::SheetId;
 
 use crate::cell_attachments::CellAttachmentsManager;
 use crate::chart_manager::ChartManager;
+use crate::conditional_formatting_manager::ConditionalFormattingManager;
 use crate::container::DataContainer;
 use crate::cube_manager::CubeManager;
 use crate::data_validation_manager::DataValidationManager;
@@ -47,6 +48,7 @@ pub struct Status {
     pub image_manager: ImageManager,
     pub chart_manager: ChartManager,
     pub data_validation_manager: DataValidationManager,
+    pub conditional_formatting_manager: ConditionalFormattingManager,
 
     pub dirty_cells_next_round: HashSet<(SheetId, CellId)>,
 }
@@ -77,6 +79,7 @@ impl Default for Status {
             image_manager: ImageManager::new(),
             chart_manager: ChartManager::new(),
             data_validation_manager: DataValidationManager::new(),
+            conditional_formatting_manager: ConditionalFormattingManager::new(),
         }
     }
 }

@@ -20,6 +20,7 @@ import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined'
 import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined'
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined'
 import GridOnOutlinedIcon from '@mui/icons-material/GridOnOutlined'
+import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import NorthEastOutlinedIcon from '@mui/icons-material/NorthEastOutlined'
 import SouthWestOutlinedIcon from '@mui/icons-material/SouthWestOutlined'
@@ -48,6 +49,7 @@ import FormatDialogContent, {
     type FormatDialogValue,
 } from '@/components/format-dialog'
 import {BlockComposerComponent} from '@/components/block-composer'
+import {ConditionalFormattingDialog} from '@/components/conditional-formatting'
 import {inferBlockFromSelection} from '@/components/block-composer/infer-selection'
 import type {FieldSetting} from 'logisheets-core'
 import {useToast} from '@/ui/notification/useToast'
@@ -116,6 +118,15 @@ export function CanvasContextMenu({
         null
     )
     const [fmtValue, setFmtValue] = useState<FormatDialogValue>({})
+    // Conditional formatting manager. Opened over the current selection, which
+    // is the range a newly created rule covers.
+    const [cfRange, setCfRange] = useState<{
+        sheetIdx: number
+        startRow: number
+        startCol: number
+        endRow: number
+        endCol: number
+    } | null>(null)
     // "Link range → block": the picker lists blocks with a matching column count
     // that aren't already linked; picking one sends a CreateLink payload.
     const [linkOpen, setLinkOpen] = useState(false)
@@ -210,6 +221,22 @@ export function CanvasContextMenu({
         },
         [dataSvc]
     )
+
+    const openConditionalFormatting = (ctx: ContextMenuContext) => {
+        close()
+        const range = getSelectedCellRange(ctx.selectedData)
+        // Fall back to the clicked cell when nothing is selected, so the item
+        // works on a bare right-click.
+        const startRow = range?.startRow ?? ctx.row ?? 0
+        const startCol = range?.startCol ?? ctx.col ?? 0
+        setCfRange({
+            sheetIdx: getActiveSheet(),
+            startRow,
+            startCol,
+            endRow: range?.endRow ?? startRow,
+            endCol: range?.endCol ?? startCol,
+        })
+    }
 
     const openFormat = (ctx: ContextMenuContext) => {
         setFmtSelectedData(ctx.selectedData)
@@ -390,7 +417,14 @@ export function CanvasContextMenu({
         await doTxn([
             {
                 type: 'createLink',
-                value: {sheetIdx, masterRow, masterCol, rowCnt, colCnt, blockId},
+                value: {
+                    sheetIdx,
+                    masterRow,
+                    masterCol,
+                    rowCnt,
+                    colCnt,
+                    blockId,
+                },
             } as Payload,
         ])
         // Linking an empty range changes no cell value, so the grid may not
@@ -541,6 +575,13 @@ export function CanvasContextMenu({
               >
                   Convert to block…
               </ContextMenuItem>,
+              <ContextMenuItem
+                  key="conditional-formatting"
+                  icon={<PaletteOutlinedIcon />}
+                  onClick={() => openConditionalFormatting(ctx)}
+              >
+                  Conditional formatting…
+              </ContextMenuItem>,
               ...(editCandidate
                   ? [
                         <ContextMenuItem
@@ -679,6 +720,27 @@ export function CanvasContextMenu({
             </ContextMenu>
 
             <Dialog
+                open={!!cfRange}
+                onClose={() => setCfRange(null)}
+                keepMounted
+                disableScrollLock
+                disableAutoFocus
+                disableEnforceFocus
+                disableRestoreFocus
+                container={document.body}
+                PaperProps={{sx: {zIndex: 2000, p: 0}}}
+            >
+                {cfRange && (
+                    <ConditionalFormattingDialog
+                        dataSvc={dataSvc}
+                        sheetIdx={cfRange.sheetIdx}
+                        range={cfRange}
+                        onClose={() => setCfRange(null)}
+                    />
+                )}
+            </Dialog>
+
+            <Dialog
                 open={fmtOpen && !!fmtSelectedData}
                 onClose={() => setFmtOpen(false)}
                 maxWidth="md"
@@ -725,7 +787,9 @@ export function CanvasContextMenu({
                     ＋ Create a new block from selection
                 </MenuItem>
                 {linkBlocks.length > 0 && (
-                    <Divider sx={{my: 0.5}}>or link to an existing block</Divider>
+                    <Divider sx={{my: 0.5}}>
+                        or link to an existing block
+                    </Divider>
                 )}
                 {linkBlocks.map((b) => (
                     <MenuItem

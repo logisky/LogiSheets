@@ -29,9 +29,17 @@ impl SheetNav {
     }
 }
 
+/// Rows in an xlsx sheet (`1048576`). Not a round million: files address the
+/// real limit — a whole-column range is commonly written `A1:A1048576` — and
+/// `Fetcher::get_row_id` panics on an index past the end, so under-allocating
+/// here made such a file impossible to open.
+pub const MAX_ROW_CNT: u32 = 1_048_576;
+/// Columns in an xlsx sheet (`XFD` = `16384`).
+pub const MAX_COL_CNT: u32 = 16_384;
+
 impl Default for SheetNav {
     fn default() -> Self {
-        SheetNav::init(1000000, 20000, 0)
+        SheetNav::init(MAX_ROW_CNT, MAX_COL_CNT, 0)
     }
 }
 

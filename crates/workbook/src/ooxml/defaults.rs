@@ -243,6 +243,10 @@ pub fn default_zero_u8() -> u8 {
     0
 }
 
+pub fn default_zero_i64() -> i64 {
+    0
+}
+
 pub fn default_zero_i32() -> i32 {
     0
 }

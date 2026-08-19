@@ -241,6 +241,9 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             ok_to_js(&ws::get_cell_images(&mgr, id, params.sheet_idx))
         }
         Message::GetCharts(params) => ok_to_js(&ws::get_charts(&mgr, id, params.sheet_idx)),
+        Message::GetConditionalFormattingRules(params) => ok_to_js(
+            &ws::get_conditional_formatting_rules(&mgr, id, params.sheet_idx),
+        ),
         Message::CalcCondition(params) => res_to_js(controller::calc_condition(
             &mut mgr,
             id,

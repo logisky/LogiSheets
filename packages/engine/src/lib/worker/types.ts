@@ -72,6 +72,7 @@ export enum MethodName {
     GetComments = 'getComments',
     GetCellImages = 'getCellImages',
     GetCharts = 'getCharts',
+    GetConditionalFormattingRules = 'getConditionalFormattingRules',
     CalcCondition = 'calcCondition',
     GetCellIdByBlockRef = 'getCellIdByBlockRef',
 

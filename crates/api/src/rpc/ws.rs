@@ -1,8 +1,8 @@
 use crate::{
     AppendixWithCell, BasicError, BlockId, BlockInfo, CellCoordinate, CellImageInfo, CellInfo,
-    CellInput, CellPosition, CellRefRange, ChartInfo, ColInfo, Comment, DependentCell, DisplayWindow,
-    DisplayWindowWithStartPoint, DiyCellId, Error, ErrorMessage, FillRange, LinkInfo, MergeCell,
-    ReproducibleCell, SheetCoordinate, SheetId, Style, Value,
+    CellInput, CellPosition, CellRefRange, CfRuleInfo, ChartInfo, ColInfo, Comment, DependentCell,
+    DisplayWindow, DisplayWindowWithStartPoint, DiyCellId, Error, ErrorMessage, FillRange,
+    LinkInfo, MergeCell, ReproducibleCell, SheetCoordinate, SheetId, Style, Value,
 };
 
 use super::{Direction, Manager};
@@ -144,7 +144,9 @@ pub fn get_col_info(
 ) -> Result<ColInfo, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
-    Ok(ws.get_col_info(col_idx).unwrap_or(ColInfo::default(col_idx)))
+    Ok(ws
+        .get_col_info(col_idx)
+        .unwrap_or(ColInfo::default(col_idx)))
 }
 
 pub fn get_value(
@@ -260,6 +262,16 @@ pub fn get_charts(mgr: &Manager, id: usize, sheet_idx: usize) -> Vec<ChartInfo> 
     let wb = mgr.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
     ws.get_charts()
+}
+
+pub fn get_conditional_formatting_rules(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+) -> Vec<CfRuleInfo> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    ws.get_conditional_formatting_rules()
 }
 
 pub fn get_cell_position(
@@ -434,7 +446,8 @@ pub fn get_reproducible_cell(
 ) -> Result<ReproducibleCell, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
-    ws.get_reproducible_cell(row, col).map_err(ErrorMessage::from)
+    ws.get_reproducible_cell(row, col)
+        .map_err(ErrorMessage::from)
 }
 
 pub fn get_reproducible_cells(

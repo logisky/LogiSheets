@@ -284,6 +284,12 @@ impl<'a> StyleConverter<'a> {
         self.convert_color(color)
     }
 
+    /// Theme/indexed-aware colour conversion, for callers outside the
+    /// whole-style path (a data bar's colour, say).
+    pub fn convert_color_pub(&self, color: CtColor) -> Color {
+        self.convert_color(color)
+    }
+
     fn convert_color(&self, color: CtColor) -> Color {
         let tint = color.tint;
         let rgb = {

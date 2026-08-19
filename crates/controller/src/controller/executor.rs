@@ -14,6 +14,7 @@ use crate::{
     cell_attachments::executor::CellAttachmentsExecutor,
     chart_manager::ChartExecutor,
     checkpoint_manager::CheckpointManager,
+    conditional_formatting_manager::executor::ConditionalFormattingExecutor,
     connectors::{
         BlockSchemaConnector, CalcConnector, CellAttachmentsConnector, ContainerConnector,
         CubeConnector, ExclusiveConnector, FormulaConnector, NavigatorConnector, RangeConnector,
@@ -189,6 +190,9 @@ impl<'a> Executor<'a> {
         let (chart_executor, chart_updated) = result.execute_chart(payload.clone())?;
         result.status.chart_manager = chart_executor.manager;
 
+        let (cf_executor, cf_updated) = result.execute_conditional_formatting(payload.clone())?;
+        result.status.conditional_formatting_manager = cf_executor.manager;
+
         let mut dirty_ranges = range_executor.dirty_ranges;
         range_executor.removed_ranges.into_iter().for_each(|e| {
             dirty_ranges.insert(e);
@@ -252,6 +256,7 @@ impl<'a> Executor<'a> {
             || exclusive_updated
             || image_updated
             || chart_updated
+            || cf_updated
             || result.updated_cells.len() > 0
             || result.cells_removed.len() > 0;
 
@@ -304,6 +309,7 @@ impl<'a> Executor<'a> {
                 image_manager: result.status.image_manager,
                 chart_manager: result.status.chart_manager,
                 data_validation_manager: result.status.data_validation_manager,
+                conditional_formatting_manager: result.status.conditional_formatting_manager,
             },
             version_manager: result.version_manager,
             async_func_manager: result.async_func_manager,
@@ -517,6 +523,24 @@ impl<'a> Executor<'a> {
         };
         let executor = ImageExecutor::new(self.status.image_manager.clone());
         executor.execute(&mut ctx, payload)
+    }
+
+    /// Conditional formatting takes the pieces it needs directly rather than a
+    /// connector: sheet lookup, the navigator (to anchor a new rule's range on
+    /// cell ids) and the dxf store (to intern the rule's format). The three are
+    /// disjoint fields of `status`, so the borrows don't collide.
+    fn execute_conditional_formatting(
+        &mut self,
+        payload: EditPayload,
+    ) -> Result<(ConditionalFormattingExecutor, bool), Error> {
+        let executor =
+            ConditionalFormattingExecutor::new(self.status.conditional_formatting_manager.clone());
+        executor.execute(
+            &self.status.navigator,
+            &self.status.sheet_info_manager,
+            &mut self.status.style_manager.dxf_manager,
+            payload,
+        )
     }
 
     fn execute_chart(&mut self, payload: EditPayload) -> Result<(ChartExecutor, bool), Error> {

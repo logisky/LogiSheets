@@ -61,7 +61,67 @@ impl Workbook {
 
     /// Execute the `EditAction`
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
-        self.controller.handle_action(action)
+        // Undo/Redo report an empty change list (they swap a whole status
+        // snapshot rather than enumerating cells), so the incremental re-sync
+        // below can't see what moved. Flag them for a full re-walk instead.
+        //
+        // A rule edit needs the same treatment for a different reason: it changes
+        // which cells are covered and what they evaluate, everywhere at once,
+        // and reports no changed cells either.
+        let restores_snapshot = match &action {
+            EditAction::Undo | EditAction::Redo => true,
+            EditAction::Payloads(p) => p.payloads.iter().any(is_conditional_formatting_payload),
+            _ => false,
+        };
+        let effect = self.controller.handle_action(action);
+        self.resync_conditional_formatting(&effect, restores_snapshot);
+        effect
+    }
+
+    /// Keep the set of materialized conditional-formatting shadows in step with
+    /// the edit that just landed.
+    ///
+    /// Evaluation itself is free — an installed shadow recomputes through the
+    /// normal dirty propagation. What needs doing here is *materialization*: a
+    /// cell that just became non-empty inside a rule's range has no shadow yet,
+    /// and one that became blank has a stale one.
+    ///
+    /// A row/column insert or delete moves the ranges themselves, changing which
+    /// cells are covered, so that falls back to a full re-walk of the sheet's
+    /// non-empty cells. Structural edits are rare enough for this to be fine.
+    ///
+    /// `full` forces that re-walk for a caller that knows the incremental path
+    /// can't work — an undo or redo, which restores a whole status snapshot
+    /// without reporting which cells it touched. The shadows themselves are
+    /// installed non-undoably, so they do NOT ride the snapshot and would
+    /// otherwise be left stale.
+    fn resync_conditional_formatting(&mut self, effect: &ActionEffect, full: bool) {
+        if self
+            .controller
+            .status
+            .conditional_formatting_manager
+            .is_empty()
+        {
+            return;
+        }
+        let structural = !effect.row_inserted.is_empty()
+            || !effect.row_removed.is_empty()
+            || !effect.col_inserted.is_empty()
+            || !effect.col_removed.is_empty();
+        if full || structural {
+            self.sync_conditional_formatting_shadows(None);
+            return;
+        }
+        let touched: std::collections::HashSet<(SheetId, CellId)> = effect
+            .value_changed
+            .iter()
+            .chain(effect.cell_removed.iter())
+            .map(|c| (c.sheet_id, c.cell_id))
+            .collect();
+        if touched.is_empty() {
+            return;
+        }
+        self.sync_conditional_formatting_shadows(Some(&touched));
     }
 
     /// Install a `ShadowKind::Validation` shadow formula on every non-empty
@@ -169,6 +229,137 @@ impl Workbook {
             }));
     }
 
+    /// Install the conditional-formatting shadows for every non-empty cell
+    /// covered by a rule: one `ConditionalFormat` shadow holding the bitmask of
+    /// matching rules, plus a `ConditionalFormatScale` shadow when a colour
+    /// scale / data bar / icon set applies.
+    ///
+    /// Empty cells are intentionally left unshadowed — Excel does not format a
+    /// blank cell for most rule kinds, and shadowing every cell of a
+    /// whole-column `sqref` would mean a million ephemeral cells.
+    ///
+    /// `only` restricts the walk to specific cells — the incremental path after
+    /// an edit. `None` walks every non-empty cell, which is what load does and
+    /// what a structural change (row/column insert or delete, which moves the
+    /// covered ranges) needs.
+    ///
+    /// A cell that has a shadow but no longer matches anything gets `=0`
+    /// installed rather than being left stale.
+    fn sync_conditional_formatting_shadows(
+        &mut self,
+        only: Option<&std::collections::HashSet<(SheetId, CellId)>>,
+    ) {
+        use crate::conditional_formatting_manager::query::{rules_for_cell, shadow_formulas};
+        use crate::edit_action::{EphemeralCellInput, PayloadsAction};
+        use crate::sid_assigner::ShadowKind;
+        use logisheets_base::CellValue;
+
+        if self
+            .controller
+            .status
+            .conditional_formatting_manager
+            .is_empty()
+        {
+            return;
+        }
+
+        // Pass 1 (immutable): work out what each covered cell needs.
+        let mut pending: Vec<(usize, SheetId, CellId, ShadowKind, String)> = Vec::new();
+        {
+            let status = &self.controller.status;
+            for (sheet_idx, sheet_id) in status.sheet_info_manager.pos.iter().enumerate() {
+                if status
+                    .conditional_formatting_manager
+                    .get_sheet(*sheet_id)
+                    .is_none()
+                {
+                    continue;
+                }
+                let Some(container) = status.container.get_sheet_container(*sheet_id) else {
+                    continue;
+                };
+                for (cell_id, cell) in container.cells.iter() {
+                    if let Some(only) = only {
+                        if !only.contains(&(*sheet_id, *cell_id)) {
+                            continue;
+                        }
+                    }
+                    let blank = matches!(cell.value, CellValue::Blank);
+                    let Ok((row, col)) = status.navigator.fetch_cell_idx(sheet_id, cell_id) else {
+                        continue;
+                    };
+                    let applicable = if blank {
+                        // Excel does not format a blank cell for the rule kinds
+                        // we translate, and shadowing every cell of a
+                        // whole-column `sqref` would mean a million ephemeral
+                        // cells. A cell that just became blank still needs its
+                        // existing shadow cleared, which the `=0` below does.
+                        Vec::new()
+                    } else {
+                        rules_for_cell(
+                            &status.conditional_formatting_manager,
+                            &status.navigator,
+                            *sheet_id,
+                            row,
+                            col,
+                        )
+                    };
+                    let formulas = shadow_formulas(&applicable);
+                    for (kind, formula) in [
+                        (ShadowKind::ConditionalFormat, formulas.match_formula),
+                        (ShadowKind::ConditionalFormatScale, formulas.scale_formula),
+                    ] {
+                        match formula {
+                            Some(f) => pending.push((sheet_idx, *sheet_id, *cell_id, kind, f)),
+                            // Only bother clearing a shadow that exists.
+                            None => {
+                                if self
+                                    .controller
+                                    .sid_assigner
+                                    .find_shadow_id(*sheet_id, *cell_id, kind)
+                                    .is_some()
+                                {
+                                    pending.push((
+                                        sheet_idx,
+                                        *sheet_id,
+                                        *cell_id,
+                                        kind,
+                                        "=0".to_string(),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if pending.is_empty() {
+            return;
+        }
+
+        // Pass 2 (mut): allocate shadow ids, then install the formulas.
+        let mut payloads = Vec::with_capacity(pending.len());
+        for (sheet_idx, sheet_id, cell_id, kind, content) in pending {
+            let sid = self
+                .controller
+                .sid_assigner
+                .get_shawdow_id(sheet_id, cell_id, kind);
+            payloads.push(crate::edit_action::EditPayload::EphemeralCellInput(
+                EphemeralCellInput {
+                    sheet_idx,
+                    id: sid,
+                    content,
+                },
+            ));
+        }
+        self.controller
+            .handle_action(EditAction::Payloads(PayloadsAction {
+                payloads,
+                undoable: false,
+                init: false,
+            }));
+    }
+
     pub fn get_sheet_name_by_idx(&self, idx: usize) -> Result<String> {
         let sheet_id = self
             .controller
@@ -248,6 +439,7 @@ impl Workbook {
         // Materialize validation shadows for the loaded, non-empty cells before
         // snapshotting the init status, so the baseline includes them.
         wb.sync_data_validation_shadows();
+        wb.sync_conditional_formatting_shadows(None);
         wb.controller
             .version_manager
             .set_init_status(wb.controller.status.clone());
@@ -1082,4 +1274,17 @@ fn collect_func_ids(node: &ast::Node, out: &mut BTreeSet<FuncId>) {
         },
         ast::PureNode::Value(_) | ast::PureNode::Reference(_) => {}
     }
+}
+
+/// Whether a payload changes the conditional-formatting rule set, and therefore
+/// requires the shadows to be rebuilt across the sheet rather than incrementally.
+fn is_conditional_formatting_payload(p: &crate::edit_action::EditPayload) -> bool {
+    use crate::edit_action::EditPayload;
+    matches!(
+        p,
+        EditPayload::CreateConditionalFormattingRule(_)
+            | EditPayload::UpdateConditionalFormattingRule(_)
+            | EditPayload::MoveConditionalFormattingRule(_)
+            | EditPayload::DeleteConditionalFormattingRule(_)
+    )
 }
