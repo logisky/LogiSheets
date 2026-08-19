@@ -32,7 +32,7 @@ run cargo run --package buildtools --bin generate --all-features
 # --- JS / WASM builds (dependency order) ---
 run yarn workspace logisheets-web build
 run yarn workspace logisheets-core build
-run yarn workspace logician build
+run yarn workspace logisheets-logician build
 run yarn run run-scripts
 run yarn run wasm
 run yarn workspace logisheets-engine build

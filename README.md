@@ -86,7 +86,7 @@ The WASM wrappers expose the engine over a simple RPC surface and carry no exten
 | **logisheets-runtime** | `packages/runtime` | Headless spreadsheet runtime for Node |
 | **logisheets-engine** | `packages/engine` | Canvas-based spreadsheet UI component (MIT, fully open source) |
 | **logisheets-formula-editor** | `packages/formula-editor` | CodeMirror 6 formula editor |
-| **logician** | `packages/logician` | AI agent toolkit for operating workbooks (browser + Node) |
+| **logisheets-logician** | `packages/logician` | AI agent toolkit for operating workbooks — LLM tool definitions used by Watson and by [logisheets-mcp](https://github.com/logisky/logisheets-mcp) |
 | **logisheets-craftsmith** | `packages/craftsmith` | CLI to scaffold, check, build & pack crafts (generates the tool manifest Watson reads) |
 | **logisheets-desktop** | `packages/desktop` | Desktop app — a [Tauri](https://tauri.app/) shell that runs the web app (WASM engine) in a native window (experimental; see its [README](./packages/desktop/README.md)) |
 
