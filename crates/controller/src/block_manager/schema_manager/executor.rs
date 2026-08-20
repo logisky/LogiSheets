@@ -501,7 +501,53 @@ impl BlockSchemaExecutor {
                     true,
                 ))
             }
+            // Structural edits to a block's rows or columns.
+            //
+            // `BlockAll` is documented as being dirtied when a row or field is
+            // added or removed, and BLOCKREFS depends on nothing else — its
+            // filters scan whatever the block currently holds, so no per-cell
+            // edge can stand in for it. Only the three schema payloads above
+            // were dirtying it, which left deletion silently stale: removing a
+            // row from a block did not change `SUM(BLOCKREFS(...))` until some
+            // unrelated write happened to trigger a recalculation. A stale
+            // total that still looks like a total is the worst failure a
+            // calculation engine has.
+            //
+            // Insertion appeared to work only by accident: new rows materialize
+            // their fields' value formulas, and writing those cells reaches
+            // `BlockAll` through the per-cell edge. Rows with no computed field
+            // had the same bug. Dirty it explicitly for both directions rather
+            // than relying on a side effect.
+            EditPayload::InsertRowsInBlock(p) => {
+                Self::dirty_structural(self, ctx, p.sheet_idx, p.block_id)
+            }
+            EditPayload::DeleteRowsInBlock(p) => {
+                Self::dirty_structural(self, ctx, p.sheet_idx, p.block_id)
+            }
+            EditPayload::InsertColsInBlock(p) => {
+                Self::dirty_structural(self, ctx, p.sheet_idx, p.block_id)
+            }
+            EditPayload::DeleteColsInBlock(p) => {
+                Self::dirty_structural(self, ctx, p.sheet_idx, p.block_id)
+            }
             _ => Ok((self, false)),
         }
+    }
+
+    /// Mark a block's structure as changed, so `BlockAll` gets dirtied and the
+    /// block's external readers recompute. Returns `false` for "handled but
+    /// nothing else to do" — the payload's real work happens elsewhere; this
+    /// only records the dependency consequence.
+    fn dirty_structural<C: BlockSchemaCtx>(
+        mut this: Self,
+        ctx: &mut C,
+        sheet_idx: usize,
+        block_id: BlockId,
+    ) -> Result<(Self, bool), Error> {
+        let sheet_id = ctx
+            .fetch_sheet_id_by_index(sheet_idx)
+            .map_err(|l| BasicError::SheetIdxExceed(l))?;
+        this.dirty_blocks.insert((sheet_id, block_id));
+        Ok((this, false))
     }
 }

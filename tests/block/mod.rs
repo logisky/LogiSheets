@@ -1106,3 +1106,114 @@ fn test_save_can_resolve_block_refs_to_coordinates() {
         "BLOCKREFS should resolve to a range, got {multi:?}"
     );
 }
+
+/// Removing a row from a block must dirty `BlockAll`, or an aggregate reading
+/// that block keeps counting the row that is gone.
+///
+/// `BLOCKREFS` depends on `BlockAll` and nothing else — its filters scan
+/// whatever the block currently holds, so no per-cell edge can stand in for it.
+/// Only the three schema payloads dirtied it, so deletion left the total stale
+/// until an unrelated write happened to trigger a recalculation: a block holding
+/// 10, 20, 30 still summed to 60 after 20 was deleted.
+///
+/// Insertion only appeared to work, because new rows materialize their fields'
+/// value formulas and writing those cells reaches `BlockAll` through the
+/// per-cell edge — so a block whose fields had no formula had the bug in both
+/// directions.
+#[test]
+fn test_block_row_removal_dirties_readers() {
+    let mut workbook = Workbook::new();
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: 1,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: 3,
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+    })];
+    for (i, (k, v)) in [("k1", "10"), ("k2", "20"), ("k3", "30")]
+        .into_iter()
+        .enumerate()
+    {
+        payloads.push(EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: i,
+            col: 0,
+            input: k.to_string(),
+        }));
+        payloads.push(EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: i,
+            col: 1,
+            input: v.to_string(),
+        }));
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "t".to_string(),
+        sheet_idx: 0,
+        block_id: 1,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec!["key".to_string(), "v".to_string()],
+        render_ids: vec!["r0".to_string(), "r1".to_string()],
+        field_formulas: vec![],
+        validation_formulas: vec![],
+        editability_formulas: vec![],
+        row: true,
+    }));
+    // Readers outside the block: one aggregate over the field, one count.
+    payloads.push(EditPayload::CellInput(CellInput {
+        sheet_idx: 0,
+        row: 10,
+        col: 0,
+        content: "=SUM(BLOCKREFS(\"t\",\"*\",\"v\"))".to_string(),
+    }));
+    payloads.push(EditPayload::CellInput(CellInput {
+        sheet_idx: 0,
+        row: 10,
+        col: 1,
+        content: "=COUNT(BLOCKREFS(\"t\",\"*\",\"v\"))".to_string(),
+    }));
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+
+    let num = |wb: &mut Workbook, row: usize, col: usize| -> f64 {
+        match wb.get_sheet_by_idx(0).unwrap().get_value(row, col).unwrap() {
+            logisheets::Value::Number(n) => n,
+            other => panic!("expected a number at ({row},{col}), got {other:?}"),
+        }
+    };
+    assert_eq!(num(&mut workbook, 10, 0), 60.0);
+    assert_eq!(num(&mut workbook, 10, 1), 3.0);
+
+    // Drop the middle row.
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteRowsInBlock(DeleteRowsInBlock {
+            sheet_idx: 0,
+            block_id: 1,
+            start: 1,
+            cnt: 1,
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    // Immediately — not after some later unrelated write.
+    assert_eq!(
+        num(&mut workbook, 10, 0),
+        40.0,
+        "SUM(BLOCKREFS) still counts the deleted row"
+    );
+    assert_eq!(
+        num(&mut workbook, 10, 1),
+        2.0,
+        "COUNT(BLOCKREFS) still counts the deleted row"
+    );
+}
