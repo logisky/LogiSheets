@@ -102,10 +102,15 @@ impl NavExecutor {
                     create_block.master_row,
                     create_block.master_col,
                 )?;
-                if let CellId::BlockCell(id) = cell_id {
-                    return Err(BasicError::CreatingBlockOn(id.block_id).into());
-                }
-                let cell_id = cell_id.assert_normal_cell_id();
+                let cell_id = match cell_id {
+                    CellId::NormalCell(c) => c,
+                    CellId::BlockCell(id) => {
+                        return Err(BasicError::CreatingBlockOn(id.block_id).into());
+                    }
+                    CellId::EphemeralCell(id) => {
+                        return Err(BasicError::CreatingBlockOnEphemeral(id).into());
+                    }
+                };
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id);
                 if sheet_nav.data.has_block_id(&create_block.id) {
                     return Err(BasicError::BlockIdHasAlreadyExisted(create_block.id).into());
@@ -129,10 +134,15 @@ impl NavExecutor {
                 let cell_id = self
                     .nav
                     .fetch_cell_id(&sheet_id, p.master_row, p.master_col)?;
-                if let CellId::BlockCell(id) = cell_id {
-                    return Err(BasicError::CreatingBlockOn(id.block_id).into());
-                }
-                let cell_id = cell_id.assert_normal_cell_id();
+                let cell_id = match cell_id {
+                    CellId::NormalCell(c) => c,
+                    CellId::BlockCell(id) => {
+                        return Err(BasicError::CreatingBlockOn(id.block_id).into());
+                    }
+                    CellId::EphemeralCell(id) => {
+                        return Err(BasicError::CreatingBlockOnEphemeral(id).into());
+                    }
+                };
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id);
                 if sheet_nav.data.has_block_id(&p.id) {
                     return Err(BasicError::BlockIdHasAlreadyExisted(p.id).into());

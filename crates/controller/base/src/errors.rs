@@ -59,6 +59,8 @@ pub enum BasicError {
     SheetIdxExceed(usize),
     #[error("creating block on an existed block: {0}")]
     CreatingBlockOn(BlockId),
+    #[error("a block must be anchored on a grid cell, not an ephemeral one: {0}")]
+    CreatingBlockOnEphemeral(EphemeralId),
     #[error("ext ref id not found: {0}")]
     ExtRefIdNotFound(ExtRefId),
     #[error("ephemeral cell in reference is not allowed: {0}")]

@@ -614,6 +614,48 @@ mod tests {
         assert!((output - 3.2).abs() < 1e-10);
     }
 
+    /// Malformed formulas must come back as `None`, never as a panic.
+    ///
+    /// The climber used to `panic!()` on four "cannot happen" states — an
+    /// expression starting with an infix operator, a non-operator where an
+    /// operator was expected, and so on. Those are unreachable through the
+    /// grammar, but a bare panic in the formula path takes down the whole engine
+    /// instance, and an agent writing formulas hits this path constantly. This
+    /// pins the contract: parsing is total over arbitrary input.
+    #[test]
+    fn malformed_formulas_do_not_panic() {
+        let parser = Parser {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
+        let mut context = Context {
+            book_name: "book",
+            id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
+        };
+
+        // Operators in positions the grammar does not allow, unbalanced
+        // delimiters, stray tokens, empty and degenerate input.
+        let cases = [
+            "*5", "+", ")", "(", "%", "%5", "5%%", "--5", "1 2", "1++2", "1**2",
+            ",", "1,,2", "SUM(,)", "SUM(1,)", "^2", "2^", "<", "<>", "1<>",
+            "&", "1&", "A1:", ":A1", "A1::A2", "(1", "1)", "((1)", "(1))",
+            "SUM(", "SUM)", "IF(", "\"", "'", ".", "..", "1..2", "-", "!", "@",
+            "~", "`", "[", "]", "{", "}", ";", "?", "A1!B1", "!A1", "Sheet1!!A1",
+            "BLOCKREF()", "BLOCKREFS(1,2)", "", " ", "1 +", "+ 1",
+        ];
+        for case in cases {
+            // The contract is "no panic"; `None` or an AST are both fine.
+            let _ = parser.parse(case, 1, &mut context);
+        }
+
+        // Deep nesting, to be sure the recursion bottoms out rather than
+        // blowing up on a shape no human would write but an agent might.
+        let deep = format!("{}1{}", "(".repeat(64), ")".repeat(64));
+        let _ = parser.parse(&deep, 1, &mut context);
+        let long = format!("1{}", "+1".repeat(256));
+        let _ = parser.parse(&long, 1, &mut context);
+    }
+
     #[test]
     fn parse_index_func_test() {
         let parser = Parser {};

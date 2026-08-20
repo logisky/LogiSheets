@@ -28,12 +28,6 @@ pub enum CellId {
 }
 
 impl CellId {
-    pub fn assert_normal_cell_id(self) -> NormalCellId {
-        match self {
-            CellId::NormalCell(n) => n,
-            _ => panic!("this cell id should be normal cell id"),
-        }
-    }
 }
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]

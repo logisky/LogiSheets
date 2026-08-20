@@ -34,7 +34,7 @@ where
     let keys = fetcher
         .get_all_keys_by_block(sheet_id, block_id)
         .into_iter()
-        .map(|(t, _, _)| Value::Text(t));
+        .map(|(t, _, _)| t);
     let fields = fetcher
         .get_all_fields_by_block(sheet_id, block_id)
         .into_iter();
@@ -68,7 +68,7 @@ pub(crate) fn calc_matrix<C, IKeys, IFields, F>(
 ) -> CalcVertex
 where
     C: Connector,
-    IKeys: Iterator<Item = Value>,
+    IKeys: Iterator<Item = String>,
     IFields: Iterator<Item = String>,
     F: Fn(
         &mut C,
@@ -83,7 +83,7 @@ where
     }
     let key_condition = key_condition.unwrap();
     let key_values = keys
-        .filter(|key| match_condition(&key_condition, key))
+        .filter(|key| match_condition(&key_condition, &Value::Text(key.clone())))
         .collect::<Vec<_>>();
 
     let field_condition = parse_condition(&field_condition_str)
@@ -97,8 +97,7 @@ where
         .collect::<Vec<_>>();
 
     let mut result = vec![];
-    for k in key_values.into_iter() {
-        let key = k.assert_text();
+    for key in key_values.into_iter() {
         let mut values = vec![];
         for f in field_values.iter() {
             let v = resolve(fetcher, &key, f);

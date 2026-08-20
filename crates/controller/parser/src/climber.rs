@@ -105,14 +105,26 @@ impl<R: RuleType> Climber<R> {
         M: FnMut(Pair<'i, R>, T) -> T,
         N: FnMut(T, Pair<'i, R>) -> T,
     {
-        let pair = pairs.next().expect("");
+        // An empty stream has no pair to hand `primary`, so there is no value
+        // to return and this one genuinely cannot degrade. The grammar always
+        // yields at least one pair for an expression; the message is here so a
+        // future grammar change is diagnosable rather than an empty panic.
+        let pair = pairs
+            .next()
+            .expect("climber: expression with no tokens — grammar guarantees at least one");
         match self.ops.get(&pair.as_rule()) {
             Some((p, Assoc::Prefix)) => {
                 let rhs = self.expr(pairs, primary, infix, prefix, suffix, *p - 1);
                 prefix(pair, rhs)
             }
             None => primary(pair),
-            _ => panic!(),
+            // An expression starting with an infix or postfix operator. The
+            // grammar rejects those before we get here, so reaching this means
+            // the grammar and the operator table have drifted apart. Treat the
+            // token as a primary and let the visitor make of it what it will —
+            // a malformed formula should surface as a formula error, not take
+            // the engine's thread down.
+            Some(_) => primary(pair),
         }
     }
 
@@ -134,7 +146,10 @@ impl<R: RuleType> Climber<R> {
         match pairs.peek() {
             Some(pair) => match self.ops.get(&pair.as_rule()) {
                 Some((prec, _)) => *prec,
-                None => panic!(),
+                // Not an operator where one was expected. Binding power 0 ends
+                // the climb, exactly as end-of-input does, rather than panicking
+                // on a token the operator table doesn't know.
+                None => 0,
             },
             None => 0,
         }
@@ -156,18 +171,30 @@ impl<R: RuleType> Climber<R> {
         M: FnMut(Pair<'i, R>, T) -> T,
         N: FnMut(T, Pair<'i, R>) -> T,
     {
-        let pair = pairs.next().unwrap();
+        let pair = match pairs.next() {
+            Some(pair) => pair,
+            // `led` is only entered after `lbp` peeked a token, so the stream
+            // cannot be empty here; yield the left side rather than unwrapping.
+            None => return lhs,
+        };
         match self.ops.get(&pair.as_rule()) {
             Some((_, Assoc::Postfix)) => suffix(lhs, pair),
             Some((prec, assoc)) => {
                 let rhs = match *assoc {
-                    Assoc::Left => self.expr(pairs, primary, infix, prefix, suffix, *prec),
+                    // A prefix operator in infix position. Unreachable via the
+                    // grammar; bind it like every other infix operator in the
+                    // table rather than dying on it.
                     Assoc::Right => self.expr(pairs, primary, infix, prefix, suffix, *prec - 1),
-                    _ => panic!(),
+                    Assoc::Left | Assoc::Prefix | Assoc::Postfix => {
+                        self.expr(pairs, primary, infix, prefix, suffix, *prec)
+                    }
                 };
                 infix(lhs, pair, rhs)
             }
-            _ => panic!(),
+            // A non-operator in operator position — `lbp` returned 0 for it, so
+            // the climb should already have stopped. Keep the left side and let
+            // the stray token be ignored instead of panicking.
+            None => lhs,
         }
     }
 }
