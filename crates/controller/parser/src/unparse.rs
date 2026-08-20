@@ -106,6 +106,12 @@ impl Stringify for PureNode {
     }
 }
 
+/// `(0, 0)` -> `A1`. Used when a BlockRef is resolved to coordinates for a
+/// reader that does not know the BLOCKREF functions.
+fn a1(row: usize, col: usize) -> String {
+    format!("{}{}", logisheets_base::index_to_column_label(col), row + 1)
+}
+
 impl Stringify for BlockRefNode {
     fn unparse<T>(&self, fetcher: &mut T, curr_sheet: SheetId, shift: CellShift) -> Result<String>
     where
@@ -120,6 +126,14 @@ impl Stringify for BlockRefNode {
                 key,
             } => {
                 let key_str = key.unparse(fetcher, curr_sheet, shift)?;
+                // A reader that has no BLOCKREF function needs coordinates. The
+                // fetcher decides: it returns `Some` only for an export that
+                // asked for resolution, and only for a literal key.
+                if let Some((row, col)) =
+                    fetcher.resolve_block_ref_cell(*sheet_id, *block_id, *field_id, &key_str)
+                {
+                    return Ok(a1(row, col));
+                }
                 let field_name = fetcher
                     .fetch_block_field_name_by_id(*sheet_id, *block_id, *field_id)
                     .unwrap_or_else(|| String::from("#REF!"));
@@ -147,6 +161,11 @@ impl Stringify for BlockRefNode {
             } => {
                 let kc = key_condition.unparse(fetcher, curr_sheet, shift)?;
                 let fc = field_condition.unparse(fetcher, curr_sheet, shift)?;
+                if let Some(((r1, c1), (r2, c2))) =
+                    fetcher.resolve_block_refs_range(*sheet_id, *block_id, &kc, &fc)
+                {
+                    return Ok(format!("{}:{}", a1(r1, c1), a1(r2, c2)));
+                }
                 if *by_block {
                     Ok(format!(
                         "BLOCKREFSB({}, {}, {}, {})",

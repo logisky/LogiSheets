@@ -4,6 +4,7 @@ use super::{cell_positioner::CellPositioner, worksheet::Worksheet};
 use crate::{
     CellInfo, Controller,
     controller::{
+        FormulaFormat,
         display::{
             BlockDataRow, BlockField, BlockInfo, CellCoordinateWithSheet, CellPosition,
             ShadowCellInfo, SheetInfo, TempCellChange, TempStatusDiff, Value as DisplayValue,
@@ -503,8 +504,15 @@ impl Workbook {
     }
 
     #[inline]
+    /// Save, keeping block formulas in their readable named form.
     pub fn save(&self) -> Result<Vec<u8>> {
         self.controller.save()
+    }
+
+    /// Save, choosing how block formulas are written. Use
+    /// [`FormulaFormat::Coordinates`] for a file Excel has to recalculate.
+    pub fn save_with_format(&self, format: FormulaFormat) -> Result<Vec<u8>> {
+        self.controller.save_with_format(format)
     }
 
     #[inline]

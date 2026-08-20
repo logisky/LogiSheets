@@ -41,7 +41,7 @@ use logisheets_base::CellId;
 use logisheets_base::SheetId;
 
 pub use controller::{
-    Controller,
+    Controller, FormulaFormat,
     display::{Comment, CommentMentionInfo, CommentNote, CommentPerson, MergeCell, Value},
     style::{Border, BorderPr, Fill, Font, Style},
     take_last_error,

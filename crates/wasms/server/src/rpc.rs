@@ -226,7 +226,12 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             ok_to_js(&controller::read_file(&mut mgr, id, params.name, &params.content))
         }
         Message::SaveWorkbook(params) => {
-            ok_to_js(&controller::save_file(&mut mgr, id, params.app_data))
+            ok_to_js(&controller::save_file(
+                &mut mgr,
+                id,
+                params.app_data,
+                params.resolve_block_refs.unwrap_or(false),
+            ))
         }
         Message::GetCellId(params) => res_to_js(controller::get_cell_id(
             &mut mgr,

@@ -166,10 +166,16 @@ export class Workbook {
      * @param appData opaque per-document JSON the host owns (craft state and
      *                friends). It round-trips through the file; pass what the
      *                engine's `getAppData` gave you, or nothing.
+     * @param resolveBlockRefs write block formulas as ordinary A1 references
+     *                instead of `BLOCKREF(...)`. Off by default: the named form
+     *                is readable and reopens here intact, but no other
+     *                spreadsheet knows those functions, so a file Excel has to
+     *                recalculate needs coordinates. One-way — see the note on
+     *                the engine's `FormulaFormat`.
      */
-    public save(appData = ''): Uint8Array {
+    public save(appData = '', resolveBlockRefs = false): Uint8Array {
         const r = handle(
-            {method: 'saveWorkbook', value: {appData}},
+            {method: 'saveWorkbook', value: {appData, resolveBlockRefs}},
             this.id
         ) as SaveFileResult
         if (r.code !== 0) {
@@ -185,14 +191,18 @@ export class Workbook {
      * Serialize and write the workbook to `path`. Defaults to the path it was
      * loaded from, so a load -> edit -> `saveAs()` round-trip needs no argument.
      */
-    public async saveAs(path?: string, appData = ''): Promise<void> {
+    public async saveAs(
+        path?: string,
+        appData = '',
+        resolveBlockRefs = false
+    ): Promise<void> {
         const target = path ?? this.path
         if (target === undefined) {
             throw new Error(
                 'saveAs: no path given and this workbook was not loaded from one'
             )
         }
-        await writeFile(resolve(target), this.save(appData))
+        await writeFile(resolve(target), this.save(appData, resolveBlockRefs))
     }
 
     /** Undo the most recent transaction. Returns whether anything was undone. */

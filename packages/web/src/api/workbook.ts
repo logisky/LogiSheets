@@ -560,8 +560,22 @@ export class Workbook {
         ) as ReturnCode
     }
 
-    public save(data: string): SaveFileResult {
-        return rpc('saveWorkbook', {appData: data}, this._id)
+    /**
+     * Serialize to .xlsx bytes.
+     *
+     * `resolveBlockRefs` writes block formulas as ordinary A1 references
+     * instead of `BLOCKREF(...)`. Off by default: the named form is readable
+     * and reopens here intact, but no other spreadsheet knows those functions,
+     * so a file Excel must recalculate needs the coordinates. One-way — a
+     * resolved `BLOCKREFS` becomes a plain range, which LogiSheets does not
+     * parse back when it straddles a block.
+     */
+    public save(data: string, resolveBlockRefs = false): SaveFileResult {
+        return rpc(
+            'saveWorkbook',
+            {appData: data, resolveBlockRefs},
+            this._id
+        )
     }
 
     public getAppData(): readonly AppData[] {

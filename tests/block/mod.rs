@@ -998,3 +998,111 @@ fn test_blockref_readers_recompute_after_reload() {
         "BLOCKREFS reader went stale after reload"
     );
 }
+
+/// `FormulaFormat::Coordinates` must turn BLOCKREF / BLOCKREFS into ordinary A1
+/// references, because no other spreadsheet knows those functions — a file Excel
+/// recalculates would otherwise fill with `#NAME?`. The default keeps the named
+/// form, which is the readable one and the one that survives rows moving.
+#[test]
+fn test_save_can_resolve_block_refs_to_coordinates() {
+    let mut workbook = Workbook::new();
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "r1".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "10".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 0,
+                input: "r2".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 1,
+                input: "20".to_string(),
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "t".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["key".to_string(), "v".to_string()],
+                render_ids: vec!["r0".to_string(), "r1".to_string()],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 0,
+                content: "=BLOCKREF(\"t\",\"r2\",\"v\")".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 1,
+                content: "=SUM(BLOCKREFS(\"t\",\"*\",\"v\"))".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    // Default: the named form is preserved.
+    let mut named = workbook.save().expect("save named");
+    let reopened = Workbook::from_file(&mut named, "named".to_string()).expect("reopen named");
+    let ws = reopened.get_sheet_by_idx(0).unwrap();
+    assert!(
+        ws.get_formula(5, 0).unwrap().contains("BLOCKREF"),
+        "default save must keep BLOCKREF, got {:?}",
+        ws.get_formula(5, 0)
+    );
+
+    // Coordinates: A1 refs, and no LogiSheets-only function left behind.
+    let bytes = workbook
+        .save_with_format(logisheets::FormulaFormat::Coordinates)
+        .expect("save resolved");
+    let mut bytes = bytes;
+    let reopened =
+        Workbook::from_file(&mut bytes, "resolved".to_string()).expect("reopen resolved");
+    let ws = reopened.get_sheet_by_idx(0).unwrap();
+
+    // `v` of row key "r2" is the block's (1,1) => sheet B2.
+    let single = ws.get_formula(5, 0).unwrap();
+    assert_eq!(single, "B2", "BLOCKREF should resolve to a cell, got {single:?}");
+
+    // Every row of field `v` is B1:B2.
+    let multi = ws.get_formula(5, 1).unwrap();
+    assert!(
+        multi.contains("B1:B2") && !multi.contains("BLOCKREF"),
+        "BLOCKREFS should resolve to a range, got {multi:?}"
+    );
+}

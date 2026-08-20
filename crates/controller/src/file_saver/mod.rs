@@ -1,5 +1,5 @@
 use logisheets_base::{
-    BlockFieldId, BlockId, ColId, Cube, RowId, SheetId, TextId, errors::BasicError,
+    BlockFieldId, BlockId, CellId, ColId, Cube, RowId, SheetId, TextId, errors::BasicError,
     index_fetcher::IndexFetcherTrait, name_fetcher::NameFetcherTrait,
 };
 use logisheets_workbook::workbook::Wb;
@@ -7,6 +7,7 @@ use logisheets_workbook::workbook::Wb;
 use crate::{
     Controller,
     block_manager::schema_manager::SchemaManager,
+    container::DataContainer,
     cube_manager::CubeManager,
     ext_book_manager::ExtBooksManager,
     ext_ref_manager::ExtRefManager,
@@ -29,7 +30,14 @@ mod utils;
 mod workbook;
 mod worksheet;
 
-pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> {
+/// Serialize the controller into a workbook.
+///
+/// `resolve_block_refs` chooses how block formulas are written. See
+/// `FormulaFormat` on the public API for what each choice means.
+pub fn save_file(
+    controller: &Controller,
+    resolve_block_refs: bool,
+) -> std::result::Result<Wb, SaveError> {
     let func_manager = &controller.status.func_id_manager;
     let external_links_manager = &controller.status.external_links_manager;
     let text_id_manager = &controller.status.text_id_manager;
@@ -67,6 +75,8 @@ pub fn save_file(controller: &Controller) -> std::result::Result<Wb, SaveError> 
         _formula_manager: formula_manager,
         sheet_pos_manager,
         block_schema_manager,
+        container: data_container,
+        resolve_block_refs,
     };
 
     save_workbook(
@@ -115,6 +125,11 @@ pub struct Saver<'a> {
     pub ext_ref_manager: &'a ExtRefManager,
     pub sheet_pos_manager: &'a SheetInfoManager,
     pub block_schema_manager: &'a SchemaManager,
+    /// Needed to read block key cells when resolving a BLOCKREF to coordinates.
+    pub container: &'a DataContainer,
+    /// When set, `BLOCKREF` / `BLOCKREFS` are written as ordinary A1 references
+    /// instead of function calls — see `FormulaFormat`.
+    pub resolve_block_refs: bool,
 }
 
 impl<'a> IndexFetcherTrait for Saver<'a> {
@@ -244,6 +259,104 @@ impl<'a> NameFetcherTrait for Saver<'a> {
     ) -> Option<String> {
         self.block_schema_manager
             .fetch_field_name(sheet_id, block_id, field_id)
+    }
+
+    fn resolve_block_ref_cell(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field_id: BlockFieldId,
+        key: &str,
+    ) -> Option<(usize, usize)> {
+        if !self.resolve_block_refs {
+            return None;
+        }
+        // Only a literal key names one row. Unparse renders a string literal
+        // with its quotes, so strip them; anything else is a computed
+        // expression and keeps the BLOCKREF form.
+        let key = key.strip_prefix('"')?.strip_suffix('"')?;
+        let (_, cell_id) = self.resolve_key(sheet_id, block_id, key)?;
+        let target = self
+            .block_schema_manager
+            .partially_resolve_by_field_id(sheet_id, block_id, cell_id, field_id)?;
+        self.navigator
+            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(target))
+            .ok()
+    }
+
+    fn resolve_block_refs_range(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        key_condition: &str,
+        field_condition: &str,
+    ) -> Option<((usize, usize), (usize, usize))> {
+        if !self.resolve_block_refs {
+            return None;
+        }
+        // Only the statically-decidable shape: every row of one named field.
+        // A real filter would have to be evaluated, and the rectangle it picks
+        // out need not even be contiguous.
+        if key_condition != "\"*\"" {
+            return None;
+        }
+        let field = field_condition.strip_prefix('"')?.strip_suffix('"')?;
+        let bp = self
+            .navigator
+            .get_block_place(&sheet_id, &block_id)
+            .ok()?
+            .clone();
+        let keys = self
+            .block_schema_manager
+            .get_all_key_cell_ids_by_block(sheet_id, block_id, &bp)?;
+        let first = keys.first()?;
+        let last = keys.last()?;
+        let top = self
+            .block_schema_manager
+            .partially_resolve_by_block(sheet_id, block_id, *first, &field.to_string())?;
+        let bottom = self
+            .block_schema_manager
+            .partially_resolve_by_block(sheet_id, block_id, *last, &field.to_string())?;
+        let top = self
+            .navigator
+            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(top))
+            .ok()?;
+        let bottom = self
+            .navigator
+            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(bottom))
+            .ok()?;
+        Some((top, bottom))
+    }
+}
+
+impl<'a> Saver<'a> {
+    /// The block key cell whose value equals `key`, mirroring how the calc
+    /// engine resolves a BLOCKREF at evaluation time.
+    fn resolve_key(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        key: &str,
+    ) -> Option<(SheetId, logisheets_base::BlockCellId)> {
+        let bp = self
+            .navigator
+            .get_block_place(&sheet_id, &block_id)
+            .ok()?
+            .clone();
+        let ids = self
+            .block_schema_manager
+            .get_all_key_cell_ids_by_block(sheet_id, block_id, &bp)?;
+        let text = |id: logisheets_base::TextId| {
+            self.text_id_manager.get_string(&id).unwrap_or_default()
+        };
+        ids.into_iter().find_map(|id| {
+            let cell = self.container.get_cell(sheet_id, &CellId::BlockCell(id))?;
+            if cell.value.to_string(&text) == key {
+                Some((sheet_id, id))
+            } else {
+                None
+            }
+        })
     }
 }
 
