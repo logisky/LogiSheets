@@ -84,3 +84,12 @@ glob = "0.3.1"
 logiscript = { path = "crates/logiscript" }
 logisheets_base = { workspace = true }
 proptest = "1"
+
+# Cargo ignores `[profile.*]` in non-root workspace members, so the wasm crate's
+# own request for a size-optimized build was silently dropped (it only produced a
+# warning). Declaring it here as a per-package override is the form that applies.
+# Scoped to the wasm crate on purpose: the native crates keep the default
+# opt-level, since trading their speed for size buys nothing.
+[profile.release.package.logisheets_wasm_server]
+opt-level = "s"
+

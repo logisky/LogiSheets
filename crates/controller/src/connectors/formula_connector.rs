@@ -50,7 +50,7 @@ pub struct FormulaConnector<'a> {
 }
 
 impl<'a> FormulaConnector<'a> {
-    fn get_id_fetcher(&mut self) -> IdFetcher {
+    fn get_id_fetcher(&mut self) -> IdFetcher<'_> {
         IdFetcher {
             sheet_id_manager: self.sheet_id_manager,
             text_id_manager: self.text_id_manager,

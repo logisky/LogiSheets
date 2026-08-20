@@ -18,6 +18,13 @@ pub mod prelude {
     pub use super::ooxml::comments::*;
     pub use super::ooxml::complex_types::*;
     pub use super::ooxml::drawing_part::*;
+    // Both modules define a `CtMarker` — same XML elements, different field
+    // types (`PlainTextU32` vs the xdr-typed ones). The globs made which one
+    // you got depend on their order here, and rustc kept `complex_types`',
+    // which has no users at all. Name the one the drawing code actually
+    // builds; an explicit re-export beats a glob, so this also settles the
+    // ambiguity rather than silencing it.
+    pub use super::ooxml::drawing_part::CtMarker;
     pub use super::ooxml::external_links::*;
     pub use super::ooxml::persons::*;
     pub use super::ooxml::pivot_cache_definition::*;

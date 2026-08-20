@@ -7,7 +7,6 @@ mod exclusive_connector;
 mod field_render_connector;
 mod formula_connector;
 mod id_fetcher;
-mod index_fetcher;
 mod name_fetcher;
 mod navigator_connector;
 mod range_connector;

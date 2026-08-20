@@ -648,7 +648,7 @@ impl Workbook {
         Ok(values)
     }
 
-    pub fn get_sheet_by_name(&self, name: &str) -> Result<Worksheet> {
+    pub fn get_sheet_by_name(&self, name: &str) -> Result<Worksheet<'_>> {
         let id = self.controller.get_sheet_id_by_name(name);
         if id.is_none() {
             return Err(BasicError::SheetNameNotFound(name.to_string()).into());
@@ -665,7 +665,7 @@ impl Workbook {
             .ok_or(BasicError::UnavailableSheetId(sheet_id).into())
     }
 
-    pub fn get_sheet_by_id(&self, sheet_id: SheetId) -> Result<Worksheet> {
+    pub fn get_sheet_by_id(&self, sheet_id: SheetId) -> Result<Worksheet<'_>> {
         let positioner = self.get_cell_positioner(sheet_id);
         let c = &self.controller;
         Ok(Worksheet {
@@ -688,7 +688,7 @@ impl Workbook {
         }
     }
 
-    pub fn get_sheet_by_idx(&self, idx: usize) -> Result<Worksheet> {
+    pub fn get_sheet_by_idx(&self, idx: usize) -> Result<Worksheet<'_>> {
         match self.controller.get_sheet_id_by_idx(idx) {
             Some(sheet_id) => Ok(Worksheet {
                 sheet_id,

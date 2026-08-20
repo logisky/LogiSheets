@@ -26,7 +26,7 @@ pub mod display;
 mod executor;
 pub mod status;
 pub mod style;
-use crate::checkpoint_manager::{CheckpointManager, CheckpointMeta};
+use crate::checkpoint_manager::CheckpointManager;
 use crate::edit_action::{
     ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, SheetCellId, SheetColId,
     SheetRowId, StatusCode, WorkbookUpdateType,

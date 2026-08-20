@@ -3500,7 +3500,7 @@ fn conditional_formatting_resyncs_after_edits() {
 fn conditional_format_reaches_cell_info_merged() {
     use crate::edit_action::CellInput;
     use logisheets_workbook::prelude::{
-        CtCfRule, CtColor, CtDxf, CtDxfs, CtFill, CtFont, CtPatternFill, PlainTextString,
+        CtColor, CtDxf, CtDxfs, CtFill, CtFont, CtPatternFill, PlainTextString,
         StPatternType, Wb, write,
     };
 

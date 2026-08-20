@@ -1,5 +1,5 @@
 use imbl::{Vector, hashmap::HashMap};
-use logisheets_base::{AuthorId, ExtBookId, FuncId, SheetId, TextId};
+use logisheets_base::{ExtBookId, FuncId, SheetId, TextId};
 use num::{Num, NumCast};
 use std::ops::AddAssign;
 
@@ -10,7 +10,6 @@ pub type SheetIdManager = IdManager<SheetId>;
 pub type BookIdManager = IdManager<ExtBookId>;
 pub type TextIdManager = IdManager<TextId>;
 pub type FuncIdManager = IdManager<FuncId>;
-pub type AuthorIdManager = IdManager<AuthorId>;
 pub type NameIdManager = name_id_manager::NameIdManager;
 
 mod name_id_manager;

@@ -27,7 +27,7 @@ pub enum ConditionValue {
     Text(String), // todo if using reference is available
 }
 
-pub fn parse_condition(text: &str) -> Option<Condition> {
+pub fn parse_condition(text: &str) -> Option<Condition<'_>> {
     let text = text.trim();
     let mut chars = text.chars().peekable();
     let first = chars.next()?;

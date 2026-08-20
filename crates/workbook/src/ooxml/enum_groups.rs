@@ -1,3 +1,10 @@
+//! DrawingML substitution groups and the text-run types they choose between
+//! (§20.1.10 and friends).
+//!
+//! Unused for the same reason as `drawings`: transcribed schema waiting for a
+//! shape model. See that module's note.
+#![allow(dead_code)]
+
 use super::complex_types::PlainTextString;
 use super::defaults::string_0_percent;
 use super::defaults::string_100_percent;

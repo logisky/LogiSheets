@@ -1,4 +1,3 @@
-use crate::lock::locked_write;
 use imbl::HashMap;
 use logisheets_base::{
     BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId, errors::BasicError,

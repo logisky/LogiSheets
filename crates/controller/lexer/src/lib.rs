@@ -6,7 +6,7 @@ use tracing::error;
 #[grammar = "grammar.pest"]
 pub struct FormulaParser;
 
-pub fn lex(s: &str) -> Option<pest::iterators::Pair<Rule>> {
+pub fn lex(s: &str) -> Option<pest::iterators::Pair<'_, Rule>> {
     let result = FormulaParser::parse(Rule::start, s);
     match result {
         Ok(mut r) => {
