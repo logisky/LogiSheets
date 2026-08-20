@@ -1,2 +1,19 @@
-INPUT C5    =CONCATENATE(2040,13)
+# Excel's CONCATENATE takes 1..255 arguments. This engine required exactly two,
+# so the common `=CONCATENATE(a," ",b)` returned an error.
+INPUT C5 =CONCATENATE(2040,13)
 CHECKSTR C5 204013
+
+INPUT C6 =CONCATENATE("a")
+CHECKSTR C6 a
+
+INPUT C7 =CONCATENATE("a","-","b","-","c")
+CHECKSTR C7 a-b-c
+
+INPUT A1 apple
+INPUT A2 banana
+INPUT C8 =CONCATENATE(A1," ",A2)
+CHECKSTR C8 apple banana
+
+# Numbers and logicals stringify the way the & operator does.
+INPUT C9 =CONCATENATE(1,TRUE)
+CHECKSTR C9 1TRUE

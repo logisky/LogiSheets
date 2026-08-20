@@ -11,7 +11,6 @@ mod bonds;
 mod boolean;
 mod choose;
 mod complex;
-mod concatenate;
 mod condition;
 mod count;
 mod countblank;
@@ -191,7 +190,10 @@ where
         "COMBIN" => permutation::calc_combine(args, fetcher),
         "COMPLEX" => complex::calc(args, fetcher),
         "CONCAT" => text::calc_concat(args, fetcher),
-        "CONCATENATE" => concatenate::calc(args, fetcher),
+        // Excel allows 1..255 arguments; the shared implementation handles any
+        // count. (CONCATENATE predates CONCAT and differs only in not being
+        // documented to take ranges; accepting them is harmless for text.)
+        "CONCATENATE" => text::calc_concat(args, fetcher),
         "COS" => scalar_number::calc_cos(args, fetcher),
         "COT" => scalar_number::calc_cot(args, fetcher),
         "COTH" => scalar_number::calc_coth(args, fetcher),
