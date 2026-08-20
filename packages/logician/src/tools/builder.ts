@@ -33,6 +33,7 @@ import type {
     Transaction,
 } from 'logisheets-web/pure'
 import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool.js'
+import {transactionFailure} from './effect.js'
 
 /** Narrow the workbook client to the concrete `Client` from logisheets-web.
  *  `ctx.workbook: WorkbookClient` is already a type alias for `Client` —
@@ -44,7 +45,7 @@ function asClient(ctx: ToolContext): Client {
 /** Throw a typed error if a transaction's status came back as 'err'. */
 function ensureOk(effect: ActionEffect, label: string): void {
     if (effect.status.type === 'err') {
-        throw new Error(`${label}: status code ${effect.status.value}`)
+        throw transactionFailure(label, effect)
     }
 }
 

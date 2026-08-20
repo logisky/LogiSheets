@@ -14,6 +14,7 @@ import type {
     Transaction,
 } from 'logisheets-web/pure'
 import type {Tool, ToolContext} from '../tool.js'
+import {transactionFailure} from './effect.js'
 
 function asClient(ctx: ToolContext): Client {
     return ctx.workbook as Client
@@ -27,7 +28,7 @@ async function commit(
     const r = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(r)) throw new Error(`${label}: ${r.msg}`)
     if (r.status.type === 'err')
-        throw new Error(`${label}: status code ${r.status.value}`)
+        throw transactionFailure(label, r)
 }
 
 /** "#RRGGBB" / "RRGGBB" / "AARRGGBB" → {red,green,blue} (fills). */

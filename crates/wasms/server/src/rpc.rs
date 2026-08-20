@@ -189,15 +189,23 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         }
         Message::HandleTransaction(params) => {
             let effect = controller::handle_transaction(&mut mgr, id, params.transaction);
-            // If the engine rejected the tx, surface the captured error string
-            // to the browser console instead of dropping it into stdout (which
-            // is a no-op in wasm).
+            // The reason now travels on the effect itself (`error_message`), so
+            // every host gets it. Still mirror it to the browser console, where
+            // it is the thing a developer actually reads, and drain
+            // `take_last_error` either way so a rejection can't leak into the
+            // next transaction's report.
             if let logisheets_rs::StatusCode::Err(_) = effect.status {
-                if let Some(msg) = logisheets_rs::take_last_error() {
+                let msg = effect
+                    .error_message
+                    .clone()
+                    .or_else(logisheets_rs::take_last_error);
+                if let Some(msg) = msg {
                     web_sys::console::error_1(
                         &format!("[handle_transaction] engine error: {}", msg).into(),
                     );
                 }
+            } else {
+                let _ = logisheets_rs::take_last_error();
             }
             ok_to_js(&effect)
         }

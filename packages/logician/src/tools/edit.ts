@@ -19,6 +19,7 @@ import type {
     Value,
 } from 'logisheets-web/pure'
 import type {JSONSchema, Tool, ToolContext} from '../tool.js'
+import {transactionFailure} from './effect.js'
 
 /** Narrow ToolContext.workbook to the concrete `Client` from
  *  logisheets-web. `WorkbookClient` is a type alias for `Client` —
@@ -49,7 +50,7 @@ async function commitTransaction(
         throw new Error(`${label}: ${result.msg}`)
     }
     if (result.status.type === 'err') {
-        throw new Error(`${label}: status code ${result.status.value}`)
+        throw transactionFailure(label, result)
     }
 }
 
@@ -395,9 +396,7 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                 throw new Error(`preview_changes: ${result.msg}`)
             }
             if (result.status.type === 'err') {
-                throw new Error(
-                    `preview_changes: status code ${result.status.value}`
-                )
+                throw transactionFailure('preview_changes', result)
             }
             const diffRes = await client.getTempStatusChanges()
             if (isErrorMessage(diffRes)) {

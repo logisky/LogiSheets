@@ -309,8 +309,7 @@ impl Controller {
             }
             Err(e) => {
                 record_last_error(&e);
-                println!("{:?}", e.to_string());
-                ActionEffect::from_err(1) // todo
+                ActionEffect::from_err_with_message(1, Some(e.to_string()))
             }
         }
     }
@@ -442,8 +441,8 @@ impl Controller {
                         }
                     }
                     Err(e) => {
-                        println!("{:?}", e.to_string());
-                        ActionEffect::from_err(1) // todo
+                        record_last_error(&e);
+                        ActionEffect::from_err_with_message(1, Some(e.to_string()))
                     }
                 }
             }
@@ -483,8 +482,8 @@ impl Controller {
                     col_removed: vec![],
                     header_updated: HashSet::new(),
                 };
-                if let Ok(result) = executor.calc() {
-                    ActionEffect {
+                match executor.calc() {
+                    Ok(result) => ActionEffect {
                         version: result.version_manager.version(),
                         async_tasks: vec![],
                         status: StatusCode::Ok(WorkbookUpdateType::Cell),
@@ -510,9 +509,11 @@ impl Controller {
                             })
                             .collect(),
                         ..Default::default()
+                    },
+                    Err(e) => {
+                        record_last_error(&e);
+                        ActionEffect::from_err_with_message(1, Some(e.to_string()))
                     }
-                } else {
-                    ActionEffect::from_err(1)
                 }
             }
         }
