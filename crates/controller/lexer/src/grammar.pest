@@ -123,7 +123,7 @@ constant_list_rows = {constant_list_row ~ (semicolon ~ constant_list_row)*}
 
 semicolon = _{";"}
 
-constant_list_row = _{constant ~ (comma ~ constant)*}
+constant_list_row = {constant ~ (comma ~ constant)*}
 
 space = {" "}
 

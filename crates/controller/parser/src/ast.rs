@@ -125,6 +125,17 @@ pub enum PureNode {
     Value(Value),
     Reference(CellReference),
     BlockRef(BlockRefNode),
+    /// An inline array constant: `{1,2;3,4}`.
+    ///
+    /// Row-major, so the outer vec is rows and the inner one columns —
+    /// `,` separates columns, `;` separates rows. Excel requires every row to
+    /// be the same length; short rows are padded so the matrix stays
+    /// rectangular, which is what the calc layer expects.
+    ///
+    /// Held as literal `Value`s rather than `Node`s: an array constant contains
+    /// only constants by grammar, so nothing here can reference a cell and it
+    /// never contributes a dependency.
+    ArrayConstant(Vec<Vec<Value>>),
 }
 
 /// Stable, id-keyed AST node for `BLOCKREF / BLOCKREFS / BLOCKREFB / BLOCKREFSB`.

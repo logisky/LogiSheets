@@ -1,3 +1,4 @@
+use logisheets_base::matrix_value::MatrixValue;
 use logisheets_parser::ast;
 
 use super::calc_vertex::{CalcValue, CalcVertex, Value};
@@ -24,6 +25,16 @@ where
         ast::PureNode::Func(f) => calc_func(f, fetcher),
         ast::PureNode::Reference(r) => fetcher.convert(r),
         ast::PureNode::BlockRef(node) => blocks::calc_block_ref(node, fetcher),
+        // A literal matrix evaluates to a range value, the same shape a cell
+        // range produces — so SUM, MAX, SUMPRODUCT and friends treat
+        // `{1,2;3,4}` exactly as they treat `A1:B2`.
+        ast::PureNode::ArrayConstant(rows) => {
+            let data = rows
+                .iter()
+                .map(|row| row.iter().map(Value::from_ast_value).collect())
+                .collect::<Vec<Vec<Value>>>();
+            CalcVertex::Value(CalcValue::Range(MatrixValue::from(data)))
+        }
     }
 }
 

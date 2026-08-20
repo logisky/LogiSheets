@@ -89,6 +89,19 @@ impl Stringify for PureNode {
             PureNode::Value(v) => v.unparse(fetcher, curr_sheet, shift),
             PureNode::Reference(cr) => cr.unparse(fetcher, curr_sheet, shift),
             PureNode::BlockRef(node) => node.unparse(fetcher, curr_sheet, shift),
+            // `{1,2;3,4}` — commas between columns, semicolons between rows,
+            // each element rendered as the literal it is.
+            PureNode::ArrayConstant(rows) => {
+                let mut out = Vec::with_capacity(rows.len());
+                for row in rows {
+                    let mut cells = Vec::with_capacity(row.len());
+                    for v in row {
+                        cells.push(v.unparse(fetcher, curr_sheet, shift)?);
+                    }
+                    out.push(cells.join(","));
+                }
+                Ok(format!("{{{}}}", out.join(";")))
+            }
         }
     }
 }

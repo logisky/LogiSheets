@@ -1272,7 +1272,9 @@ fn collect_func_ids(node: &ast::Node, out: &mut BTreeSet<FuncId>) {
                 collect_func_ids(field_condition, out);
             }
         },
-        ast::PureNode::Value(_) | ast::PureNode::Reference(_) => {}
+        ast::PureNode::Value(_)
+        | ast::PureNode::Reference(_)
+        | ast::PureNode::ArrayConstant(_) => {}
     }
 }
 

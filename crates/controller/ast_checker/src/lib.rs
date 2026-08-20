@@ -27,6 +27,8 @@ impl AstChecker {
             // the variant if args don't match), so it bypasses the
             // FuncSignature registry.
             ast::PureNode::BlockRef(_) => Ok(()),
+            // A literal matrix: nothing to check, it contains no calls.
+            ast::PureNode::ArrayConstant(_) => Ok(()),
         }
     }
 }
@@ -176,7 +178,7 @@ fn args_check(sign: &FuncSignature, args: &Vec<Node>) -> Result<(), FuncCheckErr
 fn arg_def_check(arg_def: &ArgDef, arg: &Node) -> bool {
     if arg_def.ref_only.unwrap_or(false) {
         match &arg.pure {
-            ast::PureNode::Value(_) => return false,
+            ast::PureNode::Value(_) | ast::PureNode::ArrayConstant(_) => return false,
             _ => {}
         };
     }

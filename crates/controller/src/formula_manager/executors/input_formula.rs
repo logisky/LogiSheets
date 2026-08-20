@@ -603,6 +603,7 @@ fn find_self_block_ref(
             .iter()
             .find_map(|n| find_self_block_ref(n, self_sheet, self_block)),
         ast::PureNode::Value(_) => None,
+        ast::PureNode::ArrayConstant(_) => None,
         ast::PureNode::Reference(_) => None,
         ast::PureNode::BlockRef(node) => match node {
             ast::BlockRefNode::Single {
@@ -642,7 +643,7 @@ fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
                 .iter()
                 .for_each(|n| get_all_vertices_from_ast(n, vertices));
         }
-        ast::PureNode::Value(_) => {}
+        ast::PureNode::Value(_) | ast::PureNode::ArrayConstant(_) => {}
         ast::PureNode::Reference(reference) => match reference {
             ast::CellReference::Mut(r) => {
                 let sheet_id = r.sheet_id;

@@ -138,7 +138,8 @@ fn shift_pure_node<'a, 'b>(
                 );
             });
         }
-        ast::PureNode::Value(_) => {}
+        // Literals, scalar or matrix: nothing inside can move.
+        ast::PureNode::Value(_) | ast::PureNode::ArrayConstant(_) => {}
         ast::PureNode::Reference(cell_ref) => {
             shift_cell_reference(cell_ref, sheet_id, row_shift, col_shift, connector);
         }

@@ -286,15 +286,10 @@ impl Parser {
                     bracket: false,
                 }
             }
-            // Convert this formula to a constant.
-            Rule::array_constant => {
-                let first = pair.into_inner().next().unwrap();
-                let constant = build_numerical_constant(first);
-                ast::Node {
-                    pure: constant,
-                    bracket: false,
-                }
-            }
+            Rule::array_constant => ast::Node {
+                pure: build_array_constant(pair),
+                bracket: false,
+            },
             _ => {
                 println!("{:?}", pair.as_str());
                 println!("{:?}", pair.as_rule());
@@ -572,6 +567,62 @@ where
         key_condition: Box::new(key_condition),
         field_condition: Box::new(field_condition),
     }))
+}
+
+/// Build `{1,2;3,4}` into a row-major matrix of literal values.
+///
+/// This used to keep only the first element and discard the rest, so
+/// `=SUM({1,2,3})` quietly evaluated to 1 — a wrong number rather than an
+/// error, which is the worst way for a calculation engine to fail.
+///
+/// An array constant contains only constants by grammar, so every element
+/// resolves to a literal `Value` here and nothing can reference a cell. Excel
+/// requires the rows to be the same width; a ragged literal is padded with
+/// `Blank` so the matrix stays rectangular for the calc layer. A nested array
+/// (`{1,{2,3}}`) is not legal in Excel and becomes `#VALUE!`.
+fn build_array_constant(pair: Pair<Rule>) -> ast::PureNode {
+    let mut rows: Vec<Vec<ast::Value>> = Vec::new();
+    for list in pair.into_inner() {
+        // `array_constant` wraps a single `constant_list_rows`.
+        if list.as_rule() != Rule::constant_list_rows {
+            continue;
+        }
+        for row in list.into_inner() {
+            // The `comma` separators are visible nodes in the tree, so keep
+            // only the elements themselves.
+            rows.push(
+                row.into_inner()
+                    .filter(|p| p.as_rule() != Rule::comma)
+                    .map(array_element)
+                    .collect(),
+            );
+        }
+    }
+    let width = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    if rows.is_empty() || width == 0 {
+        return ast::PureNode::Value(ast::Value::Error(ast::Error::Value));
+    }
+    for row in rows.iter_mut() {
+        row.resize(width, ast::Value::Blank);
+    }
+    ast::PureNode::ArrayConstant(rows)
+}
+
+/// One element of an array constant, as a literal value.
+fn array_element(pair: Pair<Rule>) -> ast::Value {
+    let pure = match pair.as_rule() {
+        Rule::numerical_constant => build_numerical_constant(pair),
+        Rule::logical_constant => build_bool(pair),
+        Rule::error_constant => build_error(pair),
+        Rule::string_constant => build_string_constant(pair),
+        // Anything else (a nested array, a stray placeholder) has no meaning
+        // inside a literal array.
+        _ => ast::PureNode::Value(ast::Value::Error(ast::Error::Value)),
+    };
+    match pure {
+        ast::PureNode::Value(v) => v,
+        _ => ast::Value::Error(ast::Error::Value),
+    }
 }
 
 fn build_numerical_constant(pair: Pair<Rule>) -> ast::PureNode {
