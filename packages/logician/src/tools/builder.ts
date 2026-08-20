@@ -333,6 +333,76 @@ interface ResolvedField {
     user_editable?: boolean
 }
 
+/**
+ * Throw unless the rectangle a new block would occupy is empty.
+ *
+ * Cheap path first: the sheet's own dimension says where content ends, so a
+ * block placed below it needs no cell reads at all. Only a rectangle that
+ * overlaps the used range is actually scanned.
+ */
+async function assertAreaIsFree(
+    client: Client,
+    sheetIdx: number,
+    row: number,
+    col: number,
+    rowCnt: number,
+    colCnt: number,
+    blockName: string
+): Promise<void> {
+    const endRow = row + rowCnt - 1
+    const endCol = col + colCnt - 1
+
+    const sheetId = await client.getSheetId({sheetIdx})
+    if (!isErrorMessage(sheetId)) {
+        const dim = await client.getSheetDimension({sheetId})
+        // Wholly past the last used row or column: nothing to collide with.
+        if (!isErrorMessage(dim) && (row > dim.maxRow || col > dim.maxCol)) {
+            return
+        }
+    }
+
+    const cells = await client.getCells({
+        sheetIdx,
+        startRow: row,
+        startCol: col,
+        endRow,
+        endCol,
+    })
+    // A read failure is not evidence of a collision; let the create proceed and
+    // fail on its own terms rather than blocking on a diagnostic.
+    if (isErrorMessage(cells)) return
+
+    const width = endCol - col + 1
+    const occupied: string[] = []
+    cells.forEach((info, i) => {
+        const empty =
+            (info.value === 'empty' || info.value === undefined) && !info.formula
+        if (empty) return
+        occupied.push(columnName(col + (i % width)) + String(row + Math.floor(i / width) + 1))
+    })
+    if (occupied.length === 0) return
+
+    const shown = occupied.slice(0, 5).join(', ')
+    const more = occupied.length > 5 ? ` and ${occupied.length - 5} more` : ''
+    throw new Error(
+        `cannot create block "${blockName}" at row ${row}, col ${col}: ` +
+            `${occupied.length} cell(s) there already hold data (${shown}${more}). ` +
+            `Creating a block over them would overwrite them. Call list_blocks and ` +
+            `use its next_block_start, or pick an empty area.`
+    )
+}
+
+/** Zero-based column index to its spreadsheet letters (0 -> A, 27 -> AB). */
+function columnName(col: number): string {
+    let n = col
+    let name = ''
+    do {
+        name = String.fromCharCode(65 + (n % 26)) + name
+        n = Math.floor(n / 26) - 1
+    } while (n >= 0)
+    return name
+}
+
 export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
     namespace: 'build',
     name: 'create_block',
@@ -467,6 +537,22 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                 `auto-create sheet "${input.sheet}"`
             )
         }
+
+        // 1b. Refuse to plant a block on top of existing content.
+        //
+        //     Creating a block over occupied cells overwrote them silently —
+        //     no error, no warning — so an agent working on a file the user
+        //     brought could destroy its first rows on its very first call.
+        //     Data loss should be a refusal the agent can act on.
+        await assertAreaIsFree(
+            client,
+            sheetIdx,
+            input.position.row,
+            input.position.col,
+            Math.max(1, (input.initial_rows ?? []).length),
+            resolvedFields.length,
+            input.name
+        )
 
         // 2. Mint a fresh block id.
         const idRes = await client.getAvailableBlockId({sheetIdx})
@@ -1452,7 +1538,7 @@ export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
     namespace: 'build',
     name: 'list_blocks',
     description:
-        'List blocks grouped by sheet, plus a suggested position for the next new block on each sheet. The `next_block_start` field is the row right after the last existing block (assuming blocks never share rows) — pass it as `position` to `create_block`. Omit `sheet` to scan the whole workbook; passing it restricts to one sheet.',
+        'List blocks grouped by sheet, plus a suggested position for the next new block on each sheet. `next_block_start` clears everything already on the sheet — the last existing block AND any loose cell content — so passing it as `position` to `create_block` will not land on top of data. Omit `sheet` to scan the whole workbook; passing it restricts to one sheet.',
     mutates: false,
     confirmation: 'never',
     cost: 'cheap',
@@ -1509,11 +1595,26 @@ export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
         // affordance so the canvas isn't a wall of touching rectangles.
         const BLOCK_GAP_ROWS = 1
 
+        // Existing cell content counts too. A file the user brings has data and
+        // no blocks at all, so a hint derived only from blocks pointed at row 0
+        // — straight onto their first row, which `create_block` then overwrote.
+        const usedRowsByIdx = new Map<number, number>()
+        await Promise.all(
+            scope.map(async (idx) => {
+                const sheetId = await client.getSheetId({sheetIdx: idx})
+                if (isErrorMessage(sheetId)) return
+                const dim = await client.getSheetDimension({sheetId})
+                if (isErrorMessage(dim)) return
+                usedRowsByIdx.set(idx, dim.maxRow + 1)
+            })
+        )
+
         const groups: SheetBlockGroup[] = scope.map((idx) => {
             const blocks = blocksByIdx.get(idx) ?? []
-            // "Next" row = end of the bottom-most block + gap. col=0 by
-            // the "one block per row range" assumption.
-            let nextRow = 0
+            // "Next" row clears both the bottom-most block and any loose cell
+            // content. col=0 by the "one block per row range" assumption.
+            let nextRow = usedRowsByIdx.get(idx) ?? 0
+            if (nextRow > 0) nextRow += BLOCK_GAP_ROWS
             for (const b of blocks) {
                 const endPlusGap = b.position.row + b.row_count + BLOCK_GAP_ROWS
                 if (endPlusGap > nextRow) nextRow = endPlusGap
