@@ -1,2 +1,4 @@
-INPUT I25   =IPMT(5%,12,10000,120000,1)
-##CHECKSTR    I25 ￥-6,000.00
+# See pmt.script: IPMT derives from PMT, so the inverted `type` flag moved this
+# too. First period's interest at 5% on 10000 is exactly 500.
+INPUT A1 =IPMT(5%,1,12,10000,120000)
+CHECKNUM A1 -500

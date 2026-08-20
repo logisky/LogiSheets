@@ -1,2 +1,3 @@
-INPUT   P5  =PPMT(5%,12,12,10000,12000)
-##CHECKSTR    P5     ￥-2363.96
+# See pmt.script: PPMT is PMT - IPMT, so the inverted `type` flag moved it too.
+INPUT A1 =PPMT(5%,12,12,10000,12000)
+CHECKNUM A1 -2363.960972

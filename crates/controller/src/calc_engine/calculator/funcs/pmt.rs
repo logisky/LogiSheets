@@ -19,7 +19,7 @@ where
     assert_f64_from_calc_value!(fv, fv_arg);
     let ty_arg = fetcher.get_calc_value(args_iter.next().unwrap_or(CalcVertex::from_number(0.)));
     assert_f64_from_calc_value!(ty, ty_arg);
-    let pmt = calc_pmt(rate, nper.floor() as usize, pv, fv, ty.abs() < 1e-7);
+    let pmt = calc_pmt(rate, nper.floor() as usize, pv, fv, ty.abs() >= 1e-7);
     CalcVertex::from_number(pmt)
 }
 
@@ -62,7 +62,7 @@ where
         nper.floor() as usize,
         pv,
         fv,
-        ty.abs() < 1e-7,
+        ty.abs() >= 1e-7,
     );
     CalcVertex::from_number(result)
 }

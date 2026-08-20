@@ -1,2 +1,9 @@
-INPUT   P6  =PV(5%,12,1000)
-##CHECKSTR    P6 ￥-8863.25
+# See pmt.script: the `type` flag was inverted here too.
+INPUT A1 =PV(0.05,10,-100)
+CHECKNUM A1 772.173493
+
+INPUT A2 =PV(0.05,10,-100,0,1)
+CHECKNUM A2 810.782168
+
+INPUT A3 =PV(0,10,-100)
+CHECKNUM A3 1000
