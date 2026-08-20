@@ -560,6 +560,23 @@ pub fn add_ast_node(
     new_formula_deps
         .into_iter()
         .for_each(|new_dep| manager.graph.add_dep(this_vertex.clone(), new_dep));
+
+    // The same topo-barrier edge the live path registers (see
+    // `register_parsed_ast`): a formula cell inside a block becomes a dep of
+    // `BlockAll(block)`.
+    //
+    // Omitting it here meant a saved workbook came back subtly broken. The
+    // formulas loaded and evaluated once, so everything looked right — but
+    // walking rdeps after a block cell recomputed never reached `BlockAll(B)`,
+    // and so never reached the external `BLOCKREF` / `BLOCKREFS` readers of that
+    // block. Change one input and the block updated while every summary cell
+    // over it kept its old value: a wrong number, silently, and only after a
+    // save/reload round trip.
+    if let CellId::BlockCell(bcid) = cell_id {
+        manager
+            .graph
+            .add_dep(Vertex::BlockAll(sheet_id, bcid.block_id), this_vertex);
+    }
 }
 
 /// Post-load pass: add the Range→member-cell dependency edges for every formula

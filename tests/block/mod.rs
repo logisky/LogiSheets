@@ -1,8 +1,8 @@
 use logisheets::Workbook;
 use logisheets_controller::edit_action::{
-    BindFormSchema, BlockInput, CreateBlock, CreateSheet, DeleteRows, DeleteRowsInBlock,
-    DeleteSheet, EditPayload, InsertCols, InsertRows, InsertRowsInBlock, MoveBlock,
-    PayloadsAction, StatusCode,
+    BindFormSchema, BlockInput, CellInput, CreateBlock, CreateSheet, DeleteRows,
+    DeleteRowsInBlock, DeleteSheet, EditPayload, InsertCols, InsertRows, InsertRowsInBlock,
+    MoveBlock, PayloadsAction, StatusCode,
 };
 
 use crate::load_script;
@@ -880,5 +880,121 @@ fn test_create_block_rejects_absurd_dimensions() {
         matches!(effect.status, StatusCode::Err(_)),
         "expected a rejection, got {:?}",
         effect.status
+    );
+}
+
+/// A formula OUTSIDE a block that reads into it via BLOCKREF / BLOCKREFS must
+/// keep recomputing after the workbook has been saved and reopened.
+///
+/// It did not. The live input path registers a topo-barrier edge making every
+/// formula cell inside a block a dep of `BlockAll(block)`; the file-load path
+/// (`add_ast_node`) skipped it. So after a reload, recomputing a block cell
+/// never walked out to `BlockAll`, and external readers kept their old values —
+/// a wrong number with no error, and only after a round trip. Found by building
+/// a DCF, saving it, and changing one assumption: the projection updated while
+/// every summary line over it stayed stale, moving value-per-share by 15%.
+#[test]
+fn test_blockref_readers_recompute_after_reload() {
+    let mut workbook = Workbook::new();
+
+    // Block 1: `a` is an input, `b` is a formula over it.
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "k1".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "10".to_string(),
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "t".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["key".to_string(), "a".to_string(), "b".to_string()],
+                render_ids: vec!["r0".to_string(), "r1".to_string(), "r2".to_string()],
+                field_formulas: vec![None, None, Some("=#FIELD(\"a\")*2".to_string())],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            // Two readers outside the block: the single form and the aggregate.
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 0,
+                content: "=BLOCKREF(\"t\",\"k1\",\"b\")".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 1,
+                content: "=SUM(BLOCKREFS(\"t\",\"*\",\"b\"))".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    let num = |wb: &mut Workbook, r: usize, c: usize| -> f64 {
+        let v = wb.get_sheet_by_idx(0).unwrap().get_value(r, c).unwrap();
+        match v {
+            logisheets::Value::Number(n) => n,
+            other => panic!("expected a number at ({r},{c}), got {other:?}"),
+        }
+    };
+    assert_eq!(num(&mut workbook, 0, 2), 20.0, "b = a*2");
+    assert_eq!(num(&mut workbook, 5, 0), 20.0, "BLOCKREF");
+    assert_eq!(num(&mut workbook, 5, 1), 20.0, "BLOCKREFS");
+
+    let mut bytes = workbook.save().expect("save");
+    let mut reopened = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+
+    // Change the input the block's own formula depends on.
+    reopened.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: 0,
+            col: 1,
+            input: "50".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    assert_eq!(
+        num(&mut reopened, 0, 2),
+        100.0,
+        "the block's own formula recomputed"
+    );
+    assert_eq!(
+        num(&mut reopened, 5, 0),
+        100.0,
+        "BLOCKREF reader went stale after reload"
+    );
+    assert_eq!(
+        num(&mut reopened, 5, 1),
+        100.0,
+        "BLOCKREFS reader went stale after reload"
     );
 }
