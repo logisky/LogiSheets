@@ -538,6 +538,56 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
             )
         }
 
+        // 1a. Uniqueness. `(block, row_key, field)` IS the addressing scheme, so
+        //     a duplicate at any of the three levels makes some cell
+        //     unreachable and, worse, makes aggregates wrong: with two rows
+        //     keyed "a", BLOCKREFS resolved the first one twice and skipped the
+        //     other, so a block holding 1, 2 and 99 summed to 4. Silence is the
+        //     problem — reject it at the door instead.
+        const duplicates = (names: readonly string[]): string[] => {
+            const seen = new Set<string>()
+            const dup = new Set<string>()
+            for (const n of names) {
+                if (seen.has(n)) dup.add(n)
+                seen.add(n)
+            }
+            return [...dup]
+        }
+
+        const dupFields = duplicates(resolvedFields.map((f) => f.name))
+        if (dupFields.length > 0) {
+            throw new Error(
+                `block "${input.name}" declares the field name(s) ${dupFields
+                    .map((f) => `"${f}"`)
+                    .join(', ')} more than once; fields address cells, so they must be unique`
+            )
+        }
+
+        const initialKeys = (input.initial_rows ?? []).map((r) => r.key)
+        const dupKeys = duplicates(initialKeys)
+        if (dupKeys.length > 0) {
+            throw new Error(
+                `block "${input.name}" repeats the row key(s) ${dupKeys
+                    .map((k) => `"${k}"`)
+                    .join(', ')}; row keys address cells, so they must be unique`
+            )
+        }
+
+        const existingBlocks = await client.getAllBlocks({})
+        if (!isErrorMessage(existingBlocks)) {
+            const clash = existingBlocks.find(
+                (b) => b.schema?.name === input.name
+            )
+            if (clash !== undefined) {
+                throw new Error(
+                    `a block named "${input.name}" already exists on sheet index ` +
+                        `${clash.sheetIdx}. Ref names are how formulas reach a block, so a ` +
+                        `duplicate makes BLOCKREF ambiguous — every reference to this name ` +
+                        `would return #VALUE!. Pick another name, or edit the existing block.`
+                )
+            }
+        }
+
         // 1b. Refuse to plant a block on top of existing content.
         //
         //     Creating a block over occupied cells overwrote them silently —
@@ -834,6 +884,34 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
         }
         const sheetIdx = block.sheetIdx
         const blockId = block.blockId
+        // Row keys address cells, so a repeat makes some row unreachable and
+        // silently skews aggregates — BLOCKREFS resolves the duplicate to the
+        // first match twice. Reject before anything is written.
+        const newKeys = input.rows.map((r) => r.key)
+        const seenNew = new Set<string>()
+        const repeated = new Set<string>()
+        for (const k of newKeys) {
+            if (seenNew.has(k)) repeated.add(k)
+            seenNew.add(k)
+        }
+        if (repeated.size > 0) {
+            throw new Error(
+                `rows repeat the key(s) ${[...repeated]
+                    .map((k) => `"${k}"`)
+                    .join(', ')}; row keys must be unique within a block`
+            )
+        }
+        const existingKeys = new Set(schema.keys.map((k) => k.key))
+        const collide = newKeys.filter((k) => existingKeys.has(k))
+        if (collide.length > 0) {
+            throw new Error(
+                `block "${input.block}" already has the row key(s) ${collide
+                    .map((k) => `"${k}"`)
+                    .join(', ')}. Row keys must be unique — use set_block_cells to ` +
+                    `update the existing row, or pick another key.`
+            )
+        }
+
         const blockStart = block.rowCnt // append after the last existing block row
         // Sheet-absolute row where new rows physically land. Under our
         // "one block per row" assumption the rows immediately after the
