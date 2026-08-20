@@ -1,7 +1,8 @@
 use logisheets::Workbook;
 use logisheets_controller::edit_action::{
     BindFormSchema, BlockInput, CreateBlock, CreateSheet, DeleteRows, DeleteRowsInBlock,
-    EditPayload, InsertRows, InsertRowsInBlock, PayloadsAction, StatusCode,
+    DeleteSheet, EditPayload, InsertCols, InsertRows, InsertRowsInBlock, MoveBlock,
+    PayloadsAction, StatusCode,
 };
 
 use crate::load_script;
@@ -771,5 +772,113 @@ fn test_block_cell_formula_survives_reload() {
         matches!(v, logisheets::Value::Number(n) if n == 120.0),
         "reloaded block formula did not recalculate: {:?}",
         v
+    );
+}
+
+/// Out-of-range payload indices must be rejected, not panic.
+///
+/// Every case below killed the engine instance before: indices arrived straight
+/// from the payload and reached imbl's `split_at` / `remove` / index operators,
+/// or an `unwrap` on a lookup that legitimately fails. Under wasm a panic is not
+/// a catchable error — it takes the session down — and an agent driving the
+/// engine explores far more of this input space than a UI user does.
+#[test]
+fn test_out_of_range_payloads_are_rejected() {
+    fn rejected(payload: EditPayload) -> bool {
+        let mut workbook = Workbook::new();
+        // A block to aim the block-scoped payloads at.
+        workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 3,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            })],
+            init: false,
+            undoable: false,
+        }));
+        let effect = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+            payloads: vec![payload],
+            init: false,
+            undoable: false,
+        }));
+        matches!(effect.status, StatusCode::Err(_))
+    }
+
+    // A sheet may be inserted just past the last one, never beyond.
+    assert!(rejected(EditPayload::CreateSheet(CreateSheet {
+        idx: 3,
+        new_name: "far".to_string(),
+    })));
+    assert!(rejected(EditPayload::DeleteSheet(DeleteSheet { idx: 9 })));
+
+    // Line counts must fit the sheet; `count: u32::MAX` used to never return.
+    assert!(rejected(EditPayload::InsertCols(InsertCols {
+        sheet_idx: 0,
+        start: 0,
+        count: u32::MAX as usize,
+    })));
+    assert!(rejected(EditPayload::InsertRows(InsertRows {
+        sheet_idx: 0,
+        start: 0,
+        count: u32::MAX as usize,
+    })));
+
+    // Block line ranges must fall inside the block.
+    assert!(rejected(EditPayload::DeleteRowsInBlock(DeleteRowsInBlock {
+        sheet_idx: 0,
+        block_id: 1,
+        start: 100,
+        cnt: u32::MAX as usize,
+    })));
+    assert!(rejected(EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+        sheet_idx: 0,
+        block_id: 1,
+        start: 100,
+        cnt: 1,
+    })));
+
+    // Moving a block that does not exist is a bad request, not a crash.
+    assert!(rejected(EditPayload::MoveBlock(MoveBlock {
+        sheet_idx: 0,
+        id: 4096,
+        new_master_row: 0,
+        new_master_col: 0,
+    })));
+}
+
+/// A block whose dimensions are large enough to overflow an allocation must be
+/// rejected, not abort the process.
+///
+/// `create_block` is a first-class agent operation, and nothing bounded the
+/// requested size: `row_cnt * col_cnt` cells were materialized eagerly, so
+/// 1048576 x 16384 — each within the sheet's own limits — asked for ~17 billion
+/// cells and panicked inside `RawVec` with a capacity overflow. Under wasm that
+/// takes down the engine instance and the session with it.
+#[test]
+fn test_create_block_rejects_absurd_dimensions() {
+    let mut workbook = Workbook::new();
+    let effect = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: 1,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 1048576,
+            col_cnt: 16384,
+            owner: None,
+            modify_policy: None,
+        })],
+        init: false,
+        undoable: false,
+    }));
+    assert!(
+        matches!(effect.status, StatusCode::Err(_)),
+        "expected a rejection, got {:?}",
+        effect.status
     );
 }

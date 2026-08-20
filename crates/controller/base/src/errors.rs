@@ -61,6 +61,16 @@ pub enum BasicError {
     CreatingBlockOn(BlockId),
     #[error("a block must be anchored on a grid cell, not an ephemeral one: {0}")]
     CreatingBlockOnEphemeral(EphemeralId),
+    #[error(
+        "block of {0} rows x {1} cols is too large: at most {2} rows, {3} cols and {4} cells"
+    )]
+    BlockTooLarge(u32, u32, u32, u32, u64),
+    #[error("{0} lines at index {1} is out of range: a sheet holds at most {2}")]
+    LineRangeOutOfSheet(u32, usize, u32),
+    #[error("line range [{0}, +{1}) is outside block {2}, which has {3} line(s)")]
+    LineRangeOutOfBlock(usize, u32, BlockId, usize),
+    #[error("reorder of block {0} must be a permutation of its {1} line(s)")]
+    BadBlockLineOrder(BlockId, usize),
     #[error("ext ref id not found: {0}")]
     ExtRefIdNotFound(ExtRefId),
     #[error("ephemeral cell in reference is not allowed: {0}")]

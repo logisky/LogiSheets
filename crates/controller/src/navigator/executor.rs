@@ -1,7 +1,76 @@
 use logisheets_base::{CellId, ColId, RowId, SheetId, errors::BasicError};
 
+use super::sheet_nav::{MAX_COL_CNT, MAX_ROW_CNT};
 use super::{BlockPlace, Navigator, SheetNav, ctx::NavExecCtx};
 use crate::{Error, edit_action::EditPayload};
+
+/// Cells a single block may cover.
+///
+/// Block cells are materialized eagerly, so the cost of creating one scales
+/// with `row_cnt * col_cnt`: a million cells already takes seconds, ten million
+/// takes half a minute, and a block the size of a whole sheet (1048576 x 16384)
+/// overflows the allocation and panics — which under wasm kills the engine
+/// instance. `create_block` is a first-class agent operation, so an unbounded
+/// size request is a crash and a denial of service reachable from one tool call.
+///
+/// This is a policy limit, not a format one: xlsx itself would allow a block to
+/// span the sheet. It is set at one full column's worth of cells, which is far
+/// past any structured table a caller has a real use for.
+pub const MAX_BLOCK_CELLS: u64 = 1_048_576;
+
+/// Reject a row/column insert or delete that cannot fit the sheet.
+///
+/// Line counts arrive straight from the payload, and the work is proportional to
+/// the count: `insert_cols` with `count = u32::MAX` never returns. A sheet holds
+/// at most `MAX_ROW_CNT` rows and `MAX_COL_CNT` columns, so anything past that
+/// is meaningless regardless of how long it would take.
+fn check_line_range(start: usize, count: u32, limit: u32) -> Result<(), Error> {
+    if start >= limit as usize || start as u64 + count as u64 > limit as u64 {
+        return Err(BasicError::LineRangeOutOfSheet(count, start, limit).into());
+    }
+    Ok(())
+}
+
+/// Reject a block-line insert or delete whose range falls outside the block.
+///
+/// `BlockPlace`'s line helpers reach imbl's `split_at` / `remove` / `insert`,
+/// which panic out of range, and the indices come straight from the payload.
+/// `insert` may land just past the last line; `delete` may not.
+fn check_block_line_range(
+    start: usize,
+    cnt: u32,
+    len: usize,
+    block_id: logisheets_base::BlockId,
+    inserting: bool,
+) -> Result<(), Error> {
+    let end = start as u64 + cnt as u64;
+    let ok = if inserting {
+        start <= len && end <= len as u64 + cnt as u64
+    } else {
+        end <= len as u64
+    };
+    if !ok {
+        return Err(BasicError::LineRangeOutOfBlock(start, cnt, block_id, len).into());
+    }
+    Ok(())
+}
+
+/// Reject block dimensions that don't fit the sheet, or whose cell count is
+/// past what we're willing to materialize.
+fn check_block_size(row_cnt: u32, col_cnt: u32) -> Result<(), Error> {
+    let cells = row_cnt as u64 * col_cnt as u64;
+    if row_cnt > MAX_ROW_CNT || col_cnt > MAX_COL_CNT || cells > MAX_BLOCK_CELLS {
+        return Err(BasicError::BlockTooLarge(
+            row_cnt,
+            col_cnt,
+            MAX_ROW_CNT,
+            MAX_COL_CNT,
+            MAX_BLOCK_CELLS,
+        )
+        .into());
+    }
+    Ok(())
+}
 
 pub struct NavExecutor {
     pub nav: Navigator,
@@ -55,6 +124,20 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                let len = if p.is_row {
+                    bp.rows.len()
+                } else {
+                    bp.cols.len()
+                };
+                if p.from >= len || p.to >= len {
+                    return Err(BasicError::LineRangeOutOfBlock(
+                        p.from.max(p.to),
+                        1,
+                        p.block_id,
+                        len,
+                    )
+                    .into());
+                }
                 let new_bp = bp.move_line(p.from, p.to, p.is_row);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 Ok((
@@ -73,6 +156,14 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                let len = if p.is_row {
+                    bp.rows.len()
+                } else {
+                    bp.cols.len()
+                };
+                if p.new_order.len() != len || p.new_order.iter().any(|&i| i >= len) {
+                    return Err(BasicError::BadBlockLineOrder(p.block_id, len).into());
+                }
                 let new_bp = bp.reorder_lines(&p.new_order, p.is_row);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 Ok((
@@ -115,6 +206,7 @@ impl NavExecutor {
                 if sheet_nav.data.has_block_id(&create_block.id) {
                     return Err(BasicError::BlockIdHasAlreadyExisted(create_block.id).into());
                 }
+                check_block_size(create_block.row_cnt as u32, create_block.col_cnt as u32)?;
                 let block_place = BlockPlace::new(
                     cell_id,
                     create_block.row_cnt as u32,
@@ -147,6 +239,7 @@ impl NavExecutor {
                 if sheet_nav.data.has_block_id(&p.id) {
                     return Err(BasicError::BlockIdHasAlreadyExisted(p.id).into());
                 }
+                check_block_size(p.row_cnt as u32, p.col_cnt as u32)?;
                 let block_place = BlockPlace::new(
                     cell_id,
                     p.row_cnt as u32,
@@ -173,6 +266,10 @@ impl NavExecutor {
                     .get_mut(&p.id)
                     .ok_or(BasicError::BlockIdNotFound(sheet_id, p.id))?
                     .clone();
+                check_block_size(
+                    p.new_row_cnt.unwrap_or(block_place.rows.len()) as u32,
+                    p.new_col_cnt.unwrap_or(block_place.cols.len()) as u32,
+                )?;
                 let new_block_place = block_place.resize(p.new_row_cnt, p.new_col_cnt);
                 sheet_nav.data.blocks.insert(p.id, new_block_place);
                 sheet_nav.cache = Default::default();
@@ -195,6 +292,7 @@ impl NavExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(insert_cols.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                check_line_range(insert_cols.start, insert_cols.count as u32, MAX_COL_CNT)?;
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
                 let (new_sheet_nav, inserted) =
                     insert_new_cols(sheet_nav, insert_cols.start, insert_cols.count as u32);
@@ -214,6 +312,7 @@ impl NavExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                check_line_range(p.start, p.count as u32, MAX_COL_CNT)?;
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
                 let (new_sheet_nav, removed) = delete_cols(sheet_nav, p.start, p.count as u32);
                 let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
@@ -232,6 +331,7 @@ impl NavExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(insert_rows.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                check_line_range(insert_rows.start, insert_rows.count as u32, MAX_ROW_CNT)?;
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
                 let (new_sheet_nav, inserted) =
                     insert_new_rows(sheet_nav, insert_rows.start, insert_rows.count as u32);
@@ -251,6 +351,7 @@ impl NavExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                check_line_range(p.start, p.count as u32, MAX_ROW_CNT)?;
                 let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id).clone();
                 let (new_sheet_nav, removed) = delete_rows(sheet_nav, p.start, p.count as u32);
                 let sheet_navs = self.nav.sheet_navs.update(sheet_id, new_sheet_nav);
@@ -270,6 +371,13 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                check_block_line_range(
+                    p.start,
+                    p.cnt as u32,
+                    bp.cols.len(),
+                    p.block_id,
+                    true,
+                )?;
                 let new_bp = bp.add_new_cols(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor {
@@ -286,6 +394,13 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                check_block_line_range(
+                    p.start,
+                    p.cnt as u32,
+                    bp.cols.len(),
+                    p.block_id,
+                    false,
+                )?;
                 let new_bp = bp.delete_cols(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor {
@@ -302,6 +417,13 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                check_block_line_range(
+                    p.start,
+                    p.cnt as u32,
+                    bp.rows.len(),
+                    p.block_id,
+                    true,
+                )?;
                 let new_bp = bp.add_new_rows(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor {
@@ -318,6 +440,13 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
+                check_block_line_range(
+                    p.start,
+                    p.cnt as u32,
+                    bp.rows.len(),
+                    p.block_id,
+                    false,
+                )?;
                 let new_bp = bp.delete_rows(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor {
@@ -400,8 +529,9 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> (SheetNav, Vec<RowI
             let (row, col) = result.get_fetcher().get_norm_cell_idx(master).unwrap();
             if row >= idx && row <= idx + cnt as usize - 1 {
                 let new_row = idx + cnt as usize;
-                let new_master_id = result.get_fetcher().get_norm_cell_id(new_row, col);
-                bp.master = new_master_id;
+                if let Ok(new_master_id) = result.get_fetcher().get_norm_cell_id(new_row, col) {
+                    bp.master = new_master_id;
+                }
             }
         });
         old_blocks
@@ -437,8 +567,9 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> (SheetNav, Vec<ColI
             let (row, col) = result.get_fetcher().get_norm_cell_idx(master).unwrap();
             if col >= idx && col <= idx + cnt as usize - 1 {
                 let new_col = idx + cnt as usize;
-                let new_master_id = result.get_fetcher().get_norm_cell_id(row, new_col);
-                bp.master = new_master_id;
+                if let Ok(new_master_id) = result.get_fetcher().get_norm_cell_id(row, new_col) {
+                    bp.master = new_master_id;
+                }
             }
         });
         old_blocks

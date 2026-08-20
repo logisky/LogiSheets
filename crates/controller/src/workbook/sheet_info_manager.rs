@@ -21,6 +21,11 @@ impl SheetInfoManager {
     ) -> Result<Self, BasicError> {
         match payload {
             EditPayload::CreateSheet(p) => {
+                // A new sheet may land anywhere from the front to just past the
+                // last one; `split_at` panics beyond that.
+                if p.idx > self.pos.len() {
+                    return Err(BasicError::SheetIdxExceed(self.pos.len()));
+                }
                 let (mut left, right) = self.pos.split_at(p.idx);
                 let id = ctx.fetch_sheet_id(&p.new_name);
                 left.push_back(id);
@@ -33,6 +38,9 @@ impl SheetInfoManager {
                 })
             }
             EditPayload::DeleteSheet(p) => {
+                if p.idx >= self.pos.len() {
+                    return Err(BasicError::SheetIdxExceed(self.pos.len()));
+                }
                 ctx.has_updated();
                 let id = self.pos.remove(p.idx);
                 self.hiddens.remove(&id);
