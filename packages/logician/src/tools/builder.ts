@@ -1782,6 +1782,12 @@ interface FieldDescription {
 
 interface DescribeBlockOutput {
     block: string
+    /**
+     * Numeric block id — what `move_block` / `resize_block` / `remove_block`
+     * take. Reported here because it was only available from `list_blocks`,
+     * so moving a block you had just described cost a second, pointless call.
+     */
+    block_id: number
     sheet: string
     sheet_idx: number
     position: {row: number; col: number}
@@ -1873,6 +1879,7 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
 
         const out: DescribeBlockOutput = {
             block: input.name,
+            block_id: block.blockId,
             sheet: sheetName,
             sheet_idx: block.sheetIdx,
             position: {row: block.rowStart, col: block.colStart},
