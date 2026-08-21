@@ -850,19 +850,31 @@ function buildFieldTypeSpec(
 interface AddBlockRowsInput {
     block: string
     rows: ReadonlyArray<{key: string; values?: Record<string, unknown>}>
+    after_key?: string
+    before_key?: string
 }
 
 export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
     namespace: 'build',
     name: 'add_block_rows',
     description:
-        "Append rows to an existing block. Each row needs a key; values is an object keyed by field name. Fields with a value_formula are auto-materialized by the engine — don't pass them in values. Validation/editability shadows for the new rows are auto-installed by the engine at InsertRowsInBlock time, so no follow-up is needed. Also inserts the matching sheet rows (one block per sheet-row assumption — extends the sheet so downstream rows shift down).",
+        "Add rows to an existing block. Appends at the end by default; pass after_key or before_key to insert at a position instead. Each row needs a key; values is an object keyed by field name. Fields with a value_formula are auto-materialized by the engine — don't pass them in values. Validation/editability shadows for the new rows are auto-installed by the engine at InsertRowsInBlock time, so no follow-up is needed. Also inserts the matching sheet rows (one block per sheet-row assumption — extends the sheet so downstream rows shift down).",
     mutates: true,
     confirmation: 'never',
     inputSchema: {
         properties: {
             block: {type: 'string', description: 'Block ref name.'},
             rows: {type: 'array', items: ROW_SCHEMA, minItems: 1},
+            after_key: {
+                type: 'string',
+                description:
+                    'Insert directly after the row with this key, instead of appending at the end. Mutually exclusive with before_key.',
+            },
+            before_key: {
+                type: 'string',
+                description:
+                    'Insert directly before the row with this key. Use the first key to insert at the top. Mutually exclusive with after_key.',
+            },
         },
         required: ['block', 'rows'],
     },
@@ -915,13 +927,42 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
             )
         }
 
-        const blockStart = block.rowCnt // append after the last existing block row
+        // Where the new rows land, as a block-relative row index. Default
+        // is "after the last existing row"; after_key / before_key aim at a
+        // named row instead. Positioning by key rather than by index is
+        // deliberate: an index would go stale the moment anything else
+        // inserts or deletes, whereas a key names the same row for good.
+        if (
+            input.after_key !== undefined &&
+            input.before_key !== undefined
+        ) {
+            throw new Error(
+                'pass either after_key or before_key, not both'
+            )
+        }
+        const anchorKey = input.after_key ?? input.before_key
+        let blockStart = block.rowCnt
+        if (anchorKey !== undefined) {
+            const anchor = schema.keys.find((k) => k.key === anchorKey)
+            if (!anchor) {
+                const which =
+                    input.after_key !== undefined ? 'after_key' : 'before_key'
+                throw new Error(
+                    `${which} "${anchorKey}" is not a row key of block ` +
+                        `"${input.block}". Existing keys: ${schema.keys
+                            .map((k) => `"${k.key}"`)
+                            .join(', ')}`
+                )
+            }
+            blockStart =
+                input.after_key !== undefined ? anchor.idx + 1 : anchor.idx
+        }
         // Sheet-absolute row where new rows physically land. Under our
         // "one block per row" assumption the rows immediately after the
         // block are free to shift down without colliding with another
         // block; if a future relaxation allows side-by-side blocks the
         // caller would need to pick a different insert site.
-        const sheetStart = block.rowStart + block.rowCnt
+        const sheetStart = block.rowStart + blockStart
         const fieldNames = [...schema.fields]
             .sort((a, b) => a.idx - b.idx)
             .map((f) => f.field)
@@ -1001,9 +1042,15 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
             `add_block_rows("${input.block}")`
         )
 
+        const where =
+            anchorKey === undefined
+                ? 'Appended'
+                : input.after_key !== undefined
+                  ? `Inserted after "${anchorKey}":`
+                  : `Inserted before "${anchorKey}":`
         return {
             data: {added: cnt},
-            display: `Appended ${cnt} row(s) to "${input.block}" (block row ${blockStart}, sheet row ${sheetStart}).`,
+            display: `${where} ${cnt} row(s) in "${input.block}" (block row ${blockStart}, sheet row ${sheetStart}).`,
         }
     },
 }

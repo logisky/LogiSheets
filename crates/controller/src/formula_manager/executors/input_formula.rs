@@ -393,9 +393,13 @@ pub fn input_block_cell_template<C: FormulaExecCtx>(
     // Build per-sibling Reference nodes once, indexed by field name, so
     // the resolver closure stays pure (only reads, no ctx mutation).
     let mut sib_subs: HashMap<String, ast::Node> = HashMap::new();
+    // Range ids the substitution itself introduces. They point into this
+    // very block by design, so the own-block check below must not flag them.
+    let mut substituted: HashSet<RangeId> = HashSet::new();
     for (name, sib_cell) in tpl.siblings {
         let range = Range::Block(BlockRange::Single(sib_cell));
         let range_id = ctx.fetch_range_id(&sheet, &range);
+        substituted.insert(range_id);
         sib_subs.insert(
             name,
             ast::Node {
@@ -430,6 +434,47 @@ pub fn input_block_cell_template<C: FormulaExecCtx>(
         logisheets_parser::PlaceholderKind::Placeholder => None,
     });
     let Some(ast) = ast else { return Ok(executor) };
+
+    // A field rule is a TEMPLATE: one string, instantiated verbatim for
+    // every row of the block. It carries no cell anchor, so a coordinate
+    // written inside it does NOT shift from row to row — `=C1+#FIELD("amt")`
+    // means literally C1 in every single row.
+    //
+    // When that coordinate lands inside this same block it is always a
+    // mistake, and a silent one: for the block's first row `C1` IS the cell
+    // being defined, so it becomes a self-loop, and the cycle iterator
+    // dutifully grinds it out to a garbage number (10 -> 10000 at
+    // `iter_limit = 1000`) without an error anywhere. That is the coordinate
+    // twin of the `BLOCKREF`-into-own-block case rejected in
+    // `register_parsed_ast`, which slipped through because a bare
+    // coordinate never builds a `BlockAll` vertex.
+    //
+    // Coordinates pointing OUTSIDE the block are left alone: a global
+    // assumption cell really is the same cell for every row, which is
+    // exactly what a template wants.
+    let mut refs = Vec::new();
+    collect_ref_ranges(&ast, &mut refs);
+    for (ref_sheet, range_id) in refs {
+        if ref_sheet != sheet || substituted.contains(&range_id) {
+            continue;
+        }
+        if let Some(Range::Block(br)) = ctx.lookup_range(ref_sheet, range_id) {
+            if br.block_id() == block_id {
+                return Err(BasicError::InvalidFormula(format!(
+                    "field rule {:?} references a cell inside its own block \
+                     (sheet={}, block={}). A field rule is a template applied \
+                     verbatim to every row, so a coordinate in it does not \
+                     shift per row — on the block's first row it resolves to \
+                     the very cell being defined. Use `#FIELD(\"name\")` for a \
+                     same-row sibling. A cross-row reference (a running total \
+                     reading the row above) has no template form; write that \
+                     column as ordinary cells instead.",
+                    body, sheet, block_id
+                )));
+            }
+        }
+    }
+
     register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)
 }
 
@@ -648,6 +693,43 @@ fn find_self_block_ref(
                     find_self_block_ref(key_condition, self_sheet, self_block)
                         .or_else(|| find_self_block_ref(field_condition, self_sheet, self_block))
                 }
+            }
+        },
+    }
+}
+
+/// Collect every range a parsed AST references *directly* — i.e. through
+/// an A1/R1C1 coordinate rather than a `BLOCKREF`. Used by the template
+/// path to check those coordinates against the block the formula lives
+/// in; `BLOCKREF` self-refs are caught separately by
+/// {@link find_self_block_ref}.
+fn collect_ref_ranges(ast: &ast::Node, out: &mut Vec<(SheetId, RangeId)>) {
+    match &ast.pure {
+        ast::PureNode::Func(func) => func
+            .args
+            .iter()
+            .for_each(|n| collect_ref_ranges(n, out)),
+        ast::PureNode::Value(_) | ast::PureNode::ArrayConstant(_) => {}
+        ast::PureNode::Reference(reference) => match reference {
+            ast::CellReference::Mut(r) => out.push((r.sheet_id, r.range_id)),
+            // Not in-sheet coordinates: a cube spans sheets, an external
+            // ref another book, a defined name is resolved elsewhere, and
+            // `#REF!` addresses nothing. None can be the own-block
+            // coordinate mistake this collector exists to catch.
+            ast::CellReference::UnMut(_)
+            | ast::CellReference::Ext(_)
+            | ast::CellReference::Name(_)
+            | ast::CellReference::RefErr => {}
+        },
+        ast::PureNode::BlockRef(node) => match node {
+            ast::BlockRefNode::Single { key, .. } => collect_ref_ranges(key, out),
+            ast::BlockRefNode::Multi {
+                key_condition,
+                field_condition,
+                ..
+            } => {
+                collect_ref_ranges(key_condition, out);
+                collect_ref_ranges(field_condition, out);
             }
         },
     }

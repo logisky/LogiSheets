@@ -19,8 +19,8 @@ use logisheets::Value;
 use logisheets::Workbook;
 use logisheets_base::CellId;
 use logisheets_controller::edit_action::{
-    BindFormSchema, BlockInput, CreateBlock, EditPayload, InsertRowsInBlock, PayloadsAction,
-    StatusCode, UpsertFieldFormulas,
+    BindFormSchema, BlockInput, CellInput, CreateBlock, EditPayload, InsertRowsInBlock,
+    PayloadsAction, StatusCode, UpsertFieldFormulas,
 };
 use logisheets_controller::sid_assigner::ShadowKind;
 
@@ -546,5 +546,121 @@ fn test_validation_field_ref_unknown_field_errors() {
         !matches!(result.status, StatusCode::Ok(_)),
         "BindFormSchema referencing unknown field should fail, got status: {:?}",
         result.status
+    );
+}
+
+/// A field rule is a template applied verbatim to every row, so a
+/// coordinate inside it never shifts per row. When that coordinate lands
+/// inside the block itself it is always a mistake — and used to be a
+/// silent one: on the first row the coordinate IS the cell being defined,
+/// so `=C1+#FIELD("amt")` became a self-loop that the cycle iterator
+/// ground out to `amt * iter_limit` with no error anywhere.
+#[test]
+fn test_field_rule_coordinate_into_own_block_errors() {
+    let mut wb = Workbook::default();
+    let result = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 3,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                sheet_idx: 0,
+                block_id: 1,
+                ref_name: "T".into(),
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["key".into(), "amt".into(), "cum".into()],
+                render_ids: vec!["r0".into(), "r1".into(), "r2".into()],
+                // The running-total mistake: C1 is `cum` of the first row.
+                field_formulas: vec![None, None, Some(r#"=C1+#FIELD("amt")"#.into())],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        !matches!(result.status, StatusCode::Ok(_)),
+        "a field rule with a coordinate into its own block should fail, got: {:?}",
+        result.status
+    );
+}
+
+/// The flip side: a coordinate pointing OUTSIDE the block is legitimate
+/// and must keep working. A global assumption cell really is the same
+/// cell for every row, which is exactly what a template wants.
+#[test]
+fn test_field_rule_coordinate_outside_block_is_fine() {
+    let mut wb = Workbook::default();
+    let result = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            // A tax rate parked well clear of the block.
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 20,
+                col: 0,
+                content: "0.25".into(),
+            }),
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                sheet_idx: 0,
+                block_id: 1,
+                ref_name: "T".into(),
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["key".into(), "amt".into(), "net".into()],
+                render_ids: vec!["r0".into(), "r1".into(), "r2".into()],
+                field_formulas: vec![
+                    None,
+                    None,
+                    Some(r#"=#FIELD("amt")*(1-$A$21)"#.into()),
+                ],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "100".into(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(result.status, StatusCode::Ok(_)),
+        "a field rule referencing a cell outside the block must be accepted, got: {:?}",
+        result.status
+    );
+    let net = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_value(0, 2)
+        .unwrap();
+    assert!(
+        matches!(net, Value::Number(n) if (n - 75.0).abs() < 1e-9),
+        "outside-block coordinate should evaluate to 100*(1-0.25)=75, got {:?}",
+        net
     );
 }
