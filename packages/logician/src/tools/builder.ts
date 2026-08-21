@@ -14,6 +14,7 @@
 
 import {
     BindFormSchemaBuilder,
+    ConvertBlockBuilder,
     BlockInputBuilder,
     CreateBlockBuilder,
     CreateSheetBuilder,
@@ -29,6 +30,7 @@ import type {CraftCalc, Value} from 'logisheets-web/pure'
 import type {
     ActionEffect,
     BlockInfo,
+    CellInfo,
     Client,
     EditPayload,
     Transaction,
@@ -2460,7 +2462,233 @@ export const renameField: Tool<
     },
 }
 
+
+// ---------------------------------------------------------------------------
+// convert_to_block — adopt a table that is already there
+// ---------------------------------------------------------------------------
+//
+// The counterpart to `create_block`, and the one a file someone brings you
+// actually needs. `create_block` lays a new block over an area and is refused
+// when that area holds data; this takes data that is already sitting in ordinary
+// cells and makes it a block in place, keeping every value.
+//
+// It only has to be done once. The block and its schema persist through save and
+// reload, and afterwards the region behaves like one that was born a block —
+// rules apply to it, rows can be added, BLOCKREF reads it by name. So a workbook
+// someone returns to week after week is converted on the first visit and is
+// structured from then on.
+
+interface ConvertToBlockInput {
+    sheet: string
+    name: string
+    /** Top-left of the DATA, excluding any header row. */
+    position: {row: number; col: number}
+    row_count: number
+    col_count: number
+    /**
+     * Row holding the column titles, if the table has one. Field names are read
+     * from it, which is what makes the resulting block readable. Usually the row
+     * directly above `position`.
+     */
+    header_row?: number
+    /** Field names, when there is no header row to read them from. */
+    fields?: string[]
+}
+
+export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields: string[]}> = {
+    namespace: 'build',
+    name: 'convert_to_block',
+    description: [
+        'Turn a table that already exists in ordinary cells into a block, in place, without touching its values.',
+        '',
+        "This is how you adopt a workbook someone hands you. `create_block` is for new tables and refuses to write over existing data; this one takes the data as it stands and gives it a name, fields and row keys, so you can address it as (block, row_key, field) and reference it from formulas by name instead of by coordinate.",
+        '',
+        'Give `position` and the counts for the DATA only, leaving out any header row, then either `header_row` to read the field names from the titles or `fields` to state them. The first field is the row-key column, so put the column that identifies each record first.',
+        '',
+        'Converting is a one-time cost: the block and its schema survive saving and reloading, and afterwards the region behaves exactly like one created as a block.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'always',
+    inputSchema: {
+        properties: {
+            sheet: {type: 'string', description: 'Sheet the table is on.'},
+            name: {
+                type: 'string',
+                description:
+                    "Ref name for the new block — BLOCKREF's first argument. Must be unique.",
+            },
+            position: {
+                type: 'object',
+                properties: {
+                    row: {type: 'integer', minimum: 0},
+                    col: {type: 'integer', minimum: 0},
+                },
+                required: ['row', 'col'],
+                description: 'Top-left cell of the data, excluding the header row.',
+            },
+            row_count: {type: 'integer', minimum: 1, description: 'Number of data rows.'},
+            col_count: {type: 'integer', minimum: 1, description: 'Number of columns.'},
+            header_row: {
+                type: 'integer',
+                minimum: 0,
+                description:
+                    'Row holding the column titles; field names are read from it. Usually one row above `position`.',
+            },
+            fields: {
+                type: 'array',
+                items: {type: 'string'},
+                description:
+                    'Field names, when there is no header row. Length must equal col_count.',
+            },
+        },
+        required: ['sheet', 'name', 'position', 'row_count', 'col_count'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+
+        const sheetInfos = await client.getAllSheetInfo()
+        if (isErrorMessage(sheetInfos)) {
+            throw new Error(`getAllSheetInfo failed: ${sheetInfos.msg}`)
+        }
+        const sheetIdx = sheetInfos.findIndex((s) => s.name === input.sheet)
+        if (sheetIdx < 0) {
+            throw new Error(
+                `no sheet named "${input.sheet}" — this converts a table that is already there, so the sheet must exist`
+            )
+        }
+
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        if (all.some((b) => b.schema?.name === input.name)) {
+            throw new Error(
+                `a block named "${input.name}" already exists — ref names are how formulas reach a block, so they must be unique`
+            )
+        }
+
+        const {row, col} = input.position
+        const endRow = row + input.row_count - 1
+        const endCol = col + input.col_count - 1
+
+        // Converting a region that already belongs to a block would give the
+        // same cells two owners.
+        for (const b of all) {
+            if (b.sheetIdx !== sheetIdx) continue
+            const overlaps =
+                row <= b.rowStart + b.rowCnt - 1 &&
+                endRow >= b.rowStart &&
+                col <= b.colStart + b.colCnt - 1 &&
+                endCol >= b.colStart
+            if (overlaps) {
+                throw new Error(
+                    `that region overlaps the existing block "${
+                        b.schema?.name ?? `block#${b.blockId}`
+                    }" at row ${b.rowStart}, col ${b.colStart}`
+                )
+            }
+        }
+
+        // Field names: from the header row if given, else stated outright.
+        let fields: string[]
+        if (input.fields !== undefined) {
+            fields = [...input.fields]
+        } else if (input.header_row !== undefined) {
+            const cells = await client.getCells({
+                sheetIdx,
+                startRow: input.header_row,
+                startCol: col,
+                endRow: input.header_row,
+                endCol,
+            })
+            if (isErrorMessage(cells)) {
+                throw new Error(`reading the header row failed: ${cells.msg}`)
+            }
+            fields = (cells as readonly CellInfo[]).map((c, i) => {
+                const v = c.value
+                const text =
+                    v === 'empty' || v === undefined
+                        ? ''
+                        : typeof v === 'object' && 'value' in v
+                          ? String((v as {value: unknown}).value)
+                          : ''
+                return text.trim() === '' ? `field_${i + 1}` : text.trim()
+            })
+        } else {
+            throw new Error(
+                'give either `header_row` to read the field names from, or `fields` to state them'
+            )
+        }
+
+        if (fields.length !== input.col_count) {
+            throw new Error(
+                `got ${fields.length} field name(s) for ${input.col_count} column(s)`
+            )
+        }
+        const dup = fields.filter((f, i) => fields.indexOf(f) !== i)
+        if (dup.length > 0) {
+            throw new Error(
+                `duplicate field name(s) ${[...new Set(dup)]
+                    .map((d) => `"${d}"`)
+                    .join(', ')} — fields address cells, so they must be unique. ` +
+                    'Pass `fields` explicitly to disambiguate.'
+            )
+        }
+
+        const idRes = await client.getAvailableBlockId({sheetIdx})
+        if (isErrorMessage(idRes)) {
+            throw new Error(`getAvailableBlockId failed: ${idRes.msg}`)
+        }
+        const blockId = idRes
+
+        // Convert then bind, in one transaction: a converted region with no
+        // schema is a block nothing can address.
+        await commitTransaction(
+            client,
+            [
+                {
+                    type: 'convertBlock',
+                    value: new ConvertBlockBuilder()
+                        .sheetIdx(sheetIdx)
+                        .id(blockId)
+                        .masterRow(row)
+                        .masterCol(col)
+                        .rowCnt(input.row_count)
+                        .colCnt(input.col_count)
+                        .build(),
+                },
+                {
+                    type: 'bindFormSchema',
+                    value: new BindFormSchemaBuilder()
+                        .refName(input.name)
+                        .sheetIdx(sheetIdx)
+                        .blockId(blockId)
+                        .fieldFrom(0)
+                        .keyIdx(0)
+                        .fields(fields)
+                        .renderIds(fields.map((_, i) => `${input.name}__f${i}`))
+                        .fieldFormulas([])
+                        .validationFormulas([])
+                        .editabilityFormulas([])
+                        .row(true)
+                        .build(),
+                },
+            ],
+            `convert_to_block("${input.name}")`
+        )
+
+        return {
+            data: {block_id: blockId, fields},
+            display:
+                `Converted the table at row ${row}, col ${col} into block "${input.name}" ` +
+                `(${input.row_count} row(s), fields ${fields.map((f) => `"${f}"`).join(', ')}). ` +
+                'Values untouched.',
+        }
+    },
+}
+
 export const BUILDER_TOOLS: Tool[] = [
+    convertToBlock as Tool,
     renameBlock as Tool,
     renameField as Tool,
     createSheet,
