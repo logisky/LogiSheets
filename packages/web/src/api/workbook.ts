@@ -476,7 +476,7 @@ export class Workbook {
     }
 
     public cleanupTempStatus() {
-        rpc('cleanTempStatus', undefined, this._id)
+        rpc('cleanupTempStatus', undefined, this._id)
     }
 
     public toggleStatus(useTemp: boolean) {

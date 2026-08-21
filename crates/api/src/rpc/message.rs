@@ -86,7 +86,11 @@ pub enum Message {
     GetAllSheetInfo,
     GetFormulaFunctionNames,
     GetAppData,
-    CleanTempStatus,
+    // Named to match `cleanup_temp_status` on the methods interface below.
+    // They disagreed — `CleanTempStatus` on the wire, `cleanupTempStatus` in the
+    // generated TS — and a client that forwards method names verbatim (the
+    // runtime's Proxy) therefore called something the engine did not recognize.
+    CleanupTempStatus,
     CommitTempStatus,
     CheckBindBlock(CheckBindBlockParams),
     GetDisplayWindowWithStartPoint(GetDisplayWindowWithStartPointParams),

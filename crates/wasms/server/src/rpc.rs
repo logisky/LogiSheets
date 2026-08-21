@@ -415,7 +415,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             ok_to_js(&controller::get_formula_function_names(&mgr, id))
         }
         Message::GetAppData => ok_to_js(&controller::get_app_data(&mgr, id)),
-        Message::CleanTempStatus => {
+        Message::CleanupTempStatus => {
             controller::clean_temp_status(&mut mgr, id);
             JsValue::NULL
         }

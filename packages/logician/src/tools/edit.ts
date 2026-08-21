@@ -429,7 +429,20 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                           } would change.`,
             }
         } finally {
-            await client.cleanupTempStatus()
+            // A cleanup that fails leaves the temp branch — and therefore the
+            // previewed writes — as the live state, which is the exact opposite
+            // of what this tool promises. Swallowing the result is how that went
+            // unnoticed: the engine's RPC was named `cleanTempStatus` while the
+            // client interface said `cleanupTempStatus`, so on any host that
+            // forwards method names verbatim the discard was a silent no-op and
+            // every "dry run" committed itself.
+            const cleaned = await client.cleanupTempStatus()
+            if (isErrorMessage(cleaned)) {
+                throw new Error(
+                    `preview_changes could not discard its temp branch (${cleaned.msg}) — ` +
+                        'the workbook may now hold the previewed values'
+                )
+            }
         }
     },
 }
