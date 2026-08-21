@@ -1,3 +1,10 @@
+//! Serde default helpers for the OOXML types.
+//!
+//! A few of these are only referenced by `drawings` / `enum_groups`, the
+//! schema modules nothing consumes yet, so they read as unused until a shape
+//! model exists. See the note at the top of `drawings`.
+#![allow(dead_code)]
+
 use super::simple_types::*;
 
 pub fn fullwidth_katakana() -> StPhoneticType {

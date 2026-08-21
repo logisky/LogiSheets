@@ -31,7 +31,7 @@ pub type LockGuardMut<'a, T> = std::sync::RwLockWriteGuard<'a, T>;
 #[inline(always)]
 #[must_use]
 #[allow(dead_code)]
-pub fn locked_read<T>(value: &Locked<T>) -> LockGuard<T> {
+pub fn locked_read<T>(value: &Locked<T>) -> LockGuard<'_, T> {
     #[cfg(not(feature = "sequencer"))]
     return value.borrow();
 
@@ -42,7 +42,7 @@ pub fn locked_read<T>(value: &Locked<T>) -> LockGuard<T> {
 #[inline(always)]
 #[must_use]
 #[allow(dead_code)]
-pub fn locked_write<T>(value: &Locked<T>) -> LockGuardMut<T> {
+pub fn locked_write<T>(value: &Locked<T>) -> LockGuardMut<'_, T> {
     #[cfg(not(feature = "sequencer"))]
     return value.borrow_mut();
 

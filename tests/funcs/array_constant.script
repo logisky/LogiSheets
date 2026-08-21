@@ -1,0 +1,74 @@
+# Inline array constants: `{1,2}` is a row, `;` starts a new row.
+#
+# These used to collapse to their first element — the parser built one numerical
+# constant and threw the rest away — so `=SUM({1,2,3})` quietly returned 1. A
+# wrong number, not an error, which is the one failure mode a calculation engine
+# exists to rule out.
+
+# One row.
+INPUT A1 =SUM({1,2,3})
+CHECKNUM A1 6
+
+INPUT A2 =MAX({4,9,2})
+CHECKNUM A2 9
+
+INPUT A3 =MIN({4,9,2})
+CHECKNUM A3 2
+
+INPUT A4 =COUNT({1,2,3})
+CHECKNUM A4 3
+
+INPUT A5 =AVERAGE({2,4,6})
+CHECKNUM A5 4
+
+# Two dimensions: `;` separates rows, so this is 2x2.
+INPUT B1 =SUM({1,2;3,4})
+CHECKNUM B1 10
+
+INPUT B2 =MAX({1,2;30,4})
+CHECKNUM B2 30
+
+# Pairwise across two arrays — the case that first showed the bug, since
+# SUMPRODUCT of first-elements-only gave 1*3 = 3.
+INPUT B3 =SUMPRODUCT({1,2},{3,4})
+CHECKNUM B3 11
+
+INPUT B4 =SUMPRODUCT({1,2;3,4},{1,2;3,4})
+CHECKNUM B4 30
+
+# An array mixes with scalars and with real ranges.
+INPUT C1 1
+INPUT C2 2
+INPUT C3 3
+INPUT B5 =SUM({1,2,3})+SUM(C1:C3)
+CHECKNUM B5 12
+
+# C1:C3 is 3 rows x 1 column, so the array has to be a column too — `;`
+# separates rows. A 1x3 array against a 3x1 range is a shape mismatch, and
+# Excel returns #VALUE! for it.
+INPUT B6 =SUMPRODUCT(C1:C3,{2;2;2})
+CHECKNUM B6 12
+
+INPUT B10 =SUMPRODUCT(C1:C3,{2,2,2})
+CHECKERR B10 #VALUE!
+
+# An error inside the array propagates, rather than being silently dropped.
+INPUT B7 =SUM({1,#DIV/0!})
+CHECKERR B7 #DIV/0!
+
+# A single-element array is just its element.
+INPUT B8 =SUM({7})
+CHECKNUM B8 7
+
+# Excel rejects a ragged literal outright; we pad the short row with blanks so
+# the matrix stays rectangular, which sums the same as the elements given.
+INPUT B9 =SUM({1,2;3})
+CHECKNUM B9 6
+
+# The literal survives a round trip through the AST, including its row shape.
+INPUT D1 =SUM({1,2;3,4})
+CHECKFORMULA D1 SUM({1,2;3,4})
+CHECKNUM D1 10
+
+INPUT D2 =SUM({1,"a",TRUE})
+CHECKFORMULA D2 SUM({1,"a",TRUE})

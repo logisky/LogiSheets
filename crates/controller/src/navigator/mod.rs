@@ -1,4 +1,3 @@
-use crate::lock::locked_write;
 use imbl::HashMap;
 use logisheets_base::{
     BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId, errors::BasicError,
@@ -22,8 +21,7 @@ pub struct Navigator {
 impl Navigator {
     pub fn fetch_row_id(&self, sheet_id: &SheetId, row: usize) -> Result<RowId, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        let row_id = fetcher.get_row_id(row);
-        Ok(row_id)
+        fetcher.get_row_id(row)
     }
 
     pub fn fetch_row_idx(&self, sheet_id: &SheetId, row: &RowId) -> Result<usize, BasicError> {
@@ -33,8 +31,7 @@ impl Navigator {
 
     pub fn fetch_col_id(&self, sheet_id: &SheetId, col: usize) -> Result<ColId, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        let col_id = fetcher.get_col_id(col.clone());
-        Ok(col_id)
+        fetcher.get_col_id(col)
     }
 
     pub fn fetch_col_idx(&self, sheet_id: &SheetId, col: &ColId) -> Result<usize, BasicError> {
@@ -112,7 +109,7 @@ impl Navigator {
         col: usize,
     ) -> Result<NormalCellId, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        Ok(fetcher.get_norm_cell_id(row, col))
+        fetcher.get_norm_cell_id(row, col)
     }
 
     pub fn fetch_cell_idx(

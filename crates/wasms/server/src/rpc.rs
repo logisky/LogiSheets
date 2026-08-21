@@ -189,15 +189,23 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         }
         Message::HandleTransaction(params) => {
             let effect = controller::handle_transaction(&mut mgr, id, params.transaction);
-            // If the engine rejected the tx, surface the captured error string
-            // to the browser console instead of dropping it into stdout (which
-            // is a no-op in wasm).
+            // The reason now travels on the effect itself (`error_message`), so
+            // every host gets it. Still mirror it to the browser console, where
+            // it is the thing a developer actually reads, and drain
+            // `take_last_error` either way so a rejection can't leak into the
+            // next transaction's report.
             if let logisheets_rs::StatusCode::Err(_) = effect.status {
-                if let Some(msg) = logisheets_rs::take_last_error() {
+                let msg = effect
+                    .error_message
+                    .clone()
+                    .or_else(logisheets_rs::take_last_error);
+                if let Some(msg) = msg {
                     web_sys::console::error_1(
                         &format!("[handle_transaction] engine error: {}", msg).into(),
                     );
                 }
+            } else {
+                let _ = logisheets_rs::take_last_error();
             }
             ok_to_js(&effect)
         }
@@ -218,7 +226,12 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             ok_to_js(&controller::read_file(&mut mgr, id, params.name, &params.content))
         }
         Message::SaveWorkbook(params) => {
-            ok_to_js(&controller::save_file(&mut mgr, id, params.app_data))
+            ok_to_js(&controller::save_file(
+                &mut mgr,
+                id,
+                params.app_data,
+                params.resolve_block_refs.unwrap_or(false),
+            ))
         }
         Message::GetCellId(params) => res_to_js(controller::get_cell_id(
             &mut mgr,
@@ -402,7 +415,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             ok_to_js(&controller::get_formula_function_names(&mgr, id))
         }
         Message::GetAppData => ok_to_js(&controller::get_app_data(&mgr, id)),
-        Message::CleanTempStatus => {
+        Message::CleanupTempStatus => {
             controller::clean_temp_status(&mut mgr, id);
             JsValue::NULL
         }

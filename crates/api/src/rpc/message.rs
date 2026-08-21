@@ -86,7 +86,11 @@ pub enum Message {
     GetAllSheetInfo,
     GetFormulaFunctionNames,
     GetAppData,
-    CleanTempStatus,
+    // Named to match `cleanup_temp_status` on the methods interface below.
+    // They disagreed — `CleanTempStatus` on the wire, `cleanupTempStatus` in the
+    // generated TS — and a client that forwards method names verbatim (the
+    // runtime's Proxy) therefore called something the engine did not recognize.
+    CleanupTempStatus,
     CommitTempStatus,
     CheckBindBlock(CheckBindBlockParams),
     GetDisplayWindowWithStartPoint(GetDisplayWindowWithStartPointParams),
@@ -356,6 +360,12 @@ pub struct LoadWorkbookParams {
 #[ts(file_name = "rpc_save_params.ts", rename_all = "camelCase")]
 pub struct SaveParams {
     pub app_data: String,
+    /// Write block formulas as `A1` references instead of `BLOCKREF(...)`.
+    ///
+    /// Off by default: the named form is the readable one and reopens here
+    /// intact. Turn it on for a file another spreadsheet has to recalculate —
+    /// no one else knows the BLOCKREF functions. See `FormulaFormat`.
+    pub resolve_block_refs: Option<bool>,
 }
 
 #[derive(Debug, Clone, TS)]

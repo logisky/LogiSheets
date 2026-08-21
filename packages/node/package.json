@@ -1,6 +1,6 @@
 {
   "name": "logisheets",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "Node.js bindings for LogiSheets — a Rust + WebAssembly spreadsheet engine that reads, edits, and writes real .xlsx (Excel) files (formulas, styles, and structure preserved) with no browser required.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

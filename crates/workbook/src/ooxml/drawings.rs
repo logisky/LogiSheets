@@ -1,3 +1,15 @@
+//! DrawingML shapes, text bodies and transforms (§20.1 / §21.1).
+//!
+//! These types describe the drawing part faithfully but nothing consumes them
+//! yet: the reader and writer round-trip drawings through `drawing_part`, and
+//! the engine has no shape model to load them into. They are kept because
+//! discarding a transcribed schema is far more work to recover than to hold, and
+//! because whatever eventually models shapes will need exactly this.
+//!
+//! `dead_code` is allowed for that reason rather than silenced blindly — if you
+//! wire a type up, nothing here needs changing.
+#![allow(dead_code)]
+
 use super::defaults::default_false;
 use super::defaults::default_string_empty;
 use super::defaults::default_true;

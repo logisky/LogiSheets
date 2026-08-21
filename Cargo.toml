@@ -37,7 +37,7 @@ members = [
 exclude = ["fuzz", "packages/desktop/src-tauri"]
 
 [workspace.package]
-version = "1.11.0"
+version = "1.12.0"
 authors = ["JeremyHe <yiliang.he@qq.com>"]
 license = "MIT"
 edition = "2024"
@@ -57,23 +57,23 @@ regex = "1"
 serde = "1"
 serde_json = "1"
 thiserror = "1.0"
-xmlserde = "0.12"
-xmlserde_derives = "0.12"
+xmlserde = "0.13.2"
+xmlserde_derives = "0.13.2"
 wildescape = "0.1"
 
 ssf-rs = { path = "crates/ssf-rs", version = "0.1.0" }
 
-logisheets_lexer = { path = "crates/controller/lexer", version = "1.11.0" }
-logisheets_parser = { path = "crates/controller/parser", version = "1.11.0" }
-logisheets_base = { path = "crates/controller/base", version = "1.11.0" }
-logisheets_controller = { path = "crates/controller", version = "1.11.0" }
-logisheets_lexer4fmt = { path = "crates/controller/lexer4fmt", version = "1.11.0" }
-logisheets_astchecker = { path = "crates/controller/ast_checker", version = "1.11.0" }
+logisheets_lexer = { path = "crates/controller/lexer", version = "1.12.0" }
+logisheets_parser = { path = "crates/controller/parser", version = "1.12.0" }
+logisheets_base = { path = "crates/controller/base", version = "1.12.0" }
+logisheets_controller = { path = "crates/controller", version = "1.12.0" }
+logisheets_lexer4fmt = { path = "crates/controller/lexer4fmt", version = "1.12.0" }
+logisheets_astchecker = { path = "crates/controller/ast_checker", version = "1.12.0" }
 
-logisheets_workbook_derives = { path = "crates/workbook/derives", version = "1.11.0" }
+logisheets_workbook_derives = { path = "crates/workbook/derives", version = "1.12.0" }
 xmldiff = { path = "crates/xmldiff", version = "1.9.0" }
-logisheets_workbook = { path = "crates/workbook", version = "1.11.0" }
-logisheets-rs = { path = "crates/api", version = "1.11.0" }
+logisheets_workbook = { path = "crates/workbook", version = "1.12.0" }
+logisheets-rs = { path = "crates/api", version = "1.12.0" }
 
 [dependencies]
 logisheets_controller = { workspace = true }
@@ -84,3 +84,12 @@ glob = "0.3.1"
 logiscript = { path = "crates/logiscript" }
 logisheets_base = { workspace = true }
 proptest = "1"
+
+# Cargo ignores `[profile.*]` in non-root workspace members, so the wasm crate's
+# own request for a size-optimized build was silently dropped (it only produced a
+# warning). Declaring it here as a per-package override is the form that applies.
+# Scoped to the wasm crate on purpose: the native crates keep the default
+# opt-level, since trading their speed for size buys nothing.
+[profile.release.package.logisheets_wasm_server]
+opt-level = "s"
+

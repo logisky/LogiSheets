@@ -1,5 +1,4 @@
 mod external_links;
-mod fetcher;
 mod sheet;
 mod sst;
 mod styles;

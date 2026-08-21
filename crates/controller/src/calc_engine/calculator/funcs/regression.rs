@@ -82,7 +82,7 @@ fn moments(xs: &[f64], ys: &[f64]) -> (f64, f64, f64, f64, f64, f64) {
 
 macro_rules! pairs_or_return {
     ($xs:ident, $ys:ident, $args:expr, $fetcher:expr) => {
-        let (($xs, $ys)) = match fetch_pairs($args, $fetcher) {
+        let ($xs, $ys) = match fetch_pairs($args, $fetcher) {
             Ok(p) => p,
             Err(e) => return CalcVertex::from_error(e),
         };

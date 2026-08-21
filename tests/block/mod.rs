@@ -1,7 +1,8 @@
 use logisheets::Workbook;
 use logisheets_controller::edit_action::{
-    BindFormSchema, BlockInput, CreateBlock, CreateSheet, DeleteRows, DeleteRowsInBlock,
-    EditPayload, InsertRows, InsertRowsInBlock, PayloadsAction, StatusCode,
+    BindFormSchema, BlockInput, CellInput, CreateBlock, CreateSheet, DeleteRows,
+    DeleteRowsInBlock, DeleteSheet, EditPayload, InsertCols, InsertRows, InsertRowsInBlock,
+    MoveBlock, PayloadsAction, StatusCode,
 };
 
 use crate::load_script;
@@ -679,4 +680,852 @@ fn test_block_input_after_deleterows_cross_sheet_same_blockid() {
             round.to_string(),
         );
     }
+}
+
+/// A formula stored in a cell INSIDE a block used to vanish when the file was
+/// reloaded.
+///
+/// `load_normal_formula` matched only `CellId::NormalCell` and dropped anything
+/// else. Blocks are registered before sheet data, so every in-block cell
+/// resolves to a `BlockCell` — and its formula was discarded with no error. The
+/// writer had emitted it correctly and the cached `<v>` still loaded, so the
+/// workbook looked intact: right numbers, no formula, nothing recalculating ever
+/// again. Reported via logisheets-mcp, where `get_cells` showed values but no
+/// formulas for a model that had been saved and reopened.
+///
+/// Asserts the formula text comes back AND that it is live, which is the part
+/// that actually matters — a retained string that never recalculates would be
+/// the same bug wearing a disguise.
+#[test]
+fn test_block_cell_formula_survives_reload() {
+    let mut workbook = Workbook::new();
+
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "10".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "20".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 2,
+                input: "=A1+B1".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    let ws = workbook.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_formula(0, 2).unwrap(), "A1 + B1", "pre-save formula");
+
+    let mut bytes = workbook.save().expect("save");
+    let mut reopened = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+
+    let ws = reopened.get_sheet_by_idx(0).unwrap();
+    assert_eq!(
+        ws.get_formula(0, 2).unwrap(),
+        "A1 + B1",
+        "block cell lost its formula on reload"
+    );
+
+    // Live, not just remembered: change a precedent and the formula recomputes.
+    reopened.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: 0,
+            col: 0,
+            input: "100".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let v = reopened
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_value(0, 2)
+        .unwrap();
+    assert!(
+        matches!(v, logisheets::Value::Number(n) if n == 120.0),
+        "reloaded block formula did not recalculate: {:?}",
+        v
+    );
+}
+
+/// Out-of-range payload indices must be rejected, not panic.
+///
+/// Every case below killed the engine instance before: indices arrived straight
+/// from the payload and reached imbl's `split_at` / `remove` / index operators,
+/// or an `unwrap` on a lookup that legitimately fails. Under wasm a panic is not
+/// a catchable error — it takes the session down — and an agent driving the
+/// engine explores far more of this input space than a UI user does.
+#[test]
+fn test_out_of_range_payloads_are_rejected() {
+    fn rejected(payload: EditPayload) -> bool {
+        let mut workbook = Workbook::new();
+        // A block to aim the block-scoped payloads at.
+        workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 3,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            })],
+            init: false,
+            undoable: false,
+        }));
+        let effect = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+            payloads: vec![payload],
+            init: false,
+            undoable: false,
+        }));
+        matches!(effect.status, StatusCode::Err(_))
+    }
+
+    // A sheet may be inserted just past the last one, never beyond.
+    assert!(rejected(EditPayload::CreateSheet(CreateSheet {
+        idx: 3,
+        new_name: "far".to_string(),
+    })));
+    assert!(rejected(EditPayload::DeleteSheet(DeleteSheet { idx: 9 })));
+
+    // Line counts must fit the sheet; `count: u32::MAX` used to never return.
+    assert!(rejected(EditPayload::InsertCols(InsertCols {
+        sheet_idx: 0,
+        start: 0,
+        count: u32::MAX as usize,
+    })));
+    assert!(rejected(EditPayload::InsertRows(InsertRows {
+        sheet_idx: 0,
+        start: 0,
+        count: u32::MAX as usize,
+    })));
+
+    // Block line ranges must fall inside the block.
+    assert!(rejected(EditPayload::DeleteRowsInBlock(DeleteRowsInBlock {
+        sheet_idx: 0,
+        block_id: 1,
+        start: 100,
+        cnt: u32::MAX as usize,
+    })));
+    assert!(rejected(EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+        sheet_idx: 0,
+        block_id: 1,
+        start: 100,
+        cnt: 1,
+    })));
+
+    // Moving a block that does not exist is a bad request, not a crash.
+    assert!(rejected(EditPayload::MoveBlock(MoveBlock {
+        sheet_idx: 0,
+        id: 4096,
+        new_master_row: 0,
+        new_master_col: 0,
+    })));
+}
+
+/// A block whose dimensions are large enough to overflow an allocation must be
+/// rejected, not abort the process.
+///
+/// `create_block` is a first-class agent operation, and nothing bounded the
+/// requested size: `row_cnt * col_cnt` cells were materialized eagerly, so
+/// 1048576 x 16384 — each within the sheet's own limits — asked for ~17 billion
+/// cells and panicked inside `RawVec` with a capacity overflow. Under wasm that
+/// takes down the engine instance and the session with it.
+#[test]
+fn test_create_block_rejects_absurd_dimensions() {
+    let mut workbook = Workbook::new();
+    let effect = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: 1,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 1048576,
+            col_cnt: 16384,
+            owner: None,
+            modify_policy: None,
+        })],
+        init: false,
+        undoable: false,
+    }));
+    assert!(
+        matches!(effect.status, StatusCode::Err(_)),
+        "expected a rejection, got {:?}",
+        effect.status
+    );
+}
+
+/// A formula OUTSIDE a block that reads into it via BLOCKREF / BLOCKREFS must
+/// keep recomputing after the workbook has been saved and reopened.
+///
+/// It did not. The live input path registers a topo-barrier edge making every
+/// formula cell inside a block a dep of `BlockAll(block)`; the file-load path
+/// (`add_ast_node`) skipped it. So after a reload, recomputing a block cell
+/// never walked out to `BlockAll`, and external readers kept their old values —
+/// a wrong number with no error, and only after a round trip. Found by building
+/// a DCF, saving it, and changing one assumption: the projection updated while
+/// every summary line over it stayed stale, moving value-per-share by 15%.
+#[test]
+fn test_blockref_readers_recompute_after_reload() {
+    let mut workbook = Workbook::new();
+
+    // Block 1: `a` is an input, `b` is a formula over it.
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "k1".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "10".to_string(),
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "t".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["key".to_string(), "a".to_string(), "b".to_string()],
+                render_ids: vec!["r0".to_string(), "r1".to_string(), "r2".to_string()],
+                field_formulas: vec![None, None, Some("=#FIELD(\"a\")*2".to_string())],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            // Two readers outside the block: the single form and the aggregate.
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 0,
+                content: "=BLOCKREF(\"t\",\"k1\",\"b\")".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 1,
+                content: "=SUM(BLOCKREFS(\"t\",\"*\",\"b\"))".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    let num = |wb: &mut Workbook, r: usize, c: usize| -> f64 {
+        let v = wb.get_sheet_by_idx(0).unwrap().get_value(r, c).unwrap();
+        match v {
+            logisheets::Value::Number(n) => n,
+            other => panic!("expected a number at ({r},{c}), got {other:?}"),
+        }
+    };
+    assert_eq!(num(&mut workbook, 0, 2), 20.0, "b = a*2");
+    assert_eq!(num(&mut workbook, 5, 0), 20.0, "BLOCKREF");
+    assert_eq!(num(&mut workbook, 5, 1), 20.0, "BLOCKREFS");
+
+    let mut bytes = workbook.save().expect("save");
+    let mut reopened = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+
+    // Change the input the block's own formula depends on.
+    reopened.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: 0,
+            col: 1,
+            input: "50".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    assert_eq!(
+        num(&mut reopened, 0, 2),
+        100.0,
+        "the block's own formula recomputed"
+    );
+    assert_eq!(
+        num(&mut reopened, 5, 0),
+        100.0,
+        "BLOCKREF reader went stale after reload"
+    );
+    assert_eq!(
+        num(&mut reopened, 5, 1),
+        100.0,
+        "BLOCKREFS reader went stale after reload"
+    );
+}
+
+/// `FormulaFormat::Coordinates` must turn BLOCKREF / BLOCKREFS into ordinary A1
+/// references, because no other spreadsheet knows those functions — a file Excel
+/// recalculates would otherwise fill with `#NAME?`. The default keeps the named
+/// form, which is the readable one and the one that survives rows moving.
+#[test]
+fn test_save_can_resolve_block_refs_to_coordinates() {
+    let mut workbook = Workbook::new();
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "r1".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "10".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 0,
+                input: "r2".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 1,
+                input: "20".to_string(),
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "t".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["key".to_string(), "v".to_string()],
+                render_ids: vec!["r0".to_string(), "r1".to_string()],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 0,
+                content: "=BLOCKREF(\"t\",\"r2\",\"v\")".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 1,
+                content: "=SUM(BLOCKREFS(\"t\",\"*\",\"v\"))".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    // Default: the named form is preserved.
+    let mut named = workbook.save().expect("save named");
+    let reopened = Workbook::from_file(&mut named, "named".to_string()).expect("reopen named");
+    let ws = reopened.get_sheet_by_idx(0).unwrap();
+    assert!(
+        ws.get_formula(5, 0).unwrap().contains("BLOCKREF"),
+        "default save must keep BLOCKREF, got {:?}",
+        ws.get_formula(5, 0)
+    );
+
+    // Coordinates: A1 refs, and no LogiSheets-only function left behind.
+    let bytes = workbook
+        .save_with_format(logisheets::FormulaFormat::Coordinates)
+        .expect("save resolved");
+    let mut bytes = bytes;
+    let reopened =
+        Workbook::from_file(&mut bytes, "resolved".to_string()).expect("reopen resolved");
+    let ws = reopened.get_sheet_by_idx(0).unwrap();
+
+    // `v` of row key "r2" is the block's (1,1) => sheet B2.
+    let single = ws.get_formula(5, 0).unwrap();
+    assert_eq!(single, "B2", "BLOCKREF should resolve to a cell, got {single:?}");
+
+    // Every row of field `v` is B1:B2.
+    let multi = ws.get_formula(5, 1).unwrap();
+    assert!(
+        multi.contains("B1:B2") && !multi.contains("BLOCKREF"),
+        "BLOCKREFS should resolve to a range, got {multi:?}"
+    );
+}
+
+/// Removing a row from a block must dirty `BlockAll`, or an aggregate reading
+/// that block keeps counting the row that is gone.
+///
+/// `BLOCKREFS` depends on `BlockAll` and nothing else — its filters scan
+/// whatever the block currently holds, so no per-cell edge can stand in for it.
+/// Only the three schema payloads dirtied it, so deletion left the total stale
+/// until an unrelated write happened to trigger a recalculation: a block holding
+/// 10, 20, 30 still summed to 60 after 20 was deleted.
+///
+/// Insertion only appeared to work, because new rows materialize their fields'
+/// value formulas and writing those cells reaches `BlockAll` through the
+/// per-cell edge — so a block whose fields had no formula had the bug in both
+/// directions.
+#[test]
+fn test_block_row_removal_dirties_readers() {
+    let mut workbook = Workbook::new();
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: 1,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: 3,
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+    })];
+    for (i, (k, v)) in [("k1", "10"), ("k2", "20"), ("k3", "30")]
+        .into_iter()
+        .enumerate()
+    {
+        payloads.push(EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: i,
+            col: 0,
+            input: k.to_string(),
+        }));
+        payloads.push(EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: i,
+            col: 1,
+            input: v.to_string(),
+        }));
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "t".to_string(),
+        sheet_idx: 0,
+        block_id: 1,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec!["key".to_string(), "v".to_string()],
+        render_ids: vec!["r0".to_string(), "r1".to_string()],
+        field_formulas: vec![],
+        validation_formulas: vec![],
+        editability_formulas: vec![],
+        row: true,
+    }));
+    // Readers outside the block: one aggregate over the field, one count.
+    payloads.push(EditPayload::CellInput(CellInput {
+        sheet_idx: 0,
+        row: 10,
+        col: 0,
+        content: "=SUM(BLOCKREFS(\"t\",\"*\",\"v\"))".to_string(),
+    }));
+    payloads.push(EditPayload::CellInput(CellInput {
+        sheet_idx: 0,
+        row: 10,
+        col: 1,
+        content: "=COUNT(BLOCKREFS(\"t\",\"*\",\"v\"))".to_string(),
+    }));
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+
+    let num = |wb: &mut Workbook, row: usize, col: usize| -> f64 {
+        match wb.get_sheet_by_idx(0).unwrap().get_value(row, col).unwrap() {
+            logisheets::Value::Number(n) => n,
+            other => panic!("expected a number at ({row},{col}), got {other:?}"),
+        }
+    };
+    assert_eq!(num(&mut workbook, 10, 0), 60.0);
+    assert_eq!(num(&mut workbook, 10, 1), 3.0);
+
+    // Drop the middle row.
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteRowsInBlock(DeleteRowsInBlock {
+            sheet_idx: 0,
+            block_id: 1,
+            start: 1,
+            cnt: 1,
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    // Immediately — not after some later unrelated write.
+    assert_eq!(
+        num(&mut workbook, 10, 0),
+        40.0,
+        "SUM(BLOCKREFS) still counts the deleted row"
+    );
+    assert_eq!(
+        num(&mut workbook, 10, 1),
+        2.0,
+        "COUNT(BLOCKREFS) still counts the deleted row"
+    );
+}
+
+/// A BLOCKREF whose key is an expression rather than a literal is a join — one
+/// table looking another up — and it is the common shape once a model has more
+/// than one table. `FormulaFormat::Coordinates` has no single cell to point at
+/// there, so it must write the lookup a plain spreadsheet would have used.
+/// Without this, a relational model exported for Excel kept most of its
+/// BLOCKREFs and stayed unrecalculable: on a production schedule, 24 of 36
+/// formulas.
+#[test]
+fn test_save_resolves_a_block_join_to_index_match() {
+    let mut workbook = Workbook::new();
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            // products: key | line
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "widget".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "L1".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 0,
+                input: "gizmo".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 1,
+                input: "L2".to_string(),
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "products".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["product".to_string(), "line".to_string()],
+                render_ids: vec!["r0".to_string(), "r1".to_string()],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            // An ordinary cell naming the product to look up, and the join.
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 0,
+                content: "gizmo".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 1,
+                content: "=BLOCKREF(\"products\",A6,\"line\")".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    // The named form is what LogiSheets keeps.
+    let mut named = workbook.save().expect("save named");
+    let reopened = Workbook::from_file(&mut named, "named".to_string()).expect("reopen");
+    let f = reopened.get_sheet_by_idx(0).unwrap().get_formula(5, 1).unwrap();
+    assert!(f.contains("BLOCKREF"), "default save should keep the join named, got {f:?}");
+
+    // Coordinates: an INDEX/MATCH over the field and key columns, which is what
+    // the same lookup looks like in a spreadsheet that has never heard of
+    // blocks. products spans A1:B2, so the field is B1:B2 and the keys A1:A2.
+    let mut bytes = workbook
+        .save_with_format(logisheets::FormulaFormat::Coordinates)
+        .expect("save resolved");
+    let reopened =
+        Workbook::from_file(&mut bytes, "resolved".to_string()).expect("reopen resolved");
+    let f = reopened.get_sheet_by_idx(0).unwrap().get_formula(5, 1).unwrap();
+    assert!(
+        !f.contains("BLOCKREF"),
+        "a resolved save must leave no BLOCKREF, got {f:?}"
+    );
+    assert!(
+        f.contains("INDEX") && f.contains("MATCH"),
+        "a computed key should become INDEX/MATCH, got {f:?}"
+    );
+    assert!(
+        f.contains("B1:B2") && f.contains("A1:A2"),
+        "should index the field column and match the key column, got {f:?}"
+    );
+}
+
+/// Helper: a block whose rows are (key, amt) plus a derived `pct` column,
+/// with whatever value-formula template the caller wants on `pct`.
+fn build_pct_block(pct_rule: &str, rows: &[(&str, f64)]) -> (Workbook, StatusCode) {
+    let mut workbook = Workbook::new();
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: 1,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 3,
+        owner: None,
+        modify_policy: None,
+    })];
+    for (i, (key, amt)) in rows.iter().enumerate() {
+        payloads.push(EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: i,
+            col: 0,
+            input: key.to_string(),
+        }));
+        payloads.push(EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: i,
+            col: 1,
+            input: amt.to_string(),
+        }));
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "t".to_string(),
+        sheet_idx: 0,
+        block_id: 1,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec!["key".to_string(), "amt".to_string(), "pct".to_string()],
+        render_ids: vec!["r0".to_string(), "r1".to_string(), "r2".to_string()],
+        field_formulas: vec![None, None, Some(pct_rule.to_string())],
+        validation_formulas: vec![],
+        editability_formulas: vec![],
+        row: true,
+    }));
+    let effect = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    (workbook, effect.status)
+}
+
+fn col_values(wb: &mut Workbook, col: usize, n: usize) -> Vec<f64> {
+    (0..n)
+        .map(|r| match wb.get_sheet_by_idx(0).unwrap().get_value(r, col).unwrap() {
+            logisheets::Value::Number(v) => v,
+            other => panic!("expected a number at ({r},{col}), got {other:?}"),
+        })
+        .collect()
+}
+
+/// `#FIELD("field", "key")` reaches another row of the cell's OWN block.
+///
+/// This is the one thing no other construct could do. `BLOCKREF` is refused
+/// against its own block — it depends on the whole-block vertex, so it would
+/// close a cycle — and a plain coordinate in a template does not shift per
+/// row (and is now refused too). Keying the row rather than offsetting to it
+/// is deliberate: rows can be reordered and inserted into, so `the row above`
+/// would silently come to mean a different row.
+///
+/// The classic use is a share-of-total column, where every row divides by one
+/// named row.
+#[test]
+fn test_field_ref_by_key_reaches_another_row_of_the_same_block() {
+    let rows = [("r1", 10.0), ("r2", 20.0), ("r3", 30.0), ("TOTAL", 60.0)];
+    let (mut wb, status) =
+        build_pct_block("=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")", &rows);
+    assert!(matches!(status, StatusCode::Ok(_)), "bind failed: {status:?}");
+    let pct = col_values(&mut wb, 2, 4);
+    let want = [10.0 / 60.0, 20.0 / 60.0, 30.0 / 60.0, 1.0];
+    for (got, exp) in pct.iter().zip(want.iter()) {
+        assert!(
+            (got - exp).abs() < 1e-9,
+            "pct column should be amt/TOTAL, got {pct:?} want {want:?}"
+        );
+    }
+}
+
+/// The keyed reference is a real dependency, not a snapshot: editing the
+/// referenced row recomputes every row that points at it.
+#[test]
+fn test_field_ref_by_key_recomputes_when_the_target_changes() {
+    let rows = [("r1", 10.0), ("r2", 20.0), ("TOTAL", 30.0)];
+    let (mut wb, _) = build_pct_block("=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")", &rows);
+    assert!((col_values(&mut wb, 2, 3)[0] - 10.0 / 30.0).abs() < 1e-9);
+
+    wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: 2, // the TOTAL row
+            col: 1,
+            input: "60".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let pct = col_values(&mut wb, 2, 3);
+    assert!(
+        (pct[0] - 10.0 / 60.0).abs() < 1e-9 && (pct[1] - 20.0 / 60.0).abs() < 1e-9,
+        "rows should follow the row they key into, got {pct:?}"
+    );
+}
+
+/// Same-block keyed refs must survive a save/reload. The file-load path has
+/// twice now registered less than the live path (block-cell formulas, then the
+/// `BlockAll` topo-barrier edge), each time as a wrong number rather than a
+/// crash — so a round trip is part of the feature, not an afterthought.
+#[test]
+fn test_field_ref_by_key_survives_save_and_reload() {
+    let rows = [("r1", 10.0), ("r2", 20.0), ("TOTAL", 30.0)];
+    let (wb, _) = build_pct_block("=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")", &rows);
+    let mut bytes = wb.save().expect("save");
+    let mut reopened = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+
+    // The template itself must come back intact. It is stored as an XML
+    // attribute full of quotes, which is exactly what the xmlserde escaping
+    // bug used to mangle — every block field rule died on save/reload.
+    let rule = reopened
+        .get_all_blocks(Some(0), None)
+        .expect("get_all_blocks")
+        .into_iter()
+        .find_map(|b| b.schema)
+        .and_then(|s| {
+            s.fields
+                .into_iter()
+                .find(|f| f.field == "pct")
+                .and_then(|f| f.value_formula)
+        })
+        .expect("the pct field should still carry its template");
+    assert_eq!(
+        rule, "=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")",
+        "the keyed template should round-trip verbatim"
+    );
+    assert!(
+        (col_values(&mut reopened, 2, 3)[1] - 20.0 / 30.0).abs() < 1e-9,
+        "values should reload intact"
+    );
+
+    // And still live: change the keyed-into row after the round trip.
+    reopened.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: 2,
+            col: 1,
+            input: "60".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let pct = col_values(&mut reopened, 2, 3);
+    assert!(
+        (pct[1] - 20.0 / 60.0).abs() < 1e-9,
+        "keyed ref went stale after reload, got {pct:?}"
+    );
+}
+
+/// A keyed reference that lands on the very cell being defined is a
+/// self-loop. Left alone the cycle iterator would grind it to a meaningless
+/// number with no error — the same silent failure as a coordinate pointing
+/// into its own block. Reject the rule instead.
+#[test]
+fn test_field_ref_by_key_onto_itself_errors() {
+    let rows = [("r1", 10.0), ("TOTAL", 30.0)];
+    // `pct` keying into `pct` of the TOTAL row: fine for r1, a self-reference
+    // for the TOTAL row itself.
+    let (_wb, status) = build_pct_block("=#FIELD(\"pct\",\"TOTAL\")+1", &rows);
+    assert!(
+        !matches!(status, StatusCode::Ok(_)),
+        "a rule resolving to its own cell should fail, got {status:?}"
+    );
+}
+
+/// A key that names no row is not a bind-time error — rows come and go, so a
+/// key that resolves today may not tomorrow. It surfaces as an error VALUE in
+/// the cell, which is visible, rather than being quietly treated as blank.
+#[test]
+fn test_field_ref_by_unknown_key_is_an_error_value_not_a_silent_blank() {
+    let rows = [("r1", 10.0), ("r2", 20.0)];
+    let (wb, status) = build_pct_block("=#FIELD(\"amt\",\"NOPE\")", &rows);
+    assert!(
+        matches!(status, StatusCode::Ok(_)),
+        "an unresolvable key should not block the bind, got {status:?}"
+    );
+    let v = wb.get_sheet_by_idx(0).unwrap().get_value(0, 2).unwrap();
+    assert!(
+        matches!(v, logisheets::Value::Error(_)),
+        "expected an error value for an unknown key, got {v:?}"
+    );
 }

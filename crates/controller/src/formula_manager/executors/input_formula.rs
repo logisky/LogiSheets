@@ -1,7 +1,8 @@
 use super::FormulaExecutor;
 use logisheets_base::errors::BasicError;
 use logisheets_base::{
-    BlockId, BlockRange, CellId, EphemeralId, NormalRange, Range, RangeId, RefAbs, SheetId,
+    BlockCellId, BlockId, BlockRange, CellId, EphemeralId, NormalRange, Range, RangeId, RefAbs,
+    SheetId,
 };
 use logisheets_parser::Parser;
 use logisheets_parser::ast::{self, RangeDisplay};
@@ -79,23 +80,8 @@ pub fn input_ephemeral_formula<C: FormulaExecCtx>(
         // only `#PLACEHOLDER`, matching the prior behavior.
         if let CellId::BlockCell(block_cell_id) = cell_id {
             if let Some(row_ctx) = ctx.block_cell_row_substitutes(sheet_id, &block_cell_id) {
-                use std::collections::HashMap;
-                let mut sib_subs: HashMap<String, ast::Node> = HashMap::new();
-                for (name, sib_cell) in row_ctx.siblings {
-                    let sib_range = Range::Block(BlockRange::Single(sib_cell));
-                    let sib_range_id = ctx.fetch_range_id(&sheet_id, &sib_range);
-                    sib_subs.insert(
-                        name,
-                        ast::Node {
-                            pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
-                                range_id: sib_range_id,
-                                ref_abs: RefAbs::default(),
-                                sheet_id,
-                            })),
-                            bracket: true,
-                        },
-                    );
-                }
+                let siblings: std::collections::HashMap<String, BlockCellId> =
+                    row_ctx.siblings.into_iter().collect();
                 let key_node = ast::Node {
                     pure: ast::PureNode::Value(ast::Value::Text(row_ctx.key_value)),
                     bracket: false,
@@ -106,7 +92,8 @@ pub fn input_ephemeral_formula<C: FormulaExecCtx>(
                     CellId::EphemeralCell(id),
                     formula,
                     placeholder_node,
-                    sib_subs,
+                    block_cell_id,
+                    siblings,
                     key_node,
                     ctx,
                 );
@@ -127,24 +114,116 @@ pub fn input_ephemeral_formula<C: FormulaExecCtx>(
     }
 }
 
+/// Resolve every `#FIELD` placeholder a template mentions into a concrete
+/// reference node, so the resolver closure passed to
+/// `parse_with_substitutes` only has to do a lookup.
+///
+/// Two-phase on purpose. A key-addressed `#FIELD("f", "k")` has to mint a
+/// range id for its target, which needs `&mut ctx` — impossible inside the
+/// closure, which runs while the parser is still holding the context. So
+/// the placeholders are discovered up front by a lex-only scan.
+///
+/// `siblings` covers the no-key form (this row). A key names another row of
+/// the SAME block; `ctx.block_cell_at_key` resolves it. An unresolvable
+/// field or key is left out of the map, so the placeholder survives into
+/// the AST and evaluates to `#NAME?` — visible, rather than quietly
+/// treated as blank.
+///
+/// Range ids that this substitution introduces are recorded in
+/// `substituted`, so the own-block coordinate check can tell them from a
+/// coordinate the author typed. When `self_cell` is `Some`, a placeholder
+/// resolving to that very cell is an error rather than a substitution: for
+/// a value formula that is a self-loop, and the cycle iterator would
+/// otherwise grind it out to a meaningless number. (Shadow formulas pass
+/// `None` — a validation rule referring to the cell it validates is normal,
+/// and lives on a separate ephemeral cell anyway.)
+fn resolve_field_placeholders<C: FormulaExecCtx>(
+    body: &str,
+    sheet: SheetId,
+    owner: &BlockCellId,
+    siblings: &std::collections::HashMap<String, BlockCellId>,
+    self_cell: Option<&BlockCellId>,
+    substituted: &mut HashSet<RangeId>,
+    ctx: &mut C,
+) -> Result<std::collections::HashMap<logisheets_parser::Placeholder, ast::Node>, BasicError> {
+    use logisheets_parser::Placeholder;
+    let parser = Parser {};
+    let Some(needed) = parser.scan_placeholders(body) else {
+        return Ok(std::collections::HashMap::new());
+    };
+    let mut out = std::collections::HashMap::new();
+    for ph in needed {
+        let Placeholder::FieldRef(name, key) = &ph else {
+            continue;
+        };
+        let target = match key {
+            None => siblings.get(name).copied(),
+            Some(k) => ctx.block_cell_at_key(sheet, owner, k, name),
+        };
+        let Some(target) = target else { continue };
+        if self_cell == Some(&target) {
+            return Err(BasicError::InvalidFormula(format!(
+                "field rule {:?} resolves to the cell it is defining \
+                 (field {:?}{}). A rule cannot compute from itself.",
+                body,
+                name,
+                match key {
+                    Some(k) => format!(", key {:?}", k),
+                    None => String::new(),
+                }
+            )));
+        }
+        let range = Range::Block(BlockRange::Single(target));
+        let range_id = ctx.fetch_range_id(&sheet, &range);
+        substituted.insert(range_id);
+        out.insert(
+            ph,
+            ast::Node {
+                pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
+                    range_id,
+                    ref_abs: RefAbs::default(),
+                    sheet_id: sheet,
+                })),
+                bracket: true,
+            },
+        );
+    }
+    Ok(out)
+}
+
 /// Ephemeral input variant that resolves all three placeholder kinds:
-/// `#PLACEHOLDER` → the shadow target cell, `#FIELD("X")` → the
-/// target's same-row sibling cell, `#KEY` → the target's row key.
-/// Used for validation formulas on block cells.
+/// `#PLACEHOLDER` → the shadow target cell, `#FIELD("X")` /
+/// `#FIELD("X", "key")` → a cell in the target's block, `#KEY` → the
+/// target's row key. Used for validation formulas on block cells.
 fn input_with_resolver<C: FormulaExecCtx>(
     executor: FormulaExecutor,
     sheet: SheetId,
     cell_id: CellId,
     formula: String,
     placeholder: ast::Node,
-    sib_subs: std::collections::HashMap<String, ast::Node>,
+    owner: BlockCellId,
+    siblings: std::collections::HashMap<String, BlockCellId>,
     key_node: ast::Node,
     ctx: &mut C,
 ) -> Result<FormulaExecutor, BasicError> {
+    // A shadow formula lives on its own ephemeral cell, so it may point at
+    // the cell it validates without any risk of a self-loop — `self_cell`
+    // is None. `substituted` is unused here for the same reason: the
+    // own-block coordinate check only guards value templates.
+    let mut substituted = HashSet::new();
+    let subs = resolve_field_placeholders(
+        &formula,
+        sheet,
+        &owner,
+        &siblings,
+        None,
+        &mut substituted,
+        ctx,
+    )?;
     let parser = Parser {};
     let ast = parser.parse_with_substitutes(&formula, sheet, ctx, &|kind| match kind {
         logisheets_parser::PlaceholderKind::Placeholder => Some(placeholder.clone()),
-        logisheets_parser::PlaceholderKind::FieldRef(name) => sib_subs.get(name).cloned(),
+        logisheets_parser::PlaceholderKind::FieldRef(..) => subs.get(&kind.to_owned()).cloned(),
         logisheets_parser::PlaceholderKind::Key => Some(key_node.clone()),
     });
     let Some(ast) = ast else { return Ok(executor) };
@@ -390,24 +469,7 @@ pub fn input_block_cell_template<C: FormulaExecCtx>(
         return Ok(executor);
     };
 
-    // Build per-sibling Reference nodes once, indexed by field name, so
-    // the resolver closure stays pure (only reads, no ctx mutation).
-    let mut sib_subs: HashMap<String, ast::Node> = HashMap::new();
-    for (name, sib_cell) in tpl.siblings {
-        let range = Range::Block(BlockRange::Single(sib_cell));
-        let range_id = ctx.fetch_range_id(&sheet, &range);
-        sib_subs.insert(
-            name,
-            ast::Node {
-                pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
-                    range_id,
-                    ref_abs: RefAbs::default(),
-                    sheet_id: sheet,
-                })),
-                bracket: true,
-            },
-        );
-    }
+    let siblings: HashMap<String, BlockCellId> = tpl.siblings.into_iter().collect();
     let key_node = ast::Node {
         pure: ast::PureNode::Value(ast::Value::Text(tpl.key_value)),
         bracket: false,
@@ -421,15 +483,70 @@ pub fn input_block_cell_template<C: FormulaExecCtx>(
         .map(|s| s.to_string())
         .unwrap_or(tpl.template);
 
+    // Range ids the substitution itself introduces. They point into this
+    // very block by design, so the own-block check below must not flag them.
+    let mut substituted: HashSet<RangeId> = HashSet::new();
+    let subs = resolve_field_placeholders(
+        &body,
+        sheet,
+        &bcid,
+        &siblings,
+        // A value formula that resolves to its own cell is a self-loop.
+        Some(&bcid),
+        &mut substituted,
+        ctx,
+    )?;
+
     let parser = Parser {};
     let ast = parser.parse_with_substitutes(&body, sheet, ctx, &|kind| match kind {
-        logisheets_parser::PlaceholderKind::FieldRef(name) => sib_subs.get(name).cloned(),
+        logisheets_parser::PlaceholderKind::FieldRef(..) => subs.get(&kind.to_owned()).cloned(),
         logisheets_parser::PlaceholderKind::Key => Some(key_node.clone()),
         // `#PLACEHOLDER` belongs to validation, not field templates;
         // leaving it untouched is harmless — surfaces as #NAME?.
         logisheets_parser::PlaceholderKind::Placeholder => None,
     });
     let Some(ast) = ast else { return Ok(executor) };
+
+    // A field rule is a TEMPLATE: one string, instantiated verbatim for
+    // every row of the block. It carries no cell anchor, so a coordinate
+    // written inside it does NOT shift from row to row — `=C1+#FIELD("amt")`
+    // means literally C1 in every single row.
+    //
+    // When that coordinate lands inside this same block it is always a
+    // mistake, and a silent one: for the block's first row `C1` IS the cell
+    // being defined, so it becomes a self-loop, and the cycle iterator
+    // dutifully grinds it out to a garbage number (10 -> 10000 at
+    // `iter_limit = 1000`) without an error anywhere. That is the coordinate
+    // twin of the `BLOCKREF`-into-own-block case rejected in
+    // `register_parsed_ast`, which slipped through because a bare
+    // coordinate never builds a `BlockAll` vertex.
+    //
+    // Coordinates pointing OUTSIDE the block are left alone: a global
+    // assumption cell really is the same cell for every row, which is
+    // exactly what a template wants.
+    let mut refs = Vec::new();
+    collect_ref_ranges(&ast, &mut refs);
+    for (ref_sheet, range_id) in refs {
+        if ref_sheet != sheet || substituted.contains(&range_id) {
+            continue;
+        }
+        if let Some(Range::Block(br)) = ctx.lookup_range(ref_sheet, range_id) {
+            if br.block_id() == block_id {
+                return Err(BasicError::InvalidFormula(format!(
+                    "field rule {:?} references a cell inside its own block \
+                     (sheet={}, block={}). A field rule is a template applied \
+                     verbatim to every row, so a coordinate in it does not \
+                     shift per row — on the block's first row it resolves to \
+                     the very cell being defined. Use `#FIELD(\"name\")` for a \
+                     same-row sibling. A cross-row reference (a running total \
+                     reading the row above) has no template form; write that \
+                     column as ordinary cells instead.",
+                    body, sheet, block_id
+                )));
+            }
+        }
+    }
+
     register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)
 }
 
@@ -491,22 +608,7 @@ pub fn input_block_cell_shadow_template<C: FormulaExecCtx>(
     let Some(row_ctx) = row_ctx else {
         return Ok(executor);
     };
-    let mut sib_subs: HashMap<String, ast::Node> = HashMap::new();
-    for (name, sib_cell) in row_ctx.siblings {
-        let range = Range::Block(BlockRange::Single(sib_cell));
-        let range_id = ctx.fetch_range_id(&sheet, &range);
-        sib_subs.insert(
-            name,
-            ast::Node {
-                pure: ast::PureNode::Reference(ast::CellReference::Mut(RangeDisplay {
-                    range_id,
-                    ref_abs: RefAbs::default(),
-                    sheet_id: sheet,
-                })),
-                bracket: true,
-            },
-        );
-    }
+    let siblings: HashMap<String, BlockCellId> = row_ctx.siblings.into_iter().collect();
     let key_node = ast::Node {
         pure: ast::PureNode::Value(ast::Value::Text(row_ctx.key_value)),
         bracket: false,
@@ -537,7 +639,8 @@ pub fn input_block_cell_shadow_template<C: FormulaExecCtx>(
         shadow_cell,
         body,
         placeholder_node,
-        sib_subs,
+        bcid,
+        siblings,
         key_node,
         ctx,
     )
@@ -560,6 +663,23 @@ pub fn add_ast_node(
     new_formula_deps
         .into_iter()
         .for_each(|new_dep| manager.graph.add_dep(this_vertex.clone(), new_dep));
+
+    // The same topo-barrier edge the live path registers (see
+    // `register_parsed_ast`): a formula cell inside a block becomes a dep of
+    // `BlockAll(block)`.
+    //
+    // Omitting it here meant a saved workbook came back subtly broken. The
+    // formulas loaded and evaluated once, so everything looked right — but
+    // walking rdeps after a block cell recomputed never reached `BlockAll(B)`,
+    // and so never reached the external `BLOCKREF` / `BLOCKREFS` readers of that
+    // block. Change one input and the block updated while every summary cell
+    // over it kept its old value: a wrong number, silently, and only after a
+    // save/reload round trip.
+    if let CellId::BlockCell(bcid) = cell_id {
+        manager
+            .graph
+            .add_dep(Vertex::BlockAll(sheet_id, bcid.block_id), this_vertex);
+    }
 }
 
 /// Post-load pass: add the Range→member-cell dependency edges for every formula
@@ -603,6 +723,7 @@ fn find_self_block_ref(
             .iter()
             .find_map(|n| find_self_block_ref(n, self_sheet, self_block)),
         ast::PureNode::Value(_) => None,
+        ast::PureNode::ArrayConstant(_) => None,
         ast::PureNode::Reference(_) => None,
         ast::PureNode::BlockRef(node) => match node {
             ast::BlockRefNode::Single {
@@ -635,6 +756,43 @@ fn find_self_block_ref(
     }
 }
 
+/// Collect every range a parsed AST references *directly* — i.e. through
+/// an A1/R1C1 coordinate rather than a `BLOCKREF`. Used by the template
+/// path to check those coordinates against the block the formula lives
+/// in; `BLOCKREF` self-refs are caught separately by
+/// {@link find_self_block_ref}.
+fn collect_ref_ranges(ast: &ast::Node, out: &mut Vec<(SheetId, RangeId)>) {
+    match &ast.pure {
+        ast::PureNode::Func(func) => func
+            .args
+            .iter()
+            .for_each(|n| collect_ref_ranges(n, out)),
+        ast::PureNode::Value(_) | ast::PureNode::ArrayConstant(_) => {}
+        ast::PureNode::Reference(reference) => match reference {
+            ast::CellReference::Mut(r) => out.push((r.sheet_id, r.range_id)),
+            // Not in-sheet coordinates: a cube spans sheets, an external
+            // ref another book, a defined name is resolved elsewhere, and
+            // `#REF!` addresses nothing. None can be the own-block
+            // coordinate mistake this collector exists to catch.
+            ast::CellReference::UnMut(_)
+            | ast::CellReference::Ext(_)
+            | ast::CellReference::Name(_)
+            | ast::CellReference::RefErr => {}
+        },
+        ast::PureNode::BlockRef(node) => match node {
+            ast::BlockRefNode::Single { key, .. } => collect_ref_ranges(key, out),
+            ast::BlockRefNode::Multi {
+                key_condition,
+                field_condition,
+                ..
+            } => {
+                collect_ref_ranges(key_condition, out);
+                collect_ref_ranges(field_condition, out);
+            }
+        },
+    }
+}
+
 fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
     match &ast.pure {
         ast::PureNode::Func(func) => {
@@ -642,7 +800,7 @@ fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
                 .iter()
                 .for_each(|n| get_all_vertices_from_ast(n, vertices));
         }
-        ast::PureNode::Value(_) => {}
+        ast::PureNode::Value(_) | ast::PureNode::ArrayConstant(_) => {}
         ast::PureNode::Reference(reference) => match reference {
             ast::CellReference::Mut(r) => {
                 let sheet_id = r.sheet_id;

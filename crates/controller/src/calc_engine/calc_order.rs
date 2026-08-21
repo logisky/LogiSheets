@@ -84,7 +84,20 @@ where
                                 None => break,
                             }
                         }
-                        if curr_scc.len() > 1 {
+                        // A self-loop is a cycle of length one, and Tarjan
+                        // reports it as a singleton SCC just like an ordinary
+                        // node. Testing only `len() > 1` therefore sent a
+                        // self-referencing cell down the plain-node path, where
+                        // it is evaluated exactly once against whatever value it
+                        // happened to hold: `A1 = 0.5*A1 + 10` produced 10 —
+                        // one step from blank — instead of converging on 20,
+                        // while the same relationship spread over two cells
+                        // solved correctly. Route it to the iterative solver.
+                        let is_cycle = curr_scc.len() > 1
+                            || curr_scc
+                                .first()
+                                .is_some_and(|n| rdeps_fetcher(n).contains(n));
+                        if is_cycle {
                             curr_scc.iter().for_each(|s| {
                                 scc_map.insert(s.clone(), scc_id);
                             });
@@ -344,6 +357,46 @@ mod tests {
         ordset.insert(4);
         let nodes = ordset.into_iter().collect::<Vec<_>>();
         assert_eq!(nodes, vec![1, 3, 4, 5]);
+    }
+
+    /// A self-loop is a cycle of length one, and Tarjan reports it as a
+    /// singleton SCC exactly like an ordinary node. Classifying on `len() > 1`
+    /// alone sent it down the plain-node path, where it is evaluated once
+    /// against whatever value it held rather than iterated: `A1 = 0.5*A1 + 10`
+    /// gave 10 instead of converging on 20, while the same relationship split
+    /// across two cells solved fine.
+    #[test]
+    fn self_loop_is_a_cycle() {
+        let mut graph = Graph::<u32>::new();
+        graph.add_dep(1, 1); // 1 depends on itself
+        graph.add_dep(2, 1); // and 2 depends on 1, so 1 is reached normally
+        let rdeps_fetcher = |r: &u32| -> Vec<u32> {
+            let set = match graph.get_rdeps(r) {
+                Some(s) => s.clone(),
+                None => HashSet::new().into(),
+            };
+            let mut v = set.into_iter().collect_vec();
+            v.sort();
+            v
+        };
+        let mut dirty_nodes = HashSet::<u32>::new();
+        dirty_nodes.insert(1);
+        let order = calc_order(&rdeps_fetcher, dirty_nodes);
+
+        let self_looped = order.iter().any(|unit| match unit {
+            CalcUnit::Cycle(c) => c == &vec![1],
+            CalcUnit::Node(_) => false,
+        });
+        assert!(
+            self_looped,
+            "a self-referencing vertex must be a Cycle so the iterative solver sees it"
+        );
+
+        // A vertex with no self-edge stays an ordinary node.
+        assert!(
+            order.iter().any(|unit| matches!(unit, CalcUnit::Node(n) if *n == 2)),
+            "a vertex without a self-edge must stay a plain Node"
+        );
     }
 
     #[test]

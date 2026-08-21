@@ -24,7 +24,7 @@ impl SheetNav {
         }
     }
 
-    pub fn get_fetcher(&self) -> Fetcher {
+    pub fn get_fetcher(&self) -> Fetcher<'_> {
         Fetcher::from(&self.data, &self.cache, self.sheet_id)
     }
 }

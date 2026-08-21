@@ -77,7 +77,13 @@ where
                         id: *range_id,
                         range: Range::Normal(NormalRange::AddrRange(s, e)),
                     }),
-                    _ => panic!("expect get normal cell range"),
+                    // Deleting lines moved the range's clipped endpoints onto a
+                    // block. A `Range` is wholly normal or wholly one block's,
+                    // so the shrunk range has no representation — the same
+                    // reason the parser rejects `PartialBlockRange`. Drop it and
+                    // mark dependents dirty so they recalculate into a reference
+                    // error; this used to panic, taking the engine down with it.
+                    _ => RangeUpdateType::Removed,
                 }
             }
             NormalRange::Single(cell) => {

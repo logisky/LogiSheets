@@ -17,6 +17,7 @@ use logisheets_lexer::*;
 use pest::iterators::Pair;
 use reference::build_cell_reference;
 use regex::Regex;
+use std::collections::HashSet;
 
 type Result<T> = std::result::Result<T, ParseError>;
 lazy_static! {
@@ -63,8 +64,36 @@ pub enum PlaceholderKind<'a> {
     Placeholder,
     /// Template `#KEY` — this row's key value.
     Key,
-    /// Template `#FIELD("name")` — sibling field.
-    FieldRef(&'a str),
+    /// Template `#FIELD("name")` — a field of this cell's own block:
+    /// the same row when the key is `None`, otherwise the row carrying
+    /// that key.
+    FieldRef(&'a str, Option<&'a str>),
+}
+
+/// Owned counterpart of {@link PlaceholderKind}, usable as a map key.
+/// {@link Parser::scan_placeholders} reports what a template needs in
+/// this form so a caller can resolve every placeholder up front — with
+/// full `&mut context` access — and then hand `parse_with_substitutes` a
+/// plain lookup. A key-addressed `#FIELD` has to mint a range id to
+/// build its replacement node, which the single-pass resolver cannot do
+/// while the parser still holds the context.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Placeholder {
+    Placeholder,
+    Key,
+    FieldRef(String, Option<String>),
+}
+
+impl PlaceholderKind<'_> {
+    pub fn to_owned(&self) -> Placeholder {
+        match self {
+            PlaceholderKind::Placeholder => Placeholder::Placeholder,
+            PlaceholderKind::Key => Placeholder::Key,
+            PlaceholderKind::FieldRef(name, key) => {
+                Placeholder::FieldRef(name.to_string(), key.map(str::to_string))
+            }
+        }
+    }
 }
 
 pub struct Parser {}
@@ -77,6 +106,45 @@ impl Parser {
         let pair = lex(f.trim())?;
         let formula = pair.into_inner().next()?;
         Some(self.parse_from_pair(formula, curr_sheet, context, false))
+    }
+
+    /// Report every template placeholder a formula body mentions, without
+    /// resolving any references — this is a lex-only pass, so it needs no
+    /// context. Callers use it to resolve the placeholders they care about
+    /// up front (which for a key-addressed `#FIELD` means minting range
+    /// ids, hence `&mut context`) and then feed the results to
+    /// {@link parse_with_substitutes} as a plain lookup.
+    ///
+    /// Returns `None` only when the body does not lex at all.
+    pub fn scan_placeholders(&self, f: &str) -> Option<HashSet<Placeholder>> {
+        let top = lex(f.trim())?;
+        let mut out = HashSet::new();
+        for pair in top.into_inner().flatten() {
+            match pair.as_rule() {
+                Rule::key_placeholder => {
+                    out.insert(Placeholder::Key);
+                }
+                Rule::field_placeholder => {
+                    let mut args = pair.into_inner().map(|inner| {
+                        let raw = inner.as_str();
+                        if raw.len() >= 2 {
+                            raw[1..raw.len() - 1].replace("\"\"", "\"")
+                        } else {
+                            String::new()
+                        }
+                    });
+                    let name = args.next().unwrap_or_default();
+                    out.insert(Placeholder::FieldRef(name, args.next()));
+                }
+                Rule::error_constant => {
+                    if pair.as_str() == "#PLACEHOLDER" {
+                        out.insert(Placeholder::Placeholder);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Some(out)
     }
 
     pub fn parse_with_substitude<T>(
@@ -120,8 +188,8 @@ impl Parser {
             ast::PureNode::Value(ast::Value::Error(error)) => match error {
                 ast::Error::Placeholder => resolver(PlaceholderKind::Placeholder).unwrap_or(node),
                 ast::Error::Key => resolver(PlaceholderKind::Key).unwrap_or(node),
-                ast::Error::FieldRef(name) => {
-                    resolver(PlaceholderKind::FieldRef(name)).unwrap_or(node)
+                ast::Error::FieldRef(name, key) => {
+                    resolver(PlaceholderKind::FieldRef(name, key.as_deref())).unwrap_or(node)
                 }
                 _ => node,
             },
@@ -229,16 +297,21 @@ impl Parser {
                 bracket: false,
             },
             Rule::field_placeholder => {
-                let inner = pair.into_inner().next().unwrap(); // string_constant
-                let raw = inner.as_str();
-                // Strip the surrounding quotes and unescape `""` → `"`.
-                let name = if raw.len() >= 2 {
-                    raw[1..raw.len() - 1].replace("\"\"", "\"")
-                } else {
-                    String::new()
-                };
+                // One string_constant for `#FIELD("name")`, two for the
+                // key-addressed `#FIELD("name", "key")`.
+                let mut args = pair.into_inner().map(|inner| {
+                    let raw = inner.as_str();
+                    // Strip the surrounding quotes and unescape `""` → `"`.
+                    if raw.len() >= 2 {
+                        raw[1..raw.len() - 1].replace("\"\"", "\"")
+                    } else {
+                        String::new()
+                    }
+                });
+                let name = args.next().unwrap_or_default();
+                let key = args.next();
                 ast::Node {
-                    pure: ast::PureNode::Value(ast::Value::Error(ast::Error::FieldRef(name))),
+                    pure: ast::PureNode::Value(ast::Value::Error(ast::Error::FieldRef(name, key))),
                     bracket: false,
                 }
             }
@@ -286,15 +359,10 @@ impl Parser {
                     bracket: false,
                 }
             }
-            // Convert this formula to a constant.
-            Rule::array_constant => {
-                let first = pair.into_inner().next().unwrap();
-                let constant = build_numerical_constant(first);
-                ast::Node {
-                    pure: constant,
-                    bracket: false,
-                }
-            }
+            Rule::array_constant => ast::Node {
+                pure: build_array_constant(pair),
+                bracket: false,
+            },
             _ => {
                 println!("{:?}", pair.as_str());
                 println!("{:?}", pair.as_rule());
@@ -574,6 +642,62 @@ where
     }))
 }
 
+/// Build `{1,2;3,4}` into a row-major matrix of literal values.
+///
+/// This used to keep only the first element and discard the rest, so
+/// `=SUM({1,2,3})` quietly evaluated to 1 — a wrong number rather than an
+/// error, which is the worst way for a calculation engine to fail.
+///
+/// An array constant contains only constants by grammar, so every element
+/// resolves to a literal `Value` here and nothing can reference a cell. Excel
+/// requires the rows to be the same width; a ragged literal is padded with
+/// `Blank` so the matrix stays rectangular for the calc layer. A nested array
+/// (`{1,{2,3}}`) is not legal in Excel and becomes `#VALUE!`.
+fn build_array_constant(pair: Pair<Rule>) -> ast::PureNode {
+    let mut rows: Vec<Vec<ast::Value>> = Vec::new();
+    for list in pair.into_inner() {
+        // `array_constant` wraps a single `constant_list_rows`.
+        if list.as_rule() != Rule::constant_list_rows {
+            continue;
+        }
+        for row in list.into_inner() {
+            // The `comma` separators are visible nodes in the tree, so keep
+            // only the elements themselves.
+            rows.push(
+                row.into_inner()
+                    .filter(|p| p.as_rule() != Rule::comma)
+                    .map(array_element)
+                    .collect(),
+            );
+        }
+    }
+    let width = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    if rows.is_empty() || width == 0 {
+        return ast::PureNode::Value(ast::Value::Error(ast::Error::Value));
+    }
+    for row in rows.iter_mut() {
+        row.resize(width, ast::Value::Blank);
+    }
+    ast::PureNode::ArrayConstant(rows)
+}
+
+/// One element of an array constant, as a literal value.
+fn array_element(pair: Pair<Rule>) -> ast::Value {
+    let pure = match pair.as_rule() {
+        Rule::numerical_constant => build_numerical_constant(pair),
+        Rule::logical_constant => build_bool(pair),
+        Rule::error_constant => build_error(pair),
+        Rule::string_constant => build_string_constant(pair),
+        // Anything else (a nested array, a stray placeholder) has no meaning
+        // inside a literal array.
+        _ => ast::PureNode::Value(ast::Value::Error(ast::Error::Value)),
+    };
+    match pure {
+        ast::PureNode::Value(v) => v,
+        _ => ast::Value::Error(ast::Error::Value),
+    }
+}
+
 fn build_numerical_constant(pair: Pair<Rule>) -> ast::PureNode {
     let num = parse_number(pair.as_str());
     num.map_or(
@@ -612,6 +736,48 @@ mod tests {
         let input = "3.2";
         let output = parse_number(input).unwrap();
         assert!((output - 3.2).abs() < 1e-10);
+    }
+
+    /// Malformed formulas must come back as `None`, never as a panic.
+    ///
+    /// The climber used to `panic!()` on four "cannot happen" states — an
+    /// expression starting with an infix operator, a non-operator where an
+    /// operator was expected, and so on. Those are unreachable through the
+    /// grammar, but a bare panic in the formula path takes down the whole engine
+    /// instance, and an agent writing formulas hits this path constantly. This
+    /// pins the contract: parsing is total over arbitrary input.
+    #[test]
+    fn malformed_formulas_do_not_panic() {
+        let parser = Parser {};
+        let mut id_fetcher = TestIdFetcher {};
+        let mut vertext_fetcher = TestVertexFetcher {};
+        let mut context = Context {
+            book_name: "book",
+            id_fetcher: &mut id_fetcher,
+            vertex_fetcher: &mut vertext_fetcher,
+        };
+
+        // Operators in positions the grammar does not allow, unbalanced
+        // delimiters, stray tokens, empty and degenerate input.
+        let cases = [
+            "*5", "+", ")", "(", "%", "%5", "5%%", "--5", "1 2", "1++2", "1**2",
+            ",", "1,,2", "SUM(,)", "SUM(1,)", "^2", "2^", "<", "<>", "1<>",
+            "&", "1&", "A1:", ":A1", "A1::A2", "(1", "1)", "((1)", "(1))",
+            "SUM(", "SUM)", "IF(", "\"", "'", ".", "..", "1..2", "-", "!", "@",
+            "~", "`", "[", "]", "{", "}", ";", "?", "A1!B1", "!A1", "Sheet1!!A1",
+            "BLOCKREF()", "BLOCKREFS(1,2)", "", " ", "1 +", "+ 1",
+        ];
+        for case in cases {
+            // The contract is "no panic"; `None` or an AST are both fine.
+            let _ = parser.parse(case, 1, &mut context);
+        }
+
+        // Deep nesting, to be sure the recursion bottoms out rather than
+        // blowing up on a shape no human would write but an agent might.
+        let deep = format!("{}1{}", "(".repeat(64), ")".repeat(64));
+        let _ = parser.parse(&deep, 1, &mut context);
+        let long = format!("1{}", "+1".repeat(256));
+        let _ = parser.parse(&long, 1, &mut context);
     }
 
     #[test]

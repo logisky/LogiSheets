@@ -1885,13 +1885,26 @@ impl<'a> Worksheet<'a> {
         let mut out: Vec<DependentCell> = Vec::new();
         let mut seen: HashSet<(usize, usize, usize, usize, usize, usize, usize)> = HashSet::new();
         for (dep_vertex, owners) in graph.rdeps.iter() {
-            let (sid, rid) = match dep_vertex {
-                Vertex::Range(s, r) if *s == self.sheet_id => (*s, *r),
+            // Readers reached through BLOCKREF hang off the virtual block
+            // vertices rather than a range, so a query that only looked at
+            // ranges answered "nothing depends on this" for every block cell —
+            // the most dangerous possible wrong answer before an edit.
+            let rect = match dep_vertex {
+                Vertex::Range(s, r) if *s == self.sheet_id => {
+                    match self.resolve_range_rect(*s, *r) {
+                        Some(x) => x,
+                        None => continue,
+                    }
+                }
+                Vertex::Block(s, ..) | Vertex::BlockKey(s, ..) | Vertex::BlockAll(s, ..)
+                    if *s == self.sheet_id =>
+                {
+                    match self.block_vertex_rect(dep_vertex) {
+                        Some(x) => x,
+                        None => continue,
+                    }
+                }
                 _ => continue,
-            };
-            let rect = match self.resolve_range_rect(sid, rid) {
-                Some(x) => x,
-                None => continue,
             };
             if !rect.intersects(r0, c0, r1, c1) {
                 continue;
@@ -1939,8 +1952,19 @@ impl<'a> Worksheet<'a> {
         let mut seen: HashSet<(usize, usize, usize, usize, usize, bool, bool)> = HashSet::new();
         if let Some(deps) = status.formula_manager.graph.get_deps(&vertex) {
             for dep in deps.iter() {
-                if let Vertex::Range(s, r) = dep {
-                    if let Some(rect) = self.resolve_range_rect(*s, *r) {
+                // A BLOCKREF reads through a virtual block vertex, not a range,
+                // so skipping those made every block reference invisible: a cell
+                // reading `BLOCKREF("assum","wacc","v")` reported no precedents
+                // at all.
+                let rect = match dep {
+                    Vertex::Range(s, r) => self.resolve_range_rect(*s, *r),
+                    Vertex::Block(..) | Vertex::BlockKey(..) | Vertex::BlockAll(..) => {
+                        self.block_vertex_rect(dep)
+                    }
+                    _ => None,
+                };
+                {
+                    if let Some(rect) = rect {
                         let refr = self.rect_to_ref(&rect);
                         let key = (
                             refr.sheet_idx,
@@ -2023,8 +2047,87 @@ impl<'a> Worksheet<'a> {
                     all_cols: false,
                 })
             }
+            // A block cell is an ordinary single cell as far as tracing is
+            // concerned — `resolve_owner_cell` already treats it as one when it
+            // is the formula's home, and refusing it here made every dependency
+            // inside a block invisible: a field rule's precedents came back
+            // empty even though the rule plainly reads its siblings.
+            Range::Block(BlockRange::Single(bc)) => {
+                let (r, c) = nav.fetch_block_cell_idx(&sheet_id, &bc).ok()?;
+                Some(ResolvedRect {
+                    sheet_id,
+                    r0: r,
+                    c0: c,
+                    r1: r,
+                    c1: c,
+                    all_rows: false,
+                    all_cols: false,
+                })
+            }
+            // A multi-cell block range still has no rectangle to report here;
+            // BLOCKREFS relationships are carried by the virtual Block vertices
+            // instead (see `block_vertex_rect`).
             Range::Block(_) | Range::Ephemeral(_) => None,
         }
+    }
+
+    /// The rectangle a virtual block vertex stands for, so BLOCKREF and
+    /// BLOCKREFS relationships can be reported like any other reference.
+    ///
+    /// These vertices carry no coordinates of their own — that is the point of
+    /// them, since a block's cells move — so resolve through the schema:
+    /// `Block(field)` is that field's column across the block's rows,
+    /// `BlockKey` the key column, `BlockAll` the whole block.
+    fn block_vertex_rect(&self, vertex: &Vertex) -> Option<ResolvedRect> {
+        let status = &self.controller.status;
+        let (sheet_id, block_id) = match vertex {
+            Vertex::Block(s, b, _) | Vertex::BlockKey(s, b) | Vertex::BlockAll(s, b) => (*s, *b),
+            _ => return None,
+        };
+        let bp = status.navigator.get_block_place(&sheet_id, &block_id).ok()?;
+        let (r0, c0) = status
+            .navigator
+            .fetch_normal_cell_idx(&sheet_id, &bp.master)
+            .ok()?;
+        let r1 = r0 + bp.rows.len().saturating_sub(1);
+        let c1 = c0 + bp.cols.len().saturating_sub(1);
+
+        // Narrow to one column when the vertex names one. Both cases go through
+        // an existing key cell rather than a field-index accessor, which the
+        // schema types do not expose.
+        let keys = status
+            .block_schema_manager
+            .get_all_key_cell_ids_by_block(sheet_id, block_id, bp)
+            .unwrap_or_default();
+        let first_key = keys.first().copied();
+        let col = match (vertex, first_key) {
+            (Vertex::Block(_, _, field_id), Some(key)) => status
+                .block_schema_manager
+                .partially_resolve_by_field_id(sheet_id, block_id, key, *field_id)
+                .and_then(|cell| {
+                    status
+                        .navigator
+                        .fetch_block_cell_idx(&sheet_id, &cell)
+                        .ok()
+                })
+                .map(|(_, c)| c),
+            (Vertex::BlockKey(_, _), Some(key)) => status
+                .navigator
+                .fetch_block_cell_idx(&sheet_id, &key)
+                .ok()
+                .map(|(_, c)| c),
+            _ => None,
+        };
+
+        Some(ResolvedRect {
+            sheet_id,
+            r0,
+            c0: col.unwrap_or(c0),
+            r1,
+            c1: col.unwrap_or(c1),
+            all_rows: false,
+            all_cols: false,
+        })
     }
 
     /// Resolve an owner (formula-cell) vertex to (sheet_idx, row, col).

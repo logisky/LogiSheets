@@ -3,7 +3,8 @@
  * from a natural-language description.
  *
  * Surface (10 tools, block-only — no raw (sheet,row,col) writes):
- *   Structure  : create_sheet, create_block, add_block_rows, delete_block_rows
+ *   Structure  : create_sheet, create_block, add_block_rows, delete_block_rows,
+ *                move_block_row
  *   Rules      : set_field_rule, define_enum_set
  *   Reflection : list_blocks, describe_block, eval_formula
  *   Safety     : checkpoint / restore       (one tool, two ops)
@@ -14,6 +15,7 @@
 
 import {
     BindFormSchemaBuilder,
+    ConvertBlockBuilder,
     BlockInputBuilder,
     CreateBlockBuilder,
     CreateSheetBuilder,
@@ -21,6 +23,7 @@ import {
     DeleteRowsInBlockBuilder,
     InsertRowsBuilder,
     InsertRowsInBlockBuilder,
+    MoveBlockLineBuilder,
     UpsertFieldFormulasBuilder,
     acquireCraftCalc,
     isErrorMessage,
@@ -28,11 +31,14 @@ import {
 import type {CraftCalc, Value} from 'logisheets-web/pure'
 import type {
     ActionEffect,
+    BlockInfo,
+    CellInfo,
     Client,
     EditPayload,
     Transaction,
 } from 'logisheets-web/pure'
 import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool.js'
+import {transactionFailure} from './effect.js'
 
 /** Narrow the workbook client to the concrete `Client` from logisheets-web.
  *  `ctx.workbook: WorkbookClient` is already a type alias for `Client` —
@@ -44,7 +50,7 @@ function asClient(ctx: ToolContext): Client {
 /** Throw a typed error if a transaction's status came back as 'err'. */
 function ensureOk(effect: ActionEffect, label: string): void {
     if (effect.status.type === 'err') {
-        throw new Error(`${label}: status code ${effect.status.value}`)
+        throw transactionFailure(label, effect)
     }
 }
 
@@ -332,6 +338,76 @@ interface ResolvedField {
     user_editable?: boolean
 }
 
+/**
+ * Throw unless the rectangle a new block would occupy is empty.
+ *
+ * Cheap path first: the sheet's own dimension says where content ends, so a
+ * block placed below it needs no cell reads at all. Only a rectangle that
+ * overlaps the used range is actually scanned.
+ */
+async function assertAreaIsFree(
+    client: Client,
+    sheetIdx: number,
+    row: number,
+    col: number,
+    rowCnt: number,
+    colCnt: number,
+    blockName: string
+): Promise<void> {
+    const endRow = row + rowCnt - 1
+    const endCol = col + colCnt - 1
+
+    const sheetId = await client.getSheetId({sheetIdx})
+    if (!isErrorMessage(sheetId)) {
+        const dim = await client.getSheetDimension({sheetId})
+        // Wholly past the last used row or column: nothing to collide with.
+        if (!isErrorMessage(dim) && (row > dim.maxRow || col > dim.maxCol)) {
+            return
+        }
+    }
+
+    const cells = await client.getCells({
+        sheetIdx,
+        startRow: row,
+        startCol: col,
+        endRow,
+        endCol,
+    })
+    // A read failure is not evidence of a collision; let the create proceed and
+    // fail on its own terms rather than blocking on a diagnostic.
+    if (isErrorMessage(cells)) return
+
+    const width = endCol - col + 1
+    const occupied: string[] = []
+    cells.forEach((info, i) => {
+        const empty =
+            (info.value === 'empty' || info.value === undefined) && !info.formula
+        if (empty) return
+        occupied.push(columnName(col + (i % width)) + String(row + Math.floor(i / width) + 1))
+    })
+    if (occupied.length === 0) return
+
+    const shown = occupied.slice(0, 5).join(', ')
+    const more = occupied.length > 5 ? ` and ${occupied.length - 5} more` : ''
+    throw new Error(
+        `cannot create block "${blockName}" at row ${row}, col ${col}: ` +
+            `${occupied.length} cell(s) there already hold data (${shown}${more}). ` +
+            `Creating a block over them would overwrite them. Call list_blocks and ` +
+            `use its next_block_start, or pick an empty area.`
+    )
+}
+
+/** Zero-based column index to its spreadsheet letters (0 -> A, 27 -> AB). */
+function columnName(col: number): string {
+    let n = col
+    let name = ''
+    do {
+        name = String.fromCharCode(65 + (n % 26)) + name
+        n = Math.floor(n / 26) - 1
+    } while (n >= 0)
+    return name
+}
+
 export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
     namespace: 'build',
     name: 'create_block',
@@ -466,6 +542,72 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                 `auto-create sheet "${input.sheet}"`
             )
         }
+
+        // 1a. Uniqueness. `(block, row_key, field)` IS the addressing scheme, so
+        //     a duplicate at any of the three levels makes some cell
+        //     unreachable and, worse, makes aggregates wrong: with two rows
+        //     keyed "a", BLOCKREFS resolved the first one twice and skipped the
+        //     other, so a block holding 1, 2 and 99 summed to 4. Silence is the
+        //     problem — reject it at the door instead.
+        const duplicates = (names: readonly string[]): string[] => {
+            const seen = new Set<string>()
+            const dup = new Set<string>()
+            for (const n of names) {
+                if (seen.has(n)) dup.add(n)
+                seen.add(n)
+            }
+            return [...dup]
+        }
+
+        const dupFields = duplicates(resolvedFields.map((f) => f.name))
+        if (dupFields.length > 0) {
+            throw new Error(
+                `block "${input.name}" declares the field name(s) ${dupFields
+                    .map((f) => `"${f}"`)
+                    .join(', ')} more than once; fields address cells, so they must be unique`
+            )
+        }
+
+        const initialKeys = (input.initial_rows ?? []).map((r) => r.key)
+        const dupKeys = duplicates(initialKeys)
+        if (dupKeys.length > 0) {
+            throw new Error(
+                `block "${input.name}" repeats the row key(s) ${dupKeys
+                    .map((k) => `"${k}"`)
+                    .join(', ')}; row keys address cells, so they must be unique`
+            )
+        }
+
+        const existingBlocks = await client.getAllBlocks({})
+        if (!isErrorMessage(existingBlocks)) {
+            const clash = existingBlocks.find(
+                (b) => b.schema?.name === input.name
+            )
+            if (clash !== undefined) {
+                throw new Error(
+                    `a block named "${input.name}" already exists on sheet index ` +
+                        `${clash.sheetIdx}. Ref names are how formulas reach a block, so a ` +
+                        `duplicate makes BLOCKREF ambiguous — every reference to this name ` +
+                        `would return #VALUE!. Pick another name, or edit the existing block.`
+                )
+            }
+        }
+
+        // 1b. Refuse to plant a block on top of existing content.
+        //
+        //     Creating a block over occupied cells overwrote them silently —
+        //     no error, no warning — so an agent working on a file the user
+        //     brought could destroy its first rows on its very first call.
+        //     Data loss should be a refusal the agent can act on.
+        await assertAreaIsFree(
+            client,
+            sheetIdx,
+            input.position.row,
+            input.position.col,
+            Math.max(1, (input.initial_rows ?? []).length),
+            resolvedFields.length,
+            input.name
+        )
 
         // 2. Mint a fresh block id.
         const idRes = await client.getAvailableBlockId({sheetIdx})
@@ -710,19 +852,31 @@ function buildFieldTypeSpec(
 interface AddBlockRowsInput {
     block: string
     rows: ReadonlyArray<{key: string; values?: Record<string, unknown>}>
+    after_key?: string
+    before_key?: string
 }
 
 export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
     namespace: 'build',
     name: 'add_block_rows',
     description:
-        "Append rows to an existing block. Each row needs a key; values is an object keyed by field name. Fields with a value_formula are auto-materialized by the engine — don't pass them in values. Validation/editability shadows for the new rows are auto-installed by the engine at InsertRowsInBlock time, so no follow-up is needed. Also inserts the matching sheet rows (one block per sheet-row assumption — extends the sheet so downstream rows shift down).",
+        "Add rows to an existing block. Appends at the end by default; pass after_key or before_key to insert at a position instead. Each row needs a key; values is an object keyed by field name. Fields with a value_formula are auto-materialized by the engine — don't pass them in values. Validation/editability shadows for the new rows are auto-installed by the engine at InsertRowsInBlock time, so no follow-up is needed. Also inserts the matching sheet rows (one block per sheet-row assumption — extends the sheet so downstream rows shift down).",
     mutates: true,
     confirmation: 'never',
     inputSchema: {
         properties: {
             block: {type: 'string', description: 'Block ref name.'},
             rows: {type: 'array', items: ROW_SCHEMA, minItems: 1},
+            after_key: {
+                type: 'string',
+                description:
+                    'Insert directly after the row with this key, instead of appending at the end. Mutually exclusive with before_key.',
+            },
+            before_key: {
+                type: 'string',
+                description:
+                    'Insert directly before the row with this key. Use the first key to insert at the top. Mutually exclusive with after_key.',
+            },
         },
         required: ['block', 'rows'],
     },
@@ -747,13 +901,70 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
         }
         const sheetIdx = block.sheetIdx
         const blockId = block.blockId
-        const blockStart = block.rowCnt // append after the last existing block row
+        // Row keys address cells, so a repeat makes some row unreachable and
+        // silently skews aggregates — BLOCKREFS resolves the duplicate to the
+        // first match twice. Reject before anything is written.
+        const newKeys = input.rows.map((r) => r.key)
+        const seenNew = new Set<string>()
+        const repeated = new Set<string>()
+        for (const k of newKeys) {
+            if (seenNew.has(k)) repeated.add(k)
+            seenNew.add(k)
+        }
+        if (repeated.size > 0) {
+            throw new Error(
+                `rows repeat the key(s) ${[...repeated]
+                    .map((k) => `"${k}"`)
+                    .join(', ')}; row keys must be unique within a block`
+            )
+        }
+        const existingKeys = new Set(schema.keys.map((k) => k.key))
+        const collide = newKeys.filter((k) => existingKeys.has(k))
+        if (collide.length > 0) {
+            throw new Error(
+                `block "${input.block}" already has the row key(s) ${collide
+                    .map((k) => `"${k}"`)
+                    .join(', ')}. Row keys must be unique — use set_block_cells to ` +
+                    `update the existing row, or pick another key.`
+            )
+        }
+
+        // Where the new rows land, as a block-relative row index. Default
+        // is "after the last existing row"; after_key / before_key aim at a
+        // named row instead. Positioning by key rather than by index is
+        // deliberate: an index would go stale the moment anything else
+        // inserts or deletes, whereas a key names the same row for good.
+        if (
+            input.after_key !== undefined &&
+            input.before_key !== undefined
+        ) {
+            throw new Error(
+                'pass either after_key or before_key, not both'
+            )
+        }
+        const anchorKey = input.after_key ?? input.before_key
+        let blockStart = block.rowCnt
+        if (anchorKey !== undefined) {
+            const anchor = schema.keys.find((k) => k.key === anchorKey)
+            if (!anchor) {
+                const which =
+                    input.after_key !== undefined ? 'after_key' : 'before_key'
+                throw new Error(
+                    `${which} "${anchorKey}" is not a row key of block ` +
+                        `"${input.block}". Existing keys: ${schema.keys
+                            .map((k) => `"${k.key}"`)
+                            .join(', ')}`
+                )
+            }
+            blockStart =
+                input.after_key !== undefined ? anchor.idx + 1 : anchor.idx
+        }
         // Sheet-absolute row where new rows physically land. Under our
         // "one block per row" assumption the rows immediately after the
         // block are free to shift down without colliding with another
         // block; if a future relaxation allows side-by-side blocks the
         // caller would need to pick a different insert site.
-        const sheetStart = block.rowStart + block.rowCnt
+        const sheetStart = block.rowStart + blockStart
         const fieldNames = [...schema.fields]
             .sort((a, b) => a.idx - b.idx)
             .map((f) => f.field)
@@ -833,9 +1044,15 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
             `add_block_rows("${input.block}")`
         )
 
+        const where =
+            anchorKey === undefined
+                ? 'Appended'
+                : input.after_key !== undefined
+                  ? `Inserted after "${anchorKey}":`
+                  : `Inserted before "${anchorKey}":`
         return {
             data: {added: cnt},
-            display: `Appended ${cnt} row(s) to "${input.block}" (block row ${blockStart}, sheet row ${sheetStart}).`,
+            display: `${where} ${cnt} row(s) in "${input.block}" (block row ${blockStart}, sheet row ${sheetStart}).`,
         }
     },
 }
@@ -999,7 +1216,139 @@ export const deleteBlockRows: Tool<DeleteBlockRowsInput, {removed: number}> = {
 }
 
 // ---------------------------------------------------------------------------
-// 5. set_field_rule
+// 5. move_block_row
+// ---------------------------------------------------------------------------
+
+interface MoveBlockRowInput {
+    block: string
+    key: string
+    after_key?: string
+    before_key?: string
+}
+
+export const moveBlockRow: Tool<MoveBlockRowInput, {order: string[]}> = {
+    namespace: 'build',
+    name: 'move_block_row',
+    description:
+        "Reorder a block by moving one row to a new position, addressing both the row and its destination by key. Moves to the end when neither after_key nor before_key is given (same default as add_block_rows). Row order inside a block is presentation only — formulas address rows by key, so reordering never changes a single computed value. Use it to match a reading order someone expects, not to change the model.",
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            block: {type: 'string', description: 'Block ref name.'},
+            key: {type: 'string', description: 'Row key of the row to move.'},
+            after_key: {
+                type: 'string',
+                description:
+                    'Land the row directly after the row with this key. Mutually exclusive with before_key.',
+            },
+            before_key: {
+                type: 'string',
+                description:
+                    'Land the row directly before the row with this key. Pass the first key to move it to the top. Mutually exclusive with after_key.',
+            },
+        },
+        required: ['block', 'key'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        if (input.after_key !== undefined && input.before_key !== undefined) {
+            throw new Error('pass either after_key or before_key, not both')
+        }
+
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const block = all.find((b) => b.schema?.name === input.block)
+        if (!block) {
+            throw new Error(`No block with ref name "${input.block}"`)
+        }
+        const schema = block.schema
+        if (!schema) {
+            throw new Error(`Block "${input.block}" has no schema`)
+        }
+        const order = [...schema.keys].sort((a, b) => a.idx - b.idx)
+        const keys = order.map((k) => k.key)
+        const known = (label: string, k: string) => {
+            const at = keys.indexOf(k)
+            if (at < 0) {
+                throw new Error(
+                    `${label} "${k}" is not a row key of block "${input.block}". ` +
+                        `Existing keys: ${keys.map((x) => `"${x}"`).join(', ')}`
+                )
+            }
+            return at
+        }
+        const from = known('key', input.key)
+        const anchorKey = input.after_key ?? input.before_key
+        if (anchorKey === input.key) {
+            throw new Error(
+                `cannot move "${input.key}" relative to itself`
+            )
+        }
+
+        // MoveBlockLine's `to` is the index the line lands on AFTER it has
+        // been lifted out, so every anchor sitting below the moved row has
+        // already shifted up by one by the time `to` is read. Getting this
+        // wrong silently puts the row one place off, so the arithmetic lives
+        // here rather than in the caller's head.
+        let to: number
+        if (anchorKey === undefined) {
+            to = keys.length - 1
+        } else {
+            const at = known(
+                input.after_key !== undefined ? 'after_key' : 'before_key',
+                anchorKey
+            )
+            const lifted = at > from ? at - 1 : at
+            to = input.after_key !== undefined ? lifted + 1 : lifted
+            // `before` the row that directly follows us, or `after` the row
+            // that directly precedes us, both mean "stay put".
+            if (to > keys.length - 1) to = keys.length - 1
+        }
+
+        if (to !== from) {
+            await commitTransaction(
+                client,
+                [
+                    {
+                        type: 'moveBlockLine',
+                        value: new MoveBlockLineBuilder()
+                            .sheetIdx(block.sheetIdx)
+                            .blockId(block.blockId)
+                            .isRow(true)
+                            .from(from)
+                            .to(to)
+                            .build(),
+                    },
+                ],
+                `move_block_row("${input.block}", "${input.key}")`
+            )
+        }
+
+        // Report the order the block actually ended up in, read back from the
+        // engine rather than predicted.
+        const after = await client.getAllBlocks({})
+        const settled = isErrorMessage(after)
+            ? keys
+            : ([...(after.find((b) => b.schema?.name === input.block)?.schema
+                  ?.keys ?? [])]
+                  .sort((a, b) => a.idx - b.idx)
+                  .map((k) => k.key) as string[])
+
+        return {
+            data: {order: settled},
+            display:
+                to === from
+                    ? `"${input.key}" was already in that position; order unchanged: ${settled.join(', ')}`
+                    : `Moved "${input.key}". Order is now: ${settled.join(', ')}`,
+        }
+    },
+}
+
+// ---------------------------------------------------------------------------
+// 6. set_field_rule
 // ---------------------------------------------------------------------------
 
 interface SetFieldRuleInput {
@@ -1017,9 +1366,14 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
         'Attach declarative rules to a field. All three rule kinds (value_formula, validation, editability) are optional — pass only the ones you want to change. Omit a kind entirely to leave it untouched on this field; pass `null` to explicitly clear an existing rule.',
         '',
         'Placeholders supported in formulas:',
-        '  #FIELD("name") — reference to the same row\'s cell in field "name"',
-        "  #KEY           — the row's key value (quoted as a string literal)",
-        '  #PLACEHOLDER   — reference to the cell itself (validation/editability only)',
+        '  #FIELD("name")        — the same row\'s cell in field "name"',
+        '  #FIELD("name", "key") — field "name" on the row carrying that key, in THIS SAME block',
+        "  #KEY                  — the row's key value (quoted as a string literal)",
+        '  #PLACEHOLDER          — the cell itself (validation/editability only)',
+        '',
+        'The two-argument #FIELD is the only way to reach another row of the cell\'s own block: BLOCKREF is refused there (it depends on the whole-block vertex, so it would close a cycle). Use it for share-of-total or index-to-a-base-row columns, e.g. "=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")".',
+        'The other row is named by KEY, never by position — there is no "previous row" form, because rows can be reordered and inserted into, so a positional address would silently come to mean a different row. A running total (each row reading the row above) therefore has no rule form; write that column as ordinary cells outside the block.',
+        'A rule that resolves onto the cell it is defining is rejected, as is a plain coordinate (A1/C3) landing inside the block — in a template a coordinate does not shift per row, so on the first row it would point at the cell being defined.',
         '',
         'Engine behaviour after this call:',
         "  - value_formula  → cells in the field become engine-computed (no direct writes). Every row's formula is re-materialized.",
@@ -1037,7 +1391,7 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
             value_formula: {
                 type: ['string', 'null'],
                 description:
-                    'Formula template, e.g. "=#FIELD(\\"qty\\")*#FIELD(\\"price\\")". Pass null to clear; omit to leave existing untouched.',
+                    'Formula template, e.g. "=#FIELD(\\"qty\\")*#FIELD(\\"price\\")", or "=#FIELD(\\"amt\\")/#FIELD(\\"amt\\",\\"TOTAL\\")" to divide by a named row of the same block. Pass null to clear; omit to leave existing untouched.',
             },
             validation: {
                 type: ['string', 'null'],
@@ -1174,7 +1528,7 @@ function normalizeFormula(s: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// 6. define_enum_set
+// 7. define_enum_set
 // ---------------------------------------------------------------------------
 
 interface EnumVariantInput {
@@ -1431,6 +1785,29 @@ interface BlockSummary {
     position: {row: number; col: number}
     row_count: number
     col_count: number
+    /**
+     * Field names in column order — what you pass as the third argument to
+     * BLOCKREF / BLOCKREFS.
+     *
+     * Included here because knowing a block exists is useless without them:
+     * finding out what to reference otherwise meant one `describe_block` per
+     * block before a single formula could be written. The data was already in
+     * hand — `getAllBlocks` returns the schema — and was being discarded.
+     */
+    fields: string[]
+    /**
+     * The row-key column. BLOCKREF's second argument matches values in it, so
+     * this is the field you do NOT address by name. Null for a block with no
+     * bound schema.
+     */
+    key_field: string | null
+    /**
+     * Fields computed by a rule. `set_block_cells` refuses to write these — the
+     * rule is the constraint — so listing them here saves a rejected call.
+     */
+    derived_fields: string[]
+    /** How many rows the block holds, i.e. how many keys there are to address. */
+    key_count: number
 }
 
 interface SheetBlockGroup {
@@ -1450,8 +1827,15 @@ interface SheetBlockGroup {
 export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
     namespace: 'build',
     name: 'list_blocks',
-    description:
-        'List blocks grouped by sheet, plus a suggested position for the next new block on each sheet. The `next_block_start` field is the row right after the last existing block (assuming blocks never share rows) — pass it as `position` to `create_block`. Omit `sheet` to scan the whole workbook; passing it restricts to one sheet.',
+    description: [
+        'Orient yourself in a workbook: every sheet, every block, and for each block the fields you can reference. One call is enough to start writing formulas.',
+        '',
+        'Per block you get its ref name (BLOCKREF\'s first argument), its `fields` in column order (the third argument), `key_field` — the column whose values BLOCKREF matches as its second argument — and `derived_fields`, which are computed by a rule and reject writes.',
+        '',
+        'Use `describe_block` when you need a field\'s actual rule, or the row keys and values. `next_block_start` clears everything already on the sheet, blocks and loose cell content alike, so passing it as `create_block`\'s `position` will not land on top of data.',
+        '',
+        'Omit `sheet` to scan the whole workbook; passing it restricts to one sheet.',
+    ].join('\n'),
     mutates: false,
     confirmation: 'never',
     cost: 'cheap',
@@ -1491,15 +1875,30 @@ export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
         const blocksByIdx = new Map<number, BlockSummary[]>()
         for (const b of result) {
             const arr = blocksByIdx.get(b.sheetIdx) ?? []
+            const schema = b.schema
+            const ordered = [...(schema?.fields ?? [])].sort(
+                (x, y) => x.idx - y.idx
+            )
             arr.push({
                 // BlockSchema.name is the block's refName (the first arg
                 // to BLOCKREF / BLOCKREFS in formulas). Schema absent →
                 // legacy / ad-hoc block, fall back to "block#<id>".
-                name: b.schema?.name ?? `block#${b.blockId}`,
+                name: schema?.name ?? `block#${b.blockId}`,
                 block_id: b.blockId,
                 position: {row: b.rowStart, col: b.colStart},
                 row_count: b.rowCnt,
                 col_count: b.colCnt,
+                fields: ordered.map((f) => f.field),
+                // fields[0] is the row-key column by construction.
+                key_field: ordered[0]?.field ?? null,
+                derived_fields: ordered
+                    .filter(
+                        (f) =>
+                            typeof f.valueFormula === 'string' &&
+                            f.valueFormula.trim() !== ''
+                    )
+                    .map((f) => f.field),
+                key_count: schema?.keys.length ?? 0,
             })
             blocksByIdx.set(b.sheetIdx, arr)
         }
@@ -1508,11 +1907,26 @@ export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
         // affordance so the canvas isn't a wall of touching rectangles.
         const BLOCK_GAP_ROWS = 1
 
+        // Existing cell content counts too. A file the user brings has data and
+        // no blocks at all, so a hint derived only from blocks pointed at row 0
+        // — straight onto their first row, which `create_block` then overwrote.
+        const usedRowsByIdx = new Map<number, number>()
+        await Promise.all(
+            scope.map(async (idx) => {
+                const sheetId = await client.getSheetId({sheetIdx: idx})
+                if (isErrorMessage(sheetId)) return
+                const dim = await client.getSheetDimension({sheetId})
+                if (isErrorMessage(dim)) return
+                usedRowsByIdx.set(idx, dim.maxRow + 1)
+            })
+        )
+
         const groups: SheetBlockGroup[] = scope.map((idx) => {
             const blocks = blocksByIdx.get(idx) ?? []
-            // "Next" row = end of the bottom-most block + gap. col=0 by
-            // the "one block per row range" assumption.
-            let nextRow = 0
+            // "Next" row clears both the bottom-most block and any loose cell
+            // content. col=0 by the "one block per row range" assumption.
+            let nextRow = usedRowsByIdx.get(idx) ?? 0
+            if (nextRow > 0) nextRow += BLOCK_GAP_ROWS
             for (const b of blocks) {
                 const endPlusGap = b.position.row + b.row_count + BLOCK_GAP_ROWS
                 if (endPlusGap > nextRow) nextRow = endPlusGap
@@ -1556,6 +1970,12 @@ interface FieldDescription {
 
 interface DescribeBlockOutput {
     block: string
+    /**
+     * Numeric block id — what `move_block` / `resize_block` / `remove_block`
+     * take. Reported here because it was only available from `list_blocks`,
+     * so moving a block you had just described cost a second, pointless call.
+     */
+    block_id: number
     sheet: string
     sheet_idx: number
     position: {row: number; col: number}
@@ -1647,6 +2067,7 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
 
         const out: DescribeBlockOutput = {
             block: input.name,
+            block_id: block.blockId,
             sheet: sheetName,
             sheet_idx: block.sheetIdx,
             position: {row: block.rowStart, col: block.colStart},
@@ -1940,11 +2361,527 @@ export const checkpoint: Tool<CheckpointInput, CheckpointOutput> = {
 // Bundle
 // ---------------------------------------------------------------------------
 
+
+// ---------------------------------------------------------------------------
+// rename_block / rename_field
+// ---------------------------------------------------------------------------
+//
+// Renaming is possible but nobody should do it by hand. The only route is to
+// re-send the whole `BindFormSchema`, and every part you leave out is silently
+// dropped: omit `fieldFormulas` and the block keeps its new names while quietly
+// ceasing to be derived — existing values stay, so it looks fine until a row is
+// added and comes back blank.
+//
+// Worse, a rename does not reach the templates that reference it. Cell formulas
+// survive, because BLOCKREF resolves to stable ids at parse time. Rule templates
+// are stored as TEXT and re-parsed per row, so renaming block `src` leaves
+// another block's `=#FIELD("n")*BLOCKREF("src","rate","v")` pointing at a name
+// that no longer exists. Existing rows keep their values; the next row added
+// evaluates to #NAME?.
+//
+// So these tools read the current schemas, rewrite every reference they can
+// resolve precisely, re-send everything else verbatim, and do it in ONE
+// transaction. Where a reference cannot be rewritten safely they refuse and say
+// what stands in the way, rather than leaving a model that looks intact.
+
+/** All of a block's schema, as the payload that would recreate it verbatim. */
+interface SchemaSnapshot {
+    sheetIdx: number
+    blockId: number
+    refName: string
+    fieldFrom: number
+    keyIdx: number
+    row: boolean
+    fields: string[]
+    renderIds: string[]
+    fieldFormulas: string[]
+    validationFormulas: string[]
+    editabilityFormulas: string[]
+}
+
+function snapshot(b: BlockInfo): SchemaSnapshot | undefined {
+    const schema = b.schema
+    if (!schema) return undefined
+    const ordered = [...schema.fields].sort((x, y) => x.idx - y.idx)
+    return {
+        sheetIdx: b.sheetIdx,
+        blockId: b.blockId,
+        refName: schema.name,
+        // `fieldFrom` / `keyIdx` are not reported back, and both are 0 for every
+        // block this toolkit creates (fields start at the first column, the key
+        // is the first field). A block bound by another host with a different
+        // layout would be re-bound wrongly, so those are refused below.
+        fieldFrom: 0,
+        keyIdx: 0,
+        row: true,
+        fields: ordered.map((f) => f.field),
+        renderIds: ordered.map((f) => f.renderId),
+        fieldFormulas: ordered.map((f) => f.valueFormula ?? ''),
+        validationFormulas: ordered.map((f) => f.validationFormula ?? ''),
+        editabilityFormulas: ordered.map((f) => f.editabilityFormula ?? ''),
+    }
+}
+
+function bindPayload(s: SchemaSnapshot): EditPayload {
+    return {
+        type: 'bindFormSchema',
+        value: new BindFormSchemaBuilder()
+            .refName(s.refName)
+            .sheetIdx(s.sheetIdx)
+            .blockId(s.blockId)
+            .fieldFrom(s.fieldFrom)
+            .keyIdx(s.keyIdx)
+            .fields(s.fields)
+            .renderIds(s.renderIds)
+            .fieldFormulas(s.fieldFormulas)
+            .validationFormulas(s.validationFormulas)
+            .editabilityFormulas(s.editabilityFormulas)
+            .row(s.row)
+            .build(),
+    }
+}
+
+/** Every template a snapshot holds, for scanning or rewriting. */
+function templates(s: SchemaSnapshot): string[] {
+    return [...s.fieldFormulas, ...s.validationFormulas, ...s.editabilityFormulas]
+}
+
+function rewriteTemplates(s: SchemaSnapshot, f: (t: string) => string): void {
+    s.fieldFormulas = s.fieldFormulas.map(f)
+    s.validationFormulas = s.validationFormulas.map(f)
+    s.editabilityFormulas = s.editabilityFormulas.map(f)
+}
+
+/** A quoted literal is a stable token, so this substitution is exact. */
+function escapeForRegex(v: string): string {
+    return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export const renameBlock: Tool<
+    {from: string; to: string},
+    {renamed: string; rules_rewritten: number}
+> = {
+    namespace: 'build',
+    name: 'rename_block',
+    description: [
+        "Rename a block, updating everything that refers to it by the old name.",
+        '',
+        'Cell formulas follow a rename on their own — BLOCKREF resolves to stable ids — but field RULES are stored as text and re-parsed for every row, so a rename they do not know about leaves them dangling: existing rows keep their values and the next row added evaluates to #NAME?. This rewrites those rules and re-binds the affected blocks in one transaction.',
+        '',
+        'Refused if the new name is already taken.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'always',
+    inputSchema: {
+        properties: {
+            from: {type: 'string', description: 'Current ref name.'},
+            to: {type: 'string', description: 'New ref name.'},
+        },
+        required: ['from', 'to'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        if (input.to.trim() === '') {
+            throw new Error('the new name cannot be empty')
+        }
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        if (input.from === input.to) {
+            return {
+                data: {renamed: input.to, rules_rewritten: 0},
+                display: `"${input.to}" already has that name.`,
+            }
+        }
+        if (all.some((b) => b.schema?.name === input.to)) {
+            throw new Error(
+                `a block named "${input.to}" already exists — ref names must be unique`
+            )
+        }
+        const target = all.find((b) => b.schema?.name === input.from)
+        if (!target) {
+            throw new Error(`no block with ref name "${input.from}"`)
+        }
+
+        const payloads: EditPayload[] = []
+        let rewritten = 0
+
+        // The renamed block itself.
+        const own = snapshot(target)
+        if (!own) throw new Error(`block "${input.from}" has no schema`)
+        own.refName = input.to
+        payloads.push(bindPayload(own))
+
+        // Every other block whose templates name it. Matching the quoted literal
+        // straight after BLOCKREF( / BLOCKREFS( keeps this exact — the block name
+        // is always the first argument.
+        const ref = new RegExp(
+            `(\\bBLOCKREFS?\\s*\\(\\s*)"${escapeForRegex(input.from)}"`,
+            'g'
+        )
+        for (const b of all) {
+            if (b.blockId === target.blockId && b.sheetIdx === target.sheetIdx) continue
+            const snap = snapshot(b)
+            if (!snap) continue
+            const before = templates(snap).join('\u0000')
+            rewriteTemplates(snap, (t) => t.replace(ref, `$1"${input.to}"`))
+            const after = templates(snap).join('\u0000')
+            if (before !== after) {
+                rewritten += 1
+                payloads.push(bindPayload(snap))
+            }
+        }
+
+        // One transaction: a rename half-applied is a broken model.
+        await commitTransaction(
+            client,
+            payloads,
+            `rename_block("${input.from}" -> "${input.to}")`
+        )
+        return {
+            data: {renamed: input.to, rules_rewritten: rewritten},
+            display:
+                `Renamed "${input.from}" to "${input.to}"` +
+                (rewritten > 0
+                    ? `, rewriting rules in ${rewritten} other block(s).`
+                    : '.'),
+        }
+    },
+}
+
+export const renameField: Tool<
+    {block: string; from: string; to: string},
+    {renamed: string}
+> = {
+    namespace: 'build',
+    name: 'rename_field',
+    description: [
+        "Rename one field of a block, updating the block's own rules that read it.",
+        '',
+        'Rules refer to sibling fields as `#FIELD("name")`, and the engine rejects a schema whose rule names a field that does not exist — so the rename and the rules have to move together. This does that in one transaction.',
+        '',
+        'Refused when another block\'s rule mentions the old name: rewriting a field reference inside someone else\'s BLOCKREF cannot be done by matching text alone, and a half-rewritten rule is worse than a refusal. The message says where to look.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'always',
+    inputSchema: {
+        properties: {
+            block: {type: 'string'},
+            from: {type: 'string', description: 'Current field name.'},
+            to: {type: 'string', description: 'New field name.'},
+        },
+        required: ['block', 'from', 'to'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        if (input.to.trim() === '') {
+            throw new Error('the new name cannot be empty')
+        }
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const target = all.find((b) => b.schema?.name === input.block)
+        if (!target) {
+            throw new Error(`no block with ref name "${input.block}"`)
+        }
+        const snap = snapshot(target)
+        if (!snap) throw new Error(`block "${input.block}" has no schema`)
+        if (!snap.fields.includes(input.from)) {
+            throw new Error(
+                `block "${input.block}" has no field named "${input.from}" — it has ${snap.fields
+                    .map((f) => `"${f}"`)
+                    .join(', ')}`
+            )
+        }
+        if (input.from === input.to) {
+            return {
+                data: {renamed: input.to},
+                display: `"${input.to}" already has that name.`,
+            }
+        }
+        if (snap.fields.includes(input.to)) {
+            throw new Error(
+                `block "${input.block}" already has a field named "${input.to}" — field names address cells, so they must be unique`
+            )
+        }
+
+        // Another block reading this field by name would need its BLOCKREF's
+        // third argument rewritten, which text matching cannot do safely.
+        const mentions = new RegExp(`"${escapeForRegex(input.from)}"`)
+        const blockedBy: string[] = []
+        for (const b of all) {
+            if (b.blockId === target.blockId && b.sheetIdx === target.sheetIdx) continue
+            const other = snapshot(b)
+            if (!other) continue
+            if (templates(other).some((t) => mentions.test(t))) {
+                blockedBy.push(other.refName)
+            }
+        }
+        if (blockedBy.length > 0) {
+            throw new Error(
+                `cannot rename "${input.from}": the rules of ${blockedBy
+                    .map((n) => `"${n}"`)
+                    .join(', ')} mention that name, and rewriting a field reference ` +
+                    'inside another block\'s BLOCKREF by text alone is not safe. ' +
+                    'Rename the field there first, or restate those rules yourself.'
+            )
+        }
+
+        snap.fields = snap.fields.map((f) => (f === input.from ? input.to : f))
+        const own = new RegExp(
+            `(#FIELD\\s*\\(\\s*)"${escapeForRegex(input.from)}"`,
+            'g'
+        )
+        rewriteTemplates(snap, (t) => t.replace(own, `$1"${input.to}"`))
+
+        await commitTransaction(
+            client,
+            [bindPayload(snap)],
+            `rename_field("${input.block}"."${input.from}" -> "${input.to}")`
+        )
+        return {
+            data: {renamed: input.to},
+            display: `Renamed ${input.block}.${input.from} to ${input.to}.`,
+        }
+    },
+}
+
+
+// ---------------------------------------------------------------------------
+// convert_to_block — adopt a table that is already there
+// ---------------------------------------------------------------------------
+//
+// The counterpart to `create_block`, and the one a file someone brings you
+// actually needs. `create_block` lays a new block over an area and is refused
+// when that area holds data; this takes data that is already sitting in ordinary
+// cells and makes it a block in place, keeping every value.
+//
+// It only has to be done once. The block and its schema persist through save and
+// reload, and afterwards the region behaves like one that was born a block —
+// rules apply to it, rows can be added, BLOCKREF reads it by name. So a workbook
+// someone returns to week after week is converted on the first visit and is
+// structured from then on.
+
+interface ConvertToBlockInput {
+    sheet: string
+    name: string
+    /** Top-left of the DATA, excluding any header row. */
+    position: {row: number; col: number}
+    row_count: number
+    col_count: number
+    /**
+     * Row holding the column titles, if the table has one. Field names are read
+     * from it, which is what makes the resulting block readable. Usually the row
+     * directly above `position`.
+     */
+    header_row?: number
+    /** Field names, when there is no header row to read them from. */
+    fields?: string[]
+}
+
+export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields: string[]}> = {
+    namespace: 'build',
+    name: 'convert_to_block',
+    description: [
+        'Turn a table that already exists in ordinary cells into a block, in place, without touching its values.',
+        '',
+        "This is how you adopt a workbook someone hands you. `create_block` is for new tables and refuses to write over existing data; this one takes the data as it stands and gives it a name, fields and row keys, so you can address it as (block, row_key, field) and reference it from formulas by name instead of by coordinate.",
+        '',
+        'Give `position` and the counts for the DATA only, leaving out any header row, then either `header_row` to read the field names from the titles or `fields` to state them. The first field is the row-key column, so put the column that identifies each record first.',
+        '',
+        'Converting is a one-time cost: the block and its schema survive saving and reloading, and afterwards the region behaves exactly like one created as a block.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'always',
+    inputSchema: {
+        properties: {
+            sheet: {type: 'string', description: 'Sheet the table is on.'},
+            name: {
+                type: 'string',
+                description:
+                    "Ref name for the new block — BLOCKREF's first argument. Must be unique.",
+            },
+            position: {
+                type: 'object',
+                properties: {
+                    row: {type: 'integer', minimum: 0},
+                    col: {type: 'integer', minimum: 0},
+                },
+                required: ['row', 'col'],
+                description: 'Top-left cell of the data, excluding the header row.',
+            },
+            row_count: {type: 'integer', minimum: 1, description: 'Number of data rows.'},
+            col_count: {type: 'integer', minimum: 1, description: 'Number of columns.'},
+            header_row: {
+                type: 'integer',
+                minimum: 0,
+                description:
+                    'Row holding the column titles; field names are read from it. Usually one row above `position`.',
+            },
+            fields: {
+                type: 'array',
+                items: {type: 'string'},
+                description:
+                    'Field names, when there is no header row. Length must equal col_count.',
+            },
+        },
+        required: ['sheet', 'name', 'position', 'row_count', 'col_count'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+
+        const sheetInfos = await client.getAllSheetInfo()
+        if (isErrorMessage(sheetInfos)) {
+            throw new Error(`getAllSheetInfo failed: ${sheetInfos.msg}`)
+        }
+        const sheetIdx = sheetInfos.findIndex((s) => s.name === input.sheet)
+        if (sheetIdx < 0) {
+            throw new Error(
+                `no sheet named "${input.sheet}" — this converts a table that is already there, so the sheet must exist`
+            )
+        }
+
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        if (all.some((b) => b.schema?.name === input.name)) {
+            throw new Error(
+                `a block named "${input.name}" already exists — ref names are how formulas reach a block, so they must be unique`
+            )
+        }
+
+        const {row, col} = input.position
+        const endRow = row + input.row_count - 1
+        const endCol = col + input.col_count - 1
+
+        // Converting a region that already belongs to a block would give the
+        // same cells two owners.
+        for (const b of all) {
+            if (b.sheetIdx !== sheetIdx) continue
+            const overlaps =
+                row <= b.rowStart + b.rowCnt - 1 &&
+                endRow >= b.rowStart &&
+                col <= b.colStart + b.colCnt - 1 &&
+                endCol >= b.colStart
+            if (overlaps) {
+                throw new Error(
+                    `that region overlaps the existing block "${
+                        b.schema?.name ?? `block#${b.blockId}`
+                    }" at row ${b.rowStart}, col ${b.colStart}`
+                )
+            }
+        }
+
+        // Field names: from the header row if given, else stated outright.
+        let fields: string[]
+        if (input.fields !== undefined) {
+            fields = [...input.fields]
+        } else if (input.header_row !== undefined) {
+            const cells = await client.getCells({
+                sheetIdx,
+                startRow: input.header_row,
+                startCol: col,
+                endRow: input.header_row,
+                endCol,
+            })
+            if (isErrorMessage(cells)) {
+                throw new Error(`reading the header row failed: ${cells.msg}`)
+            }
+            fields = (cells as readonly CellInfo[]).map((c, i) => {
+                const v = c.value
+                const text =
+                    v === 'empty' || v === undefined
+                        ? ''
+                        : typeof v === 'object' && 'value' in v
+                          ? String((v as {value: unknown}).value)
+                          : ''
+                return text.trim() === '' ? `field_${i + 1}` : text.trim()
+            })
+        } else {
+            throw new Error(
+                'give either `header_row` to read the field names from, or `fields` to state them'
+            )
+        }
+
+        if (fields.length !== input.col_count) {
+            throw new Error(
+                `got ${fields.length} field name(s) for ${input.col_count} column(s)`
+            )
+        }
+        const dup = fields.filter((f, i) => fields.indexOf(f) !== i)
+        if (dup.length > 0) {
+            throw new Error(
+                `duplicate field name(s) ${[...new Set(dup)]
+                    .map((d) => `"${d}"`)
+                    .join(', ')} — fields address cells, so they must be unique. ` +
+                    'Pass `fields` explicitly to disambiguate.'
+            )
+        }
+
+        const idRes = await client.getAvailableBlockId({sheetIdx})
+        if (isErrorMessage(idRes)) {
+            throw new Error(`getAvailableBlockId failed: ${idRes.msg}`)
+        }
+        const blockId = idRes
+
+        // Convert then bind, in one transaction: a converted region with no
+        // schema is a block nothing can address.
+        await commitTransaction(
+            client,
+            [
+                {
+                    type: 'convertBlock',
+                    value: new ConvertBlockBuilder()
+                        .sheetIdx(sheetIdx)
+                        .id(blockId)
+                        .masterRow(row)
+                        .masterCol(col)
+                        .rowCnt(input.row_count)
+                        .colCnt(input.col_count)
+                        .build(),
+                },
+                {
+                    type: 'bindFormSchema',
+                    value: new BindFormSchemaBuilder()
+                        .refName(input.name)
+                        .sheetIdx(sheetIdx)
+                        .blockId(blockId)
+                        .fieldFrom(0)
+                        .keyIdx(0)
+                        .fields(fields)
+                        .renderIds(fields.map((_, i) => `${input.name}__f${i}`))
+                        .fieldFormulas([])
+                        .validationFormulas([])
+                        .editabilityFormulas([])
+                        .row(true)
+                        .build(),
+                },
+            ],
+            `convert_to_block("${input.name}")`
+        )
+
+        return {
+            data: {block_id: blockId, fields},
+            display:
+                `Converted the table at row ${row}, col ${col} into block "${input.name}" ` +
+                `(${input.row_count} row(s), fields ${fields.map((f) => `"${f}"`).join(', ')}). ` +
+                'Values untouched.',
+        }
+    },
+}
+
 export const BUILDER_TOOLS: Tool[] = [
+    convertToBlock as Tool,
+    renameBlock as Tool,
+    renameField as Tool,
     createSheet,
     createBlock,
     addBlockRows,
     deleteBlockRows,
+    moveBlockRow,
     setFieldRule,
     defineEnumSet,
     listBlocks,

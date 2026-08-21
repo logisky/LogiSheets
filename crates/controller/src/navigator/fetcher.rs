@@ -22,18 +22,22 @@ impl<'a> Fetcher<'a> {
         }
     }
 
-    pub fn get_row_id(&self, row: usize) -> RowId {
+    pub fn get_row_id(&self, row: usize) -> Result<RowId> {
         let cache = locked_read(&self.cache);
         let cache_id = cache.row_id.get(&row);
         match cache_id {
-            Some(result) => *result,
+            Some(result) => Ok(*result),
             None => {
                 drop(cache);
-                let result = *self.data.rows.get(row).unwrap();
+                let result = *self
+                    .data
+                    .rows
+                    .get(row)
+                    .ok_or(BasicError::RowIdNotFound(row))?;
                 let mut cache = locked_write(&self.cache);
                 cache.row_id.insert(row, result);
                 cache.row_index.insert(result, row);
-                result
+                Ok(result)
             }
         }
     }
@@ -60,18 +64,22 @@ impl<'a> Fetcher<'a> {
         }
     }
 
-    pub fn get_col_id(&self, col: usize) -> ColId {
+    pub fn get_col_id(&self, col: usize) -> Result<ColId> {
         let cache = locked_read(&self.cache);
         let cache_id = cache.col_id.get(&col);
         match cache_id {
-            Some(result) => *result,
+            Some(result) => Ok(*result),
             None => {
                 drop(cache);
-                let result = *self.data.cols.get(col).unwrap();
+                let result = *self
+                    .data
+                    .cols
+                    .get(col)
+                    .ok_or(BasicError::ColIdNotFound(col))?;
                 let mut cache = locked_write(&self.cache);
                 cache.col_id.insert(col, result);
                 cache.col_index.insert(result, col);
-                result
+                Ok(result)
             }
         }
     }
@@ -130,20 +138,20 @@ impl<'a> Fetcher<'a> {
             drop(cache);
             return Ok(res);
         }
-        let res = CellId::NormalCell(self.get_norm_cell_id(row, col));
+        let res = CellId::NormalCell(self.get_norm_cell_id(row, col)?);
         let mut cache = locked_write(&self.cache);
         cache.cell_id.insert((row, col), res);
         drop(cache);
         Ok(res)
     }
 
-    pub fn get_norm_cell_id(&self, row: usize, col: usize) -> NormalCellId {
-        let row_id = self.get_row_id(row);
-        let col_id = self.get_col_id(col);
-        NormalCellId {
+    pub fn get_norm_cell_id(&self, row: usize, col: usize) -> Result<NormalCellId> {
+        let row_id = self.get_row_id(row)?;
+        let col_id = self.get_col_id(col)?;
+        Ok(NormalCellId {
             row: row_id,
             col: col_id,
-        }
+        })
     }
 
     pub fn get_block_cell_idx(&self, block_cell_id: &BlockCellId) -> Result<(usize, usize)> {

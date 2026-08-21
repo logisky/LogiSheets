@@ -1,2 +1,25 @@
-INPUT   P4  =PMT(5%,12,10000,10000)
-##CHECKSTR    P4  ￥-1756.51
+# Excel's `type`: 0 or omitted = payments at the END of each period, 1 = at the
+# beginning. The engine had the flag inverted, so every default-type result was
+# the annuity-due answer — off by a factor of (1+rate). This file used to assert
+# the right value with the check commented out, which hid it.
+INPUT   A1  =PMT(5%,12,10000,10000)
+CHECKNUM    A1  -1756.508200
+
+# One period at 10%: pay back 100 plus a period of interest.
+INPUT A2 =PMT(0.1,1,-100)
+CHECKNUM A2 110
+
+# A 3-year 5% car loan, the textbook case.
+INPUT A3 =PMT(0.05/12,36,-20000)
+CHECKNUM A3 599.417942
+
+# type=1 pays at the start of the period, so it is the type=0 payment
+# discounted by one period.
+INPUT A4 =PMT(0.01,12,-1000,0,1)
+CHECKNUM A4 87.969098
+INPUT A5 =PMT(0.01,12,-1000,0,0)
+CHECKNUM A5 88.848791
+
+# Zero rate divides the principal evenly.
+INPUT A6 =PMT(0,10,-1000)
+CHECKNUM A6 100

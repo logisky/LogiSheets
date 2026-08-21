@@ -77,9 +77,27 @@ pub fn calc_countifs<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
+    // COUNTIFS has no sum range — its arguments are `(range, criteria)+`, so an
+    // even count — while `calc_ifs` is written for the SUMIFS shape and
+    // unconditionally consumes a leading range to sum over. Every well-formed
+    // COUNTIFS therefore failed the odd-arity check and returned an error.
+    //
+    // The range being summed is only ever the iteration domain here: the sum
+    // function below discards the values and the result takes the count. So hand
+    // `calc_ifs` the first criteria range to walk. It has the same length as the
+    // criteria, which is what the row-by-row pairing needs.
+    assert_or_return!(
+        args.len() >= 2 && args.len() % 2 == 0,
+        ast::Error::Unspecified
+    );
+    let domain = args[0].clone();
+    let mut with_domain = Vec::with_capacity(args.len() + 1);
+    with_domain.push(domain);
+    with_domain.extend(args);
+
     let func = |_, _| -> f64 { 0. };
     let result = |_: f64, cnt: f64| CalcVertex::from_number(cnt);
-    calc_ifs(args, fetcher, &result, &func)
+    calc_ifs(with_domain, fetcher, &result, &func)
 }
 
 fn calc_ifs<C, F, SF>(args: Vec<CalcVertex>, fetcher: &mut C, f: &F, sum_func: &SF) -> CalcVertex

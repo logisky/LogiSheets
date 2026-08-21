@@ -89,8 +89,27 @@ impl Stringify for PureNode {
             PureNode::Value(v) => v.unparse(fetcher, curr_sheet, shift),
             PureNode::Reference(cr) => cr.unparse(fetcher, curr_sheet, shift),
             PureNode::BlockRef(node) => node.unparse(fetcher, curr_sheet, shift),
+            // `{1,2;3,4}` — commas between columns, semicolons between rows,
+            // each element rendered as the literal it is.
+            PureNode::ArrayConstant(rows) => {
+                let mut out = Vec::with_capacity(rows.len());
+                for row in rows {
+                    let mut cells = Vec::with_capacity(row.len());
+                    for v in row {
+                        cells.push(v.unparse(fetcher, curr_sheet, shift)?);
+                    }
+                    out.push(cells.join(","));
+                }
+                Ok(format!("{{{}}}", out.join(";")))
+            }
         }
     }
+}
+
+/// `(0, 0)` -> `A1`. Used when a BlockRef is resolved to coordinates for a
+/// reader that does not know the BLOCKREF functions.
+fn a1(row: usize, col: usize) -> String {
+    format!("{}{}", logisheets_base::index_to_column_label(col), row + 1)
 }
 
 impl Stringify for BlockRefNode {
@@ -107,6 +126,30 @@ impl Stringify for BlockRefNode {
                 key,
             } => {
                 let key_str = key.unparse(fetcher, curr_sheet, shift)?;
+                // A reader that has no BLOCKREF function needs coordinates. The
+                // fetcher decides: it returns `Some` only for an export that
+                // asked for resolution, and only for a literal key.
+                if let Some((row, col)) =
+                    fetcher.resolve_block_ref_cell(*sheet_id, *block_id, *field_id, &key_str)
+                {
+                    return Ok(a1(row, col));
+                }
+                // A computed key — one table looking another up — has no single
+                // cell to name, so write the lookup a plain spreadsheet would
+                // have used. `key_str` is already unparsed, so a cell-reference
+                // key comes through as the reference itself.
+                if let Some(((f0, f1), (k0, k1))) =
+                    fetcher.resolve_block_join(*sheet_id, *block_id, *field_id)
+                {
+                    return Ok(format!(
+                        "INDEX({}:{}, MATCH({}, {}:{}, 0))",
+                        a1(f0.0, f0.1),
+                        a1(f1.0, f1.1),
+                        key_str,
+                        a1(k0.0, k0.1),
+                        a1(k1.0, k1.1),
+                    ));
+                }
                 let field_name = fetcher
                     .fetch_block_field_name_by_id(*sheet_id, *block_id, *field_id)
                     .unwrap_or_else(|| String::from("#REF!"));
@@ -134,6 +177,11 @@ impl Stringify for BlockRefNode {
             } => {
                 let kc = key_condition.unparse(fetcher, curr_sheet, shift)?;
                 let fc = field_condition.unparse(fetcher, curr_sheet, shift)?;
+                if let Some(((r1, c1), (r2, c2))) =
+                    fetcher.resolve_block_refs_range(*sheet_id, *block_id, &kc, &fc)
+                {
+                    return Ok(format!("{}:{}", a1(r1, c1), a1(r2, c2)));
+                }
                 if *by_block {
                     Ok(format!(
                         "BLOCKREFSB({}, {}, {}, {})",
@@ -465,10 +513,18 @@ impl Stringify for Error {
         T: NameFetcherTrait,
     {
         Ok(match self {
-            // `#FIELD("name")` round-trip: escape the inner string per
-            // Excel rules (doubled `"`).
-            Error::FieldRef(name) => {
-                format!("#FIELD(\"{}\")", name.replace('"', "\"\""))
+            // `#FIELD("name")` / `#FIELD("name", "key")` round-trip:
+            // escape the inner strings per Excel rules (doubled `"`).
+            // The key is emitted only when present, so same-row rules
+            // written before keys existed come back byte-identical.
+            Error::FieldRef(name, key) => {
+                let escape = |s: &str| s.replace('"', "\"\"");
+                match key {
+                    Some(k) => {
+                        format!("#FIELD(\"{}\", \"{}\")", escape(name), escape(k))
+                    }
+                    None => format!("#FIELD(\"{}\")", escape(name)),
+                }
             }
             other => other.get_err_str().to_string(),
         })

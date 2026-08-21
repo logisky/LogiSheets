@@ -26,7 +26,7 @@ pub mod display;
 mod executor;
 pub mod status;
 pub mod style;
-use crate::checkpoint_manager::{CheckpointManager, CheckpointMeta};
+use crate::checkpoint_manager::CheckpointManager;
 use crate::edit_action::{
     ActionEffect, CreateSheet, EditAction, PayloadsAction, RecalcCell, SheetCellId, SheetColId,
     SheetRowId, StatusCode, WorkbookUpdateType,
@@ -93,11 +93,42 @@ impl Default for Controller {
     }
 }
 
+/// How block formulas are written when a workbook is saved.
+///
+/// `BLOCKREF("assumptions","wacc","value")` is the form LogiSheets works in: it
+/// names what it reads, so it survives rows moving and blocks being renamed, and
+/// it is what a person reading the file can actually follow. But it is a
+/// LogiSheets function — no other spreadsheet knows it, so a reader that
+/// recalculates the file gets `#NAME?`.
+///
+/// So the choice is the caller's, and it is a genuine trade, not a default with
+/// an exception: keep the names for a file that comes back here, resolve to
+/// coordinates for a file going to Excel.
+///
+/// Resolving is one-way. `BLOCKREFS` over a field becomes a plain range like
+/// `L19:L23`, and a range covering part of a block is not a thing LogiSheets can
+/// parse back (see `ParseError::PartialBlockRange`), so a resolved file is an
+/// export rather than a round trip.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FormulaFormat {
+    /// Keep `BLOCKREF` / `BLOCKREFS`. Readable, and reopens here intact.
+    #[default]
+    Named,
+    /// Resolve them to `A1` references, for Excel and everything else.
+    Coordinates,
+}
+
 impl Controller {
     // TODO: Due to the UUID generating, we can't just `assert_eq!(file1, file2)` where
     // `file1` and `file2` are binary got from saving of the same file. Fix it.
+    /// Save with block formulas kept in their readable named form.
     pub fn save(&self) -> Result<Vec<u8>> {
-        let workbook = save_file(self)?;
+        self.save_with_format(FormulaFormat::default())
+    }
+
+    /// Save, choosing how block formulas are written — see [`FormulaFormat`].
+    pub fn save_with_format(&self, format: FormulaFormat) -> Result<Vec<u8>> {
+        let workbook = save_file(self, format == FormulaFormat::Coordinates)?;
         write(workbook).map_err(|e| Error::Serde(e.into()))
     }
 
@@ -309,8 +340,7 @@ impl Controller {
             }
             Err(e) => {
                 record_last_error(&e);
-                println!("{:?}", e.to_string());
-                ActionEffect::from_err(1) // todo
+                ActionEffect::from_err_with_message(1, Some(e.to_string()))
             }
         }
     }
@@ -442,8 +472,8 @@ impl Controller {
                         }
                     }
                     Err(e) => {
-                        println!("{:?}", e.to_string());
-                        ActionEffect::from_err(1) // todo
+                        record_last_error(&e);
+                        ActionEffect::from_err_with_message(1, Some(e.to_string()))
                     }
                 }
             }
@@ -483,8 +513,8 @@ impl Controller {
                     col_removed: vec![],
                     header_updated: HashSet::new(),
                 };
-                if let Ok(result) = executor.calc() {
-                    ActionEffect {
+                match executor.calc() {
+                    Ok(result) => ActionEffect {
                         version: result.version_manager.version(),
                         async_tasks: vec![],
                         status: StatusCode::Ok(WorkbookUpdateType::Cell),
@@ -510,9 +540,11 @@ impl Controller {
                             })
                             .collect(),
                         ..Default::default()
+                    },
+                    Err(e) => {
+                        record_last_error(&e);
+                        ActionEffect::from_err_with_message(1, Some(e.to_string()))
                     }
-                } else {
-                    ActionEffect::from_err(1)
                 }
             }
         }

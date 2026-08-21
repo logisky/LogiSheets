@@ -29,7 +29,12 @@ pub fn read_file(mgr: &mut Manager, id: usize, name: String, buf: &[u8]) -> u8 {
     }
 }
 
-pub fn save_file(mgr: &mut Manager, id: usize, app_data: String) -> SaveFileResult {
+pub fn save_file(
+    mgr: &mut Manager,
+    id: usize,
+    app_data: String,
+    resolve_block_refs: bool,
+) -> SaveFileResult {
     let ctrl = mgr.get_mut_workbook(&id);
     if ctrl.is_none() {
         return SaveFileResult {
@@ -42,7 +47,12 @@ pub fn save_file(mgr: &mut Manager, id: usize, app_data: String) -> SaveFileResu
         name: "logisheets".to_string(),
         data: app_data.clone(),
     }]);
-    if let Ok(data) = ctrl.save() {
+    let format = if resolve_block_refs {
+        logisheets_controller::FormulaFormat::Coordinates
+    } else {
+        logisheets_controller::FormulaFormat::Named
+    };
+    if let Ok(data) = ctrl.save_with_format(format) {
         SaveFileResult { data, code: 0 }
     } else {
         SaveFileResult {

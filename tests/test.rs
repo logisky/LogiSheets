@@ -304,7 +304,7 @@ mod funcs {
 
         // Double round-trip, then write ALL THREE inputs in ONE tx (as onRequest does).
         let mut bytes = wb.save().expect("save");
-        let mut wb = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+        let wb = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
         let mut bytes = wb.save().expect("save2");
         let mut wb = Workbook::from_file(&mut bytes, "reload2".to_string()).expect("reopen2");
         wb.handle_action(EditAction::Payloads(

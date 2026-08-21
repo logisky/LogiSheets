@@ -1,5 +1,68 @@
-INPUT I21   =2
-INPUT I22   =1
-INPUT I23   =2
-##INPUT   I24 =INDEX(I21:I23,1,1)
-##CHECKNUM    I24  2
+# INDEX(array, row_num, [col_num], [area_num]).
+#
+# Only the four-argument form used to work. The three-argument form hit a
+# `todo!()` and PANICKED — under wasm that kills the engine instance — and the
+# two-argument form, `INDEX(A1:A10,3)`, was rejected as bad arity. The bounds
+# check was also off by one, so the last row and column of any array were
+# unreachable.
+
+INPUT A1 1
+INPUT B1 2
+INPUT C1 3
+INPUT A2 4
+INPUT B2 5
+INPUT C2 6
+INPUT A3 7
+INPUT B3 8
+INPUT C3 9
+
+# Two arguments on a column: walk it. Row 3 is the off-by-one case.
+INPUT E1 =INDEX(A1:A3,2)
+CHECKNUM E1 4
+INPUT E2 =INDEX(A1:A3,3)
+CHECKNUM E2 7
+
+# Two arguments on a row.
+INPUT E3 =INDEX(A1:C1,3)
+CHECKNUM E3 3
+
+# Three arguments, including both last indices.
+INPUT E4 =INDEX(A1:C3,2,2)
+CHECKNUM E4 5
+INPUT E5 =INDEX(A1:C3,3,3)
+CHECKNUM E5 9
+INPUT E6 =INDEX(A1:C3,1,3)
+CHECKNUM E6 3
+
+# A zero index means the whole row or column, so these are arrays.
+INPUT E7 =SUM(INDEX(A1:C3,2,0))
+CHECKNUM E7 15
+INPUT E8 =SUM(INDEX(A1:C3,0,2))
+CHECKNUM E8 15
+INPUT E9 =SUM(INDEX(A1:C3,0,0))
+CHECKNUM E9 45
+
+# Two arguments on a 2-D array selects a whole row, as Excel does.
+INPUT F1 =SUM(INDEX(A1:C3,2))
+CHECKNUM F1 15
+
+# Out of range is #REF!; a negative index or text is #VALUE!.
+INPUT F2 =INDEX(A1:C3,4,1)
+CHECKERR F2 #REF!
+INPUT F3 =INDEX(A1:C3,1,4)
+CHECKERR F3 #REF!
+INPUT F4 =INDEX(A1:A3,-1)
+CHECKERR F4 #VALUE!
+INPUT F5 =INDEX(A1:A3,"x")
+CHECKERR F5 #VALUE!
+
+# Nested in the idiom people actually write it in.
+INPUT G1 apple
+INPUT G2 banana
+INPUT G3 cherry
+INPUT F6 =INDEX(A1:A3,MATCH("cherry",G1:G3,0))
+CHECKNUM F6 7
+
+# The four-argument area form still picks among reference areas.
+INPUT F7 =INDEX((A1:B2,A3:B3),1,2,2)
+CHECKNUM F7 8

@@ -34,6 +34,6 @@ where
     assert_f64_from_calc_value!(fv, fv_arg);
     let ty_arg = fetcher.get_calc_value(iter.next().unwrap_or(CalcVertex::from_number(0.)));
     assert_f64_from_calc_value!(ty, ty_arg);
-    let result = func(rate, nper, pmt, fv, ty.abs() < 1e-7);
+    let result = func(rate, nper, pmt, fv, ty.abs() >= 1e-7);
     CalcVertex::from_number(result)
 }

@@ -10,7 +10,7 @@ pub use fmt::{CellRef, FormulaDisplayInfo, TokenType, TokenUnit, lex_and_fmt};
 #[grammar = "grammar.pest"]
 pub struct FormulaParser;
 
-pub fn lex(s: &str) -> Option<pest::iterators::Pair<Rule>> {
+pub fn lex(s: &str) -> Option<pest::iterators::Pair<'_, Rule>> {
     let result = FormulaParser::parse(Rule::start, s);
     match result {
         Ok(mut r) => {

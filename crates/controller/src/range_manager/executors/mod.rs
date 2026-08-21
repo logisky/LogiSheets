@@ -51,14 +51,18 @@ impl RangeExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(move_block.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, move_block.id).unwrap();
+                // Moving a block that isn't there is an ordinary bad request:
+                // this function already returns Result, so report it instead of
+                // unwrapping. `saturating_sub` keeps a zero-sized block (or a
+                // move to row/col 0) from underflowing the end coordinates.
+                let (row_cnt, col_cnt) = ctx.get_block_size(sheet_id, move_block.id)?;
                 if ctx.any_other_blocks_in(
                     sheet_id,
                     move_block.id,
                     move_block.new_master_row,
                     move_block.new_master_col,
-                    row_cnt + move_block.new_master_row - 1,
-                    col_cnt + move_block.new_master_col - 1,
+                    (row_cnt + move_block.new_master_row).saturating_sub(1),
+                    (col_cnt + move_block.new_master_col).saturating_sub(1),
                 ) {
                     Ok(self)
                 } else {

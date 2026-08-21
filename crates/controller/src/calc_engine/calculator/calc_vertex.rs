@@ -109,19 +109,6 @@ impl Value {
         }
     }
 
-    pub fn assert_text(self) -> String {
-        match self {
-            Value::Text(t) => t,
-            _ => panic!("Value is not a text"),
-        }
-    }
-
-    pub fn assert_text_ptr(&self) -> &String {
-        match self {
-            Value::Text(t) => t,
-            _ => panic!("Value is not a text"),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

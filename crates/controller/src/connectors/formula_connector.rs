@@ -50,7 +50,7 @@ pub struct FormulaConnector<'a> {
 }
 
 impl<'a> FormulaConnector<'a> {
-    fn get_id_fetcher(&mut self) -> IdFetcher {
+    fn get_id_fetcher(&mut self) -> IdFetcher<'_> {
         IdFetcher {
             sheet_id_manager: self.sheet_id_manager,
             text_id_manager: self.text_id_manager,
@@ -395,6 +395,37 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
             siblings: ctx.siblings,
             key_value: ctx.key_value,
         })
+    }
+
+    fn block_cell_at_key(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        key: &str,
+        field: &str,
+    ) -> Option<BlockCellId> {
+        let block_id = cell.block_id;
+        let bp = self.id_navigator.get_block_place(&sheet_id, &block_id).ok()?;
+        let key_cells = self
+            .block_schema_manager
+            .get_all_key_cell_ids_by_block(sheet_id, block_id, bp)?;
+        let tm = &*self.text_id_manager;
+        let text_fetcher = |id: TextId| tm.get_string(&id).unwrap_or_default();
+        // Keys are compared by their rendered string, the same way
+        // BLOCKREF matches them, so `#FIELD("v","Y1")` and
+        // `BLOCKREF("m","Y1","v")` agree on what row "Y1" is.
+        let matched = key_cells.into_iter().find(|id| {
+            self.container
+                .get_cell(sheet_id, &CellId::BlockCell(*id))
+                .map(|c| c.value.to_string(&text_fetcher) == key)
+                .unwrap_or(false)
+        })?;
+        self.block_schema_manager.partially_resolve_by_block(
+            sheet_id,
+            block_id,
+            matched,
+            &field.to_string(),
+        )
     }
 
     fn block_cell_shadow_template(

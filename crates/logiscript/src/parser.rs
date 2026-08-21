@@ -20,7 +20,7 @@ pub struct ParseError {
     pub msg: String,
 }
 
-fn lex(s: &str) -> Option<pest::iterators::Pair<Rule>> {
+fn lex(s: &str) -> Option<pest::iterators::Pair<'_, Rule>> {
     let result = ScriptParser::parse(Rule::start, s);
     match result {
         Ok(mut r) => {
