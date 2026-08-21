@@ -710,7 +710,374 @@ export function locateInBlock(
 // Bundle
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// goal_seek — what input produces the answer I want
+// ---------------------------------------------------------------------------
+
+/** A cell named semantically or by coordinate. */
+interface CellPointer {
+    block?: string
+    row_key?: string
+    field?: string
+    sheet_idx?: number
+    row?: number
+    col?: number
+}
+
+interface GoalSeekInput {
+    /** The input to vary. */
+    set: CellPointer
+    /** The output to land on. */
+    target: CellPointer
+    /** The value `target` should reach. */
+    to: number
+    /** Search bracket. Derived by expanding around the current input if absent. */
+    between?: readonly [number, number]
+    /** How close to `to` counts as solved. Defaults to 1e-6 relative. */
+    tolerance?: number
+    max_iterations?: number
+}
+
+interface GoalSeekOutput {
+    /** The input value found. */
+    value: number | null
+    /** What `target` evaluates to there. */
+    achieved: number | null
+    converged: boolean
+    iterations: number
+    /** The bracket actually searched. */
+    searched?: [number, number]
+    /** Why it stopped, when it did not converge. */
+    note?: string
+}
+
+export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
+    namespace: 'edit',
+    name: 'goal_seek',
+    description: [
+        'Find the input value that makes a chosen output equal a target — "what discount rate gives a value per share of 30".',
+        '',
+        'Runs entirely on the engine\'s temp branch, so the workbook is never modified: this is a question, not an edit. The search happens inside the engine rather than as a conversation, so it costs one tool call instead of one per iteration.',
+        '',
+        'Name both cells semantically as (block, row_key, field) or by coordinate as (row, col). Give `between` when you know a bracket; otherwise it expands outward from the current input value to find one.',
+        '',
+        'Bisection, so it needs the output to move monotonically between the bracket ends and it finds one crossing. If the bracket does not straddle the target it says so rather than returning a number — a non-answer you can act on beats a plausible one you cannot.',
+    ].join('\n'),
+    mutates: false,
+    confirmation: 'never',
+    cost: 'normal',
+    inputSchema: {
+        properties: {
+            set: {
+                type: 'object',
+                description: 'The input cell to vary.',
+                properties: {
+                    block: {type: 'string'},
+                    row_key: {type: 'string'},
+                    field: {type: 'string'},
+                    sheet_idx: {type: 'integer', default: 0},
+                    row: {type: 'integer'},
+                    col: {type: 'integer'},
+                },
+            },
+            target: {
+                type: 'object',
+                description: 'The output cell to drive to `to`.',
+                properties: {
+                    block: {type: 'string'},
+                    row_key: {type: 'string'},
+                    field: {type: 'string'},
+                    sheet_idx: {type: 'integer', default: 0},
+                    row: {type: 'integer'},
+                    col: {type: 'integer'},
+                },
+            },
+            to: {type: 'number', description: 'The value `target` should reach.'},
+            between: {
+                type: 'array',
+                items: {type: 'number'},
+                minItems: 2,
+                maxItems: 2,
+                description:
+                    'Search bracket [low, high]. Omit to expand outward from the current input value.',
+            },
+            tolerance: {
+                type: 'number',
+                description: 'How close to `to` counts as solved. Default 1e-6 relative.',
+            },
+            max_iterations: {type: 'integer', default: 60},
+        },
+        required: ['set', 'target', 'to'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const maxIter = input.max_iterations ?? 60
+        const tol =
+            input.tolerance ?? Math.max(1e-9, Math.abs(input.to) * 1e-9 + 1e-9)
+
+        const allRes = await client.getAllBlocks({})
+        if (isErrorMessage(allRes)) {
+            throw new Error(`getAllBlocks failed: ${allRes.msg}`)
+        }
+        const blocks = allRes
+
+        /** Resolve a pointer to coordinates, plus the payload needed to write it. */
+        const resolve = (
+            ptr: CellPointer,
+            what: string
+        ): {sheetIdx: number; row: number; col: number; blockId?: number; blockRow?: number; blockCol?: number} => {
+            if (ptr.block !== undefined) {
+                const b = blocks.find((x) => x.schema?.name === ptr.block)
+                if (!b) throw new Error(`${what}: no block named "${ptr.block}"`)
+                const schema = b.schema
+                if (!schema) throw new Error(`${what}: block "${ptr.block}" has no schema`)
+                const key = schema.keys.find((k) => k.key === ptr.row_key)
+                if (!key) {
+                    throw new Error(
+                        `${what}: no row with key "${ptr.row_key}" in "${ptr.block}"`
+                    )
+                }
+                const field = schema.fields.find((f) => f.field === ptr.field)
+                if (!field) {
+                    throw new Error(
+                        `${what}: no field "${ptr.field}" in "${ptr.block}"`
+                    )
+                }
+                return {
+                    sheetIdx: b.sheetIdx,
+                    row: b.rowStart + key.idx,
+                    col: b.colStart + field.idx,
+                    blockId: b.blockId,
+                    blockRow: key.idx,
+                    blockCol: field.idx,
+                }
+            }
+            if (ptr.row === undefined || ptr.col === undefined) {
+                throw new Error(
+                    `${what}: give either (block, row_key, field) or (row, col)`
+                )
+            }
+            return {sheetIdx: ptr.sheet_idx ?? 0, row: ptr.row, col: ptr.col}
+        }
+
+        const setAt = resolve(input.set, 'set')
+        const targetAt = resolve(input.target, 'target')
+
+        const writePayload = (v: number): EditPayload =>
+            setAt.blockId !== undefined
+                ? {
+                      type: 'blockInput',
+                      value: new BlockInputBuilder()
+                          .sheetIdx(setAt.sheetIdx)
+                          .blockId(setAt.blockId)
+                          .row(setAt.blockRow ?? 0)
+                          .col(setAt.blockCol ?? 0)
+                          .input(String(v))
+                          .build(),
+                  }
+                : {
+                      type: 'cellInput',
+                      value: {
+                          sheetIdx: setAt.sheetIdx,
+                          row: setAt.row,
+                          col: setAt.col,
+                          content: String(v),
+                      },
+                  }
+
+        const readTarget = async (): Promise<number | null> => {
+            const cells = await client.getCells({
+                sheetIdx: targetAt.sheetIdx,
+                startRow: targetAt.row,
+                startCol: targetAt.col,
+                endRow: targetAt.row,
+                endCol: targetAt.col,
+            })
+            if (isErrorMessage(cells)) {
+                throw new Error(`getCells failed: ${cells.msg}`)
+            }
+            const info = (cells as readonly CellInfo[])[0]
+            if (info === undefined) return null
+            const v = flattenValue(info.value)
+            return typeof v === 'number' ? v : null
+        }
+
+        /** Evaluate the target with the input set to `v`, changing nothing. */
+        let probes = 0
+        const probe = async (v: number): Promise<number | null> => {
+            probes += 1
+            const toggleRes = await client.toggleStatus({useTemp: true})
+            if (isErrorMessage(toggleRes)) {
+                throw new Error(`toggleStatus failed: ${toggleRes.msg}`)
+            }
+            try {
+                const result = await client.handleTransaction({
+                    transaction: {payloads: [writePayload(v)], undoable: false, temp: true},
+                })
+                if (isErrorMessage(result)) {
+                    throw new Error(`goal_seek: ${result.msg}`)
+                }
+                if (result.status.type === 'err') {
+                    throw transactionFailure('goal_seek', result)
+                }
+                return await readTarget()
+            } finally {
+                const cleaned = await client.cleanupTempStatus()
+                if (isErrorMessage(cleaned)) {
+                    throw new Error(
+                        `goal_seek could not discard its temp branch (${cleaned.msg}) — ` +
+                            'the workbook may now hold a probe value'
+                    )
+                }
+            }
+        }
+
+        const current = await (async (): Promise<number> => {
+            const cells = await client.getCells({
+                sheetIdx: setAt.sheetIdx,
+                startRow: setAt.row,
+                startCol: setAt.col,
+                endRow: setAt.row,
+                endCol: setAt.col,
+            })
+            if (isErrorMessage(cells)) return 0
+            const info = (cells as readonly CellInfo[])[0]
+            const v = info === undefined ? null : flattenValue(info.value)
+            return typeof v === 'number' ? v : 0
+        })()
+
+        // f(x) = target(x) - to. Bisection needs a sign change.
+        const f = async (x: number): Promise<number | null> => {
+            const y = await probe(x)
+            return y === null ? null : y - input.to
+        }
+
+        let lo: number
+        let hi: number
+        let flo: number | null
+        let fhi: number | null
+        if (input.between !== undefined) {
+            lo = Math.min(input.between[0], input.between[1])
+            hi = Math.max(input.between[0], input.between[1])
+            flo = await f(lo)
+            fhi = await f(hi)
+        } else {
+            // Expand outward from the current value until the sign flips. A
+            // model's inputs are rarely near zero in a useful way, so step by a
+            // fraction of the value and grow geometrically.
+            const base = current === 0 ? 1 : Math.abs(current)
+            lo = current
+            hi = current
+            flo = await f(current)
+            fhi = flo
+            let step = base * 0.5
+            let found = false
+            for (let k = 0; k < 24 && !found; k++) {
+                const nextLo = current - step
+                const nextHi = current + step
+                const fNextLo = await f(nextLo)
+                if (fNextLo !== null && flo !== null && fNextLo * flo <= 0) {
+                    lo = nextLo
+                    hi = current
+                    fhi = flo
+                    flo = fNextLo
+                    found = true
+                    break
+                }
+                const fNextHi = await f(nextHi)
+                if (fNextHi !== null && flo !== null && fNextHi * flo <= 0) {
+                    lo = current
+                    hi = nextHi
+                    fhi = fNextHi
+                    found = true
+                    break
+                }
+                step *= 2
+            }
+            if (!found) {
+                return {
+                    data: {
+                        value: null,
+                        achieved: null,
+                        converged: false,
+                        iterations: probes,
+                        note:
+                            `no bracket found around the current value (${current}) after ` +
+                            `${probes} probes — pass \`between\` with a range you expect the answer in`,
+                    },
+                    display: 'No bracket found; pass `between`.',
+                }
+            }
+        }
+
+        if (flo === null || fhi === null) {
+            return {
+                data: {
+                    value: null,
+                    achieved: null,
+                    converged: false,
+                    iterations: probes,
+                    searched: [lo, hi],
+                    note: 'the target did not evaluate to a number at a bracket end',
+                },
+                display: 'Target is not numeric at the bracket ends.',
+            }
+        }
+        if (flo * fhi > 0) {
+            return {
+                data: {
+                    value: null,
+                    achieved: null,
+                    converged: false,
+                    iterations: probes,
+                    searched: [lo, hi],
+                    note:
+                        `the target does not cross ${input.to} between ${lo} and ${hi} ` +
+                        `(it is ${flo + input.to} and ${fhi + input.to} at the ends)`,
+                },
+                display: `No crossing of ${input.to} in [${lo}, ${hi}].`,
+            }
+        }
+
+        let mid = (lo + hi) / 2
+        let fmid: number | null = null
+        for (let k = 0; k < maxIter; k++) {
+            mid = (lo + hi) / 2
+            fmid = await f(mid)
+            if (fmid === null) break
+            if (Math.abs(fmid) <= tol) break
+            if (fmid * flo <= 0) {
+                hi = mid
+                fhi = fmid
+            } else {
+                lo = mid
+                flo = fmid
+            }
+        }
+
+        const achieved = fmid === null ? null : fmid + input.to
+        const converged = fmid !== null && Math.abs(fmid) <= tol
+        return {
+            data: {
+                value: mid,
+                achieved,
+                converged,
+                iterations: probes,
+                searched: [lo, hi],
+                note: converged
+                    ? undefined
+                    : `stopped after ${maxIter} bisection steps; the bracket narrowed to ` +
+                      `[${lo}, ${hi}] without reaching the tolerance`,
+            },
+            display: converged
+                ? `${mid} gives ${achieved} (${probes} probes).`
+                : `Best ${mid} gives ${achieved}; not within tolerance.`,
+        }
+    },
+}
+
 export const EDIT_TOOLS: Tool[] = [
+    goalSeek as Tool,
     setBlockCells,
     clearBlock,
     previewChanges,
