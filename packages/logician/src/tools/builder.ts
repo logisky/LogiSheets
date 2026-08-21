@@ -28,6 +28,7 @@ import {
 import type {CraftCalc, Value} from 'logisheets-web/pure'
 import type {
     ActionEffect,
+    BlockInfo,
     Client,
     EditPayload,
     Transaction,
@@ -2165,7 +2166,296 @@ export const checkpoint: Tool<CheckpointInput, CheckpointOutput> = {
 // Bundle
 // ---------------------------------------------------------------------------
 
+
+// ---------------------------------------------------------------------------
+// rename_block / rename_field
+// ---------------------------------------------------------------------------
+//
+// Renaming is possible but nobody should do it by hand. The only route is to
+// re-send the whole `BindFormSchema`, and every part you leave out is silently
+// dropped: omit `fieldFormulas` and the block keeps its new names while quietly
+// ceasing to be derived — existing values stay, so it looks fine until a row is
+// added and comes back blank.
+//
+// Worse, a rename does not reach the templates that reference it. Cell formulas
+// survive, because BLOCKREF resolves to stable ids at parse time. Rule templates
+// are stored as TEXT and re-parsed per row, so renaming block `src` leaves
+// another block's `=#FIELD("n")*BLOCKREF("src","rate","v")` pointing at a name
+// that no longer exists. Existing rows keep their values; the next row added
+// evaluates to #NAME?.
+//
+// So these tools read the current schemas, rewrite every reference they can
+// resolve precisely, re-send everything else verbatim, and do it in ONE
+// transaction. Where a reference cannot be rewritten safely they refuse and say
+// what stands in the way, rather than leaving a model that looks intact.
+
+/** All of a block's schema, as the payload that would recreate it verbatim. */
+interface SchemaSnapshot {
+    sheetIdx: number
+    blockId: number
+    refName: string
+    fieldFrom: number
+    keyIdx: number
+    row: boolean
+    fields: string[]
+    renderIds: string[]
+    fieldFormulas: string[]
+    validationFormulas: string[]
+    editabilityFormulas: string[]
+}
+
+function snapshot(b: BlockInfo): SchemaSnapshot | undefined {
+    const schema = b.schema
+    if (!schema) return undefined
+    const ordered = [...schema.fields].sort((x, y) => x.idx - y.idx)
+    return {
+        sheetIdx: b.sheetIdx,
+        blockId: b.blockId,
+        refName: schema.name,
+        // `fieldFrom` / `keyIdx` are not reported back, and both are 0 for every
+        // block this toolkit creates (fields start at the first column, the key
+        // is the first field). A block bound by another host with a different
+        // layout would be re-bound wrongly, so those are refused below.
+        fieldFrom: 0,
+        keyIdx: 0,
+        row: true,
+        fields: ordered.map((f) => f.field),
+        renderIds: ordered.map((f) => f.renderId),
+        fieldFormulas: ordered.map((f) => f.valueFormula ?? ''),
+        validationFormulas: ordered.map((f) => f.validationFormula ?? ''),
+        editabilityFormulas: ordered.map((f) => f.editabilityFormula ?? ''),
+    }
+}
+
+function bindPayload(s: SchemaSnapshot): EditPayload {
+    return {
+        type: 'bindFormSchema',
+        value: new BindFormSchemaBuilder()
+            .refName(s.refName)
+            .sheetIdx(s.sheetIdx)
+            .blockId(s.blockId)
+            .fieldFrom(s.fieldFrom)
+            .keyIdx(s.keyIdx)
+            .fields(s.fields)
+            .renderIds(s.renderIds)
+            .fieldFormulas(s.fieldFormulas)
+            .validationFormulas(s.validationFormulas)
+            .editabilityFormulas(s.editabilityFormulas)
+            .row(s.row)
+            .build(),
+    }
+}
+
+/** Every template a snapshot holds, for scanning or rewriting. */
+function templates(s: SchemaSnapshot): string[] {
+    return [...s.fieldFormulas, ...s.validationFormulas, ...s.editabilityFormulas]
+}
+
+function rewriteTemplates(s: SchemaSnapshot, f: (t: string) => string): void {
+    s.fieldFormulas = s.fieldFormulas.map(f)
+    s.validationFormulas = s.validationFormulas.map(f)
+    s.editabilityFormulas = s.editabilityFormulas.map(f)
+}
+
+/** A quoted literal is a stable token, so this substitution is exact. */
+function escapeForRegex(v: string): string {
+    return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export const renameBlock: Tool<
+    {from: string; to: string},
+    {renamed: string; rules_rewritten: number}
+> = {
+    namespace: 'build',
+    name: 'rename_block',
+    description: [
+        "Rename a block, updating everything that refers to it by the old name.",
+        '',
+        'Cell formulas follow a rename on their own — BLOCKREF resolves to stable ids — but field RULES are stored as text and re-parsed for every row, so a rename they do not know about leaves them dangling: existing rows keep their values and the next row added evaluates to #NAME?. This rewrites those rules and re-binds the affected blocks in one transaction.',
+        '',
+        'Refused if the new name is already taken.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'always',
+    inputSchema: {
+        properties: {
+            from: {type: 'string', description: 'Current ref name.'},
+            to: {type: 'string', description: 'New ref name.'},
+        },
+        required: ['from', 'to'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        if (input.to.trim() === '') {
+            throw new Error('the new name cannot be empty')
+        }
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        if (input.from === input.to) {
+            return {
+                data: {renamed: input.to, rules_rewritten: 0},
+                display: `"${input.to}" already has that name.`,
+            }
+        }
+        if (all.some((b) => b.schema?.name === input.to)) {
+            throw new Error(
+                `a block named "${input.to}" already exists — ref names must be unique`
+            )
+        }
+        const target = all.find((b) => b.schema?.name === input.from)
+        if (!target) {
+            throw new Error(`no block with ref name "${input.from}"`)
+        }
+
+        const payloads: EditPayload[] = []
+        let rewritten = 0
+
+        // The renamed block itself.
+        const own = snapshot(target)
+        if (!own) throw new Error(`block "${input.from}" has no schema`)
+        own.refName = input.to
+        payloads.push(bindPayload(own))
+
+        // Every other block whose templates name it. Matching the quoted literal
+        // straight after BLOCKREF( / BLOCKREFS( keeps this exact — the block name
+        // is always the first argument.
+        const ref = new RegExp(
+            `(\\bBLOCKREFS?\\s*\\(\\s*)"${escapeForRegex(input.from)}"`,
+            'g'
+        )
+        for (const b of all) {
+            if (b.blockId === target.blockId && b.sheetIdx === target.sheetIdx) continue
+            const snap = snapshot(b)
+            if (!snap) continue
+            const before = templates(snap).join('\u0000')
+            rewriteTemplates(snap, (t) => t.replace(ref, `$1"${input.to}"`))
+            const after = templates(snap).join('\u0000')
+            if (before !== after) {
+                rewritten += 1
+                payloads.push(bindPayload(snap))
+            }
+        }
+
+        // One transaction: a rename half-applied is a broken model.
+        await commitTransaction(
+            client,
+            payloads,
+            `rename_block("${input.from}" -> "${input.to}")`
+        )
+        return {
+            data: {renamed: input.to, rules_rewritten: rewritten},
+            display:
+                `Renamed "${input.from}" to "${input.to}"` +
+                (rewritten > 0
+                    ? `, rewriting rules in ${rewritten} other block(s).`
+                    : '.'),
+        }
+    },
+}
+
+export const renameField: Tool<
+    {block: string; from: string; to: string},
+    {renamed: string}
+> = {
+    namespace: 'build',
+    name: 'rename_field',
+    description: [
+        "Rename one field of a block, updating the block's own rules that read it.",
+        '',
+        'Rules refer to sibling fields as `#FIELD("name")`, and the engine rejects a schema whose rule names a field that does not exist — so the rename and the rules have to move together. This does that in one transaction.',
+        '',
+        'Refused when another block\'s rule mentions the old name: rewriting a field reference inside someone else\'s BLOCKREF cannot be done by matching text alone, and a half-rewritten rule is worse than a refusal. The message says where to look.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'always',
+    inputSchema: {
+        properties: {
+            block: {type: 'string'},
+            from: {type: 'string', description: 'Current field name.'},
+            to: {type: 'string', description: 'New field name.'},
+        },
+        required: ['block', 'from', 'to'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        if (input.to.trim() === '') {
+            throw new Error('the new name cannot be empty')
+        }
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const target = all.find((b) => b.schema?.name === input.block)
+        if (!target) {
+            throw new Error(`no block with ref name "${input.block}"`)
+        }
+        const snap = snapshot(target)
+        if (!snap) throw new Error(`block "${input.block}" has no schema`)
+        if (!snap.fields.includes(input.from)) {
+            throw new Error(
+                `block "${input.block}" has no field named "${input.from}" — it has ${snap.fields
+                    .map((f) => `"${f}"`)
+                    .join(', ')}`
+            )
+        }
+        if (input.from === input.to) {
+            return {
+                data: {renamed: input.to},
+                display: `"${input.to}" already has that name.`,
+            }
+        }
+        if (snap.fields.includes(input.to)) {
+            throw new Error(
+                `block "${input.block}" already has a field named "${input.to}" — field names address cells, so they must be unique`
+            )
+        }
+
+        // Another block reading this field by name would need its BLOCKREF's
+        // third argument rewritten, which text matching cannot do safely.
+        const mentions = new RegExp(`"${escapeForRegex(input.from)}"`)
+        const blockedBy: string[] = []
+        for (const b of all) {
+            if (b.blockId === target.blockId && b.sheetIdx === target.sheetIdx) continue
+            const other = snapshot(b)
+            if (!other) continue
+            if (templates(other).some((t) => mentions.test(t))) {
+                blockedBy.push(other.refName)
+            }
+        }
+        if (blockedBy.length > 0) {
+            throw new Error(
+                `cannot rename "${input.from}": the rules of ${blockedBy
+                    .map((n) => `"${n}"`)
+                    .join(', ')} mention that name, and rewriting a field reference ` +
+                    'inside another block\'s BLOCKREF by text alone is not safe. ' +
+                    'Rename the field there first, or restate those rules yourself.'
+            )
+        }
+
+        snap.fields = snap.fields.map((f) => (f === input.from ? input.to : f))
+        const own = new RegExp(
+            `(#FIELD\\s*\\(\\s*)"${escapeForRegex(input.from)}"`,
+            'g'
+        )
+        rewriteTemplates(snap, (t) => t.replace(own, `$1"${input.to}"`))
+
+        await commitTransaction(
+            client,
+            [bindPayload(snap)],
+            `rename_field("${input.block}"."${input.from}" -> "${input.to}")`
+        )
+        return {
+            data: {renamed: input.to},
+            display: `Renamed ${input.block}.${input.from} to ${input.to}.`,
+        }
+    },
+}
+
 export const BUILDER_TOOLS: Tool[] = [
+    renameBlock as Tool,
+    renameField as Tool,
     createSheet,
     createBlock,
     addBlockRows,
