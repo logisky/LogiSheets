@@ -1217,3 +1217,114 @@ fn test_block_row_removal_dirties_readers() {
         "COUNT(BLOCKREFS) still counts the deleted row"
     );
 }
+
+/// A BLOCKREF whose key is an expression rather than a literal is a join — one
+/// table looking another up — and it is the common shape once a model has more
+/// than one table. `FormulaFormat::Coordinates` has no single cell to point at
+/// there, so it must write the lookup a plain spreadsheet would have used.
+/// Without this, a relational model exported for Excel kept most of its
+/// BLOCKREFs and stayed unrecalculable: on a production schedule, 24 of 36
+/// formulas.
+#[test]
+fn test_save_resolves_a_block_join_to_index_match() {
+    let mut workbook = Workbook::new();
+    workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            // products: key | line
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "widget".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 1,
+                input: "L1".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 0,
+                input: "gizmo".to_string(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 1,
+                input: "L2".to_string(),
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "products".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["product".to_string(), "line".to_string()],
+                render_ids: vec!["r0".to_string(), "r1".to_string()],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            // An ordinary cell naming the product to look up, and the join.
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 0,
+                content: "gizmo".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 5,
+                col: 1,
+                content: "=BLOCKREF(\"products\",A6,\"line\")".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    // The named form is what LogiSheets keeps.
+    let mut named = workbook.save().expect("save named");
+    let reopened = Workbook::from_file(&mut named, "named".to_string()).expect("reopen");
+    let f = reopened.get_sheet_by_idx(0).unwrap().get_formula(5, 1).unwrap();
+    assert!(f.contains("BLOCKREF"), "default save should keep the join named, got {f:?}");
+
+    // Coordinates: an INDEX/MATCH over the field and key columns, which is what
+    // the same lookup looks like in a spreadsheet that has never heard of
+    // blocks. products spans A1:B2, so the field is B1:B2 and the keys A1:A2.
+    let mut bytes = workbook
+        .save_with_format(logisheets::FormulaFormat::Coordinates)
+        .expect("save resolved");
+    let reopened =
+        Workbook::from_file(&mut bytes, "resolved".to_string()).expect("reopen resolved");
+    let f = reopened.get_sheet_by_idx(0).unwrap().get_formula(5, 1).unwrap();
+    assert!(
+        !f.contains("BLOCKREF"),
+        "a resolved save must leave no BLOCKREF, got {f:?}"
+    );
+    assert!(
+        f.contains("INDEX") && f.contains("MATCH"),
+        "a computed key should become INDEX/MATCH, got {f:?}"
+    );
+    assert!(
+        f.contains("B1:B2") && f.contains("A1:A2"),
+        "should index the field column and match the key column, got {f:?}"
+    );
+}

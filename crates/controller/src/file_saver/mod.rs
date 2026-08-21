@@ -284,6 +284,54 @@ impl<'a> NameFetcherTrait for Saver<'a> {
             .ok()
     }
 
+    fn resolve_block_join(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        field_id: logisheets_base::BlockFieldId,
+    ) -> Option<(((usize, usize), (usize, usize)), ((usize, usize), (usize, usize)))> {
+        if !self.resolve_block_refs {
+            return None;
+        }
+        let bp = self
+            .navigator
+            .get_block_place(&sheet_id, &block_id)
+            .ok()?
+            .clone();
+        let keys = self
+            .block_schema_manager
+            .get_all_key_cell_ids_by_block(sheet_id, block_id, &bp)?;
+        let first = keys.first()?;
+        let last = keys.last()?;
+
+        // The key column: where the key cells themselves sit.
+        let k0 = self
+            .navigator
+            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(*first))
+            .ok()?;
+        let k1 = self
+            .navigator
+            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(*last))
+            .ok()?;
+
+        // The field column, over the same rows.
+        let ftop = self
+            .block_schema_manager
+            .partially_resolve_by_field_id(sheet_id, block_id, *first, field_id)?;
+        let fbot = self
+            .block_schema_manager
+            .partially_resolve_by_field_id(sheet_id, block_id, *last, field_id)?;
+        let f0 = self
+            .navigator
+            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(ftop))
+            .ok()?;
+        let f1 = self
+            .navigator
+            .fetch_cell_idx(&sheet_id, &CellId::BlockCell(fbot))
+            .ok()?;
+        Some(((f0, f1), (k0, k1)))
+    }
+
     fn resolve_block_refs_range(
         &self,
         sheet_id: SheetId,

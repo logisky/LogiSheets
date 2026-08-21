@@ -134,6 +134,22 @@ impl Stringify for BlockRefNode {
                 {
                     return Ok(a1(row, col));
                 }
+                // A computed key — one table looking another up — has no single
+                // cell to name, so write the lookup a plain spreadsheet would
+                // have used. `key_str` is already unparsed, so a cell-reference
+                // key comes through as the reference itself.
+                if let Some(((f0, f1), (k0, k1))) =
+                    fetcher.resolve_block_join(*sheet_id, *block_id, *field_id)
+                {
+                    return Ok(format!(
+                        "INDEX({}:{}, MATCH({}, {}:{}, 0))",
+                        a1(f0.0, f0.1),
+                        a1(f1.0, f1.1),
+                        key_str,
+                        a1(k0.0, k0.1),
+                        a1(k1.0, k1.1),
+                    ));
+                }
                 let field_name = fetcher
                     .fetch_block_field_name_by_id(*sheet_id, *block_id, *field_id)
                     .unwrap_or_else(|| String::from("#REF!"));

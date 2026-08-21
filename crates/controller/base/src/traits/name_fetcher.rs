@@ -60,6 +60,25 @@ pub trait NameFetcherTrait {
         None
     }
 
+    /// The two columns a `BLOCKREF` join needs: the field being read, and the
+    /// block's key column to match against.
+    ///
+    /// Used when the key is an expression rather than a literal — the common
+    /// shape once one table looks another up, e.g.
+    /// `BLOCKREF("products", <this row's product>, "line")`. There is no single
+    /// cell to point at, so unparse emits `INDEX(field, MATCH(key, keys, 0))`
+    /// instead, which is what a plain spreadsheet would have been written as.
+    ///
+    /// Returns `(field_rect, key_rect)` as `((r0, c0), (r1, c1))` pairs.
+    fn resolve_block_join(
+        &self,
+        _sheet_id: SheetId,
+        _block_id: BlockId,
+        _field_id: BlockFieldId,
+    ) -> Option<(((usize, usize), (usize, usize)), ((usize, usize), (usize, usize)))> {
+        None
+    }
+
     /// Resolve a `BLOCKREFS` scan to the rectangle it covers, for the same
     /// reason as {@link resolve_block_ref_cell}.
     ///

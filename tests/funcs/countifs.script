@@ -1,0 +1,36 @@
+# COUNTIFS takes `(range, criteria)+` — an EVEN argument count, with no sum range.
+# `calc_ifs` is shared with SUMIFS, which has an odd count because it leads with
+# the range to sum, and it consumed that leading range unconditionally. So every
+# well-formed COUNTIFS failed the arity check and returned an error, while
+# COUNTIF, SUMIF and SUMIFS all worked.
+INPUT A1 L1
+INPUT B1 10
+INPUT A2 L2
+INPUT B2 20
+INPUT A3 L1
+INPUT B3 30
+
+INPUT D1 =COUNTIFS(A1:A3,"L1")
+CHECKNUM D1 2
+
+INPUT D2 =COUNTIFS(A1:A3,"L2")
+CHECKNUM D2 1
+
+INPUT D3 =COUNTIFS(A1:A3,"L9")
+CHECKNUM D3 0
+
+# Two conditions: L1 rows whose hours exceed 15 — only the third row.
+INPUT D4 =COUNTIFS(A1:A3,"L1",B1:B3,">15")
+CHECKNUM D4 1
+
+# Numeric conditions on their own.
+INPUT D5 =COUNTIFS(B1:B3,">=20")
+CHECKNUM D5 2
+
+# Agrees with COUNTIF, which was never broken.
+INPUT D6 =COUNTIF(A1:A3,"L1")-COUNTIFS(A1:A3,"L1")
+CHECKNUM D6 0
+
+# And with the SUMIFS it shares its machinery with.
+INPUT D7 =SUMIFS(B1:B3,A1:A3,"L1")
+CHECKNUM D7 40
