@@ -3,7 +3,8 @@
  * from a natural-language description.
  *
  * Surface (10 tools, block-only — no raw (sheet,row,col) writes):
- *   Structure  : create_sheet, create_block, add_block_rows, delete_block_rows
+ *   Structure  : create_sheet, create_block, add_block_rows, delete_block_rows,
+ *                move_block_row
  *   Rules      : set_field_rule, define_enum_set
  *   Reflection : list_blocks, describe_block, eval_formula
  *   Safety     : checkpoint / restore       (one tool, two ops)
@@ -22,6 +23,7 @@ import {
     DeleteRowsInBlockBuilder,
     InsertRowsBuilder,
     InsertRowsInBlockBuilder,
+    MoveBlockLineBuilder,
     UpsertFieldFormulasBuilder,
     acquireCraftCalc,
     isErrorMessage,
@@ -1214,7 +1216,139 @@ export const deleteBlockRows: Tool<DeleteBlockRowsInput, {removed: number}> = {
 }
 
 // ---------------------------------------------------------------------------
-// 5. set_field_rule
+// 5. move_block_row
+// ---------------------------------------------------------------------------
+
+interface MoveBlockRowInput {
+    block: string
+    key: string
+    after_key?: string
+    before_key?: string
+}
+
+export const moveBlockRow: Tool<MoveBlockRowInput, {order: string[]}> = {
+    namespace: 'build',
+    name: 'move_block_row',
+    description:
+        "Reorder a block by moving one row to a new position, addressing both the row and its destination by key. Moves to the end when neither after_key nor before_key is given (same default as add_block_rows). Row order inside a block is presentation only — formulas address rows by key, so reordering never changes a single computed value. Use it to match a reading order someone expects, not to change the model.",
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            block: {type: 'string', description: 'Block ref name.'},
+            key: {type: 'string', description: 'Row key of the row to move.'},
+            after_key: {
+                type: 'string',
+                description:
+                    'Land the row directly after the row with this key. Mutually exclusive with before_key.',
+            },
+            before_key: {
+                type: 'string',
+                description:
+                    'Land the row directly before the row with this key. Pass the first key to move it to the top. Mutually exclusive with after_key.',
+            },
+        },
+        required: ['block', 'key'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        if (input.after_key !== undefined && input.before_key !== undefined) {
+            throw new Error('pass either after_key or before_key, not both')
+        }
+
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const block = all.find((b) => b.schema?.name === input.block)
+        if (!block) {
+            throw new Error(`No block with ref name "${input.block}"`)
+        }
+        const schema = block.schema
+        if (!schema) {
+            throw new Error(`Block "${input.block}" has no schema`)
+        }
+        const order = [...schema.keys].sort((a, b) => a.idx - b.idx)
+        const keys = order.map((k) => k.key)
+        const known = (label: string, k: string) => {
+            const at = keys.indexOf(k)
+            if (at < 0) {
+                throw new Error(
+                    `${label} "${k}" is not a row key of block "${input.block}". ` +
+                        `Existing keys: ${keys.map((x) => `"${x}"`).join(', ')}`
+                )
+            }
+            return at
+        }
+        const from = known('key', input.key)
+        const anchorKey = input.after_key ?? input.before_key
+        if (anchorKey === input.key) {
+            throw new Error(
+                `cannot move "${input.key}" relative to itself`
+            )
+        }
+
+        // MoveBlockLine's `to` is the index the line lands on AFTER it has
+        // been lifted out, so every anchor sitting below the moved row has
+        // already shifted up by one by the time `to` is read. Getting this
+        // wrong silently puts the row one place off, so the arithmetic lives
+        // here rather than in the caller's head.
+        let to: number
+        if (anchorKey === undefined) {
+            to = keys.length - 1
+        } else {
+            const at = known(
+                input.after_key !== undefined ? 'after_key' : 'before_key',
+                anchorKey
+            )
+            const lifted = at > from ? at - 1 : at
+            to = input.after_key !== undefined ? lifted + 1 : lifted
+            // `before` the row that directly follows us, or `after` the row
+            // that directly precedes us, both mean "stay put".
+            if (to > keys.length - 1) to = keys.length - 1
+        }
+
+        if (to !== from) {
+            await commitTransaction(
+                client,
+                [
+                    {
+                        type: 'moveBlockLine',
+                        value: new MoveBlockLineBuilder()
+                            .sheetIdx(block.sheetIdx)
+                            .blockId(block.blockId)
+                            .isRow(true)
+                            .from(from)
+                            .to(to)
+                            .build(),
+                    },
+                ],
+                `move_block_row("${input.block}", "${input.key}")`
+            )
+        }
+
+        // Report the order the block actually ended up in, read back from the
+        // engine rather than predicted.
+        const after = await client.getAllBlocks({})
+        const settled = isErrorMessage(after)
+            ? keys
+            : ([...(after.find((b) => b.schema?.name === input.block)?.schema
+                  ?.keys ?? [])]
+                  .sort((a, b) => a.idx - b.idx)
+                  .map((k) => k.key) as string[])
+
+        return {
+            data: {order: settled},
+            display:
+                to === from
+                    ? `"${input.key}" was already in that position; order unchanged: ${settled.join(', ')}`
+                    : `Moved "${input.key}". Order is now: ${settled.join(', ')}`,
+        }
+    },
+}
+
+// ---------------------------------------------------------------------------
+// 6. set_field_rule
 // ---------------------------------------------------------------------------
 
 interface SetFieldRuleInput {
@@ -1394,7 +1528,7 @@ function normalizeFormula(s: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// 6. define_enum_set
+// 7. define_enum_set
 // ---------------------------------------------------------------------------
 
 interface EnumVariantInput {
@@ -2747,6 +2881,7 @@ export const BUILDER_TOOLS: Tool[] = [
     createBlock,
     addBlockRows,
     deleteBlockRows,
+    moveBlockRow,
     setFieldRule,
     defineEnumSet,
     listBlocks,
