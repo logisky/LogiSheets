@@ -1596,6 +1596,29 @@ interface BlockSummary {
     position: {row: number; col: number}
     row_count: number
     col_count: number
+    /**
+     * Field names in column order — what you pass as the third argument to
+     * BLOCKREF / BLOCKREFS.
+     *
+     * Included here because knowing a block exists is useless without them:
+     * finding out what to reference otherwise meant one `describe_block` per
+     * block before a single formula could be written. The data was already in
+     * hand — `getAllBlocks` returns the schema — and was being discarded.
+     */
+    fields: string[]
+    /**
+     * The row-key column. BLOCKREF's second argument matches values in it, so
+     * this is the field you do NOT address by name. Null for a block with no
+     * bound schema.
+     */
+    key_field: string | null
+    /**
+     * Fields computed by a rule. `set_block_cells` refuses to write these — the
+     * rule is the constraint — so listing them here saves a rejected call.
+     */
+    derived_fields: string[]
+    /** How many rows the block holds, i.e. how many keys there are to address. */
+    key_count: number
 }
 
 interface SheetBlockGroup {
@@ -1615,8 +1638,15 @@ interface SheetBlockGroup {
 export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
     namespace: 'build',
     name: 'list_blocks',
-    description:
-        'List blocks grouped by sheet, plus a suggested position for the next new block on each sheet. `next_block_start` clears everything already on the sheet — the last existing block AND any loose cell content — so passing it as `position` to `create_block` will not land on top of data. Omit `sheet` to scan the whole workbook; passing it restricts to one sheet.',
+    description: [
+        'Orient yourself in a workbook: every sheet, every block, and for each block the fields you can reference. One call is enough to start writing formulas.',
+        '',
+        'Per block you get its ref name (BLOCKREF\'s first argument), its `fields` in column order (the third argument), `key_field` — the column whose values BLOCKREF matches as its second argument — and `derived_fields`, which are computed by a rule and reject writes.',
+        '',
+        'Use `describe_block` when you need a field\'s actual rule, or the row keys and values. `next_block_start` clears everything already on the sheet, blocks and loose cell content alike, so passing it as `create_block`\'s `position` will not land on top of data.',
+        '',
+        'Omit `sheet` to scan the whole workbook; passing it restricts to one sheet.',
+    ].join('\n'),
     mutates: false,
     confirmation: 'never',
     cost: 'cheap',
@@ -1656,15 +1686,30 @@ export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
         const blocksByIdx = new Map<number, BlockSummary[]>()
         for (const b of result) {
             const arr = blocksByIdx.get(b.sheetIdx) ?? []
+            const schema = b.schema
+            const ordered = [...(schema?.fields ?? [])].sort(
+                (x, y) => x.idx - y.idx
+            )
             arr.push({
                 // BlockSchema.name is the block's refName (the first arg
                 // to BLOCKREF / BLOCKREFS in formulas). Schema absent →
                 // legacy / ad-hoc block, fall back to "block#<id>".
-                name: b.schema?.name ?? `block#${b.blockId}`,
+                name: schema?.name ?? `block#${b.blockId}`,
                 block_id: b.blockId,
                 position: {row: b.rowStart, col: b.colStart},
                 row_count: b.rowCnt,
                 col_count: b.colCnt,
+                fields: ordered.map((f) => f.field),
+                // fields[0] is the row-key column by construction.
+                key_field: ordered[0]?.field ?? null,
+                derived_fields: ordered
+                    .filter(
+                        (f) =>
+                            typeof f.valueFormula === 'string' &&
+                            f.valueFormula.trim() !== ''
+                    )
+                    .map((f) => f.field),
+                key_count: schema?.keys.length ?? 0,
             })
             blocksByIdx.set(b.sheetIdx, arr)
         }
