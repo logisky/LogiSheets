@@ -18,6 +18,7 @@ import type {
     Value,
 } from 'logisheets-web/pure'
 import type {JSONSchema, Tool, ToolContext} from '../tool.js'
+import {locateInBlock} from './edit.js'
 
 function asClient(ctx: ToolContext): Client {
     return ctx.workbook as Client
@@ -661,10 +662,402 @@ export const getActiveSelection: Tool<
 // Bundle
 // ---------------------------------------------------------------------------
 
+
+// ---------------------------------------------------------------------------
+// trace — what a number depends on, and what depends on it
+// ---------------------------------------------------------------------------
+
+/** A cell named either semantically or by coordinate. */
+interface TraceTarget {
+    block?: string
+    row_key?: string
+    field?: string
+    sheet_idx?: number
+    row?: number
+    col?: number
+}
+
+interface TraceInput {
+    target: TraceTarget
+    /** Which way to look. Both by default — they answer different questions. */
+    direction?: 'precedents' | 'dependents' | 'both'
+}
+
+/** A cell, reported semantically when it sits in a block. */
+interface TracedCell {
+    block: string | null
+    row_key: string | null
+    field: string | null
+    sheet_idx: number
+    row: number
+    col: number
+    /** A1 form, so the answer is readable without doing the arithmetic. */
+    ref: string
+}
+
+interface TracedRange {
+    sheet_idx: number
+    ref: string
+    /**
+     * How precise this edge is.
+     *
+     * `cell` — exactly this cell. `field` — the engine tracks BLOCKREF
+     * dependencies per (block, field), not per row, so the edge is really "this
+     * block's field", of which the queried cell is one row. `block` — a
+     * BLOCKREFS scan, which depends on the block as a whole.
+     */
+    scope: 'cell' | 'field' | 'block'
+    /** Set when the range is a single cell that lands inside a block. */
+    block: string | null
+    row_key: string | null
+    field: string | null
+    /** A whole-column (`A:A`) or whole-row (`3:3`) reference. */
+    all_rows: boolean
+    all_cols: boolean
+}
+
+interface TraceOutput {
+    target: TracedCell
+    /** What this cell reads. Present unless direction was 'dependents'. */
+    precedents?: TracedRange[]
+    /** What reads this cell, each with the reference it used. Present unless
+     *  direction was 'precedents'. */
+    dependents?: Array<TracedCell & {via: string; scope: 'cell' | 'field' | 'block'}>
+    /**
+     * Set when any reported edge is wider than a single cell. Block
+     * dependencies are tracked per field, so a dependent list for one block
+     * cell is everything that reads that field — an over-approximation, not a
+     * per-row answer.
+     */
+    approximate?: boolean
+}
+
+/** 0-based (row, col) to A1. */
+function a1(row: number, col: number): string {
+    let n = col
+    let name = ''
+    do {
+        name = String.fromCharCode(65 + (n % 26)) + name
+        n = Math.floor(n / 26) - 1
+    } while (n >= 0)
+    return `${name}${row + 1}`
+}
+
+function rangeRef(r: {
+    startRow: number
+    startCol: number
+    endRow: number
+    endCol: number
+    allRows: boolean
+    allCols: boolean
+}): string {
+    if (r.allRows) {
+        return `${a1(0, r.startCol).replace(/\d+$/, '')}:${a1(0, r.endCol).replace(/\d+$/, '')}`
+    }
+    if (r.allCols) {
+        return `${r.startRow + 1}:${r.endRow + 1}`
+    }
+    const from = a1(r.startRow, r.startCol)
+    const to = a1(r.endRow, r.endCol)
+    return from === to ? from : `${from}:${to}`
+}
+
+export const trace: Tool<TraceInput, TraceOutput> = {
+    namespace: 'inspect',
+    name: 'trace',
+    description: [
+        "Follow a cell's dependencies, in either direction, using the engine's own dependency graph.",
+        '',
+        '  - `precedents` — what this cell reads. Use it to audit a number: "why is value-per-share what it is".',
+        '  - `dependents` — what reads this cell, and through which reference. Use it before changing something: "what breaks if I edit this assumption".',
+        '',
+        'Both by default. Name the cell semantically as (block, row_key, field), or by coordinate as (row, col) with an optional sheet_idx. Results come back named the same way whenever the cell sits inside a block, so you get "assumptions.wacc" rather than a coordinate to interpret.',
+        '',
+        'This asks the engine rather than reading formula text, so it sees through BLOCKREF, ranges and whole-column references, and it answers the reverse direction — which formula strings cannot.',
+        '',
+        'Granularity matters when blocks are involved. The engine tracks block dependencies per (block, field), not per row, so `dependents` of one block cell is everything reading that FIELD — the queried row among them. Each edge carries `scope`: "cell" is exact, "field" and "block" are over-approximations, and `approximate: true` is set on the result when any edge is wider than a cell. Treat a field-wide answer as "at least these", not "exactly these".',
+    ].join('\n'),
+    mutates: false,
+    confirmation: 'never',
+    cost: 'cheap',
+    inputSchema: {
+        properties: {
+            target: {
+                type: 'object',
+                description:
+                    'The cell to trace. Either (block, row_key, field) or (row, col).',
+                properties: {
+                    block: {type: 'string'},
+                    row_key: {type: 'string'},
+                    field: {type: 'string'},
+                    sheet_idx: {type: 'integer', default: 0},
+                    row: {type: 'integer'},
+                    col: {type: 'integer'},
+                },
+            },
+            direction: {
+                type: 'string',
+                enum: ['precedents', 'dependents', 'both'],
+                default: 'both',
+            },
+        },
+        required: ['target'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const direction = input.direction ?? 'both'
+
+        const allRes = await client.getAllBlocks({})
+        if (isErrorMessage(allRes)) {
+            throw new Error(`getAllBlocks failed: ${allRes.msg}`)
+        }
+        const blocks = allRes
+
+        // Resolve the target to coordinates.
+        const t = input.target
+        let sheetIdx: number
+        let row: number
+        let col: number
+        if (t.block !== undefined) {
+            const block = blocks.find((b) => b.schema?.name === t.block)
+            if (!block) {
+                throw new Error(`no block with ref name "${t.block}"`)
+            }
+            const schema = block.schema
+            if (!schema) {
+                throw new Error(`block "${t.block}" has no schema`)
+            }
+            const key = schema.keys.find((k) => k.key === t.row_key)
+            if (!key) {
+                throw new Error(
+                    `no row with key "${t.row_key}" in block "${t.block}"`
+                )
+            }
+            const field = schema.fields.find((f) => f.field === t.field)
+            if (!field) {
+                throw new Error(
+                    `no field named "${t.field}" in block "${t.block}"`
+                )
+            }
+            sheetIdx = block.sheetIdx
+            row = block.rowStart + key.idx
+            col = block.colStart + field.idx
+        } else {
+            if (t.row === undefined || t.col === undefined) {
+                throw new Error(
+                    'target needs either (block, row_key, field) or (row, col)'
+                )
+            }
+            sheetIdx = t.sheet_idx ?? 0
+            row = t.row
+            col = t.col
+        }
+
+        const name = (si: number, r: number, c: number): TracedCell => {
+            const annot = locateInBlock(si, r, c, blocks)
+            return {
+                block: annot?.block ?? null,
+                row_key: annot?.row_key ?? null,
+                field: annot?.field ?? null,
+                sheet_idx: si,
+                row: r,
+                col: c,
+                ref: a1(r, c),
+            }
+        }
+
+        const out: TraceOutput = {target: name(sheetIdx, row, col)}
+
+        /**
+         * Name a referenced rectangle the way the model talks about it.
+         *
+         * A BLOCKREF resolves to a rectangle covering a block's rows and one
+         * field's column, so reporting the coordinates back would throw away
+         * exactly the naming that makes this readable — the point is to answer
+         * "assumptions.wacc", not "C1:C2".
+         */
+        const nameRange = (r: {
+            sheetIdx: number
+            startRow: number
+            startCol: number
+            endRow: number
+            endCol: number
+            allRows: boolean
+            allCols: boolean
+        }): {
+            block: string | null
+            row_key: string | null
+            field: string | null
+            scope: 'cell' | 'field' | 'block'
+            isKeyColumn: boolean
+        } => {
+            const none = {
+                block: null,
+                row_key: null,
+                field: null,
+                scope: 'cell' as const,
+                isKeyColumn: false,
+            }
+            if (r.allRows || r.allCols) return none
+            // A single cell inside a block names one (key, field) exactly.
+            if (r.startRow === r.endRow && r.startCol === r.endCol) {
+                const a = locateInBlock(r.sheetIdx, r.startRow, r.startCol, blocks)
+                return a === undefined
+                    ? none
+                    : {...none, block: a.block, row_key: a.row_key, field: a.field}
+            }
+            // A rectangle spanning a block's whole row range is that block —
+            // one column of it names a field, all of it names the block.
+            for (const b of blocks) {
+                if (b.sheetIdx !== r.sheetIdx) continue
+                if (r.startRow !== b.rowStart) continue
+                if (r.endRow !== b.rowStart + b.rowCnt - 1) continue
+                const schema = b.schema
+                if (!schema) continue
+                if (r.startCol === r.endCol) {
+                    const f = schema.fields.find(
+                        (x) => x.idx === r.startCol - b.colStart
+                    )
+                    if (f) {
+                        // fields[0] is the row-key column by construction. A
+                        // BLOCKREF depends on it to find its row, but the
+                        // formula is not reading the key — flag it so it can be
+                        // dropped instead of making every block reference look
+                        // like two.
+                        const isKey =
+                            schema.fields.length > 0 &&
+                            f.idx === schema.fields[0]?.idx
+                        return {
+                            block: schema.name,
+                            row_key: null,
+                            field: f.field,
+                            scope: 'field' as const,
+                            isKeyColumn: isKey,
+                        }
+                    }
+                }
+                if (
+                    r.startCol === b.colStart &&
+                    r.endCol === b.colStart + b.colCnt - 1
+                ) {
+                    return {
+                        block: schema.name,
+                        row_key: null,
+                        field: null,
+                        scope: 'block' as const,
+                        isKeyColumn: false,
+                    }
+                }
+            }
+            return none
+        }
+
+        if (direction === 'precedents' || direction === 'both') {
+            const res = await client.getPrecedents({sheetIdx, row, col})
+            if (isErrorMessage(res)) {
+                throw new Error(`getPrecedents failed: ${res.msg}`)
+            }
+            out.precedents = res
+                .map((r) => ({r, named: nameRange(r)}))
+                // Drop the key-column edge: a BLOCKREF depends on it to find
+                // its row, but the formula is not reading the key, and listing
+                // it makes every block reference look like two.
+                .filter(({named}) => !named.isKeyColumn)
+                // A BLOCKREF depends on both its field and the block as a
+                // whole. Reporting both says the same thing twice, the second
+                // time less precisely — so keep the block-wide edge only when it
+                // is the whole answer, which is the BLOCKREFS case.
+                .filter(({named}, _i, all) => {
+                    if (named.scope !== 'block' || named.block === null) return true
+                    return !all.some(
+                        (o) =>
+                            o.named.scope === 'field' &&
+                            o.named.block === named.block
+                    )
+                })
+                .map(({r, named}) => ({
+                    sheet_idx: r.sheetIdx,
+                    ref: rangeRef(r),
+                    block: named.block,
+                    row_key: named.row_key,
+                    field: named.field,
+                    scope: named.scope,
+                    all_rows: r.allRows,
+                    all_cols: r.allCols,
+                }))
+        }
+
+        if (direction === 'dependents' || direction === 'both') {
+            const res = await client.getDependents({
+                sheetIdx,
+                startRow: row,
+                startCol: col,
+                endRow: row,
+                endCol: col,
+            })
+            if (isErrorMessage(res)) {
+                throw new Error(`getDependents failed: ${res.msg}`)
+            }
+            // One row per dependent cell. A reader that goes through BLOCKREF
+            // hangs off more than one virtual vertex — the field's and the
+            // block's — so the engine legitimately reports it once per
+            // reference. For "what depends on this" that reads as a duplicate,
+            // so keep the narrowest reference, which is also the most
+            // informative one.
+            const area = (r: {
+                startRow: number
+                startCol: number
+                endRow: number
+                endCol: number
+                allRows: boolean
+                allCols: boolean
+            }): number =>
+                r.allRows || r.allCols
+                    ? Number.MAX_SAFE_INTEGER
+                    : (r.endRow - r.startRow + 1) * (r.endCol - r.startCol + 1)
+            const best = new Map<string, (typeof res)[number]>()
+            for (const d of res) {
+                const key = `${d.sheetIdx}:${d.row}:${d.col}`
+                const prev = best.get(key)
+                if (prev === undefined || area(d.via) < area(prev.via)) {
+                    best.set(key, d)
+                }
+            }
+            out.dependents = [...best.values()].map((d) => {
+                const named = nameRange(d.via)
+                return {
+                    ...name(d.sheetIdx, d.row, d.col),
+                    via:
+                        named.block !== null
+                            ? `${named.block}.${named.field ?? '*'}`
+                            : rangeRef(d.via),
+                    scope: named.scope,
+                }
+            })
+        }
+
+        const wide = [
+            ...(out.precedents ?? []),
+            ...(out.dependents ?? []),
+        ].some((x) => x.scope !== 'cell')
+        if (wide) out.approximate = true
+
+        const parts: string[] = []
+        if (out.precedents) parts.push(`${out.precedents.length} precedent(s)`)
+        if (out.dependents) parts.push(`${out.dependents.length} dependent(s)`)
+        if (wide) parts.push('some edges are field- or block-wide')
+        return {
+            data: out,
+            display: `${out.target.block ? `${out.target.block}.${out.target.field}` : out.target.ref}: ${parts.join(', ')}.`,
+        }
+    },
+}
+
 export const INSPECT_TOOLS: Tool[] = [
     listViolations,
     whyLocked,
     getActiveSelection,
+    trace,
 ] as Tool[]
 
 // Mark JSONSchema as referenced to keep the import explicit for future use.

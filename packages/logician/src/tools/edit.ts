@@ -669,7 +669,10 @@ function flattenValue(v: Value): CellValue {
     }
 }
 
-function locateInBlock(
+/** Which (block, row_key, field) a coordinate names, if any. Shared with the
+ *  inspect tools so a traced cell reads back semantically rather than as a
+ *  coordinate the agent then has to interpret. */
+export function locateInBlock(
     sheetIdx: number,
     row: number,
     col: number,
