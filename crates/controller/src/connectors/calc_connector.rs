@@ -688,7 +688,7 @@ where
             // context (i.e. somebody wrote `=#KEY` directly into a cell
             // that isn't a templated block-field). Surface as #NAME?.
             ast::Error::Key => CellValue::Error(Error::Name),
-            ast::Error::FieldRef(_) => CellValue::Error(Error::Name),
+            ast::Error::FieldRef(..) => CellValue::Error(Error::Name),
         },
     }
 }

@@ -56,6 +56,23 @@ pub trait FormulaExecCtx:
         cell: &BlockCellId,
     ) -> Option<BlockCellRowContext>;
 
+    /// Resolve a key-addressed `#FIELD("field", "key")`: the cell at
+    /// (`key`, `field`) inside `cell`'s OWN block. Returns `None` when the
+    /// block has no row with that key, no such field, or no schema.
+    ///
+    /// This is the only way a formula can reach another row of its own
+    /// block. `BLOCKREF` cannot: it depends on the whole-block vertex, so
+    /// pointing it at its own block closes a cycle. Resolving to one
+    /// concrete cell here sidesteps that — the dependency is cell-to-cell,
+    /// which the topological order handles like any other.
+    fn block_cell_at_key(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        key: &str,
+        field: &str,
+    ) -> Option<BlockCellId>;
+
     /// Read the validation- or editability-formula template that the
     /// schema has registered for this cell's field, if any. Returns the
     /// raw template string (may or may not include a leading `=`).

@@ -1328,3 +1328,204 @@ fn test_save_resolves_a_block_join_to_index_match() {
         "should index the field column and match the key column, got {f:?}"
     );
 }
+
+/// Helper: a block whose rows are (key, amt) plus a derived `pct` column,
+/// with whatever value-formula template the caller wants on `pct`.
+fn build_pct_block(pct_rule: &str, rows: &[(&str, f64)]) -> (Workbook, StatusCode) {
+    let mut workbook = Workbook::new();
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: 1,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 3,
+        owner: None,
+        modify_policy: None,
+    })];
+    for (i, (key, amt)) in rows.iter().enumerate() {
+        payloads.push(EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: i,
+            col: 0,
+            input: key.to_string(),
+        }));
+        payloads.push(EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: i,
+            col: 1,
+            input: amt.to_string(),
+        }));
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "t".to_string(),
+        sheet_idx: 0,
+        block_id: 1,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec!["key".to_string(), "amt".to_string(), "pct".to_string()],
+        render_ids: vec!["r0".to_string(), "r1".to_string(), "r2".to_string()],
+        field_formulas: vec![None, None, Some(pct_rule.to_string())],
+        validation_formulas: vec![],
+        editability_formulas: vec![],
+        row: true,
+    }));
+    let effect = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    (workbook, effect.status)
+}
+
+fn col_values(wb: &mut Workbook, col: usize, n: usize) -> Vec<f64> {
+    (0..n)
+        .map(|r| match wb.get_sheet_by_idx(0).unwrap().get_value(r, col).unwrap() {
+            logisheets::Value::Number(v) => v,
+            other => panic!("expected a number at ({r},{col}), got {other:?}"),
+        })
+        .collect()
+}
+
+/// `#FIELD("field", "key")` reaches another row of the cell's OWN block.
+///
+/// This is the one thing no other construct could do. `BLOCKREF` is refused
+/// against its own block — it depends on the whole-block vertex, so it would
+/// close a cycle — and a plain coordinate in a template does not shift per
+/// row (and is now refused too). Keying the row rather than offsetting to it
+/// is deliberate: rows can be reordered and inserted into, so `the row above`
+/// would silently come to mean a different row.
+///
+/// The classic use is a share-of-total column, where every row divides by one
+/// named row.
+#[test]
+fn test_field_ref_by_key_reaches_another_row_of_the_same_block() {
+    let rows = [("r1", 10.0), ("r2", 20.0), ("r3", 30.0), ("TOTAL", 60.0)];
+    let (mut wb, status) =
+        build_pct_block("=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")", &rows);
+    assert!(matches!(status, StatusCode::Ok(_)), "bind failed: {status:?}");
+    let pct = col_values(&mut wb, 2, 4);
+    let want = [10.0 / 60.0, 20.0 / 60.0, 30.0 / 60.0, 1.0];
+    for (got, exp) in pct.iter().zip(want.iter()) {
+        assert!(
+            (got - exp).abs() < 1e-9,
+            "pct column should be amt/TOTAL, got {pct:?} want {want:?}"
+        );
+    }
+}
+
+/// The keyed reference is a real dependency, not a snapshot: editing the
+/// referenced row recomputes every row that points at it.
+#[test]
+fn test_field_ref_by_key_recomputes_when_the_target_changes() {
+    let rows = [("r1", 10.0), ("r2", 20.0), ("TOTAL", 30.0)];
+    let (mut wb, _) = build_pct_block("=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")", &rows);
+    assert!((col_values(&mut wb, 2, 3)[0] - 10.0 / 30.0).abs() < 1e-9);
+
+    wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: 2, // the TOTAL row
+            col: 1,
+            input: "60".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let pct = col_values(&mut wb, 2, 3);
+    assert!(
+        (pct[0] - 10.0 / 60.0).abs() < 1e-9 && (pct[1] - 20.0 / 60.0).abs() < 1e-9,
+        "rows should follow the row they key into, got {pct:?}"
+    );
+}
+
+/// Same-block keyed refs must survive a save/reload. The file-load path has
+/// twice now registered less than the live path (block-cell formulas, then the
+/// `BlockAll` topo-barrier edge), each time as a wrong number rather than a
+/// crash — so a round trip is part of the feature, not an afterthought.
+#[test]
+fn test_field_ref_by_key_survives_save_and_reload() {
+    let rows = [("r1", 10.0), ("r2", 20.0), ("TOTAL", 30.0)];
+    let (wb, _) = build_pct_block("=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")", &rows);
+    let mut bytes = wb.save().expect("save");
+    let mut reopened = Workbook::from_file(&mut bytes, "reload".to_string()).expect("reopen");
+
+    // The template itself must come back intact. It is stored as an XML
+    // attribute full of quotes, which is exactly what the xmlserde escaping
+    // bug used to mangle — every block field rule died on save/reload.
+    let rule = reopened
+        .get_all_blocks(Some(0), None)
+        .expect("get_all_blocks")
+        .into_iter()
+        .find_map(|b| b.schema)
+        .and_then(|s| {
+            s.fields
+                .into_iter()
+                .find(|f| f.field == "pct")
+                .and_then(|f| f.value_formula)
+        })
+        .expect("the pct field should still carry its template");
+    assert_eq!(
+        rule, "=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")",
+        "the keyed template should round-trip verbatim"
+    );
+    assert!(
+        (col_values(&mut reopened, 2, 3)[1] - 20.0 / 30.0).abs() < 1e-9,
+        "values should reload intact"
+    );
+
+    // And still live: change the keyed-into row after the round trip.
+    reopened.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BlockInput(BlockInput {
+            sheet_idx: 0,
+            block_id: 1,
+            row: 2,
+            col: 1,
+            input: "60".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let pct = col_values(&mut reopened, 2, 3);
+    assert!(
+        (pct[1] - 20.0 / 60.0).abs() < 1e-9,
+        "keyed ref went stale after reload, got {pct:?}"
+    );
+}
+
+/// A keyed reference that lands on the very cell being defined is a
+/// self-loop. Left alone the cycle iterator would grind it to a meaningless
+/// number with no error — the same silent failure as a coordinate pointing
+/// into its own block. Reject the rule instead.
+#[test]
+fn test_field_ref_by_key_onto_itself_errors() {
+    let rows = [("r1", 10.0), ("TOTAL", 30.0)];
+    // `pct` keying into `pct` of the TOTAL row: fine for r1, a self-reference
+    // for the TOTAL row itself.
+    let (_wb, status) = build_pct_block("=#FIELD(\"pct\",\"TOTAL\")+1", &rows);
+    assert!(
+        !matches!(status, StatusCode::Ok(_)),
+        "a rule resolving to its own cell should fail, got {status:?}"
+    );
+}
+
+/// A key that names no row is not a bind-time error — rows come and go, so a
+/// key that resolves today may not tomorrow. It surfaces as an error VALUE in
+/// the cell, which is visible, rather than being quietly treated as blank.
+#[test]
+fn test_field_ref_by_unknown_key_is_an_error_value_not_a_silent_blank() {
+    let rows = [("r1", 10.0), ("r2", 20.0)];
+    let (wb, status) = build_pct_block("=#FIELD(\"amt\",\"NOPE\")", &rows);
+    assert!(
+        matches!(status, StatusCode::Ok(_)),
+        "an unresolvable key should not block the bind, got {status:?}"
+    );
+    let v = wb.get_sheet_by_idx(0).unwrap().get_value(0, 2).unwrap();
+    assert!(
+        matches!(v, logisheets::Value::Error(_)),
+        "expected an error value for an unknown key, got {v:?}"
+    );
+}

@@ -69,103 +69,28 @@ fn validate_field_refs(
         if trimmed.is_empty() {
             continue;
         }
-        let names = scan_field_refs(trimmed);
-        for n in names {
-            if !declared_names.contains(&n) {
+        let Some(placeholders) = logisheets_parser::Parser {}.scan_placeholders(trimmed) else {
+            continue;
+        };
+        for ph in placeholders {
+            // Only the field name is checked. The row key of a
+            // `#FIELD("f", "key")` is data, not schema: rows come and go,
+            // so a key that resolves today may not tomorrow, and vice
+            // versa. An unresolvable key surfaces as `#NAME?` at eval
+            // time rather than blocking the bind.
+            let logisheets_parser::Placeholder::FieldRef(name, _) = ph else {
+                continue;
+            };
+            if !declared_names.contains(&name) {
                 return Err(BasicError::InvalidFormula(format!(
                     "{}[{}] references unknown field {:?}",
-                    kind, i, n
+                    kind, i, name
                 ))
                 .into());
             }
         }
     }
     Ok(())
-}
-
-/// Scan a value-formula template for `#FIELD("name")` occurrences and
-/// return every referenced name. Used at bind time to validate that
-/// every reference resolves to a declared field — early failure beats
-/// runtime `#NAME?` for typos.
-///
-/// String-literal-safe: skips characters inside `"..."` (honoring Excel's
-/// doubled-quote escape `""`) so a literal like `"#FIELD(\"x\")"` inside
-/// a text constant is NOT picked up.
-///
-/// UTF-8-safe: operates on the &str by-byte for ASCII anchors (`#FIELD("`,
-/// `"`) and reads field names as a &str slice — never reinterprets a
-/// raw byte as a `char`, which would mangle CJK / emoji / any multibyte
-/// character mid-sequence.
-fn scan_field_refs(template: &str) -> Vec<String> {
-    let bytes = template.as_bytes();
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'"' {
-            // Skip over the string literal, honoring "" escapes.
-            i += 1;
-            while i < bytes.len() {
-                if bytes[i] == b'"' {
-                    if i + 1 < bytes.len() && bytes[i + 1] == b'"' {
-                        i += 2;
-                        continue;
-                    }
-                    i += 1;
-                    break;
-                }
-                i += 1;
-            }
-            continue;
-        }
-        // Match the literal `#FIELD("` prefix, then read the name as
-        // a &str slice up to the closing quote — preserves UTF-8
-        // multi-byte characters. `""` inside the name is the Excel
-        // escape for a literal `"`; we splice the pieces.
-        let head = b"#FIELD(\"";
-        if bytes[i..].starts_with(head) {
-            i += head.len();
-            let mut name = String::new();
-            let mut chunk_start = i;
-            while i < bytes.len() {
-                if bytes[i] == b'"' {
-                    // Flush the chunk so far (always at a UTF-8 boundary
-                    // — `"` is ASCII and we only advanced on whole chars
-                    // via str index arithmetic).
-                    name.push_str(&template[chunk_start..i]);
-                    if i + 1 < bytes.len() && bytes[i + 1] == b'"' {
-                        // Escaped quote inside the name.
-                        name.push('"');
-                        i += 2;
-                        chunk_start = i;
-                        continue;
-                    }
-                    i += 1;
-                    break;
-                }
-                // Advance one whole UTF-8 char. utf8_char_width is
-                // unstable, so derive from the leading-byte pattern.
-                let lead = bytes[i];
-                let char_len = if lead < 0x80 {
-                    1
-                } else if lead < 0xC0 {
-                    // Continuation byte — malformed if we land here,
-                    // but be defensive and skip 1.
-                    1
-                } else if lead < 0xE0 {
-                    2
-                } else if lead < 0xF0 {
-                    3
-                } else {
-                    4
-                };
-                i += char_len;
-            }
-            out.push(name);
-            continue;
-        }
-        i += 1;
-    }
-    out
 }
 
 pub struct BlockSchemaExecutor {

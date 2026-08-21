@@ -1232,9 +1232,14 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
         'Attach declarative rules to a field. All three rule kinds (value_formula, validation, editability) are optional — pass only the ones you want to change. Omit a kind entirely to leave it untouched on this field; pass `null` to explicitly clear an existing rule.',
         '',
         'Placeholders supported in formulas:',
-        '  #FIELD("name") — reference to the same row\'s cell in field "name"',
-        "  #KEY           — the row's key value (quoted as a string literal)",
-        '  #PLACEHOLDER   — reference to the cell itself (validation/editability only)',
+        '  #FIELD("name")        — the same row\'s cell in field "name"',
+        '  #FIELD("name", "key") — field "name" on the row carrying that key, in THIS SAME block',
+        "  #KEY                  — the row's key value (quoted as a string literal)",
+        '  #PLACEHOLDER          — the cell itself (validation/editability only)',
+        '',
+        'The two-argument #FIELD is the only way to reach another row of the cell\'s own block: BLOCKREF is refused there (it depends on the whole-block vertex, so it would close a cycle). Use it for share-of-total or index-to-a-base-row columns, e.g. "=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")".',
+        'The other row is named by KEY, never by position — there is no "previous row" form, because rows can be reordered and inserted into, so a positional address would silently come to mean a different row. A running total (each row reading the row above) therefore has no rule form; write that column as ordinary cells outside the block.',
+        'A rule that resolves onto the cell it is defining is rejected, as is a plain coordinate (A1/C3) landing inside the block — in a template a coordinate does not shift per row, so on the first row it would point at the cell being defined.',
         '',
         'Engine behaviour after this call:',
         "  - value_formula  → cells in the field become engine-computed (no direct writes). Every row's formula is re-materialized.",
@@ -1252,7 +1257,7 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
             value_formula: {
                 type: ['string', 'null'],
                 description:
-                    'Formula template, e.g. "=#FIELD(\\"qty\\")*#FIELD(\\"price\\")". Pass null to clear; omit to leave existing untouched.',
+                    'Formula template, e.g. "=#FIELD(\\"qty\\")*#FIELD(\\"price\\")", or "=#FIELD(\\"amt\\")/#FIELD(\\"amt\\",\\"TOTAL\\")" to divide by a named row of the same block. Pass null to clear; omit to leave existing untouched.',
             },
             validation: {
                 type: ['string', 'null'],

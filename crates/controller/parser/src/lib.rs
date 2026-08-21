@@ -17,6 +17,7 @@ use logisheets_lexer::*;
 use pest::iterators::Pair;
 use reference::build_cell_reference;
 use regex::Regex;
+use std::collections::HashSet;
 
 type Result<T> = std::result::Result<T, ParseError>;
 lazy_static! {
@@ -63,8 +64,36 @@ pub enum PlaceholderKind<'a> {
     Placeholder,
     /// Template `#KEY` — this row's key value.
     Key,
-    /// Template `#FIELD("name")` — sibling field.
-    FieldRef(&'a str),
+    /// Template `#FIELD("name")` — a field of this cell's own block:
+    /// the same row when the key is `None`, otherwise the row carrying
+    /// that key.
+    FieldRef(&'a str, Option<&'a str>),
+}
+
+/// Owned counterpart of {@link PlaceholderKind}, usable as a map key.
+/// {@link Parser::scan_placeholders} reports what a template needs in
+/// this form so a caller can resolve every placeholder up front — with
+/// full `&mut context` access — and then hand `parse_with_substitutes` a
+/// plain lookup. A key-addressed `#FIELD` has to mint a range id to
+/// build its replacement node, which the single-pass resolver cannot do
+/// while the parser still holds the context.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Placeholder {
+    Placeholder,
+    Key,
+    FieldRef(String, Option<String>),
+}
+
+impl PlaceholderKind<'_> {
+    pub fn to_owned(&self) -> Placeholder {
+        match self {
+            PlaceholderKind::Placeholder => Placeholder::Placeholder,
+            PlaceholderKind::Key => Placeholder::Key,
+            PlaceholderKind::FieldRef(name, key) => {
+                Placeholder::FieldRef(name.to_string(), key.map(str::to_string))
+            }
+        }
+    }
 }
 
 pub struct Parser {}
@@ -77,6 +106,45 @@ impl Parser {
         let pair = lex(f.trim())?;
         let formula = pair.into_inner().next()?;
         Some(self.parse_from_pair(formula, curr_sheet, context, false))
+    }
+
+    /// Report every template placeholder a formula body mentions, without
+    /// resolving any references — this is a lex-only pass, so it needs no
+    /// context. Callers use it to resolve the placeholders they care about
+    /// up front (which for a key-addressed `#FIELD` means minting range
+    /// ids, hence `&mut context`) and then feed the results to
+    /// {@link parse_with_substitutes} as a plain lookup.
+    ///
+    /// Returns `None` only when the body does not lex at all.
+    pub fn scan_placeholders(&self, f: &str) -> Option<HashSet<Placeholder>> {
+        let top = lex(f.trim())?;
+        let mut out = HashSet::new();
+        for pair in top.into_inner().flatten() {
+            match pair.as_rule() {
+                Rule::key_placeholder => {
+                    out.insert(Placeholder::Key);
+                }
+                Rule::field_placeholder => {
+                    let mut args = pair.into_inner().map(|inner| {
+                        let raw = inner.as_str();
+                        if raw.len() >= 2 {
+                            raw[1..raw.len() - 1].replace("\"\"", "\"")
+                        } else {
+                            String::new()
+                        }
+                    });
+                    let name = args.next().unwrap_or_default();
+                    out.insert(Placeholder::FieldRef(name, args.next()));
+                }
+                Rule::error_constant => {
+                    if pair.as_str() == "#PLACEHOLDER" {
+                        out.insert(Placeholder::Placeholder);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Some(out)
     }
 
     pub fn parse_with_substitude<T>(
@@ -120,8 +188,8 @@ impl Parser {
             ast::PureNode::Value(ast::Value::Error(error)) => match error {
                 ast::Error::Placeholder => resolver(PlaceholderKind::Placeholder).unwrap_or(node),
                 ast::Error::Key => resolver(PlaceholderKind::Key).unwrap_or(node),
-                ast::Error::FieldRef(name) => {
-                    resolver(PlaceholderKind::FieldRef(name)).unwrap_or(node)
+                ast::Error::FieldRef(name, key) => {
+                    resolver(PlaceholderKind::FieldRef(name, key.as_deref())).unwrap_or(node)
                 }
                 _ => node,
             },
@@ -229,16 +297,21 @@ impl Parser {
                 bracket: false,
             },
             Rule::field_placeholder => {
-                let inner = pair.into_inner().next().unwrap(); // string_constant
-                let raw = inner.as_str();
-                // Strip the surrounding quotes and unescape `""` → `"`.
-                let name = if raw.len() >= 2 {
-                    raw[1..raw.len() - 1].replace("\"\"", "\"")
-                } else {
-                    String::new()
-                };
+                // One string_constant for `#FIELD("name")`, two for the
+                // key-addressed `#FIELD("name", "key")`.
+                let mut args = pair.into_inner().map(|inner| {
+                    let raw = inner.as_str();
+                    // Strip the surrounding quotes and unescape `""` → `"`.
+                    if raw.len() >= 2 {
+                        raw[1..raw.len() - 1].replace("\"\"", "\"")
+                    } else {
+                        String::new()
+                    }
+                });
+                let name = args.next().unwrap_or_default();
+                let key = args.next();
                 ast::Node {
-                    pure: ast::PureNode::Value(ast::Value::Error(ast::Error::FieldRef(name))),
+                    pure: ast::PureNode::Value(ast::Value::Error(ast::Error::FieldRef(name, key))),
                     bracket: false,
                 }
             }

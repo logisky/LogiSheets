@@ -513,10 +513,18 @@ impl Stringify for Error {
         T: NameFetcherTrait,
     {
         Ok(match self {
-            // `#FIELD("name")` round-trip: escape the inner string per
-            // Excel rules (doubled `"`).
-            Error::FieldRef(name) => {
-                format!("#FIELD(\"{}\")", name.replace('"', "\"\""))
+            // `#FIELD("name")` / `#FIELD("name", "key")` round-trip:
+            // escape the inner strings per Excel rules (doubled `"`).
+            // The key is emitted only when present, so same-row rules
+            // written before keys existed come back byte-identical.
+            Error::FieldRef(name, key) => {
+                let escape = |s: &str| s.replace('"', "\"\"");
+                match key {
+                    Some(k) => {
+                        format!("#FIELD(\"{}\", \"{}\")", escape(name), escape(k))
+                    }
+                    None => format!("#FIELD(\"{}\")", escape(name)),
+                }
             }
             other => other.get_err_str().to_string(),
         })

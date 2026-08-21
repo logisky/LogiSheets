@@ -22,11 +22,19 @@ pub enum Error {
     /// formula was inputted without template context — surfaces as
     /// `#NAME?` to the user.
     Key,
-    /// `#FIELD("name")` template placeholder. Substituted with a
-    /// reference to the same row's sibling cell at parse time. Carries
-    /// the field name through `unparse`; surfaces as `#NAME?` at eval
-    /// time if unsubstituted (same fallback as `Key`).
-    FieldRef(String),
+    /// `#FIELD("name")` template placeholder. Substituted at parse time
+    /// with a reference to a cell in the formula's own block: the same
+    /// row's sibling field, or — when the optional second argument is
+    /// present, `#FIELD("name", "key")` — the field on the row carrying
+    /// that key.
+    ///
+    /// The other row is addressed by KEY, never by position: rows can be
+    /// reordered and inserted into, so a positional address would come
+    /// to mean a different row without the formula changing.
+    ///
+    /// Carries both through `unparse`; surfaces as `#NAME?` at eval time
+    /// if unsubstituted (same fallback as `Key`).
+    FieldRef(String, Option<String>),
 }
 
 impl Error {
@@ -46,7 +54,7 @@ impl Error {
             // The dynamic field-name part is appended in the Stringify
             // impl (see unparse.rs); this static prefix is only used by
             // paths that don't go through unparse.
-            Error::FieldRef(_) => "#FIELD",
+            Error::FieldRef(..) => "#FIELD",
         }
     }
 

@@ -176,3 +176,57 @@ mod tests {
         println!("{:?}", r);
     }
 }
+
+#[cfg(test)]
+mod field_placeholder_tests {
+    use super::{Rule, lex};
+
+    /// Walk the token tree and pull out the string_constant texts under
+    /// every field_placeholder, so the arity is visible in the assertion.
+    fn field_args(f: &str) -> Vec<Vec<String>> {
+        let top = lex(f).expect("should lex");
+        top.into_inner()
+            .flatten()
+            .filter(|p| p.as_rule() == Rule::field_placeholder)
+            .map(|p| {
+                p.into_inner()
+                    .filter(|c| c.as_rule() == Rule::string_constant)
+                    .map(|c| c.as_str().to_string())
+                    .collect()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn one_arg_is_the_same_row() {
+        assert_eq!(field_args(r#"#FIELD("qty")*2"#), vec![vec![r#""qty""#]]);
+    }
+
+    #[test]
+    fn two_args_name_a_row_by_key() {
+        assert_eq!(
+            field_args(r#"#FIELD("amt")/#FIELD("amt", "TOTAL")"#),
+            vec![vec![r#""amt""#], vec![r#""amt""#, r#""TOTAL""#]]
+        );
+    }
+
+    #[test]
+    fn whitespace_around_the_key_is_fine() {
+        assert_eq!(
+            field_args("#FIELD( \"amt\" ,  \"TOTAL\" )"),
+            vec![vec![r#""amt""#, r#""TOTAL""#]]
+        );
+    }
+
+    #[test]
+    fn cjk_and_escaped_quotes_survive() {
+        assert_eq!(
+            field_args(r#"#FIELD("数量", "合计")"#),
+            vec![vec![r#""数量""#, r#""合计""#]]
+        );
+        assert_eq!(
+            field_args(r#"#FIELD("a""b", "k""1")"#),
+            vec![vec![r#""a""b""#, r#""k""1""#]]
+        );
+    }
+}
