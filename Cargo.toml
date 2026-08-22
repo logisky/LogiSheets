@@ -37,7 +37,7 @@ members = [
 exclude = ["fuzz", "packages/desktop/src-tauri"]
 
 [workspace.package]
-version = "1.12.0"
+version = "1.12.1"
 authors = ["JeremyHe <yiliang.he@qq.com>"]
 license = "MIT"
 edition = "2024"
@@ -63,17 +63,17 @@ wildescape = "0.1"
 
 ssf-rs = { path = "crates/ssf-rs", version = "0.1.0" }
 
-logisheets_lexer = { path = "crates/controller/lexer", version = "1.12.0" }
-logisheets_parser = { path = "crates/controller/parser", version = "1.12.0" }
-logisheets_base = { path = "crates/controller/base", version = "1.12.0" }
-logisheets_controller = { path = "crates/controller", version = "1.12.0" }
-logisheets_lexer4fmt = { path = "crates/controller/lexer4fmt", version = "1.12.0" }
-logisheets_astchecker = { path = "crates/controller/ast_checker", version = "1.12.0" }
+logisheets_lexer = { path = "crates/controller/lexer", version = "1.12.1" }
+logisheets_parser = { path = "crates/controller/parser", version = "1.12.1" }
+logisheets_base = { path = "crates/controller/base", version = "1.12.1" }
+logisheets_controller = { path = "crates/controller", version = "1.12.1" }
+logisheets_lexer4fmt = { path = "crates/controller/lexer4fmt", version = "1.12.1" }
+logisheets_astchecker = { path = "crates/controller/ast_checker", version = "1.12.1" }
 
-logisheets_workbook_derives = { path = "crates/workbook/derives", version = "1.12.0" }
+logisheets_workbook_derives = { path = "crates/workbook/derives", version = "1.12.1" }
 xmldiff = { path = "crates/xmldiff", version = "1.9.0" }
-logisheets_workbook = { path = "crates/workbook", version = "1.12.0" }
-logisheets-rs = { path = "crates/api", version = "1.12.0" }
+logisheets_workbook = { path = "crates/workbook", version = "1.12.1" }
+logisheets-rs = { path = "crates/api", version = "1.12.1" }
 
 [dependencies]
 logisheets_controller = { workspace = true }

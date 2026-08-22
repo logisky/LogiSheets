@@ -58,7 +58,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         mut cube_manager,
         mut ext_ref_manager,
         exclusive_manager,
-        dirty_cells_next_round: dirty_cells,
+        dirty_cells_next_round: mut dirty_cells,
         mut block_schema_manager,
         mut field_render_manager,
         mut image_manager,
@@ -314,6 +314,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     &block_schema_manager,
                     &mut style_loader,
                     &xl,
+                    &mut dirty_cells,
                 );
                 if let Some(drawing) = &ws.drawing {
                     load_cell_images(

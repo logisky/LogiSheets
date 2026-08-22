@@ -167,7 +167,10 @@ impl<'a> Worksheet<'a> {
                     }
                 }
                 logisheets_base::CellValue::Number(n) => Value::Number(*n),
-                logisheets_base::CellValue::InlineStr(_) => Value::Empty,
+                // Inline strings are text like any other; rendering them as
+                // Empty hid every label in a workbook written without a
+                // shared-string table.
+                logisheets_base::CellValue::InlineStr(rst) => Value::Str(rst.plain_text()),
                 logisheets_base::CellValue::FormulaStr(s) => Value::Str(s.to_string()),
             };
             Ok(v)

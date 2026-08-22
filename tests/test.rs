@@ -1489,3 +1489,45 @@ mod calc_test {
         let _ = Workbook::from_file(&mut buf, String::from("calc_test")).unwrap();
     }
 }
+
+/// A workbook written by openpyxl, which is how most tooling that is not Excel
+/// emits `.xlsx`. This one carries all three things that used to make the
+/// reader abort, and it aborted before reading a single cell:
+///
+///   * relationship targets in absolute form (`/xl/worksheets/sheet1.xml`),
+///     mixed with relative ones;
+///   * a `core.xml` with no `lastModifiedBy` and an `app.xml` with no
+///     `HeadingPairs` — metadata the loader discards anyway;
+///   * 25 formula cells whose value element is empty (`<f>B20/$B$8</f><v/>`),
+///     because openpyxl writes formulas without computing them.
+///
+/// The last one is the substance of the test: with no cached results in the
+/// file at all, every number here has to come from our own evaluation of the
+/// formulas. It is a five-year DCF, and its value per share is computed
+/// independently in Python from the same inputs — not copied from any
+/// spreadsheet's output.
+#[test]
+fn reads_and_computes_a_workbook_openpyxl_wrote() {
+    use logisheets::{Value, Workbook};
+    use std::fs;
+    let mut buf = fs::read("tests/openpyxl-dcf.xlsx").unwrap();
+    let wb = Workbook::from_file(&mut buf, String::from("openpyxl")).unwrap();
+    // `write_data_to_excel` with an unknown sheet name adds a sheet, so the
+    // model sits on the second one, after the empty default.
+    let ws = wb.get_sheet_by_idx(1).unwrap();
+
+    // An assumption, read straight from the file.
+    match ws.get_value(0, 1).unwrap() {
+        Value::Number(f) => assert_eq!(f, 1000.0),
+        other => panic!("B1 should be the base revenue, got {:?}", other),
+    }
+    // And the answer, which exists only if we evaluated the chain ourselves.
+    match ws.get_value(20, 1).unwrap() {
+        Value::Number(f) => assert!(
+            (f - 20.803603425995494).abs() < 1e-9,
+            "value per share should be 20.8036…, got {}",
+            f
+        ),
+        other => panic!("B21 should be a number, got {:?}", other),
+    }
+}

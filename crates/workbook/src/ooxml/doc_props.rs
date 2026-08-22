@@ -12,12 +12,16 @@ use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 #[xmlserde(with_custom_ns(b"dcmitype", b"http://purl.org/dc/dcmitype/"))]
 #[xmlserde(with_custom_ns(b"xsi", b"http://www.w3.org/2001/XMLSchema-instance"))]
 pub struct DocPropCore {
+    // Every one of these is optional in practice. openpyxl writes a core.xml
+    // with only a creator and the two timestamps, and required children here
+    // meant the generated deserializer unwrapped a None and took the whole
+    // load down — over metadata that the loader discards anyway.
     #[xmlserde(name = b"cp:lastModifiedBy", ty = "child")]
-    pub last_modified_by: ModifiedBy,
+    pub last_modified_by: Option<ModifiedBy>,
     #[xmlserde(name = b"dcterms:created", ty = "child")]
-    pub created: Time,
+    pub created: Option<Time>,
     #[xmlserde(name = b"dcterms:modified", ty = "child")]
-    pub modified: Time,
+    pub modified: Option<Time>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -28,12 +32,14 @@ pub struct DocPropCore {
     b"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"
 ))]
 pub struct DocPropApp {
+    // Same story: openpyxl's app.xml carries an Application and an AppVersion
+    // and nothing else.
     #[xmlserde(name = b"Application", ty = "child")]
-    pub application: Application,
+    pub application: Option<Application>,
     #[xmlserde(name = b"HeadingPairs", ty = "child")]
-    pub heading_pairs: Unparsed,
+    pub heading_pairs: Option<Unparsed>,
     #[xmlserde(name = b"TitlesOfParts", ty = "child")]
-    pub title_of_parts: Unparsed,
+    pub title_of_parts: Option<Unparsed>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]

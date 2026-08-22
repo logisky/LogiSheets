@@ -16,6 +16,18 @@ pub struct CtRst {
     pub phonetic_pr: Option<CtPhoneticPr>,
 }
 
+impl CtRst {
+    /// The text of a rich string, runs concatenated, formatting discarded.
+    /// A `<t>` when there is one, otherwise the `<r>` runs in order — the two
+    /// shapes an inline or shared string can take.
+    pub fn plain_text(&self) -> String {
+        match &self.t {
+            Some(p) => p.value.to_string(),
+            None => self.r.iter().map(|run| run.t.value.as_str()).collect(),
+        }
+    }
+}
+
 #[derive(XmlSerialize, XmlDeserialize, Default, Debug, Clone)]
 pub struct CtRElt {
     #[xmlserde(name = b"rPr", ty = "child")]

@@ -54,6 +54,31 @@ function ensureOk(effect: ActionEffect, label: string): void {
     }
 }
 
+/** A cell's value as a string — number, boolean or text alike. What a row key
+ *  is compared on, since a key column of years or ids is perfectly ordinary. */
+function cellDisplay(c: CellInfo | undefined): string {
+    const v = c?.value
+    if (v === undefined || v === 'empty') return ''
+    if (typeof v === 'object' && 'value' in v) {
+        return String((v as {value: unknown}).value)
+    }
+    return ''
+}
+
+/** A cell's value only when it is TEXT, else ''. Distinct from
+ *  {@link cellDisplay} because deciding whether a row is a header turns on
+ *  exactly that difference: titles are words, the data under them usually is
+ *  not. Treating a number as text made every numeric first row look like a
+ *  second header, and the header above it went unread. */
+function cellTextOnly(c: CellInfo | undefined): string {
+    const v = c?.value
+    if (v === undefined || v === 'empty') return ''
+    if (typeof v === 'object' && 'type' in v && (v as {type: string}).type === 'str') {
+        return String((v as {value: unknown}).value)
+    }
+    return ''
+}
+
 /** Coerce arbitrary JSON values into the string form BlockInput expects.
  *  Numbers / booleans / null are stringified; strings pass through. */
 function stringifyForBlockInput(v: unknown): string {
@@ -2679,9 +2704,24 @@ interface ConvertToBlockInput {
     header_row?: number
     /** Field names, when there is no header row to read them from. */
     fields?: string[]
+    /**
+     * Which field identifies a row. Omit and it is inferred: the first column
+     * whose values are all present and all different. The key is how every
+     * formula and every later edit names a row, so getting it from the data
+     * beats defaulting to whatever column happens to be first.
+     */
+    key_field?: string
 }
 
-export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields: string[]}> = {
+export const convertToBlock: Tool<
+    ConvertToBlockInput,
+    {
+        block_id: number
+        fields: string[]
+        key_field: string
+        header_row: number | null
+    }
+> = {
     namespace: 'build',
     name: 'convert_to_block',
     description: [
@@ -2689,7 +2729,9 @@ export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields
         '',
         "This is how you adopt a workbook someone hands you. `create_block` is for new tables and refuses to write over existing data; this one takes the data as it stands and gives it a name, fields and row keys, so you can address it as (block, row_key, field) and reference it from formulas by name instead of by coordinate.",
         '',
-        'Give `position` and the counts for the DATA only, leaving out any header row, then either `header_row` to read the field names from the titles or `fields` to state them. The first field is the row-key column, so put the column that identifies each record first.',
+        'Give `position` and the counts for the DATA only, leaving out any header row. Field names come from the header row — pass `header_row`, or leave it out and the row directly above the data is used when it looks like titles. `fields` states them outright instead.',
+        '',
+        'The row key is inferred: the first column whose values are all present and all different. Pass `key_field` to choose. Whatever is inferred is reported back, so check it — the key is how formulas and later edits name a row.',
         '',
         'Converting is a one-time cost: the block and its schema survive saving and reloading, and afterwards the region behaves exactly like one created as a block.',
     ].join('\n'),
@@ -2718,7 +2760,12 @@ export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields
                 type: 'integer',
                 minimum: 0,
                 description:
-                    'Row holding the column titles; field names are read from it. Usually one row above `position`.',
+                    'Row holding the column titles; field names are read from it. Omit it and the row directly above `position` is used when it looks like a header — all text, over data that is not.',
+            },
+            key_field: {
+                type: 'string',
+                description:
+                    'Which field identifies a row. Omit and the first column whose values are all present and all different is used.',
             },
             fields: {
                 type: 'array',
@@ -2775,35 +2822,105 @@ export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields
             }
         }
 
-        // Field names: from the header row if given, else stated outright.
+        // The data itself, read once: the key has to be inferred from it, and
+        // the header check wants to know whether the first data row is text.
+        // `getCells` returns the rectangle row-major.
+        const width = input.col_count
+        const dataRes = await client.getCells({
+            sheetIdx,
+            startRow: row,
+            startCol: col,
+            endRow,
+            endCol,
+        })
+        if (isErrorMessage(dataRes)) {
+            throw new Error(`reading the table failed: ${dataRes.msg}`)
+        }
+        const data = dataRes as readonly CellInfo[]
+        const at = (r: number, c: number): CellInfo | undefined =>
+            data[r * width + c]
+
+        // Adopting a region with nothing in it is a mistake worth refusing.
+        // This tool exists to take data that is already there and name it; an
+        // empty rectangle would become a block of `field_1..n` with no rows,
+        // which is what `create_block` is for.
+        const anyData = data.some((c) => cellDisplay(c) !== '' || c.formula)
+        if (!anyData) {
+            throw new Error(
+                `there is nothing in the region at row ${row}, col ${col} ` +
+                    `(${input.row_count}x${input.col_count}) — this adopts a table that ` +
+                    'already exists; use create_block for a new one'
+            )
+        }
+
+        // Which row holds the titles. Stated, or the row directly above the
+        // data when it looks like titles: text all the way across, over a first
+        // data row that is not all text. Guessing wrong here is cheap to spot —
+        // the field names come back in the result — and the fallback is
+        // `field_1..n`, which is obviously not a header.
+        let headerRow: number | undefined = input.header_row
+        let headerSource = 'stated'
+        // Why the guess was declined, when it was, so the caller knows what to
+        // pass instead.
+        let headerDeclined = 'there is no row above the data'
+        if (headerRow === undefined && input.fields === undefined && row > 0) {
+            const above = await client.getCells({
+                sheetIdx,
+                startRow: row - 1,
+                startCol: col,
+                endRow: row - 1,
+                endCol,
+            })
+            if (!isErrorMessage(above)) {
+                const titles = above as readonly CellInfo[]
+                const allText =
+                    titles.length === width &&
+                    titles.every((c) => cellTextOnly(c).trim() !== '')
+                const dataAllText = Array.from({length: width}, (_, i) =>
+                    cellTextOnly(at(0, i))
+                ).every((t) => t.trim() !== '')
+                if (allText && !dataAllText) {
+                    headerRow = row - 1
+                    headerSource = 'inferred from the row above the data'
+                } else if (allText && dataAllText) {
+                    // Both are words, so there is nothing to tell them apart.
+                    // Guessing here is the one guess that could name the fields
+                    // after a row of data.
+                    headerDeclined =
+                        `the row above is all text but so is the first data row, ` +
+                        `so which one is titles cannot be told apart — pass ` +
+                        `\`header_row\` (probably ${row - 1}) or \`fields\``
+                } else {
+                    headerDeclined = 'the row above the data is not all text'
+                }
+            }
+        }
+
+        // Field names: stated, read from the header row, or generated.
         let fields: string[]
+        let fieldSource: string
         if (input.fields !== undefined) {
             fields = [...input.fields]
-        } else if (input.header_row !== undefined) {
+            fieldSource = 'stated'
+        } else if (headerRow !== undefined) {
             const cells = await client.getCells({
                 sheetIdx,
-                startRow: input.header_row,
+                startRow: headerRow,
                 startCol: col,
-                endRow: input.header_row,
+                endRow: headerRow,
                 endCol,
             })
             if (isErrorMessage(cells)) {
                 throw new Error(`reading the header row failed: ${cells.msg}`)
             }
             fields = (cells as readonly CellInfo[]).map((c, i) => {
-                const v = c.value
-                const text =
-                    v === 'empty' || v === undefined
-                        ? ''
-                        : typeof v === 'object' && 'value' in v
-                          ? String((v as {value: unknown}).value)
-                          : ''
-                return text.trim() === '' ? `field_${i + 1}` : text.trim()
+                const text = cellDisplay(c).trim()
+                return text === '' ? `field_${i + 1}` : text
             })
+            fieldSource = `read from row ${headerRow} (${headerSource})`
         } else {
-            throw new Error(
-                'give either `header_row` to read the field names from, or `fields` to state them'
-            )
+            fields = Array.from({length: width}, (_, i) => `field_${i + 1}`)
+            fieldSource = `generated, because ${headerDeclined}`
         }
 
         if (fields.length !== input.col_count) {
@@ -2819,6 +2936,43 @@ export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields
                     .join(', ')} — fields address cells, so they must be unique. ` +
                     'Pass `fields` explicitly to disambiguate.'
             )
+        }
+
+        // Which column identifies a row. The key is how BLOCKREF names a row and
+        // how every later edit addresses one, so it is worth deriving from the
+        // data rather than assuming the leftmost column: the first column whose
+        // values are all present and all different. A column with a gap cannot
+        // address every row, and a repeat is worse than a gap — BLOCKREF would
+        // resolve both rows to the first match.
+        const columnCanKey = (c: number): boolean => {
+            const seen = new Set<string>()
+            for (let r = 0; r < input.row_count; r++) {
+                const text = cellDisplay(at(r, c)).trim()
+                if (text === '' || seen.has(text)) return false
+                seen.add(text)
+            }
+            return true
+        }
+        let keyIdx: number
+        let keySource: string
+        if (input.key_field !== undefined) {
+            keyIdx = fields.indexOf(input.key_field)
+            if (keyIdx < 0) {
+                throw new Error(
+                    `key_field "${input.key_field}" is not one of the fields ` +
+                        `${fields.map((f) => `"${f}"`).join(', ')}`
+                )
+            }
+            keySource = 'stated'
+        } else {
+            const found = Array.from({length: width}, (_, i) => i).find(
+                columnCanKey
+            )
+            keyIdx = found ?? 0
+            keySource =
+                found === undefined
+                    ? 'fell back to the first column — no column has a value in every row that is also unique'
+                    : 'inferred: its values are all present and all different'
         }
 
         const idRes = await client.getAvailableBlockId({sheetIdx})
@@ -2850,7 +3004,7 @@ export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields
                         .sheetIdx(sheetIdx)
                         .blockId(blockId)
                         .fieldFrom(0)
-                        .keyIdx(0)
+                        .keyIdx(keyIdx)
                         .fields(fields)
                         .renderIds(fields.map((_, i) => `${input.name}__f${i}`))
                         .fieldFormulas([])
@@ -2864,11 +3018,17 @@ export const convertToBlock: Tool<ConvertToBlockInput, {block_id: number; fields
         )
 
         return {
-            data: {block_id: blockId, fields},
+            data: {
+                block_id: blockId,
+                fields,
+                key_field: fields[keyIdx] as string,
+                header_row: headerRow ?? null,
+            },
             display:
                 `Converted the table at row ${row}, col ${col} into block "${input.name}" ` +
-                `(${input.row_count} row(s), fields ${fields.map((f) => `"${f}"`).join(', ')}). ` +
-                'Values untouched.',
+                `(${input.row_count} row(s)). Values untouched.\n` +
+                `Fields: ${fields.map((f) => `"${f}"`).join(', ')} — ${fieldSource}.\n` +
+                `Row key: "${fields[keyIdx]}" — ${keySource}.`,
         }
     },
 }

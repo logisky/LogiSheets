@@ -357,12 +357,33 @@ impl CellValue {
     where
         F: FnMut(usize) -> TextId,
     {
+        // An inline string keeps its text in `<is>`, never in `<v>`, so it has
+        // to be handled before everything below — all of which is gated on a
+        // `<v>` being present. openpyxl writes every string this way when the
+        // file has no shared-string table, and such cells were loading as
+        // blank: every label in the workbook silently lost, leaving only
+        // numbers and formulas. The `StCellType::InlineStr` arm further down
+        // was unreachable for exactly this reason.
+        if matches!(t, StCellType::InlineStr) {
+            return match is {
+                Some(rst) => CellValue::InlineStr(rst.clone()),
+                None => CellValue::Blank,
+            };
+        }
         if let Some(text) = value {
             match t {
-                StCellType::N => {
-                    let num = text.value.parse::<f64>().unwrap();
-                    CellValue::Number(num)
-                }
+                StCellType::N => match text.value.parse::<f64>() {
+                    Ok(num) => CellValue::Number(num),
+                    // A tool that writes formulas without computing them
+                    // leaves the value element empty — `<f>B20/$B$8</f><v/>`
+                    // is what openpyxl produces for every formula it writes,
+                    // and openpyxl is how most non-Excel tooling emits .xlsx.
+                    // An empty or malformed number is a blank cell; the
+                    // formula next to it is what matters, and it gets
+                    // evaluated on load. Panicking here took down the entire
+                    // workbook over one absent cached result.
+                    Err(_) => CellValue::Blank,
+                },
                 StCellType::B => {
                     if text.value == "1" {
                         CellValue::Boolean(true)
@@ -432,7 +453,8 @@ impl CellValue {
             CellValue::Number(n) => *n != 0.0,
             CellValue::Blank => false,
             CellValue::String(s) => *s > 0,
-            CellValue::InlineStr(_) => false,
+            // Non-empty text is true, matching the shared-string case above.
+            CellValue::InlineStr(rst) => !rst.plain_text().is_empty(),
             CellValue::FormulaStr(_) => false,
             CellValue::Error(_) => false,
         }

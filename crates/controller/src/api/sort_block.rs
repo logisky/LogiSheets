@@ -191,7 +191,10 @@ where
         // Rich inline strings are rare in block fields and carry no cheap
         // plain-text projection here; treat as empty text so they group
         // together rather than panic.
-        CellValue::InlineStr(_) => SortKey::Text(String::new()),
+        // Sorting these as the empty string made every inline-string cell
+        // compare equal to every other, so a column of them kept whatever
+        // order it happened to have.
+        CellValue::InlineStr(rst) => SortKey::Text(rst.plain_text()),
     }
 }
 

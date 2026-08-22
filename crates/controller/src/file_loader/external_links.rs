@@ -58,9 +58,17 @@ where
                                     }
                                 }
                                 StCellType::E => Value::Error(ast::Error::from_err_str(&val_str)),
-                                StCellType::S => unreachable!(),
+                                // A shared string cannot appear in a cached
+                                // external value (there is no string table to
+                                // point into), but refusing to load a whole
+                                // workbook over a malformed one is not a
+                                // reasonable trade either.
+                                StCellType::S => Value::Text(val_str.clone()),
                                 StCellType::Str => Value::Text(val_str.clone()),
-                                StCellType::InlineStr => unreachable!(),
+                                // An inline string's text is in `<is>`, which
+                                // this loader does not read; the value string
+                                // is the best available and is usually empty.
+                                StCellType::InlineStr => Value::Text(val_str.clone()),
                             };
                             data_set.insert((sheet_id, Addr { row: r, col: c }), val);
                         }

@@ -1,6 +1,6 @@
 {
     "name": "logisheets-runtime",
-    "version": "1.12.0",
+    "version": "1.12.1",
     "description": "Headless LogiSheets spreadsheet runtime for Node — logisheets-core wired to the Node WASM engine. The Node counterpart of the browser app.",
     "type": "module",
     "main": "./dist/index.js",
@@ -39,8 +39,8 @@
     },
     "homepage": "https://github.com/logisky/LogiSheets",
     "dependencies": {
-        "logisheets": "^1.12.0",
-        "logisheets-core": "^1.12.0"
+        "logisheets": "^1.12.1",
+        "logisheets-core": "^1.12.1"
     },
     "devDependencies": {
         "@types/node": "^18",

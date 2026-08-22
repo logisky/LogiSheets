@@ -19,8 +19,8 @@ use logisheets::Value;
 use logisheets::Workbook;
 use logisheets_base::CellId;
 use logisheets_controller::edit_action::{
-    BindFormSchema, BlockInput, CellInput, CreateBlock, EditPayload, InsertRowsInBlock,
-    PayloadsAction, StatusCode, UpsertFieldFormulas,
+    BindFormSchema, BlockInput, CellInput, ConvertBlock, CreateBlock, EditPayload,
+    InsertRowsInBlock, PayloadsAction, StatusCode, UpsertFieldFormulas,
 };
 use logisheets_controller::sid_assigner::ShadowKind;
 
@@ -663,4 +663,111 @@ fn test_field_rule_coordinate_outside_block_is_fine() {
         "outside-block coordinate should evaluate to 100*(1-0.25)=75, got {:?}",
         net
     );
+}
+
+
+/// Adopting a table that already holds formulas must leave it computing.
+///
+/// `ConvertBlock` re-homes cell CONTENT from normal-cell ids to block-cell ids,
+/// but a formula is keyed by `CellId` in the formula manager — so the formulas
+/// used to stay registered against normal cells nothing pointed at any more.
+/// The converted cells kept their last computed value and stopped recomputing:
+/// adopting a live model quietly froze it into numbers, while the tool reported
+/// success and the values all looked right.
+///
+/// The earlier test for this path used a table of plain values, which is why it
+/// never caught it.
+#[test]
+fn test_convert_block_keeps_the_formulas_live() {
+    let mut wb = Workbook::default();
+    // A rate in B1, and two rows that multiply by it: C2 = A2*$B$1, C3 = A3*$B$1
+    let result = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 1,
+                content: "2".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "10".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 2,
+                content: "=A2*$B$1".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 2,
+                col: 0,
+                content: "20".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 2,
+                col: 2,
+                content: "=A3*$B$1".into(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(result.status, StatusCode::Ok(_)));
+    let value = |wb: &mut Workbook, row: usize, col: usize| -> f64 {
+        match wb
+            .get_sheet_by_idx(0)
+            .unwrap()
+            .get_value(row, col)
+            .unwrap()
+        {
+            Value::Number(f) => f,
+            other => panic!("expected a number at ({row},{col}), got {:?}", other),
+        }
+    };
+    assert_eq!(value(&mut wb, 1, 2), 20.0);
+    assert_eq!(value(&mut wb, 2, 2), 40.0);
+
+    // Adopt rows 2..3, columns A..C as a block.
+    let result = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::ConvertBlock(ConvertBlock {
+            sheet_idx: 0,
+            id: 7,
+            master_row: 1,
+            master_col: 0,
+            row_cnt: 2,
+            col_cnt: 3,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(result.status, StatusCode::Ok(_)),
+        "convert should succeed, got {:?}",
+        result.status
+    );
+    assert_eq!(value(&mut wb, 1, 2), 20.0, "values survive the conversion");
+
+    // The point: change the rate the adopted formulas read, outside the block.
+    let result = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 1,
+            content: "3".into(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(result.status, StatusCode::Ok(_)));
+    assert_eq!(
+        value(&mut wb, 1, 2),
+        30.0,
+        "an adopted formula must still recompute; 10*3"
+    );
+    assert_eq!(value(&mut wb, 2, 2), 60.0, "and so must the row below it");
 }

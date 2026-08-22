@@ -230,6 +230,63 @@ fn input_with_resolver<C: FormulaExecCtx>(
     register_parsed_ast(executor, sheet, cell_id, ast, ctx)
 }
 
+/// Move the formulas of a region that has just become a block from their old
+/// normal-cell identities to their new block-cell ones.
+///
+/// `ConvertBlock` re-homes the cells' CONTENT in the container, but a formula is
+/// keyed by `CellId` in the formula manager and by a range id in the dependency
+/// graph — so without this the formulas stayed registered against
+/// `NormalCell`s that nothing points at any more. The cells kept their last
+/// computed value and stopped recomputing: adopting a live model quietly froze
+/// it into numbers. The tool's own promise is to adopt a table "without
+/// touching its values", and the values were indeed intact; it was the model
+/// that was gone.
+///
+/// Runs after the navigator has committed the new block, so the block cell ids
+/// are resolvable.
+pub fn convert_cells_to_block<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet_idx: usize,
+    block_id: BlockId,
+    master_row: usize,
+    master_col: usize,
+    row_cnt: usize,
+    col_cnt: usize,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+    let mut executor = executor;
+    for r in master_row..master_row + row_cnt {
+        for c in master_col..master_col + col_cnt {
+            let Ok(normal) = ctx.fetch_norm_cell_id(&sheet, r, c) else {
+                continue;
+            };
+            let old_id = CellId::NormalCell(normal);
+            let Some(ast) = executor.manager.formulas.remove(&(sheet, old_id)) else {
+                continue; // a plain value; the container already moved it
+            };
+            // Detach the old vertex before the new one is wired up, or the
+            // stale edges keep the converted cell's precedents pointing at a
+            // cell id that no longer holds anything.
+            let old_range = Range::Normal(NormalRange::Single(normal));
+            let old_range_id = ctx.fetch_range_id(&sheet, &old_range);
+            let old_vertex = Vertex::Range(sheet, old_range_id);
+            if let Some(deps) = executor.manager.graph.clone().get_deps(&old_vertex) {
+                for dep in deps.iter() {
+                    executor.manager.graph.remove_dep(&old_vertex, dep);
+                }
+            }
+            let bcid =
+                ctx.fetch_block_cell_id(&sheet, &block_id, r - master_row, c - master_col)?;
+            executor =
+                register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)?;
+        }
+    }
+    Ok(executor)
+}
+
 pub fn remove_formula<C: FormulaExecCtx>(
     executor: FormulaExecutor,
     sheet_idx: usize,

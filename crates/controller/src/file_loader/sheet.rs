@@ -241,6 +241,8 @@ pub fn load_sheet_data(
     block_schema_manager: &SchemaManager,
     style_loader: &mut StyleLoader,
     xl: &Xl,
+    // Formula cells the file gives us no value for. See the insert below.
+    dirty: &mut imbl::HashSet<(SheetId, CellId)>,
 ) {
     navigator.add_sheet_id(&sheet_id);
 
@@ -279,12 +281,25 @@ pub fn load_sheet_data(
                     });
                     let id = navigator.fetch_cell_id(&sheet_id, row, col).unwrap();
                     let style_id = style_loader.load_xf(ct_cell.s);
+                    // A formula whose value element is absent or empty has
+                    // never been computed by anyone: openpyxl and everything
+                    // built on it write `<f>…</f><v/>`, and such a file also
+                    // asks for a full recalculation through
+                    // `calcPr@fullCalcOnLoad`. Nothing in the load path used to
+                    // mark anything dirty, so those cells simply stayed blank —
+                    // which went unnoticed because our own saver writes cached
+                    // values, making a save-and-reload of our own files look
+                    // like it worked when it was only reading the numbers back.
+                    let uncomputed = matches!(cv, CellValue::Blank);
                     let cell = Cell {
                         value: cv,
                         style: style_id,
                     };
                     container.add_cell(sheet_id, id, cell);
                     if let Some(formula) = &ct_cell.f {
+                        if uncomputed && formula.formula.is_some() {
+                            dirty.insert((sheet_id, id));
+                        }
                         let mut connector = FormulaConnector {
                             book_name,
                             sheet_pos_manager,
