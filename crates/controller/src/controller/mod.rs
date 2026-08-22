@@ -198,7 +198,25 @@ impl Controller {
 
     pub fn from_file(name: String, f: &[u8]) -> Result<Self> {
         let res = read(f)?;
-        Ok(load_file(res, name))
+        let mut controller = load_file(res, name);
+        // The loader parks every formula cell the file carries no value for in
+        // `dirty_cells_next_round`, but that set is only drained when an action
+        // runs — so a workbook straight off disk would keep reporting those
+        // cells as blank until something happened to edit it. Run one empty,
+        // non-undoable transaction to settle them.
+        //
+        // This is not exotic: openpyxl, and everything built on it, writes
+        // `<f>…</f><v/>` for every formula, and such files ask for exactly this
+        // through `calcPr@fullCalcOnLoad`. Files that do carry cached values
+        // mark nothing dirty, so they pay nothing here.
+        if !controller.status.dirty_cells_next_round.is_empty() {
+            controller.handle_action(EditAction::Payloads(PayloadsAction {
+                payloads: vec![],
+                undoable: false,
+                init: true,
+            }));
+        }
+        Ok(controller)
     }
 
     pub fn get_sheet_id_by_idx(&self, idx: usize) -> Option<SheetId> {

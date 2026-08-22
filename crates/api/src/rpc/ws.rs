@@ -242,25 +242,45 @@ pub fn get_merged_cells(
     end_col: usize,
 ) -> Vec<MergeCell> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    // This one hands back a plain list, so an out-of-range sheet index
+    // is nothing to report — an empty list is the honest answer, and
+    // far better than the panic that used to be here.
+    let Ok(ws) = wb.get_sheet_by_idx(sheet_idx) else {
+        return Vec::new();
+    };
     ws.get_merged_cells(start_row, start_col, end_row, end_col)
 }
 
 pub fn get_comments(mgr: &Manager, id: usize, sheet_idx: usize) -> Vec<Comment> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    // This one hands back a plain list, so an out-of-range sheet index
+    // is nothing to report — an empty list is the honest answer, and
+    // far better than the panic that used to be here.
+    let Ok(ws) = wb.get_sheet_by_idx(sheet_idx) else {
+        return Vec::new();
+    };
     ws.get_comments()
 }
 
 pub fn get_cell_images(mgr: &Manager, id: usize, sheet_idx: usize) -> Vec<CellImageInfo> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    // This one hands back a plain list, so an out-of-range sheet index
+    // is nothing to report — an empty list is the honest answer, and
+    // far better than the panic that used to be here.
+    let Ok(ws) = wb.get_sheet_by_idx(sheet_idx) else {
+        return Vec::new();
+    };
     ws.get_cell_images()
 }
 
 pub fn get_charts(mgr: &Manager, id: usize, sheet_idx: usize) -> Vec<ChartInfo> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    // This one hands back a plain list, so an out-of-range sheet index
+    // is nothing to report — an empty list is the honest answer, and
+    // far better than the panic that used to be here.
+    let Ok(ws) = wb.get_sheet_by_idx(sheet_idx) else {
+        return Vec::new();
+    };
     ws.get_charts()
 }
 
@@ -270,7 +290,12 @@ pub fn get_conditional_formatting_rules(
     sheet_idx: usize,
 ) -> Vec<CfRuleInfo> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    // This one hands back a plain list, so an out-of-range sheet index
+    // is nothing to report — an empty list is the honest answer, and
+    // far better than the panic that used to be here.
+    let Ok(ws) = wb.get_sheet_by_idx(sheet_idx) else {
+        return Vec::new();
+    };
     ws.get_conditional_formatting_rules()
 }
 
@@ -328,7 +353,7 @@ pub fn get_cell_infos(
     end_col: usize,
 ) -> Result<Vec<CellInfo>, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
     ws.get_cell_infos(start_row, start_col, end_row, end_col)
         .map_err(ErrorMessage::from)
 }
@@ -379,7 +404,7 @@ pub fn get_cell_infos_except_window(
     window_end_col: usize,
 ) -> Result<Vec<CellInfo>, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
     ws.get_cell_infos_except_window(
         start_row,
         start_col,
@@ -445,7 +470,7 @@ pub fn get_reproducible_cell(
     col: usize,
 ) -> Result<ReproducibleCell, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
     ws.get_reproducible_cell(row, col)
         .map_err(ErrorMessage::from)
 }
@@ -457,7 +482,7 @@ pub fn get_reproducible_cells(
     coordinates: Vec<SheetCoordinate>,
 ) -> Result<Vec<ReproducibleCell>, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
     ws.get_reproducible_cells(coordinates)
         .map_err(ErrorMessage::from)
 }
@@ -471,7 +496,7 @@ pub fn get_next_visible_cell(
     direction: Direction,
 ) -> Result<CellCoordinate, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
     match direction {
         Direction::Up => ws.get_next_upward_visible_cell(row, col),
         Direction::Down => ws.get_next_downward_visible_cell(row, col),
@@ -490,7 +515,7 @@ pub fn get_data_boundary(
     direction: Direction,
 ) -> Result<CellCoordinate, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
-    let ws = wb.get_sheet_by_idx(sheet_idx).unwrap();
+    let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
     match direction {
         Direction::Up => ws.get_upward_data_boundary(row, col),
         Direction::Down => ws.get_downward_data_boundary(row, col),

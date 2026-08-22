@@ -359,10 +359,18 @@ impl CellValue {
     {
         if let Some(text) = value {
             match t {
-                StCellType::N => {
-                    let num = text.value.parse::<f64>().unwrap();
-                    CellValue::Number(num)
-                }
+                StCellType::N => match text.value.parse::<f64>() {
+                    Ok(num) => CellValue::Number(num),
+                    // A tool that writes formulas without computing them
+                    // leaves the value element empty — `<f>B20/$B$8</f><v/>`
+                    // is what openpyxl produces for every formula it writes,
+                    // and openpyxl is how most non-Excel tooling emits .xlsx.
+                    // An empty or malformed number is a blank cell; the
+                    // formula next to it is what matters, and it gets
+                    // evaluated on load. Panicking here took down the entire
+                    // workbook over one absent cached result.
+                    Err(_) => CellValue::Blank,
+                },
                 StCellType::B => {
                     if text.value == "1" {
                         CellValue::Boolean(true)
