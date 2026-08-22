@@ -339,11 +339,17 @@ interface PreviewScenarioResult {
     label?: string
     /** Every cell whose value changes. Present unless `watch` was given. */
     diff?: PreviewDiffEntry[]
-    /** The watched cells' values under this scenario, in the order asked. */
-    watched?: Array<{target: WatchTarget; value: CellValue}>
+    /** The watched cells' values, in the same order as `watching` on the
+     *  result. Bare values: repeating the target on every scenario cost more
+     *  bytes than all the answers put together on a 16-cell grid, and the
+     *  caller named those targets in the first place. */
+    values?: CellValue[]
 }
 
 interface PreviewChangesOutput {
+    /** The watched targets, once, in the order their values appear on each
+     *  scenario. Present only when `watch` was given. */
+    watching?: WatchTarget[]
     /** One entry per scenario, in the order given. */
     scenarios: PreviewScenarioResult[]
     /** The single scenario's diff, when called with `changes` and no `watch` —
@@ -558,8 +564,7 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                     // Read the watched cells inside the branch, so a cell the
                     // change did not move still reports its (unchanged) value
                     // rather than going missing from a diff.
-                    const watched: Array<{target: WatchTarget; value: CellValue}> =
-                        []
+                    const values: CellValue[] = []
                     for (const w of watchCoords) {
                         const cells = await client.getCells({
                             sheetIdx: w.sheetIdx,
@@ -572,15 +577,11 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                             throw new Error(`getCells failed: ${cells.msg}`)
                         }
                         const info = (cells as readonly CellInfo[])[0]
-                        watched.push({
-                            target: w.target,
-                            value:
-                                info === undefined
-                                    ? null
-                                    : flattenValue(info.value),
-                        })
+                        values.push(
+                            info === undefined ? null : flattenValue(info.value)
+                        )
                     }
-                    results.push({label: scenario.label, watched})
+                    results.push({label: scenario.label, values})
                 } else {
                     const diffRes = await client.getTempStatusChanges()
                     if (isErrorMessage(diffRes)) {
@@ -649,7 +650,15 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
         }
 
         return {
-            data: single !== undefined ? {scenarios: results, diff: single} : {scenarios: results},
+            data:
+                single !== undefined
+                    ? {scenarios: results, diff: single}
+                    : watchCoords.length > 0
+                      ? {
+                            watching: watchCoords.map((w) => w.target),
+                            scenarios: results,
+                        }
+                      : {scenarios: results},
             display: describe(),
         }
     },
@@ -665,7 +674,10 @@ function flattenValue(v: Value): CellValue {
         case 'bool':
             return v.value
         case 'error':
-            return `#ERR:${v.value}`
+            // The engine's error value is already spelled the way a
+            // spreadsheet spells it — `#DIV/0!`. Decorating it produced
+            // `#ERR:#DIV/0!`, which matches nothing anyone would look for.
+            return v.value
     }
 }
 
