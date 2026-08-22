@@ -357,6 +357,19 @@ impl CellValue {
     where
         F: FnMut(usize) -> TextId,
     {
+        // An inline string keeps its text in `<is>`, never in `<v>`, so it has
+        // to be handled before everything below — all of which is gated on a
+        // `<v>` being present. openpyxl writes every string this way when the
+        // file has no shared-string table, and such cells were loading as
+        // blank: every label in the workbook silently lost, leaving only
+        // numbers and formulas. The `StCellType::InlineStr` arm further down
+        // was unreachable for exactly this reason.
+        if matches!(t, StCellType::InlineStr) {
+            return match is {
+                Some(rst) => CellValue::InlineStr(rst.clone()),
+                None => CellValue::Blank,
+            };
+        }
         if let Some(text) = value {
             match t {
                 StCellType::N => match text.value.parse::<f64>() {

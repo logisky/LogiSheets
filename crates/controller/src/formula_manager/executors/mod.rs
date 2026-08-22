@@ -2,7 +2,7 @@ mod input_formula;
 
 use std::collections::HashSet;
 
-pub use input_formula::{
+pub use input_formula::{convert_cells_to_block,
     add_ast_node, input_block_cell_shadow_template, input_block_cell_template, input_block_formula,
     input_ephemeral_formula, input_formula, rebuild_range_deps, remove_ephemeral_formula,
     remove_formula,
@@ -247,6 +247,16 @@ impl FormulaExecutor {
                 }
                 Ok(exec)
             }
+            EditPayload::ConvertBlock(p) => convert_cells_to_block(
+                self,
+                p.sheet_idx,
+                p.id,
+                p.master_row,
+                p.master_col,
+                p.row_cnt,
+                p.col_cnt,
+                ctx,
+            ),
             EditPayload::CellClear(p) => remove_formula(self, p.sheet_idx, p.row, p.col, ctx),
             EditPayload::CreateLink(_) => {
                 // Creating a link remaps existing formulas' ranges to the block

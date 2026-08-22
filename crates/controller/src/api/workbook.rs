@@ -1250,7 +1250,10 @@ fn read_display_value(status: &Status, sheet_id: SheetId, cell_id: &CellId) -> D
             None => DisplayValue::Str(String::new()),
         },
         logisheets_base::CellValue::Number(n) => DisplayValue::Number(n),
-        logisheets_base::CellValue::InlineStr(_) => DisplayValue::Empty,
+        logisheets_base::CellValue::InlineStr(ref rst) => DisplayValue::Str({ let rst = rst; match &rst.t {
+                    Some(p) => p.value.to_string(),
+                    None => rst.r.iter().map(|relt| relt.t.value.as_str()).collect::<String>(),
+                } }),
         logisheets_base::CellValue::FormulaStr(ref s) => DisplayValue::Str(s.clone()),
     }
 }
