@@ -47,7 +47,10 @@ function valueToScalar(v: Value): ScalarValue {
         case 'bool':
             return v.value
         case 'error':
-            return `#${v.value}`
+            // The engine's error value already carries its `#` — `#DIV/0!`,
+            // not `DIV/0!`. Prefixing another one produced `##DIV/0!`, which
+            // matches nothing an agent or a test would look for.
+            return v.value
         default:
             return null
     }
