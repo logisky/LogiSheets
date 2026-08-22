@@ -2,7 +2,7 @@
     "name": "logisheets-engine",
     "author": "Jeremy He<yiliang.he@qq.com>",
     "license": "MIT",
-    "version": "1.12.0",
+    "version": "1.12.1",
     "description": "Embeddable spreadsheet UI component for LogiSheets — an Excel-like, canvas-rendered data grid with formulas and .xlsx (Excel) import/export, powered by a Rust + WebAssembly engine in a Web Worker.",
     "type": "module",
     "main": "./dist/logisheets-engine.umd.js",
@@ -45,7 +45,7 @@
     ],
     "dependencies": {
         "echarts": "^5.5.1",
-        "logisheets-web": "^1.12.0",
+        "logisheets-web": "^1.12.1",
         "rxjs": "^7.8.1"
     },
     "devDependencies": {
