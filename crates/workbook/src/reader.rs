@@ -655,8 +655,18 @@ fn get_target_abs_path(rels: &str, target: &str) -> PathBuf {
     let t = PathBuf::from_str(target);
     let target = t.unwrap();
     target.components().for_each(|c| match c {
-        std::path::Component::Prefix(_) => unreachable!(),
-        std::path::Component::RootDir => unreachable!(),
+        // A part name may be absolute — `/xl/worksheets/sheet1.xml` — in which
+        // case it is resolved from the package root rather than from the .rels
+        // file's own directory. openpyxl writes targets this way, mixed in with
+        // relative ones, so a workbook produced by it used to hit the
+        // `unreachable!()` that stood here and take the process down.
+        std::path::Component::RootDir => {
+            path_buf.clear();
+        }
+        // Not expressible in an OPC part name. Ignoring it resolves the rest
+        // of the target relatively, which beats killing the reader over a
+        // malformed file we were handed.
+        std::path::Component::Prefix(_) => {}
         std::path::Component::CurDir => {}
         std::path::Component::ParentDir => {
             path_buf.pop();
@@ -680,6 +690,33 @@ mod tests {
             Ok(e) => assert_eq!(e.to_str().unwrap(), r"/foo/_rels/test.xml.rels"),
             Err(_) => panic!(),
         }
+    }
+
+    /// openpyxl writes absolute part names, mixed in with relative ones. An
+    /// absolute target resolves from the package root, not from the .rels
+    /// file's directory — this used to be an `unreachable!()`, so any workbook
+    /// openpyxl produced brought the reader down instead of loading.
+    #[test]
+    fn absolute_target_resolves_from_the_package_root() {
+        let rels = "xl/_rels/workbook.xml.rels";
+        assert_eq!(
+            get_target_abs_path(rels, "/xl/worksheets/sheet1.xml")
+                .to_str()
+                .unwrap(),
+            "xl/worksheets/sheet1.xml"
+        );
+        // The relative form, from the same .rels, still lands in xl/.
+        assert_eq!(
+            get_target_abs_path(rels, "styles.xml").to_str().unwrap(),
+            "xl/styles.xml"
+        );
+        // Absolute wins even when it appears after other components.
+        assert_eq!(
+            get_target_abs_path("xl/worksheets/_rels/sheet1.xml.rels", "/xl/styles.xml")
+                .to_str()
+                .unwrap(),
+            "xl/styles.xml"
+        );
     }
 
     #[test]
