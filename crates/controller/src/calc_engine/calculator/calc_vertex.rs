@@ -104,7 +104,10 @@ impl Value {
             CellValue::Error(e) => Value::Error(ast::Error::from_err_str(&e.to_string())),
             CellValue::String(tid) => Value::Text(fetcher(&tid).unwrap_or(String::from(""))),
             CellValue::Number(f) => Value::Number(f),
-            CellValue::InlineStr(_) => todo!(),
+            // Text like any other. This `todo!()` was unreachable while
+            // inline strings never loaded; the moment they did, any formula
+            // reading a label written that way brought the process down.
+            CellValue::InlineStr(rst) => Value::Text(rst.plain_text()),
             CellValue::FormulaStr(s) => Value::Text(s),
         }
     }

@@ -453,7 +453,8 @@ impl CellValue {
             CellValue::Number(n) => *n != 0.0,
             CellValue::Blank => false,
             CellValue::String(s) => *s > 0,
-            CellValue::InlineStr(_) => false,
+            // Non-empty text is true, matching the shared-string case above.
+            CellValue::InlineStr(rst) => !rst.plain_text().is_empty(),
             CellValue::FormulaStr(_) => false,
             CellValue::Error(_) => false,
         }

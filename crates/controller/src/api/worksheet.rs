@@ -170,10 +170,7 @@ impl<'a> Worksheet<'a> {
                 // Inline strings are text like any other; rendering them as
                 // Empty hid every label in a workbook written without a
                 // shared-string table.
-                logisheets_base::CellValue::InlineStr(rst) => Value::Str({ let rst = rst; match &rst.t {
-                    Some(p) => p.value.to_string(),
-                    None => rst.r.iter().map(|relt| relt.t.value.as_str()).collect::<String>(),
-                } }),
+                logisheets_base::CellValue::InlineStr(rst) => Value::Str(rst.plain_text()),
                 logisheets_base::CellValue::FormulaStr(s) => Value::Str(s.to_string()),
             };
             Ok(v)
