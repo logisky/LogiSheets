@@ -5,9 +5,13 @@ use logisheets_workbook::prelude::{
     CtAutoFilter, CtCellWatches, CtConditionalFormatting, CtControls, CtCustomProperties,
     CtCustomSheetViews, CtDataConsolidate, CtHeaderFooter, CtHyperlinks, CtIgnoredErrors,
     CtPageBreak, CtPageMargins, CtPageSetup, CtPhoneticPr, CtPrintOptions, CtProtectedRanges,
-    CtScenarios, CtSheetCalcPr, CtSheetFormatPr, CtSheetProtection, CtSheetViews, CtSmartTags,
-    CtSortState, CtTableParts, CtWebPublishItems,
+    CtBookViews, CtCustomWorkbookViews, CtDefinedNames, CtFileRecoveryPr,
+    CtFileSharing, CtFileVersion, CtFunctionGroups, CtOleSize, CtPivotCaches, CtScenarios,
+    CtSheetCalcPr, CtSheetFormatPr, CtSheetProtection, CtSheetViews, CtSmartTagPr,
+    CtSmartTagTypes, CtSmartTags, CtSortState, CtTableParts, CtWebPublishing,
+    CtWebPublishItems, CtWorkbookPr, CtWorkbookProtection,
 };
+use logisheets_workbook::workbook::{DocProps, TablePart};
 
 use crate::theme_manager::ThemeManager;
 
@@ -42,6 +46,38 @@ pub struct PreservedWorksheetParts {
     pub controls: Option<CtControls>,
     pub web_publish_items: Option<CtWebPublishItems>,
     pub table_parts: Option<CtTableParts>,
+    /// The `xl/tables/tableN.xml` parts themselves, with their original
+    /// relationship ids so the `<tableParts>` above still resolves. Both halves
+    /// have to be kept or neither: the reference alone would dangle, which is
+    /// why this used to be dropped outright.
+    pub tables: Vec<TablePart>,
+}
+
+/// Workbook-level OOXML the controller does not model, preserved verbatim
+/// across open→save. Same idea as {@link PreservedWorksheetParts} one level up:
+/// the save path used to hardcode every one of these to `None`, so a defined
+/// name, a print title, a workbook view — anything Excel put in `workbook.xml`
+/// that we have no opinion about — disappeared the first time an agent touched
+/// the file.
+///
+/// `calc_pr` is deliberately absent: its iterate settings ARE modelled (they
+/// land in `calc_config`), so re-emitting the original would contradict them.
+#[derive(Default)]
+pub struct PreservedWorkbookParts {
+    pub file_version: Option<CtFileVersion>,
+    pub file_sharing: Option<CtFileSharing>,
+    pub workbook_pr: Option<CtWorkbookPr>,
+    pub workbook_protection: Option<CtWorkbookProtection>,
+    pub book_views: Option<CtBookViews>,
+    pub function_groups: Option<CtFunctionGroups>,
+    pub defined_names: Option<CtDefinedNames>,
+    pub ole_size: Option<CtOleSize>,
+    pub custom_workbook_views: Option<CtCustomWorkbookViews>,
+    pub pivot_caches: Option<CtPivotCaches>,
+    pub smart_tag_pr: Option<CtSmartTagPr>,
+    pub smart_tag_types: Option<CtSmartTagTypes>,
+    pub web_publishing: Option<CtWebPublishing>,
+    pub file_recovery_pr: Option<CtFileRecoveryPr>,
 }
 
 pub struct Settings {
@@ -49,6 +85,12 @@ pub struct Settings {
     pub sheet_views: HashMap<SheetId, CtSheetViews>,
     /// Per-sheet verbatim passthrough of unmodeled worksheet OOXML parts.
     pub preserved_parts: HashMap<SheetId, PreservedWorksheetParts>,
+    /// Workbook-level passthrough of the same kind.
+    pub preserved_workbook: PreservedWorkbookParts,
+    /// `docProps/app.xml` and `docProps/core.xml` as they arrived. The loader
+    /// discards their contents and the saver used to write `default()`, so
+    /// authorship and timestamps were wiped on every save.
+    pub doc_props: DocProps,
     pub calc_config: CalcConfig,
     pub async_funcs: HashSet<String>, // function names in upper case.
     pub theme: ThemeManager,
@@ -61,6 +103,8 @@ impl Default for Settings {
         let sheet_views = HashMap::new();
         let afuncs = vec!["BAIDUHOTSEARCH".to_string()];
         Settings {
+            preserved_workbook: PreservedWorkbookParts::default(),
+            doc_props: DocProps::default(),
             sheet_format_pr,
             calc_config,
             sheet_views,

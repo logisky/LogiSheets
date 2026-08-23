@@ -379,7 +379,12 @@ pub fn load_sheet_views(settings: &mut Settings, sheet_id: SheetId, sheet_views:
 /// Capture the worksheet OOXML parts the controller does not model, so they
 /// survive open→save (see `PreservedWorksheetParts`). Only stores an entry when
 /// at least one part is present, to avoid empty rows for freshly-created sheets.
-pub fn load_preserved_parts(settings: &mut Settings, sheet_id: SheetId, wp: &WorksheetPart) {
+pub fn load_preserved_parts(
+    settings: &mut Settings,
+    sheet_id: SheetId,
+    wp: &WorksheetPart,
+    tables: &[logisheets_workbook::workbook::TablePart],
+) {
     let parts = crate::settings::PreservedWorksheetParts {
         sheet_calc_pr: wp.sheet_calc_pr.clone(),
         sheet_protection: wp.sheet_protection.clone(),
@@ -404,10 +409,13 @@ pub fn load_preserved_parts(settings: &mut Settings, sheet_id: SheetId, wp: &Wor
         smart_tags: wp.smart_tags.clone(),
         controls: wp.controls.clone(),
         web_publish_items: wp.web_publish_items.clone(),
-        // `<tableParts>` is deliberately dropped: the engine converts every
-        // `<table>` into a block on load and never writes a `tableN.xml`, so a
-        // preserved reference would point at parts that no longer exist.
-        table_parts: None,
+        // Both halves of a structured table: the `<tableParts>` reference and
+        // the `tableN.xml` parts it points at. Keeping only the reference would
+        // dangle — which is why this was dropped before the parts were carried
+        // too. The table is ALSO adopted as a block on load; preserving these
+        // is what lets Excel still see a table on the way back out.
+        table_parts: wp.table_parts.clone(),
+        tables: tables.to_vec(),
     };
     settings.preserved_parts.insert(sheet_id, parts);
 }

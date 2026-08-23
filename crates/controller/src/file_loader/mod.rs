@@ -82,11 +82,38 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         settings.calc_config.error = calc_pr.iterate_delta as f32;
     }
 
+    // Everything in `workbook.xml` the controller has no opinion about, kept so
+    // a save does not silently delete it. A defined name matters most of these:
+    // a formula can reference one, so dropping it turns a working workbook into
+    // one full of `#NAME?`.
+    {
+        let p = &wb.xl.workbook_part;
+        settings.preserved_workbook = crate::settings::PreservedWorkbookParts {
+            file_version: p.file_version.clone(),
+            file_sharing: p.file_sharing.clone(),
+            workbook_pr: p.workbook_pr.clone(),
+            workbook_protection: p.workbook_protection.clone(),
+            book_views: p.book_views.clone(),
+            function_groups: p.function_groups.clone(),
+            defined_names: p.defined_names.clone(),
+            ole_size: p.ole_size.clone(),
+            custom_workbook_views: p.custom_workbook_views.clone(),
+            pivot_caches: p.pivot_caches.clone(),
+            smart_tag_pr: p.smart_tag_pr.clone(),
+            smart_tag_types: p.smart_tag_types.clone(),
+            web_publishing: p.web_publishing.clone(),
+            file_recovery_pr: p.file_recovery_pr.clone(),
+        };
+    }
+
     let Wb {
         xl,
-        doc_props: _,
+        doc_props,
         logisheets,
     } = wb;
+    // Authorship and timestamps arrived with the file; the saver used to write
+    // `default()` over them.
+    settings.doc_props = doc_props;
 
     // Register sheet names and their positions first
     xl.workbook_part.sheets.sheets.iter().for_each(|ct_sheet| {
@@ -335,7 +362,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                 // open→save doesn't drop them. `<tableParts>` is intentionally NOT
                 // preserved: we convert every `<table>` into a block below and never
                 // author a `tableN.xml`, so a retained reference would dangle.
-                load_preserved_parts(&mut settings, sheet_id, &ws.worksheet_part);
+                load_preserved_parts(&mut settings, sheet_id, &ws.worksheet_part, &ws.tables);
                 // Queue each structured table for table→block conversion (done
                 // after the load completes, once the container holds every cell).
                 for tp in ws.tables.iter() {
@@ -472,6 +499,11 @@ fn model_conditional_formatting(controller: &mut Controller) {
 /// field names) and any totals row(s).
 struct TableConvertSpec {
     sheet_idx: usize,
+    /// The table's `displayName`. Excel keeps these unique per workbook and
+    /// identifier-shaped, so it makes a far better ref name than a serial
+    /// number — `BLOCKREF("Sales","north","q1")` works on a file nobody
+    /// prepared, which is the whole point of adopting the table at all.
+    name: String,
     master_row: usize,
     master_col: usize,
     row_cnt: usize,
@@ -524,6 +556,7 @@ fn table_part_to_spec(
     }
     Some(TableConvertSpec {
         sheet_idx,
+        name: table.display_name.clone(),
         master_row,
         master_col: rect.c0,
         row_cnt,
@@ -534,8 +567,9 @@ fn table_part_to_spec(
 
 /// Realize each queued table as a form block: `ConvertBlock` keeps the region's
 /// existing cell values while re-homing them into the block, then
-/// `BindFormSchema` attaches a schema whose ref name is `unspecified-<blockId>`
-/// and whose fields are the table's column headers (all "unspecified" type —
+/// `BindFormSchema` attaches a schema whose ref name is the table's own
+/// `displayName` (or `unspecified-<blockId>` when that is missing or already
+/// taken) and whose fields are the table's column headers (all "unspecified" type —
 /// the host renders them as plain cells). A failure on one table is skipped so
 /// the rest of the workbook still loads.
 fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvertSpec>) {
@@ -559,7 +593,19 @@ fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvert
             Ok(id) => id,
             Err(_) => continue,
         };
-        let ref_name = format!("unspecified-{}", block_id);
+        // Prefer the table's own name; fall back to the serial form when it is
+        // empty or already taken (ref names address blocks, so they must be
+        // unique).
+        let taken = controller
+            .status
+            .block_schema_manager
+            .refs
+            .contains_key(&spec.name);
+        let ref_name = if spec.name.trim().is_empty() || taken {
+            format!("unspecified-{}", block_id)
+        } else {
+            spec.name.clone()
+        };
         let render_ids: Vec<String> = (0..spec.col_cnt)
             .map(|c| format!("{}-{}", ref_name, c))
             .collect();

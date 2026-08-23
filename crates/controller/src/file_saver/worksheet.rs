@@ -161,8 +161,15 @@ fn save_worksheet<S: SaverTrait>(
         drawing: None,
         // The engine does not yet model pivot tables; none are emitted on save.
         pivot_tables: Vec::new(),
-        // The engine does not yet model structured tables; none on save.
-        tables: Vec::new(),
+        // Structured tables are handed back as they came in, so a file that
+        // arrived with an Excel table still has one after a save. The engine
+        // adopts them as blocks on load; that does not have to cost the
+        // ListObject on the way out.
+        tables: settings
+            .preserved_parts
+            .get(&sheet_id)
+            .map(|p| p.tables.clone())
+            .unwrap_or_default(),
     }
 }
 

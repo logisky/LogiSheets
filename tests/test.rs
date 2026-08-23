@@ -1531,3 +1531,89 @@ fn reads_and_computes_a_workbook_openpyxl_wrote() {
         other => panic!("B21 should be a number, got {:?}", other),
     }
 }
+
+/// An Excel table arrives, becomes an addressable block under its own name, and
+/// is still a table on the way out — with its range following the block.
+///
+/// The loader has always adopted a `<table>` as a block, which is the useful
+/// half. The other half was missing: the block was named `unspecified-<id>`
+/// rather than the table's own `displayName`, so a formula could not name it
+/// without looking the number up first; and the `tableN.xml` part was dropped on
+/// save, so a file that arrived with a table came back without one.
+///
+/// Keeping the part means keeping its range honest, which is why the growth case
+/// is asserted here too: a preserved `ref` would otherwise describe where the
+/// data used to be.
+#[test]
+fn test_excel_table_round_trips_as_a_named_block() {
+    use logisheets::{Workbook, Value};
+    use std::fs;
+
+    let mut buf = fs::read("tests/table.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&mut buf, String::from("table")).unwrap();
+
+    // Adopted under the table's own name, with its column headers as fields.
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 1, "the table should have become one block");
+    let schema = blocks[0].schema.as_ref().expect("the block has a schema");
+    assert_eq!(schema.name, "Sales", "named after the table, not a serial");
+    let fields: Vec<&str> = schema.fields.iter().map(|f| f.field.as_str()).collect();
+    assert_eq!(fields, vec!["region", "q1", "q2", "total"]);
+
+    // The table's own formulas are alive: D4 is south's total.
+    let v = wb.get_sheet_by_idx(0).unwrap().get_value(2, 3).unwrap();
+    assert!(
+        matches!(v, Value::Number(n) if (n - 38.0).abs() < 1e-9),
+        "20 + 18, computed by the engine; got {:?}",
+        v
+    );
+
+    let table_ref = |bytes: &[u8]| -> String {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name().starts_with("xl/tables/") && f.name().ends_with(".xml") {
+                use std::io::Read;
+                let mut s = String::new();
+                f.read_to_string(&mut s).unwrap();
+                let at = s.find("<table ").expect("a table element");
+                let rest = &s[at..];
+                let r = rest.find("ref=\"").expect("a ref") + 5;
+                let end = rest[r..].find('"').unwrap();
+                return rest[r..r + end].to_string();
+            }
+        }
+        String::from("no table part")
+    };
+
+    // Saved back with the table intact, over the same range.
+    let saved = wb.save().expect("save");
+    assert_eq!(table_ref(&saved), "A1:D4");
+
+    // Grow the block; the table's range follows.
+    let mut wb = Workbook::from_file(&mut buf, String::from("table2")).unwrap();
+    let result = wb.handle_action(logisheets::EditAction::Payloads(
+        logisheets_controller::edit_action::PayloadsAction {
+            payloads: vec![logisheets_controller::edit_action::EditPayload::InsertRowsInBlock(
+                logisheets_controller::edit_action::InsertRowsInBlock {
+                    sheet_idx: 0,
+                    block_id: blocks[0].block_id,
+                    start: 3,
+                    cnt: 1,
+                },
+            )],
+            undoable: true,
+            init: false,
+        },
+    ));
+    assert!(matches!(
+        result.status,
+        logisheets_controller::edit_action::StatusCode::Ok(_)
+    ));
+    let grown = wb.save().expect("save after growth");
+    assert_eq!(
+        table_ref(&grown),
+        "A1:D5",
+        "a preserved range would still say A1:D4 and stop short of the new row"
+    );
+}

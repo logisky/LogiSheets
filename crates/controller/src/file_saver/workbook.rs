@@ -7,7 +7,7 @@ use logisheets_workbook::{
         CtConditionalFormatting, CtExternalReference, CtExternalReferences, CtPerson, CtSheet,
         CtSheets, Persons, WorkbookPart,
     },
-    workbook::{DocProps, Media, Wb, Worksheet, WorksheetDrawing, Xl},
+    workbook::{Media, Wb, Worksheet, WorksheetDrawing, Xl},
 };
 use std::collections::HashMap;
 
@@ -97,6 +97,38 @@ pub fn save_workbook<S: SaverTrait>(
             let sheet_id = sheet_pos_manager
                 .get_sheet_id(sheet_pos)
                 .expect("sheet position has a registered sheet id");
+
+            // A structured table that arrived with the file was adopted as a
+            // block, and the block may have grown or shrunk since. The
+            // preserved `tableN.xml` still carries the range it had on the way
+            // in, so re-point it at where its block is now — a stale `ref` is
+            // how Excel ends up showing a table that stops one row short of its
+            // own data.
+            for tp in worksheet.tables.iter_mut() {
+                let Some(range) = block_ranges.iter().find(|r| {
+                    block_schema_manager
+                        .fetch_block_ref_name(sheet_id, r.block_id)
+                        .is_some_and(|n| n == tp.table.display_name)
+                }) else {
+                    continue;
+                };
+                let header = tp.table.header_row_count as usize;
+                let totals = tp.table.totals_row_count as usize;
+                let r0 = range.start_row.saturating_sub(header);
+                let r1 = range.start_row + range.row_cnt - 1 + totals;
+                let c1 = range.start_col + range.col_cnt - 1;
+                let a1 = format!(
+                    "{}{}:{}{}",
+                    crate::sqref::col_to_letters(range.start_col),
+                    r0 + 1,
+                    crate::sqref::col_to_letters(c1),
+                    r1 + 1
+                );
+                if let Some(af) = tp.table.auto_filter.as_mut() {
+                    af.reference = a1.clone();
+                }
+                tp.table.reference = a1;
+            }
 
             // Attach cell images as a SpreadsheetDrawingML part. Each image's
             // stable CellId is resolved to a (row, col) position; images on
@@ -250,7 +282,7 @@ pub fn save_workbook<S: SaverTrait>(
     let persons = save_persons(attachment_manager);
     let workbook = Wb {
         xl: Xl {
-            workbook_part: get_workbook(ct_sheets, ct_references),
+            workbook_part: get_workbook(ct_sheets, ct_references, settings),
             styles: (style_id, styles),
             sst,
             worksheets,
@@ -261,7 +293,9 @@ pub fn save_workbook<S: SaverTrait>(
             // The engine does not yet model pivot caches; none emitted on save.
             pivot_caches: Vec::new(),
         },
-        doc_props: DocProps::default(),
+        // As they arrived, not `default()`: overwriting a file should not strip
+        // its author and creation time.
+        doc_props: settings.doc_props.clone(),
         logisheets: Some(LogiSheetsData {
             sheets,
             apps: app_data,
@@ -292,7 +326,11 @@ fn save_persons(attachment_manager: &CellAttachmentsManager) -> Option<Persons> 
     }
 }
 
-fn get_workbook(ct_sheets: CtSheets, ext_references: Vec<CtExternalReference>) -> WorkbookPart {
+fn get_workbook(
+    ct_sheets: CtSheets,
+    ext_references: Vec<CtExternalReference>,
+    settings: &Settings,
+) -> WorkbookPart {
     let external_references = if ext_references.is_empty() {
         None
     } else {
@@ -300,24 +338,26 @@ fn get_workbook(ct_sheets: CtSheets, ext_references: Vec<CtExternalReference>) -
             external_references: ext_references,
         })
     };
+    // Hand back what came in for everything the controller does not model.
+    let kept = &settings.preserved_workbook;
     WorkbookPart {
-        file_version: None,
-        file_sharing: None,
-        workbook_pr: None,
-        workbook_protection: None,
-        book_views: None,
+        file_version: kept.file_version.clone(),
+        file_sharing: kept.file_sharing.clone(),
+        workbook_pr: kept.workbook_pr.clone(),
+        workbook_protection: kept.workbook_protection.clone(),
+        book_views: kept.book_views.clone(),
         sheets: ct_sheets,
-        function_groups: None,
+        function_groups: kept.function_groups.clone(),
         external_references,
-        defined_names: None,
+        defined_names: kept.defined_names.clone(),
         calc_pr: None,
-        ole_size: None,
-        custom_workbook_views: None,
-        pivot_caches: None,
-        smart_tag_pr: None,
-        smart_tag_types: None,
-        web_publishing: None,
-        file_recovery_pr: None,
+        ole_size: kept.ole_size.clone(),
+        custom_workbook_views: kept.custom_workbook_views.clone(),
+        pivot_caches: kept.pivot_caches.clone(),
+        smart_tag_pr: kept.smart_tag_pr.clone(),
+        smart_tag_types: kept.smart_tag_types.clone(),
+        web_publishing: kept.web_publishing.clone(),
+        file_recovery_pr: kept.file_recovery_pr.clone(),
         web_publish_objects: None,
         conformance: None,
     }

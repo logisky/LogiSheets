@@ -272,7 +272,7 @@ pub struct ExternalLink {
     pub target: String,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct DocProps {
     pub app: Option<DocPropApp>,
     pub core: Option<DocPropCore>,

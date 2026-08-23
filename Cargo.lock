@@ -940,6 +940,7 @@ dependencies = [
  "logisheets_controller",
  "logisheets_workbook",
  "proptest",
+ "zip",
 ]
 
 [[package]]

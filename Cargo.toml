@@ -81,6 +81,9 @@ logisheets_workbook = { workspace = true }
 
 [dev-dependencies]
 glob = "0.3.1"
+# Round-trip tests reach into the saved .xlsx to check a part is really there;
+# the only way to see what another spreadsheet would see.
+zip = { version = "0.6.0", default-features = false, features = ["deflate"] }
 logiscript = { path = "crates/logiscript" }
 logisheets_base = { workspace = true }
 proptest = "1"

@@ -1,7 +1,7 @@
 use crate::Unparsed;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"cp:coreProperties")]
 #[xmlserde(with_custom_ns(
     b"cp",
@@ -24,7 +24,7 @@ pub struct DocPropCore {
     pub modified: Option<Time>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"Properties")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties")]
 #[xmlserde(with_custom_ns(
@@ -42,7 +42,7 @@ pub struct DocPropApp {
     pub title_of_parts: Option<Unparsed>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"Properties")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/officeDocument/2006/custom-properties")]
 #[xmlserde(with_custom_ns(
@@ -54,19 +54,19 @@ pub struct DocPropCustom {
     pub properties: Vec<Unparsed>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct Application {
     #[xmlserde(ty = "text")]
     pub val: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct ModifiedBy {
     #[xmlserde(ty = "text")]
     pub val: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct Time {
     #[xmlserde(name = b"xsi:type", ty = "attr")]
     pub ty: String,
