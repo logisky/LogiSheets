@@ -259,7 +259,11 @@ impl CellValue {
             CellValue::Error(e) => e.to_string(),
             CellValue::String(id) => text_id_fetcher(*id),
             CellValue::Number(n) => n.to_string(),
-            CellValue::InlineStr(_) => todo!(),
+            // The last of these. It survived the sweep that fixed the others
+            // because the grep that found them excluded this line range —
+            // which is why the sweep should have been `grep` with no filter at
+            // all, and now is.
+            CellValue::InlineStr(rst) => rst.plain_text(),
             CellValue::FormulaStr(s) => s.clone(),
         }
     }
