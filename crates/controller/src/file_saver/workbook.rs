@@ -64,6 +64,12 @@ pub fn save_workbook<S: SaverTrait>(
     // unique names; each sheet's drawing references them by relationship.
     let mut medias: Vec<Media> = vec![];
     let mut media_counter: usize = 0;
+    // Table `displayName`s and ids have to be unique across the WORKBOOK, not
+    // per sheet; Excel repairs a file where they collide. Two different block
+    // ref names can sanitise to the same identifier, so the counter and the
+    // taken-set live out here.
+    let mut table_names: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut table_id_counter: u32 = 0;
 
     sheet_id_manager
         .get_all_ids()
@@ -128,6 +134,99 @@ pub fn save_workbook<S: SaverTrait>(
                     af.reference = a1.clone();
                 }
                 tp.table.reference = a1;
+            }
+
+            // Every other block becomes a table too, so a person opening the
+            // file in Excel gets a real ListObject — filters, structured
+            // references, styling — over the same rows the agent addresses by
+            // name. Reloading here restores the block from `logisheets/data.xml`
+            // (ref name, field rules, key column), and the table is recognised
+            // as the same region rather than converted a second time; that
+            // coexistence is what makes this safe.
+            //
+            // `headerRowCount` is 0 because a block's field names live in its
+            // schema, not in a row of cells. This is the same shape Excel itself
+            // writes for a table created with "My table has headers" unchecked:
+            // the column names live in the table definition.
+            {
+                let mut used_rids: std::collections::HashSet<String> = worksheet
+                    .tables
+                    .iter()
+                    .map(|t| t.rel_id.clone())
+                    .collect();
+                // A table preserved from the input already covers its block.
+                let already_tabled: std::collections::HashSet<String> = worksheet
+                    .tables
+                    .iter()
+                    .map(|t| t.table.display_name.clone())
+                    .collect();
+                for t in worksheet.tables.iter() {
+                    table_names.insert(t.table.display_name.clone());
+                    table_id_counter = table_id_counter.max(t.table.id);
+                }
+                for range in block_ranges.iter() {
+                    let Some(ref_name) = block_schema_manager
+                        .fetch_block_ref_name(sheet_id, range.block_id)
+                    else {
+                        continue; // no schema: nothing to name a table after
+                    };
+                    let base = excel_table_name(&ref_name);
+                    if already_tabled.contains(&base) {
+                        continue;
+                    }
+                    // Suffix rather than skip on a collision: a block silently
+                    // missing its table is harder to notice than one named
+                    // `sales_2`.
+                    let mut display_name = base.clone();
+                    let mut suffix = 2;
+                    while table_names.contains(&display_name) {
+                        display_name = format!("{}_{}", base, suffix);
+                        suffix += 1;
+                    }
+                    let fields = block_schema_manager
+                        .get_all_fields_by_block(sheet_id, range.block_id)
+                        .unwrap_or_default();
+                    if fields.is_empty() || range.row_cnt == 0 {
+                        continue;
+                    }
+                    let mut rid_n = 1;
+                    let rel_id = loop {
+                        let candidate = format!("rIdTable{}", rid_n);
+                        if used_rids.insert(candidate.clone()) {
+                            break candidate;
+                        }
+                        rid_n += 1;
+                    };
+                    let a1 = format!(
+                        "{}{}:{}{}",
+                        crate::sqref::col_to_letters(range.start_col),
+                        range.start_row + 1,
+                        crate::sqref::col_to_letters(range.start_col + range.col_cnt - 1),
+                        range.start_row + range.row_cnt
+                    );
+                    table_id_counter += 1;
+                    table_names.insert(display_name.clone());
+                    worksheet.tables.push(logisheets_workbook::workbook::TablePart {
+                        rel_id,
+                        table: block_to_table(table_id_counter, &display_name, &a1, &fields),
+                    });
+                }
+                // The sheet's `<tableParts>` has to list every one of them, the
+                // preserved and the synthesised alike, or the parts are orphaned.
+                if worksheet.tables.is_empty() {
+                    worksheet.worksheet_part.table_parts = None;
+                } else {
+                    worksheet.worksheet_part.table_parts = Some(logisheets_workbook::prelude::CtTableParts {
+                        count: worksheet.tables.len() as u32,
+                        parts: worksheet
+                            .tables
+                            .iter()
+                            .map(|t| logisheets_workbook::prelude::CtTablePart {
+                                id: t.rel_id.clone(),
+                            })
+                            .collect(),
+                    });
+                }
             }
 
             // Attach cell images as a SpreadsheetDrawingML part. Each image's
@@ -390,4 +489,103 @@ fn conditional_formatting_manager_to_xml(
             })
         })
         .collect()
+}
+
+
+/// A block ref name as an Excel table `displayName`. Excel requires an
+/// identifier: letters, digits and underscores only, not starting with a digit,
+/// and never something that could be read as a cell reference. Agent-chosen ref
+/// names are none of those things by construction, so they are transliterated
+/// rather than rejected.
+fn excel_table_name(ref_name: &str) -> String {
+    let mut out = String::with_capacity(ref_name.len());
+    for ch in ref_name.chars() {
+        if ch.is_alphanumeric() || ch == '_' {
+            out.push(ch);
+        } else {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        return String::from("Block");
+    }
+    // Must not start with a digit, and must not look like `A1` / `R1C1`.
+    let starts_bad = out.chars().next().is_some_and(|c| c.is_ascii_digit());
+    let looks_like_ref = {
+        let letters: String = out.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+        let rest: String = out.chars().skip(letters.len()).collect();
+        !letters.is_empty()
+            && letters.len() <= 3
+            && !rest.is_empty()
+            && rest.chars().all(|c| c.is_ascii_digit())
+    };
+    if starts_bad || looks_like_ref {
+        format!("_{}", out)
+    } else {
+        out
+    }
+}
+
+/// A minimal `<table>` over a block: its rows, its fields as column names, no
+/// header row. Styling is left to Excel's default so nothing is invented.
+fn block_to_table(
+    id: u32,
+    display_name: &str,
+    reference: &str,
+    fields: &[String],
+) -> logisheets_workbook::prelude::Table {
+    use logisheets_workbook::prelude::{CtTableColumn, CtTableColumns, Table};
+    Table {
+        auto_filter: None,
+        sort_state: None,
+        table_columns: CtTableColumns {
+            count: fields.len() as u32,
+            table_column: fields
+                .iter()
+                .enumerate()
+                .map(|(i, name)| CtTableColumn {
+                    calculated_column_formula: None,
+                    totals_row_formula: None,
+                    xml_column_pr: None,
+                    ext_lst: None,
+                    id: i as u32 + 1,
+                    unique_name: None,
+                    name: name.clone(),
+                    totals_row_function: None,
+                    totals_row_label: None,
+                    query_table_field_id: None,
+                    header_row_dxf_id: None,
+                    data_dxf_id: None,
+                    totals_row_dxf_id: None,
+                    header_row_cell_style: None,
+                    data_cell_style: None,
+                    totals_row_cell_style: None,
+                })
+                .collect(),
+        },
+        table_style_info: None,
+        ext_lst: None,
+        id,
+        name: None,
+        display_name: display_name.to_string(),
+        comment: None,
+        reference: reference.to_string(),
+        table_type: None,
+        header_row_count: 0,
+        insert_row: false,
+        insert_row_shift: false,
+        totals_row_count: 0,
+        totals_row_shown: true,
+        published: false,
+        header_row_dxf_id: None,
+        data_dxf_id: None,
+        totals_row_dxf_id: None,
+        header_row_border_dxf_id: None,
+        table_border_dxf_id: None,
+        totals_row_border_dxf_id: None,
+        header_row_cell_style: None,
+        data_cell_style: None,
+        totals_row_cell_style: None,
+        connection_id: None,
+    }
 }

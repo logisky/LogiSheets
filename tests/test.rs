@@ -1617,3 +1617,103 @@ fn test_excel_table_round_trips_as_a_named_block() {
         "a preserved range would still say A1:D4 and stop short of the new row"
     );
 }
+
+/// A block is written out as an Excel table, so a person opening the file gets a
+/// real ListObject over the rows the agent addresses by name.
+///
+/// The two carriers compose: the table describes the shape (name, columns,
+/// extent), `logisheets/data.xml` describes the semantics (field rules, key
+/// column, render ids). Reloading must therefore produce ONE block, not two —
+/// and the shape alone has to be enough when the app data is absent, which is
+/// what another tool, or an older build, would leave behind.
+#[test]
+fn test_block_is_saved_as_an_excel_table() {
+    use logisheets::Workbook;
+    use logisheets_controller::edit_action::{
+        BindFormSchema, BlockInput, CreateBlock, EditPayload, PayloadsAction, StatusCode,
+    };
+
+    let mut wb = Workbook::default();
+    let result = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                sheet_idx: 0,
+                block_id: 1,
+                ref_name: "sales".into(),
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["region".into(), "amount".into()],
+                render_ids: vec!["r0".into(), "r1".into()],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "north".into(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 0,
+                input: "south".into(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(result.status, StatusCode::Ok(_)));
+
+    let saved = wb.save().expect("save");
+    let part = {
+        let mut zip =
+            zip::ZipArchive::new(std::io::Cursor::new(saved.clone())).expect("a zip");
+        let mut found = String::new();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name().starts_with("xl/tables/") && f.name().ends_with(".xml") {
+                use std::io::Read;
+                f.read_to_string(&mut found).unwrap();
+            }
+        }
+        found
+    };
+    assert!(
+        part.contains("displayName=\"sales\""),
+        "the block should be a table named after its ref: {}",
+        part
+    );
+    // No header row in the sheet — a block's field names live in its schema —
+    // so the table carries them as column names, the way Excel stores a table
+    // created without headers.
+    assert!(part.contains("headerRowCount=\"0\""), "{}", part);
+    assert!(part.contains("name=\"region\""), "{}", part);
+    assert!(part.contains("ref=\"A1:B2\""), "{}", part);
+
+    // Reload: exactly one block, not one from the table and another from the
+    // app data.
+    let mut bytes = saved.clone();
+    let reopened = Workbook::from_file(&mut bytes, String::from("again")).expect("reopen");
+    let blocks = reopened.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 1, "the table and the app data are one block");
+    assert_eq!(
+        blocks[0].schema.as_ref().unwrap().name,
+        "sales",
+        "and it keeps its name"
+    );
+}
