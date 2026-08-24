@@ -1831,3 +1831,58 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
         "the refused bind must not have left a block behind"
     );
 }
+
+/// A chart anchored with `oneCellAnchor` — one corner plus a size — comes back
+/// as one, with its size intact.
+///
+/// Only `twoCellAnchor` used to be modeled, so such a chart was skipped on load
+/// without a word and vanished on save. Giving it a synthesised second corner
+/// would have been worse than skipping: the invented corner would drift the
+/// first time a row was inserted between it and the anchor.
+#[test]
+fn test_one_cell_anchor_chart_round_trips() {
+    use logisheets::Workbook;
+    use std::fs;
+
+    let anchors = |bytes: &[u8]| -> (String, String) {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name() == "xl/drawings/drawing1.xml" {
+                use std::io::Read;
+                let mut s = String::new();
+                f.read_to_string(&mut s).unwrap();
+                let kind = if s.contains("oneCellAnchor") {
+                    "oneCellAnchor"
+                } else if s.contains("twoCellAnchor") {
+                    "twoCellAnchor"
+                } else {
+                    "none"
+                };
+                let ext = s
+                    .find("<xdr:ext ")
+                    .map(|at| s[at..].split('>').next().unwrap_or("").to_string())
+                    .unwrap_or_default();
+                return (kind.to_string(), ext);
+            }
+        }
+        (String::from("no drawing"), String::new())
+    };
+
+    let mut buf = fs::read("tests/one_cell_anchor.xlsx").unwrap();
+    let before = anchors(&buf);
+    assert_eq!(before.0, "oneCellAnchor", "fixture sanity");
+
+    let wb = Workbook::from_file(&mut buf, String::from("one")).unwrap();
+    let saved = wb.save().expect("save");
+    let after = anchors(&saved);
+    assert_eq!(
+        after.0, "oneCellAnchor",
+        "the anchor kind is kept, not converted"
+    );
+    assert!(
+        after.1.contains(r#"cx="5400000""#) && after.1.contains(r#"cy="2700000""#),
+        "the size should survive verbatim, got {:?}",
+        after.1
+    );
+}

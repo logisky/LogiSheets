@@ -10,7 +10,7 @@ use logisheets_workbook::prelude::*;
 use sheet::{load_comments, load_persons, load_threaded_comments};
 
 use crate::{
-    chart_manager::{Chart, ChartManager, ChartMarker},
+    chart_manager::{Chart, ChartExtent, ChartManager, ChartMarker},
     connectors::FormulaConnector,
     controller::{Controller, status::Status},
     file_loader::{
@@ -705,51 +705,95 @@ fn load_charts(
     if chart_parts.is_empty() {
         return;
     }
-    let anchors: Vec<&CtTwoCellAnchor> = drawing
-        .content
-        .two_cell_anchors
-        .iter()
-        .filter(|a| a.graphic_frame.is_some())
-        .collect();
 
     // The whole chart part tree (chart XML + style/color satellites) is kept
     // together for lossless save; shared across the sheet's charts for now.
     let raw = Arc::new(drawing.chart_parts.clone());
 
-    for (i, part) in chart_parts.iter().enumerate() {
-        let data = match parse_chart(&part.data) {
-            Some(d) => d,
-            None => continue,
+    // An anchor names its chart through the drawing's relationships, so pair
+    // them that way rather than by position. Position happened to work while
+    // there was one anchor list; with `oneCellAnchor` there are two, and their
+    // interleaving in the file is not recoverable from the parsed lists.
+    let part_by_rid = |rid: &str| -> Option<&&PassthroughPart> {
+        let target = drawing.rels.iter().find(|r| r.id == rid)?.target.as_str();
+        let file = target.rsplit('/').next()?;
+        chart_parts
+            .iter()
+            .find(|p| p.path.rsplit('/').next() == Some(file))
+    };
+    let chart_rid = |frame: &Option<CtGraphicFrame>| -> Option<String> {
+        frame
+            .as_ref()?
+            .graphic
+            .as_ref()?
+            .graphic_data
+            .as_ref()?
+            .chart
+            .as_ref()?
+            .r_id
+            .clone()
+    };
+
+    // Both anchor kinds, each contributing its own extent. Access marker fields
+    // directly rather than naming the marker type: `CtMarker` is ambiguous
+    // through the workbook prelude glob (both `complex_types` and `drawing_part`
+    // export one), but the concrete field access off the anchor is unambiguous.
+    let mut found: Vec<(&PassthroughPart, ChartMarker, ChartExtent)> = vec![];
+    for a in drawing.content.two_cell_anchors.iter() {
+        let Some(rid) = chart_rid(&a.graphic_frame) else {
+            continue;
         };
-        let anchor = match anchors.get(i) {
-            Some(a) => *a,
-            None => continue,
-        };
-        // Access marker fields directly rather than naming the marker type:
-        // `CtMarker` is ambiguous through the workbook prelude glob (both
-        // `complex_types` and `drawing_part` export one), but the concrete
-        // field access off the anchor is unambiguous.
-        let from = match chart_marker(
+        let Some(part) = part_by_rid(&rid) else { continue };
+        let Some(from) = chart_marker(
             sheet_id,
-            anchor.from.col.v,
-            anchor.from.row.v,
-            anchor.from.col_off.v,
-            anchor.from.row_off.v,
+            a.from.col.v,
+            a.from.row.v,
+            a.from.col_off.v,
+            a.from.row_off.v,
             navigator,
-        ) {
-            Some(m) => m,
-            None => continue,
+        ) else {
+            continue;
         };
-        let to = match chart_marker(
+        let Some(to) = chart_marker(
             sheet_id,
-            anchor.to.col.v,
-            anchor.to.row.v,
-            anchor.to.col_off.v,
-            anchor.to.row_off.v,
+            a.to.col.v,
+            a.to.row.v,
+            a.to.col_off.v,
+            a.to.row_off.v,
             navigator,
-        ) {
-            Some(m) => m,
-            None => continue,
+        ) else {
+            continue;
+        };
+        found.push((part, from, ChartExtent::ToCell(to)));
+    }
+    for a in drawing.content.one_cell_anchors.iter() {
+        let Some(rid) = chart_rid(&a.graphic_frame) else {
+            continue;
+        };
+        let Some(part) = part_by_rid(&rid) else { continue };
+        let Some(from) = chart_marker(
+            sheet_id,
+            a.from.col.v,
+            a.from.row.v,
+            a.from.col_off.v,
+            a.from.row_off.v,
+            navigator,
+        ) else {
+            continue;
+        };
+        found.push((
+            part,
+            from,
+            ChartExtent::Size {
+                cx: a.ext.cx,
+                cy: a.ext.cy,
+            },
+        ));
+    }
+
+    for (part, from, extent) in found {
+        let Some(data) = parse_chart(&part.data) else {
+            continue;
         };
         let id = part
             .path
@@ -763,7 +807,7 @@ fn load_charts(
             Chart {
                 id,
                 from,
-                to,
+                extent,
                 part_path: part.path.clone(),
                 data,
                 raw: raw.clone(),

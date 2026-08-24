@@ -34,6 +34,47 @@ fn default_prst_rect() -> String {
 pub struct CtWsDr {
     #[xmlserde(name = b"xdr:twoCellAnchor", ty = "child")]
     pub two_cell_anchors: Vec<CtTwoCellAnchor>,
+    /// The other anchor kind: one corner plus an explicit size, rather than two
+    /// corners. Excel writes it for an object the user has not resized by
+    /// dragging, and it is what openpyxl writes by default — so a chart
+    /// arriving from a generator is usually anchored this way.
+    #[xmlserde(name = b"xdr:oneCellAnchor", ty = "child")]
+    pub one_cell_anchors: Vec<CtOneCellAnchor>,
+}
+
+/// `<xdr:oneCellAnchor>` — anchored at `from`, sized by `ext`. There is no
+/// second cell, which is why it is a separate type rather than a
+/// `twoCellAnchor` with a guessed `to`: inventing one would be a lie that also
+/// moves when rows are inserted.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct CtOneCellAnchor {
+    #[xmlserde(name = b"xdr:from", ty = "child")]
+    pub from: CtMarker,
+    #[xmlserde(name = b"xdr:ext", ty = "child")]
+    pub ext: CtPositiveSize2D,
+    #[xmlserde(name = b"xdr:pic", ty = "child")]
+    pub pic: Option<CtPic>,
+    #[xmlserde(name = b"xdr:sp", ty = "child")]
+    pub sp: Option<Unparsed>,
+    #[xmlserde(name = b"xdr:grpSp", ty = "child")]
+    pub grp_sp: Option<Unparsed>,
+    #[xmlserde(name = b"xdr:graphicFrame", ty = "child")]
+    pub graphic_frame: Option<CtGraphicFrame>,
+    #[xmlserde(name = b"xdr:cxnSp", ty = "child")]
+    pub cxn_sp: Option<Unparsed>,
+    #[xmlserde(name = b"xdr:contentPart", ty = "child")]
+    pub content_part: Option<Unparsed>,
+    #[xmlserde(name = b"xdr:clientData", ty = "child")]
+    pub client_data: Option<CtAnchorClientData>,
+}
+
+/// `<xdr:ext cx="…" cy="…">` — a size in EMUs.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct CtPositiveSize2D {
+    #[xmlserde(name = b"cx", ty = "attr")]
+    pub cx: i64,
+    #[xmlserde(name = b"cy", ty = "attr")]
+    pub cy: i64,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -404,6 +445,7 @@ impl CtTwoCellAnchor {
         }
     }
 
+
     /// The `(col, row)` of the `from` marker, i.e. the anchored cell.
     pub fn anchor_cell(&self) -> (i32, i32) {
         (self.from.col.v, self.from.row.v)
@@ -416,5 +458,48 @@ impl CtTwoCellAnchor {
             .and_then(|p| p.blip_fill.as_ref())
             .and_then(|b| b.blip.as_ref())
             .and_then(|b| b.embed.as_deref())
+    }
+}
+
+impl CtOneCellAnchor {
+    /// The `oneCellAnchor` counterpart of
+    /// {@link CtTwoCellAnchor::new_chart_anchor}: same graphic frame, anchored
+    /// at one cell with an explicit size instead of spanning to a second.
+    pub fn new_chart_anchor(
+        from: CtMarker,
+        ext: CtPositiveSize2D,
+        frame_id: u32,
+        name: String,
+        chart_rid: String,
+    ) -> Self {
+        CtOneCellAnchor {
+            from,
+            ext,
+            pic: None,
+            sp: None,
+            grp_sp: None,
+            graphic_frame: Some(CtGraphicFrame {
+                nv_graphic_frame_pr: Some(CtGraphicFrameNonVisual {
+                    c_nv_pr: Some(CtNvDrawingProps {
+                        id: frame_id,
+                        name,
+                        descr: String::new(),
+                    }),
+                    c_nv_graphic_frame_pr: Some(CtNvGraphicFrameProps::default()),
+                }),
+                xfrm: None,
+                graphic: Some(CtGraphicalObject {
+                    graphic_data: Some(CtGraphicalObjectData {
+                        uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),
+                        chart: Some(CChart {
+                            r_id: Some(chart_rid),
+                        }),
+                    }),
+                }),
+            }),
+            cxn_sp: None,
+            content_part: None,
+            client_data: Some(CtAnchorClientData::default()),
+        }
     }
 }

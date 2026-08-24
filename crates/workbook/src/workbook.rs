@@ -1,7 +1,7 @@
 use crate::logisheets::LogiSheetsData;
 use crate::ooxml::comments::Comments;
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
-use crate::ooxml::drawing_part::{CtMarker, CtTwoCellAnchor, CtWsDr};
+use crate::ooxml::drawing_part::{CtMarker, CtOneCellAnchor, CtPositiveSize2D, CtTwoCellAnchor, CtWsDr};
 use crate::ooxml::external_links::*;
 use crate::ooxml::persons::Persons;
 use crate::ooxml::relationships::CtRelationship;
@@ -170,6 +170,7 @@ impl WorksheetDrawing {
         WorksheetDrawing {
             content: CtWsDr {
                 two_cell_anchors: anchors,
+                one_cell_anchors: Vec::new(),
             },
             rels,
             chart_parts: Vec::new(),
@@ -186,6 +187,7 @@ impl WorksheetDrawing {
         chart_parts: Vec<PassthroughPart>,
     ) -> Self {
         let mut anchors = Vec::with_capacity(images.len() + charts.len());
+        let mut one_cell_anchors = Vec::<CtOneCellAnchor>::new();
         let mut rels = Vec::with_capacity(images.len() + charts.len());
         let mut rid = 1u32;
         let mut nv_id = 2u32; // cNvPr ids; Excel reserves 1 for the sheet.
@@ -219,13 +221,31 @@ impl WorksheetDrawing {
                 Some(rest) => format!("../{}", rest),
                 None => ca.chart_path.clone(),
             };
-            anchors.push(CtTwoCellAnchor::new_chart_anchor(
-                CtMarker::with_offset(ca.from_col, ca.from_row, ca.from_col_off, ca.from_row_off),
-                CtMarker::with_offset(ca.to_col, ca.to_row, ca.to_col_off, ca.to_row_off),
-                nv_id,
-                ca.name,
-                embed.clone(),
-            ));
+            let from =
+                CtMarker::with_offset(ca.from_col, ca.from_row, ca.from_col_off, ca.from_row_off);
+            match ca.extent {
+                ChartAnchorExtent::ToCell {
+                    col,
+                    row,
+                    col_off,
+                    row_off,
+                } => anchors.push(CtTwoCellAnchor::new_chart_anchor(
+                    from,
+                    CtMarker::with_offset(col, row, col_off, row_off),
+                    nv_id,
+                    ca.name,
+                    embed.clone(),
+                )),
+                ChartAnchorExtent::Size { cx, cy } => {
+                    one_cell_anchors.push(CtOneCellAnchor::new_chart_anchor(
+                        from,
+                        CtPositiveSize2D { cx, cy },
+                        nv_id,
+                        ca.name,
+                        embed.clone(),
+                    ))
+                }
+            }
             nv_id += 1;
             rels.push(CtRelationship {
                 id: embed,
@@ -238,6 +258,7 @@ impl WorksheetDrawing {
         WorksheetDrawing {
             content: CtWsDr {
                 two_cell_anchors: anchors,
+                one_cell_anchors,
             },
             rels,
             chart_parts,
@@ -253,14 +274,28 @@ pub struct ChartAnchor {
     pub from_row: i32,
     pub from_col_off: i64,
     pub from_row_off: i64,
-    pub to_col: i32,
-    pub to_row: i32,
-    pub to_col_off: i64,
-    pub to_row_off: i64,
+    /// How far the frame reaches: to a second cell, or an explicit size. The two
+    /// are different anchor elements in the file and a chart keeps the one it
+    /// arrived with.
+    pub extent: ChartAnchorExtent,
     /// Workbook-absolute path of the chart part, e.g. `xl/charts/chart1.xml`.
     pub chart_path: String,
     /// Human-readable frame name (e.g. `Chart 1`).
     pub name: String,
+}
+
+/// The two ways a drawing anchor states an object's extent.
+#[derive(Debug, Clone)]
+pub enum ChartAnchorExtent {
+    /// `<xdr:twoCellAnchor>`: a second corner cell, with EMU offsets into it.
+    ToCell {
+        col: i32,
+        row: i32,
+        col_off: i64,
+        row_off: i64,
+    },
+    /// `<xdr:oneCellAnchor>`: a size in EMUs, with no second cell.
+    Size { cx: i64, cy: i64 },
 }
 
 #[derive(Debug)]

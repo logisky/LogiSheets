@@ -2,7 +2,7 @@ use itertools::Itertools;
 use logisheets_base::NormalRange;
 use logisheets_workbook::{
     logisheets::{AppData, LinkRangeXml, LogiSheetsData, Sheet},
-    prelude::{ChartAnchor, PassthroughPart},
+    prelude::{ChartAnchor, ChartAnchorExtent, PassthroughPart},
     prelude::{
         CtConditionalFormatting, CtExternalReference, CtExternalReferences, CtPerson, CtSheet,
         CtSheets, Persons, WorkbookPart,
@@ -252,21 +252,32 @@ pub fn save_workbook<S: SaverTrait>(
             let mut seen_parts: std::collections::HashSet<String> =
                 std::collections::HashSet::new();
             for chart in chart_manager.charts_of_sheet(sheet_id) {
-                let from = navigator.fetch_cell_idx(&sheet_id, &chart.from.cell);
-                let to = navigator.fetch_cell_idx(&sheet_id, &chart.to.cell);
-                let ((fr, fc), (tr, tc)) = match (from, to) {
-                    (Ok(f), Ok(t)) => (f, t),
-                    _ => continue,
+                let Ok((fr, fc)) = navigator.fetch_cell_idx(&sheet_id, &chart.from.cell) else {
+                    continue;
+                };
+                // A chart goes back out under the anchor kind it came in with.
+                let extent = match &chart.extent {
+                    crate::chart_manager::ChartExtent::ToCell(m) => {
+                        let Ok((tr, tc)) = navigator.fetch_cell_idx(&sheet_id, &m.cell) else {
+                            continue;
+                        };
+                        ChartAnchorExtent::ToCell {
+                            col: tc as i32,
+                            row: tr as i32,
+                            col_off: m.col_off,
+                            row_off: m.row_off,
+                        }
+                    }
+                    crate::chart_manager::ChartExtent::Size { cx, cy } => {
+                        ChartAnchorExtent::Size { cx: *cx, cy: *cy }
+                    }
                 };
                 chart_anchors.push(ChartAnchor {
                     from_col: fc as i32,
                     from_row: fr as i32,
                     from_col_off: chart.from.col_off,
                     from_row_off: chart.from.row_off,
-                    to_col: tc as i32,
-                    to_row: tr as i32,
-                    to_col_off: chart.to.col_off,
-                    to_row_off: chart.to.row_off,
+                    extent,
                     chart_path: chart.part_path.clone(),
                     name: format!("Chart {}", chart.id),
                 });

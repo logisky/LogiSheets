@@ -30,12 +30,26 @@ pub struct ChartMarker {
     pub row_off: i64,
 }
 
+/// How far a chart's frame reaches from its `from` corner.
+///
+/// The file has two anchor elements for this and a chart keeps the one it
+/// arrived with. A `oneCellAnchor` has no second cell at all, so giving it a
+/// synthesised `to` would be both a lie and unstable — it would drift the first
+/// time a row was inserted between the invented corners.
+#[derive(Debug, Clone)]
+pub enum ChartExtent {
+    /// `twoCellAnchor`: a second corner that moves with its cell.
+    ToCell(ChartMarker),
+    /// `oneCellAnchor`: a fixed size in EMUs.
+    Size { cx: i64, cy: i64 },
+}
+
 #[derive(Debug, Clone)]
 pub struct Chart {
     /// Stable id (currently the chart part's file stem, e.g. `chart1`).
     pub id: String,
     pub from: ChartMarker,
-    pub to: ChartMarker,
+    pub extent: ChartExtent,
     /// Workbook-absolute path of this chart's own part, e.g.
     /// `xl/charts/chart1.xml` — the drawing's `graphicFrame` references it.
     pub part_path: String,
@@ -77,7 +91,7 @@ impl ChartManager {
         sheet_id: SheetId,
         chart_id: &str,
         from: ChartMarker,
-        to: ChartMarker,
+        extent: ChartExtent,
     ) -> bool {
         let mut v = match self.charts.get(&sheet_id) {
             Some(v) => v.clone(),
@@ -90,7 +104,7 @@ impl ChartManager {
         };
         let mut chart = v[idx].clone();
         chart.from = from;
-        chart.to = to;
+        chart.extent = extent;
         v.set(idx, chart);
         self.charts.insert(sheet_id, v);
         true
