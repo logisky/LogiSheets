@@ -445,12 +445,72 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
     }
     let mut controller = Controller::from(status, book_name, settings, app_data);
     convert_tables_to_blocks(&mut controller, pending_tables);
+    materialize_loaded_schema_rules(&mut controller);
     // Must run last: `sqref` is resolved against the navigator, and blocks only
     // exist once the table conversion above has run — a rule covering a
     // converted table has to anchor on block cell ids, not the normal cell ids
     // those coordinates had mid-load.
     model_conditional_formatting(&mut controller);
     controller
+}
+
+/// Re-install the shadow cells that a block's loaded rules describe.
+///
+/// A field's `validation_formula` / `editability_formula` is a TEMPLATE. It is
+/// stored on the schema, but what the host actually reads is the shadow cell the
+/// template is instantiated into on every row, and installing those shadows is a
+/// side effect of the `BindFormSchema` executor. Loading a file restores the
+/// schema map directly, so the rules came back as data and did nothing: a
+/// workbook whose cells were flagged invalid before it was saved reopened with
+/// every flag gone, and the templates were still sitting right there in
+/// `get_all_blocks` to say they should not have been.
+///
+/// `UpsertFieldFormulas` with three empty vecs is exactly this pass: empty means
+/// "keep the rules you have" to the schema executor, and the formula executor
+/// then re-walks every (row × field) and re-materializes value, validation and
+/// editability. So the rules are replayed through the same code path that
+/// installed them the first time, rather than through a second implementation
+/// that could drift from it.
+fn materialize_loaded_schema_rules(controller: &mut Controller) {
+    use crate::edit_action::{EditAction, EditPayload, PayloadsAction, UpsertFieldFormulas};
+
+    let mut targets: Vec<(usize, usize)> = controller
+        .status
+        .block_schema_manager
+        .schemas
+        .keys()
+        .filter_map(|(sheet_id, block_id)| {
+            let idx = controller
+                .status
+                .sheet_info_manager
+                .get_sheet_idx(sheet_id)?;
+            Some((idx, *block_id))
+        })
+        .collect();
+    // The map is unordered and this issues edits, so fix an order: a load must
+    // produce the same workbook every time.
+    targets.sort_unstable();
+    if targets.is_empty() {
+        return;
+    }
+
+    let payloads = targets
+        .into_iter()
+        .map(|(sheet_idx, block_id)| {
+            EditPayload::UpsertFieldFormulas(UpsertFieldFormulas {
+                sheet_idx,
+                block_id,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            })
+        })
+        .collect();
+    controller.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: false,
+        init: false,
+    }));
 }
 
 /// Move each sheet's `<conditionalFormatting>` out of the verbatim passthrough

@@ -771,3 +771,116 @@ fn test_convert_block_keeps_the_formulas_live() {
     );
     assert_eq!(value(&mut wb, 2, 2), 60.0, "and so must the row below it");
 }
+
+/// Every rule SHAPE must survive a save and a reload — template and effect.
+///
+/// One field formula is already known to round-trip
+/// (`test_field_ref_by_key_survives_save_and_reload`), and that is how the
+/// xmlserde escaping bug was caught: a template is stored as an XML attribute
+/// full of quotes, and when the writer stopped escaping them, every block field
+/// rule in every file died at once. Validation and editability templates take
+/// the same path and had no save coverage at all, so the same bug could land
+/// again in two of the three slots and every test here would still pass.
+///
+/// The table is the point. It is not one rule but each shape the substituter
+/// can produce, and — deliberately — the characters XML has to escape: `<` and
+/// `>` from a comparison, `&` from a concatenation, `"` from a quoted key. A
+/// rule is checked live, then the workbook is saved, reopened, the template read
+/// back verbatim, and the shadows re-read on the far side. Adding a shape is one
+/// line.
+#[test]
+fn every_rule_shape_survives_save_and_reload() {
+    // (rule, expected per row for values 5 / 10 / 15 keyed k0 / k1 / k2)
+    let cases: &[(&str, [bool; 3])] = &[
+        ("#PLACEHOLDER>=10", [false, true, true]),
+        // `<` and `>` in one operator.
+        ("#PLACEHOLDER<>15", [true, true, false]),
+        // A bare `<`, which is the character an unescaped attribute breaks on.
+        ("#PLACEHOLDER<12", [true, true, false]),
+        // Quotes around a literal.
+        (r#"#KEY="k2""#, [false, false, true]),
+        (r#"#FIELD("key")="k1""#, [false, true, false]),
+        // A keyed reach into another row: the same answer on every row.
+        (r#"#FIELD("value","k2")>14"#, [true, true, true]),
+        // Nested, with both a comparison and a quoted key inside a call.
+        (
+            r#"AND(#PLACEHOLDER>=10,#KEY<>"k2")"#,
+            [false, true, false],
+        ),
+        // `&` — string concatenation, and the third character XML escapes.
+        (r#"#KEY&"!"="k1!""#, [false, true, false]),
+    ];
+
+    let mut failures = Vec::<String>::new();
+    for (rule, want) in cases {
+        for kind in [ShadowKind::Validation, ShadowKind::UserEditable] {
+            let (validations, editabilities) = match kind {
+                ShadowKind::Validation => (vec![None, Some(rule.to_string())], vec![None, None]),
+                _ => (vec![None, None], vec![None, Some(rule.to_string())]),
+            };
+            let mut wb = fresh_block_with_data(validations, editabilities);
+
+            for (row, want_row) in want.iter().enumerate() {
+                let got = shadow_value(&mut wb, 0, row, 1, kind);
+                if !matches!(got, Value::Bool(b) if b == *want_row) {
+                    failures.push(format!(
+                        "{rule:?} as {kind:?}: row {row} was {got:?} before saving, wanted {want_row}"
+                    ));
+                }
+            }
+
+            let mut bytes = match wb.save() {
+                Ok(b) => b,
+                Err(e) => {
+                    failures.push(format!("{rule:?} as {kind:?}: save failed: {e:?}"));
+                    continue;
+                }
+            };
+            let mut reopened = match Workbook::from_file(&mut bytes, "reload".to_string()) {
+                Ok(wb) => wb,
+                Err(e) => {
+                    failures.push(format!("{rule:?} as {kind:?}: reopen failed: {e:?}"));
+                    continue;
+                }
+            };
+
+            // The template itself, verbatim. An escaping bug shows up here
+            // before it shows up in a value.
+            let stored = reopened
+                .get_all_blocks(Some(0), None)
+                .ok()
+                .and_then(|bs| bs.into_iter().find_map(|b| b.schema))
+                .and_then(|s| {
+                    s.fields.into_iter().find(|f| f.field == "value").map(|f| {
+                        match kind {
+                            ShadowKind::Validation => f.validation_formula,
+                            _ => f.editability_formula,
+                        }
+                    })
+                })
+                .flatten();
+            if stored.as_deref() != Some(*rule) {
+                failures.push(format!(
+                    "{rule:?} as {kind:?}: came back as {stored:?}"
+                ));
+                continue;
+            }
+
+            for (row, want_row) in want.iter().enumerate() {
+                let got = shadow_value(&mut reopened, 0, row, 1, kind);
+                if !matches!(got, Value::Bool(b) if b == *want_row) {
+                    failures.push(format!(
+                        "{rule:?} as {kind:?}: row {row} came back {got:?}, wanted {want_row}"
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "{} rule shapes broke:\n  {}",
+        failures.len(),
+        failures.join("\n  ")
+    );
+}

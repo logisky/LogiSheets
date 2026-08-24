@@ -268,3 +268,144 @@ fn cells_and_styles_differ(a: &Workbook, b: &Workbook) -> Option<String> {
     }
     None
 }
+
+/// Editing a real file, saving it, and opening it again must keep the edit.
+///
+/// The property above only ever loads and saves, so every table it exercises
+/// arrived from the file intact. The workflow that actually matters is the other
+/// one: open something a real producer wrote, change it, save, come back. That
+/// path touches the parts a pure re-save never does — a string appended to a
+/// shared-string table that was loaded rather than built, a formula compiled
+/// against a sheet whose names came from XML, a dependency edge that has to be
+/// rebuilt after the reload rather than recorded while the edit happened.
+///
+/// So each corpus file gets three cells written far below its content, is saved
+/// and reopened, and then a member cell is changed to prove the formula still
+/// recomputes on the far side. A file that merely stores what we wrote and comes
+/// back inert would pass every check before this one.
+#[test]
+fn editing_a_corpus_file_survives_a_round_trip() {
+    use logisheets::EditAction;
+    use logisheets_controller::edit_action::{CellInput, PayloadsAction};
+
+    // Far below any corpus content, so nothing existing is disturbed.
+    const R: usize = 300;
+    let mut checked = 0;
+    let mut failures = Vec::<String>::new();
+
+    for entry in std::fs::read_dir("tests").expect("tests dir") {
+        let path = entry.expect("dir entry").path();
+        if path.extension().and_then(|e| e.to_str()) != Some("xlsx") {
+            continue;
+        }
+        let file = path
+            .file_name()
+            .and_then(|f| f.to_str())
+            .unwrap_or("")
+            .to_string();
+        let mut buf = std::fs::read(&path).expect("read fixture");
+        let mut wb = match Workbook::from_file(&mut buf, file.clone()) {
+            Ok(wb) => wb,
+            // Loading is the previous test's business, not this one's.
+            Err(_) => continue,
+        };
+
+        wb.handle_action(EditAction::Payloads(
+            PayloadsAction::new()
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: R,
+                    col: 0,
+                    content: "5".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: R + 1,
+                    col: 0,
+                    content: "7".into(),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: R,
+                    col: 1,
+                    content: format!("=SUM(A{}:A{})", R + 1, R + 2),
+                })
+                .add_payload(CellInput {
+                    sheet_idx: 0,
+                    row: R + 1,
+                    col: 1,
+                    // A string the file's shared-string table cannot already
+                    // hold, so saving has to extend one it did not build.
+                    content: "round-trip probe 名字".into(),
+                }),
+        ));
+
+        let live = wb.get_sheet_by_idx(0).and_then(|s| s.get_value(R, 1));
+        if !matches!(live, Ok(Value::Number(n)) if n == 12.0) {
+            failures.push(format!("{file}: the edit did not even compute: {live:?}"));
+            continue;
+        }
+
+        let saved = match wb.save() {
+            Ok(s) => s,
+            Err(e) => {
+                failures.push(format!("{file}: save after editing failed: {e:?}"));
+                continue;
+            }
+        };
+        let mut again = saved.clone();
+        let mut reopened = match Workbook::from_file(&mut again, file.clone()) {
+            Ok(wb) => wb,
+            Err(e) => {
+                failures.push(format!("{file}: could not reopen an edited file: {e:?}"));
+                continue;
+            }
+        };
+        checked += 1;
+
+        let sheet = match reopened.get_sheet_by_idx(0) {
+            Ok(s) => s,
+            Err(e) => {
+                failures.push(format!("{file}: sheet 0 is gone after editing: {e:?}"));
+                continue;
+            }
+        };
+        for (row, col, want) in [(R, 0, 5.0), (R + 1, 0, 7.0), (R, 1, 12.0)] {
+            let got = sheet.get_value(row, col);
+            if !matches!(got, Ok(Value::Number(n)) if n == want) {
+                failures.push(format!(
+                    "{file}: ({row},{col}) was {want} before saving, {got:?} after"
+                ));
+            }
+        }
+        let text = sheet.get_value(R + 1, 1);
+        if !matches!(&text, Ok(Value::Str(s)) if s == "round-trip probe 名字") {
+            failures.push(format!("{file}: the written string came back as {text:?}"));
+        }
+
+        // And the reloaded formula must still be alive, not a stored number.
+        reopened.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+            CellInput {
+                sheet_idx: 0,
+                row: R,
+                col: 0,
+                content: "50".into(),
+            },
+        )));
+        let after = reopened.get_sheet_by_idx(0).and_then(|s| s.get_value(R, 1));
+        if !matches!(after, Ok(Value::Number(n)) if n == 57.0) {
+            failures.push(format!(
+                "{file}: the reloaded SUM went stale — expected 57, got {after:?}"
+            ));
+        }
+    }
+
+    assert!(checked > 0, "no corpus file could be edited");
+    assert!(
+        failures.is_empty(),
+        "editing broke {} of {} corpus files:\n  {}",
+        failures.len(),
+        checked,
+        failures.join("\n  ")
+    );
+}
