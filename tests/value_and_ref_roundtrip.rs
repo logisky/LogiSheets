@@ -265,3 +265,197 @@ fn a_cross_sheet_reference_survives_a_round_trip() {
         );
     }
 }
+
+/// A STRUCTURAL edit shifts every reference that points past it, and the shifted
+/// reference has to be what gets saved.
+///
+/// This is the family with the worst failure mode in the repo: a reference that
+/// shifts wrong is not an error, it is a plausible number pointing at the wrong
+/// cell, and it survives every check that only asks whether the file loads. The
+/// engine holds references as ids, so nothing shifts internally — but a save
+/// prints them back as TEXT against the post-edit grid, and that printing is
+/// where an off-by-one lives.
+///
+/// Each case sets up the same sheet, applies one structural edit, and then
+/// insists on three things: the value now, the value after a save and a reload,
+/// and the reference's spelling in the reloaded file. The last one is what
+/// distinguishes "shifted correctly" from "happened to still add up".
+#[test]
+fn a_structural_edit_is_saved_as_the_shifted_reference() {
+    use logisheets_controller::edit_action::{
+        DeleteCols, DeleteRows, EditPayload, InsertCols, InsertRows,
+    };
+
+    // A1=1 A2=2 A3=3, with the formula under test at D11 — below and to the
+    // right of every edit, so it is never itself deleted and the test is
+    // measuring the reference rather than the cell holding it.
+    const FR: usize = 10;
+    const FC: usize = 3;
+    let setup = |wb: &mut Workbook, formula: &str| {
+        write(
+            wb,
+            &[(0, 0, "1"), (1, 0, "2"), (2, 0, "3"), (FR, FC, formula)],
+        );
+    };
+
+    // (formula, edit, expected value after, expected spelling after)
+    let cases: &[(&str, EditPayload, f64, &str)] = &[
+        // A row inserted ABOVE the referent moves it down.
+        (
+            "=A2",
+            EditPayload::InsertRows(InsertRows {
+                sheet_idx: 0,
+                start: 0,
+                count: 1,
+            }),
+            2.0,
+            "A3",
+        ),
+        // A row inserted INSIDE a range widens it.
+        (
+            "=SUM(A1:A3)",
+            EditPayload::InsertRows(InsertRows {
+                sheet_idx: 0,
+                start: 1,
+                count: 1,
+            }),
+            6.0,
+            "SUM(A1:A4)",
+        ),
+        // A row inserted below the range leaves it alone.
+        (
+            "=SUM(A1:A3)",
+            EditPayload::InsertRows(InsertRows {
+                sheet_idx: 0,
+                start: 5,
+                count: 1,
+            }),
+            6.0,
+            "SUM(A1:A3)",
+        ),
+        // Deleting a row above pulls the referent up.
+        (
+            "=A3",
+            EditPayload::DeleteRows(DeleteRows {
+                sheet_idx: 0,
+                start: 0,
+                count: 1,
+            }),
+            3.0,
+            "A2",
+        ),
+        // Deleting a row inside a range narrows it, and drops that addend.
+        (
+            "=SUM(A1:A3)",
+            EditPayload::DeleteRows(DeleteRows {
+                sheet_idx: 0,
+                start: 1,
+                count: 1,
+            }),
+            4.0,
+            "SUM(A1:A2)",
+        ),
+        // An absolute reference shifts too: `$` pins it against a FILL, not
+        // against a structural edit.
+        (
+            "=$A$2",
+            EditPayload::InsertRows(InsertRows {
+                sheet_idx: 0,
+                start: 0,
+                count: 1,
+            }),
+            2.0,
+            "$A$3",
+        ),
+        // Columns, the same three ways.
+        (
+            "=A1",
+            EditPayload::InsertCols(InsertCols {
+                sheet_idx: 0,
+                start: 0,
+                count: 1,
+            }),
+            1.0,
+            "B1",
+        ),
+        (
+            "=SUM(A1:A3)",
+            EditPayload::InsertCols(InsertCols {
+                sheet_idx: 0,
+                start: 0,
+                count: 2,
+            }),
+            6.0,
+            "SUM(C1:C3)",
+        ),
+        (
+            "=SUM(B1:B3)",
+            EditPayload::DeleteCols(DeleteCols {
+                sheet_idx: 0,
+                start: 0,
+                count: 1,
+            }),
+            0.0,
+            "SUM(A1:A3)",
+        ),
+    ];
+
+    let mut failures = Vec::<String>::new();
+    for (formula, edit, want, want_spelling) in cases {
+        let label = format!("{formula} then {edit:?}");
+        let mut wb = Workbook::default();
+        setup(&mut wb, formula);
+        let r = wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![edit.clone()],
+            undoable: true,
+            init: false,
+        }));
+        if !matches!(r.status, StatusCode::Ok(_)) {
+            failures.push(format!("{label}: the edit failed: {:?}", r.status));
+            continue;
+        }
+
+        // The formula's own cell moves with the edit, so follow it rather than
+        // assuming — every edit here lands above or left of it.
+        let (fr, fc) = match edit {
+            EditPayload::InsertRows(p) => (FR + p.count, FC),
+            EditPayload::DeleteRows(p) => (FR - p.count, FC),
+            EditPayload::InsertCols(p) => (FR, FC + p.count),
+            EditPayload::DeleteCols(p) => (FR, FC - p.count),
+            _ => (FR, FC),
+        };
+
+        let live = wb.get_sheet_by_idx(0).and_then(|s| s.get_value(fr, fc));
+        if !matches!(live, Ok(Value::Number(n)) if n == *want) {
+            failures.push(format!("{label}: {live:?} before saving, wanted {want}"));
+            continue;
+        }
+
+        let back = save_reload(&wb);
+        let sheet = match back.get_sheet_by_idx(0) {
+            Ok(s) => s,
+            Err(e) => {
+                failures.push(format!("{label}: sheet gone: {e:?}"));
+                continue;
+            }
+        };
+        let reread = sheet.get_value(fr, fc);
+        if !matches!(reread, Ok(Value::Number(n)) if n == *want) {
+            failures.push(format!("{label}: came back {reread:?}, wanted {want}"));
+        }
+        let text = sheet.get_formula(fr, fc);
+        let flat = |s: &str| s.trim_start_matches('=').replace(' ', "");
+        if text.as_deref().map(flat).ok().as_deref() != Some(*want_spelling) {
+            failures.push(format!(
+                "{label}: saved as {text:?}, wanted {want_spelling}"
+            ));
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} of {} structural edits broke:\n  {}",
+        failures.len(),
+        cases.len(),
+        failures.join("\n  ")
+    );
+}
