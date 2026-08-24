@@ -1886,3 +1886,64 @@ fn test_one_cell_anchor_chart_round_trips() {
         after.1
     );
 }
+
+/// The same chart from a producer that binds the drawing namespaces as the
+/// DEFAULT rather than as `xdr:` / `c:` prefixes.
+///
+/// The prefix is a binding the producer chose, not part of an element's
+/// identity, but names here are matched literally — so every anchor in such a
+/// file was invisible and the chart was dropped in silence, whatever its anchor
+/// kind. The `alias` attribute (xmlserde 0.14) is what lets one declaration
+/// answer to both spellings; this fixture is written by openpyxl, which does it
+/// the unprefixed way.
+#[test]
+fn test_chart_from_a_default_namespace_drawing_round_trips() {
+    use logisheets::Workbook;
+    use std::fs;
+
+    let mut buf = fs::read("tests/default_ns_drawing.xlsx").unwrap();
+    // Sanity: the fixture really is the unprefixed shape.
+    {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(buf.clone())).unwrap();
+        let mut found = String::new();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name() == "xl/drawings/drawing1.xml" {
+                use std::io::Read;
+                f.read_to_string(&mut found).unwrap();
+            }
+        }
+        assert!(
+            found.contains("<oneCellAnchor") && !found.contains("<xdr:oneCellAnchor"),
+            "fixture should be unprefixed"
+        );
+    }
+
+    let wb = Workbook::from_file(&mut buf, String::from("dn")).unwrap();
+    let saved = wb.save().expect("save");
+
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(saved)).unwrap();
+    let mut drawing = String::new();
+    let mut has_chart_part = false;
+    for i in 0..zip.len() {
+        let mut f = zip.by_index(i).unwrap();
+        if f.name() == "xl/drawings/drawing1.xml" {
+            use std::io::Read;
+            f.read_to_string(&mut drawing).unwrap();
+        }
+        if f.name().starts_with("xl/charts/") && f.name().ends_with(".xml") {
+            has_chart_part = true;
+        }
+    }
+    assert!(has_chart_part, "the chart part should be written back");
+    assert!(
+        drawing.contains("<xdr:oneCellAnchor"),
+        "and its anchor kind kept — written under our own prefix: {}",
+        &drawing[..drawing.len().min(200)]
+    );
+    assert!(
+        drawing.contains(r#"cx="5400000""#),
+        "with the size intact: {}",
+        &drawing[..drawing.len().min(300)]
+    );
+}

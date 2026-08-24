@@ -21,6 +21,7 @@ fn default_prst_rect() -> String {
 /// Root element of a worksheet drawing part (`xdr:wsDr`).
 #[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"xdr:wsDr")]
+#[xmlserde(alias(b"wsDr"))]
 #[xmlserde(with_custom_ns(
     b"xdr",
     b"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
@@ -33,12 +34,14 @@ fn default_prst_rect() -> String {
 #[xmlserde(with_custom_ns(b"c", b"http://schemas.openxmlformats.org/drawingml/2006/chart"))]
 pub struct CtWsDr {
     #[xmlserde(name = b"xdr:twoCellAnchor", ty = "child")]
+    #[xmlserde(alias(b"twoCellAnchor"))]
     pub two_cell_anchors: Vec<CtTwoCellAnchor>,
     /// The other anchor kind: one corner plus an explicit size, rather than two
     /// corners. Excel writes it for an object the user has not resized by
     /// dragging, and it is what openpyxl writes by default — so a chart
     /// arriving from a generator is usually anchored this way.
     #[xmlserde(name = b"xdr:oneCellAnchor", ty = "child")]
+    #[xmlserde(alias(b"oneCellAnchor"))]
     pub one_cell_anchors: Vec<CtOneCellAnchor>,
 }
 
@@ -49,22 +52,31 @@ pub struct CtWsDr {
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct CtOneCellAnchor {
     #[xmlserde(name = b"xdr:from", ty = "child")]
+    #[xmlserde(alias(b"from"))]
     pub from: CtMarker,
     #[xmlserde(name = b"xdr:ext", ty = "child")]
+    #[xmlserde(alias(b"ext"))]
     pub ext: CtPositiveSize2D,
     #[xmlserde(name = b"xdr:pic", ty = "child")]
+    #[xmlserde(alias(b"pic"))]
     pub pic: Option<CtPic>,
     #[xmlserde(name = b"xdr:sp", ty = "child")]
+    #[xmlserde(alias(b"sp"))]
     pub sp: Option<Unparsed>,
     #[xmlserde(name = b"xdr:grpSp", ty = "child")]
+    #[xmlserde(alias(b"grpSp"))]
     pub grp_sp: Option<Unparsed>,
     #[xmlserde(name = b"xdr:graphicFrame", ty = "child")]
+    #[xmlserde(alias(b"graphicFrame"))]
     pub graphic_frame: Option<CtGraphicFrame>,
     #[xmlserde(name = b"xdr:cxnSp", ty = "child")]
+    #[xmlserde(alias(b"cxnSp"))]
     pub cxn_sp: Option<Unparsed>,
     #[xmlserde(name = b"xdr:contentPart", ty = "child")]
+    #[xmlserde(alias(b"contentPart"))]
     pub content_part: Option<Unparsed>,
     #[xmlserde(name = b"xdr:clientData", ty = "child")]
+    #[xmlserde(alias(b"clientData"))]
     pub client_data: Option<CtAnchorClientData>,
 }
 
@@ -82,10 +94,13 @@ pub struct CtTwoCellAnchor {
     #[xmlserde(name = b"editAs", ty = "attr", default = "default_edit_as")]
     pub edit_as: String,
     #[xmlserde(name = b"xdr:from", ty = "child")]
+    #[xmlserde(alias(b"from"))]
     pub from: CtMarker,
     #[xmlserde(name = b"xdr:to", ty = "child")]
+    #[xmlserde(alias(b"to"))]
     pub to: CtMarker,
     #[xmlserde(name = b"xdr:pic", ty = "child")]
+    #[xmlserde(alias(b"pic"))]
     pub pic: Option<CtPic>,
     // A `twoCellAnchor` hosts exactly one object. `pic` (images we create) and
     // `graphicFrame` (charts — we both read their reference and re-emit them on
@@ -94,16 +109,22 @@ pub struct CtTwoCellAnchor {
     // round-trip. A chart's `graphicFrame` points at a chart part via the
     // drawing's relationships; the chart part itself is a `PassthroughPart`.
     #[xmlserde(name = b"xdr:sp", ty = "child")]
+    #[xmlserde(alias(b"sp"))]
     pub sp: Option<Unparsed>,
     #[xmlserde(name = b"xdr:grpSp", ty = "child")]
+    #[xmlserde(alias(b"grpSp"))]
     pub grp_sp: Option<Unparsed>,
     #[xmlserde(name = b"xdr:graphicFrame", ty = "child")]
+    #[xmlserde(alias(b"graphicFrame"))]
     pub graphic_frame: Option<CtGraphicFrame>,
     #[xmlserde(name = b"xdr:cxnSp", ty = "child")]
+    #[xmlserde(alias(b"cxnSp"))]
     pub cxn_sp: Option<Unparsed>,
     #[xmlserde(name = b"xdr:contentPart", ty = "child")]
+    #[xmlserde(alias(b"contentPart"))]
     pub content_part: Option<Unparsed>,
     #[xmlserde(name = b"xdr:clientData", ty = "child")]
+    #[xmlserde(alias(b"clientData"))]
     pub client_data: Option<CtAnchorClientData>,
 }
 
@@ -111,12 +132,16 @@ pub struct CtTwoCellAnchor {
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct CtMarker {
     #[xmlserde(name = b"xdr:col", ty = "child")]
+    #[xmlserde(alias(b"col"))]
     pub col: XdrI32,
     #[xmlserde(name = b"xdr:colOff", ty = "child")]
+    #[xmlserde(alias(b"colOff"))]
     pub col_off: XdrI64,
     #[xmlserde(name = b"xdr:row", ty = "child")]
+    #[xmlserde(alias(b"row"))]
     pub row: XdrI32,
     #[xmlserde(name = b"xdr:rowOff", ty = "child")]
+    #[xmlserde(alias(b"rowOff"))]
     pub row_off: XdrI64,
 }
 
@@ -165,18 +190,23 @@ pub struct CtAnchorClientData {}
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct CtPic {
     #[xmlserde(name = b"xdr:nvPicPr", ty = "child")]
+    #[xmlserde(alias(b"nvPicPr"))]
     pub nv_pic_pr: Option<CtPictureNonVisual>,
     #[xmlserde(name = b"xdr:blipFill", ty = "child")]
+    #[xmlserde(alias(b"blipFill"))]
     pub blip_fill: Option<CtBlipFillProperties>,
     #[xmlserde(name = b"xdr:spPr", ty = "child")]
+    #[xmlserde(alias(b"spPr"))]
     pub sp_pr: Option<CtPicShapeProperties>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct CtPictureNonVisual {
     #[xmlserde(name = b"xdr:cNvPr", ty = "child")]
+    #[xmlserde(alias(b"cNvPr"))]
     pub c_nv_pr: Option<CtNvDrawingProps>,
     #[xmlserde(name = b"xdr:cNvPicPr", ty = "child")]
+    #[xmlserde(alias(b"cNvPicPr"))]
     pub c_nv_pic_pr: Option<CtNvPicProps>,
 }
 
@@ -266,8 +296,10 @@ pub struct CtGeomGuideList {}
 #[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
 pub struct CtGraphicFrame {
     #[xmlserde(name = b"xdr:nvGraphicFramePr", ty = "child")]
+    #[xmlserde(alias(b"nvGraphicFramePr"))]
     pub nv_graphic_frame_pr: Option<CtGraphicFrameNonVisual>,
     #[xmlserde(name = b"xdr:xfrm", ty = "child")]
+    #[xmlserde(alias(b"xfrm"))]
     pub xfrm: Option<Unparsed>,
     #[xmlserde(name = b"a:graphic", ty = "child")]
     pub graphic: Option<CtGraphicalObject>,
@@ -276,8 +308,10 @@ pub struct CtGraphicFrame {
 #[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
 pub struct CtGraphicFrameNonVisual {
     #[xmlserde(name = b"xdr:cNvPr", ty = "child")]
+    #[xmlserde(alias(b"cNvPr"))]
     pub c_nv_pr: Option<CtNvDrawingProps>,
     #[xmlserde(name = b"xdr:cNvGraphicFramePr", ty = "child")]
+    #[xmlserde(alias(b"cNvGraphicFramePr"))]
     pub c_nv_graphic_frame_pr: Option<CtNvGraphicFrameProps>,
 }
 

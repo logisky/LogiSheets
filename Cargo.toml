@@ -57,8 +57,8 @@ regex = "1"
 serde = "1"
 serde_json = "1"
 thiserror = "1.0"
-xmlserde = "0.13.2"
-xmlserde_derives = "0.13.2"
+xmlserde = "0.14.0"
+xmlserde_derives = "0.14.0"
 wildescape = "0.1"
 
 ssf-rs = { path = "crates/ssf-rs", version = "0.1.0" }
