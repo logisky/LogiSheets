@@ -407,9 +407,13 @@ impl CellValue {
                     }
                 }
                 StCellType::S => {
-                    let idx = text.value.parse::<usize>().unwrap();
-                    let id = f(idx);
-                    CellValue::String(id)
+                    // The index into the shared-string table is text in the
+                    // file like everything else, so it can be negative, or not
+                    // a number at all. It used to be unwrapped.
+                    match text.value.parse::<usize>() {
+                        Ok(idx) => CellValue::String(f(idx)),
+                        Err(_) => CellValue::Blank,
+                    }
                 }
                 StCellType::InlineStr => {
                     if let Some(is) = is {

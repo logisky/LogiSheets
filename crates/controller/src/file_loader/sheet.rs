@@ -266,7 +266,12 @@ pub fn load_sheet_data(
             style: style_id,
         };
         let idx = base_curr_idx + offset;
-        let id = navigator.fetch_row_id(&sheet_id, idx as usize).unwrap();
+        // A row number past the end of the grid has no id to fetch. The file
+        // says what it says; skip that row rather than refusing the workbook.
+        let Ok(id) = navigator.fetch_row_id(&sheet_id, idx as usize) else {
+            offset += 1;
+            return;
+        };
         container.set_row_info(sheet_id, id, row_info);
 
         offset += 1;
@@ -275,11 +280,20 @@ pub fn load_sheet_data(
             if let Some(r) = &ct_cell.r {
                 if let Some((row, col)) = parse_cell(r) {
                     let cv = CellValue::from_cell(ct_cell, |idx| {
-                        let rst = xl.sst.as_ref().unwrap().1.si.get(idx).unwrap();
-                        let string = rst_to_plain_text(rst);
+                        // A cell says `t="s"` and carries an index into the
+                        // shared-string table. Nothing guarantees the table has
+                        // that entry, or exists at all, and a file where it does
+                        // not used to take the whole workbook down with it. An
+                        // index pointing at nothing is an empty cell.
+                        let rst = xl.sst.as_ref().and_then(|sst| sst.1.si.get(idx));
+                        let string = rst.map(rst_to_plain_text).unwrap_or_default();
                         text_id_manager.get_or_register_id(&string)
                     });
-                    let id = navigator.fetch_cell_id(&sheet_id, row, col).unwrap();
+                    // Same for a column past the end: `r="ZZZZ9999999"` parses
+                    // into coordinates no sheet has.
+                    let Ok(id) = navigator.fetch_cell_id(&sheet_id, row, col) else {
+                        return;
+                    };
                     let style_id = style_loader.load_xf(ct_cell.s);
                     // A formula whose value element is absent or empty has
                     // never been computed by anyone: openpyxl and everything

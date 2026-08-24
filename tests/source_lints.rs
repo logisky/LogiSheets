@@ -81,16 +81,21 @@ fn xml_names_are_not_snake_case() {
 #[test]
 fn panics_reachable_from_data_do_not_increase() {
     // Paths that parse, evaluate or write a user's file.
+    // Today's inventory, not a target. Some of these are provably safe — a
+    // `Regex::new` on a literal, an `.unwrap()` guarded by the `is_none()` check
+    // on the line above — and separating those from the reachable ones is the
+    // work this ratchet is meant to fund, one number at a time.
     const DATA_PATHS: &[(&str, usize)] = &[
-        ("crates/workbook/src/reader.rs", 1),
-        ("crates/workbook/src/writer.rs", 1),
-        ("crates/controller/src/file_loader", 4),
-        ("crates/controller/src/file_saver", 1),
+        ("crates/workbook/src/reader.rs", 12),
+        ("crates/workbook/src/writer.rs", 2),
+        ("crates/controller/src/file_loader", 17),
+        ("crates/controller/src/file_saver", 12),
         ("crates/controller/base/src/lib.rs", 2),
         // The calculator is the big one, and the least surprising: an
-        // unimplemented corner of a function is a `todo!()` today. Every one is
-        // a formula someone can type.
-        ("crates/controller/src/calc_engine", 26),
+        // unimplemented corner of a function is a `todo!()` today, and an
+        // argument that has already been checked is unwrapped. Every one is a
+        // formula someone can type.
+        ("crates/controller/src/calc_engine", 443),
     ];
     let mut report = Vec::new();
     for (path, budget) in DATA_PATHS {
@@ -112,7 +117,18 @@ fn panics_reachable_from_data_do_not_increase() {
                 if in_tests {
                     continue;
                 }
-                if line.contains("todo!()") || line.contains("unreachable!()") {
+                // `.unwrap()` counts too. It is the SAME crash as a `todo!()`
+                // when the None came out of the file rather than out of our own
+                // reasoning, and it is by far the more common way to write one:
+                // this test passed for months while a shared-string index one
+                // past the table, a row numbered 0, and an `<externalLink>`
+                // holding a `<ddeLink>` each took the whole load down. Counting
+                // only the loud macros measured the tidy half of the problem.
+                if line.contains("todo!()")
+                    || line.contains("unreachable!()")
+                    || line.contains(".unwrap()")
+                    || line.contains(".expect(")
+                {
                     found += 1;
                 }
             }

@@ -17,7 +17,23 @@ where
     if let Some(id) = manager.book_id_manager.has(&ext.target) {
         return id;
     }
-    let ext_book = ext.external_link_part.external_book.as_ref().unwrap();
+    // `<externalBook>` is only ONE of the things this part may hold — `<ddeLink>`
+    // and `<oleLink>` are equally valid alternatives — so a workbook linked to a
+    // DDE server or an OLE object has no external book here and used to crash
+    // the whole load. Register the target so references to it resolve to a book
+    // with no data, which is what an unreadable link is.
+    let Some(ext_book) = ext.external_link_part.external_book.as_ref() else {
+        let bid = manager.book_id_manager.get_or_register_id(&ext.target);
+        manager.books.insert(
+            bid,
+            ExtBook {
+                sheets: Vector::<SheetId>::new(),
+                data_set: HashMap::new(),
+            },
+        );
+        manager.orders.push_back(bid);
+        return bid;
+    };
     let sheets = if let Some(ext_sheet_names) = &ext_book.sheet_names {
         let names = ext_sheet_names
             .names
@@ -31,7 +47,12 @@ where
     let mut data_set = HashMap::<(SheetId, Addr), Value>::new();
     if let Some(ds) = &ext_book.sheet_data_set {
         ds.data.iter().enumerate().for_each(|(idx, sheet_data)| {
-            let sheet_id = sheets.get(idx).unwrap().clone();
+            // `<sheetDataSet>` and `<sheetNames>` are separate elements and
+            // nothing in the file makes them agree, so a cached sheet with no
+            // name is the file's business, not a reason to refuse it.
+            let Some(sheet_id) = sheets.get(idx).cloned() else {
+                return;
+            };
             sheet_data.rows.iter().for_each(|r| {
                 r.cells.iter().for_each(|ext_cell| {
                     if ext_cell.v.is_none() || ext_cell.r.is_none() {
