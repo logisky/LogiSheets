@@ -33,10 +33,22 @@ pub fn calc_infix(
         ast::InfixOperator::Divide => {
             let func = |lhs: &Value, rhs: &Value| {
                 infix_number(lhs, rhs, |a: &f64, b: &f64| {
-                    if b.clone().abs() < 1e-10 {
+                    // Only an exact zero is a division by zero. Treating
+                    // anything under 1e-10 as zero — which this did — turned
+                    // ordinary arithmetic on small numbers into #DIV/0!:
+                    // `0.03125 / 7^-12` is 432540225, not an error, and rates,
+                    // probabilities and scientific quantities live down there.
+                    if *b == 0.0 {
                         Err(ast::Error::Div0)
                     } else {
-                        Ok(a / b)
+                        let r = a / b;
+                        // A quotient too large for an f64 is #NUM!, the way
+                        // Excel reports an overflow.
+                        if r.is_finite() {
+                            Ok(r)
+                        } else {
+                            Err(ast::Error::Num)
+                        }
                     }
                 })
             };

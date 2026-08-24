@@ -4,10 +4,14 @@ use logisheets_parser::ast;
 pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
     match (lhs, rhs) {
         (Value::Blank, Value::Blank) => CompareResult::Equal,
+        // A blank compares as zero, so this is `0` against `num` and nothing
+        // else. The 1e-10 that used to be here made every number smaller than
+        // that equal to blank — `5e-11 = ""` came back TRUE — and the negative
+        // branch's `< 1e-10` was redundant besides, since every negative is.
         (Value::Blank, Value::Number(num)) => {
-            if *num > 0_f64 && *num > 1e-10 {
+            if *num > 0_f64 {
                 CompareResult::Less
-            } else if *num < 0_f64 && *num < 1e-10 {
+            } else if *num < 0_f64 {
                 CompareResult::Greater
             } else {
                 CompareResult::Equal
@@ -17,9 +21,9 @@ pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
         (Value::Blank, Value::Boolean(_)) => CompareResult::Less,
         (Value::Blank, Value::Error(e)) => CompareResult::Error(e.clone()),
         (Value::Number(num), Value::Blank) => {
-            if *num > 0_f64 && *num > 1e-10 {
+            if *num > 0_f64 {
                 CompareResult::Greater
-            } else if *num < 0_f64 && *num < 1e-10 {
+            } else if *num < 0_f64 {
                 CompareResult::Less
             } else {
                 CompareResult::Equal

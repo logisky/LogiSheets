@@ -2098,3 +2098,68 @@ fn test_unmodeled_parts_survive_a_save() {
     let mut again = saved.clone();
     Workbook::from_file(&mut again, String::from("wps2")).expect("reopen");
 }
+
+/// Dividing by a small number is division, not division by zero.
+///
+/// The divide operator treated anything under 1e-10 in magnitude as zero, so
+/// ordinary arithmetic on small quantities came back `#DIV/0!`. Rates,
+/// probabilities and any scientific measure live down there — proptest found it
+/// as `=(-(2^(-5)))/7^(-12)`, which is -432540225.03125 and not an error.
+///
+/// The same 1e-10 was in the blank-versus-number comparison, where it made
+/// every number smaller than that EQUAL to an empty cell.
+#[test]
+fn test_small_divisors_and_blank_comparisons() {
+    use logisheets::{Value, Workbook};
+
+    let mut wb = Workbook::default();
+    let eval = |wb: &mut Workbook, f: &str| -> Value {
+        use logisheets_controller::edit_action::{CellInput, EditPayload, PayloadsAction};
+        let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 20,
+                col: 20,
+                content: f.to_string(),
+            })],
+            undoable: true,
+            init: false,
+        }));
+        assert!(matches!(
+            r.status,
+            logisheets_controller::edit_action::StatusCode::Ok(_)
+        ));
+        wb.get_sheet_by_idx(0).unwrap().get_value(20, 20).unwrap()
+    };
+
+    // The case proptest shrank to.
+    let v = eval(&mut wb, "=(-(2^(-5)))/7^(-12)");
+    assert!(
+        matches!(v, Value::Number(n) if (n - -432540225.03125).abs() < 1e-4),
+        "expected -432540225.03125, got {:?}",
+        v
+    );
+    // A divisor far below the old cutoff.
+    let v = eval(&mut wb, "=1/0.00000000000001");
+    assert!(
+        matches!(v, Value::Number(n) if (n - 1e14).abs() < 1.0),
+        "got {:?}",
+        v
+    );
+    // Exact zero is still #DIV/0!.
+    let v = eval(&mut wb, "=1/0");
+    assert!(matches!(v, Value::Error(ref e) if e == "#DIV/0!"), "got {:?}", v);
+    // And an overflow is #NUM!, not infinity.
+    let v = eval(&mut wb, "=1E308/0.000000001");
+    assert!(matches!(v, Value::Error(ref e) if e == "#NUM!"), "got {:?}", v);
+
+    // A blank is zero, so a tiny positive number is greater than one — not
+    // equal to it.
+    let v = eval(&mut wb, "=A50=0.00000000005");
+    assert!(matches!(v, Value::Bool(false)), "blank should not equal 5e-11, got {:?}", v);
+    let v = eval(&mut wb, "=A50<0.00000000005");
+    assert!(matches!(v, Value::Bool(true)), "blank is less than 5e-11, got {:?}", v);
+    // A blank really does equal zero.
+    let v = eval(&mut wb, "=A50=0");
+    assert!(matches!(v, Value::Bool(true)), "got {:?}", v);
+}
