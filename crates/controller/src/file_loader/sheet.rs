@@ -385,6 +385,7 @@ pub fn load_preserved_parts(
     wp: &WorksheetPart,
     tables: &[logisheets_workbook::workbook::TablePart],
     pivot_tables: &[logisheets_workbook::workbook::PivotTablePart],
+    unknown_parts: &[logisheets_workbook::workbook::UnknownPart],
 ) {
     let parts = crate::settings::PreservedWorksheetParts {
         sheet_calc_pr: wp.sheet_calc_pr.clone(),
@@ -419,6 +420,7 @@ pub fn load_preserved_parts(
         tables: tables.to_vec(),
         // The engine has no model for a pivot table, so it travels whole.
         pivot_tables: pivot_tables.to_vec(),
+        unknown_parts: unknown_parts.to_vec(),
     };
     settings.preserved_parts.insert(sheet_id, parts);
 }

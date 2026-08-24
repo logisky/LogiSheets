@@ -1,6 +1,11 @@
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct RType<'a>(pub &'a str);
 
+/// A relationship type this crate does not model. Parts reached through one are
+/// carried as `UnknownPart`s, which keep their real type on the relationship
+/// itself; this stands in where an `RType` is structurally required.
+pub const UNMODELED: RType = RType("");
+
 pub const WORKBOOK: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument");
 pub const WORKSHEET: RType =

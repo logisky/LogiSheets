@@ -60,8 +60,38 @@ pub fn save_file(
     let mut navigator_replication = controller.status.navigator.clone();
     let block_schema_manager = &controller.status.block_schema_manager;
     let field_render_manager = &controller.status.field_render_manager;
+    let reserved_ids: std::collections::HashSet<String> = settings
+        .unknown_package_parts
+        .iter()
+        .chain(settings.unknown_workbook_parts.iter())
+        .chain(
+            settings
+                .preserved_parts
+                .values()
+                .flat_map(|p| p.unknown_parts.iter()),
+        )
+        .map(|u| u.rel.id.clone())
+        // Preserved parts are not the only ones that keep a source id: a pivot
+        // cache, a pivot table and a structured table all do, because the XML
+        // that references them names that id. `calc_test.xlsx` showed the
+        // consequence — a minted `rId4` landing on the pivot cache's.
+        .chain(settings.pivot_caches.iter().map(|c| c.rel_id.clone()))
+        .chain(
+            settings
+                .preserved_parts
+                .values()
+                .flat_map(|p| p.pivot_tables.iter().map(|t| t.rel_id.clone())),
+        )
+        .chain(
+            settings
+                .preserved_parts
+                .values()
+                .flat_map(|p| p.tables.iter().map(|t| t.rel_id.clone())),
+        )
+        .collect();
     let mut saver = Saver {
         part_count: 0,
+        reserved_ids,
         _external_count: 0,
         func_manager,
         range_manager,
@@ -111,6 +141,14 @@ pub trait SaverTrait: IndexFetcherTrait + NameFetcherTrait {
 
 pub struct Saver<'a> {
     pub part_count: u32,
+    /// Relationship ids that preserved parts already answer to.
+    ///
+    /// A part we do not model keeps the id it arrived with, because the XML that
+    /// references it says `r:id="…"` and renaming would break that. Minted ids
+    /// therefore have to step around them: two relationships sharing an Id makes
+    /// the package invalid, and it would only show up on a file whose vendor
+    /// part happened to be numbered the way we number ours.
+    pub reserved_ids: std::collections::HashSet<String>,
     pub _external_count: u32,
 
     pub func_manager: &'a FuncIdManager,
@@ -410,8 +448,13 @@ impl<'a> Saver<'a> {
 
 impl<'a> SaverTrait for Saver<'a> {
     fn fetch_part_id(&mut self) -> String {
-        self.part_count += 1;
-        format!("rId{}", self.part_count)
+        loop {
+            self.part_count += 1;
+            let candidate = format!("rId{}", self.part_count);
+            if !self.reserved_ids.contains(&candidate) {
+                return candidate;
+            }
+        }
     }
 
     fn fetch_row_id(&mut self, sheet_id: SheetId, idx: usize) -> RowId {

@@ -391,6 +391,7 @@ pub fn save_workbook<S: SaverTrait>(
     };
     let persons = save_persons(attachment_manager);
     let workbook = Wb {
+        unknown_parts: settings.unknown_package_parts.clone(),
         xl: Xl {
             workbook_part: get_workbook(ct_sheets, ct_references, settings),
             styles: (style_id, styles),
@@ -402,6 +403,7 @@ pub fn save_workbook<S: SaverTrait>(
             medias,
             // The engine does not yet model pivot caches; none emitted on save.
             pivot_caches: settings.pivot_caches.clone(),
+            unknown_parts: settings.unknown_workbook_parts.clone(),
         },
         // As they arrived, not `default()`: overwriting a file should not strip
         // its author and creation time.

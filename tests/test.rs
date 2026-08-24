@@ -2001,3 +2001,100 @@ fn test_pivot_table_and_cache_round_trip() {
         );
     }
 }
+
+/// A part reached by a relationship type nothing here models is kept, along with
+/// everything it references and its `[Content_Types].xml` entry.
+///
+/// `tests/7.xlsx` is a WPS workbook whose in-cell images live in a vendor
+/// extension: `xl/cellimages.xml` is a manifest, its own relationships name the
+/// eight media files, and the cells hold `_xlfn.DISPIMG(...)`. None of that is
+/// OOXML — the `_xlfn.` prefix is the producer saying so — and Excel does not
+/// render it either. Which is exactly why the reader used to no-op on the
+/// relationship and the writer emit nothing: a save deleted the manifest, its
+/// rels, and all eight images.
+///
+/// Preserving is not supporting. Nothing here understands the bytes and no
+/// renderer will show them; it only means a save is not a deletion.
+#[test]
+fn test_unmodeled_parts_survive_a_save() {
+    use logisheets::Workbook;
+    use std::fs;
+
+    let names = |bytes: &[u8]| -> Vec<String> {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        (0..zip.len())
+            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .collect()
+    };
+    let text_of = |bytes: &[u8], want: &str| -> String {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name() == want {
+                use std::io::Read;
+                let mut s = String::new();
+                let _ = f.read_to_string(&mut s);
+                return s;
+            }
+        }
+        String::new()
+    };
+
+    let mut buf = fs::read("tests/7.xlsx").unwrap();
+    let wb = Workbook::from_file(&mut buf, String::from("wps")).unwrap();
+    let saved = wb.save().expect("save");
+    let after = names(&saved);
+
+    for want in [
+        "xl/cellimages.xml",
+        "xl/_rels/cellimages.xml.rels",
+        "xl/media/image1.png",
+        "xl/media/image6.webp",
+        "xl/media/image8.png",
+    ] {
+        assert!(
+            after.iter().any(|n| n == want),
+            "{} should survive; got {:?}",
+            want,
+            after
+        );
+    }
+
+    // The vendor content type has to travel with the part: nothing can derive
+    // it from a relationship type.
+    let ct = text_of(&saved, "[Content_Types].xml");
+    assert!(
+        ct.contains("application/vnd.wps-officedocument.cellimage+xml"),
+        "the content type override should be carried: {}",
+        ct
+    );
+    // And the relationship that reached it, under its original id, because the
+    // manifest is referenced by that id.
+    let rels = text_of(&saved, "xl/_rels/workbook.xml.rels");
+    assert!(
+        rels.contains("cellimages.xml") && rels.contains("www.wps.cn"),
+        "the relationship should be re-attached: {}",
+        rels
+    );
+
+    // No two relationships may share an Id — preserved ids keep theirs, so ours
+    // step around them.
+    for part in ["xl/_rels/workbook.xml.rels", "xl/worksheets/_rels/sheet1.xml.rels"] {
+        let xml = text_of(&saved, part);
+        let mut ids: Vec<&str> = xml
+            .match_indices("Id=\"")
+            .map(|(at, _)| {
+                let rest = &xml[at + 4..];
+                &rest[..rest.find('"').unwrap_or(0)]
+            })
+            .collect();
+        let before = ids.len();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(before, ids.len(), "duplicate relationship id in {}", part);
+    }
+
+    // What we wrote has to be readable again.
+    let mut again = saved.clone();
+    Workbook::from_file(&mut again, String::from("wps2")).expect("reopen");
+}

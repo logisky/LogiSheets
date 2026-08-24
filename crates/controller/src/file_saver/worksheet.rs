@@ -163,6 +163,11 @@ fn save_worksheet<S: SaverTrait>(
         // arrived. Dropping it used to take the pivot out of the workbook while
         // leaving the cache it read from behind — half a feature is worse than
         // either whole one.
+        unknown_parts: settings
+            .preserved_parts
+            .get(&sheet_id)
+            .map(|p| p.unknown_parts.clone())
+            .unwrap_or_default(),
         pivot_tables: settings
             .preserved_parts
             .get(&sheet_id)

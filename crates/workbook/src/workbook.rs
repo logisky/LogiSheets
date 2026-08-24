@@ -24,6 +24,8 @@ pub struct Wb {
     pub xl: Xl,
     pub doc_props: DocProps,
     pub logisheets: Option<LogiSheetsData>,
+    /// Package-level parts reached by a relationship this crate does not model.
+    pub unknown_parts: Vec<UnknownPart>,
 }
 
 #[derive(Debug)]
@@ -43,6 +45,8 @@ pub struct Xl {
     /// `<pivotCaches>` element links each cache's `cacheId` to the `rel_id`
     /// here (see [`PivotCache`]).
     pub pivot_caches: Vec<PivotCache>,
+    /// Workbook-level parts reached by a relationship this crate does not model.
+    pub unknown_parts: Vec<UnknownPart>,
 }
 
 /// A pivot cache: a `pivotCacheDefinition` plus its (optional) `pivotCacheRecords`.
@@ -92,6 +96,8 @@ pub struct Worksheet {
     pub pivot_tables: Vec<PivotTablePart>,
     /// Structured tables (`ListObject`s) on this worksheet (`xl/tables/*`).
     pub tables: Vec<TablePart>,
+    /// Sheet-level parts reached by a relationship this crate does not model.
+    pub unknown_parts: Vec<UnknownPart>,
 }
 
 /// A structured table on a worksheet: the `CT_Table` plus the relationship id
@@ -121,6 +127,31 @@ pub struct PassthroughPart {
     /// The part's own relationships (may be empty), written to
     /// `<dir>/_rels/<file>.rels`.
     pub rels: Vec<CtRelationship>,
+}
+
+/// A part nothing in this crate models, kept whole so that saving a workbook
+/// does not delete it.
+///
+/// The reader is driven by relationships, and a relationship type it does not
+/// recognise used to be a no-op — which quietly dropped the part, everything the
+/// part referenced, and its `[Content_Types].xml` entry. That is how a workbook
+/// carrying a vendor extension (WPS in-cell images, say) came back with the
+/// extension and its media gone.
+///
+/// Preserving is not supporting: nothing here understands what the bytes mean,
+/// and no renderer will show them. It only means a save is not a deletion.
+#[derive(Debug, Clone)]
+pub struct UnknownPart {
+    /// The relationship that reached it, verbatim, so it can be re-attached to
+    /// whatever pointed at it.
+    pub rel: CtRelationship,
+    /// The part itself, plus everything it transitively references, each with
+    /// its own relationships.
+    pub parts: Vec<PassthroughPart>,
+    /// `[Content_Types].xml` entries these parts need. A vendor content type
+    /// cannot be derived from a relationship type, so it travels with the part.
+    pub overrides: Vec<crate::ooxml::content_types::CtOverride>,
+    pub defaults: Vec<crate::ooxml::content_types::CtDefault>,
 }
 
 /// A worksheet drawing part together with its relationships, which map the

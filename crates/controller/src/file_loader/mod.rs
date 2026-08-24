@@ -85,6 +85,8 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
     // The pivot caches are workbook-scoped; the tables that read them are kept
     // per sheet. Both have to survive or the pivot is broken either way round.
     settings.pivot_caches = wb.xl.pivot_caches.clone();
+    // Parts nothing here models, at both levels above the sheets.
+    settings.unknown_workbook_parts = wb.xl.unknown_parts.clone();
 
     // Everything in `workbook.xml` the controller has no opinion about, kept so
     // a save does not silently delete it. A defined name matters most of these:
@@ -114,7 +116,9 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         xl,
         doc_props,
         logisheets,
+        unknown_parts: package_unknown_parts,
     } = wb;
+    settings.unknown_package_parts = package_unknown_parts;
     // Authorship and timestamps arrived with the file; the saver used to write
     // `default()` over them.
     settings.doc_props = doc_props;
@@ -372,6 +376,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     &ws.worksheet_part,
                     &ws.tables,
                     &ws.pivot_tables,
+                    &ws.unknown_parts,
                 );
                 // Queue each structured table for table→block conversion (done
                 // after the load completes, once the container holds every cell).

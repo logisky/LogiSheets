@@ -12,7 +12,7 @@ pub struct ContentTypes {
     pub overides: Vec<CtOverride>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtDefault {
     #[xmlserde(name = b"Extension", ty = "attr")]
     pub extension: StExtension,
@@ -20,7 +20,7 @@ pub struct CtDefault {
     pub content_type: StContentType,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtOverride {
     #[xmlserde(name = b"PartName", ty = "attr")]
     pub part_name: String,

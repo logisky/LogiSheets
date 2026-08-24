@@ -44,6 +44,8 @@ pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
     let mut doc_prop_custom = Option::<DocPropCustom>::None;
     let mut doc_prop_app = Option::<DocPropApp>::None;
     let mut logisheets = Option::<LogiSheetsData>::None;
+    let mut unknown_parts = Vec::<crate::workbook::UnknownPart>::new();
+    let root_ctypes = ContentTypeIndex::read(&mut archive);
     relationships
         .relationships
         .into_iter()
@@ -96,7 +98,13 @@ pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
                     }
                 }
             }
-            _ => {}
+            // Package-level parts nothing here models — a thumbnail, a vendor
+            // extension — kept rather than dropped.
+            _ => {
+                if let Some(u) = collect_unknown_part(&p, root, &mut archive, &root_ctypes) {
+                    unknown_parts.push(u);
+                }
+            }
         });
     let xl = xl?;
     let doc_props = DocProps {
@@ -108,6 +116,7 @@ pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
         xl,
         doc_props,
         logisheets,
+        unknown_parts,
     })
 }
 
@@ -148,6 +157,8 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
     let mut persons = Option::<Persons>::None;
     let mut medias = Vec::<Media>::new();
     let mut pivot_caches = Vec::<crate::workbook::PivotCache>::new();
+    let mut unknown_parts = Vec::<crate::workbook::UnknownPart>::new();
+    let ctypes = ContentTypeIndex::read(archive);
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -261,7 +272,14 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
                     }
                 }
             }
-            _ => {}
+            // A relationship type this crate does not model. Rather than drop
+            // the part it points at — and everything that part references — keep
+            // the bytes so a save is not a deletion.
+            _ => {
+                if let Some(u) = collect_unknown_part(&r, rels, archive, &ctypes) {
+                    unknown_parts.push(u);
+                }
+            }
         });
     Ok(Xl {
         workbook_part,
@@ -273,6 +291,7 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
         persons,
         medias,
         pivot_caches,
+        unknown_parts,
     })
 }
 
@@ -287,6 +306,8 @@ fn de_worksheet<R: Read + Seek>(
     let mut drawing = Option::<WorksheetDrawing>::None;
     let mut pivot_tables = Vec::<crate::workbook::PivotTablePart>::new();
     let mut tables = Vec::<crate::workbook::TablePart>::new();
+    let mut unknown_parts = Vec::<crate::workbook::UnknownPart>::new();
+    let ctypes = ContentTypeIndex::read(archive);
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
@@ -302,6 +323,7 @@ fn de_worksheet<R: Read + Seek>(
             drawing,
             pivot_tables,
             tables,
+            unknown_parts,
         });
     }
     let relationships = result.unwrap();
@@ -373,7 +395,13 @@ fn de_worksheet<R: Read + Seek>(
                     }
                 }
             }
-            _ => {}
+            // Same as at the workbook level: an unmodeled relationship keeps
+            // its part instead of losing it.
+            _ => {
+                if let Some(u) = collect_unknown_part(&r, rels, archive, &ctypes) {
+                    unknown_parts.push(u);
+                }
+            }
         });
     Ok(Worksheet {
         worksheet_part,
@@ -382,6 +410,7 @@ fn de_worksheet<R: Read + Seek>(
         drawing,
         pivot_tables,
         tables,
+        unknown_parts,
     })
 }
 
@@ -475,6 +504,113 @@ fn read_chart_tree<R: Read + Seek>(
 }
 
 /// Read a single part's bytes plus its `_rels` (if present) verbatim.
+/// An index of `[Content_Types].xml`, so a preserved part can carry its own
+/// content type. A vendor extension declares one nothing can derive from a
+/// relationship type — `application/vnd.wps-officedocument.cellimage+xml`, for
+/// instance — and without it the written file has a part no reader will open.
+struct ContentTypeIndex {
+    overrides: std::collections::HashMap<String, String>,
+    defaults: std::collections::HashMap<String, String>,
+}
+
+impl ContentTypeIndex {
+    fn read<R: Read + Seek>(archive: &mut ZipArchive<R>) -> Self {
+        let mut overrides = std::collections::HashMap::new();
+        let mut defaults = std::collections::HashMap::new();
+        if let Ok(ct) = de_content_types("[Content_Types].xml", archive) {
+            for o in ct.overides.iter() {
+                overrides.insert(
+                    o.part_name.trim_start_matches('/').to_string(),
+                    o.content_type.clone(),
+                );
+            }
+            for d in ct.defaults.iter() {
+                defaults.insert(d.extension.to_ascii_lowercase(), d.content_type.clone());
+            }
+        }
+        ContentTypeIndex {
+            overrides,
+            defaults,
+        }
+    }
+}
+
+/// Everything reachable from a relationship this crate does not model, as raw
+/// bytes.
+///
+/// The walk is transitive because such a part's meaning usually lives in what it
+/// points at: WPS's `cellimages.xml` is a manifest whose own relationships name
+/// the eight images. Keeping the manifest and dropping the images would leave a
+/// file worse off than either extreme.
+fn collect_unknown_part<R: Read + Seek>(
+    rel: &crate::ooxml::relationships::CtRelationship,
+    owner_rels_path: &str,
+    archive: &mut ZipArchive<R>,
+    ctypes: &ContentTypeIndex,
+) -> Option<crate::workbook::UnknownPart> {
+    // An external target is a URL, not a part in this package.
+    if matches!(rel.target_mode, crate::ooxml::simple_types::StTargetMode::External) {
+        return None;
+    }
+    let root = get_target_abs_path(owner_rels_path, &rel.target)
+        .to_str()?
+        .to_string();
+    let mut parts = Vec::<PassthroughPart>::new();
+    let mut overrides = Vec::new();
+    let mut defaults = Vec::new();
+    let mut seen = std::collections::HashSet::<String>::new();
+    let mut queue = vec![root];
+    // A malformed package could cycle; the visited set stops that, and the cap
+    // stops a pathological fan-out from reading the whole archive.
+    while let Some(path) = queue.pop() {
+        if parts.len() >= 512 || !seen.insert(path.clone()) {
+            continue;
+        }
+        let Some(part) = read_passthrough_part(&path, crate::rtypes::UNMODELED, archive) else {
+            continue;
+        };
+        if let Some(ct) = ctypes.overrides.get(&path) {
+            overrides.push(crate::ooxml::content_types::CtOverride {
+                part_name: format!("/{}", path),
+                content_type: ct.clone(),
+            });
+        } else if let Some(ext) = path.rsplit('.').next() {
+            let ext = ext.to_ascii_lowercase();
+            if let Some(ct) = ctypes.defaults.get(&ext) {
+                defaults.push(crate::ooxml::content_types::CtDefault {
+                    extension: ext,
+                    content_type: ct.clone(),
+                });
+            }
+        }
+        if let Ok(rp) = get_rels(&path) {
+            if let Some(rp) = rp.to_str() {
+                for r in part.rels.iter() {
+                    if matches!(
+                        r.target_mode,
+                        crate::ooxml::simple_types::StTargetMode::External
+                    ) {
+                        continue;
+                    }
+                    if let Some(t) = get_target_abs_path(rp, &r.target).to_str() {
+                        queue.push(t.to_string());
+                    }
+                }
+            }
+        }
+        parts.push(part);
+    }
+    if parts.is_empty() {
+        return None;
+    }
+    Some(crate::workbook::UnknownPart {
+        rel: rel.clone(),
+        parts,
+        overrides,
+        defaults,
+    })
+}
+
 fn read_passthrough_part<R: Read + Seek>(
     path: &str,
     rtype: RType<'static>,
@@ -547,6 +683,10 @@ define_de_func!(
     crate::ooxml::pivot_table::PivotTableDefinition
 );
 define_de_func!(de_table, crate::ooxml::table::Table);
+define_de_func!(
+    de_content_types,
+    crate::ooxml::content_types::ContentTypes
+);
 
 /// Read a pivot cache: `pivotCacheDefinitionN.xml` plus (via its `.rels`) the
 /// `pivotCacheRecordsN.xml` it points to.
@@ -608,7 +748,7 @@ fn de_pivot_table<R: Read + Seek>(
 }
 
 /// Given a path `/foo/test.xml`, find its relationships `/foo/_rels/test.xml.rels`
-fn get_rels(path: &str) -> Result<PathBuf, SerdeErr> {
+pub(crate) fn get_rels(path: &str) -> Result<PathBuf, SerdeErr> {
     let p = PathBuf::from_str(path);
     if p.is_err() {
         return Err(SerdeErr::Custom(format!(
