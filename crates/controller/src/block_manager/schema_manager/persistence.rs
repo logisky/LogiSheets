@@ -100,7 +100,7 @@ pub fn load_schemas_for_sheet(
 ) {
     for x in rows {
         let block_id = x.block_id;
-        let name = x.name.clone();
+        let resolved = free_ref_name(&manager, x.name.clone(), block_id);
         let schema = RowSchema {
             fields: x
                 .fields
@@ -115,10 +115,10 @@ pub fn load_schemas_for_sheet(
                     )
                 })
                 .collect(),
-            name: x.name,
+            name: resolved.clone(),
             key: x.key as RowId,
         };
-        manager.refs.insert(name, (sheet_id, block_id));
+        manager.refs.insert(resolved, (sheet_id, block_id));
         manager
             .schemas
             .insert((sheet_id, block_id), Schema::RowSchema(schema));
@@ -126,7 +126,7 @@ pub fn load_schemas_for_sheet(
 
     for x in cols {
         let block_id = x.block_id;
-        let name = x.name.clone();
+        let resolved = free_ref_name(&manager, x.name.clone(), block_id);
         let schema = ColSchema {
             fields: x
                 .fields
@@ -141,10 +141,10 @@ pub fn load_schemas_for_sheet(
                     )
                 })
                 .collect(),
-            name: x.name,
+            name: resolved.clone(),
             key: x.key as ColId,
         };
-        manager.refs.insert(name, (sheet_id, block_id));
+        manager.refs.insert(resolved, (sheet_id, block_id));
         manager
             .schemas
             .insert((sheet_id, block_id), Schema::ColSchema(schema));
@@ -152,16 +152,16 @@ pub fn load_schemas_for_sheet(
 
     for x in randoms {
         let block_id = x.block_id;
-        let name = x.name.clone();
+        let resolved = free_ref_name(&manager, x.name.clone(), block_id);
         let schema = RandomSchema {
             key_field: x
                 .key_fields
                 .into_iter()
                 .map(|kf| (kf.key, kf.row as RowId, kf.col as ColId, kf.render_id))
                 .collect(),
-            name: x.name,
+            name: resolved.clone(),
         };
-        manager.refs.insert(name, (sheet_id, block_id));
+        manager.refs.insert(resolved, (sheet_id, block_id));
         manager
             .schemas
             .insert((sheet_id, block_id), Schema::RandomSchema(schema));
@@ -294,4 +294,28 @@ mod tests {
         let (rows, _, _) = schemas_to_xml(&manager, 1);
         assert_eq!(rows.len(), 1, "only sheet 1's schema should be projected");
     }
+}
+
+/// A ref name nothing else answers to yet.
+///
+/// The bind path rejects a name that is taken; a load cannot — refusing would
+/// make the file unopenable over something the file already contains. So a
+/// collision here is resolved by suffixing, which keeps the later block
+/// addressable instead of letting it silently steal the name and redirect every
+/// BLOCKREF that meant the first one.
+fn free_ref_name(
+    manager: &SchemaManager,
+    wanted: String,
+    block_id: logisheets_base::BlockId,
+) -> String {
+    if !manager.refs.contains_key(&wanted) {
+        return wanted;
+    }
+    let mut candidate = format!("{}-{}", wanted, block_id);
+    let mut n = 2;
+    while manager.refs.contains_key(&candidate) {
+        candidate = format!("{}-{}-{}", wanted, block_id, n);
+        n += 1;
+    }
+    candidate
 }

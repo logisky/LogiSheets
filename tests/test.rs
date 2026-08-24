@@ -1717,3 +1717,117 @@ fn test_block_is_saved_as_an_excel_table() {
         "and it keeps its name"
     );
 }
+
+/// A ref name addresses one block for the whole workbook, and the ENGINE has to
+/// say so — the tool layer refusing is not enough, since any host can send a
+/// `BindFormSchema` of its own.
+///
+/// Taking a name that is already spoken for used to overwrite the entry: the
+/// first block stayed on its sheet, looking fine, while every `BLOCKREF` naming
+/// it silently began resolving to the second one. Formulas that keep evaluating
+/// against the wrong data are the worst failure available.
+#[test]
+fn test_block_ref_name_is_unique_across_the_workbook() {
+    use logisheets::Workbook;
+    use logisheets_controller::edit_action::{
+        BindFormSchema, CreateBlock, CreateSheet, EditPayload, PayloadsAction, StatusCode,
+    };
+
+    let bind = |sheet_idx: usize, block_id: usize, name: &str| {
+        vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx,
+                id: block_id,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                sheet_idx,
+                block_id,
+                ref_name: name.into(),
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["k".into(), "v".into()],
+                render_ids: vec![format!("{}-0", name), format!("{}-1", name)],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+        ]
+    };
+
+    let mut wb = Workbook::default();
+    let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: {
+            let mut p = vec![EditPayload::CreateSheet(CreateSheet {
+                idx: 1,
+                new_name: "Second".into(),
+            })];
+            p.extend(bind(0, 1, "dup"));
+            p
+        },
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(r.status, StatusCode::Ok(_)), "{:?}", r.status);
+
+    // The same name, a different sheet and block: refused.
+    let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: bind(1, 2, "dup"),
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        !matches!(r.status, StatusCode::Ok(_)),
+        "a second block named \"dup\" should be refused, got {:?}",
+        r.status
+    );
+
+    // Rebinding the SAME block under the name it already has is not a clash —
+    // that is how a field gets renamed.
+    let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
+            sheet_idx: 0,
+            block_id: 1,
+            ref_name: "dup".into(),
+            field_from: 0,
+            key_idx: 0,
+            fields: vec!["k".into(), "value".into()],
+            render_ids: vec!["dup-0".into(), "dup-1".into()],
+            field_formulas: vec![],
+            validation_formulas: vec![],
+            editability_formulas: vec![],
+            row: true,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(r.status, StatusCode::Ok(_)),
+        "rebinding the same block should be allowed, got {:?}",
+        r.status
+    );
+
+    // And the name still points where it did.
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 1);
+    assert_eq!(blocks[0].schema.as_ref().unwrap().name, "dup");
+    let fields: Vec<&str> = blocks[0]
+        .schema
+        .as_ref()
+        .unwrap()
+        .fields
+        .iter()
+        .map(|f| f.field.as_str())
+        .collect();
+    assert_eq!(fields, vec!["k", "value"], "the rebind took effect");
+    assert!(
+        wb.get_sheet_by_idx(1).unwrap().get_all_blocks().is_empty(),
+        "the refused bind must not have left a block behind"
+    );
+}

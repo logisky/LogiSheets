@@ -213,6 +213,23 @@ impl BlockSchemaExecutor {
                         name: p.ref_name.clone(),
                     })
                 };
+                // A ref name addresses one block for the whole workbook. Taking
+                // one that is already spoken for used to overwrite the entry, so
+                // the first block stayed on the sheet but every BLOCKREF naming
+                // it silently began resolving to the second — formulas that kept
+                // evaluating, against the wrong data.
+                if let Some((owner_sheet, owner_block)) =
+                    manager.ref_name_owner(&p.ref_name)
+                {
+                    if (owner_sheet, owner_block) != (sheet_id, block_id) {
+                        return Err(BasicError::BlockRefNameTaken(
+                            p.ref_name.clone(),
+                            owner_sheet,
+                            owner_block,
+                        )
+                        .into());
+                    }
+                }
                 let old_schema = manager.schemas.get(&(sheet_id, block_id));
                 if old_schema.is_some() {
                     let old_ref = old_schema.unwrap().get_ref_name();
@@ -408,6 +425,23 @@ impl BlockSchemaExecutor {
                     key_field,
                     name: p.ref_name.clone(),
                 });
+                // A ref name addresses one block for the whole workbook. Taking
+                // one that is already spoken for used to overwrite the entry, so
+                // the first block stayed on the sheet but every BLOCKREF naming
+                // it silently began resolving to the second — formulas that kept
+                // evaluating, against the wrong data.
+                if let Some((owner_sheet, owner_block)) =
+                    manager.ref_name_owner(&p.ref_name)
+                {
+                    if (owner_sheet, owner_block) != (sheet_id, block_id) {
+                        return Err(BasicError::BlockRefNameTaken(
+                            p.ref_name.clone(),
+                            owner_sheet,
+                            owner_block,
+                        )
+                        .into());
+                    }
+                }
                 let old_schema = manager.schemas.get(&(sheet_id, block_id));
                 if old_schema.is_some() {
                     let old_ref = old_schema.unwrap().get_ref_name();
