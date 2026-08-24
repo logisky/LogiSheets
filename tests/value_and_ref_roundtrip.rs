@@ -57,12 +57,17 @@ fn every_value_kind_survives_a_round_trip() {
             "a string long enough to be worth a shared-string entry of its own",
             "Str(\"a string long enough to be worth a shared-string entry of its own\")",
         ),
-        // A typed string is TRIMMED on the way in — Excel keeps the space, we
-        // drop it — so the expectation here is what the engine does, not what
-        // Excel does. Recorded rather than left out: this is an input-path
-        // decision, not a round-trip loss, and the round trip is what is under
-        // test. The saved value keeps whatever survived the trim.
-        ("  padded  ", "Str(\"padded\")"),
+        // Whitespace at the ends is kept on a string, the way Excel keeps it,
+        // and it has to survive the file too — which takes `xml:space="preserve"`
+        // on the way out, the only thing that makes it significant in XML.
+        ("  padded  ", "Str(\"  padded  \")"),
+        ("trailing ", "Str(\"trailing \")"),
+        // But it decides nothing about WHICH kind a cell holds: a padded number
+        // is still a number and a padded TRUE is still a boolean.
+        (" 12 ", "Number(12.0)"),
+        (" true ", "Bool(true)"),
+        // A leading apostrophe forces text and is not part of it.
+        ("'0123", "Str(\"0123\")"),
         ("TRUE", "Bool(true)"),
         ("FALSE", "Bool(false)"),
         ("=1/0", "Error(\"#DIV/0!\")"),
@@ -457,5 +462,39 @@ fn a_structural_edit_is_saved_as_the_shifted_reference() {
         failures.len(),
         cases.len(),
         failures.join("\n  ")
+    );
+}
+
+/// The saved FILE has to say the whitespace is significant.
+///
+/// A value that reads back correctly through our own loader proves less than it
+/// looks: we would read a bare `<t>  padded  </t>` back intact, and Excel would
+/// not. `xml:space="preserve"` is the only thing that makes whitespace at the
+/// ends of an XML text element survive a conforming reader, so this looks at the
+/// bytes rather than at what we can parse.
+#[test]
+fn a_padded_string_is_saved_with_xml_space_preserve() {
+    use std::io::Read;
+
+    let mut wb = Workbook::default();
+    write(&mut wb, &[(0, 0, "  padded  "), (1, 0, "unpadded")]);
+    let saved = wb.save().expect("save");
+
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(saved)).expect("a zip");
+    let mut sst = String::new();
+    zip.by_name("xl/sharedStrings.xml")
+        .expect("a shared-string table")
+        .read_to_string(&mut sst)
+        .expect("readable");
+
+    assert!(
+        sst.contains(r#"<t xml:space="preserve">  padded  </t>"#),
+        "the padded string lost its marker, or its padding:\n{sst}"
+    );
+    // And not on strings that do not need it, which would be noise in every
+    // file we write.
+    assert!(
+        sst.contains("<t>unpadded</t>"),
+        "an unpadded string should be written plain:\n{sst}"
     );
 }

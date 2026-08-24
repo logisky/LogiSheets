@@ -272,20 +272,24 @@ impl CellValue {
     where
         F: FnMut(&str) -> TextId,
     {
-        let upper_text = text.to_uppercase();
-        let text = text.trim();
-        if text == "" {
+        // Whitespace at the ends decides nothing about WHICH kind this is —
+        // ` 12 ` is the number 12 and ` true ` is TRUE, the way Excel reads
+        // them — so the classification below looks at the trimmed text. But a
+        // string keeps what was typed. Trimming it here used to lose the space
+        // for good, several layers before anything could have made it
+        // significant again.
+        let trimmed = text.trim();
+        if trimmed.is_empty() {
             CellValue::Blank
-        } else if upper_text == "TRUE" {
+        } else if trimmed.eq_ignore_ascii_case("TRUE") {
             CellValue::Boolean(true)
-        } else if upper_text == "FALSE" {
+        } else if trimmed.eq_ignore_ascii_case("FALSE") {
             CellValue::Boolean(false)
-        } else if text.starts_with('\'') {
-            let mut chars = text.chars();
-            chars.next();
-            let text_id = text_id_fetcher(chars.as_str());
+        } else if let Some(rest) = text.strip_prefix('\'') {
+            // A leading apostrophe forces text, and is not part of it.
+            let text_id = text_id_fetcher(rest);
             CellValue::String(text_id)
-        } else if let Ok(n) = text.parse::<f64>() {
+        } else if let Ok(n) = trimmed.parse::<f64>() {
             CellValue::Number(n)
         } else {
             let tid = text_id_fetcher(&text);

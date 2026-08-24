@@ -10,19 +10,21 @@ pub fn unparse_cell(row: usize, col: usize) -> String {
     format!("{col_str}{}", row + 1)
 }
 
+/// Wrap a string as an XML text element, marking it `xml:space="preserve"` when
+/// it has whitespace at either end.
+///
+/// That attribute is the ONLY thing that makes leading or trailing whitespace
+/// significant in XML — without it a conforming reader is free to drop it, and
+/// Excel does. What stood here before both deleted the whitespace it was trying
+/// to protect (it wrote `trim_start`'s output as the value) and set the attribute
+/// to `"".repeat(n)`, which is the empty string for every n, so the marker said
+/// nothing. A string with a leading space did not survive being saved.
 pub fn convert_string_to_plain_text_string(raw_string: String) -> PlainTextString {
-    let s = raw_string.trim_start();
-
-    if s.len() == raw_string.len() {
-        PlainTextString {
-            value: raw_string,
-            space: None,
-        }
-    } else {
-        PlainTextString {
-            value: s.to_string(),
-            space: Some("".repeat(raw_string.len() - s.len()).to_string()),
-        }
+    let needs_preserve = raw_string.starts_with(char::is_whitespace)
+        || raw_string.ends_with(char::is_whitespace);
+    PlainTextString {
+        space: needs_preserve.then(|| String::from("preserve")),
+        value: raw_string,
     }
 }
 
