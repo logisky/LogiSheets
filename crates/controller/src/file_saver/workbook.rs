@@ -71,8 +71,14 @@ pub fn save_workbook<S: SaverTrait>(
     let mut table_names: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut table_id_counter: u32 = 0;
 
-    sheet_id_manager
-        .get_all_ids()
+    // In sheet ORDER, not hash order. `get_all_ids` walks a hash map, so which
+    // sheet was handed `rId1` changed from one save to the next — the file stayed
+    // internally consistent, but the output was not reproducible, and a
+    // preserved part that keeps the relationship id it arrived with has to be
+    // able to trust that minted ids are assigned predictably.
+    let mut ordered_sheet_ids = sheet_id_manager.get_all_ids();
+    ordered_sheet_ids.sort_by_key(|id| sheet_pos_manager.get_sheet_idx(id).unwrap_or(usize::MAX));
+    ordered_sheet_ids
         .into_iter()
         .flat_map(|id| {
             let default_container = crate::container::SheetDataContainer::default();

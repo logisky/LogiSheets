@@ -103,6 +103,12 @@ pub struct Settings {
     /// `UnknownPart`.
     pub unknown_package_parts: Vec<UnknownPart>,
     pub unknown_workbook_parts: Vec<UnknownPart>,
+    /// The `sheetId` attribute each sheet arrived with. It is Excel's stable
+    /// per-sheet identifier, and the save path used to write the sheet's
+    /// POSITION there instead — so a workbook whose sheets were 1, 2, 3 came
+    /// back as 0, 1, 2. A sheet created here has no arrival value and falls back
+    /// to `position + 1`, which is what Excel does.
+    pub sheet_ooxml_ids: HashMap<SheetId, u32>,
     /// `docProps/app.xml` and `docProps/core.xml` as they arrived. The loader
     /// discards their contents and the saver used to write `default()`, so
     /// authorship and timestamps were wiped on every save.
@@ -121,6 +127,7 @@ impl Default for Settings {
         Settings {
             preserved_workbook: PreservedWorkbookParts::default(),
             pivot_caches: Vec::new(),
+            sheet_ooxml_ids: HashMap::new(),
             unknown_package_parts: Vec::new(),
             unknown_workbook_parts: Vec::new(),
             doc_props: DocProps::default(),

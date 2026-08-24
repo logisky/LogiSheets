@@ -129,6 +129,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         let sheet_id = sheet_id_manager.get_or_register_id(sheet_name);
         navigator.add_sheet_id(&sheet_id);
         sheet_info_manager.pos.push_back(sheet_id);
+        settings.sheet_ooxml_ids.insert(sheet_id, ct_sheet.sheet_id);
         if ct_sheet.state != StSheetState::Visible {
             sheet_info_manager.hiddens.insert(sheet_id);
         }

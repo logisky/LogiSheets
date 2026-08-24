@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc cf697f1245804258c1cfbf15d6fb7831e00106275c961d4f54bec3c30de6a9e0 # shrinks to e = Bin(Div, Neg(Bin(Pow, Num(2), Neg(Num(5)))), Bin(Pow, Num(7), Neg(Num(12))))
+cc bc0cc186c0f3aab0584847eb0dbbd8d159d5f2eb877788b0fdd75759db60c80a # shrinks to e = Neg(Bin(Add, Call(Power, [Num(3), Dec { mantissa: 6461, scale: 1 }]), Num(1))), side = false
+cc 37a448cbcc11ca210e91210f748baf10e2edb0f95e0af73e69285a6d9639395b # shrinks to e = Bin(Add, Call(Min, [Call(Power, [Num(5), Bin(Add, Num(1), Dec { mantissa: 4401, scale: 1 })]), Num(1)]), Num(1))

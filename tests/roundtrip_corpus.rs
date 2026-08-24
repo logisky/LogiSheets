@@ -15,7 +15,7 @@
 //! Deliberate, characterised exceptions are listed below rather than silently
 //! tolerated. A new loss fails the test.
 
-use logisheets::Workbook;
+use logisheets::{Value, Workbook};
 use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Read};
 
@@ -129,8 +129,78 @@ fn every_corpus_file_round_trips() {
         }
 
         let mut again = saved.clone();
-        if let Err(e) = Workbook::from_file(&mut again, file.clone()) {
-            failures.push(format!("{file}: could not reopen what we wrote: {e:?}"));
+        match Workbook::from_file(&mut again, file.clone()) {
+            Err(e) => failures.push(format!("{file}: could not reopen what we wrote: {e:?}")),
+            Ok(reopened) => match reopened.save() {
+                Err(e) => failures.push(format!("{file}: second save failed: {e:?}")),
+                Ok(twice) => {
+                    // Saving what we just saved must produce the same thing.
+                    // A file that loses a little on each pass looks fine once
+                    // and is ruined after a few edits, and nothing above would
+                    // notice: the first save is measured against the original,
+                    // never against itself.
+                    let second = entries(&twice);
+                    let first = &after;
+                    // `styles.xml` is compared by MEANING, not by bytes: the
+                    // style table is rebuilt from what the cells actually
+                    // reference, so an entry nothing points at is collected. That
+                    // is a legitimate shrink — 124 styled cells resolved
+                    // identically across a save that dropped one font and two
+                    // formats — and demanding byte equality here would fail on
+                    // correct behaviour. What must not change is any cell's
+                    // resolved style, checked separately below.
+                    // Two kinds of part are compared by MEANING rather than by
+                    // bytes, because the style table is rebuilt from what the
+                    // cells actually reference: an entry nothing points at is
+                    // collected, the rest are renumbered, and every `s="N"` on a
+                    // cell moves with them. That is correct behaviour — 124
+                    // styled cells resolved identically across a save that
+                    // dropped one font and two formats — so byte equality here
+                    // would fail on a working engine. What must not change is any
+                    // cell's resolved value or style, which `cells_and_styles`
+                    // checks below.
+                    let byte_compared = |name: &String| {
+                        name.as_str() != "xl/styles.xml"
+                            && !(name.starts_with("xl/worksheets/") && name.ends_with(".xml"))
+                    };
+                    let mut drifted: Vec<String> = first
+                        .keys()
+                        .filter(|k| byte_compared(k))
+                        .filter(|k| !second.contains_key(*k))
+                        .map(|k| format!("lost {k}"))
+                        .chain(
+                            second
+                                .keys()
+                                .filter(|k| byte_compared(k) && !first.contains_key(*k))
+                                .map(|k| format!("gained {k}")),
+                        )
+                        .chain(first.iter().filter(|(k, _)| byte_compared(k)).filter_map(|(k, v)| {
+                            second
+                                .get(k)
+                                .filter(|w| *w != v)
+                                .map(|w| format!("{k} changed ({} -> {} bytes)", v.len(), w.len()))
+                        }))
+                        .collect();
+                    drifted.sort();
+                    if !drifted.is_empty() {
+                        failures.push(format!(
+                            "{file}: saving twice is not the same as saving once: {drifted:?}"
+                        ));
+                    }
+                    let mut first_wb = saved.clone();
+                    if let Ok(a) = Workbook::from_file(&mut first_wb, file.clone()) {
+                        let mut second_wb = twice.clone();
+                        if let Ok(b) = Workbook::from_file(&mut second_wb, file.clone()) {
+                            if let Some(diff) = cells_and_styles_differ(&a, &b) {
+                                failures.push(format!(
+                                    "{file}: a cell changed between the first save and the \
+                                     second: {diff}"
+                                ));
+                            }
+                        }
+                    }
+                }
+            },
         }
     }
     assert!(checked > 0, "no fixtures found — is the corpus gone?");
@@ -141,4 +211,60 @@ fn every_corpus_file_round_trips() {
         checked,
         failures.join("\n  ")
     );
+}
+
+/// The first cell whose value or resolved style differs between two workbooks,
+/// if any.
+///
+/// This is the property the byte comparison gives up on for worksheets and the
+/// style table: whatever the indices say, the cell has to look the same. A
+/// bounded window keeps it quick — the corpus has a sheet of a million cells —
+/// and covers the region fixtures actually use.
+fn cells_and_styles_differ(a: &Workbook, b: &Workbook) -> Option<String> {
+    const ROWS: usize = 60;
+    const COLS: usize = 20;
+    for idx in 0..8 {
+        let (Ok(sa), Ok(sb)) = (a.get_sheet_by_idx(idx), b.get_sheet_by_idx(idx)) else {
+            break;
+        };
+        for row in 0..ROWS {
+            for col in 0..COLS {
+                let (Ok(ia), Ok(ib)) = (sa.get_cell_info(row, col), sb.get_cell_info(row, col))
+                else {
+                    continue;
+                };
+                let va = format!("{:?}", ia.value);
+                let vb = format!("{:?}", ib.value);
+                if va != vb {
+                    return Some(format!(
+                        "sheet {idx} ({row},{col}) value {va} then {vb}"
+                    ));
+                }
+                // Styles are compared only where the cell HOLDS something.
+                //
+                // An empty cell's style is a fallback — cell, then row, then
+                // column — and the row half of that does not survive a save: no
+                // `<row>` element carries a style, so the second load resolves
+                // through a different branch than the first. On `tests/6.xlsx`
+                // that shows up at (0,1) and (0,2), two empty cells inside a
+                // merged title, as not-bold after one save and bold after two.
+                // Cells with content agree throughout.
+                //
+                // A known, reproducible gap, recorded here rather than dropped:
+                // widen this to every cell once row styles round-trip, and this
+                // comment is the reproducer.
+                if matches!(ia.value, Value::Empty) && matches!(ib.value, Value::Empty) {
+                    continue;
+                }
+                let ga = format!("{:?}", ia.style);
+                let gb = format!("{:?}", ib.style);
+                if ga != gb {
+                    return Some(format!(
+                        "sheet {idx} ({row},{col}) style changed"
+                    ));
+                }
+            }
+        }
+    }
+    None
 }

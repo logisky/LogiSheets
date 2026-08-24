@@ -57,7 +57,13 @@ pub fn save_sheets<S: SaverTrait>(
     let is_hidden = sheet_info_manager.is_hidden(&sheet_id);
     let ct_sheet = CtSheet {
         name: sheet_name,
-        sheet_id: pos as u32,
+        // Excel's own identifier, kept as it arrived. Writing the position here
+        // renumbered a workbook's sheets on every save.
+        sheet_id: settings
+            .sheet_ooxml_ids
+            .get(&sheet_id)
+            .copied()
+            .unwrap_or(pos as u32 + 1),
         state: if is_hidden {
             StSheetState::Hidden
         } else {
