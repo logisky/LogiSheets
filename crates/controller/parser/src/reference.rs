@@ -654,22 +654,29 @@ pub struct ReferencePrefix {
 }
 
 fn build_work_sheet_prefix(pair: Pair<Rule>) -> Option<ReferencePrefix> {
+    let raw = pair.as_str();
+    // Inside apostrophes, `''` stands for one apostrophe — the only way to write
+    // a name that contains the character that delimits it. The names below are
+    // pulled out by a regex that keeps whatever it matched, so without undoing
+    // the doubling here `'Bob''s Data'!A1` looks up a sheet literally called
+    // `Bob''s Data`, finds nothing, and resolves to `#REF!` — a formula the user
+    // typed correctly, refused. Outside apostrophes a doubled apostrophe is two
+    // apostrophes and is left alone.
+    let quoted = raw.starts_with('\'');
+    let unquote = |name: &str| {
+        if quoted {
+            name.replace("''", "'")
+        } else {
+            name.to_string()
+        }
+    };
     WORKSHEET_PREIFX_REGEX
-        .captures_iter(pair.as_str())
+        .captures_iter(raw)
         .next()
         .map_or(None, |c| {
-            let sheet = c.get(5).map_or(None, |m| {
-                let name = m.as_str();
-                Some(name.to_string())
-            })?;
-            let workbook = c.get(2).map_or(None, |m| {
-                let name = m.as_str();
-                Some(name.to_string())
-            });
-            let from_sheet = c.get(4).map_or(None, |m| {
-                let name = m.as_str();
-                Some(name.to_string())
-            });
+            let sheet = c.get(5).map(|m| unquote(m.as_str()))?;
+            let workbook = c.get(2).map(|m| unquote(m.as_str()));
+            let from_sheet = c.get(4).map(|m| unquote(m.as_str()));
             Some(ReferencePrefix {
                 sheet,
                 workbook,
