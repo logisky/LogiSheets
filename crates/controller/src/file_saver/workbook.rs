@@ -401,7 +401,7 @@ pub fn save_workbook<S: SaverTrait>(
             persons,
             medias,
             // The engine does not yet model pivot caches; none emitted on save.
-            pivot_caches: Vec::new(),
+            pivot_caches: settings.pivot_caches.clone(),
         },
         // As they arrived, not `default()`: overwriting a file should not strip
         // its author and creation time.

@@ -159,8 +159,15 @@ fn save_worksheet<S: SaverTrait>(
         // Cell images are attached later in `save_workbook`, which has the
         // navigator and image manager needed to resolve cell positions.
         drawing: None,
-        // The engine does not yet model pivot tables; none are emitted on save.
-        pivot_tables: Vec::new(),
+        // No model for a pivot table either, so it goes back exactly as it
+        // arrived. Dropping it used to take the pivot out of the workbook while
+        // leaving the cache it read from behind — half a feature is worse than
+        // either whole one.
+        pivot_tables: settings
+            .preserved_parts
+            .get(&sheet_id)
+            .map(|p| p.pivot_tables.clone())
+            .unwrap_or_default(),
         // Structured tables are handed back as they came in, so a file that
         // arrived with an Excel table still has one after a save. The engine
         // adopts them as blocks on load; that does not have to cost the

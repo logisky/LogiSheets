@@ -82,6 +82,10 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         settings.calc_config.error = calc_pr.iterate_delta as f32;
     }
 
+    // The pivot caches are workbook-scoped; the tables that read them are kept
+    // per sheet. Both have to survive or the pivot is broken either way round.
+    settings.pivot_caches = wb.xl.pivot_caches.clone();
+
     // Everything in `workbook.xml` the controller has no opinion about, kept so
     // a save does not silently delete it. A defined name matters most of these:
     // a formula can reference one, so dropping it turns a working workbook into
@@ -362,7 +366,13 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                 // open→save doesn't drop them. `<tableParts>` is intentionally NOT
                 // preserved: we convert every `<table>` into a block below and never
                 // author a `tableN.xml`, so a retained reference would dangle.
-                load_preserved_parts(&mut settings, sheet_id, &ws.worksheet_part, &ws.tables);
+                load_preserved_parts(
+                    &mut settings,
+                    sheet_id,
+                    &ws.worksheet_part,
+                    &ws.tables,
+                    &ws.pivot_tables,
+                );
                 // Queue each structured table for table→block conversion (done
                 // after the load completes, once the container holds every cell).
                 for tp in ws.tables.iter() {

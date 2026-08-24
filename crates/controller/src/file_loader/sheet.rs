@@ -384,6 +384,7 @@ pub fn load_preserved_parts(
     sheet_id: SheetId,
     wp: &WorksheetPart,
     tables: &[logisheets_workbook::workbook::TablePart],
+    pivot_tables: &[logisheets_workbook::workbook::PivotTablePart],
 ) {
     let parts = crate::settings::PreservedWorksheetParts {
         sheet_calc_pr: wp.sheet_calc_pr.clone(),
@@ -416,6 +417,8 @@ pub fn load_preserved_parts(
         // is what lets Excel still see a table on the way back out.
         table_parts: wp.table_parts.clone(),
         tables: tables.to_vec(),
+        // The engine has no model for a pivot table, so it travels whole.
+        pivot_tables: pivot_tables.to_vec(),
     };
     settings.preserved_parts.insert(sheet_id, parts);
 }

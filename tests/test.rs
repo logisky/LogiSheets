@@ -1550,7 +1550,7 @@ fn test_excel_table_round_trips_as_a_named_block() {
     use std::fs;
 
     let mut buf = fs::read("tests/table.xlsx").unwrap();
-    let mut wb = Workbook::from_file(&mut buf, String::from("table")).unwrap();
+    let wb = Workbook::from_file(&mut buf, String::from("table")).unwrap();
 
     // Adopted under the table's own name, with its column headers as fields.
     let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
@@ -1946,4 +1946,58 @@ fn test_chart_from_a_default_namespace_drawing_round_trips() {
         "with the size intact: {}",
         &drawing[..drawing.len().min(300)]
     );
+}
+
+
+
+
+/// A pivot table and the cache it reads from both come back.
+///
+/// Neither was written on save, so a workbook arrived with a pivot and left
+/// without one. Fixing that exposed the reason the chain could not have worked
+/// anyway: `CtPivotCaches` declared its child element as `pivot_cache`, and
+/// OOXML spells it `pivotCache`. The wrapper matched, its contents never did, so
+/// the list was always empty — which left the writer unable to say which cache a
+/// pivot table reads and so unable to write the table's relationship file.
+///
+/// Seven more element names had the same snake_case slip; `textRotation` is the
+/// one a person would notice, since a rotated cell came back straight.
+#[test]
+fn test_pivot_table_and_cache_round_trip() {
+    use logisheets::Workbook;
+    use std::fs;
+
+    let parts = |bytes: &[u8]| -> Vec<String> {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        (0..zip.len())
+            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .filter(|n| n.contains("pivot"))
+            .collect()
+    };
+
+    let mut buf = fs::read("tests/calc_test.xlsx").unwrap();
+    let before = parts(&buf);
+    assert!(
+        before.iter().any(|p| p.contains("pivotTables/pivotTable")),
+        "fixture should have a pivot table, got {:?}",
+        before
+    );
+
+    let wb = Workbook::from_file(&mut buf, String::from("pv")).unwrap();
+    let saved = wb.save().expect("save");
+    let after = parts(&saved);
+
+    for want in [
+        "xl/pivotTables/pivotTable1.xml",
+        "xl/pivotTables/_rels/pivotTable1.xml.rels",
+        "xl/pivotCache/pivotCacheDefinition1.xml",
+        "xl/pivotCache/pivotCacheRecords1.xml",
+    ] {
+        assert!(
+            after.iter().any(|p| p == want),
+            "{} should be written back; got {:?}",
+            want,
+            after
+        );
+    }
 }

@@ -11,7 +11,7 @@ use logisheets_workbook::prelude::{
     CtSmartTagTypes, CtSmartTags, CtSortState, CtTableParts, CtWebPublishing,
     CtWebPublishItems, CtWorkbookPr, CtWorkbookProtection,
 };
-use logisheets_workbook::workbook::{DocProps, TablePart};
+use logisheets_workbook::workbook::{DocProps, PivotCache, PivotTablePart, TablePart};
 
 use crate::theme_manager::ThemeManager;
 
@@ -51,6 +51,10 @@ pub struct PreservedWorksheetParts {
     /// have to be kept or neither: the reference alone would dangle, which is
     /// why this used to be dropped outright.
     pub tables: Vec<TablePart>,
+    /// Pivot tables anchored on this sheet (`xl/pivotTables/*`). No model for
+    /// one either, so it travels whole. Dropping it took the pivot out of the
+    /// workbook while leaving the cache it read from behind.
+    pub pivot_tables: Vec<PivotTablePart>,
 }
 
 /// Workbook-level OOXML the controller does not model, preserved verbatim
@@ -87,6 +91,9 @@ pub struct Settings {
     pub preserved_parts: HashMap<SheetId, PreservedWorksheetParts>,
     /// Workbook-level passthrough of the same kind.
     pub preserved_workbook: PreservedWorkbookParts,
+    /// Workbook-scoped pivot caches (`xl/pivotCache/*`), the data side of the
+    /// pivot tables preserved per sheet.
+    pub pivot_caches: Vec<PivotCache>,
     /// `docProps/app.xml` and `docProps/core.xml` as they arrived. The loader
     /// discards their contents and the saver used to write `default()`, so
     /// authorship and timestamps were wiped on every save.
@@ -104,6 +111,7 @@ impl Default for Settings {
         let afuncs = vec!["BAIDUHOTSEARCH".to_string()];
         Settings {
             preserved_workbook: PreservedWorkbookParts::default(),
+            pivot_caches: Vec::new(),
             doc_props: DocProps::default(),
             sheet_format_pr,
             calc_config,
