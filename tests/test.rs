@@ -1531,3 +1531,638 @@ fn reads_and_computes_a_workbook_openpyxl_wrote() {
         other => panic!("B21 should be a number, got {:?}", other),
     }
 }
+
+/// An Excel table arrives, becomes an addressable block under its own name, and
+/// is still a table on the way out — with its range following the block.
+///
+/// The loader has always adopted a `<table>` as a block, which is the useful
+/// half. The other half was missing: the block was named `unspecified-<id>`
+/// rather than the table's own `displayName`, so a formula could not name it
+/// without looking the number up first; and the `tableN.xml` part was dropped on
+/// save, so a file that arrived with a table came back without one.
+///
+/// Keeping the part means keeping its range honest, which is why the growth case
+/// is asserted here too: a preserved `ref` would otherwise describe where the
+/// data used to be.
+#[test]
+fn test_excel_table_round_trips_as_a_named_block() {
+    use logisheets::{Workbook, Value};
+    use std::fs;
+
+    let mut buf = fs::read("tests/table.xlsx").unwrap();
+    let wb = Workbook::from_file(&mut buf, String::from("table")).unwrap();
+
+    // Adopted under the table's own name, with its column headers as fields.
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 1, "the table should have become one block");
+    let schema = blocks[0].schema.as_ref().expect("the block has a schema");
+    assert_eq!(schema.name, "Sales", "named after the table, not a serial");
+    let fields: Vec<&str> = schema.fields.iter().map(|f| f.field.as_str()).collect();
+    assert_eq!(fields, vec!["region", "q1", "q2", "total"]);
+
+    // The table's own formulas are alive: D4 is south's total.
+    let v = wb.get_sheet_by_idx(0).unwrap().get_value(2, 3).unwrap();
+    assert!(
+        matches!(v, Value::Number(n) if (n - 38.0).abs() < 1e-9),
+        "20 + 18, computed by the engine; got {:?}",
+        v
+    );
+
+    let table_ref = |bytes: &[u8]| -> String {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name().starts_with("xl/tables/") && f.name().ends_with(".xml") {
+                use std::io::Read;
+                let mut s = String::new();
+                f.read_to_string(&mut s).unwrap();
+                let at = s.find("<table ").expect("a table element");
+                let rest = &s[at..];
+                let r = rest.find("ref=\"").expect("a ref") + 5;
+                let end = rest[r..].find('"').unwrap();
+                return rest[r..r + end].to_string();
+            }
+        }
+        String::from("no table part")
+    };
+
+    // Saved back with the table intact, over the same range.
+    let saved = wb.save().expect("save");
+    assert_eq!(table_ref(&saved), "A1:D4");
+
+    // Grow the block; the table's range follows.
+    let mut wb = Workbook::from_file(&mut buf, String::from("table2")).unwrap();
+    let result = wb.handle_action(logisheets::EditAction::Payloads(
+        logisheets_controller::edit_action::PayloadsAction {
+            payloads: vec![logisheets_controller::edit_action::EditPayload::InsertRowsInBlock(
+                logisheets_controller::edit_action::InsertRowsInBlock {
+                    sheet_idx: 0,
+                    block_id: blocks[0].block_id,
+                    start: 3,
+                    cnt: 1,
+                },
+            )],
+            undoable: true,
+            init: false,
+        },
+    ));
+    assert!(matches!(
+        result.status,
+        logisheets_controller::edit_action::StatusCode::Ok(_)
+    ));
+    let grown = wb.save().expect("save after growth");
+    assert_eq!(
+        table_ref(&grown),
+        "A1:D5",
+        "a preserved range would still say A1:D4 and stop short of the new row"
+    );
+}
+
+/// A block is written out as an Excel table, so a person opening the file gets a
+/// real ListObject over the rows the agent addresses by name.
+///
+/// The two carriers compose: the table describes the shape (name, columns,
+/// extent), `logisheets/data.xml` describes the semantics (field rules, key
+/// column, render ids). Reloading must therefore produce ONE block, not two —
+/// and the shape alone has to be enough when the app data is absent, which is
+/// what another tool, or an older build, would leave behind.
+#[test]
+fn test_block_is_saved_as_an_excel_table() {
+    use logisheets::Workbook;
+    use logisheets_controller::edit_action::{
+        BindFormSchema, BlockInput, CreateBlock, EditPayload, PayloadsAction, StatusCode,
+    };
+
+    let mut wb = Workbook::default();
+    let result = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: 1,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                sheet_idx: 0,
+                block_id: 1,
+                ref_name: "sales".into(),
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["region".into(), "amount".into()],
+                render_ids: vec!["r0".into(), "r1".into()],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 0,
+                col: 0,
+                input: "north".into(),
+            }),
+            EditPayload::BlockInput(BlockInput {
+                sheet_idx: 0,
+                block_id: 1,
+                row: 1,
+                col: 0,
+                input: "south".into(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(result.status, StatusCode::Ok(_)));
+
+    let saved = wb.save().expect("save");
+    let part = {
+        let mut zip =
+            zip::ZipArchive::new(std::io::Cursor::new(saved.clone())).expect("a zip");
+        let mut found = String::new();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name().starts_with("xl/tables/") && f.name().ends_with(".xml") {
+                use std::io::Read;
+                f.read_to_string(&mut found).unwrap();
+            }
+        }
+        found
+    };
+    assert!(
+        part.contains("displayName=\"sales\""),
+        "the block should be a table named after its ref: {}",
+        part
+    );
+    // No header row in the sheet — a block's field names live in its schema —
+    // so the table carries them as column names, the way Excel stores a table
+    // created without headers.
+    assert!(part.contains("headerRowCount=\"0\""), "{}", part);
+    assert!(part.contains("name=\"region\""), "{}", part);
+    assert!(part.contains("ref=\"A1:B2\""), "{}", part);
+
+    // Reload: exactly one block, not one from the table and another from the
+    // app data.
+    let mut bytes = saved.clone();
+    let reopened = Workbook::from_file(&mut bytes, String::from("again")).expect("reopen");
+    let blocks = reopened.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 1, "the table and the app data are one block");
+    assert_eq!(
+        blocks[0].schema.as_ref().unwrap().name,
+        "sales",
+        "and it keeps its name"
+    );
+}
+
+/// A ref name addresses one block for the whole workbook, and the ENGINE has to
+/// say so — the tool layer refusing is not enough, since any host can send a
+/// `BindFormSchema` of its own.
+///
+/// Taking a name that is already spoken for used to overwrite the entry: the
+/// first block stayed on its sheet, looking fine, while every `BLOCKREF` naming
+/// it silently began resolving to the second one. Formulas that keep evaluating
+/// against the wrong data are the worst failure available.
+#[test]
+fn test_block_ref_name_is_unique_across_the_workbook() {
+    use logisheets::Workbook;
+    use logisheets_controller::edit_action::{
+        BindFormSchema, CreateBlock, CreateSheet, EditPayload, PayloadsAction, StatusCode,
+    };
+
+    let bind = |sheet_idx: usize, block_id: usize, name: &str| {
+        vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx,
+                id: block_id,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                sheet_idx,
+                block_id,
+                ref_name: name.into(),
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["k".into(), "v".into()],
+                render_ids: vec![format!("{}-0", name), format!("{}-1", name)],
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+                row: true,
+            }),
+        ]
+    };
+
+    let mut wb = Workbook::default();
+    let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: {
+            let mut p = vec![EditPayload::CreateSheet(CreateSheet {
+                idx: 1,
+                new_name: "Second".into(),
+            })];
+            p.extend(bind(0, 1, "dup"));
+            p
+        },
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(r.status, StatusCode::Ok(_)), "{:?}", r.status);
+
+    // The same name, a different sheet and block: refused.
+    let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: bind(1, 2, "dup"),
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        !matches!(r.status, StatusCode::Ok(_)),
+        "a second block named \"dup\" should be refused, got {:?}",
+        r.status
+    );
+
+    // Rebinding the SAME block under the name it already has is not a clash —
+    // that is how a field gets renamed.
+    let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
+            sheet_idx: 0,
+            block_id: 1,
+            ref_name: "dup".into(),
+            field_from: 0,
+            key_idx: 0,
+            fields: vec!["k".into(), "value".into()],
+            render_ids: vec!["dup-0".into(), "dup-1".into()],
+            field_formulas: vec![],
+            validation_formulas: vec![],
+            editability_formulas: vec![],
+            row: true,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(r.status, StatusCode::Ok(_)),
+        "rebinding the same block should be allowed, got {:?}",
+        r.status
+    );
+
+    // And the name still points where it did.
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 1);
+    assert_eq!(blocks[0].schema.as_ref().unwrap().name, "dup");
+    let fields: Vec<&str> = blocks[0]
+        .schema
+        .as_ref()
+        .unwrap()
+        .fields
+        .iter()
+        .map(|f| f.field.as_str())
+        .collect();
+    assert_eq!(fields, vec!["k", "value"], "the rebind took effect");
+    assert!(
+        wb.get_sheet_by_idx(1).unwrap().get_all_blocks().is_empty(),
+        "the refused bind must not have left a block behind"
+    );
+}
+
+/// A chart anchored with `oneCellAnchor` — one corner plus a size — comes back
+/// as one, with its size intact.
+///
+/// Only `twoCellAnchor` used to be modeled, so such a chart was skipped on load
+/// without a word and vanished on save. Giving it a synthesised second corner
+/// would have been worse than skipping: the invented corner would drift the
+/// first time a row was inserted between it and the anchor.
+#[test]
+fn test_one_cell_anchor_chart_round_trips() {
+    use logisheets::Workbook;
+    use std::fs;
+
+    let anchors = |bytes: &[u8]| -> (String, String) {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name() == "xl/drawings/drawing1.xml" {
+                use std::io::Read;
+                let mut s = String::new();
+                f.read_to_string(&mut s).unwrap();
+                let kind = if s.contains("oneCellAnchor") {
+                    "oneCellAnchor"
+                } else if s.contains("twoCellAnchor") {
+                    "twoCellAnchor"
+                } else {
+                    "none"
+                };
+                let ext = s
+                    .find("<xdr:ext ")
+                    .map(|at| s[at..].split('>').next().unwrap_or("").to_string())
+                    .unwrap_or_default();
+                return (kind.to_string(), ext);
+            }
+        }
+        (String::from("no drawing"), String::new())
+    };
+
+    let mut buf = fs::read("tests/one_cell_anchor.xlsx").unwrap();
+    let before = anchors(&buf);
+    assert_eq!(before.0, "oneCellAnchor", "fixture sanity");
+
+    let wb = Workbook::from_file(&mut buf, String::from("one")).unwrap();
+    let saved = wb.save().expect("save");
+    let after = anchors(&saved);
+    assert_eq!(
+        after.0, "oneCellAnchor",
+        "the anchor kind is kept, not converted"
+    );
+    assert!(
+        after.1.contains(r#"cx="5400000""#) && after.1.contains(r#"cy="2700000""#),
+        "the size should survive verbatim, got {:?}",
+        after.1
+    );
+}
+
+/// The same chart from a producer that binds the drawing namespaces as the
+/// DEFAULT rather than as `xdr:` / `c:` prefixes.
+///
+/// The prefix is a binding the producer chose, not part of an element's
+/// identity, but names here are matched literally — so every anchor in such a
+/// file was invisible and the chart was dropped in silence, whatever its anchor
+/// kind. The `alias` attribute (xmlserde 0.14) is what lets one declaration
+/// answer to both spellings; this fixture is written by openpyxl, which does it
+/// the unprefixed way.
+#[test]
+fn test_chart_from_a_default_namespace_drawing_round_trips() {
+    use logisheets::Workbook;
+    use std::fs;
+
+    let mut buf = fs::read("tests/default_ns_drawing.xlsx").unwrap();
+    // Sanity: the fixture really is the unprefixed shape.
+    {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(buf.clone())).unwrap();
+        let mut found = String::new();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name() == "xl/drawings/drawing1.xml" {
+                use std::io::Read;
+                f.read_to_string(&mut found).unwrap();
+            }
+        }
+        assert!(
+            found.contains("<oneCellAnchor") && !found.contains("<xdr:oneCellAnchor"),
+            "fixture should be unprefixed"
+        );
+    }
+
+    let wb = Workbook::from_file(&mut buf, String::from("dn")).unwrap();
+    let saved = wb.save().expect("save");
+
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(saved)).unwrap();
+    let mut drawing = String::new();
+    let mut has_chart_part = false;
+    for i in 0..zip.len() {
+        let mut f = zip.by_index(i).unwrap();
+        if f.name() == "xl/drawings/drawing1.xml" {
+            use std::io::Read;
+            f.read_to_string(&mut drawing).unwrap();
+        }
+        if f.name().starts_with("xl/charts/") && f.name().ends_with(".xml") {
+            has_chart_part = true;
+        }
+    }
+    assert!(has_chart_part, "the chart part should be written back");
+    assert!(
+        drawing.contains("<xdr:oneCellAnchor"),
+        "and its anchor kind kept — written under our own prefix: {}",
+        &drawing[..drawing.len().min(200)]
+    );
+    assert!(
+        drawing.contains(r#"cx="5400000""#),
+        "with the size intact: {}",
+        &drawing[..drawing.len().min(300)]
+    );
+}
+
+
+
+
+/// A pivot table and the cache it reads from both come back.
+///
+/// Neither was written on save, so a workbook arrived with a pivot and left
+/// without one. Fixing that exposed the reason the chain could not have worked
+/// anyway: `CtPivotCaches` declared its child element as `pivot_cache`, and
+/// OOXML spells it `pivotCache`. The wrapper matched, its contents never did, so
+/// the list was always empty — which left the writer unable to say which cache a
+/// pivot table reads and so unable to write the table's relationship file.
+///
+/// Seven more element names had the same snake_case slip; `textRotation` is the
+/// one a person would notice, since a rotated cell came back straight.
+#[test]
+fn test_pivot_table_and_cache_round_trip() {
+    use logisheets::Workbook;
+    use std::fs;
+
+    let parts = |bytes: &[u8]| -> Vec<String> {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        (0..zip.len())
+            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .filter(|n| n.contains("pivot"))
+            .collect()
+    };
+
+    let mut buf = fs::read("tests/calc_test.xlsx").unwrap();
+    let before = parts(&buf);
+    assert!(
+        before.iter().any(|p| p.contains("pivotTables/pivotTable")),
+        "fixture should have a pivot table, got {:?}",
+        before
+    );
+
+    let wb = Workbook::from_file(&mut buf, String::from("pv")).unwrap();
+    let saved = wb.save().expect("save");
+    let after = parts(&saved);
+
+    for want in [
+        "xl/pivotTables/pivotTable1.xml",
+        "xl/pivotTables/_rels/pivotTable1.xml.rels",
+        "xl/pivotCache/pivotCacheDefinition1.xml",
+        "xl/pivotCache/pivotCacheRecords1.xml",
+    ] {
+        assert!(
+            after.iter().any(|p| p == want),
+            "{} should be written back; got {:?}",
+            want,
+            after
+        );
+    }
+}
+
+/// A part reached by a relationship type nothing here models is kept, along with
+/// everything it references and its `[Content_Types].xml` entry.
+///
+/// `tests/7.xlsx` is a WPS workbook whose in-cell images live in a vendor
+/// extension: `xl/cellimages.xml` is a manifest, its own relationships name the
+/// eight media files, and the cells hold `_xlfn.DISPIMG(...)`. None of that is
+/// OOXML — the `_xlfn.` prefix is the producer saying so — and Excel does not
+/// render it either. Which is exactly why the reader used to no-op on the
+/// relationship and the writer emit nothing: a save deleted the manifest, its
+/// rels, and all eight images.
+///
+/// Preserving is not supporting. Nothing here understands the bytes and no
+/// renderer will show them; it only means a save is not a deletion.
+#[test]
+fn test_unmodeled_parts_survive_a_save() {
+    use logisheets::Workbook;
+    use std::fs;
+
+    let names = |bytes: &[u8]| -> Vec<String> {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        (0..zip.len())
+            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .collect()
+    };
+    let text_of = |bytes: &[u8], want: &str| -> String {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
+        for i in 0..zip.len() {
+            let mut f = zip.by_index(i).unwrap();
+            if f.name() == want {
+                use std::io::Read;
+                let mut s = String::new();
+                let _ = f.read_to_string(&mut s);
+                return s;
+            }
+        }
+        String::new()
+    };
+
+    let mut buf = fs::read("tests/7.xlsx").unwrap();
+    let wb = Workbook::from_file(&mut buf, String::from("wps")).unwrap();
+    let saved = wb.save().expect("save");
+    let after = names(&saved);
+
+    for want in [
+        "xl/cellimages.xml",
+        "xl/_rels/cellimages.xml.rels",
+        "xl/media/image1.png",
+        "xl/media/image6.webp",
+        "xl/media/image8.png",
+    ] {
+        assert!(
+            after.iter().any(|n| n == want),
+            "{} should survive; got {:?}",
+            want,
+            after
+        );
+    }
+
+    // The vendor content type has to travel with the part: nothing can derive
+    // it from a relationship type.
+    let ct = text_of(&saved, "[Content_Types].xml");
+    assert!(
+        ct.contains("application/vnd.wps-officedocument.cellimage+xml"),
+        "the content type override should be carried: {}",
+        ct
+    );
+    // And the relationship that reached it, under its original id, because the
+    // manifest is referenced by that id.
+    let rels = text_of(&saved, "xl/_rels/workbook.xml.rels");
+    assert!(
+        rels.contains("cellimages.xml") && rels.contains("www.wps.cn"),
+        "the relationship should be re-attached: {}",
+        rels
+    );
+
+    // No two relationships may share an Id — preserved ids keep theirs, so ours
+    // step around them.
+    for part in ["xl/_rels/workbook.xml.rels", "xl/worksheets/_rels/sheet1.xml.rels"] {
+        let xml = text_of(&saved, part);
+        let mut ids: Vec<&str> = xml
+            .match_indices("Id=\"")
+            .map(|(at, _)| {
+                let rest = &xml[at + 4..];
+                &rest[..rest.find('"').unwrap_or(0)]
+            })
+            .collect();
+        let before = ids.len();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(before, ids.len(), "duplicate relationship id in {}", part);
+    }
+
+    // What we wrote has to be readable again.
+    let mut again = saved.clone();
+    Workbook::from_file(&mut again, String::from("wps2")).expect("reopen");
+}
+
+/// Dividing by a small number is division, not division by zero.
+///
+/// The divide operator treated anything under 1e-10 in magnitude as zero, so
+/// ordinary arithmetic on small quantities came back `#DIV/0!`. Rates,
+/// probabilities and any scientific measure live down there — proptest found it
+/// as `=(-(2^(-5)))/7^(-12)`, which is -432540225.03125 and not an error.
+///
+/// The same 1e-10 was in the blank-versus-number comparison, where it made
+/// every number smaller than that EQUAL to an empty cell.
+#[test]
+fn test_small_divisors_and_blank_comparisons() {
+    use logisheets::{Value, Workbook};
+
+    let mut wb = Workbook::default();
+    let eval = |wb: &mut Workbook, f: &str| -> Value {
+        use logisheets_controller::edit_action::{CellInput, EditPayload, PayloadsAction};
+        let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 20,
+                col: 20,
+                content: f.to_string(),
+            })],
+            undoable: true,
+            init: false,
+        }));
+        assert!(matches!(
+            r.status,
+            logisheets_controller::edit_action::StatusCode::Ok(_)
+        ));
+        wb.get_sheet_by_idx(0).unwrap().get_value(20, 20).unwrap()
+    };
+
+    // The case proptest shrank to.
+    let v = eval(&mut wb, "=(-(2^(-5)))/7^(-12)");
+    assert!(
+        matches!(v, Value::Number(n) if (n - -432540225.03125).abs() < 1e-4),
+        "expected -432540225.03125, got {:?}",
+        v
+    );
+    // A divisor far below the old cutoff.
+    let v = eval(&mut wb, "=1/0.00000000000001");
+    assert!(
+        matches!(v, Value::Number(n) if (n - 1e14).abs() < 1.0),
+        "got {:?}",
+        v
+    );
+    // Exact zero is still #DIV/0!.
+    let v = eval(&mut wb, "=1/0");
+    assert!(matches!(v, Value::Error(ref e) if e == "#DIV/0!"), "got {:?}", v);
+    // And an overflow is #NUM!, not infinity.
+    let v = eval(&mut wb, "=1E308/0.000000001");
+    assert!(matches!(v, Value::Error(ref e) if e == "#NUM!"), "got {:?}", v);
+
+    // A blank is zero, so a tiny positive number is greater than one — not
+    // equal to it.
+    let v = eval(&mut wb, "=A50=0.00000000005");
+    assert!(matches!(v, Value::Bool(false)), "blank should not equal 5e-11, got {:?}", v);
+    let v = eval(&mut wb, "=A50<0.00000000005");
+    assert!(matches!(v, Value::Bool(true)), "blank is less than 5e-11, got {:?}", v);
+    // A blank really does equal zero.
+    let v = eval(&mut wb, "=A50=0");
+    assert!(matches!(v, Value::Bool(true)), "got {:?}", v);
+}
+
+
+

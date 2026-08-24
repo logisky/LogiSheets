@@ -57,7 +57,13 @@ pub fn save_sheets<S: SaverTrait>(
     let is_hidden = sheet_info_manager.is_hidden(&sheet_id);
     let ct_sheet = CtSheet {
         name: sheet_name,
-        sheet_id: pos as u32,
+        // Excel's own identifier, kept as it arrived. Writing the position here
+        // renumbered a workbook's sheets on every save.
+        sheet_id: settings
+            .sheet_ooxml_ids
+            .get(&sheet_id)
+            .copied()
+            .unwrap_or(pos as u32 + 1),
         state: if is_hidden {
             StSheetState::Hidden
         } else {
@@ -159,10 +165,29 @@ fn save_worksheet<S: SaverTrait>(
         // Cell images are attached later in `save_workbook`, which has the
         // navigator and image manager needed to resolve cell positions.
         drawing: None,
-        // The engine does not yet model pivot tables; none are emitted on save.
-        pivot_tables: Vec::new(),
-        // The engine does not yet model structured tables; none on save.
-        tables: Vec::new(),
+        // No model for a pivot table either, so it goes back exactly as it
+        // arrived. Dropping it used to take the pivot out of the workbook while
+        // leaving the cache it read from behind — half a feature is worse than
+        // either whole one.
+        unknown_parts: settings
+            .preserved_parts
+            .get(&sheet_id)
+            .map(|p| p.unknown_parts.clone())
+            .unwrap_or_default(),
+        pivot_tables: settings
+            .preserved_parts
+            .get(&sheet_id)
+            .map(|p| p.pivot_tables.clone())
+            .unwrap_or_default(),
+        // Structured tables are handed back as they came in, so a file that
+        // arrived with an Excel table still has one after a save. The engine
+        // adopts them as blocks on load; that does not have to cost the
+        // ListObject on the way out.
+        tables: settings
+            .preserved_parts
+            .get(&sheet_id)
+            .map(|p| p.tables.clone())
+            .unwrap_or_default(),
     }
 }
 
@@ -551,17 +576,25 @@ fn save_sheet_data<S: SaverTrait>(
         let r = row.r.unwrap();
         let mut skip = false;
         while next < r {
-            let row_info = sheet_data_container.row_info.get_row_info(next);
+            // `next` is a 1-based row NUMBER; row info is keyed by row id, and
+            // the two are unrelated. Looking one up with the other handed these
+            // gap rows a different row's height, style and hidden flag — an
+            // empty hidden row came back visible wearing someone else's format.
+            let row_id = saver.fetch_row_id(sheet_id, next as usize - 1);
+            let row_info = sheet_data_container.row_info.get_row_info(row_id);
             if let Some(info) = row_info {
                 let i = CtRow {
                     cells: vec![],
                     r: None,
                     spans: None,
-                    s: info.style,
+                    // Same convention as the cell-bearing branch above: the
+                    // style index is only meaningful when custom_format is set,
+                    // and it is stored one lower than it is written.
+                    s: if info.custom_format { info.style + 1 } else { 0 },
                     custom_format: info.custom_format,
                     ht: info.ht,
                     hidden: info.hidden,
-                    custom_height: info.custom_format,
+                    custom_height: info.custom_height,
                     outline_level: info.outline_level,
                     collapsed: info.collapsed,
                     thick_top: false,

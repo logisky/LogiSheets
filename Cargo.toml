@@ -57,8 +57,8 @@ regex = "1"
 serde = "1"
 serde_json = "1"
 thiserror = "1.0"
-xmlserde = "0.13.2"
-xmlserde_derives = "0.13.2"
+xmlserde = "0.14.0"
+xmlserde_derives = "0.14.0"
 wildescape = "0.1"
 
 ssf-rs = { path = "crates/ssf-rs", version = "0.1.0" }
@@ -81,6 +81,9 @@ logisheets_workbook = { workspace = true }
 
 [dev-dependencies]
 glob = "0.3.1"
+# Round-trip tests reach into the saved .xlsx to check a part is really there;
+# the only way to see what another spreadsheet would see.
+zip = { version = "0.6.0", default-features = false, features = ["deflate"] }
 logiscript = { path = "crates/logiscript" }
 logisheets_base = { workspace = true }
 proptest = "1"

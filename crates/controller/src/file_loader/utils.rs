@@ -11,6 +11,11 @@ pub fn parse_cell(r: &str) -> Option<(usize, usize)> {
     let r = capture.get(2)?.as_str();
     let col_idx = column_label_to_index(c);
     match r.parse::<usize>() {
+        // Rows are 1-based, so there is no row 0 to convert — subtracting from
+        // it underflowed a usize and took the load down. The parser's own
+        // `parse_row` already refuses it for the same reason; this is the copy
+        // that reads the FILE, where the number is not ours.
+        Ok(0) => None,
         Ok(row_idx) => Some((row_idx - 1, col_idx)),
         Err(_) => None,
     }

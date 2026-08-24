@@ -40,7 +40,7 @@ pub mod prelude {
     pub use super::ooxml::workbook::*;
     pub use super::ooxml::worksheet::*;
     pub use super::reader::*;
-    pub use super::workbook::ChartAnchor;
+    pub use super::workbook::{ChartAnchor, ChartAnchorExtent};
     pub use super::workbook::Media;
     pub use super::workbook::PassthroughPart;
     pub use super::workbook::Wb;

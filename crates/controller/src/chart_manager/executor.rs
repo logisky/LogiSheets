@@ -43,11 +43,13 @@ impl ChartExecutor {
                         col_off: p.from_col_off,
                         row_off: p.from_row_off,
                     },
-                    ChartMarker {
+                    // A move from the host always states two corners, so the
+                    // chart becomes cell-anchored even if it arrived sized.
+                    crate::chart_manager::ChartExtent::ToCell(ChartMarker {
                         cell: to_cell,
                         col_off: p.to_col_off,
                         row_off: p.to_row_off,
-                    },
+                    }),
                 );
                 Ok((self, changed))
             }
@@ -100,11 +102,11 @@ impl ChartExecutor {
                             col_off: p.from_col_off,
                             row_off: p.from_row_off,
                         },
-                        to: ChartMarker {
+                        extent: crate::chart_manager::ChartExtent::ToCell(ChartMarker {
                             cell: to_cell,
                             col_off: p.to_col_off,
                             row_off: p.to_row_off,
-                        },
+                        }),
                         part_path,
                         data,
                         raw,

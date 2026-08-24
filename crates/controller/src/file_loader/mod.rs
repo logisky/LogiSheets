@@ -10,7 +10,7 @@ use logisheets_workbook::prelude::*;
 use sheet::{load_comments, load_persons, load_threaded_comments};
 
 use crate::{
-    chart_manager::{Chart, ChartManager, ChartMarker},
+    chart_manager::{Chart, ChartExtent, ChartManager, ChartMarker},
     connectors::FormulaConnector,
     controller::{Controller, status::Status},
     file_loader::{
@@ -82,11 +82,46 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         settings.calc_config.error = calc_pr.iterate_delta as f32;
     }
 
+    // The pivot caches are workbook-scoped; the tables that read them are kept
+    // per sheet. Both have to survive or the pivot is broken either way round.
+    settings.pivot_caches = wb.xl.pivot_caches.clone();
+    // Parts nothing here models, at both levels above the sheets.
+    settings.unknown_workbook_parts = wb.xl.unknown_parts.clone();
+
+    // Everything in `workbook.xml` the controller has no opinion about, kept so
+    // a save does not silently delete it. A defined name matters most of these:
+    // a formula can reference one, so dropping it turns a working workbook into
+    // one full of `#NAME?`.
+    {
+        let p = &wb.xl.workbook_part;
+        settings.preserved_workbook = crate::settings::PreservedWorkbookParts {
+            file_version: p.file_version.clone(),
+            file_sharing: p.file_sharing.clone(),
+            workbook_pr: p.workbook_pr.clone(),
+            workbook_protection: p.workbook_protection.clone(),
+            book_views: p.book_views.clone(),
+            function_groups: p.function_groups.clone(),
+            defined_names: p.defined_names.clone(),
+            ole_size: p.ole_size.clone(),
+            custom_workbook_views: p.custom_workbook_views.clone(),
+            pivot_caches: p.pivot_caches.clone(),
+            smart_tag_pr: p.smart_tag_pr.clone(),
+            smart_tag_types: p.smart_tag_types.clone(),
+            web_publishing: p.web_publishing.clone(),
+            file_recovery_pr: p.file_recovery_pr.clone(),
+        };
+    }
+
     let Wb {
         xl,
-        doc_props: _,
+        doc_props,
         logisheets,
+        unknown_parts: package_unknown_parts,
     } = wb;
+    settings.unknown_package_parts = package_unknown_parts;
+    // Authorship and timestamps arrived with the file; the saver used to write
+    // `default()` over them.
+    settings.doc_props = doc_props;
 
     // Register sheet names and their positions first
     xl.workbook_part.sheets.sheets.iter().for_each(|ct_sheet| {
@@ -94,6 +129,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         let sheet_id = sheet_id_manager.get_or_register_id(sheet_name);
         navigator.add_sheet_id(&sheet_id);
         sheet_info_manager.pos.push_back(sheet_id);
+        settings.sheet_ooxml_ids.insert(sheet_id, ct_sheet.sheet_id);
         if ct_sheet.state != StSheetState::Visible {
             sheet_info_manager.hiddens.insert(sheet_id);
         }
@@ -335,7 +371,14 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                 // open→save doesn't drop them. `<tableParts>` is intentionally NOT
                 // preserved: we convert every `<table>` into a block below and never
                 // author a `tableN.xml`, so a retained reference would dangle.
-                load_preserved_parts(&mut settings, sheet_id, &ws.worksheet_part);
+                load_preserved_parts(
+                    &mut settings,
+                    sheet_id,
+                    &ws.worksheet_part,
+                    &ws.tables,
+                    &ws.pivot_tables,
+                    &ws.unknown_parts,
+                );
                 // Queue each structured table for table→block conversion (done
                 // after the load completes, once the container holds every cell).
                 for tp in ws.tables.iter() {
@@ -402,12 +445,72 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
     }
     let mut controller = Controller::from(status, book_name, settings, app_data);
     convert_tables_to_blocks(&mut controller, pending_tables);
+    materialize_loaded_schema_rules(&mut controller);
     // Must run last: `sqref` is resolved against the navigator, and blocks only
     // exist once the table conversion above has run — a rule covering a
     // converted table has to anchor on block cell ids, not the normal cell ids
     // those coordinates had mid-load.
     model_conditional_formatting(&mut controller);
     controller
+}
+
+/// Re-install the shadow cells that a block's loaded rules describe.
+///
+/// A field's `validation_formula` / `editability_formula` is a TEMPLATE. It is
+/// stored on the schema, but what the host actually reads is the shadow cell the
+/// template is instantiated into on every row, and installing those shadows is a
+/// side effect of the `BindFormSchema` executor. Loading a file restores the
+/// schema map directly, so the rules came back as data and did nothing: a
+/// workbook whose cells were flagged invalid before it was saved reopened with
+/// every flag gone, and the templates were still sitting right there in
+/// `get_all_blocks` to say they should not have been.
+///
+/// `UpsertFieldFormulas` with three empty vecs is exactly this pass: empty means
+/// "keep the rules you have" to the schema executor, and the formula executor
+/// then re-walks every (row × field) and re-materializes value, validation and
+/// editability. So the rules are replayed through the same code path that
+/// installed them the first time, rather than through a second implementation
+/// that could drift from it.
+fn materialize_loaded_schema_rules(controller: &mut Controller) {
+    use crate::edit_action::{EditAction, EditPayload, PayloadsAction, UpsertFieldFormulas};
+
+    let mut targets: Vec<(usize, usize)> = controller
+        .status
+        .block_schema_manager
+        .schemas
+        .keys()
+        .filter_map(|(sheet_id, block_id)| {
+            let idx = controller
+                .status
+                .sheet_info_manager
+                .get_sheet_idx(sheet_id)?;
+            Some((idx, *block_id))
+        })
+        .collect();
+    // The map is unordered and this issues edits, so fix an order: a load must
+    // produce the same workbook every time.
+    targets.sort_unstable();
+    if targets.is_empty() {
+        return;
+    }
+
+    let payloads = targets
+        .into_iter()
+        .map(|(sheet_idx, block_id)| {
+            EditPayload::UpsertFieldFormulas(UpsertFieldFormulas {
+                sheet_idx,
+                block_id,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            })
+        })
+        .collect();
+    controller.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: false,
+        init: false,
+    }));
 }
 
 /// Move each sheet's `<conditionalFormatting>` out of the verbatim passthrough
@@ -472,6 +575,11 @@ fn model_conditional_formatting(controller: &mut Controller) {
 /// field names) and any totals row(s).
 struct TableConvertSpec {
     sheet_idx: usize,
+    /// The table's `displayName`. Excel keeps these unique per workbook and
+    /// identifier-shaped, so it makes a far better ref name than a serial
+    /// number — `BLOCKREF("Sales","north","q1")` works on a file nobody
+    /// prepared, which is the whole point of adopting the table at all.
+    name: String,
     master_row: usize,
     master_col: usize,
     row_cnt: usize,
@@ -524,6 +632,7 @@ fn table_part_to_spec(
     }
     Some(TableConvertSpec {
         sheet_idx,
+        name: table.display_name.clone(),
         master_row,
         master_col: rect.c0,
         row_cnt,
@@ -534,8 +643,9 @@ fn table_part_to_spec(
 
 /// Realize each queued table as a form block: `ConvertBlock` keeps the region's
 /// existing cell values while re-homing them into the block, then
-/// `BindFormSchema` attaches a schema whose ref name is `unspecified-<blockId>`
-/// and whose fields are the table's column headers (all "unspecified" type —
+/// `BindFormSchema` attaches a schema whose ref name is the table's own
+/// `displayName` (or `unspecified-<blockId>` when that is missing or already
+/// taken) and whose fields are the table's column headers (all "unspecified" type —
 /// the host renders them as plain cells). A failure on one table is skipped so
 /// the rest of the workbook still loads.
 fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvertSpec>) {
@@ -559,7 +669,19 @@ fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvert
             Ok(id) => id,
             Err(_) => continue,
         };
-        let ref_name = format!("unspecified-{}", block_id);
+        // Prefer the table's own name; fall back to the serial form when it is
+        // empty or already taken (ref names address blocks, so they must be
+        // unique).
+        let taken = controller
+            .status
+            .block_schema_manager
+            .refs
+            .contains_key(&spec.name);
+        let ref_name = if spec.name.trim().is_empty() || taken {
+            format!("unspecified-{}", block_id)
+        } else {
+            spec.name.clone()
+        };
         let render_ids: Vec<String> = (0..spec.col_cnt)
             .map(|c| format!("{}-{}", ref_name, c))
             .collect();
@@ -659,51 +781,95 @@ fn load_charts(
     if chart_parts.is_empty() {
         return;
     }
-    let anchors: Vec<&CtTwoCellAnchor> = drawing
-        .content
-        .two_cell_anchors
-        .iter()
-        .filter(|a| a.graphic_frame.is_some())
-        .collect();
 
     // The whole chart part tree (chart XML + style/color satellites) is kept
     // together for lossless save; shared across the sheet's charts for now.
     let raw = Arc::new(drawing.chart_parts.clone());
 
-    for (i, part) in chart_parts.iter().enumerate() {
-        let data = match parse_chart(&part.data) {
-            Some(d) => d,
-            None => continue,
+    // An anchor names its chart through the drawing's relationships, so pair
+    // them that way rather than by position. Position happened to work while
+    // there was one anchor list; with `oneCellAnchor` there are two, and their
+    // interleaving in the file is not recoverable from the parsed lists.
+    let part_by_rid = |rid: &str| -> Option<&&PassthroughPart> {
+        let target = drawing.rels.iter().find(|r| r.id == rid)?.target.as_str();
+        let file = target.rsplit('/').next()?;
+        chart_parts
+            .iter()
+            .find(|p| p.path.rsplit('/').next() == Some(file))
+    };
+    let chart_rid = |frame: &Option<CtGraphicFrame>| -> Option<String> {
+        frame
+            .as_ref()?
+            .graphic
+            .as_ref()?
+            .graphic_data
+            .as_ref()?
+            .chart
+            .as_ref()?
+            .r_id
+            .clone()
+    };
+
+    // Both anchor kinds, each contributing its own extent. Access marker fields
+    // directly rather than naming the marker type: `CtMarker` is ambiguous
+    // through the workbook prelude glob (both `complex_types` and `drawing_part`
+    // export one), but the concrete field access off the anchor is unambiguous.
+    let mut found: Vec<(&PassthroughPart, ChartMarker, ChartExtent)> = vec![];
+    for a in drawing.content.two_cell_anchors.iter() {
+        let Some(rid) = chart_rid(&a.graphic_frame) else {
+            continue;
         };
-        let anchor = match anchors.get(i) {
-            Some(a) => *a,
-            None => continue,
-        };
-        // Access marker fields directly rather than naming the marker type:
-        // `CtMarker` is ambiguous through the workbook prelude glob (both
-        // `complex_types` and `drawing_part` export one), but the concrete
-        // field access off the anchor is unambiguous.
-        let from = match chart_marker(
+        let Some(part) = part_by_rid(&rid) else { continue };
+        let Some(from) = chart_marker(
             sheet_id,
-            anchor.from.col.v,
-            anchor.from.row.v,
-            anchor.from.col_off.v,
-            anchor.from.row_off.v,
+            a.from.col.v,
+            a.from.row.v,
+            a.from.col_off.v,
+            a.from.row_off.v,
             navigator,
-        ) {
-            Some(m) => m,
-            None => continue,
+        ) else {
+            continue;
         };
-        let to = match chart_marker(
+        let Some(to) = chart_marker(
             sheet_id,
-            anchor.to.col.v,
-            anchor.to.row.v,
-            anchor.to.col_off.v,
-            anchor.to.row_off.v,
+            a.to.col.v,
+            a.to.row.v,
+            a.to.col_off.v,
+            a.to.row_off.v,
             navigator,
-        ) {
-            Some(m) => m,
-            None => continue,
+        ) else {
+            continue;
+        };
+        found.push((part, from, ChartExtent::ToCell(to)));
+    }
+    for a in drawing.content.one_cell_anchors.iter() {
+        let Some(rid) = chart_rid(&a.graphic_frame) else {
+            continue;
+        };
+        let Some(part) = part_by_rid(&rid) else { continue };
+        let Some(from) = chart_marker(
+            sheet_id,
+            a.from.col.v,
+            a.from.row.v,
+            a.from.col_off.v,
+            a.from.row_off.v,
+            navigator,
+        ) else {
+            continue;
+        };
+        found.push((
+            part,
+            from,
+            ChartExtent::Size {
+                cx: a.ext.cx,
+                cy: a.ext.cy,
+            },
+        ));
+    }
+
+    for (part, from, extent) in found {
+        let Some(data) = parse_chart(&part.data) else {
+            continue;
         };
         let id = part
             .path
@@ -717,7 +883,7 @@ fn load_charts(
             Chart {
                 id,
                 from,
-                to,
+                extent,
                 part_path: part.path.clone(),
                 data,
                 raw: raw.clone(),

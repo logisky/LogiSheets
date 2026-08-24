@@ -270,6 +270,12 @@ pub struct ChartInfo {
     pub to_col: usize,
     pub to_col_off: i64,
     pub to_row_off: i64,
+    /// Set when the chart is anchored by a size rather than a second cell
+    /// (`oneCellAnchor`): the frame's width and height in EMUs. `to_*` then
+    /// repeats the `from` cell and carries no extent, so a host that wants to
+    /// draw the frame should use these when they are present.
+    pub ext_cx: Option<i64>,
+    pub ext_cy: Option<i64>,
     pub chart_type: String,
     pub stacked: bool,
     pub title: Option<String>,

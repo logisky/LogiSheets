@@ -364,7 +364,7 @@ pub struct CtCellAlignment {
     pub horizontal: Option<StHorizontalAlignment>,
     #[xmlserde(name = b"vertical", ty = "attr")]
     pub vertical: Option<StVerticalAlignment>,
-    #[xmlserde(name = b"text_rotation", ty = "attr")]
+    #[xmlserde(name = b"textRotation", ty = "attr")]
     pub text_rotation: Option<u32>,
     #[xmlserde(name = b"wrapText", ty = "attr")]
     pub wrap_text: Option<bool>,
@@ -658,7 +658,7 @@ pub struct CtCommentPr {
     pub anchor: CtObjectAnchor,
     #[xmlserde(name = b"locked", ty = "attr", default = "default_true")]
     pub locked: bool,
-    #[xmlserde(name = b"default_size", ty = "attr", default = "default_true")]
+    #[xmlserde(name = b"defaultSize", ty = "attr", default = "default_true")]
     pub default_size: bool,
     #[xmlserde(name = b"print", ty = "attr", default = "default_true")]
     pub print: bool,
@@ -822,12 +822,12 @@ pub struct CtWorkbookPr {
     pub show_pivot_chart_filter: bool,
     #[xmlserde(name = b"allowRefreshQuery", ty = "attr", default = "default_false")]
     pub allow_refresh_query: bool,
-    #[xmlserde(name = b"publish_items", ty = "attr", default = "default_false")]
+    #[xmlserde(name = b"publishItems", ty = "attr", default = "default_false")]
     pub publish_items: bool,
     #[xmlserde(name = b"checkCompatibility", ty = "attr", default = "default_false")]
     pub check_compatibility: bool,
     #[xmlserde(
-        name = b"auto_compress_pictures",
+        name = b"autoCompressPictures",
         ty = "attr",
         default = "default_true"
     )]
@@ -896,7 +896,7 @@ pub struct CtOleSize {
 
 #[derive(Debug, Clone, XmlDeserialize, XmlSerialize)]
 pub struct CtPivotCaches {
-    #[xmlserde(name = b"pivot_cache", ty = "child")]
+    #[xmlserde(name = b"pivotCache", ty = "child")]
     pub pivot_caches: Vec<CtPivotCache>,
 }
 
@@ -1054,7 +1054,7 @@ pub struct CtCustomWorkbookView {
     pub changes_saved_win: bool,
     #[xmlserde(name = b"onlySync", ty = "attr", default = "default_false")]
     pub only_sync: bool,
-    #[xmlserde(name = b"personal_view", ty = "attr", default = "default_false")]
+    #[xmlserde(name = b"personalView", ty = "attr", default = "default_false")]
     pub personal_view: bool,
     #[xmlserde(name = b"includePrintSettings", ty = "attr", default = "default_true")]
     pub include_print_settings: bool,
@@ -1782,7 +1782,7 @@ pub struct CtObjectPr {
     pub print: bool,
     #[xmlserde(name = b"disabled", ty = "attr", default = "default_false")]
     pub disabled: bool,
-    #[xmlserde(name = b"ui_object", ty = "attr", default = "default_false")]
+    #[xmlserde(name = b"uiObject", ty = "attr", default = "default_false")]
     pub ui_object: bool,
     #[xmlserde(name = b"autoFill", ty = "attr", default = "default_true")]
     pub auto_fill: bool,
@@ -2352,7 +2352,7 @@ pub struct CtCustomProperty {
 
 #[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct CtCustomSheetViews {
-    #[xmlserde(name = b"custom_sheet_view", ty = "child")]
+    #[xmlserde(name = b"customSheetView", ty = "child")]
     pub views: Vec<CtCustomSheetView>,
 }
 

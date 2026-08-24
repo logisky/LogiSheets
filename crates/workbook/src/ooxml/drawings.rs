@@ -234,7 +234,7 @@ pub struct CtTextBodyProperties {
     pub prst_tx_warp: Option<CtPresetTextShape>,
     #[xmlserde(ty = "untag")]
     pub text_auto_fit: Option<EgTextAutofit>,
-    #[xmlserde(name = b"scene_3d", ty = "child")]
+    #[xmlserde(name = b"scene3d", ty = "child")]
     pub scene_3d: Option<Unparsed>, // CT_Scene3D
     #[xmlserde(ty = "untag")]
     pub text_3d: Option<Unparsed>, // EG_Text3D

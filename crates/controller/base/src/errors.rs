@@ -27,6 +27,13 @@ pub enum BasicError {
     BlockRowIdNotFound(SheetId, BlockId, usize),
     #[error("Failed to fetch block col id by the block id: {1}, col index: {2} in sheet {0}")]
     BlockColIdNotFound(SheetId, BlockId, usize),
+    #[error(
+        "block ref name {0:?} is already used by block {2} on sheet {1}. Ref names \
+         are how formulas reach a block, so they must be unique across the \
+         workbook — reusing one would silently redirect every existing \
+         BLOCKREF to the new block"
+    )]
+    BlockRefNameTaken(String, SheetId, BlockId),
     #[error("Failed to create block because the block id is already existed")]
     BlockIdHasAlreadyExisted(BlockId),
     #[error("Failed to create block because the block id is not existed")]

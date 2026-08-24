@@ -266,7 +266,12 @@ pub fn load_sheet_data(
             style: style_id,
         };
         let idx = base_curr_idx + offset;
-        let id = navigator.fetch_row_id(&sheet_id, idx as usize).unwrap();
+        // A row number past the end of the grid has no id to fetch. The file
+        // says what it says; skip that row rather than refusing the workbook.
+        let Ok(id) = navigator.fetch_row_id(&sheet_id, idx as usize) else {
+            offset += 1;
+            return;
+        };
         container.set_row_info(sheet_id, id, row_info);
 
         offset += 1;
@@ -275,11 +280,20 @@ pub fn load_sheet_data(
             if let Some(r) = &ct_cell.r {
                 if let Some((row, col)) = parse_cell(r) {
                     let cv = CellValue::from_cell(ct_cell, |idx| {
-                        let rst = xl.sst.as_ref().unwrap().1.si.get(idx).unwrap();
-                        let string = rst_to_plain_text(rst);
+                        // A cell says `t="s"` and carries an index into the
+                        // shared-string table. Nothing guarantees the table has
+                        // that entry, or exists at all, and a file where it does
+                        // not used to take the whole workbook down with it. An
+                        // index pointing at nothing is an empty cell.
+                        let rst = xl.sst.as_ref().and_then(|sst| sst.1.si.get(idx));
+                        let string = rst.map(rst_to_plain_text).unwrap_or_default();
                         text_id_manager.get_or_register_id(&string)
                     });
-                    let id = navigator.fetch_cell_id(&sheet_id, row, col).unwrap();
+                    // Same for a column past the end: `r="ZZZZ9999999"` parses
+                    // into coordinates no sheet has.
+                    let Ok(id) = navigator.fetch_cell_id(&sheet_id, row, col) else {
+                        return;
+                    };
                     let style_id = style_loader.load_xf(ct_cell.s);
                     // A formula whose value element is absent or empty has
                     // never been computed by anyone: openpyxl and everything
@@ -379,7 +393,14 @@ pub fn load_sheet_views(settings: &mut Settings, sheet_id: SheetId, sheet_views:
 /// Capture the worksheet OOXML parts the controller does not model, so they
 /// survive open→save (see `PreservedWorksheetParts`). Only stores an entry when
 /// at least one part is present, to avoid empty rows for freshly-created sheets.
-pub fn load_preserved_parts(settings: &mut Settings, sheet_id: SheetId, wp: &WorksheetPart) {
+pub fn load_preserved_parts(
+    settings: &mut Settings,
+    sheet_id: SheetId,
+    wp: &WorksheetPart,
+    tables: &[logisheets_workbook::workbook::TablePart],
+    pivot_tables: &[logisheets_workbook::workbook::PivotTablePart],
+    unknown_parts: &[logisheets_workbook::workbook::UnknownPart],
+) {
     let parts = crate::settings::PreservedWorksheetParts {
         sheet_calc_pr: wp.sheet_calc_pr.clone(),
         sheet_protection: wp.sheet_protection.clone(),
@@ -404,10 +425,16 @@ pub fn load_preserved_parts(settings: &mut Settings, sheet_id: SheetId, wp: &Wor
         smart_tags: wp.smart_tags.clone(),
         controls: wp.controls.clone(),
         web_publish_items: wp.web_publish_items.clone(),
-        // `<tableParts>` is deliberately dropped: the engine converts every
-        // `<table>` into a block on load and never writes a `tableN.xml`, so a
-        // preserved reference would point at parts that no longer exist.
-        table_parts: None,
+        // Both halves of a structured table: the `<tableParts>` reference and
+        // the `tableN.xml` parts it points at. Keeping only the reference would
+        // dangle — which is why this was dropped before the parts were carried
+        // too. The table is ALSO adopted as a block on load; preserving these
+        // is what lets Excel still see a table on the way back out.
+        table_parts: wp.table_parts.clone(),
+        tables: tables.to_vec(),
+        // The engine has no model for a pivot table, so it travels whole.
+        pivot_tables: pivot_tables.to_vec(),
+        unknown_parts: unknown_parts.to_vec(),
     };
     settings.preserved_parts.insert(sheet_id, parts);
 }

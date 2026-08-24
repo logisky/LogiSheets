@@ -32,6 +32,16 @@ impl SchemaManager {
         schema.partially_resolve(key, field)
     }
 
+    /// Which block, if any, already answers to this ref name.
+    ///
+    /// Ref names are the workbook's public addressing surface — `BLOCKREF`'s
+    /// first argument — so two blocks cannot share one. Rebinding the SAME
+    /// block under the name it already has is not a clash, which is why this
+    /// returns the owner rather than a bool.
+    pub fn ref_name_owner(&self, name: &str) -> Option<(SheetId, BlockId)> {
+        self.refs.get(name).copied()
+    }
+
     pub fn get_all_key_cell_ids<'a, F>(
         &'a self,
         ref_name: &str,

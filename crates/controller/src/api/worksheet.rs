@@ -654,7 +654,19 @@ impl<'a> Worksheet<'a> {
             .filter_map(|chart| {
                 let (from_row, from_col) =
                     nav.fetch_cell_idx(&self.sheet_id, &chart.from.cell).ok()?;
-                let (to_row, to_col) = nav.fetch_cell_idx(&self.sheet_id, &chart.to.cell).ok()?;
+                // A size-anchored chart has no second cell; report the `from`
+                // cell again and hand the size over separately rather than
+                // inventing a corner.
+                let (to_row, to_col, to_col_off, to_row_off, ext_cx, ext_cy) =
+                    match &chart.extent {
+                        crate::chart_manager::ChartExtent::ToCell(m) => {
+                            let (r, c) = nav.fetch_cell_idx(&self.sheet_id, &m.cell).ok()?;
+                            (r, c, m.col_off, m.row_off, None, None)
+                        }
+                        crate::chart_manager::ChartExtent::Size { cx, cy } => {
+                            (from_row, from_col, 0, 0, Some(*cx), Some(*cy))
+                        }
+                    };
                 let d = &chart.data;
                 Some(ChartInfo {
                     chart_id: chart.id.clone(),
@@ -664,8 +676,10 @@ impl<'a> Worksheet<'a> {
                     from_row_off: chart.from.row_off,
                     to_row,
                     to_col,
-                    to_col_off: chart.to.col_off,
-                    to_row_off: chart.to.row_off,
+                    to_col_off,
+                    to_row_off,
+                    ext_cx,
+                    ext_cy,
                     chart_type: chart_type_str(&d.chart_type),
                     stacked: d.stacked,
                     title: d.title.clone(),

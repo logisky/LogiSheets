@@ -154,38 +154,51 @@ fn is_stacked(grouping: Option<&CtStrAttr>) -> bool {
 
 #[derive(Debug, XmlDeserialize, Default)]
 #[xmlserde(root = b"c:chartSpace")]
+#[xmlserde(alias(b"chartSpace"))]
 struct CtChartSpace {
     #[xmlserde(name = b"c:chart", ty = "child")]
+    #[xmlserde(alias(b"chart"))]
     chart: Option<CtChart>,
 }
 
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtChart {
     #[xmlserde(name = b"c:title", ty = "child")]
+    #[xmlserde(alias(b"title"))]
     title: Option<CtTitle>,
     #[xmlserde(name = b"c:plotArea", ty = "child")]
+    #[xmlserde(alias(b"plotArea"))]
     plot_area: Option<CtPlotArea>,
     #[xmlserde(name = b"c:legend", ty = "child")]
+    #[xmlserde(alias(b"legend"))]
     legend: Option<CtLegend>,
 }
 
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtPlotArea {
     #[xmlserde(name = b"c:barChart", ty = "child")]
+    #[xmlserde(alias(b"barChart"))]
     bar_chart: Option<CtBarChart>,
     #[xmlserde(name = b"c:lineChart", ty = "child")]
+    #[xmlserde(alias(b"lineChart"))]
     line_chart: Option<CtGroupedChart>,
     #[xmlserde(name = b"c:areaChart", ty = "child")]
+    #[xmlserde(alias(b"areaChart"))]
     area_chart: Option<CtGroupedChart>,
     #[xmlserde(name = b"c:pieChart", ty = "child")]
+    #[xmlserde(alias(b"pieChart"))]
     pie_chart: Option<CtSimpleChart>,
     #[xmlserde(name = b"c:doughnutChart", ty = "child")]
+    #[xmlserde(alias(b"doughnutChart"))]
     doughnut_chart: Option<CtSimpleChart>,
     #[xmlserde(name = b"c:scatterChart", ty = "child")]
+    #[xmlserde(alias(b"scatterChart"))]
     scatter_chart: Option<CtSimpleChart>,
     #[xmlserde(name = b"c:catAx", ty = "child")]
+    #[xmlserde(alias(b"catAx"))]
     cat_ax: Vec<CtAxis>,
     #[xmlserde(name = b"c:valAx", ty = "child")]
+    #[xmlserde(alias(b"valAx"))]
     val_ax: Vec<CtAxis>,
 }
 
@@ -201,40 +214,52 @@ impl CtPlotArea {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtBarChart {
     #[xmlserde(name = b"c:barDir", ty = "child")]
+    #[xmlserde(alias(b"barDir"))]
     bar_dir: Option<CtStrAttr>,
     #[xmlserde(name = b"c:grouping", ty = "child")]
+    #[xmlserde(alias(b"grouping"))]
     grouping: Option<CtStrAttr>,
     #[xmlserde(name = b"c:ser", ty = "child")]
+    #[xmlserde(alias(b"ser"))]
     ser: Vec<CtSer>,
 }
 
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtGroupedChart {
     #[xmlserde(name = b"c:grouping", ty = "child")]
+    #[xmlserde(alias(b"grouping"))]
     grouping: Option<CtStrAttr>,
     #[xmlserde(name = b"c:ser", ty = "child")]
+    #[xmlserde(alias(b"ser"))]
     ser: Vec<CtSer>,
 }
 
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtSimpleChart {
     #[xmlserde(name = b"c:ser", ty = "child")]
+    #[xmlserde(alias(b"ser"))]
     ser: Vec<CtSer>,
 }
 
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtSer {
     #[xmlserde(name = b"c:tx", ty = "child")]
+    #[xmlserde(alias(b"tx"))]
     tx: Option<CtSerTx>,
     #[xmlserde(name = b"c:spPr", ty = "child")]
+    #[xmlserde(alias(b"spPr"))]
     sp_pr: Option<CtChartShapeProps>,
     #[xmlserde(name = b"c:cat", ty = "child")]
+    #[xmlserde(alias(b"cat"))]
     cat: Option<CtAxDataSource>,
     #[xmlserde(name = b"c:val", ty = "child")]
+    #[xmlserde(alias(b"val"))]
     val: Option<CtNumDataSource>,
     #[xmlserde(name = b"c:xVal", ty = "child")]
+    #[xmlserde(alias(b"xVal"))]
     x_val: Option<CtAxDataSource>,
     #[xmlserde(name = b"c:yVal", ty = "child")]
+    #[xmlserde(alias(b"yVal"))]
     y_val: Option<CtNumDataSource>,
 }
 
@@ -295,8 +320,10 @@ impl CtSer {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtSerTx {
     #[xmlserde(name = b"c:strRef", ty = "child")]
+    #[xmlserde(alias(b"strRef"))]
     str_ref: Option<CtStrRef>,
     #[xmlserde(name = b"c:v", ty = "child")]
+    #[xmlserde(alias(b"v"))]
     v: Option<CtText>,
 }
 
@@ -315,6 +342,7 @@ impl CtSerTx {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtNumDataSource {
     #[xmlserde(name = b"c:numRef", ty = "child")]
+    #[xmlserde(alias(b"numRef"))]
     num_ref: Option<CtNumRef>,
 }
 
@@ -338,16 +366,20 @@ impl CtNumDataSource {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtNumRef {
     #[xmlserde(name = b"c:f", ty = "child")]
+    #[xmlserde(alias(b"f"))]
     f: Option<CtText>,
     #[xmlserde(name = b"c:numCache", ty = "child")]
+    #[xmlserde(alias(b"numCache"))]
     num_cache: Option<CtNumData>,
 }
 
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtNumData {
     #[xmlserde(name = b"c:ptCount", ty = "child")]
+    #[xmlserde(alias(b"ptCount"))]
     pt_count: Option<CtU32Attr>,
     #[xmlserde(name = b"c:pt", ty = "child")]
+    #[xmlserde(alias(b"pt"))]
     pts: Vec<CtNumPt>,
 }
 
@@ -383,14 +415,17 @@ struct CtNumPt {
     #[xmlserde(name = b"idx", ty = "attr")]
     idx: Option<u32>,
     #[xmlserde(name = b"c:v", ty = "child")]
+    #[xmlserde(alias(b"v"))]
     v: Option<CtText>,
 }
 
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtAxDataSource {
     #[xmlserde(name = b"c:strRef", ty = "child")]
+    #[xmlserde(alias(b"strRef"))]
     str_ref: Option<CtStrRef>,
     #[xmlserde(name = b"c:numRef", ty = "child")]
+    #[xmlserde(alias(b"numRef"))]
     num_ref: Option<CtNumRef>,
 }
 
@@ -431,16 +466,20 @@ impl CtAxDataSource {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtStrRef {
     #[xmlserde(name = b"c:f", ty = "child")]
+    #[xmlserde(alias(b"f"))]
     f: Option<CtText>,
     #[xmlserde(name = b"c:strCache", ty = "child")]
+    #[xmlserde(alias(b"strCache"))]
     str_cache: Option<CtStrData>,
 }
 
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtStrData {
     #[xmlserde(name = b"c:ptCount", ty = "child")]
+    #[xmlserde(alias(b"ptCount"))]
     pt_count: Option<CtU32Attr>,
     #[xmlserde(name = b"c:pt", ty = "child")]
+    #[xmlserde(alias(b"pt"))]
     pts: Vec<CtNumPt>,
 }
 
@@ -473,6 +512,7 @@ impl CtStrData {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtTitle {
     #[xmlserde(name = b"c:tx", ty = "child")]
+    #[xmlserde(alias(b"tx"))]
     tx: Option<CtTx>,
 }
 
@@ -485,8 +525,10 @@ impl CtTitle {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtTx {
     #[xmlserde(name = b"c:rich", ty = "child")]
+    #[xmlserde(alias(b"rich"))]
     rich: Option<CtTextBody>,
     #[xmlserde(name = b"c:strRef", ty = "child")]
+    #[xmlserde(alias(b"strRef"))]
     str_ref: Option<CtStrRef>,
 }
 
@@ -537,6 +579,7 @@ struct CtTextRun {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtLegend {
     #[xmlserde(name = b"c:legendPos", ty = "child")]
+    #[xmlserde(alias(b"legendPos"))]
     legend_pos: Option<CtStrAttr>,
 }
 
@@ -557,6 +600,7 @@ impl CtLegend {
 #[derive(Debug, XmlDeserialize, Default)]
 struct CtAxis {
     #[xmlserde(name = b"c:title", ty = "child")]
+    #[xmlserde(alias(b"title"))]
     title: Option<CtTitle>,
 }
 

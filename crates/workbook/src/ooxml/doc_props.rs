@@ -1,7 +1,7 @@
 use crate::Unparsed;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"cp:coreProperties")]
 #[xmlserde(with_custom_ns(
     b"cp",
@@ -16,6 +16,27 @@ pub struct DocPropCore {
     // with only a creator and the two timestamps, and required children here
     // meant the generated deserializer unwrapped a None and took the whole
     // load down — over metadata that the loader discards anyway.
+    //
+    // The Dublin Core fields below are the ones Excel and every other producer
+    // actually write. They were absent from this struct, so "preserve the doc
+    // props verbatim" quietly dropped a file's author and title: the round trip
+    // can only keep what the model has a field for.
+    #[xmlserde(name = b"dc:title", ty = "child")]
+    pub title: Option<TextProp>,
+    #[xmlserde(name = b"dc:subject", ty = "child")]
+    pub subject: Option<TextProp>,
+    #[xmlserde(name = b"dc:creator", ty = "child")]
+    pub creator: Option<TextProp>,
+    #[xmlserde(name = b"cp:keywords", ty = "child")]
+    pub keywords: Option<TextProp>,
+    #[xmlserde(name = b"dc:description", ty = "child")]
+    pub description: Option<TextProp>,
+    #[xmlserde(name = b"cp:category", ty = "child")]
+    pub category: Option<TextProp>,
+    #[xmlserde(name = b"cp:contentStatus", ty = "child")]
+    pub content_status: Option<TextProp>,
+    #[xmlserde(name = b"cp:revision", ty = "child")]
+    pub revision: Option<TextProp>,
     #[xmlserde(name = b"cp:lastModifiedBy", ty = "child")]
     pub last_modified_by: Option<ModifiedBy>,
     #[xmlserde(name = b"dcterms:created", ty = "child")]
@@ -24,7 +45,7 @@ pub struct DocPropCore {
     pub modified: Option<Time>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"Properties")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties")]
 #[xmlserde(with_custom_ns(
@@ -42,7 +63,7 @@ pub struct DocPropApp {
     pub title_of_parts: Option<Unparsed>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 #[xmlserde(root = b"Properties")]
 #[xmlserde(with_ns = b"http://schemas.openxmlformats.org/officeDocument/2006/custom-properties")]
 #[xmlserde(with_custom_ns(
@@ -54,19 +75,26 @@ pub struct DocPropCustom {
     pub properties: Vec<Unparsed>,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct Application {
     #[xmlserde(ty = "text")]
     pub val: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+/// A core property whose whole content is its text — `<dc:creator>Jane</dc:creator>`.
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
+pub struct TextProp {
+    #[xmlserde(ty = "text")]
+    pub val: String,
+}
+
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct ModifiedBy {
     #[xmlserde(ty = "text")]
     pub val: String,
 }
 
-#[derive(Debug, XmlSerialize, XmlDeserialize)]
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
 pub struct Time {
     #[xmlserde(name = b"xsi:type", ty = "attr")]
     pub ty: String,

@@ -84,44 +84,40 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     let mut relationships = Vec::<CtRelationship>::new();
 
     relationships.push(CtRelationship {
-        id: format!("rId{}", i),
+        id: next_rid(&mut i, &relationships),
         ty: WORKBOOK.0.to_string(),
         target: String::from("xl/workbook.xml"),
         target_mode: StTargetMode::Internal,
     });
-    i += 1;
 
     let ps = write_doc_props(wb.doc_props, &mut writer)?;
     ps.iter().for_each(|wp| match &wp.rtype {
         &DOC_PROP_APP => {
             let relationship = CtRelationship {
-                id: format!("rId{}", i),
+                id: next_rid(&mut i, &relationships),
                 ty: wp.rtype.0.to_string(),
                 target: String::from("docProps/app.xml"),
                 target_mode: StTargetMode::Internal,
             };
             relationships.push(relationship);
-            i += 1;
         }
         &DOC_PROP_CUSTOM => {
             let relationship = CtRelationship {
-                id: format!("rId{}", i),
+                id: next_rid(&mut i, &relationships),
                 ty: wp.rtype.0.to_string(),
                 target: String::from("docProps/custom.xml"),
                 target_mode: StTargetMode::Internal,
             };
             relationships.push(relationship);
-            i += 1;
         }
         &DOC_PROP_CORE => {
             let relationship = CtRelationship {
-                id: format!("rId{}", i),
+                id: next_rid(&mut i, &relationships),
                 ty: wp.rtype.0.to_string(),
                 target: String::from("docProps/core.xml"),
                 target_mode: StTargetMode::Internal,
             };
             relationships.push(relationship);
-            i += 1;
         }
         _ => unreachable!(),
     });
@@ -130,7 +126,7 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     if let Some(logisheets) = wb.logisheets {
         let p = write_logisheets_data(logisheets, &mut writer)?;
         let relationship = CtRelationship {
-            id: format!("rId{}", i),
+            id: next_rid(&mut i, &relationships),
             target_mode: StTargetMode::Internal,
             target: String::from("logisheets/data.xml"),
             ty: p.rtype.0.to_string(),
@@ -140,10 +136,20 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
         // i += 1;
     }
 
-    let ps = write_xl(wb.xl, &mut writer)?;
+    let mut extra_overrides = Vec::<CtOverride>::new();
+    let mut extra_defaults = Vec::<CtDefault>::new();
+    write_unknown_parts(
+        &wb.unknown_parts,
+        &mut writer,
+        &mut relationships,
+        &mut extra_overrides,
+        &mut extra_defaults,
+    )?;
+
+    let ps = write_xl(wb.xl, &mut writer, &mut extra_overrides, &mut extra_defaults)?;
     proofs.extend(ps);
 
-    write_content_types(proofs, &mut writer)?;
+    write_content_types(proofs, extra_overrides, extra_defaults, &mut writer)?;
 
     write_relationships(Relationships { relationships }, &mut writer, "_rels/.rels")?;
 
@@ -153,9 +159,93 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     Ok(buf)
 }
 
-fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
+/// Write out parts reached by relationships this crate does not model: the bytes
+/// at their original paths, their own `.rels`, the relationship that pointed at
+/// them, and the `[Content_Types].xml` entries they need.
+///
+/// Original paths and relationship ids are kept deliberately. A vendor manifest
+/// names the parts it owns by path, and renumbering either would leave a file
+/// whose pieces no longer find each other — worse than the deletion this
+/// replaces.
+/// The next `rIdN` not already claimed.
+///
+/// Preserved parts keep the relationship ids they arrived with, because the XML
+/// that references them says `r:id="…"` and renaming would break that. Our own
+/// ids therefore have to step around them: two relationships sharing an Id makes
+/// the package invalid, and the collision would only show up on a file whose
+/// vendor part happened to be numbered the same way ours are.
+fn next_rid(counter: &mut usize, taken: &[CtRelationship]) -> String {
+    loop {
+        let candidate = format!("rId{}", *counter);
+        *counter += 1;
+        if !taken.iter().any(|r| r.id == candidate) {
+            return candidate;
+        }
+    }
+}
+
+fn write_unknown_parts(
+    unknown: &[crate::workbook::UnknownPart],
+    writer: &mut Writer,
+    relationships: &mut Vec<CtRelationship>,
+    overrides: &mut Vec<CtOverride>,
+    defaults: &mut Vec<CtDefault>,
+) -> ZipResult<()> {
+    use std::io::Write;
+    let mut dirs = std::collections::HashSet::<String>::new();
+    for u in unknown {
+        for part in u.parts.iter() {
+            if let Some((dir, _)) = part.path.rsplit_once('/') {
+                if dirs.insert(dir.to_string()) {
+                    let _ = writer.add_directory(dir, options());
+                }
+            }
+            writer.start_file(&part.path, options())?;
+            writer.write_all(&part.data)?;
+            if !part.rels.is_empty() {
+                let rp = crate::reader::get_rels(&part.path)
+                    .ok()
+                    .and_then(|p| p.to_str().map(|s| s.to_string()));
+                if let Some(rp) = rp {
+                    if let Some((dir, _)) = rp.rsplit_once('/') {
+                        if dirs.insert(dir.to_string()) {
+                            let _ = writer.add_directory(dir, options());
+                        }
+                    }
+                    write_relationships(
+                        Relationships {
+                            relationships: part.rels.clone(),
+                        },
+                        writer,
+                        &rp,
+                    )?;
+                }
+            }
+        }
+        relationships.push(u.rel.clone());
+        overrides.extend(u.overrides.iter().cloned());
+        defaults.extend(u.defaults.iter().cloned());
+    }
+    Ok(())
+}
+
+fn write_xl(
+    xl: Xl,
+    writer: &mut Writer,
+    extra_overrides: &mut Vec<CtOverride>,
+    extra_defaults: &mut Vec<CtDefault>,
+) -> ZipResult<Vec<WriteProof>> {
     let mut result = Vec::<WriteProof>::with_capacity(10);
     let mut relationships = Vec::<CtRelationship>::new();
+
+    // Workbook-level parts nothing here models, kept whole.
+    write_unknown_parts(
+        &xl.unknown_parts,
+        writer,
+        &mut relationships,
+        extra_overrides,
+        extra_defaults,
+    )?;
 
     let mut worksheets = xl.worksheets;
     let mut sheet_ids = xl
@@ -232,6 +322,8 @@ fn write_xl(xl: Xl, writer: &mut Writer) -> ZipResult<Vec<WriteProof>> {
                 &mut pivot_table_ctr,
                 &cache_target_by_id,
                 &mut table_ctr,
+                extra_overrides,
+                extra_defaults,
             )?;
             result.extend(prooves);
             relationships.push(CtRelationship {
@@ -367,10 +459,21 @@ fn write_worksheet<'a>(
     pivot_ctr: &mut usize,
     cache_target_by_id: &HashMap<u32, String>,
     table_ctr: &mut usize,
+    extra_overrides: &mut Vec<CtOverride>,
+    extra_defaults: &mut Vec<CtDefault>,
 ) -> ZipResult<Vec<WriteProof>> {
     let mut result = Vec::<WriteProof>::new();
     let mut relationships = Vec::<CtRelationship>::new();
     let mut rid = 1_usize;
+
+    // Sheet-level parts nothing here models, kept whole.
+    write_unknown_parts(
+        &std::mem::take(&mut wb.unknown_parts),
+        writer,
+        &mut relationships,
+        extra_overrides,
+        extra_defaults,
+    )?;
 
     // Structured tables on this sheet. Numbered globally via `table_ctr`; the
     // relationship id is preserved so the worksheet's `<tableParts>` still
@@ -429,8 +532,7 @@ fn write_worksheet<'a>(
     // A drawing part holds the sheet's cell images. Emit it (plus its own rels
     // to media) and point the worksheet's <drawing r:id> at it.
     if let Some(drawing) = wb.drawing.take() {
-        let drawing_rid = format!("rId{}", rid);
-        rid += 1;
+        let drawing_rid = next_rid(&mut rid, &relationships);
         let p = write_drawing_part(
             drawing.content,
             writer,
@@ -481,13 +583,12 @@ fn write_worksheet<'a>(
             FileLocation::from(format!("xl/comments{}.xml", idx)),
         )?;
         relationships.push(CtRelationship {
-            id: format!("rId{}", rid),
+            id: next_rid(&mut rid, &relationships),
             target: format!("../comments{}.xml", idx),
             ty: COMMENTS.0.to_string(),
             target_mode: StTargetMode::Internal,
         });
         result.push(p);
-        rid += 1;
     }
 
     if let Some(threaded) = wb.threaded_comments {
@@ -497,7 +598,7 @@ fn write_worksheet<'a>(
             FileLocation::from(format!("xl/threadedComments/threadedComment{}.xml", idx)),
         )?;
         relationships.push(CtRelationship {
-            id: format!("rId{}", rid),
+            id: next_rid(&mut rid, &relationships),
             target: format!("../threadedComments/threadedComment{}.xml", idx),
             ty: THREADED_COMMENT.0.to_string(),
             target_mode: StTargetMode::Internal,
@@ -599,7 +700,12 @@ fn write_doc_props(doc_props: DocProps, writer: &mut Writer) -> ZipResult<Vec<Wr
     Ok(result)
 }
 
-fn write_content_types(proofs: Vec<WriteProof>, writer: &mut Writer) -> ZipResult<()> {
+fn write_content_types(
+    proofs: Vec<WriteProof>,
+    extra_overrides: Vec<CtOverride>,
+    extra_defaults: Vec<CtDefault>,
+    writer: &mut Writer,
+) -> ZipResult<()> {
     let defaults = vec![
         CtDefault {
             extension: String::from("bin"),
@@ -656,6 +762,20 @@ fn write_content_types(proofs: Vec<WriteProof>, writer: &mut Writer) -> ZipResul
             prev.push(c);
             prev
         });
+    // Entries carried by preserved parts, deduped against what we emit anyway:
+    // a repeated Default or Override makes the package invalid.
+    let mut defaults = defaults;
+    let mut overides = overides;
+    for d in extra_defaults {
+        if !defaults.iter().any(|x| x.extension == d.extension) {
+            defaults.push(d);
+        }
+    }
+    for o in extra_overrides {
+        if !overides.iter().any(|x| x.part_name == o.part_name) {
+            overides.push(o);
+        }
+    }
     let content_types = ContentTypes { defaults, overides };
     let s = xml_serialize_with_decl(content_types);
     writer.start_file("[Content_Types].xml", options())?;

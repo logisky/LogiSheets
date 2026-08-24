@@ -2,12 +2,12 @@ use itertools::Itertools;
 use logisheets_base::NormalRange;
 use logisheets_workbook::{
     logisheets::{AppData, LinkRangeXml, LogiSheetsData, Sheet},
-    prelude::{ChartAnchor, PassthroughPart},
+    prelude::{ChartAnchor, ChartAnchorExtent, PassthroughPart},
     prelude::{
         CtConditionalFormatting, CtExternalReference, CtExternalReferences, CtPerson, CtSheet,
         CtSheets, Persons, WorkbookPart,
     },
-    workbook::{DocProps, Media, Wb, Worksheet, WorksheetDrawing, Xl},
+    workbook::{Media, Wb, Worksheet, WorksheetDrawing, Xl},
 };
 use std::collections::HashMap;
 
@@ -64,9 +64,21 @@ pub fn save_workbook<S: SaverTrait>(
     // unique names; each sheet's drawing references them by relationship.
     let mut medias: Vec<Media> = vec![];
     let mut media_counter: usize = 0;
+    // Table `displayName`s and ids have to be unique across the WORKBOOK, not
+    // per sheet; Excel repairs a file where they collide. Two different block
+    // ref names can sanitise to the same identifier, so the counter and the
+    // taken-set live out here.
+    let mut table_names: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut table_id_counter: u32 = 0;
 
-    sheet_id_manager
-        .get_all_ids()
+    // In sheet ORDER, not hash order. `get_all_ids` walks a hash map, so which
+    // sheet was handed `rId1` changed from one save to the next — the file stayed
+    // internally consistent, but the output was not reproducible, and a
+    // preserved part that keeps the relationship id it arrived with has to be
+    // able to trust that minted ids are assigned predictably.
+    let mut ordered_sheet_ids = sheet_id_manager.get_all_ids();
+    ordered_sheet_ids.sort_by_key(|id| sheet_pos_manager.get_sheet_idx(id).unwrap_or(usize::MAX));
+    ordered_sheet_ids
         .into_iter()
         .flat_map(|id| {
             let default_container = crate::container::SheetDataContainer::default();
@@ -98,6 +110,131 @@ pub fn save_workbook<S: SaverTrait>(
                 .get_sheet_id(sheet_pos)
                 .expect("sheet position has a registered sheet id");
 
+            // A structured table that arrived with the file was adopted as a
+            // block, and the block may have grown or shrunk since. The
+            // preserved `tableN.xml` still carries the range it had on the way
+            // in, so re-point it at where its block is now — a stale `ref` is
+            // how Excel ends up showing a table that stops one row short of its
+            // own data.
+            for tp in worksheet.tables.iter_mut() {
+                let Some(range) = block_ranges.iter().find(|r| {
+                    block_schema_manager
+                        .fetch_block_ref_name(sheet_id, r.block_id)
+                        .is_some_and(|n| n == tp.table.display_name)
+                }) else {
+                    continue;
+                };
+                let header = tp.table.header_row_count as usize;
+                let totals = tp.table.totals_row_count as usize;
+                let r0 = range.start_row.saturating_sub(header);
+                let r1 = range.start_row + range.row_cnt - 1 + totals;
+                let c1 = range.start_col + range.col_cnt - 1;
+                let a1 = format!(
+                    "{}{}:{}{}",
+                    crate::sqref::col_to_letters(range.start_col),
+                    r0 + 1,
+                    crate::sqref::col_to_letters(c1),
+                    r1 + 1
+                );
+                if let Some(af) = tp.table.auto_filter.as_mut() {
+                    af.reference = a1.clone();
+                }
+                tp.table.reference = a1;
+            }
+
+            // Every other block becomes a table too, so a person opening the
+            // file in Excel gets a real ListObject — filters, structured
+            // references, styling — over the same rows the agent addresses by
+            // name. Reloading here restores the block from `logisheets/data.xml`
+            // (ref name, field rules, key column), and the table is recognised
+            // as the same region rather than converted a second time; that
+            // coexistence is what makes this safe.
+            //
+            // `headerRowCount` is 0 because a block's field names live in its
+            // schema, not in a row of cells. This is the same shape Excel itself
+            // writes for a table created with "My table has headers" unchecked:
+            // the column names live in the table definition.
+            {
+                let mut used_rids: std::collections::HashSet<String> = worksheet
+                    .tables
+                    .iter()
+                    .map(|t| t.rel_id.clone())
+                    .collect();
+                // A table preserved from the input already covers its block.
+                let already_tabled: std::collections::HashSet<String> = worksheet
+                    .tables
+                    .iter()
+                    .map(|t| t.table.display_name.clone())
+                    .collect();
+                for t in worksheet.tables.iter() {
+                    table_names.insert(t.table.display_name.clone());
+                    table_id_counter = table_id_counter.max(t.table.id);
+                }
+                for range in block_ranges.iter() {
+                    let Some(ref_name) = block_schema_manager
+                        .fetch_block_ref_name(sheet_id, range.block_id)
+                    else {
+                        continue; // no schema: nothing to name a table after
+                    };
+                    let base = excel_table_name(&ref_name);
+                    if already_tabled.contains(&base) {
+                        continue;
+                    }
+                    // Suffix rather than skip on a collision: a block silently
+                    // missing its table is harder to notice than one named
+                    // `sales_2`.
+                    let mut display_name = base.clone();
+                    let mut suffix = 2;
+                    while table_names.contains(&display_name) {
+                        display_name = format!("{}_{}", base, suffix);
+                        suffix += 1;
+                    }
+                    let fields = block_schema_manager
+                        .get_all_fields_by_block(sheet_id, range.block_id)
+                        .unwrap_or_default();
+                    if fields.is_empty() || range.row_cnt == 0 {
+                        continue;
+                    }
+                    let mut rid_n = 1;
+                    let rel_id = loop {
+                        let candidate = format!("rIdTable{}", rid_n);
+                        if used_rids.insert(candidate.clone()) {
+                            break candidate;
+                        }
+                        rid_n += 1;
+                    };
+                    let a1 = format!(
+                        "{}{}:{}{}",
+                        crate::sqref::col_to_letters(range.start_col),
+                        range.start_row + 1,
+                        crate::sqref::col_to_letters(range.start_col + range.col_cnt - 1),
+                        range.start_row + range.row_cnt
+                    );
+                    table_id_counter += 1;
+                    table_names.insert(display_name.clone());
+                    worksheet.tables.push(logisheets_workbook::workbook::TablePart {
+                        rel_id,
+                        table: block_to_table(table_id_counter, &display_name, &a1, &fields),
+                    });
+                }
+                // The sheet's `<tableParts>` has to list every one of them, the
+                // preserved and the synthesised alike, or the parts are orphaned.
+                if worksheet.tables.is_empty() {
+                    worksheet.worksheet_part.table_parts = None;
+                } else {
+                    worksheet.worksheet_part.table_parts = Some(logisheets_workbook::prelude::CtTableParts {
+                        count: worksheet.tables.len() as u32,
+                        parts: worksheet
+                            .tables
+                            .iter()
+                            .map(|t| logisheets_workbook::prelude::CtTablePart {
+                                id: t.rel_id.clone(),
+                            })
+                            .collect(),
+                    });
+                }
+            }
+
             // Attach cell images as a SpreadsheetDrawingML part. Each image's
             // stable CellId is resolved to a (row, col) position; images on
             // deleted cells (no position) are dropped.
@@ -121,21 +258,32 @@ pub fn save_workbook<S: SaverTrait>(
             let mut seen_parts: std::collections::HashSet<String> =
                 std::collections::HashSet::new();
             for chart in chart_manager.charts_of_sheet(sheet_id) {
-                let from = navigator.fetch_cell_idx(&sheet_id, &chart.from.cell);
-                let to = navigator.fetch_cell_idx(&sheet_id, &chart.to.cell);
-                let ((fr, fc), (tr, tc)) = match (from, to) {
-                    (Ok(f), Ok(t)) => (f, t),
-                    _ => continue,
+                let Ok((fr, fc)) = navigator.fetch_cell_idx(&sheet_id, &chart.from.cell) else {
+                    continue;
+                };
+                // A chart goes back out under the anchor kind it came in with.
+                let extent = match &chart.extent {
+                    crate::chart_manager::ChartExtent::ToCell(m) => {
+                        let Ok((tr, tc)) = navigator.fetch_cell_idx(&sheet_id, &m.cell) else {
+                            continue;
+                        };
+                        ChartAnchorExtent::ToCell {
+                            col: tc as i32,
+                            row: tr as i32,
+                            col_off: m.col_off,
+                            row_off: m.row_off,
+                        }
+                    }
+                    crate::chart_manager::ChartExtent::Size { cx, cy } => {
+                        ChartAnchorExtent::Size { cx: *cx, cy: *cy }
+                    }
                 };
                 chart_anchors.push(ChartAnchor {
                     from_col: fc as i32,
                     from_row: fr as i32,
                     from_col_off: chart.from.col_off,
                     from_row_off: chart.from.row_off,
-                    to_col: tc as i32,
-                    to_row: tr as i32,
-                    to_col_off: chart.to.col_off,
-                    to_row_off: chart.to.row_off,
+                    extent,
                     chart_path: chart.part_path.clone(),
                     name: format!("Chart {}", chart.id),
                 });
@@ -249,8 +397,9 @@ pub fn save_workbook<S: SaverTrait>(
     };
     let persons = save_persons(attachment_manager);
     let workbook = Wb {
+        unknown_parts: settings.unknown_package_parts.clone(),
         xl: Xl {
-            workbook_part: get_workbook(ct_sheets, ct_references),
+            workbook_part: get_workbook(ct_sheets, ct_references, settings),
             styles: (style_id, styles),
             sst,
             worksheets,
@@ -259,9 +408,12 @@ pub fn save_workbook<S: SaverTrait>(
             persons,
             medias,
             // The engine does not yet model pivot caches; none emitted on save.
-            pivot_caches: Vec::new(),
+            pivot_caches: settings.pivot_caches.clone(),
+            unknown_parts: settings.unknown_workbook_parts.clone(),
         },
-        doc_props: DocProps::default(),
+        // As they arrived, not `default()`: overwriting a file should not strip
+        // its author and creation time.
+        doc_props: settings.doc_props.clone(),
         logisheets: Some(LogiSheetsData {
             sheets,
             apps: app_data,
@@ -292,7 +444,11 @@ fn save_persons(attachment_manager: &CellAttachmentsManager) -> Option<Persons> 
     }
 }
 
-fn get_workbook(ct_sheets: CtSheets, ext_references: Vec<CtExternalReference>) -> WorkbookPart {
+fn get_workbook(
+    ct_sheets: CtSheets,
+    ext_references: Vec<CtExternalReference>,
+    settings: &Settings,
+) -> WorkbookPart {
     let external_references = if ext_references.is_empty() {
         None
     } else {
@@ -300,24 +456,26 @@ fn get_workbook(ct_sheets: CtSheets, ext_references: Vec<CtExternalReference>) -
             external_references: ext_references,
         })
     };
+    // Hand back what came in for everything the controller does not model.
+    let kept = &settings.preserved_workbook;
     WorkbookPart {
-        file_version: None,
-        file_sharing: None,
-        workbook_pr: None,
-        workbook_protection: None,
-        book_views: None,
+        file_version: kept.file_version.clone(),
+        file_sharing: kept.file_sharing.clone(),
+        workbook_pr: kept.workbook_pr.clone(),
+        workbook_protection: kept.workbook_protection.clone(),
+        book_views: kept.book_views.clone(),
         sheets: ct_sheets,
-        function_groups: None,
+        function_groups: kept.function_groups.clone(),
         external_references,
-        defined_names: None,
+        defined_names: kept.defined_names.clone(),
         calc_pr: None,
-        ole_size: None,
-        custom_workbook_views: None,
-        pivot_caches: None,
-        smart_tag_pr: None,
-        smart_tag_types: None,
-        web_publishing: None,
-        file_recovery_pr: None,
+        ole_size: kept.ole_size.clone(),
+        custom_workbook_views: kept.custom_workbook_views.clone(),
+        pivot_caches: kept.pivot_caches.clone(),
+        smart_tag_pr: kept.smart_tag_pr.clone(),
+        smart_tag_types: kept.smart_tag_types.clone(),
+        web_publishing: kept.web_publishing.clone(),
+        file_recovery_pr: kept.file_recovery_pr.clone(),
         web_publish_objects: None,
         conformance: None,
     }
@@ -350,4 +508,103 @@ fn conditional_formatting_manager_to_xml(
             })
         })
         .collect()
+}
+
+
+/// A block ref name as an Excel table `displayName`. Excel requires an
+/// identifier: letters, digits and underscores only, not starting with a digit,
+/// and never something that could be read as a cell reference. Agent-chosen ref
+/// names are none of those things by construction, so they are transliterated
+/// rather than rejected.
+fn excel_table_name(ref_name: &str) -> String {
+    let mut out = String::with_capacity(ref_name.len());
+    for ch in ref_name.chars() {
+        if ch.is_alphanumeric() || ch == '_' {
+            out.push(ch);
+        } else {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        return String::from("Block");
+    }
+    // Must not start with a digit, and must not look like `A1` / `R1C1`.
+    let starts_bad = out.chars().next().is_some_and(|c| c.is_ascii_digit());
+    let looks_like_ref = {
+        let letters: String = out.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+        let rest: String = out.chars().skip(letters.len()).collect();
+        !letters.is_empty()
+            && letters.len() <= 3
+            && !rest.is_empty()
+            && rest.chars().all(|c| c.is_ascii_digit())
+    };
+    if starts_bad || looks_like_ref {
+        format!("_{}", out)
+    } else {
+        out
+    }
+}
+
+/// A minimal `<table>` over a block: its rows, its fields as column names, no
+/// header row. Styling is left to Excel's default so nothing is invented.
+fn block_to_table(
+    id: u32,
+    display_name: &str,
+    reference: &str,
+    fields: &[String],
+) -> logisheets_workbook::prelude::Table {
+    use logisheets_workbook::prelude::{CtTableColumn, CtTableColumns, Table};
+    Table {
+        auto_filter: None,
+        sort_state: None,
+        table_columns: CtTableColumns {
+            count: fields.len() as u32,
+            table_column: fields
+                .iter()
+                .enumerate()
+                .map(|(i, name)| CtTableColumn {
+                    calculated_column_formula: None,
+                    totals_row_formula: None,
+                    xml_column_pr: None,
+                    ext_lst: None,
+                    id: i as u32 + 1,
+                    unique_name: None,
+                    name: name.clone(),
+                    totals_row_function: None,
+                    totals_row_label: None,
+                    query_table_field_id: None,
+                    header_row_dxf_id: None,
+                    data_dxf_id: None,
+                    totals_row_dxf_id: None,
+                    header_row_cell_style: None,
+                    data_cell_style: None,
+                    totals_row_cell_style: None,
+                })
+                .collect(),
+        },
+        table_style_info: None,
+        ext_lst: None,
+        id,
+        name: None,
+        display_name: display_name.to_string(),
+        comment: None,
+        reference: reference.to_string(),
+        table_type: None,
+        header_row_count: 0,
+        insert_row: false,
+        insert_row_shift: false,
+        totals_row_count: 0,
+        totals_row_shown: true,
+        published: false,
+        header_row_dxf_id: None,
+        data_dxf_id: None,
+        totals_row_dxf_id: None,
+        header_row_border_dxf_id: None,
+        table_border_dxf_id: None,
+        totals_row_border_dxf_id: None,
+        header_row_cell_style: None,
+        data_cell_style: None,
+        totals_row_cell_style: None,
+        connection_id: None,
+    }
 }

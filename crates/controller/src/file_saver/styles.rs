@@ -8,6 +8,33 @@ use logisheets_workbook::prelude::{
 
 use super::SaverTrait;
 
+/// A style table as a dense list, so an entry's POSITION equals its id.
+///
+/// Every style id is written into the file as an INDEX — `s="4"` on a cell,
+/// `fontId="2"` on an xf — so position and id have to agree. They did for as
+/// long as ids arrived contiguous from a file, and stopped agreeing the moment an
+/// unreferenced entry was collected: the sorted list closed the gap, every index
+/// past it shifted by one, and cells came back looking different. On
+/// `tests/6.xlsx` a cell went from not-bold-and-black to bold-and-coloured on the
+/// SECOND save, the first having been correct.
+///
+/// Filling the gaps keeps the invariant true for any id that gets written,
+/// rather than correcting the handful of places that currently write one and
+/// hoping the next author notices. A gap is unreferenced by construction — it
+/// was collected because nothing pointed at it — so what fills it only has to be
+/// valid.
+fn dense_by_id<T: Clone>(items: Vec<(u32, T)>) -> Vec<T> {
+    let Some(filler) = items.first().map(|(_, v)| v.clone()) else {
+        return Vec::new();
+    };
+    let max = items.iter().map(|(i, _)| *i).max().unwrap_or(0);
+    let mut out = vec![filler; max as usize + 1];
+    for (id, v) in items {
+        out[id as usize] = v;
+    }
+    out
+}
+
 pub fn save_sheet_style<S: SaverTrait>(manager: &StyleManager, _: &mut S) -> StylesheetPart {
     let fonts = save_fonts(&manager.font_manager);
     let fills = save_fills(&manager.fill_manager);
@@ -33,8 +60,7 @@ pub fn save_sheet_style<S: SaverTrait>(manager: &StyleManager, _: &mut S) -> Sty
 }
 
 fn save_cell_style_xfs(manager: &XfManager) -> Option<CtCellStyleXfs> {
-    let xfs: Vec<_> = manager
-        .get_data_sorted_by_id()
+    let xfs: Vec<_> = dense_by_id(manager.get_data_with_id_sorted_by_id())
         .into_iter()
         .map(|ctrl_xf| ctrl_xf.to_ct_xf())
         .collect();
@@ -47,8 +73,7 @@ fn save_cell_style_xfs(manager: &XfManager) -> Option<CtCellStyleXfs> {
 }
 
 fn save_cell_xfs(manager: &XfManager) -> Option<CtCellXfs> {
-    let xfs: Vec<_> = manager
-        .get_data_sorted_by_id()
+    let xfs: Vec<_> = dense_by_id(manager.get_data_with_id_sorted_by_id())
         .into_iter()
         .map(|ctrl_xf| ctrl_xf.to_ct_xf())
         .collect();
@@ -61,7 +86,7 @@ fn save_cell_xfs(manager: &XfManager) -> Option<CtCellXfs> {
 }
 
 fn save_borders(manager: &BorderManager) -> Option<CtBorders> {
-    let borders = manager.get_data_sorted_by_id();
+    let borders = dense_by_id(manager.get_data_with_id_sorted_by_id());
     let count = borders.len() as u32;
     if count > 0 {
         Some(CtBorders { count, borders })
@@ -71,7 +96,7 @@ fn save_borders(manager: &BorderManager) -> Option<CtBorders> {
 }
 
 fn save_fonts(manager: &FontManager) -> Option<CtFonts> {
-    let fonts = manager.get_data_sorted_by_id();
+    let fonts = dense_by_id(manager.get_data_with_id_sorted_by_id());
     let count = fonts.len() as u32;
     if count > 0 {
         Some(CtFonts { count, fonts })
@@ -81,7 +106,7 @@ fn save_fonts(manager: &FontManager) -> Option<CtFonts> {
 }
 
 fn save_fills(manager: &FillManager) -> Option<CtFills> {
-    let fills = manager.get_data_sorted_by_id();
+    let fills = dense_by_id(manager.get_data_with_id_sorted_by_id());
     let count = fills.len() as u32;
     if count > 0 {
         Some(CtFills { count, fills })

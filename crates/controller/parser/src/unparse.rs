@@ -284,7 +284,9 @@ impl Stringify for CubeDisplay {
         let cube = fetcher.fetch_cube(&self.cube_id)?;
         let from_sheet = fetcher.fetch_sheet_name(&cube.from_sheet)?;
         let to_sheet = fetcher.fetch_sheet_name(&cube.to_sheet)?;
-        let prefix = format!("{}:{}", from_sheet, to_sheet);
+        // Quoted as one prefix: a 3D range's apostrophes go around the whole
+        // `Sheet1:Sheet3`, not around either name.
+        let prefix = quote_sheet_prefix(&format!("{}:{}", from_sheet, to_sheet));
         let RefAbs {
             start_row,
             start_col,
@@ -317,6 +319,54 @@ impl Stringify for CubeDisplay {
         };
         Ok(format!("{}!{}", prefix, cross_str))
     }
+}
+
+/// True when a sheet name cannot appear in a formula without apostrophes.
+///
+/// The grammar treats a SPACE as an operator — Excel's intersection — so an
+/// unquoted `Quarterly Data!A1` lexes as `Quarterly` intersected with `Data!A1`,
+/// and every other operator character is ambiguous the same way. A leading digit
+/// is rejected too: it would start a number.
+///
+/// Deliberately conservative about what it leaves bare. Quoting a name that did
+/// not need it still parses and still means the same range, while failing to
+/// quote one that did produces a formula nobody can read back — so anything but
+/// letters, digits, underscores and periods gets apostrophes. CJK names stay
+/// bare, which is what they were before, because they contain no operator.
+fn sheet_name_needs_quoting(name: &str) -> bool {
+    if name.is_empty() {
+        return false;
+    }
+    if name.starts_with(|c: char| c.is_ascii_digit()) {
+        return true;
+    }
+    name.chars().any(|c| {
+        c.is_whitespace()
+            || matches!(
+                c,
+                '!' | '"' | '#' | '$' | '%' | '&' | '\'' | '(' | ')' | '*' | '+' | ','
+                    | '-' | '/' | ':' | ';' | '<' | '=' | '>' | '?' | '@' | '[' | '\\'
+                    | ']' | '^' | '`' | '{' | '|' | '}' | '~'
+            )
+    })
+}
+
+/// Wrap a formula's sheet prefix in apostrophes when it needs them, doubling any
+/// apostrophe inside — `Bob's Data` becomes `'Bob''s Data'`, which is the form
+/// the grammar's `sheet_name_special` reads back.
+///
+/// Takes the whole prefix rather than one name so the three shapes that share it
+/// are quoted the way Excel quotes them: the apostrophes go OUTSIDE, around
+/// `Sheet1:Sheet3` and around `[Book]Sheet` alike, never around a single piece
+/// of either.
+fn quote_sheet_prefix(prefix: &str) -> String {
+    if !prefix.chars().any(|c| {
+        c.is_whitespace() || matches!(c, '\'' | '[' | ']')
+    }) && !sheet_name_needs_quoting(prefix)
+    {
+        return prefix.to_string();
+    }
+    format!("'{}'", prefix.replace('\'', "''"))
 }
 
 impl Stringify for ExtRefDisplay {
@@ -366,7 +416,11 @@ impl Stringify for ExtRefDisplay {
                 format!("{}{}:{}{}", sc, sr, ec, er)
             }
         };
-        Ok(format!("[{}]{}!{}", workbook_name, sheet, cross_str))
+        Ok(format!(
+            "{}!{}",
+            quote_sheet_prefix(&format!("[{}]{}", workbook_name, sheet)),
+            cross_str
+        ))
     }
 }
 
@@ -401,7 +455,7 @@ impl Stringify for RangeDisplay {
         } else {
             let sheet_name = fetcher.fetch_sheet_name(&self.sheet_id)?;
             if sheet_name.len() > 0 {
-                format!("{}!", sheet_name)
+                format!("{}!", quote_sheet_prefix(&sheet_name))
             } else {
                 String::from("")
             }

@@ -39,18 +39,27 @@ pub fn load_normal_formula<'a, 'b>(
     };
     let range_id = connector.range_manager.get_range_id(&sheet_id, &range);
 
-    let ast_node = parse_formula(sheet_id, connector, f);
+    let Some(ast_node) = parse_formula(sheet_id, connector, f) else {
+        return;
+    };
 
     formula_manager.add_ast_node(sheet_id, cid, range_id, ast_node)
 }
 
+/// `None` when the formula cannot be read.
+///
+/// A file can hold a formula this parser does not accept — a function we have
+/// not implemented, a dialect quirk, plain corruption — and that used to end the
+/// load for the entire workbook. The cell's cached `<v>` is already in place by
+/// the time this runs, so skipping the registration leaves the value the file
+/// shipped, visible and wrong-if-stale, instead of no file at all.
 fn parse_formula<'a: 'c, 'b, 'c>(
     sheet_id: SheetId,
     connector: &'c mut FormulaConnector<'a>,
     f: &str,
-) -> ast::Node {
+) -> Option<ast::Node> {
     let parser = Parser {};
-    parser.parse(f, sheet_id, connector).unwrap()
+    parser.parse(f, sheet_id, connector)
 }
 
 pub fn load_shared_formulas<'a, 'b>(
@@ -65,7 +74,9 @@ pub fn load_shared_formulas<'a, 'b>(
     master_formula: &str,
     connector: &'a mut FormulaConnector<'a>,
 ) {
-    let master_ast = parse_formula(sheet_id, connector, master_formula);
+    let Some(master_ast) = parse_formula(sheet_id, connector, master_formula) else {
+        return;
+    };
     for row in row_start..row_end + 1 {
         for col in col_start..col_end + 1 {
             let cid = connector.fetch_cell_id(&sheet_id, row, col).unwrap();
