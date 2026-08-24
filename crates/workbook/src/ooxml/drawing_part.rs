@@ -369,6 +369,7 @@ mod tests {
         let anchor = CtTwoCellAnchor::new_cell_image(2, 3, 2, "Picture 1".into(), "rId1".into());
         let dr = CtWsDr {
             two_cell_anchors: vec![anchor],
+            one_cell_anchors: vec![],
         };
         let xml = xml_serialize_with_decl(dr);
         // Sanity: the qualified names and the embed id survive serialization.

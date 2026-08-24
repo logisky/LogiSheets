@@ -1000,12 +1000,14 @@ fn table_converts_to_block_on_load() {
         "block covers the 3 data rows"
     );
 
-    // Schema ref is `unspecified-*` and its fields are the header names.
+    // The ref name is the TABLE's own name, and its fields are the header
+    // names. A ref name is how a formula addresses the block, so the name the
+    // user already gave the table is the useful one; `unspecified-<id>` is the
+    // fallback for a table whose `displayName` is empty or already taken.
     let schema = b.schema.as_ref().expect("converted block has a schema");
-    assert!(
-        schema.name.starts_with("unspecified-"),
-        "ref name should be unspecified-*, got {:?}",
-        schema.name
+    assert_eq!(
+        schema.name, "Table1",
+        "the block should adopt the table's own displayName"
     );
     let field_names: Vec<&str> = schema.fields.iter().map(|f| f.field.as_str()).collect();
     assert_eq!(field_names, vec!["Region", "Q1", "Q2"]);
@@ -1015,17 +1017,39 @@ fn table_converts_to_block_on_load() {
     assert!(matches!(ws0.get_value(1, 0).unwrap(), Value::Str(s) if s == "East"));
     assert!(matches!(ws0.get_value(3, 2).unwrap(), Value::Number(n) if (n - 60.0).abs() < 1e-9));
 
-    // 4. Re-save: no table is written back; the block persists as private data.
+    // 4. Re-save: the block goes back out AS A TABLE. That is the point of the
+    // conversion being two-way — a block is the engine's idea, and a table is
+    // how every other program recognizes the same region, so a file that came in
+    // with a table leaves with one and Excel still sees what it wrote.
     let resaved = wb.save().unwrap();
     let raw2 = Wb::from_file(&resaved).unwrap();
-    assert!(
-        raw2.xl.worksheets.values().all(|w| w.tables.is_empty()),
-        "the engine must not write the block back out as a table"
+    let tables: Vec<_> = raw2
+        .xl
+        .worksheets
+        .values()
+        .flat_map(|w| w.tables.iter())
+        .collect();
+    assert_eq!(
+        tables.len(),
+        1,
+        "the block should be written back out as one table"
     );
-    // Reload the re-saved file: the block round-trips (from logisheets data).
+
+    // Reload the re-saved file: the table becomes the block again, under the
+    // same name, so the round trip is a fixed point rather than a drift.
     let wb2 = Workbook::from_file(&resaved, "tbl2".to_string()).unwrap();
     let ws2 = wb2.get_sheet_by_idx(0).unwrap();
-    assert_eq!(ws2.get_all_blocks().len(), 1, "block survives save/reload");
+    let blocks2 = ws2.get_all_blocks();
+    assert_eq!(blocks2.len(), 1, "block survives save/reload");
+    assert_eq!(
+        blocks2[0]
+            .schema
+            .as_ref()
+            .expect("still has a schema")
+            .name,
+        schema.name,
+        "the ref name should not change across a save"
+    );
     assert!(matches!(ws2.get_value(1, 0).unwrap(), Value::Str(s) if s == "East"));
 }
 
