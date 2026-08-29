@@ -84,6 +84,17 @@ pub struct BlockRange {
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct BlockLineInfo {
+    /// This line's own position within its block, along the block's axis
+    /// (`<rowInfos>` count rows, `<colInfos>` count columns).
+    ///
+    /// Only the ANNOTATED lines are written, so without a position the
+    /// restore is a positional zip against the block's full axis — correct
+    /// only when every line happened to carry info, and silently wrong
+    /// otherwise (metadata set on column 2 alone came back on column 0).
+    /// Files written before this attribute existed have `None` and keep the
+    /// old behaviour; see `file_loader`.
+    #[xmlserde(name = b"line", ty = "attr")]
+    pub line: Option<u32>,
     #[xmlserde(name = b"style", ty = "attr")]
     pub style: Option<u32>,
     #[xmlserde(name = b"name", ty = "attr")]
@@ -94,8 +105,15 @@ pub struct BlockLineInfo {
     pub diy_render: Option<bool>,
 }
 
+/// Craft-authored metadata attached to one cell of a block.
+///
+/// Addressed by block id plus a BLOCK-RELATIVE offset, never by a sheet
+/// coordinate: a block moves, and rows are inserted above it, so a saved
+/// sheet coordinate would point somewhere else the next time the file opens.
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct CellAppendix {
+    #[xmlserde(name = b"blockId", ty = "attr")]
+    pub block_id: usize,
     #[xmlserde(name = b"rowIdx", ty = "attr")]
     pub row_idx: u32,
     #[xmlserde(name = b"colIdx", ty = "attr")]

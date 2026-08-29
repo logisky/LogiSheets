@@ -129,6 +129,7 @@ pub fn save_file(
         &controller.status.data_validation_manager,
         &controller.status.conditional_formatting_manager,
         &controller.status.range_manager,
+        &controller.status.exclusive_manager,
         &mut saver,
     )
 }

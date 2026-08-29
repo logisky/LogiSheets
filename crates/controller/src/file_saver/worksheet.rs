@@ -77,36 +77,42 @@ pub fn save_sheets<S: SaverTrait>(
         .iter()
         .flat_map(|(block_id, block)| {
             let master = block.master;
+            // Only the annotated lines are written, so each one carries its own
+            // position along the block's axis. Without it the loader can only
+            // zip positionally, which puts a lone column-2 annotation on column
+            // 0 — a block is rarely annotated end to end.
             let row_infos = block
                 .rows
                 .iter()
-                .flat_map(|row_id| {
-                    sheet_data_container
+                .enumerate()
+                .filter_map(|(line, row_id)| {
+                    let info = sheet_data_container
                         .block_line_info_manager
-                        .get_row_info(*block_id, *row_id)
-                        .cloned()
-                })
-                .map(|info| BlockLineInfo {
-                    style: info.style,
-                    name: info.name,
-                    field_id: info.field_id,
-                    diy_render: info.diy_render,
+                        .get_row_info(*block_id, *row_id)?;
+                    Some(BlockLineInfo {
+                        line: Some(line as u32),
+                        style: info.style,
+                        name: info.name.clone(),
+                        field_id: info.field_id.clone(),
+                        diy_render: info.diy_render,
+                    })
                 })
                 .collect::<Vec<_>>();
             let col_infos = block
                 .cols
                 .iter()
-                .flat_map(|col_id| {
-                    sheet_data_container
+                .enumerate()
+                .filter_map(|(line, col_id)| {
+                    let info = sheet_data_container
                         .block_line_info_manager
-                        .get_col_info(*block_id, *col_id)
-                        .cloned()
-                })
-                .map(|info| BlockLineInfo {
-                    style: info.style,
-                    name: info.name,
-                    field_id: info.field_id,
-                    diy_render: info.diy_render,
+                        .get_col_info(*block_id, *col_id)?;
+                    Some(BlockLineInfo {
+                        line: Some(line as u32),
+                        style: info.style,
+                        name: info.name.clone(),
+                        field_id: info.field_id.clone(),
+                        diy_render: info.diy_render,
+                    })
                 })
                 .collect::<Vec<_>>();
             if let Ok((row_idx, col_idx)) = saver.fetch_normal_cell_index(&sheet_id, &master) {
