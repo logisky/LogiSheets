@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use logisheets_base::NormalRange;
 use logisheets_workbook::{
-    logisheets::{AppData, LinkRangeXml, LogiSheetsData, Sheet},
+    logisheets::{AppData, CellAppendix, LinkRangeXml, LogiSheetsData, Sheet},
     prelude::{ChartAnchor, ChartAnchorExtent, PassthroughPart},
     prelude::{
         CtConditionalFormatting, CtExternalReference, CtExternalReferences, CtPerson, CtSheet,
@@ -55,6 +55,7 @@ pub fn save_workbook<S: SaverTrait>(
     data_validation_manager: &DataValidationManager,
     conditional_formatting_manager: &crate::conditional_formatting_manager::ConditionalFormattingManager,
     range_manager: &crate::range_manager::RangeManager,
+    exclusive_manager: &crate::exclusive::ExclusiveManager,
     saver: &mut S,
 ) -> Result<Wb, SaveError> {
     let mut worksheets: HashMap<String, Worksheet> = HashMap::new();
@@ -354,11 +355,42 @@ pub fn save_workbook<S: SaverTrait>(
                         .collect()
                 })
                 .unwrap_or_default();
+            // Craft metadata on block cells, addressed the way it is held in
+            // memory: by block id and a block-relative offset. Resolving the
+            // BlockCellId's row/col ids to offsets here is what makes the
+            // record survive the block moving between saves.
+            let mut cell_appendices = Vec::new();
+            if let Some(nav) = navigator.sheet_navs.get(&sheet_id) {
+                for (cell, list) in exclusive_manager.appendix_manager.iter_sheet(sheet_id) {
+                    let Some(bp) = nav.data.blocks.get(&cell.block_id) else {
+                        continue;
+                    };
+                    let Some((row_idx, col_idx)) = bp.get_inner_idx(cell.row, cell.col) else {
+                        continue;
+                    };
+                    for a in list.iter() {
+                        cell_appendices.push(CellAppendix {
+                            block_id: cell.block_id,
+                            row_idx: row_idx as u32,
+                            col_idx: col_idx as u32,
+                            craft_id: a.craft_id.clone(),
+                            craft_tag: a.tag as u32,
+                            content: a.content.clone(),
+                        });
+                    }
+                }
+            }
+            // `iter_sheet` walks a hash map, so without this the element order
+            // changed from one save to the next. A stable sort by cell keeps
+            // each cell's own stack in push order, which is the order the
+            // craft that wrote them will read them back in.
+            cell_appendices.sort_by_key(|a| (a.block_id, a.row_idx, a.col_idx));
+
             // field_renders_to_xml is invoked once at the end, below —
             // it's workbook-global, not per sheet.
             let sheet = Sheet {
                 block_ranges,
-                cell_appendices: vec![],
+                cell_appendices,
                 row_schemas,
                 col_schemas,
                 random_schemas,

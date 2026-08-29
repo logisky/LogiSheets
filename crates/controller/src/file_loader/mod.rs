@@ -57,7 +57,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         mut range_manager,
         mut cube_manager,
         mut ext_ref_manager,
-        exclusive_manager,
+        mut exclusive_manager,
         dirty_cells_next_round: mut dirty_cells,
         mut block_schema_manager,
         mut field_render_manager,
@@ -162,7 +162,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             .for_each(|(idx, sheet_data)| {
                 let logisheets_workbook::logisheets::Sheet {
                     block_ranges,
-                    cell_appendices: _,
+                    cell_appendices,
                     row_schemas,
                     col_schemas,
                     random_schemas,
@@ -201,30 +201,50 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                         modify_policy,
                     );
                     let sheet_container = container.get_sheet_container_mut(sheet_id);
-                    let row_infos = block_range.row_infos;
-                    if row_infos.len() > 0 {
-                        block_place.rows.iter().zip(row_infos.into_iter()).for_each(
-                            |(row_id, info)| {
-                                sheet_container
-                                    .block_line_info_manager
-                                    .row_manager
-                                    .set_info(block_id, *row_id, info.into());
-                            },
-                        );
-                    }
-                    let col_infos = block_range.col_infos;
-                    if col_infos.len() > 0 {
-                        block_place.cols.iter().zip(col_infos.into_iter()).for_each(
-                            |(col_id, info)| {
-                                sheet_container
-                                    .block_line_info_manager
-                                    .col_manager
-                                    .set_info(block_id, *col_id, info.into());
-                            },
-                        );
-                    }
+                    restore_line_infos(block_range.row_infos, &block_place.rows, |id, info| {
+                        sheet_container
+                            .block_line_info_manager
+                            .row_manager
+                            .set_info(block_id, id, info);
+                    });
+                    restore_line_infos(block_range.col_infos, &block_place.cols, |id, info| {
+                        sheet_container
+                            .block_line_info_manager
+                            .col_manager
+                            .set_info(block_id, id, info);
+                    });
                     let sheet_nav = navigator.sheet_navs.get_mut(&sheet_id).unwrap();
                     sheet_nav.data.blocks.insert(block_id, block_place);
+                });
+                // After the blocks, because an appendix is addressed by a
+                // block-relative offset that only a live `BlockPlace` can turn
+                // back into the row/col ids the manager is keyed by. An entry
+                // naming a block or an offset the file no longer has is
+                // dropped: the cell it annotated is gone.
+                cell_appendices.into_iter().for_each(|a| {
+                    let Some(sheet_nav) = navigator.sheet_navs.get(&sheet_id) else {
+                        return;
+                    };
+                    let Some(bp) = sheet_nav.data.blocks.get(&a.block_id) else {
+                        return;
+                    };
+                    let Some((row, col)) = bp.get_inner_id(a.row_idx as usize, a.col_idx as usize)
+                    else {
+                        return;
+                    };
+                    exclusive_manager.appendix_manager.push(
+                        sheet_id,
+                        logisheets_base::BlockCellId {
+                            block_id: a.block_id,
+                            row,
+                            col,
+                        },
+                        crate::exclusive::Appendix {
+                            craft_id: a.craft_id,
+                            tag: a.craft_tag as u8,
+                            content: a.content,
+                        },
+                    );
                 });
                 // Defer link restoration until every sheet's blocks exist.
                 link_ranges
@@ -927,5 +947,83 @@ fn load_sheet_pr(
             let rgb = turn_indexed_color_to_rgb(index);
             sheet_info_manager.colors.insert(sheet_id, rgb);
         }
+    }
+}
+
+/// Put each persisted `<rowInfos>` / `<colInfos>` entry back on the line it
+/// came from.
+///
+/// The writer emits only the ANNOTATED lines, so their position in the list
+/// says nothing about their position in the block. `line` carries the real one.
+/// Files written before that attribute existed have `None`, and the best that
+/// can be done for them is the original positional zip — right when every line
+/// was annotated, which is the only case that ever worked anyway.
+fn restore_line_infos<T: Copy>(
+    infos: Vec<logisheets_workbook::logisheets::BlockLineInfo>,
+    ids: &imbl::Vector<T>,
+    mut set: impl FnMut(T, crate::container::block_line_info_manager::BlockLineInfo),
+) where
+    T: Clone,
+{
+    for (positional, info) in infos.into_iter().enumerate() {
+        let at = info.line.map_or(positional, |l| l as usize);
+        let Some(id) = ids.get(at) else { continue };
+        set(*id, info.into());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::restore_line_infos;
+    use logisheets_workbook::logisheets::BlockLineInfo as Xml;
+
+    fn xml(line: Option<u32>, field_id: &str) -> Xml {
+        Xml {
+            line,
+            style: None,
+            name: None,
+            field_id: field_id.to_string(),
+            diy_render: None,
+        }
+    }
+
+    fn restored(infos: Vec<Xml>) -> Vec<(u32, String)> {
+        let ids: imbl::Vector<u32> = (0..4u32).collect();
+        let mut out = Vec::new();
+        restore_line_infos(infos, &ids, |id, info| out.push((id, info.field_id)));
+        out.sort();
+        out
+    }
+
+    #[test]
+    fn an_entry_lands_on_the_line_it_names() {
+        assert_eq!(
+            restored(vec![xml(Some(2), "c"), xml(Some(0), "a")]),
+            vec![(0, "a".to_string()), (2, "c".to_string())],
+            "order in the list says nothing; `line` does"
+        );
+    }
+
+    #[test]
+    fn a_legacy_entry_without_a_line_falls_back_to_its_position() {
+        // Files written before `line` existed carry only the annotated lines,
+        // in axis order. Zipping them onto the block's axis is what the loader
+        // always did, and it is right for the only case that ever worked: a
+        // block annotated end to end.
+        assert_eq!(
+            restored(vec![xml(None, "a"), xml(None, "b"), xml(None, "c")]),
+            vec![
+                (0, "a".to_string()),
+                (1, "b".to_string()),
+                (2, "c".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn a_line_the_block_no_longer_has_is_dropped_not_panicked_on() {
+        // The block can have shrunk since the file was written; indexing past
+        // its axis used to be a panic waiting to happen.
+        assert_eq!(restored(vec![xml(Some(99), "gone")]), vec![]);
     }
 }

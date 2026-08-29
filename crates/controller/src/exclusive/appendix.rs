@@ -40,6 +40,18 @@ impl AppendixManager {
         self.data.get(&(sheet_id, *block_cell_id)).cloned()
     }
 
+    /// Every annotated cell on `sheet_id`, with the appendices stacked on it in
+    /// the order they were pushed. Iteration follows the hash map, so a caller
+    /// writing a file has to sort — the save must not depend on hash order.
+    pub fn iter_sheet(
+        &self,
+        sheet_id: SheetId,
+    ) -> impl Iterator<Item = (&BlockCellId, &Vec<Appendix>)> {
+        self.data
+            .iter()
+            .filter_map(move |((sid, cell), list)| (*sid == sheet_id).then_some((cell, list)))
+    }
+
     pub fn push(&mut self, sheet_id: SheetId, block_cell_id: BlockCellId, appendix: Appendix) {
         self.data
             .entry((sheet_id, block_cell_id))
