@@ -202,6 +202,36 @@ export class ViewManager {
 
   public dataChunks: CellViewData[] = [];
 
+  /**
+   * Workbook-unit origin (x in column-width units, y in pt) the returned
+   * window should be laid out from — the top-left of its FIRST cell.
+   *
+   * The core answers a window request with one extra row/column in front (the
+   * partially-scrolled leading cell) but reports `startX`/`startY` for the
+   * cell that contains the requested anchor — i.e. one cell later than the
+   * list it hands back. Laying the list out at that reported point puts the
+   * leading cell where the anchor's own cell belongs and shifts the whole
+   * view — headers, paint and hit-testing alike — by one cell. So resolve the
+   * true origin from the first returned cell's own position instead; that is
+   * also correct when the leading cell is hidden (the core drops hidden
+   * rows/cols, so there may be no extra cell at all).
+   */
+  private _originOf(w: DisplayWindowWithStartPoint): {
+    startX: number;
+    startY: number;
+  } {
+    const row = w.window.rows[0];
+    const col = w.window.cols[0];
+    if (!row || !col) return { startX: w.startX, startY: w.startY };
+    const pos = this._workbook.getCellPosition({
+      sheetIdx: this._sheetIdx,
+      row: row.idx,
+      col: col.idx,
+    });
+    if (isErrorMessage(pos)) return { startX: w.startX, startY: w.startY };
+    return { startX: pos.x, startY: pos.y };
+  }
+
   public getViewResponse(
     startX: number,
     startY: number,
@@ -223,6 +253,7 @@ export class ViewManager {
 
     const data = parseDisplayWindow(
       w,
+      this._originOf(w),
       this._pool.getRenderCell.bind(this._pool),
       this._pool.getRange.bind(this._pool),
       this._pool.getStandardCell.bind(this._pool),
@@ -267,14 +298,17 @@ function locate(
 
 function parseDisplayWindow(
   window: DisplayWindowWithStartPoint,
+  // Where the first returned row/col actually starts — NOT window.startX/Y;
+  // see ViewManager._originOf.
+  origin: { startX: number; startY: number },
   getRenderCell: () => RenderCell,
   getRange: () => Range,
   getStandardCell: () => StandardCell,
   getStandardValue: () => StandardValue,
   getStandardStyle: () => StandardStyle,
 ): CellViewData {
-  const xStart = widthToPx(window.startX);
-  const yStart = ptToPx(window.startY);
+  const xStart = widthToPx(origin.startX);
+  const yStart = ptToPx(origin.startY);
 
   let x = xStart;
   const cols = window.window.cols.map((c) => {

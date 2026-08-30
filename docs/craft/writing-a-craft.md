@@ -282,6 +282,10 @@ Everything below appears **after** the iframe loads — guard with `whenReady`.
 - **Canvas input** — `window.onCanvasInput(cb)` intercepts mouse/keyboard on the
   grid **before the engine sees it**. `cb` gets `{type, sheetIdx, row, col, …}`;
   **return `true` to consume** the event, `false`/`undefined` to pass it through.
+- **Zoom** — the grid already zooms itself on **Ctrl/⌘ + wheel** and on a
+  trackpad pinch, so a craft doesn't need to implement the gesture. Use
+  `window.setCanvasZoom(factor)` / `window.getCanvasZoom()` only to drive a
+  specific factor (e.g. a "fit the board" button).
 - **Persistence** — `window.setCraftState(json)` / `getCraftState()` for
   per-document state the host folds into the saved workbook; `window.craftStorage`
   (async key/value) for device-scoped preferences that persist across documents.

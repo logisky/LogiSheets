@@ -60,6 +60,7 @@ export type {
   CellLayout,
   CanvasProps,
   EngineConfig,
+  ZoomOrigin,
 } from "$types/index";
 
 export {

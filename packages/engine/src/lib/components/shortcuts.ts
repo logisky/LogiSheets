@@ -67,6 +67,10 @@ export type ShortcutId =
     | 'insertTime'
     | 'autoSum'
     | 'toggleFormulas'
+    // Canvas zoom
+    | 'zoomIn'
+    | 'zoomOut'
+    | 'zoomReset'
 
 /** `true`/`false` require the modifier up/down; `'any'` ignores it. */
 type ModReq = boolean | 'any'
@@ -189,6 +193,26 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
         key: '`',
         primary: true,
     },
+    // ---- Canvas zoom ----
+    // Ctrl/⌘ + `+` / `-` / `0`, matching every browser and Excel. Shift is
+    // ignored because `+` is Shift+`=` on most layouts, and the numpad keys
+    // report '+' / '-' directly. Ctrl+Alt+`=` stays AutoSum (alt defaults to
+    // false here, so the two specs can't both match).
+    {
+        id: 'zoomIn',
+        description: 'Zoom in',
+        key: ['=', '+'],
+        primary: true,
+        shift: 'any',
+    },
+    {
+        id: 'zoomOut',
+        description: 'Zoom out',
+        key: ['-', '_'],
+        primary: true,
+        shift: 'any',
+    },
+    {id: 'zoomReset', description: 'Reset zoom', key: '0', primary: true},
 ]
 
 function modOk(pressed: boolean, req: ModReq | undefined): boolean {

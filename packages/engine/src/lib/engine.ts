@@ -23,10 +23,15 @@ import { isErrorMessage } from "logisheets-web";
 import { DataService, type BeforeLoadWorkbook } from "./clients/service";
 import { WorkbookClient } from "./clients/workbook";
 import { BlockManager } from "./block";
-import type { Grid, EngineConfig } from "$types/index";
+import type { Grid, EngineConfig, ZoomOrigin } from "$types/index";
 import { DEFAULT_ENGINE_CONFIG } from "$types/index";
 import { Session } from "./session";
-import { setZoomFactor, getZoomFactor } from "./components/utils";
+import {
+  setZoomFactor,
+  getZoomFactor,
+  setRequestedZoomFactor,
+  getRequestedZoomFactor,
+} from "./components/utils";
 import type {
   SessionHost,
   SessionMountOptions,
@@ -42,12 +47,19 @@ import type {
 import MyWorker from "./worker/worker.ts?worker&inline";
 
 /** Workbook-level events, shared across all views. */
-export type EngineEventType = "ready" | "sheetChange" | "cellChange" | "error";
+export type EngineEventType =
+  | "ready"
+  | "sheetChange"
+  | "cellChange"
+  | "zoomChange"
+  | "error";
 
 export interface EngineEventMap {
   ready: void;
   sheetChange: readonly SheetInfo[];
   cellChange: void;
+  /** The canvas zoom factor changed (1 = 100%). */
+  zoomChange: number;
   error: Error;
 }
 
@@ -90,12 +102,23 @@ export class Engine {
   // Workbook-level event listeners.
   private _listeners: Map<EngineEventType, Set<EventCallback<any>>> = new Map();
 
+  // Zoom coalescing: `_zooming` while a zoom is being applied, `_queuedZoom`
+  // holding the latest target requested meanwhile (see setZoom).
+  private _zooming = false;
+  private _queuedZoom: { factor: number; origin?: ZoomOrigin } | null = null;
+
   constructor(config?: Partial<EngineConfig>) {
     this._config = { ...DEFAULT_ENGINE_CONFIG, ...config };
     this._blockManager = new BlockManager();
 
     (
-      ["ready", "sheetChange", "cellChange", "error"] as EngineEventType[]
+      [
+        "ready",
+        "sheetChange",
+        "cellChange",
+        "zoomChange",
+        "error",
+      ] as EngineEventType[]
     ).forEach((type) => {
       this._listeners.set(type, new Set());
     });
@@ -189,6 +212,12 @@ export class Engine {
         if (this._defaultSession === session) {
           this._defaultSession = null;
         }
+      },
+      // A view asking to zoom (Ctrl/⌘ + wheel, pinch, or a zoom shortcut).
+      // Zoom is engine-global, so the request comes back up here rather than
+      // being applied by the view that saw the gesture.
+      requestZoom: (factor, origin) => {
+        void this.setZoom(factor, origin);
       },
     };
     const session = new Session(this._dataService, this._config, host);
@@ -301,11 +330,79 @@ export class Engine {
   /**
    * Global canvas zoom, as a factor (1 = 100%). Modeled as an effective-DPI
    * multiplier on the unit↔px converters, so layout, hit-testing, overlays and
-   * fonts all scale coherently across every view. Clamped to [0.5, 3]. Applies
-   * to all views (the worker + workbook are shared), which is why it's global.
+   * fonts all scale coherently across every view. Clamped to the config's
+   * [minZoom, maxZoom]. Applies to all views (the worker + workbook are
+   * shared), which is why it's global.
+   *
+   * `origin` is a viewport point to keep fixed (the pointer, for a wheel or
+   * pinch zoom): the view containing it zooms about that point, every other
+   * view keeps its own top-left cell.
+   *
+   * Calls made while a zoom is still applying are COALESCED: the latest factor
+   * wins and is applied as soon as the in-flight one lands, so a burst of
+   * wheel/pinch events costs one extra render, not one per event. Such a call
+   * resolves as soon as it is queued, not when it has been applied — a caller
+   * that must observe the result should read the settled value from
+   * {@link getZoom} after the `zoomChange` event.
    */
-  async setZoom(factor: number): Promise<void> {
-    const z = Math.min(3, Math.max(0.5, factor));
+  async setZoom(factor: number, origin?: ZoomOrigin): Promise<void> {
+    const z = Math.min(
+      this._config.maxZoom,
+      Math.max(this._config.minZoom, factor),
+    );
+    // Publish the target immediately: a gesture handler mid-pinch chains its
+    // next step off the REQUESTED zoom, not the applied one (see
+    // getRequestedZoomFactor), so events arriving while this one is still
+    // being applied keep accumulating instead of all reading the same base.
+    setRequestedZoomFactor(z);
+    this._queuedZoom = { factor: z, origin };
+    if (this._zooming) return;
+    this._zooming = true;
+    try {
+      // Drain: a zoom queued while the previous one was applying runs next.
+      while (this._queuedZoom) {
+        const next = this._queuedZoom;
+        this._queuedZoom = null;
+        await this._applyZoom(next.factor, next.origin);
+      }
+    } finally {
+      this._zooming = false;
+      // Re-sync the requested factor with what actually landed. A no-op in the
+      // normal path; this is what heals it if an apply threw.
+      if (!this._queuedZoom) setRequestedZoomFactor(getZoomFactor());
+    }
+  }
+
+  /** Current global zoom factor (1 = 100%). */
+  getZoom(): number {
+    return getZoomFactor();
+  }
+
+  // zoomIn/zoomOut step off the REQUESTED factor, not the applied one, so
+  // holding down a zoom button keeps stepping while a step is still rendering.
+
+  /** Zoom in one step (`config.zoomStep`), about `origin` when given. */
+  zoomIn(origin?: ZoomOrigin): Promise<void> {
+    return this.setZoom(
+      getRequestedZoomFactor() * this._config.zoomStep,
+      origin,
+    );
+  }
+
+  /** Zoom out one step (`config.zoomStep`), about `origin` when given. */
+  zoomOut(origin?: ZoomOrigin): Promise<void> {
+    return this.setZoom(
+      getRequestedZoomFactor() / this._config.zoomStep,
+      origin,
+    );
+  }
+
+  /** Back to 100%. */
+  resetZoom(): Promise<void> {
+    return this.setZoom(1);
+  }
+
+  private async _applyZoom(z: number, origin?: ZoomOrigin): Promise<void> {
     const current = getZoomFactor();
     if (Math.abs(z - current) < 1e-6) return;
     const ratio = z / current;
@@ -314,17 +411,14 @@ export class Engine {
     // Worker converters (layout + paint). Await so the re-render below lays
     // out at the new scale.
     await this._dataService.setZoom(z);
-    // Re-render every mounted view, keeping each one's top-left cell in view.
+    // Re-render every mounted view. The one under `origin` holds that point
+    // still; the rest keep their top-left cell in view.
     await Promise.all(
       [...this._sessions].map((s) =>
-        s.getGrid() ? s.applyZoom(ratio) : Promise.resolve(),
+        s.getGrid() ? s.applyZoom(ratio, origin) : Promise.resolve(),
       ),
     );
-  }
-
-  /** Current global zoom factor (1 = 100%). */
-  getZoom(): number {
-    return getZoomFactor();
+    this._emit("zoomChange", z);
   }
 
   setCurrentSheetIndex(index: number): void {

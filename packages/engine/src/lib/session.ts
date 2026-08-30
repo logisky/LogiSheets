@@ -20,7 +20,7 @@ import type { SheetInfo, SelectedData, CellLayout } from "logisheets-web";
 import { isErrorMessage } from "logisheets-web";
 import type { DataService } from "./clients/service";
 import { isLoadCancelled } from "./clients/service";
-import type { Grid, EngineConfig } from "$types/index";
+import type { Grid, EngineConfig, ZoomOrigin } from "$types/index";
 import { mount, unmount } from "svelte";
 import Spreadsheet from "./components/Spreadsheet.svelte";
 import type { ContextMenuContext } from "./components/contextMenuTypes";
@@ -81,6 +81,12 @@ export interface SessionHost {
   notifySheetsChange(sheets: readonly SheetInfo[]): void;
   /** Tell the Engine this session is destroyed so it can drop it. */
   releaseSession(session: Session): void;
+  /**
+   * A view saw a zoom gesture (Ctrl/⌘ + wheel, pinch, or a zoom shortcut).
+   * Zoom is engine-global — the Engine clamps, applies and re-renders every
+   * view. `origin` is the viewport point to keep fixed.
+   */
+  requestZoom(factor: number, origin?: ZoomOrigin): void;
 }
 
 // Each Session renders to its own OffscreenCanvas in the shared worker,
@@ -193,6 +199,11 @@ export class Session {
         },
         onFind: () => {
           this._emit("find", undefined);
+        },
+        // Zoom is engine-global; hand the gesture up rather than applying it
+        // to this view alone.
+        onZoomRequest: (factor: number, origin?: ZoomOrigin) => {
+          this._host.requestZoom(factor, origin);
         },
         // Pass data service for internal use
         dataService: this._dataService,
@@ -416,15 +427,17 @@ export class Session {
   }
 
   /**
-   * Re-render this view after a global zoom change, keeping its top-left cell
-   * in view. `ratio` is newZoom/oldZoom. No-op when unmounted. The worker must
-   * already hold the new zoom (Engine.setZoom guarantees this).
+   * Re-render this view after a global zoom change. `ratio` is
+   * newZoom/oldZoom. When `origin` falls inside this view's canvas that point
+   * is held still (zoom about the pointer); otherwise the top-left cell stays
+   * put. No-op when unmounted. The worker must already hold the new zoom
+   * (Engine.setZoom guarantees this).
    */
-  applyZoom(ratio: number): Promise<void> {
+  applyZoom(ratio: number, origin?: ZoomOrigin): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mounted = this._mountedComponent as any;
     if (mounted && typeof mounted.applyZoom === "function") {
-      return mounted.applyZoom(ratio);
+      return mounted.applyZoom(ratio, origin);
     }
     return Promise.resolve();
   }

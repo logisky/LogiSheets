@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import type { Grid, CellLayout, EngineConfig, DEFAULT_ENGINE_CONFIG } from '$types/index'
+    import type { Grid, CellLayout, EngineConfig, ZoomOrigin } from '$types/index'
+    import { DEFAULT_ENGINE_CONFIG } from '$types/index'
     import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType, ChartInfo } from 'logisheets-web'
     import { isErrorMessage } from 'logisheets-web'
     import { DataService } from '$lib/clients/service'
@@ -27,6 +28,7 @@
         buildSelectedDataFromLines,
         ptToPx,
         pxToPt,
+        getRequestedZoomFactor,
         pxToWidth,
         widthToPx,
         simpleUuid,
@@ -93,6 +95,13 @@ let isDragging = false; // True while user is drag-selecting
         onSave?: () => void
         /** Callback for the Find shortcut (Ctrl/⌘+F) — host opens its find UI. */
         onFind?: () => void
+        /**
+         * The user asked to zoom (Ctrl/⌘ + wheel, trackpad pinch, or a zoom
+         * shortcut). Zoom is engine-global, so the view only reports the
+         * requested factor and the point to hold still; the Engine clamps it
+         * and re-renders every view (see Engine.setZoom).
+         */
+        onZoomRequest?: (factor: number, origin?: ZoomOrigin) => void
         /** Ctrl/⌘+Arrow found no data/block boundary ahead — host may show a hint. */
         onNoDataBoundary?: (direction: 'up' | 'down' | 'left' | 'right') => void
         /** External data service (when used via Engine.mount()) */
@@ -118,6 +127,7 @@ let isDragging = false; // True while user is drag-selecting
         onInvalidFormula,
         onSave,
         onFind,
+        onZoomRequest,
         onNoDataBoundary,
         dataService: externalDataService = null,
         getIsEditingFormula,
@@ -127,18 +137,9 @@ let isDragging = false; // True while user is drag-selecting
     // Configuration (merge with defaults)
     // ========================================================================
 
-    const defaultConfig: EngineConfig = {
-        leftTopWidth: 32,
-        leftTopHeight: 24,
-        showHorizontalGridLines: true,
-        showVerticalGridLines: true,
-        showCellValues: true,
-        defaultCellWidth: 6,
-        defaultCellHeight: 25,
-        scrollbarSize: 16,
-    }
-
-    const cfg = $derived({ ...defaultConfig, ...config })
+    // Defaults come from the shared table, not a local copy — a second copy
+    // silently drifts as new options (zoom limits, gesture toggles, ...) land.
+    const cfg = $derived({ ...DEFAULT_ENGINE_CONFIG, ...config })
     const LeftTop = $derived({ width: cfg.leftTopWidth, height: cfg.leftTopHeight })
 
     const CANVAS_ID = simpleUuid()
@@ -645,6 +646,15 @@ let isDragging = false; // True while user is drag-selecting
         // Watch for DPR changes (zoom, moving to different display)
         prevDpr = window.devicePixelRatio || 1
         window.addEventListener('resize', handleDprChange)
+
+        // Safari / WKWebView (the desktop app's webview) report a trackpad
+        // pinch as non-standard gesture events rather than the ctrlKey wheel
+        // every other engine sends, so pinch-to-zoom needs this second path.
+        if (canvasEl) {
+            canvasEl.addEventListener('gesturestart', onGestureStart)
+            canvasEl.addEventListener('gesturechange', onGestureChange)
+            canvasEl.addEventListener('gestureend', preventGestureDefault)
+        }
     }
 
     function cleanup() {
@@ -664,6 +674,11 @@ let isDragging = false; // True while user is drag-selecting
             externalDataService.disposeOffscreen(canvasId)
         }
         window.removeEventListener('resize', handleDprChange)
+        if (canvasEl) {
+            canvasEl.removeEventListener('gesturestart', onGestureStart)
+            canvasEl.removeEventListener('gesturechange', onGestureChange)
+            canvasEl.removeEventListener('gestureend', preventGestureDefault)
+        }
     }
 
     // ========================================================================
@@ -800,12 +815,37 @@ let isDragging = false; // True while user is drag-selecting
     }
 
     // Re-render after a global zoom change. `ratio` is newZoom/oldZoom; scaling
-    // the current px anchor by it keeps the same top-left workbook position in
-    // view instead of jumping. The worker must already hold the new zoom (the
-    // Engine sets it before calling this), so this render lays out at the new
-    // scale. Exposed on the mounted component (see Session.applyZoom).
-    export function applyZoom(ratio: number): Promise<void> {
-        return renderWithAnchor(anchorX * ratio, anchorY * ratio, 'applyZoom')
+    // the current px anchor by it keeps the same workbook position in view
+    // instead of jumping. `origin` is a viewport point to hold still (the
+    // pointer of a wheel/pinch zoom): the sheet coordinate under it is
+    // `anchor + offset`, so after scaling it stays under the pointer when the
+    // anchor becomes `ratio * (anchor + offset) - offset`. An origin outside
+    // this view's canvas (another view saw the gesture) falls back to
+    // offset 0 — i.e. the top-left cell stays put.
+    //
+    // The worker must already hold the new zoom (the Engine sets it before
+    // calling this), so this render lays out at the new scale. Exposed on the
+    // mounted component (see Session.applyZoom).
+    export function applyZoom(ratio: number, origin?: ZoomOrigin): Promise<void> {
+        let offsetX = 0
+        let offsetY = 0
+        if (origin && canvasEl) {
+            const rect = canvasEl.getBoundingClientRect()
+            const x = origin.clientX - rect.left
+            const y = origin.clientY - rect.top
+            if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+                offsetX = x
+                offsetY = y
+            }
+        }
+        // Document extent is in px, so it changes with the zoom — refresh it or
+        // the scrollbars keep the old scale's range.
+        updateDocumentDimensions()
+        return renderWithAnchor(
+            Math.max(0, (anchorX + offsetX) * ratio - offsetX),
+            Math.max(0, (anchorY + offsetY) * ratio - offsetY),
+            'applyZoom'
+        )
     }
 
     // ========================================================================
@@ -1520,8 +1560,73 @@ let isDragging = false; // True while user is drag-selecting
         })
     }
 
+    // One wheel notch in px. Firefox reports deltaMode LINE (or, rarely,
+    // PAGE); normalize so a notch zooms the same everywhere.
+    function wheelDeltaPx(e: WheelEvent): number {
+        if (e.deltaMode === 1) return e.deltaY * 16 // lines
+        if (e.deltaMode === 2) return e.deltaY * 400 // pages
+        return e.deltaY
+    }
+
+    // WebKit's non-standard pinch events (see the listeners registered in
+    // initializeAsync). Not in lib.dom, so the shape we use is declared
+    // locally. `scale` is cumulative from gesturestart, hence the zoom
+    // snapshot taken there.
+    interface WebKitGestureEvent extends Event {
+        scale: number
+        clientX: number
+        clientY: number
+    }
+
+    let gestureBaseZoom = 1
+
+    /** True when this view handles the pinch itself (else WebKit page-zooms). */
+    function pinchHandled(): boolean {
+        return cfg.wheelZoom && !!onZoomRequest
+    }
+
+    function preventGestureDefault(e: Event) {
+        if (pinchHandled()) e.preventDefault()
+    }
+
+    function onGestureStart(e: Event) {
+        if (!pinchHandled()) return
+        e.preventDefault()
+        gestureBaseZoom = getRequestedZoomFactor()
+    }
+
+    function onGestureChange(e: Event) {
+        if (!pinchHandled()) return
+        e.preventDefault()
+        const g = e as WebKitGestureEvent
+        onZoomRequest?.(gestureBaseZoom * g.scale, {
+            clientX: g.clientX,
+            clientY: g.clientY,
+        })
+    }
+
     function onWheel(e: WheelEvent) {
         e.preventDefault()
+
+        // Ctrl/⌘ + wheel zooms instead of scrolling. A trackpad pinch reaches
+        // the page as exactly this (a wheel event with ctrlKey set), so the
+        // one branch covers both gestures. preventDefault above is what stops
+        // the browser's own page zoom from firing too. Without a zoom handler
+        // (a standalone <Spreadsheet/>, no Engine) this falls through and the
+        // gesture just scrolls, which beats doing nothing.
+        if (cfg.wheelZoom && onZoomRequest && (e.ctrlKey || e.metaKey)) {
+            if (e.deltaY === 0) return
+            // Exponential so each notch is a constant PERCENTAGE step (zoom is
+            // multiplicative) and so a pinch, which arrives as a stream of
+            // small deltas, accumulates smoothly. Clamped because a fast
+            // wheel/inertial scroll can report a huge single delta.
+            const d = Math.max(-40, Math.min(40, wheelDeltaPx(e)))
+            onZoomRequest(getRequestedZoomFactor() * Math.exp(-d / 300), {
+                clientX: e.clientX,
+                clientY: e.clientY,
+            })
+            return
+        }
 
         if (e.deltaY === 0) return
 
@@ -1544,7 +1649,7 @@ let isDragging = false; // True while user is drag-selecting
     // fillDown/fillRight/find/formatCells/insertDate/insertTime/autoSum/
     // toggleFormulas) are intentionally omitted — an absent entry falls through
     // and preserves native/default behavior. Add one when the feature lands.
-    const shortcutHandlers: ShortcutHandlers = {
+    const baseShortcutHandlers: ShortcutHandlers = {
         moveUp: () => moveSelection('up'),
         moveDown: () => moveSelection('down'),
         moveLeft: () => moveSelection('left'),
@@ -1573,6 +1678,36 @@ let isDragging = false; // True while user is drag-selecting
         // forwards the intent; returning a handler makes dispatchShortcut
         // preventDefault, so the browser's native Ctrl+F is suppressed.
         find: () => onFind?.(),
+        // Zoom. Registering these also suppresses the browser's own page
+        // zoom on Ctrl/⌘ +/-/0 while the grid has focus.
+        zoomIn: () => requestZoomStep(cfg.zoomStep),
+        zoomOut: () => requestZoomStep(1 / cfg.zoomStep),
+        zoomReset: () => onZoomRequest?.(1),
+    }
+
+    // Drop the zoom bindings when the host turned zoom shortcuts off, so
+    // Ctrl/⌘ +/-/0 falls through to the browser instead of being swallowed
+    // (an unhandled shortcut is not preventDefault'd — see dispatchShortcut).
+    const shortcutHandlers: ShortcutHandlers = $derived.by(() => {
+        if (cfg.zoomShortcuts) return baseShortcutHandlers
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { zoomIn, zoomOut, zoomReset, ...rest } = baseShortcutHandlers
+        return rest
+    })
+
+    /** Multiply the current zoom by `step`, anchored at the canvas center. */
+    function requestZoomStep(step: number) {
+        if (!onZoomRequest) return
+        const rect = canvasEl?.getBoundingClientRect()
+        onZoomRequest(
+            getRequestedZoomFactor() * step,
+            rect
+                ? {
+                      clientX: rect.left + rect.width / 2,
+                      clientY: rect.top + rect.height / 2,
+                  }
+                : undefined
+        )
     }
 
     /** Begin editing the selected cell, seeding the editor with `initial`. */
