@@ -1123,6 +1123,15 @@ let isDragging = false; // True while user is drag-selecting
             return
         }
 
+        // Shift+click extends the current selection from its anchor instead of
+        // starting a new one (Excel / Sheets). No drag is started: the user is
+        // adjusting an existing range, not sweeping a new one.
+        if (e.shiftKey && extensionCorners()) {
+            const corners = extensionCorners()!
+            applyExtendedSelection(corners.anchor, {row, col})
+            return
+        }
+
         startCell = matchedCell
         endCell = undefined
         isDragging = true
@@ -1145,6 +1154,9 @@ let isDragging = false; // True while user is drag-selecting
         )
         selectedData = data
         onSelectedDataChange?.(data)
+        // The click seeds both extension corners; a drag below moves the focus.
+        selAnchor = {row: mRow, col: mCol}
+        selFocus = {row: mRow, col: mCol}
 
         const stopAutoScroll = () => {
             if (dragScrollInterval) {
@@ -1197,6 +1209,8 @@ let isDragging = false; // True while user is drag-selecting
                                 const d = buildSelectedDataFromCellRange(sr, sc, er, ec, 'none');
                                 selectedData = d;
                                 onSelectedDataChange?.(d);
+                                selAnchor = {row: sr, col: sc};
+                                selFocus = {row: er, col: ec};
                             }
                         }
                     }
@@ -1245,6 +1259,8 @@ let isDragging = false; // True while user is drag-selecting
                 const d = buildSelectedDataFromCellRange(sr, sc, er, ec, 'none');
                 selectedData = d;
                 onSelectedDataChange?.(d);
+                selAnchor = {row: sr, col: sc};
+                selFocus = {row: er, col: ec};
             }
         };
 
@@ -1560,12 +1576,12 @@ let isDragging = false; // True while user is drag-selecting
         })
     }
 
-    // One wheel notch in px. Firefox reports deltaMode LINE (or, rarely,
-    // PAGE); normalize so a notch zooms the same everywhere.
-    function wheelDeltaPx(e: WheelEvent): number {
-        if (e.deltaMode === 1) return e.deltaY * 16 // lines
-        if (e.deltaMode === 2) return e.deltaY * 400 // pages
-        return e.deltaY
+    // A wheel delta in px. Firefox reports deltaMode LINE (or, rarely, PAGE);
+    // normalize so a notch means the same everywhere.
+    function wheelPx(delta: number, mode: number): number {
+        if (mode === 1) return delta * 16 // lines
+        if (mode === 2) return delta * 400 // pages
+        return delta
     }
 
     // WebKit's non-standard pinch events (see the listeners registered in
@@ -1620,7 +1636,7 @@ let isDragging = false; // True while user is drag-selecting
             // multiplicative) and so a pinch, which arrives as a stream of
             // small deltas, accumulates smoothly. Clamped because a fast
             // wheel/inertial scroll can report a huge single delta.
-            const d = Math.max(-40, Math.min(40, wheelDeltaPx(e)))
+            const d = Math.max(-40, Math.min(40, wheelPx(e.deltaY, e.deltaMode)))
             onZoomRequest(getRequestedZoomFactor() * Math.exp(-d / 300), {
                 clientX: e.clientX,
                 clientY: e.clientY,
@@ -1628,15 +1644,25 @@ let isDragging = false; // True while user is drag-selecting
             return
         }
 
-        if (e.deltaY === 0) return
+        let dx = wheelPx(e.deltaX, e.deltaMode)
+        let dy = wheelPx(e.deltaY, e.deltaMode)
+        // Shift+wheel scrolls horizontally — the convention everywhere else on
+        // the web. Some browsers already swap the axes themselves while Shift
+        // is held, so only do it when they haven't (dx still 0).
+        if (e.shiftKey && dx === 0) {
+            dx = dy
+            dy = 0
+        }
+        if (dx === 0 && dy === 0) return
 
-        // Chain off pendingAnchorY, not the rendered anchorY — otherwise
+        // Chain off pendingAnchorX/Y, not the rendered anchorX/Y — otherwise
         // wheel events arriving during an in-flight render compute from a
         // stale base and lose (or reverse) deltas.
-        const newY = Math.max(0, pendingAnchorY + e.deltaY)
-        if (newY === pendingAnchorY) return
+        const newX = Math.max(0, pendingAnchorX + dx)
+        const newY = Math.max(0, pendingAnchorY + dy)
+        if (newX === pendingAnchorX && newY === pendingAnchorY) return
 
-        renderWithAnchor(pendingAnchorX, newY)
+        renderWithAnchor(newX, newY)
     }
 
     // Every keyboard action is registered in ./shortcuts.ts and wired to a
@@ -1650,18 +1676,23 @@ let isDragging = false; // True while user is drag-selecting
     // toggleFormulas) are intentionally omitted — an absent entry falls through
     // and preserves native/default behavior. Add one when the feature lands.
     const baseShortcutHandlers: ShortcutHandlers = {
-        moveUp: () => moveSelection('up'),
-        moveDown: () => moveSelection('down'),
-        moveLeft: () => moveSelection('left'),
-        moveRight: () => moveSelection('right'),
+        // Shift extends the selection from its anchor instead of moving it.
+        moveUp: (e) => (e.shiftKey ? extendSelection('up') : moveSelection('up')),
+        moveDown: (e) =>
+            e.shiftKey ? extendSelection('down') : moveSelection('down'),
+        moveLeft: (e) =>
+            e.shiftKey ? extendSelection('left') : moveSelection('left'),
+        moveRight: (e) =>
+            e.shiftKey ? extendSelection('right') : moveSelection('right'),
         enter: (e) => moveSelection(e.shiftKey ? 'up' : 'down'),
         tab: (e) => moveSelection(e.shiftKey ? 'left' : 'right'),
         editCell: () => editCurrentCell(),
         clearCell: () => startEditCurrent(''),
-        jumpUp: () => jumpToBoundary('up'),
-        jumpDown: () => jumpToBoundary('down'),
-        jumpLeft: () => jumpToBoundary('left'),
-        jumpRight: () => jumpToBoundary('right'),
+        // Ctrl/⌘+Shift+Arrow extends to the boundary rather than jumping to it.
+        jumpUp: (e) => jumpToBoundary('up', e.shiftKey),
+        jumpDown: (e) => jumpToBoundary('down', e.shiftKey),
+        jumpLeft: (e) => jumpToBoundary('left', e.shiftKey),
+        jumpRight: (e) => jumpToBoundary('right', e.shiftKey),
         nextSheet: () => switchSheet(activeSheet + 1),
         prevSheet: () => switchSheet(activeSheet - 1),
         bold: () => toggleFontStyle('bold'),
@@ -1669,6 +1700,8 @@ let isDragging = false; // True while user is drag-selecting
         underline: () => toggleFontStyle('underline'),
         insertDate: () => insertDateTime('date'),
         insertTime: () => insertDateTime('time'),
+        fillDown: () => fillFromSelection('down'),
+        fillRight: () => fillFromSelection('right'),
         undo: () => dataService?.undo(),
         redo: () => dataService?.redo(),
         // Persisting is the host's call (file export, server sync, ...); the
@@ -1801,15 +1834,27 @@ let isDragging = false; // True while user is drag-selecting
         await dataService.handleTransaction({ payloads, undoable: true, temp: false })
     }
 
-    /** Ctrl/⌘+Arrow: jump the selection to the next data/block boundary. */
-    async function jumpToBoundary(direction: 'up' | 'down' | 'left' | 'right') {
+    /**
+     * Ctrl/⌘+Arrow: jump the selection to the next data/block boundary.
+     * With `extend` (Ctrl/⌘+Shift+Arrow) the anchor stays put and the
+     * selection grows out to the boundary instead.
+     */
+    async function jumpToBoundary(
+        direction: 'up' | 'down' | 'left' | 'right',
+        extend = false
+    ) {
         if (!dataService) return
         const sel = getSelectedCellRange(selectedData)
         if (!sel) return
+        // Search from the moving corner when extending, so a second
+        // Ctrl+Shift+Arrow continues past the first boundary.
+        const from = extend
+            ? (extensionCorners()?.focus ?? {row: sel.startRow, col: sel.startCol})
+            : {row: sel.startRow, col: sel.startCol}
         const target = await dataService.getWorkbook().getDataBoundary({
             sheetIdx: activeSheet,
-            rowIdx: sel.startRow,
-            colIdx: sel.startCol,
+            rowIdx: from.row,
+            colIdx: from.col,
             direction,
         })
         // No boundary ahead — engine returns an ErrorMessage; leave the
@@ -1818,7 +1863,60 @@ let isDragging = false; // True while user is drag-selecting
             onNoDataBoundary?.(direction)
             return
         }
+        if (extend) {
+            const corners = extensionCorners()
+            if (!corners) return
+            applyExtendedSelection(corners.anchor, {row: target.y, col: target.x})
+            await ensureCellVisible(target.y, target.x, direction)
+            return
+        }
         await goToCell(target.y, target.x)
+    }
+
+    /**
+     * Ctrl/⌘+D / Ctrl/⌘+R: fill the selection down / right. A multi-row (or
+     * multi-column) selection fills from its own first line; a single line
+     * pulls from the line just before it, matching Excel.
+     *
+     * This runs through the same predict-fill the fill handle uses, so
+     * formulas get their relative references shifted properly. A single source
+     * line repeats rather than extending a series (the core only infers a
+     * numeric series from two or more source cells), which is exactly the
+     * copy-down semantics Ctrl+D is expected to have.
+     */
+    async function fillFromSelection(direction: 'down' | 'right') {
+        if (!dataService) return
+        const sel = getSelectedCellRange(selectedData)
+        if (!sel) return
+        const startRow = Math.min(sel.startRow, sel.endRow)
+        const endRow = Math.max(sel.startRow, sel.endRow)
+        const startCol = Math.min(sel.startCol, sel.endCol)
+        const endCol = Math.max(sel.startCol, sel.endCol)
+
+        let src: {startRow: number; startCol: number; endRow: number; endCol: number}
+        let dst: typeof src
+        if (direction === 'down') {
+            if (endRow > startRow) {
+                src = {startRow, startCol, endRow: startRow, endCol}
+                dst = {startRow: startRow + 1, startCol, endRow, endCol}
+            } else {
+                if (startRow === 0) return // nothing above to fill from
+                src = {startRow: startRow - 1, startCol, endRow: startRow - 1, endCol}
+                dst = {startRow, startCol, endRow, endCol}
+            }
+        } else {
+            if (endCol > startCol) {
+                src = {startRow, startCol, endRow, endCol: startCol}
+                dst = {startRow, startCol: startCol + 1, endRow, endCol}
+            } else {
+                if (startCol === 0) return // nothing to the left
+                src = {startRow, startCol: startCol - 1, endRow, endCol: startCol - 1}
+                dst = {startRow, startCol, endRow, endCol}
+            }
+        }
+
+        const result = await dataService.fill(activeSheet, src, dst)
+        if (isErrorMessage(result)) console.warn('fill failed:', result.msg)
     }
 
     /** F2: open the editor pre-filled with the cell's current text/formula. */
@@ -1858,6 +1956,176 @@ let isDragging = false; // True while user is drag-selecting
         }
     }
 
+    // ========================================================================
+    // Range extension (Shift+Arrow, Shift+click, Ctrl/⌘+Shift+Arrow)
+    // ========================================================================
+
+    // A selection is stored as a plain rect, which loses WHICH corner is
+    // fixed. `selAnchor` is that fixed corner and `selFocus` the moving one: a
+    // plain click or arrow sets both to the same cell, Shift moves only the
+    // focus. Null when the current selection didn't come from cell navigation
+    // (a row/column selection, or a host-driven setSelection), in which case
+    // an extension seeds them from the range's corners.
+    let selAnchor: {row: number; col: number} | null = null
+    let selFocus: {row: number; col: number} | null = null
+
+    /** The merged cell containing (r, c), or null. */
+    function mergeAt(r: number, c: number) {
+        if (!grid?.mergeCells) return null
+        for (const m of grid.mergeCells) {
+            if (m.startRow <= r && r <= m.endRow && m.startCol <= c && c <= m.endCol)
+                return m
+        }
+        return null
+    }
+
+    /**
+     * Grow a rect until it fully covers every merged cell it touches — a
+     * selection must never cut a merge in half. Loops because a merge pulled
+     * in at one edge can itself touch another; it converges quickly, and the
+     * bound just stops a pathological layout from spinning.
+     */
+    function expandRangeToMerges(rect: {
+        startRow: number
+        startCol: number
+        endRow: number
+        endCol: number
+    }) {
+        if (!grid?.mergeCells?.length) return rect
+        let {startRow, startCol, endRow, endCol} = rect
+        for (let i = 0; i < 8; i++) {
+            let changed = false
+            for (const m of grid.mergeCells) {
+                const touches =
+                    m.startRow <= endRow &&
+                    m.endRow >= startRow &&
+                    m.startCol <= endCol &&
+                    m.endCol >= startCol
+                if (!touches) continue
+                if (m.startRow < startRow) (startRow = m.startRow), (changed = true)
+                if (m.endRow > endRow) (endRow = m.endRow), (changed = true)
+                if (m.startCol < startCol) (startCol = m.startCol), (changed = true)
+                if (m.endCol > endCol) (endCol = m.endCol), (changed = true)
+            }
+            if (!changed) break
+        }
+        return {startRow, startCol, endRow, endCol}
+    }
+
+    /** Select anchor→focus (merge-aware) and remember the two corners. */
+    function applyExtendedSelection(
+        anchor: {row: number; col: number},
+        focus: {row: number; col: number}
+    ) {
+        selAnchor = anchor
+        selFocus = focus
+        const rect = expandRangeToMerges({
+            startRow: Math.min(anchor.row, focus.row),
+            startCol: Math.min(anchor.col, focus.col),
+            endRow: Math.max(anchor.row, focus.row),
+            endCol: Math.max(anchor.col, focus.col),
+        })
+        const d = buildSelectedDataFromCellRange(
+            rect.startRow,
+            rect.startCol,
+            rect.endRow,
+            rect.endCol,
+            'none'
+        )
+        selectedData = d
+        onSelectedDataChange?.(d)
+    }
+
+    /**
+     * The corners to extend from. Falls back to the current range's top-left /
+     * bottom-right when the anchor/focus pair is unknown, so Shift still does
+     * something sensible after a host-driven selection change.
+     */
+    function extensionCorners() {
+        const sel = getSelectedCellRange(selectedData)
+        if (!sel) return null
+        const anchor = selAnchor ?? {
+            row: Math.min(sel.startRow, sel.endRow),
+            col: Math.min(sel.startCol, sel.endCol),
+        }
+        const focus = selFocus ?? {
+            row: Math.max(sel.startRow, sel.endRow),
+            col: Math.max(sel.startCol, sel.endCol),
+        }
+        return {anchor, focus}
+    }
+
+    /**
+     * Scroll just enough to bring (row, col) into view, moving only the axis
+     * that's actually out of view. `direction` says which edge the cell is
+     * being chased toward, so we align it to that edge like moveSelection does.
+     */
+    async function ensureCellVisible(
+        row: number,
+        col: number,
+        direction: 'up' | 'down' | 'left' | 'right'
+    ) {
+        if (!grid || !dataService || !canvasEl) return
+        const size = canvasEl.getBoundingClientRect()
+        const [rowStart, rowEnd] = findVisibleRowIdxRange(anchorY, size.height - 50, grid)
+        const [colStart, colEnd] = findVisibleColIdxRange(anchorX, size.width, grid)
+        // findIndex returns -1 for a cell outside the rendered window, which
+        // correctly reads as "not visible".
+        const rowIdx = grid.rows.findIndex((r) => r.idx === row)
+        const colIdx = grid.columns.findIndex((c) => c.idx === col)
+        const rowVisible = rowIdx >= rowStart && rowIdx <= rowEnd
+        const colVisible = colIdx >= colStart && colIdx <= colEnd
+        if (rowVisible && colVisible) return
+
+        const pos = await dataService.getWorkbook().getCellPosition({
+            sheetIdx: activeSheet,
+            row,
+            col,
+        })
+        if (isErrorMessage(pos)) return
+        let newX = pendingAnchorX
+        let newY = pendingAnchorY
+        if (!rowVisible)
+            newY =
+                direction === 'up'
+                    ? ptToPx(pos.y)
+                    : ptToPx(pos.y) - size.height + 50
+        if (!colVisible)
+            newX =
+                direction === 'left'
+                    ? ptToPx(pos.x)
+                    : ptToPx(pos.x) - size.width + 100
+        await renderWithAnchor(Math.max(0, newX), Math.max(0, newY))
+    }
+
+    /** Shift+Arrow: move the focus corner one cell, keeping the anchor put. */
+    async function extendSelection(direction: 'up' | 'down' | 'left' | 'right') {
+        if (!grid) return
+        const corners = extensionCorners()
+        if (!corners) return
+        let {row, col} = corners.focus
+        // Step past the merge the focus sits in, or the selection would stall
+        // inside it (the same reasoning as moveSelection's merge handling).
+        const m = mergeAt(row, col)
+        switch (direction) {
+            case 'up':
+                row = (m ? m.startRow : row) - 1
+                break
+            case 'down':
+                row = (m ? m.endRow : row) + 1
+                break
+            case 'left':
+                col = (m ? m.startCol : col) - 1
+                break
+            case 'right':
+                col = (m ? m.endCol : col) + 1
+                break
+        }
+        if (row < 0 || col < 0) return
+        applyExtendedSelection(corners.anchor, {row, col})
+        await ensureCellVisible(row, col, direction)
+    }
+
     async function moveSelection(direction: 'up' | 'down' | 'left' | 'right') {
         if (!grid || !dataService || !canvasEl) return
 
@@ -1868,23 +2136,10 @@ let isDragging = false; // True while user is drag-selecting
         const workbook = dataService.getWorkbook()
         const sheetIdx = activeSheet
 
-        // Merge-aware navigation. The active cell may sit inside a merged cell;
-        // treat the whole merge as the origin so an arrow steps OUT past its
-        // far edge (instead of landing back inside it), and expand whatever
-        // cell we land on to its merge so the selection covers the full merge.
-        const mergeAt = (r: number, c: number) => {
-            if (!grid?.mergeCells) return null
-            for (const m of grid.mergeCells) {
-                if (
-                    m.startRow <= r &&
-                    r <= m.endRow &&
-                    m.startCol <= c &&
-                    c <= m.endCol
-                )
-                    return m
-            }
-            return null
-        }
+        // Merge-aware navigation (see `mergeAt`): treat the whole merge as the
+        // origin so an arrow steps OUT past its far edge instead of landing
+        // back inside it, and expand whatever cell we land on to its merge so
+        // the selection covers the full merge.
         const applySelection = (r: number, c: number) => {
             const m = mergeAt(r, c)
             const nd = m
@@ -1898,12 +2153,24 @@ let isDragging = false; // True while user is drag-selecting
                 : buildSelectedDataFromCellRange(r, c, r, c, 'none')
             selectedData = nd
             onSelectedDataChange?.(nd)
+            // A plain move collapses the selection, so both extension corners
+            // land on the new cell.
+            selAnchor = {row: r, col: c}
+            selFocus = {row: r, col: c}
         }
-        const origin = mergeAt(selectedCells.startRow, selectedCells.startCol)
-        const topRow = origin ? origin.startRow : selectedCells.startRow
-        const botRow = origin ? origin.endRow : selectedCells.startRow
-        const leftCol = origin ? origin.startCol : selectedCells.startCol
-        const rightCol = origin ? origin.endCol : selectedCells.startCol
+        // Move from the ACTIVE cell — the extension anchor — rather than the
+        // range's top-left, so an arrow after a Shift-extension (or a drag)
+        // continues from where the user started, as Excel does. Falls back to
+        // the top-left when the anchor is unknown (host-driven selection).
+        const active = selAnchor ?? {
+            row: selectedCells.startRow,
+            col: selectedCells.startCol,
+        }
+        const origin = mergeAt(active.row, active.col)
+        const topRow = origin ? origin.startRow : active.row
+        const botRow = origin ? origin.endRow : active.row
+        const leftCol = origin ? origin.startCol : active.col
+        const rightCol = origin ? origin.endCol : active.col
 
         switch (direction) {
             case 'up': {
@@ -2108,6 +2375,8 @@ let isDragging = false; // True while user is drag-selecting
         const data = buildSelectedDataFromCellRange(row, col, row, col, 'none')
         selectedData = data
         onSelectedDataChange?.(data)
+        selAnchor = {row, col}
+        selFocus = {row, col}
     }
 
     /**
@@ -2118,6 +2387,10 @@ let isDragging = false; // True while user is drag-selecting
      */
     export function setSelectedData(data: SelectedData) {
         selectedData = data
+        // The host didn't tell us which corner it considers fixed; drop the
+        // pair so the next Shift+Arrow re-seeds it from the new range.
+        selAnchor = null
+        selFocus = null
     }
 
     /** Select a cell or range and scroll to it */
@@ -2125,6 +2398,8 @@ let isDragging = false; // True while user is drag-selecting
         const data = buildSelectedDataFromCellRange(startRow, startCol, endRow, endCol, 'none')
         selectedData = data
         onSelectedDataChange?.(data)
+        selAnchor = {row: startRow, col: startCol}
+        selFocus = {row: endRow, col: endCol}
         await scrollToCell(startRow, startCol)
     }
 </script>

@@ -93,7 +93,8 @@ interface ShortcutSpec {
 // Display strings (Ctrl vs ⌘) are derived per-platform by `shortcutLabel`.
 export const SHORTCUTS: readonly ShortcutSpec[] = [
     // ---- Navigation / editing (bare keys) ----
-    // Arrows move the selection; Shift is ignored (range-extend not yet built).
+    // Arrows move the selection; with Shift they extend it from the anchor
+    // (the handler reads shiftKey — see Spreadsheet's extendSelection).
     {id: 'moveUp', description: 'Move up', key: 'ArrowUp', shift: 'any'},
     {id: 'moveDown', description: 'Move down', key: 'ArrowDown', shift: 'any'},
     {id: 'moveLeft', description: 'Move left', key: 'ArrowLeft', shift: 'any'},
@@ -112,7 +113,8 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
         description: 'Clear cell',
         key: ['Delete', 'Backspace'],
     },
-    // Ctrl/⌘+Arrow: jump to the next data/block boundary. Shift ignored.
+    // Ctrl/⌘+Arrow: jump to the next data/block boundary; with Shift, extend
+    // the selection out to it instead.
     {
         id: 'jumpUp',
         description: 'Jump to boundary up',
