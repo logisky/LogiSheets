@@ -556,12 +556,30 @@ const DEFAULT_PPI = 96;
 // layout px arrive from the worker already zoomed.
 let zoomFactor = 1;
 
+// The latest zoom REQUESTED — which, mid-gesture, runs ahead of the applied
+// `zoomFactor` above (applying one is async: worker + re-render). Gesture
+// handlers chain their next step off this, because a pinch fires several
+// events before the first one lands and chaining off the applied value would
+// silently drop every step in between. Engine.setZoom sets it (already
+// clamped) the moment a zoom is requested.
+let requestedZoomFactor = 1;
+
 export function setZoomFactor(z: number): void {
   zoomFactor = z > 0 ? z : 1;
+  requestedZoomFactor = zoomFactor;
 }
 
 export function getZoomFactor(): number {
   return zoomFactor;
+}
+
+export function setRequestedZoomFactor(z: number): void {
+  requestedZoomFactor = z > 0 ? z : 1;
+}
+
+/** Latest requested zoom — the applied one when nothing is in flight. */
+export function getRequestedZoomFactor(): number {
+  return requestedZoomFactor;
 }
 
 export function ptToPx(pt: number): number {

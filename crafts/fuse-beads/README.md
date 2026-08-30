@@ -19,7 +19,8 @@ on a worksheet.
   *right* brush.
 - On the canvas: **left-click** paints the left color, **right-click** paints the
   right color, and dragging with a button held paints a continuous stroke.
-  **Shift + wheel** zooms the canvas.
+  **Ctrl/⌘ + wheel** (or a trackpad pinch) zooms — that one is the engine's
+  own gesture, not this craft's.
 - Every painted bead also gets its **color code written into the cell** (e.g.
   `A7`, `H1`), centered, sized to fit the square, in a contrasting color (white
   on dark beads, near-black on light) — so the pattern doubles as a
@@ -41,7 +42,6 @@ the board-setup / paint transactions). The UI and the canvas wiring live in
   update, so a bead's fill and its label styling ride in a single payload.
 - `window.onCanvasInput(handler)` — intercept mouse/wheel events on the canvas
   (added in commit `4c20df3`).
-- `window.setCanvasZoom` / `window.getCanvasZoom` — canvas zoom.
 - `window.setShowCellValues` / `window.getShowCellValues` — show/hide the written
   color codes (a worker-global engine render toggle; drives the **色号显示**
   button, which adopts the engine's current state on load).

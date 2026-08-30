@@ -70,6 +70,7 @@ export type {
   CellLayout,
   CanvasProps,
   EngineConfig,
+  ZoomOrigin,
 } from "$types/index";
 
 // Re-export default config

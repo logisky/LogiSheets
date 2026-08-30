@@ -77,6 +77,10 @@ All fields are optional (pass a `Partial<EngineConfig>`); defaults come from
 | `defaultCellWidth` | `number` | Default column width, in points (pt). |
 | `defaultCellHeight` | `number` | Default row height, in points (pt). |
 | `scrollbarSize` | `number` | Scrollbar thickness, in pixels. |
+| `minZoom` / `maxZoom` | `number` | Zoom limits (defaults `0.5` / `3`). Every zoom request is clamped to this range. See [Zoom](#zoom). |
+| `wheelZoom` | `boolean` | Ctrl/⌘ + wheel and trackpad pinch zoom the canvas (default `true`). Set `false` to drive zoom yourself. |
+| `zoomShortcuts` | `boolean` | Ctrl/⌘ + `+` / `-` / `0` zoom in / out / reset (default `true`). When `false` those keys fall through to the browser. |
+| `zoomStep` | `number` | Multiplier per zoom shortcut press or `zoomIn` / `zoomOut` call (default `1.1`). |
 
 ## Mount options
 
@@ -114,6 +118,7 @@ type is determined by the event:
 | `startEdit` | `{row: number; col: number; initialText: string}` | The user began editing a cell — open your editor at `(row, col)` seeded with `initialText`. |
 | `contextMenu` | `{context: ContextMenuContext; x: number; y: number}` | The user right-clicked a cell or a row/column header. The engine renders **no** menu — render your own at `(x, y)` (viewport coords). See [Context menu](#context-menu). |
 | `cellChange` | `void` | A cell value changed. |
+| `zoomChange` | `number` | The canvas zoom factor changed (1 = 100%) — e.g. the user pinched or Ctrl-wheeled. Use it to drive a zoom indicator. |
 | `invalidFormula` | `void` | An invalid formula was entered. |
 | `error` | `Error` | An internal error occurred. |
 
@@ -288,6 +293,44 @@ await engine.setShowCellValues(false)
 The initial values come from [`EngineConfig`](#constructor-config-engineconfig):
 `showHorizontalGridLines` / `showVerticalGridLines` / `showCellValues`, all
 `true` by default.
+
+## Zoom
+
+Zoom is built in. Out of the box, on any mounted view:
+
+- **Ctrl/⌘ + wheel**, or a **trackpad pinch**, zooms about the pointer — the
+  cell under the cursor stays under it.
+- **Ctrl/⌘ + `+` / `-` / `0`** zooms in / out / back to 100%.
+
+Both gestures can be turned off per engine (`wheelZoom`, `zoomShortcuts` in
+[`EngineConfig`](#constructor-config-engineconfig)) if your app drives zoom
+itself.
+
+Zoom is modeled as an *effective-DPI* multiplier on the workbook-unit ↔ pixel
+converters, so layout, hit-testing, overlays and fonts scale together — it is
+not a canvas transform on top of a 100% layout. It is engine-**global**: every
+view of the workbook shares one factor, because they share one worker.
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `setZoom` | `setZoom(factor: number, origin?: ZoomOrigin): Promise<void>` | Set the zoom factor (1 = 100%), clamped to `[minZoom, maxZoom]`. `origin` is a viewport point (`{clientX, clientY}`) to hold still — the view containing it zooms about that point, the others keep their top-left cell. |
+| `getZoom` | `getZoom(): number` | Current zoom factor. |
+| `zoomIn` / `zoomOut` | `(origin?: ZoomOrigin): Promise<void>` | Step by `config.zoomStep`. |
+| `resetZoom` | `(): Promise<void>` | Back to 100%. |
+
+```ts
+// A zoom control in your toolbar.
+engine.on('zoomChange', (z) => setLabel(`${Math.round(z * 100)}%`))
+await engine.zoomIn()
+await engine.setZoom(1.5)
+await engine.resetZoom()
+```
+
+Rapid `setZoom` calls **coalesce**: while one is being applied the latest
+requested factor replaces any other pending one, so a burst of wheel or pinch
+events costs one extra render rather than one per event. A coalesced call
+resolves when it is queued, not when it is on screen — read the settled value
+from `getZoom()` after a `zoomChange`.
 
 ## Editing data — `DataService`
 

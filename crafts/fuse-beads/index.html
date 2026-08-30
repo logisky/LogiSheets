@@ -164,7 +164,7 @@
         <div class="meta"><div id="right-name" class="name">未选</div><div id="right-code" class="code"></div></div>
       </div>
     </div>
-    <div class="hint">在下方「我的工作区」里：<b>左键</b>点色块设为左键画笔，<b>右键</b>点色块设为右键画笔。<br/>在画布上：左键涂左色，右键涂右色，按住拖动可连续涂。<b>Shift + 滚轮</b>缩放画布。</div>
+    <div class="hint">在下方「我的工作区」里：<b>左键</b>点色块设为左键画笔，<b>右键</b>点色块设为右键画笔。<br/>在画布上：左键涂左色，右键涂右色，按住拖动可连续涂。<b>Ctrl/⌘ + 滚轮</b>（或触控板双指捏合）缩放画布。</div>
   </div>
 
   <div class="card">
@@ -352,13 +352,9 @@
     }
 
     function canvasHandler(e) {
-      // Shift + wheel → zoom, on any sheet.
-      if (e.type === 'wheel' && e.shiftKey) {
-        var cur = window.getCanvasZoom ? window.getCanvasZoom() : 1
-        window.setCanvasZoom(e.deltaY < 0 ? cur * 1.1 : cur / 1.1)
-        return true
-      }
-      // Everything else only applies on the bead board.
+      // Zooming is the engine's own gesture now (Ctrl/⌘ + wheel, or a
+      // trackpad pinch), so this craft doesn't handle wheel at all.
+      // Everything below only applies on the bead board.
       if (boardSheetIdx === null || e.sheetIdx !== boardSheetIdx) return false
 
       switch (e.type) {
@@ -476,7 +472,7 @@
       document.getElementById('cancel-rebuild').addEventListener('click', function () {
         showRebuildConfirm(false)
       })
-      // Register the canvas paint/zoom handler once the host has injected it,
+      // Register the canvas paint handler once the host has injected it,
       // and hide the cell selection — this craft paints, it doesn't select, so
       // the selection box would just get in the way.
       whenHostReady(function () {

@@ -254,6 +254,30 @@ export interface EngineConfig {
   defaultCellHeight: number;
   /** Scrollbar size in pixels */
   scrollbarSize: number;
+  /** Lower bound of the canvas zoom factor (1 = 100%). */
+  minZoom: number;
+  /** Upper bound of the canvas zoom factor. */
+  maxZoom: number;
+  /**
+   * Ctrl/⌘ + wheel (and the trackpad pinch, which browsers report as a
+   * ctrlKey wheel) zooms the canvas. Turn off for a host that drives zoom
+   * itself.
+   */
+  wheelZoom: boolean;
+  /** Ctrl/⌘ + `+` / `-` / `0` zoom in / out / reset to 100%. */
+  zoomShortcuts: boolean;
+  /** Multiplier applied per zoom-shortcut press (and per zoom-button click). */
+  zoomStep: number;
+}
+
+/**
+ * Viewport point a zoom should keep fixed — the pointer for a wheel/pinch
+ * zoom. The view containing the point anchors it; every other view keeps its
+ * own top-left cell. Omit to anchor at the top-left everywhere.
+ */
+export interface ZoomOrigin {
+  clientX: number;
+  clientY: number;
 }
 
 export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
@@ -265,6 +289,11 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   defaultCellWidth: 6,
   defaultCellHeight: 25,
   scrollbarSize: 16,
+  minZoom: 0.5,
+  maxZoom: 3,
+  wheelZoom: true,
+  zoomShortcuts: true,
+  zoomStep: 1.1,
 };
 
 // ============================================================================

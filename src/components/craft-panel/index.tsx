@@ -170,10 +170,11 @@ export const CraftPanel = ({
         // craft selected); see the setActiveCraft effect below.
         win.onCanvasInput = (handler: CraftInputHandler) =>
             registerCraftInputHandler(craftId, handler)
-        // Global canvas zoom (1 = 100%, clamped to [0.5, 3]). Applies to every
-        // view — the engine shares one worker/workbook — which is why it's a
-        // global control. A craft typically pairs this with onCanvasInput:
-        // consume Ctrl+wheel and call setCanvasZoom to drive zoom itself.
+        // Global canvas zoom (1 = 100%, clamped to the engine's zoom limits).
+        // Applies to every view — the engine shares one worker/workbook —
+        // which is why it's a global control. The engine already zooms on
+        // Ctrl/⌘+wheel and pinch by itself; this is for a craft that wants to
+        // set a specific factor (e.g. "fit the board").
         win.setCanvasZoom = (factor: number) => engine.setZoom(factor)
         win.getCanvasZoom = (): number => engine.getZoom()
         // Show/hide cell VALUES (text) across every view. Worker-global, like
