@@ -21,6 +21,7 @@
         "build": "vite build --config vite.config.lib.ts && yarn build:types",
         "build:types": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.types.json",
         "check": "svelte-check --tsconfig ./tsconfig.json",
+        "test": "vitest run",
         "preview": "vite preview",
         "prepack": "yarn build"
     },
@@ -55,7 +56,8 @@
         "svelte-check": "^4.0.0",
         "terser": "^5.46.0",
         "typescript": "^6.0.0",
-        "vite": "^6.0.0"
+        "vite": "^6.0.0",
+        "vitest": "3.2.6"
     },
     "bugs": {
         "url": "https://github.com/logisky/LogiSheets/issues"
