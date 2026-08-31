@@ -47,6 +47,12 @@ export type ShortcutId =
     // Sheet navigation
     | 'nextSheet'
     | 'prevSheet'
+    // Page / Home / End navigation
+    | 'pageUp'
+    | 'pageDown'
+    | 'rowStart'
+    | 'sheetStart'
+    | 'sheetEnd'
     // Ctrl/⌘ chords
     | 'copy'
     | 'cut'
@@ -67,6 +73,8 @@ export type ShortcutId =
     | 'insertTime'
     | 'autoSum'
     | 'toggleFormulas'
+    | 'insertLines'
+    | 'deleteLines'
     // Canvas zoom
     | 'zoomIn'
     | 'zoomOut'
@@ -158,6 +166,32 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
         key: 'PageUp',
         primary: true,
     },
+    // The BARE page keys move a screen within the sheet (Ctrl/⌘ switches
+    // sheets, just above). Home goes to the start of the row, Ctrl/⌘+Home to
+    // A1 and Ctrl/⌘+End to the last used cell. Shift is 'any' throughout —
+    // every one of these extends the selection instead when it's held.
+    {id: 'pageUp', description: 'Page up', key: 'PageUp', shift: 'any'},
+    {id: 'pageDown', description: 'Page down', key: 'PageDown', shift: 'any'},
+    {
+        id: 'rowStart',
+        description: 'Go to start of row',
+        key: 'Home',
+        shift: 'any',
+    },
+    {
+        id: 'sheetStart',
+        description: 'Go to first cell',
+        key: 'Home',
+        primary: true,
+        shift: 'any',
+    },
+    {
+        id: 'sheetEnd',
+        description: 'Go to last used cell',
+        key: 'End',
+        primary: true,
+        shift: 'any',
+    },
     // ---- Ctrl/⌘ chords ----
     {id: 'copy', description: 'Copy', key: 'c', primary: true},
     {id: 'cut', description: 'Cut', key: 'x', primary: true},
@@ -188,18 +222,43 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
         primary: true,
         shift: true,
     },
-    {id: 'autoSum', description: 'AutoSum', key: '=', primary: true, alt: true},
+    // AutoSum is Alt+`=` in Excel — no Ctrl. Spelling it that way also keeps
+    // Ctrl/⌘+Alt+`=` free for the insert binding below.
+    {id: 'autoSum', description: 'AutoSum', key: '=', alt: true},
     {
         id: 'toggleFormulas',
         description: 'Show formulas',
         key: '`',
         primary: true,
     },
+    // ---- Insert / delete rows and columns ----
+    // Ctrl/⌘+Alt+`=` / `-`, as in Google Sheets. Excel puts these on
+    // Ctrl+Shift+`+` / Ctrl+`-`, but those are the same physical keys the
+    // browser zooms with, and adding Alt keeps zoom on its usual chords below.
+    // `+` is Shift+`=` on most layouts and its own key on the numpad; macOS
+    // turns Option+`=` / Option+`-` into `≠` / `–`, so those spellings are
+    // listed too.
+    {
+        id: 'insertLines',
+        description: 'Insert rows / columns',
+        key: ['=', '+', '≠'],
+        primary: true,
+        alt: true,
+        shift: 'any',
+    },
+    {
+        id: 'deleteLines',
+        description: 'Delete rows / columns',
+        key: ['-', '_', '–', '—'],
+        primary: true,
+        alt: true,
+        shift: 'any',
+    },
     // ---- Canvas zoom ----
     // Ctrl/⌘ + `+` / `-` / `0`, matching every browser and Excel. Shift is
     // ignored because `+` is Shift+`=` on most layouts, and the numpad keys
-    // report '+' / '-' directly. Ctrl+Alt+`=` stays AutoSum (alt defaults to
-    // false here, so the two specs can't both match).
+    // report '+' / '-' directly. Alt defaults to false here, so the insert /
+    // delete specs above (which require it) can never also match.
     {
         id: 'zoomIn',
         description: 'Zoom in',
