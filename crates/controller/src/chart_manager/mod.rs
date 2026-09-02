@@ -76,12 +76,16 @@ impl ChartManager {
         self.charts.insert(sheet_id, v);
     }
 
-    /// All charts on a sheet, in stored order.
-    pub fn charts_of_sheet(&self, sheet_id: SheetId) -> Vec<Chart> {
+    /// All charts on a sheet, in stored order, borrowed.
+    ///
+    /// Deliberately not `Vec<Chart>`: a `Chart` carries its parsed data and
+    /// every preserved XML subtree, so cloning the list is far from free — and
+    /// the read paths (rendering, saving, looking one up) only need a look.
+    pub fn charts_of_sheet(&self, sheet_id: SheetId) -> impl Iterator<Item = &Chart> {
         self.charts
             .get(&sheet_id)
-            .map(|v| v.iter().cloned().collect())
-            .unwrap_or_default()
+            .into_iter()
+            .flat_map(|v| v.iter())
     }
 
     /// Re-anchor the chart with `chart_id` on `sheet_id`. Returns whether a

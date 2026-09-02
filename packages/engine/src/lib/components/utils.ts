@@ -49,6 +49,36 @@ export const yForRowEnd = (rowIdx: number, grid: Grid): number => {
   return acc;
 };
 
+// The four helpers above answer only for rows and columns the grid has laid
+// out; asked about one that is scrolled away they return the window's own
+// edge. That is right for hit-testing (nothing off-screen can be hit) but
+// wrong for positioning something anchored to a cell — an overlay whose anchor
+// has scrolled past collapses against the edge instead of scrolling away with
+// it. The two below extrapolate instead, at the size of the row/column nearest
+// the edge, which is exact whenever the ones outside match it.
+
+export const xForColStartUnclamped = (colIdx: number, grid: Grid): number => {
+  const first = grid.columns[0];
+  const last = grid.columns[grid.columns.length - 1];
+  if (!first || !last) return 0;
+  if (colIdx < first.idx)
+    return xForColStart(first.idx, grid) - (first.idx - colIdx) * first.width;
+  if (colIdx > last.idx)
+    return xForColEnd(last.idx, grid) + (colIdx - last.idx - 1) * last.width;
+  return xForColStart(colIdx, grid);
+};
+
+export const yForRowStartUnclamped = (rowIdx: number, grid: Grid): number => {
+  const first = grid.rows[0];
+  const last = grid.rows[grid.rows.length - 1];
+  if (!first || !last) return 0;
+  if (rowIdx < first.idx)
+    return yForRowStart(first.idx, grid) - (first.idx - rowIdx) * first.height;
+  if (rowIdx > last.idx)
+    return yForRowEnd(last.idx, grid) + (rowIdx - last.idx - 1) * last.height;
+  return yForRowStart(rowIdx, grid);
+};
+
 export interface CellRect {
   x: number;
   y: number;

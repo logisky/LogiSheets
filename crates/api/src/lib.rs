@@ -28,20 +28,20 @@ pub use logisheets_controller::api::{
 pub use logisheets_controller::controller::display::{
     BlockCellInfo, BlockDataRow, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema,
     BlockSchemaRandomEntry, BlockSchemaType, CellCoordinate, CellCoordinateWithSheet,
-    CellImageInfo, CellPosition, ChartInfo, ChartSeriesInfo, ColInfo, DisplayWindow,
-    DisplayWindowRequest, DisplayWindowWithStartPoint, LinkInfo, RowInfo, ShadowCellInfo,
-    SheetInfo, TempCellChange, TempStatusDiff,
+    CellImageInfo, CellPosition, ChartAxisScaleInfo, ChartDataLabelsInfo, ChartInfo,
+    ChartOfPieSplitInfo, ChartSeriesInfo, ColInfo, DisplayWindow, DisplayWindowRequest, DisplayWindowWithStartPoint,
+    LinkInfo, RowInfo, ShadowCellInfo, SheetInfo, TempCellChange, TempStatusDiff,
 };
 
 // Re-export edit actions
 pub use logisheets_controller::edit_action::{
-    ActionEffect, Alignment, AsyncFuncResult, BindFormSchema, BindRandomSchema, BlockInput,
-    BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellClear, CellFormatBrush, CellInput,
-    CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCellImage,
-    DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction,
-    EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock,
-    InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, MoveBlock,
-    PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetCellImage, SetColWidth,
+    ActionEffect, Alignment, AsyncFuncResult, AxisScaleUpdate, BindFormSchema, BindRandomSchema,
+    BlockInput, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellClear, CellFormatBrush,
+    CellInput, CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet,
+    DeleteCellImage, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet,
+    EditAction, EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols,
+    InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells,
+    MoveBlock, OfPieSplitUpdate, PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetCellImage, SetColWidth,
     SetRowHeight, SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells,
     StatusCode, StyleUpdateType, UpsertFieldRenderInfo, VerticalAlignment,
 };

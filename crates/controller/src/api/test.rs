@@ -49,6 +49,7 @@ fn update_chart_changes_type_and_title() {
             chart_id: chart_id.clone(),
             chart_type: Some("line".to_string()),
             title: Some("My Title".to_string()),
+            ..Default::default()
         })],
         undoable: true,
         init: false,
@@ -115,10 +116,16 @@ fn create_chart_from_scratch() {
                 CreateChartSeries {
                     name: Some("Row1".to_string()),
                     value_ref: "Sheet1!$B$1:$C$1".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: None,
                 },
                 CreateChartSeries {
                     name: Some("Row2".to_string()),
                     value_ref: "Sheet1!$B$2:$C$2".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: None,
                 },
             ],
         })],
@@ -1042,11 +1049,7 @@ fn table_converts_to_block_on_load() {
     let blocks2 = ws2.get_all_blocks();
     assert_eq!(blocks2.len(), 1, "block survives save/reload");
     assert_eq!(
-        blocks2[0]
-            .schema
-            .as_ref()
-            .expect("still has a schema")
-            .name,
+        blocks2[0].schema.as_ref().expect("still has a schema").name,
         schema.name,
         "the ref name should not change across a save"
     );
@@ -3524,8 +3527,8 @@ fn conditional_formatting_resyncs_after_edits() {
 fn conditional_format_reaches_cell_info_merged() {
     use crate::edit_action::CellInput;
     use logisheets_workbook::prelude::{
-        CtColor, CtDxf, CtDxfs, CtFill, CtFont, CtPatternFill, PlainTextString,
-        StPatternType, Wb, write,
+        CtColor, CtDxf, CtDxfs, CtFill, CtFont, CtPatternFill, PlainTextString, StPatternType, Wb,
+        write,
     };
 
     fn red(rgb: &str) -> CtColor {
@@ -4363,4 +4366,1040 @@ fn range_straddling_a_block_boundary_does_not_panic() {
     let reloaded = Workbook::from_file(&bytes, "saved".to_string())
         .expect("reloading must not panic on the rejected reference");
     assert_eq!(reloaded.get_sheet_count(), 1);
+}
+
+#[test]
+fn update_chart_changes_every_setting() {
+    // Everything the chart editor can change must land in the chart and
+    // survive a save/reload — the chart XML is regenerated on each edit, so a
+    // setting that is not written back is silently lost.
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let (chart_id, original_color) = {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let charts = ws.get_charts();
+        (
+            charts[0].chart_id.clone(),
+            charts[0].series[0].color.clone(),
+        )
+    };
+    assert!(original_color.is_some(), "fixture series has a theme color");
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: chart_id.clone(),
+            chart_type: Some("bar".to_string()),
+            stacked: Some(true),
+            legend_pos: Some("right".to_string()),
+            cat_axis_title: Some("Quarter".to_string()),
+            val_axis_title: Some("Amount".to_string()),
+            show_data_labels: Some(true),
+            data_label_position: Some("ctr".to_string()),
+            num_fmt: Some("#,##0.00".to_string()),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let check = |c: &crate::controller::display::ChartInfo| {
+        assert_eq!(c.chart_type, "bar");
+        assert!(c.stacked, "stacked");
+        assert_eq!(c.legend_pos.as_deref(), Some("right"));
+        assert_eq!(c.cat_axis_title.as_deref(), Some("Quarter"));
+        assert_eq!(c.val_axis_title.as_deref(), Some("Amount"));
+        assert!(c.data_labels.show_value, "data labels on");
+        assert_eq!(c.data_labels.position.as_deref(), Some("ctr"));
+        assert_eq!(c.data_labels.num_fmt.as_deref(), Some("#,##0.00"));
+        assert_eq!(c.val_axis_num_fmt.as_deref(), Some("#,##0.00"));
+        // Regenerating the XML must not drop the series' colors.
+        assert_eq!(c.series.len(), 3);
+        assert!(c.series[0].color.is_some(), "series color preserved");
+    };
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        check(&ws.get_charts()[0]);
+    }
+
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    let ws2 = wb2.get_sheet_by_idx(0).unwrap();
+    check(&ws2.get_charts()[0]);
+    assert_eq!(
+        ws2.get_charts()[0].series[0].color,
+        original_color,
+        "the theme color is the same one it was loaded with"
+    );
+}
+
+#[test]
+fn update_chart_repoints_series_and_keeps_colors() {
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let (chart_id, color0) = {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = ws.get_charts();
+        (c[0].chart_id.clone(), c[0].series[0].color.clone())
+    };
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id,
+            // Two series instead of three; the first keeps its slot (and its
+            // color), the second names an explicit one.
+            series: Some(vec![
+                CreateChartSeries {
+                    name: Some("First".to_string()),
+                    value_ref: "Sheet1!$B$2:$E$2".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: None,
+                },
+                CreateChartSeries {
+                    name: Some("Second".to_string()),
+                    value_ref: "Sheet1!$B$3:$E$3".to_string(),
+                    color: Some("FF0000".to_string()),
+                    size_ref: None,
+                    series_type: None,
+                },
+            ]),
+            categories_ref: Some("Sheet1!$B$1:$E$1".to_string()),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let c = &ws.get_charts()[0];
+    assert_eq!(c.series.len(), 2);
+    assert_eq!(c.series[0].name.as_deref(), Some("First"));
+    assert_eq!(c.series[0].color, color0, "kept its position's color");
+    assert_eq!(c.series[1].color.as_deref(), Some("FF0000"));
+    assert_eq!(c.series[0].val_ref.as_deref(), Some("Sheet1!$B$2:$E$2"));
+    assert_eq!(c.cat_ref.as_deref(), Some("Sheet1!$B$1:$E$1"));
+    assert_eq!(
+        c.series[0].values,
+        vec![Some(11.0), Some(13.0), Some(15.0), Some(24.0)]
+    );
+}
+
+#[test]
+fn chart_categories_and_formats_are_live() {
+    // Category labels follow the source cells (formatted the way the sheet
+    // shows them), and the series' number format is read from those cells so
+    // labels/axis can render like the data does.
+    let mut wb = Workbook::default();
+    let mut payloads: Vec<EditPayload> = vec![
+        ("A1", 0usize, 0usize, "Jan"),
+        ("A2", 1, 0, "Feb"),
+        ("B1", 0, 1, "1234.5"),
+        ("B2", 1, 1, "6789"),
+    ]
+    .into_iter()
+    .map(|(_, r, c, v)| {
+        EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: r,
+            col: c,
+            content: v.to_string(),
+        })
+    })
+    .collect();
+    // Format the values as currency-ish thousands.
+    payloads.push(EditPayload::CellStyleUpdate(
+        crate::edit_action::CellStyleUpdate {
+            sheet_idx: 0,
+            row: 0,
+            col: 1,
+            ty: StyleUpdateType {
+                set_num_fmt: Some("#,##0.00".to_string()),
+                ..Default::default()
+            },
+        },
+    ));
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateChart(CreateChart {
+            sheet_idx: 0,
+            chart_id: "chartLive".to_string(),
+            chart_type: "col".to_string(),
+            from_row: 4,
+            from_col: 0,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: 18,
+            to_col: 8,
+            to_col_off: 0,
+            to_row_off: 0,
+            title: None,
+            categories_ref: Some("Sheet1!$A$1:$A$2".to_string()),
+            series: vec![CreateChartSeries {
+                name: Some("Values".to_string()),
+                value_ref: "Sheet1!$B$1:$B$2".to_string(),
+                color: None,
+                size_ref: None,
+                series_type: None,
+            }],
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(c.categories, vec!["Jan".to_string(), "Feb".to_string()]);
+        assert_eq!(
+            c.series[0].num_fmt.as_deref(),
+            Some("#,##0.00"),
+            "series format comes from the source cells"
+        );
+        // The label strings are rendered core-side; the host cannot evaluate
+        // Excel format codes.
+        assert_eq!(
+            c.series[0].formatted_values,
+            vec![Some("1,234.50".to_string()), Some("6,789.00".to_string())],
+            "values are pre-formatted for data labels"
+        );
+    }
+
+    // Renaming a category cell updates the chart's labels.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 0,
+            content: "March".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(
+        ws.get_charts()[0].categories,
+        vec!["Jan".to_string(), "March".to_string()],
+        "category labels are live"
+    );
+}
+
+#[test]
+fn editing_a_chart_keeps_its_styling_and_satellite_parts() {
+    // A chart authored in Excel carries styling this engine does not model
+    // (fonts, fills, gridline colors) plus sibling parts (style1/colors1).
+    // Editing it regenerates the chart XML, so both have to survive that —
+    // and survive a save/reload afterwards.
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let chart_id = {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        ws.get_charts()[0].chart_id.clone()
+    };
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: chart_id.clone(),
+            chart_type: Some("line".to_string()),
+            title: Some("Edited".to_string()),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let bytes = wb.save().unwrap();
+    let parts = chart_parts(&bytes);
+    let chart_xml = parts
+        .iter()
+        .find(|(p, _)| p.ends_with("chart1.xml"))
+        .map(|(_, d)| String::from_utf8_lossy(d).to_string())
+        .expect("chart part written");
+
+    assert!(
+        chart_xml.contains(r#"<a:defRPr lang="zh-CN" sz="1400""#),
+        "title font survived the edit"
+    );
+    assert!(
+        chart_xml.contains("<c:majorGridlines><c:spPr>"),
+        "styled gridlines survived the edit"
+    );
+    assert!(
+        chart_xml.contains(r#"<c:spPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill>"#),
+        "chart-area fill survived the edit"
+    );
+    assert!(chart_xml.contains("<c:lineChart>"), "the edit applied");
+
+    // Excel's own style/colors parts ride along untouched.
+    assert!(
+        parts.iter().any(|(p, _)| p.ends_with("style1.xml")),
+        "style part kept, got {:?}",
+        parts.iter().map(|(p, _)| p).collect::<Vec<_>>()
+    );
+    assert!(
+        parts.iter().any(|(p, _)| p.ends_with("colors1.xml")),
+        "colors part kept"
+    );
+
+    // And the reloaded workbook still shows the edited chart.
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    let ws2 = wb2.get_sheet_by_idx(0).unwrap();
+    let c = &ws2.get_charts()[0];
+    assert_eq!(c.chart_type, "line");
+    assert_eq!(c.title.as_deref(), Some("Edited"));
+    assert!(c.series[0].color.is_some(), "series colors still resolve");
+}
+
+/// Every chart part in a saved workbook, as (path, bytes).
+fn chart_parts(xlsx: &[u8]) -> Vec<(String, Vec<u8>)> {
+    let wb = logisheets_workbook::workbook::Wb::from_file(xlsx).unwrap();
+    wb.xl
+        .worksheets
+        .values()
+        .filter_map(|w| w.drawing.as_ref())
+        .flat_map(|d| d.chart_parts.iter())
+        .map(|p| (p.path.clone(), p.data.clone()))
+        .collect()
+}
+
+#[test]
+fn update_chart_sets_the_axis_scale() {
+    use crate::edit_action::AxisScaleUpdate;
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let chart_id = {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        assert_eq!(
+            ws.get_charts()[0].val_axis_scale.min,
+            None,
+            "starts automatic"
+        );
+        ws.get_charts()[0].chart_id.clone()
+    };
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: chart_id.clone(),
+            val_axis_scale: Some(AxisScaleUpdate {
+                min: Some(0.0),
+                max: Some(80.0),
+                major_unit: Some(20.0),
+                // Out of Excel's 2..=1000 range, so it must be ignored rather
+                // than written into a file Excel would refuse.
+                log_base: Some(1.0),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let check = |c: &crate::controller::display::ChartInfo| {
+        assert_eq!(c.val_axis_scale.min, Some(0.0));
+        assert_eq!(c.val_axis_scale.max, Some(80.0));
+        assert_eq!(c.val_axis_scale.major_unit, Some(20.0));
+        assert_eq!(c.val_axis_scale.log_base, None, "invalid log base dropped");
+        assert!(!c.val_axis_scale.reversed);
+    };
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        check(&ws.get_charts()[0]);
+    }
+
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    check(&wb2.get_sheet_by_idx(0).unwrap().get_charts()[0]);
+
+    // Sending the scale again with everything cleared returns it to automatic.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id,
+            val_axis_scale: Some(AxisScaleUpdate::default()),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_charts()[0].val_axis_scale.max, None, "back to auto");
+}
+
+/// Charts live in `Status`, which is what the undo stack snapshots — so every
+/// chart payload has to be undoable like any cell edit. This pins that down for
+/// all four of them, since nothing else would catch a chart edit quietly
+/// falling outside the history.
+#[test]
+fn chart_edits_are_undoable() {
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let chart_id = {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = ws.get_charts();
+        assert_eq!(c[0].chart_type, "col");
+        assert_eq!(c[0].title, None);
+        c[0].chart_id.clone()
+    };
+    let charts = |wb: &Workbook| wb.get_sheet_by_idx(0).unwrap().get_charts();
+
+    // --- reconfigure -------------------------------------------------
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: chart_id.clone(),
+            chart_type: Some("line".to_string()),
+            title: Some("Edited".to_string()),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert_eq!(charts(&wb)[0].chart_type, "line");
+
+    wb.handle_action(EditAction::Undo);
+    let c = charts(&wb);
+    assert_eq!(c[0].chart_type, "col", "undo restores the chart type");
+    assert_eq!(c[0].title, None, "undo restores the title");
+
+    wb.handle_action(EditAction::Redo);
+    let c = charts(&wb);
+    assert_eq!(c[0].chart_type, "line", "redo re-applies it");
+    assert_eq!(c[0].title.as_deref(), Some("Edited"));
+
+    // --- move --------------------------------------------------------
+    let (from_row, from_col) = (charts(&wb)[0].from_row, charts(&wb)[0].from_col);
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::MoveChart(MoveChart {
+            sheet_idx: 0,
+            chart_id: chart_id.clone(),
+            from_row: from_row + 5,
+            from_col: from_col + 2,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: from_row + 20,
+            to_col: from_col + 10,
+            to_col_off: 0,
+            to_row_off: 0,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert_eq!(charts(&wb)[0].from_row, from_row + 5);
+    wb.handle_action(EditAction::Undo);
+    assert_eq!(
+        (charts(&wb)[0].from_row, charts(&wb)[0].from_col),
+        (from_row, from_col),
+        "undo restores the anchor"
+    );
+
+    // --- delete ------------------------------------------------------
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteChart(DeleteChart {
+            sheet_idx: 0,
+            chart_id: chart_id.clone(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(charts(&wb).is_empty());
+    wb.handle_action(EditAction::Undo);
+    let c = charts(&wb);
+    assert_eq!(c.len(), 1, "undo brings the chart back");
+    assert_eq!(c[0].chart_id, chart_id);
+    assert_eq!(c[0].series.len(), 3, "with its data intact");
+    assert!(c[0].series[0].color.is_some(), "and its styling");
+
+    // --- create ------------------------------------------------------
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateChart(CreateChart {
+            sheet_idx: 0,
+            chart_id: "chartUndo".to_string(),
+            chart_type: "pie".to_string(),
+            from_row: 20,
+            from_col: 1,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: 30,
+            to_col: 8,
+            to_col_off: 0,
+            to_row_off: 0,
+            title: None,
+            categories_ref: None,
+            series: vec![CreateChartSeries {
+                name: None,
+                value_ref: "Sheet1!$B$2:$E$2".to_string(),
+                color: None,
+                size_ref: None,
+                series_type: None,
+            }],
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert_eq!(charts(&wb).len(), 2);
+    wb.handle_action(EditAction::Undo);
+    assert_eq!(charts(&wb).len(), 1, "undo removes the created chart");
+    wb.handle_action(EditAction::Redo);
+    assert_eq!(charts(&wb).len(), 2, "redo brings it back");
+}
+
+#[test]
+fn create_bubble_chart_with_live_sizes() {
+    // A bubble chart's third dimension goes through the same live-value path
+    // as the Y values: editing a size cell must move the bubble.
+    let mut wb = Workbook::default();
+    let cells = [
+        (0usize, 0usize, "10"), // x
+        (1, 0, "20"),
+        (0, 1, "5"), // y
+        (1, 1, "8"),
+        (0, 2, "100"), // size
+        (1, 2, "400"),
+    ];
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: cells
+            .iter()
+            .map(|(r, c, v)| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row: *r,
+                    col: *c,
+                    content: v.to_string(),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateChart(CreateChart {
+            sheet_idx: 0,
+            chart_id: "bubble1".to_string(),
+            chart_type: "bubble".to_string(),
+            from_row: 4,
+            from_col: 0,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: 18,
+            to_col: 8,
+            to_col_off: 0,
+            to_row_off: 0,
+            title: Some("Bubbles".to_string()),
+            categories_ref: Some("Sheet1!$A$1:$A$2".to_string()),
+            series: vec![CreateChartSeries {
+                name: Some("Products".to_string()),
+                value_ref: "Sheet1!$B$1:$B$2".to_string(),
+                color: None,
+                size_ref: Some("Sheet1!$C$1:$C$2".to_string()),
+                series_type: None,
+            }],
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(c.chart_type, "bubble");
+        assert_eq!(c.series[0].values, vec![Some(5.0), Some(8.0)]);
+        assert_eq!(c.series[0].sizes, vec![Some(100.0), Some(400.0)]);
+        assert_eq!(c.series[0].size_ref.as_deref(), Some("Sheet1!$C$1:$C$2"));
+    }
+
+    // Sizes are live.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 2,
+            content: "900".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert_eq!(
+        wb.get_sheet_by_idx(0).unwrap().get_charts()[0].series[0].sizes[0],
+        Some(900.0)
+    );
+
+    // And they survive save/reload.
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "r".to_string()).unwrap();
+    let c = &wb2.get_sheet_by_idx(0).unwrap().get_charts()[0];
+    assert_eq!(c.chart_type, "bubble");
+    assert_eq!(c.series[0].sizes, vec![Some(900.0), Some(400.0)]);
+}
+
+#[test]
+fn switch_a_chart_to_radar_and_bubble() {
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let chart_id = wb.get_sheet_by_idx(0).unwrap().get_charts()[0]
+        .chart_id
+        .clone();
+
+    let switch = |wb: &mut Workbook, ty: &str| {
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::UpdateChart(UpdateChart {
+                sheet_idx: 0,
+                chart_id: chart_id.clone(),
+                chart_type: Some(ty.to_string()),
+                ..Default::default()
+            })],
+            undoable: true,
+            init: false,
+        }));
+    };
+
+    switch(&mut wb, "radar");
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(c.chart_type, "radar");
+        assert_eq!(c.series.len(), 3, "series survive the switch");
+        assert_eq!(
+            c.series[0].values,
+            vec![Some(11.0), Some(13.0), Some(15.0), Some(24.0)]
+        );
+        assert!(c.series[0].color.is_some(), "colors survive");
+    }
+
+    switch(&mut wb, "bubble");
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(c.chart_type, "bubble");
+        // No size reference was ever set, so bubbles have no third dimension —
+        // the chart is still valid, the renderer just uses a default size.
+        assert!(c.series[0].sizes.is_empty());
+    }
+
+    // Both kinds survive a save/reload.
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "r".to_string()).unwrap();
+    assert_eq!(
+        wb2.get_sheet_by_idx(0).unwrap().get_charts()[0].chart_type,
+        "bubble"
+    );
+}
+
+#[test]
+fn create_stock_of_pie_and_surface_charts() {
+    // The three kinds differ in shape, not just in name: stock's series are
+    // the price components, of-pie carries a split, and a surface needs three
+    // axes. Each has to survive creation, a save and a reload.
+    let mut wb = Workbook::default();
+    let mut payloads: Vec<EditPayload> = vec![];
+    for row in 0..4usize {
+        for col in 0..4usize {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row,
+                col,
+                content: ((row + 1) * 10 + col).to_string(),
+            }));
+        }
+    }
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+
+    let make = |wb: &mut Workbook, id: &str, ty: &str, series: Vec<CreateChartSeries>| {
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CreateChart(CreateChart {
+                sheet_idx: 0,
+                chart_id: id.to_string(),
+                chart_type: ty.to_string(),
+                from_row: 6,
+                from_col: 0,
+                from_col_off: 0,
+                from_row_off: 0,
+                to_row: 20,
+                to_col: 8,
+                to_col_off: 0,
+                to_row_off: 0,
+                title: None,
+                categories_ref: Some("Sheet1!$A$1:$A$4".to_string()),
+                series,
+            })],
+            undoable: true,
+            init: false,
+        }));
+    };
+    let ser = |name: &str, col: char| CreateChartSeries {
+        name: Some(name.to_string()),
+        value_ref: format!("Sheet1!${}$1:${}$4", col, col),
+        color: None,
+        size_ref: None,
+        series_type: None,
+    };
+
+    make(
+        &mut wb,
+        "stock1",
+        "stock",
+        vec![
+            ser("Open", 'A'),
+            ser("High", 'B'),
+            ser("Low", 'C'),
+            ser("Close", 'D'),
+        ],
+    );
+    make(&mut wb, "ofpie1", "ofPie", vec![ser("Share", 'B')]);
+    make(
+        &mut wb,
+        "surf1",
+        "surface",
+        vec![ser("r1", 'B'), ser("r2", 'C'), ser("r3", 'D')],
+    );
+
+    let check = |wb: &Workbook| {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let charts = ws.get_charts();
+        let by = |id: &str| {
+            charts
+                .iter()
+                .find(|c| c.chart_id == id)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "{} missing, have {:?}",
+                        id,
+                        charts.iter().map(|c| &c.chart_id).collect::<Vec<_>>()
+                    )
+                })
+                .clone()
+        };
+        let stock = by("stock1");
+        assert_eq!(stock.chart_type, "stock");
+        assert_eq!(stock.series.len(), 4, "all four price series");
+        assert_eq!(stock.series[3].name.as_deref(), Some("Close"));
+        // Values are live like any other chart's.
+        assert_eq!(stock.series[0].values[0], Some(10.0));
+
+        let of_pie = by("ofpie1");
+        assert_eq!(of_pie.chart_type, "ofPie");
+        assert_eq!(of_pie.series.len(), 1, "of-pie plots one series");
+
+        let surface = by("surf1");
+        assert_eq!(surface.chart_type, "surface");
+        assert_eq!(surface.series.len(), 3, "one series per grid row");
+    };
+    check(&wb);
+
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    check(&wb2);
+}
+
+#[test]
+fn update_chart_sets_the_of_pie_split() {
+    use crate::edit_action::OfPieSplitUpdate;
+    let mut wb = Workbook::default();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: (0..6usize)
+            .map(|r| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row: r,
+                    col: 0,
+                    content: (10 - r).to_string(),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateChart(CreateChart {
+            sheet_idx: 0,
+            chart_id: "op".to_string(),
+            chart_type: "ofPie".to_string(),
+            from_row: 8,
+            from_col: 0,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: 20,
+            to_col: 8,
+            to_col_off: 0,
+            to_row_off: 0,
+            title: None,
+            categories_ref: None,
+            series: vec![CreateChartSeries {
+                name: None,
+                value_ref: "Sheet1!$A$1:$A$6".to_string(),
+                color: None,
+                size_ref: None,
+                series_type: None,
+            }],
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: "op".to_string(),
+            of_pie_split: Some(OfPieSplitUpdate {
+                by: Some("pos".to_string()),
+                pos: Some(2.0),
+                // Out of Excel's 5..=200 range, so it must be dropped.
+                second_size: Some(500.0),
+            }),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let check = |wb: &Workbook| {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(c.of_pie_split.by.as_deref(), Some("pos"));
+        assert_eq!(c.of_pie_split.pos, Some(2.0));
+        assert_eq!(
+            c.of_pie_split.second_size, None,
+            "out-of-range size dropped"
+        );
+    };
+    check(&wb);
+
+    let bytes = wb.save().unwrap();
+    check(&Workbook::from_file(&bytes, "r".to_string()).unwrap());
+
+    // And switching to a kind with no split leaves the chart valid.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: "op".to_string(),
+            chart_type: Some("surface".to_string()),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_charts()[0].chart_type, "surface");
+}
+
+#[test]
+fn create_a_combo_chart_and_keep_it_through_edits() {
+    // A combo chart is one whose series disagree about their kind. The whole
+    // point is that an edit elsewhere must not collapse it back to one kind.
+    let mut wb = Workbook::default();
+    let mut payloads: Vec<EditPayload> = vec![];
+    for row in 0..4usize {
+        for (col, base) in [(0usize, 100), (1, 20), (2, 3)] {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row,
+                col,
+                content: (base + row).to_string(),
+            }));
+        }
+    }
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateChart(CreateChart {
+            sheet_idx: 0,
+            chart_id: "combo".to_string(),
+            chart_type: "col".to_string(),
+            from_row: 6,
+            from_col: 0,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: 20,
+            to_col: 8,
+            to_col_off: 0,
+            to_row_off: 0,
+            title: None,
+            categories_ref: None,
+            series: vec![
+                CreateChartSeries {
+                    name: Some("Revenue".to_string()),
+                    value_ref: "Sheet1!$A$1:$A$4".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: None,
+                },
+                CreateChartSeries {
+                    name: Some("Margin".to_string()),
+                    value_ref: "Sheet1!$B$1:$B$4".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: Some("line".to_string()),
+                },
+                CreateChartSeries {
+                    name: Some("Churn".to_string()),
+                    value_ref: "Sheet1!$C$1:$C$4".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: Some("area".to_string()),
+                },
+            ],
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let check = |wb: &Workbook, note: &str| {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(c.chart_type, "col", "{}", note);
+        assert_eq!(c.series.len(), 3, "{}", note);
+        assert_eq!(c.series[0].series_type, None, "{}: follows the chart", note);
+        assert_eq!(
+            c.series[1].series_type.as_deref(),
+            Some("line"),
+            "{}: line override",
+            note
+        );
+        assert_eq!(
+            c.series[2].series_type.as_deref(),
+            Some("area"),
+            "{}: area override",
+            note
+        );
+        // Values stay live in every group.
+        assert_eq!(c.series[1].values[0], Some(20.0), "{}", note);
+    };
+    check(&wb, "after create");
+
+    // An unrelated edit regenerates the XML — the overrides must survive it.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: "combo".to_string(),
+            title: Some("Combo".to_string()),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+    check(&wb, "after an unrelated edit");
+
+    // So must a save/reload.
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    check(&wb2, "after reload");
+
+    // Re-pointing a series without restating its kind keeps the override.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::UpdateChart(UpdateChart {
+            sheet_idx: 0,
+            chart_id: "combo".to_string(),
+            series: Some(vec![
+                CreateChartSeries {
+                    name: Some("Revenue".to_string()),
+                    value_ref: "Sheet1!$A$1:$A$4".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: None,
+                },
+                CreateChartSeries {
+                    name: Some("Margin".to_string()),
+                    // A different range, same kind.
+                    value_ref: "Sheet1!$B$2:$B$4".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: None,
+                },
+            ]),
+            ..Default::default()
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let c = &ws.get_charts()[0];
+    assert_eq!(c.series.len(), 2);
+    assert_eq!(
+        c.series[1].series_type.as_deref(),
+        Some("line"),
+        "the slot's kind is kept when the caller does not restate it"
+    );
+    assert_eq!(c.series[1].val_ref.as_deref(), Some("Sheet1!$B$2:$B$4"));
+}
+
+#[test]
+fn three_d_chart_types_round_trip_through_the_api() {
+    let mut wb = Workbook::default();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: (0..4usize)
+            .map(|r| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row: r,
+                    col: 0,
+                    content: ((r + 1) * 5).to_string(),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+
+    for (i, ty) in ["col3d", "bar3d", "line3d", "area3d", "pie3d"]
+        .iter()
+        .enumerate()
+    {
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::CreateChart(CreateChart {
+                sheet_idx: 0,
+                chart_id: format!("c3d{}", i),
+                chart_type: ty.to_string(),
+                from_row: 6 + i * 2,
+                from_col: 0,
+                from_col_off: 0,
+                from_row_off: 0,
+                to_row: 20 + i * 2,
+                to_col: 8,
+                to_col_off: 0,
+                to_row_off: 0,
+                title: None,
+                categories_ref: None,
+                series: vec![CreateChartSeries {
+                    name: Some(ty.to_string()),
+                    value_ref: "Sheet1!$A$1:$A$4".to_string(),
+                    color: None,
+                    size_ref: None,
+                    series_type: None,
+                }],
+            })],
+            undoable: true,
+            init: false,
+        }));
+    }
+
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    let ws = wb2.get_sheet_by_idx(0).unwrap();
+    let charts = ws.get_charts();
+    assert_eq!(charts.len(), 5);
+    let mut kinds: Vec<&str> = charts.iter().map(|c| c.chart_type.as_str()).collect();
+    kinds.sort_unstable();
+    assert_eq!(kinds, ["area3d", "bar3d", "col3d", "line3d", "pie3d"]);
+    // Values are live in the 3-D forms too.
+    assert_eq!(
+        charts[0].series[0].values,
+        vec![Some(5.0), Some(10.0), Some(15.0), Some(20.0)]
+    );
 }

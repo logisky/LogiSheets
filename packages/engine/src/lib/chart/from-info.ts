@@ -27,11 +27,28 @@ export function chartInfoToModel(info: ChartInfo): ChartModel {
             // `values` is typed readonly number[] by the generated binding but
             // carries nulls at runtime for gaps; the model allows both.
             values: [...s.values] as Array<number | null>,
+            formattedValues: [...s.formattedValues] as Array<string | null>,
             color: s.color ?? undefined,
+            valRef: s.valRef,
+            seriesType: s.seriesType as ChartType | undefined,
+            sizes: [...s.sizes] as Array<number | null>,
+            sizeRef: s.sizeRef,
         })),
         legendPosition: (info.legendPos as LegendPosition | undefined) ?? 'none',
         stacked: info.stacked,
         catAxisTitle: info.catAxisTitle,
         valAxisTitle: info.valAxisTitle,
+        dataLabels: {
+            value: info.dataLabels.showValue,
+            category: info.dataLabels.showCategory,
+            series: info.dataLabels.showSeries,
+            percent: info.dataLabels.showPercent,
+            position: info.dataLabels.position,
+        },
+        valAxisNumFmt: info.valAxisNumFmt,
+        catRef: info.catRef,
+        valAxisScale: info.valAxisScale,
+        catAxisScale: info.catAxisScale,
+        ofPieSplit: info.ofPieSplit,
     }
 }

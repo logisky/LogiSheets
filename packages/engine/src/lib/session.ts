@@ -17,6 +17,7 @@
  */
 
 import type { SheetInfo, SelectedData, CellLayout } from "logisheets-web";
+import type {ChartUpdate} from "./chart/types";
 import { isErrorMessage } from "logisheets-web";
 import type { DataService } from "./clients/service";
 import { isLoadCancelled } from "./clients/service";
@@ -330,9 +331,11 @@ export class Session {
   }
 
   /**
-   * Reconfigure an existing chart (type and/or title). Requires a mounted UI.
+   * Reconfigure an existing chart: type, title, legend, axis titles, data
+   * labels, number format, or the data references themselves. Requires a
+   * mounted UI.
    */
-  updateChart(id: string, opts: {chartType?: string; title?: string}): void {
+  updateChart(id: string, opts: ChartUpdate): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mounted = this._mountedComponent as any;
     if (mounted && typeof mounted.updateChart === "function") {
