@@ -19,6 +19,7 @@
  */
 
 import type { SheetInfo, SelectedData, CellLayout } from "logisheets-web";
+import type {ChartUpdate} from "./chart/types";
 import { isErrorMessage } from "logisheets-web";
 import { DataService, type BeforeLoadWorkbook } from "./clients/service";
 import { WorkbookClient } from "./clients/workbook";
@@ -277,7 +278,7 @@ export class Engine {
   }
 
   /** Reconfigure an existing chart (type and/or title). */
-  updateChart(id: string, opts: {chartType?: string; title?: string}): void {
+  updateChart(id: string, opts: ChartUpdate): void {
     this._ensureReady();
     this.getDefaultSession().updateChart(id, opts);
   }

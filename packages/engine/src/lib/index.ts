@@ -83,9 +83,12 @@ export { Range as RangeClass, Cell as CellClass } from "$types/index";
 // mapChartToOption is the model→ECharts translation layer.
 export { ChartView, mapChartToOption } from "./chart";
 export type {
+  AxisScale,
   ChartModel,
   ChartSeries,
   ChartType,
+  ChartUpdate,
+  DataLabels,
   LegendPosition,
 } from "./chart";
 

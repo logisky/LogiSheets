@@ -2,10 +2,13 @@
     import { onMount } from 'svelte'
     import type { Grid, CellLayout, EngineConfig, ZoomOrigin } from '$types/index'
     import { DEFAULT_ENGINE_CONFIG } from '$types/index'
-    import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType, ChartInfo } from 'logisheets-web'
+    import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType, ChartInfo, UpdateChart } from 'logisheets-web'
     import { isErrorMessage } from 'logisheets-web'
     import { DataService } from '$lib/clients/service'
     import ChartView from '$lib/chart/ChartView.svelte'
+    import ChartSettings from '$lib/chart/ChartSettings.svelte'
+    import {chartDataRefsFromSelection} from '$lib/chart/from-selection'
+    import {chartSourceRanges, isRangeVisible} from '$lib/chart/source-ranges'
     import { mapChartToOption, chartInfoToModel } from '$lib/chart'
     // Inlined (base64 blob) so the published bundle is self-contained — see
     // the matching import in engine.ts for why a separate worker asset breaks
@@ -15,6 +18,8 @@
         match,
         xForColStart,
         xForColEnd,
+        xForColStartUnclamped,
+        yForRowStartUnclamped,
         yForRowStart,
         yForRowEnd,
         getSelectedCellRange,
@@ -209,10 +214,20 @@ let isDragging = false; // True while user is drag-selecting
         const g = grid
         if (!g) return []
         return charts.map((c) => {
-            const x0 = xForColStart(c.fromCol, g) + c.fromColOff / EMU_PER_PX
-            const y0 = yForRowStart(c.fromRow, g) + c.fromRowOff / EMU_PER_PX
-            const x1 = xForColStart(c.toCol, g) + c.toColOff / EMU_PER_PX
-            const y1 = yForRowStart(c.toRow, g) + c.toRowOff / EMU_PER_PX
+            // Anchors are positioned unclamped: a chart scrolled past the top
+            // must slide away with its cells, not flatten against the edge.
+            const x0 = xForColStartUnclamped(c.fromCol, g) + c.fromColOff / EMU_PER_PX
+            const y0 = yForRowStartUnclamped(c.fromRow, g) + c.fromRowOff / EMU_PER_PX
+            // A size-anchored chart (`oneCellAnchor`) repeats its `from` cell
+            // as `to` and carries the frame size in `extCx`/`extCy` instead —
+            // deriving the box from the corners would give it zero size.
+            const sized = c.extCx != null && c.extCy != null
+            const x1 = sized
+                ? x0 + c.extCx! / EMU_PER_PX
+                : xForColStartUnclamped(c.toCol, g) + c.toColOff / EMU_PER_PX
+            const y1 = sized
+                ? y0 + c.extCy! / EMU_PER_PX
+                : yForRowStartUnclamped(c.toRow, g) + c.toRowOff / EMU_PER_PX
             return {
                 id: c.chartId,
                 left: x0,
@@ -225,10 +240,81 @@ let isDragging = false; // True while user is drag-selecting
         })
     })
 
-    const CHART_TYPES = ['col', 'bar', 'line', 'area', 'pie', 'doughnut', 'scatter']
+    // The quick picker on a selected chart. Kept in step with the fuller,
+    // labelled list in ChartSettings.svelte.
+    const CHART_TYPES = [
+        'col',
+        'bar',
+        'line',
+        'area',
+        'pie',
+        'doughnut',
+        'scatter',
+        'radar',
+        'bubble',
+        'stock',
+        'ofPie',
+        'barOfPie',
+        'surface',
+        'surface3d',
+        'col3d',
+        'bar3d',
+        'line3d',
+        'area3d',
+        'pie3d',
+    ]
 
     // ---- Chart selection, move, resize, delete -------------------------
     let selectedChartId: string | null = $state(null)
+
+    /**
+     * The source ranges of the selected chart, as boxes in the same
+     * canvas-data space the chart boxes use — so selecting a chart outlines
+     * the cells it plots, the way Excel does. Only ranges on the sheet being
+     * shown can be drawn; one pointing at another sheet is listed in the
+     * editor instead.
+     */
+    const chartSourceBoxes = $derived.by(() => {
+        const g = grid
+        const chart = charts.find((c) => c.chartId === selectedChartId)
+        if (!g || !chart) return []
+        const sheetName = sheets[activeSheet]?.name
+        // The grid only knows the size of the rows and columns it has laid
+        // out, so a range outside that window has no drawable position.
+        const window = {
+            firstRow: g.rows[0]?.idx ?? 0,
+            lastRow: g.rows[g.rows.length - 1]?.idx ?? 0,
+            firstCol: g.columns[0]?.idx ?? 0,
+            lastCol: g.columns[g.columns.length - 1]?.idx ?? 0,
+        }
+        return chartSourceRanges(chart)
+            .filter((src) => src.sheet === undefined || src.sheet === sheetName)
+            .filter((src) => isRangeVisible(src.range, window))
+            .map((src, i) => {
+                const {startRow, startCol, endRow, endCol} = src.range
+                // Unclamped like the chart boxes, so a range that is only
+                // half in view keeps its real edges and is clipped by the
+                // layer rather than drawing a false border at the viewport's
+                // edge. A cell's far edge is the next one's near edge.
+                const left = xForColStartUnclamped(startCol, g)
+                const top = yForRowStartUnclamped(startRow, g)
+                return {
+                    key: `${src.kind}-${i}`,
+                    kind: src.kind,
+                    color: src.color,
+                    left,
+                    top,
+                    width: Math.max(0, xForColStartUnclamped(endCol + 1, g) - left),
+                    height: Math.max(0, yForRowStartUnclamped(endRow + 1, g) - top),
+                }
+            })
+            .filter((b) => b.width > 0 && b.height > 0)
+    })
+    // The settings popover is opened per selection, from the gear button.
+    let chartSettingsOpen = $state(false)
+    const selectedChart = $derived(
+        charts.find((c) => c.chartId === selectedChartId)
+    )
     let chartDrag: {id: string; startX: number; startY: number; dx: number; dy: number} | null =
         $state(null)
     let chartResize:
@@ -335,6 +421,7 @@ let isDragging = false; // True while user is drag-selecting
     function onChartMouseDown(e: MouseEvent, id: string) {
         e.stopPropagation()
         e.preventDefault()
+        if (selectedChartId !== id) chartSettingsOpen = false
         selectedChartId = id
         chartDrag = {id, startX: e.clientX, startY: e.clientY, dx: 0, dy: 0}
         const move = (ev: MouseEvent) => {
@@ -408,6 +495,10 @@ let isDragging = false; // True while user is drag-selecting
                       toColOff: to.colOff,
                       toRow: to.row,
                       toRowOff: to.rowOff,
+                      // MoveChart always states two corners, so a formerly
+                      // size-anchored chart is now cell-anchored.
+                      extCx: undefined,
+                      extCy: undefined,
                   }
                 : c
         )
@@ -446,23 +537,18 @@ let isDragging = false; // True while user is drag-selecting
         })
     }
 
-    // Reconfigure an existing chart (type/title). UpdateChart changes no cell
-    // values, so await the transaction then refetch (like insertChart).
+    // Reconfigure an existing chart. UpdateChart changes no cell values, so
+    // await the transaction then refetch (like insertChart).
     export async function updateChart(
         id: string,
-        opts: {chartType?: string; title?: string}
+        opts: Omit<UpdateChart, 'sheetIdx' | 'chartId'>
     ) {
         if (!dataService) return
         await dataService.handleTransaction({
             payloads: [
                 {
                     type: 'updateChart',
-                    value: {
-                        sheetIdx: activeSheet,
-                        chartId: id,
-                        chartType: opts.chartType,
-                        title: opts.title,
-                    },
+                    value: {...opts, sheetIdx: activeSheet, chartId: id},
                 },
             ],
             undoable: true,
@@ -1090,6 +1176,7 @@ let isDragging = false; // True while user is drag-selecting
 
         // Clicking the grid deselects any selected chart.
         selectedChartId = null
+        chartSettingsOpen = false
 
         if (e.button !== 0) return // Only left click
         if (!grid || !canvasEl) return
@@ -2294,27 +2381,35 @@ let isDragging = false; // True while user is drag-selecting
     // ========================================================================
 
     /**
-     * Insert a chart from the current selection. Each selected column becomes a
-     * series (values down the rows); the chart is anchored just below the
-     * selection. `chartType` is col|bar|line|area|pie|doughnut|scatter.
+     * Insert a chart from the current selection, inferring its shape the way
+     * Excel does (see `chartDataRefsFromSelection`). The chart is anchored just
+     * below the selection.
      */
     export async function insertChart(chartType: string = 'col') {
         if (!dataService) return
         const range = getSelectedCellRange(selectedData)
         if (!range) return
-        const startRow = Math.min(range.startRow, range.endRow)
         const endRow = Math.max(range.startRow, range.endRow)
         const startCol = Math.min(range.startCol, range.endCol)
-        const endCol = Math.max(range.startCol, range.endCol)
         const sheetName = sheets[activeSheet]?.name ?? 'Sheet1'
-        const qs = quoteSheetName(sheetName)
 
-        const series: {name: string | undefined; valueRef: string}[] = []
-        for (let c = startCol; c <= endCol; c++) {
-            const col = toA1notation(c)
-            const valueRef = `${qs}!$${col}$${startRow + 1}:$${col}$${endRow + 1}`
-            series.push({name: undefined, valueRef})
-        }
+        const {categoriesRef, series} = await chartDataRefsFromSelection(
+            chartType,
+            range,
+            sheetName,
+            {
+                isText: async (r, c) => {
+                    const info = await dataService!.getCellInfo(activeSheet, r, c)
+                    if (isErrorMessage(info)) return false
+                    const v = info.toCellInfo().value
+                    return v !== 'empty' && v.type === 'str' && v.value !== ''
+                },
+                textAt: async (r, c) => {
+                    const info = await dataService!.getCellInfo(activeSheet, r, c)
+                    return isErrorMessage(info) ? undefined : info.getText() || undefined
+                },
+            }
+        )
 
         // Anchor below the selection, spanning ~8 cols × 15 rows.
         const fromRow = endRow + 2
@@ -2336,7 +2431,7 @@ let isDragging = false; // True while user is drag-selecting
                         toColOff: 0,
                         toRowOff: 0,
                         title: undefined,
-                        categoriesRef: undefined,
+                        categoriesRef,
                         series,
                     },
                 },
@@ -2548,6 +2643,14 @@ let isDragging = false; // True while user is drag-selecting
                     class="chart-layer"
                     style="left: {LeftTop.width}px; top: {LeftTop.height}px; width: calc(100% - {LeftTop.width}px - {showScrollbars ? cfg.scrollbarSize : 0}px); height: calc(100% - {LeftTop.height}px - {showScrollbars ? cfg.scrollbarSize : 0}px);"
                 >
+                    <!-- Source outlines of the selected chart, under the
+                         charts themselves. -->
+                    {#each chartSourceBoxes as src (src.key)}
+                        <div
+                            class="chart-source {src.kind}"
+                            style="left: {src.left}px; top: {src.top}px; width: {src.width}px; height: {src.height}px; border-color: {src.color};"
+                        ></div>
+                    {/each}
                     {#each chartBoxes as box (box.id)}
                         {@const r = displayChartRect(box)}
                         <div
@@ -2569,19 +2672,42 @@ let isDragging = false; // True while user is drag-selecting
                                 onmousedown={(e) => onChartMouseDown(e, box.id)}
                             ></div>
                             {#if selectedChartId === box.id}
-                                <select
-                                    class="chart-type-select"
-                                    value={box.chartType}
+                                <div
+                                    class="chart-toolbar"
+                                    role="presentation"
                                     onmousedown={(e) => e.stopPropagation()}
-                                    onchange={(e) =>
-                                        updateChart(box.id, {
-                                            chartType: e.currentTarget.value,
-                                        })}
                                 >
-                                    {#each CHART_TYPES as t (t)}
-                                        <option value={t}>{t}</option>
-                                    {/each}
-                                </select>
+                                    <select
+                                        class="chart-type-select"
+                                        value={box.chartType}
+                                        onchange={(e) =>
+                                            updateChart(box.id, {
+                                                chartType: e.currentTarget.value,
+                                            })}
+                                    >
+                                        {#each CHART_TYPES as t (t)}
+                                            <option value={t}>{t}</option>
+                                        {/each}
+                                    </select>
+                                    <button
+                                        class="chart-settings-btn"
+                                        class:active={chartSettingsOpen}
+                                        title="Chart settings"
+                                        aria-label="Chart settings"
+                                        onclick={() =>
+                                            (chartSettingsOpen = !chartSettingsOpen)}
+                                    >
+                                        ⚙
+                                    </button>
+                                </div>
+                                {#if chartSettingsOpen && selectedChart}
+                                    <ChartSettings
+                                        chart={selectedChart}
+                                        onUpdate={(patch) =>
+                                            updateChart(box.id, patch)}
+                                        onClose={() => (chartSettingsOpen = false)}
+                                    />
+                                {/if}
                                 {#each ['nw', 'ne', 'sw', 'se'] as corner (corner)}
                                     <div
                                         class="chart-handle {corner}"
@@ -2689,6 +2815,23 @@ let isDragging = false; // True while user is drag-selecting
         position: absolute;
     }
 
+    /* Outline of a range the selected chart plots. Categories are dashed and
+       bubble sizes dotted, so the three kinds stay apart even when a series
+       colour happens to match. */
+    .chart-source {
+        position: absolute;
+        box-sizing: border-box;
+        border: 2px solid;
+        border-radius: 2px;
+        pointer-events: none;
+    }
+    .chart-source.categories {
+        border-style: dashed;
+    }
+    .chart-source.sizes {
+        border-style: dotted;
+    }
+
     /* Transparent surface above the chart canvas that opts back into pointer
        events (the layer disables them) so charts can be selected and dragged. */
     .chart-cover {
@@ -2736,19 +2879,30 @@ let isDragging = false; // True while user is drag-selecting
         cursor: nwse-resize;
     }
 
-    /* Chart-type picker on the selected chart. */
-    .chart-type-select {
+    /* Quick controls above the selected chart: type picker + settings. */
+    .chart-toolbar {
         position: absolute;
         top: -26px;
         left: 0;
+        display: flex;
+        gap: 4px;
         pointer-events: auto;
+        z-index: 2;
+    }
+
+    .chart-type-select,
+    .chart-settings-btn {
         font-size: 12px;
         padding: 2px 4px;
         border: 1px solid #1a73e8;
         border-radius: 3px;
         background: #fff;
         cursor: pointer;
-        z-index: 2;
+        color: #202124;
+    }
+
+    .chart-settings-btn.active {
+        background: #e8f0fe;
     }
 
     .corner-cell {

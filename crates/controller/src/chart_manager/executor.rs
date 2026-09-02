@@ -5,7 +5,8 @@ use logisheets_base::{
     id_fetcher::{IdFetcherTrait, SheetIdFetcherByIdxTrait},
 };
 use logisheets_workbook::prelude::{
-    ChartType, NewChartSeries, PassthroughPart, build_chart_xml, parse_chart,
+    AxisScale, ChartData, ChartSeries, ChartType, LegendPos, OfPieSplit, PassthroughPart,
+    SeriesColor, build_chart_xml, parse_chart,
 };
 
 use crate::{Error, edit_action::EditPayload};
@@ -67,21 +68,14 @@ impl ChartExecutor {
                 let from_cell = ctx.fetch_cell_id(&sheet_id, p.from_row, p.from_col)?;
                 let to_cell = ctx.fetch_cell_id(&sheet_id, p.to_row, p.to_col)?;
                 let chart_type = chart_type_from_str(&p.chart_type);
-                let series: Vec<NewChartSeries> = p
-                    .series
-                    .iter()
-                    .map(|s| NewChartSeries {
-                        name: s.name.clone(),
-                        value_ref: s.value_ref.clone(),
-                    })
-                    .collect();
-                let xml = build_chart_xml(
-                    &chart_type,
-                    p.title.as_deref(),
-                    p.categories_ref.as_deref(),
-                    &series,
+                let series = p.series.iter().map(new_series).collect();
+                let spec = ChartData::new(
+                    chart_type,
+                    p.title.clone(),
+                    p.categories_ref.clone(),
+                    series,
                 );
-                let bytes = xml.into_bytes();
+                let bytes = build_chart_xml(&spec).into_bytes();
                 let data = match parse_chart(&bytes) {
                     Some(d) => d,
                     None => return Ok((self, false)),
@@ -120,51 +114,137 @@ impl ChartExecutor {
                     .map_err(BasicError::SheetIdxExceed)?;
                 // Read the existing chart's data to keep refs/anchor while
                 // re-generating with the new type/title.
-                let existing = match self
+                // Cloned because the chart is replaced further down, which
+                // needs `self.manager` mutably. One chart, not the sheet's.
+                let existing = self
                     .manager
                     .charts_of_sheet(sheet_id)
-                    .into_iter()
                     .find(|c| c.id == p.chart_id)
-                {
-                    Some(c) => c,
-                    None => return Ok((self, false)),
+                    .cloned();
+                let Some(existing) = existing else {
+                    return Ok((self, false));
                 };
-                let new_type = match &p.chart_type {
-                    Some(s) => chart_type_from_str(s),
-                    None => existing.data.chart_type.clone(),
-                };
-                let title = match &p.title {
-                    Some(t) => Some(t.clone()),
-                    None => existing.data.title.clone(),
-                };
-                let series: Vec<NewChartSeries> = existing
-                    .data
-                    .series
-                    .iter()
-                    .filter_map(|s| {
-                        s.val_ref.clone().map(|vr| NewChartSeries {
-                            name: s.name.clone(),
-                            value_ref: vr,
+                let mut spec = existing.data.clone();
+                if let Some(t) = &p.chart_type {
+                    spec.chart_type = chart_type_from_str(t);
+                }
+                if let Some(t) = &p.title {
+                    spec.title = non_empty(t);
+                }
+                if let Some(l) = &p.legend_pos {
+                    spec.legend_pos = legend_pos_from_str(l);
+                }
+                if let Some(v) = p.stacked {
+                    spec.stacked = v;
+                }
+                if let Some(t) = &p.cat_axis_title {
+                    spec.cat_axis_title = non_empty(t);
+                }
+                if let Some(t) = &p.val_axis_title {
+                    spec.val_axis_title = non_empty(t);
+                }
+                if let Some(v) = p.show_data_labels {
+                    spec.data_labels.show_value = v;
+                }
+                if let Some(v) = p.show_category_labels {
+                    spec.data_labels.show_category = v;
+                }
+                if let Some(v) = p.show_series_labels {
+                    spec.data_labels.show_series = v;
+                }
+                if let Some(v) = p.show_percent_labels {
+                    spec.data_labels.show_percent = v;
+                }
+                if let Some(pos) = &p.data_label_position {
+                    spec.data_labels.position = non_empty(pos);
+                }
+                if let Some(fmt) = &p.num_fmt {
+                    let fmt = non_empty(fmt);
+                    spec.val_axis_num_fmt = fmt.clone();
+                    spec.data_labels.num_fmt = fmt;
+                }
+                if let Some(r) = &p.categories_ref {
+                    spec.cat_ref = non_empty(r);
+                }
+                if let Some(sc) = &p.val_axis_scale {
+                    spec.val_axis_scale = axis_scale(sc);
+                }
+                if let Some(sc) = &p.cat_axis_scale {
+                    spec.cat_axis_scale = axis_scale(sc);
+                }
+                if let Some(sp) = &p.of_pie_split {
+                    spec.of_pie_split = OfPieSplit {
+                        by: sp.by.as_ref().and_then(|b| non_empty(b)),
+                        pos: sp.pos.filter(|v| *v > 0.0),
+                        // Excel clamps the second plot to 5..=200% of the first.
+                        second_size: sp.second_size.filter(|v| (5.0..=200.0).contains(v)),
+                    };
+                }
+                if let Some(series) = &p.series {
+                    let previous = std::mem::take(&mut spec.series);
+                    spec.series = series
+                        .iter()
+                        .enumerate()
+                        .map(|(i, s)| {
+                            let mut ns = new_series(s);
+                            let old = previous.get(i);
+                            // A caller editing a non-bubble chart has no size
+                            // field to send, so keep the one this slot had —
+                            // switching to bubble and back must not lose it.
+                            if ns.size_ref.is_none() {
+                                ns.size_ref = old.and_then(|o| o.size_ref.clone());
+                            }
+                            // Same for the combo override: a caller editing
+                            // something else does not restate it.
+                            if ns.series_type.is_none() {
+                                ns.series_type = old.and_then(|o| o.series_type.clone());
+                            }
+                            match &ns.color {
+                                // An explicit color replaces the series' whole
+                                // shape properties: the authored ones describe
+                                // a fill we are overriding, so keeping them
+                                // would keep the old color.
+                                Some(_) => {}
+                                // Otherwise carry the previous slot's look over
+                                // whole, so re-pointing a range or renaming a
+                                // series does not reset the chart's palette.
+                                None => {
+                                    ns.color = old.and_then(|o| o.color.clone());
+                                    if let Some(o) = old {
+                                        ns.preserved = o.preserved.clone();
+                                    }
+                                }
+                            }
+                            ns
                         })
-                    })
-                    .collect();
-                let xml = build_chart_xml(
-                    &new_type,
-                    title.as_deref(),
-                    existing.data.cat_ref.as_deref(),
-                    &series,
-                );
-                let bytes = xml.into_bytes();
+                        .collect();
+                }
+                let bytes = build_chart_xml(&spec).into_bytes();
                 let data = match parse_chart(&bytes) {
                     Some(d) => d,
                     None => return Ok((self, false)),
                 };
-                let raw = Arc::new(vec![PassthroughPart {
-                    path: existing.part_path.clone(),
-                    data: bytes,
-                    rtype: logisheets_workbook::rtypes::CHART,
-                    rels: vec![],
-                }]);
+                // Only the chart part itself is regenerated. Its relationships
+                // and the satellite parts Excel writes alongside it (style,
+                // colors) are carried over untouched — dropping them would
+                // restyle the chart in Excel and break any reference the chart
+                // makes to another part.
+                let raw = Arc::new(
+                    existing
+                        .raw
+                        .iter()
+                        .map(|part| {
+                            if part.path == existing.part_path {
+                                PassthroughPart {
+                                    data: bytes.clone(),
+                                    ..part.clone()
+                                }
+                            } else {
+                                part.clone()
+                            }
+                        })
+                        .collect::<Vec<_>>(),
+                );
                 let changed = self
                     .manager
                     .update_content(sheet_id, &p.chart_id, data, raw);
@@ -172,6 +252,58 @@ impl ChartExecutor {
             }
             _ => Ok((self, false)),
         }
+    }
+}
+
+/// A payload series → the workbook model. An explicit color is taken as a
+/// literal RGB hex (what a color picker produces); theme-scheme colors only
+/// come from the file.
+fn new_series(s: &crate::edit_action::CreateChartSeries) -> ChartSeries {
+    let mut out = ChartSeries::new(s.name.clone(), s.value_ref.clone());
+    out.size_ref = s.size_ref.as_ref().and_then(|r| non_empty(r));
+    out.series_type = s
+        .series_type
+        .as_ref()
+        .and_then(|t| non_empty(t))
+        .map(|t| chart_type_from_str(&t));
+    out.color = s
+        .color
+        .as_ref()
+        .and_then(|c| non_empty(c))
+        .map(|c| SeriesColor::Srgb(c.trim_start_matches('#').to_string()));
+    out
+}
+
+/// Payload text fields use the empty string to mean "clear it".
+fn non_empty(s: &str) -> Option<String> {
+    if s.trim().is_empty() {
+        None
+    } else {
+        Some(s.to_string())
+    }
+}
+
+fn axis_scale(u: &crate::edit_action::AxisScaleUpdate) -> AxisScale {
+    AxisScale {
+        min: u.min,
+        max: u.max,
+        // Excel rejects a log base outside 2..=1000; treat anything else as
+        // linear rather than writing a file Excel will refuse to open.
+        log_base: u.log_base.filter(|b| (2.0..=1000.0).contains(b)),
+        reversed: u.reversed,
+        major_unit: u.major_unit.filter(|v| *v > 0.0),
+        minor_unit: u.minor_unit.filter(|v| *v > 0.0),
+    }
+}
+
+fn legend_pos_from_str(s: &str) -> Option<LegendPos> {
+    match s {
+        "top" => Some(LegendPos::Top),
+        "bottom" => Some(LegendPos::Bottom),
+        "left" => Some(LegendPos::Left),
+        "right" => Some(LegendPos::Right),
+        // "none" (and anything unrecognized) hides the legend.
+        _ => None,
     }
 }
 
@@ -183,6 +315,18 @@ fn chart_type_from_str(s: &str) -> ChartType {
         "pie" => ChartType::Pie,
         "doughnut" => ChartType::Doughnut,
         "scatter" => ChartType::Scatter,
+        "radar" => ChartType::Radar,
+        "bubble" => ChartType::Bubble,
+        "stock" => ChartType::Stock,
+        "ofPie" => ChartType::OfPie,
+        "barOfPie" => ChartType::BarOfPie,
+        "surface" => ChartType::Surface,
+        "surface3d" => ChartType::Surface3d,
+        "col3d" => ChartType::Col3d,
+        "bar3d" => ChartType::Bar3d,
+        "line3d" => ChartType::Line3d,
+        "area3d" => ChartType::Area3d,
+        "pie3d" => ChartType::Pie3d,
         _ => ChartType::Col,
     }
 }

@@ -8,7 +8,8 @@ use crate::controller::display::BlockSchemaRandomEntry;
 use crate::controller::display::BlockSchemaType;
 use crate::controller::display::{
     BlockCellInfo, BlockDisplayInfo, BlockInfo, CellCoordinate, CellImageInfo, CellPosition,
-    ChartInfo, ChartSeriesInfo, DisplayWindow, DisplayWindowWithStartPoint, LinkInfo,
+    ChartDataLabelsInfo, ChartInfo, ChartOfPieSplitInfo, ChartSeriesInfo, DisplayWindow,
+    DisplayWindowWithStartPoint, LinkInfo,
 };
 use crate::errors::Result;
 use crate::exclusive::AppendixWithCell;
@@ -574,6 +575,106 @@ impl<'a> Worksheet<'a> {
         Some(out)
     }
 
+    /// Resolve a category reference to the labels the sheet displays — numbers
+    /// go through their cell's number format, so a date axis reads as dates.
+    /// Returns `None` when the reference is unusable or resolves to nothing but
+    /// blanks, so the caller can keep the labels cached in the file.
+    fn resolve_category_labels(&self, cat_ref: &str) -> Option<Vec<String>> {
+        let (sheet_name, sr, sc, er, ec) = Self::parse_a1_range(cat_ref)?;
+        let sheet_id = self.ref_sheet_id(sheet_name.as_deref())?;
+        let mut out = Vec::new();
+        for row in sr..=er {
+            for col in sc..=ec {
+                out.push(self.cell_label(sheet_id, row, col));
+            }
+        }
+        if out.iter().all(|l| l.is_empty()) {
+            return None;
+        }
+        Some(out)
+    }
+
+    /// The number format of a reference's first cell. This is Excel's "linked
+    /// to source" behavior for value labels and axis ticks. `None` for General
+    /// or an unresolvable reference.
+    fn resolve_ref_num_fmt(&self, val_ref: &str) -> Option<String> {
+        let (sheet_name, sr, sc, _, _) = Self::parse_a1_range(val_ref)?;
+        let sheet_id = self.ref_sheet_id(sheet_name.as_deref())?;
+        let cell_id = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_id(&sheet_id, sr, sc)
+            .ok()?;
+        let cell = self
+            .controller
+            .status
+            .container
+            .get_cell(sheet_id, &cell_id)?;
+        let fmt = self
+            .controller
+            .status
+            .style_manager
+            .get_style(cell.style)
+            .formatter;
+        if fmt.is_empty() || fmt.eq_ignore_ascii_case("general") {
+            None
+        } else {
+            Some(fmt)
+        }
+    }
+
+    /// The sheet a chart reference points at: the named one, or this sheet
+    /// when the reference carries no sheet name.
+    fn ref_sheet_id(&self, sheet_name: Option<&str>) -> Option<SheetId> {
+        match sheet_name {
+            Some(name) => self
+                .controller
+                .status
+                .sheet_id_manager
+                .get_id(name)
+                .copied(),
+            None => Some(self.sheet_id),
+        }
+    }
+
+    /// A cell rendered as chart-label text: numbers through their own number
+    /// format, everything else as its plain text. Missing cells are empty.
+    fn cell_label(&self, sheet_id: SheetId, row: usize, col: usize) -> String {
+        let cell = self
+            .controller
+            .status
+            .navigator
+            .fetch_cell_id(&sheet_id, row, col)
+            .ok()
+            .and_then(|cid| self.controller.status.container.get_cell(sheet_id, &cid));
+        let Some(cell) = cell else {
+            return String::new();
+        };
+        match &cell.value {
+            logisheets_base::CellValue::Blank => String::new(),
+            logisheets_base::CellValue::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
+            logisheets_base::CellValue::Error(e) => e.to_string(),
+            logisheets_base::CellValue::String(t) => self
+                .controller
+                .status
+                .text_id_manager
+                .get_string(t)
+                .unwrap_or_default(),
+            logisheets_base::CellValue::InlineStr(rst) => rst.plain_text(),
+            logisheets_base::CellValue::FormulaStr(t) => t.clone(),
+            logisheets_base::CellValue::Number(n) => {
+                let fmt = self
+                    .controller
+                    .status
+                    .style_manager
+                    .get_style(cell.style)
+                    .formatter;
+                format_with(Some(fmt.as_str()), *n)
+            }
+        }
+    }
+
     /// Parse an A1 reference `[Sheet!]$C$R[:$C$R]` into
     /// `(sheet, start_row, start_col, end_row, end_col)` (0-based, normalized).
     fn parse_a1_range(s: &str) -> Option<(Option<String>, usize, usize, usize, usize)> {
@@ -632,6 +733,18 @@ impl<'a> Worksheet<'a> {
                 ChartType::Pie => "pie",
                 ChartType::Doughnut => "doughnut",
                 ChartType::Scatter => "scatter",
+                ChartType::Radar => "radar",
+                ChartType::Bubble => "bubble",
+                ChartType::Stock => "stock",
+                ChartType::OfPie => "ofPie",
+                ChartType::BarOfPie => "barOfPie",
+                ChartType::Surface => "surface",
+                ChartType::Surface3d => "surface3d",
+                ChartType::Col3d => "col3d",
+                ChartType::Bar3d => "bar3d",
+                ChartType::Line3d => "line3d",
+                ChartType::Area3d => "area3d",
+                ChartType::Pie3d => "pie3d",
             }
             .to_string()
         };
@@ -650,23 +763,21 @@ impl<'a> Worksheet<'a> {
             .status
             .chart_manager
             .charts_of_sheet(self.sheet_id)
-            .into_iter()
             .filter_map(|chart| {
                 let (from_row, from_col) =
                     nav.fetch_cell_idx(&self.sheet_id, &chart.from.cell).ok()?;
                 // A size-anchored chart has no second cell; report the `from`
                 // cell again and hand the size over separately rather than
                 // inventing a corner.
-                let (to_row, to_col, to_col_off, to_row_off, ext_cx, ext_cy) =
-                    match &chart.extent {
-                        crate::chart_manager::ChartExtent::ToCell(m) => {
-                            let (r, c) = nav.fetch_cell_idx(&self.sheet_id, &m.cell).ok()?;
-                            (r, c, m.col_off, m.row_off, None, None)
-                        }
-                        crate::chart_manager::ChartExtent::Size { cx, cy } => {
-                            (from_row, from_col, 0, 0, Some(*cx), Some(*cy))
-                        }
-                    };
+                let (to_row, to_col, to_col_off, to_row_off, ext_cx, ext_cy) = match &chart.extent {
+                    crate::chart_manager::ChartExtent::ToCell(m) => {
+                        let (r, c) = nav.fetch_cell_idx(&self.sheet_id, &m.cell).ok()?;
+                        (r, c, m.col_off, m.row_off, None, None)
+                    }
+                    crate::chart_manager::ChartExtent::Size { cx, cy } => {
+                        (from_row, from_col, 0, 0, Some(*cx), Some(*cy))
+                    }
+                };
                 let d = &chart.data;
                 Some(ChartInfo {
                     chart_id: chart.id.clone(),
@@ -684,25 +795,84 @@ impl<'a> Worksheet<'a> {
                     stacked: d.stacked,
                     title: d.title.clone(),
                     legend_pos: d.legend_pos.as_ref().map(legend_pos_str),
-                    categories: d.categories.clone(),
+                    // Labels follow the sheet like values do; the file's cache
+                    // is the fallback.
+                    categories: d
+                        .cat_ref
+                        .as_deref()
+                        .and_then(|r| self.resolve_category_labels(r))
+                        .unwrap_or_else(|| d.categories.clone()),
+                    cat_ref: d.cat_ref.clone(),
                     series: d
                         .series
                         .iter()
-                        .map(|s| ChartSeriesInfo {
-                            name: s.name.clone(),
+                        .map(|s| {
                             // Live values re-read from the source range so the
                             // chart reflects edits; fall back to the OOXML cache
                             // if the reference can't be resolved.
-                            values: s
+                            let values = s
                                 .val_ref
                                 .as_deref()
                                 .and_then(|r| self.resolve_series_values(r))
-                                .unwrap_or_else(|| s.cached_values.clone()),
-                            color: s.color.as_ref().and_then(|c| self.resolve_series_color(c)),
+                                .unwrap_or_else(|| s.cached_values.clone());
+                            // The source cells' format wins over the cached
+                            // one, so reformatting the data reformats the
+                            // chart. An explicit label format beats both.
+                            let num_fmt = s
+                                .val_ref
+                                .as_deref()
+                                .and_then(|r| self.resolve_ref_num_fmt(r))
+                                .or_else(|| s.format_code.clone());
+                            let label_fmt = d.data_labels.num_fmt.as_ref().or(num_fmt.as_ref());
+                            let formatted_values = values
+                                .iter()
+                                .map(|v| v.map(|n| format_with(label_fmt.map(|f| f.as_str()), n)))
+                                .collect();
+                            ChartSeriesInfo {
+                                name: s.name.clone(),
+                                values,
+                                formatted_values,
+                                // A bubble chart's third dimension, live like
+                                // the values are.
+                                sizes: s
+                                    .size_ref
+                                    .as_deref()
+                                    .and_then(|r| self.resolve_series_values(r))
+                                    .unwrap_or_else(|| s.cached_sizes.clone()),
+                                size_ref: s.size_ref.clone(),
+                                color: s.color.as_ref().and_then(|c| self.resolve_series_color(c)),
+                                val_ref: s.val_ref.clone(),
+                                // Set only on a combo chart's overridden
+                                // series; `None` means it follows the chart.
+                                series_type: s.series_type.as_ref().map(chart_type_str),
+                                num_fmt,
+                            }
                         })
                         .collect(),
                     cat_axis_title: d.cat_axis_title.clone(),
                     val_axis_title: d.val_axis_title.clone(),
+                    data_labels: ChartDataLabelsInfo {
+                        show_value: d.data_labels.show_value,
+                        show_category: d.data_labels.show_category,
+                        show_series: d.data_labels.show_series,
+                        show_percent: d.data_labels.show_percent,
+                        show_legend_key: d.data_labels.show_legend_key,
+                        position: d.data_labels.position.clone(),
+                        num_fmt: d.data_labels.num_fmt.clone(),
+                    },
+                    of_pie_split: ChartOfPieSplitInfo {
+                        by: d.of_pie_split.by.clone(),
+                        pos: d.of_pie_split.pos,
+                        second_size: d.of_pie_split.second_size,
+                    },
+                    val_axis_scale: axis_scale_info(&d.val_axis_scale),
+                    cat_axis_scale: axis_scale_info(&d.cat_axis_scale),
+                    val_axis_num_fmt: d.val_axis_num_fmt.clone().or_else(|| {
+                        d.series
+                            .first()
+                            .and_then(|s| s.val_ref.as_deref())
+                            .and_then(|r| self.resolve_ref_num_fmt(r))
+                    }),
                 })
             })
             .collect()
@@ -2101,7 +2271,10 @@ impl<'a> Worksheet<'a> {
             Vertex::Block(s, b, _) | Vertex::BlockKey(s, b) | Vertex::BlockAll(s, b) => (*s, *b),
             _ => return None,
         };
-        let bp = status.navigator.get_block_place(&sheet_id, &block_id).ok()?;
+        let bp = status
+            .navigator
+            .get_block_place(&sheet_id, &block_id)
+            .ok()?;
         let (r0, c0) = status
             .navigator
             .fetch_normal_cell_idx(&sheet_id, &bp.master)
@@ -2121,12 +2294,7 @@ impl<'a> Worksheet<'a> {
             (Vertex::Block(_, _, field_id), Some(key)) => status
                 .block_schema_manager
                 .partially_resolve_by_field_id(sheet_id, block_id, key, *field_id)
-                .and_then(|cell| {
-                    status
-                        .navigator
-                        .fetch_block_cell_idx(&sheet_id, &cell)
-                        .ok()
-                })
+                .and_then(|cell| status.navigator.fetch_block_cell_idx(&sheet_id, &cell).ok())
                 .map(|(_, c)| c),
             (Vertex::BlockKey(_, _), Some(key)) => status
                 .navigator
@@ -2804,5 +2972,31 @@ mod boundary_tests {
         assert_eq!(boundary_1d(0, &occ(&[8]), &blocks, true), Some(8));
         // Without that data cell, stop just before the block at 9.
         assert_eq!(boundary_1d(0, &occ(&[]), &blocks, true), Some(9));
+    }
+}
+
+/// Render a number with an Excel number-format code, falling back to the plain
+/// JavaScript-style representation for General / unsupported codes. Shared by
+/// chart category labels and data labels so both read like the sheet.
+fn format_with(fmt: Option<&str>, n: f64) -> String {
+    match fmt {
+        Some(f) if !f.is_empty() && !f.eq_ignore_ascii_case("general") => {
+            ssf_rs::format(f, &ssf_rs::Value::Num(n), false)
+                .unwrap_or_else(|_| ssf_rs::jsnum::to_string_js(n))
+        }
+        _ => ssf_rs::jsnum::to_string_js(n),
+    }
+}
+
+fn axis_scale_info(
+    s: &logisheets_workbook::prelude::AxisScale,
+) -> crate::controller::display::ChartAxisScaleInfo {
+    crate::controller::display::ChartAxisScaleInfo {
+        min: s.min,
+        max: s.max,
+        log_base: s.log_base,
+        reversed: s.reversed,
+        major_unit: s.major_unit,
+        minor_unit: s.minor_unit,
     }
 }

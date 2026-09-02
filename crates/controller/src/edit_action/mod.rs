@@ -343,20 +343,90 @@ pub struct DeleteChart {
     pub chart_id: String,
 }
 
-/// Reconfigure an existing chart in place, keeping its anchor and data
-/// references. Any field left `None` keeps the chart's current value.
-/// `chart_type` is one of `col|bar|line|area|pie|doughnut|scatter`.
-#[derive(Debug, Clone, TS)]
+/// Reconfigure an existing chart in place, keeping its anchor. Any field left
+/// `None` keeps the chart's current value; an empty string clears a text field
+/// (title, axis title, number format).
+///
+/// `chart_type` is one of `col|bar|line|area|pie|doughnut|scatter|radar|
+/// bubble|stock|ofPie|barOfPie|surface|surface3d`; `legend_pos` is
+/// `top|bottom|left|right|none`.
+#[derive(Debug, Clone, Default, TS)]
 #[ts(file_name = "update_chart.ts", builder, rename_all = "camelCase")]
 pub struct UpdateChart {
     pub sheet_idx: usize,
     pub chart_id: String,
     pub chart_type: Option<String>,
     pub title: Option<String>,
+    pub legend_pos: Option<String>,
+    /// Stack the series (bar/column, line, area). Ignored by pie and scatter.
+    pub stacked: Option<bool>,
+    pub cat_axis_title: Option<String>,
+    pub val_axis_title: Option<String>,
+    /// Show the value next to each data point.
+    pub show_data_labels: Option<bool>,
+    /// Also show the category name / series name / percentage in the label.
+    pub show_category_labels: Option<bool>,
+    pub show_series_labels: Option<bool>,
+    pub show_percent_labels: Option<bool>,
+    /// Where the label sits: `ctr|inEnd|outEnd|inBase|bestFit`.
+    pub data_label_position: Option<String>,
+    /// Excel number-format code applied to the value axis and to data labels
+    /// (e.g. `#,##0.00`, `0%`). Empty clears it, falling back to the source
+    /// cells' own format.
+    pub num_fmt: Option<String>,
+    /// Replace the category (X) reference, e.g. `Sheet1!$A$2:$A$5`.
+    pub categories_ref: Option<String>,
+    /// Replace the whole series list. Colors of series that keep their position
+    /// are preserved when the new entry does not name one.
+    pub series: Option<Vec<CreateChartSeries>>,
+    /// Replace the value axis' scale wholesale. Unlike the other fields this
+    /// is all-or-nothing: sending it sets every part of the scale, so a `None`
+    /// inside means "auto" rather than "keep". That is the only way to clear a
+    /// fixed minimum back to automatic.
+    pub val_axis_scale: Option<AxisScaleUpdate>,
+    /// The same for the category (X) axis.
+    pub cat_axis_scale: Option<AxisScaleUpdate>,
+    /// Replace how a pie-of-pie / bar-of-pie splits its series. Like the axis
+    /// scales this is all-or-nothing rather than a patch.
+    pub of_pie_split: Option<OfPieSplitUpdate>,
 }
 
-/// One series for [`CreateChart`]: an optional name and a value reference
-/// formula (e.g. `Sheet1!$B$2:$E$2`).
+/// The division between an of-pie chart's two plots.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(
+    file_name = "of_pie_split_update.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct OfPieSplitUpdate {
+    /// `auto | cust | percent | pos | val`. Anything else is treated as `auto`.
+    pub by: Option<String>,
+    /// Read according to `by`: a count of trailing points for `pos`, a
+    /// threshold for `val`, a percentage for `percent`.
+    pub pos: Option<f64>,
+    /// The second plot's size, as a percentage of the first (Excel: 5..=200).
+    pub second_size: Option<f64>,
+}
+
+/// An axis' scale. Every field `None`/`false` is a fully automatic axis, which
+/// is Excel's default.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "axis_scale_update.ts", builder, rename_all = "camelCase")]
+pub struct AxisScaleUpdate {
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    /// Log scale base (Excel allows 2..=1000). `None` is a linear axis.
+    pub log_base: Option<f64>,
+    /// Draw the axis in the opposite direction.
+    pub reversed: bool,
+    /// Spacing between major ticks / gridlines. `None` is automatic.
+    pub major_unit: Option<f64>,
+    pub minor_unit: Option<f64>,
+}
+
+/// One series for [`CreateChart`] / [`UpdateChart`]: an optional name, the
+/// value reference formula (e.g. `Sheet1!$B$2:$E$2`) and an optional explicit
+/// fill color as an RGB hex string (`"4472C4"`).
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "create_chart_series.ts",
@@ -366,10 +436,19 @@ pub struct UpdateChart {
 pub struct CreateChartSeries {
     pub name: Option<String>,
     pub value_ref: String,
+    pub color: Option<String>,
+    /// Bubble sizes for this series (`Sheet1!$D$2:$D$6`). Only a bubble chart
+    /// reads it; other kinds keep it in the model but never draw it.
+    pub size_ref: Option<String>,
+    /// Draw this one series as a different kind — `col|bar|line|area` — which
+    /// is how a combo chart is expressed. `None` follows the chart's own type.
+    /// An override the chart cannot combine with is ignored.
+    pub series_type: Option<String>,
 }
 
 /// Create a new chart anchored at `from`..`to`. `chart_type` is one of
-/// `col|bar|line|area|pie|doughnut|scatter`. `chart_id` must be workbook-unique
+/// `col|bar|line|area|pie|doughnut|scatter|radar|bubble|stock|ofPie|barOfPie|
+/// surface|surface3d`. `chart_id` must be workbook-unique
 /// (the caller generates it; it also names the chart part). Series values are
 /// read live from the referenced ranges, so no cached values are needed here.
 #[derive(Debug, Clone, TS)]

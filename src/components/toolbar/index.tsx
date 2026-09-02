@@ -97,6 +97,33 @@ const FONT_FAMILIES = [
     '楷体',
 ]
 
+/** The chart kinds the engine can create from a selection. */
+const CHART_TYPES = [
+    {value: 'col', label: 'Column'},
+    {value: 'bar', label: 'Bar'},
+    {value: 'line', label: 'Line'},
+    {value: 'area', label: 'Area'},
+    {value: 'pie', label: 'Pie'},
+    {value: 'doughnut', label: 'Doughnut'},
+    {value: 'scatter', label: 'Scatter'},
+    {value: 'radar', label: 'Radar'},
+    // Reads three columns from the selection: X, Y, then bubble size.
+    {value: 'bubble', label: 'Bubble'},
+    // Stock reads its series positionally: 4 columns is open/high/low/close,
+    // 3 is high/low/close.
+    {value: 'stock', label: 'Stock'},
+    {value: 'ofPie', label: 'Pie of pie'},
+    {value: 'barOfPie', label: 'Bar of pie'},
+    {value: 'surface', label: 'Surface'},
+    {value: 'surface3d', label: 'Surface (3-D)'},
+    // The 3-D forms round-trip to Excel as 3-D but are drawn flat here.
+    {value: 'col3d', label: 'Column (3-D)'},
+    {value: 'bar3d', label: 'Bar (3-D)'},
+    {value: 'line3d', label: 'Line (3-D)'},
+    {value: 'area3d', label: 'Area (3-D)'},
+    {value: 'pie3d', label: 'Pie (3-D)'},
+]
+
 export interface ToolbarProps {
     setGrid: (grid: Grid | null) => void
     setActiveSheet: (idx: number) => void
@@ -267,6 +294,7 @@ export const Toolbar = observer(
 
         // Alignment popover
         const [alignAnchor, setAlignAnchor] = useState<HTMLElement | null>(null)
+        const [chartAnchor, setChartAnchor] = useState<HTMLElement | null>(null)
         const [alignment, setAlignment] = useState<string | null>(null)
         const [wrapText, setWrapText] = useState(false)
         const [bookName, setBookName] = useState('Untitled')
@@ -1268,17 +1296,36 @@ export const Toolbar = observer(
 
                     {/* Insert / create */}
                     <div className={styles.section}>
-                        <Tooltip title="Insert column chart from selection">
+                        <Tooltip title="Insert chart from selection">
                             <span>
                                 <IconButton
                                     size="small"
-                                    onClick={() => engine.insertChart('col')}
+                                    onClick={(e) =>
+                                        setChartAnchor(e.currentTarget)
+                                    }
                                     disabled={!hasSelectedData}
                                 >
                                     <BarChartIcon fontSize="small" />
                                 </IconButton>
                             </span>
                         </Tooltip>
+                        <Menu
+                            anchorEl={chartAnchor}
+                            open={Boolean(chartAnchor)}
+                            onClose={() => setChartAnchor(null)}
+                        >
+                            {CHART_TYPES.map((t) => (
+                                <MenuItem
+                                    key={t.value}
+                                    onClick={() => {
+                                        setChartAnchor(null)
+                                        engine.insertChart(t.value)
+                                    }}
+                                >
+                                    {t.label}
+                                </MenuItem>
+                            ))}
+                        </Menu>
                         <Button
                             variant="outlined"
                             size="small"

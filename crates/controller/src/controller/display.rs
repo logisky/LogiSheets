@@ -252,12 +252,73 @@ pub struct ChartSeriesInfo {
     /// Resolved fill color as an RGB/ARGB hex (no `#`), or `None` to use the
     /// renderer's default palette. Scheme colors are resolved against the theme.
     pub color: Option<String>,
+    /// `values` rendered with the label number format — the exact strings a
+    /// data label should show. The renderer cannot do this itself: Excel
+    /// number formats are evaluated by the core, not the host.
+    pub formatted_values: Vec<Option<String>>,
+    /// Bubble sizes, live from `size_ref` — a bubble chart's third dimension.
+    /// Empty for every other chart kind.
+    pub sizes: Vec<Option<f64>>,
+    /// The bubble-size source range, e.g. `Sheet1!$D$2:$D$6`.
+    pub size_ref: Option<String>,
+    /// The kind this series is drawn as when it differs from the chart's own —
+    /// what makes a combo chart. `None` means it follows `chart_type`.
+    pub series_type: Option<String>,
+    /// The series' source range, e.g. `Sheet1!$B$2:$E$2`. This is what an
+    /// editor shows and rewrites when the user re-points the series.
+    pub val_ref: Option<String>,
+    /// Excel number-format code for this series' values, taken from the source
+    /// cells (Excel's "linked to source"), falling back to the format the
+    /// producer cached. `None` means render the raw number.
+    pub num_fmt: Option<String>,
+}
+
+/// An axis' scale as it will be drawn. All-`None`/false is a fully automatic
+/// axis, which is what most charts have.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_axis_scale_info.ts", rename_all = "camelCase")]
+pub struct ChartAxisScaleInfo {
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub log_base: Option<f64>,
+    pub reversed: bool,
+    pub major_unit: Option<f64>,
+    pub minor_unit: Option<f64>,
+}
+
+/// How a pie-of-pie / bar-of-pie divides its series between the two plots.
+/// Empty for every other chart kind.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_of_pie_split_info.ts", rename_all = "camelCase")]
+pub struct ChartOfPieSplitInfo {
+    /// `auto | cust | percent | pos | val`.
+    pub by: Option<String>,
+    /// Read according to `by`: a count of trailing points, a value threshold,
+    /// or a percentage.
+    pub pos: Option<f64>,
+    /// The second plot's size as a percentage of the first.
+    pub second_size: Option<f64>,
+}
+
+/// What a chart draws next to each data point. All-false means no labels.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_data_labels_info.ts", rename_all = "camelCase")]
+pub struct ChartDataLabelsInfo {
+    pub show_value: bool,
+    pub show_category: bool,
+    pub show_series: bool,
+    pub show_percent: bool,
+    pub show_legend_key: bool,
+    /// `ctr|inEnd|outEnd|inBase|bestFit`, or `None` for the renderer's default.
+    pub position: Option<String>,
+    /// Number-format code for the label's value; overrides the series format.
+    pub num_fmt: Option<String>,
 }
 
 /// A chart anchored on a sheet, resolved for rendering. The anchor is its
 /// from/to cell positions plus EMU offsets into those cells; `chart_type` is
-/// one of `col|bar|line|area|pie|doughnut|scatter`; `legend_pos` (if any) is
-/// `top|bottom|left|right`.
+/// one of `col|bar|line|area|pie|doughnut|scatter|radar|bubble|stock|ofPie|
+/// barOfPie|surface|surface3d`; `legend_pos` (if any) is `top|bottom|left|right`.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "chart_info.ts", rename_all = "camelCase")]
 pub struct ChartInfo {
@@ -280,10 +341,22 @@ pub struct ChartInfo {
     pub stacked: bool,
     pub title: Option<String>,
     pub legend_pos: Option<String>,
+    /// Category labels, read live from `cat_ref` and formatted the way the
+    /// source cells display (so dates read as dates), falling back to the
+    /// labels cached in the file.
     pub categories: Vec<String>,
+    /// The category (X) source range, e.g. `Sheet1!$A$2:$A$5`.
+    pub cat_ref: Option<String>,
     pub series: Vec<ChartSeriesInfo>,
     pub cat_axis_title: Option<String>,
     pub val_axis_title: Option<String>,
+    pub data_labels: ChartDataLabelsInfo,
+    pub of_pie_split: ChartOfPieSplitInfo,
+    pub val_axis_scale: ChartAxisScaleInfo,
+    pub cat_axis_scale: ChartAxisScaleInfo,
+    /// Number-format code for the value axis, live from the first series'
+    /// source cells when the chart does not set one itself.
+    pub val_axis_num_fmt: Option<String>,
 }
 
 /// A person referenced by a comment (author or mention). Enterprise builds
