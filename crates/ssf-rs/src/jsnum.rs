@@ -39,6 +39,82 @@ fn exact_nonneg(x: f64) -> Exact {
     }
 }
 
+/// Which decimal a formatter should treat a double as being.
+///
+/// JavaScript's `Number` methods round the *exact* binary value, so `1.005`
+/// (really `1.00499999999999989…`) renders as `"1.00"`. Excel keeps only 15
+/// significant decimal digits and rounds that, so it renders `"1.01"`. Both are
+/// correct about their own spec, and this crate needs both: [`Exact`] to stay a
+/// faithful port that can be diffed against Node, [`Excel15`] for what a
+/// spreadsheet is supposed to show.
+///
+/// [`Exact`]: Precision::Exact
+/// [`Excel15`]: Precision::Excel15
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Precision {
+    /// The exact binary value — JavaScript's rule.
+    #[default]
+    Exact,
+    /// Rounded to 15 significant decimal digits first — Excel's rule.
+    Excel15,
+}
+
+/// How many significant decimal digits Excel keeps.
+const EXCEL_SIG_DIGITS: usize = 15;
+
+/// The expansion a formatter should work from, under `precision`.
+///
+/// Collapsing to 15 significant digits is what turns a value sitting a hair
+/// below a tie into the tie itself, which is the whole difference between the
+/// two rules: `4.935` is exactly `4.93499999999999960920…`, and its 15-digit
+/// form is `4.93500000000000` — so rounding to 2 places goes up, not down.
+fn expansion(x: f64, precision: Precision) -> Exact {
+    let e = exact_nonneg(x);
+    match precision {
+        Precision::Exact => e,
+        // At 1e15 and above the 15-digit window closes before the decimal
+        // point, so collapsing would rewrite the INTEGER digits rather than
+        // settle a fractional tie. Excel does shorten those too, but it does
+        // so on every numeric format at once; doing it here would only shift
+        // the formats that happen to route through this function and leave
+        // them disagreeing with the rest. Left alone, deliberately.
+        Precision::Excel15 if x.abs() < 1e15 => {
+            let (digits, exp) = round_sig(&e, EXCEL_SIG_DIGITS);
+            from_sig_digits(&digits, exp)
+        }
+        Precision::Excel15 => e,
+    }
+}
+
+/// Rebuild an [`Exact`] from a significant-digit string and the exponent of its
+/// leading digit — the inverse of what [`round_sig`] takes apart.
+fn from_sig_digits(digits: &str, exp: i32) -> Exact {
+    if exp >= 0 {
+        let intlen = (exp + 1) as usize;
+        if digits.len() <= intlen {
+            // More integer places than digits: pad with the zeros they stand for.
+            Exact {
+                int: format!("{}{}", digits, "0".repeat(intlen - digits.len())),
+                frac: String::new(),
+            }
+        } else {
+            Exact {
+                int: digits[..intlen].to_string(),
+                frac: digits[intlen..].trim_end_matches('0').to_string(),
+            }
+        }
+    } else {
+        // Value below 1: the leading digit sits `-exp - 1` zeros in.
+        let zeros = (-exp - 1) as usize;
+        Exact {
+            int: "0".to_string(),
+            frac: format!("{}{}", "0".repeat(zeros), digits)
+                .trim_end_matches('0')
+                .to_string(),
+        }
+    }
+}
+
 /// Increment a non-negative decimal digit string by 1 (e.g. `"199"` -> `"200"`,
 /// `"999"` -> `"1000"`). Input/output have no decimal point.
 fn inc_digits(s: &str) -> String {
@@ -90,6 +166,12 @@ pub fn round(x: f64) -> f64 {
 /// `frac` in `0..=100`. Returns the value with exactly `frac` digits after the
 /// decimal point, correctly rounded (ties up) from the exact binary value.
 pub fn to_fixed(x: f64, frac: usize) -> String {
+    to_fixed_with(x, frac, Precision::Exact)
+}
+
+/// [`to_fixed`], reading the value at `precision`. `Precision::Excel15` is what
+/// a spreadsheet's fixed-decimal formats (`0.00`) want.
+pub fn to_fixed_with(x: f64, frac: usize, precision: Precision) -> String {
     if x.is_nan() {
         return "NaN".to_string();
     }
@@ -101,7 +183,7 @@ pub fn to_fixed(x: f64, frac: usize) -> String {
         return to_string_js(x);
     }
     let sign = if x < 0.0 { "-" } else { "" };
-    let e = exact_nonneg(x);
+    let e = expansion(x, precision);
 
     // Build the integer formed by (int . first `frac` frac-digits), rounding.
     let fbytes = e.frac.as_bytes();
@@ -230,6 +312,11 @@ fn round_sig_even(e: &Exact, sig: usize) -> (String, i32) {
 
 /// JavaScript `Number.prototype.toExponential(frac)`.
 pub fn to_exponential(x: f64, frac: usize) -> String {
+    to_exponential_with(x, frac, Precision::Exact)
+}
+
+/// [`to_exponential`], reading the value at `precision`.
+pub fn to_exponential_with(x: f64, frac: usize, precision: Precision) -> String {
     if x.is_nan() {
         return "NaN".to_string();
     }
@@ -237,7 +324,7 @@ pub fn to_exponential(x: f64, frac: usize) -> String {
         return if x < 0.0 { "-Infinity" } else { "Infinity" }.to_string();
     }
     let sign = if x < 0.0 && x != 0.0 { "-" } else { "" };
-    let e = exact_nonneg(x);
+    let e = expansion(x, precision);
     let (digits, exp) = round_sig(&e, frac + 1);
     let mantissa = if frac == 0 {
         digits[..1].to_string()
@@ -250,6 +337,11 @@ pub fn to_exponential(x: f64, frac: usize) -> String {
 
 /// JavaScript `Number.prototype.toPrecision(prec)`.
 pub fn to_precision(x: f64, prec: usize) -> String {
+    to_precision_with(x, prec, Precision::Exact)
+}
+
+/// [`to_precision`], reading the value at `precision`.
+pub fn to_precision_with(x: f64, prec: usize, precision: Precision) -> String {
     if x.is_nan() {
         return "NaN".to_string();
     }
@@ -258,7 +350,7 @@ pub fn to_precision(x: f64, prec: usize) -> String {
     }
     let prec = prec.max(1);
     let sign = if x < 0.0 && x != 0.0 { "-" } else { "" };
-    let e = exact_nonneg(x);
+    let e = expansion(x, precision);
     let (digits, exp) = round_sig(&e, prec);
 
     if exp < -6 || exp >= prec as i32 {

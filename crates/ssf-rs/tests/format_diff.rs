@@ -4,6 +4,14 @@
 //!
 //! Ignored by default (needs `node` + a local `ssf`). Run with:
 //!   cargo test -p ssf-rs --test format_diff -- --ignored --nocapture
+//!
+//! NOTE: this crate deliberately diverges from the JavaScript reference on
+//! numeric rounding — it rounds at Excel's 15-significant-digit precision,
+//! where `ssf` inherits JavaScript's exact-binary rounding, so `0.00` renders
+//! 1.005 as "1.01" here and "1.00" there. See `NOTICE`. Divergences reported
+//! by this test are only interesting once that class is excluded;
+//! `jsnum_diff.rs` is the one that must stay clean, since the primitives it
+//! tests are still a faithful port.
 
 use std::io::Write;
 use std::process::Command;

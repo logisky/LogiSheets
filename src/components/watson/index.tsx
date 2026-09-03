@@ -30,6 +30,7 @@ import {
     COMMENT_TOOLS,
     BLOCK_OPS_TOOLS,
     LINK_TOOLS,
+    CHART_TOOLS,
     CRAFT_INTERACTION_TOOLS,
     toUiBubbles,
     installCraftSkillTools,
@@ -158,6 +159,7 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
             ...COMMENT_TOOLS,
             ...BLOCK_OPS_TOOLS,
             ...LINK_TOOLS,
+            ...CHART_TOOLS,
             ...CRAFT_INTERACTION_TOOLS,
         ])
         const installedIds = (

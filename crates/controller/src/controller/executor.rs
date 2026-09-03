@@ -544,6 +544,9 @@ impl<'a> Executor<'a> {
     }
 
     fn execute_chart(&mut self, payload: EditPayload) -> Result<(ChartExecutor, bool), Error> {
+        // Resolved out here because a block's ranges come from its place and
+        // its schema, which the chart executor's context does not carry.
+        let block_refs = self.resolve_chart_block_source(&payload);
         let mut ctx = CellAttachmentsConnector {
             sheet_pos_manager: &self.status.sheet_info_manager,
             navigator: &self.status.navigator,
@@ -554,7 +557,34 @@ impl<'a> Executor<'a> {
             text_id_manager: &mut self.status.text_id_manager,
         };
         let executor = ChartExecutor::new(self.status.chart_manager.clone());
-        executor.execute(&mut ctx, payload)
+        executor.execute(&mut ctx, payload, block_refs)
+    }
+
+    /// The ranges a chart payload's `block_source` currently covers, or `None`
+    /// when the payload has no block source (and when it names one that cannot
+    /// be charted — the executor treats both as "do not create a chart").
+    fn resolve_chart_block_source(
+        &self,
+        payload: &EditPayload,
+    ) -> Option<crate::chart_manager::ResolvedBlockRefs> {
+        let (sheet_idx, source) = match payload {
+            EditPayload::CreateChart(p) => (p.sheet_idx, p.block_source.as_ref()?),
+            EditPayload::UpdateChart(p) => (p.sheet_idx, p.block_source.as_ref()?),
+            _ => return None,
+        };
+        let sheet_id = self.status.sheet_info_manager.get_sheet_id(sheet_idx)?;
+        let sheet_name = self.status.sheet_id_manager.get_string(&sheet_id)?;
+        crate::chart_manager::resolve_block_refs(
+            &self.status.navigator,
+            &self.status.block_schema_manager,
+            sheet_id,
+            &sheet_name,
+            &crate::chart_manager::ChartBlockSource {
+                block_id: source.block_id,
+                category_field: source.category_field.clone(),
+                value_fields: source.value_fields.clone(),
+            },
+        )
     }
 
     fn execute_container(

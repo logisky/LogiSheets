@@ -42,6 +42,8 @@ export function defaultCategory(t: Pick<Tool, 'namespace' | 'name'>): readonly s
             return ['Blocks']
         case 'link':
             return ['Blocks', 'Links']
+        case 'chart':
+            return ['Charts']
         case 'comment':
             return ['Comments']
         case 'history':

@@ -17,7 +17,8 @@
     "scripts": {
         "build": "tsc && yarn build:node",
         "build:node": "esbuild src/index.ts --bundle --format=esm --platform=node --external:logisheets-core --external:logisheets --outfile=dist/index.node.js",
-        "prepack": "yarn build"
+        "prepack": "yarn build",
+        "test": "vitest run"
     },
     "dependencies": {
         "logisheets-core": "^1.12.1",
@@ -25,7 +26,8 @@
     },
     "devDependencies": {
         "esbuild": "^0.21.0",
-        "typescript": "^6.0.0"
+        "typescript": "^6.0.0",
+        "vitest": "^3.2.6"
     },
     "files": [
         "dist"

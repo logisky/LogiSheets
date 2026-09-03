@@ -389,6 +389,12 @@ pub struct UpdateChart {
     /// Replace how a pie-of-pie / bar-of-pie splits its series. Like the axis
     /// scales this is all-or-nothing rather than a patch.
     pub of_pie_split: Option<OfPieSplitUpdate>,
+    /// Bind the chart to a block, or rebind it to different fields. The series
+    /// then come from the block and `series`/`categories_ref` are ignored.
+    ///
+    /// To unbind, state `series` instead: naming fixed ranges is exactly the
+    /// statement that the chart no longer tracks a block.
+    pub block_source: Option<ChartBlockSource>,
 }
 
 /// The division between an of-pie chart's two plots.
@@ -468,6 +474,24 @@ pub struct CreateChart {
     pub title: Option<String>,
     pub categories_ref: Option<String>,
     pub series: Vec<CreateChartSeries>,
+    /// Plot a block instead of fixed ranges. When set, `series` and
+    /// `categories_ref` are ignored — the block says where its fields are, and
+    /// the chart re-reads that on every render and every save, so it follows
+    /// the block as records are added or columns move.
+    pub block_source: Option<ChartBlockSource>,
+}
+
+/// Binds a chart to a block: which block, which of its fields to plot, and
+/// which field labels the categories. Fields are named, the identity
+/// `#FIELD("qty")` formulas use — a renamed field breaks the link, a moved one
+/// does not. A block with a `random` schema has no field axis and cannot be
+/// charted this way.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_block_source.ts", builder, rename_all = "camelCase")]
+pub struct ChartBlockSource {
+    pub block_id: usize,
+    pub category_field: Option<String>,
+    pub value_fields: Vec<String>,
 }
 
 /// Add a conditional-formatting rule over `start`..`end` (corners may be given

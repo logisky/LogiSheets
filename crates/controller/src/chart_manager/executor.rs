@@ -11,7 +11,7 @@ use logisheets_workbook::prelude::{
 
 use crate::{Error, edit_action::EditPayload};
 
-use super::{Chart, ChartManager, ChartMarker};
+use super::{Chart, ChartBlockSource, ChartManager, ChartMarker, ResolvedBlockRefs};
 
 pub struct ChartExecutor {
     pub manager: ChartManager,
@@ -24,10 +24,17 @@ impl ChartExecutor {
 
     /// Handle chart payloads. Returns `(self, changed)`; `changed` is `false`
     /// for payloads this executor does not care about.
+    ///
+    /// `block_refs` carries the ranges a `block_source` on the payload resolves
+    /// to right now. It is resolved by the caller because it needs the block
+    /// places and schemas, which this executor's context does not carry — and
+    /// `None` here means the source named a block that cannot be charted, so
+    /// the payload is refused rather than turned into a chart of nothing.
     pub fn execute<C: IdFetcherTrait + SheetIdFetcherByIdxTrait>(
         mut self,
         ctx: &mut C,
         payload: EditPayload,
+        block_refs: Option<ResolvedBlockRefs>,
     ) -> Result<(Self, bool), Error> {
         match payload {
             EditPayload::MoveChart(p) => {
@@ -68,13 +75,25 @@ impl ChartExecutor {
                 let from_cell = ctx.fetch_cell_id(&sheet_id, p.from_row, p.from_col)?;
                 let to_cell = ctx.fetch_cell_id(&sheet_id, p.to_row, p.to_col)?;
                 let chart_type = chart_type_from_str(&p.chart_type);
-                let series = p.series.iter().map(new_series).collect();
-                let spec = ChartData::new(
-                    chart_type,
-                    p.title.clone(),
-                    p.categories_ref.clone(),
-                    series,
-                );
+                // A block-bound chart states fields, not ranges; the ranges
+                // come from where the block's fields sit at this moment.
+                let (series, cat_ref) = match (&p.block_source, &block_refs) {
+                    (Some(_), Some(refs)) => (
+                        refs.series
+                            .iter()
+                            .map(|(name, r)| ChartSeries::new(Some(name.clone()), r.clone()))
+                            .collect(),
+                        refs.cat_ref.clone(),
+                    ),
+                    // Asked for a block we could not resolve: refuse rather
+                    // than silently create an empty chart.
+                    (Some(_), None) => return Ok((self, false)),
+                    (None, _) => (
+                        p.series.iter().map(new_series).collect(),
+                        p.categories_ref.clone(),
+                    ),
+                };
+                let spec = ChartData::new(chart_type, p.title.clone(), cat_ref, series);
                 let bytes = build_chart_xml(&spec).into_bytes();
                 let data = match parse_chart(&bytes) {
                     Some(d) => d,
@@ -104,6 +123,7 @@ impl ChartExecutor {
                         part_path,
                         data,
                         raw,
+                        source: p.block_source.as_ref().map(block_source),
                     },
                 );
                 Ok((self, true))
@@ -166,6 +186,34 @@ impl ChartExecutor {
                 if let Some(r) = &p.categories_ref {
                     spec.cat_ref = non_empty(r);
                 }
+                // Rebinding to a block replaces the series wholesale; stating
+                // `series` instead unbinds, because naming fixed ranges is
+                // exactly the statement that the chart no longer tracks one.
+                let new_source = match (&p.block_source, &block_refs) {
+                    (Some(bs), Some(refs)) => {
+                        let previous = std::mem::take(&mut spec.series);
+                        spec.cat_ref = refs.cat_ref.clone();
+                        spec.series = refs
+                            .series
+                            .iter()
+                            .enumerate()
+                            .map(|(i, (name, r))| {
+                                let mut ns = ChartSeries::new(Some(name.clone()), r.clone());
+                                // Keep the slot's look, so re-resolving a block
+                                // does not reshuffle the chart's palette.
+                                if let Some(old) = previous.get(i) {
+                                    ns.color = old.color.clone();
+                                    ns.series_type = old.series_type.clone();
+                                    ns.preserved = old.preserved.clone();
+                                }
+                                ns
+                            })
+                            .collect();
+                        Some(Some(block_source(bs)))
+                    }
+                    (Some(_), None) => return Ok((self, false)),
+                    (None, _) => p.series.as_ref().map(|_| None),
+                };
                 if let Some(sc) = &p.val_axis_scale {
                     spec.val_axis_scale = axis_scale(sc);
                 }
@@ -180,7 +228,7 @@ impl ChartExecutor {
                         second_size: sp.second_size.filter(|v| (5.0..=200.0).contains(v)),
                     };
                 }
-                if let Some(series) = &p.series {
+                if let (None, Some(series)) = (&p.block_source, &p.series) {
                     let previous = std::mem::take(&mut spec.series);
                     spec.series = series
                         .iter()
@@ -248,10 +296,24 @@ impl ChartExecutor {
                 let changed = self
                     .manager
                     .update_content(sheet_id, &p.chart_id, data, raw);
+                if let Some(source) = new_source {
+                    self.manager.set_source(sheet_id, &p.chart_id, source);
+                }
                 Ok((self, changed))
             }
             _ => Ok((self, false)),
         }
+    }
+}
+
+/// A payload's block binding → the stored one. Only the field *names* are
+/// kept: positions are looked up against the block on each resolution, which
+/// is the whole point of binding to it.
+fn block_source(p: &crate::edit_action::ChartBlockSource) -> ChartBlockSource {
+    ChartBlockSource {
+        block_id: p.block_id,
+        category_field: p.category_field.as_ref().and_then(|f| non_empty(f)),
+        value_fields: p.value_fields.clone(),
     }
 }
 

@@ -169,6 +169,53 @@ fn eval_checked(e: &Expr) -> RefValue {
     }
 }
 
+/// Excel's ROUND, as scaled-integer arithmetic over the number's decimal form.
+///
+/// Not `(a * 10^d).round() / 10^d`: that decides the halfway case on the binary
+/// double, so `ROUND(4.935,2)` comes out 4.93 where Excel says 4.94 — as a
+/// double 4.935 is 4.93499999999999961, which Excel never sees because it keeps
+/// 15 significant decimal digits. It also inherits the error of the scaling
+/// multiply, whose direction depends on how the value was computed.
+///
+/// So: read the 15 significant digits as an integer mantissa with an exponent,
+/// then round by integer division, half away from zero. Deliberately a
+/// different formulation from the engine's (which carries over a digit string),
+/// so agreement is not two copies of one mistake.
+fn excel_round(a: f64, digits: i32) -> Option<f64> {
+    if !a.is_finite() {
+        return None;
+    }
+    if a == 0.0 {
+        return Some(a);
+    }
+    let neg = a < 0.0;
+    let s = format!("{:.14e}", a.abs());
+    let (mantissa, exp) = s.split_once('e')?;
+    let exp: i32 = exp.parse().ok()?;
+    // 15 digits, so `value = m * 10^(exp - 14)`.
+    let m: i128 = mantissa
+        .bytes()
+        .filter(u8::is_ascii_digit)
+        .map(|b| (b - b'0') as i128)
+        .fold(0, |acc, d| acc * 10 + d);
+
+    // We want `round(value * 10^digits)` as an integer.
+    let shift = exp - 14 + digits;
+    let scaled = if shift >= 0 {
+        // Already an integer at this scale; nothing to decide.
+        m.checked_mul(10i128.checked_pow(u32::try_from(shift).ok()?)?)?
+    } else {
+        let p = 10i128.checked_pow(u32::try_from(-shift).ok()?)?;
+        // Half away from zero on non-negative integers is `(m + p/2) / p`.
+        (m + p / 2) / p
+    };
+    let out = scaled as f64 / 10f64.powi(digits);
+    if !out.is_finite() {
+        return None;
+    }
+    Some(if neg { -out } else { out })
+}
+
 /// Reference semantics, written from Excel's documented behaviour and nothing
 /// else. `None` means the call has no numeric answer (Excel returns an error),
 /// which the caller skips rather than guesses at.
@@ -193,14 +240,7 @@ fn eval_call(f: Func, args: &[f64]) -> Option<f64> {
             if !(-10.0..=10.0).contains(&d) {
                 return None;
             }
-            let p = 10f64.powi(d as i32);
-            let scaled = a * p;
-            if !scaled.is_finite() {
-                return None;
-            }
-            // Half away from zero, which is Excel; `f64::round` agrees, while
-            // "round half to even" would not.
-            Some(scaled.abs().round().copysign(scaled) / p)
+            excel_round(a, d as i32)
         }
         Func::Power => {
             let r = args[0].powf(args[1]);

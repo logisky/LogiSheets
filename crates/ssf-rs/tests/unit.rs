@@ -51,3 +51,92 @@ fn readme_examples() {
     assert_eq!(format_str("#,##0.00", 1234.5).unwrap(), "1,234.50");
     assert_eq!(format_str("yyyy-mm-dd", 45000.0).unwrap(), "2023-03-15");
 }
+
+/// Excel's precision, not JavaScript's. These are the values where the two
+/// rules disagree, and a spreadsheet has to answer the way the spreadsheet
+/// does — see `NOTICE`. Expectations captured from Excel, NOT from `ssf`.
+#[test]
+fn numbers_round_at_excel_precision() {
+    let cases: &[(&str, f64, &str)] = &[
+        // As doubles these all sit a hair BELOW the halfway point, so
+        // JavaScript rounds them down. Their 15-significant-digit form is the
+        // tie, which Excel resolves away from zero.
+        ("0.00", 1.005, "1.01"),
+        ("0.00", 4.935, "4.94"),
+        ("0.00", 0.015, "0.02"),
+        ("0.00", 0.045, "0.05"),
+        ("0.0", 0.15, "0.2"),
+        ("#,##0.00", 1234.565, "1,234.57"),
+        // Already above the tie: unchanged, and a check that the collapse to
+        // 15 digits does not disturb the ordinary cases.
+        ("0.00", 2.675, "2.68"),
+        ("0.00", 0.135, "0.14"),
+        ("0.000", 1.0005, "1.001"),
+        // Negative ties go away from zero too, as Excel does.
+        ("0.00", -1.005, "-1.01"),
+        ("0.00", -4.935, "-4.94"),
+        // Scaling by a power of ten used to cost an exact value a place:
+        // `2.1 * 100` is 209.99999999999997.
+        ("0.00", 2.1, "2.10"),
+        ("0.0", 8.7, "8.7"),
+        // A carry out of the fraction has to reach the integer part.
+        ("0.00", 9.999, "10.00"),
+        ("0.00", 0.995, "1.00"),
+    ];
+    for (fmt, v, want) in cases {
+        assert_eq!(
+            format_str(fmt, *v).unwrap(),
+            *want,
+            "format {fmt:?} of {v:?}"
+        );
+    }
+}
+
+/// The comma formats reach the number through a different helper than the bare
+/// `0.00` ones do. They used to round differently as a result — `#,##0.00` said
+/// "1.00" and "2.67" where `0.00` said "1.01" and "2.68" — so the point here is
+/// that the families agree, not just that each is right on its own.
+#[test]
+fn every_fixed_decimal_format_rounds_alike() {
+    let vals: &[(f64, &str)] = &[
+        (1.005, "1.01"),
+        (4.935, "4.94"),
+        (2.675, "2.68"),
+        (0.015, "0.02"),
+        (2.1, "2.10"),
+        (9.999, "10.00"),
+        (0.995, "1.00"),
+    ];
+    for (v, want) in vals {
+        assert_eq!(format_str("0.00", *v).unwrap(), *want, "0.00 of {v:?}");
+        assert_eq!(
+            format_str("#,##0.00", *v).unwrap(),
+            *want,
+            "#,##0.00 of {v:?}"
+        );
+        assert_eq!(
+            format_str("$#,##0.00", *v).unwrap(),
+            format!("${want}"),
+            "$#,##0.00 of {v:?}"
+        );
+    }
+}
+
+/// Above 1e15 the rule is deliberately not applied, so every numeric format
+/// keeps rendering the same digits it always did. Left unguarded, only the
+/// formats routing through the changed helpers would have shortened, and they
+/// would no longer have matched the others.
+#[test]
+fn large_values_render_the_same_across_formats() {
+    let big = 26925224612816314368.0;
+    assert_eq!(format_str("0", big).unwrap(), "26925224612816314000");
+    assert_eq!(format_str("0.00", big).unwrap(), "26925224612816314000.00");
+    assert_eq!(
+        format_str("#,##0", big).unwrap(),
+        "26,925,224,612,816,314,000"
+    );
+    assert_eq!(
+        format_str("#,##0.00", big).unwrap(),
+        "26,925,224,612,816,314,000.00"
+    );
+}

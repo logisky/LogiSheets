@@ -46,3 +46,6 @@ jobs:
 
       - name: Test logisheets-runtime
         run: yarn workspace logisheets-runtime test
+
+      - name: Test logisheets-logician
+        run: yarn workspace logisheets-logician test
