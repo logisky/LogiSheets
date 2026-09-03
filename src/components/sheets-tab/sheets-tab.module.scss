@@ -3,46 +3,164 @@
   align-items: center;
   justify-content: center;
 }
+
+// Shared with the toolbar's ramp so the two strips read as one product.
+$line: #e2e6ed;
+$ink: #1f2937;
+$ink-muted: #5b6472;
+$accent: #1d4ed8;
+$strip: #f2f4f7;
+
 .host {
   flex-direction: row;
   display: flex;
+  align-items: center;
+  gap: 2px;
   box-sizing: border-box;
   /* Reserve space; prevent overlaying the canvas area */
-  flex: 0 0 44px;
-  height: 44px;
-  padding-bottom: 8px;
-  padding-left: 12px;
-  background-color: #f2f4f7;
-  border-top: 1px solid #e2e6ed;
+  flex: 0 0 42px;
+  height: 42px;
+  padding: 0 10px;
+  background-color: $strip;
+  border-top: 1px solid $line;
   position: relative;
   z-index: 0;
 }
-.pre-btns {
-  width: 30px;
+
+/* Sheet tabs are docked at the BOTTOM, so MUI's default bottom underline
+   points away from the grid it belongs to — which is what made the strip read
+   as a row of links rather than tabs. The current sheet is given a surface
+   instead: a white tab on the grey strip, which is the convention in Sheets
+   and Excel alike. */
+.host :global(.MuiTabs-root) {
+  min-height: 0;
 }
-.tab {
-  overflow: hidden;
-  border-bottom: 1px solid #e2e6ed;
-  border-left: 1px solid #e2e6ed;
-  border-right: 1px solid #e2e6ed;
+.host :global(.MuiTabs-indicator) {
+  display: none;
+}
+.host :global(.MuiTabs-flexContainer) {
+  gap: 2px;
+}
+.host :global(.MuiTab-root).sheetTab {
+  min-height: 30px;
   height: 30px;
-  padding: 0 16px;
-  background-color: #fff;
-  cursor: pointer;
-  @include center();
+  // Long enough that a tab reads as a tab even when its name is short, and
+  // that neighbouring tabs are easy to hit apart.
+  min-width: 104px;
+  padding: 0 20px;
+  border-radius: 6px 6px 4px 4px;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  color: $ink-muted;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+.host :global(.MuiTab-root).sheetTab:hover {
+  background: rgba(255, 255, 255, 0.65);
+  color: $ink;
+}
+.host :global(.MuiTab-root).sheetTab:global(.Mui-selected) {
+  background: #ffffff;
+  color: $accent;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.07);
+}
+
+/* Right of the strip: the status read-out. */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  padding-left: 4px;
+  flex: 0 0 auto;
+}
+
+.selection {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 8px;
+  font-size: 12px;
   white-space: nowrap;
-  word-wrap: normal;
-  &.active {
-    font-weight: bold;
-    color: #1cac73;
+  // Digits must not shift the layout as the selection grows.
+  font-variant-numeric: tabular-nums;
+}
+.selectionAddress {
+  color: $ink;
+  font-weight: 500;
+}
+.selectionSize {
+  color: $ink-muted;
+}
+
+.stats {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0 4px;
+  font-size: 12px;
+  color: $ink-muted;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  b {
+    font-weight: 600;
+    color: $ink;
   }
 }
-.add-btn {
-  width: 30px;
-  height: 30px;
-  cursor: pointer;
-  @include center();
+
+.statusDivider {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: $line;
 }
+
+.zoomValue {
+  min-width: 46px;
+  height: 26px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: $ink-muted;
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.zoomValue:hover {
+  background: rgba(255, 255, 255, 0.8);
+  color: $ink;
+}
+
+/* The add button sits apart from the tabs, so it is not mistaken for one. */
+.addSheet {
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
+  margin-left: 4px;
+  border-left: 1px solid $line;
+  flex: 0 0 auto;
+}
+.host :global(.MuiIconButton-root) {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 5px;
+  color: $ink-muted;
+}
+.host :global(.MuiIconButton-root:hover) {
+  background: rgba(255, 255, 255, 0.8);
+  color: $ink;
+}
+.host :global(.MuiSvgIcon-root) {
+  font-size: 17px;
+}
+
 .context-menu {
   display: flex;
   flex-direction: column;

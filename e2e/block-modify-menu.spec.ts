@@ -1,4 +1,5 @@
 import {test, expect, type Page} from '@playwright/test'
+import {createBlockButton} from './toolbar'
 
 /**
  * The block gear menu's "Modify" action opens the block composer in edit mode
@@ -25,14 +26,19 @@ async function cellCenter(page: Page, col: string, row: number) {
     return {x: ch.x + ch.width / 2, y: rh.y + rh.height / 2}
 }
 
-async function createBlockAt(page: Page, col: string, row: number, name: string) {
+async function createBlockAt(
+    page: Page,
+    col: string,
+    row: number,
+    name: string
+) {
     const start = await cellCenter(page, col, row)
     await page.mouse.move(start.x, start.y)
     await page.mouse.down()
     await page.mouse.move(start.x + 3, start.y + 3, {steps: 3})
     await page.mouse.up()
 
-    const create = page.getByRole('button', {name: /CreateBlock/i})
+    const create = await createBlockButton(page)
     await expect(create).toBeEnabled()
     await create.click()
     await page.getByPlaceholder(/customers/i).fill(name)

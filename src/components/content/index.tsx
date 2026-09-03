@@ -90,6 +90,7 @@ export const ContentComponent = observer(function ContentComponent({
                             activeSheet={activeSheet}
                             activeSheet$={setActiveSheet}
                             grid={grid}
+                            selectedData={selectedData}
                         />
                     </div>
                     <SpreadsheetView viewId="view-2" />
@@ -104,6 +105,7 @@ export const ContentComponent = observer(function ContentComponent({
                         activeSheet={activeSheet}
                         activeSheet$={setActiveSheet}
                         grid={grid}
+                        selectedData={selectedData}
                     />
                 </>
             )}

@@ -12,7 +12,8 @@ class Settings {
     public showContextMenu = true
     public showToolBar = true
     public showSheetsTab = true
-    public topBar = '46px'
+    // Two rows: chrome (38) + ribbon (40), plus the card's hairline borders.
+    public topBar = '80px'
     public blockViewTop = '6px'
     public bottomBar = '0'
     public defaultSheetName = 'sheet'

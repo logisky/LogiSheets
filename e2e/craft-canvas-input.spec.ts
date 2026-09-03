@@ -1,4 +1,5 @@
 import {test, expect, type Page} from '@playwright/test'
+import {craftToggle} from './toolbar'
 
 /**
  * End-to-end coverage for the craft canvas-input capability.
@@ -32,13 +33,19 @@ async function waitForGrid(page: Page) {
 // records every event and consumes based on `window.__consume`. A probe on the
 // canvas records whether the event reached the engine.
 async function installCraftHandler(page: Page) {
-    await page.getByRole('button', {name: 'Toggle craft panel'}).click()
+    await (await craftToggle(page)).click()
 
     // Wait until the host has injected onCanvasInput onto the craft iframe.
-    await page.waitForFunction(() => {
-        const f = document.querySelector('iframe') as HTMLIFrameElement | null
-        return !!(f && (f.contentWindow as any)?.onCanvasInput)
-    }, undefined, {timeout: 30_000})
+    await page.waitForFunction(
+        () => {
+            const f = document.querySelector(
+                'iframe'
+            ) as HTMLIFrameElement | null
+            return !!(f && (f.contentWindow as any)?.onCanvasInput)
+        },
+        undefined,
+        {timeout: 30_000}
+    )
 
     await page.evaluate(() => {
         const w = window as any
@@ -46,14 +53,22 @@ async function installCraftHandler(page: Page) {
         w.__reached = false
         w.__consume = false
         const iframe = document.querySelector('iframe') as HTMLIFrameElement
-        const cv = document.querySelector('canvas.main-canvas') as HTMLCanvasElement
+        const cv = document.querySelector(
+            'canvas.main-canvas'
+        ) as HTMLCanvasElement
         const probe = () => {
             w.__reached = true
         }
         cv.addEventListener('mousedown', probe, false)
         cv.addEventListener('keydown', probe, false)
         ;(iframe.contentWindow as any).onCanvasInput((e: any) => {
-            w.__ev.push({type: e.type, row: e.row, col: e.col, sheetIdx: e.sheetIdx, key: e.key})
+            w.__ev.push({
+                type: e.type,
+                row: e.row,
+                col: e.col,
+                sheetIdx: e.sheetIdx,
+                key: e.key,
+            })
             return w.__consume ? {handled: true} : false
         })
     })
@@ -105,7 +120,9 @@ test('a consuming craft blocks the event from reaching the engine', async ({
 
     const {ev, reached} = await readState(page)
     expect(ev.some((e) => e.type === 'mousedown')).toBe(true)
-    expect(reached, 'engine canvas must NOT receive a consumed event').toBe(false)
+    expect(reached, 'engine canvas must NOT receive a consumed event').toBe(
+        false
+    )
 })
 
 test('a passing craft lets the event through to the engine', async ({page}) => {
@@ -145,7 +162,8 @@ test('closing the panel deactivates routing — events go straight to the engine
 
     const {ev, reached} = await readState(page)
     expect(ev.length, 'inactive craft handler must not be called').toBe(0)
-    expect(reached, 'engine should receive the event when no craft is active').toBe(
-        true
-    )
+    expect(
+        reached,
+        'engine should receive the event when no craft is active'
+    ).toBe(true)
 })

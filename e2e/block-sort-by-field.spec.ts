@@ -1,4 +1,5 @@
 import {test, expect, type Page} from '@playwright/test'
+import {createBlockButton} from './toolbar'
 
 /**
  * End-to-end coverage for sorting a block's records by one of its fields.
@@ -50,7 +51,7 @@ async function createBlockAt(page: Page, col: string, row: number) {
     await page.mouse.move(start.x + 3, start.y + 3, {steps: 3})
     await page.mouse.up()
 
-    const create = page.getByRole('button', {name: /CreateBlock/i})
+    const create = await createBlockButton(page)
     await expect(create).toBeEnabled()
     await create.click()
 
@@ -68,7 +69,12 @@ async function hoverBlock(page: Page) {
 }
 
 // Type a value into a cell and commit it.
-async function typeIntoCell(page: Page, col: string, row: number, text: string) {
+async function typeIntoCell(
+    page: Page,
+    col: string,
+    row: number,
+    text: string
+) {
     const c = await cellCenter(page, col, row)
     await page.mouse.click(c.x, c.y)
     await page.keyboard.type(text)

@@ -191,6 +191,9 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                     sessionRef.current?.setCurrentSheetIndex(idx)
                 }}
                 grid={grid}
+                // This pane keeps its own selection, so its strip reports that
+                // one rather than the main view's.
+                selectedData={selectedData}
             />
         </div>
     )

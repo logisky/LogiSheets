@@ -774,10 +774,16 @@ export class WorkbookClient implements Client {
     // These have no worker handler / no Rust-side backend reachable across
     // the worker boundary. They satisfy the contract's type surface but fail
     // loudly if actually invoked, instead of silently returning undefined.
+    //
+    // Three of them do have a working equivalent on this same class under a
+    // different name. Say so in the failure: reading `getCellInfos` here and
+    // concluding the engine cannot fetch a range of cells has cost more than
+    // one person an afternoon, when `getCells` does exactly that.
 
-    private _notImplemented(name: string): never {
+    private _notImplemented(name: string, insteadUse?: string): never {
         throw new Error(
-            `WorkbookClient.${name} is not implemented in the engine worker`
+            `WorkbookClient.${name} is not implemented in the engine worker` +
+                (insteadUse ? `; use ${insteadUse} instead` : '')
         )
     }
 
@@ -788,9 +794,20 @@ export class WorkbookClient implements Client {
     getDisplayWindowWithinCell: Client['getDisplayWindowWithinCell'] = () =>
         this._notImplemented('getDisplayWindowWithinCell')
     getCellInfos: Client['getCellInfos'] = () =>
-        this._notImplemented('getCellInfos')
-    getFormula: Client['getFormula'] = () => this._notImplemented('getFormula')
-    getStyle: Client['getStyle'] = () => this._notImplemented('getStyle')
+        this._notImplemented(
+            'getCellInfos',
+            'getCells (same range, one worker round trip)'
+        )
+    getFormula: Client['getFormula'] = () =>
+        this._notImplemented(
+            'getFormula',
+            'getCell, whose CellInfo carries `formula`'
+        )
+    getStyle: Client['getStyle'] = () =>
+        this._notImplemented(
+            'getStyle',
+            'getCell, whose CellInfo carries `style`'
+        )
     getCellsExceptWindow: Client['getCellsExceptWindow'] = () =>
         this._notImplemented('getCellsExceptWindow')
     getBlockDisplayWindow: Client['getBlockDisplayWindow'] = () =>

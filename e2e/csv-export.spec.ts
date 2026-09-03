@@ -25,7 +25,12 @@ async function cellCenter(page: Page, col: string, row: number) {
     return {x: ch.x + ch.width / 2, y: rh.y + rh.height / 2}
 }
 
-async function typeIntoCell(page: Page, col: string, row: number, text: string) {
+async function typeIntoCell(
+    page: Page,
+    col: string,
+    row: number,
+    text: string
+) {
     const c = await cellCenter(page, col, row)
     await page.mouse.click(c.x, c.y)
     await page.keyboard.type(text)

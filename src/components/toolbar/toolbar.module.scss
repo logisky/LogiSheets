@@ -1,121 +1,533 @@
+/**
+ * The app's top chrome, in the three tiers every desktop spreadsheet uses:
+ *
+ *   1. title bar   — who this document is, and app-level actions
+ *   2. menu strip  — what switches the row below
+ *   3. ribbon      — the active tab's controls, in labelled groups
+ *
+ * Cramming all three into one line (what this used to do) is what made it read
+ * as a toy: the document's name, the tab switcher and the formatting tools all
+ * competed for the same row, so nothing looked primary. Splitting them costs
+ * ~70px of height and buys the layout every other spreadsheet has.
+ */
+
+// Neutrals — one ramp, so borders/hovers/text stay consistent with the app's
+// cards and menus rather than each control inventing its own grey.
+$ink: #1f2937; // primary text
+$ink-muted: #5b6472; // icons, secondary text
+$ink-faint: #98a2b3; // disabled
+$line: #e4e7ec; // hairline borders
+$line-strong: #d0d5dd; // hover borders
+$surface: #ffffff;
+$surface-hover: #f2f4f7;
+$surface-sunken: #f9fafb;
+
+// One accent, used for both "active" fills and focus.
+$accent: #1d4ed8;
+$accent-wash: #e8eefc;
+
+$row-top: 38px;
+$row-ribbon: 40px;
+$btn: 28px;
+
 .host {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
   height: 100%;
-  padding: 0 12px;
-  background: #ffffff;
+  background: $surface;
   border-radius: 10px;
+  border: 1px solid $line;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-  border: 1px solid #e4e7ec; /* hairline, matches the app's card/menu edges */
-  color: #475467;
+  color: $ink-muted;
+  overflow: hidden; // keeps the row separators inside the rounded corners
 }
 
-.center {
+.grow {
   flex: 1;
+}
+
+/* ---------------------------------------------------------------- row 1 */
+
+/* Identity, the File menu and the tab strip on one line. Three rows was the
+   Sheets/Excel shape, but theirs are full — a share button, a search box, an
+   avatar. Ours held a document name and five tabs, so two of the three rows
+   were mostly empty space. */
+.topRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  height: $row-top;
+  flex: 0 0 $row-top;
+  padding: 0 10px;
+
+  // The tab strip carries the only underline in the chrome, so the boundary
+  // between "what switches" and "what is switched" stays unambiguous even
+  // though it now shares a line with the title.
+  :global(.MuiTabs-root) {
+    min-height: 0;
+  }
+  :global(.MuiTab-root) {
+    min-height: $row-top;
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    color: $ink-muted;
+  }
+  :global(.MuiTab-root:hover) {
+    color: $ink;
+  }
+  :global(.MuiTab-root.Mui-selected) {
+    color: $accent;
+    font-weight: 600;
+  }
+  :global(.MuiTabs-indicator) {
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background-color: $accent;
+  }
+
+  /* The product's own tab. Three quiet signals rather than one loud one: a
+     rule that separates it from the borrowed-from-Excel tabs, a diamond that
+     breaks the run of plain words, and the accent carried at rest so the eye
+     lands there once. Selected, it behaves exactly like its neighbours. */
+  :global(.MuiTab-root).tabAdvanced {
+    position: relative;
+    margin-left: 7px;
+    padding-left: 16px;
+    color: $accent;
+    opacity: 0.78;
+  }
+  :global(.MuiTab-root).tabAdvanced::before {
+    // the separating rule
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 16px;
+    background: $line;
+  }
+  :global(.MuiTab-root).tabAdvanced::after {
+    // the diamond
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    border-radius: 1px;
+    background: currentColor;
+    transform: translateY(-50%) rotate(45deg);
+  }
+  :global(.MuiTab-root).tabAdvanced:hover {
+    opacity: 1;
+  }
+  :global(.MuiTab-root).tabAdvanced:global(.Mui-selected) {
+    opacity: 1;
+    font-weight: 600;
+  }
+
+  // The File menu reads as a menu, not a toolbar button.
+  :global(.MuiButton-root) {
+    height: 26px;
+    padding: 0 8px;
+    min-width: auto;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    color: $ink-muted;
+  }
+  :global(.MuiButton-root:hover) {
+    background: $surface-hover;
+    color: $ink;
+  }
 }
 
+/* Document-level actions, top right. */
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  margin-left: 2px;
+  border: 1px solid $line;
+  border-radius: 6px;
+  background: $surface;
+  color: $ink;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+.saveBtn:hover:not(:disabled) {
+  background: $surface-hover;
+  border-color: $line-strong;
+}
+.saveBtn:disabled {
+  color: $ink-faint;
+  cursor: default;
+}
+
+/* Temp mode is a mode, so it gets a persistent chip rather than a quiet icon —
+   amber because it is a warning about where edits are going, not an accent. */
+.tempChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  margin-right: 2px;
+  border: 1px solid #f3c86b;
+  border-radius: 6px;
+  background: #fdf5e4;
+  color: #92620a;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tempChip:hover {
+  background: #fbedd0;
+  border-color: #e0ad45;
+}
+
+.logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------- row 3 */
+
+.ribbon {
+  // Its own width — not the viewport's — is what decides whether the labels
+  // fit, so it is the query container.
+  container-type: inline-size;
+  container-name: ribbon;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: $row-ribbon;
+  flex: 0 0 $row-ribbon;
+  padding: 0 6px;
+  border-top: 1px solid $line;
+  background: $surface-sunken; // separates the tools from the title above
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* A run of related controls. The gap inside a group is tighter than the
+   padding between groups, which is what makes the grouping legible without
+   needing a rule between every pair of buttons. */
 .section {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-}
-
-/* View tab: each option is a self-contained pill so the label is unambiguously
-   tied to its own switch, with clear gaps between options. */
-.viewSection {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.toggleItem {
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  padding: 0 8px 0 12px;
-  border: 1px solid #e4e7ec;
-  border-radius: 8px;
-  background: #ffffff;
-  white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-.toggleItem:hover {
-  background: #f9fafb;
-  border-color: #d0d5dd;
-}
-
-/* Compact, refined controls (container height unchanged). */
-.host :global(.MuiButton-root) {
-  padding: 3px 8px;
-  min-width: auto;
-  font-size: 12px;
-  text-transform: none;
-  border-radius: 8px;
-}
-
-/* Icon buttons: quiet by default, soft rounded hover with a subtle accent. */
-.host :global(.MuiIconButton-root) {
-  padding: 5px;
-  border-radius: 8px;
-  color: #475467;
-  transition: background 0.12s ease, color 0.12s ease;
-}
-.host :global(.MuiIconButton-root:hover) {
-  background: #f2f4f7;
-  color: #1d4ed8;
-}
-.host :global(.MuiIconButton-root.Mui-disabled) {
-  color: #c3c8d0;
-}
-
-.host :global(.MuiSvgIcon-root) {
-  font-size: 18px;
-}
-
-/* Dropdowns (font family, number format): rounded hairline, refined focus. */
-.host :global(.MuiOutlinedInput-root) {
-  border-radius: 8px;
-  background: #ffffff;
-}
-.host :global(.MuiOutlinedInput-notchedOutline) {
-  border-color: #e4e7ec;
-}
-.host :global(.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline) {
-  border-color: #d0d5dd;
-}
-.host
-  :global(.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) {
-  border-width: 1px;
-}
-
-/* Ribbon tabs. */
-.host :global(.MuiTab-root) {
-  color: #667085;
-  font-weight: 600;
-}
-.host :global(.MuiTab-root.Mui-selected) {
-  color: #1d4ed8;
-}
-.host :global(.MuiTabs-indicator) {
-  background-color: #1d4ed8;
-  height: 2px;
-  border-radius: 2px;
+  gap: 1px;
+  padding: 0 5px;
+  flex: 0 0 auto;
 }
 
 .group {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  margin-left: 4px;
-  margin-right: 4px;
+  gap: 1px;
+  padding: 0 5px;
+  flex: 0 0 auto;
 }
 
+/* MUI's `flexItem` sets `align-self: stretch`, so a fixed height alone left
+   the rule hanging from the top of the row instead of centred in it. */
 .divider {
-  margin: 0 6px !important;
-  border-color: #eaecf0 !important;
+  height: 20px !important;
+  align-self: center !important;
+  margin: 0 !important;
+  border-color: $line-strong !important;
+  flex: 0 0 auto;
+}
+
+/* A labelled ribbon button. The label is the default state; it collapses to
+   the bare icon only when the ribbon runs out of width. */
+.toolBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: $btn;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: $ink-muted;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+.toolBtn:hover:not(:disabled) {
+  background: $surface-hover;
+  color: $ink;
+}
+.toolBtn:disabled {
+  color: $ink-faint;
+  cursor: default;
+}
+.toolBtnActive,
+.toolBtnActive:hover:not(:disabled) {
+  background: $accent-wash;
+  color: $accent;
+}
+
+.toolIcon {
+  display: inline-flex;
+  align-items: center;
+  // Optical alignment: the 18px glyphs sit a hair high next to 12px text.
+  margin-top: -1px;
+}
+
+/* Below this the labels stop earning their width. The threshold is set from
+   the widest tab (Home) so the collapse happens once, for every tab at the
+   same point, rather than each tab flipping at its own width. */
+@container ribbon (max-width: 1180px) {
+  .toolLabel {
+    display: none;
+  }
+  .toolBtn {
+    padding: 0 5px;
+  }
+}
+
+/* ------------------------------------------------------- shared controls */
+
+/* Icon buttons: square, quiet until hovered, and filled when the format they
+   toggle is on — the same three states Sheets and Excel use, which is what
+   makes a toolbar feel responsive rather than decorative. */
+.host :global(.MuiIconButton-root) {
+  width: $btn;
+  height: $btn;
+  padding: 0;
+  border-radius: 4px;
+  color: $ink-muted;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+.host :global(.MuiIconButton-root:hover) {
+  background: $surface-hover;
+  color: $ink;
+}
+.host :global(.MuiIconButton-root.Mui-disabled) {
+  color: $ink-faint;
+}
+/* MUI marks an active toggle with `color="primary"`; give that a filled pill
+   so an enabled format is visible at a glance, not just a hue shift. */
+.host :global(.MuiIconButton-colorPrimary) {
+  background: $accent-wash;
+  color: $accent;
+}
+.host :global(.MuiIconButton-colorPrimary:hover) {
+  background: #dbe5fa; // one step darker than $accent-wash
+  color: $accent;
+}
+.host :global(.MuiSvgIcon-root) {
+  font-size: 18px;
+}
+
+/* MUI shouts button labels by default. */
+.host :global(.MuiButton-root) {
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* The ribbon's one filled action (insert block) — the only place in the chrome
+   that earns an accent fill, so it reads as the primary create action. */
+.ribbon :global(.MuiButton-outlinedPrimary) {
+  height: $btn;
+  border-radius: 4px;
+  border-color: rgba(29, 78, 216, 0.4);
+  padding: 0 10px;
+  font-size: 12px;
+}
+.ribbon :global(.MuiButton-outlinedPrimary:hover) {
+  background: $accent-wash;
+  border-color: $accent;
+}
+
+/* The docs link. Shaped like a ribbon button so it sits in the row, but it is
+   an anchor — it opens a page, and middle-click / "open in new tab" should
+   work the way they do on any link. */
+.helpLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: $btn;
+  padding: 0 8px;
+  border-radius: 4px;
+  color: $ink-muted;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+.helpLink:hover {
+  background: $surface-hover;
+  color: $accent;
+}
+
+/* Dropdowns (font family, number format): sized to the button row so the
+   ribbon has one baseline instead of three. */
+.host :global(.MuiOutlinedInput-root) {
+  height: $btn;
+  border-radius: 4px;
+  background: $surface;
+  font-size: 12px;
+  color: $ink;
+}
+.host :global(.MuiOutlinedInput-notchedOutline) {
+  border-color: $line;
+}
+.host :global(.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline) {
+  border-color: $line-strong;
+}
+.host
+  :global(.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) {
+  border-width: 1px;
+  border-color: $accent;
+}
+.host :global(.MuiSelect-select) {
+  padding: 0 24px 0 8px !important;
+  display: flex;
+  align-items: center;
+  height: 100% !important;
+  box-sizing: border-box;
+}
+
+/* The document title. A borderless field that only shows its box on hover is
+   the convention for an in-place-editable name (Sheets, Notion, Figma). */
+.docName {
+  :global(.MuiInput-root) {
+    font-size: 15px;
+    font-weight: 500;
+    color: $ink;
+  }
+  :global(.MuiInput-root:before),
+  :global(.MuiInput-root:after) {
+    display: none;
+  }
+  :global(input) {
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: text;
+    transition: box-shadow 0.1s ease;
+  }
+  :global(input:hover) {
+    box-shadow: inset 0 0 0 1px $line-strong;
+  }
+  :global(input:focus) {
+    box-shadow: inset 0 0 0 2px $accent;
+  }
+}
+
+/* View tab: each option is a self-contained pill so the label is unambiguously
+   tied to its own switch. */
+.viewSection {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+}
+.toggleItem {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 6px 0 10px;
+  border: 1px solid $line;
+  border-radius: 6px;
+  background: $surface;
+  white-space: nowrap;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+.toggleItem:hover {
+  background: $surface-hover;
+  border-color: $line-strong;
+}
+
+/* The point-size box: one control made of a field and a caret, so it reads as
+   a single unit the way Excel's does rather than as an input next to a button. */
+.fontSize {
+  display: inline-flex;
+  align-items: center;
+  height: $btn;
+  border: 1px solid $line;
+  border-radius: 4px;
+  background: $surface;
+  overflow: hidden;
+  flex: 0 0 auto;
+
+  input {
+    width: 30px;
+    height: 100%;
+    border: none;
+    outline: none;
+    padding: 0 0 0 6px;
+    font-size: 12px;
+    color: $ink;
+    background: transparent;
+    // Centre-ish: sizes are 1–3 characters, so left padding alone looks off.
+    text-align: center;
+  }
+  input:disabled {
+    color: $ink-faint;
+  }
+  &:hover {
+    border-color: $line-strong;
+  }
+  &:focus-within {
+    border-color: $accent;
+  }
+}
+.host .fontSizeCaret {
+  width: 16px !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+}
+.host .fontSizeCaret :global(.MuiSvgIcon-root) {
+  font-size: 16px;
+}
+
+/* The zoom read-out sits between its two buttons, so it needs a fixed width
+   or the buttons shift as the percentage changes width. */
+.zoomLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: $ink;
 }
 
 .alignIcon {
@@ -124,34 +536,26 @@
   line-height: 1;
 }
 
-/* Logo */
-.logo {
-  display: inline-block;
-  width: 26px;
-  height: 26px;
-  margin-right: 6px;
-  border-radius: 6px;
-  object-fit: contain;
-}
-
-/* GitHub star badge (right end of the toolbar) */
+/* GitHub star badge (title bar, far right) */
 .github {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 10px;
-  margin-left: 6px;
-  border: 1px solid #e4e7ec;
-  border-radius: 8px;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  margin-left: 4px;
+  border: 1px solid $line;
+  border-radius: 6px;
   color: #24292f;
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 .github:hover {
-  background: #f2f4f7;
-  border-color: #d0d5dd;
+  background: $surface-hover;
+  border-color: $line-strong;
 }
 .githubStars {
   display: inline-flex;
@@ -159,14 +563,14 @@
   gap: 2px;
   font-size: 12px;
   font-weight: 600;
-  color: #475467;
+  color: $ink-muted;
 }
 .githubStarIcon {
   font-size: 14px !important;
   color: #eab308;
 }
 
-/* Alignment popover grid (3x3) */
+/* Alignment popover (3x3) */
 .alignGrid {
   display: grid;
   grid-template-columns: repeat(3, 28px);
@@ -177,15 +581,15 @@
 .alignCell {
   width: 28px;
   height: 28px;
-  border: 1px solid #e4e7ec;
+  border: 1px solid $line;
   border-radius: 6px;
-  background: #fff;
-  color: #334155;
+  background: $surface;
+  color: $ink;
   cursor: pointer;
 }
 .alignCell:hover {
-  background: #f2f4f7;
-  border-color: #d0d5dd;
+  background: $surface-hover;
+  border-color: $line-strong;
 }
 .alignCell:disabled {
   opacity: 0.4;
