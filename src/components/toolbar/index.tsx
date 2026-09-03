@@ -1,12 +1,19 @@
 import {useEffect, useRef, useState} from 'react'
+import type {FC, ReactNode} from 'react'
 import {observer} from 'mobx-react-lite'
 import {globalStore} from '@/store'
 import styles from './toolbar.module.scss'
 import modalStyles from '../modal.module.scss'
-import {getSelectedCellRange, getSelectedLines, Grid} from 'logisheets-engine'
+import {
+    getSelectedCellRange,
+    getSelectedLines,
+    toA1notation,
+    Grid,
+} from 'logisheets-engine'
 import {Cell, ErrorMessage} from 'logisheets-engine'
 import {useEngine, useOps} from '@/core/engine/provider'
 import {BlockComposerComponent} from '@/components/block-composer'
+import {ConditionalFormattingDialog} from '@/components/conditional-formatting'
 import {BorderSettingComponent} from './border-setting'
 import {GithubStar} from './github-star'
 import {generateFontPayload, generateWrapTextPayload} from 'logisheets-core'
@@ -36,12 +43,30 @@ import Tooltip from '@mui/material/Tooltip'
 import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
+import FunctionsIcon from '@mui/icons-material/Functions'
+import SearchIcon from '@mui/icons-material/Search'
+import BackspaceIcon from '@mui/icons-material/Backspace'
+import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined'
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
+import TableRowsOutlinedIcon from '@mui/icons-material/TableRowsOutlined'
+import ViewWeekOutlinedIcon from '@mui/icons-material/ViewWeekOutlined'
+import ZoomInIcon from '@mui/icons-material/ZoomIn'
+import TextIncreaseIcon from '@mui/icons-material/TextIncrease'
+import TextDecreaseIcon from '@mui/icons-material/TextDecrease'
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
+import ZoomOutIcon from '@mui/icons-material/ZoomOut'
+import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong'
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ExtensionIcon from '@mui/icons-material/Extension'
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import Popover from '@mui/material/Popover'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Tabs from '@mui/material/Tabs'
+import Dialog from '@mui/material/Dialog'
 import Tab from '@mui/material/Tab'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
@@ -58,8 +83,11 @@ import {
     FormatColorText as FormatColorTextIcon,
     FormatColorFill as FormatColorFillIcon,
     BorderClear as BorderIcon,
-    MergeType as MergeIcon,
     ArrowDropDown as ArrowDropDownIcon,
+    NorthEastOutlined as NorthEastOutlinedIcon,
+    SouthWestOutlined as SouthWestOutlinedIcon,
+    LayersClearOutlined as LayersClearOutlinedIcon,
+    PaletteOutlined as PaletteOutlinedIcon,
     TextIncrease,
     TextDecrease,
     AlignHorizontalCenterOutlined,
@@ -137,6 +165,80 @@ export interface ToolbarProps {
     /** Whether the craft panel is currently open (highlights the button). */
     craftActive?: boolean
 }
+
+/** The point sizes Excel and Sheets offer; the box also accepts any value. */
+const FONT_PT_CHOICES = [
+    8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72,
+] as const
+
+/**
+ * A ribbon button that says what it does.
+ *
+ * An icon alone only works once you already know the tool — `Merge`, `Wrap` or
+ * the trace arrows are unreadable on first contact, and a tooltip does not help
+ * someone scanning for a feature they have never seen. So the label ships with
+ * the icon and only drops out when the ribbon genuinely runs out of room (see
+ * the container query in the stylesheet), which is the order Excel and Sheets
+ * degrade in too. `B`/`I`/`U` keep their bare glyphs: those are universal, and
+ * labelling them would push everything else off the row.
+ */
+/**
+ * Merge cells.
+ *
+ * Material's `Merge` is the version-control arrow — two branches joining — so
+ * on a spreadsheet toolbar it reads as anything but "make these cells one".
+ * This draws the operation instead: a divided bottom row under a single wide
+ * cell, which is the before and after in one glyph.
+ */
+const MergeCellsIcon: FC<{fontSize?: 'small' | 'inherit'}> = () => (
+    <svg
+        viewBox="0 0 24 24"
+        width="1em"
+        height="1em"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{fontSize: 18}}
+        aria-hidden="true"
+        focusable="false"
+    >
+        <rect x="3.5" y="5" width="17" height="14" rx="1.5" />
+        {/* the merged cell above, two cells below */}
+        <path d="M3.5 12h17" />
+        <path d="M12 12v7" />
+    </svg>
+)
+
+const ToolButton: FC<{
+    label: string
+    tip?: string
+    icon: ReactNode
+    onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
+    disabled?: boolean
+    active?: boolean
+}> = ({label, tip, icon, onClick, disabled, active}) => (
+    <Tooltip title={tip ?? label}>
+        {/* A disabled button fires no events, so the tooltip needs a live
+            wrapper to hang off. */}
+        <span>
+            <button
+                type="button"
+                className={`${styles.toolBtn} ${
+                    active ? styles.toolBtnActive : ''
+                }`}
+                aria-label={label}
+                aria-pressed={active}
+                disabled={disabled}
+                onClick={onClick}
+            >
+                <span className={styles.toolIcon}>{icon}</span>
+                <span className={styles.toolLabel}>{label}</span>
+            </button>
+        </span>
+    </Tooltip>
+)
 
 export const Toolbar = observer(
     ({
@@ -254,7 +356,12 @@ export const Toolbar = observer(
         // File menu (dropdown)
         const [fileAnchor, setFileAnchor] = useState<HTMLElement | null>(null)
         // Which toolbar ribbon tab is active.
-        const [activeTab, setActiveTab] = useState<'home' | 'view'>('home')
+        const fontSizeBoxRef = useRef<HTMLDivElement>(null)
+        const [saving, setSaving] = useState(false)
+        const [showValues, setShowValues] = useState(true)
+        const [activeTab, setActiveTab] = useState<
+            'home' | 'insert' | 'formulas' | 'data' | 'view' | 'advanced'
+        >('home')
         const openFileMenu = (e: React.MouseEvent<HTMLElement>) =>
             setFileAnchor(e.currentTarget)
         const closeFileMenu = () => setFileAnchor(null)
@@ -291,6 +398,22 @@ export const Toolbar = observer(
         const [underline, setUnderline] = useState(false)
         const [strike, setStrike] = useState(false)
         const [fontName, setFontName] = useState('Arial')
+        // The size of the selection's first cell, and the text in the box while
+        // the user is typing (kept separate so a half-typed "1" is not applied).
+        const [fontPt, setFontPt] = useState(10)
+        const [fontPtDraft, setFontPtDraft] = useState<string | null>(null)
+        const [fontSizeAnchor, setFontSizeAnchor] =
+            useState<HTMLElement | null>(null)
+        // The conditional-formatting dialog, which the Data tab opens for the
+        // current selection. Until now it was reachable only from the cell
+        // context menu.
+        const [cfRange, setCfRange] = useState<{
+            sheetIdx: number
+            startRow: number
+            startCol: number
+            endRow: number
+            endCol: number
+        } | null>(null)
 
         // Alignment popover
         const [alignAnchor, setAlignAnchor] = useState<HTMLElement | null>(null)
@@ -393,6 +516,8 @@ export const Toolbar = observer(
                     )
                     setStrike(font.strike)
                     setFontName(font.name?.val || 'Arial')
+                    setFontPt(font.sz ?? 10)
+                    setFontPtDraft(null)
                     switch (style.formatter.toLocaleLowerCase()) {
                         case '':
                         case 'general':
@@ -630,6 +755,264 @@ export const Toolbar = observer(
             setAlignAnchor(null)
         }
 
+        // ─── Cells, editing and auditing ────────────────────────────────
+        // These mirror actions the right-click menu already offers. They are
+        // reissued here rather than shared with it because each is a couple of
+        // payloads over the selection; the menu's versions also close the menu
+        // and re-select, which a toolbar button must not do.
+
+        const runTxn = (payloads: readonly Payload[]) =>
+            DATA_SERVICE.handleTransaction(tx(payloads, true))
+
+        /** Insert or delete whole rows/columns across the selection. */
+        const lineOp = (axis: 'row' | 'col', op: 'insert' | 'delete') => {
+            if (!selectedData) return
+            const r = getSelectedCellRange(selectedData)
+            if (!r) return
+            const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+            const [lo, hi] =
+                axis === 'row' ? [r.startRow, r.endRow] : [r.startCol, r.endCol]
+            const count = hi - lo + 1
+            const type =
+                op === 'insert'
+                    ? axis === 'row'
+                        ? 'insertRows'
+                        : 'insertCols'
+                    : axis === 'row'
+                    ? 'deleteRows'
+                    : 'deleteCols'
+            runTxn([{type, value: {sheetIdx, start: lo, count}} as Payload])
+        }
+
+        /** Empty every cell in the selection, keeping its formatting. */
+        const clearCells = () => {
+            if (!selectedData) return
+            const r = getSelectedCellRange(selectedData)
+            if (!r) return
+            const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+            const payloads: Payload[] = []
+            for (let row = r.startRow; row <= r.endRow; row++) {
+                for (let col = r.startCol; col <= r.endCol; col++) {
+                    payloads.push({
+                        type: 'cellClear',
+                        value: {sheetIdx, row, col},
+                    })
+                }
+            }
+            runTxn(payloads)
+        }
+
+        /** Pick a file and anchor it to the selection's top-left cell. */
+        const insertImage = () => {
+            if (!selectedData) return
+            const r = getSelectedCellRange(selectedData)
+            if (!r) return
+            const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+            const input = document.createElement('input')
+            input.type = 'file'
+            input.accept = 'image/png,image/jpeg,image/gif,image/bmp'
+            input.onchange = () => {
+                const file = input.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = () => {
+                    const result = String(reader.result ?? '')
+                    const comma = result.indexOf(',')
+                    if (comma < 0) return
+                    const data = result.slice(comma + 1)
+                    let format = 'png'
+                    const m = /^data:image\/([a-z0-9.+-]+);/i.exec(result)
+                    if (m) format = m[1].toLowerCase()
+                    const imageId =
+                        typeof crypto !== 'undefined' && crypto.randomUUID
+                            ? crypto.randomUUID()
+                            : `img-${Date.now()}`
+                    runTxn([
+                        {
+                            type: 'setCellImage',
+                            value: {
+                                sheetIdx,
+                                row: r.startRow,
+                                col: r.startCol,
+                                imageId,
+                                format,
+                                data,
+                            },
+                        } as Payload,
+                    ])
+                }
+                reader.readAsDataURL(file)
+            }
+            input.click()
+        }
+
+        const addComment = () => {
+            if (!selectedData) return
+            const r = getSelectedCellRange(selectedData)
+            if (!r) return
+            globalStore.requestAddComment({
+                sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
+                row: r.startRow,
+                col: r.startCol,
+            })
+        }
+
+        /**
+         * Sum the run of cells directly above the selection (or to its left
+         * when the selection spans a row), writing `=SUM(range)` into it —
+         * Excel's AutoSum, which guesses the range instead of asking.
+         */
+        const autoSum = async () => {
+            if (!selectedData) return
+            const r = getSelectedCellRange(selectedData)
+            if (!r) return
+            const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+            const numericAt = async (row: number, col: number) => {
+                if (row < 0 || col < 0) return false
+                const info = await DATA_SERVICE.getCellInfo(sheetIdx, row, col)
+                if (isErrorMessage(info)) return false
+                const v = info.toCellInfo().value
+                return v !== 'empty' && v.type === 'number'
+            }
+            // Walk up first; a single row of numbers to the left is the other
+            // shape people expect.
+            let start = r.startRow
+            while (start > 0 && (await numericAt(start - 1, r.startCol)))
+                start--
+            if (start < r.startRow) {
+                const col = toA1notation(r.startCol)
+                runTxn([
+                    {
+                        type: 'cellInput',
+                        value: {
+                            sheetIdx,
+                            row: r.startRow,
+                            col: r.startCol,
+                            content: `=SUM($${col}$${start + 1}:$${col}$${
+                                r.startRow
+                            })`,
+                        },
+                    } as Payload,
+                ])
+                return
+            }
+            let left = r.startCol
+            while (left > 0 && (await numericAt(r.startRow, left - 1))) left--
+            if (left < r.startCol) {
+                const row = r.startRow + 1
+                runTxn([
+                    {
+                        type: 'cellInput',
+                        value: {
+                            sheetIdx,
+                            row: r.startRow,
+                            col: r.startCol,
+                            content: `=SUM($${toA1notation(
+                                left
+                            )}$${row}:$${toA1notation(r.startCol - 1)}$${row})`,
+                        },
+                    } as Payload,
+                ])
+            }
+        }
+
+        /** Zoom is engine state, so the buttons just drive its API. */
+        const zoomPct = Math.round(engine.getZoom() * 100)
+
+        /**
+         * Creating a block is this spreadsheet's flagship action, so it earns
+         * two doors: Insert, where someone looks for "add a thing", and
+         * Advanced, next to the rest of what makes this not-Excel. One
+         * definition rendered twice — a second copy would drift.
+         */
+        const createBlockButton = (
+            <Button
+                variant="outlined"
+                size="small"
+                color="primary"
+                onClick={() => setComposerOpen(true)}
+                startIcon={<GridViewIcon />}
+                disabled={
+                    selectedData === undefined ||
+                    getSelectedCellRange(selectedData) === undefined
+                }
+                sx={{
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    px: 1.25,
+                    whiteSpace: 'nowrap',
+                }}
+            >
+                CreateBlock
+            </Button>
+        )
+
+        /** Trace arrows for the selection's first cell (see TraceLayer). */
+        const traceCell = (kind: 'precedents' | 'dependents') => {
+            if (!selectedData) return
+            const r = getSelectedCellRange(selectedData)
+            if (!r) return
+            globalStore.requestTrace({
+                sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
+                row: r.startRow,
+                col: r.startCol,
+                kind,
+            })
+        }
+
+        const openConditionalFormatting = () => {
+            if (!selectedData) return
+            const r = getSelectedCellRange(selectedData)
+            if (!r) return
+            setCfRange({
+                sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
+                startRow: r.startRow,
+                startCol: r.startCol,
+                endRow: r.endRow,
+                endCol: r.endCol,
+            })
+        }
+
+        /** Apply an absolute point size, the way the size box does. */
+        /**
+         * The next size up or down the offered ladder rather than ±1pt: from 11
+         * the useful next step is 12, and at the top end 48 → 72, which walking
+         * one point at a time would take forever to reach.
+         */
+        const nextFontPt = (dir: 1 | -1) => {
+            const ladder = FONT_PT_CHOICES
+            if (dir === 1)
+                return (
+                    ladder.find((p) => p > fontPt) ?? Math.min(fontPt + 1, 409)
+                )
+            return (
+                [...ladder].reverse().find((p) => p < fontPt) ??
+                Math.max(fontPt - 1, 1)
+            )
+        }
+
+        const applyFontSize = (pt: number) => {
+            if (!selectedData) return
+            // Excel's own bounds; anything outside is a typo, not an intent.
+            if (!Number.isFinite(pt) || pt < 1 || pt > 409) {
+                setFontPtDraft(null)
+                return
+            }
+            const rounded = Math.round(pt * 2) / 2 // Excel allows half points
+            setFontPt(rounded)
+            setFontPtDraft(null)
+            DATA_SERVICE.handleTransactionAndAdjustRowHeights(
+                tx(
+                    generateFontPayload(
+                        DATA_SERVICE.getCurrentSheetIdx(),
+                        selectedData,
+                        {size: rounded}
+                    ),
+                    true
+                )
+            )
+        }
+
         const onFontSizeChange = async (ty: 'increase' | 'decrease') => {
             if (!selectedData) return
             const firstCell = getFirstCell(selectedData)
@@ -688,9 +1071,7 @@ export const Toolbar = observer(
                     .endCol(cr.endCol)
                     .build(),
             })
-            ops.applyPayloads(payloads).then(() =>
-                setMergedOn(true)
-            )
+            ops.applyPayloads(payloads).then(() => setMergedOn(true))
         }
 
         // Icon for alignment grid cells
@@ -774,6 +1155,21 @@ export const Toolbar = observer(
             a.click()
             URL.revokeObjectURL(url)
         }
+        /**
+         * Save with feedback. Serialising a workbook takes long enough to
+         * notice, and the File-menu item gave no sign it was working — so the
+         * toolbar button disables itself for the duration.
+         */
+        const saveWorkbook = async () => {
+            if (saving) return
+            setSaving(true)
+            try {
+                await onSave()
+            } finally {
+                setSaving(false)
+            }
+        }
+
         async function onSave(): Promise<void> {
             const persistentData = BLOCK_MANAGER.getPersistentData([])
             const envelope = JSON.stringify({
@@ -803,8 +1199,6 @@ export const Toolbar = observer(
         }
         return (
             <div className={styles.host}>
-                {/* App logo */}
-                <img src="/logo.png" alt="LogiSheets" className={styles.logo} />
                 {/* Hidden file input */}
                 <input
                     ref={fileInputRef}
@@ -812,8 +1206,31 @@ export const Toolbar = observer(
                     style={{display: 'none'}}
                     onChange={onFileChange}
                 />
-                {/* File dropdown (left fixed cluster) */}
-                <div className={styles.section}>
+
+                {/* One chrome row: identity, the File menu and the tab
+                    strip. These were three rows, but ours had little to put in
+                    them — a 40px line holding only a document name, and a 30px
+                    line holding only five tabs, left two bands of empty space.
+                    Merged, the row is full and the chrome is ~30px shorter. */}
+                <div className={styles.topRow}>
+                    <img
+                        src="/logo.png"
+                        alt="LogiSheets"
+                        className={styles.logo}
+                    />
+                    <TextField
+                        className={styles.docName}
+                        value={bookName}
+                        onChange={(e) => setBookName(e.target.value)}
+                        variant="standard"
+                        size="small"
+                        placeholder="Untitled"
+                    />
+                    <Divider
+                        orientation="vertical"
+                        flexItem
+                        className={styles.divider}
+                    />
                     <Button
                         size="small"
                         variant="text"
@@ -869,489 +1286,920 @@ export const Toolbar = observer(
                             Export as CSV
                         </MenuItem>
                     </Menu>
-                    <TextField
-                        value={bookName}
-                        onChange={(e) => setBookName(e.target.value)}
-                        variant="standard"
-                        size="small"
-                        placeholder="Untitled"
+                    <Tabs
+                        value={activeTab}
+                        onChange={(_, v) => setActiveTab(v)}
                         sx={{
-                            '& .MuiInput-root': {
-                                fontSize: '14px',
-                                fontWeight: 500,
-                            },
-                            '& .MuiInput-root:before': {
-                                borderBottom: 'none',
-                            },
-                            '& .MuiInput-root:hover:not(.Mui-disabled):before':
-                                {
-                                    borderBottom:
-                                        '1px solid rgba(0, 0, 0, 0.42)',
-                                },
-                            '& .MuiInput-root:after': {
-                                borderBottom: '2px solid primary.main',
-                            },
-                            '& input': {
-                                cursor: 'pointer',
-                                padding: '4px 8px',
-                            },
-                            '& input:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                            minHeight: 0,
+                            '& .MuiTab-root': {
+                                minHeight: 0,
+                                minWidth: 0,
+                                padding: '4px 10px',
+                                fontSize: 12,
+                                textTransform: 'none',
                             },
                         }}
-                    />
-                </div>
-                {/* Ribbon tab switcher */}
-                <Tabs
-                    value={activeTab}
-                    onChange={(_, v) => setActiveTab(v)}
-                    sx={{
-                        minHeight: 0,
-                        '& .MuiTab-root': {
-                            minHeight: 0,
-                            minWidth: 0,
-                            padding: '4px 10px',
-                            fontSize: 12,
-                            textTransform: 'none',
-                        },
-                    }}
-                >
-                    <Tab value="home" label="Home" />
-                    <Tab value="view" label="View" />
-                </Tabs>
-                <Divider
-                    orientation="vertical"
-                    flexItem
-                    className={styles.divider}
-                />
-                {/* Assistants & mode: Watson, crafts, temp mode. Kept in the
-                    left cluster (tab-independent) so they stay visible even when
-                    the ribbon overflows on the right. */}
-                <div className={styles.section}>
-                    {onToggleWatson ? (
-                        <Tooltip title="Ask Watson">
-                            <IconButton
-                                size="small"
-                                aria-label="Toggle Watson AI assistant"
-                                color={watsonActive ? 'primary' : 'default'}
-                                onClick={onToggleWatson}
+                    >
+                        <Tab value="home" label="Home" />
+                        <Tab value="insert" label="Insert" />
+                        <Tab value="formulas" label="Formulas" />
+                        <Tab value="data" label="Data" />
+                        <Tab value="view" label="View" />
+                        {/* The five above are the tabs every spreadsheet has;
+                            this one is what only this spreadsheet has. It is
+                            set apart by a rule and carries the accent even
+                            when unselected — enough to draw the eye without
+                            turning a tab strip into a badge. */}
+                        <Tab
+                            value="advanced"
+                            label="Advanced"
+                            className={styles.tabAdvanced}
+                        />
+                    </Tabs>
+                    <span className={styles.grow} />
+                    {/* Document-level actions. Saving lives here rather than
+                        only in the File menu because it is the most-used one,
+                        and temp mode announces itself here because it is a
+                        mode: entering it from the Advanced tab and then
+                        switching to Home used to leave no sign that edits were
+                        going to a scratch branch. */}
+                    {globalStore.isTempMode ? (
+                        <Tooltip title="Editing on a scratch branch — click to commit it">
+                            <button
+                                type="button"
+                                className={styles.tempChip}
+                                onClick={onToggleTempMode}
                             >
-                                <AutoAwesomeIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                    ) : null}
-                    {onToggleCraft ? (
-                        <Tooltip title="Crafts">
-                            <IconButton
-                                size="small"
-                                aria-label="Toggle craft panel"
-                                color={craftActive ? 'primary' : 'default'}
-                                onClick={onToggleCraft}
-                            >
-                                <ExtensionIcon fontSize="small" />
-                            </IconButton>
+                                <ScienceIcon fontSize="small" />
+                                Temp mode
+                            </button>
                         </Tooltip>
                     ) : null}
                     <Tooltip
                         title={
-                            globalStore.isTempMode
-                                ? 'Exit temp mode (commit)'
-                                : 'Enter temp mode'
+                            globalStore.showComments
+                                ? 'Hide comments'
+                                : 'Show comments'
                         }
                     >
                         <IconButton
                             size="small"
-                            onClick={onToggleTempMode}
+                            aria-label="Toggle comments"
                             color={
-                                globalStore.isTempMode ? 'warning' : 'default'
+                                globalStore.showComments ? 'primary' : 'default'
+                            }
+                            onClick={() =>
+                                globalStore.setShowComments(
+                                    !globalStore.showComments
+                                )
                             }
                         >
-                            <ScienceIcon fontSize="small" />
+                            <ChatBubbleOutlineIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
+                    <Tooltip title="Download as .xlsx">
+                        <span>
+                            <button
+                                type="button"
+                                className={styles.saveBtn}
+                                aria-label="Save workbook"
+                                disabled={saving}
+                                onClick={saveWorkbook}
+                            >
+                                <SaveIcon fontSize="small" />
+                                {saving ? 'Saving…' : 'Save'}
+                            </button>
+                        </span>
+                    </Tooltip>
+                    <GithubStar />
                 </div>
-                <Divider
-                    orientation="vertical"
-                    flexItem
-                    className={styles.divider}
-                />
-                {/* Center cluster: all remaining controls */}
-                <div className={styles.center}>
+
+                {/* Row 3 — the active tab's controls. */}
+                <div className={styles.ribbon}>
                     {activeTab === 'view' ? (
-                        <div className={styles.viewSection}>
-                            {[
-                                {
-                                    label: 'Split view (2nd view)',
-                                    checked: globalStore.splitView,
-                                    onChange: (v: boolean) =>
-                                        globalStore.setSplitView(v),
-                                },
-                                {
-                                    label: 'Diff layer',
-                                    checked: globalStore.diffLayerEnabled,
-                                    onChange: (v: boolean) =>
-                                        globalStore.setDiffLayerEnabled(v),
-                                },
-                                {
-                                    label: 'Block overlays always visible',
-                                    checked: globalStore.alwaysShowBlockInfo,
-                                    onChange: (v: boolean) =>
-                                        globalStore.setAlwaysShowBlockInfo(v),
-                                },
-                                {
-                                    label: 'Show gridlines',
-                                    checked: globalStore.showGridlines,
-                                    onChange: (v: boolean) => {
-                                        globalStore.setShowGridlines(v)
-                                        engine.setShowGridLines(v)
+                        <>
+                            <div className={styles.viewSection}>
+                                {[
+                                    {
+                                        label: 'Split view (2nd view)',
+                                        checked: globalStore.splitView,
+                                        onChange: (v: boolean) =>
+                                            globalStore.setSplitView(v),
                                     },
-                                },
-                                {
-                                    label: 'Show comments',
-                                    checked: globalStore.showComments,
-                                    onChange: (v: boolean) =>
-                                        globalStore.setShowComments(v),
-                                },
-                            ].map((t) => (
-                                <div
-                                    className={styles.toggleItem}
-                                    key={t.label}
-                                >
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                size="small"
-                                                checked={t.checked}
-                                                onChange={(e) =>
-                                                    t.onChange(e.target.checked)
-                                                }
-                                            />
-                                        }
-                                        label={t.label}
-                                        labelPlacement="start"
-                                        sx={{
-                                            m: 0,
-                                            gap: '6px',
-                                            '& .MuiFormControlLabel-label': {
-                                                fontSize: 12,
-                                            },
-                                        }}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    ) : null}
-                    {activeTab === 'home' ? (
-                      <>
-                    {/* History */}
-                    <div className={styles.section}>
-                        <Tooltip title="Undo">
-                            <IconButton size="small" onClick={undo}>
-                                <UndoIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Redo">
-                            <IconButton size="small" onClick={redo}>
-                                <RedoIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                    </div>
-                    <Divider
-                        orientation="vertical"
-                        flexItem
-                        className={styles.divider}
-                    />
-
-                    {/* Formatting */}
-                    <div className={styles.section}>
-                        <Tooltip title="Format Painter">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={onFormatPainter}
-                                    color={
-                                        formatBrushOn ? 'primary' : 'default'
+                                    {
+                                        label: 'Diff layer',
+                                        checked: globalStore.diffLayerEnabled,
+                                        onChange: (v: boolean) =>
+                                            globalStore.setDiffLayerEnabled(v),
+                                    },
+                                    {
+                                        label: 'Block overlays always visible',
+                                        checked:
+                                            globalStore.alwaysShowBlockInfo,
+                                        onChange: (v: boolean) =>
+                                            globalStore.setAlwaysShowBlockInfo(
+                                                v
+                                            ),
+                                    },
+                                    {
+                                        label: 'Show gridlines',
+                                        checked: globalStore.showGridlines,
+                                        onChange: (v: boolean) => {
+                                            globalStore.setShowGridlines(v)
+                                            engine.setShowGridLines(v)
+                                        },
+                                    },
+                                    {
+                                        label: 'Show comments',
+                                        checked: globalStore.showComments,
+                                        onChange: (v: boolean) =>
+                                            globalStore.setShowComments(v),
+                                    },
+                                ].map((t) => (
+                                    <div
+                                        className={styles.toggleItem}
+                                        key={t.label}
+                                    >
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    size="small"
+                                                    checked={t.checked}
+                                                    onChange={(e) =>
+                                                        t.onChange(
+                                                            e.target.checked
+                                                        )
+                                                    }
+                                                />
+                                            }
+                                            label={t.label}
+                                            labelPlacement="start"
+                                            sx={{
+                                                m: 0,
+                                                gap: '6px',
+                                                '& .MuiFormControlLabel-label':
+                                                    {
+                                                        fontSize: 12,
+                                                    },
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Zoom */}
+                            <div className={styles.section}>
+                                <Tooltip title="Zoom out">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Zoom out"
+                                            onClick={() => engine.zoomOut()}
+                                        >
+                                            <ZoomOutIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <span className={styles.zoomLabel}>
+                                    {zoomPct}%
+                                </span>
+                                <Tooltip title="Zoom in">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Zoom in"
+                                            onClick={() => engine.zoomIn()}
+                                        >
+                                            <ZoomInIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <ToolButton
+                                    label="Reset"
+                                    tip="Reset zoom to 100%"
+                                    icon={
+                                        <CenterFocusStrongIcon fontSize="small" />
                                     }
-                                    disabled={!hasSelectedData}
-                                >
-                                    <FormatPaintIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-                        <Select
-                            size="small"
-                            value={fontName}
-                            onChange={onFontNameChange}
-                            disabled={!hasSelectedData}
-                            sx={{minWidth: 120, maxHeight: 30, fontSize: 12}}
-                        >
-                            {(FONT_FAMILIES.includes(fontName)
-                                ? FONT_FAMILIES
-                                : [fontName, ...FONT_FAMILIES]
-                            ).map((f) => (
-                                <MenuItem
-                                    key={f}
-                                    value={f}
-                                    sx={{fontSize: 12, fontFamily: f}}
-                                >
-                                    {f}
-                                </MenuItem>
-                            ))}
-                        </Select>
-
-                        <Tooltip title="Bold">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={onToggleBold}
-                                    color={bold ? 'primary' : 'default'}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <FormatBoldIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Italic">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={onToggleItalic}
-                                    color={italic ? 'primary' : 'default'}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <FormatItalicIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Underline">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={onToggleUnderline}
-                                    color={underline ? 'primary' : 'default'}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <FormatUnderlinedIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Strikethrough">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={onToggleStrike}
-                                    color={strike ? 'primary' : 'default'}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <StrikethroughS
-                                        fontSize="small"
-                                        style={{textDecoration: 'line-through'}}
-                                    />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Font Color">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setColorPicking('font')}
-                                    sx={{color: fontColor}}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <FormatColorTextIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Increase font size">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => onFontSizeChange('increase')}
-                                >
-                                    <TextIncrease fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Decrease font size">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => onFontSizeChange('decrease')}
-                                >
-                                    <TextDecrease fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Wrap text">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={onToggleWrapText}
-                                    color={wrapText ? 'primary' : 'default'}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <WrapTextIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-                        <Tooltip title="Fill Color">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setColorPicking('fill')}
-                                    sx={{color: fillColor}}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <FormatColorFillIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-                        <Tooltip title="Borders">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setBorderOpen(true)}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <BorderIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-                        <Tooltip title="Alignment">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={onAlignClick}
-                                    color={alignment ? 'primary' : 'default'}
-                                    disabled={!hasSelectedData}
-                                >
-                                    <AlignHorizontalCenterOutlined fontSize="small" />
-                                    <ArrowDropDownIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-                        <Tooltip title="Merge">
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    aria-label="Merge"
-                                    onClick={onMergeOrSplitClick}
-                                    disabled={mergedOn === null}
-                                    color={mergedOn ? 'primary' : 'default'}
-                                >
-                                    <MergeIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                    </div>
-
-                    <Divider
-                        orientation="vertical"
-                        flexItem
-                        className={styles.divider}
-                    />
-                    {/* number formatter */}
-                    <div className={styles.section}>
-                        <Select
-                            size="small"
-                            value={numberFormat}
-                            onChange={onNumberFormatChange}
-                            displayEmpty
-                            disabled={!hasSelectedData}
-                            sx={{minWidth: 100, maxHeight: 30, fontSize: 12}}
-                        >
-                            <MenuItem value="general" sx={{fontSize: 12}}>
-                                General
-                            </MenuItem>
-                            <MenuItem value="number" sx={{fontSize: 12}}>
-                                Number
-                            </MenuItem>
-                            <MenuItem value="fraction" sx={{fontSize: 12}}>
-                                Fraction
-                            </MenuItem>
-                            <MenuItem value="percent" sx={{fontSize: 12}}>
-                                Percent
-                            </MenuItem>
-                            <MenuItem value="text" sx={{fontSize: 12}}>
-                                Text
-                            </MenuItem>
-                            <MenuItem value="date" sx={{fontSize: 12}}>
-                                Date
-                            </MenuItem>
-                            <MenuItem value="time" sx={{fontSize: 12}}>
-                                Time
-                            </MenuItem>
-                        </Select>
-                    </div>
-                    <Divider
-                        orientation="vertical"
-                        flexItem
-                        className={styles.divider}
-                    />
-
-                    {/* Insert / create */}
-                    <div className={styles.section}>
-                        <Tooltip title="Insert chart from selection">
-                            <span>
-                                <IconButton
-                                    size="small"
+                                    onClick={() => engine.resetZoom()}
+                                />
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Cell values */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Values"
+                                    tip="Show or hide cell contents"
+                                    icon={
+                                        <VisibilityOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={() => {
+                                        const v = !showValues
+                                        engine.setShowCellValues(v)
+                                        setShowValues(v)
+                                    }}
+                                />
+                            </div>
+                        </>
+                    ) : null}
+                    {activeTab === 'insert' ? (
+                        <>
+                            <div className={styles.section}>
+                                {createBlockButton}
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Insert / create */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Chart"
+                                    tip="Insert a chart from the selection"
+                                    icon={<BarChartIcon fontSize="small" />}
                                     onClick={(e) =>
                                         setChartAnchor(e.currentTarget)
                                     }
                                     disabled={!hasSelectedData}
+                                />
+                                <Menu
+                                    anchorEl={chartAnchor}
+                                    open={Boolean(chartAnchor)}
+                                    onClose={() => setChartAnchor(null)}
                                 >
-                                    <BarChartIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Menu
-                            anchorEl={chartAnchor}
-                            open={Boolean(chartAnchor)}
-                            onClose={() => setChartAnchor(null)}
-                        >
-                            {CHART_TYPES.map((t) => (
-                                <MenuItem
-                                    key={t.value}
-                                    onClick={() => {
-                                        setChartAnchor(null)
-                                        engine.insertChart(t.value)
+                                    {CHART_TYPES.map((t) => (
+                                        <MenuItem
+                                            key={t.value}
+                                            onClick={() => {
+                                                setChartAnchor(null)
+                                                engine.insertChart(t.value)
+                                            }}
+                                        >
+                                            {t.label}
+                                        </MenuItem>
+                                    ))}
+                                </Menu>
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Objects */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Image"
+                                    tip="Insert an image at the selection"
+                                    icon={
+                                        <ImageOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={insertImage}
+                                    disabled={!hasSelectedData}
+                                />
+                                <ToolButton
+                                    label="Comment"
+                                    tip="Add a comment to this cell"
+                                    icon={
+                                        <AddCommentOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={addComment}
+                                    disabled={!hasSelectedData}
+                                />
+                            </div>
+                        </>
+                    ) : null}
+                    {activeTab === 'formulas' ? (
+                        <>
+                            {/* Function library */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="AutoSum"
+                                    tip="Sum the numbers above or to the left"
+                                    icon={<FunctionsIcon fontSize="small" />}
+                                    onClick={autoSum}
+                                    disabled={!hasSelectedData}
+                                />
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Formula auditing */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Precedents"
+                                    tip="Show which cells this formula reads"
+                                    icon={
+                                        <NorthEastOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={() => traceCell('precedents')}
+                                    disabled={!hasSelectedData}
+                                />
+                                <ToolButton
+                                    label="Dependents"
+                                    tip="Show which cells read this one"
+                                    icon={
+                                        <SouthWestOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={() => traceCell('dependents')}
+                                    disabled={!hasSelectedData}
+                                />
+                                <ToolButton
+                                    label="Clear arrows"
+                                    tip="Clear the trace arrows"
+                                    icon={
+                                        <LayersClearOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={() => globalStore.clearTrace()}
+                                    disabled={!globalStore.traceResult}
+                                />
+                            </div>
+                        </>
+                    ) : null}
+                    {activeTab === 'advanced' ? (
+                        <>
+                            {/* What this spreadsheet has that others do not:
+                                structured blocks, crafts, the assistant, and
+                                the uncommitted "temp" branch. Grouped together
+                                so the product's own concepts are one place
+                                rather than scattered through Excel's tabs. */}
+                            <div className={styles.section}>
+                                {createBlockButton}
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            <div className={styles.section}>
+                                {onToggleWatson ? (
+                                    <ToolButton
+                                        label="Watson"
+                                        tip="Ask Watson"
+                                        icon={
+                                            <AutoAwesomeIcon fontSize="small" />
+                                        }
+                                        onClick={onToggleWatson}
+                                        active={watsonActive}
+                                    />
+                                ) : null}
+                                {onToggleCraft ? (
+                                    <ToolButton
+                                        label="Crafts"
+                                        tip="Open the craft panel"
+                                        icon={
+                                            <ExtensionIcon fontSize="small" />
+                                        }
+                                        onClick={onToggleCraft}
+                                        active={craftActive}
+                                    />
+                                ) : null}
+                                <ToolButton
+                                    label="Temp mode"
+                                    tip={
+                                        globalStore.isTempMode
+                                            ? 'Exit temp mode (commit the branch)'
+                                            : 'Enter temp mode (edit on a scratch branch)'
+                                    }
+                                    icon={<ScienceIcon fontSize="small" />}
+                                    onClick={onToggleTempMode}
+                                    active={globalStore.isTempMode}
+                                />
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Blocks, crafts and Watson are this product's own
+                                vocabulary — nothing carried over from Excel
+                                tells you what they are. The tab that gathers
+                                them is the one place someone will look, so it
+                                is where the way out to the docs belongs. */}
+                            <div className={styles.section}>
+                                <Tooltip title="What are blocks, crafts and Watson? — opens the docs">
+                                    <a
+                                        className={styles.helpLink}
+                                        // `.html` is not optional: the docs site does not set VitePress'
+                                        // `cleanUrls`, so the extensionless path 404s.
+                                        href="https://docs.logisheets.com/introduction.html"
+                                        target="_blank"
+                                        rel="noreferrer noopener"
+                                    >
+                                        <HelpOutlineIcon fontSize="small" />
+                                        Help
+                                    </a>
+                                </Tooltip>
+                            </div>
+                        </>
+                    ) : null}
+                    {activeTab === 'data' ? (
+                        <>
+                            {/* Rules */}
+                            <div className={styles.section}>
+                                <Button
+                                    size="small"
+                                    startIcon={<PaletteOutlinedIcon />}
+                                    disabled={!hasSelectedData}
+                                    onClick={openConditionalFormatting}
+                                >
+                                    Conditional formatting…
+                                </Button>
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Find */}
+                            <div className={styles.section}>
+                                <Button
+                                    size="small"
+                                    startIcon={<SearchIcon />}
+                                    onClick={() => globalStore.requestFind()}
+                                >
+                                    Find & replace
+                                </Button>
+                            </div>
+                        </>
+                    ) : null}
+                    {activeTab === 'home' ? (
+                        <>
+                            {/* History */}
+                            <div className={styles.section}>
+                                <Tooltip title="Undo">
+                                    <IconButton size="small" onClick={undo}>
+                                        <UndoIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Redo">
+                                    <IconButton size="small" onClick={redo}>
+                                        <RedoIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+
+                            {/* Clipboard */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Painter"
+                                    tip="Copy formatting to another range"
+                                    icon={<FormatPaintIcon fontSize="small" />}
+                                    onClick={onFormatPainter}
+                                    disabled={!hasSelectedData}
+                                    active={!!formatBrushOn}
+                                />
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Font */}
+                            <div className={styles.section}>
+                                <Select
+                                    size="small"
+                                    value={fontName}
+                                    onChange={onFontNameChange}
+                                    disabled={!hasSelectedData}
+                                    sx={{
+                                        minWidth: 120,
+                                        maxHeight: 30,
+                                        fontSize: 12,
                                     }}
                                 >
-                                    {t.label}
-                                </MenuItem>
-                            ))}
-                        </Menu>
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            color="primary"
-                            onClick={() => setComposerOpen(true)}
-                            startIcon={<GridViewIcon />}
-                            disabled={
-                                selectedData === undefined ||
-                                getSelectedCellRange(selectedData) === undefined
-                            }
-                            sx={{
-                                borderRadius: '8px',
-                                fontWeight: 600,
-                                px: 1.25,
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            CreateBlock
-                        </Button>
-                    </div>
-                      </>
+                                    {(FONT_FAMILIES.includes(fontName)
+                                        ? FONT_FAMILIES
+                                        : [fontName, ...FONT_FAMILIES]
+                                    ).map((f) => (
+                                        <MenuItem
+                                            key={f}
+                                            value={f}
+                                            sx={{fontSize: 12, fontFamily: f}}
+                                        >
+                                            {f}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                {/* Point size: an editable box with a dropdown, as in Excel and
+                                    Sheets. The stepper buttons that used to be here could only walk the
+                                    size one point at a time, so setting 24 took fourteen clicks. */}
+                                <div
+                                    className={styles.fontSize}
+                                    ref={fontSizeBoxRef}
+                                >
+                                    <input
+                                        aria-label="Font size"
+                                        value={fontPtDraft ?? String(fontPt)}
+                                        disabled={!hasSelectedData}
+                                        onChange={(e) =>
+                                            setFontPtDraft(e.target.value)
+                                        }
+                                        onBlur={() => {
+                                            if (fontPtDraft !== null)
+                                                applyFontSize(
+                                                    Number(fontPtDraft)
+                                                )
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter')
+                                                e.currentTarget.blur()
+                                            // Escape abandons the edit and shows the real size again.
+                                            if (e.key === 'Escape') {
+                                                setFontPtDraft(null)
+                                                e.currentTarget.blur()
+                                            }
+                                            // The old stepper behaviour, on the keys that mean it.
+                                            if (e.key === 'ArrowUp') {
+                                                e.preventDefault()
+                                                applyFontSize(fontPt + 1)
+                                            }
+                                            if (e.key === 'ArrowDown') {
+                                                e.preventDefault()
+                                                applyFontSize(fontPt - 1)
+                                            }
+                                        }}
+                                    />
+                                    <Tooltip title="Font size">
+                                        <span>
+                                            <IconButton
+                                                className={styles.fontSizeCaret}
+                                                size="small"
+                                                aria-label="Choose font size"
+                                                disabled={!hasSelectedData}
+                                                onClick={() =>
+                                                    setFontSizeAnchor(
+                                                        fontSizeBoxRef.current
+                                                    )
+                                                }
+                                            >
+                                                <ArrowDropDownIcon fontSize="small" />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                    {/* Anchored to the whole box, not to the
+                                        caret: hanging a menu off a 16px button
+                                        left it visibly out of line with the
+                                        field it belongs to. */}
+                                    <Menu
+                                        anchorEl={fontSizeAnchor}
+                                        open={Boolean(fontSizeAnchor)}
+                                        onClose={() => setFontSizeAnchor(null)}
+                                        anchorOrigin={{
+                                            vertical: 'bottom',
+                                            horizontal: 'left',
+                                        }}
+                                        transformOrigin={{
+                                            vertical: 'top',
+                                            horizontal: 'left',
+                                        }}
+                                        slotProps={{
+                                            paper: {
+                                                sx: {
+                                                    minWidth:
+                                                        fontSizeAnchor?.offsetWidth,
+                                                    maxHeight: 320,
+                                                },
+                                            },
+                                        }}
+                                    >
+                                        {FONT_PT_CHOICES.map((pt) => (
+                                            <MenuItem
+                                                key={pt}
+                                                selected={pt === fontPt}
+                                                sx={{
+                                                    fontSize: 12,
+                                                    minHeight: 28,
+                                                }}
+                                                onClick={() => {
+                                                    setFontSizeAnchor(null)
+                                                    applyFontSize(pt)
+                                                }}
+                                            >
+                                                {pt}
+                                            </MenuItem>
+                                        ))}
+                                    </Menu>
+                                </div>
+                                <Tooltip title="Increase font size">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Increase font size"
+                                            disabled={!hasSelectedData}
+                                            onClick={() =>
+                                                applyFontSize(nextFontPt(1))
+                                            }
+                                        >
+                                            <TextIncreaseIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <Tooltip title="Decrease font size">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Decrease font size"
+                                            disabled={!hasSelectedData}
+                                            onClick={() =>
+                                                applyFontSize(nextFontPt(-1))
+                                            }
+                                        >
+                                            <TextDecreaseIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Font style */}
+                            <div className={styles.section}>
+                                <Tooltip title="Bold">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Bold"
+                                            onClick={onToggleBold}
+                                            color={bold ? 'primary' : 'default'}
+                                            disabled={!hasSelectedData}
+                                        >
+                                            <FormatBoldIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <Tooltip title="Italic">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Italic"
+                                            onClick={onToggleItalic}
+                                            color={
+                                                italic ? 'primary' : 'default'
+                                            }
+                                            disabled={!hasSelectedData}
+                                        >
+                                            <FormatItalicIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <Tooltip title="Underline">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Underline"
+                                            onClick={onToggleUnderline}
+                                            color={
+                                                underline
+                                                    ? 'primary'
+                                                    : 'default'
+                                            }
+                                            disabled={!hasSelectedData}
+                                        >
+                                            <FormatUnderlinedIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <Tooltip title="Strikethrough">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Strikethrough"
+                                            onClick={onToggleStrike}
+                                            color={
+                                                strike ? 'primary' : 'default'
+                                            }
+                                            disabled={!hasSelectedData}
+                                        >
+                                            <StrikethroughS
+                                                fontSize="small"
+                                                style={{
+                                                    textDecoration:
+                                                        'line-through',
+                                                }}
+                                            />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Colour and borders */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Text"
+                                    tip="Text colour"
+                                    icon={
+                                        <FormatColorTextIcon fontSize="small" />
+                                    }
+                                    onClick={() => setColorPicking('font')}
+                                    disabled={!hasSelectedData}
+                                />
+                                <ToolButton
+                                    label="Fill"
+                                    tip="Cell fill colour"
+                                    icon={
+                                        <FormatColorFillIcon fontSize="small" />
+                                    }
+                                    onClick={() => setColorPicking('fill')}
+                                    disabled={!hasSelectedData}
+                                />
+                                <ToolButton
+                                    label="Borders"
+                                    tip="Cell borders"
+                                    icon={<BorderIcon fontSize="small" />}
+                                    onClick={() => setBorderOpen(true)}
+                                    disabled={!hasSelectedData}
+                                />
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Alignment */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Align"
+                                    tip="Alignment"
+                                    icon={
+                                        <ArrowDropDownIcon fontSize="small" />
+                                    }
+                                    onClick={onAlignClick}
+                                    disabled={!hasSelectedData}
+                                />
+                                <ToolButton
+                                    label="Wrap"
+                                    tip="Wrap text in the cell"
+                                    icon={<WrapTextIcon fontSize="small" />}
+                                    onClick={onToggleWrapText}
+                                    disabled={!hasSelectedData}
+                                    active={wrapText}
+                                />
+                                <ToolButton
+                                    label="Merge"
+                                    tip="Merge or split the selected cells"
+                                    icon={<MergeCellsIcon />}
+                                    onClick={onMergeOrSplitClick}
+                                    disabled={mergedOn === null}
+                                    active={!!mergedOn}
+                                />
+                            </div>
+
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* number formatter */}
+                            <div className={styles.section}>
+                                <Select
+                                    size="small"
+                                    value={numberFormat}
+                                    onChange={onNumberFormatChange}
+                                    displayEmpty
+                                    disabled={!hasSelectedData}
+                                    sx={{
+                                        minWidth: 100,
+                                        maxHeight: 30,
+                                        fontSize: 12,
+                                    }}
+                                >
+                                    <MenuItem
+                                        value="general"
+                                        sx={{fontSize: 12}}
+                                    >
+                                        General
+                                    </MenuItem>
+                                    <MenuItem
+                                        value="number"
+                                        sx={{fontSize: 12}}
+                                    >
+                                        Number
+                                    </MenuItem>
+                                    <MenuItem
+                                        value="fraction"
+                                        sx={{fontSize: 12}}
+                                    >
+                                        Fraction
+                                    </MenuItem>
+                                    <MenuItem
+                                        value="percent"
+                                        sx={{fontSize: 12}}
+                                    >
+                                        Percent
+                                    </MenuItem>
+                                    <MenuItem value="text" sx={{fontSize: 12}}>
+                                        Text
+                                    </MenuItem>
+                                    <MenuItem value="date" sx={{fontSize: 12}}>
+                                        Date
+                                    </MenuItem>
+                                    <MenuItem value="time" sx={{fontSize: 12}}>
+                                        Time
+                                    </MenuItem>
+                                </Select>
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Cells. The insert button carries the noun; its
+                                delete twin is a bare minus beside it, which
+                                reads as "one fewer of these" without spending
+                                a second label on the same word. */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Rows"
+                                    tip="Insert rows above the selection"
+                                    icon={
+                                        <TableRowsOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={() => lineOp('row', 'insert')}
+                                    disabled={!hasSelectedData}
+                                />
+                                <Tooltip title="Delete the selected rows">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Delete rows"
+                                            disabled={!hasSelectedData}
+                                            onClick={() =>
+                                                lineOp('row', 'delete')
+                                            }
+                                        >
+                                            <RemoveCircleOutlineIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <ToolButton
+                                    label="Cols"
+                                    tip="Insert columns before the selection"
+                                    icon={
+                                        <ViewWeekOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={() => lineOp('col', 'insert')}
+                                    disabled={!hasSelectedData}
+                                />
+                                <Tooltip title="Delete the selected columns">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="Delete columns"
+                                            disabled={!hasSelectedData}
+                                            onClick={() =>
+                                                lineOp('col', 'delete')
+                                            }
+                                        >
+                                            <RemoveCircleOutlineIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Editing */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label="Clear"
+                                    tip="Clear the contents, keeping the formatting"
+                                    icon={<BackspaceIcon fontSize="small" />}
+                                    onClick={clearCells}
+                                    disabled={!hasSelectedData}
+                                />
+                                <ToolButton
+                                    label="Find"
+                                    tip="Find and replace"
+                                    icon={<SearchIcon fontSize="small" />}
+                                    onClick={() => globalStore.requestFind()}
+                                />
+                            </div>
+                        </>
                     ) : null}
                 </div>
-
-                {/* GitHub star badge (far right) */}
-                <GithubStar />
 
                 {/* Color pickers */}
                 <Modal
@@ -1448,6 +2296,28 @@ export const Toolbar = observer(
                         </button>
                     </div>
                 </Popover>
+
+                {/* The dialog is content, not a modal of its own — the cell
+                    context menu wraps it the same way. */}
+                <Dialog
+                    open={!!cfRange}
+                    onClose={() => setCfRange(null)}
+                    disableScrollLock
+                    disableAutoFocus
+                    disableEnforceFocus
+                    disableRestoreFocus
+                    container={document.body}
+                    PaperProps={{sx: {zIndex: 2000, p: 0}}}
+                >
+                    {cfRange && (
+                        <ConditionalFormattingDialog
+                            dataSvc={DATA_SERVICE}
+                            sheetIdx={cfRange.sheetIdx}
+                            range={cfRange}
+                            onClose={() => setCfRange(null)}
+                        />
+                    )}
+                </Dialog>
 
                 {composerOpen && (
                     <BlockComposerComponent

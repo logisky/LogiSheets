@@ -33,7 +33,12 @@ async function cellCenter(page: Page, col: string, row: number) {
 }
 
 // Type a value into a cell and commit it.
-async function typeIntoCell(page: Page, col: string, row: number, text: string) {
+async function typeIntoCell(
+    page: Page,
+    col: string,
+    row: number,
+    text: string
+) {
     const c = await cellCenter(page, col, row)
     await page.mouse.click(c.x, c.y)
     await page.keyboard.type(text)

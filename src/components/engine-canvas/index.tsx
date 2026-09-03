@@ -18,6 +18,7 @@ import {DiffLayer} from '@/components/diff-layer'
 import type {DiffState} from '@/components/diff-layer'
 import {CanvasContextMenu, type ContextMenuTrigger} from './canvas-context-menu'
 import {useCraftInputInterception} from '@/core/craft-input/use-interception'
+import {globalStore} from '@/store'
 import styles from './engine-canvas.module.scss'
 
 export interface EngineCanvasProps {
@@ -75,6 +76,11 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
         engine.on('find', openFind)
         return () => engine.off('find', openFind)
     }, [engine])
+    // The toolbar's Find button raises a store request rather than a keystroke.
+    const findRequest = globalStore.findRequest
+    useEffect(() => {
+        if (findRequest > 0) setFindOpen(true)
+    }, [findRequest])
     const getActiveCell = useCallback(() => {
         const r = getSelectedCellRange(selectedDataRef.current)
         return r ? {row: r.startRow, col: r.startCol} : null

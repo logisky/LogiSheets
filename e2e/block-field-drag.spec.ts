@@ -1,4 +1,5 @@
 import {test, expect, type Page} from '@playwright/test'
+import {createBlockButton} from './toolbar'
 
 /**
  * End-to-end coverage for reordering a block's fields by dragging a field-name
@@ -44,7 +45,7 @@ async function createTwoFieldBlock(page: Page) {
     await page.mouse.move(start.x + 3, start.y + 3, {steps: 3})
     await page.mouse.up()
 
-    const create = page.getByRole('button', {name: /CreateBlock/i})
+    const create = await createBlockButton(page)
     await expect(create).toBeEnabled()
     await create.click()
 

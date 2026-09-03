@@ -27,7 +27,11 @@ async function waitForGrid(page: Page) {
     ).toBeVisible({timeout: 30_000})
 }
 
-async function typeInCell(page: Page, pos: {x: number; y: number}, text: string) {
+async function typeInCell(
+    page: Page,
+    pos: {x: number; y: number},
+    text: string
+) {
     await gridCanvas(page).click({position: pos})
     await page.keyboard.type(text)
     await page.keyboard.press('Enter')

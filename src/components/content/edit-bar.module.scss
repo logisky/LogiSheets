@@ -1,37 +1,119 @@
+/**
+ * The formula bar, in the shape every spreadsheet uses:
+ *
+ *   [ name box ] │ fx │ [ formula ......................... ] [ toggles ]
+ *
+ * It used to be three bare 1px boxes floating on the page background with a
+ * 30px empty gap in the middle, which read as unfinished. Now it is one card
+ * matching the toolbar above it, with the `fx` marker that makes a formula bar
+ * recognisable at a glance, and the two debug toggles moved off the spot where
+ * `fx` belongs to the quiet end of the row.
+ */
+
+$line: #e4e7ec;
+$line-strong: #d0d5dd;
+$ink: #1f2937;
+$ink-muted: #5b6472;
+$accent: #1d4ed8;
+
 .host {
-  flex-direction: row;
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
   box-sizing: border-box;
   width: 100%;
-  height: 24px;
-  padding: 0 16px;
-  align-items: stretch;
+  height: 30px;
+  background: #fff;
+  border: 1px solid $line;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  overflow: hidden;
 }
+
+/* The name box. No border of its own — the rule between it and `fx` is the
+   separator, which is how Sheets and Excel draw it. */
 .a1notation {
-  justify-content: center;
-  align-items: center;
+  width: 116px;
+  flex: 0 0 116px;
+  border: none;
+  border-right: 1px solid $line;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 12px;
+  color: $ink;
+  outline: none;
+}
+.a1notation:focus {
+  box-shadow: inset 0 0 0 2px rgba(29, 78, 216, 0.35);
+}
+.a1notation:disabled {
+  background: #f9fafb;
+  color: #98a2b3;
+}
+
+/* The `fx` marker. Italic serif is the convention — it is read as a symbol
+   rather than as a word. */
+.fx {
   display: flex;
-  border: 1px solid #e2e6ed;
-  width: 126px;
-  background-color: #fff;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  border-right: 1px solid $line;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: $ink-muted;
+  user-select: none;
 }
-.middle {
-  width: 30px;
-}
-// Wraps either a CodeMirror-based FormulaEditor or a plain readonly input.
-// FormulaEditor renders its own `.formula-editor` <div> inside, so this
-// wrapper just provides the bar slot — flex-1 to fill remaining width,
-// matching the previous <input> visuals.
+
+/* Wraps either a CodeMirror-based FormulaEditor or a plain readonly input.
+   FormulaEditor renders its own `.formula-editor` <div> inside, so this
+   wrapper just provides the bar slot. */
 .formula {
   margin: 0;
-  border: 1px solid #e2e6ed;
+  border: none;
   flex: 1;
   min-width: 0;
-  padding: 0;
-  text-indent: 10px;
-  background-color: #fff;
+  padding: 0 10px;
+  background: #fff;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   overflow: hidden;
+  font-size: 12px;
+  color: $ink;
+  outline: none;
+}
+
+/* The two inspection toggles (show formula/value, show validation formula).
+   They belong to this app rather than to the formula-bar convention, so they
+   sit at the trailing edge, quiet until used. */
+.toggles {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border-left: 1px solid $line;
+}
+.toggles :global(.MuiIconButton-root) {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 4px;
+  color: $ink-muted;
+}
+.toggles :global(.MuiIconButton-root:hover) {
+  background: #f2f4f7;
+  color: $ink;
+}
+.toggles :global(.MuiIconButton-colorPrimary) {
+  background: #e8eefc;
+  color: $accent;
+}
+.toggles :global(.MuiIconButton-root.Mui-disabled) {
+  color: #c8cdd6;
+}
+.toggles :global(.MuiSvgIcon-root) {
+  font-size: 16px;
 }

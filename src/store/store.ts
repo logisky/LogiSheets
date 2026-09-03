@@ -101,6 +101,17 @@ export class GlobalStore {
         this.pendingCommentCell = null
     }
 
+    // A one-shot request to open the find/replace overlay, raised by the
+    // toolbar's Find button and consumed by EngineCanvas (which owns the
+    // dialog). The engine's own Ctrl+F path emits a `find` event instead; both
+    // end at the same state. A counter rather than a boolean so a second click
+    // re-opens it after the user closed it.
+    @observable findRequest = 0
+
+    @action requestFind() {
+        this.findRequest += 1
+    }
+
     // ─── Formula auditing: trace precedents / dependents ────────────────────
     // A one-shot request raised by the right-click "追踪引用/追踪从属" items,
     // fulfilled by TraceLayer (which has workbook access): it calls the engine's

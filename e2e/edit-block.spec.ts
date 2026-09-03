@@ -1,4 +1,5 @@
 import {test, expect, type Page} from '@playwright/test'
+import {createBlockButton} from './toolbar'
 
 /**
  * End-to-end coverage for "Edit block…" — the cell right-click entry that opens
@@ -37,7 +38,12 @@ async function rightClickCell(page: Page, col: string, row: number) {
     await page.mouse.click(c.x, c.y, {button: 'right'})
 }
 
-async function typeIntoCell(page: Page, col: string, row: number, text: string) {
+async function typeIntoCell(
+    page: Page,
+    col: string,
+    row: number,
+    text: string
+) {
     const c = await cellCenter(page, col, row)
     await page.mouse.click(c.x, c.y)
     await page.keyboard.type(text)
@@ -71,7 +77,7 @@ const dialog = (page: Page) => page.getByRole('dialog')
 async function createPeopleBlock(page: Page) {
     const c = await cellCenter(page, 'B', 2)
     await page.mouse.click(c.x, c.y)
-    await page.getByRole('button', {name: 'CreateBlock'}).click()
+    await (await createBlockButton(page)).click()
 
     const d = dialog(page)
     await expect(d).toBeVisible({timeout: 10_000})

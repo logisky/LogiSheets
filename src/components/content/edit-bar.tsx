@@ -259,41 +259,7 @@ export const EditBarComponent = observer(function EditBarComponent({
                 onBlur={(e) => locationChange(e.target.value)}
                 disabled={!hasSelectedData}
             />
-            <div className={styles.middle} />
-            <Tooltip title="Show formula or value">
-                <IconButton
-                    size="small"
-                    sx={{p: 0.4}}
-                    color={showFormula ? 'primary' : 'default'}
-                    onClick={onToggleShowFormularOrValue}
-                    disabled={!hasSelectedData}
-                >
-                    <TransformOutlined fontSize="small" />
-                </IconButton>
-            </Tooltip>
-            {/* Toggle: show the bound block field's validation formula
-                (the shadow-cell expression that drives the warning marker).
-                Read-only — purely for debugging. Disabled when no cell is
-                selected OR when the selected cell has no validation. */}
-            <Tooltip
-                title={
-                    validationText
-                        ? 'Show validation formula'
-                        : 'No validation on this cell'
-                }
-            >
-                <span>
-                    <IconButton
-                        size="small"
-                        sx={{p: 0.4}}
-                        color={showValidation ? 'primary' : 'default'}
-                        onClick={() => setShowValidation((v) => !v)}
-                        disabled={!hasSelectedData || !validationText}
-                    >
-                        <RuleOutlined fontSize="small" />
-                    </IconButton>
-                </span>
-            </Tooltip>
+            <div className={styles.fx}>fx</div>
             {!hasSelectedData ? (
                 <input className={styles.formula} value="" disabled readOnly />
             ) : showValidation ? (
@@ -337,6 +303,42 @@ export const EditBarComponent = observer(function EditBarComponent({
             ) : (
                 <input className={styles.formula} value={rawValue} readOnly />
             )}
+            <div className={styles.toggles}>
+                <Tooltip title="Show formula or value">
+                    <IconButton
+                        size="small"
+                        sx={{p: 0.4}}
+                        color={showFormula ? 'primary' : 'default'}
+                        onClick={onToggleShowFormularOrValue}
+                        disabled={!hasSelectedData}
+                    >
+                        <TransformOutlined fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+                {/* Toggle: show the bound block field's validation formula
+                    (the shadow-cell expression that drives the warning marker).
+                    Read-only — purely for debugging. Disabled when no cell is
+                    selected OR when the selected cell has no validation. */}
+                <Tooltip
+                    title={
+                        validationText
+                            ? 'Show validation formula'
+                            : 'No validation on this cell'
+                    }
+                >
+                    <span>
+                        <IconButton
+                            size="small"
+                            sx={{p: 0.4}}
+                            color={showValidation ? 'primary' : 'default'}
+                            onClick={() => setShowValidation((v) => !v)}
+                            disabled={!hasSelectedData || !validationText}
+                        >
+                            <RuleOutlined fontSize="small" />
+                        </IconButton>
+                    </span>
+                </Tooltip>
+            </div>
         </div>
     )
 })

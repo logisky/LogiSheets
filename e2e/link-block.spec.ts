@@ -1,4 +1,5 @@
 import {test, expect, type Page} from '@playwright/test'
+import {createBlockButton} from './toolbar'
 
 /**
  * End-to-end coverage for the "link a range to a block" right-click action
@@ -43,7 +44,9 @@ test('clicking Link opens the picker (getLinkableBlocks resolves)', async ({
     page,
 }) => {
     await gridCanvas(page).click({button: 'right', position: CELL})
-    await menu(page).getByRole('menuitem', {name: /Link to block/}).click()
+    await menu(page)
+        .getByRole('menuitem', {name: /Link to block/})
+        .click()
     // The picker always offers "Create a new block…"; its appearance proves the
     // getLinkableBlocks call (app → worker → wasm) came back without erroring.
     await expect(
@@ -55,35 +58,33 @@ test('Create-a-new-block opens the block-composer (convert mode)', async ({
     page,
 }) => {
     await gridCanvas(page).click({button: 'right', position: CELL})
-    await menu(page).getByRole('menuitem', {name: /Link to block/}).click()
+    await menu(page)
+        .getByRole('menuitem', {name: /Link to block/})
+        .click()
     await page.getByRole('menuitem', {name: /Create a new block/}).click()
     // "Create new" reuses the existing block-composer in convert mode, so the
     // block gets a ref name + fields at creation (a visible, schema'd block).
     // The composer exposes the ref-name field and its Save action.
     await expect(page.getByText('Block Ref Name')).toBeVisible()
-    await expect(
-        page.getByRole('button', {name: /Save Changes/})
-    ).toBeVisible()
+    await expect(page.getByRole('button', {name: /Save Changes/})).toBeVisible()
 })
 
 test('linking a range to a block draws the outer border', async ({page}) => {
     // Create a 1×1 block at the current selection via the toolbar composer.
     await gridCanvas(page).click({position: {x: 60, y: 30}})
-    await page.getByRole('button', {name: 'CreateBlock'}).click()
+    await (await createBlockButton(page)).click()
     await page.getByPlaceholder('e.g. customers').fill('myblock')
     await page.getByRole('button', {name: /Save Changes/}).click()
     await expect(page.getByText(/configured successfully/i)).toBeVisible()
 
     // Link a *different* single cell (matching column count) to that block.
     await gridCanvas(page).click({button: 'right', position: CELL})
-    await menu(page).getByRole('menuitem', {name: /Link to block/}).click()
-    await page
-        .getByRole('menuitem', {name: /Block #\d+ · .* myblock/})
+    await menu(page)
+        .getByRole('menuitem', {name: /Link to block/})
         .click()
+    await page.getByRole('menuitem', {name: /Block #\d+ · .* myblock/}).click()
 
     // The linked source range now carries the dashed outer border.
     await expect(page.locator('[data-testid="link-border"]')).toHaveCount(1)
-    await expect(
-        page.locator('[data-testid="link-border"]')
-    ).toBeVisible()
+    await expect(page.locator('[data-testid="link-border"]')).toBeVisible()
 })
