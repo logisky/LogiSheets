@@ -1,4 +1,7 @@
 import {
+    BlockActor,
+    BlockModifyInfo,
+    BlockOp,
     WorkbookClient,
     Transaction,
     Payload,
@@ -26,6 +29,125 @@ function permissionDeniedError() {
     return {msg: 'permission denied by modify policy', ty: 403}
 }
 
+/**
+ * Which of the block's declared operations a payload counts as.
+ *
+ * `undefined` means the payload is not one of the five a block can single out
+ * (removing or moving the whole block, restyling it); those keep the older
+ * owner-identity check below rather than silently becoming unguarded.
+ */
+export function blockOpForPayload(type: string): BlockOp | undefined {
+    switch (type) {
+        case 'insertRowsInBlock':
+        case 'deleteRowsInBlock':
+        case 'insertColsInBlock':
+        case 'deleteColsInBlock':
+        case 'resizeBlock':
+            return 'insertDeleteLines'
+        case 'removeBlock':
+            return 'removeBlock'
+        // `setBlockPermissions` belongs here because handing a block's
+        // policies over is itself a schema-level change — otherwise anyone
+        // could unlock a block simply by asking to.
+        case 'bindFormSchema':
+        case 'bindRandomSchema':
+        case 'upsertFieldRenderInfo':
+        case 'blockLineNameFieldUpdate':
+        case 'setBlockPermissions':
+            return 'modifySchema'
+        case 'cellInput':
+        case 'blockInput':
+            return 'cellInput'
+        case 'reorderBlockLines':
+        case 'moveBlockLine':
+            return 'sortByField'
+        case 'setBlockDescription':
+            return 'modifyDescription'
+        default:
+            return undefined
+    }
+}
+
+/**
+ * Ask the engine whether this caller may perform `op` on the block.
+ *
+ * The decision deliberately is not made here: the block's owner and its
+ * per-operation policies are saved in the file, and the same question is asked
+ * by the craft runtime and by Watson, so re-implementing the rules in the app
+ * is how the three come to disagree. `undefined` when the engine cannot say
+ * (no such block, or an unidentified caller), leaving the caller to fall back.
+ */
+async function mayCallerModify(
+    client: WorkbookClient,
+    sheetIdx: number,
+    blockId: number,
+    op: BlockOp,
+    callerUuid: string
+): Promise<boolean | undefined> {
+    const resolved = callerRegistry.resolveActor(callerUuid)
+    if (!resolved) return undefined
+    const actor: BlockActor =
+        resolved.type === 'user'
+            ? 'user'
+            : {type: 'craft', value: resolved.craftId}
+    const verdict = await client.mayModifyBlock({sheetIdx, blockId, op, actor})
+    if (isErrorMessage(verdict)) return undefined
+    return verdict
+}
+
+/** A block's governance metadata, read once per block per transaction. */
+async function modifyInfo(
+    client: WorkbookClient,
+    cache: Map<string, BlockModifyInfo | undefined>,
+    ref: {sheetIdx: number; blockId: number}
+): Promise<BlockModifyInfo | undefined> {
+    const key = `${ref.sheetIdx}-${ref.blockId}`
+    if (cache.has(key)) return cache.get(key)
+    const got = await client.getBlockModifyInfo({
+        sheetIdx: ref.sheetIdx,
+        blockId: ref.blockId,
+    })
+    const info = isErrorMessage(got) ? undefined : got
+    cache.set(key, info)
+    return info
+}
+
+/**
+ * Whether the caller is the block's owner according to the *saved* owner.
+ *
+ * A fact check, not a policy decision, so it belongs here rather than in the
+ * core: `resolveActor` turns the session uuid back into the craft id that a
+ * block's `owner` was written as.
+ */
+export function isPersistedOwner(
+    info: BlockModifyInfo | undefined,
+    callerUuid: string
+): boolean {
+    if (!info?.owner) return false
+    const resolved = callerRegistry.resolveActor(callerUuid)
+    return resolved?.type === 'craft' && resolved.craftId === info.owner
+}
+
+/**
+ * Whether the block states a policy for `op` at all — an explicit override, or
+ * a default that is not simply "anyone".
+ *
+ * This is not a permission decision (that is `mayModifyBlock`'s), it is the
+ * difference between a block that says "anyone may" and one that says nothing.
+ * A block created with an `owner` but no policy falls in the second group, and
+ * for those the in-memory owner check below still applies — dropping it just
+ * because the engine reads an unstated policy as `all` would make such a block
+ * *less* protected than it was before the engine knew about policies.
+ */
+export function declaresPolicy(
+    info: BlockModifyInfo | undefined,
+    op: BlockOp
+): boolean {
+    if (!info) return false
+    const explicit = (info.permissions as Record<string, unknown>)[op]
+    return explicit !== undefined || info.modifyPolicy !== 'all'
+}
+
 function isBlockPayload(payload: Payload): boolean {
     const blockTypes = [
         'blockInput',
@@ -43,6 +165,10 @@ function isBlockPayload(payload: Payload): boolean {
         'deleteColsInBlock',
         'insertRowsInBlock',
         'deleteRowsInBlock',
+        'reorderBlockLines',
+        'moveBlockLine',
+        'setBlockDescription',
+        'setBlockPermissions',
     ]
     return blockTypes.includes(payload.type)
 }
@@ -124,7 +250,8 @@ async function lookupUserEditableShadow(
 async function validateCellInput(
     client: WorkbookClient,
     payload: Payload,
-    callerUuid: string
+    callerUuid: string,
+    modifyInfoCache: Map<string, BlockModifyInfo | undefined>
 ): Promise<boolean> {
     const v = payload.value as {
         sheetIdx: number
@@ -189,10 +316,39 @@ async function validateCellInput(
     if (fieldEditable === true) {
         return true
     }
-    if (fieldEditable === false && owner !== callerUuid) {
+
+    const info = await modifyInfo(client, modifyInfoCache, {
+        sheetIdx: v.sheetIdx,
+        blockId,
+    })
+    const isOwner = isPersistedOwner(info, callerUuid) || owner === callerUuid
+
+    // A field marked non-editable is off limits to everyone but the craft that
+    // maintains it — a computed column, typically. Finer than the block's own
+    // policy, so it is decided first and either notion of ownership counts.
+    if (fieldEditable === false && !isOwner) {
         return false
     }
 
+    // Then the block's `cellInput` policy. This is the path a person typing
+    // into a cell takes (the grid sends `cellInput`, not `blockInput`), so
+    // without it the policy would be the one nobody enforced.
+    const allowed = await mayCallerModify(
+        client,
+        v.sheetIdx,
+        blockId,
+        'cellInput',
+        callerUuid
+    )
+    if (allowed === false) {
+        return false
+    }
+    if (allowed === true && declaresPolicy(info, 'cellInput')) {
+        return true
+    }
+
+    // The block declares nothing about typing: keep the older in-memory owner
+    // rule rather than letting an unstated policy read as "anyone may".
     if (owner !== undefined && owner !== callerUuid) {
         return false
     }
@@ -276,12 +432,19 @@ function applyPatch() {
             callerUuid: string
         ): Promise<boolean> {
             const tx = transaction as Transaction
+            // One metadata read per distinct block, not per payload: a
+            // transaction touching a block usually touches it several times.
+            const modifyInfoCache = new Map<
+                string,
+                BlockModifyInfo | undefined
+            >()
             for (const payload of tx.payloads) {
                 if (payload.type === 'cellInput') {
                     const ok = await validateCellInput(
                         this,
                         payload,
-                        callerUuid
+                        callerUuid,
+                        modifyInfoCache
                     )
                     if (!ok) {
                         return false
@@ -320,6 +483,40 @@ function applyPatch() {
                 }
                 const ref = getBlockRefFromPayload(payload)
                 if (!ref) continue
+
+                // What the block itself declares, which is saved in the file —
+                // unlike the in-memory owner map below, this survives a
+                // reload, so a craft's table is still protected the next time
+                // the workbook is opened.
+                const op = blockOpForPayload(payload.type)
+                if (op) {
+                    const allowed = await mayCallerModify(
+                        this,
+                        ref.sheetIdx,
+                        ref.blockId,
+                        op,
+                        callerUuid
+                    )
+                    if (allowed === false) {
+                        toast.error(
+                            `Operation blocked: block ${ref.blockId} on sheet ${ref.sheetIdx} does not allow ${op} by this caller.`
+                        )
+                        return false
+                    }
+                    // Allowed — but only take that as the final word when the
+                    // block actually stated something. Otherwise fall through:
+                    // see `declaresPolicy`.
+                    if (
+                        allowed === true &&
+                        declaresPolicy(
+                            await modifyInfo(this, modifyInfoCache, ref),
+                            op
+                        )
+                    ) {
+                        continue
+                    }
+                }
+
                 const owner = callerRegistry.getBlockOwner(
                     ref.sheetIdx,
                     ref.blockId

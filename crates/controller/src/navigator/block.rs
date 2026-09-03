@@ -1,7 +1,7 @@
 use imbl::Vector;
 use logisheets_base::{ColId, NormalCellId, RowId};
 
-use crate::edit_action::ModifyPolicy;
+use crate::edit_action::{BlockPermissions, ModifyPolicy};
 
 #[derive(Debug, Clone)]
 pub struct BlockPlace {
@@ -11,7 +11,17 @@ pub struct BlockPlace {
     next_avail_row: RowId,
     next_avail_col: ColId,
     pub owner: String,
+    /// The block's default write policy: what an operation with no explicit
+    /// entry in `permissions` falls back to.
     pub modify_policy: ModifyPolicy,
+    /// What this block is for, in prose. Written for an AI reading the sheet:
+    /// a block's schema says what shape its records are, and nothing else says
+    /// what they mean or how they are meant to be used.
+    pub description: String,
+    /// Per-operation overrides of `modify_policy`. Empty — which is every
+    /// block loaded from a file written before this existed — means the single
+    /// policy governs everything, exactly as it used to.
+    pub permissions: BlockPermissions,
 }
 
 impl BlockPlace {
@@ -34,7 +44,21 @@ impl BlockPlace {
             next_avail_col,
             owner,
             modify_policy,
+            description: String::new(),
+            permissions: BlockPermissions::default(),
         }
+    }
+
+    /// Replace the prose description. Separate from [`Self::new`] because a
+    /// block is usually created before anyone has anything to say about it.
+    pub fn with_description(mut self, description: String) -> Self {
+        self.description = description;
+        self
+    }
+
+    pub fn with_permissions(mut self, permissions: BlockPermissions) -> Self {
+        self.permissions = permissions;
+        self
     }
 
     pub fn resize(self, row_cnt: Option<usize>, col_cnt: Option<usize>) -> Self {
@@ -70,6 +94,8 @@ impl BlockPlace {
             next_avail_col: result.next_avail_col,
             owner: result.owner,
             modify_policy: result.modify_policy,
+            description: result.description,
+            permissions: result.permissions,
         }
     }
 
@@ -89,6 +115,8 @@ impl BlockPlace {
             next_avail_col: self.next_avail_col,
             owner: self.owner,
             modify_policy: self.modify_policy,
+            description: self.description,
+            permissions: self.permissions,
         }
     }
 
@@ -108,6 +136,8 @@ impl BlockPlace {
             next_avail_col: new_next_avail_col,
             owner: self.owner,
             modify_policy: self.modify_policy,
+            description: self.description,
+            permissions: self.permissions,
         }
     }
 
@@ -123,6 +153,8 @@ impl BlockPlace {
             next_avail_col: self.next_avail_col,
             owner: self.owner,
             modify_policy: self.modify_policy,
+            description: self.description,
+            permissions: self.permissions,
         }
     }
 
@@ -138,6 +170,8 @@ impl BlockPlace {
             next_avail_col: self.next_avail_col,
             owner: self.owner,
             modify_policy: self.modify_policy,
+            description: self.description,
+            permissions: self.permissions,
         }
     }
 
@@ -196,6 +230,8 @@ mod tests {
             next_avail_col: 0,
             owner: String::new(),
             modify_policy: ModifyPolicy::All,
+            description: String::new(),
+            permissions: BlockPermissions::default(),
         }
     }
 

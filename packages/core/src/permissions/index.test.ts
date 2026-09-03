@@ -49,3 +49,25 @@ describe('isFieldUserEditable', () => {
         expect(isFieldUserEditable(undefined)).toBe(true)
     })
 })
+
+describe('resolveActor', () => {
+    it('translates a uuid back to the identity the engine knows', () => {
+        // Block owners are craft ids saved in the file; these uuids only exist
+        // for this session, so the two have to be bridged before the engine
+        // can be asked anything.
+        const user = callerRegistry.getUserUuid()
+        const craft = callerRegistry.getCraftUuid('data-gateway')
+        expect(callerRegistry.resolveActor(user)).toEqual({type: 'user'})
+        expect(callerRegistry.resolveActor(craft)).toEqual({
+            type: 'craft',
+            craftId: 'data-gateway',
+        })
+    })
+
+    it('does not pass off an unknown uuid as the user', () => {
+        // Failing open to `user` here would hand an unidentified caller
+        // whatever the user is allowed to do.
+        expect(callerRegistry.resolveActor('never-issued')).toBeUndefined()
+        expect(callerRegistry.resolveActor(undefined)).toBeUndefined()
+    })
+})

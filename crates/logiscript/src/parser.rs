@@ -130,6 +130,8 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
                 col_cnt: end_col - start_col + 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }))
         }
         Rule::block_convert => {

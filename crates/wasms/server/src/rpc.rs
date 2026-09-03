@@ -181,9 +181,12 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.row,
             params.col,
         )),
-        Message::GetRowHeight(params) => {
-            res_to_js(ws::get_row_height(&mgr, id, params.sheet_id, params.row_idx))
-        }
+        Message::GetRowHeight(params) => res_to_js(ws::get_row_height(
+            &mgr,
+            id,
+            params.sheet_id,
+            params.row_idx,
+        )),
         Message::GetColWidth(params) => {
             res_to_js(ws::get_col_width(&mgr, id, params.sheet_id, params.col_idx))
         }
@@ -213,26 +216,27 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             controller::toggle_status(&mut mgr, id, params.use_temp);
             JsValue::NULL
         }
-        Message::BatchGetCellInfoById(params) => {
-            res_to_js(controller::batch_get_cell_info_by_id(&mut mgr, id, params.ids))
-        }
+        Message::BatchGetCellInfoById(params) => res_to_js(controller::batch_get_cell_info_by_id(
+            &mut mgr, id, params.ids,
+        )),
         Message::BatchGetCellCoordinateWithSheetById(params) => res_to_js(
             controller::batch_get_cell_coordinate_with_sheet_by_id(&mut mgr, id, params.ids),
         ),
         Message::GetSheetNameByIdx(params) => {
             res_to_js(controller::get_sheet_name_by_idx(&mut mgr, id, params.idx))
         }
-        Message::LoadWorkbook(params) => {
-            ok_to_js(&controller::read_file(&mut mgr, id, params.name, &params.content))
-        }
-        Message::SaveWorkbook(params) => {
-            ok_to_js(&controller::save_file(
-                &mut mgr,
-                id,
-                params.app_data,
-                params.resolve_block_refs.unwrap_or(false),
-            ))
-        }
+        Message::LoadWorkbook(params) => ok_to_js(&controller::read_file(
+            &mut mgr,
+            id,
+            params.name,
+            &params.content,
+        )),
+        Message::SaveWorkbook(params) => ok_to_js(&controller::save_file(
+            &mut mgr,
+            id,
+            params.app_data,
+            params.resolve_block_refs.unwrap_or(false),
+        )),
         Message::GetCellId(params) => res_to_js(controller::get_cell_id(
             &mut mgr,
             id,
@@ -278,9 +282,14 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.field_filter,
         )),
         Message::GetTempStatusChanges => res_to_js(controller::get_temp_status_changes(&mgr, id)),
-        Message::GetBlockDisplayWindow(params) => res_to_js(
-            controller::get_display_window_for_block(&mut mgr, id, params.sheet_id, params.block_id),
-        ),
+        Message::GetBlockDisplayWindow(params) => {
+            res_to_js(controller::get_display_window_for_block(
+                &mut mgr,
+                id,
+                params.sheet_id,
+                params.block_id,
+            ))
+        }
         Message::GetBlockRowId(params) => res_to_js(controller::get_block_row_id(
             &mut mgr,
             id,
@@ -317,6 +326,20 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.field,
             params.asc,
         )),
+        Message::MayModifyBlock(params) => res_to_js(controller::may_modify_block(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.block_id,
+            params.op,
+            params.actor,
+        )),
+        Message::GetBlockModifyInfo(params) => res_to_js(controller::get_block_modify_info(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.block_id,
+        )),
         Message::GetShadowCellId(params) => res_to_js(controller::get_shadow_cell_id(
             &mut mgr,
             id,
@@ -333,9 +356,11 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.col_idx,
             params.kind.unwrap_or_default(),
         )),
-        Message::GetShadowInfoById(params) => {
-            res_to_js(controller::get_shadow_info_by_id(&mut mgr, id, params.shadow_id))
-        }
+        Message::GetShadowInfoById(params) => res_to_js(controller::get_shadow_info_by_id(
+            &mut mgr,
+            id,
+            params.shadow_id,
+        )),
         Message::GetDiyCellIdWithBlockId(params) => ok_to_js(&ws::get_diy_cell_id_with_block_id(
             &mgr,
             id,
@@ -373,12 +398,17 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         Message::GetDisplayUnitsOfFormula(params) => {
             res_to_js(controller::get_display_units_of_formula(&params.formula))
         }
-        Message::GetRowInfo(params) => {
-            res_to_js(controller::get_row_info(&mgr, id, params.sheet_idx, params.row_idx))
-        }
-        Message::GetAvailableBlockId(params) => {
-            res_to_js(controller::get_available_block_id(&mut mgr, id, params.sheet_idx))
-        }
+        Message::GetRowInfo(params) => res_to_js(controller::get_row_info(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.row_idx,
+        )),
+        Message::GetAvailableBlockId(params) => res_to_js(controller::get_available_block_id(
+            &mut mgr,
+            id,
+            params.sheet_idx,
+        )),
         Message::CheckFormula(params) => {
             ok_to_js(&controller::check_formula(&mgr, id, params.formula))
         }
@@ -462,12 +492,18 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.row_cnt,
             params.col_cnt,
         )),
-        Message::GetAllBlocks(params) => {
-            res_to_js(ws::get_all_blocks(&mgr, id, params.sheet_idx, params.sheet_id))
-        }
-        Message::GetLinkableBlocks(params) => {
-            res_to_js(ws::get_linkable_blocks(&mgr, id, params.sheet_idx, params.col_cnt))
-        }
+        Message::GetAllBlocks(params) => res_to_js(ws::get_all_blocks(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.sheet_id,
+        )),
+        Message::GetLinkableBlocks(params) => res_to_js(ws::get_linkable_blocks(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.col_cnt,
+        )),
         Message::GetLinks(params) => res_to_js(ws::get_links(&mgr, id, params.sheet_idx)),
         Message::SaveCheckpoint(params) => ok_to_js(&ws::save_checkpoint(
             &mut mgr,

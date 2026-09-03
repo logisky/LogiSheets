@@ -849,8 +849,30 @@ impl Workbook {
             .ok_or(BasicError::BlockIdNotFound(sheet_id, block_id))?;
         Ok(crate::edit_action::BlockModifyInfo {
             owner: block.owner.clone(),
-            modify_policy: block.modify_policy.clone(),
+            modify_policy: block.modify_policy,
+            permissions: block.permissions.clone(),
+            description: block.description.clone(),
         })
+    }
+
+    /// Whether `actor` may perform `op` on this block.
+    ///
+    /// The engine cannot enforce this itself — a payload carries no trace of
+    /// who prompted it — so this is the question a host asks before it lets an
+    /// edit through. Answering it here keeps every host, and the craft
+    /// runtime, agreeing on what a policy means.
+    pub fn may_modify_block(
+        &self,
+        sheet_idx: usize,
+        block_id: BlockId,
+        op: crate::edit_action::BlockOp,
+        actor: &crate::edit_action::BlockActor,
+    ) -> Result<bool> {
+        let info = self.get_block_modify_info(sheet_idx, block_id)?;
+        Ok(info
+            .permissions
+            .policy_for(op, info.modify_policy)
+            .allows(actor, &info.owner))
     }
 
     pub fn get_available_block_id(&self, sheet_idx: usize) -> Result<usize> {
@@ -1280,9 +1302,8 @@ fn collect_func_ids(node: &ast::Node, out: &mut BTreeSet<FuncId>) {
                 collect_func_ids(field_condition, out);
             }
         },
-        ast::PureNode::Value(_)
-        | ast::PureNode::Reference(_)
-        | ast::PureNode::ArrayConstant(_) => {}
+        ast::PureNode::Value(_) | ast::PureNode::Reference(_) | ast::PureNode::ArrayConstant(_) => {
+        }
     }
 }
 

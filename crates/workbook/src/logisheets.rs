@@ -76,6 +76,24 @@ pub struct BlockRange {
     /// Unknown or missing values are treated as "all" by the controller.
     #[xmlserde(name = b"modifyPolicy", ty = "attr")]
     pub modify_policy: Option<String>,
+    /// What the block is for, in prose. Absent on blocks that never got one.
+    #[xmlserde(name = b"description", ty = "attr")]
+    pub description: Option<String>,
+    /// Per-operation write policies, each `all|ownerOnly|ownerAndUser`. An
+    /// absent attribute means the operation defers to `modify_policy`, which
+    /// is what every block written before these existed does.
+    #[xmlserde(name = b"permInsertDeleteLines", ty = "attr")]
+    pub perm_insert_delete_lines: Option<String>,
+    #[xmlserde(name = b"permRemoveBlock", ty = "attr")]
+    pub perm_remove_block: Option<String>,
+    #[xmlserde(name = b"permModifySchema", ty = "attr")]
+    pub perm_modify_schema: Option<String>,
+    #[xmlserde(name = b"permCellInput", ty = "attr")]
+    pub perm_cell_input: Option<String>,
+    #[xmlserde(name = b"permSortByField", ty = "attr")]
+    pub perm_sort_by_field: Option<String>,
+    #[xmlserde(name = b"permModifyDescription", ty = "attr")]
+    pub perm_modify_description: Option<String>,
     #[xmlserde(name = b"rowInfos", ty = "child")]
     pub row_infos: Vec<BlockLineInfo>,
     #[xmlserde(name = b"colInfos", ty = "child")]

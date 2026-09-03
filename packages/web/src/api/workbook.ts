@@ -6,6 +6,9 @@ import {
     BlockInfo,
     BlockSortOrder,
     GetBlockSortOrderParams,
+    MayModifyBlockParams,
+    GetBlockModifyInfoParams,
+    BlockModifyInfo,
     FormulaDisplayInfo,
     ShadowCellInfo,
     SheetCellId,
@@ -571,11 +574,7 @@ export class Workbook {
      * parse back when it straddles a block.
      */
     public save(data: string, resolveBlockRefs = false): SaveFileResult {
-        return rpc(
-            'saveWorkbook',
-            {appData: data, resolveBlockRefs},
-            this._id
-        )
+        return rpc('saveWorkbook', {appData: data, resolveBlockRefs}, this._id)
     }
 
     public getAppData(): readonly AppData[] {
@@ -645,6 +644,42 @@ export class Workbook {
     ): Result<BlockSortOrder> {
         return rpc(
             'getBlockSortOrder',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Whether `actor` may perform `op` on this block.
+     *
+     * The engine cannot enforce a block's write policy on its own — a payload
+     * carries no trace of who prompted it — so a host that offers an
+     * operation should ask this first and refuse it itself. The decision lives
+     * in the core so this app, node, the desktop build and the craft runtime
+     * cannot drift apart on what a policy means.
+     *
+     * The block's `description`, `owner`, `modifyPolicy` and `permissions`
+     * come back on `getBlockInfo` if you need to explain the refusal.
+     */
+    public mayModifyBlock(params: MayModifyBlockParams): Result<boolean> {
+        return rpc(
+            'mayModifyBlock',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * A block's governance metadata on its own — owner, default policy,
+     * per-operation overrides, description. `getBlockInfo` carries the same
+     * fields but drags every cell along with them, which is the wrong shape
+     * for a check that runs once per payload.
+     */
+    public getBlockModifyInfo(
+        params: GetBlockModifyInfoParams
+    ): Result<BlockModifyInfo> {
+        return rpc(
+            'getBlockModifyInfo',
             params as unknown as Record<string, unknown>,
             this._id
         )

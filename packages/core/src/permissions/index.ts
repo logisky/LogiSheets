@@ -38,6 +38,29 @@ class CallerRegistry {
         return uuid === this._entries.get(USER_KEY)
     }
 
+    /**
+     * The engine-side identity a caller uuid stands for: `'user'`, or the
+     * craft named by the id it registered under.
+     *
+     * The uuids here are session-scoped, while a block's `owner` is a craft id
+     * saved in the file — so asking the engine whether a caller may touch a
+     * block means translating back first. `undefined` for a uuid this registry
+     * never issued, which the caller should treat as unidentified rather than
+     * as the user.
+     */
+    resolveActor(
+        uuid: string | undefined
+    ): {type: 'user'} | {type: 'craft'; craftId: string} | undefined {
+        if (uuid === undefined) return undefined
+        for (const [key, value] of this._entries) {
+            if (value !== uuid) continue
+            return key === USER_KEY
+                ? {type: 'user'}
+                : {type: 'craft', craftId: key}
+        }
+        return undefined
+    }
+
     registerBlockOwner(
         sheetIdx: number,
         blockId: number,

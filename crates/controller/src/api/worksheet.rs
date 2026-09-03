@@ -2050,6 +2050,10 @@ impl<'a> Worksheet<'a> {
                     schema,
                     field_renders,
                     cells: cell_values,
+                    description: block_place.description.clone(),
+                    owner: block_place.owner.clone(),
+                    modify_policy: block_place.modify_policy,
+                    permissions: block_place.permissions.clone(),
                 }
             })
             .collect::<Vec<_>>();
@@ -2819,6 +2823,10 @@ impl<'a> Worksheet<'a> {
             schema,
             field_renders,
             cells: cell_values,
+            description: block_place.description.clone(),
+            owner: block_place.owner.clone(),
+            modify_policy: block_place.modify_policy,
+            permissions: block_place.permissions.clone(),
         })
     }
 

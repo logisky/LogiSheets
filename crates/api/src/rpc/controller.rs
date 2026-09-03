@@ -115,7 +115,8 @@ pub fn batch_get_cell_info_by_id(
     ids: Vec<SheetCellId>,
 ) -> Result<Vec<CellInfo>, ErrorMessage> {
     let wb = mgr.get_mut_workbook(&id).unwrap();
-    wb.batch_get_cell_info_by_id(ids).map_err(ErrorMessage::from)
+    wb.batch_get_cell_info_by_id(ids)
+        .map_err(ErrorMessage::from)
 }
 
 pub fn batch_get_cell_coordinate_with_sheet_by_id(
@@ -165,7 +166,9 @@ pub fn get_row_info(
 ) -> Result<RowInfo, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
     let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
-    Ok(ws.get_row_info(row_idx).unwrap_or(RowInfo::default(row_idx)))
+    Ok(ws
+        .get_row_info(row_idx)
+        .unwrap_or(RowInfo::default(row_idx)))
 }
 
 pub fn check_formula(mgr: &Manager, id: usize, f: String) -> bool {
@@ -272,6 +275,39 @@ pub fn get_block_sort_order(
 ) -> Result<BlockSortOrder, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
     wb.get_block_sort_order(sheet_idx, block_id, &field, asc)
+        .map_err(ErrorMessage::from)
+}
+
+/// Whether `actor` may perform `op` on this block — see
+/// [`MayModifyBlockParams`]. Read-only: it decides nothing, it only answers,
+/// and the host is what actually refuses the edit.
+///
+/// [`MayModifyBlockParams`]: crate::rpc::message::MayModifyBlockParams
+pub fn may_modify_block(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+    op: crate::BlockOp,
+    actor: crate::BlockActor,
+) -> Result<bool, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.may_modify_block(sheet_idx, block_id, op, &actor)
+        .map_err(ErrorMessage::from)
+}
+
+/// A block's governance metadata, without its cells. See
+/// [`GetBlockModifyInfoParams`].
+///
+/// [`GetBlockModifyInfoParams`]: crate::rpc::message::GetBlockModifyInfoParams
+pub fn get_block_modify_info(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+) -> Result<crate::BlockModifyInfo, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.get_block_modify_info(sheet_idx, block_id)
         .map_err(ErrorMessage::from)
 }
 

@@ -157,6 +157,8 @@ mod funcs {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: Some(ModifyPolicy::OwnerAndUser),
+                permissions: None,
+                description: None,
             })
             .add_payload(CellInput {
                 sheet_idx: 1,
@@ -493,6 +495,8 @@ mod funcs {
                     col_cnt: 2,
                     owner: None,
                     modify_policy: None,
+                    permissions: None,
+                    description: None,
                 })
                 .add_payload(BindFormSchema {
                     ref_name: "people".to_string(),
@@ -601,6 +605,8 @@ mod funcs {
                     col_cnt: 3,
                     owner: None,
                     modify_policy: None,
+                    permissions: None,
+                    description: None,
                 })
                 // Header rows aren't needed for the schema (RowSchema reads
                 // values, not headers); just stuff numbers + keys.
@@ -694,6 +700,8 @@ mod funcs {
                     col_cnt: 2,
                     owner: None,
                     modify_policy: None,
+                    permissions: None,
+                    description: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -841,6 +849,8 @@ mod funcs {
                     col_cnt: 2,
                     owner: None,
                     modify_policy: None,
+                    permissions: None,
+                    description: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -913,6 +923,8 @@ mod funcs {
                     col_cnt: 2,
                     owner: None,
                     modify_policy: None,
+                    permissions: None,
+                    description: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1046,6 +1058,8 @@ mod funcs {
                     col_cnt: 2,
                     owner: None,
                     modify_policy: None,
+                permissions: None,
+                description: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1082,6 +1096,8 @@ mod funcs {
                     col_cnt: 2,
                     owner: None,
                     modify_policy: None,
+                permissions: None,
+                description: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1119,6 +1135,8 @@ mod funcs {
                     col_cnt: 3,
                     owner: None,
                     modify_policy: None,
+                permissions: None,
+                description: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1223,6 +1241,8 @@ mod funcs {
                     col_cnt: 2,
                     owner: None,
                     modify_policy: None,
+                    permissions: None,
+                    description: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1245,6 +1265,8 @@ mod funcs {
                     col_cnt: 2,
                     owner: None,
                     modify_policy: None,
+                    permissions: None,
+                    description: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1546,7 +1568,7 @@ fn reads_and_computes_a_workbook_openpyxl_wrote() {
 /// data used to be.
 #[test]
 fn test_excel_table_round_trips_as_a_named_block() {
-    use logisheets::{Workbook, Value};
+    use logisheets::{Value, Workbook};
     use std::fs;
 
     let mut buf = fs::read("tests/table.xlsx").unwrap();
@@ -1594,14 +1616,16 @@ fn test_excel_table_round_trips_as_a_named_block() {
     let mut wb = Workbook::from_file(&mut buf, String::from("table2")).unwrap();
     let result = wb.handle_action(logisheets::EditAction::Payloads(
         logisheets_controller::edit_action::PayloadsAction {
-            payloads: vec![logisheets_controller::edit_action::EditPayload::InsertRowsInBlock(
-                logisheets_controller::edit_action::InsertRowsInBlock {
-                    sheet_idx: 0,
-                    block_id: blocks[0].block_id,
-                    start: 3,
-                    cnt: 1,
-                },
-            )],
+            payloads: vec![
+                logisheets_controller::edit_action::EditPayload::InsertRowsInBlock(
+                    logisheets_controller::edit_action::InsertRowsInBlock {
+                        sheet_idx: 0,
+                        block_id: blocks[0].block_id,
+                        start: 3,
+                        cnt: 1,
+                    },
+                ),
+            ],
             undoable: true,
             init: false,
         },
@@ -1645,6 +1669,8 @@ fn test_block_is_saved_as_an_excel_table() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 sheet_idx: 0,
@@ -1681,8 +1707,7 @@ fn test_block_is_saved_as_an_excel_table() {
 
     let saved = wb.save().expect("save");
     let part = {
-        let mut zip =
-            zip::ZipArchive::new(std::io::Cursor::new(saved.clone())).expect("a zip");
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(saved.clone())).expect("a zip");
         let mut found = String::new();
         for i in 0..zip.len() {
             let mut f = zip.by_index(i).unwrap();
@@ -1744,6 +1769,8 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 sheet_idx,
@@ -1948,9 +1975,6 @@ fn test_chart_from_a_default_namespace_drawing_round_trips() {
     );
 }
 
-
-
-
 /// A pivot table and the cache it reads from both come back.
 ///
 /// Neither was written on save, so a workbook arrived with a pivot and left
@@ -2079,7 +2103,10 @@ fn test_unmodeled_parts_survive_a_save() {
 
     // No two relationships may share an Id — preserved ids keep theirs, so ours
     // step around them.
-    for part in ["xl/_rels/workbook.xml.rels", "xl/worksheets/_rels/sheet1.xml.rels"] {
+    for part in [
+        "xl/_rels/workbook.xml.rels",
+        "xl/worksheets/_rels/sheet1.xml.rels",
+    ] {
         let xml = text_of(&saved, part);
         let mut ids: Vec<&str> = xml
             .match_indices("Id=\"")
@@ -2148,21 +2175,34 @@ fn test_small_divisors_and_blank_comparisons() {
     );
     // Exact zero is still #DIV/0!.
     let v = eval(&mut wb, "=1/0");
-    assert!(matches!(v, Value::Error(ref e) if e == "#DIV/0!"), "got {:?}", v);
+    assert!(
+        matches!(v, Value::Error(ref e) if e == "#DIV/0!"),
+        "got {:?}",
+        v
+    );
     // And an overflow is #NUM!, not infinity.
     let v = eval(&mut wb, "=1E308/0.000000001");
-    assert!(matches!(v, Value::Error(ref e) if e == "#NUM!"), "got {:?}", v);
+    assert!(
+        matches!(v, Value::Error(ref e) if e == "#NUM!"),
+        "got {:?}",
+        v
+    );
 
     // A blank is zero, so a tiny positive number is greater than one — not
     // equal to it.
     let v = eval(&mut wb, "=A50=0.00000000005");
-    assert!(matches!(v, Value::Bool(false)), "blank should not equal 5e-11, got {:?}", v);
+    assert!(
+        matches!(v, Value::Bool(false)),
+        "blank should not equal 5e-11, got {:?}",
+        v
+    );
     let v = eval(&mut wb, "=A50<0.00000000005");
-    assert!(matches!(v, Value::Bool(true)), "blank is less than 5e-11, got {:?}", v);
+    assert!(
+        matches!(v, Value::Bool(true)),
+        "blank is less than 5e-11, got {:?}",
+        v
+    );
     // A blank really does equal zero.
     let v = eval(&mut wb, "=A50=0");
     assert!(matches!(v, Value::Bool(true)), "got {:?}", v);
 }
-
-
-

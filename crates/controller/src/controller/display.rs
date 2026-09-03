@@ -109,6 +109,18 @@ pub struct BlockInfo {
     pub schema: Option<BlockSchema>,
     pub field_renders: Vec<FieldRenderEntry>,
     pub cells: Vec<BlockCellInfo>,
+    /// What the block is for, in prose — empty when nobody said. The schema
+    /// describes the shape of the records; this is the only thing that says
+    /// what they mean, which is what an AI reading the sheet needs.
+    pub description: String,
+    /// The craft that created the block, empty for one the user made.
+    pub owner: String,
+    /// The block's default write policy.
+    pub modify_policy: crate::edit_action::ModifyPolicy,
+    /// Per-operation overrides of it. Do not read these apart to decide
+    /// whether an edit is allowed — ask `Workbook::may_modify_block`, so
+    /// every host answers the question the same way.
+    pub permissions: crate::edit_action::BlockPermissions,
 }
 
 /// A range that is linked to a backing block: the *source* range (the cells the

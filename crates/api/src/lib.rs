@@ -29,21 +29,24 @@ pub use logisheets_controller::controller::display::{
     BlockCellInfo, BlockDataRow, BlockDisplayInfo, BlockField, BlockInfo, BlockSchema,
     BlockSchemaRandomEntry, BlockSchemaType, CellCoordinate, CellCoordinateWithSheet,
     CellImageInfo, CellPosition, ChartAxisScaleInfo, ChartDataLabelsInfo, ChartInfo,
-    ChartOfPieSplitInfo, ChartSeriesInfo, ColInfo, DisplayWindow, DisplayWindowRequest, DisplayWindowWithStartPoint,
-    LinkInfo, RowInfo, ShadowCellInfo, SheetInfo, TempCellChange, TempStatusDiff,
+    ChartOfPieSplitInfo, ChartSeriesInfo, ColInfo, DisplayWindow, DisplayWindowRequest,
+    DisplayWindowWithStartPoint, LinkInfo, RowInfo, ShadowCellInfo, SheetInfo, TempCellChange,
+    TempStatusDiff,
 };
 
 // Re-export edit actions
 pub use logisheets_controller::edit_action::{
     ActionEffect, Alignment, AsyncFuncResult, AxisScaleUpdate, BindFormSchema, BindRandomSchema,
-    BlockInput, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellClear, CellFormatBrush,
-    CellInput, CellStyleUpdate, CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet,
-    DeleteCellImage, DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet,
-    EditAction, EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols,
-    InsertColsInBlock, InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells,
-    MoveBlock, OfPieSplitUpdate, PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock, SetCellImage, SetColWidth,
-    SetRowHeight, SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells,
-    StatusCode, StyleUpdateType, UpsertFieldRenderInfo, VerticalAlignment,
+    BlockActor, BlockInput, BlockLineNameFieldUpdate, BlockLineStyleUpdate, BlockModifyInfo,
+    BlockOp, BlockPermissions, CellClear, CellFormatBrush, CellInput, CellStyleUpdate,
+    CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCellImage, DeleteCols,
+    DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
+    EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
+    InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, ModifyPolicy, MoveBlock,
+    OfPieSplitUpdate, PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock,
+    SetBlockDescription, SetBlockPermissions, SetCellImage, SetColWidth, SetRowHeight,
+    SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells, StatusCode,
+    StyleUpdateType, UpsertFieldRenderInfo, VerticalAlignment,
 };
 
 // Re-export style types

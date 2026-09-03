@@ -97,6 +97,8 @@ export enum MethodName {
     GetSheetId = 'getSheetId',
     GetBlockValues = 'getBlockValues',
     GetBlockSortOrder = 'getBlockSortOrder',
+    MayModifyBlock = 'mayModifyBlock',
+    GetBlockModifyInfo = 'getBlockModifyInfo',
     GetAvailableBlockId = 'getAvailableBlockId',
 
     GetDiyCellIdWithBlockId = 'getDiyCellIdWithBlockId',

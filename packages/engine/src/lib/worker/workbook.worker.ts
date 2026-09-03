@@ -36,6 +36,9 @@ import type {
     LinkInfo,
     BlockSortOrder,
     GetBlockSortOrderParams,
+    MayModifyBlockParams,
+    GetBlockModifyInfoParams,
+    BlockModifyInfo,
 } from 'logisheets-web'
 
 import {WorkerUpdate, MethodName} from './types'
@@ -398,6 +401,21 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         params: GetBlockSortOrderParams
     ): Result<BlockSortOrder> {
         return this.workbook.getBlockSortOrder(params)
+    }
+
+    /**
+     * Whether an actor may perform one operation on a block. Read-only: the
+     * core decides, the caller is what refuses the edit.
+     */
+    public mayModifyBlock(params: MayModifyBlockParams): Result<boolean> {
+        return this.workbook.mayModifyBlock(params)
+    }
+
+    /** A block's governance metadata, without its cells. */
+    public getBlockModifyInfo(
+        params: GetBlockModifyInfoParams
+    ): Result<BlockModifyInfo> {
+        return this.workbook.getBlockModifyInfo(params)
     }
 
     public getAvailableBlockId(params: {sheetIdx: number}): Result<number> {
@@ -783,6 +801,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetBlockSortOrder:
                     result = this.getBlockSortOrder(args)
+                    break
+                case MethodName.GetBlockModifyInfo:
+                    result = this.getBlockModifyInfo(args)
+                    break
+                case MethodName.MayModifyBlock:
+                    result = this.mayModifyBlock(args)
                     break
                 case MethodName.GetAvailableBlockId:
                     result = this.getAvailableBlockId(args)
