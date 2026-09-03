@@ -144,6 +144,35 @@ pub struct Sheet {
     /// restored on load. See the controller's `range_manager::link`.
     #[xmlserde(name = b"linkRange", ty = "child")]
     pub link_ranges: Vec<LinkRangeXml>,
+    /// Charts bound to a block rather than to fixed ranges. The chart part in
+    /// the xlsx always holds real A1 ranges so Excel can draw it; this records
+    /// what those ranges were derived *from*, so reopening in LogiSheets keeps
+    /// the chart following the block instead of freezing it at the last save.
+    #[xmlserde(name = b"chartSource", ty = "child")]
+    pub chart_sources: Vec<ChartSourceXml>,
+}
+
+/// A chart's block binding: which block, which field labels the categories,
+/// and which fields are plotted. Fields are named because that is the identity
+/// the schema exposes and the one `#FIELD("qty")` formulas already use.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct ChartSourceXml {
+    #[xmlserde(name = b"chartId", ty = "attr")]
+    pub chart_id: String,
+    #[xmlserde(name = b"blockId", ty = "attr")]
+    pub block_id: usize,
+    #[xmlserde(name = b"categoryField", ty = "attr")]
+    pub category_field: Option<String>,
+    /// Child elements rather than one delimited attribute: a field name is
+    /// user-supplied text and may contain whatever separator we picked.
+    #[xmlserde(name = b"valueField", ty = "child")]
+    pub value_fields: Vec<ChartSourceFieldXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct ChartSourceFieldXml {
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: String,
 }
 
 fn default_zero_usize() -> usize {

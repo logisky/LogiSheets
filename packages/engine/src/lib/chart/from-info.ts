@@ -34,7 +34,8 @@ export function chartInfoToModel(info: ChartInfo): ChartModel {
             sizes: [...s.sizes] as Array<number | null>,
             sizeRef: s.sizeRef,
         })),
-        legendPosition: (info.legendPos as LegendPosition | undefined) ?? 'none',
+        legendPosition:
+            (info.legendPos as LegendPosition | undefined) ?? 'none',
         stacked: info.stacked,
         catAxisTitle: info.catAxisTitle,
         valAxisTitle: info.valAxisTitle,
@@ -50,5 +51,6 @@ export function chartInfoToModel(info: ChartInfo): ChartModel {
         valAxisScale: info.valAxisScale,
         catAxisScale: info.catAxisScale,
         ofPieSplit: info.ofPieSplit,
+        blockSource: info.blockSource,
     }
 }

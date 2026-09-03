@@ -722,7 +722,7 @@ impl<'a> Worksheet<'a> {
     /// `data` (type, series, cached values) comes from the chart's parsed
     /// OOXML; the frontend re-reads live values from the source ranges.
     pub fn get_charts(&self) -> Vec<ChartInfo> {
-        use logisheets_workbook::prelude::{ChartType, LegendPos};
+        use logisheets_workbook::prelude::{ChartSeries, ChartType, LegendPos};
 
         let chart_type_str = |t: &ChartType| -> String {
             match t {
@@ -779,6 +779,47 @@ impl<'a> Worksheet<'a> {
                     }
                 };
                 let d = &chart.data;
+                // A chart bound to a block reads the block as it is *now*: the
+                // refs stored in `data` are only the last resolution, so a
+                // record appended to the block is plotted without the chart
+                // having been touched.
+                let live = chart.source.as_ref().and_then(|src| {
+                    let name = self
+                        .controller
+                        .status
+                        .sheet_id_manager
+                        .get_string(&self.sheet_id)?;
+                    crate::chart_manager::resolve_block_refs(
+                        nav,
+                        &self.controller.status.block_schema_manager,
+                        self.sheet_id,
+                        &name,
+                        src,
+                    )
+                });
+                // What to draw and where each series reads from. A bound chart
+                // takes both from the block; the stored series then contribute
+                // only their look.
+                let planned: Vec<(Option<String>, Option<String>, Option<&ChartSeries>)> =
+                    match &live {
+                        Some(l) => l
+                            .series
+                            .iter()
+                            .enumerate()
+                            .map(|(i, (name, r))| {
+                                (Some(name.clone()), Some(r.clone()), d.series.get(i))
+                            })
+                            .collect(),
+                        None => d
+                            .series
+                            .iter()
+                            .map(|s| (s.name.clone(), s.val_ref.clone(), Some(s)))
+                            .collect(),
+                    };
+                let cat_ref = match &live {
+                    Some(l) => l.cat_ref.clone(),
+                    None => d.cat_ref.clone(),
+                };
                 Some(ChartInfo {
                     chart_id: chart.id.clone(),
                     from_row,
@@ -797,54 +838,58 @@ impl<'a> Worksheet<'a> {
                     legend_pos: d.legend_pos.as_ref().map(legend_pos_str),
                     // Labels follow the sheet like values do; the file's cache
                     // is the fallback.
-                    categories: d
-                        .cat_ref
+                    categories: cat_ref
                         .as_deref()
                         .and_then(|r| self.resolve_category_labels(r))
                         .unwrap_or_else(|| d.categories.clone()),
-                    cat_ref: d.cat_ref.clone(),
-                    series: d
-                        .series
+                    cat_ref: cat_ref.clone(),
+                    series: planned
                         .iter()
-                        .map(|s| {
+                        .map(|(name, val_ref, s)| {
                             // Live values re-read from the source range so the
                             // chart reflects edits; fall back to the OOXML cache
                             // if the reference can't be resolved.
-                            let values = s
-                                .val_ref
+                            let values = val_ref
                                 .as_deref()
                                 .and_then(|r| self.resolve_series_values(r))
-                                .unwrap_or_else(|| s.cached_values.clone());
+                                .unwrap_or_else(|| {
+                                    s.map(|s| s.cached_values.clone()).unwrap_or_default()
+                                });
                             // The source cells' format wins over the cached
                             // one, so reformatting the data reformats the
                             // chart. An explicit label format beats both.
-                            let num_fmt = s
-                                .val_ref
+                            let num_fmt = val_ref
                                 .as_deref()
                                 .and_then(|r| self.resolve_ref_num_fmt(r))
-                                .or_else(|| s.format_code.clone());
+                                .or_else(|| s.and_then(|s| s.format_code.clone()));
                             let label_fmt = d.data_labels.num_fmt.as_ref().or(num_fmt.as_ref());
                             let formatted_values = values
                                 .iter()
                                 .map(|v| v.map(|n| format_with(label_fmt.map(|f| f.as_str()), n)))
                                 .collect();
+                            let size_ref = s.and_then(|s| s.size_ref.clone());
                             ChartSeriesInfo {
-                                name: s.name.clone(),
+                                name: name.clone(),
                                 values,
                                 formatted_values,
                                 // A bubble chart's third dimension, live like
                                 // the values are.
-                                sizes: s
-                                    .size_ref
+                                sizes: size_ref
                                     .as_deref()
                                     .and_then(|r| self.resolve_series_values(r))
-                                    .unwrap_or_else(|| s.cached_sizes.clone()),
-                                size_ref: s.size_ref.clone(),
-                                color: s.color.as_ref().and_then(|c| self.resolve_series_color(c)),
-                                val_ref: s.val_ref.clone(),
+                                    .unwrap_or_else(|| {
+                                        s.map(|s| s.cached_sizes.clone()).unwrap_or_default()
+                                    }),
+                                size_ref,
+                                color: s
+                                    .and_then(|s| s.color.as_ref())
+                                    .and_then(|c| self.resolve_series_color(c)),
+                                val_ref: val_ref.clone(),
                                 // Set only on a combo chart's overridden
                                 // series; `None` means it follows the chart.
-                                series_type: s.series_type.as_ref().map(chart_type_str),
+                                series_type: s
+                                    .and_then(|s| s.series_type.as_ref())
+                                    .map(chart_type_str),
                                 num_fmt,
                             }
                         })
@@ -868,10 +913,17 @@ impl<'a> Worksheet<'a> {
                     val_axis_scale: axis_scale_info(&d.val_axis_scale),
                     cat_axis_scale: axis_scale_info(&d.cat_axis_scale),
                     val_axis_num_fmt: d.val_axis_num_fmt.clone().or_else(|| {
-                        d.series
+                        planned
                             .first()
-                            .and_then(|s| s.val_ref.as_deref())
+                            .and_then(|(_, r, _)| r.as_deref())
                             .and_then(|r| self.resolve_ref_num_fmt(r))
+                    }),
+                    block_source: chart.source.as_ref().map(|src| {
+                        crate::controller::display::ChartBlockSourceInfo {
+                            block_id: src.block_id,
+                            category_field: src.category_field.clone(),
+                            value_fields: src.value_fields.clone(),
+                        }
                     }),
                 })
             })

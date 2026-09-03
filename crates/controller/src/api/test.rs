@@ -128,6 +128,7 @@ fn create_chart_from_scratch() {
                     series_type: None,
                 },
             ],
+            block_source: None,
         })],
         undoable: true,
         init: false,
@@ -4548,6 +4549,7 @@ fn chart_categories_and_formats_are_live() {
                 size_ref: None,
                 series_type: None,
             }],
+            block_source: None,
         })],
         undoable: true,
         init: false,
@@ -4841,6 +4843,7 @@ fn chart_edits_are_undoable() {
                 size_ref: None,
                 series_type: None,
             }],
+            block_source: None,
         })],
         undoable: true,
         init: false,
@@ -4903,6 +4906,7 @@ fn create_bubble_chart_with_live_sizes() {
                 size_ref: Some("Sheet1!$C$1:$C$2".to_string()),
                 series_type: None,
             }],
+            block_source: None,
         })],
         undoable: true,
         init: false,
@@ -5034,6 +5038,7 @@ fn create_stock_of_pie_and_surface_charts() {
                 title: None,
                 categories_ref: Some("Sheet1!$A$1:$A$4".to_string()),
                 series,
+                block_source: None,
             })],
             undoable: true,
             init: false,
@@ -5144,6 +5149,7 @@ fn update_chart_sets_the_of_pie_split() {
                 size_ref: None,
                 series_type: None,
             }],
+            block_source: None,
         })],
         undoable: true,
         init: false,
@@ -5255,6 +5261,7 @@ fn create_a_combo_chart_and_keep_it_through_edits() {
                     series_type: Some("area".to_string()),
                 },
             ],
+            block_source: None,
         })],
         undoable: true,
         init: false,
@@ -5383,6 +5390,7 @@ fn three_d_chart_types_round_trip_through_the_api() {
                     size_ref: None,
                     series_type: None,
                 }],
+                block_source: None,
             })],
             undoable: true,
             init: false,
@@ -5402,4 +5410,306 @@ fn three_d_chart_types_round_trip_through_the_api() {
         charts[0].series[0].values,
         vec![Some(5.0), Some(10.0), Some(15.0), Some(20.0)]
     );
+}
+
+/// A chart bound to a block plots the block, not a snapshot of where it was:
+/// records appended to it appear without the chart being touched, and edits
+/// elsewhere on the sheet cannot leave it pointing at the wrong cells.
+#[test]
+fn chart_bound_to_block_follows_it() {
+    use crate::edit_action::{
+        BindFormSchema, ChartBlockSource, CreateBlock, InsertRows, InsertRowsInBlock,
+    };
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let cell = |row: usize, col: usize, content: &str| {
+        EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col,
+            content: content.to_string(),
+        })
+    };
+
+    // A 3x3 block at B2 with a row schema: name / qty / price, one record a row.
+    // The header that named the fields is *outside* the block, so every row of
+    // the block is a record.
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 1,
+            master_col: 1,
+            row_cnt: 3,
+            col_cnt: 3,
+            owner: None,
+            modify_policy: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "sales".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec!["name".into(), "qty".into(), "price".into()],
+            render_ids: vec!["r0".into(), "r1".into(), "r2".into()],
+            row: true,
+            field_formulas: vec![],
+            validation_formulas: vec![],
+            editability_formulas: vec![],
+        }),
+    ];
+    for (i, (name, qty)) in [("a", "10"), ("b", "20"), ("c", "30")].iter().enumerate() {
+        payloads.push(cell(1 + i, 1, name));
+        payloads.push(cell(1 + i, 2, qty));
+    }
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: false,
+        init: false,
+    }));
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateChart(CreateChart {
+            sheet_idx: 0,
+            chart_id: "chart1".to_string(),
+            chart_type: "col".to_string(),
+            from_row: 6,
+            from_col: 1,
+            from_col_off: 0,
+            from_row_off: 0,
+            to_row: 16,
+            to_col: 6,
+            to_col_off: 0,
+            to_row_off: 0,
+            title: Some("Sales".to_string()),
+            // Named fields, not ranges: the block says where they are.
+            categories_ref: None,
+            series: vec![],
+            block_source: Some(ChartBlockSource {
+                block_id: bid,
+                category_field: Some("name".to_string()),
+                value_fields: vec!["qty".to_string()],
+            }),
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(c.cat_ref.as_deref(), Some("Sheet1!$B$2:$B$4"));
+        assert_eq!(c.series.len(), 1);
+        assert_eq!(c.series[0].name.as_deref(), Some("qty"));
+        assert_eq!(c.series[0].val_ref.as_deref(), Some("Sheet1!$C$2:$C$4"));
+        assert_eq!(c.series[0].values, vec![Some(10.0), Some(20.0), Some(30.0)]);
+        assert_eq!(c.categories, vec!["a", "b", "c"]);
+    }
+
+    // Append a record. Nothing touches the chart.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+                sheet_idx: 0,
+                block_id: bid,
+                start: 3,
+                cnt: 1,
+            }),
+            cell(4, 1, "d"),
+            cell(4, 2, "40"),
+        ],
+        undoable: false,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(
+            c.series[0].val_ref.as_deref(),
+            Some("Sheet1!$C$2:$C$5"),
+            "the range grew with the block"
+        );
+        assert_eq!(
+            c.series[0].values,
+            vec![Some(10.0), Some(20.0), Some(30.0), Some(40.0)]
+        );
+        assert_eq!(c.categories, vec!["a", "b", "c", "d"]);
+    }
+
+    // A row inserted above the block pushes it down. A stored A1 ref would now
+    // be a row short of the data; a bound one is recomputed and still right.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRows(InsertRows {
+            sheet_idx: 0,
+            start: 0,
+            count: 1,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(
+            c.series[0].val_ref.as_deref(),
+            Some("Sheet1!$C$3:$C$6"),
+            "the range shifted with the block"
+        );
+        assert_eq!(
+            c.series[0].values,
+            vec![Some(10.0), Some(20.0), Some(30.0), Some(40.0)]
+        );
+    }
+}
+
+/// The binding survives a save: the xlsx carries real A1 ranges so Excel can
+/// draw the chart, and logisheets.xml carries what they were derived from, so
+/// reopening here leaves the chart still following the block.
+#[test]
+fn block_bound_chart_survives_save() {
+    use crate::edit_action::{BindFormSchema, ChartBlockSource, CreateBlock, InsertRowsInBlock};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let cell = |row: usize, col: usize, content: &str| {
+        EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col,
+            content: content.to_string(),
+        })
+    };
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["name".into(), "qty".into()],
+                render_ids: vec!["r0".into(), "r1".into()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            }),
+            cell(0, 0, "a"),
+            cell(0, 1, "10"),
+            cell(1, 0, "b"),
+            cell(1, 1, "20"),
+            EditPayload::CreateChart(CreateChart {
+                sheet_idx: 0,
+                chart_id: "chart1".to_string(),
+                chart_type: "col".to_string(),
+                from_row: 5,
+                from_col: 0,
+                from_col_off: 0,
+                from_row_off: 0,
+                to_row: 15,
+                to_col: 5,
+                to_col_off: 0,
+                to_row_off: 0,
+                title: None,
+                categories_ref: None,
+                series: vec![],
+                block_source: Some(ChartBlockSource {
+                    block_id: bid,
+                    category_field: Some("name".to_string()),
+                    value_fields: vec!["qty".to_string()],
+                }),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    let bytes = wb.save().unwrap();
+    let mut wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    {
+        let ws = wb2.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        assert_eq!(c.series[0].val_ref.as_deref(), Some("Sheet1!$B$1:$B$2"));
+        assert_eq!(c.series[0].values, vec![Some(10.0), Some(20.0)]);
+    }
+    // Still bound, not frozen: growing the reloaded block grows the chart.
+    let bid2 = {
+        let ws = wb2.get_sheet_by_idx(0).unwrap();
+        ws.get_all_blocks()[0].block_id
+    };
+    wb2.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+                sheet_idx: 0,
+                block_id: bid2,
+                start: 2,
+                cnt: 1,
+            }),
+            cell(2, 0, "c"),
+            cell(2, 1, "30"),
+        ],
+        undoable: false,
+        init: false,
+    }));
+    let ws = wb2.get_sheet_by_idx(0).unwrap();
+    let c = &ws.get_charts()[0];
+    assert_eq!(
+        c.series[0].val_ref.as_deref(),
+        Some("Sheet1!$B$1:$B$3"),
+        "the reloaded chart is still bound to the block"
+    );
+    assert_eq!(c.series[0].values, vec![Some(10.0), Some(20.0), Some(30.0)]);
+}
+
+/// A cell's displayed value and `ROUND` must agree about the same number.
+/// Before, the display path rounded on the exact double (JavaScript's rule,
+/// inherited from the `ssf` port) while `ROUND` scaled by a power of ten, so
+/// the two could disagree — and the money formats disagreed with `0.00`.
+#[test]
+fn text_and_round_agree_at_excel_precision() {
+    let mut wb = Workbook::default();
+    let cases = [
+        ("=TEXT(1.005,\"0.00\")", "1.01"),
+        ("=TEXT(1.005,\"#,##0.00\")", "1.01"),
+        ("=TEXT(4.935,\"0.00\")", "4.94"),
+        ("=TEXT(2.675,\"#,##0.00\")", "2.68"),
+        ("=FIXED(1.005,2)", "1.01"),
+        ("=DOLLAR(1.005,2)", "$1.01"),
+        ("=TEXT(ROUND(1.005,2),\"0.00\")", "1.01"),
+    ];
+    let mut payloads = vec![];
+    for (i, (e, _)) in cases.iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: i,
+            col: 0,
+            content: e.to_string(),
+        }));
+    }
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: false,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    for (i, (e, want)) in cases.iter().enumerate() {
+        // `Value` has no `PartialEq`, and a formatted cell is a string anyway.
+        let got = match ws.get_value(i, 0).unwrap() {
+            crate::controller::display::Value::Str(s) => s,
+            other => panic!("{e} did not render as text: {other:?}"),
+        };
+        assert_eq!(got, *want, "{e}");
+    }
 }

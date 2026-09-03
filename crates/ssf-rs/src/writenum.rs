@@ -5,7 +5,7 @@ use regex::Regex;
 use std::sync::OnceLock;
 
 use crate::helpers::{commaify, fill, hashq, pad0, pad0_i, pad0r, pad_, rpad_, strrev};
-use crate::jsnum;
+use crate::jsnum::{self, Precision};
 
 fn re(cell: &'static OnceLock<Regex>, pat: &str) -> &'static Regex {
     cell.get_or_init(|| Regex::new(pat).unwrap())
@@ -79,14 +79,92 @@ fn log10_floor(v: f64) -> i32 {
     (v.abs().ln() * std::f64::consts::LOG10_E).floor() as i32
 }
 
-/// `ssf.rnd(val, d)`.
+/// `ssf.rnd(val, d)` — the value rounded to `d` decimal places, as a bare
+/// number string (no padding; callers widen it to the format's own shape).
+///
+/// Upstream is `Math.round(val * 10^d) / 10^d`, which is wrong for a
+/// spreadsheet twice over. It decides the halfway case on the scaled binary
+/// product, so `0.00` rendered 1.005 as "1.00" and 4.935 as "4.93" where Excel
+/// shows "1.01" and "4.94" — Excel keeps 15 significant decimal digits, and
+/// both of those are ties in that form. And the scaling multiply adds error of
+/// its own: `2.1 * 100` is 209.99999999999997, so an exact value could drop a
+/// place. Rounding the decimal expansion removes both.
 fn rnd(val: f64, d: i32) -> String {
-    let dd = 10f64.powi(d);
-    s(jsnum::round(val * dd) / dd)
+    // Past 1e15 there is no fractional tie to settle, and `to_fixed` would
+    // spell out the double's exact integer digits where every other numeric
+    // format shows the shortest ones. Keep the original route so they agree.
+    if !val.is_finite() || val.abs() >= 1e15 {
+        let dd = 10f64.powi(d);
+        return s(jsnum::round(val * dd) / dd);
+    }
+    // Both call sites pass a count of format placeholders, so `d` is never
+    // negative; clamp anyway to stay inside `to_fixed`'s domain.
+    let fixed = jsnum::to_fixed_with(val, d.clamp(0, 100) as usize, Precision::Excel15);
+    strip_trailing_frac_zeros(&fixed)
 }
 
-/// `ssf.dec(val, d)`.
+/// Trailing fractional zeros, and a bare trailing point, are not part of a
+/// number's string form — `rnd` has to look like `s()` did.
+fn strip_trailing_frac_zeros(x: &str) -> String {
+    if !x.contains('.') {
+        return x.to_string();
+    }
+    let trimmed = x.trim_end_matches('0').trim_end_matches('.');
+    // `-0.00` trims to `-0`, and `0.00` to `0`; upstream produced "0" for both.
+    if trimmed.is_empty() || trimmed == "-" {
+        return "0".to_string();
+    }
+    trimmed.to_string()
+}
+
+/// The `d` fractional digits of `val` and whether rounding them carried into
+/// the integer part, both read off ONE Excel-precision rendering.
+///
+/// The pair has to agree — `#,##0.00` builds its output from
+/// `s(floor + carry)` and `dec` separately, so a carry that only one of them
+/// saw would print 9.999 as "10.00" or "9.00" instead of "10.00". Sharing the
+/// rendering makes that impossible.
+///
+/// Returns `(carry, frac_digits)`.
+fn rounded_parts(val: f64, d: i32) -> (i64, i64) {
+    let places = d.clamp(0, 100) as usize;
+    let fixed = jsnum::to_fixed_with(val, places, Precision::Excel15);
+    let (int_str, frac_str) = match fixed.split_once('.') {
+        Some((i, f)) => (i, f),
+        None => (fixed.as_str(), ""),
+    };
+    // Compared as strings: the integer part can exceed `i64` and `s()` renders
+    // it the same way `to_fixed` does below 1e21.
+    let carry = i64::from(int_str != s(val.floor()));
+    let frac = frac_str.parse::<i64>().unwrap_or(0);
+    (carry, frac)
+}
+
+/// `ssf.dec(val, d)` — the fractional digits, at Excel's precision.
+///
+/// Upstream rounds `(val - floor(val)) * 10^d` as a double, which is how
+/// `#,##0.00` came to render 2.675 as "2.67" and 1.005 as "1.00" while the
+/// plain `0.00` format got them right.
 fn dec(val: f64, d: i32) -> i64 {
+    if !val.is_finite() || val.abs() >= 1e15 {
+        return dec_legacy(val, d);
+    }
+    rounded_parts(val, d).1
+}
+
+/// `ssf.carry(val, d)` — whether rounding the fraction carries into the
+/// integer part. Shares [`rounded_parts`] with [`dec`] so the two cannot
+/// disagree about it.
+fn carry(val: f64, d: i32) -> i64 {
+    if !val.is_finite() || val.abs() >= 1e15 {
+        return carry_legacy(val, d);
+    }
+    rounded_parts(val, d).0
+}
+
+/// The upstream `dec`, kept for magnitudes where there is no fraction left to
+/// round and the decimal path would only change how integer digits print.
+fn dec_legacy(val: f64, d: i32) -> i64 {
     let frac = val - val.floor();
     let dd = 10f64.powi(d);
     let rr = jsnum::round(frac * dd);
@@ -97,8 +175,8 @@ fn dec(val: f64, d: i32) -> i64 {
     }
 }
 
-/// `ssf.carry(val, d)`.
-fn carry(val: f64, d: i32) -> i64 {
+/// The upstream `carry`, paired with [`dec_legacy`].
+fn carry_legacy(val: f64, d: i32) -> i64 {
     let dd = 10f64.powi(d);
     let rr = jsnum::round((val - val.floor()) * dd);
     if (d as usize) < s(rr).len() {
@@ -196,7 +274,7 @@ fn write_num_exp(fmt: &str, val: f64, v2: bool) -> String {
             ee += period;
         }
         let prec = (idx + 1 + (period + ee) % period).max(0) as usize;
-        o = jsnum::to_precision(val / 10f64.powi(ee), prec.max(1));
+        o = jsnum::to_precision_with(val / 10f64.powi(ee), prec.max(1), Precision::Excel15);
 
         let no_exp = if v2 {
             !o.contains('e') && !o.contains('E')
@@ -232,7 +310,7 @@ fn write_num_exp(fmt: &str, val: f64, v2: bool) -> String {
         // .replace(/^([+-]?)(\d*)\.(\d*)[Ee]/, cb)
         o = replace_exp_mantissa(&o, period, ee);
     } else {
-        o = jsnum::to_exponential(val, idx.max(0) as usize);
+        o = jsnum::to_exponential_with(val, idx.max(0) as usize, Precision::Excel15);
     }
 
     if re_eplus00().is_match(fmt) && re_e_single().is_match(&o) {
@@ -519,7 +597,11 @@ fn write_num_flt(t: &str, fmt: &str, val: f64) -> Result<String, String> {
     }
     if let Some(cap) = re_numdotnum_flt().captures(fmt) {
         let r2 = cap.get(2).unwrap().as_str();
-        let mut o = jsnum::to_fixed(val, r2.len().min(10));
+        // Excel's precision, not JavaScript's: a spreadsheet showing `0.00`
+        // renders 1.005 as "1.01", because the only thing it keeps of the
+        // double is 15 significant digits and that form is a tie. `toFixed`
+        // would say "1.00" — right about ECMAScript, wrong about Excel.
+        let mut o = jsnum::to_fixed_with(val, r2.len().min(10), Precision::Excel15);
         o = re_trail_after_nonzero().replace(&o, "$1").to_string();
         let ri = o.find('.').map(|x| x as i32).unwrap_or(-1);
         let lres = fmt.find('.').unwrap() as i32 - ri;
@@ -694,7 +776,11 @@ fn write_num_int(t: &str, fmt: &str, val: f64) -> Result<String, String> {
     }
     if let Some(cap) = re_numdotnum_int().captures(fmt) {
         let r2 = cap.get(2).unwrap().as_str();
-        let mut o = jsnum::to_fixed(val, r2.len().min(10));
+        // Excel's precision, not JavaScript's: a spreadsheet showing `0.00`
+        // renders 1.005 as "1.01", because the only thing it keeps of the
+        // double is 15 significant digits and that form is a tie. `toFixed`
+        // would say "1.00" — right about ECMAScript, wrong about Excel.
+        let mut o = jsnum::to_fixed_with(val, r2.len().min(10), Precision::Excel15);
         o = re_trail_after_nonzero().replace(&o, "$1").to_string();
         let ri = o.find('.').map(|x| x as i32).unwrap_or(-1);
         let lres = fmt.find('.').unwrap() as i32 - ri;

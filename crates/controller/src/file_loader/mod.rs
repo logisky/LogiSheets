@@ -135,6 +135,11 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         }
     });
     let mut app_data = vec![];
+    // Chart-to-block bindings are restored after the sheet walk: the charts
+    // themselves are loaded from each sheet's drawing further down, so there is
+    // nothing to bind to yet.
+    let mut pending_chart_sources: Vec<(SheetId, logisheets_workbook::logisheets::ChartSourceXml)> =
+        vec![];
 
     if let Some(logisheets) = logisheets {
         app_data = logisheets.apps;
@@ -167,6 +172,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     col_schemas,
                     random_schemas,
                     link_ranges,
+                    chart_sources,
                 } = sheet_data;
                 let sheet_id = sheet_info_manager.get_sheet_id(idx).unwrap();
                 navigator.add_sheet_id(&sheet_id);
@@ -250,6 +256,9 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                 link_ranges
                     .into_iter()
                     .for_each(|lr| pending_links.push((sheet_id, lr)));
+                chart_sources
+                    .into_iter()
+                    .for_each(|cs| pending_chart_sources.push((sheet_id, cs)));
             });
         // All blocks on all sheets now exist — restore each link. The source range
         // is on its own sheet; the target block may be on another (`block_sheet_idx`).
@@ -456,7 +465,23 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         block_schema_manager,
         field_render_manager,
         image_manager,
-        chart_manager,
+        chart_manager: {
+            // Every chart is loaded by now, so a saved binding has something
+            // to attach to. A binding whose chart is gone is dropped.
+            let mut cm = chart_manager;
+            for (sheet_id, cs) in pending_chart_sources {
+                cm.set_source(
+                    sheet_id,
+                    &cs.chart_id,
+                    Some(crate::chart_manager::ChartBlockSource {
+                        block_id: cs.block_id,
+                        category_field: cs.category_field,
+                        value_fields: cs.value_fields.into_iter().map(|f| f.name).collect(),
+                    }),
+                );
+            }
+            cm
+        },
         data_validation_manager,
         conditional_formatting_manager,
     };
@@ -907,6 +932,9 @@ fn load_charts(
                 part_path: part.path.clone(),
                 data,
                 raw: raw.clone(),
+                // Restored from logisheets.xml further down; an xlsx written by
+                // Excel has no block bindings at all.
+                source: None,
             },
         );
     }

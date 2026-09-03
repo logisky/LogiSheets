@@ -1,7 +1,10 @@
 use itertools::Itertools;
 use logisheets_base::NormalRange;
 use logisheets_workbook::{
-    logisheets::{AppData, CellAppendix, LinkRangeXml, LogiSheetsData, Sheet},
+    logisheets::{
+        AppData, CellAppendix, ChartSourceFieldXml, ChartSourceXml, LinkRangeXml, LogiSheetsData,
+        Sheet,
+    },
     prelude::{ChartAnchor, ChartAnchorExtent, PassthroughPart},
     prelude::{
         CtConditionalFormatting, CtExternalReference, CtExternalReferences, CtPerson, CtSheet,
@@ -256,8 +259,10 @@ pub fn save_workbook<S: SaverTrait>(
             // images share one drawing part.
             let mut chart_anchors: Vec<ChartAnchor> = vec![];
             let mut chart_parts: Vec<PassthroughPart> = vec![];
+            let mut chart_sources: Vec<ChartSourceXml> = vec![];
             let mut seen_parts: std::collections::HashSet<String> =
                 std::collections::HashSet::new();
+            let sheet_name = sheet_id_manager.get_string(&sheet_id).unwrap_or_default();
             for chart in chart_manager.charts_of_sheet(sheet_id) {
                 let Ok((fr, fc)) = navigator.fetch_cell_idx(&sheet_id, &chart.from.cell) else {
                     continue;
@@ -288,9 +293,67 @@ pub fn save_workbook<S: SaverTrait>(
                     chart_path: chart.part_path.clone(),
                     name: format!("Chart {}", chart.id),
                 });
+                // A block-bound chart is written out with the ranges the block
+                // covers right now. Excel has no idea what a block is, so the
+                // file has to carry real A1 refs — and the ones sitting in
+                // `data` are only as fresh as the last resolution. The binding
+                // itself goes to logisheets.xml below, so reopening here picks
+                // the chart back up as bound rather than frozen.
+                let regenerated = chart.source.as_ref().and_then(|src| {
+                    let refs = crate::chart_manager::resolve_block_refs(
+                        navigator,
+                        block_schema_manager,
+                        sheet_id,
+                        &sheet_name,
+                        src,
+                    )?;
+                    let mut spec = chart.data.clone();
+                    spec.cat_ref = refs.cat_ref.clone();
+                    let previous = std::mem::take(&mut spec.series);
+                    spec.series = refs
+                        .series
+                        .iter()
+                        .enumerate()
+                        .map(|(i, (name, r))| {
+                            let mut ns = logisheets_workbook::prelude::ChartSeries::new(
+                                Some(name.clone()),
+                                r.clone(),
+                            );
+                            if let Some(old) = previous.get(i) {
+                                ns.color = old.color.clone();
+                                ns.series_type = old.series_type.clone();
+                                ns.preserved = old.preserved.clone();
+                            }
+                            ns
+                        })
+                        .collect();
+                    Some(logisheets_workbook::prelude::build_chart_xml(&spec).into_bytes())
+                });
+                if let Some(src) = &chart.source {
+                    chart_sources.push(ChartSourceXml {
+                        chart_id: chart.id.clone(),
+                        block_id: src.block_id,
+                        category_field: src.category_field.clone(),
+                        value_fields: src
+                            .value_fields
+                            .iter()
+                            .map(|name| ChartSourceFieldXml { name: name.clone() })
+                            .collect(),
+                    });
+                }
                 for p in chart.raw.iter() {
                     if seen_parts.insert(p.path.clone()) {
-                        chart_parts.push(p.clone());
+                        match &regenerated {
+                            // Only the chart part itself is replaced; the style
+                            // and color satellites go out untouched.
+                            Some(bytes) if p.path == chart.part_path => {
+                                chart_parts.push(PassthroughPart {
+                                    data: bytes.clone(),
+                                    ..p.clone()
+                                });
+                            }
+                            _ => chart_parts.push(p.clone()),
+                        }
                     }
                 }
             }
@@ -395,6 +458,7 @@ pub fn save_workbook<S: SaverTrait>(
                 col_schemas,
                 random_schemas,
                 link_ranges,
+                chart_sources,
             };
             sheets.push(sheet);
         });

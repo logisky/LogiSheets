@@ -21,3 +21,30 @@ Changes made in this port relative to the upstream JavaScript source:
     and independent of the host timezone/DST.
   - The public formatting entry points return `Result` values instead of
     throwing on unsupported/invalid input.
+  - Numeric rendering rounds at Excel's precision rather than JavaScript's.
+    Upstream reaches for `Math.round(val * 10^d) / 10^d` and `toFixed`, which
+    decide a halfway case on the exact binary double: 1.005 is really
+    1.00499999999999989, so `0.00` renders it "1.00". Excel keeps only 15
+    significant decimal digits, sees the tie in 1.00500000000000, and shows
+    "1.01". Since the point of this port is Excel's `TEXT()`, the number paths
+    (`rnd`, `dec`, `carry`, and the fixed-decimal `to_fixed` calls in
+    `writenum`) now settle the rounding on the value's 15-significant-digit
+    decimal form, via `jsnum::Precision::Excel15`. So `0.00`, `#,##0.00` and
+    `$#,##0.00` all render 1.005 as "1.01", 2.675 as "2.68" and 4.935 as
+    "4.94" — and they agree with each other, which they did not before
+    (`#,##0.00` went through a different rounding helper and answered "1.00"
+    and "2.67").
+
+    Scoped to magnitudes under 1e15. At or above that the 15-digit window
+    closes before the decimal point, so there is no fractional tie to settle
+    and applying the rule would rewrite integer digits instead. Excel does
+    shorten those as well, but uniformly across every numeric format; doing it
+    only in the helpers that happen to route through here would leave the
+    formats disagreeing with each other. Large-value output is therefore
+    unchanged from upstream.
+
+    The JavaScript primitives in `jsnum` are NOT changed — `to_fixed`,
+    `to_exponential` and `to_precision` still reproduce ECMAScript exactly, so
+    `tests/jsnum_diff.rs` remains a true differential test against node. Only
+    the Excel-facing callers opt into `Precision::Excel15`, which does mean
+    `tests/format_diff.rs` diverges from the JavaScript `ssf` on those values.

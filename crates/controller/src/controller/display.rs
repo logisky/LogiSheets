@@ -357,6 +357,21 @@ pub struct ChartInfo {
     /// Number-format code for the value axis, live from the first series'
     /// source cells when the chart does not set one itself.
     pub val_axis_num_fmt: Option<String>,
+    /// Set when the chart plots a block rather than fixed ranges. The refs
+    /// above are then derived from the block as it is right now, so a host
+    /// showing a chart's source should say which block it follows rather than
+    /// present the range as something the user typed.
+    pub block_source: Option<ChartBlockSourceInfo>,
+}
+
+/// The block a chart follows: its id, the field labelling the categories, and
+/// the fields plotted as series.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_block_source_info.ts", rename_all = "camelCase")]
+pub struct ChartBlockSourceInfo {
+    pub block_id: usize,
+    pub category_field: Option<String>,
+    pub value_fields: Vec<String>,
 }
 
 /// A person referenced by a comment (author or mention). Enterprise builds

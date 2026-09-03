@@ -150,6 +150,20 @@ export interface ChartModel {
     catAxisScale?: AxisScale
     /** How an of-pie chart divides its series between the two plots. */
     ofPieSplit?: OfPieSplit
+    /**
+     * Set when the chart plots a block rather than fixed ranges. `catRef` and
+     * the series refs are then derived from that block as it is right now, so
+     * showing them as something the user typed would be misleading — and a
+     * chart that grows on its own has no ranges worth editing by hand.
+     */
+    blockSource?: ChartBlockSource
+}
+
+/** The block a chart follows, and which of its fields it plots. */
+export interface ChartBlockSource {
+    blockId: number
+    categoryField?: string
+    valueFields: readonly string[]
 }
 
 /**

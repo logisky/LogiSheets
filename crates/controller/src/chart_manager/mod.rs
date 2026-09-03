@@ -12,14 +12,16 @@
 //! (`c:chartSpace`), not this struct: `data` is derived for rendering and may be
 //! lossy, while `raw` is authoritative for persistence.
 
+pub mod block_source;
 pub mod executor;
 
+pub use block_source::{ResolvedBlockRefs, resolve_block_refs};
 pub use executor::ChartExecutor;
 
 use std::sync::Arc;
 
 use imbl::{HashMap, Vector};
-use logisheets_base::{CellId, SheetId};
+use logisheets_base::{BlockId, CellId, SheetId};
 use logisheets_workbook::prelude::{ChartData, PassthroughPart};
 
 /// A chart anchor corner: a stable cell plus an EMU offset into that cell.
@@ -44,6 +46,28 @@ pub enum ChartExtent {
     Size { cx: i64, cy: i64 },
 }
 
+/// A chart whose ranges are a block's, not a fixed rectangle.
+///
+/// Charts normally carry A1 text (`Sheet1!$B$2:$B$5`), which is what OOXML
+/// stores and all Excel understands. That is a snapshot: append a record to the
+/// block and it falls outside the range. A block already knows its own extent
+/// and where each field lives, so a chart bound to one states *what* to plot
+/// and lets the block say *where* — the range is recomputed on every read and
+/// every save, so it grows and shifts with the block for free.
+///
+/// Fields are held by name, the same identity `#FIELD("qty")` formulas use, so
+/// inserting or moving a column inside the block keeps the link. Renaming a
+/// field breaks it, exactly as it breaks those formulas.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChartBlockSource {
+    pub block_id: BlockId,
+    /// Field whose values label the category axis. `None` numbers the
+    /// categories 1..n instead.
+    pub category_field: Option<String>,
+    /// Fields plotted as series, in series order.
+    pub value_fields: Vec<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Chart {
     /// Stable id (currently the chart part's file stem, e.g. `chart1`).
@@ -58,6 +82,10 @@ pub struct Chart {
     /// Original chart part tree (chart XML + style/color satellites) preserved
     /// verbatim for lossless save. Behind an `Arc` to keep snapshots cheap.
     pub raw: Arc<Vec<PassthroughPart>>,
+    /// Set when the chart plots a block rather than a fixed range. The refs in
+    /// `data` are then a cache of the last resolution, not the truth — see
+    /// [`ChartBlockSource`].
+    pub source: Option<ChartBlockSource>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -134,6 +162,29 @@ impl ChartManager {
         let mut chart = v[idx].clone();
         chart.data = data;
         chart.raw = raw;
+        v.set(idx, chart);
+        self.charts.insert(sheet_id, v);
+        true
+    }
+
+    /// Bind (or, with `None`, unbind) a chart's block source. Returns whether
+    /// a matching chart was found.
+    pub fn set_source(
+        &mut self,
+        sheet_id: SheetId,
+        chart_id: &str,
+        source: Option<ChartBlockSource>,
+    ) -> bool {
+        let mut v = match self.charts.get(&sheet_id) {
+            Some(v) => v.clone(),
+            None => return false,
+        };
+        let idx = match v.iter().position(|c| c.id == chart_id) {
+            Some(i) => i,
+            None => return false,
+        };
+        let mut chart = v[idx].clone();
+        chart.source = source;
         v.set(idx, chart);
         self.charts.insert(sheet_id, v);
         true

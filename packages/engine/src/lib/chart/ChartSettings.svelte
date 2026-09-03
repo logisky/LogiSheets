@@ -431,6 +431,21 @@
 
     <div class="group">
         <div class="group-head">Data</div>
+        {#if chart.blockSource}
+            <div class="bound">
+                <strong
+                    >Follows block {chart.blockSource.blockId}</strong
+                >
+                <span>
+                    Plots {chart.blockSource.valueFields.join(', ')}{chart
+                        .blockSource.categoryField
+                        ? ` by ${chart.blockSource.categoryField}`
+                        : ''}. The ranges below are worked out from the block,
+                    so records added to it show up on their own — editing a
+                    range by hand detaches the chart from the block.
+                </span>
+            </div>
+        {/if}
         <label class="field">
             <span>Categories</span>
             <input
@@ -584,6 +599,27 @@
     .group-head {
         font-weight: 600;
         margin-bottom: 4px;
+    }
+
+    .bound {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: 6px;
+        padding: 6px 8px;
+        border-left: 3px solid #4c6ef5;
+        border-radius: 3px;
+        background: #eef2ff;
+        line-height: 1.35;
+    }
+
+    .bound strong {
+        font-weight: 600;
+    }
+
+    .bound span {
+        color: #4a5568;
+        font-size: 11px;
     }
 
     .series-row {

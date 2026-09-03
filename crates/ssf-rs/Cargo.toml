@@ -1,6 +1,6 @@
 [package]
 name = "ssf-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A faithful Rust port of SheetJS's ssf (SpreadSheet Format) — renders a value with an Excel number-format code to a display string. Backs the TEXT() worksheet function."
 license = "Apache-2.0"

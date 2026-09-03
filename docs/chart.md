@@ -34,7 +34,19 @@ xl/charts/chartN.xml (c:chartSpace)          ← source of truth, in the .xlsx
   parts ride along too. Adding a typed field means adding it to *both*
   `ChartData` and `build_chart_xml`.
 - **Anchored by stable `CellId`.** Charts shift with row/column insert/delete,
-  like images.
+  like images. Their *data ranges* do not — see the known bug below.
+- **A chart can be bound to a block instead of a range.** `ChartBlockSource`
+  (block id + field names) is stored on the controller's `Chart`, outside the
+  OOXML model, and `chart_manager::resolve_block_refs` turns it into A1 ranges
+  from the block's *current* place and schema. That resolution runs on every
+  `get_charts` and every save, so the chart follows the block: records appended
+  to it are plotted with nothing touching the chart, and a row inserted above
+  the block cannot leave it pointing at the wrong cells. Fields are held by
+  name — the identity `#FIELD("qty")` formulas use — so a moved column keeps
+  the link and a renamed field breaks it. The `.xlsx` still carries real A1
+  refs (Excel has no idea what a block is); the binding itself is persisted in
+  `logisheets.xml` as `<chartSource>` and restored on load, so reopening in
+  LogiSheets picks the chart back up as bound rather than frozen.
 - **Rendering library: ECharts**, bundled in `logisheets-engine` as an external
   dependency + tree-shaken (`echarts/core` + `use()`), rendered as a DOM overlay
   (`.chart-layer`) positioned from the grid.
@@ -45,6 +57,7 @@ xl/charts/chartN.xml (c:chartSpace)          ← source of truth, in the .xlsx
 | --- | --- | --- |
 | Read & display charts from `.xlsx` | ✅ | user + tests |
 | Chart follows data edits (live values) | ✅ | `chart_reflects_live_data` |
+| Chart bound to a block, follows it as it grows | ✅ | `chart_bound_to_block_follows_it`, `block_bound_chart_survives_save` |
 | Select (click) | ✅ | user |
 | Move (drag) | ✅ | `move_chart_updates_anchor` + user |
 | Resize (corner handles) | ✅ | reuses MoveChart + user |
@@ -96,6 +109,17 @@ picks the tick values, so the engine formats them with `formatAxisNumber`, a
 small subset renderer (separators, decimals, percent, currency affixes).
 
 ## What's remaining
+
+**Known bug: a plain chart's ranges do not track edits**
+- A chart that holds A1 text is *anchored* by `CellId` but its refs are plain
+  strings that nothing rewrites. Insert a row above its data and the chart goes
+  **blank**: the ref still names the old rows, which are now empty, so the live
+  resolution succeeds and returns nothing. (`resolve_series_values` returning
+  `Some(vec![None, …])` also means the `numCache` fallback never kicks in.)
+  Proven by hand on `tests/graph.xlsx`; no test covers it yet.
+- The fix is the same shape as the anchor's: hold the range as `CellId`
+  endpoints and render A1 only at save. Block-bound charts already sidestep it,
+  because their ranges are recomputed rather than stored.
 
 **Fidelity gaps**
 - Fonts, fills, gridline styling and 3-D effects survive an edit but are not
@@ -197,8 +221,13 @@ service, so the inference is unit-tested without a workbook
 - `crates/workbook/src/ooxml/chart.rs` — parse (`parse_chart`) + generate
   (`build_chart_xml`).
 - `crates/workbook/src/ooxml/drawing_part.rs` — `graphicFrame` anchor model.
-- `crates/controller/src/chart_manager/` — `ChartManager` + executor.
-- `crates/controller/src/api/worksheet.rs` — `get_charts` (live-value resolution).
+- `crates/controller/src/chart_manager/` — `ChartManager` + executor, plus
+  `block_source.rs` (block binding → live A1 ranges).
+- `crates/controller/src/api/worksheet.rs` — `get_charts` (live-value resolution
+  and live block-range resolution).
+- `crates/workbook/src/logisheets.rs` — `<chartSource>`, the persisted binding.
+- `packages/logician/src/tools/charts.ts` — Watson's chart tools, including
+  `chart__from_block`, which states fields and lets the engine find them.
 - `packages/engine/src/lib/chart/` — ECharts setup, model, renderer,
   `ChartSettings.svelte` (the editor), `num-format.ts` (axis ticks),
   `from-info.ts` (binding → model), `from-selection.ts` (insert inference) and

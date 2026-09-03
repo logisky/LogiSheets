@@ -7,3 +7,5 @@
 cc cf697f1245804258c1cfbf15d6fb7831e00106275c961d4f54bec3c30de6a9e0 # shrinks to e = Bin(Div, Neg(Bin(Pow, Num(2), Neg(Num(5)))), Bin(Pow, Num(7), Neg(Num(12))))
 cc bc0cc186c0f3aab0584847eb0dbbd8d159d5f2eb877788b0fdd75759db60c80a # shrinks to e = Neg(Bin(Add, Call(Power, [Num(3), Dec { mantissa: 6461, scale: 1 }]), Num(1))), side = false
 cc 37a448cbcc11ca210e91210f748baf10e2edb0f95e0af73e69285a6d9639395b # shrinks to e = Bin(Add, Call(Min, [Call(Power, [Num(5), Bin(Add, Num(1), Dec { mantissa: 4401, scale: 1 })]), Num(1)]), Num(1))
+cc 9c4bd9eb8dc3915d2f48fa0ea99a14cb428474f5fb1a56c7c124784b66b3183a # shrinks to e = Call(Mod, [Neg(Call(Round, [Dec { mantissa: 4935, scale: 3 }, Num(2)])), Num(1)])
+cc 4314131c201dad3c7b02c3275c696f1eb71ebf8be4b1173b59d8ff135fe5143e # shrinks to e = Neg(Call(Round, [Dec { mantissa: 50, scale: 5 }, Num(2)]))
