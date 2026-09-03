@@ -2,12 +2,12 @@ use gents_derives::{Interface, TS};
 
 use crate::BlockId;
 use crate::{
-    ActionEffect, AppData, AppendixWithCell, BlockDataRow, BlockField, BlockInfo, BlockSortOrder,
-    CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
-    CfRuleInfo, ChartInfo, ColId, Comment, DependentCell, DisplayWindow,
-    DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo, LinkInfo,
-    MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId,
-    SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
+    ActionEffect, AppData, AppendixWithCell, BlockActor, BlockDataRow, BlockField, BlockInfo,
+    BlockModifyInfo, BlockOp, BlockSortOrder, CellCoordinateWithSheet, CellImageInfo, CellInfo,
+    CellInput, CellPosition, CellRefRange, CfRuleInfo, ChartInfo, ColId, Comment, DependentCell,
+    DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo,
+    LinkInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo,
+    SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
 };
 
 // ============================================================================
@@ -61,6 +61,8 @@ pub enum Message {
     GetSheetId(GetSheetIdParams),
     GetBlockValues(GetBlockValuesParams),
     GetBlockSortOrder(GetBlockSortOrderParams),
+    MayModifyBlock(MayModifyBlockParams),
+    GetBlockModifyInfo(GetBlockModifyInfoParams),
     GetShadowCellId(GetShadowCellIdParams),
     GetShadowCellIds(GetShadowCellIdsParams),
     GetShadowInfoById(GetShadowInfoByIdParams),
@@ -505,6 +507,37 @@ pub struct GetBlockSortOrderParams {
     pub asc: bool,
 }
 
+/// Ask whether an actor may perform one operation on a block.
+///
+/// The engine cannot enforce a block's write policy — a payload carries no
+/// trace of who prompted it — so the host gates the edit and asks this first.
+/// Answering it in the core keeps the browser, node, the desktop app and the
+/// craft runtime from drifting apart on what a policy means.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "may_modify_block_params.ts", rename_all = "camelCase")]
+pub struct MayModifyBlockParams {
+    pub sheet_idx: usize,
+    pub block_id: BlockId,
+    pub op: BlockOp,
+    pub actor: BlockActor,
+}
+
+/// A block's governance metadata on its own — owner, default policy,
+/// per-operation overrides, description — without its cells.
+///
+/// `getBlockInfo` carries the same fields but drags every cell along with
+/// them, which is the wrong shape for a permission check running once per
+/// payload in a transaction.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "get_block_modify_info_params.ts",
+    rename_all = "camelCase"
+)]
+pub struct GetBlockModifyInfoParams {
+    pub sheet_idx: usize,
+    pub block_id: BlockId,
+}
+
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_shadow_cell_id_params.ts",
@@ -836,6 +869,12 @@ pub struct WorkbookMethods {
         params: GetBlockSortOrderParams,
         book_id: Option<usize>,
     ) -> Result<BlockSortOrder, ErrorMessage>,
+    pub may_modify_block:
+        fn(params: MayModifyBlockParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
+    pub get_block_modify_info: fn(
+        params: GetBlockModifyInfoParams,
+        book_id: Option<usize>,
+    ) -> Result<BlockModifyInfo, ErrorMessage>,
     pub get_available_block_id:
         fn(params: GetAvailableBlockIdParams, book_id: Option<usize>) -> Result<u32, ErrorMessage>,
     pub get_all_block_fields: fn(book_id: Option<usize>) -> Result<Vec<BlockField>, ErrorMessage>,

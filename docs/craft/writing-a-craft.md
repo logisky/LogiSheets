@@ -214,6 +214,84 @@ export async function solve(ctx: SkillCtx): Promise<{ok: boolean}> {
 
 (The engine has no compare-and-swap, so this optimistic check is the right tool.)
 
+### Say what your block is for, and keep it yours
+
+A block your craft creates should carry two things beyond its schema.
+
+**A description.** The schema says what shape the records are; nothing else says
+what they *mean*. It is saved in the file and reported by `getBlockInfo`, so it
+is what Watson — or you, next session — reads to understand a table it did not
+build. Write it for a stranger, not for this conversation.
+
+**Per-operation permissions.** One policy for the whole block is too blunt: you
+usually want the user to keep typing into your table while refusing to let them
+pull rows out from under it or re-point its schema, either of which takes the
+block out of your control for good.
+
+```ts
+await ctx.workbook.handleTransaction({
+    transaction: {
+        payloads: [
+            {
+                type: 'createBlock',
+                value: {
+                    sheetIdx, id: blockId,
+                    masterRow: 0, masterCol: 0, rowCnt: 8, colCnt: 3,
+                    owner: 'my-craft',              // required for any policy to bite
+                    description:
+                        'One row per run. `score` is computed by my-craft; ' +
+                        'edit `input`, never `score`.',
+                    modifyPolicy: 'ownerAndUser',   // the fallback
+                    permissions: {
+                        cellInput: 'all',           // let anyone type
+                        insertDeleteLines: 'ownerOnly',
+                        removeBlock: 'ownerOnly',
+                        modifySchema: 'ownerOnly',
+                        // sortByField left out → follows modifyPolicy
+                    },
+                },
+            },
+        ],
+        undoable: true, temp: false,
+    },
+})
+```
+
+The operations are `insertDeleteLines`, `removeBlock`, `modifySchema`,
+`cellInput`, `sortByField` and `modifyDescription`. Each takes `all`,
+`ownerAndUser` (the person at the keyboard, but no other craft) or `ownerOnly`.
+An operation you leave out follows `modifyPolicy`. **`owner` must be set** — a
+policy on an unowned block has nobody to privilege, so it is read as `all`.
+
+`removeBlock` is worth reserving even on a block that is otherwise open:
+deleting it takes the records, the schema and this policy along with it, and
+there is no editing your way back. Moving a block is not governed separately —
+it keeps its identity, its cells and its rules wherever it lands.
+
+Two things to understand about enforcement:
+
+- **The engine does not enforce it.** A payload carries no trace of who prompted
+  it, so the core cannot tell your write from the user's. Whoever offers an
+  operation is what must refuse it.
+- **Ask, do not re-implement.** Call `mayModifyBlock({sheetIdx, blockId, op,
+  actor})` — `actor` is `'user'` or `{type: 'craft', value: 'my-craft'}`. The
+  decision lives in the core so the app, the desktop build, Watson and your
+  craft cannot drift apart on what a policy means.
+
+```ts
+const ok = await ctx.workbook.mayModifyBlock({
+    sheetIdx, blockId, op: 'insertDeleteLines',
+    actor: {type: 'craft', value: 'my-craft'},
+})
+if (isErrorMessage(ok) || !ok) return {ok: false, why: 'not mine to resize'}
+```
+
+Both can also be set later, on a block that already exists, with the
+`setBlockDescription` and `setBlockPermissions` payloads. `setBlockPermissions`
+replaces the whole set rather than patching it, so state the block's full stance
+each time — that is the only way to clear an override back to "follows the
+default".
+
 ## Face: a browser UI
 
 An `index.html` gives your craft a UI in the craft panel. It's loaded in a

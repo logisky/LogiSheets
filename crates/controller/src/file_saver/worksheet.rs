@@ -123,8 +123,18 @@ pub fn save_sheets<S: SaverTrait>(
                 };
                 let modify_policy = match block.modify_policy {
                     crate::edit_action::ModifyPolicy::All => None,
-                    ref p => Some(p.as_wire_str().to_string()),
+                    p => Some(p.as_wire_str().to_string()),
                 };
+                // Only what the block actually says: an operation deferring to
+                // the block's default policy writes no attribute, so a file
+                // gains nothing for the blocks that never used this.
+                let perm = |op| {
+                    block
+                        .permissions
+                        .explicit(op)
+                        .map(|p| p.as_wire_str().to_string())
+                };
+                use crate::edit_action::BlockOp;
                 Some(BlockRange {
                     block_id: *block_id,
                     start_row: row_idx,
@@ -133,6 +143,17 @@ pub fn save_sheets<S: SaverTrait>(
                     col_cnt: block.cols.len(),
                     owner,
                     modify_policy,
+                    description: if block.description.is_empty() {
+                        None
+                    } else {
+                        Some(block.description.clone())
+                    },
+                    perm_insert_delete_lines: perm(BlockOp::InsertDeleteLines),
+                    perm_remove_block: perm(BlockOp::RemoveBlock),
+                    perm_modify_schema: perm(BlockOp::ModifySchema),
+                    perm_cell_input: perm(BlockOp::CellInput),
+                    perm_sort_by_field: perm(BlockOp::SortByField),
+                    perm_modify_description: perm(BlockOp::ModifyDescription),
                     row_infos,
                     col_infos,
                 })
@@ -596,7 +617,11 @@ fn save_sheet_data<S: SaverTrait>(
                     // Same convention as the cell-bearing branch above: the
                     // style index is only meaningful when custom_format is set,
                     // and it is stored one lower than it is written.
-                    s: if info.custom_format { info.style + 1 } else { 0 },
+                    s: if info.custom_format {
+                        info.style + 1
+                    } else {
+                        0
+                    },
                     custom_format: info.custom_format,
                     ht: info.ht,
                     hidden: info.hidden,

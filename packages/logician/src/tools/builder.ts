@@ -31,7 +31,9 @@ import {
 import type {CraftCalc, Value} from 'logisheets-web/pure'
 import type {
     ActionEffect,
+    BlockActor,
     BlockInfo,
+    BlockOp,
     CellInfo,
     Client,
     EditPayload,
@@ -39,6 +41,25 @@ import type {
 } from 'logisheets-web/pure'
 import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool.js'
 import {transactionFailure} from './effect.js'
+
+/**
+ * Watson editing a sheet is a craft as far as a block's write policy is
+ * concerned, and this is the id it is known by. A block Watson created owns
+ * itself under this name, so its own blocks stay editable while another
+ * craft's stay off limits.
+ */
+export const WATSON_CRAFT_ID = 'watson'
+const WATSON_ACTOR: BlockActor = {type: 'craft', value: WATSON_CRAFT_ID}
+
+/** Every operation a block can single out; mirrors the core's `BlockOp`. */
+const BLOCK_OPS: readonly BlockOp[] = [
+    'insertDeleteLines',
+    'removeBlock',
+    'modifySchema',
+    'cellInput',
+    'sortByField',
+    'modifyDescription',
+]
 
 /** Narrow the workbook client to the concrete `Client` from logisheets-web.
  *  `ctx.workbook: WorkbookClient` is already a type alias for `Client` —
@@ -73,7 +94,11 @@ function cellDisplay(c: CellInfo | undefined): string {
 function cellTextOnly(c: CellInfo | undefined): string {
     const v = c?.value
     if (v === undefined || v === 'empty') return ''
-    if (typeof v === 'object' && 'type' in v && (v as {type: string}).type === 'str') {
+    if (
+        typeof v === 'object' &&
+        'type' in v &&
+        (v as {type: string}).type === 'str'
+    ) {
         return String((v as {value: unknown}).value)
     }
     return ''
@@ -340,6 +365,12 @@ export const createSheet: Tool<{name: string}, {sheet_idx: number}> = {
 interface CreateBlockInput {
     sheet: string
     name: string
+    /**
+     * What the block is for, in prose. Saved with the block, so the next agent
+     * to open the file learns what it means without inferring it from the
+     * column names.
+     */
+    description?: string
     position: {row: number; col: number}
     fields: ReadonlyArray<{
         name: string
@@ -406,9 +437,13 @@ async function assertAreaIsFree(
     const occupied: string[] = []
     cells.forEach((info, i) => {
         const empty =
-            (info.value === 'empty' || info.value === undefined) && !info.formula
+            (info.value === 'empty' || info.value === undefined) &&
+            !info.formula
         if (empty) return
-        occupied.push(columnName(col + (i % width)) + String(row + Math.floor(i / width) + 1))
+        occupied.push(
+            columnName(col + (i % width)) +
+                String(row + Math.floor(i / width) + 1)
+        )
     })
     if (occupied.length === 0) return
 
@@ -455,6 +490,11 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                 type: 'string',
                 description:
                     'Block ref name. Used as the first arg to BLOCKREF/BLOCKREFS in formulas. Must be unique within the workbook.',
+            },
+            description: {
+                type: 'string',
+                description:
+                    'What this table is for, in a sentence or two: what a row represents, what the fields mean where the names are not obvious, and anything a later reader must not do to it (e.g. a field the craft maintains). Saved with the block and returned by describe_block, so write it for whoever opens the file next rather than for this conversation.',
             },
             position: {
                 type: 'object',
@@ -589,7 +629,9 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
             throw new Error(
                 `block "${input.name}" declares the field name(s) ${dupFields
                     .map((f) => `"${f}"`)
-                    .join(', ')} more than once; fields address cells, so they must be unique`
+                    .join(
+                        ', '
+                    )} more than once; fields address cells, so they must be unique`
             )
         }
 
@@ -599,7 +641,9 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
             throw new Error(
                 `block "${input.name}" repeats the row key(s) ${dupKeys
                     .map((k) => `"${k}"`)
-                    .join(', ')}; row keys address cells, so they must be unique`
+                    .join(
+                        ', '
+                    )}; row keys address cells, so they must be unique`
             )
         }
 
@@ -704,14 +748,22 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
 
         payloads.push({
             type: 'createBlock',
-            value: new CreateBlockBuilder()
-                .sheetIdx(sheetIdx)
-                .id(blockId)
-                .masterRow(input.position.row)
-                .masterCol(input.position.col)
-                .rowCnt(rowCnt)
-                .colCnt(colCnt)
-                .build(),
+            value: (() => {
+                const b = new CreateBlockBuilder()
+                    .sheetIdx(sheetIdx)
+                    .id(blockId)
+                    .masterRow(input.position.row)
+                    .masterCol(input.position.col)
+                    .rowCnt(rowCnt)
+                    .colCnt(colCnt)
+                    // Owned by Watson, so a later session can tell a block it
+                    // built from one the user made, and so the block's own
+                    // policies can privilege it.
+                    .owner(WATSON_CRAFT_ID)
+                if (input.description?.trim())
+                    b.description(input.description.trim())
+                return b.build()
+            })(),
         })
 
         for (let i = 0; i < initialRows.length; i++) {
@@ -949,7 +1001,9 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
             throw new Error(
                 `block "${input.block}" already has the row key(s) ${collide
                     .map((k) => `"${k}"`)
-                    .join(', ')}. Row keys must be unique — use set_block_cells to ` +
+                    .join(
+                        ', '
+                    )}. Row keys must be unique — use set_block_cells to ` +
                     `update the existing row, or pick another key.`
             )
         }
@@ -959,13 +1013,8 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
         // named row instead. Positioning by key rather than by index is
         // deliberate: an index would go stale the moment anything else
         // inserts or deletes, whereas a key names the same row for good.
-        if (
-            input.after_key !== undefined &&
-            input.before_key !== undefined
-        ) {
-            throw new Error(
-                'pass either after_key or before_key, not both'
-            )
+        if (input.after_key !== undefined && input.before_key !== undefined) {
+            throw new Error('pass either after_key or before_key, not both')
         }
         const anchorKey = input.after_key ?? input.before_key
         let blockStart = block.rowCnt
@@ -1073,8 +1122,8 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
             anchorKey === undefined
                 ? 'Appended'
                 : input.after_key !== undefined
-                  ? `Inserted after "${anchorKey}":`
-                  : `Inserted before "${anchorKey}":`
+                ? `Inserted after "${anchorKey}":`
+                : `Inserted before "${anchorKey}":`
         return {
             data: {added: cnt},
             display: `${where} ${cnt} row(s) in "${input.block}" (block row ${blockStart}, sheet row ${sheetStart}).`,
@@ -1255,7 +1304,7 @@ export const moveBlockRow: Tool<MoveBlockRowInput, {order: string[]}> = {
     namespace: 'build',
     name: 'move_block_row',
     description:
-        "Reorder a block by moving one row to a new position, addressing both the row and its destination by key. Moves to the end when neither after_key nor before_key is given (same default as add_block_rows). Row order inside a block is presentation only — formulas address rows by key, so reordering never changes a single computed value. Use it to match a reading order someone expects, not to change the model.",
+        'Reorder a block by moving one row to a new position, addressing both the row and its destination by key. Moves to the end when neither after_key nor before_key is given (same default as add_block_rows). Row order inside a block is presentation only — formulas address rows by key, so reordering never changes a single computed value. Use it to match a reading order someone expects, not to change the model.',
     mutates: true,
     confirmation: 'never',
     inputSchema: {
@@ -1308,9 +1357,7 @@ export const moveBlockRow: Tool<MoveBlockRowInput, {order: string[]}> = {
         const from = known('key', input.key)
         const anchorKey = input.after_key ?? input.before_key
         if (anchorKey === input.key) {
-            throw new Error(
-                `cannot move "${input.key}" relative to itself`
-            )
+            throw new Error(`cannot move "${input.key}" relative to itself`)
         }
 
         // MoveBlockLine's `to` is the index the line lands on AFTER it has
@@ -1357,8 +1404,10 @@ export const moveBlockRow: Tool<MoveBlockRowInput, {order: string[]}> = {
         const after = await client.getAllBlocks({})
         const settled = isErrorMessage(after)
             ? keys
-            : ([...(after.find((b) => b.schema?.name === input.block)?.schema
-                  ?.keys ?? [])]
+            : ([
+                  ...(after.find((b) => b.schema?.name === input.block)?.schema
+                      ?.keys ?? []),
+              ]
                   .sort((a, b) => a.idx - b.idx)
                   .map((k) => k.key) as string[])
 
@@ -1366,8 +1415,14 @@ export const moveBlockRow: Tool<MoveBlockRowInput, {order: string[]}> = {
             data: {order: settled},
             display:
                 to === from
-                    ? `"${input.key}" was already in that position; order unchanged: ${settled.join(', ')}`
-                    : `Moved "${input.key}". Order is now: ${settled.join(', ')}`,
+                    ? `"${
+                          input.key
+                      }" was already in that position; order unchanged: ${settled.join(
+                          ', '
+                      )}`
+                    : `Moved "${input.key}". Order is now: ${settled.join(
+                          ', '
+                      )}`,
         }
     },
 }
@@ -1396,7 +1451,7 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
         "  #KEY                  — the row's key value (quoted as a string literal)",
         '  #PLACEHOLDER          — the cell itself (validation/editability only)',
         '',
-        'The two-argument #FIELD is the only way to reach another row of the cell\'s own block: BLOCKREF is refused there (it depends on the whole-block vertex, so it would close a cycle). Use it for share-of-total or index-to-a-base-row columns, e.g. "=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")".',
+        'The two-argument #FIELD is the only way to reach another row of the cell\'s own block: BLOCKREF is refused there (it depends on the whole-block vertex, so it would close a cycle). Use it for share-of-total or index-to-a-base-row columns, e.g. "=#FIELD("amt")/#FIELD("amt","TOTAL")".',
         'The other row is named by KEY, never by position — there is no "previous row" form, because rows can be reordered and inserted into, so a positional address would silently come to mean a different row. A running total (each row reading the row above) therefore has no rule form; write that column as ordinary cells outside the block.',
         'A rule that resolves onto the cell it is defining is rejected, as is a plain coordinate (A1/C3) landing inside the block — in a template a coordinate does not shift per row, so on the first row it would point at the cell being defined.',
         '',
@@ -1855,9 +1910,9 @@ export const listBlocks: Tool<ListBlocksInput, SheetBlockGroup[]> = {
     description: [
         'Orient yourself in a workbook: every sheet, every block, and for each block the fields you can reference. One call is enough to start writing formulas.',
         '',
-        'Per block you get its ref name (BLOCKREF\'s first argument), its `fields` in column order (the third argument), `key_field` — the column whose values BLOCKREF matches as its second argument — and `derived_fields`, which are computed by a rule and reject writes.',
+        "Per block you get its ref name (BLOCKREF's first argument), its `fields` in column order (the third argument), `key_field` — the column whose values BLOCKREF matches as its second argument — and `derived_fields`, which are computed by a rule and reject writes.",
         '',
-        'Use `describe_block` when you need a field\'s actual rule, or the row keys and values. `next_block_start` clears everything already on the sheet, blocks and loose cell content alike, so passing it as `create_block`\'s `position` will not land on top of data.',
+        "Use `describe_block` when you need a field's actual rule, or the row keys and values. `next_block_start` clears everything already on the sheet, blocks and loose cell content alike, so passing it as `create_block`'s `position` will not land on top of data.",
         '',
         'Omit `sheet` to scan the whole workbook; passing it restricts to one sheet.',
     ].join('\n'),
@@ -1996,6 +2051,20 @@ interface FieldDescription {
 interface DescribeBlockOutput {
     block: string
     /**
+     * What the block is for, in prose, as whoever built it wrote it. The
+     * schema says what shape the records are; this is the only thing that says
+     * what they mean or how they are meant to be used. `null` when nobody said.
+     */
+    description: string | null
+    /** The craft that owns the block, `null` for one a person made. */
+    owner: string | null
+    /**
+     * Which operations are closed to you. Absent keys are open. You are not
+     * the owner of a block some other craft built, so an entry here for
+     * anything you were about to do means: do not, and say why.
+     */
+    denied_operations?: Record<string, string>
+    /**
      * Numeric block id — what `move_block` / `resize_block` / `remove_block`
      * take. Reported here because it was only available from `list_blocks`,
      * so moving a block you had just described cost a second, pointless call.
@@ -2090,8 +2159,33 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
             .sort((a, b) => a.idx - b.idx)
             .map((k) => k.key)
 
+        // What the block declares about itself. `mayModifyBlock` is asked per
+        // operation rather than the policies being read apart here, so this
+        // agent cannot drift from what the app and the craft runtime enforce.
+        const denied: Record<string, string> = {}
+        const verdicts = await Promise.all(
+            BLOCK_OPS.map((op) =>
+                client.mayModifyBlock({
+                    sheetIdx: block.sheetIdx,
+                    blockId: block.blockId,
+                    op,
+                    actor: WATSON_ACTOR,
+                })
+            )
+        )
+        BLOCK_OPS.forEach((op, i) => {
+            const allowed = verdicts[i]
+            if (!isErrorMessage(allowed) && allowed === false) {
+                denied[op] = block.owner
+                    ? `reserved to "${block.owner}"`
+                    : 'not permitted on this block'
+            }
+        })
+
         const out: DescribeBlockOutput = {
             block: input.name,
+            description: nonEmpty(block.description),
+            owner: nonEmpty(block.owner),
             block_id: block.blockId,
             sheet: sheetName,
             sheet_idx: block.sheetIdx,
@@ -2101,6 +2195,7 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
             fields,
             keys,
         }
+        if (Object.keys(denied).length) out.denied_operations = denied
 
         if (input.include_rows) {
             // `cells` is row-major: index = row * colCnt + col.
@@ -2386,7 +2481,6 @@ export const checkpoint: Tool<CheckpointInput, CheckpointOutput> = {
 // Bundle
 // ---------------------------------------------------------------------------
 
-
 // ---------------------------------------------------------------------------
 // rename_block / rename_field
 // ---------------------------------------------------------------------------
@@ -2468,7 +2562,11 @@ function bindPayload(s: SchemaSnapshot): EditPayload {
 
 /** Every template a snapshot holds, for scanning or rewriting. */
 function templates(s: SchemaSnapshot): string[] {
-    return [...s.fieldFormulas, ...s.validationFormulas, ...s.editabilityFormulas]
+    return [
+        ...s.fieldFormulas,
+        ...s.validationFormulas,
+        ...s.editabilityFormulas,
+    ]
 }
 
 function rewriteTemplates(s: SchemaSnapshot, f: (t: string) => string): void {
@@ -2489,7 +2587,7 @@ export const renameBlock: Tool<
     namespace: 'build',
     name: 'rename_block',
     description: [
-        "Rename a block, updating everything that refers to it by the old name.",
+        'Rename a block, updating everything that refers to it by the old name.',
         '',
         'Cell formulas follow a rename on their own — BLOCKREF resolves to stable ids — but field RULES are stored as text and re-parsed for every row, so a rename they do not know about leaves them dangling: existing rows keep their values and the next row added evaluates to #NAME?. This rewrites those rules and re-binds the affected blocks in one transaction.',
         '',
@@ -2546,7 +2644,8 @@ export const renameBlock: Tool<
             'g'
         )
         for (const b of all) {
-            if (b.blockId === target.blockId && b.sheetIdx === target.sheetIdx) continue
+            if (b.blockId === target.blockId && b.sheetIdx === target.sheetIdx)
+                continue
             const snap = snapshot(b)
             if (!snap) continue
             const before = templates(snap).join('\u0000')
@@ -2586,7 +2685,7 @@ export const renameField: Tool<
         '',
         'Rules refer to sibling fields as `#FIELD("name")`, and the engine rejects a schema whose rule names a field that does not exist — so the rename and the rules have to move together. This does that in one transaction.',
         '',
-        'Refused when another block\'s rule mentions the old name: rewriting a field reference inside someone else\'s BLOCKREF cannot be done by matching text alone, and a half-rewritten rule is worse than a refusal. The message says where to look.',
+        "Refused when another block's rule mentions the old name: rewriting a field reference inside someone else's BLOCKREF cannot be done by matching text alone, and a half-rewritten rule is worse than a refusal. The message says where to look.",
     ].join('\n'),
     mutates: true,
     confirmation: 'always',
@@ -2615,9 +2714,9 @@ export const renameField: Tool<
         if (!snap) throw new Error(`block "${input.block}" has no schema`)
         if (!snap.fields.includes(input.from)) {
             throw new Error(
-                `block "${input.block}" has no field named "${input.from}" — it has ${snap.fields
-                    .map((f) => `"${f}"`)
-                    .join(', ')}`
+                `block "${input.block}" has no field named "${
+                    input.from
+                }" — it has ${snap.fields.map((f) => `"${f}"`).join(', ')}`
             )
         }
         if (input.from === input.to) {
@@ -2637,7 +2736,8 @@ export const renameField: Tool<
         const mentions = new RegExp(`"${escapeForRegex(input.from)}"`)
         const blockedBy: string[] = []
         for (const b of all) {
-            if (b.blockId === target.blockId && b.sheetIdx === target.sheetIdx) continue
+            if (b.blockId === target.blockId && b.sheetIdx === target.sheetIdx)
+                continue
             const other = snapshot(b)
             if (!other) continue
             if (templates(other).some((t) => mentions.test(t))) {
@@ -2648,8 +2748,10 @@ export const renameField: Tool<
             throw new Error(
                 `cannot rename "${input.from}": the rules of ${blockedBy
                     .map((n) => `"${n}"`)
-                    .join(', ')} mention that name, and rewriting a field reference ` +
-                    'inside another block\'s BLOCKREF by text alone is not safe. ' +
+                    .join(
+                        ', '
+                    )} mention that name, and rewriting a field reference ` +
+                    "inside another block's BLOCKREF by text alone is not safe. " +
                     'Rename the field there first, or restate those rules yourself.'
             )
         }
@@ -2672,7 +2774,6 @@ export const renameField: Tool<
         }
     },
 }
-
 
 // ---------------------------------------------------------------------------
 // convert_to_block — adopt a table that is already there
@@ -2727,7 +2828,7 @@ export const convertToBlock: Tool<
     description: [
         'Turn a table that already exists in ordinary cells into a block, in place, without touching its values.',
         '',
-        "This is how you adopt a workbook someone hands you. `create_block` is for new tables and refuses to write over existing data; this one takes the data as it stands and gives it a name, fields and row keys, so you can address it as (block, row_key, field) and reference it from formulas by name instead of by coordinate.",
+        'This is how you adopt a workbook someone hands you. `create_block` is for new tables and refuses to write over existing data; this one takes the data as it stands and gives it a name, fields and row keys, so you can address it as (block, row_key, field) and reference it from formulas by name instead of by coordinate.',
         '',
         'Give `position` and the counts for the DATA only, leaving out any header row. Field names come from the header row — pass `header_row`, or leave it out and the row directly above the data is used when it looks like titles. `fields` states them outright instead.',
         '',
@@ -2752,10 +2853,19 @@ export const convertToBlock: Tool<
                     col: {type: 'integer', minimum: 0},
                 },
                 required: ['row', 'col'],
-                description: 'Top-left cell of the data, excluding the header row.',
+                description:
+                    'Top-left cell of the data, excluding the header row.',
             },
-            row_count: {type: 'integer', minimum: 1, description: 'Number of data rows.'},
-            col_count: {type: 'integer', minimum: 1, description: 'Number of columns.'},
+            row_count: {
+                type: 'integer',
+                minimum: 1,
+                description: 'Number of data rows.',
+            },
+            col_count: {
+                type: 'integer',
+                minimum: 1,
+                description: 'Number of columns.',
+            },
             header_row: {
                 type: 'integer',
                 minimum: 0,
@@ -2933,7 +3043,9 @@ export const convertToBlock: Tool<
             throw new Error(
                 `duplicate field name(s) ${[...new Set(dup)]
                     .map((d) => `"${d}"`)
-                    .join(', ')} — fields address cells, so they must be unique. ` +
+                    .join(
+                        ', '
+                    )} — fields address cells, so they must be unique. ` +
                     'Pass `fields` explicitly to disambiguate.'
             )
         }
@@ -3027,10 +3139,190 @@ export const convertToBlock: Tool<
             display:
                 `Converted the table at row ${row}, col ${col} into block "${input.name}" ` +
                 `(${input.row_count} row(s)). Values untouched.\n` +
-                `Fields: ${fields.map((f) => `"${f}"`).join(', ')} — ${fieldSource}.\n` +
+                `Fields: ${fields
+                    .map((f) => `"${f}"`)
+                    .join(', ')} — ${fieldSource}.\n` +
                 `Row key: "${fields[keyIdx]}" — ${keySource}.`,
         }
     },
+}
+
+// ---------------------------------------------------------------------------
+// Block self-description and write policy
+// ---------------------------------------------------------------------------
+
+/** Resolve a block by its ref name, or throw naming what exists. */
+async function blockByName(client: Client, name: string): Promise<BlockInfo> {
+    const all = await client.getAllBlocks({})
+    if (isErrorMessage(all)) throw new Error(`getAllBlocks failed: ${all.msg}`)
+    const found = all.find((b) => b.schema?.name === name)
+    if (!found) {
+        const known = all
+            .map((b) => b.schema?.name)
+            .filter(Boolean)
+            .join(', ')
+        throw new Error(
+            `No block named "${name}". Blocks in this workbook: ${
+                known || '(none)'
+            }.`
+        )
+    }
+    return found
+}
+
+export const setBlockDescription: Tool<
+    {name: string; description: string},
+    {ok: true}
+> = {
+    namespace: 'build',
+    name: 'set_block_description',
+    description: [
+        'Write what a block is for, in prose, onto the block itself. Saved in the file and returned by describe_block, so it is how the next agent — or the next you, in a later session — learns what the table means.',
+        'Say what one row represents, what any non-obvious field holds, and anything that must not be done to it. Do not restate the field names; they are already visible.',
+        'Refused when the block reserves `modifyDescription` to its owner. Pass an empty string to clear it.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'once',
+    inputSchema: {
+        properties: {
+            name: {type: 'string', description: 'Block ref name.'},
+            description: {type: 'string'},
+        },
+        required: ['name', 'description'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const block = await blockByName(client, input.name)
+        await assertMayModify(client, block, 'modifyDescription')
+        await commitTransaction(
+            client,
+            [
+                {
+                    type: 'setBlockDescription',
+                    value: {
+                        sheetIdx: block.sheetIdx,
+                        blockId: block.blockId,
+                        description: input.description,
+                    },
+                },
+            ],
+            'set_block_description'
+        )
+        return {
+            data: {ok: true},
+            display: `Described block ${input.name}`,
+        }
+    },
+}
+
+export const setBlockPermissions: Tool<
+    {
+        name: string
+        operations: Partial<
+            Record<BlockOp, 'all' | 'ownerOnly' | 'ownerAndUser'>
+        >
+        default_policy?: 'all' | 'ownerOnly' | 'ownerAndUser'
+    },
+    {ok: true}
+> = {
+    namespace: 'build',
+    name: 'set_block_permissions',
+    description: [
+        'Set who may do what to a block, one operation at a time.',
+        '',
+        'Use it on a block you built that must stay under your control: leave `cellInput` open so the user keeps entering data, and reserve `insertDeleteLines`, `removeBlock` and `modifySchema` to the owner so a stray edit cannot take the table out of your hands. `removeBlock` is worth reserving even when the rest is open — deleting the block takes its records, its schema and this policy with it. `ownerOnly` means only the owning craft; `ownerAndUser` adds the person at the keyboard but no other craft; `all` means anyone.',
+        '',
+        "REPLACES the whole set: an operation you leave out goes back to following `default_policy`. State the block's full stance each time.",
+        '',
+        'The engine cannot enforce this by itself — it cannot tell who prompted an edit — so it is the host that refuses the operation. Setting it is a declaration, not a lock.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'always',
+    inputSchema: {
+        properties: {
+            name: {type: 'string', description: 'Block ref name.'},
+            operations: {
+                type: 'object',
+                description:
+                    'Policy per operation. Omitted operations follow default_policy.',
+                properties: Object.fromEntries(
+                    BLOCK_OPS.map((op) => [
+                        op,
+                        {
+                            type: 'string',
+                            enum: ['all', 'ownerOnly', 'ownerAndUser'],
+                        },
+                    ])
+                ),
+            },
+            default_policy: {
+                type: 'string',
+                enum: ['all', 'ownerOnly', 'ownerAndUser'],
+                description:
+                    "The block's fallback for operations left unstated. Omit to keep the current one.",
+            },
+        },
+        required: ['name', 'operations'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const block = await blockByName(client, input.name)
+        // Changing the policy is itself governed: a block another craft
+        // reserved must not be unlocked by asking nicely.
+        await assertMayModify(client, block, 'modifySchema')
+        const policy = (op: BlockOp) => input.operations[op] ?? undefined
+        await commitTransaction(
+            client,
+            [
+                {
+                    type: 'setBlockPermissions',
+                    value: {
+                        sheetIdx: block.sheetIdx,
+                        blockId: block.blockId,
+                        permissions: {
+                            insertDeleteLines: policy('insertDeleteLines'),
+                            removeBlock: policy('removeBlock'),
+                            modifySchema: policy('modifySchema'),
+                            cellInput: policy('cellInput'),
+                            sortByField: policy('sortByField'),
+                            modifyDescription: policy('modifyDescription'),
+                        },
+                        modifyPolicy: input.default_policy,
+                    },
+                },
+            ],
+            'set_block_permissions'
+        )
+        return {
+            data: {ok: true},
+            display: `Set permissions on block ${input.name}`,
+        }
+    },
+}
+
+/** Throw with the reason when this agent may not perform `op` on `block`. */
+async function assertMayModify(
+    client: Client,
+    block: BlockInfo,
+    op: BlockOp
+): Promise<void> {
+    const allowed = await client.mayModifyBlock({
+        sheetIdx: block.sheetIdx,
+        blockId: block.blockId,
+        op,
+        actor: WATSON_ACTOR,
+    })
+    if (isErrorMessage(allowed)) {
+        throw new Error(`mayModifyBlock failed: ${allowed.msg}`)
+    }
+    if (!allowed) {
+        const owner = block.owner ? `"${block.owner}"` : 'its creator'
+        throw new Error(
+            `Block "${
+                block.schema?.name ?? block.blockId
+            }" reserves ${op} to ${owner}, so this is not yours to change. Tell the user what you wanted to do and why it is refused.`
+        )
+    }
 }
 
 export const BUILDER_TOOLS: Tool[] = [
@@ -3046,6 +3338,8 @@ export const BUILDER_TOOLS: Tool[] = [
     defineEnumSet,
     listBlocks,
     describeBlock,
+    setBlockDescription as Tool,
+    setBlockPermissions as Tool,
     evalFormula,
     checkpoint,
 ] as Tool[]

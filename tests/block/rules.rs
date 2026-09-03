@@ -85,6 +85,8 @@ fn fresh_block_with_data(
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             // Keys first (matches the factory-simulator pattern — see
             // `BindFormSchema` arm's comment in
@@ -520,6 +522,8 @@ fn test_validation_field_ref_unknown_field_errors() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 sheet_idx: 0,
@@ -569,6 +573,8 @@ fn test_field_rule_coordinate_into_own_block_errors() {
                 col_cnt: 3,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 sheet_idx: 0,
@@ -619,6 +625,8 @@ fn test_field_rule_coordinate_outside_block_is_fine() {
                 col_cnt: 3,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 sheet_idx: 0,
@@ -628,11 +636,7 @@ fn test_field_rule_coordinate_outside_block_is_fine() {
                 key_idx: 0,
                 fields: vec!["key".into(), "amt".into(), "net".into()],
                 render_ids: vec!["r0".into(), "r1".into(), "r2".into()],
-                field_formulas: vec![
-                    None,
-                    None,
-                    Some(r#"=#FIELD("amt")*(1-$A$21)"#.into()),
-                ],
+                field_formulas: vec![None, None, Some(r#"=#FIELD("amt")*(1-$A$21)"#.into())],
                 validation_formulas: vec![],
                 editability_formulas: vec![],
                 row: true,
@@ -653,18 +657,13 @@ fn test_field_rule_coordinate_outside_block_is_fine() {
         "a field rule referencing a cell outside the block must be accepted, got: {:?}",
         result.status
     );
-    let net = wb
-        .get_sheet_by_idx(0)
-        .unwrap()
-        .get_value(0, 2)
-        .unwrap();
+    let net = wb.get_sheet_by_idx(0).unwrap().get_value(0, 2).unwrap();
     assert!(
         matches!(net, Value::Number(n) if (n - 75.0).abs() < 1e-9),
         "outside-block coordinate should evaluate to 100*(1-0.25)=75, got {:?}",
         net
     );
 }
-
 
 /// Adopting a table that already holds formulas must leave it computing.
 ///
@@ -719,12 +718,7 @@ fn test_convert_block_keeps_the_formulas_live() {
     }));
     assert!(matches!(result.status, StatusCode::Ok(_)));
     let value = |wb: &mut Workbook, row: usize, col: usize| -> f64 {
-        match wb
-            .get_sheet_by_idx(0)
-            .unwrap()
-            .get_value(row, col)
-            .unwrap()
-        {
+        match wb.get_sheet_by_idx(0).unwrap().get_value(row, col).unwrap() {
             Value::Number(f) => f,
             other => panic!("expected a number at ({row},{col}), got {:?}", other),
         }
@@ -803,10 +797,7 @@ fn every_rule_shape_survives_save_and_reload() {
         // A keyed reach into another row: the same answer on every row.
         (r#"#FIELD("value","k2")>14"#, [true, true, true]),
         // Nested, with both a comparison and a quoted key inside a call.
-        (
-            r#"AND(#PLACEHOLDER>=10,#KEY<>"k2")"#,
-            [false, true, false],
-        ),
+        (r#"AND(#PLACEHOLDER>=10,#KEY<>"k2")"#, [false, true, false]),
         // `&` — string concatenation, and the third character XML escapes.
         (r#"#KEY&"!"="k1!""#, [false, true, false]),
     ];
@@ -851,18 +842,17 @@ fn every_rule_shape_survives_save_and_reload() {
                 .ok()
                 .and_then(|bs| bs.into_iter().find_map(|b| b.schema))
                 .and_then(|s| {
-                    s.fields.into_iter().find(|f| f.field == "value").map(|f| {
-                        match kind {
+                    s.fields
+                        .into_iter()
+                        .find(|f| f.field == "value")
+                        .map(|f| match kind {
                             ShadowKind::Validation => f.validation_formula,
                             _ => f.editability_formula,
-                        }
-                    })
+                        })
                 })
                 .flatten();
             if stored.as_deref() != Some(*rule) {
-                failures.push(format!(
-                    "{rule:?} as {kind:?}: came back as {stored:?}"
-                ));
+                failures.push(format!("{rule:?} as {kind:?}: came back as {stored:?}"));
                 continue;
             }
 

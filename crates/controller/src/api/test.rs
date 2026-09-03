@@ -687,6 +687,8 @@ fn create_block() {
             col_cnt: 3,
             owner: None,
             modify_policy: None,
+            permissions: None,
+            description: None,
         })],
         undoable: false,
         init: false,
@@ -774,6 +776,8 @@ fn remove_diy_cell_round_trips_without_panicking() {
             col_cnt: 3,
             owner: None,
             modify_policy: None,
+            permissions: None,
+            description: None,
         })],
         undoable: false,
         init: false,
@@ -1085,6 +1089,8 @@ fn range_link_redirects_to_block_and_tracks_growth() {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1221,6 +1227,8 @@ fn clearing_field_rule_purges_stale_shadow_value() {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1349,6 +1357,8 @@ fn create_link_payload_redirects_existing_formula() {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1467,6 +1477,8 @@ fn linked_range_size_mismatch_reads_block_both_orders() {
             col_cnt: 1,
             owner: None,
             modify_policy: None,
+            permissions: None,
+            description: None,
         })];
         for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
             payloads.push(EditPayload::CellInput(CellInput {
@@ -1548,6 +1560,8 @@ fn linked_multicol_subcolumn_reference_reads_block_column() {
         col_cnt: 2,
         owner: None,
         modify_policy: None,
+        permissions: None,
+        description: None,
     })];
     for (i, v) in [10, 20, 30, 40, 50, 60].iter().enumerate() {
         payloads.push(EditPayload::CellInput(CellInput {
@@ -1646,6 +1660,8 @@ fn cross_sheet_linked_column_tracks_block_and_survives_save_load() {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1781,6 +1797,8 @@ fn link_survives_save_load() {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1894,6 +1912,8 @@ fn linked_column_tracks_tail_append() {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -2013,6 +2033,8 @@ fn linked_record_rejects_non_column_references() {
             col_cnt: 2,
             owner: None,
             modify_policy: None,
+            permissions: None,
+            description: None,
         })];
         for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
             payloads.push(EditPayload::CellInput(CellInput {
@@ -2133,6 +2155,8 @@ fn get_links_reports_linked_source_range_coords() {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::CreateLink(CreateLink {
                 sheet_idx: 0,
@@ -2185,6 +2209,8 @@ fn create_block_with_owner_and_policy_roundtrip() {
             col_cnt: 2,
             owner: Some("what-if-calculator".to_string()),
             modify_policy: Some(ModifyPolicy::OwnerAndUser),
+            permissions: None,
+            description: None,
         })],
         undoable: false,
         init: false,
@@ -2513,6 +2539,8 @@ fn sort_block_by_field_end_to_end() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "people".into(),
@@ -2640,6 +2668,8 @@ fn sort_block_by_field_end_to_end() {
                     col_cnt: 1,
                     owner: None,
                     modify_policy: None,
+                    permissions: None,
+                    description: None,
                 }),
                 EditPayload::BindRandomSchema(BindRandomSchema {
                     ref_name: "rnd".into(),
@@ -2723,6 +2753,8 @@ fn sort_block_grown_by_insert_rows() {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "people".into(),
@@ -2840,6 +2872,8 @@ fn sort_block_reference_follows_moved_cell() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "people".into(),
@@ -3260,6 +3294,8 @@ fn conditional_formatting_anchors_on_block_cells() {
             col_cnt: 3,
             owner: None,
             modify_policy: None,
+            permissions: None,
+            description: None,
         })],
         undoable: false,
         init: false,
@@ -4184,6 +4220,8 @@ fn block_schema_key_entries_report_record_row() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -4307,6 +4345,8 @@ fn range_straddling_a_block_boundary_does_not_panic() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -5445,6 +5485,8 @@ fn chart_bound_to_block_follows_it() {
             col_cnt: 3,
             owner: None,
             modify_policy: None,
+            permissions: None,
+            description: None,
         }),
         EditPayload::BindFormSchema(BindFormSchema {
             ref_name: "sales".into(),
@@ -5592,6 +5634,8 @@ fn block_bound_chart_survives_save() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -5712,4 +5756,78 @@ fn text_and_round_agree_at_excel_precision() {
         };
         assert_eq!(got, *want, "{e}");
     }
+}
+
+/// Block metadata is undoable like anything else. It lives on `BlockPlace`,
+/// which is inside `Status`, and every undoable action snapshots the whole
+/// `Status` — but that is a property of where the field was put, so it is
+/// worth a test rather than an assumption.
+#[test]
+fn block_description_and_permissions_are_undoable() {
+    use crate::edit_action::{
+        BlockOp, BlockPermissions, ModifyPolicy, SetBlockDescription, SetBlockPermissions,
+    };
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 2,
+            col_cnt: 2,
+            owner: Some("craft-a".to_string()),
+            modify_policy: None,
+            permissions: None,
+            description: Some("first".to_string()),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::SetBlockDescription(SetBlockDescription {
+                sheet_idx: 0,
+                block_id: bid,
+                description: "second".to_string(),
+            }),
+            EditPayload::SetBlockPermissions(SetBlockPermissions {
+                sheet_idx: 0,
+                block_id: bid,
+                permissions: BlockPermissions {
+                    insert_delete_lines: Some(ModifyPolicy::OwnerOnly),
+                    ..Default::default()
+                },
+                modify_policy: None,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    let state = |wb: &Workbook| {
+        let m = wb.get_block_modify_info(0, bid).unwrap();
+        (
+            m.description.clone(),
+            m.permissions.explicit(BlockOp::InsertDeleteLines),
+        )
+    };
+    assert_eq!(
+        state(&wb),
+        ("second".to_string(), Some(ModifyPolicy::OwnerOnly))
+    );
+    wb.handle_action(EditAction::Undo);
+    assert_eq!(
+        state(&wb),
+        ("first".to_string(), None),
+        "undo restores both the description and the permissions"
+    );
+    wb.handle_action(EditAction::Redo);
+    assert_eq!(
+        state(&wb),
+        ("second".to_string(), Some(ModifyPolicy::OwnerOnly)),
+        "and redo puts them back"
+    );
 }

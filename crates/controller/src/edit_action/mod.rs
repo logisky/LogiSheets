@@ -118,6 +118,8 @@ pub enum EditPayload {
     BlockStyleUpdate(BlockStyleUpdate),
     BlockLineStyleUpdate(BlockLineStyleUpdate),
     BlockLineNameFieldUpdate(BlockLineNameFieldUpdate),
+    SetBlockDescription(SetBlockDescription),
+    SetBlockPermissions(SetBlockPermissions),
 
     CellFormatBrush(CellFormatBrush),
     LineFormatBrush(LineFormatBrush),
@@ -624,9 +626,11 @@ pub struct CellClear {
 /// manage all your blocks. If the `block id` is already existed, engines
 /// will remove the old one.
 ///
-/// `owner` and `modify_policy` are optional metadata used by the frontend
-/// to gate write access at runtime. They are not enforced by the engine
-/// itself.
+/// `owner`, `modify_policy`, `permissions` and `description` are metadata the
+/// host uses to gate write access at runtime — ask
+/// `Workbook::may_modify_block` rather than reading them apart. The engine
+/// does not enforce them itself: a payload carries no trace of who prompted
+/// it, so only the host knows whether an edit came from a person or a craft.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "create_block.ts", builder, rename_all = "camelCase")]
 pub struct CreateBlock {
@@ -638,11 +642,54 @@ pub struct CreateBlock {
     pub col_cnt: usize,
     pub owner: Option<String>,
     pub modify_policy: Option<ModifyPolicy>,
+    /// Per-operation overrides of `modify_policy`. Omitted, the single policy
+    /// governs every operation.
+    pub permissions: Option<BlockPermissions>,
+    /// What the block is for, in prose, for an AI or a person reading the
+    /// sheet later. A craft creating a block should say what it is for here.
+    pub description: Option<String>,
+}
+
+/// Rewrite a block's prose description, or clear it with an empty string.
+///
+/// Governed by `BlockOp::ModifyDescription`, which the host is expected to
+/// check first: a description is how the block explains itself to whoever
+/// reads the sheet next, so an owner may well want it left alone.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "set_block_description.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct SetBlockDescription {
+    pub sheet_idx: usize,
+    pub block_id: usize,
+    pub description: String,
+}
+
+/// Replace a block's per-operation policies, and optionally its default one.
+///
+/// All-or-nothing on `permissions`: what is sent becomes the whole set, so an
+/// operation left `None` in the payload goes back to deferring to the default
+/// policy. That is the only way to clear an override, and it means the caller
+/// always states the block's full stance rather than patching it blind.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "set_block_permissions.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct SetBlockPermissions {
+    pub sheet_idx: usize,
+    pub block_id: usize,
+    pub permissions: BlockPermissions,
+    /// `None` keeps the block's current default policy.
+    pub modify_policy: Option<ModifyPolicy>,
 }
 
 /// Controls who is allowed to write to a block at the frontend runtime layer.
 /// Reads are always allowed regardless of policy.
-#[derive(Debug, Clone, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TS)]
 #[ts(file_name = "modify_policy.ts", tag = "type")]
 pub enum ModifyPolicy {
     /// Anyone (any craft or the user) can write.
@@ -680,6 +727,146 @@ impl ModifyPolicy {
     }
 }
 
+/// The operations a block's permissions can speak about separately.
+///
+/// One policy for the whole block is too blunt for the case this exists to
+/// serve: a block a craft or Watson built usually wants the user to keep
+/// *typing into it* while refusing to let them pull rows out from under it or
+/// re-point its schema, which would take the block out of the owner's control
+/// for good.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TS)]
+#[ts(file_name = "block_op.ts", tag = "type")]
+pub enum BlockOp {
+    /// Insert or delete rows/columns inside the block.
+    InsertDeleteLines,
+    /// Delete the whole block. Kept apart from the rest because it is the one
+    /// operation there is no recovering from by editing: the records, the
+    /// schema and this policy itself all go at once.
+    RemoveBlock,
+    /// Bind a different schema, or change the fields of the current one.
+    ModifySchema,
+    /// Write a value into one of the block's cells.
+    CellInput,
+    /// Reorder the records by one of the fields.
+    SortByField,
+    /// Rewrite the prose description.
+    ModifyDescription,
+}
+
+impl BlockOp {
+    /// Every operation, so a caller can render or check the whole set without
+    /// having to keep its own list in step with this one.
+    pub const ALL: [BlockOp; 6] = [
+        BlockOp::InsertDeleteLines,
+        BlockOp::RemoveBlock,
+        BlockOp::ModifySchema,
+        BlockOp::CellInput,
+        BlockOp::SortByField,
+        BlockOp::ModifyDescription,
+    ];
+
+    /// Attribute name used for .xlsx persistence.
+    pub fn as_wire_str(&self) -> &'static str {
+        match self {
+            BlockOp::InsertDeleteLines => "insertDeleteLines",
+            BlockOp::RemoveBlock => "removeBlock",
+            BlockOp::ModifySchema => "modifySchema",
+            BlockOp::CellInput => "cellInput",
+            BlockOp::SortByField => "sortByField",
+            BlockOp::ModifyDescription => "modifyDescription",
+        }
+    }
+}
+
+/// Per-operation overrides of a block's [`ModifyPolicy`].
+///
+/// `None` on an operation defers to the block's own `modify_policy`, so a
+/// block that says nothing here behaves exactly as it did when one policy
+/// governed everything — which is what every block in a file written before
+/// this existed says.
+#[derive(Debug, Clone, Default, PartialEq, Eq, TS)]
+#[ts(file_name = "block_permissions.ts", builder, rename_all = "camelCase")]
+pub struct BlockPermissions {
+    pub insert_delete_lines: Option<ModifyPolicy>,
+    pub remove_block: Option<ModifyPolicy>,
+    pub modify_schema: Option<ModifyPolicy>,
+    pub cell_input: Option<ModifyPolicy>,
+    pub sort_by_field: Option<ModifyPolicy>,
+    pub modify_description: Option<ModifyPolicy>,
+}
+
+impl BlockPermissions {
+    /// The policy for one operation, or `fallback` when this block does not
+    /// single that operation out.
+    pub fn policy_for(&self, op: BlockOp, fallback: ModifyPolicy) -> ModifyPolicy {
+        self.explicit(op).unwrap_or(fallback)
+    }
+
+    pub fn set(&mut self, op: BlockOp, policy: Option<ModifyPolicy>) {
+        match op {
+            BlockOp::InsertDeleteLines => self.insert_delete_lines = policy,
+            BlockOp::RemoveBlock => self.remove_block = policy,
+            BlockOp::ModifySchema => self.modify_schema = policy,
+            BlockOp::CellInput => self.cell_input = policy,
+            BlockOp::SortByField => self.sort_by_field = policy,
+            BlockOp::ModifyDescription => self.modify_description = policy,
+        }
+    }
+
+    /// `true` when nothing is singled out, i.e. the block is governed by its
+    /// single policy alone. Lets the writer omit the attributes entirely.
+    pub fn is_empty(&self) -> bool {
+        BlockOp::ALL.iter().all(|op| self.explicit(*op).is_none())
+    }
+
+    /// The policy stated for `op`, if this block states one.
+    pub fn explicit(&self, op: BlockOp) -> Option<ModifyPolicy> {
+        match op {
+            BlockOp::InsertDeleteLines => self.insert_delete_lines,
+            BlockOp::RemoveBlock => self.remove_block,
+            BlockOp::ModifySchema => self.modify_schema,
+            BlockOp::CellInput => self.cell_input,
+            BlockOp::SortByField => self.sort_by_field,
+            BlockOp::ModifyDescription => self.modify_description,
+        }
+    }
+}
+
+/// Who is asking to change a block.
+///
+/// The engine cannot tell these apart on its own — every payload arrives from
+/// the host process, whoever prompted it — so this is what the host states
+/// when it asks whether an operation is allowed. Keeping the *decision* here
+/// rather than in each host means the browser, node, the desktop app and the
+/// craft runtime cannot drift apart on what a policy means.
+#[derive(Debug, Clone, PartialEq, Eq, TS)]
+#[ts(file_name = "block_actor.ts", tag = "type")]
+pub enum BlockActor {
+    /// A person editing the sheet.
+    User,
+    /// A craft, named by its craft id. Watson counts as one.
+    Craft(String),
+}
+
+impl ModifyPolicy {
+    /// Whether `actor` may write to a block owned by `owner` under this policy.
+    ///
+    /// A block with no owner has nobody to privilege, so `OwnerOnly` on it
+    /// would lock everyone out including whoever set it; it is read as `All`
+    /// instead.
+    pub fn allows(&self, actor: &BlockActor, owner: &str) -> bool {
+        match self {
+            ModifyPolicy::All => true,
+            _ if owner.is_empty() => true,
+            ModifyPolicy::OwnerOnly => matches!(actor, BlockActor::Craft(id) if id == owner),
+            ModifyPolicy::OwnerAndUser => match actor {
+                BlockActor::User => true,
+                BlockActor::Craft(id) => id == owner,
+            },
+        }
+    }
+}
+
 /// Read-only view of a block's frontend-runtime write policy. Returned by
 /// `Workbook::get_block_modify_info` so the JS validate hook can decide
 /// whether a caller is allowed to write to a given block.
@@ -687,7 +874,11 @@ impl ModifyPolicy {
 #[ts(file_name = "block_modify_info.ts", rename_all = "camelCase")]
 pub struct BlockModifyInfo {
     pub owner: String,
+    /// The block's default policy — what an operation absent from
+    /// `permissions` falls back to.
     pub modify_policy: ModifyPolicy,
+    pub permissions: BlockPermissions,
+    pub description: String,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -1555,6 +1746,16 @@ impl Payload for UpdateChart {}
 impl From<CreateBlock> for EditPayload {
     fn from(value: CreateBlock) -> Self {
         EditPayload::CreateBlock(value)
+    }
+}
+impl From<SetBlockDescription> for EditPayload {
+    fn from(value: SetBlockDescription) -> Self {
+        EditPayload::SetBlockDescription(value)
+    }
+}
+impl From<SetBlockPermissions> for EditPayload {
+    fn from(value: SetBlockPermissions) -> Self {
+        EditPayload::SetBlockPermissions(value)
     }
 }
 impl From<MoveBlock> for EditPayload {

@@ -212,11 +212,42 @@ impl NavExecutor {
                     create_block.row_cnt as u32,
                     create_block.col_cnt as u32,
                     create_block.owner.clone().unwrap_or_default(),
-                    create_block.modify_policy.clone().unwrap_or_default(),
-                );
+                    create_block.modify_policy.unwrap_or_default(),
+                )
+                .with_description(create_block.description.clone().unwrap_or_default())
+                .with_permissions(create_block.permissions.clone().unwrap_or_default());
                 let block_id = create_block.id;
                 sheet_nav.data.blocks.insert(block_id, block_place);
                 sheet_nav.cache = Default::default();
+                Ok((self, true))
+            }
+            EditPayload::SetBlockDescription(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id);
+                let Some(bp) = sheet_nav.data.blocks.get(&p.block_id) else {
+                    return Err(BasicError::BlockIdNotFound(sheet_id, p.block_id).into());
+                };
+                let mut bp = bp.clone();
+                bp.description = p.description.clone();
+                sheet_nav.data.blocks.insert(p.block_id, bp);
+                Ok((self, true))
+            }
+            EditPayload::SetBlockPermissions(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id);
+                let Some(bp) = sheet_nav.data.blocks.get(&p.block_id) else {
+                    return Err(BasicError::BlockIdNotFound(sheet_id, p.block_id).into());
+                };
+                let mut bp = bp.clone();
+                bp.permissions = p.permissions.clone();
+                if let Some(policy) = p.modify_policy {
+                    bp.modify_policy = policy;
+                }
+                sheet_nav.data.blocks.insert(p.block_id, bp);
                 Ok((self, true))
             }
             EditPayload::ConvertBlock(p) => {
@@ -371,13 +402,7 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
-                check_block_line_range(
-                    p.start,
-                    p.cnt as u32,
-                    bp.cols.len(),
-                    p.block_id,
-                    true,
-                )?;
+                check_block_line_range(p.start, p.cnt as u32, bp.cols.len(), p.block_id, true)?;
                 let new_bp = bp.add_new_cols(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor {
@@ -394,13 +419,7 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
-                check_block_line_range(
-                    p.start,
-                    p.cnt as u32,
-                    bp.cols.len(),
-                    p.block_id,
-                    false,
-                )?;
+                check_block_line_range(p.start, p.cnt as u32, bp.cols.len(), p.block_id, false)?;
                 let new_bp = bp.delete_cols(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor {
@@ -417,13 +436,7 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
-                check_block_line_range(
-                    p.start,
-                    p.cnt as u32,
-                    bp.rows.len(),
-                    p.block_id,
-                    true,
-                )?;
+                check_block_line_range(p.start, p.cnt as u32, bp.rows.len(), p.block_id, true)?;
                 let new_bp = bp.add_new_rows(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor {
@@ -440,13 +453,7 @@ impl NavExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let bp = self.nav.get_block_place(&sheet_id, &p.block_id)?.clone();
-                check_block_line_range(
-                    p.start,
-                    p.cnt as u32,
-                    bp.rows.len(),
-                    p.block_id,
-                    false,
-                )?;
+                check_block_line_range(p.start, p.cnt as u32, bp.rows.len(), p.block_id, false)?;
                 let new_bp = bp.delete_rows(p.start, p.cnt as u32);
                 let nav = self.nav.add_block_place(sheet_id, p.block_id, new_bp);
                 let result = NavExecutor {

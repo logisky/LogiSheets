@@ -25,9 +25,10 @@
 use logisheets::Workbook;
 use logisheets_controller::controller::display::BlockSchemaType;
 use logisheets_controller::edit_action::{
-    BindFormSchema, BindRandomSchema, BlockLineNameFieldUpdate, CellInput, CreateAppendix,
-    CreateBlock, CreateLink, CreateSheet, EditAction, EditPayload, InsertRows, ModifyPolicy,
-    PayloadsAction, RandomSchemaUnit, StatusCode, StyleUpdateType, UpsertFieldRenderInfo,
+    BindFormSchema, BindRandomSchema, BlockActor, BlockLineNameFieldUpdate, BlockOp,
+    BlockPermissions, CellInput, CreateAppendix, CreateBlock, CreateLink, CreateSheet, EditAction,
+    EditPayload, InsertRows, ModifyPolicy, PayloadsAction, RandomSchemaUnit, StatusCode,
+    StyleUpdateType, UpsertFieldRenderInfo,
 };
 
 // ---------------------------------------------------------------------------
@@ -97,6 +98,25 @@ fn authored() -> Workbook {
                 col_cnt: 4,
                 owner: Some("roundtrip-craft".into()),
                 modify_policy: Some(ModifyPolicy::OwnerAndUser),
+                // A craft-owned block that still wants the user typing in it,
+                // but must not have rows pulled out from under it or its
+                // schema re-pointed — the case the per-operation policies
+                // exist for. `sort_by_field` is left unstated on purpose, so
+                // the trip has to preserve "defers to the default" as
+                // something distinct from "stated as ownerAndUser".
+                permissions: Some(BlockPermissions {
+                    insert_delete_lines: Some(ModifyPolicy::OwnerOnly),
+                    remove_block: Some(ModifyPolicy::OwnerOnly),
+                    modify_schema: Some(ModifyPolicy::OwnerOnly),
+                    cell_input: Some(ModifyPolicy::All),
+                    sort_by_field: None,
+                    modify_description: Some(ModifyPolicy::OwnerOnly),
+                }),
+                description: Some(
+                    "Customer orders, one per row. `total` is qty * price and is \
+                     maintained by the craft — write qty or price, never total."
+                        .into(),
+                ),
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "orders".into(),
@@ -182,6 +202,8 @@ fn authored() -> Workbook {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "specs".into(),
@@ -207,6 +229,8 @@ fn authored() -> Workbook {
                 col_cnt: 3,
                 owner: Some("dial-craft".into()),
                 modify_policy: Some(ModifyPolicy::OwnerOnly),
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindRandomSchema(BindRandomSchema {
                 ref_name: "dial".into(),
@@ -242,6 +266,8 @@ fn authored() -> Workbook {
                 col_cnt: 1,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
         ],
     );
@@ -496,6 +522,117 @@ fn check(wb: &Workbook, stage: &str) {
     assert!(
         matches!(modify.modify_policy, ModifyPolicy::OwnerAndUser),
         "[{stage}] orders policy"
+    );
+
+    // ---- description ------------------------------------------------------
+    // Prose, with the quoting and the line continuation the authored string
+    // had: this is the one field an AI reads to know what the block is for, so
+    // it has to come back as written rather than merely non-empty.
+    assert_eq!(
+        modify.description,
+        "Customer orders, one per row. `total` is qty * price and is \
+         maintained by the craft — write qty or price, never total.",
+        "[{stage}] orders description"
+    );
+    // Reported on the block itself too, which is what the host renders from.
+    let info = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_block_info(ORDERS)
+        .unwrap();
+    assert_eq!(
+        info.description, modify.description,
+        "[{stage}] description agrees between block info and modify info"
+    );
+
+    // ---- per-operation permissions ----------------------------------------
+    // Each operation separately, INCLUDING the one deliberately left unstated:
+    // "defers to the block's default" has to survive as its own thing, or a
+    // trip would quietly freeze it as whatever the default happened to be.
+    let perms = &modify.permissions;
+    assert_eq!(
+        perms.explicit(BlockOp::InsertDeleteLines),
+        Some(ModifyPolicy::OwnerOnly),
+        "[{stage}] insertDeleteLines"
+    );
+    assert_eq!(
+        perms.explicit(BlockOp::RemoveBlock),
+        Some(ModifyPolicy::OwnerOnly),
+        "[{stage}] removeBlock"
+    );
+    assert_eq!(
+        perms.explicit(BlockOp::ModifySchema),
+        Some(ModifyPolicy::OwnerOnly),
+        "[{stage}] modifySchema"
+    );
+    assert_eq!(
+        perms.explicit(BlockOp::CellInput),
+        Some(ModifyPolicy::All),
+        "[{stage}] cellInput"
+    );
+    assert_eq!(
+        perms.explicit(BlockOp::SortByField),
+        None,
+        "[{stage}] sortByField stays unstated"
+    );
+    assert_eq!(
+        perms.explicit(BlockOp::ModifyDescription),
+        Some(ModifyPolicy::OwnerOnly),
+        "[{stage}] modifyDescription"
+    );
+    // ...and that the unstated one still resolves through the default.
+    assert_eq!(
+        perms.policy_for(BlockOp::SortByField, modify.modify_policy),
+        ModifyPolicy::OwnerAndUser,
+        "[{stage}] sortByField falls back to the block default"
+    );
+
+    // The decision the host actually asks for, end to end.
+    let user = BlockActor::User;
+    let owner = BlockActor::Craft("roundtrip-craft".into());
+    let other = BlockActor::Craft("some-other-craft".into());
+    let may = |op, actor: &BlockActor| wb.may_modify_block(0, ORDERS, op, actor).unwrap();
+    assert!(
+        !may(BlockOp::InsertDeleteLines, &user),
+        "[{stage}] the user must not resize a craft-owned block"
+    );
+    assert!(
+        may(BlockOp::InsertDeleteLines, &owner),
+        "[{stage}] its owner still can"
+    );
+    // Deleting the block outright is the mistake there is no undoing by
+    // editing, so it gets its own policy rather than riding on the others.
+    assert!(
+        !may(BlockOp::RemoveBlock, &user),
+        "[{stage}] the user must not delete a craft-owned block"
+    );
+    assert!(
+        !may(BlockOp::RemoveBlock, &other),
+        "[{stage}] nor another craft"
+    );
+    assert!(may(BlockOp::RemoveBlock, &owner), "[{stage}] its owner may");
+    assert!(
+        may(BlockOp::CellInput, &user),
+        "[{stage}] but the user keeps typing in it"
+    );
+    assert!(
+        may(BlockOp::CellInput, &other),
+        "[{stage}] cellInput is All, which means any craft as well"
+    );
+    // Where a third party IS shut out: OwnerOnly excludes both the user and
+    // other crafts, which is the difference from the block's OwnerAndUser
+    // default that `sort_by_field` still defers to.
+    assert!(
+        !may(BlockOp::ModifySchema, &other),
+        "[{stage}] another craft must not re-point the schema"
+    );
+    assert!(
+        may(BlockOp::SortByField, &user),
+        "[{stage}] sorting falls back to OwnerAndUser, so the user may"
+    );
+    assert!(
+        !may(BlockOp::SortByField, &other),
+        "[{stage}] but another craft may not"
     );
 
     // ---- field renders ----------------------------------------------------
@@ -849,6 +986,8 @@ fn an_appendix_follows_its_block_cell_when_the_block_moves() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::CreateAppendix(CreateAppendix {
                 sheet_id: None,
@@ -919,6 +1058,8 @@ fn sparse_block_line_info_returns_to_its_own_line() {
                 col_cnt: 3,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             // Only the LAST column, and only the LAST row.
             EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
@@ -977,4 +1118,162 @@ fn sparse_block_line_info_returns_to_its_own_line() {
         .collect();
     fields.sort();
     assert_eq!(fields, vec!["field-col-2", "field-row-2"]);
+}
+
+/// The description and the per-operation policies are also settable *after* the
+/// block exists, and what those payloads write has to survive a file the same
+/// way the create-time values do.
+#[test]
+fn set_description_and_permissions_survive_a_trip() {
+    use logisheets_controller::edit_action::{SetBlockDescription, SetBlockPermissions};
+
+    const B: usize = 1;
+    let mut wb = Workbook::default();
+    ok(
+        &mut wb,
+        vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: B,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 2,
+            col_cnt: 2,
+            owner: Some("watson".into()),
+            modify_policy: None,
+            permissions: None,
+            description: None,
+        })],
+    );
+    // Created bare, so this is also a check that "no metadata" is a real state
+    // and not a hole that reads as something else.
+    {
+        let m = wb.get_block_modify_info(0, B).unwrap();
+        assert_eq!(m.description, "");
+        assert!(m.permissions.is_empty(), "nothing stated yet");
+        assert!(matches!(m.modify_policy, ModifyPolicy::All));
+    }
+
+    ok(
+        &mut wb,
+        vec![
+            EditPayload::SetBlockDescription(SetBlockDescription {
+                sheet_idx: 0,
+                block_id: B,
+                description: "Watson's scratch table — do not resize.".into(),
+            }),
+            EditPayload::SetBlockPermissions(SetBlockPermissions {
+                sheet_idx: 0,
+                block_id: B,
+                permissions: BlockPermissions {
+                    insert_delete_lines: Some(ModifyPolicy::OwnerOnly),
+                    remove_block: Some(ModifyPolicy::OwnerOnly),
+                    modify_schema: None,
+                    cell_input: None,
+                    sort_by_field: Some(ModifyPolicy::OwnerAndUser),
+                    modify_description: Some(ModifyPolicy::OwnerOnly),
+                },
+                // Raising the default at the same time, which is the other
+                // half of that payload.
+                modify_policy: Some(ModifyPolicy::OwnerAndUser),
+            }),
+        ],
+    );
+
+    let assert_state = |wb: &Workbook, stage: &str| {
+        let m = wb.get_block_modify_info(0, B).unwrap();
+        assert_eq!(
+            m.description, "Watson's scratch table — do not resize.",
+            "[{stage}] description"
+        );
+        assert_eq!(m.owner, "watson", "[{stage}] owner");
+        assert!(
+            matches!(m.modify_policy, ModifyPolicy::OwnerAndUser),
+            "[{stage}] default policy was raised"
+        );
+        assert_eq!(
+            m.permissions.explicit(BlockOp::InsertDeleteLines),
+            Some(ModifyPolicy::OwnerOnly),
+            "[{stage}] insertDeleteLines"
+        );
+        assert_eq!(
+            m.permissions.explicit(BlockOp::RemoveBlock),
+            Some(ModifyPolicy::OwnerOnly),
+            "[{stage}] removeBlock"
+        );
+        assert_eq!(
+            m.permissions.explicit(BlockOp::ModifySchema),
+            None,
+            "[{stage}] modifySchema left unstated"
+        );
+        assert_eq!(
+            m.permissions.explicit(BlockOp::SortByField),
+            Some(ModifyPolicy::OwnerAndUser),
+            "[{stage}] sortByField"
+        );
+        // The user may not take rows out of Watson's table, but may still sort
+        // and type in it — the whole point of splitting the policy up.
+        let user = BlockActor::User;
+        assert!(
+            !wb.may_modify_block(0, B, BlockOp::InsertDeleteLines, &user)
+                .unwrap()
+        );
+        assert!(
+            wb.may_modify_block(0, B, BlockOp::SortByField, &user)
+                .unwrap()
+        );
+        assert!(
+            wb.may_modify_block(0, B, BlockOp::CellInput, &user)
+                .unwrap()
+        );
+        assert!(
+            !wb.may_modify_block(0, B, BlockOp::RemoveBlock, &user)
+                .unwrap()
+        );
+        assert!(
+            !wb.may_modify_block(0, B, BlockOp::ModifyDescription, &user)
+                .unwrap()
+        );
+    };
+
+    assert_state(&wb, "authored");
+    let once = round_trip(&wb, "set-metadata");
+    assert_state(&once, "one trip");
+    let twice = round_trip(&once, "set-metadata again");
+    assert_state(&twice, "two trips");
+}
+
+/// A block that says nothing about itself must not start writing attributes,
+/// so files from before this existed keep round-tripping unchanged and a diff
+/// of a saved workbook does not fill up with defaults.
+#[test]
+fn a_block_with_no_metadata_writes_no_attributes() {
+    const B: usize = 1;
+    let mut wb = Workbook::default();
+    ok(
+        &mut wb,
+        vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: B,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 2,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+        })],
+    );
+    let xml = data_xml(&wb.save().unwrap());
+    for attr in [
+        "description",
+        "permInsertDeleteLines",
+        "permRemoveBlock",
+        "permModifySchema",
+        "permCellInput",
+        "permSortByField",
+        "permModifyDescription",
+    ] {
+        assert!(!xml.contains(attr), "a bare block wrote {attr}:\n{xml}");
+    }
 }

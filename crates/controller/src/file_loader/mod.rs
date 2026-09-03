@@ -199,13 +199,27 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                         .as_deref()
                         .map(crate::edit_action::ModifyPolicy::from_wire_str)
                         .unwrap_or_default();
+                    let parse_perm = |s: &Option<String>| {
+                        s.as_deref()
+                            .map(crate::edit_action::ModifyPolicy::from_wire_str)
+                    };
+                    let permissions = crate::edit_action::BlockPermissions {
+                        insert_delete_lines: parse_perm(&block_range.perm_insert_delete_lines),
+                        remove_block: parse_perm(&block_range.perm_remove_block),
+                        modify_schema: parse_perm(&block_range.perm_modify_schema),
+                        cell_input: parse_perm(&block_range.perm_cell_input),
+                        sort_by_field: parse_perm(&block_range.perm_sort_by_field),
+                        modify_description: parse_perm(&block_range.perm_modify_description),
+                    };
                     let block_place = BlockPlace::new(
                         master_cell_id,
                         block_range.row_cnt as u32,
                         block_range.col_cnt as u32,
                         owner,
                         modify_policy,
-                    );
+                    )
+                    .with_description(block_range.description.clone().unwrap_or_default())
+                    .with_permissions(permissions);
                     let sheet_container = container.get_sheet_container_mut(sheet_id);
                     restore_line_infos(block_range.row_infos, &block_place.rows, |id, info| {
                         sheet_container
@@ -864,7 +878,9 @@ fn load_charts(
         let Some(rid) = chart_rid(&a.graphic_frame) else {
             continue;
         };
-        let Some(part) = part_by_rid(&rid) else { continue };
+        let Some(part) = part_by_rid(&rid) else {
+            continue;
+        };
         let Some(from) = chart_marker(
             sheet_id,
             a.from.col.v,
@@ -891,7 +907,9 @@ fn load_charts(
         let Some(rid) = chart_rid(&a.graphic_frame) else {
             continue;
         };
-        let Some(part) = part_by_rid(&rid) else { continue };
+        let Some(part) = part_by_rid(&rid) else {
+            continue;
+        };
         let Some(from) = chart_marker(
             sheet_id,
             a.from.col.v,

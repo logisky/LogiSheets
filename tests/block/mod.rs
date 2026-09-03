@@ -1,8 +1,8 @@
 use logisheets::Workbook;
 use logisheets_controller::edit_action::{
-    BindFormSchema, BlockInput, CellInput, CreateBlock, CreateSheet, DeleteRows,
-    DeleteRowsInBlock, DeleteSheet, EditPayload, InsertCols, InsertRows, InsertRowsInBlock,
-    MoveBlock, PayloadsAction, StatusCode,
+    BindFormSchema, BlockInput, CellInput, CreateBlock, CreateSheet, DeleteRows, DeleteRowsInBlock,
+    DeleteSheet, EditPayload, InsertCols, InsertRows, InsertRowsInBlock, MoveBlock, PayloadsAction,
+    StatusCode,
 };
 
 use crate::load_script;
@@ -83,6 +83,8 @@ fn test_form_block_rowcnt1_two_fields() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 sheet_idx: 0,
@@ -155,6 +157,8 @@ fn test_factory_simulator_round_wipe_loop() {
             col_cnt: COL_CNT,
             owner: None,
             modify_policy: None,
+            permissions: None,
+            description: None,
         })],
         undoable: true,
         init: false,
@@ -360,6 +364,8 @@ fn test_factory_simulator_single_tx_round() {
                 col_cnt: ORDER_STATUS_COL,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::CreateBlock(CreateBlock {
                 sheet_idx: MAIN_SHEET,
@@ -370,6 +376,8 @@ fn test_factory_simulator_single_tx_round() {
                 col_cnt: ORDER_CONTRIB_COL,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::CreateBlock(CreateBlock {
                 sheet_idx: ENGINE_SHEET,
@@ -380,6 +388,8 @@ fn test_factory_simulator_single_tx_round() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: ENGINE_SHEET,
@@ -557,6 +567,8 @@ fn test_block_input_after_deleterows_cross_sheet_same_blockid() {
                 col_cnt: COL_CNT,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::CreateBlock(CreateBlock {
                 sheet_idx: ENGINE_SHEET,
@@ -567,6 +579,8 @@ fn test_block_input_after_deleterows_cross_sheet_same_blockid() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: ENGINE_SHEET,
@@ -711,6 +725,8 @@ fn test_block_cell_formula_survives_reload() {
                 col_cnt: 3,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -797,6 +813,8 @@ fn test_out_of_range_payloads_are_rejected() {
                 col_cnt: 3,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             })],
             init: false,
             undoable: false,
@@ -829,18 +847,22 @@ fn test_out_of_range_payloads_are_rejected() {
     })));
 
     // Block line ranges must fall inside the block.
-    assert!(rejected(EditPayload::DeleteRowsInBlock(DeleteRowsInBlock {
-        sheet_idx: 0,
-        block_id: 1,
-        start: 100,
-        cnt: u32::MAX as usize,
-    })));
-    assert!(rejected(EditPayload::InsertRowsInBlock(InsertRowsInBlock {
-        sheet_idx: 0,
-        block_id: 1,
-        start: 100,
-        cnt: 1,
-    })));
+    assert!(rejected(EditPayload::DeleteRowsInBlock(
+        DeleteRowsInBlock {
+            sheet_idx: 0,
+            block_id: 1,
+            start: 100,
+            cnt: u32::MAX as usize,
+        }
+    )));
+    assert!(rejected(EditPayload::InsertRowsInBlock(
+        InsertRowsInBlock {
+            sheet_idx: 0,
+            block_id: 1,
+            start: 100,
+            cnt: 1,
+        }
+    )));
 
     // Moving a block that does not exist is a bad request, not a crash.
     assert!(rejected(EditPayload::MoveBlock(MoveBlock {
@@ -872,6 +894,8 @@ fn test_create_block_rejects_absurd_dimensions() {
             col_cnt: 16384,
             owner: None,
             modify_policy: None,
+            permissions: None,
+            description: None,
         })],
         init: false,
         undoable: false,
@@ -909,6 +933,8 @@ fn test_blockref_readers_recompute_after_reload() {
                 col_cnt: 3,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -1017,6 +1043,8 @@ fn test_save_can_resolve_block_refs_to_coordinates() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -1097,7 +1125,10 @@ fn test_save_can_resolve_block_refs_to_coordinates() {
 
     // `v` of row key "r2" is the block's (1,1) => sheet B2.
     let single = ws.get_formula(5, 0).unwrap();
-    assert_eq!(single, "B2", "BLOCKREF should resolve to a cell, got {single:?}");
+    assert_eq!(
+        single, "B2",
+        "BLOCKREF should resolve to a cell, got {single:?}"
+    );
 
     // Every row of field `v` is B1:B2.
     let multi = ws.get_formula(5, 1).unwrap();
@@ -1132,6 +1163,8 @@ fn test_block_row_removal_dirties_readers() {
         col_cnt: 2,
         owner: None,
         modify_policy: None,
+        permissions: None,
+        description: None,
     })];
     for (i, (k, v)) in [("k1", "10"), ("k2", "20"), ("k3", "30")]
         .into_iter()
@@ -1240,6 +1273,8 @@ fn test_save_resolves_a_block_join_to_index_match() {
                 col_cnt: 2,
                 owner: None,
                 modify_policy: None,
+                permissions: None,
+                description: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -1303,8 +1338,15 @@ fn test_save_resolves_a_block_join_to_index_match() {
     // The named form is what LogiSheets keeps.
     let mut named = workbook.save().expect("save named");
     let reopened = Workbook::from_file(&mut named, "named".to_string()).expect("reopen");
-    let f = reopened.get_sheet_by_idx(0).unwrap().get_formula(5, 1).unwrap();
-    assert!(f.contains("BLOCKREF"), "default save should keep the join named, got {f:?}");
+    let f = reopened
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_formula(5, 1)
+        .unwrap();
+    assert!(
+        f.contains("BLOCKREF"),
+        "default save should keep the join named, got {f:?}"
+    );
 
     // Coordinates: an INDEX/MATCH over the field and key columns, which is what
     // the same lookup looks like in a spreadsheet that has never heard of
@@ -1314,7 +1356,11 @@ fn test_save_resolves_a_block_join_to_index_match() {
         .expect("save resolved");
     let reopened =
         Workbook::from_file(&mut bytes, "resolved".to_string()).expect("reopen resolved");
-    let f = reopened.get_sheet_by_idx(0).unwrap().get_formula(5, 1).unwrap();
+    let f = reopened
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_formula(5, 1)
+        .unwrap();
     assert!(
         !f.contains("BLOCKREF"),
         "a resolved save must leave no BLOCKREF, got {f:?}"
@@ -1342,6 +1388,8 @@ fn build_pct_block(pct_rule: &str, rows: &[(&str, f64)]) -> (Workbook, StatusCod
         col_cnt: 3,
         owner: None,
         modify_policy: None,
+        permissions: None,
+        description: None,
     })];
     for (i, (key, amt)) in rows.iter().enumerate() {
         payloads.push(EditPayload::BlockInput(BlockInput {
@@ -1382,10 +1430,12 @@ fn build_pct_block(pct_rule: &str, rows: &[(&str, f64)]) -> (Workbook, StatusCod
 
 fn col_values(wb: &mut Workbook, col: usize, n: usize) -> Vec<f64> {
     (0..n)
-        .map(|r| match wb.get_sheet_by_idx(0).unwrap().get_value(r, col).unwrap() {
-            logisheets::Value::Number(v) => v,
-            other => panic!("expected a number at ({r},{col}), got {other:?}"),
-        })
+        .map(
+            |r| match wb.get_sheet_by_idx(0).unwrap().get_value(r, col).unwrap() {
+                logisheets::Value::Number(v) => v,
+                other => panic!("expected a number at ({r},{col}), got {other:?}"),
+            },
+        )
         .collect()
 }
 
@@ -1403,9 +1453,11 @@ fn col_values(wb: &mut Workbook, col: usize, n: usize) -> Vec<f64> {
 #[test]
 fn test_field_ref_by_key_reaches_another_row_of_the_same_block() {
     let rows = [("r1", 10.0), ("r2", 20.0), ("r3", 30.0), ("TOTAL", 60.0)];
-    let (mut wb, status) =
-        build_pct_block("=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")", &rows);
-    assert!(matches!(status, StatusCode::Ok(_)), "bind failed: {status:?}");
+    let (mut wb, status) = build_pct_block("=#FIELD(\"amt\")/#FIELD(\"amt\",\"TOTAL\")", &rows);
+    assert!(
+        matches!(status, StatusCode::Ok(_)),
+        "bind failed: {status:?}"
+    );
     let pct = col_values(&mut wb, 2, 4);
     let want = [10.0 / 60.0, 20.0 / 60.0, 30.0 / 60.0, 1.0];
     for (got, exp) in pct.iter().zip(want.iter()) {

@@ -127,6 +127,32 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             Ok(Some((Diff::Unavailable, sheet_id)))
         }
+        // Metadata only: no cell changes value or moves, so the host just
+        // needs to know the block itself is different.
+        EditPayload::SetBlockDescription(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: p.block_id,
+                },
+                sheet_id,
+            )))
+        }
+        EditPayload::SetBlockPermissions(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: p.block_id,
+                },
+                sheet_id,
+            )))
+        }
         EditPayload::ConvertBlock(p) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(p.sheet_idx)

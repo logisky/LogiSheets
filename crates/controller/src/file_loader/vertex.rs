@@ -1,4 +1,6 @@
-use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId, id_fetcher::IdFetcherTrait};
+use logisheets_base::{
+    BlockRange, CellId, NormalRange, Range, SheetId, id_fetcher::IdFetcherTrait,
+};
 use logisheets_parser::{Parser, ast};
 
 use crate::{connectors::FormulaConnector, formula_manager::FormulaManager};
