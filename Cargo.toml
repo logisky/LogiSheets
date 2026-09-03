@@ -61,7 +61,7 @@ xmlserde = "0.14.0"
 xmlserde_derives = "0.14.0"
 wildescape = "0.1"
 
-ssf-rs = { path = "crates/ssf-rs", version = "0.1.0" }
+ssf-rs = { path = "crates/ssf-rs", version = "0.1" }
 
 logisheets_lexer = { path = "crates/controller/lexer", version = "1.12.1" }
 logisheets_parser = { path = "crates/controller/parser", version = "1.12.1" }
