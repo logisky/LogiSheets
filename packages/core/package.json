@@ -1,6 +1,6 @@
 {
     "name": "logisheets-core",
-    "version": "1.12.1",
+    "version": "1.14.0",
     "description": "UI-free LogiSheets logic — runs in the browser or on Node. Depends on logisheets-web only for types; the engine Client is injected by the host.",
     "main": "./dist/index.js",
     "module": "./dist/index.js",
@@ -63,7 +63,7 @@
     },
     "homepage": "https://github.com/logisky/LogiSheets",
     "peerDependencies": {
-        "logisheets-web": "^1.12.1"
+        "logisheets-web": "^1.14.0"
     },
     "devDependencies": {
         "@types/node": "^18",

@@ -14,9 +14,11 @@
 
 pub mod block_source;
 pub mod executor;
+pub mod refs;
 
 pub use block_source::{ResolvedBlockRefs, resolve_block_refs};
 pub use executor::ChartExecutor;
+pub use refs::{ChartRange, ChartRefs, ChartSeriesRefs};
 
 use std::sync::Arc;
 
@@ -86,6 +88,10 @@ pub struct Chart {
     /// `data` are then a cache of the last resolution, not the truth — see
     /// [`ChartBlockSource`].
     pub source: Option<ChartBlockSource>,
+    /// The data ranges, held by cell id so they ride along with row and column
+    /// edits the way the anchor does. The A1 text in `data` is the fallback for
+    /// a range whose corner has been deleted. See [`refs`].
+    pub refs: ChartRefs,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -150,6 +156,7 @@ impl ChartManager {
         chart_id: &str,
         data: ChartData,
         raw: Arc<Vec<PassthroughPart>>,
+        refs: ChartRefs,
     ) -> bool {
         let mut v = match self.charts.get(&sheet_id) {
             Some(v) => v.clone(),
@@ -162,6 +169,24 @@ impl ChartManager {
         let mut chart = v[idx].clone();
         chart.data = data;
         chart.raw = raw;
+        chart.refs = refs;
+        v.set(idx, chart);
+        self.charts.insert(sheet_id, v);
+        true
+    }
+
+    /// Replace a chart's id-based ranges.
+    pub fn set_refs(&mut self, sheet_id: SheetId, chart_id: &str, refs: ChartRefs) -> bool {
+        let mut v = match self.charts.get(&sheet_id) {
+            Some(v) => v.clone(),
+            None => return false,
+        };
+        let idx = match v.iter().position(|c| c.id == chart_id) {
+            Some(i) => i,
+            None => return false,
+        };
+        let mut chart = v[idx].clone();
+        chart.refs = refs;
         v.set(idx, chart);
         self.charts.insert(sheet_id, v);
         true

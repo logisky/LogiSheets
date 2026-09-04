@@ -797,6 +797,13 @@ impl<'a> Worksheet<'a> {
                         src,
                     )
                 });
+                // Where a range is NOW, from the cells it was bound to. The
+                // A1 text in `data` is only what the file last said, so it is
+                // the fallback for a corner that has since been deleted.
+                let sheets = &self.controller.status.sheet_id_manager;
+                let live_ref = |r: &Option<crate::chart_manager::ChartRange>| {
+                    r.as_ref().and_then(|r| r.to_a1(nav, sheets))
+                };
                 // What to draw and where each series reads from. A bound chart
                 // takes both from the block; the stored series then contribute
                 // only their look.
@@ -813,12 +820,20 @@ impl<'a> Worksheet<'a> {
                         None => d
                             .series
                             .iter()
-                            .map(|s| (s.name.clone(), s.val_ref.clone(), Some(s)))
+                            .enumerate()
+                            .map(|(i, s)| {
+                                let val = chart
+                                    .refs
+                                    .series_at(i)
+                                    .and_then(|r| live_ref(&r.val))
+                                    .or_else(|| s.val_ref.clone());
+                                (s.name.clone(), val, Some(s))
+                            })
                             .collect(),
                     };
                 let cat_ref = match &live {
                     Some(l) => l.cat_ref.clone(),
-                    None => d.cat_ref.clone(),
+                    None => live_ref(&chart.refs.cat).or_else(|| d.cat_ref.clone()),
                 };
                 Some(ChartInfo {
                     chart_id: chart.id.clone(),
@@ -845,7 +860,8 @@ impl<'a> Worksheet<'a> {
                     cat_ref: cat_ref.clone(),
                     series: planned
                         .iter()
-                        .map(|(name, val_ref, s)| {
+                        .enumerate()
+                        .map(|(idx, (name, val_ref, s))| {
                             // Live values re-read from the source range so the
                             // chart reflects edits; fall back to the OOXML cache
                             // if the reference can't be resolved.
@@ -867,7 +883,11 @@ impl<'a> Worksheet<'a> {
                                 .iter()
                                 .map(|v| v.map(|n| format_with(label_fmt.map(|f| f.as_str()), n)))
                                 .collect();
-                            let size_ref = s.and_then(|s| s.size_ref.clone());
+                            let size_ref = chart
+                                .refs
+                                .series_at(idx)
+                                .and_then(|r| live_ref(&r.size))
+                                .or_else(|| s.and_then(|s| s.size_ref.clone()));
                             ChartSeriesInfo {
                                 name: name.clone(),
                                 values,

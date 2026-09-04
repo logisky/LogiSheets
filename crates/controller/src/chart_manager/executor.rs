@@ -124,6 +124,10 @@ impl ChartExecutor {
                         data,
                         raw,
                         source: p.block_source.as_ref().map(block_source),
+                        // Filled by the caller: turning A1 into cell ids needs
+                        // the navigator and the sheet names, which this
+                        // executor's context does not carry.
+                        refs: Default::default(),
                     },
                 );
                 Ok((self, true))
@@ -293,9 +297,13 @@ impl ChartExecutor {
                         })
                         .collect::<Vec<_>>(),
                 );
-                let changed = self
-                    .manager
-                    .update_content(sheet_id, &p.chart_id, data, raw);
+                let changed = self.manager.update_content(
+                    sheet_id,
+                    &p.chart_id,
+                    data,
+                    raw,
+                    Default::default(),
+                );
                 if let Some(source) = new_source {
                     self.manager.set_source(sheet_id, &p.chart_id, source);
                 }

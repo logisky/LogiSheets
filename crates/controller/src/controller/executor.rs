@@ -557,7 +557,41 @@ impl<'a> Executor<'a> {
             text_id_manager: &mut self.status.text_id_manager,
         };
         let executor = ChartExecutor::new(self.status.chart_manager.clone());
-        executor.execute(&mut ctx, payload, block_refs)
+        let (mut executor, changed) = executor.execute(&mut ctx, payload.clone(), block_refs)?;
+        // `ctx` borrowed the sheet-name table mutably, so turning the chart's
+        // A1 text into cell ids has to wait until it is gone.
+        self.attach_chart_refs(&mut executor, &payload);
+        Ok((executor, changed))
+    }
+
+    /// Give a chart just created or re-pointed its id-based ranges.
+    ///
+    /// The executor states them as A1, because that is what the payload and
+    /// the file speak; from here on the ids are what follow the cells.
+    fn attach_chart_refs(&self, executor: &mut ChartExecutor, payload: &EditPayload) {
+        let (sheet_idx, chart_id) = match payload {
+            EditPayload::CreateChart(p) => (p.sheet_idx, &p.chart_id),
+            EditPayload::UpdateChart(p) => (p.sheet_idx, &p.chart_id),
+            _ => return,
+        };
+        let Some(sheet_id) = self.status.sheet_info_manager.get_sheet_id(sheet_idx) else {
+            return;
+        };
+        let Some(data) = executor
+            .manager
+            .charts_of_sheet(sheet_id)
+            .find(|c| &c.id == chart_id)
+            .map(|c| c.data.clone())
+        else {
+            return;
+        };
+        let refs = crate::chart_manager::ChartRefs::from_data(
+            &self.status.navigator,
+            &self.status.sheet_id_manager,
+            sheet_id,
+            &data,
+        );
+        executor.manager.set_refs(sheet_id, chart_id, refs);
     }
 
     /// The ranges a chart payload's `block_source` currently covers, or `None`

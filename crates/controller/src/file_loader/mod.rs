@@ -403,7 +403,13 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                         &navigator,
                         &mut image_manager,
                     );
-                    load_charts(sheet_id, drawing, &navigator, &mut chart_manager);
+                    load_charts(
+                        sheet_id,
+                        drawing,
+                        &navigator,
+                        &sheet_id_manager,
+                        &mut chart_manager,
+                    );
                 }
                 // Excel data validation is stored verbatim per sheet for round-trip.
                 if let Some(dv) = &ws.worksheet_part.data_validations {
@@ -830,6 +836,7 @@ fn load_charts(
     sheet_id: SheetId,
     drawing: &WorksheetDrawing,
     navigator: &Navigator,
+    sheets: &crate::id_manager::SheetIdManager,
     chart_manager: &mut ChartManager,
 ) {
     let chart_parts: Vec<&PassthroughPart> = drawing
@@ -941,6 +948,7 @@ fn load_charts(
             .and_then(|f| f.strip_suffix(".xml"))
             .unwrap_or("chart")
             .to_string();
+        let refs = crate::chart_manager::ChartRefs::from_data(navigator, sheets, sheet_id, &data);
         chart_manager.add(
             sheet_id,
             Chart {
@@ -953,6 +961,9 @@ fn load_charts(
                 // Restored from logisheets.xml further down; an xlsx written by
                 // Excel has no block bindings at all.
                 source: None,
+                // The file states its ranges in A1; from here on the cells
+                // themselves are what the chart follows.
+                refs,
             },
         );
     }
