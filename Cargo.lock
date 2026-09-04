@@ -161,7 +161,7 @@ dependencies = [
 
 [[package]]
 name = "buildtools"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "gents",
  "logisheets-rs",
@@ -932,7 +932,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "glob",
  "logiscript",
@@ -945,7 +945,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets-rs"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -957,7 +957,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_astchecker"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "logisheets_base",
  "logisheets_parser",
@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_base"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "chrono",
  "futures",
@@ -979,7 +979,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_controller"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "chrono",
  "colorsys",
@@ -1014,7 +1014,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_lexer"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "pest",
  "pest_derive",
@@ -1023,7 +1023,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_lexer4fmt"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -1035,7 +1035,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_parser"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "chrono",
  "lazy_static",
@@ -1064,7 +1064,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_wasm_server"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "console_error_panic_hook",
  "getrandom 0.2.15",
@@ -1081,7 +1081,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_workbook"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -1098,7 +1098,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_workbook_derives"
-version = "1.12.1"
+version = "1.14.0"
 dependencies = [
  "paste",
  "proc-macro2",

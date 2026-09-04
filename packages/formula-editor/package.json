@@ -1,6 +1,6 @@
 {
     "name": "logisheets-formula-editor",
-    "version": "1.12.1",
+    "version": "1.14.0",
     "description": "Excel-style formula editor for spreadsheets — syntax highlighting, per-reference cell-ref coloring, and function autocomplete, built on CodeMirror 6. Ships a React component and a framework-agnostic core.",
     "author": "Jeremy He",
     "license": "MIT",
