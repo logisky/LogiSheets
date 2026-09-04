@@ -159,11 +159,8 @@ pub fn save_workbook<S: SaverTrait>(
             // writes for a table created with "My table has headers" unchecked:
             // the column names live in the table definition.
             {
-                let mut used_rids: std::collections::HashSet<String> = worksheet
-                    .tables
-                    .iter()
-                    .map(|t| t.rel_id.clone())
-                    .collect();
+                let mut used_rids: std::collections::HashSet<String> =
+                    worksheet.tables.iter().map(|t| t.rel_id.clone()).collect();
                 // A table preserved from the input already covers its block.
                 let already_tabled: std::collections::HashSet<String> = worksheet
                     .tables
@@ -175,8 +172,8 @@ pub fn save_workbook<S: SaverTrait>(
                     table_id_counter = table_id_counter.max(t.table.id);
                 }
                 for range in block_ranges.iter() {
-                    let Some(ref_name) = block_schema_manager
-                        .fetch_block_ref_name(sheet_id, range.block_id)
+                    let Some(ref_name) =
+                        block_schema_manager.fetch_block_ref_name(sheet_id, range.block_id)
                     else {
                         continue; // no schema: nothing to name a table after
                     };
@@ -216,26 +213,29 @@ pub fn save_workbook<S: SaverTrait>(
                     );
                     table_id_counter += 1;
                     table_names.insert(display_name.clone());
-                    worksheet.tables.push(logisheets_workbook::workbook::TablePart {
-                        rel_id,
-                        table: block_to_table(table_id_counter, &display_name, &a1, &fields),
-                    });
+                    worksheet
+                        .tables
+                        .push(logisheets_workbook::workbook::TablePart {
+                            rel_id,
+                            table: block_to_table(table_id_counter, &display_name, &a1, &fields),
+                        });
                 }
                 // The sheet's `<tableParts>` has to list every one of them, the
                 // preserved and the synthesised alike, or the parts are orphaned.
                 if worksheet.tables.is_empty() {
                     worksheet.worksheet_part.table_parts = None;
                 } else {
-                    worksheet.worksheet_part.table_parts = Some(logisheets_workbook::prelude::CtTableParts {
-                        count: worksheet.tables.len() as u32,
-                        parts: worksheet
-                            .tables
-                            .iter()
-                            .map(|t| logisheets_workbook::prelude::CtTablePart {
-                                id: t.rel_id.clone(),
-                            })
-                            .collect(),
-                    });
+                    worksheet.worksheet_part.table_parts =
+                        Some(logisheets_workbook::prelude::CtTableParts {
+                            count: worksheet.tables.len() as u32,
+                            parts: worksheet
+                                .tables
+                                .iter()
+                                .map(|t| logisheets_workbook::prelude::CtTablePart {
+                                    id: t.rel_id.clone(),
+                                })
+                                .collect(),
+                        });
                 }
             }
 
@@ -299,6 +299,41 @@ pub fn save_workbook<S: SaverTrait>(
                 // `data` are only as fresh as the last resolution. The binding
                 // itself goes to logisheets.xml below, so reopening here picks
                 // the chart back up as bound rather than frozen.
+                // A chart holds its ranges by cell id, so what goes into the
+                // file is where those cells are now. Rebuilt only when that
+                // differs from the text the chart came in with, so a chart
+                // nothing moved still goes back out byte for byte.
+                let moved = {
+                    let live = |r: &Option<crate::chart_manager::ChartRange>| {
+                        r.as_ref()
+                            .and_then(|r| r.to_a1(navigator, sheet_id_manager))
+                    };
+                    let cat = live(&chart.refs.cat);
+                    let cat_moved = cat.is_some() && cat != chart.data.cat_ref;
+                    let series_moved = chart.data.series.iter().enumerate().any(|(i, s)| {
+                        let r = chart.refs.series_at(i);
+                        let val = r.and_then(|r| live(&r.val));
+                        let size = r.and_then(|r| live(&r.size));
+                        (val.is_some() && val != s.val_ref)
+                            || (size.is_some() && size != s.size_ref)
+                    });
+                    if cat_moved || series_moved {
+                        let mut spec = chart.data.clone();
+                        spec.cat_ref = cat.or(spec.cat_ref);
+                        for (i, s) in spec.series.iter_mut().enumerate() {
+                            let r = chart.refs.series_at(i);
+                            if let Some(v) = r.and_then(|r| live(&r.val)) {
+                                s.val_ref = Some(v);
+                            }
+                            if let Some(v) = r.and_then(|r| live(&r.size)) {
+                                s.size_ref = Some(v);
+                            }
+                        }
+                        Some(logisheets_workbook::prelude::build_chart_xml(&spec).into_bytes())
+                    } else {
+                        None
+                    }
+                };
                 let regenerated = chart.source.as_ref().and_then(|src| {
                     let refs = crate::chart_manager::resolve_block_refs(
                         navigator,
@@ -329,6 +364,9 @@ pub fn save_workbook<S: SaverTrait>(
                         .collect();
                     Some(logisheets_workbook::prelude::build_chart_xml(&spec).into_bytes())
                 });
+                // A block-bound chart's ranges come from the block, so that
+                // resolution wins over the cell-id one.
+                let regenerated = regenerated.or(moved);
                 if let Some(src) = &chart.source {
                     chart_sources.push(ChartSourceXml {
                         chart_id: chart.id.clone(),
@@ -606,7 +644,6 @@ fn conditional_formatting_manager_to_xml(
         .collect()
 }
 
-
 /// A block ref name as an Excel table `displayName`. Excel requires an
 /// identifier: letters, digits and underscores only, not starting with a digit,
 /// and never something that could be read as a cell reference. Agent-chosen ref
@@ -627,7 +664,10 @@ fn excel_table_name(ref_name: &str) -> String {
     // Must not start with a digit, and must not look like `A1` / `R1C1`.
     let starts_bad = out.chars().next().is_some_and(|c| c.is_ascii_digit());
     let looks_like_ref = {
-        let letters: String = out.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+        let letters: String = out
+            .chars()
+            .take_while(|c| c.is_ascii_alphabetic())
+            .collect();
         let rest: String = out.chars().skip(letters.len()).collect();
         !letters.is_empty()
             && letters.len() <= 3

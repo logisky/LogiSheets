@@ -34,7 +34,18 @@ xl/charts/chartN.xml (c:chartSpace)          ← source of truth, in the .xlsx
   parts ride along too. Adding a typed field means adding it to *both*
   `ChartData` and `build_chart_xml`.
 - **Anchored by stable `CellId`.** Charts shift with row/column insert/delete,
-  like images. Their *data ranges* do not — see the known bug below.
+  like images.
+- **Data ranges are held by `CellId` too** (`chart_manager/refs.rs`). The engine's
+  rule is that positions exist only at the edges — ids in the middle — and chart
+  refs used to be the exception: they kept the file's `Sheet1!$B$2:$E$2` text and
+  nothing rewrote it, so a row inserted above the data left the chart resolving
+  a range of now-empty cells and rendering **blank**. A `ChartRange` is a
+  `SheetId` plus the same id-based `Range` formulas use, so a chart now shifts
+  with rows and columns, widens when a row is inserted inside its range (as
+  Excel does), and re-points when its sheet is renamed. The A1 text in
+  `ChartData` is the fallback for a corner whose cell has been deleted. On save
+  the part is regenerated **only if** the resolved A1 differs from what the
+  chart came in with, so an undisturbed chart still round-trips byte for byte.
 - **A chart can be bound to a block instead of a range.** `ChartBlockSource`
   (block id + field names) is stored on the controller's `Chart`, outside the
   OOXML model, and `chart_manager::resolve_block_refs` turns it into A1 ranges
@@ -57,6 +68,7 @@ xl/charts/chartN.xml (c:chartSpace)          ← source of truth, in the .xlsx
 | --- | --- | --- |
 | Read & display charts from `.xlsx` | ✅ | user + tests |
 | Chart follows data edits (live values) | ✅ | `chart_reflects_live_data` |
+| Range follows row/col insert, delete, sheet rename | ✅ | `plain_chart_follows_row_and_column_edits`, `tests/chart_range_tracking.rs` |
 | Chart bound to a block, follows it as it grows | ✅ | `chart_bound_to_block_follows_it`, `block_bound_chart_survives_save` |
 | Select (click) | ✅ | user |
 | Move (drag) | ✅ | `move_chart_updates_anchor` + user |
@@ -109,17 +121,6 @@ picks the tick values, so the engine formats them with `formatAxisNumber`, a
 small subset renderer (separators, decimals, percent, currency affixes).
 
 ## What's remaining
-
-**Known bug: a plain chart's ranges do not track edits**
-- A chart that holds A1 text is *anchored* by `CellId` but its refs are plain
-  strings that nothing rewrites. Insert a row above its data and the chart goes
-  **blank**: the ref still names the old rows, which are now empty, so the live
-  resolution succeeds and returns nothing. (`resolve_series_values` returning
-  `Some(vec![None, …])` also means the `numCache` fallback never kicks in.)
-  Proven by hand on `tests/graph.xlsx`; no test covers it yet.
-- The fix is the same shape as the anchor's: hold the range as `CellId`
-  endpoints and render A1 only at save. Block-bound charts already sidestep it,
-  because their ranges are recomputed rather than stored.
 
 **Fidelity gaps**
 - Fonts, fills, gridline styling and 3-D effects survive an edit but are not
@@ -222,7 +223,8 @@ service, so the inference is unit-tested without a workbook
   (`build_chart_xml`).
 - `crates/workbook/src/ooxml/drawing_part.rs` — `graphicFrame` anchor model.
 - `crates/controller/src/chart_manager/` — `ChartManager` + executor, plus
-  `block_source.rs` (block binding → live A1 ranges).
+  `block_source.rs` (block binding → live A1 ranges) and `refs.rs` (data ranges
+  as cell ids, and the A1 ↔ id conversion at the edges).
 - `crates/controller/src/api/worksheet.rs` — `get_charts` (live-value resolution
   and live block-range resolution).
 - `crates/workbook/src/logisheets.rs` — `<chartSource>`, the persisted binding.

@@ -5831,3 +5831,103 @@ fn block_description_and_permissions_are_undoable() {
         "and redo puts them back"
     );
 }
+
+/// A chart's data range rides along with row and column edits, like every
+/// other thing the engine anchors. It used to hold the file's A1 text and
+/// nothing rewrote it, so inserting a row above the data left the chart
+/// pointing at cells that had moved — and it rendered blank.
+#[test]
+fn plain_chart_follows_row_and_column_edits() {
+    use crate::edit_action::{InsertCols, InsertRows};
+
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    let read = |wb: &Workbook| {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let c = &ws.get_charts()[0];
+        (
+            c.series[0].val_ref.clone(),
+            c.series[0].values.clone(),
+            c.cat_ref.clone(),
+        )
+    };
+    let (ref0, values0, cat0) = read(&wb);
+    assert_eq!(ref0.as_deref(), Some("Sheet1!$B$2:$E$2"));
+    assert_eq!(
+        values0,
+        vec![Some(11.0), Some(13.0), Some(15.0), Some(24.0)]
+    );
+
+    // A row inserted above the data pushes it down one.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRows(InsertRows {
+            sheet_idx: 0,
+            start: 0,
+            count: 1,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let (ref1, values1, _) = read(&wb);
+    assert_eq!(
+        ref1.as_deref(),
+        Some("Sheet1!$B$3:$E$3"),
+        "the range moved with its cells"
+    );
+    assert_eq!(values1, values0, "and reads the same numbers");
+
+    // A column inserted to the left does the same sideways.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertCols(InsertCols {
+            sheet_idx: 0,
+            start: 0,
+            count: 1,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    let (ref2, values2, _) = read(&wb);
+    assert_eq!(ref2.as_deref(), Some("Sheet1!$C$3:$F$3"));
+    assert_eq!(values2, values0);
+
+    // Undo restores the ranges too, since they are part of the snapshot.
+    wb.handle_action(EditAction::Undo);
+    wb.handle_action(EditAction::Undo);
+    let (ref3, values3, cat3) = read(&wb);
+    assert_eq!(ref3, ref0, "undo puts the range back");
+    assert_eq!(values3, values0);
+    assert_eq!(cat3, cat0);
+}
+
+/// The moved range has to reach the file too, or the fix would live only in
+/// memory and the saved workbook would still point at the old cells.
+#[test]
+fn a_moved_chart_range_survives_a_save() {
+    use crate::edit_action::InsertRows;
+
+    let buf = std::fs::read("../../tests/graph.xlsx").unwrap();
+    let mut wb = Workbook::from_file(&buf, "graph".to_string()).unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRows(InsertRows {
+            sheet_idx: 0,
+            start: 0,
+            count: 1,
+        })],
+        undoable: false,
+        init: false,
+    }));
+
+    let bytes = wb.save().unwrap();
+    let wb2 = Workbook::from_file(&bytes, "reloaded".to_string()).unwrap();
+    let ws = wb2.get_sheet_by_idx(0).unwrap();
+    let c = &ws.get_charts()[0];
+    assert_eq!(
+        c.series[0].val_ref.as_deref(),
+        Some("Sheet1!$B$3:$E$3"),
+        "the file carries where the cells ended up"
+    );
+    assert_eq!(
+        c.series[0].values,
+        vec![Some(11.0), Some(13.0), Some(15.0), Some(24.0)]
+    );
+}
