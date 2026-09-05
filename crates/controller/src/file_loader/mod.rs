@@ -210,6 +210,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                         cell_input: parse_perm(&block_range.perm_cell_input),
                         sort_by_field: parse_perm(&block_range.perm_sort_by_field),
                         modify_description: parse_perm(&block_range.perm_modify_description),
+                        override_validation: parse_perm(&block_range.perm_override_validation),
                     };
                     let block_place = BlockPlace::new(
                         master_cell_id,

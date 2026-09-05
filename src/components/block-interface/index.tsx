@@ -9,6 +9,8 @@ import {
     Add as AddIcon,
     ArrowUpward as ArrowUpwardIcon,
     ArrowDownward as ArrowDownwardIcon,
+    Functions as FunctionsIcon,
+    RuleOutlined as RuleIcon,
 } from '@mui/icons-material'
 import {
     Grid,
@@ -24,7 +26,13 @@ import {MenuComponent} from './menu'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {useEngine, useOps, useDataService} from '@/core/engine/provider'
 import type {FieldInfo} from 'logisheets-engine'
-import {BlockCellInfo, BlockDisplayInfo} from 'logisheets-engine'
+import {
+    BlockCellInfo,
+    BlockDisplayInfo,
+    BlockSchemaFieldEntry,
+} from 'logisheets-engine'
+import {FieldRuleDialog} from './field-rule-dialog'
+import type {FieldRuleKind} from '@/components/block-composer/field-formula'
 import {LeftTop} from '@/core/settings'
 import {BlockCellProps, RenderedCellSpec, buildRenderedCells} from './cell'
 import {EnumCell} from './enum-cell'
@@ -192,6 +200,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         cells={info.cells}
                         grid={grid}
                         title={info.schema.name}
+                        schemaFields={info.schema.fields}
                     />
                 )
             })}
@@ -218,6 +227,13 @@ interface BlockInterfaceInternalProps {
     cells: readonly BlockCellInfo[]
     grid: Grid
     title: string
+    /**
+     * The block's schema fields IN SCHEMA ORDER, not display order.
+     * `UpsertFieldFormulas` takes one rule per field in exactly that order, so
+     * the per-field rule dialog has to rebuild its vector from this list
+     * rather than from the (idx-sorted) `fieldInfo` above.
+     */
+    schemaFields: readonly BlockSchemaFieldEntry[]
 }
 
 const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
@@ -240,6 +256,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         canvasStartY,
         cells,
         grid,
+        schemaFields,
     } = props
 
     const ops = useOps()
@@ -279,6 +296,42 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                 `Failed to sort by "${field}": ${
                     e instanceof Error ? e.message : String(e)
                 }`
+            )
+        }
+    }
+
+    // Which per-field rule the header menu opened, if any.
+    const [ruleDialog, setRuleDialog] = useState<{
+        kind: FieldRuleKind
+        field: string
+    } | null>(null)
+
+    const ruleOf = (field: string, kind: FieldRuleKind): string => {
+        const entry = schemaFields.find((f) => f.field === field)
+        const raw =
+            kind === 'value' ? entry?.valueFormula : entry?.validationFormula
+        return raw ?? ''
+    }
+
+    const handleSaveRule = async (
+        kind: FieldRuleKind,
+        field: string,
+        rule: string
+    ) => {
+        setRuleDialog(null)
+        // One entry per field, in the schema's own order — the engine replaces
+        // the whole vector for this rule kind, so every field that is not the
+        // one being edited has to carry its rule through unchanged.
+        const formulas = schemaFields.map((f) =>
+            f.field === field ? rule : ruleOf(f.field, kind)
+        )
+        try {
+            await ops.setFieldRules({sheetIdx, blockId, kind, formulas})
+        } catch (e) {
+            toast.error(
+                `Failed to set the ${
+                    kind === 'value' ? 'field formula' : 'validation rule'
+                } on "${field}": ${e instanceof Error ? e.message : String(e)}`
             )
         }
     }
@@ -958,7 +1011,57 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     >
                         Sort descending
                     </ContextMenuItem>
+                    {/* The two rules a field can carry. Labelled by whether one
+                        is already in force, so the menu says what the column
+                        does without having to open anything. */}
+                    <ContextMenuItem
+                        icon={<FunctionsIcon />}
+                        onClick={() => {
+                            if (!sortMenu) return
+                            setRuleDialog({
+                                kind: 'value',
+                                field: sortMenu.field,
+                            })
+                            setSortMenu(null)
+                        }}
+                    >
+                        {sortMenu && ruleOf(sortMenu.field, 'value') !== ''
+                            ? 'Edit field formula…'
+                            : 'Set field formula…'}
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        icon={<RuleIcon />}
+                        onClick={() => {
+                            if (!sortMenu) return
+                            setRuleDialog({
+                                kind: 'validation',
+                                field: sortMenu.field,
+                            })
+                            setSortMenu(null)
+                        }}
+                    >
+                        {sortMenu && ruleOf(sortMenu.field, 'validation') !== ''
+                            ? 'Edit validation rule…'
+                            : 'Set validation rule…'}
+                    </ContextMenuItem>
                 </ContextMenu>
+
+                {ruleDialog && (
+                    <FieldRuleDialog
+                        kind={ruleDialog.kind}
+                        fieldName={ruleDialog.field}
+                        allFieldNames={schemaFields.map((f) => f.field)}
+                        initialValue={ruleOf(ruleDialog.field, ruleDialog.kind)}
+                        onSave={(rule) =>
+                            handleSaveRule(
+                                ruleDialog.kind,
+                                ruleDialog.field,
+                                rule
+                            )
+                        }
+                        onClose={() => setRuleDialog(null)}
+                    />
+                )}
 
                 {/* Add row button (bottom) — hover only, like the settings
                     button. */}

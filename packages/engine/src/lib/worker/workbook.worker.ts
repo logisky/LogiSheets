@@ -37,6 +37,8 @@ import type {
     BlockSortOrder,
     GetBlockSortOrderParams,
     MayModifyBlockParams,
+    CheckFieldValidationParams,
+    FieldValidationVerdict,
     GetBlockModifyInfoParams,
     BlockModifyInfo,
 } from 'logisheets-web'
@@ -409,6 +411,16 @@ export class WorkbookWorkerService implements IWorkbookWorker {
      */
     public mayModifyBlock(params: MayModifyBlockParams): Result<boolean> {
         return this.workbook.mayModifyBlock(params)
+    }
+
+    /**
+     * Whether a proposed value would break its field's validation rule.
+     * Read-only — the cell is left holding whatever it already held.
+     */
+    public checkFieldValidation(
+        params: CheckFieldValidationParams
+    ): Result<FieldValidationVerdict> {
+        return this.workbook.checkFieldValidation(params)
     }
 
     /** A block's governance metadata, without its cells. */
@@ -807,6 +819,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.MayModifyBlock:
                     result = this.mayModifyBlock(args)
+                    break
+                case MethodName.CheckFieldValidation:
+                    result = this.checkFieldValidation(args)
                     break
                 case MethodName.GetAvailableBlockId:
                     result = this.getAvailableBlockId(args)

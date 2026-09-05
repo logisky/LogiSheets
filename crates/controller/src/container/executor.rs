@@ -12,6 +12,18 @@ use crate::{
 
 use super::{DataContainer, ctx::ContainerExecCtx};
 
+/// True when `cell_id` is a block cell sitting in a field that carries a
+/// value-formula template. Such a cell is engine-owned: the schema's
+/// template decides what it holds, and a write from anywhere else — a
+/// person typing in the grid, a paste, a clear — has to be dropped, or
+/// the row silently loses the column's formula.
+fn is_templated_cell<C: ContainerExecCtx>(ctx: &C, sheet_id: SheetId, cell_id: &CellId) -> bool {
+    match cell_id {
+        CellId::BlockCell(bcid) => ctx.is_block_cell_templated(sheet_id, bcid),
+        _ => false,
+    }
+}
+
 pub struct ContainerExecutor {
     pub container: DataContainer,
     pub cells_removed: Vec<(SheetId, CellId)>,
@@ -197,6 +209,13 @@ impl ContainerExecutor {
                         cell.coordinate.row - anchor_x + p.start_row,
                         cell.coordinate.col - anchor_y + p.start_col,
                     )?;
+                    // Paste / fill lands on whatever the target rectangle
+                    // covers, which may include a block's computed column.
+                    // Skip those cells rather than refusing the whole
+                    // operation — the rest of the paste is legitimate.
+                    if is_templated_cell(ctx, sheet_id, &cell_id) {
+                        continue;
+                    }
                     let cell_value = match cell.value {
                         crate::Value::Str(s) => {
                             CellValue::from_string(s, &mut |t| -> TextId { ctx.fetch_text_id(t) })
@@ -236,6 +255,15 @@ impl ContainerExecutor {
                 let cell_value =
                     CellValue::from_string(p.content, &mut |t| -> TextId { ctx.fetch_text_id(t) });
                 let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
+                // A templated block cell belongs to its field's formula.
+                // `BlockInput` already drops writes here; `CellInput` is
+                // the path a person typing into the grid takes, so it has
+                // to drop them too — otherwise a stray keystroke replaces
+                // the computed value and the formula executor tears the
+                // row's formula out behind it.
+                if is_templated_cell(ctx, sheet_id, &cell_id) {
+                    return Ok((self, false));
+                }
                 self.container.update_value(sheet_id, cell_id, cell_value);
                 self.value_changed.push((sheet_id, cell_id));
                 Ok((self, true))
@@ -269,6 +297,12 @@ impl ContainerExecutor {
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
+                // Clearing a templated cell would blank a value the schema
+                // is about to recompute anyway — and removing the cell drops
+                // the formula with it. Leave it alone.
+                if is_templated_cell(ctx, sheet_id, &cell_id) {
+                    return Ok((self, false));
+                }
                 self.container.remove_cell(sheet_id, &cell_id);
                 self.value_changed.push((sheet_id, cell_id));
                 Ok((self, true))

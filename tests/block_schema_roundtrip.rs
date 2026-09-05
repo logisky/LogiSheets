@@ -111,6 +111,9 @@ fn authored() -> Workbook {
                     cell_input: Some(ModifyPolicy::All),
                     sort_by_field: None,
                     modify_description: Some(ModifyPolicy::OwnerOnly),
+                    // Typing is open, but a value the schema says is wrong is
+                    // the craft's call — the pairing the op exists for.
+                    override_validation: Some(ModifyPolicy::OwnerOnly),
                 }),
                 description: Some(
                     "Customer orders, one per row. `total` is qty * price and is \
@@ -580,6 +583,11 @@ fn check(wb: &Workbook, stage: &str) {
         Some(ModifyPolicy::OwnerOnly),
         "[{stage}] modifyDescription"
     );
+    assert_eq!(
+        perms.explicit(BlockOp::OverrideValidation),
+        Some(ModifyPolicy::OwnerOnly),
+        "[{stage}] overrideValidation"
+    );
     // ...and that the unstated one still resolves through the default.
     assert_eq!(
         perms.policy_for(BlockOp::SortByField, modify.modify_policy),
@@ -905,6 +913,80 @@ fn a_second_save_produces_the_same_data_part() {
     );
 }
 
+/// A field formula is LogiSheets' own concept, but the cells it computes have
+/// to leave the building as ordinary spreadsheet cells: an `<f>` with a plain
+/// A1 expression and a `<v>` holding the last computed value, one per record.
+/// Anything else and a workbook opened elsewhere shows a column of blanks (or
+/// a column of frozen numbers with no formula behind them), which is exactly
+/// the state a person would discover only after sending the file to someone.
+#[test]
+fn a_field_formula_reaches_the_file_as_a_cell_formula_per_row() {
+    let wb = authored();
+    let xml = part(&wb.save().unwrap(), "xl/worksheets/sheet1.xml");
+
+    // `total` is column D; the three records are rows 1..3.
+    for (cell, qty, price) in [("D1", "B1", "C1"), ("D2", "B2", "C2"), ("D3", "B3", "C3")] {
+        let f =
+            cell_formula(&xml, cell).unwrap_or_else(|| panic!("no <f> written for {cell}:\n{xml}"));
+        assert!(
+            f.contains(qty) && f.contains(price),
+            "{cell}'s formula should reference this row's qty/price cells              ({qty}, {price}) — the template's #FIELD refs are substituted at              parse time, so what lands on disk is ordinary A1. Got {f:?}"
+        );
+        assert!(
+            !f.contains("#FIELD") && !f.contains('#'),
+            "{cell} must not carry a LogiSheets placeholder into the sheet              part — no other reader understands one. Got {f:?}"
+        );
+    }
+
+    // The cached values ship too, so a reader that doesn't recalculate on open
+    // still shows the right numbers.
+    for (cell, want) in [("D1", "7"), ("D2", "5"), ("D3", "10")] {
+        let v =
+            cell_value(&xml, cell).unwrap_or_else(|| panic!("no <v> written for {cell}:\n{xml}"));
+        let got: f64 = v.parse().unwrap_or_else(|_| panic!("{cell} value {v:?}"));
+        let want: f64 = want.parse().unwrap();
+        assert!(
+            (got - want).abs() < 1e-9,
+            "{cell} should carry its computed value {want}, got {got}"
+        );
+    }
+}
+
+/// The `<c r="…">` element for one cell, as raw XML.
+fn cell_element<'a>(xml: &'a str, reference: &str) -> Option<&'a str> {
+    let needle = format!("r=\"{reference}\"");
+    let start = xml.find(&needle)?;
+    let start = xml[..start].rfind("<c ")?;
+    let end = xml[start..].find("</c>").map(|e| start + e)?;
+    Some(&xml[start..end])
+}
+
+fn cell_formula<'a>(xml: &'a str, reference: &str) -> Option<&'a str> {
+    let c = cell_element(xml, reference)?;
+    let start = c.find("<f>")? + "<f>".len();
+    let end = c[start..].find("</f>").map(|e| start + e)?;
+    Some(&c[start..end])
+}
+
+fn cell_value<'a>(xml: &'a str, reference: &str) -> Option<&'a str> {
+    let c = cell_element(xml, reference)?;
+    let start = c.find("<v>")? + "<v>".len();
+    let end = c[start..].find("</v>").map(|e| start + e)?;
+    Some(&c[start..end])
+}
+
+/// Read one part of a saved workbook as text.
+fn part(bytes: &[u8], name: &str) -> String {
+    use std::io::Read;
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).expect("a zip");
+    let mut f = zip
+        .by_name(name)
+        .unwrap_or_else(|_| panic!("no {name} in the saved file"));
+    let mut s = String::new();
+    f.read_to_string(&mut s).expect("utf-8 part");
+    s
+}
+
 fn data_xml(bytes: &[u8]) -> String {
     use std::io::Read;
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).expect("a zip");
@@ -1171,6 +1253,7 @@ fn set_description_and_permissions_survive_a_trip() {
                     cell_input: None,
                     sort_by_field: Some(ModifyPolicy::OwnerAndUser),
                     modify_description: Some(ModifyPolicy::OwnerOnly),
+                    override_validation: None,
                 },
                 // Raising the default at the same time, which is the other
                 // half of that payload.
