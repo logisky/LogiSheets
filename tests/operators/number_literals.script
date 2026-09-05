@@ -1,0 +1,31 @@
+# Numeric literals must be read as a whole.
+#
+# REGRESSION: the parser used to rebuild a literal out of the pieces the grammar
+# splits off — `(integer as i32 as f64 + ".frac".parse()) * 10^exponent`. Every
+# line below was wrong because of it.
+
+# The integer part went through i32, so anything past 2^31 fell off entirely.
+INPUT A1 =3000000000
+CHECKNUM A1 3000000000
+
+# ...and here only the fraction survived: this used to be 0.5.
+INPUT A2 =12345678901.5
+CHECKNUM A2 12345678901.5
+
+INPUT A3 =123456789012345678/1000000000
+CHECKNUM A3 123456789.012
+
+# The exponent was applied as a multiply, so a literal near the top of the range
+# overflowed to infinity — and inf/inf is not 1.
+INPUT A4 =1E308/1E308
+CHECKNUM A4 1
+
+# ...and one near the bottom flushed to zero, making this #DIV/0!.
+INPUT A5 =1E-320/1E-320
+CHECKNUM A5 1
+
+# Adding the two halves rounds twice, which put 4.778 one ulp above the
+# correctly rounded double. One ulp in an exponent is not small: this MOD over
+# a large power came out 0.263671875.
+INPUT A6 =MOD(-(566.5^4.778),1)
+CHECKNUM A6 0.34375
