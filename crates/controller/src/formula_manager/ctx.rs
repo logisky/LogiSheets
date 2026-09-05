@@ -32,6 +32,11 @@ pub trait FormulaExecCtx:
     /// caller can dirty the right virtual node.
     fn block_cell_role(&self, sheet_id: SheetId, cell: &BlockCellId) -> BlockCellRole;
 
+    /// True if this block cell sits in a field carrying a value-formula
+    /// template. Cheaper than {@link block_cell_template} (no sibling map,
+    /// no key lookup) and used by the write-guard on user-facing payloads.
+    fn is_block_cell_templated(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool;
+
     /// If this block cell sits in a field with a value-formula template,
     /// return everything the executor needs to substitute and parse it:
     ///   1. the raw template (still including `=` if the author wrote one)

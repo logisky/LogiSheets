@@ -289,10 +289,9 @@ pub struct CtGeomGuideList {}
 // --- graphicFrame (charts) -------------------------------------------------
 //
 // Modeled enough to (a) read a chart reference on load and (b) regenerate the
-// anchor on save. `nvGraphicFramePr` and `graphic/graphicData/c:chart` are
-// typed; `xfrm` is preserved opaquely (Excel recomputes it from the anchor's
-// from/to on a twoCellAnchor). Non-chart graphicData (e.g. SmartArt) is not
-// modeled and would not round-trip — charts are the supported case.
+// anchor on save. `nvGraphicFramePr`, `xfrm` and `graphic/graphicData/c:chart`
+// are typed. Non-chart graphicData (e.g. SmartArt) is not modeled and would not
+// round-trip — charts are the supported case.
 #[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
 pub struct CtGraphicFrame {
     #[xmlserde(name = b"xdr:nvGraphicFramePr", ty = "child")]
@@ -300,9 +299,49 @@ pub struct CtGraphicFrame {
     pub nv_graphic_frame_pr: Option<CtGraphicFrameNonVisual>,
     #[xmlserde(name = b"xdr:xfrm", ty = "child")]
     #[xmlserde(alias(b"xfrm"))]
-    pub xfrm: Option<Unparsed>,
+    pub xfrm: Option<CtGraphicFrameXfrm>,
     #[xmlserde(name = b"a:graphic", ty = "child")]
     pub graphic: Option<CtGraphicalObject>,
+}
+
+/// `<xdr:xfrm>` on a graphicFrame — DrawingML's `a:CT_Transform2D`.
+///
+/// The schema requires it, and so does Excel: a graphicFrame without one makes
+/// Excel repair the drawing part on open. Excel does recompute the geometry
+/// from the anchor's from/to, so the element may be *empty* — real producers
+/// write a bare `<xdr:xfrm/>` rather than omitting it, which is what
+/// `tests/one_cell_anchor.xlsx` contains — but it has to be present.
+///
+/// Typed rather than kept opaque because a chart we generate has to emit one
+/// and `xmlserde::Unparsed` cannot be constructed from outside that crate. The
+/// three attributes and two children below are the whole of `CT_Transform2D`,
+/// so nothing is dropped from a file that already had one.
+///
+/// Distinct from `drawings::CtTransform2D`, which names its children without
+/// the `a:` prefix; this module writes every tag prefixed.
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CtGraphicFrameXfrm {
+    #[xmlserde(name = b"rot", ty = "attr")]
+    pub rot: Option<i64>,
+    #[xmlserde(name = b"flipH", ty = "attr")]
+    pub flip_h: Option<bool>,
+    #[xmlserde(name = b"flipV", ty = "attr")]
+    pub flip_v: Option<bool>,
+    #[xmlserde(name = b"a:off", ty = "child")]
+    #[xmlserde(alias(b"off"))]
+    pub off: Option<CtPoint2D>,
+    #[xmlserde(name = b"a:ext", ty = "child")]
+    #[xmlserde(alias(b"ext"))]
+    pub ext: Option<CtPositiveSize2D>,
+}
+
+/// `<a:off x="…" y="…">` — an offset in EMUs.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct CtPoint2D {
+    #[xmlserde(name = b"x", ty = "attr")]
+    pub x: i64,
+    #[xmlserde(name = b"y", ty = "attr")]
+    pub y: i64,
 }
 
 #[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
@@ -464,7 +503,9 @@ impl CtTwoCellAnchor {
                     }),
                     c_nv_graphic_frame_pr: Some(CtNvGraphicFrameProps::default()),
                 }),
-                xfrm: None,
+                // Empty, but present: Excel recomputes the geometry from
+                // the anchor and repairs the part if the element is absent.
+                xfrm: Some(CtGraphicFrameXfrm::default()),
                 graphic: Some(CtGraphicalObject {
                     graphic_data: Some(CtGraphicalObjectData {
                         uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),
@@ -522,7 +563,9 @@ impl CtOneCellAnchor {
                     }),
                     c_nv_graphic_frame_pr: Some(CtNvGraphicFrameProps::default()),
                 }),
-                xfrm: None,
+                // Empty, but present: Excel recomputes the geometry from
+                // the anchor and repairs the part if the element is absent.
+                xfrm: Some(CtGraphicFrameXfrm::default()),
                 graphic: Some(CtGraphicalObject {
                     graphic_data: Some(CtGraphicalObjectData {
                         uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),

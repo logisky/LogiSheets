@@ -7,6 +7,7 @@ import {
     ListItem,
     ListItemButton,
     ListItemText,
+    Tooltip,
 } from '@mui/material'
 import {
     Add as AddIcon,
@@ -206,6 +207,29 @@ export const FieldList = ({
                                                                 >
                                                                     {field.name}
                                                                 </Box>
+                                                                {field.valueFormula?.trim() ? (
+                                                                    <Tooltip
+                                                                        title={`Computed: ${field.valueFormula}`}
+                                                                    >
+                                                                        <Chip
+                                                                            label="fx"
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            sx={{
+                                                                                height: 20,
+                                                                                fontStyle:
+                                                                                    'italic',
+                                                                                '& .MuiChip-label':
+                                                                                    {
+                                                                                        px: 0.75,
+                                                                                        fontSize:
+                                                                                            '0.7rem',
+                                                                                        lineHeight: 1,
+                                                                                    },
+                                                                            }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                ) : null}
                                                                 {field.primary && (
                                                                     <Chip
                                                                         label="Primary"
@@ -304,6 +328,29 @@ export const FieldList = ({
                                                 >
                                                     {field.name}
                                                 </Box>
+                                                {field.valueFormula?.trim() ? (
+                                                    <Tooltip
+                                                        title={`Computed: ${field.valueFormula}`}
+                                                    >
+                                                        <Chip
+                                                            label="fx"
+                                                            size="small"
+                                                            variant="outlined"
+                                                            sx={{
+                                                                height: 20,
+                                                                fontStyle:
+                                                                    'italic',
+                                                                '& .MuiChip-label':
+                                                                    {
+                                                                        px: 0.75,
+                                                                        fontSize:
+                                                                            '0.7rem',
+                                                                        lineHeight: 1,
+                                                                    },
+                                                            }}
+                                                        />
+                                                    </Tooltip>
+                                                ) : null}
                                                 {field.primary && (
                                                     <Chip
                                                         label="Primary"

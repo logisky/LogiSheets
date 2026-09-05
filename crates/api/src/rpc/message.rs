@@ -4,6 +4,7 @@ use crate::BlockId;
 use crate::{
     ActionEffect, AppData, AppendixWithCell, BlockActor, BlockDataRow, BlockField, BlockInfo,
     BlockModifyInfo, BlockOp, BlockSortOrder, CellCoordinateWithSheet, CellImageInfo, CellInfo,
+    FieldValidationVerdict,
     CellInput, CellPosition, CellRefRange, CfRuleInfo, ChartInfo, ColId, Comment, DependentCell,
     DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo,
     LinkInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo,
@@ -62,6 +63,7 @@ pub enum Message {
     GetBlockValues(GetBlockValuesParams),
     GetBlockSortOrder(GetBlockSortOrderParams),
     MayModifyBlock(MayModifyBlockParams),
+    CheckFieldValidation(CheckFieldValidationParams),
     GetBlockModifyInfo(GetBlockModifyInfoParams),
     GetShadowCellId(GetShadowCellIdParams),
     GetShadowCellIds(GetShadowCellIdsParams),
@@ -522,6 +524,27 @@ pub struct MayModifyBlockParams {
     pub actor: BlockActor,
 }
 
+/// Ask whether a value would break a block field's validation rule, before
+/// writing it.
+///
+/// The pairing with [`MayModifyBlockParams`] is the whole point: a host that
+/// wants to enforce `BlockOp::OverrideValidation` needs both halves — is this
+/// write a violation, and is this actor allowed to make one.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "check_field_validation_params.ts",
+    rename_all = "camelCase"
+)]
+pub struct CheckFieldValidationParams {
+    pub sheet_idx: usize,
+    /// Sheet-absolute coordinates, not block-relative — this is asked from the
+    /// grid's write path, which speaks in sheet coordinates.
+    pub row: usize,
+    pub col: usize,
+    /// The value the caller is about to write, exactly as the user typed it.
+    pub proposed: String,
+}
+
 /// A block's governance metadata on its own — owner, default policy,
 /// per-operation overrides, description — without its cells.
 ///
@@ -871,6 +894,10 @@ pub struct WorkbookMethods {
     ) -> Result<BlockSortOrder, ErrorMessage>,
     pub may_modify_block:
         fn(params: MayModifyBlockParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
+    pub check_field_validation: fn(
+        params: CheckFieldValidationParams,
+        book_id: Option<usize>,
+    ) -> Result<FieldValidationVerdict, ErrorMessage>,
     pub get_block_modify_info: fn(
         params: GetBlockModifyInfoParams,
         book_id: Option<usize>,

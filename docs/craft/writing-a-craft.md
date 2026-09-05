@@ -258,10 +258,21 @@ await ctx.workbook.handleTransaction({
 ```
 
 The operations are `insertDeleteLines`, `removeBlock`, `modifySchema`,
-`cellInput`, `sortByField` and `modifyDescription`. Each takes `all`,
-`ownerAndUser` (the person at the keyboard, but no other craft) or `ownerOnly`.
-An operation you leave out follows `modifyPolicy`. **`owner` must be set** — a
-policy on an unowned block has nobody to privilege, so it is read as `all`.
+`cellInput`, `sortByField`, `modifyDescription` and `overrideValidation`. Each
+takes `all`, `ownerAndUser` (the person at the keyboard, but no other craft) or
+`ownerOnly`. An operation you leave out follows `modifyPolicy`. **`owner` must
+be set** — a policy on an unowned block has nobody to privilege, so it is read
+as `all`.
+
+`overrideValidation` is the narrow one: it governs writing a value that a
+field's `validationFormulas` rule rejects, not writing at all. Left at `all` a
+violating value lands and the cell is flagged, which is what every block did
+before the op existed. Reserved to the owner, the person at the keyboard is
+held to the rule while you can still seed a row you know is incomplete — a
+required field you fill in on the next round. Hosts ask
+`checkFieldValidation({sheetIdx, row, col, proposed})` for the verdict on a
+value before writing it, then `mayModifyBlock` with this op; the engine
+evaluates the rule against the proposed value without touching the cell.
 
 `removeBlock` is worth reserving even on a block that is otherwise open:
 deleting it takes the records, the schema and this policy along with it, and
