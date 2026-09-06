@@ -36,9 +36,18 @@ export const ValidationCell = (props: BlockCellProps) => {
     const validation = t.validation
 
     if (validation !== '' && shadowValue === undefined) {
-        // We haven't set a shadow cell for calculating the validation.
-        // The orchestration lives in logisheets-core's WorkbookOps so the
-        // browser and the Node runtime establish validation identically.
+        // Legacy path. A rule declared in the SCHEMA
+        // (`BindFormSchema.validationFormulas`) is installed by the engine on
+        // every record, so `shadowValue` is already populated and this branch
+        // never runs — that is now how every producer writes a rule: the
+        // composer, Watson's block builder and the crafts alike.
+        //
+        // It stays for blocks that predate that: a file saved when the rule
+        // lived only in the host's FieldInfo has nothing in its schema to
+        // install from, and without this its markers would silently vanish on
+        // reload. Installing here keeps them, at the cost of a rule the
+        // `overrideValidation` gate cannot see — such a block enforces
+        // nothing, it only warns, exactly as it did before.
         ops.setValidationRule(sheetIdx, rowIdx, colIdx, validation).catch(() =>
             toast.error('Failed to set validation rule')
         )

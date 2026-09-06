@@ -755,11 +755,18 @@ fn write_content_types(
     let overides = proofs
         .into_iter()
         .fold(Vec::<CtOverride>::new(), |mut prev, p| {
-            let c = CtOverride {
-                part_name: format!("/{}", String::from(p.path)),
-                content_type: get_content_type(p.rtype).into(),
-            };
-            prev.push(c);
+            let content_type = get_content_type(p.rtype);
+            // An `Override` with an empty ContentType is not a lax package, it
+            // is an invalid one — OPC requires a media type here, and Excel
+            // rejects the whole file rather than repairing a part. A part whose
+            // type we cannot name is better left to the `xml` Default above,
+            // which is what it would have resolved to anyway.
+            if !content_type.is_empty() {
+                prev.push(CtOverride {
+                    part_name: format!("/{}", String::from(p.path)),
+                    content_type: content_type.into(),
+                });
+            }
             prev
         });
     // Entries carried by preserved parts, deduped against what we emit anyway:
@@ -811,7 +818,16 @@ fn get_content_type(rtype: RType) -> &'static str {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml"
         }
         TABLE => "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml",
-        _ => "",
+        // Our own part. Not an OOXML type, but a part still needs a real
+        // content type: an `Override` with an empty one makes the whole package
+        // invalid, and Excel then refuses the file with a generic "we found a
+        // problem" rather than a per-part repair record.
+        LOGISHEETS_APP_DATA => "application/xml",
+        // Nothing else should reach here. Returning "" would emit an invalid
+        // Override, so name the generic XML type — which is what the `xml`
+        // Default resolves to anyway, and which `write_content_types` is free
+        // to drop as redundant.
+        _ => "application/xml",
     }
 }
 
@@ -928,6 +944,138 @@ mod tests {
         );
         assert!(ct.contains("/xl/charts/style1.xml"));
         assert!(ct.contains("/xl/charts/colors1.xml"));
+    }
+
+    /// Every `Override` must name a real media type.
+    ///
+    /// An empty `ContentType` is not a lax package but an invalid one: Excel
+    /// rejects the whole file with a generic "we found a problem" and no
+    /// per-part repair record, because the failure is at the OPC layer rather
+    /// than inside any one part. `logisheets/data.xml` shipped like that — its
+    /// relationship type was missing from `get_content_type`, whose catch-all
+    /// arm returned "".
+    #[test]
+    fn every_content_type_override_names_a_media_type() {
+        use crate::logisheets::LogiSheetsData;
+        use crate::workbook::Wb;
+        let buf = fs::read("../../tests/graph.xlsx").unwrap();
+        let mut wb = Wb::from_file(&buf).unwrap();
+        // The regression was in `logisheets/data.xml`, which is only written
+        // for a workbook that carries LogiSheets data — every workbook this
+        // engine authors, and none of the plain-Excel fixtures. Attach some, or
+        // the part under test is never emitted.
+        wb.logisheets = Some(LogiSheetsData {
+            sheets: vec![],
+            apps: vec![],
+            field_renders: vec![],
+        });
+        let out = write(wb).unwrap();
+        let ct = read_zip_entry(&out, "[Content_Types].xml");
+        assert!(
+            ct.contains("/logisheets/data.xml"),
+            "the part under test was not written: {ct}"
+        );
+
+        // Every declared type is `type/subtype`, per the media-type grammar OPC
+        // requires. This catches the empty string too.
+        let mut checked = 0;
+        for chunk in ct.split("ContentType=\"").skip(1) {
+            let value = chunk.split('"').next().unwrap_or("");
+            let parts = value.split('/').collect::<Vec<_>>();
+            assert!(
+                parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty(),
+                "not a media type: {value:?} in {ct}"
+            );
+            checked += 1;
+        }
+        assert!(checked > 0, "no content types declared at all");
+    }
+
+    /// A generated chart's `graphicFrame` must carry `xdr:xfrm`.
+    ///
+    /// The schema requires it, and Excel repairs the drawing part without it.
+    /// Excel recomputes the geometry from the anchor, so an empty element is
+    /// enough — which is what real producers write (see
+    /// `tests/one_cell_anchor.xlsx`) — but it has to be there.
+    #[test]
+    fn a_generated_chart_anchor_carries_an_xfrm() {
+        use crate::ooxml::drawing_part::{CtMarker, CtOneCellAnchor, CtPositiveSize2D, CtTwoCellAnchor};
+
+        let two = CtTwoCellAnchor::new_chart_anchor(
+            CtMarker::new(5, 4),
+            CtMarker::new(13, 16),
+            2,
+            String::from("Chart 1"),
+            String::from("rId1"),
+        );
+        assert!(
+            two.graphic_frame
+                .as_ref()
+                .expect("graphic frame")
+                .xfrm
+                .is_some(),
+            "twoCellAnchor: a generated graphicFrame needs an xfrm or Excel repairs the drawing"
+        );
+
+        let one = CtOneCellAnchor::new_chart_anchor(
+            CtMarker::new(5, 4),
+            CtPositiveSize2D {
+                cx: 4572000,
+                cy: 2743200,
+            },
+            2,
+            String::from("Chart 1"),
+            String::from("rId1"),
+        );
+        assert!(
+            one.graphic_frame
+                .as_ref()
+                .expect("graphic frame")
+                .xfrm
+                .is_some(),
+            "oneCellAnchor: a generated graphicFrame needs an xfrm"
+        );
+    }
+
+    /// The typed `xfrm` must not lose geometry a real file already had.
+    ///
+    /// `tests/graph.xlsx` was written by Excel and carries a populated
+    /// `<xdr:xfrm><a:off/><a:ext/></xdr:xfrm>`. Modelling the element — it used
+    /// to be opaque passthrough — is only safe if those values survive a save.
+    #[test]
+    fn a_populated_xfrm_survives_the_round_trip() {
+        use crate::workbook::Wb;
+        let buf = fs::read("../../tests/graph.xlsx").unwrap();
+
+        let read_xfrm = |bytes: &[u8]| {
+            let wb = Wb::from_file(bytes).unwrap();
+            let d = wb
+                .xl
+                .worksheets
+                .values()
+                .filter_map(|w| w.drawing.as_ref())
+                .find(|d| !d.chart_parts.is_empty())
+                .expect("drawing with a chart");
+            let frame = d
+                .content
+                .two_cell_anchors
+                .iter()
+                .find_map(|a| a.graphic_frame.as_ref())
+                .expect("graphicFrame");
+            let xfrm = frame.xfrm.as_ref().expect("xfrm read from a real file");
+            (
+                xfrm.off.as_ref().map(|o| (o.x, o.y)),
+                xfrm.ext.as_ref().map(|e| (e.cx, e.cy)),
+            )
+        };
+
+        let before = read_xfrm(&buf);
+        assert!(
+            before.0.is_some() && before.1.is_some(),
+            "fixture should have a populated xfrm, got {before:?}"
+        );
+        let out = write(Wb::from_file(&buf).unwrap()).unwrap();
+        assert_eq!(before, read_xfrm(&out), "xfrm geometry changed on save");
     }
 
     #[test]

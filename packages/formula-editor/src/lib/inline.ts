@@ -115,6 +115,13 @@ export interface InlineCellEditorOptions {
     origin?: {x: number; y: number}
     /** Permission gate before opening. Default: always editable. */
     canEdit?: (sheetIdx: number, row: number, col: number, grid: Grid) => boolean
+    /**
+     * Called instead of opening the editor when {@link canEdit} refuses.
+     * Without it a keystroke on a read-only cell does nothing at all, which
+     * reads as a broken grid rather than a locked one — hosts use this to say
+     * why. Default: no-op.
+     */
+    onEditRefused?: (sheetIdx: number, row: number, col: number) => void
     /** Autocomplete / signature functions. Default: bundled built-ins. */
     formulaFunctions?: FormulaFunction[]
     /** Maps a reference index to a CSS color. Default: built-in palette. */
@@ -177,6 +184,7 @@ export function createInlineCellEditor(
         coordinator,
         origin = {x: 32, y: 24},
         canEdit = () => true,
+        onEditRefused,
         formulaFunctions = builtinFormulaFunctions,
         getHighlightColor = getCellRefColor,
         editorConfig,
@@ -416,7 +424,10 @@ export function createInlineCellEditor(
     ) {
         if (!grid) return
         const editSheetIdx = getViewSheetIdx()
-        if (!canEdit(editSheetIdx, row, col, grid)) return
+        if (!canEdit(editSheetIdx, row, col, grid)) {
+            onEditRefused?.(editSheetIdx, row, col)
+            return
+        }
         if (editing) finishEditing()
 
         const position = getCellRect(grid, row, col, {

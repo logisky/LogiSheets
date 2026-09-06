@@ -98,6 +98,7 @@ export enum MethodName {
     GetBlockValues = 'getBlockValues',
     GetBlockSortOrder = 'getBlockSortOrder',
     MayModifyBlock = 'mayModifyBlock',
+    CheckFieldValidation = 'checkFieldValidation',
     GetBlockModifyInfo = 'getBlockModifyInfo',
     GetAvailableBlockId = 'getAvailableBlockId',
 

@@ -35,6 +35,24 @@ pub struct FormulaExecutor {
     pub ephemeral_shadows_cleared: HashSet<(SheetId, CellId)>,
 }
 
+/// True when the cell at `(row, col)` is a block cell whose field carries a
+/// value-formula template. The template owns that cell, so user-facing write
+/// payloads have to leave it alone.
+fn is_templated_at<C: FormulaExecCtx>(
+    ctx: &mut C,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+) -> Result<bool, Error> {
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+    match ctx.fetch_cell_id(&sheet, row, col) {
+        Ok(CellId::BlockCell(bcid)) => Ok(ctx.is_block_cell_templated(sheet, &bcid)),
+        _ => Ok(false),
+    }
+}
+
 impl FormulaExecutor {
     pub fn execute<C: FormulaExecCtx>(
         self,
@@ -43,6 +61,17 @@ impl FormulaExecutor {
     ) -> Result<Self, Error> {
         let executor = match payload {
             EditPayload::CellInput(mut cell_input) => {
+                // A cell in a field with a value-formula template is
+                // engine-owned. `CellInput` is the grid's write path, so
+                // this is where a person typing lands: refuse both a plain
+                // value (which would be overwritten on the next recalc
+                // anyway) and a literal `=formula` (which would silently
+                // replace the field's template for this one row). Crafts
+                // that genuinely want the per-row escape hatch still have
+                // it through `BlockInput`.
+                if is_templated_at(ctx, cell_input.sheet_idx, cell_input.row, cell_input.col)? {
+                    return Ok(self);
+                }
                 if cell_input.content.starts_with("=") {
                     let formula = cell_input.content.split_off(1);
                     input_formula(
@@ -257,7 +286,14 @@ impl FormulaExecutor {
                 p.col_cnt,
                 ctx,
             ),
-            EditPayload::CellClear(p) => remove_formula(self, p.sheet_idx, p.row, p.col, ctx),
+            EditPayload::CellClear(p) => {
+                // Clearing a templated cell must not strip the field's
+                // formula off that row — the container drops the clear too.
+                if is_templated_at(ctx, p.sheet_idx, p.row, p.col)? {
+                    return Ok(self);
+                }
+                remove_formula(self, p.sheet_idx, p.row, p.col, ctx)
+            }
             EditPayload::CreateLink(_) => {
                 // Creating a link remaps existing formulas' ranges to the block
                 // (in the range executor). Their dependency edges were built

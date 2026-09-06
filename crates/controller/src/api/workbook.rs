@@ -32,7 +32,10 @@ const CALC_CONDITION_EPHEMERAL_ID: u64 = 225715;
 pub(crate) type CellPositionerDefault = CellPositioner<1000>;
 
 pub struct Workbook {
-    controller: Controller,
+    /// `pub(crate)` so sibling api modules (`field_validation`) can run a
+    /// one-shot calculation against the live status; nothing outside the crate
+    /// reaches the controller directly.
+    pub(crate) controller: Controller,
     cell_positioners: Locked<HashMap<SheetId, Locked<CellPositionerDefault>>>,
 }
 

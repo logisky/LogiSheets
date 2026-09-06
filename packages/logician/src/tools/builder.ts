@@ -59,6 +59,7 @@ const BLOCK_OPS: readonly BlockOp[] = [
     'cellInput',
     'sortByField',
     'modifyDescription',
+    'overrideValidation',
 ]
 
 /** Narrow the workbook client to the concrete `Client` from logisheets-web.
@@ -3230,7 +3231,7 @@ export const setBlockPermissions: Tool<
     description: [
         'Set who may do what to a block, one operation at a time.',
         '',
-        'Use it on a block you built that must stay under your control: leave `cellInput` open so the user keeps entering data, and reserve `insertDeleteLines`, `removeBlock` and `modifySchema` to the owner so a stray edit cannot take the table out of your hands. `removeBlock` is worth reserving even when the rest is open — deleting the block takes its records, its schema and this policy with it. `ownerOnly` means only the owning craft; `ownerAndUser` adds the person at the keyboard but no other craft; `all` means anyone.',
+        "Use it on a block you built that must stay under your control: leave `cellInput` open so the user keeps entering data, and reserve `insertDeleteLines`, `removeBlock` and `modifySchema` to the owner so a stray edit cannot take the table out of your hands. `removeBlock` is worth reserving even when the rest is open — deleting the block takes its records, its schema and this policy with it. `overrideValidation` is narrower than `cellInput`: reserving it lets the user keep typing but holds them to the fields' validation rules, while you can still seed a row you know is incomplete. `ownerOnly` means only the owning craft; `ownerAndUser` adds the person at the keyboard but no other craft; `all` means anyone.",
         '',
         "REPLACES the whole set: an operation you leave out goes back to following `default_policy`. State the block's full stance each time.",
         '',
@@ -3286,6 +3287,7 @@ export const setBlockPermissions: Tool<
                             cellInput: policy('cellInput'),
                             sortByField: policy('sortByField'),
                             modifyDescription: policy('modifyDescription'),
+                            overrideValidation: policy('overrideValidation'),
                         },
                         modifyPolicy: input.default_policy,
                     },

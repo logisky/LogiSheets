@@ -145,9 +145,11 @@ export class FieldManager {
       blockId,
     };
     // (Pre-Phase-1+2 we forced `userEditable=false` here when
-    // valueFormula was set. The Rust engine now rejects BlockInput on
-    // templated cells in the container layer, so the TS-side enforcement
-    // is redundant and FieldInfo no longer carries valueFormula.)
+    // valueFormula was set. The Rust engine now drops every user-facing
+    // write to a templated cell — CellInput, CellClear, paste/fill and
+    // BlockInput alike — and the host reads the template off
+    // `BlockInfo.schema` to gate the UI, so FieldInfo no longer needs to
+    // carry either the formula or a flag standing in for it.)
 
     this.fields.set(fieldId, fieldInfo);
 

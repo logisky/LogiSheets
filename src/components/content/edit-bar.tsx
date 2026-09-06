@@ -14,7 +14,12 @@ import {isErrorMessage} from 'logisheets-engine'
 import {TransformOutlined, RuleOutlined} from '@mui/icons-material'
 import {IconButton, Tooltip} from '@mui/material'
 import {callerRegistry} from 'logisheets-core'
-import {isCellUserEditableSync} from '@/core/permissions/field-editable'
+import {
+    editRefusedMessage,
+    getCellFieldFormula,
+    isCellUserEditableSync,
+} from '@/core/permissions/field-editable'
+import {useToast} from '@/ui/notification/useToast'
 import {
     FormulaEditor,
     FormulaEditorRef,
@@ -43,6 +48,7 @@ export const EditBarComponent = observer(function EditBarComponent({
 }: EditBarProps) {
     const engine = useEngine()
     const dataSvc = engine.getDataService()
+    const {toast} = useToast()
     const ops = useOps()
     // Target the active view: the edit bar reads/writes the view the user
     // last focused (highlighted), not always the main one. Falls back to the
@@ -67,6 +73,24 @@ export const EditBarComponent = observer(function EditBarComponent({
     const [validationText, setValidationText] = useState('')
     const [sheetName, setSheetName] = useState('')
     const editorRef = useRef<FormulaEditorRef>(null)
+
+    // The field-formula template governing the selected cell, if any. The
+    // cell's own formula is this template with `#FIELD` already resolved to
+    // this row's coordinates — true, but not the thing a person would edit,
+    // and misleading to offer in an editable box. Show the template instead,
+    // read-only, and point at where it can actually be changed.
+    const fieldFormula = useMemo(() => {
+        const selectedCell = getSelectedCellRange(selectedData)
+        if (!selectedCell) return undefined
+        return getCellFieldFormula(
+            selectedCell.startRow,
+            selectedCell.startCol,
+            engine.getGrid()
+        )
+        // `selectedDataContentChanged` is in the deps on purpose: binding or
+        // clearing a field formula doesn't move the selection, so nothing else
+        // would trigger a recompute.
+    }, [selectedData, selectedDataContentChanged, engine])
 
     // One-call engine binding: getDisplayUnits + the app's function list.
     const source = useMemo(
@@ -181,21 +205,15 @@ export const EditBarComponent = observer(function EditBarComponent({
         // Mirror the previous behavior: don't fire CellInput if the buffer is
         // empty (e.g., user opened the bar but typed nothing).
         if (value !== '') {
-            // Guard: block cells whose field is declared
-            // `userEditable: false` are not writable from the formula
-            // bar either. Engine-side patch would reject anyway; this
-            // failing fast here avoids a confusing silent commit
-            // (and keeps the cell's previous value visible without a
-            // round-trip).
+            // Guard: a cell computed by its field's formula, or in a field
+            // declared `userEditable: false`, is not writable from the
+            // formula bar either. The engine rejects the write anyway; the
+            // point of failing fast here is that the rejection is otherwise
+            // invisible — the bar would clear and the old value would come
+            // back with no explanation.
             const cell = getFirstCell(selectedData)
-            if (
-                isCellUserEditableSync(
-                    sheetIdx,
-                    cell.y,
-                    cell.x,
-                    engine.getGrid()
-                )
-            ) {
+            const grid = engine.getGrid()
+            if (isCellUserEditableSync(sheetIdx, cell.y, cell.x, grid)) {
                 // Await the write, then re-read so the bar shows the committed
                 // value. The selectedDataContentChanged bump can fire before
                 // the input is applied, which would otherwise leave the bar
@@ -206,6 +224,8 @@ export const EditBarComponent = observer(function EditBarComponent({
                     setFormulaText(cellToDisplayText(c))
                     setRawValue(c.getText())
                 }
+            } else {
+                toast(editRefusedMessage(cell.y, cell.x, grid), {type: 'info'})
             }
         }
         setIsEditing(false)
@@ -268,6 +288,16 @@ export const EditBarComponent = observer(function EditBarComponent({
                     value={validationText}
                     readOnly
                 />
+            ) : showFormula && fieldFormula ? (
+                <Tooltip
+                    title={`Computed by this block field’s formula. Edit it in the block’s settings — “${fieldFormula}”`}
+                >
+                    <input
+                        className={styles.formula}
+                        value={fieldFormula}
+                        readOnly
+                    />
+                </Tooltip>
             ) : showFormula ? (
                 <div className={styles.formula}>
                     <FormulaEditor

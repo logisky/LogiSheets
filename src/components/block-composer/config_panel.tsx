@@ -29,6 +29,11 @@ import {
 } from '@mui/icons-material'
 import type {FieldSetting, EnumValue, FieldTypeEnum} from 'logisheets-core'
 import {COLORS} from './types'
+import {
+    FieldRuleEditor,
+    RULE_HELPER_TEXT,
+    RULE_PLACEHOLDER,
+} from './field-rule-editor'
 import {buttonSx, primaryButtonSx, cardSx, sectionLabelSx} from './styles'
 import {EnumSetManager, FieldManager} from 'logisheets-engine'
 import {useToast} from '@/ui/notification/useToast'
@@ -88,6 +93,11 @@ export const FieldConfigPanel = ({
     )
 
     const availableEnumSets = enumSetManager.getAll()
+
+    // Rule editors address fields by name; the panel keeps the list here so
+    // both boxes offer the same siblings.
+    const fieldNames = localFields.map((f) => f.name)
+
     const showEnumSection =
         field.type === 'enum' || field.type === 'multiSelect'
 
@@ -1140,35 +1150,31 @@ export const FieldConfigPanel = ({
                                             </Box>
                                         }
                                     />
-                                    <TextField
-                                        fullWidth
-                                        size="small"
+                                    <FieldRuleEditor
+                                        kind="validation"
                                         label="Validation"
+                                        fieldName={field.name}
+                                        allFieldNames={fieldNames}
                                         value={field.validation || ''}
-                                        onChange={(e) =>
-                                            onUpdate({
-                                                ...field,
-                                                validation: e.target.value,
-                                            })
+                                        onChange={(validation) =>
+                                            onUpdate({...field, validation})
                                         }
-                                        placeholder="e.g., #PLACEHOLDER > 0 && #PLACEHOLDER < 100"
-                                        helperText="Use #PLACEHOLDER to reference the input value"
+                                        placeholder={
+                                            RULE_PLACEHOLDER.validation
+                                        }
+                                        helperText={RULE_HELPER_TEXT.validation}
                                     />
-                                    <TextField
-                                        fullWidth
-                                        size="small"
+                                    <FieldRuleEditor
+                                        kind="value"
                                         label="Value formula"
+                                        fieldName={field.name}
+                                        allFieldNames={fieldNames}
                                         value={field.valueFormula || ''}
-                                        onChange={(e) =>
-                                            onUpdate({
-                                                ...field,
-                                                valueFormula: e.target.value,
-                                            })
+                                        onChange={(valueFormula) =>
+                                            onUpdate({...field, valueFormula})
                                         }
-                                        placeholder={`e.g., =#FIELD("amount") * #FIELD("price")`}
-                                        helperText={
-                                            'When set, this column is derived (not editable). Use #FIELD("name") for same-row siblings and #KEY for the row key.'
-                                        }
+                                        placeholder={RULE_PLACEHOLDER.value}
+                                        helperText={RULE_HELPER_TEXT.value}
                                     />
                                 </Stack>
                             </CardContent>

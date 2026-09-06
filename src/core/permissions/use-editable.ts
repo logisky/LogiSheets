@@ -3,6 +3,9 @@
  *
  * Post-Phase-1+2 architecture:
  *
+ *   - A field with a value formula is never editable — the engine owns
+ *     those cells and refuses every write to them. This is checked
+ *     first and overrides everything below.
  *   - The static boolean form lives on `FieldInfo.userEditable`
  *     (read synchronously).
  *   - The dynamic formula form lives in the Rust schema
@@ -26,6 +29,7 @@ import {useEffect, useState} from 'react'
 import type {FieldInfo, SheetCellId, Value} from 'logisheets-engine'
 import {isErrorMessage} from 'logisheets-engine'
 import {useEngine} from '@/core/engine/provider'
+import {getCellFieldFormula} from '@/core/permissions/field-editable'
 
 // Module-level cache of last-known shadow values, keyed by
 // `sheetIdx:row:col`. Updated on every refresh.
@@ -58,6 +62,12 @@ export function useEditable(
 ): boolean {
     const engine = useEngine()
     const ue = fieldInfo?.userEditable
+
+    // A field formula outranks both the shadow and the static flag: the engine
+    // computes those cells and drops writes to them, so a widget that let the
+    // user pick a value would just be lying about what happens next.
+    const computed =
+        getCellFieldFormula(rowIdx, colIdx, engine.getGrid()) !== undefined
 
     const cacheKey = `${sheetIdx}:${rowIdx}:${colIdx}`
     const cached = _shadowValueCache.get(cacheKey)
@@ -118,5 +128,5 @@ export function useEditable(
         }
     }, [engine, ue, sheetIdx, rowIdx, colIdx, cacheKey])
 
-    return editable
+    return computed ? false : editable
 }

@@ -296,6 +296,27 @@ pub fn may_modify_block(
         .map_err(ErrorMessage::from)
 }
 
+/// Whether writing `proposed` into this cell would break its field's
+/// validation rule — see [`CheckFieldValidationParams`].
+///
+/// The companion to [`may_modify_block`] for `BlockOp::OverrideValidation`:
+/// that answers "may this actor write a violating value", this answers
+/// "would this value be a violating one". Neither writes anything.
+///
+/// [`CheckFieldValidationParams`]: crate::rpc::message::CheckFieldValidationParams
+pub fn check_field_validation(
+    mgr: &mut Manager,
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    proposed: String,
+) -> Result<logisheets_controller::FieldValidationVerdict, ErrorMessage> {
+    let wb = mgr.get_mut_workbook(&id).unwrap();
+    wb.check_field_validation(sheet_idx, row, col, proposed)
+        .map_err(ErrorMessage::from)
+}
+
 /// A block's governance metadata, without its cells. See
 /// [`GetBlockModifyInfoParams`].
 ///

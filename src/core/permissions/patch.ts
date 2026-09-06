@@ -51,6 +51,7 @@ export function blockOpForPayload(type: string): BlockOp | undefined {
         // could unlock a block simply by asking to.
         case 'bindFormSchema':
         case 'bindRandomSchema':
+        case 'upsertFieldFormulas':
         case 'upsertFieldRenderInfo':
         case 'blockLineNameFieldUpdate':
         case 'setBlockPermissions':
@@ -157,6 +158,10 @@ function isBlockPayload(payload: Payload): boolean {
         'convertBlock',
         'bindFormSchema',
         'bindRandomSchema',
+        // Rewriting a field's value or validation rule changes what the block
+        // computes and what it accepts — as much a schema change as rebinding
+        // it, and governed the same way.
+        'upsertFieldFormulas',
         'upsertFieldRenderInfo',
         'blockStyleUpdate',
         'blockLineStyleUpdate',
@@ -248,6 +253,84 @@ async function lookupUserEditableShadow(
 }
 
 async function validateCellInput(
+    client: WorkbookClient,
+    payload: Payload,
+    callerUuid: string,
+    modifyInfoCache: Map<string, BlockModifyInfo | undefined>
+): Promise<boolean> {
+    if (!(await mayWriteHere(client, payload, callerUuid, modifyInfoCache))) {
+        return false
+    }
+    // Being allowed to write here is a separate question from being allowed to
+    // write THIS — a value the field's validation rule rejects. Asked last, so
+    // a write refused for any other reason never reaches the extra RPC.
+    return mayWriteAViolatingValue(client, payload, callerUuid)
+}
+
+/**
+ * Whether the caller may write a value the field's validation rule rejects.
+ *
+ * `true` whenever there is nothing to gate: no rule on this field, or a value
+ * that satisfies it. When the value does violate, the block's
+ * `overrideValidation` policy decides — left unstated it falls back to the
+ * block's own policy, which for an ordinary block is `all`, i.e. exactly what
+ * happened before this gate existed: the value lands and the marker shows.
+ *
+ * A craft seeding a row it knows is incomplete is the case this protects: the
+ * owner keeps writing while a person typing into the same block is held to the
+ * rule.
+ */
+async function mayWriteAViolatingValue(
+    client: WorkbookClient,
+    payload: Payload,
+    callerUuid: string
+): Promise<boolean> {
+    const v = payload.value as {
+        sheetIdx: number
+        row: number
+        col: number
+        content: string
+    }
+    const verdict = await client.checkFieldValidation({
+        sheetIdx: v.sheetIdx,
+        row: v.row,
+        col: v.col,
+        proposed: v.content ?? '',
+    })
+    if (isErrorMessage(verdict)) return true
+    if (!verdict.hasRule || !verdict.violates) return true
+
+    const sheetCellId = await client.getCellId({
+        sheetIdx: v.sheetIdx,
+        rowIdx: v.row,
+        colIdx: v.col,
+    })
+    if (isErrorMessage(sheetCellId)) return true
+    if (sheetCellId.cellId.type !== 'blockCell') return true
+
+    const allowed = await mayCallerModify(
+        client,
+        v.sheetIdx,
+        sheetCellId.cellId.value.blockId,
+        'overrideValidation',
+        callerUuid
+    )
+    // `undefined` means the caller could not be identified; don't turn an
+    // unknown actor into a refusal on the strength of a validation rule.
+    if (allowed === false) {
+        // The one refusal in this file worth spelling out: the person can see
+        // the cell, the value looks reasonable to them, and the rule that
+        // rejected it lives in the block's schema where they will not think to
+        // look. Quote it.
+        toast.error(
+            `“${v.content}” doesn’t satisfy this field’s validation rule (${verdict.rule}), and this block doesn’t allow overriding it.`
+        )
+        return false
+    }
+    return true
+}
+
+async function mayWriteHere(
     client: WorkbookClient,
     payload: Payload,
     callerUuid: string,

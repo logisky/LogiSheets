@@ -5,6 +5,7 @@ pub use crate::{
     errors::{Error, ErrorMessage, Result},
 };
 mod cell_positioner;
+mod field_validation;
 mod fill;
 mod sort_block;
 mod types;
@@ -13,6 +14,7 @@ mod worksheet;
 
 #[cfg(test)]
 mod test;
+pub use field_validation::FieldValidationVerdict;
 pub use fill::FillRange;
 pub use logisheets_base::BlockId;
 pub use sort_block::BlockSortOrder;

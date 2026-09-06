@@ -94,6 +94,8 @@ pub struct BlockRange {
     pub perm_sort_by_field: Option<String>,
     #[xmlserde(name = b"permModifyDescription", ty = "attr")]
     pub perm_modify_description: Option<String>,
+    #[xmlserde(name = b"permOverrideValidation", ty = "attr")]
+    pub perm_override_validation: Option<String>,
     #[xmlserde(name = b"rowInfos", ty = "child")]
     pub row_infos: Vec<BlockLineInfo>,
     #[xmlserde(name = b"colInfos", ty = "child")]

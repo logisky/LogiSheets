@@ -14,6 +14,7 @@ import {
     isErrorMessage,
 } from 'logisheets-engine'
 import {useToast} from '@/ui/notification/useToast'
+import {firstFieldFormulaError} from './field-formula'
 import {useEngine, useOps} from '@/core/engine/provider'
 import type {FieldTypeEnum} from 'logisheets-engine'
 import {FieldList} from './field_list'
@@ -371,10 +372,18 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 default:
                     break
             }
+            // The validation rule goes into the SCHEMA, not just the host
+            // FieldInfo: the engine then installs the per-record shadow itself
+            // (including on rows added later), and the same rule answers both
+            // the warning marker and the `overrideValidation` write gate.
+            // Only some field types carry one — the rest send ''.
+            const validationFormula =
+                'validation' in ty ? ty.validation ?? '' : ''
             return {
                 name: field.name,
                 renderId,
                 valueFormula: field.valueFormula ?? '',
+                validationFormula,
                 diyRender,
                 numFmt,
             }
@@ -404,8 +413,22 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         return null
     }
 
+    /**
+     * Field formulas that name a field the block doesn't have make the engine
+     * refuse the whole bind, taking every other edit in the dialog with it.
+     * Catch it here and say which field is at fault.
+     */
+    const validateFieldFormulas = (): boolean => {
+        const bad = firstFieldFormulaError(fields)
+        if (!bad) return true
+        setSelectedFieldId(bad.field.id)
+        toast(`“${bad.field.name}” — ${bad.message}`, {type: 'error'})
+        return false
+    }
+
     const handleSaveEdit = async () => {
         if (!editTarget || !editMeta) return
+        if (!validateFieldFormulas()) return
         const refErr = await validateRefName()
         if (refErr) {
             toast(refErr, {type: 'error'})
@@ -449,6 +472,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             )
             return
         }
+        if (!validateFieldFormulas()) return
         const refErr = await validateRefName()
         if (refErr) {
             toast(refErr, {type: 'error'})

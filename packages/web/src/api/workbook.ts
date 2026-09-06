@@ -7,6 +7,8 @@ import {
     BlockSortOrder,
     GetBlockSortOrderParams,
     MayModifyBlockParams,
+    CheckFieldValidationParams,
+    FieldValidationVerdict,
     GetBlockModifyInfoParams,
     BlockModifyInfo,
     FormulaDisplayInfo,
@@ -664,6 +666,29 @@ export class Workbook {
     public mayModifyBlock(params: MayModifyBlockParams): Result<boolean> {
         return rpc(
             'mayModifyBlock',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Whether writing `proposed` into this cell would break its field's
+     * validation rule.
+     *
+     * The companion to {@link mayModifyBlock} for `overrideValidation`: that
+     * answers whether this actor may write a violating value, this answers
+     * whether the value in hand is a violating one. A host gating a write
+     * needs both, and needs them BEFORE the write — the marker on the cell
+     * only ever judges a value the cell already holds.
+     *
+     * Reads nothing into the workbook: the rule is evaluated against the
+     * proposed value and the cell is left exactly as it was.
+     */
+    public checkFieldValidation(
+        params: CheckFieldValidationParams
+    ): Result<FieldValidationVerdict> {
+        return rpc(
+            'checkFieldValidation',
             params as unknown as Record<string, unknown>,
             this._id
         )

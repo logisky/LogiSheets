@@ -381,6 +381,12 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         self.block_schema_manager.cell_role(sheet_id, cell)
     }
 
+    fn is_block_cell_templated(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
+        self.block_schema_manager
+            .formula_for_block_cell(sheet_id, cell)
+            .is_some()
+    }
+
     fn block_cell_template(
         &self,
         sheet_id: SheetId,

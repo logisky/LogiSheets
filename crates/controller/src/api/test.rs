@@ -1313,6 +1313,230 @@ fn clearing_field_rule_purges_stale_shadow_value() {
     }
 }
 
+// A field with a value formula owns every cell in its column. The grid's write
+// path is `CellInput` (not `BlockInput`), and it used to sail straight through:
+// the container wrote the typed value and the formula executor then REMOVED the
+// materialized formula, so one keystroke permanently un-computed that row. The
+// column is supposed to be read-only to people; assert every user-facing write
+// payload leaves it exactly as the schema left it.
+#[test]
+fn a_templated_field_refuses_every_user_write() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellClear, CellInput};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // 2x2 block at A1. Field 0 ("qty") is free-form and doubles as the key;
+    // field 1 ("total") is derived: total = qty * 2.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["qty".into(), "total".into()],
+                render_ids: vec!["r0".into(), "r1".into()],
+                row: true,
+                field_formulas: vec![None, Some("=#FIELD(\"qty\")*2".into())],
+                validation_formulas: vec![],
+                editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "10".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    let total =
+        |wb: &Workbook| -> Value { wb.get_sheet_by_idx(0).unwrap().get_value(0, 1).unwrap() };
+    let formula =
+        |wb: &Workbook| -> String { wb.get_sheet_by_idx(0).unwrap().get_formula(0, 1).unwrap() };
+
+    assert!(
+        matches!(total(&wb), Value::Number(n) if n == 20.0),
+        "the template should have computed 10*2, got {:?}",
+        total(&wb)
+    );
+    let materialized = formula(&wb);
+    assert!(
+        !materialized.is_empty(),
+        "the templated cell should carry a real formula"
+    );
+
+    // Every one of these is a person interacting with the grid.
+    for (label, payload) in [
+        (
+            "a plain value",
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 1,
+                content: "999".to_string(),
+            }),
+        ),
+        (
+            "a literal formula",
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 1,
+                content: "=42".to_string(),
+            }),
+        ),
+        (
+            "a clear",
+            EditPayload::CellClear(CellClear {
+                sheet_idx: 0,
+                row: 0,
+                col: 1,
+            }),
+        ),
+    ] {
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![payload],
+            undoable: false,
+            init: false,
+        }));
+        assert!(
+            matches!(total(&wb), Value::Number(n) if n == 20.0),
+            "{label} must not change a templated cell's value, got {:?}",
+            total(&wb)
+        );
+        assert_eq!(
+            formula(&wb),
+            materialized,
+            "{label} must leave the field's formula on the cell"
+        );
+    }
+
+    // And the column still tracks its input: the formula is live, not a
+    // frozen leftover that merely survived the writes above.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: "7".to_string(),
+        })],
+        undoable: false,
+        init: false,
+    }));
+    assert!(
+        matches!(total(&wb), Value::Number(n) if n == 14.0),
+        "the field formula should still recompute from its input, got {:?}",
+        total(&wb)
+    );
+}
+
+// `BlockOp::OverrideValidation` asks the host to gate a write BEFORE it lands,
+// so the engine has to be able to judge a value the cell does not hold yet.
+// The check runs the field's live validation shadow against the proposed value
+// and must leave nothing behind — a question that quietly edits the workbook is
+// worse than no question at all.
+#[test]
+fn a_proposed_value_is_judged_without_touching_the_workbook() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // 2x2 block at A1: key in col 0, `qty` in col 1 validated as > 0.
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec!["key".into(), "qty".into()],
+                render_ids: vec!["r0".into(), "r1".into()],
+                row: true,
+                field_formulas: vec![],
+                validation_formulas: vec![None, Some("#PLACEHOLDER>0".into())],
+                editability_formulas: vec![],
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 1,
+                content: "5".to_string(),
+            }),
+        ],
+        undoable: false,
+        init: false,
+    }));
+
+    let read =
+        |wb: &Workbook| -> Value { wb.get_sheet_by_idx(0).unwrap().get_value(0, 1).unwrap() };
+    assert!(
+        matches!(read(&wb), Value::Number(n) if n == 5.0),
+        "sanity: the cell should hold the value that was written"
+    );
+
+    let ok = wb.check_field_validation(0, 0, 1, "7".to_string()).unwrap();
+    assert!(ok.has_rule, "the field carries a validation rule");
+    assert!(!ok.violates, "7 > 0 passes the rule");
+    assert_eq!(ok.rule, "#PLACEHOLDER>0");
+
+    let bad = wb
+        .check_field_validation(0, 0, 1, "-3".to_string())
+        .unwrap();
+    assert!(bad.violates, "-3 fails `#PLACEHOLDER>0`");
+
+    // Neither call may have moved anything: not the cell it asked about, and
+    // not the verdict the marker is currently showing.
+    assert!(
+        matches!(read(&wb), Value::Number(n) if n == 5.0),
+        "checking a proposed value must leave the cell holding its own value, got {:?}",
+        read(&wb)
+    );
+
+    // A field with no rule, and a cell outside any block, both answer
+    // "nothing to check" rather than failing.
+    let keyless = wb
+        .check_field_validation(0, 0, 0, "anything".to_string())
+        .unwrap();
+    assert!(!keyless.has_rule, "the key field declares no validation");
+    let outside = wb
+        .check_field_validation(0, 9, 9, "anything".to_string())
+        .unwrap();
+    assert!(!outside.has_rule, "a cell outside every block has no rule");
+}
+
 // The CreateLink edit payload, driven through the public API, for the real app
 // flow: the seller's SUM(A1:A2) formula ALREADY exists (reading literal cells),
 // THEN the user links A1:A2 to a block. The existing formula must redirect to the

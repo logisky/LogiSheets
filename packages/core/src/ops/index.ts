@@ -72,6 +72,16 @@ export interface FormBlockField {
     renderId: string
     /** Per-field value-formula template (#FIELD("X") / #KEY); '' if free-form. */
     valueFormula?: string
+    /**
+     * Per-field validation template (#PLACEHOLDER for the value under test,
+     * #FIELD("X") for a same-row sibling); '' when the field has no rule.
+     *
+     * This goes into the schema rather than staying host-side so the engine
+     * installs the per-record shadow itself — on bind AND on every row added
+     * later — and so one answer serves every reader: the warning marker, the
+     * `overrideValidation` write gate, and any other host.
+     */
+    validationFormula?: string
     /** Whether the field renders via a host-drawn (DIY) overlay. */
     diyRender: boolean
     /** Number format applied to the field's render info. */
@@ -480,7 +490,9 @@ export class WorkbookOps {
                     fields: fields.map((f) => f.name),
                     renderIds: fields.map((f) => f.renderId),
                     fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                    validationFormulas: [],
+                    validationFormulas: fields.map(
+                        (f) => f.validationFormula ?? ''
+                    ),
                     editabilityFormulas: [],
                 },
             },
@@ -548,7 +560,9 @@ export class WorkbookOps {
                     fields: fields.map((f) => f.name),
                     renderIds: fields.map((f) => f.renderId),
                     fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                    validationFormulas: [],
+                    validationFormulas: fields.map(
+                        (f) => f.validationFormula ?? ''
+                    ),
                     editabilityFormulas: [],
                 },
             },
@@ -624,7 +638,9 @@ export class WorkbookOps {
                 fields: fields.map((f) => f.name),
                 renderIds: fields.map((f) => f.renderId),
                 fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                validationFormulas: [],
+                validationFormulas: fields.map(
+                    (f) => f.validationFormula ?? ''
+                ),
                 editabilityFormulas: [],
             },
         })
@@ -639,6 +655,43 @@ export class WorkbookOps {
             }))
         )
         await this.apply(payloads, true)
+    }
+
+    /**
+     * Rewrite ONE kind of per-field rule on a block, leaving the others alone.
+     *
+     * `formulas` is one entry per field, in the schema's field order — a rule
+     * or `''` for none. The other two rule kinds are sent empty, which the
+     * engine reads as "don't touch these", so editing a validation rule cannot
+     * clear the value formulas standing next to it.
+     *
+     * Every existing row is re-materialized from the new rule, so this is also
+     * how a rule is removed: pass `''` for that field.
+     */
+    async setFieldRules(opts: {
+        sheetIdx: number
+        blockId: number
+        kind: 'value' | 'validation' | 'editability'
+        formulas: readonly string[]
+    }): Promise<void> {
+        const {sheetIdx, blockId, kind, formulas} = opts
+        const forKind = (k: typeof kind) =>
+            kind === k ? formulas.map((f) => f ?? '') : []
+        await this.apply(
+            [
+                {
+                    type: 'upsertFieldFormulas',
+                    value: {
+                        sheetIdx,
+                        blockId,
+                        fieldFormulas: forKind('value'),
+                        validationFormulas: forKind('validation'),
+                        editabilityFormulas: forKind('editability'),
+                    },
+                },
+            ],
+            true
+        )
     }
 
     // ---- generic / temp-branch -----------------------------------------

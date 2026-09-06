@@ -751,18 +751,31 @@ pub enum BlockOp {
     SortByField,
     /// Rewrite the prose description.
     ModifyDescription,
+    /// Write a value into a block cell that its field's validation rule
+    /// rejects.
+    ///
+    /// Distinct from `CellInput` because the two answer different questions:
+    /// `CellInput` is "may this actor write here at all", this one is "may
+    /// this actor write something the schema says is wrong". A craft that
+    /// maintains a table often has to seed a row it knows is incomplete —
+    /// a required field it fills in on the next round — while a person typing
+    /// into the same block should be held to the rule. Left at `All` (the
+    /// default), a violating write lands and is flagged, which is what every
+    /// block did before this op existed.
+    OverrideValidation,
 }
 
 impl BlockOp {
     /// Every operation, so a caller can render or check the whole set without
     /// having to keep its own list in step with this one.
-    pub const ALL: [BlockOp; 6] = [
+    pub const ALL: [BlockOp; 7] = [
         BlockOp::InsertDeleteLines,
         BlockOp::RemoveBlock,
         BlockOp::ModifySchema,
         BlockOp::CellInput,
         BlockOp::SortByField,
         BlockOp::ModifyDescription,
+        BlockOp::OverrideValidation,
     ];
 
     /// Attribute name used for .xlsx persistence.
@@ -774,6 +787,7 @@ impl BlockOp {
             BlockOp::CellInput => "cellInput",
             BlockOp::SortByField => "sortByField",
             BlockOp::ModifyDescription => "modifyDescription",
+            BlockOp::OverrideValidation => "overrideValidation",
         }
     }
 }
@@ -793,6 +807,7 @@ pub struct BlockPermissions {
     pub cell_input: Option<ModifyPolicy>,
     pub sort_by_field: Option<ModifyPolicy>,
     pub modify_description: Option<ModifyPolicy>,
+    pub override_validation: Option<ModifyPolicy>,
 }
 
 impl BlockPermissions {
@@ -810,6 +825,7 @@ impl BlockPermissions {
             BlockOp::CellInput => self.cell_input = policy,
             BlockOp::SortByField => self.sort_by_field = policy,
             BlockOp::ModifyDescription => self.modify_description = policy,
+            BlockOp::OverrideValidation => self.override_validation = policy,
         }
     }
 
@@ -828,6 +844,7 @@ impl BlockPermissions {
             BlockOp::CellInput => self.cell_input,
             BlockOp::SortByField => self.sort_by_field,
             BlockOp::ModifyDescription => self.modify_description,
+            BlockOp::OverrideValidation => self.override_validation,
         }
     }
 }

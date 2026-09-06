@@ -334,6 +334,14 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.op,
             params.actor,
         )),
+        Message::CheckFieldValidation(params) => res_to_js(controller::check_field_validation(
+            &mut mgr,
+            id,
+            params.sheet_idx,
+            params.row,
+            params.col,
+            params.proposed,
+        )),
         Message::GetBlockModifyInfo(params) => res_to_js(controller::get_block_modify_info(
             &mgr,
             id,

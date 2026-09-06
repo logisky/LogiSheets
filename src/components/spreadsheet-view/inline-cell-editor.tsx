@@ -7,7 +7,11 @@ import {
 } from 'logisheets-formula-editor/inline'
 import {getHighlightColor} from '@/components/const'
 import {getFormulaFunctions} from '@/core/snippet'
-import {isCellUserEditableSync} from '@/core/permissions/field-editable'
+import {
+    editRefusedMessage,
+    isCellUserEditableSync,
+} from '@/core/permissions/field-editable'
+import {useToast} from '@/ui/notification/useToast'
 import {InvalidFormulaDialog} from '@/components/engine-canvas/InvalidFormulaDialog'
 import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
 
@@ -63,6 +67,7 @@ export function InlineCellEditor({
     onContentChanged,
 }: InlineCellEditorProps) {
     const ops = useOps()
+    const {toast} = useToast()
     const [invalidOpen, setInvalidOpen] = useState(false)
     const ctrlRef = useRef<InlineCellEditorHandle | null>(null)
 
@@ -74,6 +79,8 @@ export function InlineCellEditor({
         setViewSheet,
         onContentChanged,
         ops,
+        grid,
+        toast,
     })
     latest.current = {
         sheetName,
@@ -82,6 +89,8 @@ export function InlineCellEditor({
         setViewSheet,
         onContentChanged,
         ops,
+        grid,
+        toast,
     }
 
     useEffect(() => {
@@ -103,6 +112,11 @@ export function InlineCellEditor({
             setViewSheet: (i) => latest.current.setViewSheet(i),
             coordinator: formulaEditCoordinator,
             canEdit: (s, r, c, g) => isCellUserEditableSync(s, r, c, g),
+            onEditRefused: (_s, r, c) =>
+                latest.current.toast(
+                    editRefusedMessage(r, c, latest.current.grid),
+                    {type: 'info'}
+                ),
             getHighlightColor: (i) => getHighlightColor(i).css(),
             onInvalidFormula: () => setInvalidOpen(true),
             onContentChanged: () => latest.current.onContentChanged?.(),

@@ -692,6 +692,11 @@ export class WorkbookClient implements Client {
             Client['mayModifyBlock']
         >
 
+    checkFieldValidation: Client['checkFieldValidation'] = (params) =>
+        this._call(MethodName.CheckFieldValidation, params) as ReturnType<
+            Client['checkFieldValidation']
+        >
+
     getDiyCellIdWithBlockId: Client['getDiyCellIdWithBlockId'] = (params) =>
         this._call(MethodName.GetDiyCellIdWithBlockId, params) as ReturnType<
             Client['getDiyCellIdWithBlockId']
