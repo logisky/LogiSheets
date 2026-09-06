@@ -47,8 +47,6 @@ lazy_static! {
         .op(Operator::new(Rule::space_op, 8, Assoc::Left))
         .op(Operator::new(Rule::colon_op, 9, Assoc::Left))
         .build();
-    static ref NUM_REGEX: Regex =
-        Regex::new(r#"([0-9]+)?(\.?([0-9]+))?([Ee]([+-]?[0-9]+))?"#).unwrap();
     static ref WORKSHEET_PREIFX_REGEX: Regex =
         Regex::new(r#"'?(\[(.+?)\])?((.+?):)?(.+?)'?!"#).unwrap();
     static ref COLUMN_REGEX: Regex = Regex::new(r#"(\$)?([A-Z]+)"#).unwrap();
@@ -457,20 +455,30 @@ impl Parser {
     }
 }
 
+/// A numeric literal's value, read from the whole literal at once.
+///
+/// It used to be reassembled from the pieces the grammar splits out —
+/// `(integer as i32 as f64 + ".frac".parse()) * 10^exponent` — which is wrong
+/// three separate ways:
+///
+/// * the integer part went through `i32`, so `3000000000` silently became `0`
+///   (`parse::<i32>().unwrap_or(0)`) and `12345678901.5` became `0.5`;
+/// * the exponent was applied as a multiply, so `1.7976931348623157E308`
+///   overflowed to infinity and `1e-320` flushed to zero, neither of which is
+///   what the literal denotes;
+/// * even in range, adding the two halves rounds twice. `4.778` came out as
+///   4.7780000000000005 — one ulp above the correctly rounded double — and one
+///   ulp in an exponent is not small: `566.5^4.778` landed 41 ulps away from
+///   the true power, which `MOD(...,1)` then magnified into the whole answer
+///   (0.2637 against 0.3438).
+///
+/// `str::parse::<f64>` is correctly rounded and handles every shape the grammar
+/// admits (`1.5`, `1.`, `.5`, `1e-3`, `1.5E+3`), so hand it the literal whole.
 fn parse_number(s: &str) -> Option<f64> {
-    let caps = NUM_REGEX.captures_iter(s.trim()).next()?;
-    let integer = caps
-        .get(1)
-        .map_or(0, |s| s.as_str().parse::<i32>().unwrap_or(0));
-    let frac = caps.get(2).map_or(0_f64, |m| -> f64 {
-        let str_f64 = m.as_str();
-        str_f64.parse::<f64>().unwrap_or(0_f64)
-    });
-    let exponent = caps
-        .get(5)
-        .map_or(0, |s| s.as_str().parse::<i32>().unwrap_or(0));
-    let result = ((integer as f64) + frac) * 10_f64.powi(exponent);
-    Some(result)
+    // `parse` also accepts `inf`/`NaN`, which the grammar never produces, and
+    // reports an out-of-range literal as infinity; neither is a value a cell
+    // should hold, so they become an error rather than a number.
+    s.trim().parse::<f64>().ok().filter(|v| v.is_finite())
 }
 
 fn build_name_with_prefix<T>(pair: Pair<Rule>, id_fetcher: &mut T) -> Option<ast::CellReference>
@@ -715,27 +723,39 @@ mod tests {
     use crate::test_utils::TestIdFetcher;
     use crate::test_utils::TestVertexFetcher;
 
-    // Need more tests
+    /// Exact equality on purpose. A literal has one correctly rounded double,
+    /// and a tolerance here would have accepted the old reassembly-from-parts
+    /// that put `4.778` one ulp too high.
     #[test]
     fn parse_number_test() {
-        let input = "3.14";
-        let output = parse_number(input).unwrap();
-        assert!((output - 3.14).abs() < 1e-10);
-        let input = "3.14e+11";
-        let output = parse_number(input).unwrap();
-        assert!((output - 3.14e+11).abs() < 1e-10);
-        let input = "3e+11";
-        let output = parse_number(input).unwrap();
-        assert!((output - 3e+11).abs() < 1e-10);
-        let input = ".3";
-        let output = parse_number(input).unwrap();
-        assert!((output - 0.3).abs() < 1e-10);
-        let input = "3";
-        let output = parse_number(input).unwrap();
-        assert!((output - 3.0).abs() < 1e-10);
-        let input = "3.2";
-        let output = parse_number(input).unwrap();
-        assert!((output - 3.2).abs() < 1e-10);
+        for (input, expected) in [
+            ("3.14", 3.14),
+            ("3.14e+11", 3.14e+11),
+            ("3e+11", 3e+11),
+            (".3", 0.3),
+            ("3", 3.0),
+            ("3.2", 3.2),
+            ("3.", 3.0),
+            ("3.14E11", 3.14e11),
+            ("1.5e-3", 1.5e-3),
+            // One ulp apart: reconstructing the value from its pieces rounds
+            // twice and cannot tell these two literals apart.
+            ("4.778", 4.778),
+            ("1.0000000000000002", 1.0000000000000002),
+            // Wider than i32, which the integer part used to be squeezed into.
+            ("3000000000", 3e9),
+            ("12345678901.5", 12345678901.5),
+            ("123456789012345678", 123456789012345678.0),
+            // Applying the exponent as a multiply overflowed / flushed these.
+            ("1.7976931348623157E308", 1.7976931348623157e308),
+            ("1e-320", 1e-320),
+        ] {
+            assert_eq!(parse_number(input), Some(expected), "parsing {input}");
+        }
+        // Out of range, and the shapes `parse` accepts but the grammar does not.
+        for input in ["1e400", "inf", "NaN", ""] {
+            assert_eq!(parse_number(input), None, "parsing {input}");
+        }
     }
 
     /// Malformed formulas must come back as `None`, never as a panic.
