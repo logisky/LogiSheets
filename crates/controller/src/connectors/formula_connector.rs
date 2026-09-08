@@ -54,6 +54,20 @@ pub struct FormulaConnector<'a> {
 }
 
 impl<'a> FormulaConnector<'a> {
+    /// Which block this block analyses, if any. `None` for an ordinary block,
+    /// and for a block that has gone missing — a marker pointing at nothing
+    /// yields no generated formula rather than a broken one.
+    fn analyzes_of(
+        &self,
+        sheet_id: SheetId,
+        block_id: logisheets_base::BlockId,
+    ) -> Option<logisheets_base::BlockId> {
+        self.id_navigator
+            .get_block_place(&sheet_id, &block_id)
+            .ok()
+            .and_then(|bp| bp.analyzes)
+    }
+
     fn get_id_fetcher(&mut self) -> IdFetcher<'_> {
         IdFetcher {
             sheet_id_manager: self.sheet_id_manager,
@@ -385,9 +399,17 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         self.block_schema_manager.cell_role(sheet_id, cell)
     }
 
+    fn analyzed_by(
+        &self,
+        sheet_id: SheetId,
+        block_id: logisheets_base::BlockId,
+    ) -> Vec<logisheets_base::BlockId> {
+        self.id_navigator.analyzed_by(&sheet_id, block_id)
+    }
+
     fn is_block_cell_templated(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
         self.block_schema_manager
-            .formula_for_block_cell(sheet_id, cell)
+            .formula_for_block_cell(sheet_id, cell, self.analyzes_of(sheet_id, cell.block_id))
             .is_some()
     }
 
@@ -396,9 +418,11 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<crate::formula_manager::ctx::BlockCellTemplate> {
-        let template = self
-            .block_schema_manager
-            .formula_for_block_cell(sheet_id, cell)?;
+        let template = self.block_schema_manager.formula_for_block_cell(
+            sheet_id,
+            cell,
+            self.analyzes_of(sheet_id, cell.block_id),
+        )?;
         let ctx = self.block_cell_row_substitutes(sheet_id, cell)?;
         Some(crate::formula_manager::ctx::BlockCellTemplate {
             template,
@@ -415,7 +439,10 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         field: &str,
     ) -> Option<BlockCellId> {
         let block_id = cell.block_id;
-        let bp = self.id_navigator.get_block_place(&sheet_id, &block_id).ok()?;
+        let bp = self
+            .id_navigator
+            .get_block_place(&sheet_id, &block_id)
+            .ok()?;
         let key_cells = self
             .block_schema_manager
             .get_all_key_cell_ids_by_block(sheet_id, block_id, bp)?;

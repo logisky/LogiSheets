@@ -389,3 +389,92 @@ mod write_policy_tests {
         );
     }
 }
+
+/// How an analysis field aggregates its source.
+///
+/// Deliberately a closed set rather than a free-form formula. A declared
+/// function can be REGENERATED — rename the source field or the source block
+/// and the engine rebuilds the formula from the current names; a stored string
+/// cannot, and goes stale silently (see
+/// `a_blockrefs_naming_a_field_that_does_not_exist_matches_nothing`). An escape
+/// hatch for arbitrary expressions is deliberately the last thing to add, not
+/// the first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AggFunc {
+    Sum,
+    /// Numeric count. `COUNTA` (non-empty of any type) is a real distinction
+    /// and an easy addition on this same shape; it is just not the common case.
+    Count,
+    Average,
+    Min,
+    Max,
+}
+
+impl AggFunc {
+    /// The spreadsheet function this lowers to, and the name it goes by on the
+    /// wire and on disk.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            AggFunc::Sum => "SUM",
+            AggFunc::Count => "COUNT",
+            AggFunc::Average => "AVERAGE",
+            AggFunc::Min => "MIN",
+            AggFunc::Max => "MAX",
+        }
+    }
+
+    /// `None` for anything unrecognized — a function a newer build introduced
+    /// must not stop this one from opening the file, and a field whose
+    /// aggregate cannot be interpreted is better left with no formula than
+    /// with a guess.
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "SUM" => Some(AggFunc::Sum),
+            "COUNT" => Some(AggFunc::Count),
+            "AVERAGE" => Some(AggFunc::Average),
+            "MIN" => Some(AggFunc::Min),
+            "MAX" => Some(AggFunc::Max),
+            _ => None,
+        }
+    }
+}
+
+/// One analysis field's declaration: which function, over which field of the
+/// block being analysed.
+///
+/// The source field is named, not id-referenced, because the generated formula
+/// reaches it through `BLOCKREFSB`'s field filter, which matches on names. That
+/// is also why re-materialization has to be triggered when the source block is
+/// re-bound — see `design/block-analysis.md` §4.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldAggregate {
+    pub func: AggFunc,
+    pub source_field: String,
+}
+
+#[cfg(test)]
+mod agg_tests {
+    use super::*;
+
+    #[test]
+    fn every_function_round_trips_through_its_wire_name() {
+        for f in [
+            AggFunc::Sum,
+            AggFunc::Count,
+            AggFunc::Average,
+            AggFunc::Min,
+            AggFunc::Max,
+        ] {
+            assert_eq!(AggFunc::from_str(f.as_str()), Some(f));
+        }
+    }
+
+    #[test]
+    fn an_unknown_function_is_none_rather_than_a_guess() {
+        // A file from a newer build must open. A field whose aggregate this
+        // build cannot interpret gets no formula, which reads as empty — not
+        // as some other function's answer.
+        assert_eq!(AggFunc::from_str("MEDIAN"), None);
+        assert_eq!(AggFunc::from_str(""), None);
+    }
+}

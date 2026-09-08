@@ -27,9 +27,8 @@ use logisheets_controller::controller::display::BlockSchemaType;
 use logisheets_controller::edit_action::{
     BindFormSchema, BindRandomSchema, BlockActor, BlockLineNameFieldUpdate, BlockOp,
     BlockPermissions, CellInput, CreateAppendix, CreateBlock, CreateLink, CreateSheet, EditAction,
-    EditPayload, InsertRows, ModifyPolicy, PayloadsAction, RandomSchemaUnit, StatusCode,
-    StyleUpdateType, UpsertFieldRenderInfo, SchemaFieldSpec,
-
+    EditPayload, InsertRows, ModifyPolicy, PayloadsAction, RandomSchemaUnit, SchemaFieldSpec,
+    StatusCode, StyleUpdateType, UpsertFieldRenderInfo,
 };
 
 // ---------------------------------------------------------------------------
@@ -121,20 +120,24 @@ fn authored() -> Workbook {
                      maintained by the craft — write qty or price, never total."
                         .into(),
                 ),
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "orders".into(),
-                    sheet_idx: 0,
-                    block_id: ORDERS,
-                    field_from: 1,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("qty", "r-qty"),
-                        SchemaFieldSpec::new("price", "r-price"),
-                        SchemaFieldSpec::new("total", "r-total").with_value_formula(Some(TOTAL_VALUE_RULE.into())).with_validation_formula(Some(TOTAL_VALIDATION_RULE.into())).with_editability_formula(Some(TOTAL_EDITABILITY_RULE.into())),
-                    ],
-                    row: true,
-                }),
+                ref_name: "orders".into(),
+                sheet_idx: 0,
+                block_id: ORDERS,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("qty", "r-qty"),
+                    SchemaFieldSpec::new("price", "r-price"),
+                    SchemaFieldSpec::new("total", "r-total")
+                        .with_value_formula(Some(TOTAL_VALUE_RULE.into()))
+                        .with_validation_formula(Some(TOTAL_VALIDATION_RULE.into()))
+                        .with_editability_formula(Some(TOTAL_EDITABILITY_RULE.into())),
+                ],
+                row: true,
+            }),
         ],
     );
 
@@ -208,20 +211,21 @@ fn authored() -> Workbook {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "specs".into(),
-                    sheet_idx: 1,
-                    block_id: SPECS,
-                    field_from: 1,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("alpha", "r-alpha"),
-                        SchemaFieldSpec::new("beta", "r-beta"),
-                        SchemaFieldSpec::new("gamma", "r-gamma"),
-                    ],
-                    row: false,
-                }),
+                ref_name: "specs".into(),
+                sheet_idx: 1,
+                block_id: SPECS,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("alpha", "r-alpha"),
+                    SchemaFieldSpec::new("beta", "r-beta"),
+                    SchemaFieldSpec::new("gamma", "r-gamma"),
+                ],
+                row: false,
+            }),
             // Random schema: keys pinned to explicit (row, col) offsets, which
             // is the only schema kind with no axis at all.
             EditPayload::CreateBlock(CreateBlock {
@@ -235,6 +239,7 @@ fn authored() -> Workbook {
                 modify_policy: Some(ModifyPolicy::OwnerOnly),
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindRandomSchema(BindRandomSchema {
                 ref_name: "dial".into(),
@@ -272,6 +277,7 @@ fn authored() -> Workbook {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
         ],
     );
@@ -1071,6 +1077,7 @@ fn an_appendix_follows_its_block_cell_when_the_block_moves() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::CreateAppendix(CreateAppendix {
                 sheet_id: None,
@@ -1143,6 +1150,7 @@ fn sparse_block_line_info_returns_to_its_own_line() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             // Only the LAST column, and only the LAST row.
             EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
@@ -1225,6 +1233,7 @@ fn set_description_and_permissions_survive_a_trip() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         })],
     );
     // Created bare, so this is also a check that "no metadata" is a real state
@@ -1346,6 +1355,7 @@ fn a_block_with_no_metadata_writes_no_attributes() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         })],
     );
     let xml = data_xml(&wb.save().unwrap());

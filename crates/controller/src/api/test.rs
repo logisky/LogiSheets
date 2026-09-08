@@ -690,6 +690,7 @@ fn create_block() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         })],
         undoable: false,
         init: false,
@@ -779,6 +780,7 @@ fn remove_diy_cell_round_trips_without_panicking() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         })],
         undoable: false,
         init: false,
@@ -1092,18 +1094,17 @@ fn range_link_redirects_to_block_and_tracks_growth() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("v", "r0"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1228,18 +1229,21 @@ fn clearing_field_rule_purges_stale_shadow_value() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("v", "r0").with_validation_formula(Some("#PLACEHOLDER>100".into())).with_editability_formula(Some("#PLACEHOLDER>100".into())),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("v", "r0")
+                        .with_validation_formula(Some("#PLACEHOLDER>100".into()))
+                        .with_editability_formula(Some("#PLACEHOLDER>100".into())),
+                ],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1339,19 +1343,21 @@ fn a_templated_field_refuses_every_user_write() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("qty", "r0"),
-                        SchemaFieldSpec::new("total", "r1").with_value_formula(Some("=#FIELD(\"qty\")*2".into())),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("qty", "r0"),
+                    SchemaFieldSpec::new("total", "r1")
+                        .with_value_formula(Some("=#FIELD(\"qty\")*2".into())),
+                ],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1471,19 +1477,21 @@ fn a_proposed_value_is_judged_without_touching_the_workbook() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("key", "r0"),
-                        SchemaFieldSpec::new("qty", "r1").with_validation_formula(Some("#PLACEHOLDER>0".into())),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0"),
+                    SchemaFieldSpec::new("qty", "r1")
+                        .with_validation_formula(Some("#PLACEHOLDER>0".into())),
+                ],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1578,18 +1586,17 @@ fn create_link_payload_redirects_existing_formula() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("v", "r0"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1696,6 +1703,7 @@ fn linked_range_size_mismatch_reads_block_both_orders() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         })];
         for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
             payloads.push(EditPayload::CellInput(CellInput {
@@ -1779,6 +1787,7 @@ fn linked_multicol_subcolumn_reference_reads_block_column() {
         modify_policy: None,
         permissions: None,
         description: None,
+        analyzes: None,
     })];
     for (i, v) in [10, 20, 30, 40, 50, 60].iter().enumerate() {
         payloads.push(EditPayload::CellInput(CellInput {
@@ -1879,18 +1888,17 @@ fn cross_sheet_linked_column_tracks_block_and_survives_save_load() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 1,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("v", "r0"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 1,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 1,
                 row: 0,
@@ -2014,18 +2022,17 @@ fn link_survives_save_load() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("v", "r0"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -2127,18 +2134,17 @@ fn linked_column_tracks_tail_append() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("v", "r0"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -2246,6 +2252,7 @@ fn linked_record_rejects_non_column_references() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         })];
         for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
             payloads.push(EditPayload::CellInput(CellInput {
@@ -2368,6 +2375,7 @@ fn get_links_reports_linked_source_range_coords() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::CreateLink(CreateLink {
                 sheet_idx: 0,
@@ -2422,6 +2430,7 @@ fn create_block_with_owner_and_policy_roundtrip() {
             modify_policy: Some(ModifyPolicy::OwnerAndUser),
             permissions: None,
             description: None,
+            analyzes: None,
         })],
         undoable: false,
         init: false,
@@ -2752,19 +2761,20 @@ fn sort_block_by_field_end_to_end() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "people".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("name", "r_name"),
-                        SchemaFieldSpec::new("age", "r_age"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "people".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("name", "r_name"),
+                    SchemaFieldSpec::new("age", "r_age"),
+                ],
+                row: true,
+            }),
         ];
         for (r, (name, age)) in records.iter().enumerate() {
             payloads.push(EditPayload::CellInput(CellInput {
@@ -2880,6 +2890,7 @@ fn sort_block_by_field_end_to_end() {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 }),
                 EditPayload::BindRandomSchema(BindRandomSchema {
                     ref_name: "rnd".into(),
@@ -2965,18 +2976,17 @@ fn sort_block_grown_by_insert_rows() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "people".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("Customer Status", "r0"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "people".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new("Customer Status", "r0")],
+                row: true,
+            }),
             // Add two rows (interior insert at index 1), like clicking "add row".
             EditPayload::InsertRowsInBlock(InsertRowsInBlock {
                 sheet_idx: 0,
@@ -3082,19 +3092,20 @@ fn sort_block_reference_follows_moved_cell() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "people".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("name", "r_name"),
-                        SchemaFieldSpec::new("age", "r_age"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "people".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("name", "r_name"),
+                    SchemaFieldSpec::new("age", "r_age"),
+                ],
+                row: true,
+            }),
             cell(0, 0, "Charlie"),
             cell(0, 1, "30"),
             cell(1, 0, "Alice"),
@@ -3503,6 +3514,7 @@ fn conditional_formatting_anchors_on_block_cells() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         })],
         undoable: false,
         init: false,
@@ -4429,19 +4441,20 @@ fn block_schema_key_entries_report_record_row() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("year", "r0"),
-                        SchemaFieldSpec::new("amount", "r1"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("year", "r0"),
+                    SchemaFieldSpec::new("amount", "r1"),
+                ],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -4553,19 +4566,20 @@ fn range_straddling_a_block_boundary_does_not_panic() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("id", "r0"),
-                        SchemaFieldSpec::new("qty", "r1"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("id", "r0"),
+                    SchemaFieldSpec::new("qty", "r1"),
+                ],
+                row: true,
+            }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -5692,20 +5706,21 @@ fn chart_bound_to_block_follows_it() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         }),
         EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "sales".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("name", "r0"),
-                        SchemaFieldSpec::new("qty", "r1"),
-                        SchemaFieldSpec::new("price", "r2"),
-                    ],
-                    row: true,
-                }),
+            ref_name: "sales".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("name", "r0"),
+                SchemaFieldSpec::new("qty", "r1"),
+                SchemaFieldSpec::new("price", "r2"),
+            ],
+            row: true,
+        }),
     ];
     for (i, (name, qty)) in [("a", "10"), ("b", "20"), ("c", "30")].iter().enumerate() {
         payloads.push(cell(1 + i, 1, name));
@@ -5841,19 +5856,20 @@ fn block_bound_chart_survives_save() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "rec".into(),
-                    sheet_idx: 0,
-                    block_id: bid,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("name", "r0"),
-                        SchemaFieldSpec::new("qty", "r1"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("name", "r0"),
+                    SchemaFieldSpec::new("qty", "r1"),
+                ],
+                row: true,
+            }),
             cell(0, 0, "a"),
             cell(0, 1, "10"),
             cell(1, 0, "b"),
@@ -5986,6 +6002,7 @@ fn block_description_and_permissions_are_undoable() {
             modify_policy: None,
             permissions: None,
             description: Some("first".to_string()),
+            analyzes: None,
         })],
         undoable: true,
         init: false,
@@ -6166,6 +6183,7 @@ fn block_with_keys(keys: [&str; 3]) -> (Workbook, logisheets_base::BlockId) {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         }),
         EditPayload::BindFormSchema(BindFormSchema {
             ref_name: "rec".into(),
@@ -6379,6 +6397,7 @@ fn block_with_legacy_duplicates() -> (Workbook, logisheets_base::BlockId) {
         modify_policy: None,
         permissions: None,
         description: None,
+        analyzes: None,
     })];
     // Rows 0 and 2 share "dup"; row 1 is unique; row 3 is left blank.
     for (row, key) in [(0usize, "dup"), (1, "solo"), (2, "dup")] {
@@ -6559,6 +6578,7 @@ fn a_blockrefs_naming_a_field_that_does_not_exist_matches_nothing() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         }),
         EditPayload::BindFormSchema(BindFormSchema {
             ref_name: "rec".into(),
@@ -6717,6 +6737,7 @@ fn block_with_declared_field(
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         }),
         EditPayload::BindFormSchema(BindFormSchema {
             ref_name: "rec".into(),
@@ -6881,6 +6902,7 @@ fn an_enum_whitelist_is_derived_from_the_workbooks_own_set() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(crate::edit_action::BindFormSchema {
                 ref_name: "rec".into(),
@@ -6939,11 +6961,14 @@ fn an_enum_whitelist_is_derived_from_the_workbooks_own_set() {
 
 #[test]
 fn the_authors_own_rule_is_kept_and_anded_with_the_derived_ones() {
-    let (mut wb, _bid) =
-        block_with_declared_field(true, false, None, Some("#PLACEHOLDER<100"));
+    let (mut wb, _bid) = block_with_declared_field(true, false, None, Some("#PLACEHOLDER<100"));
     write_amts(&mut wb, &["5", "", "500"]);
 
-    assert_eq!(amt_violates(&mut wb, 0), Some(false), "present and under 100");
+    assert_eq!(
+        amt_violates(&mut wb, 0),
+        Some(false),
+        "present and under 100"
+    );
     assert_eq!(
         amt_violates(&mut wb, 1),
         Some(true),
@@ -6966,7 +6991,11 @@ fn the_derived_rule_survives_a_field_rename_because_it_is_regenerated() {
 
     let (mut wb, bid) = block_with_declared_field(false, true, None, None);
     write_amts(&mut wb, &["5", "6", "7"]);
-    assert_eq!(amt_violates(&mut wb, 0), Some(false), "sanity: all distinct");
+    assert_eq!(
+        amt_violates(&mut wb, 0),
+        Some(false),
+        "sanity: all distinct"
+    );
 
     let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
         payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
@@ -7036,6 +7065,7 @@ fn a_fields_write_policy_is_declared_on_the_schema_and_survives_a_round_trip() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -7046,8 +7076,7 @@ fn a_fields_write_policy_is_declared_on_the_schema_and_survives_a_round_trip() {
                 fields: vec![
                     SchemaFieldSpec::new("key", "r0")
                         .with_write_policy(FieldWritePolicy::OwnerOnly),
-                    SchemaFieldSpec::new("note", "r1")
-                        .with_write_policy(FieldWritePolicy::Anyone),
+                    SchemaFieldSpec::new("note", "r1").with_write_policy(FieldWritePolicy::Anyone),
                     // Says nothing — inherits the block's own rules.
                     SchemaFieldSpec::new("amt", "r2"),
                 ],
@@ -7143,6 +7172,7 @@ fn a_block_reports_whether_it_states_a_policy_at_all() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
         })],
         undoable: true,
         init: false,
@@ -7188,4 +7218,533 @@ fn a_block_reports_whether_it_states_a_policy_at_all() {
             .all(|p| !p.stated),
         "the other operations still say nothing"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Analysis blocks.
+//
+// An analysis block is an ordinary block that declares which block it analyses;
+// its fields declare how they aggregate it, and the engine generates the
+// formula from those declarations rather than storing one.
+//
+// The whole point of it being a SEPARATE block is that every row of every block
+// stays a record — so an agent reading the sheet sees a table and its analysis,
+// cannot mistake a total for a record, and can address the total by key. See
+// design/block-analysis.md.
+// ---------------------------------------------------------------------------
+
+/// `orders` (3 records, `amt` 10/20/30) plus a one-row block below it declaring
+/// `analyzes: orders` and a `SUM(amt)` field. Returns (workbook, source, analysis).
+#[cfg(test)]
+fn orders_with_analysis(
+    func: crate::block_manager::schema_manager::field_type::AggFunc,
+) -> (Workbook, logisheets_base::BlockId, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let src = wb.get_available_block_id(0).unwrap();
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: src,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "orders".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "s0"),
+                SchemaFieldSpec::new("amt", "s1"),
+            ],
+            row: true,
+        }),
+    ];
+    for (row, amt) in [(0usize, "10"), (1, "20"), (2, "30")] {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: format!("k{row}"),
+        }));
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 1,
+            content: amt.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "source setup should succeed: {:?}",
+        effect.error_message
+    );
+
+    let analysis = wb.get_available_block_id(0).unwrap();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: analysis,
+                master_row: 3,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+                // Declared as the block is made, so it is never briefly a
+                // stray table that a reader would take for records.
+                analyzes: Some(src),
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "orders_analysis".into(),
+                sheet_idx: 0,
+                block_id: analysis,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    // The label column declares no aggregate, so it stays an
+                    // ordinary cell — and it is the key the result is
+                    // addressed by.
+                    SchemaFieldSpec::new("key", "a0"),
+                    // No value formula is sent. The engine generates it.
+                    SchemaFieldSpec::new("amt", "a1").with_aggregate(func, "amt"),
+                ],
+                row: true,
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 3,
+                col: 0,
+                content: "TOTAL".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "analysis setup should succeed: {:?}",
+        effect.error_message
+    );
+    (wb, src, analysis)
+}
+
+#[cfg(test)]
+fn cell_num(wb: &Workbook, row: usize, col: usize) -> Option<f64> {
+    use crate::controller::display::Value;
+    match wb.get_sheet_by_idx(0).unwrap().get_value(row, col).unwrap() {
+        Value::Number(n) => Some(n),
+        _ => None,
+    }
+}
+
+#[test]
+fn an_analysis_field_computes_from_its_declaration_with_no_formula_sent() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (mut wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(cell_num(&wb, 3, 1), Some(60.0), "10+20+30");
+
+    // It tracks an edit to the source.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 1,
+            content: "99".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 3, 1), Some(139.0), "10+99+30");
+}
+
+#[test]
+fn the_total_does_not_count_itself() {
+    // The reason a separate block is the design: the analysis is not a record
+    // of the source, so `BLOCKREFS` over the source cannot reach it. An
+    // in-block summary row would have had to be carved out of the record set
+    // to get this, and every reader would have had to remember.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(
+        cell_num(&wb, 3, 1),
+        Some(60.0),
+        "60, not 120 — the total is outside the set it sums"
+    );
+}
+
+#[test]
+fn every_declared_function_computes() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    for (func, expected) in [
+        (AggFunc::Sum, 60.0),
+        (AggFunc::Count, 3.0),
+        (AggFunc::Average, 20.0),
+        (AggFunc::Min, 10.0),
+        (AggFunc::Max, 30.0),
+    ] {
+        let (wb, _src, _analysis) = orders_with_analysis(func);
+        assert_eq!(
+            cell_num(&wb, 3, 1),
+            Some(expected),
+            "{} over 10/20/30",
+            func.as_str()
+        );
+    }
+}
+
+#[test]
+fn the_analysis_tracks_the_source_growing() {
+    // Why the generated formula goes through BLOCKREFS rather than a resolved
+    // cell range: the dependency is on the whole source block, so a new record
+    // is picked up with nothing rewritten.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::{InsertRows, InsertRowsInBlock};
+
+    let (mut wb, src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            // Room first, or the block would grow into the analysis below it.
+            EditPayload::InsertRows(InsertRows {
+                sheet_idx: 0,
+                start: 3,
+                count: 1,
+            }),
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+                sheet_idx: 0,
+                block_id: src,
+                start: 3,
+                cnt: 1,
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 3,
+                col: 0,
+                content: "k3".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 3,
+                col: 1,
+                content: "1".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "growing the source should succeed: {:?}",
+        effect.error_message
+    );
+
+    // The analysis was pushed down a row by the sheet insert, and picked the
+    // new record up.
+    assert_eq!(cell_num(&wb, 4, 1), Some(61.0), "10+20+30+1");
+}
+
+#[test]
+fn the_label_column_stays_an_ordinary_cell() {
+    // Which is why the aggregate is declared per FIELD rather than per block:
+    // the label is the key the result is addressed by, and a person has to be
+    // able to type it.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::controller::display::Value;
+
+    let (wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert!(
+        matches!(
+            wb.get_sheet_by_idx(0).unwrap().get_value(3, 0).unwrap(),
+            Value::Str(s) if s == "TOTAL"
+        ),
+        "the label the transaction wrote is still there"
+    );
+}
+
+#[test]
+fn the_result_is_addressable_by_key_from_elsewhere() {
+    // The capability an in-block summary row could not have had: the total has
+    // a key, so anything else can reference it — which is what an agent needs
+    // in order to USE a total rather than merely see it.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (mut wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 5,
+            content: r#"=BLOCKREF("orders_analysis", "TOTAL", "amt") * 2"#.to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "referencing the analysis should succeed: {:?}",
+        effect.error_message
+    );
+    assert_eq!(cell_num(&wb, 0, 5), Some(120.0), "60 * 2");
+}
+
+#[test]
+fn a_block_may_not_analyse_itself() {
+    // Its cells would aggregate a set they belong to — the cycle the separate
+    // block design exists to avoid.
+    use crate::edit_action::SetBlockAnalyzes;
+
+    let (mut wb, src, _analysis) =
+        orders_with_analysis(crate::block_manager::schema_manager::field_type::AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: src,
+            analyzes: Some(src),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "a self-analysis must be refused"
+    );
+    assert!(
+        effect
+            .error_message
+            .unwrap_or_default()
+            .contains("cannot analyse itself")
+    );
+}
+
+#[test]
+fn analysing_a_block_that_does_not_exist_is_refused() {
+    // A marker pointing at nothing would make every field read empty with no
+    // way for a reader to see why.
+    use crate::edit_action::SetBlockAnalyzes;
+
+    let (mut wb, _src, analysis) =
+        orders_with_analysis(crate::block_manager::schema_manager::field_type::AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: analysis,
+            analyzes: Some(9999),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "analysing a nonexistent block must be refused"
+    );
+}
+
+#[test]
+fn the_declarations_survive_a_save_and_reload() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    let saved = wb.save().unwrap();
+    let reopened = Workbook::from_file(&saved, "again".to_string()).unwrap();
+
+    // The marker, and the total it produces.
+    let ws = reopened.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let a = blocks.iter().find(|b| b.block_id == analysis).unwrap();
+    assert_eq!(
+        a.analyzes,
+        Some(src),
+        "the analysis marker round-trips: {:?}",
+        a.analyzes
+    );
+    assert_eq!(
+        cell_num(&reopened, 3, 1),
+        Some(60.0),
+        "and the generated formula is rebuilt, so the total still computes"
+    );
+}
+
+#[test]
+fn removing_the_source_removes_its_analyses() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::RemoveBlock;
+
+    let (mut wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(
+        wb.get_sheet_by_idx(0).unwrap().get_all_blocks().len(),
+        2,
+        "sanity: the pair exists"
+    );
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::RemoveBlock(RemoveBlock {
+            sheet_idx: 0,
+            id: src,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "removing the source should succeed: {:?}",
+        effect.error_message
+    );
+
+    // Both gone. An analysis block outliving its source would sit there
+    // aggregating a block that no longer exists, reading empty with nothing to
+    // say why.
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert!(
+        blocks.is_empty(),
+        "the analysis went with its source, got {:?}",
+        blocks.iter().map(|b| b.block_id).collect::<Vec<_>>()
+    );
+
+    // One undo brings the whole set back — which is why the cascade is extra
+    // payloads in the same transaction rather than a special case.
+    assert!(wb.undo());
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 2, "undo restores both");
+    assert!(blocks.iter().any(|b| b.block_id == analysis));
+    assert_eq!(
+        cell_num(&wb, 3, 1),
+        Some(60.0),
+        "and the total still computes"
+    );
+}
+
+#[test]
+fn removing_an_analysis_leaves_its_source_alone() {
+    // Not symmetric: a table means something without its total.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::RemoveBlock;
+
+    let (mut wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::RemoveBlock(RemoveBlock {
+            sheet_idx: 0,
+            id: analysis,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 1);
+    assert_eq!(blocks[0].block_id, src);
+}
+
+#[test]
+fn renaming_a_source_field_regenerates_the_analysis_formula() {
+    // The trigger that has to exist. The generated formula names the source's
+    // FIELD as a runtime string, and nothing else re-materializes a block when
+    // a different block is re-bound — so without this the analysis would keep
+    // naming a field that no longer exists, and a `BLOCKREFS` resolves that to
+    // nothing rather than to an error. The total would silently read 0.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(cell_num(&wb, 3, 1), Some(60.0), "sanity");
+
+    // Rename `amt` to `amount` on the SOURCE, and update the analysis's
+    // declaration to match — the two halves a rename tool would send.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "orders_analysis".into(),
+                sheet_idx: 0,
+                block_id: _analysis,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "a0"),
+                    SchemaFieldSpec::new("amount", "a1").with_aggregate(AggFunc::Sum, "amount"),
+                ],
+                row: true,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "orders".into(),
+                sheet_idx: 0,
+                block_id: src,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "s0"),
+                    SchemaFieldSpec::new("amount", "s1"),
+                ],
+                row: true,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the rename should succeed: {:?}",
+        effect.error_message
+    );
+
+    assert_eq!(
+        cell_num(&wb, 3, 1),
+        Some(60.0),
+        "the total still computes after the source field was renamed"
+    );
+}
+
+#[test]
+fn a_block_reports_its_analyses_and_they_report_it() {
+    // Both directions, because an agent reading the sheet has to be able to
+    // tell a table from its analysis from either end — and must not sum an
+    // analysis block's rows alongside the source's.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+
+    let source = blocks.iter().find(|b| b.block_id == src).unwrap();
+    assert_eq!(source.analyzes, None, "the table analyses nothing");
+    assert_eq!(source.analyzed_by, vec![analysis]);
+
+    let a = blocks.iter().find(|b| b.block_id == analysis).unwrap();
+    assert_eq!(a.analyzes, Some(src));
+    assert!(a.analyzed_by.is_empty());
+
+    // And the per-field declaration is reported, so a reader can see WHAT the
+    // number is, not just that it is a number.
+    let schema = a.schema.as_ref().unwrap();
+    let amt = schema.fields.iter().find(|f| f.field == "amt").unwrap();
+    assert_eq!(amt.agg_func.as_deref(), Some("SUM"));
+    assert_eq!(amt.agg_field.as_deref(), Some("amt"));
+    let key = schema.fields.iter().find(|f| f.field == "key").unwrap();
+    assert_eq!(key.agg_func, None, "the label column aggregates nothing");
 }

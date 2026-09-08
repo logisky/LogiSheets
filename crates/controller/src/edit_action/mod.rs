@@ -120,6 +120,7 @@ pub enum EditPayload {
     BlockLineNameFieldUpdate(BlockLineNameFieldUpdate),
     SetBlockDescription(SetBlockDescription),
     SetBlockPermissions(SetBlockPermissions),
+    SetBlockAnalyzes(SetBlockAnalyzes),
     UpsertEnumSet(UpsertEnumSet),
     RemoveEnumSet(RemoveEnumSet),
 
@@ -650,6 +651,12 @@ pub struct CreateBlock {
     /// What the block is for, in prose, for an AI or a person reading the
     /// sheet later. A craft creating a block should say what it is for here.
     pub description: Option<String>,
+    /// Which block this one analyses, when it is an analysis block. Set here
+    /// rather than in a follow-up payload so the block is never briefly a
+    /// stray table — the whole creation lands as one transaction, and a reader
+    /// between two payloads never sees a total row it would mistake for a
+    /// record. See `design/block-analysis.md`.
+    pub analyzes: Option<usize>,
 }
 
 /// Rewrite a block's prose description, or clear it with an empty string.
@@ -667,6 +674,27 @@ pub struct SetBlockDescription {
     pub sheet_idx: usize,
     pub block_id: usize,
     pub description: String,
+}
+
+/// Declare (or clear) which block a block analyses.
+///
+/// Governed by `BlockOp::ModifySchema`: what a block analyses is as much a
+/// structural fact about it as its fields are, and pointing an existing block
+/// at a different source changes what every one of its cells computes.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "set_block_analyzes.ts", builder, rename_all = "camelCase")]
+pub struct SetBlockAnalyzes {
+    pub sheet_idx: usize,
+    pub block_id: usize,
+    /// The block being analysed, or `None` to make this an ordinary block
+    /// again. Must be on the same sheet, and must not be the block itself.
+    pub analyzes: Option<usize>,
+}
+
+impl From<SetBlockAnalyzes> for EditPayload {
+    fn from(value: SetBlockAnalyzes) -> Self {
+        EditPayload::SetBlockAnalyzes(value)
+    }
 }
 
 /// Replace a block's per-operation policies, and optionally its default one.
@@ -830,6 +858,7 @@ pub const BLOCK_OP_BY_PAYLOAD: &[(&str, BlockOp)] = &[
     // Handing a block's policies over is itself a schema-level change —
     // otherwise anyone could unlock a block simply by asking to.
     ("setBlockPermissions", BlockOp::ModifySchema),
+    ("setBlockAnalyzes", BlockOp::ModifySchema),
     ("cellInput", BlockOp::CellInput),
     ("blockInput", BlockOp::CellInput),
     ("reorderBlockLines", BlockOp::SortByField),
@@ -1182,6 +1211,14 @@ pub struct SchemaFieldSpec {
     /// `ownerOnly` | `anyone`. A declaration the host decides with — the engine
     /// does not know who is writing. Omitted inherits the block's own rules.
     pub write_policy: Option<String>,
+    /// When the block analyses another one: how this field aggregates it.
+    /// `SUM` | `COUNT` | `AVERAGE` | `MIN` | `MAX`, over `agg_field` of the
+    /// analysed block. Both are needed — one without the other is not a
+    /// declaration anybody made — and both omitted is an ordinary field.
+    ///
+    /// The value formula is generated from this; do not also send one.
+    pub agg_func: Option<String>,
+    pub agg_field: Option<String>,
 }
 
 /// One option of an enum set.
@@ -1253,6 +1290,8 @@ impl SchemaFieldSpec {
             unique: None,
             default_value: None,
             write_policy: None,
+            agg_func: None,
+            agg_field: None,
         }
     }
 
@@ -1304,6 +1343,16 @@ impl SchemaFieldSpec {
         p: crate::block_manager::schema_manager::field_type::FieldWritePolicy,
     ) -> Self {
         self.write_policy = Some(p.as_str().to_string());
+        self
+    }
+
+    pub fn with_aggregate(
+        mut self,
+        func: crate::block_manager::schema_manager::field_type::AggFunc,
+        source_field: impl Into<String>,
+    ) -> Self {
+        self.agg_func = Some(func.as_str().to_string());
+        self.agg_field = Some(source_field.into());
         self
     }
 }

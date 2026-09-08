@@ -1,6 +1,6 @@
 use logisheets_base::{BlockCellId, BlockFieldId, BlockId, ColId, RowId};
 
-use super::field_type::{FieldType, FieldWritePolicy};
+use super::field_type::{FieldAggregate, FieldType, FieldWritePolicy};
 use crate::navigator::BlockPlace;
 
 /// Position of a single block-cell within a schema. Used by the dependency
@@ -72,6 +72,14 @@ pub struct FieldEntry<F> {
     /// with — the engine does not know who is writing. `Inherit` falls back to
     /// the block's own owner / policy rules.
     pub write_policy: FieldWritePolicy,
+    /// When this block analyses another one, how this field aggregates it.
+    ///
+    /// The `value_formula` is GENERATED from this, not stored — so renaming the
+    /// source field or the source block rebuilds it instead of leaving a rule
+    /// naming something that no longer exists. `None` is an ordinary field:
+    /// that is what the label column of a total row is, and what a user can
+    /// type into. See `design/block-analysis.md`.
+    pub aggregate: Option<FieldAggregate>,
 }
 
 impl<F> FieldEntry<F> {
@@ -88,6 +96,7 @@ impl<F> FieldEntry<F> {
             unique: false,
             default_value: None,
             write_policy: FieldWritePolicy::Inherit,
+            aggregate: None,
         }
     }
 
@@ -118,6 +127,11 @@ impl<F> FieldEntry<F> {
 
     pub fn with_write_policy(mut self, p: FieldWritePolicy) -> Self {
         self.write_policy = p;
+        self
+    }
+
+    pub fn with_aggregate(mut self, a: Option<FieldAggregate>) -> Self {
+        self.aggregate = a;
         self
     }
 

@@ -1,8 +1,10 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import FunctionsIcon from '@mui/icons-material/Functions'
+import TableRowsOutlinedIcon from '@mui/icons-material/TableRowsOutlined'
+import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined'
 import styles from './block-interface.module.scss'
 import React from 'react'
-import {useOps} from '@/core/engine/provider'
 import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 
 export interface MenuProps {
@@ -20,6 +22,23 @@ export interface MenuProps {
     /** Open the block composer in edit mode over this block. Owned by the
      *  parent so it survives this menu unmounting on select. */
     readonly onModify: () => void
+    /**
+     * The block this one analyses, and the blocks that analyse it — resolved
+     * to names, because that is what the user reads. Both sides are listed so
+     * a pair is navigable from either end; see `design/block-analysis.md` §7.
+     */
+    readonly analyzes?: {blockId: number; name: string}
+    readonly analyzedBy?: ReadonlyArray<{blockId: number; name: string}>
+    /** Select and scroll to another block. Absent where no view is wired. */
+    readonly onGoToBlock?: (blockId: number) => void
+    /** Create the block that analyses this one. */
+    readonly onCreateAnalysis: () => void
+    /**
+     * Delete this block. Owned by the parent because removing a block that
+     * has analyses removes those too, and the parent holds the dialog that
+     * says so.
+     */
+    readonly onDelete: () => void
 }
 
 export interface ClickableListProps {
@@ -51,10 +70,23 @@ export const ClickableList = ({
 }
 
 export const MenuComponent = (props: MenuProps) => {
-    const {sheetIdx, blockId, isOpen, setIsOpen, onModify} = props
-    const ops = useOps()
+    const {
+        isOpen,
+        setIsOpen,
+        onModify,
+        analyzes,
+        analyzedBy = [],
+        onGoToBlock,
+        onCreateAnalysis,
+        onDelete,
+    } = props
 
-    const items = [
+    const items: Array<{
+        label: React.ReactNode
+        icon: React.ReactNode
+        danger?: boolean
+        onClick: () => void
+    }> = [
         {
             label: 'Modify',
             icon: <EditOutlinedIcon />,
@@ -65,14 +97,43 @@ export const MenuComponent = (props: MenuProps) => {
             },
         },
         {
-            label: 'Delete',
-            icon: <DeleteOutlinedIcon />,
-            danger: true,
-            onClick: () => {
-                ops.removeBlock(sheetIdx, blockId)
-            },
+            label: '创建分析块',
+            icon: <FunctionsIcon />,
+            onClick: onCreateAnalysis,
         },
     ]
+
+    // Navigation both ways. The pair is deliberately not glued together — the
+    // analysis does not follow the source when it moves — so being able to get
+    // from one to the other is how the relationship stays workable.
+    if (analyzes && onGoToBlock) {
+        items.push({
+            label: `源块：${analyzes.name}`,
+            icon: <TableRowsOutlinedIcon />,
+            onClick: () => onGoToBlock(analyzes.blockId),
+        })
+    }
+    if (onGoToBlock) {
+        for (const a of analyzedBy) {
+            items.push({
+                label: `分析块：${a.name}`,
+                icon: <SummarizeOutlinedIcon />,
+                onClick: () => onGoToBlock(a.blockId),
+            })
+        }
+    }
+
+    items.push({
+        // Says up front that this is a two-block deletion. The dialog the
+        // parent opens says which blocks.
+        label:
+            analyzedBy.length > 0
+                ? `Delete（连带 ${analyzedBy.length} 个分析块）`
+                : 'Delete',
+        icon: <DeleteOutlinedIcon />,
+        danger: true,
+        onClick: onDelete,
+    })
 
     return (
         <ContextMenu

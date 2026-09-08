@@ -53,8 +53,7 @@ mod funcs {
     use crate::{load_script, test_script};
     use logisheets_controller::edit_action::{
         BindFormSchema, BlockInput, CellInput, CreateBlock, CreateSheet, ModifyPolicy,
-        PayloadsAction, UpsertFieldFormulas, SchemaFieldSpec,
-
+        PayloadsAction, SchemaFieldSpec, UpsertFieldFormulas,
     };
 
     #[test]
@@ -160,6 +159,7 @@ mod funcs {
                 modify_policy: Some(ModifyPolicy::OwnerAndUser),
                 permissions: None,
                 description: None,
+                analyzes: None,
             })
             .add_payload(CellInput {
                 sheet_idx: 1,
@@ -174,16 +174,14 @@ mod funcs {
                 content: seed.to_string(),
             })
             .add_payload(BindFormSchema {
-                    ref_name: refname.to_string(),
-                    sheet_idx: 1,
-                    block_id: id,
-                    field_from: 1,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new(String::from("v"), format!("r{id}")),
-                    ],
-                    row: true,
-                })
+                ref_name: refname.to_string(),
+                sheet_idx: 1,
+                block_id: id,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new(String::from("v"), format!("r{id}"))],
+                row: true,
+            })
         };
         // Phase 1: sellers's sheet before baking. A1/A2/A3 hold plain values;
         // helpers E1..E4 and the output C1 exactly mirror the 房贷 calculator.
@@ -494,6 +492,7 @@ mod funcs {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 })
                 .add_payload(BindFormSchema {
                     ref_name: "people".to_string(),
@@ -601,6 +600,7 @@ mod funcs {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 })
                 // Header rows aren't needed for the schema (RowSchema reads
                 // values, not headers); just stuff numbers + keys.
@@ -634,9 +634,7 @@ mod funcs {
                     block_id: 42,
                     field_from: 1,
                     key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("age", "r-age"),
-                    ],
+                    fields: vec![SchemaFieldSpec::new("age", "r-age")],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -694,6 +692,7 @@ mod funcs {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -725,9 +724,7 @@ mod funcs {
                     block_id: 42,
                     field_from: 1,
                     key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("age", "r-age"),
-                    ],
+                    fields: vec![SchemaFieldSpec::new("age", "r-age")],
                     row: true,
                 })
                 // Two formulas referencing the block BY NAME "people".
@@ -761,16 +758,14 @@ mod funcs {
         // layout / fields are unchanged — only the name in `refs` moves.
         wb.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
             BindFormSchema {
-                    ref_name: "humans".into(),
-                    sheet_idx: 0,
-                    block_id: 42,
-                    field_from: 1,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("age", "r-age"),
-                    ],
-                    row: true,
-                },
+                ref_name: "humans".into(),
+                sheet_idx: 0,
+                block_id: 42,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new("age", "r-age")],
+                row: true,
+            },
         )));
 
         // The existing formulas (typed with the OLD name) STILL evaluate.
@@ -839,6 +834,7 @@ mod funcs {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -852,9 +848,7 @@ mod funcs {
                     block_id: 7,
                     field_from: 1,
                     key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("v", "r-v"),
-                    ],
+                    fields: vec![SchemaFieldSpec::new("v", "r-v")],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -911,6 +905,7 @@ mod funcs {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -930,9 +925,7 @@ mod funcs {
                     block_id: 8,
                     field_from: 1,
                     key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("v", "r-v"),
-                    ],
+                    fields: vec![SchemaFieldSpec::new("v", "r-v")],
                     row: true,
                 })
                 .add_payload(CellInput {
@@ -983,17 +976,17 @@ mod funcs {
         // AST keeps the block_id, so it should still resolve.
         wb.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
             BindFormSchema {
-                    ref_name: "renamed_ref".to_string(),
-                    sheet_idx: 0,
-                    block_id: 1,
-                    field_from: 1,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new(String::from("field1"), String::from("render1")),
-                        SchemaFieldSpec::new(String::from("field2"), String::from("render2")),
-                    ],
-                    row: true,
-                },
+                ref_name: "renamed_ref".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new(String::from("field1"), String::from("render1")),
+                    SchemaFieldSpec::new(String::from("field2"), String::from("render2")),
+                ],
+                row: true,
+            },
         )));
 
         let v = wb.get_sheet_by_idx(0).unwrap().get_value(10, 10).unwrap();
@@ -1042,6 +1035,7 @@ mod funcs {
                     modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1079,6 +1073,7 @@ mod funcs {
                     modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1117,6 +1112,7 @@ mod funcs {
                     modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1215,6 +1211,7 @@ mod funcs {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1239,6 +1236,7 @@ mod funcs {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1624,8 +1622,8 @@ fn test_excel_table_round_trips_as_a_named_block() {
 fn test_block_is_saved_as_an_excel_table() {
     use logisheets::Workbook;
     use logisheets_controller::edit_action::{
-        BindFormSchema, BlockInput, CreateBlock, EditPayload, PayloadsAction, StatusCode, SchemaFieldSpec,
-
+        BindFormSchema, BlockInput, CreateBlock, EditPayload, PayloadsAction, SchemaFieldSpec,
+        StatusCode,
     };
 
     let mut wb = Workbook::default();
@@ -1642,19 +1640,20 @@ fn test_block_is_saved_as_an_excel_table() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "sales".into(),
-                    sheet_idx: 0,
-                    block_id: 1,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("region", "r0"),
-                        SchemaFieldSpec::new("amount", "r1"),
-                    ],
-                    row: true,
-                }),
+                ref_name: "sales".into(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("region", "r0"),
+                    SchemaFieldSpec::new("amount", "r1"),
+                ],
+                row: true,
+            }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
                 block_id: 1,
@@ -1725,8 +1724,8 @@ fn test_block_is_saved_as_an_excel_table() {
 fn test_block_ref_name_is_unique_across_the_workbook() {
     use logisheets::Workbook;
     use logisheets_controller::edit_action::{
-        BindFormSchema, CreateBlock, CreateSheet, EditPayload, PayloadsAction, StatusCode, SchemaFieldSpec,
-
+        BindFormSchema, CreateBlock, CreateSheet, EditPayload, PayloadsAction, SchemaFieldSpec,
+        StatusCode,
     };
 
     let bind = |sheet_idx: usize, block_id: usize, name: &str| {
@@ -1742,19 +1741,20 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: name.into(),
-                    sheet_idx: sheet_idx,
-                    block_id: block_id,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("k", format!("{}-0", name)),
-                        SchemaFieldSpec::new("v", format!("{}-1", name)),
-                    ],
-                    row: true,
-                }),
+                ref_name: name.into(),
+                sheet_idx: sheet_idx,
+                block_id: block_id,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("k", format!("{}-0", name)),
+                    SchemaFieldSpec::new("v", format!("{}-1", name)),
+                ],
+                row: true,
+            }),
         ]
     };
 
@@ -1789,17 +1789,17 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
     // that is how a field gets renamed.
     let r = wb.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
         payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "dup".into(),
-                    sheet_idx: 0,
-                    block_id: 1,
-                    field_from: 0,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("k", "dup-0"),
-                        SchemaFieldSpec::new("value", "dup-1"),
-                    ],
-                    row: true,
-                })],
+            ref_name: "dup".into(),
+            sheet_idx: 0,
+            block_id: 1,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("k", "dup-0"),
+                SchemaFieldSpec::new("value", "dup-1"),
+            ],
+            row: true,
+        })],
         undoable: true,
         init: false,
     }));

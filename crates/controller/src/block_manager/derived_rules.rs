@@ -209,6 +209,7 @@ mod tests {
             required,
             unique,
             validation_formula: None,
+            aggregate: None,
         }
     }
 

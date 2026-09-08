@@ -127,6 +127,11 @@ pub struct BlockRange {
     pub perm_modify_description: Option<String>,
     #[xmlserde(name = b"permOverrideValidation", ty = "attr")]
     pub perm_override_validation: Option<String>,
+    /// Which block this one analyses, when it is an analysis block. Absent for
+    /// an ordinary block, which is every block written before this existed.
+    /// Same sheet, so the id alone identifies it.
+    #[xmlserde(name = b"analyzes", ty = "attr")]
+    pub analyzes: Option<usize>,
     #[xmlserde(name = b"rowInfos", ty = "child")]
     pub row_infos: Vec<BlockLineInfo>,
     #[xmlserde(name = b"colInfos", ty = "child")]
@@ -336,6 +341,16 @@ pub struct SchemaFieldXml {
     /// build introduces must not stop this one from opening the file.
     #[xmlserde(name = b"writePolicy", ty = "attr")]
     pub write_policy: Option<String>,
+    /// When the block analyses another one: how this field aggregates it.
+    /// `aggFunc` is `SUM|COUNT|AVERAGE|MIN|MAX`, `aggField` the field of the
+    /// analysed block. Both absent for an ordinary field.
+    ///
+    /// A free string for the same reason `kind` is: a function a newer build
+    /// introduces must not stop this one from opening the file.
+    #[xmlserde(name = b"aggFunc", ty = "attr")]
+    pub agg_func: Option<String>,
+    #[xmlserde(name = b"aggField", ty = "attr")]
+    pub agg_field: Option<String>,
 }
 
 /// A free-form schema: explicit `(key, row, col, renderId)` tuples with no

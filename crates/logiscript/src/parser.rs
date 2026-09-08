@@ -132,6 +132,7 @@ fn parse_op(s: Pair<Rule>) -> Result<Operator, ParseError> {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             }))
         }
         Rule::block_convert => {

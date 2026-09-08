@@ -2,6 +2,7 @@ import {useEffect, useRef, useState, useCallback} from 'react'
 import {observer} from 'mobx-react-lite'
 import {useEngine} from '@/core/engine/provider'
 import type {Session, Grid, SelectedData} from 'logisheets-engine'
+import {buildSelectedDataFromCell} from 'logisheets-engine'
 import {SheetsTabComponent} from '@/components/sheets-tab'
 import {globalStore} from '@/store'
 import {
@@ -60,6 +61,13 @@ export const SpreadsheetView = observer(function SpreadsheetView({
         sessionRef.current?.setSelection(d)
         setSelectedData(d)
     }, [])
+    // Select a cell and scroll it into view. Handed to the block overlay,
+    // where a block and its analysis are navigable from either end.
+    const navigateToCell = useCallback(
+        (row: number, col: number) =>
+            setSelection(buildSelectedDataFromCell(row, col, 'none')),
+        [setSelection]
+    )
     // Subscribe to THIS session's contextMenu event (re-binds once the session
     // is created). The engine renders no menu; the host menu below does.
     const subscribeContextMenu = useCallback(
@@ -175,6 +183,7 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                     activeSheet={activeSheet}
                     canvasStartX={canvasPos.x}
                     canvasStartY={canvasPos.y}
+                    navigateToCell={navigateToCell}
                 />
                 <ActiveViewBadge active={isActive} />
             </div>

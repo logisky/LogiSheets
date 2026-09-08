@@ -228,7 +228,8 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                         modify_policy,
                     )
                     .with_description(block_range.description.clone().unwrap_or_default())
-                    .with_permissions(permissions);
+                    .with_permissions(permissions)
+                    .with_analyzes(block_range.analyzes);
                     let sheet_container = container.get_sheet_container_mut(sheet_id);
                     restore_line_infos(block_range.row_infos, &block_place.rows, |id, info| {
                         sheet_container

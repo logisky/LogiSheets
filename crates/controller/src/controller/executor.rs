@@ -72,6 +72,31 @@ impl<'a> Executor<'a> {
     pub fn execute_and_calc(self, payload_action: PayloadsAction) -> Result<Self, Error> {
         let mut result = self;
         for payload in payload_action.clone().payloads.into_iter() {
+            // Removing a block removes the blocks that analyse it. Expanded
+            // into extra `RemoveBlock` payloads rather than handled inside the
+            // navigator's arm, so the cells, the schema and the nav state all
+            // go the way they do for any other removal — and one undo brings
+            // the whole set back. Computed against the status as it stands, so
+            // a transaction that creates and then removes in sequence sees
+            // what it just did.
+            if let EditPayload::RemoveBlock(ref rb) = payload {
+                if let Some(sheet_id) = result.status.sheet_info_manager.get_sheet_id(rb.sheet_idx)
+                {
+                    let cascade = crate::block_manager::analysis::remove_cascade(
+                        &result.status.navigator,
+                        sheet_id,
+                        rb.id,
+                    );
+                    for analysis in cascade {
+                        result = result.execute_payload(EditPayload::RemoveBlock(
+                            crate::edit_action::RemoveBlock {
+                                sheet_idx: rb.sheet_idx,
+                                id: analysis,
+                            },
+                        ))?;
+                    }
+                }
+            }
             result = result.execute_payload(payload)?;
         }
 
@@ -230,8 +255,7 @@ impl<'a> Executor<'a> {
         // sheet. Changing one changes what the fields declaring it allow, so
         // every block that references a touched set is marked dirty and its
         // per-record membership rules are regenerated.
-        let (enum_set_executor, enum_sets_updated) =
-            result.execute_enum_sets(payload.clone())?;
+        let (enum_set_executor, enum_sets_updated) = result.execute_enum_sets(payload.clone())?;
         result.status.enum_set_manager = enum_set_executor.manager;
         let mut dirty_blocks = dirty_blocks;
         if !enum_set_executor.dirty_sets.is_empty() {
@@ -766,10 +790,7 @@ impl<'a> Executor<'a> {
 /// rule is a per-record shadow — so the blocks have to be dirtied for it to be
 /// regenerated. Scanning every schema is fine: enum-set edits are rare and a
 /// workbook holds tens of blocks, not thousands.
-fn blocks_using_enum_sets(
-    status: &Status,
-    sets: &[String],
-) -> Vec<(SheetId, BlockId)> {
+fn blocks_using_enum_sets(status: &Status, sets: &[String]) -> Vec<(SheetId, BlockId)> {
     use crate::block_manager::schema_manager::schema::Schema;
 
     let mut out = Vec::new();

@@ -122,6 +122,16 @@ pub struct BlockInfo {
     /// whether an edit is allowed — ask `Workbook::may_modify_block`, so
     /// every host answers the question the same way.
     pub permissions: crate::edit_action::BlockPermissions,
+    /// Which block this one ANALYSES, when it is an analysis block — a total
+    /// row, a set of statistics, later a pivot. `None` for an ordinary block.
+    ///
+    /// Reported in both directions on purpose. An agent reading the sheet has
+    /// to be able to tell a table from its analysis: the rows of an analysis
+    /// block are its own records, not the source's, and summing them alongside
+    /// the source would double-count. See `design/block-analysis.md`.
+    pub analyzes: Option<BlockId>,
+    /// The blocks that analyse THIS one. Empty for a block nobody summarises.
+    pub analyzed_by: Vec<BlockId>,
 }
 
 /// A range that is linked to a backing block: the *source* range (the cells the
@@ -199,6 +209,15 @@ pub struct BlockSchemaFieldEntry {
     /// not know who is writing. Always reported, so a reader never has to
     /// guess what an absent value meant.
     pub write_policy: String,
+    /// When the block analyses another one: how this field aggregates it —
+    /// `SUM` | `COUNT` | `AVERAGE` | `MIN` | `MAX`, over `agg_field` of the
+    /// analysed block. Both absent for an ordinary field, which is what the
+    /// label column of a total row is.
+    ///
+    /// Reported so a reader can see WHAT the number is rather than only that
+    /// it is a number — and so an agent knows not to write to it.
+    pub agg_func: Option<String>,
+    pub agg_field: Option<String>,
 }
 
 impl BlockSchemaFieldEntry {
@@ -225,6 +244,11 @@ impl BlockSchemaFieldEntry {
             unique: entry.unique,
             default_value: entry.default_value.clone(),
             write_policy: entry.write_policy.as_str().to_string(),
+            agg_func: entry
+                .aggregate
+                .as_ref()
+                .map(|a| a.func.as_str().to_string()),
+            agg_field: entry.aggregate.as_ref().map(|a| a.source_field.clone()),
         }
     }
 }

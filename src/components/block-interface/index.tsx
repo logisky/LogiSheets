@@ -2,7 +2,17 @@ import {useEffect, useRef, useState} from 'react'
 import {observer} from 'mobx-react-lite'
 import {toast} from 'react-toastify'
 import {globalStore} from '@/store'
-import {Box, IconButton, Tooltip, Typography} from '@mui/material'
+import {
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    IconButton,
+    Tooltip,
+    Typography,
+} from '@mui/material'
 import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import {
     Settings as SettingsIcon,
@@ -30,8 +40,10 @@ import {projectBlockFields} from '@/core/blocks/field-projection'
 import {
     BlockCellInfo,
     BlockDisplayInfo,
+    BlockInfo,
     BlockSchemaFieldEntry,
 } from 'logisheets-engine'
+import type {AnalysisSource, WorkbookOps} from 'logisheets-core'
 import {FieldRuleDialog} from './field-rule-dialog'
 import type {FieldRuleKind} from '@/components/block-composer/field-formula'
 import {LeftTop} from '@/core/settings'
@@ -49,6 +61,14 @@ export interface BlockInterfaceProps {
     grid: Grid
     canvasStartX: number
     canvasStartY: number
+    /**
+     * Select a cell and scroll it into view, through the host's own selection
+     * state. Used to walk between a block and its analysis — they are
+     * deliberately not glued together, so getting from one to the other is
+     * how the relationship stays workable. Omitted where a view has no
+     * selection setter, and the navigation items simply don't appear.
+     */
+    navigateToCell?: (row: number, col: number) => void
 }
 
 /** Inclusive sheet-index rectangle. */
@@ -69,6 +89,42 @@ function blockRegionOf(b: {
         sc: colStart,
         er: rowStart + rowCnt - 1,
         ec: colStart + colCnt - 1,
+    }
+}
+
+/**
+ * Project a block into what {@link WorkbookOps.createAnalysisBlock} needs to
+ * analyse it.
+ *
+ * `isNumber` comes from the field's DECLARATION, not from what its cells
+ * happen to hold: guessing from the data totals an id column and leaves a
+ * still-empty column out of a total it belongs in. That declaration is what
+ * the field-semantics work put on the schema (see
+ * `design/block-field-semantics.md`) — before it, no host could read a field
+ * type back at all.
+ */
+function analysisSourceOf(info: BlockInfo): AnalysisSource | undefined {
+    const schema = info.schema
+    if (!schema) return undefined
+    const numFmtOf = (renderId: string) =>
+        info.fieldRenders.find((r) => r.renderId === renderId)?.style
+            ?.formatter || undefined
+    const fields = [...schema.fields]
+        .sort((a, b) => a.idx - b.idx)
+        .map((f) => ({
+            name: f.field,
+            isNumber: f.fieldType?.kind === 'number',
+            numFmt: numFmtOf(f.renderId),
+        }))
+    return {
+        sheetIdx: info.sheetIdx,
+        blockId: info.blockId,
+        refName: schema.name,
+        rowStart: info.rowStart,
+        rowCnt: info.rowCnt,
+        colStart: info.colStart,
+        fields,
+        keyIdx: schema.keys[0]?.idx ?? 0,
     }
 }
 
@@ -106,13 +162,42 @@ function cellAtCanvas(
 }
 
 export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
-    const {grid, canvasStartX, canvasStartY} = props
+    const {grid, canvasStartX, canvasStartY, navigateToCell} = props
     const engine = useEngine()
     const BLOCK_MANAGER = engine.getBlockManager()
+    // Which block the pointer is over. Lifted here because the highlight it
+    // drives lands on a DIFFERENT block — a block and its analysis are
+    // siblings in this list, so neither can light the other up on its own.
+    const [hoveredBlock, setHoveredBlock] = useState<number | null>(null)
 
     if (!grid.blockInfos || grid.blockInfos.length === 0) {
         return null
     }
+
+    const infos: BlockInfo[] = grid.blockInfos.map(
+        (b: BlockDisplayInfo) => b.info
+    )
+    const nameOf = (blockId: number) =>
+        infos.find((i: BlockInfo) => i.blockId === blockId)?.schema?.name
+    /** A block's partners: what it analyses, and what analyses it. */
+    const partnersOf = (blockId: number): number[] => {
+        const info = infos.find((i: BlockInfo) => i.blockId === blockId)
+        if (!info) return []
+        return [
+            ...(info.analyzes !== undefined ? [info.analyzes] : []),
+            // Defaulted: a half-done wasm rebuild leaves the worker sending an
+            // older BlockInfo, and the whole block layer throwing is a far
+            // worse failure than no pair highlight.
+            ...(info.analyzedBy ?? []),
+        ]
+    }
+    // The pair affordance. Outlines are deliberately NOT merged (a pivot is
+    // its own table and should never merge, and a merged outline un-merges
+    // the moment the source moves or gains a column) — this is what replaces
+    // it: point at either half and both are lit.
+    const paired = new Set(
+        hoveredBlock === null ? [] : partnersOf(hoveredBlock)
+    )
 
     return (
         <>
@@ -164,6 +249,46 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         grid={grid}
                         title={info.schema.name}
                         schemaFields={info.schema.fields}
+                        analysisSource={analysisSourceOf(info)}
+                        analyzes={
+                            info.analyzes === undefined
+                                ? undefined
+                                : {
+                                      blockId: info.analyzes,
+                                      name:
+                                          nameOf(info.analyzes) ??
+                                          `#${info.analyzes}`,
+                                  }
+                        }
+                        analyzedBy={(info.analyzedBy ?? []).map(
+                            (id: number) => ({
+                                blockId: id,
+                                name: nameOf(id) ?? `#${id}`,
+                            })
+                        )}
+                        isPaired={paired.has(info.blockId)}
+                        onHoverChange={(hovered) =>
+                            setHoveredBlock((prev) =>
+                                hovered
+                                    ? info.blockId
+                                    : prev === info.blockId
+                                    ? null
+                                    : prev
+                            )
+                        }
+                        onGoToBlock={
+                            navigateToCell &&
+                            ((blockId: number) => {
+                                const target = infos.find(
+                                    (i: BlockInfo) => i.blockId === blockId
+                                )
+                                if (target)
+                                    navigateToCell(
+                                        target.rowStart,
+                                        target.colStart
+                                    )
+                            })
+                        }
                     />
                 )
             })}
@@ -197,6 +322,15 @@ interface BlockInterfaceInternalProps {
      * rather than from the (idx-sorted) `fieldInfo` above.
      */
     schemaFields: readonly BlockSchemaFieldEntry[]
+    /** This block, projected for `createAnalysisBlock`. */
+    analysisSource?: AnalysisSource
+    /** The block this one analyses, and the blocks that analyse it. */
+    analyzes?: {blockId: number; name: string}
+    analyzedBy: ReadonlyArray<{blockId: number; name: string}>
+    /** True while the pointer is on this block's partner. */
+    isPaired: boolean
+    onHoverChange: (hovered: boolean) => void
+    onGoToBlock?: (blockId: number) => void
 }
 
 const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
@@ -220,6 +354,12 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         cells,
         grid,
         schemaFields,
+        analysisSource,
+        analyzes,
+        analyzedBy,
+        isPaired,
+        onHoverChange,
+        onGoToBlock,
     } = props
 
     const ops = useOps()
@@ -249,6 +389,58 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         anchor: HTMLElement
         field: string
     } | null>(null)
+
+    // Deleting a block that has analyses deletes those too (the engine
+    // cascades), so the user is told which blocks before it happens rather
+    // than after.
+    const [deleteConfirm, setDeleteConfirm] = useState(false)
+
+    const handleDelete = async () => {
+        setDeleteConfirm(false)
+        try {
+            await ops.removeBlock(sheetIdx, blockId)
+        } catch (e) {
+            toast.error(
+                `Failed to delete block: ${
+                    e instanceof Error ? e.message : String(e)
+                }`
+            )
+        }
+    }
+
+    /**
+     * Create the block that analyses this one — a totals row below it.
+     *
+     * Every aggregate is a DECLARATION; the engine generates the formulas, so
+     * renaming a field of this block rebuilds the total rather than silently
+     * zeroing it. See `design/block-analysis.md`.
+     */
+    const handleCreateAnalysis = async () => {
+        if (!analysisSource) return
+        const refName = `${analysisSource.refName}_analysis`
+        try {
+            const newId = await dataService.getAvailableBlockId(sheetIdx)
+            if (isErrorMessage(newId)) {
+                toast.error(newId.msg)
+                return
+            }
+            const aggregated = await ops.createAnalysisBlock({
+                source: analysisSource,
+                blockId: newId,
+                refName,
+                label: '合计',
+            })
+            toast.success(
+                `已创建分析块 "${refName}"：` +
+                    aggregated.map((a) => `${a.func}(${a.field})`).join('、') +
+                    `。用 BLOCKREF("${refName}", "合计", "<字段>") 引用结果。`
+            )
+        } catch (e) {
+            toast.error(
+                `无法创建分析块：${e instanceof Error ? e.message : String(e)}`
+            )
+        }
+    }
 
     const handleSortField = async (field: string, asc: boolean) => {
         setSortMenu(null)
@@ -330,6 +522,20 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
             window.removeEventListener('mousemove', onMove)
         }
     }, [x, y, width, height, canvasStartX, canvasStartY, isHover])
+
+    // Report hover to the parent, which is the only place that can light up
+    // this block's PARTNER — a block and its analysis are siblings in the same
+    // list, so neither can reach the other.
+    //
+    // Through a ref, and keyed on `isHover` alone: the parent hands down a
+    // fresh callback on every render, and calling it from an effect that
+    // re-ran on identity would set parent state, re-render, and call it again.
+    const hoverCbRef = useRef(onHoverChange)
+    hoverCbRef.current = onHoverChange
+    useEffect(() => {
+        hoverCbRef.current(isHover)
+        return () => hoverCbRef.current(false)
+    }, [isHover])
 
     const baseX = xForColStart(colStart, grid)
     const baseY = yForRowStart(rowStart, grid)
@@ -663,19 +869,31 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     borderRadius: 1,
                 }}
             >
-                {/* Main border */}
+                {/* Main border. `isPaired` — the pointer is on this block's
+                    source or on one of its analyses — draws it in the same
+                    strong colour as hover, so pointing at either half of a
+                    pair shows both. This is what replaces merging the two
+                    outlines: it works when they are not adjacent, when their
+                    column counts differ, and for a pivot, none of which a
+                    merged outline survives. */}
                 <Box
                     sx={{
                         position: 'absolute',
                         inset: '6px',
                         border: '2px solid',
-                        borderColor: showInfo
-                            ? 'rgb(103, 58, 183)'
-                            : 'rgba(103, 58, 183, 0.5)',
+                        borderColor:
+                            showInfo || isPaired
+                                ? 'rgb(103, 58, 183)'
+                                : 'rgba(103, 58, 183, 0.5)',
                         boxSizing: 'border-box',
                         transition: 'border-color 0.2s',
                         pointerEvents: 'none',
                         borderRadius: '4px',
+                        // A dashed outline on the partner, so which one the
+                        // pointer is actually on stays unambiguous.
+                        ...(isPaired && !showInfo
+                            ? {borderStyle: 'dashed'}
+                            : {}),
                     }}
                 />
 
@@ -706,12 +924,21 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
 
                 {/* Settings button (top right) — hover only, even when the
                     "always show block info" toggle is on. The toggle only
-                    keeps the title and field name headers visible. */}
+                    keeps the title and field name headers visible.
+
+                    BOTTOM right on an analysis block, because it is placed
+                    directly beneath the block it analyses, and the source's
+                    draggable bottom edge (a 10px band, always live so the
+                    outline is grabbable anytime) sits exactly where a top-
+                    right button would be — swallowing every click on it. Hung
+                    below instead, it is reachable, and it reads correctly too:
+                    an analysis block's controls hang off its lower edge, away
+                    from the table above. */}
                 {isHover && (
                     <Box
                         sx={{
                             position: 'absolute',
-                            top: '-12px',
+                            ...(analyzes ? {bottom: '-12px'} : {top: '-12px'}),
                             right: '-12px',
                             width: 22,
                             height: 22,
@@ -767,7 +994,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     column-header row so the schema info never visually
                     covers it (see field headers overlay below for the
                     same trick). */}
-                {showInfo && title && (
+                {(showInfo || isPaired) && title && (
                     <Box
                         sx={{
                             position: 'absolute',
@@ -809,6 +1036,10 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             }}
                         >
                             {title}
+                            {/* Names its source, so an analysis block is
+                                self-explanatory seen alone — the pair is not
+                                glued together and may be nowhere near it. */}
+                            {analyzes && ` ← Σ ${analyzes.name}`}
                         </Typography>
                     </Box>
                 )}
@@ -1108,6 +1339,15 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     setError={setError}
                     setSuccessMessage={setSuccessMessage}
                     onModify={() => setEditComposerOpen(true)}
+                    analyzes={analyzes}
+                    analyzedBy={analyzedBy}
+                    onGoToBlock={onGoToBlock}
+                    onCreateAnalysis={handleCreateAnalysis}
+                    onDelete={() =>
+                        analyzedBy.length > 0
+                            ? setDeleteConfirm(true)
+                            : handleDelete()
+                    }
                 />
             )}
 
@@ -1118,6 +1358,31 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     editTarget={{sheetIdx, sheetId, blockId}}
                     close={() => setEditComposerOpen(false)}
                 />
+            )}
+
+            {/* Deleting a block deletes its analyses with it — an analysis of
+                a block that no longer exists would sit there reading empty
+                with nothing to say why. Named, so the user knows what goes. */}
+            {deleteConfirm && (
+                <Dialog open onClose={() => setDeleteConfirm(false)}>
+                    <DialogTitle>删除 “{title}”？</DialogTitle>
+                    <DialogContent>
+                        <Typography variant="body2">
+                            它的 {analyzedBy.length} 个分析块（
+                            {analyzedBy.map((a) => a.name).join('、')}
+                            ）会一起删除 —— 分析块的每一列都在汇总这个
+                            block，源块不在了就没有意义了。一次撤销可以全部恢复。
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setDeleteConfirm(false)}>
+                            取消
+                        </Button>
+                        <Button color="error" onClick={handleDelete}>
+                            全部删除
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             )}
         </Box>
     )

@@ -183,6 +183,66 @@ function enumSetPayloads(
 }
 
 /**
+ * How an analysis field aggregates the field it reads. Every one lowers to
+ * `FUNC(BLOCKREFSB(...))` in the engine, which is why adding one is a one-line
+ * change there and none here.
+ */
+export type AggFunc = 'SUM' | 'COUNT' | 'AVERAGE' | 'MIN' | 'MAX'
+
+/** One field of an analysis block: what it aggregates, and how. */
+export interface AnalysisAggregate {
+    /** Field name of the SOURCE block. */
+    field: string
+    func: AggFunc
+}
+
+/** One column of the block being analysed, as the analysis needs to see it. */
+export interface AnalysisSourceField {
+    name: string
+    /**
+     * Whether the source DECLARES this field a number. Not whether its cells
+     * currently hold numbers: guessing from the data totals an id column, and
+     * leaves a still-empty column out of a total it belongs in.
+     */
+    isNumber: boolean
+    /**
+     * The source column's number format, carried onto the total so a sum of
+     * currency reads as currency.
+     */
+    numFmt?: string
+}
+
+/** The block being analysed. */
+export interface AnalysisSource {
+    sheetIdx: number
+    blockId: number
+    /** Its ref name — used in the new block's description, not in a formula. */
+    refName: string
+    rowStart: number
+    rowCnt: number
+    colStart: number
+    /** Fields in COLUMN order, so the analysis's columns line up with them. */
+    fields: readonly AnalysisSourceField[]
+    /** Which column is the key — where the label goes. */
+    keyIdx: number
+}
+
+/**
+ * SUM over every field the source declares a number.
+ *
+ * A default is only possible because the declaration exists: this is what the
+ * field-type work in `design/block-field-semantics.md` bought — before it, a
+ * caller could only guess from the data.
+ */
+export function defaultAnalysisAggregates(
+    fields: readonly AnalysisSourceField[]
+): AnalysisAggregate[] {
+    return fields
+        .filter((f) => f.isNumber)
+        .map((f) => ({field: f.name, func: 'SUM' as const}))
+}
+
+/**
  * One field of a `bindFormSchema` payload.
  *
  * The payload used to take five positionally-aligned arrays (names, renderIds,
@@ -801,6 +861,131 @@ export class WorkbookOps {
             ],
             true
         )
+    }
+
+    // ---- analysis blocks ------------------------------------------------
+
+    /**
+     * Create the block that analyses `source`: a totals row placed directly
+     * below it, declaring what it analyses and how each of its fields
+     * aggregates. See `design/block-analysis.md`.
+     *
+     * **No formula is sent.** The engine generates each aggregate field's
+     * formula from the declaration, which is what makes renaming a source
+     * field rebuild the total instead of silently zeroing it. A field with no
+     * aggregate stays an ordinary cell — that is the label column, and the
+     * label is also the key the result is addressed by
+     * (`BLOCKREF(refName, label, field)`).
+     *
+     * One transaction, so it is one undo, and so a reader between two payloads
+     * never sees a one-row table it would mistake for a record.
+     *
+     * Returns what it aggregated, in column order, for the caller to report.
+     */
+    async createAnalysisBlock(opts: {
+        source: AnalysisSource
+        blockId: number
+        refName: string
+        label: string
+        /**
+         * Which source fields to aggregate and how. Omit for
+         * {@link defaultAnalysisAggregates} — SUM over every field the source
+         * DECLARES as a number.
+         */
+        aggregates?: readonly AnalysisAggregate[]
+    }): Promise<readonly AnalysisAggregate[]> {
+        const {source, blockId, refName, label} = opts
+        const chosen = new Map<string, AggFunc>()
+        for (const a of opts.aggregates ??
+            defaultAnalysisAggregates(source.fields)) {
+            if (!source.fields.some((f) => f.name === a.field)) {
+                throw new Error(
+                    `Cannot aggregate "${a.field}": the block has no such field.`
+                )
+            }
+            chosen.set(a.field, a.func)
+        }
+        if (chosen.size === 0) {
+            throw new Error(
+                'Nothing to aggregate: no field of this block is declared a ' +
+                    'number. Give a field the number type first, or choose ' +
+                    'what to aggregate explicitly.'
+            )
+        }
+
+        const row = source.rowStart + source.rowCnt
+        const renderIdOf = (i: number) => `${refName}__agg${i}`
+        await this.apply(
+            [
+                // Room first, or the block would land on whatever sits below
+                // the table. This is also what pushes the pair apart as the
+                // source grows, keeping them adjacent.
+                {
+                    type: 'insertRows',
+                    value: {sheetIdx: source.sheetIdx, start: row, count: 1},
+                },
+                {
+                    type: 'createBlock',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        id: blockId,
+                        masterRow: row,
+                        masterCol: source.colStart,
+                        rowCnt: 1,
+                        colCnt: source.fields.length,
+                        analyzes: source.blockId,
+                        description: `Analysis of "${source.refName}".`,
+                    },
+                },
+                {
+                    type: 'bindFormSchema',
+                    value: {
+                        refName,
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        fieldFrom: 0,
+                        row: true,
+                        keyIdx: source.keyIdx < 0 ? 0 : source.keyIdx,
+                        fields: source.fields.map((f, i) => {
+                            const func = chosen.get(f.name)
+                            return {
+                                name: f.name,
+                                renderId: renderIdOf(i),
+                                aggFunc: func,
+                                aggField: func ? f.name : undefined,
+                            }
+                        }),
+                    },
+                },
+                // The label, which is the key the result is addressed by.
+                {
+                    type: 'blockInput',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        row: 0,
+                        col: source.keyIdx < 0 ? 0 : source.keyIdx,
+                        input: label,
+                    },
+                },
+                // Carry each source column's number format across, so a total
+                // is formatted like the column it totals rather than as a bare
+                // number.
+                ...source.fields.map((f, i) => ({
+                    type: 'upsertFieldRenderInfo' as const,
+                    value: {
+                        renderId: renderIdOf(i),
+                        diyRender: false,
+                        styleUpdate: {setNumFmt: f.numFmt ?? ''},
+                    },
+                })),
+            ],
+            true
+        )
+
+        return source.fields
+            .filter((f) => chosen.has(f.name))
+            .map((f) => ({field: f.name, func: chosen.get(f.name)!}))
     }
 
     // ---- generic / temp-branch -----------------------------------------

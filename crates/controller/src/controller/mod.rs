@@ -1037,6 +1037,7 @@ mod tests {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 }),
                 EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
                     sheet_idx,
@@ -1072,6 +1073,7 @@ mod tests {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
                 }),
                 EditPayload::BlockLineStyleUpdate(BlockLineStyleUpdate {
                     sheet_idx,
@@ -1448,6 +1450,7 @@ mod tests {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             })],
             undoable: true,
             init: false,
@@ -1553,6 +1556,7 @@ mod tests {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
             })],
             undoable: true,
             init: false,

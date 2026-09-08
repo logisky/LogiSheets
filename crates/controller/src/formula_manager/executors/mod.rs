@@ -2,10 +2,10 @@ mod input_formula;
 
 use std::collections::HashSet;
 
-pub use input_formula::{convert_cells_to_block,
-    add_ast_node, input_block_cell_shadow_template, input_block_cell_template, input_block_formula,
-    input_ephemeral_formula, input_formula, rebuild_range_deps, remove_ephemeral_formula,
-    remove_formula,
+pub use input_formula::{
+    add_ast_node, convert_cells_to_block, input_block_cell_shadow_template,
+    input_block_cell_template, input_block_formula, input_ephemeral_formula, input_formula,
+    rebuild_range_deps, remove_ephemeral_formula, remove_formula,
 };
 use logisheets_base::{
     BlockId, BlockRange, CellId, CubeId, Range, RangeId, SheetId, errors::BasicError,
@@ -272,6 +272,24 @@ impl FormulaExecutor {
                             crate::sid_assigner::ShadowKind::UserEditable,
                             ctx,
                         )?;
+                    }
+                }
+                // Any block that ANALYSES this one has generated formulas that
+                // name this block's fields as runtime strings. Re-binding here
+                // may have renamed or dropped one of them, and nothing else
+                // would re-materialize the analysis — its formula would keep
+                // naming a field that no longer exists, which a `BLOCKREFS`
+                // resolves to nothing rather than an error. So regenerate
+                // them. See `design/block-analysis.md` §4.
+                for analysis in ctx.analyzed_by(sheet_id, p.block_id) {
+                    let Ok((a_rows, a_cols)) = ctx.get_block_size(sheet_id, analysis) else {
+                        continue;
+                    };
+                    for r in 0..a_rows {
+                        for c in 0..a_cols {
+                            exec =
+                                input_block_cell_template(exec, p.sheet_idx, analysis, r, c, ctx)?;
+                        }
                     }
                 }
                 Ok(exec)

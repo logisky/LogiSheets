@@ -2081,10 +2081,35 @@ interface FieldDescription {
      * does not enforce it, because the engine does not know who is writing.
      */
     write_policy: string
+    /**
+     * When this block ANALYSES another one: what this column is.
+     * `"SUM of amt"`, `"AVERAGE of price"`. Absent on an ordinary field.
+     *
+     * A field with this is engine-computed from the source block — do not
+     * write to it (the write is dropped), and do not treat its value as a
+     * record of anything. Change what it shows by changing the declaration.
+     */
+    aggregates?: string
 }
 
 interface DescribeBlockOutput {
     block: string
+    /**
+     * The block this one ANALYSES, when it is an analysis block — a total row,
+     * a set of statistics, a pivot. Absent for an ordinary table.
+     *
+     * Its rows are its own records, NOT the source's. Never sum an analysis
+     * block alongside the block it analyses: you would count the same numbers
+     * twice. Read the source for records, read this for the conclusions drawn
+     * from them.
+     */
+    analyzes?: string
+    /**
+     * The blocks that analyse THIS one, if any — where to find its totals.
+     * Their values are addressable like any other block's, e.g.
+     * `BLOCKREF("orders_analysis", "TOTAL", "amt")`.
+     */
+    analyzed_by?: string[]
     /**
      * What the block is for, in prose, as whoever built it wrote it. The
      * schema says what shape the records are; this is the only thing that says
@@ -2129,6 +2154,14 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
         "Return a block's full structure for the LLM: identity (name, sheet, position), per-field schema, and row keys in order. Every field reports both what it IS — `type`, `description`, `required`, `unique`, `default_value`, and `references` for a field pointing at another block — and what currently guards it: the `value_formula`, `validation` and `editability` templates. All of it comes from the Rust schema, the engine's authoritative source, so the answer is the same in every host and survives a save/load.",
         '',
         "Read a field's `type` and `description` BEFORE writing a value to it: the description is where the unit, the convention, or the thing-not-to-do is written down, and it is the only record of it. A `type` of null means nobody has claimed one yet.",
+        '',
+        '`analyzes` and `analyzed_by` say whether this block is a table or a ' +
+            'conclusion drawn from one. A block with `analyzes` set is an ANALYSIS ' +
+            'block — a total row, a set of statistics, a pivot — and its rows are ' +
+            "its own, not the source's. Never sum an analysis block alongside the " +
+            'block it analyses: that counts the same numbers twice. A field with ' +
+            '`aggregates` set is engine-computed from the source; writes to it are ' +
+            'dropped, and you change it by changing the declaration.',
         '',
         'Pass `include_rows: true` to additionally include current cell values as `rows[].values[fieldName]`. Off by default to save tokens — use it when the agent actually needs to inspect data, not when it only needs the shape.',
     ].join('\n'),
@@ -2208,6 +2241,10 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
                 unique: !!f.unique,
                 default_value: nonEmpty(f.defaultValue) ?? undefined,
                 write_policy: f.writePolicy,
+                aggregates:
+                    f.aggFunc && f.aggField
+                        ? `${f.aggFunc} of ${f.aggField}`
+                        : undefined,
             }
         })
 
@@ -2240,8 +2277,25 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
             }
         })
 
+        // Ids are the engine's currency; a reader wants names. Resolved from
+        // the same `getAllBlocks` result, so this costs no extra call.
+        const nameOfBlock = (id: number): string | undefined =>
+            allBlocks.find(
+                (b) => b.blockId === id && b.sheetIdx === block.sheetIdx
+            )?.schema?.name
+
         const out: DescribeBlockOutput = {
             block: input.name,
+            analyzes:
+                block.analyzes !== undefined
+                    ? nameOfBlock(block.analyzes) ?? `block#${block.analyzes}`
+                    : undefined,
+            // Defaulted, not asserted: an app can ship a wasm older than this
+            // tool, and describe_block failing outright would be a much worse
+            // answer than reporting no analyses.
+            analyzed_by: (block.analyzedBy ?? []).length
+                ? block.analyzedBy.map((id) => nameOfBlock(id) ?? `block#${id}`)
+                : undefined,
             description: nonEmpty(block.description),
             owner: nonEmpty(block.owner),
             block_id: block.blockId,
@@ -3432,6 +3486,210 @@ async function assertMayModify(
     }
 }
 
+// ---------------------------------------------------------------------------
+// create_analysis_block — a table's totals, as their own block
+// ---------------------------------------------------------------------------
+
+const AGG_FUNCS = ['SUM', 'COUNT', 'AVERAGE', 'MIN', 'MAX'] as const
+
+interface CreateAnalysisBlockInput {
+    source: string
+    name?: string
+    label?: string
+    aggregates?: ReadonlyArray<{
+        field: string
+        func: (typeof AGG_FUNCS)[number]
+    }>
+}
+
+export const createAnalysisBlock: Tool<
+    CreateAnalysisBlockInput,
+    {block: string; block_id: number; aggregated: string[]}
+> = {
+    namespace: 'build',
+    name: 'create_analysis_block',
+    description: [
+        'Add a block that analyses another one — a totals row, sitting directly below the table it summarises.',
+        '',
+        'It is an ordinary block that declares which block it analyses, so its result is addressable like any other: `BLOCKREF("<name>", "<label>", "<field>")`. That is the point of it being separate — a total you can only look at is much less useful than one you can reference.',
+        '',
+        "What the engine does with the declaration: it GENERATES each field's formula from it, so renaming a field of the source rebuilds the total instead of breaking it, and the total tracks the source as rows are added. Do not write the formulas yourself.",
+        '',
+        'By default every `number` field of the source gets a SUM and everything else is left blank; pass `aggregates` to choose. Removing the source removes this block with it.',
+        '',
+        'Read it back with describe_block: the analysis reports `analyzes`, the source reports `analyzed_by`. Never sum an analysis block alongside its source — that counts the same numbers twice.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            source: {
+                type: 'string',
+                description: 'Ref name of the block to analyse.',
+            },
+            name: {
+                type: 'string',
+                description:
+                    'Ref name for the new block. Defaults to "<source>_analysis".',
+            },
+            label: {
+                type: 'string',
+                description:
+                    'What goes in the key column, and therefore the key the result is addressed by. Defaults to "TOTAL".',
+            },
+            aggregates: {
+                type: 'array',
+                description:
+                    'Which source fields to aggregate and how. Omit to SUM every field the source declares as `number`.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        field: {
+                            type: 'string',
+                            description: 'Field name of the SOURCE block.',
+                        },
+                        func: {type: 'string', enum: [...AGG_FUNCS]},
+                    },
+                    required: ['field', 'func'],
+                },
+            },
+        },
+        required: ['source'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const source = all.find((b) => b.schema?.name === input.source)
+        if (!source) {
+            throw new Error(`no block with ref name "${input.source}"`)
+        }
+        const schema = source.schema
+        if (!schema) {
+            throw new Error(
+                `block "${input.source}" has no schema, so it has no fields to aggregate`
+            )
+        }
+        const name = input.name ?? `${input.source}_analysis`
+        if (all.some((b) => b.schema?.name === name)) {
+            throw new Error(
+                `a block named "${name}" already exists — ref names are how formulas reach a block, so pick another`
+            )
+        }
+        const label = input.label ?? 'TOTAL'
+
+        const ordered = [...schema.fields].sort((a, b) => a.idx - b.idx)
+        // Default: SUM every field the source DECLARES as a number. The
+        // declaration is why this can be a default at all — guessing from the
+        // data would sum an id column.
+        const chosen = new Map<string, (typeof AGG_FUNCS)[number]>()
+        if (input.aggregates?.length) {
+            for (const a of input.aggregates) {
+                if (!ordered.some((f) => f.field === a.field)) {
+                    throw new Error(
+                        `block "${input.source}" has no field named "${a.field}"`
+                    )
+                }
+                chosen.set(a.field, a.func)
+            }
+        } else {
+            for (const f of ordered) {
+                if (f.fieldType?.kind === 'number') chosen.set(f.field, 'SUM')
+            }
+        }
+        if (chosen.size === 0) {
+            throw new Error(
+                `nothing to aggregate: block "${input.source}" declares no number fields. ` +
+                    'Pass `aggregates` explicitly, or declare a field type first.'
+            )
+        }
+
+        const idRes = await client.getAvailableBlockId({
+            sheetIdx: source.sheetIdx,
+        })
+        if (isErrorMessage(idRes)) {
+            throw new Error(`getAvailableBlockId failed: ${idRes.msg}`)
+        }
+        const blockId = idRes
+        const row = source.rowStart + source.rowCnt
+
+        await commitTransaction(
+            client,
+            [
+                // Room first, or the new block would land on whatever sits
+                // below the table. This is also what keeps the pair adjacent
+                // as the source grows later.
+                {
+                    type: 'insertRows',
+                    value: {sheetIdx: source.sheetIdx, start: row, count: 1},
+                },
+                {
+                    type: 'createBlock',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        id: blockId,
+                        masterRow: row,
+                        masterCol: source.colStart,
+                        rowCnt: 1,
+                        colCnt: source.colCnt,
+                        // Declared as it is created, so it is never briefly a
+                        // stray table a reader would take for records.
+                        analyzes: source.blockId,
+                        description: `Analysis of "${input.source}".`,
+                    },
+                },
+                {
+                    type: 'bindFormSchema',
+                    value: {
+                        refName: name,
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        fieldFrom: 0,
+                        keyIdx: 0,
+                        row: true,
+                        fields: ordered.map((f, i) => {
+                            const func = chosen.get(f.field)
+                            return {
+                                name: f.field,
+                                renderId: `${name}__f${i}`,
+                                // No value formula: the engine generates it
+                                // from the aggregate declaration.
+                                aggFunc: func,
+                                aggField: func ? f.field : undefined,
+                            }
+                        }),
+                    },
+                },
+                // The label is the key the result is addressed by.
+                {
+                    type: 'blockInput',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        row: 0,
+                        col: schema.keys[0]?.idx ?? 0,
+                        input: label,
+                    },
+                },
+            ],
+            `create_analysis_block("${input.source}")`
+        )
+
+        const aggregated = [...chosen.entries()].map(
+            ([field, func]) => `${func} of ${field}`
+        )
+        return {
+            data: {block: name, block_id: blockId, aggregated},
+            display:
+                `Created "${name}" below "${input.source}": ` +
+                `${aggregated.join(', ')}. ` +
+                `Reference a result with BLOCKREF("${name}", "${label}", "<field>").`,
+        }
+    },
+}
+
 export const BUILDER_TOOLS: Tool[] = [
     convertToBlock as Tool,
     renameBlock as Tool,
@@ -3445,6 +3703,7 @@ export const BUILDER_TOOLS: Tool[] = [
     defineEnumSet,
     listBlocks,
     describeBlock,
+    createAnalysisBlock as Tool,
     setBlockDescription as Tool,
     setBlockPermissions as Tool,
     evalFormula,

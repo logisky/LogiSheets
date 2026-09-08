@@ -6,7 +6,7 @@ use crate::{
     Error,
     block_manager::schema_manager::{
         ctx::BlockSchemaCtx,
-        field_type::{FieldType, FieldWritePolicy},
+        field_type::{AggFunc, FieldAggregate, FieldType, FieldWritePolicy},
         manager::SchemaManager,
         schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema, SchemaTrait},
     },
@@ -36,7 +36,6 @@ fn normalize_formula_vec(input: Vec<Option<String>>) -> Vec<Option<String>> {
         })
         .collect()
 }
-
 
 /// Apply a slice of (possibly-updated) rule values to a schema's existing
 /// rule slots. When `incoming.is_empty()`, the existing rule is preserved
@@ -187,9 +186,16 @@ impl BlockSchemaExecutor {
                         .with_required(spec.required.unwrap_or(false))
                         .with_unique(spec.unique.unwrap_or(false))
                         .with_default_value(spec.default_value)
-                        .with_write_policy(FieldWritePolicy::from_str(
-                            spec.write_policy.as_deref(),
-                        ));
+                        .with_write_policy(FieldWritePolicy::from_str(spec.write_policy.as_deref()))
+                        // Both halves or neither. A function with no field to
+                        // aggregate, or a field with no function, is not a
+                        // declaration — and a function this build does not know
+                        // yields no aggregate rather than a guess.
+                        .with_aggregate(match (spec.agg_func.as_deref(), spec.agg_field) {
+                            (Some(func), Some(source_field)) => AggFunc::from_str(func)
+                                .map(|func| FieldAggregate { func, source_field }),
+                            _ => None,
+                        });
                     fields.push((spec.name, entry));
                 }
                 let schema = if p.row {

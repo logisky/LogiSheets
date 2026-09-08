@@ -147,6 +147,22 @@ fn convert_diff<C: VersionExecCtx>(
                 sheet_id,
             )))
         }
+        // Re-pointing a block at a different source changes what every one of
+        // its cells computes, so the whole block is stale — same as a
+        // permissions or description change, which also alter the block
+        // wholesale rather than any one cell.
+        EditPayload::SetBlockAnalyzes(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: p.block_id,
+                },
+                sheet_id,
+            )))
+        }
         EditPayload::SetBlockPermissions(p) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(p.sheet_idx)

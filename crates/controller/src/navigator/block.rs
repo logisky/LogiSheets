@@ -1,5 +1,5 @@
 use imbl::Vector;
-use logisheets_base::{ColId, NormalCellId, RowId};
+use logisheets_base::{BlockId, ColId, NormalCellId, RowId};
 
 use crate::edit_action::{BlockPermissions, ModifyPolicy};
 
@@ -22,6 +22,23 @@ pub struct BlockPlace {
     /// block loaded from a file written before this existed — means the single
     /// policy governs everything, exactly as it used to.
     pub permissions: BlockPermissions,
+    /// Which block this one ANALYSES, when it is an analysis block: a total
+    /// row, a set of statistics, later a pivot.
+    ///
+    /// An analysis block is an ordinary block — cells, schema, fields,
+    /// persistence, governance, all the same. This marker is the whole of what
+    /// makes it one, and it deliberately says nothing about shape: a total row
+    /// happens to have its source's columns, a pivot's columns are the distinct
+    /// values of one of them. That is what lets one model carry both.
+    ///
+    /// Same sheet only — `BlockId` is unique within a sheet, so no sheet id is
+    /// needed and a cross-sheet analysis is not expressible.
+    ///
+    /// Read for an AI first: `describe_block` reports it in both directions, so
+    /// an agent reading the sheet sees "a table and its analysis" rather than
+    /// two unrelated tables — and cannot mistake a total for a record. See
+    /// `design/block-analysis.md`.
+    pub analyzes: Option<BlockId>,
 }
 
 impl BlockPlace {
@@ -46,7 +63,16 @@ impl BlockPlace {
             modify_policy,
             description: String::new(),
             permissions: BlockPermissions::default(),
+            analyzes: None,
         }
+    }
+
+    /// Declare which block this one analyses. Separate from [`Self::new`] for
+    /// the same reason the description is: an analysis block is created and
+    /// then told what it is for.
+    pub fn with_analyzes(mut self, source: Option<BlockId>) -> Self {
+        self.analyzes = source;
+        self
     }
 
     /// Replace the prose description. Separate from [`Self::new`] because a
@@ -96,6 +122,7 @@ impl BlockPlace {
             modify_policy: result.modify_policy,
             description: result.description,
             permissions: result.permissions,
+            analyzes: result.analyzes,
         }
     }
 
@@ -117,6 +144,7 @@ impl BlockPlace {
             modify_policy: self.modify_policy,
             description: self.description,
             permissions: self.permissions,
+            analyzes: self.analyzes,
         }
     }
 
@@ -138,6 +166,7 @@ impl BlockPlace {
             modify_policy: self.modify_policy,
             description: self.description,
             permissions: self.permissions,
+            analyzes: self.analyzes,
         }
     }
 
@@ -155,6 +184,7 @@ impl BlockPlace {
             modify_policy: self.modify_policy,
             description: self.description,
             permissions: self.permissions,
+            analyzes: self.analyzes,
         }
     }
 
@@ -172,6 +202,7 @@ impl BlockPlace {
             modify_policy: self.modify_policy,
             description: self.description,
             permissions: self.permissions,
+            analyzes: self.analyzes,
         }
     }
 
@@ -232,6 +263,7 @@ mod tests {
             modify_policy: ModifyPolicy::All,
             description: String::new(),
             permissions: BlockPermissions::default(),
+            analyzes: None,
         }
     }
 

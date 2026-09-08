@@ -155,6 +155,7 @@ pub fn save_sheets<S: SaverTrait>(
                     perm_sort_by_field: perm(BlockOp::SortByField),
                     perm_modify_description: perm(BlockOp::ModifyDescription),
                     perm_override_validation: perm(BlockOp::OverrideValidation),
+                    analyzes: block.analyzes,
                     row_infos,
                     col_infos,
                 })

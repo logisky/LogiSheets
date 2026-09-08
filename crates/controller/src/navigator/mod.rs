@@ -307,6 +307,28 @@ impl Navigator {
         }
     }
 
+    /// The blocks on this sheet that declare they analyse `block_id`, in id
+    /// order so two reads of an unchanged sheet agree.
+    ///
+    /// A scan: analysis blocks are few and a sheet holds tens of blocks, not
+    /// thousands. Reported to readers alongside the forward marker so an agent
+    /// sees the relation from either end — from the table, "this is
+    /// summarised"; from the summary, "this is what I summarise".
+    pub fn analyzed_by(&self, sheet_id: &SheetId, block_id: BlockId) -> Vec<BlockId> {
+        let Ok(sheet_nav) = self.get_sheet_nav(sheet_id) else {
+            return Vec::new();
+        };
+        let mut out: Vec<BlockId> = sheet_nav
+            .data
+            .blocks
+            .iter()
+            .filter(|(_, bp)| bp.analyzes == Some(block_id))
+            .map(|(id, _)| *id)
+            .collect();
+        out.sort_unstable();
+        out
+    }
+
     pub(crate) fn get_sheet_nav(&self, sheet_id: &SheetId) -> Result<&SheetNav, BasicError> {
         self.sheet_navs
             .get(sheet_id)

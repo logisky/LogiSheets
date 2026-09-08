@@ -16,6 +16,8 @@ pub struct BlockFieldView<'a> {
     /// The author's own rule. The rules the declaration implies are derived, not
     /// stored — see `block_manager::derived_rules`.
     pub validation_formula: Option<&'a str>,
+    /// How this field aggregates the block its own block analyses, if it does.
+    pub aggregate: Option<&'a super::field_type::FieldAggregate>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -177,7 +179,34 @@ impl SchemaManager {
     /// any. Returns the raw template string (still includes the leading
     /// `=` if the schema author wrote one). Callers do substitution on
     /// the body.
-    pub fn formula_for_block_cell(&self, sheet_id: SheetId, cell: &BlockCellId) -> Option<String> {
+    /// The value-formula template governing a cell.
+    ///
+    /// `analyzes` is the block this cell's block analyses, when it is an
+    /// analysis block. It is passed in rather than looked up because it lives
+    /// on the navigator's `BlockPlace` alongside the block's other metadata,
+    /// not on the schema — and every caller already holds the navigator.
+    ///
+    /// An analysis field's formula is GENERATED from its declaration rather
+    /// than stored (see `block_manager::analysis`), and it wins over any
+    /// authored template: a field cannot both aggregate a source and compute
+    /// something else per record.
+    pub fn formula_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        analyzes: Option<BlockId>,
+    ) -> Option<String> {
+        if let Some(source) = analyzes {
+            if let Some(view) = self.field_view_for_block_cell(sheet_id, cell) {
+                if let Some(generated) = crate::block_manager::analysis::aggregate_formula(
+                    sheet_id,
+                    source,
+                    view.aggregate,
+                ) {
+                    return Some(generated);
+                }
+            }
+        }
         let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
         match schema {
             Schema::RowSchema(s) => s.formula_for_field_axis(cell.col).map(String::from),
@@ -206,6 +235,7 @@ impl SchemaManager {
                 required: e.required,
                 unique: e.unique,
                 validation_formula: e.validation_formula.as_deref(),
+                aggregate: e.aggregate.as_ref(),
             }
         }
         match schema {

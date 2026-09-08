@@ -280,8 +280,7 @@ pub fn convert_cells_to_block<C: FormulaExecCtx>(
             }
             let bcid =
                 ctx.fetch_block_cell_id(&sheet, &block_id, r - master_row, c - master_col)?;
-            executor =
-                register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)?;
+            executor = register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)?;
         }
     }
     Ok(executor)
@@ -820,10 +819,7 @@ fn find_self_block_ref(
 /// {@link find_self_block_ref}.
 fn collect_ref_ranges(ast: &ast::Node, out: &mut Vec<(SheetId, RangeId)>) {
     match &ast.pure {
-        ast::PureNode::Func(func) => func
-            .args
-            .iter()
-            .for_each(|n| collect_ref_ranges(n, out)),
+        ast::PureNode::Func(func) => func.args.iter().for_each(|n| collect_ref_ranges(n, out)),
         ast::PureNode::Value(_) | ast::PureNode::ArrayConstant(_) => {}
         ast::PureNode::Reference(reference) => match reference {
             ast::CellReference::Mut(r) => out.push((r.sheet_id, r.range_id)),

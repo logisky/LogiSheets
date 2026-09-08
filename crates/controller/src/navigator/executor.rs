@@ -215,7 +215,8 @@ impl NavExecutor {
                     create_block.modify_policy.unwrap_or_default(),
                 )
                 .with_description(create_block.description.clone().unwrap_or_default())
-                .with_permissions(create_block.permissions.clone().unwrap_or_default());
+                .with_permissions(create_block.permissions.clone().unwrap_or_default())
+                .with_analyzes(create_block.analyzes);
                 let block_id = create_block.id;
                 sheet_nav.data.blocks.insert(block_id, block_place);
                 sheet_nav.cache = Default::default();
@@ -231,6 +232,35 @@ impl NavExecutor {
                 };
                 let mut bp = bp.clone();
                 bp.description = p.description.clone();
+                sheet_nav.data.blocks.insert(p.block_id, bp);
+                Ok((self, true))
+            }
+            EditPayload::SetBlockAnalyzes(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id);
+                // A block cannot analyse itself: its cells would aggregate a
+                // set they belong to, which is the cycle the whole separate-
+                // block design exists to avoid.
+                if p.analyzes == Some(p.block_id) {
+                    return Err(Error::PayloadError(format!(
+                        "block {} cannot analyse itself",
+                        p.block_id
+                    )));
+                }
+                // And it has to analyse something that exists — a marker
+                // pointing at nothing would make the block's formulas read
+                // empty with no way for a reader to see why.
+                if let Some(source) = p.analyzes {
+                    if !sheet_nav.data.has_block_id(&source) {
+                        return Err(BasicError::BlockIdNotFound(sheet_id, source).into());
+                    }
+                }
+                let Some(bp) = sheet_nav.data.blocks.get(&p.block_id) else {
+                    return Err(BasicError::BlockIdNotFound(sheet_id, p.block_id).into());
+                };
+                let bp = bp.clone().with_analyzes(p.analyzes);
                 sheet_nav.data.blocks.insert(p.block_id, bp);
                 Ok((self, true))
             }

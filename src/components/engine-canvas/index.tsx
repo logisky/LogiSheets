@@ -192,6 +192,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                 activeSheet={activeSheet}
                 canvasStartX={canvasPos.x}
                 canvasStartY={canvasPos.y}
+                navigateToCell={navigateToCell}
             />
             <CanvasContextMenu
                 subscribe={subscribeContextMenu}

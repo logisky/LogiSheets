@@ -2046,6 +2046,8 @@ impl<'a> Worksheet<'a> {
                     }
                 }
                 BlockInfo {
+                    analyzes: block_place.analyzes,
+                    analyzed_by: self.controller.status.navigator.analyzed_by(&self.sheet_id, id),
                     sheet_idx,
                     sheet_id: self.sheet_id,
                     block_id: id,
@@ -2804,6 +2806,12 @@ impl<'a> Worksheet<'a> {
             }
         }
         Ok(BlockInfo {
+            analyzes: block_place.analyzes,
+            analyzed_by: self
+                .controller
+                .status
+                .navigator
+                .analyzed_by(&self.sheet_id, block_id),
             sheet_id: self.sheet_id,
             block_id,
             row_start,

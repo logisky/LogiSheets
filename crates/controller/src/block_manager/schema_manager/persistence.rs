@@ -15,7 +15,7 @@ use logisheets_workbook::logisheets::{
 };
 
 use super::SchemaManager;
-use super::field_type::{FieldType, FieldWritePolicy};
+use super::field_type::{AggFunc, FieldAggregate, FieldType, FieldWritePolicy};
 use super::schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema};
 
 /// Project a field entry into its on-disk attributes. Shared by the row and
@@ -48,6 +48,11 @@ fn field_to_xml<F: Copy + Into<u32>>(name: &str, entry: &FieldEntry<F>) -> Schem
             FieldWritePolicy::Inherit => None,
             p => Some(p.as_str().to_string()),
         },
+        agg_func: entry
+            .aggregate
+            .as_ref()
+            .map(|a| a.func.as_str().to_string()),
+        agg_field: entry.aggregate.as_ref().map(|a| a.source_field.clone()),
     }
 }
 
@@ -73,7 +78,15 @@ fn field_from_xml<F: From<u32>>(f: SchemaFieldXml) -> (String, FieldEntry<F>) {
             .with_required(f.required.unwrap_or(false))
             .with_unique(f.unique.unwrap_or(false))
             .with_default_value(f.default_value)
-            .with_write_policy(FieldWritePolicy::from_str(f.write_policy.as_deref())),
+            .with_write_policy(FieldWritePolicy::from_str(f.write_policy.as_deref()))
+            // Both halves or neither: a function with no field to aggregate,
+            // or a field with no function, is not a declaration anybody made.
+            .with_aggregate(match (f.agg_func.as_deref(), f.agg_field) {
+                (Some(func), Some(source_field)) => {
+                    AggFunc::from_str(func).map(|func| FieldAggregate { func, source_field })
+                }
+                _ => None,
+            }),
     )
 }
 

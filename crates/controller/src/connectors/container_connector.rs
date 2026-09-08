@@ -30,6 +30,16 @@ pub struct ContainerConnector<'a> {
     pub block_schema_manager: &'a crate::block_manager::schema_manager::SchemaManager,
 }
 
+/// Which block this block analyses, if any. `None` for an ordinary block, and
+/// for a block that has gone missing — a marker pointing at nothing yields no
+/// generated formula rather than a broken one.
+fn analyzes_of(navigator: &Navigator, sheet_id: SheetId, block_id: BlockId) -> Option<BlockId> {
+    navigator
+        .get_block_place(&sheet_id, &block_id)
+        .ok()
+        .and_then(|bp| bp.analyzes)
+}
+
 impl<'a> IdFetcherTrait for ContainerConnector<'a> {
     fn fetch_row_id(&self, sheet_id: &SheetId, row_idx: usize) -> Result<RowId, BasicError> {
         self.navigator.fetch_row_id(sheet_id, row_idx)
@@ -285,7 +295,11 @@ impl<'a> ContainerExecCtx for ContainerConnector<'a> {
         cell: &logisheets_base::BlockCellId,
     ) -> bool {
         self.block_schema_manager
-            .formula_for_block_cell(sheet_id, cell)
+            .formula_for_block_cell(
+                sheet_id,
+                cell,
+                analyzes_of(self.navigator, sheet_id, cell.block_id),
+            )
             .is_some()
     }
 }
